@@ -10,6 +10,9 @@ export function criarDashboard(result){
   const change=values=>{Object.assign(state,{pagina:0},values);load();};
   function dispose(){version++;controller?.abort();map?.destroy();map=null;host=null;}
   function draw(data){
+    role('rows').closest('table').dataset.tableSort='off';
+    const ordenaveis=[{id:'origem',nome:'Feição de entrada'},{id:'registro',nome:'Registro'},{id:'valor',nome:'Valor'},...data.cobertura.map((c,i)=>({id:`base:${i}`,nome:`${c.categoria} · ${c.base}`}))];
+    opcoes(q('[data-filter="ordem"]'),ordenaveis,state.ordem);
     const all=(label,items)=>[{id:'',nome:label},...items];
     const options={camada:(result.modo==='enriquecimento'?Object.keys(result.camadas||{}):['resultado']).map(id=>({id,nome:id})),
       categoria:all('Todas as categorias',data.categorias.map(c=>({id:c.nome,nome:c.nome}))),
@@ -48,12 +51,14 @@ export function criarDashboard(result){
     }
     const rows=new Map(data.linhas.map(r=>[String(r.posicao),r]));
     function select(key){const row=rows.get(key);if(!row)return;role('selection-title').textContent=row.origem;definicoes(role('selection-attributes'),row.atributos);map?.focus(key);
-      role('rows').querySelectorAll('tr').forEach((tr,i)=>tr.classList.toggle('is-selected',String(data.linhas[i].posicao)===key));}
+      role('rows').querySelectorAll('tr').forEach(tr=>tr.classList.toggle('is-selected',tr.dataset.registro===key));}
     map?.destroy();map=desenharMapa(role('map'),data.mapa.features.map(f=>({...f,properties:{...f.properties,chave:String(f.properties.posicao),rotulo:rows.get(String(f.properties.posicao))?.origem}})),select);
     role('selection-title').textContent='Selecione um registro';definicoes(role('selection-attributes'),{});
     role('map-scope').textContent=`Mapa: ${data.mapa.features.length} geometrias desta página. Gráficos: ${data.resumo.registros} registros do recorte.${data.representacao_mapa.metodo!=='original'?' Representação visual aproximada.':''}`;
     cabecalhos(role('columns'),['Feição de entrada','Registro',data.fonte_campo?.apelido||data.campo||'Valor',...data.cobertura.map(c=>`${c.categoria} · ${c.base}`),'Detalhar']);
+    [...role('columns').children].forEach((th,i)=>{if(!ordenaveis[i])return;const id=ordenaveis[i].id,button=document.createElement('button');button.type='button';button.className='ea-matrix-sort';button.textContent=th.textContent+(state.ordem===id?(state.descendente?' ↓':' ↑'):'');th.setAttribute('aria-sort',state.ordem===id?(state.descendente?'descending':'ascending'):'none');button.onclick=()=>change({ordem:id,descendente:state.ordem===id?!state.descendente:false});th.replaceChildren(button);});
     linhas(role('rows'),data.linhas.map(r=>[r.origem,r.registro,r.valor,...r.bases.map(b=>b.corresponde==null?'Não informado':b.corresponde?'Com correspondência':'Sem correspondência')]),i=>select(String(data.linhas[i].posicao)));
+    role('rows').querySelectorAll('tr').forEach((tr,i)=>{tr.dataset.registro=String(data.linhas[i].posicao);});
     role('empty').hidden=!!data.linhas.length;role('pagination').textContent=`${data.paginas?data.pagina+1:0} / ${data.paginas} · ${data.resumo.registros} registros`;
     q('[data-action="previous"]').disabled=data.pagina===0;q('[data-action="next"]').disabled=data.pagina+1>=data.paginas;
     definicoes(role('concepts'),Object.fromEntries(data.categorias.filter(c=>!state.categoria||c.nome===state.categoria).map(c=>[c.nome,c.conceito||'Conceito não registrado'])));

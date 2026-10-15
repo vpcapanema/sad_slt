@@ -1,0 +1,124 @@
+{
+  "section2Visible": true,
+  "matrixAfterEdit": "5",
+  "writesAfterMatrix": 0,
+  "matrixAfterReload": "1",
+  "wrongTarget": {
+    "method": "PATCH",
+    "path": "/api/ahp/comparacao-colaborativa/ambientes/j2",
+    "data": {
+      "hierarquizacao_id": "h1",
+      "convites": [
+        {
+          "email": "p0@example.com",
+          "nome": "Pessoa 0"
+        }
+      ],
+      "valido_ate": "2027-01-01T02:59:59.000Z"
+    }
+  },
+  "createPosts": 2,
+  "errors": [],
+  "cssFiles": [
+    {
+      "href": "http://127.0.0.1:8083/assets/css/app.css",
+      "rules": 536,
+      "matched": 70
+    },
+    {
+      "href": "http://127.0.0.1:8083/assets/vendor/fontawesome/css/all.min.css",
+      "rules": 2012,
+      "matched": 9
+    },
+    {
+      "href": "http://127.0.0.1:8083/assets/css/template-conteudo.css",
+      "rules": 16,
+      "matched": 14
+    },
+    {
+      "href": "http://127.0.0.1:8083/assets/css/process_feedback_system.css",
+      "rules": 321,
+      "matched": 185
+    },
+    {
+      "href": "http://127.0.0.1:8083/assets/css/navbar-modulo.css",
+      "rules": 13,
+      "matched": 8
+    },
+    {
+      "href": "http://127.0.0.1:8083/assets/vendor/fontawesome/css/all.min.css",
+      "rules": 2012,
+      "matched": 9
+    },
+    {
+      "href": "http://127.0.0.1:8083/assets/css/ahp-module.css",
+      "rules": 804,
+      "matched": 62
+    },
+    {
+      "href": "http://127.0.0.1:8083/assets/css/ahp-collab-analytics.css",
+      "rules": 41,
+      "matched": 1
+    },
+    {
+      "href": "http://127.0.0.1:8083/assets/css/ahp-collab-explorer.css",
+      "rules": 25,
+      "matched": 0
+    },
+    {
+      "href": "http://127.0.0.1:8083/assets/css/ahp-collab-rounds.css",
+      "rules": 3,
+      "matched": 2
+    },
+    {
+      "href": "http://127.0.0.1:8083/assets/css/analise-multicriterio.css?v=20260831-espaco-analitico",
+      "rules": 401,
+      "matched": 146
+    },
+    {
+      "href": "http://127.0.0.1:8083/assets/css/analise-multicriterio-tabela.css?v=20260831-larguras-colunas",
+      "rules": 36,
+      "matched": 27
+    },
+    {
+      "href": "http://127.0.0.1:8083/assets/css/central-respostas-layout.css?v=20260821-table-left-chart-right",
+      "rules": 8,
+      "matched": 7
+    },
+    {
+      "href": "http://127.0.0.1:8083/assets/css/analise-multicriterio-modal.css?v=20260819-modal5",
+      "rules": 53,
+      "matched": 23
+    },
+    {
+      "href": "http://127.0.0.1:8083/assets/css/mad-filter-standard.css?v=20260820-1",
+      "rules": 16,
+      "matched": 0
+    },
+    {
+      "href": "http://127.0.0.1:8083/assets/css/page-title-standard.css?v=20260820-3",
+      "rules": 12,
+      "matched": 11
+    },
+    {
+      "href": "http://127.0.0.1:8083/assets/css/table-standard.css?v=20261015-fontes-ordem",
+      "rules": 33,
+      "matched": 22
+    },
+    {
+      "href": "http://127.0.0.1:8083/assets/css/admin-table-controls.css?v=20261015-botoes-quadrados",
+      "rules": 65,
+      "matched": 26
+    },
+    {
+      "href": "http://127.0.0.1:8083/assets/css/paginas/ami-espaco-secoes.css?v=20261015-subsecoes-colunas",
+      "rules": 43,
+      "matched": 37
+    },
+    {
+      "href": null,
+      "rules": 57,
+      "matched": 3
+    }
+  ]
+}

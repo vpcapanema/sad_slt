@@ -45,7 +45,7 @@
   function nativeMapLayers(id) { return state().map.getStyle().layers.filter(layer => layer.source === id && !layer.id.startsWith("gp-selection")); }
 
   async function loadEnvironments() {
-    const cached = JSON.parse(localStorage.getItem("gp-environments") || "{}");
+    let cached={};try{cached=JSON.parse(localStorage.getItem("gp-environments")||"{}")}catch{localStorage.removeItem("gp-environments")}
     try {
       const saved = await request(`${API}/ambientes`);
       const environments = { ...cached, ...saved };
@@ -63,7 +63,7 @@
     const bounds = new maplibregl.LngLatBounds();
     for (const layer of state().layers) {
       if (layer.tipo?.toLowerCase().includes("raster")) {
-        const preview = await request(`${API}/camadas/${layer.id}/preview`); preview.coordinates.forEach(coord => bounds.extend(coord));
+        const preview = layer.preview||await request(`${API}/camadas/${layer.id}/preview`); preview.coordinates.forEach(coord => bounds.extend(coord));
       } else {
         const native=nativeSession(layer.id),local=native?null:window.gpArquivos?.sessions.get(layer.id)?.geojson || state().map.getSource(layer.id)?._data;
         if(native&&Array.isArray(native.bounds)&&native.bounds.length===4&&native.bounds.every(Number.isFinite)){bounds.extend(native.bounds.slice(0,2));bounds.extend(native.bounds.slice(2,4));}
@@ -139,7 +139,7 @@
         const file = nativeSession(id), known = state().nativeSelectionBounds?.[id];
         if (known && known.key === fids.join(",")) { bounds.extend(known.bounds.slice(0, 2)); bounds.extend(known.bounds.slice(2, 4)); continue; }
         if (fids.length > NATIVE_GEOMETRY_LIMIT) return notify(`Ajuste à seleção indisponível: ${fids.length} feições nativas em ${file.nome || id} excedem o limite de ${NATIVE_GEOMETRY_LIMIT} geometrias por consulta.`);
-        const result = await request(`${API}/bancada-arquivos/geometrias`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, arquivo: file.arquivo, revisao: file.revisao, ids: fids }) });
+        const result = await request(API+(window.gpArquivos.requestPath?.(file,"geometrias")||"/bancada-arquivos/geometrias"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(window.gpArquivos.requestPayload?.(file,{ids:fids})||{ id, arquivo: file.arquivo, revisao: file.revisao, ids: fids }) });
         result.features?.forEach(feature => walkCoordinates(feature.geometry?.coordinates, coord => bounds.extend(coord)));
       }
     } catch (error) { return notify(error.message); }
@@ -315,7 +315,7 @@
   async function queryNative(file,expression){
     nativeFidField(file);
     let result;
-    try{result=await request(`${API}/bancada-arquivos/consulta`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:file.id,arquivo:file.arquivo,revisao:file.revisao,expressao:expression,limite:NATIVE_QUERY_LIMIT,offset:0})});}
+    try{result=await request(API+(window.gpArquivos.requestPath?.(file,'consulta')||'/bancada-arquivos/consulta'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(window.gpArquivos.requestPayload?.(file,{expressao:expression,limite:NATIVE_QUERY_LIMIT,offset:0})||{id:file.id,arquivo:file.arquivo,revisao:file.revisao,expressao:expression,limite:NATIVE_QUERY_LIMIT,offset:0})});}
     catch(error){
       if(error.status===405||(error.status===404&&error.detail==='Not Found'))throw new Error('O servidor ainda não oferece consulta limitada sobre o arquivo original (/bancada-arquivos/consulta). Nada foi aplicado.');
       throw error;
@@ -365,6 +365,8 @@
 
   async function refreshSource() {
     const layer = activeLayer(); if (!layer) return notify("Selecione uma camada.");
+    if(window.gpAttributeTable?.hasPendingChanges(layer.id))return notify("Salve ou descarte as alterações da tabela antes de atualizar a fonte.");
+    if(layer.preview&&layer.destino==='storage_original'){try{await window.gpApp.adicionarRasterStorage(layer);notify('Fonte atualizada.');}catch(error){notify(error.message);}return;}
     try {
       await request(`${API}/camadas/${layer.id}/atualizar-fonte`, { method: "POST" }); const map = state().map;
       [`${layer.id}-point`, `${layer.id}-line`, layer.id].forEach(id => { if (map.getLayer(id)) map.removeLayer(id); }); if (map.getSource(layer.id)) map.removeSource(layer.id);

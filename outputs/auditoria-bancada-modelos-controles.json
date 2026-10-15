@@ -1,0 +1,194 @@
+{
+  "scope": [
+    "geoprocessamento-modeler.js",
+    "geoprocessamento-portal.js",
+    "geoprocessamento-actions.js",
+    "geoprocessamento-docks.js",
+    "geoprocessamento-toolbox.js",
+    "geoprocessamento-ribbon.js"
+  ],
+  "read_completely": [
+    "geoprocessamento-modeler.js",
+    "geoprocessamento-portal.js",
+    "geoprocessamento-actions.js",
+    "geoprocessamento-docks.js",
+    "geoprocessamento-toolbox.js",
+    "geoprocessamento-ribbon.js",
+    "assets/css/geoprocessamento.css"
+  ],
+  "vendor_audit": false,
+  "control_selectors_reviewed": {
+    "geoprocessamento-modeler.js": [
+      "data-add-parameter",
+      "data-close-model",
+      "data-contract-param",
+      "data-create-back",
+      "data-ctx-action",
+      "data-delete-node",
+      "data-document-tab",
+      "data-edge",
+      "data-edge-visible",
+      "data-input-ref",
+      "data-insert-variable",
+      "data-iterator-source",
+      "data-iterator-variable",
+      "data-lucide",
+      "data-menu-item",
+      "data-menu-kind",
+      "data-model-command",
+      "data-model-description",
+      "data-model-document",
+      "data-model-menu",
+      "data-model-name",
+      "data-model-panel",
+      "data-model-search",
+      "data-model-view",
+      "data-node",
+      "data-node-label",
+      "data-op",
+      "data-output-field",
+      "data-palette-kind",
+      "data-parameter-key",
+      "data-parameter-row",
+      "data-parameter-value",
+      "data-port",
+      "data-process-close",
+      "data-process-final",
+      "data-process-state",
+      "data-remove-parameter",
+      "data-ribbon",
+      "data-right-tab",
+      "data-system-input",
+      "data-system-values",
+      "data-variable-ref",
+      "data-variable-type",
+      "data-variable-value"
+    ],
+    "geoprocessamento-portal.js": [
+      "data-import-stac",
+      "data-lucide",
+      "data-mapbiomas-info",
+      "data-portal-back",
+      "data-stac-asset",
+      "data-stac-temporal"
+    ],
+    "geoprocessamento-actions.js": [
+      "data-catalog-group",
+      "data-catalog-tab",
+      "data-favorite",
+      "data-layer",
+      "data-layer-group",
+      "data-left-tab",
+      "data-lucide",
+      "data-open-operation",
+      "data-unfavorite",
+      "data-use-service",
+      "data-zoom-layer"
+    ],
+    "geoprocessamento-docks.js": [
+      "data-action",
+      "data-collapse",
+      "data-dynamic-tab",
+      "data-left-close",
+      "data-left-pane",
+      "data-left-panel",
+      "data-open-left",
+      "data-panel-toggle",
+      "data-restore",
+      "data-right-tab",
+      "data-tab-close"
+    ],
+    "geoprocessamento-toolbox.js": [],
+    "geoprocessamento-ribbon.js": [
+      "data-action",
+      "data-directory-back",
+      "data-layer",
+      "data-load-file",
+      "data-lucide",
+      "data-nav-dir",
+      "data-right-tab"
+    ]
+  },
+  "fixes": [
+    "Model execution uses asynchronous jobs and cooperative cancellation between steps, including iterators/nested functions. Completed outputs preserved.",
+    "Multiple selected contract inputs remain selected after rendering.",
+    "Input without iterator accepts vector or raster and defaults to one resource.",
+    "Late catalog and portal responses no longer overwrite a newer panel.",
+    "Catalog search reapplied after loading a tab.",
+    "Ribbon cancellation rejection reported; absent layer.tipo does not crash export.",
+    "Function run confirmation now says Executar fun??o; confirmation errors release editor busy state.",
+    "Worker lifecycle explicitly records responsible user and execution context; context reset verified.",
+    "POST bancada-arquivos/classificacao and local/classificacao read only requested field and reuse classification logic; revisions checked before/after."
+  ],
+  "tested": [
+    "tests/test_bancada_model_jobs.py: 4 passed, synthetic executors and report sink",
+    "tests/browser/bancada-modelos-contratos.cjs: raster input, multi-select retention, job dispatch, late portal response; mocked HTTP; zero pageerrors",
+    "Classification/native/temporary: 28 synthetic tests passed, including geometry-ignored field read and owner isolation."
+  ],
+  "button_groups": {
+    "model": [
+      "save",
+      "validate",
+      "run",
+      "input",
+      "variable",
+      "iterator",
+      "algorithm",
+      "function",
+      "output",
+      "connect",
+      "fit",
+      "layout",
+      "duplicate",
+      "delete",
+      "close",
+      "context rename/duplicate/delete",
+      "create/back"
+    ],
+    "portal": [
+      "search scenes",
+      "add STAC asset",
+      "add OSM",
+      "open official MapBiomas download",
+      "back"
+    ],
+    "catalog": [
+      "collapse groups",
+      "open operation",
+      "tab project/portal/favorites",
+      "favorite/unfavorite",
+      "consume service",
+      "layer/group visibility",
+      "zoom"
+    ],
+    "docks": [
+      "activate/close/restore/collapse panels",
+      "view menu toggles"
+    ],
+    "ribbon": [
+      "import local/WFS/system",
+      "tools scopes",
+      "run/cancel",
+      "basemap/explore/select/clear/fit/fit selection",
+      "attributes/properties/remove/delete",
+      "validate/reproject/repair",
+      "save/export/add result",
+      "function/flow create/edit/validate/run",
+      "history/environments/duplicate/import/export definition",
+      "calculate field/select attribute/filter/refresh"
+    ]
+  },
+  "limitations": [
+    "External portal availability not tested live; all mutation tests mocked.",
+    "Legacy synchronous execute endpoints preserved for API compatibility; UI migrated to jobs.",
+    "Cancellation waits for the current algorithm to finish, preserving completed writes; does not roll back outputs."
+  ],
+  "references": [
+    "https://pro.arcgis.com/en/pro-app/3.6/help/analysis/geoprocessing/modelbuilder/run-a-model.htm",
+    "https://pro.arcgis.com/en/pro-app/3.6/help/analysis/geoprocessing/basics/run-geoprocessing-tools.htm",
+    "https://pro.arcgis.com/en/pro-app/3.6/help/analysis/geoprocessing/modelbuilder/modelbuilder-quick-tour.htm",
+    "https://doc.esri.com/en/arcgis-pro/latest/help/analysis/geoprocessing/modelbuilder/add-connect-and-modify-data-and-tools-in-a-model.html",
+    "https://pro.arcgis.com/en/pro-app/3.6/help/mapping/layer-properties/graduated-colors.htm"
+  ],
+  "validation_runner": "pytest CLI: VS Code Testing/runTests tool unavailable in this agent session; synthetic tests only."
+}

@@ -1,0 +1,233 @@
+[
+  {
+    "local": "assets/css/app.css",
+    "lines": 3409,
+    "chars": 66738
+  },
+  {
+    "local": "assets/css/template-conteudo.css",
+    "lines": 109,
+    "chars": 2893
+  },
+  {
+    "local": "assets/vendor/fontawesome/css/all.min.css",
+    "lines": 9,
+    "chars": 103017
+  },
+  {
+    "local": "assets/css/process_feedback_system.css",
+    "lines": 595,
+    "chars": 32835
+  },
+  {
+    "local": "assets/css/navbar-modulo.css",
+    "lines": 96,
+    "chars": 2731
+  },
+  {
+    "local": "assets/css/ahp-module.css",
+    "lines": 4988,
+    "chars": 112779
+  },
+  {
+    "local": "assets/css/ahp-collab-explorer.css",
+    "lines": 2,
+    "chars": 2049
+  },
+  {
+    "local": "assets/css/ahp-collab-analytics.css",
+    "lines": 2,
+    "chars": 3310
+  },
+  {
+    "local": "assets/css/analise-multicriterio.css",
+    "lines": 287,
+    "chars": 41530
+  },
+  {
+    "local": "assets/css/ahp-collab-rounds.css",
+    "lines": 4,
+    "chars": 295
+  },
+  {
+    "local": "assets/css/analise-multicriterio-tabela.css",
+    "lines": 220,
+    "chars": 4561
+  },
+  {
+    "local": "assets/css/central-respostas-layout.css",
+    "lines": 42,
+    "chars": 879
+  },
+  {
+    "local": "assets/css/mad-filter-standard.css",
+    "lines": 108,
+    "chars": 2267
+  },
+  {
+    "local": "assets/css/analise-multicriterio-modal.css",
+    "lines": 7,
+    "chars": 5549
+  },
+  {
+    "local": "assets/css/page-title-standard.css",
+    "lines": 73,
+    "chars": 1497
+  },
+  {
+    "local": "assets/js/table-standard.js",
+    "lines": 49,
+    "chars": 2685,
+    "syntax": "ok"
+  },
+  {
+    "local": "assets/css/table-standard.css",
+    "lines": 102,
+    "chars": 4704
+  },
+  {
+    "local": "assets/js/admin-auth.js",
+    "lines": 140,
+    "chars": 4108,
+    "syntax": "ok"
+  },
+  {
+    "local": "assets/js/paginas/analise-multicriterio-tabela.js",
+    "lines": 55,
+    "chars": 15460,
+    "syntax": "ok"
+  },
+  {
+    "local": "assets/js/table-sort.js",
+    "lines": 362,
+    "chars": 14008,
+    "syntax": "ok"
+  },
+  {
+    "local": "assets/js/paginas/analise-multicriterio-julgamentos.js",
+    "lines": 1033,
+    "chars": 102154,
+    "syntax": "ok"
+  },
+  {
+    "local": "assets/js/template-base.js",
+    "lines": 83,
+    "chars": 3137,
+    "syntax": "ok"
+  },
+  {
+    "local": "assets/js/notification_system.js",
+    "lines": 861,
+    "chars": 31117,
+    "syntax": "ok"
+  },
+  {
+    "local": "assets/js/process_feedback_unified.js",
+    "lines": 1427,
+    "chars": 87470,
+    "syntax": "ok"
+  },
+  {
+    "local": "assets/js/ahp-process-monitor.js",
+    "lines": 37,
+    "chars": 2048,
+    "syntax": "ok"
+  },
+  {
+    "local": "assets/vendor/xlsx/xlsx-0.18.5.min.js",
+    "lines": 23,
+    "chars": 639145,
+    "syntax": "ok"
+  },
+  {
+    "local": "hierarquizacao/processos.css",
+    "lines": 302,
+    "chars": 7598
+  },
+  {
+    "local": "assets/vendor/leaflet/leaflet.css",
+    "lines": 662,
+    "chars": 14806
+  },
+  {
+    "local": "assets/css/paginas/hierarquizacao-home-inline-1.css",
+    "lines": 246,
+    "chars": 7110
+  },
+  {
+    "local": "assets/js/admin-api.js",
+    "lines": 354,
+    "chars": 11716,
+    "syntax": "ok"
+  },
+  {
+    "local": "assets/js/catalog.js",
+    "lines": 61,
+    "chars": 1587,
+    "syntax": "ok"
+  },
+  {
+    "local": "assets/js/sigma-read.js",
+    "lines": 84,
+    "chars": 2376,
+    "syntax": "ok"
+  },
+  {
+    "local": "assets/js/status-colors.js",
+    "lines": 896,
+    "chars": 31393,
+    "syntax": "ok"
+  },
+  {
+    "local": "hierarquizacao/js/demandas-grupo.js",
+    "lines": 294,
+    "chars": 12287,
+    "syntax": "ok"
+  },
+  {
+    "local": "assets/js/admin-labels.js",
+    "lines": 312,
+    "chars": 10004,
+    "syntax": "ok"
+  },
+  {
+    "local": "hierarquizacao/js/hier-api.js",
+    "lines": 107,
+    "chars": 4960,
+    "syntax": "ok"
+  },
+  {
+    "local": "assets/js/matriz-criterios-arquivo.js",
+    "lines": 13,
+    "chars": 2032,
+    "syntax": "ok"
+  },
+  {
+    "local": "assets/vendor/leaflet/leaflet.js",
+    "lines": 6,
+    "chars": 147557,
+    "syntax": "ok"
+  },
+  {
+    "local": "hierarquizacao/js/processos.js",
+    "lines": 489,
+    "chars": 26105,
+    "syntax": "ok"
+  },
+  {
+    "local": "assets/js/paginas/hierarquizacao-home-inline-1.js",
+    "lines": 34,
+    "chars": 1298,
+    "syntax": "ok"
+  },
+  {
+    "local": "assets/css/admin-table-controls.css",
+    "lines": 381,
+    "chars": 8903
+  },
+  {
+    "local": "assets/css/paginas/ami-espaco-secoes.css",
+    "lines": 214,
+    "chars": 6312
+  }
+]

@@ -6,6 +6,7 @@
     cabecalho_grupo: "Cabeçalho do grupo",
     objetos: "Objetos",
     demanda_id: "Identificador da demanda",
+    origem_sei_processo: "Processo SEI",
     codigo: "Código",
     nome: "Nome",
     descricao: "Descrição",
@@ -173,6 +174,7 @@
     [
       fieldGroup("Identificação", [
         field("Código", object.codigo),
+        field("Processo SEI", object.origem_sei_processo),
         field("Nome", object.nome),
         field("Tipo de demanda", object.tipo_demanda),
         field("Situação", object.status ? statusLabel(object.status) : null),

@@ -44,6 +44,7 @@ class DemandaCreateSchema(BaseModel):
     vinculo_institucional: bool = False
     vinculo_tipo: str | None = Field(None, description="programa ou plano quando há vínculo institucional")
     nome: str = Field(..., min_length=1, max_length=200)
+    origem_sei_processo: str | None = Field(None, max_length=50)
     descricao: str | None = None
     geometria: GeometriaSchema | None = None
     classificacao: dict[str, Any] | None = None
@@ -89,6 +90,7 @@ class DemandaResponseSchema(BaseModel):
     vinculo_tipo: str | None = None
     vinculo_objeto_id: str | None = None
     nome: str
+    origem_sei_processo: str | None = Field(None, max_length=50)
     descricao: str | None = None
     geometria: GeometriaSchema | None = None
     classificacao: dict[str, Any] | None = None
@@ -111,6 +113,7 @@ class DemandaUpdateSchema(BaseModel):
 
     status: str | None = None
     nome: str | None = Field(None, min_length=1, max_length=200)
+    origem_sei_processo: str | None = Field(None, max_length=50)
     descricao: str | None = None
     diretoria_id: str | None = None
     plano_id: str | None = None

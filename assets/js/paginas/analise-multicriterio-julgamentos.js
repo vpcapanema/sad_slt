@@ -6,6 +6,8 @@
   var hierarquizacoes = [];
   var respostasCentral = [];
   var draftEmails = [];
+  var draftEditing = true, draftSnapshot = [];
+  var draftPage = 1, draftVisibleCount = 0, sortDrafts = function (rows) { return rows; };
   var pairwiseMatrices = {};
   var pairwiseConfigured = {};
   var pairwiseMode = null;
@@ -18,7 +20,10 @@
   var selectedId = null;
   var editingId = null;
   var environmentMode = "create";
+  var environmentId = null, environmentSaving = false, analysisSaving = false;
+  var analysisResponseIds = new Set();
   var analysisWorkspace = null;
+  var analysisRequest = 0;
   var selectedJudgeId = null; // null = todos os julgadores juntos
   var selectedMeasure = "geometrica"; // medida de tendencia central da agregacao
   var modo = new URLSearchParams(location.search).get("modo") || "julgamentos";
@@ -32,7 +37,7 @@
   ];
 
   function appUrl(area, path) { return (area === "public" ? "/public" : "/restrict") + path; }
-  function escapeHtml(value) { var node = document.createElement("span"); node.textContent = value == null ? "" : String(value); return node.innerHTML; }
+  function escapeHtml(value) { var node = document.createElement("span"); node.textContent = value == null ? "" : String(value); return node.innerHTML.replace(/"/g, "&quot;"); }
   function api(url, options) {
     return fetch(url, Object.assign({ credentials: "same-origin", headers: { "Content-Type": "application/json" } }, options || {})).then(async function (response) {
       var body = await response.json().catch(function () { return {}; });
@@ -222,10 +227,11 @@
     select.innerHTML = '<option value="">Todos os julgadores</option>' + julgadores.map(function (j, indice) {
       return '<option value="' + escapeHtml(j.id) + '"' + (j.id === selectedJudgeId ? " selected" : "") + '>J' + (indice + 1) + " \u00b7 " + escapeHtml(j.nome) + (j.instituicao ? " (" + escapeHtml(j.instituicao) + ")" : "") + '</option>';
     }).join("");
-    if (!select.dataset.bound) { select.dataset.bound = "1"; select.addEventListener("change", function () { selectedJudgeId = select.value || null; renderPairsSection(); }); }
+    if (!select.dataset.bound) { select.dataset.bound = "1"; select.addEventListener("change", function () { selectedJudgeId = select.value || null; analysisResponseIds = new Set(selectedJudgeId ? [selectedJudgeId] : respostasEnviadas(analysisWorkspace).map(function (r) { return String(r.id); })); renderResponsesForConsolidation(analysisWorkspace); renderPairsSection(); }); }
     $("ami-pairs-judge-hint").textContent = julgadores.length + (julgadores.length === 1 ? " julgador com resposta enviada" : " julgadores com resposta enviada");
     $("ami-analysis-pairs").innerHTML = pairsTable(pairs, selectedJudgeId);
     $("ami-analysis-pairs-chart").innerHTML = analysisPairBars(pairs, selectedJudgeId);
+    SLTAnalysisTable($("ami-analysis-pairs").querySelector("table"));
     renderFioDerivado(analysisWorkspace);
     ligarRealcePares();
   }
@@ -241,7 +247,7 @@
       });
     });
     $("ami-analysis-pairs-chart").querySelectorAll("[data-judge]").forEach(function (barra) {
-      barra.addEventListener("click", function () { selectedJudgeId = barra.dataset.judge; renderPairsSection(); });
+      barra.addEventListener("click", function () { selectedJudgeId = barra.dataset.judge; analysisResponseIds = new Set([selectedJudgeId]); renderResponsesForConsolidation(analysisWorkspace); renderPairsSection(); });
     });
   }
   function analysisMatrixTable(item) {
@@ -279,7 +285,10 @@
   // media aritmetica ou mediana, agregar as duas metades separadamente quebraria
   // a reciprocidade (a_ij x a_ji deixaria de ser 1).
   function matrizAgregada(data, medida) {
-    var enviadas = respostasEnviadas(data);
+    var limite = Number($("ami-analysis-rc").value);
+    var enviadas = respostasEnviadas(data).filter(function (r) {
+      return analysisResponseIds.has(String(r.id)) && (!$("ami-analysis-exclude-inconsistent").checked || (r.consistente && Number(r.razao_consistencia) <= limite));
+    });
     if (!enviadas.length) return null;
     var n = enviadas[0].matriz_comparacao.length, calcula = (MEDIDAS[medida] || MEDIDAS.geometrica).calcula;
     var matriz = [];
@@ -296,7 +305,7 @@
   // A matriz que alimenta as secoes 2.3 a 2.5: a do julgador selecionado, ou a
   // agregacao de todos pela medida escolhida.
   function matrizEmFoco(data) {
-    if (selectedJudgeId) {
+    if (selectedJudgeId && !$("ami-analysis-exclude-inconsistent").checked) {
       var resposta = (data.respostas || []).filter(function (r) { return String(r.id) === selectedJudgeId; })[0];
       var matriz = resposta && resposta.matriz_comparacao;
       return matriz && matriz.length ? { matriz: matriz, origem: "julgador", rotulo: resposta.nome_completo } : null;
@@ -338,18 +347,20 @@
         (r ? '<td>' + escapeHtml(deadlineLabel(r.iniciadoEm)) + '</td>' : vazio) +
         (r && r.enviadoEm ? '<td>' + escapeHtml(deadlineLabel(r.enviadoEm)) + '</td>' : vazio) + '</tr>';
     }).join("") || '<tr><td colspan="7" class="ami-empty">Nenhum julgador convidado.</td></tr>';
+    SLTAnalysisTable($("ami-analysis-judges").closest("table"));
   }
   function renderResponsesForConsolidation(data) {
     var vazio = '<td class="ami-cell-vazio"></td>';
     $("ami-analysis-responses").innerHTML = julgadoresDoJulgamento(data).map(function (julgador) {
       var r = julgador.resposta, enviada = r && r.status === "enviada";
-      return '<tr' + (enviada ? '' : ' class="is-sem-resposta"') + '><td><input type="checkbox" ' + (enviada ? 'data-analysis-response="' + escapeHtml(r.id) + '" checked' : 'disabled title="Sem resposta enviada"') + '></td>' +
+      return '<tr' + (enviada ? '' : ' class="is-sem-resposta"') + '><td><input type="checkbox" ' + (enviada ? 'data-analysis-response="' + escapeHtml(r.id) + '" ' + (analysisResponseIds.has(String(r.id)) ? 'checked' : '') : 'disabled title="Sem resposta enviada"') + '></td>' +
         '<td class="ami-stats-table__name">' + (julgador.indice >= 0 ? '<strong>J' + (julgador.indice + 1) + '</strong> ' : '') + escapeHtml(julgador.nome || "\u2014") + '</td>' +
         '<td class="ami-stats-table__name">' + escapeHtml(julgador.email) + '</td><td>' + julgador.situacao + '</td>' +
         (enviada ? '<td>' + fmtNumber(r.razao_consistencia) + '</td>' : vazio) +
         (r ? '<td>' + escapeHtml(deadlineLabel(r.iniciadoEm)) + '</td>' : vazio) +
         (enviada ? '<td>' + escapeHtml(deadlineLabel(r.enviadoEm)) + '</td>' : vazio) + '</tr>';
     }).join("") || '<tr><td colspan="7" class="ami-empty">Nenhum julgador convidado.</td></tr>';
+    SLTAnalysisTable($("ami-analysis-responses").closest("table"));
   }
   function renderConsolidatedMatrix(data) {
     var foco = matrizEmFoco(data), criterios = (data.ambiente.criterios || []).map(criterionName);
@@ -361,15 +372,15 @@
       seletor.dataset.bound = "1";
       seletor.addEventListener("change", function () { selectedMeasure = seletor.value; renderFioDerivado(analysisWorkspace); });
     }
-    var homologada = analiseHomologada(data);
+
     $("ami-analysis-matrix-hint").innerHTML = !foco
       ? 'Sem respostas enviadas: ainda n\u00e3o h\u00e1 matriz.'
       : foco.origem === "julgador"
         ? 'Matriz do julgador <strong>' + escapeHtml(foco.rotulo) + '</strong>, exatamente como ele a preencheu. Cada c\u00e9lula responde: quantas vezes o crit\u00e9rio da linha importa mais que o da coluna.'
-        : 'Agrega\u00e7\u00e3o dos julgamentos de todos os julgadores, par a par, pela <strong>' + escapeHtml(foco.rotulo) + '</strong> dos \u00edndices.' +
-          (homologada && selectedMeasure === "geometrica" ? ' Corresponde \u00e0 an\u00e1lise homologada <strong>' + escapeHtml(homologada.nome) + '</strong> (' + escapeHtml(homologada.codigo) + ').' : '');
+        : 'Agrega\u00e7\u00e3o dos julgamentos dos julgadores selecionados, par a par, pela <strong>' + escapeHtml(foco.rotulo) + '</strong> dos \u00edndices.' +
+          ' Pr\u00e9via das respostas selecionadas em 2.6. O resultado homologado est\u00e1 identificado em 2.7.';
     if (!foco) { $("ami-analysis-matrix").innerHTML = '<p class="ami-empty">Sem respostas enviadas.</p>'; return; }
-    $("ami-analysis-matrix").innerHTML = '<div class="matriz-table-wrap"><table class="admin-table ami-stats-table ami-matrix"><thead><tr><th>Crit\u00e9rio</th>' +
+    $("ami-analysis-matrix").innerHTML = '<div class="matriz-table-wrap"><table class="admin-table ami-stats-table ami-matrix" data-table-sort="off"><thead><tr><th>Crit\u00e9rio</th>' +
       criterios.map(function (nome) { return '<th>' + escapeHtml(nome) + '</th>'; }).join("") + '</tr></thead><tbody>' +
       foco.matriz.map(function (linha, i) {
         return '<tr><td class="ami-stats-table__name">' + escapeHtml(criterios[i]) + '</td>' +
@@ -444,7 +455,7 @@
     $("ami-analysis-weight-col").textContent = "Peso";
     $("ami-analysis-weights-hint").innerHTML = !foco ? 'Sem respostas enviadas.' : foco.origem === "julgador"
       ? 'Pesos derivados da matriz de <strong>' + escapeHtml(foco.rotulo) + '</strong>, sem agrega\u00e7\u00e3o \u2014 \u00e9 o julgamento de uma pessoa s\u00f3.'
-      : 'Pesos consolidados a partir dos \u00edndices de todos os julgadores, agregados pela <strong>' + escapeHtml(foco.rotulo) + '</strong>.';
+      : 'Pesos consolidados a partir dos \u00edndices dos julgadores selecionados, agregados pela <strong>' + escapeHtml(foco.rotulo) + '</strong>.';
     $("ami-analysis-criteria").innerHTML = criterios.map(function (nome, indice) {
       return '<tr><td class="ami-stats-table__name" title="' + escapeHtml(nome) + '">' + escapeHtml(nome) + '</td><td><strong>' + (pesos.length ? fmtNumber(pesos[indice]) : "\u2014") + '</strong></td></tr>';
     }).join("") || '<tr><td colspan="2" class="ami-empty">Sem respostas enviadas.</td></tr>';
@@ -454,6 +465,7 @@
           return '<div class="ami-range-chart__row"><span class="ami-range-chart__label" title="' + escapeHtml(nome) + '">' + escapeHtml(nome) + '</span><div class="ami-range-chart__track"><span class="ami-range-chart__span" style="left:0;width:' + Math.max(1, percentual).toFixed(2) + '%"></span></div><strong>' + percentual.toFixed(1) + '%</strong></div>';
         }).join("") + '<figcaption>Participa\u00e7\u00e3o de cada crit\u00e9rio no total dos pesos.</figcaption></figure>'
       : '<p class="ami-empty">Sem respostas enviadas.</p>';
+    SLTAnalysisTable($("ami-analysis-criteria").closest("table"));
   }
   // Tudo que deriva da matriz acompanha a selecao do julgador e da medida.
   function renderFioDerivado(data) {
@@ -508,10 +520,12 @@
   // Consolidacao completa: cada etapa alimenta o modal de processo e o desfecho
   // vai para o semaforo.
   function consolidarRespostas() {
-    if (!analysisWorkspace) return;
-    var selecionadas = Array.from($("ami-analysis-responses").querySelectorAll("[data-analysis-response]:checked")).map(function (item) { return item.dataset.analysisResponse; });
+    if (!analysisWorkspace || analysisSaving) return;
+    var ambienteId = analysisWorkspace.ambiente.id;
+    var selecionadas = Array.from(analysisResponseIds);
     var enviadas = respostasEnviadas(analysisWorkspace).length;
-    var limite = Number($("ami-analysis-rc").value) || 0.1;
+    var limite = Number($("ami-analysis-rc").value);
+    if (!$("ami-analysis-rc").reportValidity()) return;
     var nome = $("ami-analysis-name").value.trim();
     $("ami-analysis-feedback").textContent = "";
     abrirModalProcesso(nome || "An\u00e1lise consolidada");
@@ -524,16 +538,16 @@
     }
     marcarEtapa("selecao", "ok", selecionadas.length + " de " + enviadas + " respostas enviadas entram na consolida\u00e7\u00e3o.");
     marcarEtapa("envio", "andamento");
-    var criada = null;
-    api("/api/ahp/comparacao-colaborativa/ambientes/" + encodeURIComponent(selectedId) + "/analises", {
+    var criada = null; analysisSaving = true; $("ami-analysis-calculate").disabled = true;
+    api("/api/ahp/comparacao-colaborativa/ambientes/" + encodeURIComponent(ambienteId) + "/analises", {
       method: "POST",
-      body: JSON.stringify({ nome: nome, resposta_ids: selecionadas, rc_maximo: limite, excluir_inconsistentes: $("ami-analysis-exclude-inconsistent").checked })
+      body: JSON.stringify({ nome: nome, metodo_agregacao: selectedMeasure, resposta_ids: selecionadas, rc_maximo: limite, excluir_inconsistentes: $("ami-analysis-exclude-inconsistent").checked })
     }).then(function (analise) {
       criada = analise;
-      marcarEtapa("envio", "ok", "Matriz agregada pela m\u00e9dia geom\u00e9trica dos \u00edndices.");
+      marcarEtapa("envio", "ok", "Matriz calculada com o m\u00e9todo selecionado.");
       marcarEtapa("gravacao", "ok", "An\u00e1lise " + (analise.codigo || "") + " gravada no julgamento.");
       marcarEtapa("recarga", "andamento");
-      return api("/api/ahp/comparacao-colaborativa/ambientes/" + encodeURIComponent(selectedId) + "/espaco-analitico");
+      return api("/api/ahp/comparacao-colaborativa/ambientes/" + encodeURIComponent(ambienteId) + "/espaco-analitico");
     }).then(function (data) {
       marcarEtapa("recarga", "ok", "Se\u00e7\u00f5es 2.1 a 2.7 atualizadas.");
       renderAnalysisWorkspace(data);
@@ -562,10 +576,13 @@
       $("ami-analysis-feedback").textContent = erro.message;
       mostrarResultado("vermelha", "Consolida\u00e7\u00e3o n\u00e3o conclu\u00edda", erro.message,
         [["Etapa", pendente ? pendente.titulo : "\u2014"], ["Selecionadas", String(selecionadas.length)]]);
-    });
+    }).finally(function () { analysisSaving = false; $("ami-analysis-calculate").disabled = false; });
   }
   function renderAnalysisWorkspace(data) {
-    analysisWorkspace = data; var a = data.ambiente, p = data.participacao;
+    var same = analysisWorkspace && analysisWorkspace.ambiente.id === data.ambiente.id;
+    var validResponses = respostasEnviadas(data).map(function (r) { return String(r.id); });
+    analysisResponseIds = new Set(same ? validResponses.filter(function (id) { return analysisResponseIds.has(id); }) : validResponses);
+    analysisWorkspace = data; selectedJudgeId = null; var a = data.ambiente, p = data.participacao;
     $("ami-analysis-context").textContent = (a.hierarquizacao_nome || a.hierarquizacao_codigo) + " · " + a.n_criterios + " critérios";
     $("ami-analysis-participation").innerHTML = [["Convidados",p.convidados],["Não iniciados",p.nao_iniciados],["Em preenchimento",p.em_preenchimento],["Enviadas",p.enviadas],["Consistentes",p.consistentes],["Inconsistentes",p.inconsistentes]].map(function (x) { return '<div class="ahp-metric-card"><div class="ahp-metric-card__label">' + x[0] + '</div><div class="ahp-metric-card__value">' + x[1] + '</div></div>'; }).join("");
     renderResponsesForConsolidation(data);
@@ -584,34 +601,59 @@
   ];
   function analiseHomologadaAviso() {
     return '<div class="ami-homologada"><p class="ami-homologada__titulo"><i class="fa-solid fa-circle-check" aria-hidden="true"></i> <strong>Análise homologada</strong></p>' +
-      '<p class="ami-homologada__texto">Os pesos dos critérios estão definidos. Com eles, as três fases do processo global de hierarquização de demandas já podem ser executadas:</p>' +
+      '<p class="ami-homologada__texto">Os pesos homologados pertencem a esta hierarquização e serão aplicados aos critérios correspondentes na fase 3. Cada fase mantém seus próprios requisitos de execução:</p>' +
       '<ol class="ami-homologada__fases">' + FASES_HIERARQUIZACAO.map(function (fase) {
         return '<li><a href="' + fase.href + '"><span class="ami-homologada__num">' + fase.numero + '</span><span><strong>' + fase.nome + '</strong><small>' + fase.resumo + '</small></span><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a></li>';
       }).join("") + '</ol></div>';
   }
   function renderConsolidatedAnalyses(items, homologadaId) {
     $("ami-analysis-consolidations").innerHTML = items.map(function (item) { var official = item.id === homologadaId || item.status === "homologada"; return '<article class="info-card"><h3>' + escapeHtml(item.nome) + ' <small>' + escapeHtml(item.codigo) + '</small></h3><div class="ami-kpis"><div><strong>' + item.respostas_incluidas + '</strong><span>respostas</span></div><div><strong>' + fmtNumber(item.razao_consistencia) + '</strong><span>RC</span></div><div><strong>' + (item.consistente ? "Sim" : "Não") + '</strong><span>consistente</span></div></div><div class="ahp-collab-grid2"><div><h4>Pesos finais</h4><div class="matriz-table-wrap"><table class="admin-table"><thead><tr><th>Critério</th><th>Peso final</th></tr></thead><tbody>' + item.pesos_consolidados.map(function (w,i) { return '<tr><td>' + escapeHtml(criterionName(analysisWorkspace.ambiente.criterios[i], i)) + '</td><td>' + fmtNumber(w) + '</td></tr>'; }).join("") + '</tbody></table></div></div><div><h4>Matriz consolidada</h4>' + analysisMatrixTable(item) + '</div></div>' + (official ? analiseHomologadaAviso() : '<button type="button" class="btn btn-success" data-homologate-analysis="' + escapeHtml(item.id) + '" ' + (!item.consistente ? "disabled" : "") + '>Homologar análise</button>') + '</article>'; }).join("") || '<p class="ami-empty">Nenhuma análise consolidada.</p>';
-    $("ami-analysis-consolidations").querySelectorAll("[data-homologate-analysis]").forEach(function (button) { button.addEventListener("click", function () { api("/api/ahp/comparacao-colaborativa/analises/" + button.dataset.homologateAnalysis + "/homologar", {method:"POST"}).then(function () { openAnalysisWorkspace(); }).catch(function (e) { $("ami-analysis-feedback").textContent=e.message; }); }); });
+    $("ami-analysis-consolidations").querySelectorAll("table:not(.ami-matrix)").forEach(SLTAnalysisTable);
+    $("ami-analysis-consolidations").querySelectorAll("[data-homologate-analysis]").forEach(function (button) { button.addEventListener("click", function () {
+      var ambienteId = analysisWorkspace.ambiente.id;
+      if (button.disabled) return;
+      button.disabled = true;
+      api("/api/ahp/comparacao-colaborativa/analises/" + button.dataset.homologateAnalysis + "/homologar", {method:"POST"})
+        .then(function () { if (analysisWorkspace.ambiente.id === ambienteId) openAnalysisWorkspace(ambienteId); })
+        .catch(function (e) { $("ami-analysis-feedback").textContent=e.message; })
+        .finally(function () { button.disabled = false; });
+    }); });
   }
-  function openAnalysisWorkspace() { if (!selectedId) return; $("ami-analysis-feedback").textContent = "Carregando análise…"; api("/api/ahp/comparacao-colaborativa/ambientes/" + encodeURIComponent(selectedId) + "/espaco-analitico").then(function (data) { $("ami-analysis-feedback").textContent=""; renderAnalysisWorkspace(data); }).catch(function (e) { $("ami-analysis-feedback").textContent=e.message; }); }
+  function openAnalysisWorkspace(ambienteId) {
+    ambienteId = typeof ambienteId === "string" ? ambienteId : selectedId;
+    if (!ambienteId) return;
+    var request = ++analysisRequest;
+    $("ami-analysis-feedback").textContent = "Carregando análise…";
+    api("/api/ahp/comparacao-colaborativa/ambientes/" + encodeURIComponent(ambienteId) + "/espaco-analitico").then(function (data) {
+      if (request !== analysisRequest) return;
+      $("ami-analysis-feedback").textContent=""; renderAnalysisWorkspace(data);
+    }).catch(function (e) { if (request === analysisRequest) $("ami-analysis-feedback").textContent=e.message; });
+  }
   function setEnvironmentMode(mode) {
     environmentMode = mode;
+    draftEditing = mode === "create";
+    draftSnapshot = [];
+    draftPage = 1;
+    $("ami-emails-filter-coluna").value = "";
+    $("ami-emails-filter-valor").value = "";
+    SLTTable.inversion($("ami-emails-filter-inverter"), false);
     var creating = mode === "create", editing = mode === "edit", readonly = mode === "view";
     ["ami-deadline", "ami-emails", "ami-add-emails", "ami-select-all", "ami-delete-emails", "ami-criteria-matrix"].forEach(function (id) { if ($(id)) $(id).disabled = readonly; });
     $("ami-hierarchy").disabled = readonly;
     $("ami-email-list").querySelectorAll("input").forEach(function (input) { input.disabled = readonly; });
     var submit = $("ami-create-form").querySelector('button[type="submit"]'); if (submit) submit.classList.toggle("is-hidden", !creating);
-    $("ami-environment-actions").classList.toggle("is-hidden", creating);
-    $("ami-environment-edit").classList.toggle("is-hidden", editing);
+    syncEnvironmentEditButton();
     $("ami-environment-save").classList.toggle("is-hidden", !editing);
     $("ami-create-cancel").innerHTML = readonly ? '<i class="fas fa-xmark c-btn__icon"></i>Fechar visualização' : editing ? '<i class="fas fa-rotate-left c-btn__icon"></i>Cancelar edição' : "Cancelar";
     $("ami-create-section").classList.toggle("is-readonly", readonly);
+    renderDraftEmails();
   }
-  function showCreateSection() { setEnvironmentMode("create"); $("ami-create-form").reset(); draftEmails = []; criteriaMatrix = null; criteriaMatrixFileBase64 = null; criteriaMatrixFileName = null; renderDraftEmails(); matrixSummary(""); $("ami-hierarchy-summary").textContent = ""; $("ami-create-status").className = "ami-empty"; $("ami-create-status").textContent = "O status será exibido após a confirmação dos colaboradores."; $("ami-email-draft-card").classList.add("is-hidden"); $("ami-create-section").classList.remove("is-hidden"); $("ami-deadline").focus(); $("ami-create-section").scrollIntoView({ behavior: "smooth", block: "start" }); }
+  function showCreateSection() { if (environmentSaving) return; environmentId = null; setEnvironmentMode("create"); $("ami-create-form").reset(); draftEmails = []; criteriaMatrix = null; criteriaMatrixFileBase64 = null; criteriaMatrixFileName = null; renderDraftEmails(); matrixSummary(""); $("ami-hierarchy-summary").textContent = ""; $("ami-create-status").className = "ami-empty"; $("ami-create-status").textContent = "O status será exibido após a confirmação dos colaboradores."; $("ami-email-draft-card").classList.add("is-hidden"); $("ami-create-section").classList.remove("is-hidden"); $("ami-deadline").focus(); $("ami-create-section").scrollIntoView({ behavior: "smooth", block: "start" }); }
   function hideCreateSection() { $("ami-create-section").classList.add("is-hidden"); $("ami-create-feedback").textContent = ""; setEnvironmentMode("create"); }
   function dateInputValue(value) { if (!value) return ""; var date = new Date(value), parts = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(date).reduce(function (result, part) { result[part.type] = part.value; return result; }, {}); return parts.year + "-" + parts.month + "-" + parts.day; }
   function viewSelectedEnvironment() {
-    var judgment = selectedRecord(); if (!judgment || modo !== "espaco") return;
+    var judgment = julgamentos.find(function (j) { return j.id === environmentId; }) || selectedRecord(); if (!judgment || modo !== "espaco") return;
+    environmentId = judgment.id;
     $("ami-deadline").value = dateInputValue(judgment.valido_ate);
     var option = Array.from($("ami-hierarchy").options).find(function (item) { return item.dataset.hierarquizacaoId === String(judgment.hierarquizacao_id || ""); });
     $("ami-hierarchy").value = option ? option.value : "";
@@ -627,28 +669,30 @@
     $("ami-create-section").classList.remove("is-hidden"); $("ami-create-section").scrollIntoView({ behavior: "smooth", block: "start" });
   }
   function editSelectedEnvironment() {
-    if (!selectedRecord() || environmentMode !== "view") return;
+    if (modo !== "espaco" || selectedIds.size !== 1 || !selectedRecord() || editingId) return;
+    environmentId = selectedId; viewSelectedEnvironment();
     setEnvironmentMode("edit");
+    $("ami-edit-emails").click();
     $("ami-create-feedback").textContent = "Edição liberada para hierarquização, prazo e colaboradores.";
     $("ami-deadline").focus();
   }
   function saveSelectedEnvironment() {
-    var judgment = selectedRecord(), feedbackNode = $("ami-create-feedback");
-    if (!judgment || environmentMode !== "edit") return;
-    addDraftEmails();
+    var judgment = julgamentos.find(function (j) { return j.id === environmentId; }), feedbackNode = $("ami-create-feedback");
+    if (!judgment || environmentMode !== "edit" || environmentSaving) return;
+    if (draftEditing) { feedbackNode.textContent = "Confirme a lista de colaboradores antes de salvar o julgamento."; return; }
     if (!draftEmails.length) { feedbackNode.textContent = "Adicione ao menos um colaborador à lista."; return; }
     if (!$("ami-deadline").value) { feedbackNode.textContent = "Informe a data limite da coleta."; return; }
     var selectedHierarchy = $("ami-hierarchy").selectedOptions[0];
     if (!selectedHierarchy || !selectedHierarchy.dataset.hierarquizacaoId) { feedbackNode.textContent = "Selecione a hierarquização."; return; }
     feedbackNode.textContent = "Salvando alterações…";
-    $("ami-environment-save").disabled = true;
+    environmentSaving = true; $("ami-environment-save").disabled = true;
     var updatePayload = { hierarquizacao_id: selectedHierarchy.dataset.hierarquizacaoId, convites: draftEmails.map(function (convite) { return { email: convite.email, nome: convite.nome }; }), valido_ate: deadlineEndOfDay() }; if (criteriaMatrixFileBase64) { updatePayload.arquivo_matriz_base64 = criteriaMatrixFileBase64; updatePayload.arquivo_matriz_nome = criteriaMatrixFileName; }
     api("/api/ahp/comparacao-colaborativa/ambientes/" + encodeURIComponent(judgment.id), { method: "PATCH", body: JSON.stringify(updatePayload) }).then(function (updated) {
       var index = julgamentos.findIndex(function (item) { return item.id === updated.id; });
       if (index >= 0) julgamentos[index] = updated;
       selectedIds.clear(); selectedIds.add(updated.id); updateSelectedId(); render(); viewSelectedEnvironment();
       $("ami-create-feedback").textContent = "Alterações salvas no banco com sucesso.";
-    }).catch(function (err) { feedbackNode.textContent = err.message; }).finally(function () { $("ami-environment-save").disabled = false; });
+    }).catch(function (err) { feedbackNode.textContent = err.message; }).finally(function () { environmentSaving = false; updateDraftControls(); });
   }
   function parseEmails(value) { return Array.from(new Set(value.split(/[\n,;]+/).map(function (v) { return v.trim().toLowerCase(); }).filter(Boolean))); }
   function deadlineLabel(value) { if (!value) return ""; return new Date(value).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }); }
@@ -674,17 +718,63 @@
     link.href = url || "#"; link.textContent = url || "Link indisponível"; card.classList.remove("is-hidden");
   }
   function renderDraftEmails() {
-    $("ami-email-list").innerHTML = draftEmails.length ? draftEmails.map(function (convite, index) { return '<tr><td class="ahp-collab-chk-col"><input type="checkbox" data-draft-index="' + index + '" aria-label="Selecionar ' + escapeHtml(convite.email) + '"></td><td>' + escapeHtml(convite.nome || "Colaborador " + (index + 1)) + '</td><td>' + escapeHtml(convite.email) + '</td><td>' + escapeHtml(formatDeadline()) + '</td></tr>'; }).join("") : '<tr><td colspan="4" class="ami-empty">Nenhum colaborador adicionado.</td></tr>';
+    var column = $("ami-emails-filter-coluna").value, valueSelect = $("ami-emails-filter-valor");
+    var rows = draftEmails.map(function (item, index) { return { item: item, index: index }; });
+    SLTTable.values(valueSelect, rows, function (row) { return draftValue(row, column); });
+    valueSelect.disabled = !column;
+    var value = valueSelect.value;
+    rows = sortDrafts(rows.filter(function (row) { return SLTTable.matches('ami-emails-filter', draftValue(row, column) === value, Boolean(column && value)); }));
+    var result = SLTTable.paginate('ami-emails-pagination', rows, draftPage, function (page) { draftPage = page; renderDraftEmails(); });
+    draftPage = result.page; draftVisibleCount = result.rows.length;
+    $("ami-email-list").innerHTML = result.rows.length ? result.rows.map(function (row) { var convite = row.item, index = row.index; return '<tr><td class="ahp-collab-chk-col"><input type="checkbox" data-draft-index="' + index + '" aria-label="Selecionar ' + escapeHtml(convite.email) + '"></td><td>' + escapeHtml(convite.nome || "Colaborador " + (index + 1)) + '</td><td>' + escapeHtml(convite.email) + '</td><td>' + escapeHtml(formatDeadline()) + '</td></tr>'; }).join("") : '<tr><td colspan="4" class="ami-empty">Nenhum colaborador encontrado.</td></tr>';
     $("ami-select-all").checked = false;
     $("ami-delete-emails").disabled = true;
     $("ami-email-list").querySelectorAll("[data-draft-index]").forEach(function (checkbox) { checkbox.addEventListener("change", updateDraftControls); });
+    if (draftEditing && environmentMode !== "view") {
+      $("ami-email-list").querySelectorAll("tr").forEach(function (row) {
+        var checkbox = row.querySelector('[data-draft-index]');
+        if (!checkbox) return;
+        var index = Number(checkbox.dataset.draftIndex);
+        if (!draftEmails[index]) return;
+        ["nome", "email"].forEach(function (key, column) {
+          var input = document.createElement("input");
+          input.type = key === "email" ? "email" : "text";
+          input.value = draftEmails[index][key] || "";
+          input.className = "ami-collaborator-cell";
+          input.setAttribute("aria-label", (key === "email" ? "E-mail" : "Nome") + " do colaborador " + (index + 1));
+          input.addEventListener("input", function () { draftEmails[index][key] = input.value; });
+          row.cells[column + 1].replaceChildren(input);
+        });
+      });
+    }
+    updateDraftControls();
   }
-  function updateDraftControls() { $("ami-delete-emails").disabled = !$("ami-email-list").querySelector("[data-draft-index]:checked"); }
+  function draftValue(row, column) {
+    if (column === 'nome') return row.item.nome || 'Colaborador ' + (row.index + 1);
+    if (column === 'email') return row.item.email;
+    if (column === 'prazo') return formatDeadline();
+    return '';
+  }
+  function updateDraftControls() {
+    var editing = draftEditing && environmentMode !== "view";
+    ["ami-emails", "ami-add-emails", "ami-select-all", "ami-cancel-emails"].forEach(function (id) { $(id).disabled = !editing; });
+    $("ami-confirm-emails").disabled = !editing || !draftEmails.length;
+    $("ami-edit-emails").disabled = editing || environmentMode === "view";
+    $("ami-delete-emails").disabled = !editing || !$("ami-email-list").querySelector("[data-draft-index]:checked");
+    var boxes = Array.from($("ami-email-list").querySelectorAll("[data-draft-index]"));
+    boxes.forEach(function (box) { box.disabled = !editing; });
+    $("ami-select-all").checked = boxes.length > 0 && boxes.every(function (box) { return box.checked; });
+    $("ami-select-all").indeterminate = boxes.some(function (box) { return box.checked; }) && !$("ami-select-all").checked;
+    SLTTable.summary('ami-emails-count', boxes.filter(function (box) { return box.checked; }).length, draftVisibleCount, draftEmails.length);
+    $("ami-create-form").querySelector('button[type="submit"]').disabled = environmentSaving || draftEditing || !draftEmails.length;
+    $("ami-environment-save").disabled = environmentSaving || draftEditing || !draftEmails.length;
+  }
   function addDraftEmails() {
+    if (!draftEditing || environmentMode === "view") return;
     var incoming = parseConvites($("ami-emails").value);
     incoming.forEach(function (convite) { if (!draftEmails.some(function (item) { return item.email === convite.email; })) draftEmails.push(convite); });
     $("ami-emails").value = "";
-    $("ami-create-feedback").textContent = incoming.length ? "Colaboradores adicionados à lista." : "Informe ao menos um e-mail.";
+    $("ami-emails-feedback").textContent = incoming.length ? "Colaboradores adicionados. Confirme a lista ao terminar." : "Informe ao menos um e-mail.";
     renderDraftEmails();
   }
   // Aceita "Nome <email@dominio>" ou o e-mail puro, um por linha, virgula ou
@@ -727,7 +817,7 @@
   function applyConfiguredVisuals(judgment, host) {
     configuredPairs(judgment).forEach(function (key) {
       var parts = key.split("_").map(Number), inputs = host.querySelectorAll('[data-pair-row="' + parts[0] + '"][data-pair-column="' + parts[1] + '"], [data-pair-row="' + parts[1] + '"][data-pair-column="' + parts[0] + '"]');
-      inputs.forEach(function (input) { var pair = input.closest(".saaty-pair"), cell = input.closest("td"); if (pair) { pair.classList.add("is-pair-configured", "is-auto-validated"); var reciprocalBox = pair.querySelector(".saaty-reciprocal"); if (reciprocalBox) reciprocalBox.classList.add("is-auto-validated"); var status = pair.querySelector(".saaty-auto-status"); if (status) status.innerHTML = '<i class="fas fa-check-circle" aria-hidden="true"></i><span>Par validado</span>'; } if (cell) cell.classList.add("is-pair-configured"); });
+      inputs.forEach(function (input) { var pair = input.closest(".saaty-pair"), cell = input.closest("td"); if (pair) { pair.classList.add("is-pair-configured", "is-auto-validated"); var reciprocalBox = pair.querySelector(".saaty-reciprocal"); if (reciprocalBox) reciprocalBox.classList.add("is-auto-validated"); var status = pair.querySelector(".saaty-auto-status"); if (status) status.innerHTML = '<i class="fas fa-check-circle" aria-hidden="true"></i><span>Par simulado</span>'; } if (cell) cell.classList.add("is-pair-configured"); });
       var reciprocal = host.querySelector('[data-reciprocal="' + parts[0] + '-' + parts[1] + '"]'); if (reciprocal) reciprocal.classList.add("is-auto-validated");
     });
   }
@@ -761,11 +851,11 @@
   function nearestFormStep(value) { var best = 4, difference = Infinity; FORM_SAATY_STEPS.forEach(function (step, index) { var current = Math.abs(Math.log(step.v) - Math.log(value)); if (current < difference) { best = index; difference = current; } }); return best; }
   function buildSaatyFormPair(row, column, criteria, value) {
     var id = row + "_" + column, ticks = FORM_SAATY_STEPS.map(function (step, index) { return '<div class="saaty-tick" style="left:' + ((index / 8) * 100) + '%"><span class="saaty-tick-val">' + step.label + '</span><span class="saaty-tick-desc">' + step.desc + '</span><span class="saaty-tick-mark"></span></div>'; }).join("");
-    return '<div class="saaty-pair" data-i="' + row + '" data-j="' + column + '"><div class="saaty-controller-title" title="' + escapeHtml(criteria[row]) + '"><strong>' + escapeHtml(criteria[row]) + '</strong></div><div class="saaty-auto-status" aria-live="polite"><i class="fas fa-pen" aria-hidden="true"></i><span>Pronto para julgamento</span></div><div class="saaty-widget"><div class="saaty-scale" data-pid="' + id + '" tabindex="0" role="slider" aria-valuemin="0" aria-valuemax="8" aria-valuenow="4" aria-label="Comparação entre ' + escapeHtml(criteria[row]) + " e " + escapeHtml(criteria[column]) + '"><div class="saaty-arrow"></div><div class="saaty-rail">' + ticks + '<div class="saaty-handle"></div></div></div><div class="saaty-dir"><span><i class="fas fa-arrow-left"></i> Menos importante</span><span>Mais importante <i class="fas fa-arrow-right"></i></span></div></div><div class="saaty-criteria"><span class="saaty-crit saaty-crit--left"><span class="saaty-crit__tag">1</span><span class="saaty-crit__name">' + escapeHtml(criteria[row]) + '</span></span><span class="saaty-vs">vs</span><span class="saaty-crit saaty-crit--right"><span class="saaty-crit__tag">2</span><span class="saaty-crit__name">' + escapeHtml(criteria[column]) + '</span></span></div><div class="saaty-readout"></div><div class="saaty-reciprocal" aria-live="polite"><span class="saaty-reciprocal__label"><i class="fas fa-rotate" aria-hidden="true"></i> Valor oposto aplicado automaticamente</span><span class="saaty-reciprocal__value">1</span><span class="saaty-reciprocal__text"></span></div><input type="hidden" data-pair-row="' + row + '" data-pair-column="' + column + '" value="' + value + '"></div>';
+    return '<div class="saaty-pair" data-i="' + row + '" data-j="' + column + '"><div class="saaty-controller-title" title="' + escapeHtml(criteria[row]) + '"><strong>' + escapeHtml(criteria[row]) + '</strong></div><div class="saaty-auto-status" aria-live="polite"><i class="fas fa-pen" aria-hidden="true"></i><span>Pronto para simulação</span></div><div class="saaty-widget"><div class="saaty-scale" data-pid="' + id + '" tabindex="0" role="slider" aria-valuemin="0" aria-valuemax="8" aria-valuenow="4" aria-label="Comparação entre ' + escapeHtml(criteria[row]) + " e " + escapeHtml(criteria[column]) + '"><div class="saaty-arrow"></div><div class="saaty-rail">' + ticks + '<div class="saaty-handle"></div></div></div><div class="saaty-dir"><span><i class="fas fa-arrow-left"></i> Menos importante</span><span>Mais importante <i class="fas fa-arrow-right"></i></span></div></div><div class="saaty-criteria"><span class="saaty-crit saaty-crit--left"><span class="saaty-crit__tag">1</span><span class="saaty-crit__name">' + escapeHtml(criteria[row]) + '</span></span><span class="saaty-vs">vs</span><span class="saaty-crit saaty-crit--right"><span class="saaty-crit__tag">2</span><span class="saaty-crit__name">' + escapeHtml(criteria[column]) + '</span></span></div><div class="saaty-readout"></div><div class="saaty-reciprocal" aria-live="polite"><span class="saaty-reciprocal__label"><i class="fas fa-rotate" aria-hidden="true"></i> Valor oposto aplicado automaticamente</span><span class="saaty-reciprocal__value">1</span><span class="saaty-reciprocal__text"></span></div><input type="hidden" data-pair-row="' + row + '" data-pair-column="' + column + '" value="' + value + '"></div>';
   }
   function wireSaatyFormPair(pair, judgment, criteria) {
     var scale = pair.querySelector(".saaty-scale"), rail = pair.querySelector(".saaty-rail"), handle = pair.querySelector(".saaty-handle"), input = pair.querySelector("[data-pair-row]"), status = pair.querySelector(".saaty-auto-status"), row = Number(input.dataset.pairRow), column = Number(input.dataset.pairColumn), index = nearestFormStep(Number(input.value) || 1), dragging = false, validationTimer = null;
-    function validateCard(target, automatic) { var targetStatus = target.querySelector(".saaty-auto-status"), targetReciprocal = target.querySelector(".saaty-reciprocal"); target.classList.remove("is-auto-editing"); target.classList.add("is-auto-validated", "is-pair-configured"); if (targetReciprocal) { targetReciprocal.classList.remove("is-auto-validating"); targetReciprocal.classList.add("is-auto-validated"); } if (targetStatus) targetStatus.innerHTML = '<i class="fas fa-check-circle" aria-hidden="true"></i><span>' + (automatic ? "Card oposto configurado e validado automaticamente" : "Par e valor oposto validados automaticamente") + "</span>"; }
+    function validateCard(target, automatic) { var targetStatus = target.querySelector(".saaty-auto-status"), targetReciprocal = target.querySelector(".saaty-reciprocal"); target.classList.remove("is-auto-editing"); target.classList.add("is-auto-validated", "is-pair-configured"); if (targetReciprocal) { targetReciprocal.classList.remove("is-auto-validating"); targetReciprocal.classList.add("is-auto-validated"); } if (targetStatus) targetStatus.innerHTML = '<i class="fas fa-check-circle" aria-hidden="true"></i><span>' + (automatic ? "Card oposto simulado automaticamente" : "Par e valor oposto simulados automaticamente") + "</span>"; }
     function scheduleVisualValidation() { var reciprocalBox = pair.querySelector(".saaty-reciprocal"), reciprocal = pairwiseMatrix(judgment)[column][row], oppositePair = document.querySelector('.saaty-pair[data-i="' + column + '"][data-j="' + row + '"]'); if (oppositePair && oppositePair._applySaaty) oppositePair._applySaaty(nearestFormStep(reciprocal)); clearTimeout(validationTimer); markPairConfigured(judgment, row, column); updateLiveMetrics(judgment); pair.classList.remove("is-auto-validated"); pair.classList.add("is-auto-editing"); reciprocalBox.classList.remove("is-auto-validated"); reciprocalBox.classList.add("is-auto-validating"); if (oppositePair) { oppositePair.classList.remove("is-auto-validated"); oppositePair.classList.add("is-auto-editing"); } status.innerHTML = '<i class="fas fa-pen" aria-hidden="true"></i><span>Julgamento em edição · card oposto sincronizado</span>'; validationTimer = setTimeout(function () { validateCard(pair, false); if (oppositePair) validateCard(oppositePair, true); }, 700); }
     function apply(next, persist) { index = Math.max(0, Math.min(8, next)); var step = FORM_SAATY_STEPS[index], reciprocal = 1 / step.v, colors = ["#7b1a1a", "#c0392b", "#d96b61", "#f4a7a0", "#7b8794", "#a9cdec", "#5b9bd5", "#2f6fad", "#0d3b66"], readout = pair.querySelector(".saaty-readout"), reciprocalBox = pair.querySelector(".saaty-reciprocal"); handle.style.left = ((index / 8) * 100) + "%"; handle.style.backgroundColor = colors[index]; scale.setAttribute("aria-valuenow", String(index)); if (persist !== false) { input.value = String(step.v); pairwiseMatrix(judgment)[row][column] = step.v; pairwiseMatrix(judgment)[column][row] = reciprocal; scheduleVisualValidation(); } pair.classList.toggle("saaty-pair--equal", index === 4); pair.classList.toggle("saaty-pair--filled", index !== 4); readout.textContent = index === 4 ? "“" + criteria[row] + "” tem igual importância que “" + criteria[column] + "” (1)" : "“" + criteria[row] + "” é " + step.desc.toLowerCase() + (index > 4 ? " mais" : " menos") + " importante que “" + criteria[column] + "” (" + step.label + ")"; readout.className = "saaty-readout saaty-readout--" + (index === 4 ? "eq" : index > 4 ? "pos" : "neg"); pair.querySelector(".saaty-reciprocal__value").textContent = saatyLabel(reciprocal); pair.querySelector(".saaty-reciprocal__text").textContent = criteria[column] + " em relação a " + criteria[row] + " = " + saatyLabel(reciprocal); reciprocalBox.classList.remove("is-positive", "is-negative", "is-equal"); reciprocalBox.classList.add(index > 4 ? "is-negative" : index < 4 ? "is-positive" : "is-equal"); }
     pair._applySaaty = function (next) { input.value = String(FORM_SAATY_STEPS[Math.max(0, Math.min(8, next))].v); apply(next, false); };
@@ -796,19 +886,24 @@
     return fetch(appUrl("restrict", "/ahp/comparacao/"), { credentials: "same-origin" }).then(function (response) { if (!response.ok) throw new Error("Não foi possível carregar a escala de Saaty."); return response.text(); }).then(function (html) {
       var source = new DOMParser().parseFromString(html, "text/html").querySelector("#saaty-scale-subcard"); if (!source) throw new Error("A subseção Escala de Intensidade de Importância não foi encontrada.");
       host.replaceChildren(source.cloneNode(true)); host.dataset.loaded = "true";
-      var scaleIndex = host.querySelector(".ahp-subsection-num"); if (scaleIndex) { scaleIndex.textContent = "2.1"; scaleIndex.classList.remove("ahp-subsection-num--roman"); }
+      var scaleIndex = host.querySelector(".ahp-subsection-num"); if (scaleIndex) { scaleIndex.textContent = "3.1"; scaleIndex.classList.remove("ahp-subsection-num--roman"); }
       var toggle = host.querySelector("#saaty-scale-toggle"), extras = host.querySelectorAll(".saaty-scale-extra"), icon = host.querySelector("#saaty-scale-chevron i");
       function toggleScale() { var expanded = toggle.getAttribute("aria-expanded") !== "true"; toggle.setAttribute("aria-expanded", String(expanded)); extras.forEach(function (element) { element.classList.toggle("is-hidden", !expanded); }); if (icon) { icon.classList.toggle("fa-chevron-down", !expanded); icon.classList.toggle("fa-chevron-up", expanded); } }
       toggle.addEventListener("click", toggleScale); toggle.addEventListener("keydown", function (event) { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); toggleScale(); } });
     }).catch(function (error) { host.innerHTML = '<p class="ami-feedback">' + escapeHtml(error.message) + "</p>"; });
   }
   function syncPairwiseButtons() { [$("ami-judgments-matrix-action"), $("ami-judgments-form-action")].forEach(function (button) { if (!button) return; var enabled = modo === "espaco" && Boolean(selectedId) && !editingId; button.disabled = !enabled; button.classList.toggle("is-disabled", !enabled); button.classList.toggle("is-hidden", modo !== "espaco"); }); }
-  function syncViewButton() { var button = $("ami-judgments-view-action"); if (!button) return; var enabled = ["espaco","julgamentos"].includes(modo) && Boolean(selectedId) && !editingId; button.disabled = !enabled; button.classList.toggle("is-disabled", !enabled); }
+  function syncEnvironmentEditButton() {
+    var button = $("ami-environment-edit"); if (!button) return;
+    var enabled = modo === "espaco" && selectedIds.size === 1 && selectedRecord()?.status === "ativa" && !editingId && !environmentSaving;
+    button.disabled = !enabled; button.classList.toggle("is-disabled", !enabled);
+  }
+  function syncViewButton() { syncEnvironmentEditButton(); var button = $("ami-judgments-view-action"); if (!button) return; var enabled = ["espaco","julgamentos"].includes(modo) && Boolean(selectedId) && !editingId; button.disabled = !enabled; button.classList.toggle("is-disabled", !enabled); }
   function createViewButton() {
     if (!["espaco","julgamentos"].includes(modo) || $("ami-judgments-view-action")) return;
     var toolbar = document.querySelector(".ami-table-actions"), edit = $("ami-judgments-edit-action"), button = document.createElement("button");
     button.className = "admin-icon-btn is-disabled"; button.id = "ami-judgments-view-action"; button.type = "button"; button.title = modo === "julgamentos" ? "Analisar respostas do julgamento" : "Visualizar ambiente colaborativo"; button.setAttribute("aria-label", button.title); button.disabled = true; button.innerHTML = '<i class="fa-solid fa-eye" aria-hidden="true"></i>';
-    toolbar.insertBefore(button, edit); button.addEventListener("click", modo === "julgamentos" ? openAnalysisWorkspace : viewSelectedEnvironment);
+    toolbar.insertBefore(button, edit); button.addEventListener("click", modo === "julgamentos" ? openAnalysisWorkspace : function () { environmentId = selectedId; viewSelectedEnvironment(); });
   }
   function feedback(message, isError) { var node = $("ami-judgments-feedback"); node.textContent = message || ""; node.classList.toggle("is-error", Boolean(isError)); }
   function selectedRecord() { var source = modo === "julgamentos" ? respostasCentral : julgamentos; return source.find(function (item) { return item.id === selectedId; }); }
@@ -895,10 +990,41 @@
     $("ami-judgments-save-action").addEventListener("click", saveInlineEdit);
     $("ami-judgments-cancel-action").addEventListener("click", cancelInlineEdit);
     $("ami-judgments-delete-action").addEventListener("click", deleteSelected);
-    $("ami-environment-edit").addEventListener("click", editSelectedEnvironment);
+    if ($("ami-environment-edit")) $("ami-environment-edit").addEventListener("click", editSelectedEnvironment);
     $("ami-environment-save").addEventListener("click", saveSelectedEnvironment);
     $("ami-create-cancel").addEventListener("click", function () { if (environmentMode === "edit") viewSelectedEnvironment(); else hideCreateSection(); });
     $("ami-add-emails").addEventListener("click", addDraftEmails);
+    $("ami-edit-emails").addEventListener("click", function () {
+      if (environmentMode === "view" || draftEditing) return;
+      draftSnapshot = draftEmails.map(function (item) { return Object.assign({}, item); });
+      draftEditing = true;
+      $("ami-emails-feedback").textContent = "Edite os colaboradores e confirme a lista ao terminar.";
+      renderDraftEmails();
+    });
+    $("ami-cancel-emails").addEventListener("click", function () {
+      if (!draftEditing || environmentMode === "view") return;
+      draftEmails = draftSnapshot.map(function (item) { return Object.assign({}, item); });
+      draftEditing = false;
+      $("ami-emails").value = "";
+      $("ami-emails-feedback").textContent = "Edição cancelada. Lista anterior restaurada.";
+      renderDraftEmails();
+    });
+    $("ami-confirm-emails").addEventListener("click", function () {
+      if (!draftEditing || environmentMode === "view") return;
+      var normalized = draftEmails.map(function (item) { return { nome: (item.nome || "").trim() || null, email: item.email.trim().toLowerCase() }; });
+      if (!normalized.length || normalized.some(function (item) { return !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(item.email); })) {
+        $("ami-emails-feedback").textContent = "Informe um e-mail válido para cada colaborador."; return;
+      }
+      if (new Set(normalized.map(function (item) { return item.email; })).size !== normalized.length) {
+        $("ami-emails-feedback").textContent = "Há e-mails repetidos. Corrija a lista antes de confirmar."; return;
+      }
+      draftEmails = normalized;
+      draftSnapshot = normalized.map(function (item) { return Object.assign({}, item); });
+      draftEditing = false;
+      $("ami-emails").value = "";
+      $("ami-emails-feedback").textContent = "Lista confirmada. Conclua o cadastro ou salve as alterações do julgamento.";
+      renderDraftEmails();
+    });
     $("ami-deadline").addEventListener("change", renderDraftEmails);
     $("ami-select-all").addEventListener("change", function () { var checked = this.checked; $("ami-email-list").querySelectorAll("[data-draft-index]").forEach(function (checkbox) { checkbox.checked = checked; }); updateDraftControls(); });
     $("ami-delete-emails").addEventListener("click", function () { var selected = Array.from($("ami-email-list").querySelectorAll("[data-draft-index]:checked")).map(function (checkbox) { return Number(checkbox.dataset.draftIndex); }); draftEmails = draftEmails.filter(function (_email, index) { return !selected.includes(index); }); renderDraftEmails(); });
@@ -907,26 +1033,42 @@
     $("ami-create-form").addEventListener("submit", function (event) {
       event.preventDefault();
       var feedback = $("ami-create-feedback");
+      if (environmentMode !== "create" || environmentSaving) return;
+      if (draftEditing) { feedback.textContent = "Confirme a lista de colaboradores antes de cadastrar o julgamento."; return; }
       if (!draftEmails.length) { feedback.textContent = "Adicione ao menos um colaborador à lista."; return; }
       if (!$("ami-deadline").value) { feedback.textContent = "Informe a data limite da coleta."; return; }
       if (matrixRows(criteriaMatrix).length < 2) { feedback.textContent = "Selecione uma hierarquização com matriz cadastrada de ao menos dois critérios."; return; }
       feedback.textContent = "Criando ambiente colaborativo…";
       var selectedHierarchy = $("ami-hierarchy").selectedOptions[0];
+      if (julgamentos.some(function (j) { return j.status === "ativa" && j.hierarquizacao_id === selectedHierarchy.dataset.hierarquizacaoId; }) && !window.confirm("Esta hierarquiza\u00e7\u00e3o possui um julgamento aberto. Criar uma nova rodada encerrar\u00e1 a coleta anterior. Continuar?")) return;
+      environmentSaving = true; updateDraftControls();
       api("/api/ahp/comparacao-colaborativa/ambientes", { method: "POST", body: JSON.stringify({ hierarquizacao_id: selectedHierarchy.dataset.hierarquizacaoId, convites: draftEmails.map(function (convite) { return { email: convite.email, nome: convite.nome }; }), valido_ate: deadlineEndOfDay() }) }).then(function (j) {
         julgamentos.unshift(j); currentPage = 1; selectedIds.clear(); selectedIds.add(j.id); updateSelectedId(); render();
         var links = actionLinks(j);
         $("ami-create-status").className = "ami-create-success";
         $("ami-create-status").innerHTML = '<strong>Ambiente colaborativo criado.</strong><span>Situação: ' + escapeHtml(statusLabel(j.status)) + '</span><span>Data limite: ' + escapeHtml(deadlineLabel(j.valido_ate)) + '</span><div class="ami-actions"><a class="btn btn-primary" href="' + escapeHtml(links.workspace) + '">Abrir espaço do julgamento</a><a class="btn btn-secondary" href="' + escapeHtml(links.public) + '">Abrir formulário público</a></div>';
-        renderEmailDraft(j);
+        environmentId = j.id; viewSelectedEnvironment();
         feedback.textContent = "Colaboradores confirmados e ambiente criado.";
-      }).catch(function (err) { feedback.textContent = err.message; });
+      }).catch(function (err) { feedback.textContent = err.message; }).finally(function () { environmentSaving = false; updateDraftControls(); });
     });
-    $("ami-copy-email-link").addEventListener("click", function () { var judgment = julgamentos.find(function (item) { return item.id === selectedId; }), url = persistentPublicUrl(judgment); if (url && navigator.clipboard) navigator.clipboard.writeText(url); });
+    $("ami-copy-email-link").addEventListener("click", function () { var judgment = julgamentos.find(function (item) { return item.id === environmentId; }), url = persistentPublicUrl(judgment); if (url && navigator.clipboard) navigator.clipboard.writeText(url); });
     $("ami-open-mail").addEventListener("click", function () { var body = $("ami-email-template").dataset.message || $("ami-email-template").textContent; location.href = "mailto:" + draftEmails.map(function (convite) { return convite.email; }).join(",") + "?subject=" + encodeURIComponent("Convite para preenchimento colaborativo AHP (SAD/SLT)") + "&body=" + encodeURIComponent(body); });
+    $("ami-analysis-responses").addEventListener("change", function (event) {
+      var id = event.target.dataset.analysisResponse; if (!id) return;
+      if (event.target.checked) analysisResponseIds.add(id); else analysisResponseIds.delete(id);
+      selectedJudgeId = null; renderPairsSection();
+    });
+    ["ami-analysis-rc", "ami-analysis-exclude-inconsistent"].forEach(function (id) { $(id).addEventListener("change", function () { if (analysisWorkspace) renderFioDerivado(analysisWorkspace); }); });
     $("ami-analysis-calculate").addEventListener("click", consolidarRespostas);
     document.querySelectorAll("[data-result-close]").forEach(function (botao) { botao.addEventListener("click", fecharModalResultado); });
     $("ami-result-modal").addEventListener("click", function (evento) { if (evento.target === $("ami-result-modal")) fecharModalResultado(); });
     document.addEventListener("keydown", function (evento) { if (evento.key === "Escape") fecharModalResultado(); });
+    [['nome','Colaboradores'],['email','Email'],['prazo','Data limite']].forEach(function (entry) { $('ami-emails-filter-coluna').add(new Option(entry[1],entry[0])); });
+    function filterDrafts() { draftPage = 1; renderDraftEmails(); }
+    $('ami-emails-filter-coluna').onchange = function () { $('ami-emails-filter-valor').value = ''; filterDrafts(); };
+    $('ami-emails-filter-valor').onchange = filterDrafts;
+    SLTTable.bindFilter('ami-emails-filter', filterDrafts, function () { $('ami-emails-filter-coluna').value = ''; $('ami-emails-filter-valor').value = ''; });
+    sortDrafts = SLTTable.sorting($('ami-email-list').closest('table'), function () { return [null].concat(['nome','email','prazo'].map(function (key) { return function (row) { return draftValue(row,key); }; })); }, filterDrafts);
     renderDraftEmails();
   });
 })();

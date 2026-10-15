@@ -127,7 +127,7 @@ def get_connection() -> Generator[ConnectionDict, None, None]:
         with _borrow(dsn) as conn:
             try:
                 yield conn
-                conn.commit()
+                commit_unless_atomic(conn)
             except Exception:
                 conn.rollback()
                 raise
@@ -135,3 +135,30 @@ def get_connection() -> Generator[ConnectionDict, None, None]:
         raise
     except Exception as exc:
         raise DatabaseUnavailableError(f"Falha ao conectar ao banco SLT: {exc}") from exc
+
+
+def commit_unless_atomic(conn: ConnectionDict) -> None:
+    """Adia commits dos repositórios durante uma unidade de trabalho explícita."""
+    if not getattr(_thread_connections, "atomic", False):
+        conn.commit()
+
+
+@contextmanager
+def atomic_connection() -> Generator[ConnectionDict, None, None]:
+    """Confirma a unidade de trabalho apenas após todos os repositórios concluírem."""
+    dsn = get_settings().slt_database_url
+    if not dsn:
+        raise DatabaseUnavailableError("SLT_DATABASE_URL não configurada.")
+    with _borrow(dsn) as conn:
+        previous = getattr(_thread_connections, "atomic", False)
+        _thread_connections.atomic = True
+        try:
+            yield conn
+        except Exception:
+            conn.rollback()
+            raise
+        else:
+            if not previous:
+                conn.commit()
+        finally:
+            _thread_connections.atomic = previous

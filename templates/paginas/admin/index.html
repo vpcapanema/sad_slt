@@ -125,12 +125,8 @@
           {{ group_heading('group-mad', 'MAD', 'Apoio à decisão e hierarquização', 'Processos, critérios e prioridades.') }}
           <div class="platform-subgroups">
             <div class="platform-subgroup subgroup-agrupamento-demandas-extracao-atributos">
-              <h3 class="platform-subgroup__title">Agrupamento de Demandas e Extração de atributos</h3>
+              <h3 class="platform-subgroup__title">Extração de atributos</h3>
               <div class="platform-grid">
-                <a href="/restrict/agrupamento-demandas/" class="platform-tile platform-tile--teal" title="Agrupamento de demandas">
-                  <span class="platform-tile__icon"><i class="fa-solid fa-object-group" aria-hidden="true"></i></span>
-                  <span class="platform-tile__label">Agrupamento de demandas</span>
-                </a>
                 {{ link_card('/restrict/geoespacial/extracoes-atributos/', 'fa-solid fa-layer-group', 'Extração de atributos', 'teal') }}
                 {{ link_card('/restrict/geoespacial/gerador-camadas-territoriais/', 'fa-solid fa-city', 'Tributação de camadas territoriais', 'teal') }}
               </div>
@@ -138,6 +134,7 @@
             <div class="platform-subgroup subgroup-analise-multicriterio-ahp-e-obtencao-de-pesos">
               <h3 class="platform-subgroup__title">Análise Multicritério (AHP) e obtenção de pesos</h3>
               <div class="platform-grid">
+                {{ link_card('/restrict/agrupamento-demandas/', 'fa-solid fa-object-group', 'Agrupamento de demandas', 'amber') }}
                 {{ link_card('/restrict/hierarquizacao/processos/', 'fa-solid fa-diagram-project', 'Central de hierarquização', 'amber') }}
                 {{ link_card('/restrict/analise-multicriterio/?modo=espaco', 'fa-solid fa-people-group', 'Central de julgamentos', 'amber') }}
                 {{ link_card('/restrict/analise-multicriterio/?modo=julgamentos', 'fa-solid fa-list-check', 'Central de respostas', 'amber') }}

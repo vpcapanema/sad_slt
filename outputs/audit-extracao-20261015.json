@@ -1,0 +1,45 @@
+{
+  "recoveredMapLayers": [
+    "output"
+  ],
+  "recoveredResult": "saved",
+  "resultAfterMapEvent": {
+    "id": "saved",
+    "modo": "enriquecimento",
+    "camadas": {
+      "saida": {
+        "bancada": {
+          "id": "output",
+          "nome": "output",
+          "tipo": "vetor",
+          "status_validacao": "valida",
+          "representacao": "tiles",
+          "tiles_url": "http://fixture/tiles",
+          "revisao": "output",
+          "feicoes": 1,
+          "campos": [
+            "id"
+          ],
+          "metadados_local": {
+            "identificacao": {
+              "total": 1,
+              "completa": true,
+              "campos": [
+                {
+                  "nome": "id",
+                  "nulos": 0
+                }
+              ],
+              "sugestao": "id"
+            }
+          }
+        }
+      }
+    },
+    "dicionario": []
+  },
+  "validatedWithOnlyFirstChecked": [
+    "a"
+  ],
+  "errors": []
+}

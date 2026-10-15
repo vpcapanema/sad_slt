@@ -15,7 +15,10 @@
 <main class="conteudo-principal app-main ahp-main">
 		<section class="card-collab-context secao-collab-context card ahp-step-section">
 			<div class="ahp-section-label"><i class="fas fa-compass"></i><span>Contextualização</span></div>
-			<div class="ahp-section-body" id="collab-context"></div>
+			<div class="ahp-section-body">
+				<p class="step-intro"><i class="fas fa-circle-info" aria-hidden="true"></i> Sua participação consiste em indicar a intensidade de importância entre os critérios apresentados. Essas comparações serão consolidadas para calcular os pesos dos critérios. Após a homologação, a fase 3 da hierarquização aplica esses pesos aos valores de cada demanda nos critérios correspondentes para calcular sua prioridade.</p>
+				<div id="collab-context"></div>
+			</div>
 		</section>
 		<section class="card-colab-nome secao-colab-nome card ahp-step-section">
 			<div class="ahp-section-label"><i class="fas fa-id-card"></i><span>Identificação</span></div>
@@ -31,6 +34,7 @@
 		<section class="card-collab-form-section secao-collab-form-section card ahp-step-section is-hidden" id="collab-form-section">
 			<div class="ahp-section-label"><i class="fas fa-scale-balanced"></i><span>Comparação pareada</span></div>
 			<div class="ahp-section-body">
+				<p class="step-intro"><i class="fas fa-circle-info" aria-hidden="true"></i> Para cada par, indique qual critério é mais importante para o objetivo desta análise e com que intensidade. Se ambos tiverem a mesma importância, escolha 1 (igual importância).</p>
 				<div id="liveMetrics" class="ahp-live-metrics is-initial">
 					<div class="ahp-metric-card"><div class="ahp-metric-card__label">RC</div><div class="ahp-metric-card__value" id="metricRCValue">—</div></div>
 					<div class="ahp-metric-card"><div class="ahp-metric-card__label">IC</div><div class="ahp-metric-card__value" id="metricICValue">—</div></div>

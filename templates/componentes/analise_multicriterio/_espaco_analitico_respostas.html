@@ -2,6 +2,7 @@
   <div class="ahp-section-label"><span class="ahp-section-index-icon">2</span><span>Espaço analítico do julgamento</span></div>
   <div class="ahp-section-body">
     <div id="ami-analysis-context" class="step-intro"></div>
+    <p class="step-intro"><i class="fas fa-circle-info" aria-hidden="true"></i> As respostas expressam a intensidade de importância entre os critérios. A consolidação dessas comparações calcula os pesos dos critérios. Ao homologar uma análise, seus pesos passam a ser utilizados na fase 3 da hierarquização vinculada, aplicada aos valores de cada demanda nos critérios correspondentes.</p>
     <div class="ahp-live-metrics ami-live-metrics" id="ami-analysis-participation"></div>
 
     <section class="ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">2.1</span><span>Julgadores</span></div>
@@ -38,7 +39,7 @@
       <p class="ami-subsection-hint">Gravar o resultado: escolha quais respostas entram e salve a análise consolidada do julgamento. Quem ainda não enviou aparece na lista, mas não pode ser incluído.</p>
       <div class="ahp-section-body">
         <div class="matriz-table-wrap"><table class="admin-table ami-stats-table ami-table--respostas"><thead><tr><th>Incluir</th><th>Julgador</th><th>E-mail</th><th>Situação</th><th>RC</th><th>Início</th><th>Envio</th></tr></thead><tbody id="ami-analysis-responses"></tbody></table></div>
-        <div class="ahp-collab-grid2"><div class="c-form-group"><label class="c-form-label" for="ami-analysis-name">Nome da análise</label><input class="c-form-control" id="ami-analysis-name" value="Análise com as respostas selecionadas"></div><div class="c-form-group"><label class="c-form-label" for="ami-analysis-rc">RC máximo individual</label><input class="c-form-control" id="ami-analysis-rc" type="number" min="0.001" max="1" step="0.01" value="0.10"></div></div><label><input id="ami-analysis-exclude-inconsistent" type="checkbox" checked> Excluir respostas inconsistentes</label><div class="ahp-form-actions"><button type="button" class="btn btn-primary" id="ami-analysis-calculate"><i class="fas fa-calculator"></i> Calcular e salvar análise</button></div><p id="ami-analysis-feedback" class="ami-feedback" role="status"></p>
+        <div class="ahp-collab-grid2"><div class="c-form-group"><label class="c-form-label" for="ami-analysis-name">Nome da análise</label><input class="c-form-control" id="ami-analysis-name" value="Análise com as respostas selecionadas"></div><div class="c-form-group"><label class="c-form-label" for="ami-analysis-rc">RC máximo individual</label><input class="c-form-control" id="ami-analysis-rc" type="number" min="0.001" max="1" step="0.001" value="0.10"></div></div><label><input id="ami-analysis-exclude-inconsistent" type="checkbox" checked> Excluir respostas inconsistentes</label><div class="ahp-form-actions"><button type="button" class="btn btn-primary" id="ami-analysis-calculate"><i class="fas fa-calculator"></i> Calcular e salvar análise</button></div><p id="ami-analysis-feedback" class="ami-feedback" role="status"></p>
       </div>
     </section>
     <section class="ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">2.7</span><span>An&aacute;lises consolidadas e pesos finais</span></div>

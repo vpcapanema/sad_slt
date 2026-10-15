@@ -138,6 +138,12 @@ def analisar(linhas, dicionario, categorias=(), *, categoria='', base='', origem
                           'n': n, 'ultimo': i == n_bins - 1} for i, n in enumerate(counts)]
     def sort_key(pair):
         value = pair[1].get(campo) if ordem == 'valor' else origens.get(identidade(pair[1]), str(pair[0]))
+        if ordem == 'registro':
+            value = pair[1].get('id_registro', pair[0] + 1)
+        elif ordem.startswith('base:'):
+            index = int(ordem.split(':', 1)[1])
+            fields = list(selected_groups.values())
+            value = correspondencia(pair[1], fields[index]) if index < len(fields) else None
         return (not presente(value), 0 if isinstance(value, (int, float)) else 1,
                 value if isinstance(value, (int, float)) and presente(value) else str(value).casefold())
     filtered.sort(key=sort_key, reverse=descendente)

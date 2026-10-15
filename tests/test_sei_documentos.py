@@ -5,6 +5,7 @@ SEI é usado. O banco é substituído por um repositório em memória — o obje
 aqui é o contrato do serviço e das rotas, não o SQL.
 """
 import io
+from contextlib import nullcontext
 from types import SimpleNamespace
 from uuid import uuid4
 
@@ -97,6 +98,8 @@ class RepositorioFalso:
 
 @pytest.fixture
 def repo(monkeypatch):
+    monkeypatch.setattr(rotas, "atomic_connection", nullcontext)
+    monkeypatch.setattr(servico, "bloquear_registro", lambda conn, documento_id: None)
     falso = RepositorioFalso()
     monkeypatch.setattr(servico, "repo", falso)
     # O identificador é UUID real; a trava por documento não deve vazar entre testes.
@@ -917,6 +920,7 @@ def test_criacao_valida_payload_e_nao_duplica(repo, monkeypatch):
     assert len(chamadas) == 1
     assert segunda.json() == {"id": "I-PRJ-SEI-12345678", "ja_existia": True}
     assert f"Processo SEI: {documento['numero_processo']}" in chamadas[0].descricao
+    assert chamadas[0].origem_sei_processo == documento["numero_processo"]
     assert repo.obter(documento["id"])["status"] == "demanda_criada"
 
 
@@ -932,7 +936,7 @@ def test_status_do_payload_e_ignorado(repo, monkeypatch):
     assert chamadas[0].status != "aprovada"
 
 
-def test_documento_sem_numero_usa_o_arquivo_como_origem(repo, monkeypatch):
+def test_documento_sem_numero_exige_conferencia(repo, monkeypatch):
     client = aplicacao(repo, monkeypatch)
     documento = servico.analisar(enviar(nome="solicitacao.pdf", texto="Oficio sem numero de processo.")["id"], "projeto")
     chamadas = []
@@ -940,8 +944,13 @@ def test_documento_sem_numero_usa_o_arquivo_como_origem(repo, monkeypatch):
                         lambda payload, **kwargs: (chamadas.append(payload), {"id": "I-PRJ-SEI-000000BB"})[1])
     campos = dict(nome="Simulacao", instituicao_id="teste", lat=-21.2, lng=-50.4,
                   representante={"nome": "Teste"}, diretoria_id="", plano_id="")
-    client.post(f"/sei/documentos/{documento['id']}/criar-demanda", json={"campos": campos})
-    assert "Documento SEI: solicitacao.pdf" in chamadas[0].descricao
+    resposta = client.post(f"/sei/documentos/{documento['id']}/criar-demanda", json={"campos": campos})
+    assert resposta.status_code == 422
+    assert not chamadas
+    campos["origem_sei_processo"] = "020.00016588/2025-13"
+    resposta = client.post(f"/sei/documentos/{documento['id']}/criar-demanda", json={"campos": campos})
+    assert resposta.status_code == 200
+    assert chamadas[0].origem_sei_processo == campos["origem_sei_processo"]
 
 
 def test_documento_com_demanda_nao_e_excluido(repo, monkeypatch):
@@ -959,3 +968,23 @@ def test_download_devolve_o_pdf_armazenado(repo, monkeypatch):
     assert resposta.status_code == 200
     assert resposta.headers["content-type"] == "application/pdf"
     assert resposta.content.startswith(b"%PDF-")
+
+
+@pytest.mark.parametrize("tipo,servico_nome,metodo", [
+    ("projeto", "demanda_service", "criar_demanda"),
+    ("plano", "plano_service", "criar_plano"),
+    ("programa", "programa_service", "criar_programa"),
+])
+def test_numero_conferido_preserva_zeros_nos_tres_tipos(repo, monkeypatch, tipo, servico_nome, metodo):
+    client = aplicacao(repo, monkeypatch)
+    documento = enviar()
+    chamadas = []
+    monkeypatch.setattr(getattr(rotas, servico_nome), metodo,
+        lambda payload, **kw: (chamadas.append(payload), {"id": "CODIGO-TESTE"})[1])
+    campos = dict(nome="Teste", descricao="Teste", instituicao_id="teste", lat=-21, lng=-50,
+        representante={"nome": "Teste"}, diretoria_id="", plano_id="",
+        origem_sei_processo=" 020.00000001/2026-01 ")
+    response = client.post(f"/sei/documentos/{documento['id']}/criar-demanda",
+        json={"tipo_demanda": tipo, "campos": campos})
+    assert response.status_code == 200, response.text
+    assert chamadas[0].origem_sei_processo == "020.00000001/2026-01"

@@ -19,7 +19,7 @@ function metric(m){
  return parts.join(' · ')||m.situacao||'Correspondência registrada';
 }
 export function criarTerritorial(result){
- const initial=()=>({entrada:'',feicao:'',categoria:'',atributo:'',busca:'',pagina:0,agrupamento:'feicao',filtros:[],combinacao:'e'});
+ const initial=()=>({entrada:'',feicao:'',categoria:'',atributo:'',busca:'',pagina:0,agrupamento:'feicao',filtros:[],combinacao:'e',ordenar_por:'',descendente:false});
  let state=initial(),host,controller,version=0,map,data,selectedKey=null,selectedArea=null,chartMetric='espacial';
  const atributosPorCategoria=new Map(),atributosAbertos=new Set();let ordenarPor='',crescente=true;
  const q=s=>host.querySelector(s),role=k=>q(`[data-role="${k}"]`);
@@ -93,7 +93,7 @@ export function criarTerritorial(result){
   const categorias=[...(data.categorias||[])].sort((a,b)=>(['restricao','risco'].indexOf(a[0])+1||3)-(['restricao','risco'].indexOf(b[0])+1||3));
   const alias=(id,campo)=>data.aliases_categorias?.[id]?.[campo]||campo.replaceAll('_',' ').replace(/^./,c=>c.toUpperCase());
   const columns=[];
-  function sortButton(label,id){const b=document.createElement('button');b.type='button';b.className='ea-matrix-sort';b.textContent=label+(ordenarPor===id?(crescente?' ↑':' ↓'):'');b.onclick=()=>{crescente=ordenarPor===id?!crescente:true;ordenarPor=id;draw();};return b;}
+  function sortButton(label,id){const b=document.createElement('button');b.type='button';b.className='ea-matrix-sort';b.textContent=label+(ordenarPor===id?(crescente?' ↑':' ↓'):'');b.onclick=()=>{crescente=ordenarPor===id?!crescente:true;ordenarPor=id;change({ordenar_por:id,descendente:!crescente});};return b;}
   const th=document.createElement('th');th.scope='col';th.append(sortButton('Nome da demanda',''));head.append(th);
   const selectors=role('matrix-fields');selectors.replaceChildren();
   for(const [id,nome] of categorias){
@@ -130,8 +130,7 @@ export function criarTerritorial(result){
    if(!areas.length)return 'Sem correspondência';
    return col.campo?[...new Set(areas.map(a=>formatarValor(a.atributos[col.campo],data.metadados_categorias?.[id]?.[col.campo])))].join(' · '):'—';
   }
-  const sortCol=columns.find(c=>c.key===ordenarPor);
-  const ordered=[...data.linhas].sort((a,b)=>(crescente?1:-1)*(sortCol?cell(a,sortCol).localeCompare(cell(b,sortCol),'pt-BR',{numeric:true}):nomeDemanda(a).localeCompare(nomeDemanda(b),'pt-BR',{numeric:true})));
+  const ordered=data.linhas;
   for(const item of ordered){
    const row=document.createElement('tr'),name=document.createElement('th');name.scope='row';name.textContent=nomeDemanda(item);name.title=`${item.entrada} · FID ${item.fid}${item.campo_nome_demanda?' · '+item.campo_nome_demanda:''}`;row.append(name);
    for(const col of columns){const td=document.createElement('td'),b=document.createElement('button');b.className='ea-matrix-cell';b.type='button';b.textContent=cell(item,col);b.title=b.textContent;b.setAttribute('aria-label',`${nomeDemanda(item)} · ${col.nome}${col.campo?' · '+col.label:''}: ${b.textContent}`);b.setAttribute('aria-pressed',String(selectedKey===item.chave&&state.categoria===col.id));b.onclick=()=>selectDemand(item.chave,col.id);td.append(b);row.append(td);}
@@ -156,7 +155,7 @@ export function criarTerritorial(result){
    if(['categoria','atributo'].includes(key)){state[key]=control.value;if(key==='categoria')state.atributo='';draw();return;}
    selectedKey=null;change({[key]:control.value,feicao:''});
   };
-  q('[data-action="reset"]').onclick=()=>{state=initial();selectedKey=null;load();};q('[data-action="retry"]').onclick=load;
+  q('[data-action="reset"]').onclick=()=>{ordenarPor='';crescente=true;state=initial();selectedKey=null;load();};q('[data-action="retry"]').onclick=load;
   q('[data-action="previous"]').onclick=()=>change({pagina:state.pagina-1,feicao:''});q('[data-action="next"]').onclick=()=>change({pagina:state.pagina+1,feicao:''});load();
  }};
 }

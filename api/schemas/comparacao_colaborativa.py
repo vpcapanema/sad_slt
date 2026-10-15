@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -151,6 +151,7 @@ class AnaliseColaborativaCreateSchema(BaseModel):
     resposta_ids: list[UUID] | None = None
     rc_maximo: float = Field(0.10, gt=0, le=1)
     excluir_inconsistentes: bool = True
+    metodo_agregacao: Literal["geometrica", "aritmetica", "mediana"] = "geometrica"
 
 
 class AnaliseColaborativaResponseSchema(BaseModel):

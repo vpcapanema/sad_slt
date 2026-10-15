@@ -5,7 +5,7 @@
 {% set requer_autenticacao = true %}
 {% set modo_pagina = request.query_params.get('modo', 'julgamentos') if request.query_params is defined else 'julgamentos' %}
 {% block titulo %}{% if modo_pagina == 'julgamentos' %}Central de respostas{% elif modo_pagina == 'formulario' %}Formulário dos especialistas{% else %}Central de julgamentos{% endif %} — SICARD{% endblock %}
-{% block classes_body %}ahp-module-page ami-page{% endblock %}
+{% block classes_body %}ahp-module-page ami-page{% if modo_pagina == 'espaco' %} ami-espaco-page{% endif %}{% endblock %}
 {% block estilos_pagina %}
   <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
   <link rel="stylesheet" href="/assets/css/ahp-module.css">
@@ -19,6 +19,11 @@
   <link rel="stylesheet" href="/assets/css/mad-filter-standard.css?v=20260820-1">
   <link rel="stylesheet" href="/assets/css/page-title-standard.css?v=20260820-3">
   <link rel="stylesheet" href="/assets/css/table-standard.css?v=20261015-fontes-ordem">
+  <link rel="stylesheet" href="/assets/css/paginas/ami-report-tables.css?v=20261015">
+  {% if modo_pagina == 'espaco' %}
+  <link rel="stylesheet" href="/assets/css/admin-table-controls.css?v=20261015-botoes-quadrados">
+  <link rel="stylesheet" href="/assets/css/paginas/ami-espaco-secoes.css?v=20261015-subsecoes-colunas">
+  {% endif %}
 {% endblock %}
 {% block conteudo %}
 <div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
@@ -30,12 +35,33 @@
   </section>
   {% set tabela_colaborativa_id = "ami-judgments" %}{% set tabela_colaborativa_respostas = modo_pagina == 'julgamentos' %}{% set tabela_colaborativa_comparacao = modo_pagina == 'espaco' %}{% include "componentes/_tabela_colaborativa.html" %}
   {% include "componentes/analise_multicriterio/_espaco_analitico_respostas.html" %}
-  <section class="card-ami-pairwise secao-ami-pairwise card ahp-step-section is-hidden" id="ami-pairwise-panel">
-    <div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">2</span><span>Preenchimento da Matriz de Comparação Pareada</span></div>
+  <section class="card-collab-section secao-collab-section card ahp-step-section is-hidden" id="ami-create-section">
+    <div class="ahp-section-label ami-environment-heading">
+      <div class="ami-environment-heading__title"><span class="ahp-section-index-icon" aria-hidden="true">2</span><span>Ambiente colaborativo</span></div>
+    </div>
     <div class="ahp-section-body">
-      <div id="ami-saaty-scale-host"></div>
+      <form id="ami-create-form">
+        {% include "componentes/analise_multicriterio/_analise_multicriterio_interativa.html" %}
+      </form>
+      <section class="secao-collab-status-section ahp-section ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">2.2</span><span>Status do ambiente colaborativo</span></div><div class="ahp-section-body"><div id="ami-create-status" class="ami-empty">O status será exibido após a confirmação dos colaboradores.</div></div></section>
+      <section id="ami-email-draft-card" class="secao-collab-email-draft-card ahp-section ahp-subcard is-hidden">
+        <div class="ahp-subsection-title"><span class="ahp-subsection-num">2.3</span><span>Sugestão de mensagem de e-mail</span></div>
+        <div class="ahp-section-body">
+          <p class="step-intro ami-email-instrucao"><i class="fas fa-circle-info" aria-hidden="true"></i><span>Use a mensagem completa abaixo para convidar os colaboradores a preencher o formulário. A mensagem inclui o link persistente e os critérios armazenados no julgamento confirmado.</span></p>
+          <div class="c-form-group"><label for="ami-email-template" class="c-form-label"><i class="fas fa-envelope-open-text"></i> Mensagem sugerida</label><div id="ami-email-template" class="c-form-control collab-email-template" role="textbox" aria-readonly="true" tabindex="0"></div>
+          <p class="form-help" id="ami-email-link-row"><i class="fas fa-link"></i> Link persistente do formulário: <a id="ami-email-form-link" href="#" target="_blank" rel="noopener"></a></p>
+          </div>
+          <div class="ahp-form-actions" id="ami-email-actions" role="group" aria-label="Controles da mensagem de e-mail"><button type="button" class="btn btn-secondary" id="ami-copy-email-link"><i class="fas fa-copy c-btn__icon" aria-hidden="true"></i>Copiar link</button><button type="button" class="btn btn-secondary" id="ami-open-mail"><i class="fas fa-envelope c-btn__icon" aria-hidden="true"></i>Abrir aplicativo de e-mail</button></div>
+        </div>
+      </section>
+    </div>
+  </section>
+  <section class="card-ami-pairwise secao-ami-pairwise card ahp-step-section is-hidden" id="ami-pairwise-panel">
+    <div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">3</span><span>Simulação de comparação pareada</span></div>
+    <div class="ahp-section-body">
+      <p class="step-intro">Simulação local: as alterações não são salvas e não modificam respostas, análises ou pesos homologados.</p><div id="ami-saaty-scale-host"></div>
       <div class="ahp-subcard info-card info-card--spaced" id="ami-metrics-card">
-        <div class="ahp-subsection-title"><span class="ahp-subsection-num">2.2</span><span>Indicadores instantâneos de consistência AHP</span></div>
+        <div class="ahp-subsection-title"><span class="ahp-subsection-num">3.2</span><span>Indicadores instantâneos de consistência AHP</span></div>
         <div class="info-card-content"><div class="ahp-live-metrics ami-live-metrics is-initial" id="ami-live-metrics" aria-live="polite">
           <div class="ahp-metric-card"><div class="ahp-metric-card__label">Lambda máximo (λmax)</div><div class="ahp-metric-card__value" id="ami-metric-lambda">—</div><div class="ahp-metric-card__sub">instantâneo</div></div>
           <div class="ahp-metric-card"><div class="ahp-metric-card__label">Índice de consistência (IC)</div><div class="ahp-metric-card__value" id="ami-metric-ic">—</div><div class="ahp-metric-card__sub">instantâneo</div></div>
@@ -47,37 +73,13 @@
       {% include "componentes/analise_multicriterio/_formulario_comparacao_pareada.html" %}
     </div>
   </section>
-  <section class="card-collab-section secao-collab-section card ahp-step-section is-hidden" id="ami-create-section">
-    <div class="ahp-section-label ami-environment-heading">
-      <div class="ami-environment-heading__title"><span class="ahp-section-index-icon" aria-hidden="true">3</span><span>Ambiente colaborativo</span></div>
-      <div class="ami-environment-heading__actions is-hidden" id="ami-environment-actions" role="group" aria-label="Ações do ambiente colaborativo">
-        <button type="button" class="ami-environment-heading__button" id="ami-environment-edit"><i class="fas fa-pen" aria-hidden="true"></i><span>Editar</span></button>
-        <button type="button" class="ami-environment-heading__button is-hidden" id="ami-environment-save"><i class="fas fa-floppy-disk" aria-hidden="true"></i><span>Salvar</span></button>
-      </div>
-    </div>
-    <div class="ahp-section-body">
-      <form id="ami-create-form">
-        {% include "componentes/analise_multicriterio/_analise_multicriterio_interativa.html" %}
-      </form>
-      <section class="secao-collab-status-section ahp-section ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">3.2</span><span>Status do ambiente colaborativo</span></div><div class="ahp-section-body"><div id="ami-create-status" class="ami-empty">O status será exibido após a confirmação dos colaboradores.</div></div></section>
-      <section id="ami-email-draft-card" class="secao-collab-email-draft-card ahp-section ahp-subcard is-hidden">
-        <div class="ahp-subsection-title"><span class="ahp-subsection-num">3.3</span><span>Sugestão de mensagem de e-mail</span></div>
-        <div class="ahp-section-body">
-          <p class="step-intro">Use a mensagem completa abaixo para convidar os colaboradores a preencher o formulário.</p>
-          <div class="c-form-group"><label for="ami-email-template" class="c-form-label"><i class="fas fa-envelope-open-text"></i> Mensagem sugerida</label><div id="ami-email-template" class="c-form-control collab-email-template" role="textbox" aria-readonly="true" tabindex="0"></div></div>
-          <p class="form-help" id="ami-email-link-row"><i class="fas fa-link"></i> Link persistente do formulário: <a id="ami-email-form-link" href="#" target="_blank" rel="noopener"></a></p>
-          <div class="ahp-form-actions"><button type="button" class="btn btn-secondary" id="ami-copy-email-link"><i class="fas fa-copy c-btn__icon"></i>Copiar link</button><button type="button" class="btn btn-secondary" id="ami-open-mail"><i class="fas fa-envelope c-btn__icon"></i>Abrir aplicativo de e-mail</button></div>
-          <p class="form-help"><i class="fas fa-circle-info"></i> A mensagem inclui o link persistente e os critérios armazenados no julgamento confirmado.</p>
-        </div>
-      </section>
-    </div>
-  </section>
 </main>
 {% endblock %}
 {% block scripts_pagina %}
   <script src="/assets/js/table-standard.js?v=20261015-fontes-ordem"></script>
+  <script src="/assets/js/analysis-table-controls.js?v=20261015-fluxo-integrado"></script>
   <script src="/assets/js/admin-auth.js"></script>
   <script src="/assets/vendor/xlsx/xlsx-0.18.5.min.js"></script>
   <script src="/assets/js/paginas/analise-multicriterio-tabela.js?v=20260820-multiselect"></script>
-  <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20261015-fontes-ordem"></script>
+  <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20261015-fluxo-integrado"></script>
 {% endblock %}

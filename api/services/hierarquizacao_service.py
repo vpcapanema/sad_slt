@@ -27,6 +27,7 @@ from api.exceptions import (
     HierarquizacaoNotFoundError,
 )
 from api.matriz_colunas import extrair_colunas
+from api.services.pesos_homologados import aplicar_pesos, mapa_pesos
 from api.repositories import camada_geoespacial_repository as camada_repo
 from api.repositories import agrupamento_demanda_repository
 from api.repositories import config_multicriterio_repository as config_repo
@@ -83,7 +84,12 @@ def _codigo() -> str:
 def _response(row: dict[str, Any]) -> HierarquizacaoResponseSchema:
     tid = row.get("tipo_demanda_id")
     tipo_demanda = TIPO_DEMANDA_ID_TO_COD.get(tid) if isinstance(tid, int) else None
-    dados_hierarquizacao = row.get("dados_hierarquizacao") or {}
+    dados_hierarquizacao = deepcopy(row.get("dados_hierarquizacao") or {})
+    if (dados_hierarquizacao.get("comparacao_colaborativa") or {}).get("analise_homologada_id"):
+        try:
+            dados_hierarquizacao["comparacao_colaborativa"]["pesos_por_atributo"] = mapa_pesos(dados_hierarquizacao)
+        except DemandaValidationError as exc:
+            dados_hierarquizacao["comparacao_colaborativa"]["erro_vinculo_pesos"] = str(exc)
     homologado_por = str(row["homologado_por"]) if row.get("homologado_por") else None
     criado_por = str(row["criado_por"]) if row.get("criado_por") else None
     nomes = _nomes_usuarios([homologado_por, criado_por])
@@ -101,11 +107,12 @@ def _response(row: dict[str, Any]) -> HierarquizacaoResponseSchema:
         grupo_demanda_id=str(row["grupo_demanda_id"]) if row.get("grupo_demanda_id") else None,
         grupo_demanda_codigo=row.get("grupo_demanda_codigo"),
         status=row["status"],
-        objetos=row.get("objetos") or [],
+        objetos=[dict(o.get("cabecalho_objeto") or o) for o in dados_hierarquizacao["objetos"]]
+        if isinstance(dados_hierarquizacao.get("objetos"), list) else row.get("objetos") or [],
         julgamento_projetos=row.get("julgamento_projetos"),
         pesos_projetos=row.get("pesos_projetos"),
         ranking=row.get("ranking"),
-        dados_hierarquizacao=row.get("dados_hierarquizacao") or {},
+        dados_hierarquizacao=dados_hierarquizacao,
         relatorio_fase1=row.get("relatorio_fase1") or {},
         relatorio_fase2=row.get("relatorio_fase2") or {},
         relatorio_fase3=row.get("relatorio_fase3") or {},
@@ -612,6 +619,8 @@ def excluir_hierarquizacao(codigo: str) -> None:
     row = repo.get_by_codigo(codigo)
     if not row:
         raise HierarquizacaoNotFoundError(codigo)
+    if row.get("julgamento_id"):
+        raise DemandaValidationError("Esta hierarquização possui julgamentos vinculados. Preserve o histórico arquivando o processo.", field="julgamento_id")
     transicao = _transicao_liberacao_universo(row)
     if not repo.delete_by_codigo(codigo, liberar_demandas=transicao):
         raise HierarquizacaoNotFoundError(codigo)
@@ -1389,7 +1398,7 @@ def executar_fase_3(
         dados.get("cabecalho_grupo", {}).get("configuracoes", {}).get("fase_3", {}).get("criterios")
         or []
     )
-    criterios = criterios_salvos or payload.criterios
+    criterios = aplicar_pesos(dados, criterios_salvos or payload.criterios)
     if not criterios:
         raise DemandaValidationError(
             "Informe ao menos um critério da Fase 3.", field="criterios"
@@ -1583,7 +1592,7 @@ def salvar_pesos_fase3(codigo: str, payload: Any) -> HierarquizacaoResponseSchem
     """Persiste o peso dos atributos dinâmicos em todos os objetos da rodada."""
     row = _carregar(codigo)
     dados = deepcopy(row.get("dados_hierarquizacao") or {})
-    criterios = payload.criterios or []
+    criterios = aplicar_pesos(dados, payload.criterios or [])
     if not criterios:
         raise DemandaValidationError("Informe os pesos dos atributos.", field="criterios")
     pesos = {

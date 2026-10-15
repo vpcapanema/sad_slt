@@ -174,6 +174,14 @@ function controls() {
     :!bancadaCompleta()?'Aguardando a inclusão das camadas na bancada.':$('#ea-run-warning').textContent||$('#ea-run-count').textContent;
   $('#ea-integration-status').hidden=[$('#ea-run-warning').textContent,$('#ea-run-count').textContent].includes($('#ea-integration-status').textContent);
 }
+async function restaurarSaidas(value){
+  for(const saida of Object.values(value.camadas||{}))if(saida.bancada)descritorOriginal(saida.bancada);
+  if(Object.values(value.camadas||{}).some(c=>c.bancada))state.bancadaResultados=copiarSaidas(value,state.bancadaResultados,['#d6542b',...(map.camadas()||[]).map(c=>c.color),...state.categories.map(c=>c.color),...state.bancadaResultados.map(c=>c.color)]);
+  assinaturaExecucao=assinaturaDe(request());
+  syncMap();
+  const novas=state.bancadaResultados.filter(c=>c.execucaoId===value.id);
+  if(novas.length)await map.enquadrar(novas.map(c=>c.id),limitesSaidas(novas));
+}
 function syncMap() {
   const items=state.bancadaBases.map(base=>{
     const layer=base.layer,category=state.categories.find(c=>c.id===base.category);
@@ -340,11 +348,7 @@ $("#ea-run").addEventListener("click",async()=>{
     const value=validateResult(await chamar("executar",pedido,job=>painel.acompanhar(job)));
     registrarResultado(value);state.result=value;assinaturaExecucao=assinaturaDe(request());results.set(value);
     try{
-      for(const saida of Object.values(value.camadas||{}))if(saida.bancada)descritorOriginal(saida.bancada);
-      state.bancadaResultados=copiarSaidas(value,state.bancadaResultados,['#d6542b',...(map.camadas()||[]).map(c=>c.color),...state.categories.map(c=>c.color),...state.bancadaResultados.map(c=>c.color)]);
-      syncMap();
-      const novas=state.bancadaResultados.filter(c=>c.execucaoId===value.id);
-      await map.enquadrar(novas.map(c=>c.id),limitesSaidas(novas));
+      await restaurarSaidas(value);
       $('#ea-workbench').scrollIntoView({behavior:'smooth',block:'start'});
     }catch(error){falha('saida_bancada',error);feedback(`A extração foi concluída, mas não foi possível exibir a saída na bancada: ${error.message}`,'error');}
     painel.concluir("Extração concluída. Os resultados estão na tela e o pacote de saída (.zip) está pronto para baixar.",
@@ -422,7 +426,7 @@ document.getElementById('ea-recover').addEventListener('click',async()=>{
   let id;try{id=sessionStorage.getItem('slt-extracao-ultima');}catch{feedback('O navegador bloqueou a sessão local. Use Ver todas as extrações para recuperar sua análise.');return;}if(!id){feedback('Nenhuma execução salva nesta sessão do navegador.');return;}
   if(state.busy)return;busy(true);
   const painel=acompanharExecucao('Recuperando análise');
-  try{const job=await json(`/extracao-atributos/execucoes/${id}`);state.result=validateResult(await esperar(job,id=>`/extracao-atributos/execucoes/${id}`,j=>painel.acompanhar(j)));registrarResultado(state.result);results.set(state.result);syncMap();painel.concluir('Última análise recuperada.');}
+  try{const job=await json(`/extracao-atributos/execucoes/${id}`);state.result=validateResult(await esperar(job,id=>`/extracao-atributos/execucoes/${id}`,j=>painel.acompanhar(j)));registrarResultado(state.result);results.set(state.result);await restaurarSaidas(state.result);painel.concluir('Última análise recuperada.');}
   catch(e){falha('recuperacao',e);painel.falhar(e.message);}finally{busy(false);}
 });
 
@@ -432,7 +436,7 @@ async function abrirExtracao(id){
   try{
     const job=await json(`/extracao-atributos/execucoes/${encodeURIComponent(id)}`);
     if(job.status!=='concluido'||!job.resultado)throw new Error('Esta extração não tem resultado disponível.');
-    state.result=validateResult(job.resultado);registrarResultado(state.result);results.set(state.result);syncMap();
+    state.result=validateResult(job.resultado);registrarResultado(state.result);results.set(state.result);await restaurarSaidas(state.result);
     $("#ea-results").scrollIntoView({behavior:"smooth",block:"start"});
     feedback(`Resultados de "${job.resultado.input_nome||'extração'}" abertos. O pacote de saída pode ser baixado na seção 03.`);
   }catch(error){falha('abrir_resultado',error);feedback(`Não foi possível abrir: ${error.message}`,'error');}finally{busy(false);}

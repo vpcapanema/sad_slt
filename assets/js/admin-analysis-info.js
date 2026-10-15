@@ -100,6 +100,10 @@
           <label for="fld-codigo">Código</label>
           <input type="text" id="fld-codigo" class="admin-field-readonly" value="${escapeHtml(d.id)}" readonly aria-readonly="true">
         </div>
+        <div class="form-field">
+          <label for="fld-processo-sei">Processo SEI</label>
+          <input type="text" id="fld-processo-sei" name="origem_sei_processo" maxlength="50" value="${escapeHtml(d.origem_sei_processo || "")}">
+        </div>
         <div class="form-field span-2">
           <label for="fld-descricao">Descrição</label>
           <textarea id="fld-descricao" name="descricao" rows="3">${escapeHtml(d.descricao || "")}</textarea>

@@ -9,7 +9,7 @@ from psycopg import sql
 from psycopg.types.json import Jsonb
 
 from api.constants import STATUS_PRE_REPROVACAO, STATUS_REPROVACAO
-from api.db.connection import get_connection
+from api.db.connection import get_connection, commit_unless_atomic
 from api.services.autoria_demanda import validar_autor
 from api.repositories import geometria_historico_repository
 
@@ -46,6 +46,7 @@ _SELECT_BASE = """
         d.vinculo_objeto_id,
         d.nome,
         d.descricao,
+        d.origem_sei_processo,
         d.latitude,
         d.longitude,
         d.geometria_tipo,
@@ -88,6 +89,7 @@ _INSERT_SQL = """
         vinculo_tipo,
         nome,
         descricao,
+        origem_sei_processo,
         latitude,
         longitude,
         geometria_tipo,
@@ -123,7 +125,7 @@ _INSERT_SQL = """
         %(vinculo_institucional)s,
         %(vinculo_tipo)s,
         %(nome)s,
-        %(descricao)s,
+        %(descricao)s, %(origem_sei_processo)s,
         %(latitude)s,
         %(longitude)s,
         %(geometria_tipo)s,
@@ -149,6 +151,7 @@ def insert(row: dict[str, Any], *, arquivo_geometria: dict[str, Any] | None = No
     """Insere uma demanda e retorna a linha persistida."""
     row = dict(row, criado_por=validar_autor(row.get("criado_por")))
     row = {
+        "origem_sei_processo": None,
         "maturidade": None,
         "capex_estimado": None,
         "base_estimativa_capex": None,
@@ -175,7 +178,7 @@ def insert(row: dict[str, Any], *, arquivo_geometria: dict[str, Any] | None = No
                     regionalidades=geometria_historico_repository.regionalidades_de(row.get("complementos")),
                     criado_por=row.get("criado_por"),
                 )
-            conn.commit()
+            commit_unless_atomic(conn)
         except errors.UniqueViolation as exc:
             conn.rollback()
             raise exc
@@ -261,6 +264,7 @@ _UPDATE_ALLOWED = {
     "programa_id": "programa_id",
     "nome": "nome",
     "descricao": "descricao",
+    "origem_sei_processo": "origem_sei_processo",
     "latitude": "latitude",
     "longitude": "longitude",
     "classificacao": "classificacao",

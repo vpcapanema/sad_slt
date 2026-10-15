@@ -1,0 +1,213 @@
+.ami-page.ami-espaco-page :is(#ami-create-section, #ami-pairwise-panel, #ami-analysis-workspace) .ahp-subcard:has(> .ahp-subsection-title) {
+  padding: 1rem;
+  border: 1px solid #00527d;
+  border-radius: 8px;
+}
+.ami-page.ami-espaco-page :is(#ami-create-section, #ami-pairwise-panel, #ami-analysis-workspace) .ahp-subsection-title {
+  box-sizing: border-box;
+  min-height: 3rem;
+  margin: -1rem -1rem 0.875rem;
+  padding: 0.72rem 1rem;
+  gap: 0.625rem;
+  background: #00527d;
+  color: #fff;
+  border-bottom: 1px solid #003b5a;
+  border-radius: 7px 7px 0 0;
+  font-size: 0.75rem;
+}
+.ami-page.ami-espaco-page :is(#ami-create-section, #ami-pairwise-panel, #ami-analysis-workspace) .ahp-subsection-title > :last-child {
+  color: inherit;
+}
+.ami-page.ami-espaco-page :is(#ami-create-section, #ami-pairwise-panel, #ami-analysis-workspace) .ahp-subsection-num {
+  width: auto;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 0.25rem;
+  box-sizing: border-box;
+  background: #83d9a5;
+  color: #003b5a;
+  font-size: 0.78rem;
+}
+.ami-espaco-page .ahp-collab-table-wrap:has(#ami-email-list) {
+  border: 1px solid var(--pli-border);
+  border-radius: 8px;
+  overflow-x: auto;
+}
+.ami-espaco-page .ahp-collab-table:has(#ami-email-list) {
+  width: 100%;
+  border-collapse: collapse;
+}
+.ami-espaco-page .ahp-collab-table:has(#ami-email-list) :is(th, td) {
+  text-align: center;
+  vertical-align: middle;
+  line-height: 1.1;
+  border: 1px solid var(--pli-border);
+  white-space: nowrap;
+}
+.ami-espaco-page .ahp-collab-table:has(#ami-email-list) th {
+  padding: 0.5rem 0.6rem;
+  background: var(--pli-deep, #003b5a);
+  color: #fff;
+  font-family: "Montserrat", Verdana, sans-serif;
+  font-size: var(--ami-font-child, 0.7rem);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.ami-espaco-page #ami-email-list td {
+  height: 1.7rem;
+  padding: 0.18rem 0.55rem;
+  color: var(--pli-deep);
+  background: #fff;
+  font-family: "Roboto", Arial, sans-serif;
+  font-size: var(--ami-font-child, 0.7rem);
+  font-weight: 400;
+}
+.ami-espaco-page #ami-email-list tr:nth-child(even) td {
+  background: #edf4f8;
+}
+.ami-espaco-page #ami-email-list tr:hover td {
+  background: #e0edf5;
+}
+.ami-espaco-page #ami-email-link-row {
+  margin: 0.25rem 0 0;
+}
+.ami-espaco-page .ahp-collab-table:has(#ami-email-list) input[type="checkbox"] {
+  width: 0.9rem;
+  height: 0.9rem;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  vertical-align: middle;
+}
+.ami-espaco-page .ahp-collab-table:has(#ami-email-list) .ahp-collab-chk-col {
+  width: 2.5rem;
+}
+.ami-espaco-page .ami-collaborator-controls {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  border-top: 0;
+}
+.ami-espaco-page .ami-collaborator-controls .admin-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.35rem;
+  height: 2.35rem;
+  padding: 0;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  background: #fff;
+  color: var(--pli-blue);
+  cursor: pointer;
+}
+.ami-espaco-page .ami-collaborator-controls .save { color: #16814a; }
+.ami-espaco-page .ami-collaborator-controls .delete { color: #c53030; }
+.ami-espaco-page .ami-collaborator-controls button:disabled { opacity: 0.4; cursor: not-allowed; }
+.ami-espaco-page .ami-collaborator-controls button:hover:not(:disabled) { background: #edf4f8; }
+.ami-espaco-page #ami-email-list .ami-collaborator-cell {
+  width: 100%;
+  box-sizing: border-box;
+  height: 1.3rem;
+  min-height: 0;
+  padding: 0 0.25rem;
+  font: inherit;
+  border: 1px solid var(--pli-border);
+  border-radius: 4px;
+}
+.ami-espaco-page #ami-collaborator-table .admin-filter-bar {
+  margin: 0;
+}
+.ami-espaco-page #ami-collaborator-table .admin-filter-bar :is(select, option, .admin-filter-label, button) {
+  font-size: var(--ami-font-child, 0.7rem);
+}
+.ami-espaco-page {
+  --admin-border: var(--pli-border, #cbd5e1);
+  --admin-accent: #1683c4;
+}
+.ami-espaco-page #ami-emails-pagination {
+  justify-content: center;
+  margin: 0;
+  font-size: var(--ami-font-child, 0.7rem);
+}
+.ami-espaco-page #ami-emails-pagination button {
+  width: 34px;
+  height: 34px;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+}
+.ami-espaco-page #ami-emails-count {
+  margin: 0;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--pli-border);
+  text-align: right;
+  font-size: var(--ami-font-help, 0.64rem);
+  color: #64748b;
+}
+.ami-espaco-page #ami-create-status {
+  font-size: var(--ami-font-help, 0.64rem);
+  line-height: 1.55;
+}
+.ami-espaco-page #ami-create-status > strong {
+  font-size: var(--ami-font-child, 0.7rem);
+}
+.ami-espaco-page #ami-create-status > span {
+  font-size: var(--ami-font-help, 0.64rem);
+}
+.ami-espaco-page #ami-create-status .btn {
+  font-size: var(--ami-font-child, 0.7rem);
+}
+.ami-espaco-page .ami-main > .ahp-step-section :is(button, .btn, .admin-icon-btn, [role="button"]):not(.ahp-subcard *, .admin-filter-bar *),
+.ami-espaco-page .ami-main > .standard-section-action-row .btn {
+  border: 1px solid currentColor;
+}
+.ami-espaco-page #ami-interactive-analysis-component .ami-collaborator-section {
+  margin-top: var(--ami-space-md, 1rem);
+}
+.ami-espaco-page #ami-interactive-analysis-component .ami-collaborator-entry {
+  margin-bottom: 0 !important;
+}
+.ami-espaco-page #ami-environment-actions .btn,
+.ami-espaco-page #ami-email-actions .btn {
+  border: 1px solid currentColor;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+.ami-espaco-page #ami-email-actions {
+  justify-content: center;
+  align-items: center;
+  gap: var(--ami-space-sm, 0.75rem);
+}
+.ami-espaco-page .ami-email-instrucao {
+  display: flex;
+  align-items: baseline;
+  gap: 0.625rem;
+  line-height: 1.55;
+}
+.ami-espaco-page .ami-email-instrucao > i {
+  flex-shrink: 0;
+  color: var(--pli-blue);
+}
+.ami-espaco-page #ami-create-feedback:empty {
+  display: none;
+}
+.ami-espaco-page .ami-deadline-hierarchy-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--ami-space-md, 1rem);
+  margin-top: var(--ami-space-md, 1rem);
+  align-items: stretch;
+}
+.ami-espaco-page #ami-interactive-analysis-component .ami-deadline-hierarchy-row > .ami-collaborator-section {
+  min-width: 0;
+  margin-top: 0;
+}
+@media (max-width: 600px) {
+  .ami-espaco-page .ami-deadline-hierarchy-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

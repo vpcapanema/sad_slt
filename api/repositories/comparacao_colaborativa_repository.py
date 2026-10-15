@@ -320,6 +320,7 @@ def atualizar_consolidacao(
     ambiente_id: str,
     data: dict[str, Any],
     hierarquizacao_data: dict[str, Any] | None = None,
+    *, homologacao: tuple[str, str | None] | None = None,
 ) -> dict[str, Any] | None:
     """Persist the round and hierarchy result in one transaction."""
     assignments = sql.SQL(", ").join(
@@ -338,6 +339,14 @@ def atualizar_consolidacao(
     params["ambiente_id"] = ambiente_id
 
     with get_connection() as conn:
+        if homologacao:
+            analise_id, usuario_id = homologacao
+            conn.execute("SELECT id FROM ahp.comparacao_colaborativa_ambiente WHERE id=%s FOR UPDATE", (ambiente_id,))
+            conn.execute("UPDATE ahp.comparacao_colaborativa_analise SET status='arquivada', atualizado_em=now() WHERE ambiente_id=%s AND status='homologada' AND id<>%s", (ambiente_id, analise_id))
+            approved = conn.execute("UPDATE ahp.comparacao_colaborativa_analise SET status='homologada', homologado_por=%s, homologado_em=now(), atualizado_em=now() WHERE id=%s AND ambiente_id=%s AND consistente RETURNING id", (usuario_id, analise_id, ambiente_id)).fetchone()
+            if not approved:
+                raise ValueError("Análise consistente não encontrada neste julgamento.")
+            conn.execute("UPDATE ahp.comparacao_colaborativa_ambiente SET analise_homologada_id=%s WHERE id=%s", (analise_id, ambiente_id))
         row = conn.execute(query, params).fetchone()
         if row and hierarquizacao_data:
             linked = conn.execute(

@@ -66,6 +66,7 @@
   const COLUMNS = {
     projeto: [
       { label: "Status", value: statusCell, editable: "status" },
+      { label: "Processo SEI", value: (d) => escapeHtml(d.origem_sei_processo || "—") },
       { label: "Código", value: (d) => `<code>${escapeHtml(d.id)}</code>` },
       { label: "Projeto", value: (d) => escapeHtml(d.nome) },
       { label: "Diretoria", value: (d) => escapeHtml(diretoriaLabel(d.diretoria_id)), editable: "diretoria" },
@@ -96,6 +97,7 @@
     ],
     programa: [
       { label: "Status", value: statusCell, editable: "status" },
+      { label: "Processo SEI", value: (d) => escapeHtml(d.origem_sei_processo || "—") },
       { label: "Código", value: (d) => `<code>${escapeHtml(d.id)}</code>` },
       { label: "Programa", value: (d) => escapeHtml(d.nome) },
       {
@@ -118,6 +120,7 @@
     ],
     plano: [
       { label: "Status", value: statusCell, editable: "status" },
+      { label: "Processo SEI", value: (d) => escapeHtml(d.origem_sei_processo || "—") },
       { label: "Código", value: (d) => `<code>${escapeHtml(d.id)}</code>` },
       { label: "Plano", value: (d) => escapeHtml(d.nome) },
       { label: "Diretoria", value: (d) => escapeHtml(diretoriaLabel(d.diretoria_id)), editable: "diretoria" },

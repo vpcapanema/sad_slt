@@ -108,6 +108,8 @@ def _assinatura_local(path: Path) -> tuple[tuple[str, int, int], ...]:
 
 
 def _revisao(fonte: Fonte) -> str:
+    if fonte.origem.get("tipo") == "local_temporaria":
+        return fonte.origem["token"]
     if fonte.local:
         return visualizacao_arquivo.revisao_arquivo(fonte.caminho)
     estado = fonte.caminho.stat()
@@ -242,8 +244,9 @@ def ler_tabela(
     revisao: str,
     offset: int,
     limite: int,
+    *, _source: Fonte | None = None,
 ) -> dict[str, Any]:
-    fonte = _fonte(ident, arquivo)
+    fonte = _source or _fonte(ident, arquivo)
     atual = _revisao(fonte)
     if atual != revisao:
         raise ValueError("O arquivo mudou desde a abertura. Reabra antes de ler a tabela.")
@@ -332,10 +335,11 @@ def ler_geometrias(
     arquivo: str,
     revisao: str,
     ids: list[str],
+    *, _source: Fonte | None = None,
 ) -> dict[str, Any]:
     """Lê apenas as feições pedidas por FID, com geometria em EPSG:4326."""
     fids = _fids(ids)
-    fonte = _fonte(ident, arquivo)
+    fonte = _source or _fonte(ident, arquivo)
     if _revisao(fonte) != revisao:
         raise ValueError("O arquivo mudou desde a abertura. Reabra antes de editar.")
     signature = _assinatura_local(fonte.caminho) if fonte.local else None
@@ -438,6 +442,7 @@ def consultar(
     inverter_selecao: bool,
     offset: int,
     limite: int,
+    *, _source: Fonte | None = None,
 ) -> dict[str, Any]:
     """Filtra todos os registros e devolve uma página de FIDs, sem geometrias."""
     from api.services.expressoes_atributos import selecionar
@@ -448,7 +453,7 @@ def consultar(
         raise ValueError(f"O limite da página deve estar entre 1 e {LIMITE_CONSULTA}.")
     if offset < 0:
         raise ValueError("O deslocamento não pode ser negativo.")
-    fonte = _fonte(ident, arquivo)
+    fonte = _source or _fonte(ident, arquivo)
     if _revisao(fonte) != revisao:
         raise ValueError("O arquivo mudou desde a abertura. Reabra antes de consultar.")
     signature = _assinatura_local(fonte.caminho) if fonte.local else None

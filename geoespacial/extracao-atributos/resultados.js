@@ -33,22 +33,24 @@ export function criarResultados(){
   }
   function outputTable(){
     const host=$('#ea-panel-attributes'),role=name=>host.querySelector(`[data-role="${name}"]`),current=++version;
-    let offset=0,request=0;
+    let offset=0,request=0,ordem='',descendente=false;
+    role('rows').closest('table').dataset.tableSort='off';
     const names=result.modo==='enriquecimento'?Object.keys(result.camadas||{}):['resultado'];
     opcoes(role('output'),names.map(id=>({id,nome:id})),names[0]);
     const previous=host.querySelector('[data-action="previous"]'),next=host.querySelector('[data-action="next"]');
     async function load(){
       const id=++request;role('loading').hidden=false;role('error').hidden=true;previous.disabled=next.disabled=true;
       role('rows').replaceChildren();role('pagination').textContent='';
-      try{const data=await json(`/extracao-atributos/execucoes/${encodeURIComponent(result.id)}/tabela?camada=${encodeURIComponent(role('output').value)}&offset=${offset}&limite=100`);
+      try{const data=await json(`/extracao-atributos/execucoes/${encodeURIComponent(result.id)}/tabela?camada=${encodeURIComponent(role('output').value)}&offset=${offset}&limite=100&ordem=${encodeURIComponent(ordem)}&descendente=${descendente}`);
         if(current!==version||id!==request)return;
         cabecalhos(role('columns'),data.campos);linhas(role('rows'),data.linhas.map(r=>data.campos.map(f=>r[f])));role('empty').hidden=!!data.linhas.length;
+        [...role('columns').children].forEach((th,i)=>{const campo=data.campos[i],button=document.createElement('button');button.type='button';button.className='ea-matrix-sort';button.textContent=campo+(ordem===campo?(descendente?' ↓':' ↑'):'');th.setAttribute('aria-sort',ordem===campo?(descendente?'descending':'ascending'):'none');button.onclick=()=>{descendente=ordem===campo?!descendente:false;ordem=campo;offset=0;load();};th.replaceChildren(button);});
         role('pagination').textContent=data.total?`${offset+1}–${offset+data.linhas.length} de ${data.total} registros. Todos os campos estão disponíveis; role a tabela horizontalmente.`:'0 registros.';
         previous.disabled=offset===0;next.disabled=offset+data.linhas.length>=data.total;
       }catch(error){if(current!==version||id!==request)return;role('error').hidden=false;role('error').querySelector('p').textContent=error.message;}
       finally{if(current===version&&id===request)role('loading').hidden=true;}
     }
-    role('output').onchange=()=>{offset=0;load();};previous.onclick=()=>{offset=Math.max(0,offset-100);load();};next.onclick=()=>{offset+=100;load();};host.querySelector('[data-action="retry"]').onclick=load;load();
+    role('output').onchange=()=>{offset=0;ordem='';descendente=false;load();};previous.onclick=()=>{offset=Math.max(0,offset-100);load();};next.onclick=()=>{offset+=100;load();};host.querySelector('[data-action="retry"]').onclick=load;load();
   }
   function summary(){
     const host=$('#ea-panel-summary'),role=name=>host.querySelector(`[data-role="${name}"]`),enriched=result.modo==='enriquecimento';

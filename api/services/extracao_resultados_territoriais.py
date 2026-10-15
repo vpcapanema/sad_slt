@@ -186,7 +186,7 @@ def nome_demanda(feature):
     return str(feature.get('fid')), 'fid'
 
 
-def consultar(snapshot, *, entrada='', feicao='', categoria='', base='', situacao='', busca='', pagina=0, tamanho=25, atributo='', agrupamento='feicao', filtros=None, combinacao='e'):
+def consultar(snapshot, *, entrada='', feicao='', categoria='', base='', situacao='', busca='', pagina=0, tamanho=25, atributo='', agrupamento='feicao', filtros=None, combinacao='e', ordenar_por='', descendente=False):
     del atributo
     if agrupamento == 'camada':
         snapshot = agrupar_demandas(snapshot)
@@ -250,6 +250,19 @@ def consultar(snapshot, *, entrada='', feicao='', categoria='', base='', situaca
             continue
         resumo_entradas.append({'nome': entry['nome'], 'total': len(group),
                                 **{tipo: {s: sum(i['estados'][tipo] == s for i in group) for s in ('com', 'sem', 'nao_avaliado', 'nao_informado')} for tipo in TIPOS}})
+    from api.services.extracao_ordenacao import chave_ordenacao
+    def valor_ordem(item):
+        if not ordenar_por:
+            return item['nome_demanda']
+        if ordenar_por in TIPOS:
+            return {'com': 'Sim', 'sem': 'Não', 'nao_avaliado': 'Não avaliado', 'nao_informado': 'Não informado'}.get(item['estados'].get(ordenar_por), '')
+        try:
+            cat, campo = json.loads(ordenar_por)
+        except (ValueError, TypeError):
+            return item['nome_demanda']
+        valores = [snapshot['areas'][aid]['atributos'].get(campo) for aid in item['areas'] if snapshot['areas'][aid]['categoria'] == cat]
+        return valores[0] if len(valores) == 1 else ' · '.join(str(v) for v in valores if v is not None)
+    items.sort(key=lambda item: chave_ordenacao(valor_ordem(item)), reverse=descendente)
     pagina = min(pagina, max(0, (len(items)-1)//tamanho))
     page = items[pagina*tamanho:(pagina+1)*tamanho]
     areas_used = {a for item in page for a in item['areas']}

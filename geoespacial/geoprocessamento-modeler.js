@@ -253,7 +253,7 @@
     const view=$(`[data-model-document="${editor.id}"]`),group=view.querySelector(".model-links g");
     group.innerHTML=editor.edges.map(edge=>{const a=editor.nodes.find(n=>n.id===edge.from),b=editor.nodes.find(n=>n.id===edge.to);if(!a||!b)return"";const x1=a.x+184,y1=a.y+47,x2=b.x,y2=b.y+47,m=(x1+x2)/2,selected=editor.selectedEdge===edge.id?" selected":"";return `<path data-edge="${edge.id}" class="edge-hit${selected}" d="M${x1},${y1} C${m},${y1} ${m},${y2} ${x2},${y2}" stroke-width="12" stroke="transparent" fill="none"/><path data-edge-visible="${edge.id}" class="edge-visible${selected}" d="M${x1},${y1} C${m},${y1} ${m},${y2} ${x2},${y2}" marker-end="url(#arrow-${editor.id})"/><text x="${m}" y="${(y1+y2)/2-5}">${esc(edge.parameter||"")}</text>`}).join("");
   }
-  function iteratorKind(editor){return editor.nodes.find(node=>node.kind==="iterator")?.ref||"vector_layers";}
+  function iteratorKind(editor){return editor.nodes.find(node=>node.kind==="iterator")?.ref||"layer";}
   function inputLayers(editor){const iterator=iteratorKind(editor);return (window.gpApp.state.layers||[]).filter(layer=>{const raster=String(layer.tipo||"").toLowerCase().includes("raster");return iterator==="raster_layers"?raster:iterator==="vector_layers"||iterator==="features"?!raster:true});}
   function connectedVariables(editor,node){
     const available=[],seen=new Set(),queue=editor.edges.filter(edge=>edge.to===node.id).map(edge=>edge.from);
@@ -306,18 +306,29 @@
     if(sourceNode.kind==="iterator") return `$${sourceNode.params?.variavel||"item_atual"}`;
     return `$${sourceNode.ref}`;
   }
+  function numericParameter(editor,node,raw){
+    if(raw===""||raw===undefined||raw===null)return raw;
+    const text=String(raw).trim();
+    if(/^\$[A-Za-z_][A-Za-z0-9_]*$/.test(text)){
+      if(connectedVariables(editor,node).some(variable=>`$${variable.ref}`===text))return text;
+      throw new Error("Selecione uma variável disponível antes deste elemento.");
+    }
+    const decimal=text.replace(",", ".");
+    if(!/^[+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/i.test(decimal)||!Number.isFinite(Number(decimal)))throw new Error("Informe um número finito ou uma variável disponível ($nome).");
+    return Number(decimal);
+  }
   function contractControl(editor,node,field){
     const [key,label,type,setting]=field,value=node.params?.[key]??(Array.isArray(setting)?"":setting??""),variables=connectedVariables(editor,node),variableOptions=variables.map(item=>`<option value="$${esc(item.ref)}" ${String(value)===`$${item.ref}`?"selected":""}>Saída anterior: ${esc(item.label)} ($${esc(item.ref)})</option>`).join("");
     if(type==="check")return `<label class="field-check model-contract-field"><input type="checkbox" data-contract-param="${esc(key)}" ${value?"checked":""}> ${esc(label)}</label>`;
-    if(type==="layer"||type==="layers"){const layers=window.gpApp.state.layers||[];return `<div class="field model-contract-field"><label>${esc(label)}</label><select data-contract-param="${esc(key)}" ${type==="layers"?"multiple size=5":""}><option value="">Selecione uma entrada…</option>${variableOptions}${layers.map(layer=>`<option value="${esc(layer.id)}" ${value===layer.id?"selected":""}>Painel de Conteúdo: ${esc(layer.nome)}</option>`).join("")}</select></div>`;}
+    if(type==="layer"||type==="layers"){const selectedValues=Array.isArray(value)?value:[value];const layers=window.gpApp.state.layers||[];return `<div class="field model-contract-field"><label>${esc(label)}</label><select data-contract-param="${esc(key)}" ${type==="layers"?"multiple size=5":""}><option value="">Selecione uma entrada…</option>${variableOptions}${layers.map(layer=>`<option value="${esc(layer.id)}" ${selectedValues.includes(layer.id)?"selected":""}>Painel de Conteúdo: ${esc(layer.nome)}</option>`).join("")}</select></div>`;}
     if(type==="select")return `<div class="field model-contract-field"><label>${esc(label)}</label><select data-contract-param="${esc(key)}"><option value="">Selecione…</option>${variableOptions}${(setting||[]).map(option=>`<option value="${esc(option)}" ${String(value)===String(option)?"selected":""}>${esc(option)}</option>`).join("")}</select></div>`;
-    const listId=`vars-${node.id}-${key}`;return `<div class="field model-contract-field"><label>${esc(label)}</label><input data-contract-param="${esc(key)}" type="${type==="number"?"number":"text"}" value="${esc(value)}" list="${listId}" placeholder="Ex.: ${type==="number"?"100 ou $valor_anterior":"$saida_anterior ou texto"}"><datalist id="${listId}">${variables.map(item=>`<option value="$${esc(item.ref)}">${esc(item.label)}</option>`).join("")}</datalist></div>`;
+    const listId=`vars-${node.id}-${key}`;return `<div class="field model-contract-field"><label>${esc(label)}</label><input data-contract-param="${esc(key)}" data-kind="${esc(type)}" type="text" value="${esc(value)}" list="${listId}" placeholder="Ex.: ${type==="number"?"100 ou $valor_anterior":"$saida_anterior ou texto"}"><datalist id="${listId}">${variables.map(item=>`<option value="$${esc(item.ref)}">${esc(item.label)}</option>`).join("")}</datalist></div>`;
   }
   function inspector(editor){
     const body=$("#gp-model-properties-view .model-inspector-body"),node=editor.nodes.find(n=>n.id===editor.selected);
     if(!node){body.innerHTML=`<div class="field"><label>Nome</label><input data-model-name value="${esc(editor.title)}"></div><div class="field"><label>Descrição</label><textarea data-model-description>${esc(editor.description)}</textarea></div>${modelTips(editor.type)}<p class="field-help">Selecione um elemento para editar suas propriedades.</p>`;return;}
     if(node.kind==="input"){
-      const layers=inputLayers(editor),iterator=iteratorKind(editor),multiple=["vector_layers","raster_layers"].includes(iterator),selected=Array.isArray(node.params.valor)?node.params.valor:[node.params.valor];body.innerHTML=`<div class="field"><label>Nome do elemento</label><input data-node-label value="${esc(node.label)}"></div><div class="field"><label>Chave da entrada</label><input data-input-ref value="${esc(node.ref)}" placeholder="Ex.: camada_entrada"></div>${iterator==="values"?`<div class="field"><label>Valor da entrada</label><input data-system-values value="${esc(JSON.stringify(node.params.valor||[]))}" placeholder='Ex.: [10, 20, 30]'></div>`:`<div class="field"><label>Valor da entrada</label><select data-system-input ${multiple?'multiple size="6"':""}><option value="">Selecione no Painel de Conteúdo…</option>${layers.map(layer=>`<option value="${esc(layer.id)}" ${selected.includes(layer.id)?"selected":""}>${esc(layer.nome)}</option>`).join("")}</select></div>`}<p class="field-help">Os parâmetros posteriores usam esta entrada como <code>$${esc(node.ref)}</code>. Tipo aceito: ${iterator==="raster_layers"?"um ou mais rasters":iterator==="features"?"uma camada vetorial cujas feições serão iteradas":iterator==="values"?"uma lista de valores":"uma ou mais camadas vetoriais"}.</p><button class="btn danger" data-delete-node>Excluir elemento</button>`;return;
+      const layers=inputLayers(editor),iterator=iteratorKind(editor),multiple=["vector_layers","raster_layers"].includes(iterator),selected=Array.isArray(node.params.valor)?node.params.valor:[node.params.valor];body.innerHTML=`<div class="field"><label>Nome do elemento</label><input data-node-label value="${esc(node.label)}"></div><div class="field"><label>Chave da entrada</label><input data-input-ref value="${esc(node.ref)}" placeholder="Ex.: camada_entrada"></div>${iterator==="values"?`<div class="field"><label>Valor da entrada</label><input data-system-values value="${esc(JSON.stringify(node.params.valor||[]))}" placeholder='Ex.: [10, 20, 30]'></div>`:`<div class="field"><label>Valor da entrada</label><select data-system-input ${multiple?'multiple size="6"':""}><option value="">Selecione no Painel de Conteúdo…</option>${layers.map(layer=>`<option value="${esc(layer.id)}" ${selected.includes(layer.id)?"selected":""}>${esc(layer.nome)}</option>`).join("")}</select></div>`}<p class="field-help">Os parâmetros posteriores usam esta entrada como <code>$${esc(node.ref)}</code>. Tipo aceito: ${iterator==="layer"?"uma camada vetorial ou raster":iterator==="raster_layers"?"um ou mais rasters":iterator==="features"?"uma camada vetorial cujas feições serão iteradas":iterator==="values"?"uma lista de valores":"uma ou mais camadas vetoriais"}.</p><button class="btn danger" data-delete-node>Excluir elemento</button>`;return;
     }
     if(node.kind==="output"){
       const raster=RASTER_RESULTS.has(sourceProcess(editor,node)?.ref);body.innerHTML=`<div class="field"><label>Nome do elemento</label><input data-node-label value="${esc(node.label)}"></div><div class="field"><label>Nome da saída</label><input data-output-field="nome_saida" value="${esc(node.params.nome_saida||editor.title)}" placeholder="Ex.: resultado_final"></div><div class="field"><label>CRS</label><select data-output-field="crs_saida"><option value="entrada">Da camada de entrada</option><option value="EPSG:4674">EPSG:4674 (SIRGAS 2000)</option><option value="EPSG:4326">EPSG:4326 (WGS 84)</option><option value="EPSG:3857">EPSG:3857 (WGS 84 / Pseudo-Mercator)</option></select></div><div class="field"><label>Destino</label><select data-output-field="destino"><option value="memoria">Memória</option><option value="storage">Storage</option></select></div><div class="field"><label>Formato</label><select data-output-field="formato_saida">${(raster?["JSON","GeoTIFF"]:["GeoJSON","GeoPackage","Shapefile"]).map(format=>`<option value="${format}">${format}</option>`).join("")}</select></div><button class="btn danger" data-delete-node>Excluir elemento</button>`;
@@ -402,7 +413,7 @@
     if(event.target.matches("[data-system-input]")){node.params.valor=event.target.multiple?[...event.target.selectedOptions].map(o=>o.value):event.target.value;editor.dirty=true;return;}
     if(event.target.matches("[data-system-values]")){try{node.params.valor=JSON.parse(event.target.value||"[]");event.target.setCustomValidity("")}catch{event.target.setCustomValidity("Informe uma lista JSON válida")}editor.dirty=true;return;}
     if(event.target.matches("[data-output-field]")){node.params[event.target.dataset.outputField]=event.target.value;editor.dirty=true;return;}
-    if(event.target.matches("[data-contract-param]")){const key=event.target.dataset.contractParam;if(event.target.type==="checkbox")node.params[key]=event.target.checked;else if(event.target.multiple)node.params[key]=[...event.target.selectedOptions].map(o=>o.value);else node.params[key]=event.target.type==="number"&&event.target.value!==""?Number(event.target.value):event.target.value;editor.dirty=true;return;}
+    if(event.target.matches("[data-contract-param]")){const key=event.target.dataset.contractParam;if(event.target.type==="checkbox")node.params[key]=event.target.checked;else if(event.target.multiple)node.params[key]=[...event.target.selectedOptions].map(o=>o.value);else if(event.target.dataset.kind==="number"){node.params[key]=event.target.value;try{node.params[key]=numericParameter(editor,node,event.target.value);event.target.setCustomValidity("")}catch(error){event.target.setCustomValidity(error.message)}}else node.params[key]=event.target.value;editor.dirty=true;return;}
     if(event.target.matches("[data-variable-type]")){node.params.tipo=event.target.value;editor.dirty=true;return;}
     if(event.target.matches("[data-variable-value]")){node.params.valor=event.target.value;editor.dirty=true;return;}
     if(event.target.matches("[data-iterator-source]")){setIteratorSource(editor,node,event.target.value);drawEdges(editor);editor.dirty=true;return;}
@@ -500,6 +511,9 @@
     if(issues.length){const error=new Error(`${issues.length} problema(s) impedem a validação.`);error.details=issues;throw error;}
   }
   function compile(editor){
+    editor.nodes.forEach(node=>contractFields(editor,node).filter(field=>field[2]==="number").forEach(([key,label])=>{
+      try{node.params[key]=numericParameter(editor,node,node.params[key]);}catch(error){throw new Error(`${node.label} — ${label}: ${error.message}`);}
+    }));
     validateGraph(editor);
     const ordered=topological(editor),steps=ordered.map(node=>{const params={...node.params};editor.edges.filter(e=>e.to===node.id&&e.parameter).forEach(edge=>{const source=editor.nodes.find(n=>n.id===edge.from),resultKey=source?.kind==="iterator"?source.params.variavel:["input","variable","output"].includes(source?.kind)?source.ref:RASTER_RESULTS.has(source?.ref)?"raster_id":"camada_id";params[edge.parameter]=`$${resultKey||"camada_id"}`});if(node.kind==="iterator")return {iterador:node.ref,parametros:params};const outputKey=RASTER_RESULTS.has(node.ref)?"raster_id":"camada_id",mappings={};editor.edges.filter(edge=>edge.from===node.id).forEach(edge=>{const variable=editor.nodes.find(item=>item.id===edge.to);if(variable?.kind==="variable")mappings[outputKey]=variable.ref});const process=node.kind==="function"?{funcao_id:node.ref,parametros:params}:{algoritmo_id:node.ref,parametros:params};if(Object.keys(mappings).length)process.mapear_saidas=mappings;return process});
     const base={id:editor.definitionId||uid(editor.type==="function"?"funcao":"fluxo"),nome:editor.title,descricao:editor.description,categoria:editor.type==="function"?"Funções customizadas":"Fluxos customizados",toolbox:"SIRCADI Toolbox",parametros_expostos:editor.nodes.filter(n=>n.kind==="input").map(n=>({nome:n.label,chave:n.ref,tipo_entrada:iteratorKind(editor),valor:n.params.valor??""})),variaveis:editor.nodes.filter(n=>n.kind==="variable").map(n=>({nome:n.label,chave:n.ref,tipo:n.params.tipo||"dados",valor:n.params.valor??""})),diagrama:{versao:3,nos:editor.nodes,conexoes:editor.edges}};
@@ -509,7 +523,7 @@
   function processFeedback(editor,action){
     if(window.gpFeedback){const verbos={save:"Salvar",validate:"Validar",run:"Executar"},proc=window.gpFeedback.ProcessFeedback.iniciarCadastro({title:editor.title,subtitle:`${verbos[action]} ${editor.type==="function"?"função":"fluxo"}`});return {
       step:(message,status)=>status==="success"||status==="error"?proc.log(message,status):proc.tarefaAtual(message),
-      complete:message=>proc.sucesso({message}),fail:message=>proc.erro({message})};}
+      sync:job=>proc.sync(job),cancel:message=>proc.confirmarCancelamento(message),complete:message=>proc.sucesso({message}),fail:message=>proc.erro({message})};}
     document.querySelector(".model-process-backdrop")?.remove();
     const labels={save:"Salvamento",validate:"Validação",run:"Execução"},kind=editor.type==="function"?"função":"fluxo",backdrop=document.createElement("div");
     backdrop.className="model-process-backdrop";backdrop.innerHTML=`<section class="model-process-modal" role="dialog" aria-modal="true" aria-labelledby="model-process-title"><header><div><small>${labels[action]} de ${kind}</small><h2 id="model-process-title">${esc(editor.title)}</h2></div><span class="model-process-running" data-process-state>Em andamento</span></header><div class="model-process-track"><span></span></div><ol class="model-process-log" aria-live="polite"></ol><footer><strong data-process-final>Aguardando processamento…</strong><button type="button" class="btn" data-process-close disabled>Fechar</button></footer></section>`;
@@ -524,10 +538,12 @@
     if(action==="run"){
       // Reserve the editor before awaiting confirmation to prevent duplicate runs.
       editor.busy=true;updateModelRibbon();
-      const approved=window.gpFeedback
-        ?await window.gpFeedback.ProcessFeedback.confirmar({title:`Executar ${editor.title}`,message:"Iniciar todas as etapas configuradas neste fluxo?",confirmLabel:"Executar fluxo"})
-        :confirm(`Executar todas as etapas de ${editor.title}?`);
-      editor.busy=false;
+      let approved;
+      try{
+        approved=window.gpFeedback
+          ?await window.gpFeedback.ProcessFeedback.confirmar({title:`Executar ${editor.title}`,message:"Iniciar todas as etapas configuradas neste modelo?",confirmLabel:editor.type==="function"?"Executar função":"Executar fluxo"})
+          :confirm(`Executar todas as etapas de ${editor.title}?`);
+      }finally{editor.busy=false;updateModelRibbon();}
       if(!approved){updateModelRibbon();return;}
     }
     if(action!=="save")editor.validated=false;
@@ -542,12 +558,32 @@
       if(action==="validate")editor.validated=true;
       feedback.complete(action==="save"?"Definição salva com sucesso.":action==="validate"?"Definição válida e pronta para executar.":"Processamento concluído e saídas atualizadas.");
       return result;
-    }catch(error){(error.details||[]).forEach(detail=>feedback.step(detail,"error"));feedback.fail(`Falha: ${error.message}`);notify(error.message);return null;}
+    }catch(error){if(error.name==="AbortError"&&feedback.cancel)feedback.cancel(error.message);else{(error.details||[]).forEach(detail=>feedback.step(detail,"error"));feedback.fail(`Falha: ${error.message}`);}notify(error.message);return null;}
     finally{editor.busy=false;updateModelRibbon();}
   }
   async function saveEditor(editor,feedback){feedback?.step("Compilando elementos, variáveis e conectores.");const data=compile(editor),endpoint=editor.type==="function"?"funcoes":"fluxos";feedback?.step("Estrutura do diagrama validada.","success");feedback?.step(editor.definitionId?"Atualizando definição no repositório.":"Registrando nova definição no repositório.");const saved=await request(`/${endpoint}${editor.definitionId?`/${editor.definitionId}`:""}`,{method:editor.definitionId?"PUT":"POST",body:JSON.stringify(data)});editor.definitionId=saved.id;editor.dirty=false;feedback?.step(`Definição persistida com identificador ${saved.id}.`,"success");feedback?.step("Sincronizando a SIRCADI Toolbox.");const refreshed=await request(`/${endpoint}`);window.gpApp.state[editor.type==="function"?"functions":"flows"].splice(0,Infinity,...refreshed);window.gpApp.renderToolbox?.();feedback?.step("Toolbox atualizada.","success");notify(`${editor.type==="function"?"Função":"Fluxo"} salva em ${data.categoria}, na SIRCADI Toolbox.`);return saved;}
   async function validateEditor(editor,feedback){feedback?.step("Verificando integridade local do diagrama.");compile(editor);feedback?.step("Integridade local confirmada.","success");if(!editor.definitionId||editor.dirty){feedback?.step("Há alterações pendentes; salvamento necessário.");await saveEditor(editor,feedback)}const endpoint=editor.type==="function"?"funcoes":"fluxos";feedback?.step("Solicitando validação canônica ao servidor.");const result=await request(`/${endpoint}/${editor.definitionId}/validar`,{method:"POST",body:"{}"});feedback?.step(result.valido?"Servidor confirmou a validade da definição.":`Servidor encontrou ${result.erros.length} pendência(s).`,result.valido?"success":"error");notify(result.valido?"Definição válida e pronta para executar.":result.erros.join("; "));return result;}
-  async function runEditor(editor,feedback){feedback?.step("Preparando definição para execução.");const valid=await validateEditor(editor,feedback);if(!valid.valido)throw new Error(valid.erros.join("; ")||"A definição não pode ser executada.");const inputNodes=editor.nodes.filter(node=>node.kind==="input"&&node.params.valor!==undefined&&node.params.valor!==""),inputs=Object.fromEntries(inputNodes.map(node=>[node.ref,node.params.valor])),endpoint=editor.type==="function"?"funcoes":"fluxos";feedback?.step(`${inputNodes.length} entrada(s) preparada(s).`,"success");feedback?.step("Executando algoritmos e funções encadeados no servidor.");const result=await request(`/${endpoint}/${editor.definitionId}/executar`,{method:"POST",body:JSON.stringify(inputs)});feedback?.step(Array.isArray(result?.resultados)?`Servidor concluiu ${result.resultados.length} etapa(s) de processamento.`:"Servidor concluiu todas as etapas de processamento.","success");feedback?.step("Atualizando camadas no Painel de Conteúdo.");await window.gpApp.syncExecutionResults(result);window.gpApp.renderLayers?.();feedback?.step("Painel de Conteúdo sincronizado.","success");notify("Execução concluída; as saídas foram atualizadas no Painel de Conteúdo.");return result;}
+  async function runEditor(editor,feedback){feedback?.step("Preparando definição para execução.");const valid=await validateEditor(editor,feedback);if(!valid.valido)throw new Error(valid.erros.join("; ")||"A definição não pode ser executada.");const inputNodes=editor.nodes.filter(node=>node.kind==="input"&&node.params.valor!==undefined&&node.params.valor!==""),inputs=Object.fromEntries(inputNodes.map(node=>[node.ref,node.params.valor])),endpoint=editor.type==="function"?"funcoes":"fluxos";feedback?.step(`${inputNodes.length} entrada(s) preparada(s).`,"success");feedback?.step("Executando algoritmos e funções encadeados no servidor.");const result=await executeDefinition(endpoint,{id:editor.definitionId},inputs,feedback);feedback?.step(Array.isArray(result?.resultados)?`Servidor concluiu ${result.resultados.length} etapa(s) de processamento.`:"Servidor concluiu todas as etapas de processamento.","success");feedback?.step("Atualizando camadas no Painel de Conteúdo.");await window.gpApp.syncExecutionResults(result);window.gpApp.renderLayers?.();feedback?.step("Painel de Conteúdo sincronizado.","success");notify("Execução concluída; as saídas foram atualizadas no Painel de Conteúdo.");return result;}
+  async function cancelModelExecution(){
+    const job=window.gpApp.state.activeJob;
+    if(!job)throw new Error("Aguarde o servidor registrar o modelo.");
+    return request(`/operacoes-jobs/status/${job.id}/cancelar`,{method:"POST"});
+  }
+  async function executeDefinition(kind,item,inputs,feedback){
+    const state=window.gpApp.state;
+    if(state.activeExecution||state.activeImport||window.gpArquivos?.busy)throw new Error("Aguarde a execução atual terminar.");
+    const endpoint=["functions","function","funcoes"].includes(kind)?"funcoes":"fluxos";
+    state.activeExecution=true;
+    try{
+      const job=await request(`/${endpoint}/${encodeURIComponent(item.id)}/executar-job`,{method:"POST",body:JSON.stringify(inputs)});
+      state.activeJob=job;
+      const finished=await window.gpApp.waitForJob(job,feedback?.sync?{configure(){},sync:feedback.sync}:undefined);
+      return finished.resultado||{};
+    }catch(error){
+      if(state.activeJob?.resultados_parciais?.length)await window.gpApp.syncExecutionResults(state.activeJob.resultados_parciais);
+      throw error;
+    }finally{state.activeExecution=false;state.activeJob=null;}
+  }
   function updateTab(editor){const span=$(`[data-document-tab="${editor.id}"] span`);if(span)span.textContent=editor.title;}
   function notify(message){if(window.gpFeedback){window.gpFeedback.Notify.info("Bancada de geoprocessamento",message,{duration:5000});return;}const status=$("#gp-save-state");status.textContent=message;clearTimeout(notify.timer);notify.timer=setTimeout(()=>status.textContent="Ambiente local",4500);}
   async function close(id){const editor=editors.get(id);if(editor?.busy){notify("Aguarde a operação terminar antes de fechar este modelo.");return;}if(editor?.dirty&&!(window.gpFeedback?await window.gpFeedback.ProcessFeedback.confirmar({message:"Fechar sem salvar as alterações?",danger:true,confirmLabel:"Fechar sem salvar"}):confirm("Fechar sem salvar as alterações?")))return;editors.delete(id);$(`[data-document-tab="${id}"]`)?.remove();$(`[data-model-document="${id}"]`)?.remove();activate("mapa");}
@@ -585,6 +621,6 @@
     window.addEventListener("resize",closeModelMenu);
     window.addEventListener("scroll",closeModelMenu,true);
     $("#gp-document-tabs").addEventListener("click",event=>{const closeButton=event.target.closest("[data-close-model]");if(closeButton){event.stopPropagation();close(closeButton.dataset.closeModel);return}const tab=event.target.closest("[data-document-tab]");if(tab)activate(tab.dataset.documentTab)});
-    window.gpApp.newFunction=seed=>showCreateForm("function",seed);window.gpApp.newFlow=()=>showCreateForm("flow");window.gpApp.openVisualDefinition=(kind,item)=>open(kind==="functions"?"function":"flow",item);window.gpModelTips=modelTips;window.gpModeler={open,create:showCreateForm,edit:(kind,item)=>open(kind,item),hasActiveEditor,showPanel:showModelPanel,updateRibbon:updateModelRibbon,_debug:{editors,activeEditor,addNode,render,deleteSelection,duplicateSelection,autoLayout,fitCanvas,selectEdge,handleModelCommand}};icons();
+    window.gpApp.newFunction=seed=>showCreateForm("function",seed);window.gpApp.newFlow=()=>showCreateForm("flow");window.gpApp.openVisualDefinition=(kind,item)=>open(kind==="functions"?"function":"flow",item);window.gpModelTips=modelTips;window.gpModeler={open,executeDefinition,create:showCreateForm,edit:(kind,item)=>open(kind,item),hasActiveEditor,showPanel:showModelPanel,updateRibbon:updateModelRibbon,_debug:{editors,activeEditor,addNode,render,deleteSelection,duplicateSelection,autoLayout,fitCanvas,selectEdge,handleModelCommand}};icons();
   });
 })();

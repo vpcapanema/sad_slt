@@ -65,18 +65,28 @@
     }).join("");
   }
 
+  let catalogRequest = 0;
   async function loadCatalog(mode) {
+    const requestId = ++catalogRequest;
     const tree = $("#gp-catalog-tree");
+    delete tree.dataset.services;
     tree.innerHTML = '<div class="empty compact">Carregando catálogo…</div>';
     try {
-      if (mode === "projeto") tree.innerHTML = renderProject(await requestCatalog("/catalogo/projeto"));
+      if (mode === "projeto") {
+        const project = await requestCatalog("/catalogo/projeto");
+        if (requestId !== catalogRequest) return;
+        tree.innerHTML = renderProject(project);
+      }
       else {
         const services = await requestCatalog(mode === "portal" ? "/catalogo/portal/servicos" : "/catalogo/favoritos");
+        if (requestId !== catalogRequest) return;
         tree.dataset.services = JSON.stringify(services);
         tree.innerHTML = renderPortal(services, mode === "favoritos");
       }
+      $("#gp-catalog-search").dispatchEvent(new Event("input"));
       window.lucide?.createIcons({ attrs: { "stroke-width": 1.7 } });
     } catch (error) {
+      if (requestId !== catalogRequest) return;
       tree.innerHTML = `<div class="empty compact">${escapeHtml(error.message)}</div>`;
     }
   }

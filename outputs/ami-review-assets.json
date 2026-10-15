@@ -1,0 +1,142 @@
+[
+  {
+    "file": "assets\\css\\app.css",
+    "lines": 3408,
+    "chars": 63330
+  },
+  {
+    "file": "assets\\vendor\\fontawesome\\css\\all.min.css",
+    "lines": 9,
+    "chars": 103009
+  },
+  {
+    "file": "assets\\css\\template-conteudo.css",
+    "lines": 108,
+    "chars": 2785
+  },
+  {
+    "file": "assets\\css\\process_feedback_system.css",
+    "lines": 594,
+    "chars": 32241
+  },
+  {
+    "file": "assets\\css\\navbar-modulo.css",
+    "lines": 95,
+    "chars": 2636
+  },
+  {
+    "file": "assets\\css\\ahp-module.css",
+    "lines": 4987,
+    "chars": 107792
+  },
+  {
+    "file": "assets\\css\\ahp-collab-analytics.css",
+    "lines": 1,
+    "chars": 3309
+  },
+  {
+    "file": "assets\\css\\ahp-collab-explorer.css",
+    "lines": 1,
+    "chars": 2048
+  },
+  {
+    "file": "assets\\css\\ahp-collab-rounds.css",
+    "lines": 3,
+    "chars": 292
+  },
+  {
+    "file": "assets\\css\\analise-multicriterio.css",
+    "lines": 286,
+    "chars": 41244
+  },
+  {
+    "file": "assets\\css\\analise-multicriterio-tabela.css",
+    "lines": 219,
+    "chars": 4342
+  },
+  {
+    "file": "assets\\css\\central-respostas-layout.css",
+    "lines": 41,
+    "chars": 838
+  },
+  {
+    "file": "assets\\css\\analise-multicriterio-modal.css",
+    "lines": 6,
+    "chars": 5543
+  },
+  {
+    "file": "assets\\css\\mad-filter-standard.css",
+    "lines": 107,
+    "chars": 2160
+  },
+  {
+    "file": "assets\\css\\page-title-standard.css",
+    "lines": 72,
+    "chars": 1425
+  },
+  {
+    "file": "assets\\css\\table-standard.css",
+    "lines": 101,
+    "chars": 4603
+  },
+  {
+    "file": "assets\\css\\admin-table-controls.css",
+    "lines": 380,
+    "chars": 8523
+  },
+  {
+    "file": "assets\\css\\paginas\\ami-espaco-secoes.css",
+    "lines": 213,
+    "chars": 6312
+  },
+  {
+    "file": "assets\\js\\table-standard.js",
+    "lines": 48,
+    "chars": 2637
+  },
+  {
+    "file": "assets\\js\\admin-auth.js",
+    "lines": 139,
+    "chars": 3969
+  },
+  {
+    "file": "assets\\vendor\\xlsx\\xlsx-0.18.5.min.js",
+    "lines": 120,
+    "chars": 639123
+  },
+  {
+    "file": "assets\\js\\paginas\\analise-multicriterio-tabela.js",
+    "lines": 54,
+    "chars": 15406
+  },
+  {
+    "file": "assets\\js\\paginas\\analise-multicriterio-julgamentos.js",
+    "lines": 1032,
+    "chars": 101122
+  },
+  {
+    "file": "assets\\js\\table-sort.js",
+    "lines": 361,
+    "chars": 13647
+  },
+  {
+    "file": "assets\\js\\template-base.js",
+    "lines": 82,
+    "chars": 3055
+  },
+  {
+    "file": "assets\\js\\notification_system.js",
+    "lines": 860,
+    "chars": 30257
+  },
+  {
+    "file": "assets\\js\\process_feedback_unified.js",
+    "lines": 1426,
+    "chars": 86044
+  },
+  {
+    "file": "assets\\js\\ahp-process-monitor.js",
+    "lines": 36,
+    "chars": 2012
+  }
+]

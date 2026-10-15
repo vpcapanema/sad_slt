@@ -90,7 +90,7 @@ def test_atualiza_todos_os_campos_da_configuracao_do_preenchimento(monkeypatch) 
     assert captured["config_portfolio_id"] is None
     assert captured["config_codigo"] == "CFG-EDITADA"
     assert captured["n_criterios"] == 2
-    assert captured["convites"] == [{"email": "novo@x.gov.br"}]
+    assert captured["convites"] == [{"email": "novo@x.gov.br", "nome": None}]
     assert captured["valido_ate"].year == 2031
 
 

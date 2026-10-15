@@ -362,9 +362,10 @@ def acompanhar_eventos(ident: UUID, user: SessionUser = Depends(require_geospati
 @router.get('/execucoes/{ident}/tabela')
 def tabela_resultado(ident: UUID, camada: str = Query(default='resultado',max_length=200),
                     offset: int = Query(default=0,ge=0), limite: int = Query(default=100,ge=1,le=1000),
+                    ordem: str = Query(default='', max_length=500), descendente: bool = False,
                     user: SessionUser = Depends(require_geospatial_access)):
     try:
-        return service.tabela_resultado(ident,user,camada,offset,limite)
+        return service.tabela_resultado(ident,user,camada,offset,limite,ordem,descendente)
     except LookupError as exc:
         raise HTTPException(404,str(exc)) from exc
 
@@ -377,7 +378,7 @@ class ConsultaDashboard(BaseModel):
     campo: str = Field(default='', max_length=500)
     valor: str = Field(default='', max_length=10000)
     busca: str = Field(default='', max_length=200)
-    ordem: Literal['origem', 'valor'] = 'origem'
+    ordem: str = Field(default='origem', max_length=40, pattern=r'^(origem|valor|registro|base:\d+)$')
     descendente: bool = False
     pagina: int = Field(default=0, ge=0)
 
@@ -410,6 +411,8 @@ class FiltroMatriz(BaseModel):
 
 
 class ConsultaIntersecoes(BaseModel):
+    ordenar_por: str = Field(default='', max_length=2000)
+    descendente: bool = False
     filtros: list[FiltroMatriz] = Field(default_factory=list, max_length=2)
     combinacao: Literal['e', 'ou'] = 'e'
     agrupamento: Literal['feicao', 'camada'] = 'feicao'

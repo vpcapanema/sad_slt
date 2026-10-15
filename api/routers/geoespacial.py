@@ -623,6 +623,24 @@ def executar_funcao(funcao_id: str, entradas: dict) -> dict:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
+@router.post("/funcoes/{funcao_id}/executar-job", status_code=status.HTTP_202_ACCEPTED)
+def iniciar_funcao_job(funcao_id: str, entradas: dict, user: SessionUser = Depends(require_geospatial_access)) -> dict:
+    definition = modelo_repo.obter(funcao_id, "funcao")
+    if not definition:
+        raise HTTPException(status_code=404, detail="Função não encontrada")
+    _validar_definicao_funcao(definition)
+    return geoprocessamento_jobs.create_model(definition, "funcao", entradas, str(user.id))
+
+
+@router.post("/fluxos/{fluxo_id}/executar-job", status_code=status.HTTP_202_ACCEPTED)
+def iniciar_fluxo_job(fluxo_id: str, entradas: dict, user: SessionUser = Depends(require_geospatial_access)) -> dict:
+    definition = modelo_repo.obter(fluxo_id, "fluxo")
+    if not definition:
+        raise HTTPException(status_code=404, detail="Fluxo não encontrado")
+    _validar_definicao_fluxo(definition)
+    return geoprocessamento_jobs.create_model(definition, "fluxo", entradas, str(user.id))
+
+
 @router.post("/fluxos")
 def salvar_fluxo(fluxo: dict) -> dict:
     _validar_definicao_fluxo(fluxo)
@@ -1042,6 +1060,15 @@ def obter_bounds_camada_storage(caminho: str, camada: str | None = None) -> dict
     from api.services import storage_geoespacial
     try:
         return {"bounds": storage_geoespacial.bounds(caminho, camada)}
+    except (FileNotFoundError, ValueError, RuntimeError) as exc:
+        raise _erro_camada_storage(exc) from exc
+
+
+@router.get("/storage/camada/raster-preview")
+def obter_preview_raster_storage(caminho: str) -> dict:
+    from api.services.bancada_raster import preview
+    try:
+        return preview(caminho)
     except (FileNotFoundError, ValueError, RuntimeError) as exc:
         raise _erro_camada_storage(exc) from exc
 

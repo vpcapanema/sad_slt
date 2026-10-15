@@ -223,12 +223,14 @@ def test_restricted_home_groups_operator_and_territorial_actions() -> None:
     assert "/public/ahp/colaborativa/" not in mad
     ahp = mad.split("subgroup-analise-multicriterio-ahp-e-obtencao-de-pesos", 1)[1].split("subgroup-ranqueamento", 1)[0]
     assert re.findall(r'class="platform-tile__label">([^<]+)</span>', ahp) == [
+        "Agrupamento de demandas",
         "Central de hierarquização",
         "Central de julgamentos",
         "Central de respostas",
     ]
     assert "?modo=formulario" not in mad
-    assert mad.index("Agrupamento de Demandas e Extração de atributos") < mad.index("Análise Multicritério (AHP)") < mad.index("Ranqueamento")
+    assert mad.index("Extração de atributos") < mad.index("Análise Multicritério (AHP)") < mad.index("Ranqueamento")
+    assert 'class="platform-tile platform-tile--amber" href="/restrict/agrupamento-demandas/"' in ahp
     ranking = mad.split("subgroup-ranqueamento", 1)[1]
     assert set(re.findall(r'href="([^"]+)"', ranking)) == {
         "/restrict/hierarquizacao/fase-1/",

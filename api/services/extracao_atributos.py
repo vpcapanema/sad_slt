@@ -493,7 +493,7 @@ def eventos_progresso(ident, user):
     return controle.eventos
 
 
-def tabela_resultado(ident, user, camada='resultado', offset=0, limite=100):
+def tabela_resultado(ident, user, camada='resultado', offset=0, limite=100, ordem='', descendente=False):
     job = consultar(ident,user,completo=True)
     resultado = job.get('resultado') or {}
     if job['status'] != 'concluido':
@@ -507,6 +507,13 @@ def tabela_resultado(ident, user, camada='resultado', offset=0, limite=100):
     tabela = repo.atributos_paginados(recurso,offset,limite)
     if tabela is None:
         raise LookupError('Tabela de saída não encontrada.')
+    if ordem:
+        if ordem not in tabela['campos']:
+            raise LookupError('Campo de ordenação não encontrado.')
+        from api.services.extracao_ordenacao import chave_ordenacao
+        registros = repo.atributos_dashboard(recurso) or []
+        registros.sort(key=lambda r: chave_ordenacao(r['propriedades'].get(ordem)), reverse=descendente)
+        tabela['linhas'] = [r['propriedades'] for r in registros[offset:offset+limite]]
     return {'camada':camada,**tabela}
 
 

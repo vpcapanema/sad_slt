@@ -6,7 +6,7 @@ from typing import Any
 from psycopg import sql
 from psycopg.types.json import Jsonb
 
-from api.db.connection import get_connection
+from api.db.connection import get_connection, commit_unless_atomic
 from api.services.autoria_demanda import validar_autor
 from api.repositories import geometria_historico_repository
 from api.constants import STATUS_POS_APROVACAO, STATUS_PRE_APROVACAO, STATUS_PRE_REPROVACAO, STATUS_REPROVACAO
@@ -21,6 +21,7 @@ _SELECT_BASE = """
         pl.diretoria_id,
         pg.nome,
         pg.descricao,
+        pg.origem_sei_processo,
         pg.objetivo,
         pg.publico_alvo,
         pg.orgao_responsavel,
@@ -68,7 +69,7 @@ _SELECT_BASE = """
 
 _INSERT_SQL = """
     INSERT INTO demandas.programa (
-        codigo, plano_id, nome, descricao,
+        codigo, plano_id, nome, descricao, origem_sei_processo,
         objetivo, publico_alvo, orgao_responsavel, justificativa,
         valor_global, atributos_cadastrais, maturidade, capex_estimado, base_estimativa_capex,
         prazo_referencia_meses, base_estimativa_prazo, vinculo_institucional,
@@ -77,7 +78,7 @@ _INSERT_SQL = """
         sigma_pessoa_id, representante_nome, representante_email, representante_telefone,
         status, criado_por, atualizado_por
     ) VALUES (
-        %(codigo)s, %(plano_id)s, %(nome)s, %(descricao)s,
+        %(codigo)s, %(plano_id)s, %(nome)s, %(descricao)s, %(origem_sei_processo)s,
         %(objetivo)s, %(publico_alvo)s, %(orgao_responsavel)s, %(justificativa)s,
         %(valor_global)s, %(atributos_cadastrais)s, %(maturidade)s, %(capex_estimado)s, %(base_estimativa_capex)s,
         %(prazo_referencia_meses)s, %(base_estimativa_prazo)s, %(vinculo_institucional)s,
@@ -130,6 +131,7 @@ def insert(
     o histórico de geometrias na mesma transação."""
     row = dict(row, criado_por=validar_autor(row.get("criado_por")))
     row = {
+        "origem_sei_processo": None,
         "maturidade": None,
         "capex_estimado": None,
         "base_estimativa_capex": None,
@@ -159,7 +161,7 @@ def insert(
                 arquivo=arquivo_geometria,
                 criado_por=row.get("criado_por"),
             )
-        conn.commit()
+        commit_unless_atomic(conn)
     found = get_by_codigo(row["codigo"])
     if not found:
         raise RuntimeError("Programa inserido mas não recuperado.")
@@ -171,6 +173,7 @@ _UPDATE_ALLOWED = {
     "plano_id": "plano_id",
     "nome": "nome",
     "descricao": "descricao",
+    "origem_sei_processo": "origem_sei_processo",
     "objetivo": "objetivo",
     "publico_alvo": "publico_alvo",
     "orgao_responsavel": "orgao_responsavel",

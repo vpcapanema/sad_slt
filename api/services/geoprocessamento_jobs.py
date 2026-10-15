@@ -311,6 +311,50 @@ class GeoprocessamentoJobs:
             job["total"] += 1
         self._advance(job_id, label, concluir_tarefa=False)
 
+    def create_model(self, definition: dict[str, Any], kind: str, inputs: dict[str, Any], responsavel: str) -> dict[str, Any]:
+        """A interrupção ocorre entre etapas; uma gravação iniciada pode concluir."""
+        execution_id = ciclo.iniciar(f"modelo_{kind}", {"modelo_id": definition["id"], "entradas": inputs}, responsavel)
+        job_id = self._new("modelo", ["Modelo registrado", "Etapas do modelo", "Processo finalizado"])
+        with self._lock:
+            self._jobs[job_id].update(responsavel=responsavel, cancelavel=True,
+                modelo_id=definition["id"], execucao_id=execution_id, parametros=deepcopy(inputs), resultados_parciais=[])
+        self._executor.submit(self._run_model, job_id, deepcopy(definition), kind, deepcopy(inputs))
+        return self.get(job_id) or {}
+
+    def _run_model(self, job_id, definition, kind, inputs):
+        execution_id = self.get(job_id)["execucao_id"]
+        token = ciclo.execucao_atual.set(execution_id)
+        def checkpoint():
+            with self._lock:
+                if self._jobs[job_id].get("cancelamento_solicitado"):
+                    raise OperacaoCancelada("Modelo cancelado entre etapas. As saídas já concluídas foram preservadas.")
+
+        def completed(result):
+            with self._lock:
+                self._jobs[job_id]["resultados_parciais"].append(deepcopy(result))
+                self._publicar(job_id)
+
+        try:
+            defaults = {item["chave"]: item.get("valor")
+                        for item in definition.get("variaveis", []) + definition.get("parametros_expostos", [])
+                        if item.get("chave") and item.get("valor") not in (None, "")}
+            checkpoint()
+            self._start(job_id, "Executando modelo; o cancelamento aguarda a etapa atual terminar")
+            result = asyncio.run(geoprocessamento_engine.run_steps(
+                definition.get("passos" if kind == "funcao" else "itens", []),
+                {**defaults, **inputs}, checkpoint=checkpoint, on_result=completed))
+            checkpoint()
+            result["execucao_id"] = execution_id
+            ciclo.finalizar(execution_id)
+            self._complete(job_id, result)
+        except Exception as exc:
+            try:
+                ciclo.finalizar(execution_id, erro=type(exc).__name__)
+            finally:
+                self._fail(job_id, exc)
+        finally:
+            ciclo.execucao_atual.reset(token)
+
     def create_import(self, filename: str, content: bytes) -> dict[str, Any]:
         name = Path(filename or "camada").name
         digest = sha256(content).hexdigest()

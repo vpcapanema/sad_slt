@@ -243,6 +243,7 @@
 
     return {
       nome: $("#fld-nome").value.trim(),
+      origem_sei_processo: $("#fld-processo-sei").value.trim() || null,
       descricao: $("#fld-descricao").value.trim() || null,
       diretoria_id: $("#fld-diretoria").value,
       plano_id: planoId,

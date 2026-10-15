@@ -20,6 +20,7 @@ class ProgramaCreateSchema(BaseModel):
     plano_codigo: str | None = Field(None, description="Código legível do plano pai (opcional sem vínculo institucional)")
     vinculo_institucional: bool = False
     nome: str = Field(..., min_length=1, max_length=200)
+    origem_sei_processo: str | None = Field(None, max_length=50)
     descricao: str = Field(..., min_length=1)
     objetivo: str | None = None
     publico_alvo: str | None = None
@@ -64,6 +65,7 @@ class ProgramaResponseSchema(BaseModel):
     plano_nome: str | None = None
     diretoria_id: str | None = None
     nome: str
+    origem_sei_processo: str | None = Field(None, max_length=50)
     descricao: str | None = None
     objetivo: str | None = None
     publico_alvo: str | None = None
@@ -88,6 +90,7 @@ class ProgramaUpdateSchema(BaseModel):
 
     status: str | None = None
     nome: str | None = Field(None, min_length=1, max_length=200)
+    origem_sei_processo: str | None = Field(None, max_length=50)
     descricao: str | None = None
     objetivo: str | None = None
     publico_alvo: str | None = None

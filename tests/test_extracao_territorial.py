@@ -28,6 +28,15 @@ def snapshot():
                       {'id':'restricao','nome':'Restrição','camadas':[{'id':'s','nome':'Restrições','frame':restricao}]}])
 
 
+def test_ordenacao_global_antes_da_paginacao():
+    saved = snapshot()
+    for feature, nome in zip(saved['entradas'][0]['feicoes'], ['Zulu', 'Álfa', 'Demanda 10', 'Demanda 2']):
+        feature['atributos']['nome'] = nome
+    pages = [consultar(saved, entrada='Demandas', tamanho=1, pagina=i)['linhas'][0]['nome_demanda'] for i in range(4)]
+    assert pages == ['Álfa', 'Demanda 2', 'Demanda 10', 'Zulu']
+    assert consultar(saved, entrada='Demandas', tamanho=1, descendente=True)['linhas'][0]['nome_demanda'] == 'Zulu'
+
+
 def test_pares_originais_borda_multiplas_areas_e_ids_repetidos():
     saved=snapshot()
     features=saved['entradas'][0]['feicoes']

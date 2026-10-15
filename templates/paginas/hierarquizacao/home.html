@@ -16,7 +16,7 @@
       rel="stylesheet"
       href="/assets/vendor/fontawesome/css/all.min.css"
     />
-  <link rel="stylesheet" href="/assets/css/paginas/hierarquizacao-home-inline-1.css?v=20261015-botao-centralizado">
+  <link rel="stylesheet" href="/assets/css/paginas/hierarquizacao-home-inline-1.css?v=20261015-instrucoes">
   <link rel="stylesheet" href="/assets/css/page-title-standard.css?v=20260820-3" />
   <link rel="stylesheet" href="/assets/css/table-standard.css?v=20261015-fontes-ordem">
 {% endblock %}
@@ -135,7 +135,7 @@
                 <span class="ahp-subsection-num">2</span>
                 <h2 id="hier-agrupamento-titulo">Agrupamento</h2>
               </div>
-              <p class="step-intro">As demandas são selecionadas e salvas na página Agrupamento de Demandas. Escolha aqui o grupo que será usado como universo desta hierarquização.</p>
+              <p class="hier-instrucao"><i class="fa-solid fa-circle-info" aria-hidden="true"></i><span>As demandas são selecionadas e salvas na página Agrupamento de Demandas. Escolha aqui o grupo que será usado como universo desta hierarquização.</span></p>
               <div class="hier-agrupamento-controles">
                 <label class="process-field" for="hier-agrupamento">
                   <span>Selecione um agrupamento *</span>
@@ -154,8 +154,8 @@
               {% set filtro_prefixo = "hier-grupo" %}{% set filtro_rotulo = "Filtrar demandas do agrupamento" %}{% include "componentes/filtro_tabela.html" %}
               <div class="admin-table-wrap">
                 <table class="admin-table hier-resumo-table">
-                  <thead><tr><th>Código</th><th>Nome</th><th>Situação</th></tr></thead>
-                  <tbody id="hier-agrupamento-demandas"><tr><td colspan="3">Selecione um agrupamento salvo.</td></tr></tbody>
+                  <thead><tr><th>Código</th><th>Processo SEI</th><th>Nome</th><th>Situação</th></tr></thead>
+                  <tbody id="hier-agrupamento-demandas"><tr><td colspan="4">Selecione um agrupamento salvo.</td></tr></tbody>
                 </table>
               </div>
               <nav id="hier-grupo-pagination" class="admin-pagination" aria-label="Paginar demandas do agrupamento"></nav>
@@ -165,7 +165,7 @@
     <section class="ahp-subcard cadastro-card card-matriz-de-premissas-e-criterios secao-matriz-de-premissas-e-criterios">
       <div class="ahp-subsection-title"><span class="ahp-subsection-num">3</span><h2>Matriz de premissas e critérios</h2></div>
       <div class="ahp-section-body">
-        <p class="step-intro">Anexe a matriz que define o contexto, as premissas e os critérios desta hierarquização. Os julgamentos associados utilizarão esta matriz cadastrada.</p>
+        <p class="hier-instrucao"><i class="fa-solid fa-circle-info" aria-hidden="true"></i><span>Anexe a matriz que define o contexto, as premissas e os critérios desta hierarquização. Nos julgamentos associados, os colaboradores indicarão a intensidade de importância entre esses critérios. A consolidação calcula os pesos, que, após homologados, serão aplicados na fase 3 aos valores de cada demanda nos critérios correspondentes.</span></p>
         <div class="hier-matriz-controles">
           <label class="process-field" for="hier-criteria-matrix"><span>Matriz de premissas e critérios</span><input id="hier-criteria-matrix" type="file" accept=".json,.csv,.xlsx" required aria-describedby="hier-criteria-matrix-formats hier-criteria-matrix-summary"></label>
           <a href="/public/documentacao/matrizes/Modelo_Matriz_Criterios_Premissas_SLT.xlsx" download="Modelo_Matriz_Criterios_Premissas_SLT.xlsx" class="btn btn-secondary btn-sm"><i class="fas fa-file-excel" aria-hidden="true"></i> Baixar modelo XLSX</a>

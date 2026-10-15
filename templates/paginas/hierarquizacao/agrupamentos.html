@@ -15,7 +15,7 @@
   <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
   <link rel="stylesheet" href="/assets/css/page-title-standard.css">
   <link rel="stylesheet" href="/assets/css/admin-table-controls.css?v=20261015-botoes-quadrados">
-  <link rel="stylesheet" href="/assets/css/paginas/agrupamentos-demandas.css?v=20261015-clique-espacamento">
+  <link rel="stylesheet" href="/assets/css/paginas/agrupamentos-demandas.css?v=20261015-nome-informacao">
 {% endblock %}
 
 {% block conteudo %}
@@ -55,24 +55,24 @@
     <div class="ahp-section-body">
       <form id="agrupamento-form">
         <article class="ahp-subcard card-agrupamento-identificacao agrupamento-identificacao">
-          <div class="ahp-subsection-title"><i class="fa-solid fa-address-card" aria-hidden="true"></i><h2>Informações do agrupamento</h2></div>
+          <div class="ahp-subsection-title"><span class="ahp-subsection-num">1</span><h2>Informações do agrupamento</h2></div>
           <div class="process-grid">
-            <label class="process-field"><span>Nome *</span><input id="agrupamento-nome" maxlength="200" required></label>
+            <label class="process-field"><span>Nome *</span><input id="agrupamento-nome" type="text" maxlength="200" required></label>
             <label class="process-field process-field--wide"><span>Descrição</span><textarea id="agrupamento-descricao" rows="3"></textarea></label>
           </div>
         </article>
 
         <article class="card-universo-da-hierarquizacao ahp-subcard cadastro-card agrupamento-universo">
-          <div class="ahp-subsection-title"><i class="fa-solid fa-folder-tree" aria-hidden="true"></i><h2>Universo da Demanda</h2></div>
-          <p class="ahp-info-note"><i class="fa-solid fa-circle-info" aria-hidden="true"></i><span>Escolha um tipo de demanda e selecione as demandas que farão parte deste agrupamento. O agrupamento pode ser reutilizado ao criar uma hierarquização.</span></p>
+          <div class="ahp-subsection-title"><span class="ahp-subsection-num">2</span><h2>Universo da Demanda</h2></div>
+          <p class="agrupamento-instrucao"><i class="fa-solid fa-circle-info" aria-hidden="true"></i><span>Escolha um tipo de demanda e selecione as demandas que farão parte deste agrupamento. O agrupamento pode ser reutilizado ao criar uma hierarquização.</span></p>
           <div class="ahp-subcard">
-            <div class="ahp-subsection-title ahp-subsection-title--roman"><span class="ahp-subsection-num ahp-subsection-num--roman">I</span><span>Tipo de demanda</span></div>
+            <div class="ahp-subsection-title"><span class="ahp-subsection-num">2.1</span><span>Tipo de demanda</span></div>
             <div class="admin-toolbar hier-tipo-toolbar mad-filter mad-filter--single">
               <div class="form-field ahp-universo-objeto"><label for="agrupamento-tipo">Tipo de demanda *</label><select id="agrupamento-tipo" required><option value="">Selecione…</option><option value="plano">Plano</option><option value="programa">Programa</option><option value="projeto">Projeto</option></select></div>
             </div>
           </div>
           <div class="ahp-subcard">
-            <div class="ahp-subsection-title ahp-subsection-title--roman"><span class="ahp-subsection-num ahp-subsection-num--roman">II</span><span>Tabela de demandas do universo</span></div>
+            <div class="ahp-subsection-title"><span class="ahp-subsection-num">2.2</span><span>Tabela de demandas do universo</span></div>
             {% set filtro_prefixo = "universo-filtro" %}
             {% set filtro_rotulo = "Filtrar demandas do universo" %}
             {% include "componentes/filtro_tabela.html" %}
@@ -90,7 +90,7 @@
             <p id="agrupamento-contagem" class="agrupamento-section-footer">Selecione o tipo de demanda.</p>
           </div>
           <div class="ahp-subcard hidden" id="grupo-composicao">
-            <div class="ahp-subsection-title ahp-subsection-title--roman"><span class="ahp-subsection-num ahp-subsection-num--roman">III</span><span id="grupo-composicao-titulo">Tabela de demandas do grupo</span></div>
+            <div class="ahp-subsection-title"><span class="ahp-subsection-num">2.3</span><span id="grupo-composicao-titulo">Tabela de demandas do grupo</span></div>
             {% set filtro_prefixo = "composicao-filtro" %}
             {% set filtro_rotulo = "Filtrar demandas do grupo" %}
             {% include "componentes/filtro_tabela.html" %}

@@ -1,0 +1,16 @@
+.ami-page .ami-report-table .admin-table thead th {
+  font-family: "Montserrat", Verdana, sans-serif;
+  font-size: .72rem;
+}
+.ami-page .ami-report-table .admin-table tbody td,
+.ami-page .ami-report-table .admin-table tbody td :is(strong, span, small, a) {
+  font-family: "Roboto", Arial, sans-serif;
+  font-size: .74rem;
+}
+.ami-page .ami-report-table .admin-filter-bar .admin-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid currentColor;
+  border-radius: 7px;
+}

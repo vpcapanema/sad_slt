@@ -269,7 +269,7 @@
             if (!this.cancelBtn.dataset.pfsBound) {
                 this.cancelBtn.dataset.pfsBound = '1';
                 this.cancelBtn.addEventListener('click', () => _progressSystem?.cancelar());
-                q('#pfsProgressClose')?.addEventListener('click', () => _progressSystem?.fechar());
+                q('#pfsProgressClose')?.addEventListener('click', () => _progressSystem?.ocultar());
                 q('#pfsFollowLog')?.addEventListener('click', () => {
                     const p = _progressSystem; if (!p) return;
                     p._followLog = !p._followLog;
@@ -627,6 +627,10 @@
         /* ── Fechar ── */
         fechar() {
             this._stop();
+            this.ocultar();
+        }
+        /* Ocultar não encerra o acompanhamento ou o cancelamento em curso. */
+        ocultar() {
             if (this.overlay && this.box.classList.contains('pfs-active')) {
                 this.overlay.classList.remove('pfs-active'); this.box.classList.remove('pfs-active');
                 devolverFoco(this.box);
@@ -880,7 +884,6 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a'); a.href = url; a.download = `sicard_erro_${Date.now()}.txt`; a.click();
             setTimeout(() => URL.revokeObjectURL(url), 1000);
-            this._lastErrorData = null;
         }
     }
 

@@ -8,7 +8,7 @@
   const key=feature=>window.gpCommands.featureKey(feature.properties,feature.id);
   const esc=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const $=selector=>root.querySelector(selector);
-  async function request(url,payload){const response=await fetch(url,{method:payload?'POST':'GET',headers:payload?{'Content-Type':'application/json'}:undefined,body:payload?JSON.stringify(payload):undefined});const body=await response.json();if(!response.ok)throw Error(body.detail||`HTTP ${response.status}`);return body;}
+  async function request(url,payload){const response=await fetch(url,{method:payload?'POST':'GET',headers:payload?{'Content-Type':'application/json'}:undefined,body:payload?JSON.stringify(payload):undefined});const body=await response.json();if(!response.ok){const detail=body.detail;throw Error(Array.isArray(detail)?detail.map(e=>`${(e.loc||[]).filter(k=>k!=='body').join('.')}: ${e.msg||'valor inválido'}`).join('; '):typeof detail==='string'?detail:`HTTP ${response.status}`);}return body;}
   function status(text,error=false){$('[data-at-status]').textContent=text;$('[data-at-status]').classList.toggle('error',error);}
   function changed(d=current){return d.remote?Boolean(d.edits.size||d.excluidos.size):Boolean(d.dirty);}
   function markDirty(d){
@@ -22,7 +22,7 @@
     }else d.dirty=JSON.stringify(d.rows)!==JSON.stringify(d.original);
     controls();
   }
-  function controls(){if(!current||!root?.isConnected)return;const dirty=changed(),count=ready?grid.getSelectedData().length:0;$('[data-at-action="undo"]').disabled=!ready||!grid.getHistoryUndoSize()||current.busy;$('[data-at-action="redo"]').disabled=!ready||!grid.getHistoryRedoSize()||current.busy;$('[data-at-save]').disabled=!dirty||current.busy;$('[data-at-discard]').disabled=!dirty||current.busy;$('[data-at-edit]').disabled=current.readonly||current.busy;$('[data-at-delete]').disabled=current.readonly||!count||current.busy;$('[data-at-edit]').classList.toggle('active',current.editing);$('[data-at-edit]').setAttribute('aria-pressed',String(current.editing));const total=current.remote&&current.total!=null?` · ${current.total} no total`:'';$('[data-at-count]').textContent=current.remote?`Página atual: ${current.rows.length} registros${total} · ${count} selecionados nesta página${dirty?' · alterações pendentes':''}`:`${current.rows.length} registros · ${count} selecionados${dirty?' · alterações pendentes':''}`;}
+  function controls(){if(!current||!root?.isConnected)return;const dirty=changed(),count=ready?grid.getSelectedData().length:0;$('[data-at-action="undo"]').disabled=!ready||!grid.getHistoryUndoSize()||current.busy;$('[data-at-action="redo"]').disabled=!ready||!grid.getHistoryRedoSize()||current.busy;$('[data-at-save]').disabled=!dirty||current.busy;$('[data-at-discard]').disabled=!dirty||current.busy;$('[data-at-edit]').disabled=current.readonly||current.busy;$('[data-at-delete]').disabled=current.readonly||!current.editing||!count||current.busy;$('[data-at-edit]').classList.toggle('active',current.editing);$('[data-at-edit]').setAttribute('aria-pressed',String(current.editing));const total=current.remote&&current.total!=null?` · ${current.total} no total`:'';$('[data-at-count]').textContent=current.remote?`Página atual: ${current.rows.length} registros${total} · ${count} selecionados nesta página${dirty?' · alterações pendentes':''}`:`${current.rows.length} registros · ${count} selecionados${dirty?' · alterações pendentes':''}`;}
   function selection(){if(syncing||!ready)return;const rows=grid.getSelectedData();app().state.activeLayerId=current.id;if(current.remote){if(!current.loadingPage)remoteSelection(current,rows);}else window.gpCommands.setLayerSelection(current.id,rows.map(row=>({...row.__gp_feature,properties:clean(row)})));controls();}
   // Seleções feitas em outras páginas permanecem no mapa; só os FIDs da página carregada são substituídos.
   async function remoteSelection(d,rows){
@@ -31,7 +31,7 @@
     const page=new Set(grid.getData().map(row=>String(row.__gp_fid))),selected=rows.map(row=>String(row.__gp_fid)),missing=selected.filter(fid=>!d.geometries.has(fid));
     try{
       for(let i=0;i<missing.length;i+=100){
-        const ids=missing.slice(i,i+100),result=await request('/api/geoespacial/bancada-arquivos/geometrias',{id:d.id,arquivo:file.arquivo,revisao,ids});
+        const ids=missing.slice(i,i+100),result=await request('/api/geoespacial'+(window.gpArquivos.requestPath?.(file,'geometrias')||'/bancada-arquivos/geometrias'),window.gpArquivos.requestPayload?.(file,{revisao,ids})||{id:d.id,arquivo:file.arquivo,revisao,ids});
         if(token!==d.selectionToken||current!==d)return;
         const found=new Map((result.features||[]).map(feature=>[String(feature.id),feature.geometry??null])),absent=ids.filter(fid=>!found.has(fid));
         if(absent.length)throw Error(`o servidor não retornou a geometria de ${absent.length} registro(s).`);
@@ -141,14 +141,26 @@
     if(!file)window.gpCommands.setLayerSelection(d.id,[]);
     await app().showAttributes(id);status(file?'Alterações salvas no arquivo original.':'Alterações salvas.');
   }catch(error){status(error.message,true);}finally{d.busy=false;controls();}}
-  async function remove(){const selected=grid.getSelectedData();if(!selected.length)return;const ok=window.gpFeedback?await window.gpFeedback.ProcessFeedback.confirmar({title:'Excluir registros',message:`Remover ${selected.length} registro(s)${current.remote?' desta página':''} e suas geometrias? A exclusão só será gravada ao salvar.`,danger:true,confirmLabel:'Remover da edição'}):window.confirm(`Remover ${selected.length} registro(s)?`);if(!ok)return;const ids=new Set(selected.map(r=>r.__gp_row));if(current.remote)selected.forEach(row=>{current.excluidos.add(row.__gp_fid);current.edits.delete(row.__gp_fid);});current.rows=current.rows.filter(r=>!ids.has(r.__gp_row));await grid.deleteRow([...ids]);if(!current.remote)current.dirty=true;selection();controls();status(`Exclusão pendente${current.remote?' nesta página':''}. Salve para confirmar ou descarte para restaurar.`);}
+  async function remove(){if(current.readonly||!current.editing)return;const selected=grid.getSelectedData();if(!selected.length)return;const ok=window.gpFeedback?await window.gpFeedback.ProcessFeedback.confirmar({title:'Excluir registros',message:`Remover ${selected.length} registro(s)${current.remote?' desta página':''} e suas geometrias? A exclusão só será gravada ao salvar.`,danger:true,confirmLabel:'Remover da edição'}):window.confirm(`Remover ${selected.length} registro(s)?`);if(!ok)return;const ids=new Set(selected.map(r=>r.__gp_row));if(current.remote)selected.forEach(row=>{current.excluidos.add(row.__gp_fid);current.edits.delete(row.__gp_fid);});current.rows=current.rows.filter(r=>!ids.has(r.__gp_row));await grid.deleteRow([...ids]);if(!current.remote)current.dirty=true;selection();controls();status(`Exclusão pendente${current.remote?' nesta página':''}. Salve para confirmar ou descarte para restaurar.`);}
   function maximize(){const expanded=root.classList.toggle('attribute-maximized'),button=$('[data-at-maximize]');const label=expanded?'Restaurar painel':'Maximizar tabela';button.title=label;button.setAttribute('aria-label',label);button.setAttribute('aria-expanded',String(expanded));button.innerHTML=`<i data-lucide="${expanded?'minimize':'maximize'}" aria-hidden="true"></i>`;window.lucide?.createIcons();grid.redraw(true);}
+  async function discard(id,body){
+    const approved=window.gpFeedback?await window.gpFeedback.ProcessFeedback.confirmar({title:'Descartar alterações',message:'Descartar as edições e exclusões ainda não salvas nesta camada?',confirmLabel:'Descartar alterações',danger:true}):window.confirm('Descartar as alterações não salvas?');
+    if(!approved)return;
+    drafts.delete(id);render(id,body);
+  }
 
   function render(id,body){
     ready=false;if(grid)grid.destroy();
-    const remote=Boolean(window.gpArquivos?.sessions.get(id));
-    let d=drafts.get(id);if(!d||!changed(d)){const rows=remote?[]:body.registros.map((r,i)=>({...structuredClone(r),__gp_row:i}));const layerReadOnly=Boolean(body.homologada||body.somente_leitura||app().state.layers.find(l=>l.id===id)?.previaAproximada),unsupportedFile=remote&&!id.startsWith('storage:');d={id,body,rows,original:structuredClone(rows),remote,total:body.total,edits:new Map(),excluidos:new Set(),originalByFid:new Map(),editing:false,readonly:layerReadOnly||unsupportedFile,readonlyReason:body.somente_leitura|| (unsupportedFile?'Edição incremental disponível apenas para arquivos nativos do storage.':layerReadOnly?'Camada somente leitura.':'')};drafts.set(id,d);}else{d.body=body;d.total=body.total;d.remote=remote;}current=d;d.editing=d.editing||app().state.editingLayers.has(id);
+    const session=window.gpArquivos?.sessions.get(id),remote=session?.representacao==='tiles';
+    let d=drafts.get(id);if(!d||!changed(d)){const rows=remote?[]:body.registros.map((r,i)=>({...structuredClone(r),__gp_row:i}));const layerReadOnly=Boolean(body.homologada||body.somente_leitura||app().state.layers.find(l=>l.id===id)?.previaAproximada),unsupportedFile=Boolean(session)&&(!remote||!id.startsWith('storage:'));d={id,body,rows,original:structuredClone(rows),remote,total:body.total,edits:new Map(),excluidos:new Set(),originalByFid:new Map(),editing:false,readonly:layerReadOnly||unsupportedFile,readonlyReason:body.somente_leitura|| (unsupportedFile?'Edição incremental disponível apenas para arquivos nativos do storage.':layerReadOnly?'Camada somente leitura.':'')};drafts.set(id,d);}else{d.body=body;d.total=body.total;d.remote=remote;}current=d;d.editing=app().state.editingLayers.has(id);
     const host=document.querySelector('#gp-editor-view');host.replaceChildren(document.querySelector('#gp-attribute-template').content.cloneNode(true));root=host.firstElementChild;
+    if(remote){
+      const labels={all:'Selecionar registros desta página',invert:'Inverter seleção nesta página',csv:'Exportar esta página em CSV',clear:'Limpar seleção e filtros desta página'};
+      Object.entries(labels).forEach(([action,label])=>{const button=$(`[data-at-action="${action}"]`);if(button){button.title=label;button.setAttribute('aria-label',label);}});
+      $('[data-at-scope] option[value="all"]').textContent='Todos os registros desta página';
+      $('[data-at-scope] option[value="selection"]').textContent='Seleção desta página';
+      $('[data-at-query]').closest('details').querySelector('summary').textContent='Selecionar por atributo nesta página';
+    }
     $('[data-at-title]').textContent=app().state.layers.find(l=>l.id===id)?.nome||id;
     const tabs=$('[data-at-layers]');(app().state.attributeTableLayers||[]).filter(id=>app().state.layers.some(l=>l.id===id)).forEach(layerId=>{const button=document.createElement('button');button.type='button';button.dataset.attributeLayer=layerId;button.textContent=app().state.layers.find(l=>l.id===layerId)?.nome||layerId;button.classList.toggle('active',layerId===id);button.onclick=()=>app().showAttributes(layerId);tabs.append(button);});
     const columns=d.body.colunas.filter(c=>c.nome!=='_indice'&&!c.nome.startsWith('__gp_'));
@@ -157,7 +169,7 @@
       const page=Math.max(1,Number(params.page)||1),size=Math.min(500,Math.max(1,Number(params.size)||100)),file=window.gpArquivos.sessions.get(id);
       d.loadingPage=true;
       try{
-        const result=await request('/api/geoespacial/bancada-arquivos/tabela',{id,arquivo:file.arquivo,revisao:d.body.revisao||file.revisao,offset:(page-1)*size,limite:size});
+        const result=await request('/api/geoespacial'+(window.gpArquivos.requestPath?.(file,'tabela')||'/bancada-arquivos/tabela'),window.gpArquivos.requestPayload?.(file,{revisao:d.body.revisao||file.revisao,offset:(page-1)*size,limite:size})||{id,arquivo:file.arquivo,revisao:d.body.revisao||file.revisao,offset:(page-1)*size,limite:size});
         if(result.revisao!==(d.body.revisao||file.revisao))throw Error('A revisão do arquivo mudou. Reabra a tabela antes de continuar.');
         if(!Array.isArray(result.linhas))throw Error('O servidor não retornou as linhas da página solicitada.');
         const rows=result.linhas.filter(row=>!d.excluidos.has(String(row.id))).map(row=>{
@@ -175,8 +187,8 @@
     // Após trocar de página, a seleção do mapa é reaplicada às linhas carregadas.
     // dataLoaded/pageLoaded disparam antes da troca das linhas; a limpeza de seleção do Tabulator vem depois.
     function pageReady(){if(current!==d)return;d.rows=grid.getData();if(d.remote&&d.loadingPage){d.loadingPage=false;if(ready)sync();}controls();}
-    grid.on('tableBuilt',()=>{ready=true;sync();applyView();controls();});grid.on('rowSelectionChanged',selection);grid.on('dataProcessed',pageReady);grid.on('cellEdited',()=>{markDirty(d);});grid.on('historyUndo',()=>{markDirty(d);});grid.on('historyRedo',()=>{markDirty(d);});
-    root.addEventListener('click',event=>{const action=event.target.closest('[data-at-action]')?.dataset.atAction;if(!action||!ready||current.busy)return;Promise.resolve().then(async()=>{if(action==='maximize')maximize();if(action==='query')query();if(action==='invert')invertSelection();if(action==='clear'){grid.clearFilter(true);grid.deselectRow();$('[data-at-only]').setAttribute('aria-pressed','false');$('[data-at-only]').classList.remove('active');applyView();}if(action==='only'){const button=$('[data-at-only]'),active=button.getAttribute('aria-pressed')!=='true';button.setAttribute('aria-pressed',String(active));button.classList.toggle('active',active);applyView();}if(action==='all'){grid.selectRow('active');if(d.remote)status('Seleção aplicada somente aos registros carregados nesta página; seleções de outras páginas são mantidas no mapa.');}if(action==='zoom')window.gpCommands.fitSelection();if(action==='edit'){d.editing=!d.editing;controls();status(d.editing?'Duplo clique na célula para editar. Salve ao terminar.':'Edição desativada.');}if(action==='delete')await remove();if(action==='save')await save();if(action==='discard'){drafts.delete(id);render(id,body);}if(action==='undo')grid.undo();if(action==='redo')grid.redo();if(action==='csv'){grid.download('csv',`${id}.csv`,{bom:true});if(d.remote)status('CSV exportado somente com os registros desta página.');}}).catch(e=>status(e.message,true));});
+    grid.on('tableBuilt',()=>{ready=true;sync();applyView();controls();});grid.on('rowSelectionChanged',selection);grid.on('dataProcessed',pageReady);grid.on('cellEdited',()=>{markDirty(d);});grid.on('historyUndo',(action,_component,data)=>{if(d.remote&&action==='rowDelete')d.excluidos.delete(String(data.data.__gp_fid));markDirty(d);});grid.on('historyRedo',(action,_component,data)=>{if(d.remote&&action==='rowDelete'){d.excluidos.add(String(data.data.__gp_fid));d.edits.delete(String(data.data.__gp_fid));}markDirty(d);});
+    root.addEventListener('click',event=>{const action=event.target.closest('[data-at-action]')?.dataset.atAction;if(!action||!ready||current.busy)return;Promise.resolve().then(async()=>{if(action==='maximize')maximize();if(action==='query')query();if(action==='invert')invertSelection();if(action==='clear'){grid.clearFilter(true);grid.deselectRow();$('[data-at-only]').setAttribute('aria-pressed','false');$('[data-at-only]').classList.remove('active');applyView();}if(action==='only'){const button=$('[data-at-only]'),active=button.getAttribute('aria-pressed')!=='true';button.setAttribute('aria-pressed',String(active));button.classList.toggle('active',active);applyView();}if(action==='all'){grid.selectRow('active');if(d.remote)status('Seleção aplicada somente aos registros carregados nesta página; seleções de outras páginas são mantidas no mapa.');}if(action==='zoom')window.gpCommands.fitSelection();if(action==='edit'){if(d.readonly)return;d.editing=!d.editing;if(d.editing)app().state.editingLayers.add(id);else app().state.editingLayers.delete(id);controls();status(d.editing?'Duplo clique na célula para editar. Salve ao terminar.':'Edição desativada.');}if(action==='delete')await remove();if(action==='save')await save();if(action==='discard')await discard(id,body);if(action==='undo')grid.undo();if(action==='redo')grid.redo();if(action==='csv'){grid.download('csv',`${id}.csv`,{bom:true});if(d.remote)status('CSV exportado somente com os registros desta página.');}}).catch(e=>status(e.message,true));});
     window.lucide?.createIcons();
     $('[data-at-field]').onchange=()=>{$('[data-at-value]').value='';suggestValues();};
     $('[data-at-operator]').onchange=queryControls;
@@ -188,7 +200,7 @@
   }
   let nativeTableRequest=0;
   async function showNativeFileAttributes(layerId){
-    const file=window.gpArquivos.sessions.get(layerId),state=app().state,requestId=++nativeTableRequest;
+    let file=window.gpArquivos.sessions.get(layerId);const state=app().state,requestId=++nativeTableRequest;
     state.activeLayerId=layerId;state.activeAttributeLayerId=layerId;state.attributeTableLayers??=[];
     if(!state.attributeTableLayers.includes(layerId))state.attributeTableLayers.push(layerId);
     const tabs=document.querySelector('.gp-right-tabs');
@@ -204,6 +216,11 @@
     document.querySelector('#gp-right-title').textContent='Tabela de Atributos';
     const editor=document.querySelector('#gp-editor-view');
     editor.innerHTML='<div class="empty">Carregando atributos…</div>';
+    if(file.tiles_token){
+      try{file=await window.gpArquivos.prepararTabela(layerId);}
+      catch(error){if(requestId===nativeTableRequest)editor.firstElementChild.textContent=error.message;return;}
+      if(requestId!==nativeTableRequest)return;
+    }
     const fields=Array.isArray(file.campos)?file.campos:[];
     const fallback=Object.keys(file.geojson?.features?.[0]?.properties||{}).map(nome=>({nome,tipo:typeof file.geojson.features[0].properties[nome]==='number'?'float64':typeof file.geojson.features[0].properties[nome]==='boolean'?'bool':'string'}));
     const colunas=(fields.length?fields:fallback).filter(field=>field.nome).map(field=>({nome:field.nome,tipo:/bool/i.test(field.subtipo||'')?'bool':field.tipo||field.subtipo||'string'}));
@@ -218,7 +235,7 @@
     const showAttributes=value.showAttributes;
     value.showAttributes=function(layerId,...args){
       const id=layerId||this.state.activeLayerId||this.state.activeAttributeLayerId;
-      if(window.gpArquivos?.sessions.has(id))return showNativeFileAttributes(id);
+      if(window.gpArquivos?.sessions.get(id)?.representacao==='tiles')return showNativeFileAttributes(id);
       return showAttributes.call(this,layerId,...args);
     };
     value.showAttributes.__gpFileTableHook=true;
@@ -231,5 +248,5 @@
   hookApp(window.gpApp);
   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&root?.classList.contains('attribute-maximized'))maximize();});
   window.addEventListener('beforeunload',event=>{if([...drafts.values()].some(d=>changed(d))){event.preventDefault();event.returnValue='';}});
-  window.gpAttributeTable={render,sync,applyLayerFilter(id){if(ready&&current?.id===id&&root?.isConnected)applyView();},hasPendingChanges(id){const draft=drafts.get(id);return Boolean(draft&&changed(draft));},atualizarArquivo(id){const draft=drafts.get(id);if(!draft?.dirty)drafts.delete(id);if(app().state.attributeTableCache)delete app().state.attributeTableCache[id];},get grid(){return grid;}};
+  window.gpAttributeTable={render,sync,applyLayerFilter(id){if(ready&&current?.id===id&&root?.isConnected)applyView();},hasPendingChanges(id){const draft=drafts.get(id);return Boolean(draft&&changed(draft));},atualizarArquivo(id){const draft=drafts.get(id);if(draft&&changed(draft))return false;drafts.delete(id);if(app().state.attributeTableCache)delete app().state.attributeTableCache[id];return true;},get grid(){return grid;}};
 })();

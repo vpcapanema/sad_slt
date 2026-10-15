@@ -6,6 +6,7 @@ from contextlib import contextmanager
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
 from pydantic import ValidationError
 
+from api.db.connection import atomic_connection
 from api.deps.auth import require_authenticated, require_operator
 from api.exceptions import DatabaseUnavailableError, DemandaNotFoundError, DemandaValidationError
 from api.schemas.demanda import DemandaCreateSchema
@@ -137,13 +138,18 @@ def excluir(documento_id: str, user: SessionUser = Depends(require_operator)):
 @router.post('/{documento_id}/criar-demanda')
 def criar_demanda(documento_id: str, body: SeiCriarDemandaSchema, user: SessionUser = Depends(require_operator)):
     with _errors():
-        with documentos.travar(documento_id):
+        with documentos.travar(documento_id), atomic_connection() as conn:
+            documentos.bloquear_registro(conn, documento_id)
             documento = documentos.obter(documento_id)
             if documento['demanda_id']:
                 # Idempotente: reenviar o mesmo documento não duplica a demanda.
                 return {'id': documento['demanda_id'], 'ja_existia': True}
             campos = dict(body.campos)
-            origem = documentos.marcador_origem(documento)
+            numero = str(campos.get('origem_sei_processo') or documento.get('numero_processo') or '').strip()
+            if not numero:
+                raise DemandaValidationError('Informe o número do processo SEI.', field='origem_sei_processo')
+            campos['origem_sei_processo'] = numero
+            origem = f'Processo SEI: {numero}'
             descricao = (campos.get('descricao') or '').strip()
             campos['descricao'] = descricao if origem in descricao else f'{origem}\n\n{descricao}'
             # O status inicial é regra do serviço, não escolha do payload.
@@ -161,5 +167,6 @@ def criar_demanda(documento_id: str, body: SeiCriarDemandaSchema, user: SessionU
                     DemandaCreateSchema.model_validate(campos), usuario_id=user.id, origem='SEI'
                 )
             identificador = resultado['id'] if isinstance(resultado, dict) else resultado.id
-            documentos.registrar_demanda(documento_id, identificador)
+            if not documentos.registrar_demanda(documento_id, identificador):
+                raise DemandaValidationError('Não foi possível vincular o documento à demanda.')
             return resultado

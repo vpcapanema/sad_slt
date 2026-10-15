@@ -52,6 +52,7 @@ def _rotulo(campo: str, tipo: str) -> str:
     contextual = {
         "codigo": f"Código do {noun}",
         "nome": f"Nome do {noun}",
+        "origem_sei_processo": "Processo SEI",
         "descricao": f"Descrição do {noun}",
     }
     if campo in contextual:

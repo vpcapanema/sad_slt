@@ -10,7 +10,7 @@ export function criarMapa(aoMudarPainel) {
   const frame=$('#ea-workbench-frame'),mounted=new Map();
   let latest=[],ready=false,timer,syncing=false;
   const context=()=>frame.contentWindow;
-  const editing=()=>Boolean(context()?.document.querySelector('.gp-file-inline'));
+  const editing=()=>Boolean(context()?.document.querySelector('.gp-file-inline'))||Boolean(context()?.gpApp?.state.layers.some(layer=>context()?.gpAttributeTable?.hasPendingChanges(layer.id)));
   function atualizarDetalhe(){
     const app=context()?.gpApp;if(!ready||!app)return;
     for(const item of latest){
@@ -43,8 +43,11 @@ export function criarMapa(aoMudarPainel) {
           const metodo=item.metadados_local?.previa?.metodo||item.representacao_previa?.metodo;const aproximada=metodo&&metodo!=='original';
           const nomeMapa=aproximada?`${item.nome} · prévia aproximada`:item.nome;
           if(item.representacao==='tiles'){
-            files.sessions.set(id,{...item,id});
-            app.adicionarCamadaStorageTiles(id,item.nome,{...item,caminho:item.arquivo||item.id},{categoria:item.grupo,lote,estiloPreparado:true});
+            // O descritor de tiles não é uma sessão de arquivo: saídas PostGIS
+            // não têm caminho, e a revisão da prévia não é a do original.
+            if(item.arquivo||item.origem_geometria==='local_temporaria')files.sessions.set(id,{...item,id});
+            else files.sessions.delete(id);
+            app.adicionarCamadaStorageTiles(id,item.nome,{...item,caminho:item.arquivo||item.id},{origem:item.origem_geometria==='local_temporaria'?'Arquivo local temporário':undefined,categoria:item.grupo,lote,estiloPreparado:true});
           }else if(item.arquivo&&item.revisao&&item.campos)files.adicionar({...item,id,categoria:item.grupo},{lote,estiloPreparado:true});
           else app.adicionarCamadaGeoJsonEmMemoria(id,nomeMapa,item.geojson,{categoria:item.grupo,lote,geometria_tipo:item.geojson.features[0]?.geometry?.type,estiloPreparado:true});
           if(!app.state.layers.some(layer=>layer.id===id))throw new Error(`${item.nome} ainda não foi adicionada ao painel. Tente novamente após o mapa carregar.`);
@@ -91,6 +94,7 @@ export function criarMapa(aoMudarPainel) {
     const remover=app.removeLayerFromMap;
     app.removeLayerFromMap=function(id,report=true){
       const retorno=remover.call(this,id,false);
+      if(retorno===false)return false;
       if(!syncing){
         // A remoção do ribbon usa renderLayers interno, não o método exportado.
         aoMudarPainel?.();

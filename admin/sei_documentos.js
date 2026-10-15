@@ -103,7 +103,7 @@
 
   let documentosTabela = [], paginaTabela = 1;
   const selecionadosTabela = new Set();
-  const colunasTabela = [['nome_arquivo', 'Arquivo'], ['numero_processo', 'Processo'], ['usuario_nome', 'Enviado por'], ['criado_em', 'Recebido em'], ['status', 'Situação']];
+  const colunasTabela = [['nome_arquivo', 'Arquivo'], ['numero_processo', 'Processo SEI'], ['usuario_nome', 'Enviado por'], ['criado_em', 'Recebido em'], ['status', 'Situação']];
   function valorTabela(doc, key) { return key === 'status' ? SITUACAO[doc.status] || doc.status : key === 'criado_em' ? dataHora(doc.criado_em) : doc[key] || '—'; }
   function valoresTabela() {
     const column = q('sei-filter-coluna').value;

@@ -976,6 +976,8 @@
               <input type="text" id="fld-nome" maxlength="200" value="${escapeHtml(d.nome)}">
             </div>
             <div class="form-field span-2">
+              <label for="fld-processo-sei">Processo SEI</label>
+              <input type="text" id="fld-processo-sei" maxlength="50" value="${escapeHtml(d.origem_sei_processo || "")}">
               <label for="fld-descricao">Descrição</label>
               <textarea id="fld-descricao" rows="3">${escapeHtml(d.descricao || "")}</textarea>
             </div>
@@ -1036,6 +1038,7 @@
   function collectPlano() {
     return {
       nome: $("#fld-nome").value.trim(),
+      origem_sei_processo: $("#fld-processo-sei").value.trim() || null,
       descricao: $("#fld-descricao").value.trim() || null,
       diretoria_id: $("#fld-diretoria").value || null,
       objetivo_estrategico: $("#fld-objetivo").value.trim() || null,
@@ -1072,6 +1075,8 @@
               <input type="text" id="fld-nome" maxlength="200" value="${escapeHtml(d.nome)}">
             </div>
             <div class="form-field span-2">
+              <label for="fld-processo-sei">Processo SEI</label>
+              <input type="text" id="fld-processo-sei" maxlength="50" value="${escapeHtml(d.origem_sei_processo || "")}">
               <label for="fld-descricao">Descrição</label>
               <textarea id="fld-descricao" rows="3">${escapeHtml(d.descricao || "")}</textarea>
             </div>
@@ -1125,6 +1130,7 @@
   function collectPrograma() {
     return {
       nome: $("#fld-nome").value.trim(),
+      origem_sei_processo: $("#fld-processo-sei").value.trim() || null,
       descricao: $("#fld-descricao").value.trim() || null,
       objetivo: $("#fld-objetivo").value.trim() || null,
       publico_alvo: $("#fld-publico").value.trim() || null,

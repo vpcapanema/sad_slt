@@ -2375,6 +2375,8 @@
   }
 
   function preencherComSugestoes(detalhe) {
+    $("#cadastro-origem-sei").classList.remove("hidden");
+    $("#cadastro-processo-sei").value = detalhe?.numero_processo || "";
     const tipo = tipoFormularioAtivo();
     const campos = detalhe?.campos_sugeridos || {};
     let preenchidos = 0;
@@ -2435,6 +2437,12 @@
       throw new Error(ultimoAviso || $("#map-error")?.textContent?.trim() || "Revise os campos do formulário.");
     }
     const campos = tipo === "plano" ? buildPlanoPayload() : tipo === "programa" ? buildProgramaPayload() : buildDemanda();
+    const processo = $("#cadastro-processo-sei");
+    campos.origem_sei_processo = processo.value.trim();
+    if (!campos.origem_sei_processo || campos.origem_sei_processo.length > 50) {
+      processo.focus();
+      throw new Error("Informe o número do processo SEI (até 50 caracteres).");
+    }
     return { tipo, campos };
   }
 

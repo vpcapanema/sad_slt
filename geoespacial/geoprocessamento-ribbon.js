@@ -236,7 +236,7 @@
       if (action === "new-flow") window.gpApp.newFlow();
       if (action === "history") window.gpApp.showHistory();
       if (action === "environments") window.gpCommands.showEnvironments();
-      if (action === "cancel") window.gpApp.cancelExecution().then(active=>{if(!active)message("Não há execução ativa para cancelar.");});
+      if (action === "cancel") window.gpApp.cancelExecution().then(active=>{if(!active)message("Não há execução ativa para cancelar.");}).catch(error=>message(error.message));
       if (action === "duplicate") window.gpCommands.duplicateDefinition();
       if (action === "import-definition") window.gpCommands.importDefinition();
       if (action === "export-definition") window.gpCommands.exportDefinition();
@@ -246,7 +246,7 @@
       if (action === "refresh-source") window.gpCommands.refreshSource();
       if (action === "export") {
         const layer = window.gpApp.state.layers.find(item => item.id === activeLayerId());
-        if (layer) openOperation(layer.tipo.toLowerCase().includes("raster") ? "OP-26" : "OP-25", {
+        if (layer) openOperation(String(layer.tipo || "").toLowerCase().includes("raster") ? "OP-26" : "OP-25", {
           camada_id: layer.id, raster_id: layer.id,
         });
         else message("Selecione uma camada ou raster para exportar.");

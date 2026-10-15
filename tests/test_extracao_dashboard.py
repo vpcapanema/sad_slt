@@ -25,6 +25,13 @@ def fixture():
 
 
 class DashboardTests(unittest.TestCase):
+    def test_ordem_registro_e_base_antes_da_pagina(self):
+        rows, fields = fixture()
+        data = analisar(rows, fields, ordem='registro', descendente=True, tamanho=1)
+        self.assertEqual(data['linhas'][0]['registro'], 4)
+        data = analisar(rows, fields, ordem='base:0', descendente=True, tamanho=1)
+        self.assertTrue(data['linhas'][0]['bases'][0]['corresponde'])
+
     def test_distinct_origin_not_business_id_or_output_count(self):
         rows, fields = fixture()
         data = analisar(rows, fields)

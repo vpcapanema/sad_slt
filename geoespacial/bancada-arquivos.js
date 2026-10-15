@@ -5,6 +5,10 @@ import { el } from './extracao-atributos/ui.js';
 const sessions=new Map(),cargasCompletas=new Map();
 let editor=null,busy=false;
 const PREFIXO_STORAGE='storage:';
+const temporario=file=>file?.origem_geometria==='local_temporaria'||String(file?.id||'').startsWith('local:');
+const requestPath=(file,action)=>`/bancada-arquivos/${temporario(file)?'local/':''}${action}`;
+const requestPayload=(file,payload={})=>({...payload,id:file.id,revisao:payload.revisao??file.revisao,...(temporario(file)?{tiles_token:file.tiles_token}:{arquivo:file.arquivo})});
+function exigirPersistido(file){if(temporario(file))throw new Error('Arquivo local temporário: importe o arquivo pelo catálogo antes de editar, calcular campos ou executar operações da bancada. A extração continua disponível na página principal.');}
 const ehStorage=ref=>String(ref?.id||'').startsWith(PREFIXO_STORAGE);
 // `storage:<caminho>::<camada>`: a camada OGR segue no parâmetro `camada` do tile.
 // Não confundir com a camada interna do MVT (source-layer), definida pelo mapa.
@@ -50,8 +54,23 @@ async function abrirPacoteLegado(ref){
   return file;
 }
 const prepararStorage=prepararOriginal;
+async function prepararTabela(id){
+  const file=sessions.get(id);
+  if(!file?.tiles_token||temporario(file))return file;
+  const original=await prepararOriginal(file);
+  // Só substitui a sessão depois de validar a origem. Mantém a identidade da
+  // camada no painel, mas tabela, FIDs e tiles passam a usar o mesmo original.
+  if(sessions.get(id)!==file)return sessions.get(id);
+  const previous=app().state.layers.find(layer=>layer.id===id);
+  const atualizado={...file,...original};delete atualizado.tiles_token;
+  mount(atualizado,{estiloPreparado:true,lote:true});
+  const layer=app().state.layers.find(layer=>layer.id===id);
+  if(previous&&layer)Object.assign(layer,{papelExtracao:previous.papelExtracao,arquivoGrupo:previous.arquivoGrupo,categoria:previous.categoria});
+  app().renderLayers();
+  return sessions.get(id);
+}
 const abrirStorage=ref=>ehPacoteStorage(ref)?abrirPacoteLegado(ref):prepararOriginal(ref);
-const releitura=file=>file.representacao==='tiles'?prepararOriginal(file):post('/extracao-atributos/arquivo-mapa',{arquivo:file.arquivo,...(ehStorage(file)?{id:file.id}:{})});
+const releitura=file=>temporario(file)?post(requestPath(file,'tabela'),requestPayload(file,{offset:0,limite:1})).then(()=>file):file.representacao==='tiles'?prepararOriginal(file):post('/extracao-atributos/arquivo-mapa',{arquivo:file.arquivo,...(ehStorage(file)?{id:file.id}:{})});
 const app=()=>window.gpApp;
 const active=()=>sessions.get(app().state.activeLayerId);
 const report=message=>app().log(message,'error');
@@ -89,9 +108,9 @@ function mount(file,opts={}){
   // origem nomeia o subgrupo em Camadas operacionais; quem chama pode informar a categoria.
   if(tiles){
     const storage=ehStorage(file),{caminho,camada}=storage?separarIdStorage(file.id):{caminho:file.arquivo,camada:null};
-    app().adicionarCamadaStorageTiles(file.id,file.nome,{caminho:caminho||file.arquivo,camada,arquivo:file.arquivo,revisao:file.revisao,bounds:file.bounds,geometria_tipo:file.geometria_tipo,crs_arquivo:file.crs_arquivo,feicoes:file.feicoes,tiles_url:file.tiles_url},{origem:storage?'Arquivo no storage':'Arquivo registrado',categoria:file.categoria||'',lote:opts.lote,estiloPreparado:opts.estiloPreparado});
+    app().adicionarCamadaStorageTiles(file.id,file.nome,{caminho:caminho||file.arquivo,camada,arquivo:file.arquivo,revisao:file.revisao,bounds:file.bounds,geometria_tipo:file.geometria_tipo,crs_arquivo:file.crs_arquivo,feicoes:file.feicoes,tiles_url:file.tiles_url,tiles_token:file.tiles_token,campo_fid_tile:file.campo_fid_tile},{origem:temporario(file)?'Arquivo local temporário':storage?'Arquivo no storage':'Arquivo registrado',categoria:file.categoria||'',lote:opts.lote,estiloPreparado:opts.estiloPreparado});
   }else app().adicionarCamadaGeoJsonEmMemoria(file.id,file.nome,file.geojson,{tipo:'vetorial',origem:'Arquivo no storage',categoria:file.categoria||'',geometria_tipo:file.geojson.features[0]?.geometry?.type,lote:opts.lote,estiloPreparado:opts.estiloPreparado});
-  Object.assign(app().state.layers.find(layer=>layer.id===file.id)||{}, {arquivo:file.arquivo,origem_geometria:ehStorage(file)?'storage':'arquivo_registrado'});
+  Object.assign(app().state.layers.find(layer=>layer.id===file.id)||{}, {arquivo:file.arquivo,origem_geometria:temporario(file)?'local_temporaria':ehStorage(file)?'storage':'arquivo_registrado'});
   app().state.activeLayerId=file.id;
   if(!opts.lote)app().renderLayers();
   syncEditRibbon();
@@ -197,6 +216,7 @@ async function abrirReferencias(refs,extra={}){
       atualizarStatus(`Abrindo ${indice+1} de ${refs.length}: ${rotulo}`);
       proc?.detalhe(`${rotulo} (${indice+1}/${refs.length})`);
       try{
+        if(String(ref.tipo).toLowerCase().includes('raster')&&ehStorage(ref)){abertos.push(await app().adicionarRasterStorage({...ref,categoria:extra.categoria||ref.categoria||''}));continue;}
         const file=ehStorage(ref)?await abrirStorage(ref):ehArquivoLocalNativo(ref)?await prepararOriginal(ref):await post('/extracao-atributos/arquivo-mapa',{arquivo:ref.arquivo||undefined,id:ref.id});
         if(extra.categoria)file.categoria=extra.categoria;
         mount(file,{lote:true});abertos.push(file);
@@ -220,8 +240,9 @@ async function abrirReferencias(refs,extra={}){
 // A geometria integral só é lida quando edição ou tabela exigem, nunca na abertura.
 // A representação em tiles é recortada e generalizada: não serve como geometria editável.
 async function garantirGeometria(id){
-  const file=sessions.get(id);
+  const file=await prepararTabela(id);
   if(!file)throw new Error('Camada não está aberta na bancada.');
+  exigirPersistido(file);
   if(file.geojson)return file;
   if(!cargasCompletas.has(id))cargasCompletas.set(id,(async()=>{
     app().log(`${file.nome}: lendo a geometria completa do arquivo original.`,'info');
@@ -241,7 +262,8 @@ async function garantirGeometria(id){
 }
 
 async function openEditor(editing=false){
-  const source=active();if(!source)throw new Error('Abra o arquivo pelo explorador da bancada.');
+  const source=await prepararTabela(app().state.activeLayerId);if(!source)throw new Error('Abra o arquivo pelo explorador da bancada.');
+  exigirPersistido(source);
   if(editor){editor.table.scrollIntoView({block:'nearest'});return;}if(busy)return;
   if(source.representacao==='tiles'&&ehStorage(source)){
     if(editing&&(source.geometria_tem_z||source.geometria_tem_m))throw new Error('A edição geométrica não está disponível para camadas com coordenadas Z/M, pois o editor do mapa não preserva essas dimensões.');
@@ -458,8 +480,9 @@ const escapar=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'
 // aberto na bancada é preciso recarregar o arquivo depois, senão a sessão
 // segue mostrando a versão anterior do storage.
 async function calcularCampo(){
-  const file=active();
+  const file=await prepararTabela(app().state.activeLayerId);
   if(!file)throw new Error('Abra o arquivo pelo explorador da bancada.');
+  exigirPersistido(file);
   if(busy||editor)throw new Error('Salve ou cancele a edição antes de calcular um campo.');
   if(window.gpAttributeTable?.hasPendingChanges?.(file.id))throw new Error('Salve ou descarte as edições da tabela antes de calcular um campo.');
   const scope=window.gpCommands.calculationScope(file.id);
@@ -504,7 +527,7 @@ async function execute(form){
     params.atributos_selecionados=selected.map(feature=>({__gp_feature:feature}));
   }
   params.filtros_camadas=Object.fromEntries(Object.entries(app().state.layerFilters||{}).filter(([id])=>Object.values(params).some(value=>value===id||Array.isArray(value)&&value.includes(id))));
-  const files={};for(const [id,file] of sessions)if(Object.values(params).some(value=>value===id||Array.isArray(value)&&value.includes(id)))files[id]={arquivo:file.arquivo,revisao:file.revisao};
+  const files={};for(const id of sessions.keys())if(Object.values(params).some(value=>value===id||Array.isArray(value)&&value.includes(id))){const file=await prepararTabela(id);exigirPersistido(file);files[id]={arquivo:file.arquivo,revisao:file.revisao};}
   if(!await window.gpFeedback.ProcessFeedback.confirmar({title:'Executar operação da bancada',message:`Iniciar ${form.dataset.op}?`,warning:JSON.stringify(params,null,2),confirmLabel:'Executar'}))return;
   let job=null,resultadoDetalhado=null;
   const cancelar=async()=>{
@@ -527,8 +550,8 @@ function init(){
     const file=sessions.get(id);if(!file)return previousZoom(id);
     if(!file.geojson)return app().ajustarStorageBounds(id);
     const bounds=new maplibregl.LngLatBounds();
-    const walk=coordinates=>{if(typeof coordinates[0]==='number')bounds.extend(coordinates);else coordinates.forEach(walk);};
-    file.geojson.features.forEach(feature=>walk(feature.geometry.coordinates));
+    const walk=coordinates=>{if(!Array.isArray(coordinates))return;if(typeof coordinates[0]==='number')bounds.extend(coordinates);else coordinates.forEach(walk);};
+    file.geojson.features.forEach(feature=>walk(feature.geometry?.coordinates));
     if(!bounds.isEmpty())app().state.map.fitBounds(bounds,{padding:40,maxZoom:16});
   };
   const editTab=button('Editar',activateEditRibbon);editTab.className='';editTab.dataset.ribbon='editar';
@@ -544,7 +567,7 @@ function init(){
       if(busy)return;
       if(edit)app().state.activeLayerId=edit.dataset.editLayer;
       if(action==='calculate-field'){calcularCampo().catch(error=>report(error.message));return;}
-      if(action==='refresh-source'){const file=active();if(editor){report('Salve ou cancele a edição antes de atualizar a fonte.');return;}releitura(file).then(async refreshed=>{mount(refreshed);window.gpAttributeTable?.atualizarArquivo(refreshed.id);window.dispatchEvent(new CustomEvent('gp-arquivo-atualizado',{detail:refreshed}));await window.gpCommands?.refreshLayerFilter?.(refreshed.id);}).catch(error=>report(error.message));return;}
+      if(action==='refresh-source'){const file=active();if(editor||window.gpAttributeTable?.hasPendingChanges?.(file.id)){report('Salve ou descarte a edição antes de atualizar a fonte.');return;}releitura(file).then(async refreshed=>{mount(refreshed);window.gpAttributeTable?.atualizarArquivo(refreshed.id);window.dispatchEvent(new CustomEvent('gp-arquivo-atualizado',{detail:refreshed}));await window.gpCommands?.refreshLayerFilter?.(refreshed.id);}).catch(error=>report(error.message));return;}
       openEditor(Boolean(edit)||['save-layer','save-result'].includes(action)).catch(error=>report(error.message));
     }
   },true);
@@ -555,6 +578,6 @@ function init(){
     event.preventDefault();event.stopImmediatePropagation();execute(event.target).catch(error=>report(error.message));
   },true);
   window.addEventListener('beforeunload',event=>{if(editor?.dirty||busy){event.preventDefault();event.returnValue='';}});
-  window.gpArquivos={get busy(){return busy;},abrir:browse,selecionarReferencias,abrirReferencias,preparar:abrirStorage,adicionar:mount,garantirGeometria,editar:()=>openEditor(true),tabela:()=>app().showAttributes(app().state.activeLayerId),sessions,sincronizarSalvamento};
+  window.gpArquivos={get busy(){return busy;},abrir:browse,selecionarReferencias,abrirReferencias,preparar:abrirStorage,prepararTabela,requestPath,requestPayload,temporario,adicionar:mount,garantirGeometria,editar:()=>openEditor(true),tabela:()=>app().showAttributes(app().state.activeLayerId),sessions,sincronizarSalvamento};
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();

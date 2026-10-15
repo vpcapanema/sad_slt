@@ -45,7 +45,7 @@
           <div class="storage-pastas-destino"><span>Destino</span><strong>Nenhuma pasta escolhida</strong></div>
           <div class="storage-pastas-botoes">
             <button type="button" class="btn btn-secondary" data-acao="cancelar">Cancelar</button>
-            <button type="button" class="btn btn-primary" data-acao="salvar" disabled>Salvar</button>
+            <button type="button" class="btn btn-primary" data-acao="salvar" disabled>Selecionar pasta</button>
           </div>
         </footer>
       </div>`;
@@ -57,7 +57,7 @@
     const dialog = montar();
     const $ = (seletor) => dialog.querySelector(seletor);
     const lista = $(".storage-pastas-lista"), status = $(".storage-pastas-status"), edicao = $(".storage-pastas-edicao");
-    const estado = { atual: "", pastas: [], arquivos: [], selecionada: null, ocupado: false };
+    const estado = { atual: "", pastas: [], arquivos: [], selecionada: null, ocupado: false, leitura: 0 };
 
     const destino = () => estado.selecionada || estado.atual;
     function avisar(texto, erro = false) { status.textContent = texto || ""; status.classList.toggle("erro", Boolean(erro)); }
@@ -103,13 +103,15 @@
     }
 
     async function abrir(caminho, selecionar = null) {
+      const leitura=++estado.leitura;
       estado.ocupado = true; sincronizar(); avisar("Lendo o storage…");
       try {
         const dados = await listar(caminho);
+        if(leitura!==estado.leitura||!dialog.isConnected)return;
         Object.assign(estado, { atual: dados.caminho, pastas: dados.pastas, arquivos: dados.arquivos, selecionada: selecionar });
         fecharEdicao(); desenharTrilha(); desenharLista(); avisar("");
-      } catch (erro) { avisar(erro.message, true); }
-      finally { estado.ocupado = false; sincronizar(); }
+      } catch (erro) { if(leitura===estado.leitura&&dialog.isConnected)avisar(erro.message, true); }
+      finally { if(leitura===estado.leitura&&dialog.isConnected){estado.ocupado = false; sincronizar();} }
     }
 
     function fecharEdicao() { edicao.hidden = true; edicao.innerHTML = ""; }
@@ -118,6 +120,7 @@
       edicao.querySelector("input")?.focus(); edicao.querySelector("input")?.select();
       edicao.onsubmit = async (e) => {
         e.preventDefault();
+        if(estado.ocupado)return;
         estado.ocupado = true; sincronizar();
         try { await aoConfirmar(edicao.querySelector("input")?.value.trim()); }
         catch (erro) { avisar(erro.message, true); }
@@ -160,7 +163,7 @@
         const acao = e.target.closest("[data-acao]")?.dataset.acao;
         if (!acao) return;
         if (acao === "cancelar") encerrar(null);
-        else if (acao === "salvar") { if (destino()) encerrar(destino()); }
+        else if (acao === "salvar") { if (!estado.ocupado&&destino()) encerrar(destino()); }
         else if (!estado.ocupado) { avisar(""); acoes[acao](); }
       });
       dialog.addEventListener("cancel", (e) => { e.preventDefault(); encerrar(null); });

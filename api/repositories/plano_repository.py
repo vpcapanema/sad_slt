@@ -6,7 +6,7 @@ from typing import Any
 from psycopg import sql
 from psycopg.types.json import Jsonb
 
-from api.db.connection import get_connection
+from api.db.connection import get_connection, commit_unless_atomic
 from api.services.autoria_demanda import validar_autor
 from api.repositories import geometria_historico_repository
 from api.constants import STATUS_POS_APROVACAO, STATUS_PRE_APROVACAO, STATUS_PRE_REPROVACAO, STATUS_REPROVACAO
@@ -18,6 +18,7 @@ _SELECT_BASE = """
         p.diretoria_id,
         p.nome,
         p.descricao,
+        p.origem_sei_processo,
         p.objetivo_estrategico,
         p.responsavel,
         p.sigma_instituicao_id,
@@ -60,7 +61,7 @@ _SELECT_BASE = """
 
 _INSERT_SQL = """
     INSERT INTO demandas.plano (
-        codigo, diretoria_id, nome, descricao,
+        codigo, diretoria_id, nome, descricao, origem_sei_processo,
         objetivo_estrategico, responsavel,
         sigma_instituicao_id, instituicao_nome, instituicao_razao_social,
         instituicao_nome_fantasia, instituicao_cnpj,
@@ -69,7 +70,7 @@ _INSERT_SQL = """
         valor_global, atributos_cadastrais, maturidade, prazo_referencia_meses, base_estimativa_prazo,
         status, criado_por, atualizado_por
     ) VALUES (
-        %(codigo)s, %(diretoria_id)s, %(nome)s, %(descricao)s,
+        %(codigo)s, %(diretoria_id)s, %(nome)s, %(descricao)s, %(origem_sei_processo)s,
         %(objetivo_estrategico)s, %(responsavel)s,
         %(sigma_instituicao_id)s, %(instituicao_nome)s, %(instituicao_razao_social)s,
         %(instituicao_nome_fantasia)s, %(instituicao_cnpj)s,
@@ -122,6 +123,7 @@ def insert(
     o histórico de geometrias na mesma transação."""
     row = dict(row, criado_por=validar_autor(row.get("criado_por")))
     row = {
+        "origem_sei_processo": None,
         "maturidade": None,
         "prazo_referencia_meses": None,
         "base_estimativa_prazo": None,
@@ -149,7 +151,7 @@ def insert(
                 arquivo=arquivo_geometria,
                 criado_por=row.get("criado_por"),
             )
-        conn.commit()
+        commit_unless_atomic(conn)
     found = get_by_codigo(row["codigo"])
     if not found:
         raise RuntimeError("Plano inserido mas não recuperado.")
@@ -160,6 +162,7 @@ _UPDATE_ALLOWED = {
     "status": "status",
     "nome": "nome",
     "descricao": "descricao",
+    "origem_sei_processo": "origem_sei_processo",
     "diretoria_id": "diretoria_id",
     "objetivo_estrategico": "objetivo_estrategico",
     "responsavel": "responsavel",

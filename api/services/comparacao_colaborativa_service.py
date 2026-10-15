@@ -223,7 +223,7 @@ def criar_ambiente(
             "A data limite deve ser futura.", field="valido_ate"
         )
 
-    convites = [{"email": str(c.email).strip().lower()} for c in payload.convites]
+    convites = [{"email": str(c.email).strip().lower(), "nome": (c.nome or "").strip() or None} for c in payload.convites]
     emails = {c["email"] for c in convites}
     if len(emails) != len(convites):
         raise DemandaValidationError(
@@ -429,7 +429,10 @@ def atualizar_ambiente(
             }
         )
     if payload.convites is not None:
-        convites = [{"email": str(item.email).strip().lower()} for item in payload.convites]
+        nomes_atuais = {str(c.get("email", "")).strip().lower(): c.get("nome") for c in atual.get("convites", [])}
+        convites = [{"email": str(item.email).strip().lower(),
+                    "nome": ((item.nome or "").strip() or None) if "nome" in item.model_fields_set
+                    else nomes_atuais.get(str(item.email).strip().lower())} for item in payload.convites]
         emails = [item["email"] for item in convites]
         if len(set(emails)) != len(emails):
             raise DemandaValidationError("Há e-mails duplicados.", field="convites")
@@ -833,21 +836,29 @@ def criar_analise(ambiente_id: str, payload: AnaliseColaborativaCreateSchema, us
     if not ambiente:
         raise DemandaValidationError("Julgamento não encontrado.", field="ambiente_id")
     respostas = [r for r in repo.list_respostas(ambiente_id) if r.get("status", "enviada") == "enviada"]
-    selecionadas = {str(v) for v in payload.resposta_ids} if payload.resposta_ids else None
+    selecionadas = {str(v) for v in payload.resposta_ids} if payload.resposta_ids is not None else None
     if selecionadas is not None:
+        if selecionadas - {str(r["id"]) for r in respostas}:
+            raise DemandaValidationError("Há respostas que não pertencem a este julgamento ou ainda não foram enviadas.", field="resposta_ids")
         respostas = [r for r in respostas if str(r["id"]) in selecionadas]
     if payload.excluir_inconsistentes:
         respostas = [r for r in respostas if r.get("consistente") and float(r.get("razao_consistencia") or 0) <= payload.rc_maximo]
     if not respostas:
         raise DemandaValidationError("Nenhuma resposta enviada atende aos filtros da análise.", field="respostas")
     consolidada = media_geometrica_matrizes([r["matriz_comparacao"] for r in respostas])
+    if payload.metodo_agregacao != "geometrica":
+        for i in range(len(consolidada)):
+            for j in range(i + 1, len(consolidada)):
+                valores = [float(r["matriz_comparacao"][i][j]) for r in respostas]
+                valor = sum(valores) / len(valores) if payload.metodo_agregacao == "aritmetica" else _mediana(valores)
+                consolidada[i][j], consolidada[j][i] = valor, 1 / valor
     resultado = ahp_engine.analyze_matrix(consolidada)
     nomes = _criterio_nomes(ambiente.get("criterios") or [])
     estatisticas = _estatisticas_respostas(respostas, nomes)
     estatisticas["total_respostas"] = len(respostas)
     row = analise_repo.insert_with_respostas({
         "ambiente_id": ambiente_id, "codigo": "ANL-" + secrets.token_hex(6).upper(), "nome": payload.nome.strip(),
-        "descricao": payload.descricao, "metodo_agregacao": "aij_media_geometrica", "rc_maximo": payload.rc_maximo,
+        "descricao": payload.descricao, "metodo_agregacao": {"geometrica": "aij_media_geometrica", "aritmetica": "aij_media_aritmetica", "mediana": "aij_mediana"}[payload.metodo_agregacao], "rc_maximo": payload.rc_maximo,
         "excluir_inconsistentes": payload.excluir_inconsistentes, "matriz_consolidada": consolidada,
         "pesos_consolidados": resultado["weights"], "lambda_max": resultado["lambdaMax"],
         "indice_consistencia": resultado["CI"], "indice_aleatorio": resultado["RI"],
@@ -887,7 +898,10 @@ def homologar_analise(analise_id: str, usuario_id: str | None = None, *, base_ur
     if not analise.get("consistente"):
         raise DemandaValidationError("Somente uma análise consistente pode ser homologada.", field="consistente")
     ambiente = repo.get_ambiente_by_id(str(analise["ambiente_id"]))
-    atualizado = analise_repo.homologar(analise_id, str(analise["ambiente_id"]), usuario_id)
+    if not ambiente:
+        raise DemandaValidationError("Julgamento da análise não encontrado.", field="ambiente_id")
+    if ambiente.get("hierarquizacao_id"):
+        _carregar_hierarquizacao(ambiente["hierarquizacao_id"])
     agora = datetime.now(timezone.utc)
     repo.atualizar_consolidacao(str(analise["ambiente_id"]), {
         "matriz_consolidada": analise["matriz_consolidada"], "pesos_consolidados": analise["pesos_consolidados"],
@@ -895,7 +909,9 @@ def homologar_analise(analise_id: str, usuario_id: str | None = None, *, base_ur
         "indice_aleatorio": analise["indice_aleatorio"], "razao_consistencia": analise["razao_consistencia"],
         "consistente": analise["consistente"], "respostas_consolidadas": len(analise_repo.list_resposta_ids(analise_id)),
         "consolidado_em": agora, "status": "consolidada",
-    }, {"comparacao_colaborativa": {"analise_homologada_id": analise_id, "matriz_comparacao": analise["matriz_consolidada"], "pesos": {"criteria": _criterio_nomes(ambiente.get("criterios") or []), "weights": analise["pesos_consolidados"]}}} if ambiente and ambiente.get("hierarquizacao_id") else None)
+    }, {"comparacao_colaborativa": {"analise_homologada_id": analise_id, "ambiente_id": str(ambiente["id"]), "hierarquizacao_id": str(ambiente["hierarquizacao_id"]), "criterios": ambiente.get("criterios") or [], "matriz_comparacao": analise["matriz_consolidada"], "pesos": {"criteria": _criterio_nomes(ambiente.get("criterios") or []), "weights": analise["pesos_consolidados"]}}} if ambiente.get("hierarquizacao_id") else None,
+        homologacao=(analise_id, usuario_id))
+    atualizado = analise_repo.get_by_id(analise_id)
     atualizado["respostas_incluidas"] = len(analise_repo.list_resposta_ids(analise_id))
     return _analise_response(atualizado)
 

@@ -81,15 +81,18 @@
 
   async function openStac(service) {
     const editor = openPanel("Pesquisar imagens", '<div class="editor-head"><button class="icon-btn" data-portal-back title="Voltar"><i data-lucide="arrow-left"></i></button><div><h2>Pesquisar imagens</h2><p>Catálogo STAC · extensão atual do mapa</p></div></div><div class="editor-body"><div class="empty compact">Carregando coleções...</div></div>');
+    const body = editor.querySelector(".editor-body");
     try {
       const collections = await request(`/catalogo/portal/${encodeURIComponent(service.id || service.servico_id)}/colecoes`);
-      editor.querySelector(".editor-body").innerHTML = `<form class="portal-search-form"><div class="field"><label>Coleção</label><select name="colecao" required>${collections.map((collection) => `<option value="${escapeHtml(collection.id)}">${escapeHtml(collection.titulo)}</option>`).join("")}</select></div><div class="field"><label>Data inicial</label><input name="data_inicio" type="date"></div><div class="field"><label>Data final</label><input name="data_fim" type="date"></div><p class="field-help" data-stac-temporal></p><div class="editor-actions"><button class="btn primary">Pesquisar</button></div></form><div class="portal-results"></div>`;
+      if (!body.isConnected) return;
+      if (!collections.length) throw new Error("Nenhuma cole??o dispon?vel neste servi?o.");
+      body.innerHTML = `<form class="portal-search-form"><div class="field"><label>Coleção</label><select name="colecao" required>${collections.map((collection) => `<option value="${escapeHtml(collection.id)}">${escapeHtml(collection.titulo)}</option>`).join("")}</select></div><div class="field"><label>Data inicial</label><input name="data_inicio" type="date"></div><div class="field"><label>Data final</label><input name="data_fim" type="date"></div><p class="field-help" data-stac-temporal></p><div class="editor-actions"><button class="btn primary">Pesquisar</button></div></form><div class="portal-results"></div>`;
       const form = editor.querySelector("form");
       form.elements.colecao.onchange = () => configureCollectionPeriod(form, collections);
       configureCollectionPeriod(form, collections);
       form.onsubmit = async (event) => {
         event.preventDefault();
-        const submit = event.submitter;
+        const submit = event.submitter || form.querySelector("button");
         submit.disabled = true;
         const results = editor.querySelector(".portal-results");
         results.innerHTML = '<div class="empty compact">Pesquisando cenas...</div>';
@@ -124,14 +127,14 @@
         } catch (error) { results.innerHTML = `<div class="empty compact">${escapeHtml(error.message)}</div>`; }
         finally { submit.disabled = false; }
       };
-    } catch (error) { editor.querySelector(".editor-body").innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`; }
+    } catch (error) { if (body.isConnected) body.innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`; }
   }
 
   function openOsm(service) {
     const editor = openPanel("Adicionar dados OpenStreetMap", '<div class="editor-head"><button class="icon-btn" data-portal-back title="Voltar"><i data-lucide="arrow-left"></i></button><div><h2>Adicionar dados OpenStreetMap</h2><p>Consulta limitada à extensão atual do mapa</p></div></div><form class="portal-osm-form"><div class="editor-body"><div class="field"><label>Feições</label><select name="tema"><option value="vias">Vias</option><option value="hidrografia">Hidrografia</option><option value="edificios">Edifícios</option></select></div><p class="field-help">O resultado será salvo como camada vetorial no Catálogo e adicionado ao mapa.</p></div><div class="editor-actions"><button class="btn primary">Adicionar ao mapa</button></div></form>');
     editor.querySelector("form").onsubmit = async (event) => {
       event.preventDefault();
-      const button = event.submitter;
+      const button = event.submitter || event.target.querySelector("button");
       button.disabled = true;
       button.textContent = "Consultando...";
       try {
@@ -143,9 +146,12 @@
 
   async function openMapbiomas(service) {
     const editor = openPanel("MapBiomas", '<div class="editor-head"><button class="icon-btn" data-portal-back title="Voltar"><i data-lucide="arrow-left"></i></button><div><h2>MapBiomas</h2><p>Cobertura e uso anual da terra no Brasil</p></div></div><div class="editor-body"><div class="empty compact">Carregando coleções anuais...</div></div>');
+    const body = editor.querySelector(".editor-body");
     try {
       const collections = await request(`/catalogo/portal/${encodeURIComponent(service.id || service.servico_id)}/mapbiomas/colecoes`);
-      editor.querySelector(".editor-body").innerHTML = `<form class="portal-search-form"><div class="field"><label>Coleção anual</label><select name="colecao">${collections.map((collection) => `<option value="${escapeHtml(collection.id)}">${escapeHtml(collection.titulo)}</option>`).join("")}</select></div><div class="field"><label>Ano</label><select name="ano"></select></div><p class="field-help" data-mapbiomas-info></p><div class="editor-actions"><button class="btn primary" type="submit">Abrir download oficial</button></div></form>`;
+      if (!body.isConnected) return;
+      if (!collections.length) throw new Error("Nenhuma cole??o dispon?vel neste servi?o.");
+      body.innerHTML = `<form class="portal-search-form"><div class="field"><label>Coleção anual</label><select name="colecao">${collections.map((collection) => `<option value="${escapeHtml(collection.id)}">${escapeHtml(collection.titulo)}</option>`).join("")}</select></div><div class="field"><label>Ano</label><select name="ano"></select></div><p class="field-help" data-mapbiomas-info></p><div class="editor-actions"><button class="btn primary" type="submit">Abrir download oficial</button></div></form>`;
       const form = editor.querySelector("form");
       const updateYears = () => {
         const collection = collections.find((item) => item.id === form.elements.colecao.value);
@@ -160,7 +166,7 @@
         window.open(collection.url, "_blank", "noopener");
         window.gpApp.log(`MapBiomas: fonte oficial aberta para ${form.elements.ano.value}.`, "ok");
       };
-    } catch (error) { editor.querySelector(".editor-body").innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`; }
+    } catch (error) { if (body.isConnected) body.innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`; }
   }
 
   async function open(service) {

@@ -1,0 +1,19 @@
+{
+  "territorialFirstPageSorted": [
+    "Z",
+    "Y"
+  ],
+  "territorialRequestsAfterSorting": 3,
+  "territorialSecondPage": [
+    "A"
+  ],
+  "dashboardOrder": [
+    "A",
+    "Z"
+  ],
+  "dashboardDetails": "A",
+  "dashboardHighlighted": [
+    "A"
+  ],
+  "errors": []
+}

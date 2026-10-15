@@ -214,3 +214,13 @@ def excluir(documento_id: str) -> None:
         raise DemandaValidationError(f"Este documento originou a demanda {documento['demanda_id']} e não pode ser excluído.")
     if not repo.excluir(documento["id"]):
         raise DemandaNotFoundError("Documento não encontrado no repositório do SEI.")
+
+
+def bloquear_registro(conn, documento_id: str) -> None:
+    """Serializa a criação por documento também entre processos do servidor."""
+    row = conn.execute(
+        "SELECT id FROM integracoes.sei_documento WHERE id = %s FOR UPDATE",
+        (_identificador(documento_id),),
+    ).fetchone()
+    if not row:
+        raise DemandaNotFoundError("Documento não encontrado no repositório do SEI.")

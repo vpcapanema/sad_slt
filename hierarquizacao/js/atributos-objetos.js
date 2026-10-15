@@ -384,10 +384,24 @@
         colunas,
         pesos: pesosIniciais(colunas, hierarquizacao.dados_hierarquizacao?.cabecalho_grupo?.configuracoes?.fase_3),
       };
+      const homologada = hierarquizacao.dados_hierarquizacao?.comparacao_colaborativa;
+      if (homologada?.analise_homologada_id) {
+        const pesos = homologada.pesos_por_atributo || {};
+        colunas.filter(c => c.grupo !== "risco").forEach(c => { estado.pesos[c.id] = pesos[c.id] ?? 0; });
+      }
       const titulo = document.getElementById("fase3-titulo-atributos");
       if (titulo) titulo.textContent = `2. Critérios atributo de ${tituloTipo(tipo)}`;
       montarTabela(raiz, objetos, colunas);
       montarPesos(raiz);
+      if (homologada?.analise_homologada_id) {
+        raiz.querySelectorAll('.atributo-peso-numero, .atributo-peso-barra').forEach(input => { input.disabled = true; input.title = 'Peso da análise homologada desta hierarquização'; });
+        const faltantes = colunas.filter(c => c.grupo !== 'risco' && !(c.id in (homologada.pesos_por_atributo || {})));
+        if (faltantes.length || homologada.erro_vinculo_pesos) {
+          const aviso = $('[data-atributos-erro]', raiz);
+          aviso.textContent = homologada.erro_vinculo_pesos || 'Atributos sem vínculo com os critérios homologados: ' + faltantes.map(c => c.alias).join('; ') + '. A execução será bloqueada até corrigir a correspondência.';
+          aviso.hidden = false;
+        }
+      }
       const acoesRiscos = $("[data-atributos-riscos-acoes]", raiz);
       if (acoesRiscos) acoesRiscos.hidden = !colunas.some((coluna) => coluna.grupo === "risco");
       $("[data-atributos-sem-colunas]", raiz).hidden = Boolean(colunas.length);

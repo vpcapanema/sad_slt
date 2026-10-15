@@ -1,7 +1,7 @@
 """Validação comum e representação cartográfica binária, sem GeoJSON intermediário.
 
 As referências de execução continuam apontando para as fontes originais. A cópia
-temporária contém somente geometria para desenhar tiles, nunca para os cálculos.
+temporária de arquivos locais preserva atributos para consulta, nunca para os cálculos.
 """
 from hashlib import sha256
 from pathlib import Path
@@ -21,7 +21,7 @@ def _pasta(dono):
     return pasta
 
 
-def representar(frame, meta, dono):
+def representar(frame, meta, dono, *, atributos=False):
     """WKB -> GDAL: nenhuma serialização da camada para JSON."""
     pasta = _pasta(dono)
     for antigo in pasta.glob('*.gpkg'):
@@ -32,6 +32,39 @@ def representar(frame, meta, dono):
                 pass
     token = uuid4().hex
     path = pasta / f'{token}.gpkg'
+    ds = None
+    try:
+        if atributos:
+            # Cópia privada de leitura: todos os atributos e geometrias originais.
+            fid = '__sicard_fid__'
+            while fid in frame.columns:
+                fid += '_'
+            geometria = '__sicard_geom__'
+            while geometria in frame.columns:
+                geometria += '_'
+            frame.to_file(path, layer='camada', driver='GPKG', engine='pyogrio', index=False,
+                          FID=fid, GEOMETRY_NAME=geometria)
+            ds = ogr.Open(str(path))
+            from api.services.storage_geoespacial import campo_fid_tile
+            campo_fid = campo_fid_tile(ds.GetLayer(0))
+            ds = None
+        else:
+            _gravar_geometrias(frame, path)
+    except Exception:
+        ds = None
+        path.unlink(missing_ok=True)
+        raise
+    resultado = dict(representacao='tiles', tiles_token=token, revisao=token,
+                bounds=meta['limites_wgs84'], feicoes=len(frame),
+                geometria_tipo=' '.join(meta['tipos_geometria']),
+                status_validacao='valida', metadados_local=meta,
+                crs_arquivo=str(frame.crs), campos=meta['campos'])
+    if atributos:
+        resultado.update(origem_geometria='local_temporaria', editavel=False, campo_fid_tile=campo_fid)
+    return resultado
+
+
+def _gravar_geometrias(frame, path):
     ds = None
     try:
         ds = ogr.GetDriverByName('GPKG').CreateDataSource(str(path))
@@ -52,11 +85,6 @@ def representar(frame, meta, dono):
         ds = None
         path.unlink(missing_ok=True)
         raise
-    return dict(representacao='tiles', tiles_token=token, revisao=token,
-                bounds=meta['limites_wgs84'], feicoes=len(frame),
-                geometria_tipo=' '.join(meta['tipos_geometria']),
-                status_validacao='valida', metadados_local=meta,
-                crs_arquivo=str(frame.crs), campos=meta['campos'])
 
 
 def preparar(ident, dono):

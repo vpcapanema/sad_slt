@@ -1,3 +1,14 @@
+.hier-processos-page .hier-instrucao {
+  display: flex;
+  align-items: baseline;
+  gap: var(--process-space-2, 0.625rem);
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+.hier-processos-page .hier-instrucao > i {
+  flex-shrink: 0;
+  color: var(--pli-blue);
+}
 .hier-processos-page :is(button, .btn, [role="button"], input[type="button"], input[type="submit"]) {
   border: 1px solid currentColor !important;
 }

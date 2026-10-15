@@ -278,7 +278,7 @@
 
   function colunas() {
     const tipo = $("#agrupamento-tipo").value;
-    const comuns = [{ campo: "status", rotulo: "Situação" }, { campo: "codigo", rotulo: "Código" }, { campo: "nome", rotulo: ROTULOS[tipo] }];
+    const comuns = [{ campo: "origem_sei_processo", rotulo: "Processo SEI" }, { campo: "status", rotulo: "Situação" }, { campo: "codigo", rotulo: "Código" }, { campo: "nome", rotulo: ROTULOS[tipo] }];
     if (tipo === "plano") return [...comuns, { campo: "diretoria_id", rotulo: "Diretoria" }, { campo: "instituicao_nome", rotulo: "Instituição" }, { campo: "representante_nome", rotulo: "Representante" }, { campo: "objetivo_estrategico", rotulo: "Objetivo estratégico" }, { campo: "valor_global", rotulo: "Valor global" }, { campo: "criado_em", rotulo: "Cadastro" }];
     if (tipo === "programa") return [...comuns, { campo: "plano_id", rotulo: "Plano vinculado" }, { campo: "vinculo_institucional", rotulo: "Vínculo institucional" }, { campo: "diretoria_id", rotulo: "Diretoria" }, { campo: "instituicao_nome", rotulo: "Instituição" }, { campo: "objetivo", rotulo: "Objetivo" }, { campo: "valor_global", rotulo: "Valor global" }, { campo: "criado_em", rotulo: "Cadastro" }];
     return [...comuns, { campo: "diretoria_id", rotulo: "Diretoria" }, { campo: "plano_id", rotulo: "Plano estratégico" }, { campo: "programa_id", rotulo: "Programa vinculado" }, { campo: "instituicao_nome", rotulo: "Instituição" }, { campo: "representante_nome", rotulo: "Representante" }, { campo: "geometria_tipo", rotulo: "Geometria" }, { campo: "criado_em", rotulo: "Cadastro" }];

@@ -1,0 +1,473 @@
+{
+  "sources": [
+    {
+      "file": "assets/css/app.css",
+      "bytes": 66785,
+      "vendor": false,
+      "cssRules": 515
+    },
+    {
+      "file": "assets/css/process_feedback_system.css",
+      "bytes": 32961,
+      "vendor": false,
+      "cssRules": 235
+    },
+    {
+      "file": "assets/vendor/leaflet/leaflet.css",
+      "bytes": 14806,
+      "vendor": true,
+      "cssRules": 124
+    },
+    {
+      "file": "assets/vendor/fontawesome/css/all.min.css",
+      "bytes": 103017,
+      "vendor": true,
+      "cssRules": 1963
+    },
+    {
+      "file": "assets/css/navbar-modulo.css",
+      "bytes": 2731,
+      "vendor": false,
+      "cssRules": 12
+    },
+    {
+      "file": "assets/css/template-conteudo.css",
+      "bytes": 2893,
+      "vendor": false,
+      "cssRules": 12
+    },
+    {
+      "file": "assets/vendor/maplibre-gl/maplibre-gl.css",
+      "bytes": 63722,
+      "vendor": true,
+      "cssRules": 112
+    },
+    {
+      "file": "assets/css/ahp-module.css",
+      "bytes": 113616,
+      "vendor": false,
+      "cssRules": 776
+    },
+    {
+      "file": "assets/css/extracao-atributos.css",
+      "bytes": 78968,
+      "vendor": false,
+      "cssRules": 692
+    },
+    {
+      "file": "assets/css/page-title-standard.css",
+      "bytes": 1497,
+      "vendor": false,
+      "cssRules": 10
+    },
+    {
+      "file": "assets/js/admin-auth.js",
+      "bytes": 4116,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "assets/css/geoprocessamento.css",
+      "bytes": 64677,
+      "vendor": false,
+      "cssRules": 689
+    },
+    {
+      "file": "geoespacial/extracao-atributos/app.js",
+      "bytes": 30802,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "assets/css/extracao-atributos.css",
+      "bytes": 78968,
+      "vendor": false,
+      "cssRules": 692
+    },
+    {
+      "file": "assets/css/process_feedback_system.css",
+      "bytes": 32961,
+      "vendor": false,
+      "cssRules": 235
+    },
+    {
+      "file": "assets/vendor/leaflet-draw/leaflet.draw.css",
+      "bytes": 5276,
+      "vendor": true,
+      "cssRules": 57
+    },
+    {
+      "file": "assets/css/bancada-arquivos.css",
+      "bytes": 1788,
+      "vendor": false,
+      "cssRules": 22
+    },
+    {
+      "file": "assets/css/storage-pastas.css",
+      "bytes": 9783,
+      "vendor": false,
+      "cssRules": 87
+    },
+    {
+      "file": "assets/vendor/tabulator/tabulator.min.css",
+      "bytes": 28360,
+      "vendor": true,
+      "cssRules": 208
+    },
+    {
+      "file": "assets/css/geoprocessamento-atributos.css",
+      "bytes": 5997,
+      "vendor": false,
+      "cssRules": 56
+    },
+    {
+      "file": "geoespacial/bancada-arquivos.js",
+      "bytes": 43877,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "assets/vendor/maplibre-gl/leaflet-maplibre-gl.js",
+      "bytes": 12955,
+      "vendor": true,
+      "syntax": "ok"
+    },
+    {
+      "file": "assets/vendor/leaflet/leaflet.js",
+      "bytes": 147557,
+      "vendor": true,
+      "syntax": "ok"
+    },
+    {
+      "file": "assets/js/table-sort.js",
+      "bytes": 14015,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "assets/js/template-base.js",
+      "bytes": 3152,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "assets/js/notification_system.js",
+      "bytes": 31527,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "assets/vendor/maplibre-gl/maplibre-gl.js",
+      "bytes": 762831,
+      "vendor": true,
+      "syntax": "ok"
+    },
+    {
+      "file": "assets/vendor/lucide/lucide.min.js",
+      "bytes": 357808,
+      "vendor": true,
+      "syntax": "ok"
+    },
+    {
+      "file": "assets/js/process_feedback_unified.js",
+      "bytes": 88229,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/bancada-feedback.js",
+      "bytes": 1214,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "assets/js/ahp-process-monitor.js",
+      "bytes": 2072,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "assets/js/status-colors.js",
+      "bytes": 31456,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/geoprocessamento-atributos.js",
+      "bytes": 26190,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/geoprocessamento-modeler.js",
+      "bytes": 71378,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/geoprocessamento-docks.js",
+      "bytes": 7542,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/geoprocessamento.js",
+      "bytes": 173663,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/geoprocessamento-portal.js",
+      "bytes": 12614,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/geoprocessamento-actions.js",
+      "bytes": 10221,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "assets/vendor/tabulator/tabulator.min.js",
+      "bytes": 442823,
+      "vendor": true,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/geoprocessamento-ribbon.js",
+      "bytes": 13301,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/geoprocessamento-commands.js",
+      "bytes": 36102,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/geoprocessamento-toolbox.js",
+      "bytes": 1464,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/geoespacial-storage-pastas.js",
+      "bytes": 12298,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "assets/vendor/leaflet-draw/leaflet.draw.js",
+      "bytes": 67493,
+      "vendor": true,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/extracao-atributos/saida-bancada.js",
+      "bytes": 1290,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/extracao-atributos/lote.js",
+      "bytes": 9340,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/extracao-atributos/bancadas.js",
+      "bytes": 6866,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/extracao-atributos/logger.js",
+      "bytes": 8569,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/extracao-atributos/camada-validada.js",
+      "bytes": 1460,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/extracao-atributos/composicao.js",
+      "bytes": 2916,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/extracao-atributos/ui.js",
+      "bytes": 2295,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/extracao-atributos/resultados.js",
+      "bytes": 13215,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/extracao-atributos/configuracao.js",
+      "bytes": 8543,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/extracao-atributos/integracao.js",
+      "bytes": 597,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/extracao-atributos/mapa.js",
+      "bytes": 8733,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/extracao-atributos/explorador.js",
+      "bytes": 20677,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/extracao-atributos/municipal.js",
+      "bytes": 5261,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/extracao-atributos/api.js",
+      "bytes": 7393,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/extracao-atributos/regras.js",
+      "bytes": 24654,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/extracao-atributos/processo.js",
+      "bytes": 3138,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/extracao-atributos/diagramas.js",
+      "bytes": 5567,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/extracao-atributos/territorial.js",
+      "bytes": 15286,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/extracao-atributos/preparacao.js",
+      "bytes": 5784,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/extracao-atributos/dashboard.js",
+      "bytes": 9627,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/extracao-atributos/resultados-dom.js",
+      "bytes": 1487,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/extracao-atributos/explorador.js",
+      "bytes": 20677,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/extracao-atributos/storage-upload.js",
+      "bytes": 8817,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/extracao-atributos/entrada-local.js",
+      "bytes": 7908,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/extracao-atributos/previa.js",
+      "bytes": 18303,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/extracao-atributos/lista-camadas.js",
+      "bytes": 22139,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/extracao-atributos/resultados-formatacao.js",
+      "bytes": 588,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/extracao-atributos/territorial-filtros.js",
+      "bytes": 4429,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/extracao-atributos/resultados-mapa.js",
+      "bytes": 1796,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/extracao-atributos/editor-lista-bases.js",
+      "bytes": 8542,
+      "vendor": false,
+      "syntax": "ok"
+    },
+    {
+      "file": "geoespacial/extracao-atributos/previa-tiles.js",
+      "bytes": 2166,
+      "vendor": false,
+      "syntax": "ok"
+    }
+  ],
+  "sizes": [
+    {
+      "width": 1280,
+      "documentWidth": 1280,
+      "overflowing": []
+    },
+    {
+      "width": 768,
+      "documentWidth": 768,
+      "overflowing": []
+    },
+    {
+      "width": 390,
+      "documentWidth": 390,
+      "overflowing": []
+    }
+  ],
+  "errors": [],
+  "failed": []
+}

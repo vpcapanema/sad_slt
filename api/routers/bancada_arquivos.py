@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -121,3 +121,69 @@ def calcular_campo(payload: CalculoCampo, user: SessionUser = Depends(require_ge
     return resposta(service.calcular_campo, payload.arquivo, payload.revisao, payload.campo,
                     payload.expressao, user, payload.camada_id, payload.chaves_selecionadas,
                     payload.filtro, payload.incluir_geojson)
+
+
+class LeituraTemporaria(BaseModel):
+    id: str = Field(pattern=r'^local:[a-f0-9]{32}$')
+    tiles_token: str = Field(pattern=r'^[a-f0-9]{32}$')
+    revisao: str = Field(min_length=1, max_length=128)
+
+
+class TabelaTemporaria(LeituraTemporaria):
+    offset: int = Field(default=0, ge=0, le=10_000_000)
+    limite: int = Field(default=100, ge=1, le=500)
+
+
+class GeometriasTemporarias(LeituraTemporaria):
+    ids: list[str] = Field(min_length=1, max_length=100)
+
+
+class ConsultaTemporaria(TabelaTemporaria):
+    expressao: str = Field(min_length=1, max_length=2000)
+    inverter_selecao: bool = False
+    limite: int = Field(default=100, ge=1, le=1000)
+
+
+class ParametrosClassificacao(BaseModel):
+    campo: str = Field(min_length=1, max_length=200)
+    metodo: Literal['valores_unicos', 'intervalos_iguais', 'quantis', 'desvio_padrao', 'quebras_naturais', 'manual'] = 'intervalos_iguais'
+    classes: int = Field(default=5, ge=2, le=12)
+
+
+class ClassificacaoArquivo(Arquivo, ParametrosClassificacao):
+    camada_id: str = Field(min_length=1, max_length=1200)
+
+
+class ClassificacaoTemporaria(LeituraTemporaria, ParametrosClassificacao):
+    pass
+
+
+@router.post('/classificacao')
+def classificacao_arquivo(payload: ClassificacaoArquivo):
+    from api.services.bancada_classificacao import classificar
+    return resposta(classificar, payload.camada_id, payload.arquivo, payload.revisao,
+                    payload.campo, payload.metodo, payload.classes)
+
+
+@router.post('/local/classificacao')
+def classificacao_temporaria(payload: ClassificacaoTemporaria, user: SessionUser = Depends(require_geospatial_access)):
+    from api.services.bancada_temporaria import consultar
+    return resposta(consultar, 'classificacao', payload, user.id)
+
+
+@router.post('/local/tabela')
+def tabela_temporaria(payload: TabelaTemporaria, user: SessionUser = Depends(require_geospatial_access)):
+    from api.services.bancada_temporaria import consultar
+    return resposta(consultar, 'tabela', payload, user.id)
+
+
+@router.post('/local/geometrias')
+def geometrias_temporarias(payload: GeometriasTemporarias, user: SessionUser = Depends(require_geospatial_access)):
+    from api.services.bancada_temporaria import consultar
+    return resposta(consultar, 'geometrias', payload, user.id)
+
+
+@router.post('/local/consulta')
+def consulta_temporaria(payload: ConsultaTemporaria, user: SessionUser = Depends(require_geospatial_access)):
+    from api.services.bancada_temporaria import consultar
+    return resposta(consultar, 'consulta', payload, user.id)

@@ -1,0 +1,568 @@
+{
+  "officialClaim": "Agregação dos julgamentos dos julgadores selecionados, par a par, pela média geométrica dos índices. Prévia das respostas selecionadas em 2.6. O resultado homologado está identificado em 2.7.",
+  "displayedMatrix": "C1\t1.000\t3.000\nC2\t0.333\t1.000",
+  "officialMatrix": [
+    [
+      1,
+      1
+    ],
+    [
+      1,
+      1
+    ]
+  ],
+  "previewAfterSubset": "C1\t1.000\t1.000\nC2\t1.000\t1.000",
+  "consolidationRequest": {
+    "method": "POST",
+    "path": "/api/ahp/comparacao-colaborativa/ambientes/j1/analises",
+    "data": {
+      "nome": "Análise com as respostas selecionadas",
+      "metodo_agregacao": "aritmetica",
+      "resposta_ids": [
+        "r0"
+      ],
+      "rc_maximo": 0.1,
+      "excluir_inconsistentes": true
+    }
+  },
+  "changedSelectionRequest": {
+    "method": "POST",
+    "path": "/api/ahp/comparacao-colaborativa/ambientes/j1/analises",
+    "data": {
+      "nome": "Análise com as respostas selecionadas",
+      "metodo_agregacao": "aritmetica",
+      "resposta_ids": [
+        "r0"
+      ],
+      "rc_maximo": 0.1,
+      "excluir_inconsistentes": true
+    }
+  },
+  "analysisTables": [
+    {
+      "rows": 2,
+      "sort": "true",
+      "filters": true,
+      "pager": true
+    },
+    {
+      "rows": 1,
+      "sort": "true",
+      "filters": true,
+      "pager": true
+    },
+    {
+      "rows": 2,
+      "filters": false,
+      "pager": false
+    },
+    {
+      "rows": 2,
+      "sort": "true",
+      "filters": true,
+      "pager": true
+    },
+    {
+      "rows": 2,
+      "sort": "true",
+      "filters": true,
+      "pager": true
+    },
+    {
+      "rows": 2,
+      "sort": "true",
+      "filters": true,
+      "pager": true
+    },
+    {
+      "rows": 2,
+      "filters": true,
+      "pager": true
+    }
+  ],
+  "css": [
+    {
+      "label": "julgamentos",
+      "sheets": [
+        {
+          "url": "http://127.0.0.1:8083/assets/css/app.css",
+          "rules": 536
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/vendor/fontawesome/css/all.min.css",
+          "rules": 2012
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/css/template-conteudo.css",
+          "rules": 16
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/css/process_feedback_system.css",
+          "rules": 321
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/css/navbar-modulo.css",
+          "rules": 13
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/vendor/fontawesome/css/all.min.css",
+          "rules": 2012
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/css/ahp-module.css",
+          "rules": 804
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/css/ahp-collab-analytics.css",
+          "rules": 41
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/css/ahp-collab-explorer.css",
+          "rules": 25
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/css/ahp-collab-rounds.css",
+          "rules": 3
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/css/analise-multicriterio.css?v=20260831-espaco-analitico",
+          "rules": 401
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/css/analise-multicriterio-tabela.css?v=20260831-larguras-colunas",
+          "rules": 36
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/css/central-respostas-layout.css?v=20260821-table-left-chart-right",
+          "rules": 8
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/css/analise-multicriterio-modal.css?v=20260819-modal5",
+          "rules": 53
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/css/mad-filter-standard.css?v=20260820-1",
+          "rules": 16
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/css/page-title-standard.css?v=20260820-3",
+          "rules": 12
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/css/table-standard.css?v=20261015-fontes-ordem",
+          "rules": 33
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/css/paginas/ami-report-tables.css?v=20261015",
+          "rules": 3
+        },
+        {
+          "url": null,
+          "rules": 57
+        }
+      ],
+      "tables": [
+        {
+          "id": "ami-judgments",
+          "headFont": "11.52px",
+          "bodyFont": "11.84px"
+        },
+        {
+          "id": "ami-analysis-judges",
+          "headFont": "9.6px",
+          "bodyFont": "10.24px"
+        },
+        {
+          "id": "",
+          "headFont": "9.6px",
+          "bodyFont": "10.24px"
+        },
+        {
+          "id": "",
+          "headFont": "9.6px",
+          "bodyFont": "10.24px"
+        },
+        {
+          "id": "ami-analysis-criteria",
+          "headFont": "9.6px",
+          "bodyFont": "10.24px"
+        },
+        {
+          "id": "ami-analysis-responses",
+          "headFont": "9.6px",
+          "bodyFont": "10.24px"
+        },
+        {
+          "id": "",
+          "headFont": "11.52px",
+          "bodyFont": "11.84px"
+        },
+        {
+          "id": "",
+          "headFont": "11.52px",
+          "bodyFont": "11.52px"
+        }
+      ],
+      "filterRadius": "50%"
+    },
+    {
+      "label": "processos",
+      "sheets": [
+        {
+          "url": "http://127.0.0.1:8083/assets/css/app.css",
+          "rules": 536
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/vendor/fontawesome/css/all.min.css",
+          "rules": 2012
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/css/template-conteudo.css",
+          "rules": 16
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/css/process_feedback_system.css",
+          "rules": 321
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/css/navbar-modulo.css",
+          "rules": 13
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/css/ahp-module.css",
+          "rules": 804
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/vendor/leaflet/leaflet.css",
+          "rules": 125
+        },
+        {
+          "url": "http://127.0.0.1:8083/restrict/hierarquizacao/processos.css?v=20261015-fluxo-atual",
+          "rules": 68
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/vendor/fontawesome/css/all.min.css",
+          "rules": 2012
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/css/paginas/hierarquizacao-home-inline-1.css?v=20261015-instrucoes",
+          "rules": 55
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/css/page-title-standard.css?v=20260820-3",
+          "rules": 12
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/css/table-standard.css?v=20261015-fontes-ordem",
+          "rules": 33
+        },
+        {
+          "url": null,
+          "rules": 108
+        },
+        {
+          "url": null,
+          "rules": 57
+        }
+      ],
+      "tables": [
+        {
+          "id": "hier-tbody",
+          "headFont": "11.52px",
+          "bodyFont": "11.84px"
+        },
+        {
+          "id": "hier-agrupamento-demandas",
+          "headFont": "11.52px",
+          "bodyFont": "11.84px"
+        }
+      ],
+      "filterRadius": "50%"
+    },
+    {
+      "label": "espaco",
+      "sheets": [
+        {
+          "url": "http://127.0.0.1:8083/assets/css/app.css",
+          "rules": 536
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/vendor/fontawesome/css/all.min.css",
+          "rules": 2012
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/css/template-conteudo.css",
+          "rules": 16
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/css/process_feedback_system.css",
+          "rules": 321
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/css/navbar-modulo.css",
+          "rules": 13
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/vendor/fontawesome/css/all.min.css",
+          "rules": 2012
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/css/ahp-module.css",
+          "rules": 804
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/css/ahp-collab-analytics.css",
+          "rules": 41
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/css/ahp-collab-explorer.css",
+          "rules": 25
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/css/ahp-collab-rounds.css",
+          "rules": 3
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/css/analise-multicriterio.css?v=20260831-espaco-analitico",
+          "rules": 401
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/css/analise-multicriterio-tabela.css?v=20260831-larguras-colunas",
+          "rules": 36
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/css/central-respostas-layout.css?v=20260821-table-left-chart-right",
+          "rules": 8
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/css/analise-multicriterio-modal.css?v=20260819-modal5",
+          "rules": 53
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/css/mad-filter-standard.css?v=20260820-1",
+          "rules": 16
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/css/page-title-standard.css?v=20260820-3",
+          "rules": 12
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/css/table-standard.css?v=20261015-fontes-ordem",
+          "rules": 33
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/css/paginas/ami-report-tables.css?v=20261015",
+          "rules": 3
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/css/admin-table-controls.css?v=20261015-botoes-quadrados",
+          "rules": 65
+        },
+        {
+          "url": "http://127.0.0.1:8083/assets/css/paginas/ami-espaco-secoes.css?v=20261015-subsecoes-colunas",
+          "rules": 43
+        },
+        {
+          "url": null,
+          "rules": 57
+        }
+      ],
+      "tables": [
+        {
+          "id": "ami-judgments",
+          "headFont": "11.52px",
+          "bodyFont": "11.84px"
+        },
+        {
+          "id": "ami-email-list",
+          "headFont": "11.2px",
+          "bodyFont": "11.2px"
+        }
+      ],
+      "filterRadius": "50%"
+    }
+  ],
+  "judgeRowsWith17": 15,
+  "hierarchySnapshotCount": 1,
+  "hierarchyDisplayedRows": 1,
+  "nameAfterSelectionToggle": "Alterado",
+  "errors": [],
+  "assetInventory": [
+    {
+      "url": "http://127.0.0.1:8083/assets/css/app.css",
+      "chars": 66738
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/vendor/fontawesome/css/all.min.css",
+      "chars": 103017
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/css/template-conteudo.css",
+      "chars": 2893
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/css/process_feedback_system.css",
+      "chars": 32835
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/css/navbar-modulo.css",
+      "chars": 2731
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/css/ahp-module.css",
+      "chars": 112779
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/css/ahp-collab-analytics.css",
+      "chars": 3310
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/css/analise-multicriterio.css?v=20260831-espaco-analitico",
+      "chars": 41530
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/css/ahp-collab-rounds.css",
+      "chars": 295
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/css/ahp-collab-explorer.css",
+      "chars": 2049
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/css/analise-multicriterio-tabela.css?v=20260831-larguras-colunas",
+      "chars": 4561
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/css/central-respostas-layout.css?v=20260821-table-left-chart-right",
+      "chars": 879
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/css/analise-multicriterio-modal.css?v=20260819-modal5",
+      "chars": 5549
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/css/mad-filter-standard.css?v=20260820-1",
+      "chars": 2267
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/css/page-title-standard.css?v=20260820-3",
+      "chars": 1497
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/css/table-standard.css?v=20261015-fontes-ordem",
+      "chars": 4704
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/js/table-standard.js?v=20261015-fontes-ordem",
+      "chars": 2685
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/css/paginas/ami-report-tables.css?v=20261015",
+      "chars": 519
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/js/analysis-table-controls.js?v=20261015-fluxo-integrado",
+      "chars": 3827
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/js/admin-auth.js",
+      "chars": 4108
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/js/paginas/analise-multicriterio-tabela.js?v=20260820-multiselect",
+      "chars": 15460
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20261015-fluxo-integrado",
+      "chars": 105719
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/js/table-sort.js?v=20261015-fontes-ordem",
+      "chars": 14008
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/js/template-base.js",
+      "chars": 3137
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/js/notification_system.js",
+      "chars": 31117
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/js/ahp-process-monitor.js",
+      "chars": 2048
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/js/process_feedback_unified.js?v=20261009-username",
+      "chars": 87470
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/vendor/xlsx/xlsx-0.18.5.min.js",
+      "chars": 639145
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/vendor/leaflet/leaflet.css",
+      "chars": 14806
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/css/paginas/hierarquizacao-home-inline-1.css?v=20261015-instrucoes",
+      "chars": 7110
+    },
+    {
+      "url": "http://127.0.0.1:8083/restrict/hierarquizacao/processos.css?v=20261015-fluxo-atual",
+      "chars": 7598
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/js/sigma-read.js",
+      "chars": 2376
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/js/admin-api.js",
+      "chars": 11716
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/js/catalog.js",
+      "chars": 1587
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/js/status-colors.js",
+      "chars": 31393
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/js/admin-labels.js",
+      "chars": 10004
+    },
+    {
+      "url": "http://127.0.0.1:8083/restrict/hierarquizacao/js/hier-api.js",
+      "chars": 4960
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/vendor/leaflet/leaflet.js",
+      "chars": 147557
+    },
+    {
+      "url": "http://127.0.0.1:8083/restrict/hierarquizacao/js/demandas-grupo.js?v=20261004-1",
+      "chars": 12287
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/js/matriz-criterios-arquivo.js?v=20261009",
+      "chars": 2032
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/js/paginas/hierarquizacao-home-inline-1.js",
+      "chars": 1298
+    },
+    {
+      "url": "http://127.0.0.1:8083/restrict/hierarquizacao/js/processos.js?v=20261015-resumo-grid",
+      "chars": 26559
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/css/admin-table-controls.css?v=20261015-botoes-quadrados",
+      "chars": 8903
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/css/paginas/ami-espaco-secoes.css?v=20261015-subsecoes-colunas",
+      "chars": 6312
+    }
+  ]
+}

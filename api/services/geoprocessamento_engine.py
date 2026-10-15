@@ -1233,7 +1233,7 @@ class GeoprocessamentoEngine:
         return erros
 
     async def run_steps(
-        self, steps: list[dict[str, Any]], inputs: dict[str, Any]
+        self, steps: list[dict[str, Any]], inputs: dict[str, Any], *, checkpoint=None, on_result=None
     ) -> dict[str, Any]:
         erros = self.validate_steps(steps)
         if erros:
@@ -1253,6 +1253,8 @@ class GeoprocessamentoEngine:
                 break
         results = []
         for index, step in enumerate(steps):
+            if checkpoint:
+                checkpoint()
             params = {
                 k: (
                     context.get(v[1:])
@@ -1316,6 +1318,8 @@ class GeoprocessamentoEngine:
                 inner_steps, after_steps = remaining[:split], remaining[split:]
                 iterations = []
                 for value in source:
+                    if checkpoint:
+                        checkpoint()
                     por_item: dict[str, Any] = {}
                     for nome_variavel, mapa in mapas.items():
                         if value not in mapa:
@@ -1326,12 +1330,12 @@ class GeoprocessamentoEngine:
                             )
                         por_item[nome_variavel] = mapa[value]
                     iteration = await self.run_steps(
-                        inner_steps, {**context, variable: value, **por_item}
+                        inner_steps, {**context, variable: value, **por_item}, checkpoint=checkpoint, on_result=on_result
                     )
                     iterations.append(iteration)
                     context.update(iteration.get("contexto", {}))
                 if after_steps:
-                    tail = await self.run_steps(after_steps, context)
+                    tail = await self.run_steps(after_steps, context, checkpoint=checkpoint, on_result=on_result)
                     context.update(tail.get("contexto", {}))
                     results.extend(tail.get("resultados", []))
                 return {
@@ -1349,10 +1353,12 @@ class GeoprocessamentoEngine:
                 if not function:
                     raise ValueError(f"Função {step['funcao_id']} não encontrada")
                 result = await self.run_steps(
-                    function.get("passos", []), {**context, **params}
+                    function.get("passos", []), {**context, **params}, checkpoint=checkpoint, on_result=on_result
                 )
             else:
                 result = await self.execute(step["algoritmo_id"], params)
+                if on_result:
+                    on_result(result)
             result_context = result.get("contexto", result)
             results.append(result)
             context.update(result_context)

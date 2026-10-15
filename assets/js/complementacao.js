@@ -15,6 +15,7 @@
   const cadastro = document.querySelector('#complementacao-cadastro');
   const grupos = ['cadastro', 'geometria', 'atributos'];
   const camposCadastro = {
+    origem_sei_processo: ['Processo SEI', 'text'],
     nome: ['Nome', 'text'], descricao: ['Descrição', 'textarea'],
     objetivo_estrategico: ['Objetivo estratégico', 'textarea'], responsavel: ['Responsável', 'text'],
     objetivo: ['Objetivo', 'textarea'], publico_alvo: ['Público-alvo', 'textarea'],
@@ -24,8 +25,8 @@
   };
   const porTipo = {
     projeto: ['nome', 'descricao', 'vigencia_inicio', 'vigencia_fim', 'valor_global'],
-    plano: ['nome', 'descricao', 'objetivo_estrategico', 'responsavel', 'vigencia_inicio', 'vigencia_fim', 'valor_global'],
-    programa: ['nome', 'descricao', 'objetivo', 'publico_alvo', 'justificativa', 'orgao_responsavel', 'valor_global'],
+    plano: ['origem_sei_processo', 'nome', 'descricao', 'objetivo_estrategico', 'responsavel', 'vigencia_inicio', 'vigencia_fim', 'valor_global'],
+    programa: ['origem_sei_processo', 'nome', 'descricao', 'objetivo', 'publico_alvo', 'justificativa', 'orgao_responsavel', 'valor_global'],
   };
 
   const caminho = (tipoDemanda, codigo) => `/api/complementacao/demandas/${encodeURIComponent(tipoDemanda)}/${encodeURIComponent(codigo)}`;

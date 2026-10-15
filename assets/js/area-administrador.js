@@ -27,6 +27,7 @@
 
   // ---------- Aliases amigáveis (pt-BR) ----------
   const ALIAS = {
+    origem_sei_processo: "Processo SEI", numero_processo: "Processo SEI",
     id: "Identificador", codigo: "Código", nome: "Nome", descricao: "Descrição",
     status: "Status", ativo: "Ativo", ordem: "Ordem", valor: "Valor", rotulo: "Rótulo",
     tipo: "Tipo", versao: "Versão", finalidade: "Finalidade", observacao: "Observação",

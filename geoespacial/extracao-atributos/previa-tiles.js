@@ -5,8 +5,10 @@ export function camadaTiles(mapa,item,color){
  const L=window.L;
  let contexto=mapas.get(mapa);
  if(!contexto){
-  const overlay=L.maplibreGL({interactive:false,style:{version:8,sources:{},layers:[]}}).addTo(mapa);
-  contexto={gl:overlay.getMaplibreMap(),camadas:new Map()};mapas.set(mapa,contexto);
+  const overlay=L.maplibreGL({pane:'overlayPane',interactive:false,style:{version:8,sources:{},layers:[]}}).addTo(mapa);
+  const gl=overlay.getMaplibreMap();
+  contexto={gl,camadas:new Map(),pendentes:new Set(),pronto:gl.isStyleLoaded()};mapas.set(mapa,contexto);
+  gl.once('load',()=>{contexto.pronto=true;for(const montar of contexto.pendentes)montar();contexto.pendentes.clear();});
   mapa.on('click',event=>{
    const {gl,camadas}=contexto;
    const point=gl.project([event.latlng.lng,event.latlng.lat]);
@@ -24,8 +26,8 @@ export function camadaTiles(mapa,item,color){
   gl.addLayer({id:ids[2],source:id,'source-layer':'camada',type:'circle',filter:['==',['geometry-type'],'Point'],paint:{'circle-color':color,'circle-radius':5}});
  };
  const Camada=L.Layer.extend({
-  onAdd(){ativa=true;camadas.set(id,this);if(gl.isStyleLoaded())montar();else gl.once('load',montar);},
-  onRemove(){ativa=false;camadas.delete(id);gl.off('load',montar);for(const key of ids)if(gl.getLayer(key))gl.removeLayer(key);if(gl.getSource(id))gl.removeSource(id);},
+  onAdd(){ativa=true;camadas.set(id,this);if(contexto.pronto)montar();else contexto.pendentes.add(montar);},
+  onRemove(){ativa=false;camadas.delete(id);contexto.pendentes.delete(montar);for(const key of ids)if(gl.getLayer(key))gl.removeLayer(key);if(gl.getSource(id))gl.removeSource(id);},
   getBounds(){const b=item.bounds||item.metadados_local?.limites_wgs84;return b?L.latLngBounds([[b[1],b[0]],[b[3],b[2]]]):L.latLngBounds([]);}
  });
  return new Camada();

@@ -192,6 +192,8 @@
     if (sa) sa.checked = rows.length > 0 && rows.every((h) => selecionadasHier.has(h.codigo));
   }
   function atualizarBotoesLote() {
+    document.querySelectorAll('#hier-filter-coluna, #hier-filter-valor, #hier-filter-inverter, #hier-filter-limpar, #hier-select-all, .hier-row-select').forEach(el => { el.disabled = hierEditMode; });
+    if (hierEditMode) document.querySelectorAll('#hier-pagination button').forEach(el => { el.disabled = true; });
     SLTTable.summary("hier-filter-count", selecionadasHier.size, hierarquizacoesFiltradas().slice((paginaHier - 1) * 15, paginaHier * 15).length, listaCache.length);
     const has = selecionadasHier.size > 0;
     const set = (id, dis) => { const el = $(id); if (el) el.disabled = dis; };
@@ -216,7 +218,7 @@
     $("hier-create-section").scrollIntoView({ behavior: "smooth", block: "start" }); $("hier-nome").focus();
   }
 
-  async function carregarAgrupamentos(selecionado = "", objetosRegistrados = []) {
+  async function carregarAgrupamentos(selecionado = "", objetosRegistrados = null) {
     const select = $("hier-agrupamento");
     if (!select) return;
     $("hier-agrupamento-resumo").hidden = true;
@@ -226,17 +228,22 @@
         .map((grupo) => `<option value="${esc(grupo.id)}">${esc(grupo.nome)} — ${esc(grupo.codigo)}</option>`)
         .join("");
       select.value = selecionado || "";
-      if (select.value) await renderResumoAgrupamento(select.value);
-      else if (objetosRegistrados.length) renderDemandasRegistradas(objetosRegistrados);
+      if (objetosRegistrados !== null && selecionado) {
+        renderDemandasRegistradas(objetosRegistrados);
+        const grupo = agrupamentosCache.find(item => String(item.id) === String(selecionado));
+        if (grupo) mostrarResumoAgrupamento({...grupo, quantidade_demandas: objetosRegistrados.length});
+      }
+      else if (select.value) await renderResumoAgrupamento(select.value);
+      else if (objetosRegistrados?.length) renderDemandasRegistradas(objetosRegistrados);
       else renderDemandasRegistradas([]);
     } catch (error) {
       select.innerHTML = '<option value="">Não foi possível carregar agrupamentos</option>';
-      renderDemandasRegistradas(objetosRegistrados, error.message);
+      renderDemandasRegistradas(objetosRegistrados || [], error.message);
     }
   }
 
   let demandasAgrupamento = [], paginaAgrupamento = 1;
-  const ordenarAgrupamento = SLTTable.sorting($('hier-agrupamento-demandas').closest('table'), () => ['codigo','nome','status'].map(key=>item=>valorAgrupamento(item,key)), () => { paginaAgrupamento=1; renderDemandasAgrupamento(); });
+  const ordenarAgrupamento = SLTTable.sorting($('hier-agrupamento-demandas').closest('table'), () => ['codigo','origem_sei_processo','nome','status'].map(key=>item=>valorAgrupamento(item,key)), () => { paginaAgrupamento=1; renderDemandasAgrupamento(); });
   function valorAgrupamento(item, key) { return String(key === 'codigo' ? item.codigo || item.id || '—' : item[key] || '—'); }
   function atualizarFiltroAgrupamento() {
     const column = $('hier-grupo-coluna').value;
@@ -248,7 +255,7 @@
     const filtered = ordenarAgrupamento(demandasAgrupamento.filter(item => SLTTable.matches('hier-grupo', valorAgrupamento(item, column) === value, Boolean(column && value))));
     const result = SLTTable.paginate('hier-grupo-pagination', filtered, paginaAgrupamento, page => { paginaAgrupamento = page; renderDemandasAgrupamento(); });
     paginaAgrupamento = result.page;
-    $('hier-agrupamento-demandas').innerHTML = result.rows.map(item => '<tr>' + ['codigo','nome','status'].map(key => `<td title="${esc(valorAgrupamento(item,key))}">${esc(valorAgrupamento(item,key))}</td>`).join('') + '</tr>').join('') || '<tr><td colspan="3">Nenhuma demanda encontrada.</td></tr>';
+    $('hier-agrupamento-demandas').innerHTML = result.rows.map(item => '<tr>' + ['codigo','origem_sei_processo','nome','status'].map(key => `<td title="${esc(valorAgrupamento(item,key))}">${esc(valorAgrupamento(item,key))}</td>`).join('') + '</tr>').join('') || '<tr><td colspan="4">Nenhuma demanda encontrada.</td></tr>';
     SLTTable.summary('hier-grupo-summary', 0, result.rows.length, demandasAgrupamento.length);
   }
   function renderDemandasRegistradas(objetos, mensagem = "") {
@@ -262,6 +269,11 @@
     $("hier-agrupamento-resumo").hidden = true;
     const grupo = await HierApi.obterAgrupamento(id);
     if ($("hier-agrupamento").value !== String(id)) return;
+    mostrarResumoAgrupamento(grupo);
+    demandasAgrupamento = grupo.objetos || []; paginaAgrupamento = 1; atualizarFiltroAgrupamento(); renderDemandasAgrupamento();
+  }
+
+  function mostrarResumoAgrupamento(grupo) {
     const tipo = { plano: "Plano", programa: "Programa", projeto: "Projeto" }[grupo.tipo_demanda] || grupo.tipo_demanda;
     const resumo = $("hier-agrupamento-resumo");
     if (resumo) resumo.innerHTML = '<dl>' + [
@@ -271,7 +283,6 @@
       ['Número de objetos do grupo', grupo.quantidade_demandas ?? grupo.objetos?.length ?? 0],
     ].map(([rotulo, valor]) => `<div><dt>${rotulo}:</dt><dd>${esc(valor ?? '—')}</dd></div>`).join('') + '</dl>';
     if (resumo) resumo.hidden = false;
-    demandasAgrupamento = grupo.objetos || []; paginaAgrupamento = 1; atualizarFiltroAgrupamento(); renderDemandasAgrupamento();
   }
 
   async function visualizarHierarquizacaoSelecionada() {
@@ -471,7 +482,7 @@
     $("hier-filter-valor").onchange = change;
   }
   async function iniciar() {
-    [['codigo','Código'],['nome','Nome'],['status','Status']].forEach(([key,label]) => $('hier-grupo-coluna').add(new Option(label,key)));
+    [['codigo','Código'],['origem_sei_processo','Processo SEI'],['nome','Nome'],['status','Status']].forEach(([key,label]) => $('hier-grupo-coluna').add(new Option(label,key)));
     const changeGrupo = () => { paginaAgrupamento = 1; renderDemandasAgrupamento(); };
     $('hier-grupo-coluna').onchange = () => { $('hier-grupo-valor').value = ''; atualizarFiltroAgrupamento(); changeGrupo(); };
     $('hier-grupo-valor').onchange = changeGrupo;

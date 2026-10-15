@@ -29,6 +29,7 @@ class PlanoCreateSchema(BaseModel):
     tipo_demandante: Literal["institucional"] = "institucional"
     diretoria_id: str
     nome: str = Field(..., min_length=1, max_length=200)
+    origem_sei_processo: str | None = Field(None, max_length=50)
     descricao: str = Field(..., min_length=1)
     objetivo_estrategico: str | None = None
     responsavel: str | None = None
@@ -70,6 +71,7 @@ class PlanoResponseSchema(BaseModel):
     motivo_reprovacao: str | None = None
     diretoria_id: str
     nome: str
+    origem_sei_processo: str | None = Field(None, max_length=50)
     descricao: str | None = None
     objetivo_estrategico: str | None = None
     responsavel: str | None = None
@@ -92,6 +94,7 @@ class PlanoUpdateSchema(BaseModel):
 
     status: str | None = None
     nome: str | None = Field(None, min_length=1, max_length=200)
+    origem_sei_processo: str | None = Field(None, max_length=50)
     descricao: str | None = None
     diretoria_id: str | None = None
     objetivo_estrategico: str | None = None

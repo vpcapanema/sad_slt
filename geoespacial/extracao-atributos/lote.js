@@ -76,12 +76,12 @@ export function renderLote(state,changed){
  const ids=new Set(entries.map(e=>e.layer.id));for(const id of selecionadas)if(!ids.has(id))selecionadas.delete(id);
  for(const {layer,config} of entries){
   const {info,erro,aguardando}=avaliarIdentificacao(layer,config);
-  if(erro)pendencias.push(`${layer.nome}: ${erro}`);
+  if(erro&&selecionadas.has(layer.id))pendencias.push(`${layer.nome}: ${erro}`);
   const row=clone('ea-tpl-identificacao'),campo=row.querySelector('[data-id="campo"]');
   row.querySelector('[data-id="nome"]').textContent=layer.nome;
   const selecionar=row.querySelector('[data-id="selecionar"]');
   selecionar.setAttribute('aria-label',`Selecionar camada: ${layer.nome}`);selecionar.checked=selecionadas.has(layer.id);selecionar.disabled=state.busy||state.uploading;
-  selecionar.onchange=()=>{if(selecionar.checked)selecionadas.add(layer.id);else selecionadas.delete(layer.id);};
+  selecionar.onchange=()=>{if(selecionar.checked)selecionadas.add(layer.id);else selecionadas.delete(layer.id);renderLote(state,changed);};
   const status=row.querySelector('[data-id="status"]');status.textContent=erro;status.hidden=!erro;
   const categoria=row.querySelector('[data-id="categoria"]');
   categoria.append(new Option('Sem categorização',''));
@@ -100,19 +100,20 @@ export function renderLote(state,changed){
   campo.onchange=()=>{config.campo_id=campo.value||null;config.identificacao_confirmada=false;changed();};
   rows.append(row);
  }
- const pronta=entries.length>0&&!pendencias.length;
+ const escolhidas=entries.filter(e=>selecionadas.has(e.layer.id));
+ const pronta=escolhidas.length>0&&!pendencias.length;
  const confirm=document.getElementById('ea-identificacao-confirmar');
- const confirmed=entries.length>0&&entries.every(e=>entradaConfirmada(e.layer,e.config));
+ const confirmed=escolhidas.length>0&&escolhidas.every(e=>entradaConfirmada(e.layer,e.config));
  confirm.disabled=state.busy||!pronta||confirmed;
- document.getElementById('ea-identificacao-status').textContent=!pronta?pendencias.join(' '):confirmed?'Configuração confirmada. Camadas disponíveis na prévia.':'Confira os IDs e as categorias. Confirme para enviar à prévia.';
+ document.getElementById('ea-identificacao-status').textContent=!escolhidas.length?'Selecione as camadas que deseja confirmar.':!pronta?pendencias.join(' '):confirmed?'Configuração confirmada. Camadas disponíveis na prévia.':'Confira os IDs e as categorias. Confirme para enviar à prévia.';
  confirm.onclick=async()=>{
   if(!pronta||state.busy)return;
   state.busy=true;window.SICARDExtracao?.ocupar?.(true);renderLote(state,changed);
-  const proc=window.ProcessFeedback.iniciarCadastro({title:'Validar camadas de entrada',subtitle:`${entries.length} camada(s)`,tasks:[...entries.map(e=>e.layer.nome||e.layer.id),'Preparar a prévia']});
+  const proc=window.ProcessFeedback.iniciarCadastro({title:'Validar camadas de entrada',subtitle:`${escolhidas.length} camada(s)`,tasks:[...escolhidas.map(e=>e.layer.nome||e.layer.id),'Preparar a prévia']});
   try{
    const validadores=await import('./camada-validada.js');
-   await validarEntradas(entries,validadores,nome=>proc.tarefaAtual(nome,'Lendo e validando o dado original.'));
-   for(const e of entries)proc.concluirTarefa(e.layer.nome||e.layer.id,`${e.layer.feicoes} feição(ões)`);
+   await validarEntradas(escolhidas,validadores,nome=>proc.tarefaAtual(nome,'Lendo e validando o dado original.'));
+   for(const e of escolhidas)proc.concluirTarefa(e.layer.nome||e.layer.id,`${e.layer.feicoes} feição(ões)`);
    proc.tarefaAtual('Preparar a prévia','Disponibilizando as camadas validadas no mapa.');
    const erros=await changed();
    if(erros?.length)throw new Error(erros.join('; '));
@@ -120,7 +121,7 @@ export function renderLote(state,changed){
    proc.concluirTarefa('Preparar a prévia','Camadas no mapa');
    proc.sucesso({title:'Entradas validadas',message:'Camadas validadas e disponibilizadas na prévia.'});
   }catch(error){
-   for(const e of entries){e.config.identificacao_confirmada=false;delete e.config.validacao_previa;}
+   for(const e of escolhidas){e.config.identificacao_confirmada=false;delete e.config.validacao_previa;}
    await changed();
    proc.erro({message:error.message});
   }finally{state.busy=false;window.SICARDExtracao?.ocupar?.(false);renderLote(state,changed);}

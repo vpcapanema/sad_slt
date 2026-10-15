@@ -713,7 +713,12 @@ class GeoespacialService:
         if campo not in self._colunas_atributos(gdf):
             raise ValueError(f"Campo '{campo}' inexistente na camada")
         serie = gdf[campo]
+        return self.classificar_serie(camada_id, campo, serie, metodo, classes)
 
+    def classificar_serie(self, camada_id, campo, serie, metodo="intervalos_iguais", classes=5):
+        """Contrato comum para valores do catálogo e leituras de campo do arquivo."""
+        if metodo not in {"valores_unicos", "intervalos_iguais", "quantis", "desvio_padrao", "quebras_naturais", "manual"}:
+            raise ValueError("Método de classificação inválido")
         if metodo == "valores_unicos":
             limite = 100
             contagem = serie.dropna().astype(str).value_counts()
@@ -732,6 +737,7 @@ class GeoespacialService:
             }
 
         valores = pd.to_numeric(serie, errors="coerce").dropna().to_numpy(dtype="float64")
+        valores = valores[np.isfinite(valores)]
         if valores.size == 0:
             raise ValueError(f"Campo '{campo}' não possui valores numéricos")
         classes = max(2, min(int(classes), 12))
