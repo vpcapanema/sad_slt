@@ -94,6 +94,7 @@
       status: "analise_reprovada",
       statusLabel: "Reprovada na análise",
       danger: true,
+      requerComplemento: true,
     },
   ];
 
@@ -302,7 +303,7 @@
             <span class="field-help">Carregando critérios…</span>
           </div>
         </div>
-        <section class="analise-criterio analise-geometria" aria-labelledby="geometria-avaliacao-titulo">
+        <section class="analise-criterio analise-geometria" hidden style="display:none" aria-labelledby="geometria-avaliacao-titulo">
           <span class="analise-criterio-rotulo" id="geometria-avaliacao-titulo">Geometria</span>
           <span class="field-help" id="geometria-pergunta">A geometria apresentada é suficientemente adequada para representar o objeto da demanda?</span>
           <div id="geometria-criterios-grid"></div>
@@ -357,7 +358,7 @@
             <textarea id="fld-parecer" class="admin-field-readonly analise-parecer" rows="14" readonly aria-readonly="true"></textarea>
           </div>
           <div class="form-field span-2" id="wrap-complemento" hidden>
-            <label for="fld-parecer-complemento">Complementação do parecer</label>
+            <label for="fld-parecer-complemento">Complementação do parecer — justificativa obrigatória para reprovar</label>
             <textarea id="fld-parecer-complemento" rows="4" maxlength="5000" placeholder="Texto adicional do avaliador — não substitui o parecer gerado."></textarea>
           </div>
           ${
@@ -379,7 +380,7 @@
       withDecisions && canAnalyze
         ? DECISOES.map(
             (dec) =>
-              `<button type="button" class="btn btn-status" data-status="${escapeHtml(dec.status)}" data-decisao="${dec.id}">${escapeHtml(dec.label)}</button>`,
+              `<button type="button" class="btn btn-status" data-status="${escapeHtml(dec.status)}" data-decisao="${dec.id}"${dec.id === "reprovada" ? ' disabled title="Complemente o parecer com uma justificativa para reprovar."' : ""}>${escapeHtml(dec.label)}</button>`,
           ).join("\n          ")
         : "";
     const situacaoButtons = canAnalyze
@@ -432,20 +433,22 @@
 
   function criterioRowHtml(criterio, editavel) {
     const nome = `crit-${criterio.campo}`;
+    const eliminatorio = ["criterio_competencia", "criterio_nao_duplicidade"].includes(criterio.campo);
+    const peso = criterio.peso ?? ({ criterio_clareza: 20, criterio_finalidade_publica: 30, criterio_relevancia_setorial: 50 })[criterio.campo];
     const marcado = (valor) => (criterio.resposta === valor ? " checked" : "");
     const desabilitado = editavel ? "" : " disabled";
     return `
       <div class="form-field span-2 analise-criterio" data-campo="${escapeHtml(criterio.campo)}">
-        <span class="analise-criterio-rotulo" id="${nome}-rotulo">${escapeHtml(criterio.rotulo)}</span>
+        <span class="analise-criterio-rotulo" id="${nome}-rotulo">${escapeHtml(criterio.rotulo)} — ${eliminatorio ? "Eliminatório" : `Classificatório (${peso}%)`}</span>
         <span class="field-help">${escapeHtml(criterio.pergunta)}</span>
         <div class="analise-criterio-opcoes" role="radiogroup" aria-labelledby="${nome}-rotulo">
           <label class="analise-opcao analise-opcao--sim" for="${nome}-sim">
             <input type="radio" id="${nome}-sim" name="${nome}" value="sim"${marcado(true)}${desabilitado}>
-            <span>Sim</span>
+            <span>Sim${criterio.campo === "criterio_nao_duplicidade" ? " (é inédita)" : ""}</span>
           </label>
           <label class="analise-opcao analise-opcao--nao" for="${nome}-nao">
             <input type="radio" id="${nome}-nao" name="${nome}" value="nao"${marcado(false)}${desabilitado}>
-            <span>Não</span>
+            <span>Não${criterio.campo === "criterio_nao_duplicidade" ? " (duplicada)" : ""}</span>
           </label>
         </div>
       </div>`;
@@ -458,6 +461,7 @@
       const marcado = row.querySelector("input[type=radio]:checked");
       respostas[campo] = marcado ? marcado.value === "sim" : null;
     });
+    respostas.demanda_duplicada_codigo = $("#demanda-duplicada")?.value || null;
     return respostas;
   }
 
@@ -481,6 +485,8 @@
   }
 
   async function salvarGeometriaAntesDaAcao() {
+    const criterios = collectCriterios();
+    if (criterios.criterio_competencia !== true || criterios.criterio_nao_duplicidade !== true) return;
     clearTimeout(geometriaSaveTimer);
     geometriaSaveRevision += 1;
     await geometriaSaveQueue;
@@ -636,20 +642,50 @@
       </li>`).join("")}</ol>`;
   }
 
-  /** Média simples de 5 critérios: nunca empata (3+ Sim aprova, 3+ Não reprova). */
+  const pesosCriterios = { criterio_clareza: 20, criterio_finalidade_publica: 30, criterio_relevancia_setorial: 50 };
+  let gravacaoCriterios = Promise.resolve();
+  let demandasDuplicidade = null;
   function computeResultado(respostas) {
-    const valores = Object.values(respostas);
-    const sim = valores.filter((v) => v === true).length;
-    const nao = valores.filter((v) => v === false).length;
-    const total = valores.length;
-    const completo = total > 0 && sim + nao === total;
-    return {
-      sim,
-      nao,
-      total,
-      completo,
-      resultado: completo ? (sim >= Math.ceil(total / 2) ? "aprovado" : "reprovado") : null,
-    };
+    const eliminada = respostas.criterio_competencia === false || respostas.criterio_nao_duplicidade === false;
+    const liberado = respostas.criterio_competencia === true && respostas.criterio_nao_duplicidade === true;
+    const completo = eliminada || (liberado && Object.keys(pesosCriterios).every(k => typeof respostas[k] === "boolean"));
+    const pontuacao = Object.entries(pesosCriterios).reduce((soma, [key,peso]) => soma + (respostas[key] === true ? peso : 0), 0);
+    return { completo, pontuacao, eliminada, resultado: completo ? (eliminada || pontuacao <= 50 ? "reprovado" : "aprovado") : null };
+  }
+  function atualizarVisibilidadeCriterios() {
+    const respostas = collectCriterios();
+    const liberado = respostas.criterio_competencia === true && respostas.criterio_nao_duplicidade === true;
+    Object.keys(pesosCriterios).forEach(campo => {
+      const row = document.querySelector(`[data-campo="${campo}"]`);
+      if (!row) return;
+      row.hidden = !liberado;
+      row.style.display = liberado ? "" : "none";
+      if (!liberado) row.querySelectorAll('input').forEach(input => { input.checked = false; });
+    });
+    const geometria = document.querySelector(".analise-geometria");
+    if (geometria) {
+      geometria.hidden = !liberado;
+      geometria.style.display = liberado ? "" : "none";
+    }
+    const wrap = $("#demanda-duplicada-wrap");
+    if (wrap) wrap.hidden = respostas.criterio_nao_duplicidade !== false;
+    if (respostas.criterio_nao_duplicidade !== false && $("#demanda-duplicada")) $("#demanda-duplicada").value = "";
+  }
+  async function carregarDemandasDuplicidade(codigo, editavel) {
+    const select = $("#demanda-duplicada");
+    if (!select) return;
+    select.disabled = true;
+    try {
+      if (!demandasDuplicidade) demandasDuplicidade = (await Promise.all([
+        SLTAdminApi.listPlanos(), SLTAdminApi.listProgramas(), SLTAdminApi.listDemandas()
+      ])).flat();
+      if (!select.isConnected) return;
+      select.innerHTML = '<option value="">Selecione uma demanda</option>' + demandasDuplicidade.filter(d => d.id !== record.id)
+        .sort((a,b) => String(a.id).localeCompare(String(b.id)))
+        .map(d => `<option value="${escapeHtml(d.id)}">${escapeHtml(d.id)} — ${escapeHtml(d.nome || "")}</option>`).join("");
+      select.value = codigo || "";
+      select.disabled = !editavel;
+    } catch (err) { reportarErroAnalise(err.message, "Lista de demandas para duplicidade"); }
   }
 
   function renderResultado(placar) {
@@ -658,9 +694,9 @@
     const rotulo = { aprovado: "Aprovado", reprovado: "Reprovado" };
     const classe = placar.resultado ? `is-${placar.resultado}` : "is-pendente";
     const texto = placar.resultado ? rotulo[placar.resultado] : "Pendente";
-    const detalhe = placar.completo
-      ? `${placar.sim} de ${placar.total} critérios atendidos.`
-      : `${placar.sim + placar.nao} de ${placar.total} critérios respondidos — responda todos para apurar o resultado.`;
+    const detalhe = placar.eliminada ? "Reprovada em critério eliminatório." : placar.completo
+      ? `${placar.pontuacao}% favoráveis · ${100 - placar.pontuacao}% contrários. Aprovação exige mais de 50%.`
+      : "Responda os critérios aplicáveis. Os classificatórios aparecem após dois Sim nos eliminatórios.";
     alvo.innerHTML = `
       <span class="analise-resultado-badge ${classe}">${escapeHtml(texto)}</span>
       <span class="analise-resultado-placar">${escapeHtml(detalhe)}</span>`;
@@ -676,7 +712,9 @@
       if (!editavel) {
         grid.insertAdjacentHTML(
           "beforeend",
-          '<div class="form-field span-2"><span class="field-help">Os critérios não são mais editáveis: a demanda já saiu da avaliação.</span></div>',
+          `<div class="form-field span-2"><span class="field-help">${!SLTAdminAuth.can("analyze")
+            ? "A edição dos critérios exige perfil Analista ou Gestor."
+            : `A edição dos critérios exige status Em avaliação. Status atual: ${escapeHtml(record?.status || "não informado")}.`}</span></div>`,
         );
       }
       grid.querySelectorAll("input[type=radio]").forEach((input) => {
@@ -684,13 +722,15 @@
       });
     }
 
-    renderResultado({
-      sim: data.sim || 0,
-      nao: data.nao || 0,
-      total: data.total_criterios || (data.criterios || []).length,
-      completo: !!data.completo,
-      resultado: data.resultado || null,
-    });
+    const duplicidade = grid?.querySelector('[data-campo="criterio_nao_duplicidade"]');
+    if (duplicidade) duplicidade.insertAdjacentHTML("beforeend", `<div id="demanda-duplicada-wrap" hidden>
+      <label for="demanda-duplicada">Demanda já cadastrada *</label>
+      <select id="demanda-duplicada" required ${editavel ? "" : "disabled"}><option value="${escapeHtml(data.demanda_duplicada_codigo || "")}">${escapeHtml(data.demanda_duplicada_codigo || "Carregando demandas…")}</option></select>
+    </div>`);
+    $("#demanda-duplicada")?.addEventListener("change", onCriterioChange);
+    atualizarVisibilidadeCriterios();
+    renderResultado(computeResultado(collectCriterios()));
+    carregarDemandasDuplicidade(data.demanda_duplicada_codigo, editavel);
     renderAvaliacaoGeometria(data, editavel);
 
     const parecer = $("#fld-parecer");
@@ -706,6 +746,7 @@
       $("#wrap-complemento")?.removeAttribute("hidden");
     }
 
+    atualizarBotaoReprovar();
     const baixar = $("#analise-parecer-baixar");
     if (baixar) {
       if (data.tem_parecer_pdf) baixar.removeAttribute("hidden");
@@ -714,14 +755,25 @@
   }
 
   async function onCriterioChange() {
+    atualizarVisibilidadeCriterios();
     const respostas = collectCriterios();
     renderResultado(computeResultado(respostas));
-    try {
-      const atualizada = await SLTAdminApi.saveAnaliseCriterios(record.id, respostas);
+    const codigo = record.id;
+    gravacaoCriterios = gravacaoCriterios.catch(() => {}).then(async () => {
+      const atualizada = await SLTAdminApi.saveAnaliseCriterios(codigo, respostas);
       const parecer = $("#fld-parecer");
-      if (parecer && atualizada.parecer_texto) parecer.value = atualizada.parecer_texto;
-    } catch (err) {
-      reportarErroAnalise(err.message, "Critérios de análise");
+      if (record.id === codigo && parecer && atualizada.parecer_texto) parecer.value = atualizada.parecer_texto;
+    });
+    try { await gravacaoCriterios; }
+    catch (err) { reportarErroAnalise(err.message, "Critérios de análise"); }
+  }
+
+  function atualizarBotaoReprovar() {
+    const preenchido = Boolean($("#fld-parecer-complemento")?.value.trim());
+    const botao = document.querySelector('[data-decisao="reprovada"]');
+    if (botao) {
+      botao.disabled = !preenchido;
+      botao.title = preenchido ? "Reprovar demanda" : "Clique em Complementar parecer e informe a justificativa para reprovar.";
     }
   }
 
@@ -737,6 +789,7 @@
     $("#btn-cancelar-complemento")?.setAttribute("hidden", "");
     const wrap = $("#wrap-complemento");
     if (!wrap) return;
+    atualizarBotaoReprovar();
     if (complementoSalvo) wrap.removeAttribute("hidden");
     else wrap.setAttribute("hidden", "");
   }
@@ -831,19 +884,26 @@
     const placar = computeResultado(respostas);
     if (!placar.completo) {
       reportarErroAnalise(
-        "Responda os cinco critérios de análise antes de registrar a decisão.",
+        "Responda os critérios aplicáveis antes de registrar a decisão.",
         decisao.label,
       );
       $("#sec-criterios")?.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
 
+    if (respostas.criterio_nao_duplicidade === false && !respostas.demanda_duplicada_codigo) {
+      reportarErroAnalise("Selecione a demanda já cadastrada.", decisao.label);
+      $("#demanda-duplicada")?.focus(); return;
+    }
+    if (decisaoId !== "reprovada" && placar.resultado !== "aprovado") {
+      reportarErroAnalise("Os critérios não permitem aprovar esta demanda.", decisao.label); return;
+    }
     if (decisao.requerComplemento) {
       const campo = $("#fld-parecer-complemento");
       const texto = campo?.value.trim() || "";
       if (!texto) {
         reportarErroAnalise(
-          "Para aprovar com ressalvas é obrigatório preencher a complementação do parecer.",
+          decisaoId === "reprovada" ? "Para reprovar, complemente o parecer com uma justificativa." : "Para aprovar com ressalvas é obrigatório preencher a complementação do parecer.",
           decisao.label,
         );
         abrirComplemento();
@@ -869,6 +929,8 @@
 
     try {
       await salvarGeometriaAntesDaAcao();
+      await gravacaoCriterios;
+      await SLTAdminApi.saveAnaliseCriterios(record.id, collectCriterios());
       await SLTAdminApi.decidirAnalise(record.id, decisao.id);
       SLTAdminUi.showToast("Decisão registrada. Baixando o parecer em PDF…");
       try {
@@ -887,6 +949,7 @@
   }
 
   function bindAnalise(d) {
+    $("#fld-parecer-complemento")?.addEventListener("input", atualizarBotaoReprovar);
     clearTimeout(geometriaSaveTimer);
     geometriaSaveRevision += 1;
     $("#btn-complementar")?.addEventListener("click", () => {

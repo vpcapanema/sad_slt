@@ -17,6 +17,7 @@ class CriteriosAnaliseSchema(BaseModel):
     critérios preenchidos.
     """
 
+    demanda_duplicada_codigo: str | None = Field(None, max_length=64)
     criterio_competencia: bool | None = None
     criterio_clareza: bool | None = None
     criterio_finalidade_publica: bool | None = None
@@ -89,6 +90,8 @@ class CriterioAvaliadoSchema(BaseModel):
     campo: str
     rotulo: str
     pergunta: str
+    classe: str = "classificatorio"
+    peso: int = 0
     resposta: bool | None = None
 
 
@@ -98,6 +101,8 @@ class AnaliseDemandaResponseSchema(BaseModel):
     demanda_nome: str | None = None
     demanda_status: str | None = None
     criterios: list[CriterioAvaliadoSchema] = Field(default_factory=list)
+    demanda_duplicada_codigo: str | None = None
+    pontuacao: int = 0
     respondidos: int = 0
     total_criterios: int = 0
     sim: int = 0

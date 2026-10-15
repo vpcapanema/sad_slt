@@ -312,7 +312,7 @@ def _status_demanda_validos() -> set[str]:
 
 
 def atualizar_demanda(
-    codigo: str, payload: DemandaUpdateSchema, *, usuario_id: str | None
+    codigo: str, payload: DemandaUpdateSchema, *, usuario_id: str | None, status_livre_gestor: bool = False
 ) -> DemandaResponseSchema:
     if not demanda_repository.get_by_codigo(codigo):
         raise DemandaNotFoundError(codigo)
@@ -331,7 +331,8 @@ def atualizar_demanda(
     if "status" in data:
         from api.services.status_transicoes import validar_transicao_status
 
-        validar_transicao_status(de=existing["status"], para=data["status"])
+        if not status_livre_gestor:
+            validar_transicao_status(de=existing["status"], para=data["status"])
 
     if "programa_codigo" in data:
         programa_id = resolve_programa_pai_id(

@@ -241,7 +241,7 @@ def reprovar_programa(
 
 
 def atualizar_programa(
-    codigo: str, payload: ProgramaUpdateSchema, *, usuario_id: str | None
+    codigo: str, payload: ProgramaUpdateSchema, *, usuario_id: str | None, status_livre_gestor: bool = False
 ) -> ProgramaResponseSchema:
     if not programa_repository.get_by_codigo(codigo):
         raise DemandaNotFoundError(codigo)
@@ -256,7 +256,8 @@ def atualizar_programa(
         valid = {r["codigo"] for r in dominio_repository.list_status_demanda()}
         if data["status"] not in valid:
             raise DemandaValidationError(f"Status inválido: {data['status']}.", field="status")
-        validar_transicao_status(de=row["status"], para=data["status"])
+        if not status_livre_gestor:
+            validar_transicao_status(de=row["status"], para=data["status"])
 
     existing = programa_repository.get_by_codigo(codigo)
     if not existing:

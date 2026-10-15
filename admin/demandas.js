@@ -353,7 +353,7 @@
   function statusOptions(currentStatus) {
     const permitidos = new Set(SLTAdminLabels.statusDestinosPermitidos(currentStatus));
     return SLTAdminLabels.statusDemanda
-      .filter((s) => permitidos.has(s.codigo))
+      .filter((s) => SLTAdminAuth.can("manage") || permitidos.has(s.codigo))
       .map(
         (s) =>
           `<option value="${escapeHtml(s.codigo)}"${s.codigo === currentStatus ? " selected" : ""}>${escapeHtml(SLTAdminLabels.statusDemandaLabel(s.codigo, tipo))}</option>`
@@ -613,7 +613,10 @@
     if (editMode) {
       tbody.querySelectorAll("tr.is-editing").forEach((tr) => {
         const d = data.find((r) => r.id === tr.dataset.codigo);
-        if (d) bindRowEditors(tr, d);
+        if (d) {
+          bindRowEditors(tr, d);
+          tr.initialEditPayload = collectPayload(tr, d);
+        }
       });
     }
 
@@ -730,6 +733,14 @@
     return payload;
   }
 
+  function collectChangedPayload(tr, d) {
+    const atual = collectPayload(tr, d);
+    const inicial = tr.initialEditPayload || {};
+    return Object.fromEntries(Object.entries(atual).filter(([campo, valor]) =>
+      JSON.stringify(valor) !== JSON.stringify(inicial[campo])
+    ));
+  }
+
   function deleteConfirmMessage() {
     const n = selected.size;
     if (tipo === "plano") {
@@ -750,8 +761,8 @@
         const tr = $(`tr[data-codigo="${CSS.escape(codigo)}"]`);
         const d = rows.find((r) => r.id === codigo);
         if (!tr || !d) continue;
-        const payload = collectPayload(tr, d);
-        await SLTAdminApi.updateDemandaByTipo(tipo, codigo, payload);
+        const payload = collectChangedPayload(tr, d);
+        if (Object.keys(payload).length) await SLTAdminApi.updateDemandaByTipo(tipo, codigo, payload);
       }
       SLTAdminUi.showToast("Alterações salvas.");
       cache[tipo] = null;

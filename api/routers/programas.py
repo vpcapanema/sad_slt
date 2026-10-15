@@ -144,7 +144,10 @@ def atualizar_programa(
 ) -> ProgramaResponseSchema:
     """Atualiza um programa existente."""
     try:
-        return programa_service.atualizar_programa(codigo, body, usuario_id=user.id)
+        return programa_service.atualizar_programa(
+            codigo, body, usuario_id=user.id,
+            status_livre_gestor=user.tipo_usuario.strip().upper() == "GESTOR",
+        )
     except DemandaNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except DemandaValidationError as exc:

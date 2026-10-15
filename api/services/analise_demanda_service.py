@@ -1,6 +1,6 @@
 """Regras de negócio — análise de admissibilidade da demanda (portão de entrada).
 
-Cinco critérios binários decidem, por maioria simples, se a demanda é admissível.
+Dois critérios eliminatórios e três classificatórios ponderados decidem a admissibilidade.
 O resultado e o texto do parecer são gerados pelo sistema (o usuário não escolhe),
 e a decisão do avaliador aplica a transição de status pelos fluxos já existentes
 (aprovar / reprovar / PATCH validado por `status_transicoes`).
@@ -39,42 +39,18 @@ from api.services import demanda_service, objeto_ahp_service, plano_service, pro
 from api.services.session_service import SessionUser
 from api.services.status_transicoes import destinos_permitidos_com_handoff
 
-CRITERIOS: tuple[dict[str, str], ...] = (
-    {
-        "campo": "criterio_competencia",
-        "rotulo": "Competência",
-        "pergunta": "É matéria de logística/transporte e de alçada estadual (SLT)?",
-    },
-    {
-        "campo": "criterio_clareza",
-        "rotulo": "Clareza do pedido",
-        "pergunta": (
-            "É possível identificar objetivamente o que se pede "
-            "(obra, estudo, ato normativo, articulação, apoio)?"
-        ),
-    },
-    {
-        "campo": "criterio_finalidade_publica",
-        "rotulo": "Finalidade pública",
-        "pergunta": "Atende interesse coletivo, e não benefício exclusivamente privado?",
-    },
-    {
-        "campo": "criterio_relevancia_setorial",
-        "rotulo": "Relevância setorial",
-        "pergunta": (
-            "Tem repercussão para o sistema de logística/transportes do Estado, "
-            "além do ponto local?"
-        ),
-    },
-    {
-        "campo": "criterio_nao_duplicidade",
-        "rotulo": "Não duplicidade",
-        "pergunta": (
-            "A demanda já não está contemplada por ação, projeto ou processo "
-            "em curso na SLT?"
-        ),
-    },
+CRITERIOS = (
+    {"campo": "criterio_competencia", "rotulo": "Competência", "pergunta": "O objeto da demanda está dentro das atribuições da SLT?", "classe": "eliminatorio", "peso": 0},
+    {"campo": "criterio_nao_duplicidade", "rotulo": "Não duplicidade", "pergunta": "Esta demanda é inédita, sem duplicidade com outra demanda já cadastrada no SICARD?", "classe": "eliminatorio", "peso": 0},
+    {"campo": "criterio_clareza", "rotulo": "Clareza do pedido", "pergunta": "As informações apresentadas permitem identificar claramente o que está sendo solicitado à SLT?", "classe": "classificatorio", "peso": 20},
+    {"campo": "criterio_finalidade_publica", "rotulo": "Finalidade pública", "pergunta": "As informações apresentadas indicam benefícios para a coletividade decorrentes do atendimento da demanda?", "classe": "classificatorio", "peso": 30},
+    {"campo": "criterio_relevancia_setorial", "rotulo": "Relevância setorial", "pergunta": "O atendimento da demanda contribui para melhorar o transporte ou a logística no Estado?", "classe": "classificatorio", "peso": 50},
 )
+ELIMINATORIOS = ("criterio_competencia", "criterio_nao_duplicidade")
+
+
+def pontuacao(respostas):
+    return sum(item["peso"] for item in CRITERIOS if respostas.get(item["campo"]) is True)
 
 _CAMPOS_CRITERIO = tuple(item["campo"] for item in CRITERIOS)
 
@@ -146,12 +122,11 @@ def _respostas(analise: dict[str, Any] | None) -> dict[str, bool | None]:
 
 
 def calcular_resultado(respostas: dict[str, bool | None]) -> str | None:
-    """Maioria simples entre os cinco critérios; ``None`` enquanto incompleto."""
-    valores = [respostas.get(campo) for campo in _CAMPOS_CRITERIO]
-    if any(valor is None for valor in valores):
+    if any(respostas.get(c) is False for c in ELIMINATORIOS):
+        return "reprovado"
+    if any(respostas.get(c) is None for c in _CAMPOS_CRITERIO):
         return None
-    sim = sum(1 for valor in valores if valor)
-    return "aprovado" if sim >= 3 else "reprovado"
+    return "aprovado" if pontuacao(respostas) > 50 else "reprovado"
 
 
 def _placar(respostas: dict[str, bool | None]) -> tuple[int, int, int]:
@@ -165,6 +140,16 @@ def _data_extenso(momento: datetime) -> str:
     return momento.strftime("%d/%m/%Y às %H:%M")
 
 
+def _nome_demanda_duplicada(codigo: str | None) -> str | None:
+    if not codigo:
+        return None
+    try:
+        _, demanda = _localizar_demanda(codigo)
+        return demanda.get("nome")
+    except DemandaNotFoundError:
+        return None
+
+
 def gerar_parecer_texto(
     *,
     codigo: str,
@@ -173,59 +158,50 @@ def gerar_parecer_texto(
     respostas: dict[str, bool | None],
     avaliador_nome: str | None,
     momento: datetime | None = None,
+    demanda_duplicada_codigo: str | None = None,
+    demanda_duplicada_nome: str | None = None,
 ) -> str:
     momento = momento or datetime.now()
     resultado = calcular_resultado(respostas)
-    sim, nao, _ = _placar(respostas)
-    total = len(CRITERIOS)
-
-    linhas: list[str] = [
-        f"PARECER TÉCNICO DE ADMISSIBILIDADE — {codigo}",
-        f"Demanda: {nome} ({tipo}).",
-        "",
-        "Critérios considerados:",
-    ]
-    for item in CRITERIOS:
+    eliminatorios = [item for item in CRITERIOS if item["classe"] == "eliminatorio"]
+    reprovados = [item["rotulo"] for item in eliminatorios if respostas.get(item["campo"]) is False]
+    liberado = all(respostas.get(item["campo"]) is True for item in eliminatorios)
+    linhas = [f"PARECER TÉCNICO DE ADMISSIBILIDADE — {codigo}",
+              f"Demanda: {nome} ({tipo}).", "", "Critérios eliminatórios:"]
+    for item in eliminatorios:
         resposta = respostas.get(item["campo"])
         marcador = "Sim" if resposta is True else "Não" if resposta is False else "Não respondido"
-        linhas.append(f"  - {item['rotulo']}: {item['pergunta']} — {marcador}")
-
-    nao_atendidos = [
-        item["rotulo"] for item in CRITERIOS if respostas.get(item["campo"]) is False
-    ]
-    nao_respondidos = [
-        item["rotulo"] for item in CRITERIOS if respostas.get(item["campo"]) is None
-    ]
-
+        linhas.append(f"  - {item['rotulo']}: {item['pergunta']} — {marcador}.")
+    if respostas.get("criterio_nao_duplicidade") is False:
+        referencia = demanda_duplicada_codigo or "identificação pendente"
+        if demanda_duplicada_nome:
+            referencia += f" — {demanda_duplicada_nome}"
+        linhas.append(f"Demanda já cadastrada identificada como duplicada: {referencia}.")
     linhas.append("")
-    if nao_atendidos:
-        linhas.append(
-            "Critérios NÃO atendidos: " + "; ".join(nao_atendidos) + "."
-        )
+    if reprovados:
+        linhas.append("Conclusão: a demanda é REPROVADA por não atender ao(s) critério(s) eliminatório(s): " + "; ".join(reprovados) + ".")
+        linhas.append("Os critérios classificatórios e a avaliação da geometria não se aplicam nesta etapa. Não há apuração de pontuação classificatória.")
+    elif not liberado:
+        linhas.append("Conclusão: pendente — responda os dois critérios eliminatórios. Os critérios classificatórios e a avaliação da geometria serão liberados somente após duas respostas Sim.")
     else:
-        linhas.append("Não há critérios reprovados: o pedido passou em todos os critérios avaliados.")
-
-    if nao_respondidos:
-        linhas.append("Critérios ainda não respondidos: " + "; ".join(nao_respondidos) + ".")
-
-    linhas.append("")
-    linhas.append(f"Placar: {sim} de {total} critérios atendidos ({nao} não atendidos).")
-
-    if resultado == "aprovado":
-        linhas.append(
-            "Conclusão: a demanda é APROVADA na análise de admissibilidade, por atender "
-            "à maioria dos critérios, e segue para as etapas seguintes do fluxo da SLT."
-        )
-    elif resultado == "reprovado":
-        linhas.append(
-            "Conclusão: a demanda é REPROVADA na análise de admissibilidade, por não atender "
-            "à maioria dos critérios, e não segue para a hierarquização."
-        )
-    else:
-        linhas.append(
-            "Conclusão: pendente — o resultado só é apurado após a resposta dos cinco critérios."
-        )
-
+        linhas.append("Ambos os critérios eliminatórios foram atendidos.")
+        linhas.append("Critérios classificatórios:")
+        for item in CRITERIOS:
+            if item["classe"] != "classificatorio":
+                continue
+            resposta = respostas.get(item["campo"])
+            marcador = "Sim" if resposta is True else "Não" if resposta is False else "Não respondido"
+            linhas.append(f"  - {item['rotulo']} (peso {item['peso']}%): {item['pergunta']} — {marcador}.")
+        linhas.append("Regra: Sim soma o peso à aprovação; Não soma o peso à reprovação. A aprovação exige mais de 50% favoráveis; 50% ou menos reprova.")
+        if resultado is None:
+            linhas.append("Conclusão: pendente — responda os três critérios classificatórios para apurar a pontuação final.")
+        else:
+            pontos = pontuacao(respostas)
+            linhas.append(f"Pontuação classificatória: {pontos}% favoráveis e {100 - pontos}% contrários.")
+            if resultado == "aprovado":
+                linhas.append("Conclusão: a demanda é APROVADA por atender aos dois eliminatórios e superar 50% de pontuação favorável.")
+            else:
+                linhas.append("Conclusão: a demanda é REPROVADA por não superar 50% de pontuação favorável, embora tenha atendido aos dois eliminatórios.")
     linhas.append("")
     linhas.append(f"Avaliador: {avaliador_nome or 'não identificado'}.")
     linhas.append(f"Data da análise: {_data_extenso(momento)}.")
@@ -252,6 +228,14 @@ def _montar_resposta(
 ) -> AnaliseDemandaResponseSchema:
     respostas = _respostas(analise)
     sim, nao, respondidos = _placar(respostas)
+    if analise and not analise.get("decisao"):
+        analise = dict(analise, parecer_texto=gerar_parecer_texto(
+            codigo=codigo, nome=demanda.get("nome") or codigo, tipo=tipo,
+            respostas=respostas, avaliador_nome=analise.get("avaliador_nome"),
+            demanda_duplicada_codigo=analise.get("demanda_duplicada_codigo"),
+            demanda_duplicada_nome=_nome_demanda_duplicada(analise.get("demanda_duplicada_codigo")),
+            momento=analise.get("atualizado_em") if isinstance(analise.get("atualizado_em"), datetime) else None,
+        ))
     return AnaliseDemandaResponseSchema(
         demanda_codigo=codigo,
         demanda_tipo=tipo,
@@ -263,6 +247,7 @@ def _montar_resposta(
                 rotulo=item["rotulo"],
                 pergunta=item["pergunta"],
                 resposta=respostas.get(item["campo"]),
+                classe=item["classe"], peso=item["peso"],
             )
             for item in CRITERIOS
         ],
@@ -270,7 +255,9 @@ def _montar_resposta(
         total_criterios=len(CRITERIOS),
         sim=sim,
         nao=nao,
-        completo=respondidos == len(CRITERIOS),
+        completo=calcular_resultado(respostas) is not None,
+        pontuacao=pontuacao(respostas),
+        demanda_duplicada_codigo=(analise or {}).get("demanda_duplicada_codigo"),
         resultado=calcular_resultado(respostas),
         parecer_texto=_parecer_com_geometria(analise or {}),
         parecer_complemento=(analise or {}).get("parecer_complemento"),
@@ -348,6 +335,18 @@ def salvar_criterios(
 ) -> AnaliseDemandaResponseSchema:
     tipo, demanda = _localizar_demanda(codigo)
     respostas = {campo: getattr(payload, campo) for campo in _CAMPOS_CRITERIO}
+    duplicada = (payload.demanda_duplicada_codigo or "").strip() or None
+    if respostas["criterio_nao_duplicidade"] is not False:
+        duplicada = None
+    if duplicada:
+        if duplicada == demanda["codigo"]:
+            raise DemandaValidationError("Selecione outra demanda.", field="demanda_duplicada_codigo")
+        _localizar_demanda(duplicada)
+    if not all(respostas[c] is True for c in ELIMINATORIOS):
+        for item in CRITERIOS:
+            if item["classe"] == "classificatorio":
+                respostas[item["campo"]] = None
+
 
     parecer = gerar_parecer_texto(
         codigo=demanda["codigo"],
@@ -355,6 +354,8 @@ def salvar_criterios(
         tipo=tipo,
         respostas=respostas,
         avaliador_nome=_avaliador_nome(user),
+        demanda_duplicada_codigo=duplicada,
+        demanda_duplicada_nome=_nome_demanda_duplicada(duplicada),
     )
 
     analise = analise_demanda_repository.upsert(
@@ -362,6 +363,7 @@ def salvar_criterios(
         demanda_tipo=tipo,
         campos={
             **respostas,
+            "demanda_duplicada_codigo": duplicada,
             "resultado": calcular_resultado(respostas),
             "parecer_texto": parecer,
             "avaliador_id": _avaliador_id(user),
@@ -598,12 +600,26 @@ def decidir(
     pendentes = [
         item["rotulo"] for item in CRITERIOS if respostas.get(item["campo"]) is None
     ]
-    if pendentes:
+    if calcular_resultado(respostas) is None:
         raise DemandaValidationError(
             "Responda todos os critérios de análise antes de decidir. Pendentes: "
             + "; ".join(pendentes)
             + ".",
             field="criterios",
+        )
+
+    if respostas.get("criterio_nao_duplicidade") is False:
+        duplicada = (analise or {}).get("demanda_duplicada_codigo")
+        if not duplicada or duplicada == codigo_demanda:
+            raise DemandaValidationError("Selecione a demanda já cadastrada.", field="demanda_duplicada_codigo")
+        _localizar_demanda(duplicada)
+    if decisao != "reprovada" and calcular_resultado(respostas) != "aprovado":
+        raise DemandaValidationError("Os critérios não permitem aprovar esta demanda.", field="criterios")
+
+    if decisao == "reprovada" and not ((analise or {}).get("parecer_complemento") or "").strip():
+        raise DemandaValidationError(
+            "Para reprovar a demanda, complemente o parecer com uma justificativa.",
+            field="parecer_complemento",
         )
 
     if decisao == "ressalvas" and not ((analise or {}).get("parecer_complemento") or "").strip():
@@ -630,6 +646,8 @@ def decidir(
         respostas=respostas,
         avaliador_nome=_avaliador_nome(user) or (analise or {}).get("avaliador_nome"),
         momento=momento,
+        demanda_duplicada_codigo=(analise or {}).get("demanda_duplicada_codigo"),
+        demanda_duplicada_nome=_nome_demanda_duplicada((analise or {}).get("demanda_duplicada_codigo")),
     )
 
     analise = analise_demanda_repository.upsert(
@@ -833,8 +851,9 @@ def gerar_pdf(
     )
     fluxo.append(
         Paragraph(
-            f"<b>{rotulo_resultado}</b> — {sim} de {total} critérios atendidos "
-            f"({nao} não atendidos).",
+            (f"<b>{rotulo_resultado}</b> — pontuação classificatória favorável: {pontuacao(respostas)}%."
+             if all(respostas.get(c) is True for c in ELIMINATORIOS)
+             else f"<b>{rotulo_resultado}</b> — avaliação pelos critérios eliminatórios; pontuação classificatória não apurada."),
             corpo,
         )
     )

@@ -1,0 +1,12 @@
+const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
+const source=fs.readFileSync('admin/demandas.js','utf8');
+const context={collectPayload:()=>context.payload};vm.createContext(context);
+vm.runInContext(source.slice(source.indexOf('  function collectChangedPayload'),source.indexOf('  function deleteConfirmMessage')),context);
+const initial={status:'analise_aprovada',plano_id:'PLANO-PLI',classificacao:null,complementos:null,instituicao_id:'ORIGINAL'};
+const row={initialEditPayload:initial};
+context.payload={...initial,status:'analise_em_avaliacao'};
+assert.equal(JSON.stringify(context.collectChangedPayload(row,{})),JSON.stringify({status:'analise_em_avaliacao'}));
+context.payload={...initial};assert.equal(JSON.stringify(context.collectChangedPayload(row,{})),'{}');
+context.payload={...initial,complementos:{modal_id:'rodoviario'}};
+assert.equal(JSON.stringify(context.collectChangedPayload(row,{})),JSON.stringify({complementos:{modal_id:'rodoviario'}}));
+console.log('OK: somente campos alterados enviados; classificação e complementos preservados ao trocar status.');

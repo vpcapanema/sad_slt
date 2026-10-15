@@ -11,6 +11,7 @@ _SELECT_BASE = """
     SELECT id,
            demanda_codigo,
            demanda_tipo,
+           demanda_duplicada_codigo,
            criterio_competencia,
            criterio_clareza,
            criterio_finalidade_publica,
@@ -31,6 +32,7 @@ _SELECT_BASE = """
 """
 
 _UPSERT_ALLOWED = (
+    "demanda_duplicada_codigo",
     "criterio_competencia",
     "criterio_clareza",
     "criterio_finalidade_publica",
