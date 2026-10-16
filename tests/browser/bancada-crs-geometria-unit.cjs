@@ -25,7 +25,7 @@ const context = vm.createContext({state, window: {}, URLSearchParams,
   symbolSelect: key => `<select data-style="${key}"></select>`, borderSwatch() { return ''; },
   CRS_DESCRIPTIONS: {'EPSG:4674': 'SIRGAS 2000', 'EPSG:31983': 'SIRGAS 2000 / UTM zona 23S'},
 });
-for (const name of ['crsLabel', 'tipoGeometriaBase', 'tiposGeometriaCamada',
+for (const name of ['crsLabel', 'tiposGeojson', 'tipoGeometriaBase', 'tiposGeometriaCamada',
   'layerColor', 'layerSymbol', 'currentEditStyle', 'symbologyFields', 'removeMapResource', 'storageTileQuery',
   'adicionarCamadaStorageTiles', 'adicionarCamadaGeoJsonEmMemoria']) {
   vm.runInContext(implementation(name), context);
@@ -36,7 +36,7 @@ assert.equal(context.crsLabel('epsg:4674'), 'EPSG:4674 (SIRGAS 2000) — Geográ
 assert.equal(context.crsLabel(`PROJCRS["SIRGAS 2000 / UTM zone 23S",${wkt},ID["EPSG",31983]]`), 'EPSG:31983 (SIRGAS 2000 / UTM zona 23S) — Projeção: Mercator Transversa');
 assert.equal(context.crsLabel('PROJCS["CRS personalizado",GEOGCS["Base",AUTHORITY["EPSG","4674"]]]'), 'CRS personalizado — Projeção não identificada');
 assert.equal(context.crsLabel(''), '');
-for (const geometry of ['LineString', 'MultiLineString', '3D Measured Multi Line String']) {
+for (const geometry of ['LineString', 'MultiLineString', '3D Measured Multi Line String', 'CircularString', 'CompoundCurve', 'Multi Curve', 'ST_MultiLineStringZM', 'Linha']) {
   const info = {caminho: 'linhas.gpkg', geometria_tipo: geometry, crs_arquivo: wkt};
   // Reopen from serialized metadata, including after removing the map source.
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -65,3 +65,17 @@ console.log('CRS WKT1/WKT2, autoridade correta, linhas e reabertura: OK');
 assert.equal(context.crsLabel('PROJCS["Local",PROJECTION["Transverse_Mercator"]]'), 'Local \u2014 Proje\u00e7\u00e3o: Mercator Transversa');
 assert.equal(context.crsLabel('PROJCRS["Local",CONVERSION["Local",METHOD["Transverse Mercator"]]]'), 'Local \u2014 Proje\u00e7\u00e3o: Mercator Transversa');
 assert.equal(context.crsLabel('PROJCS["Local",PROJECTION["Minha_Projecao"]]'), 'Local \u2014 Proje\u00e7\u00e3o: Minha Projecao');
+
+for (const texture of ['solid','dashed','dotted']) {
+  state.layerStyles.line = {borderColor:'#123456',lineTexture:texture,lineWidth:4};
+  const symbol=context.layerSymbol(state.layers.find(layer=>layer.id==='line'));
+  assert.match(symbol, /<svg[^>]+viewBox="0 0 26 16"/);
+  assert.match(symbol, /<path[^>]+fill="none"/);
+  assert.match(symbol, /stroke-width="4"/);
+  if(texture!=='solid')assert.match(symbol,/stroke-dasharray=/);
+}
+state.geometryTypes.preview=['Point'];
+assert.match(context.layerSymbol({id:'preview',metadados_local:{tipos_geometria:['MultiLineString']}}), /layer-symbol line/);
+context.adicionarCamadaGeoJsonEmMemoria('collection','Linhas', {features:[{geometry:{type:'GeometryCollection',geometries:[{type:'LineString',coordinates:[]},{type:'MultiLineString',coordinates:[]}]}}]}, {lote:true});
+assert.match(context.layerSymbol(state.layers.find(layer=>layer.id==='collection')), /layer-symbol line/);
+for(const type of ['Point','Polygon','CurvePolygon','MultiSurface'])assert.doesNotMatch(context.layerSymbol({id:'other',geometria_tipo:type}), /layer-symbol line/);

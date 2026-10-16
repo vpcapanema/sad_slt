@@ -107,6 +107,9 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .layer-legend{display:flex;flex-direction:column;gap:2px;cursor:pointer;border-radius:4px;padding:1px 2px;transition:background .12s}
 #gp-layer-list .tree-layer:hover .layer-legend,#gp-layer-list .tree-layer.active .layer-legend{background:rgba(22,131,196,.08)}
 .layer-legend--single{padding-left:1px}
+.layer-symbol.line-svg{width:26px;height:16px;background:none;border:0}
+.layer-symbol.line-svg::after{content:none}
+.tree-row .layer-symbol.line-svg svg{display:block;width:26px;height:16px;overflow:visible}
 .layer-legend-item{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--muted,#64748b);line-height:1.35;min-width:0}
 .layer-legend .legend-swatch{width:13px;height:13px;flex:0 0 auto;border-radius:3px;border:1px solid rgba(15,23,42,.25)}
 .layer-legend .legend-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

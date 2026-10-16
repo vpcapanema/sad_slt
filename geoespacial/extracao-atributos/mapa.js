@@ -49,7 +49,7 @@ export function criarMapa(aoMudarPainel) {
             else files.sessions.delete(id);
             app.adicionarCamadaStorageTiles(id,item.nome,{...item,caminho:item.arquivo||item.id},{origem:item.origem_geometria==='local_temporaria'?'Arquivo local temporário':undefined,categoria:item.grupo,lote,estiloPreparado:true});
           }else if(item.arquivo&&item.revisao&&item.campos)files.adicionar({...item,id,categoria:item.grupo},{lote,estiloPreparado:true});
-          else app.adicionarCamadaGeoJsonEmMemoria(id,nomeMapa,item.geojson,{categoria:item.grupo,lote,geometria_tipo:item.geojson.features[0]?.geometry?.type,estiloPreparado:true});
+          else app.adicionarCamadaGeoJsonEmMemoria(id,nomeMapa,item.geojson,{categoria:item.grupo,lote,geometria_tipo:item.geometria_tipo,metadados_local:item.metadados_local,crs_arquivo:item.crs_arquivo,estiloPreparado:true});
           if(!app.state.layers.some(layer=>layer.id===id))throw new Error(`${item.nome} ainda não foi adicionada ao painel. Tente novamente após o mapa carregar.`);
           app.state.layers.find(layer=>layer.id===id).previaAproximada=Boolean(aproximada);
           mounted.set(item.key,{id,geojson:item.geojson,revisao:item.revisao,color:item.color});

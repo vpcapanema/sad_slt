@@ -445,14 +445,19 @@
     if(layer.tipo?.toLowerCase().includes("raster"))return '<span class="layer-symbol raster" title="Raster"></span>';
     const types=tiposGeometriaCamada(layer),type=types[0]||"geometry",symbolStyle=state.layerStyles[layer.id]||{},color=overrideColor||(type.includes("Line")?symbolStyle.borderColor||symbolStyle.fillColor:symbolStyle.fillColor||symbolStyle.borderColor)||layerColor(layer.id,types),style=` style="--layer-color:${color}"`;
     if(type.includes("Point")){const shape=symbolStyle.pointShape||"circle";if(shape!=="circle")return `<span class="layer-symbol layer-symbol-shape" title="Pontos">${symbolPreview("shape",shape,color)}</span>`;return `<span class="layer-symbol point"${style} title="Pontos"></span>`}
-    if(type.includes("Line"))return `<span class="layer-symbol line"${style} title="Linhas"></span>`;
+    if(type.includes("Line")){
+      const width=Math.max(1,Math.min(Number(symbolStyle.lineWidth)||2,6));
+      const dash=symbolStyle.lineTexture==="dashed"?' stroke-dasharray="5 3"':symbolStyle.lineTexture==="dotted"?' stroke-dasharray="1 3"':'';
+      return `<span class="layer-symbol line line-svg"${style} title="Linhas"><svg viewBox="0 0 26 16" aria-hidden="true"><path d="M2 12 L9 4 L17 12 L24 4" fill="none" stroke="var(--layer-color)" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round"${dash}/></svg></span>`;
+    }
     if(type.includes("Polygon"))return `<span class="layer-symbol polygon"${style} title="Polígonos"></span>`;
     return `<span class="layer-symbol geometry"${style} title="Geometria vetorial"></span>`;
   }
   function tiposGeometriaCamada(layer){
-    const declarados=String(layer.geometria_tipo||"").split(",").map(tipoGeometriaBase).filter(Boolean);
+    const meta=layer.metadados_local||layer.metadados||{};
+    const declarados=[layer.geometria_tipo,layer.tipo_geometria,...(Array.isArray(meta.tipos_geometria)?meta.tipos_geometria:[]),meta.geometria_tipo].flatMap(value=>String(value||"").split(",")).map(tipoGeometriaBase).filter(Boolean);
     const observados=(state.geometryTypes[layer.id]||[]).map(tipoGeometriaBase).filter(Boolean);
-    return observados.length?observados:declarados;
+    return [...new Set(declarados.length?declarados:observados)];
   }
   function legendField(renderer){
     // Entre o nome da camada e os símbolos: sem isto, graduado/categorizado
@@ -1021,7 +1026,7 @@
     if(resource.destino==="memoria"){
       const response=await fetch(`${API}/camadas/${id}/geojson`);
       if(!response.ok)throw new Error(`Geometria em memória indisponível (HTTP ${response.status})`);
-      const data=await response.json();state.geometryTypes[id]=[...new Set((data.features||[]).map(feature=>feature.geometry?.type).filter(Boolean))];
+      const data=await response.json();state.geometryTypes[id]=tiposGeojson(data);
       const color=layerColor(id,state.geometryTypes[id]);
       state.map.addSource(id,{type:"geojson",data});
       state.map.addLayer({id,type:"fill",source:id,paint:{"fill-color":color,"fill-opacity":.32,"fill-outline-color":"transparent"},filter:["==",["geometry-type"],"Polygon"]});
@@ -1586,7 +1591,7 @@
     removeMapResource(id);
     // Sem isto a camada em memória fica sem tipo de geometria e o painel mostra o
     // símbolo genérico em vez de ponto, linha ou polígono.
-    state.geometryTypes[id]=[...new Set((geojson.features||[]).map(f=>f.geometry?.type).filter(Boolean))];
+    state.geometryTypes[id]=tiposGeojson(geojson);
     if(!state.geometryTypes[id].length&&opts.geometria_tipo)state.geometryTypes[id]=[opts.geometria_tipo];
     const color=layerColor(id,state.geometryTypes[id]);
     state.map.addSource(id,{type:"geojson",data:geojson});
@@ -1604,7 +1609,7 @@
       (geojson.features||[]).forEach(f=>walkCoords(f.geometry?.coordinates,c=>bounds.extend(c)));
       if(!bounds.isEmpty()) state.map.fitBounds(bounds,{padding:40,maxZoom:14});
     }
-    const entry={id,nome:nome||id,tipo:opts.tipo||"vetorial (memória)",origem:opts.origem||"Hierarquização",categoria:opts.categoria||"",destino:"memoria_local",crs:opts.crs_arquivo||"EPSG:4326",geometria_tipo:state.geometryTypes[id].join(",")||opts.geometria_tipo||""};
+    const entry={id,nome:nome||id,tipo:opts.tipo||"vetorial (memória)",origem:opts.origem||"Hierarquização",categoria:opts.categoria||"",destino:"memoria_local",crs:opts.crs_arquivo||"EPSG:4326",geometria_tipo:opts.geometria_tipo||state.geometryTypes[id].join(","),metadados_local:opts.metadados_local};
     const idx=state.layers.findIndex(l=>l.id===id);
     if(idx>=0) state.layers[idx]=entry; else state.layers.push(entry);
     if(!opts.lote) renderLayers();
@@ -1612,10 +1617,20 @@
   // Camada interna fixa do MVT gerado pelo servidor (layerName do driver MVT);
   // não confundir com o parâmetro `camada`, que é a camada OGR do arquivo.
   const STORAGE_TILE_SOURCE_LAYER="camada";
+  function tiposGeojson(data){
+    const types=new Set();
+    function visit(geometry){
+      if(!geometry)return;
+      if(geometry.type==='GeometryCollection'){(geometry.geometries||[]).forEach(visit);return}
+      if(geometry.type)types.add(geometry.type);
+    }
+    (data.features||[]).forEach(feature=>visit(feature.geometry));
+    return [...types];
+  }
   function tipoGeometriaBase(tipo){
-    const texto=String(tipo||"").toLowerCase();
-    if(texto.includes("polygon")||texto.includes("polígono"))return "Polygon";
-    if(texto.includes("line")||texto.includes("linha"))return "LineString";
+    const texto=String(tipo||"").normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+    if(texto.includes("polygon")||texto.includes("poligono")||texto.includes("surface"))return "Polygon";
+    if(texto.includes("line")||texto.includes("linha")||texto.includes("curve")||texto.includes("circularstring"))return "LineString";
     if(texto.includes("point")||texto.includes("ponto"))return "Point";
     return "";
   }
@@ -1655,7 +1670,7 @@
     map.setFilter(id+"-line",["match",["geometry-type"],["LineString","MultiLineString","Polygon","MultiPolygon"],true,false]);
     map.setFilter(id+"-point",["match",["geometry-type"],["Point","MultiPoint"],true,false]);
     applySavedStyle(id);
-    const entry={id,nome:nome||id,tipo:"vetorial",origem:opts.origem||"Arquivo no storage",categoria:opts.categoria||"",destino:info.tiles_url?"arquivo_original":"storage_original",representacao:"tiles",arquivo:info.arquivo||info.caminho,crs:info.crs_arquivo||"",geometria_tipo:info.geometria_tipo||base||"",feicoes:info.feicoes,campo_fid_tile:info.campo_fid_tile};
+    const entry={id,nome:nome||id,tipo:"vetorial",origem:opts.origem||"Arquivo no storage",categoria:opts.categoria||"",destino:info.tiles_url?"arquivo_original":"storage_original",representacao:"tiles",arquivo:info.arquivo||info.caminho,crs:info.crs_arquivo||"",geometria_tipo:info.geometria_tipo||base||"",metadados_local:info.metadados_local,feicoes:info.feicoes,campo_fid_tile:info.campo_fid_tile};
     const idx=state.layers.findIndex(l=>l.id===id);
     if(idx>=0) state.layers[idx]=entry; else state.layers.push(entry);
     if(!opts.lote){ajustarStorageBounds(id).catch(()=>{});renderLayers();}
