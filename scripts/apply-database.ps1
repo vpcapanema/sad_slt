@@ -66,7 +66,7 @@ function Test-ContainerRunning([string]$Name) {
 
 function Test-SchemaReady([string]$Query) {
     $query = $Query
-    if ($env:SLT_USE_SIGMA_POSTGRES -eq "true" -and $env:SLT_DATABASE_URL) {
+    if ($env:SLT_DATABASE_URL) {
         $env:SLT_MIGRATION_QUERY = $query
         $python = Join-Path $Root ".venv\Scripts\python.exe"
         $previousErrorActionPreference = $ErrorActionPreference
@@ -261,7 +261,8 @@ $migrations = @(
     "130_separar_auditoria_decisao.sql",
     "131_geometria_historico_storage_metadata.sql",
     "132_solicitacao_complementacao_demanda.sql",
-    "133_avaliacao_geometria_historico.sql"
+    "133_avaliacao_geometria_historico.sql",
+    "136_corrigir_contrato_exportacao_seed.sql"
 )
 
 if ($OnlyMigration) {
@@ -405,6 +406,22 @@ if (-not $OnlyMigration) {
     }
 }
 
+if (-not $OnlyMigration -and "136_corrigir_contrato_exportacao_seed.sql" -notin $migrations) {
+    $seedQuery = @'
+SELECT EXISTS (
+    SELECT 1 FROM geoprocessamento.modelo_geoprocessamento
+    WHERE id='funcao_fase2_normalizar_exportar' AND tipo='funcao'
+      AND definicao #>> '{passos,1,algoritmo_id}'='OP-26'
+      AND definicao #> '{passos,1,parametros}'=
+          '{"raster_id":"$raster_id","nome_arquivo":"favorabilidade_normalizada.tif","formato_saida":"GeoTIFF"}'::jsonb
+);
+'@
+    if (Test-SchemaReady $seedQuery) {
+        $migrations += "136_corrigir_contrato_exportacao_seed.sql"
+        Write-Ok "Contrato de exportacao do seed pendente; aplicando migration 136"
+    }
+}
+
 function Invoke-PsycopgFile {
     param([string]$FilePath)
     $env:SLT_MIGRATION_FILE = $FilePath
@@ -423,7 +440,7 @@ foreach ($name in $migrations) {
 }
 
 try {
-    if ($env:SLT_USE_SIGMA_POSTGRES -eq "true" -and $env:SLT_DATABASE_URL) {
+    if ($env:SLT_DATABASE_URL) {
         Write-Step "PostgreSQL remoto - aplicando migrations via psycopg"
         foreach ($name in $migrations) {
             $path = Join-Path $DbDir $name
@@ -465,6 +482,8 @@ try {
     Write-Host "  Schema SLT aplicado com sucesso" -ForegroundColor Green
     if ($env:SLT_USE_SIGMA_POSTGRES -eq "true") {
         Write-Host "  Banco remoto: $($env:SIGMA_POSTGRES_HOST):$($env:SIGMA_POSTGRES_PORT)/slt_db" -ForegroundColor DarkGray
+    } elseif ($env:SLT_DATABASE_URL) {
+        Write-Host "  Banco remoto configurado em SLT_DATABASE_URL" -ForegroundColor DarkGray
     } else {
         Write-Host "  SLT_DATABASE_URL=postgresql://${DbUser}:***@${HostAddr}:${Port}/${DbName}" -ForegroundColor DarkGray
     }

@@ -8,6 +8,7 @@ arquivo ia para pastas diferentes conforme a porta — e foi assim que
 from __future__ import annotations
 
 import pytest
+pytestmark = pytest.mark.usefixtures("storage_sintetico")
 
 from api import path_policy
 from api.services import geospatial_upload_storage as upload

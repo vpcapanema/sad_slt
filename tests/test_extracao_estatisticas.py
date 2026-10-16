@@ -6,6 +6,7 @@ import zipfile
 import geopandas as gpd
 import pandas as pd
 import pytest
+pytestmark = pytest.mark.usefixtures("storage_sintetico")
 from shapely.geometry import Point, LineString, MultiLineString, Polygon, GeometryCollection, box
 
 from api.services.extracao_atributos_estatisticas import enriquecer, agregar

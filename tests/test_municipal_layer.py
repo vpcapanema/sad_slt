@@ -4,6 +4,8 @@ import pytest
 from api.services import base_municipal as dados
 from api.services import municipal_layer as service
 
+pytestmark = pytest.mark.usefixtures("storage_sintetico")
+
 
 def test_base_municipal_carregada():
     malha = dados.malha()

@@ -11,6 +11,8 @@ from api.services.session_service import SessionUser, create_token, cookie_name
 
 USER=SessionUser(id='00000000-0000-0000-0000-000000000021',email='teste@example.org',username='teste_operador',nome='Teste',tipo_usuario='OPERADOR')
 
+pytestmark = pytest.mark.usefixtures("storage_sintetico")
+
 @pytest.fixture
 def client():
     c=TestClient(app);c.cookies.set(cookie_name(),create_token(USER));return c

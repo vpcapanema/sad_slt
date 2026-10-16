@@ -2,6 +2,7 @@ from copy import deepcopy
 from types import SimpleNamespace
 
 import pytest
+pytestmark = pytest.mark.usefixtures("storage_sintetico")
 from osgeo import ogr, osr
 
 from api.services import bancada_arquivos as service

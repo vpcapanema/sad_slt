@@ -2,6 +2,7 @@ from types import SimpleNamespace
 from threading import Event
 from time import sleep
 import pytest
+pytestmark = pytest.mark.usefixtures("storage_sintetico")
 from api.services.controle_processamento import ControleProcessamento,ProcessamentoCancelado
 
 

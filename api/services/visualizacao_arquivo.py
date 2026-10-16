@@ -29,8 +29,10 @@ def ler_arquivo(arquivo: str) -> dict:
     root = next((project_path('data/geoespacial/' + area['caminho']).resolve()
                  for area in RAIZES_CARREGAVEIS.values()
                  if relative.startswith('data/geoespacial/' + area['caminho'] + '/')), None)
+    if root is None:
+        raise ValueError('Selecione um arquivo nas áreas permitidas do storage.')
     path = project_path(relative).resolve()
-    if root is None or not path.is_relative_to(root):
+    if not path.is_relative_to(root):
         raise ValueError('Selecione um arquivo nas áreas permitidas do storage.')
     if not path.is_file():
         raise FileNotFoundError('Arquivo não encontrado no storage.')

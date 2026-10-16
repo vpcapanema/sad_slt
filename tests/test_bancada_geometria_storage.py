@@ -4,6 +4,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+pytestmark = pytest.mark.usefixtures("storage_sintetico")
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from osgeo import ogr, osr

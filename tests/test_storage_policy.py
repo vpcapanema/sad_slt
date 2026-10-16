@@ -28,6 +28,58 @@ def test_sem_configuracao_nao_usa_temp_local(monkeypatch):
     create.assert_not_called()
 
 
+def test_inicializacao_sem_montagem_nao_cria_temporarios(monkeypatch):
+    monkeypatch.delenv('SICARD_STORAGE_WRITE_DIR', raising=False)
+    monkeypatch.delenv('SICARD_STORAGE_TEMP_DIR', raising=False)
+    original = policy._tempfile.tempdir
+    create = Mock()
+    monkeypatch.setattr(policy._tempfile, 'mkdtemp', create)
+    policy.configurar_temporarios()
+    assert policy._tempfile.tempdir == original
+    create.assert_not_called()
+
+
+def test_configuracao_parcial_continua_recusada(monkeypatch):
+    monkeypatch.delenv('SICARD_STORAGE_WRITE_DIR', raising=False)
+    monkeypatch.setenv('SICARD_STORAGE_TEMP_DIR', 'invalido')
+    with pytest.raises(RuntimeError):
+        policy.configurar_temporarios()
+
+
+def test_servidor_sem_montagem_mantem_api_disponivel(monkeypatch):
+    from fastapi.testclient import TestClient
+    from api.server import app
+    monkeypatch.delenv('SICARD_STORAGE_WRITE_DIR', raising=False)
+    monkeypatch.delenv('SICARD_STORAGE_TEMP_DIR', raising=False)
+    with TestClient(app) as client:
+        assert client.get('/api/health').status_code == 200
+        assert client.get('/data/arquivo-inexistente.tif').status_code == 503
+
+
+@pytest.mark.parametrize('status', [200, 404, 503])
+def test_mapa_documental_sem_montagem_le_apenas_api(monkeypatch, status):
+    from fastapi.testclient import TestClient
+    from api.server import app
+    monkeypatch.delenv('SICARD_STORAGE_WRITE_DIR', raising=False)
+    monkeypatch.delenv('SICARD_STORAGE_TEMP_DIR', raising=False)
+    path = 'data/geoespacial/relatorios/mapas_fase2/mapa.png'
+    def baixar(logical):
+        assert logical == f'aplicacao/{path}'
+        if status == 404:
+            raise FileNotFoundError(logical)
+        if status == 503:
+            raise storage_remoto.StorageIndisponivel('indisponibilidade simulada')
+        return b'\x89PNG\r\n\x1a\n'
+    monkeypatch.setattr(storage_remoto, 'baixar', baixar)
+    with TestClient(app) as client:
+        response = client.get(f'/{path}')
+        assert response.status_code == status
+        if status == 200:
+            assert response.content == b'\x89PNG\r\n\x1a\n'
+            assert response.headers['content-type'] == 'image/png'
+        assert client.get('/data/geoespacial/relatorios/mapas_fase2/privado.txt').status_code == 404
+
+
 def test_pasta_local_nao_e_montagem(storage, monkeypatch):
     monkeypatch.setattr(policy, 'montagem', lambda path: False)
     with pytest.raises(RuntimeError, match='montagem'):
@@ -73,6 +125,12 @@ def test_caminhos_de_dados_e_retorno(storage, logical):
 
 def test_codigo_permanece_somente_leitura_no_projeto(storage):
     assert project_path('assets/teste.js') == PROJECT_ROOT / 'assets/teste.js'
+
+
+def test_caminho_de_codigo_sem_montagem(monkeypatch):
+    monkeypatch.delenv('SICARD_STORAGE_WRITE_DIR', raising=False)
+    monkeypatch.delenv('SICARD_STORAGE_TEMP_DIR', raising=False)
+    assert project_relative(PROJECT_ROOT / 'assets/teste.js') == 'assets/teste.js'
 
 
 def test_envio_bytes_nao_materializa_arquivo(monkeypatch):
@@ -124,6 +182,8 @@ def test_fuse_grava_em_memoria_e_publica_no_flush(monkeypatch):
 
 def test_storage_montado_dentro_do_projeto_mantem_caminho_logico(monkeypatch):
     root = PROJECT_ROOT.resolve() / 'storage-escrita'
+    monkeypatch.setenv('SICARD_STORAGE_WRITE_DIR', str(root))
+    monkeypatch.setenv('SICARD_STORAGE_TEMP_DIR', str(root / 'temporarios-sicard'))
     monkeypatch.setattr(policy, 'raiz_escrita', lambda: root)
     monkeypatch.setattr(policy, 'raiz_temporaria', lambda: root / 'temporarios-sicard')
     assert project_relative(root / 'aplicacao/data/a.tif') == 'data/a.tif'

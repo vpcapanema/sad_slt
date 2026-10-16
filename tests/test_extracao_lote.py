@@ -3,6 +3,7 @@ import json
 import zipfile
 import geopandas as gpd
 import pytest
+pytestmark = pytest.mark.usefixtures("storage_sintetico")
 from shapely.geometry import Point, LineString, box
 from api.services.extracao_lote import entradas_do_lote, executar
 from api.services.extracao_saida_analitica import snapshot_saida

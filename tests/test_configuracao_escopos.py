@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 import pytest
+pytestmark = pytest.mark.usefixtures("storage_sintetico")
 from api.services import configuracao_bancada as config, extracao_atributos as service
 
 @pytest.fixture

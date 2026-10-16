@@ -5,6 +5,8 @@ import re
 import tempfile
 import time
 import unittest
+import pytest
+pytestmark = pytest.mark.usefixtures("storage_sintetico")
 from pathlib import Path
 from unittest.mock import patch
 from uuid import uuid4
@@ -13,7 +15,7 @@ import geopandas as gpd
 from fastapi.testclient import TestClient
 from shapely.geometry import Point
 
-from api.path_policy import project_relative
+from api.path_policy import project_path, project_relative
 from api.db.connection import get_connection
 from api.services import geospatial_upload_storage as upload_storage
 from api.repositories import camada_geoespacial_repository
@@ -37,9 +39,10 @@ class GeoprocessamentoApiTest(unittest.TestCase):
         geoprocessamento_engine.profiles.clear()
         geoprocessamento_engine.functions.clear()
         geoprocessamento_engine.flows.clear()
-        Path("data/geoespacial/tests").mkdir(parents=True, exist_ok=True)
-        self.tempdir = tempfile.TemporaryDirectory(dir="data/geoespacial/tests")
-        temp_path = Path(project_relative(Path(self.tempdir.name)))
+        base = project_path("data/geoespacial/tests")
+        base.mkdir(parents=True, exist_ok=True)
+        self.tempdir = tempfile.TemporaryDirectory(dir=base)
+        temp_path = Path(self.tempdir.name)
         geoprocessamento_engine._definitions_path = temp_path / "definicoes.json"
         self.sample = temp_path / "amostra.geojson"
         self.sample.write_text(
@@ -83,7 +86,7 @@ class GeoprocessamentoApiTest(unittest.TestCase):
     def carregar(self) -> str:
         response = self.client.post(
             "/api/geoespacial/operacoes/importar-camada",
-            params={"tipo_entrada": "local", "caminho_arquivo": str(self.sample)},
+            params={"tipo_entrada": "local", "caminho_arquivo": project_relative(self.sample)},
         )
         self.assertEqual(response.status_code, 200, response.text)
         return response.json()["camada_id"]

@@ -10,6 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+pytestmark = pytest.mark.usefixtures("storage_sintetico")
 from fastapi.testclient import TestClient
 
 from api.routers.geoespacial import RAIZES_CARREGAVEIS
@@ -56,6 +57,8 @@ def test_recusa_travessia(cliente):
 
 
 def test_permite_descer_dentro_de_uma_raiz(cliente):
+    from api.path_policy import project_path
+    project_path("data/geoespacial/uploads/datastorage").mkdir(parents=True)
     resposta = cliente.get(ROTA, params={"caminho": "uploads/datastorage"})
     assert resposta.status_code == 200, resposta.text
     assert resposta.json()["pai"] == "", "subir de uma raiz volta ao nível zero"

@@ -1,4 +1,5 @@
 import pytest
+pytestmark = pytest.mark.usefixtures("storage_sintetico")
 from api.services import bancadas_salvas as service
 
 @pytest.fixture

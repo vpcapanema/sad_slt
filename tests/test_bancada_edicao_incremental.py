@@ -29,7 +29,7 @@ def _valores(path, camada=None):
 
 
 @pytest.fixture
-def remoto(tmp_path, monkeypatch):
+def remoto(tmp_path, monkeypatch, storage_sintetico):
     """SFTPGo simulado sobre a pasta do storage montada no teste."""
     monkeypatch.setattr(storage, 'diretorio_storage', lambda: tmp_path)
     calls = {'enviar': [], 'mover': [], 'apagar': []}

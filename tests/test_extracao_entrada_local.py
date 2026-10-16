@@ -8,6 +8,7 @@ from zipfile import ZipFile
 
 import geopandas as gpd
 import pytest
+pytestmark = pytest.mark.usefixtures("storage_sintetico")
 from osgeo import gdal
 from shapely.geometry import Point
 

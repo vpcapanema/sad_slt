@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import unittest
+import pytest
+pytestmark = pytest.mark.usefixtures("storage_sintetico")
 from pathlib import Path
 
 from api.path_policy import project_path, project_relative, relative_file_name, relative_path

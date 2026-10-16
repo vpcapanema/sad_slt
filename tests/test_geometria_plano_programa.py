@@ -7,6 +7,7 @@ recebe a geometria desenhada em tela quando o payload a traz.
 from contextlib import contextmanager
 
 import pytest
+pytestmark = pytest.mark.usefixtures("storage_sintetico")
 
 from api.repositories import geometria_historico_repository, plano_repository, programa_repository
 from api.services.demanda_service import geometria_desenhada_geojson

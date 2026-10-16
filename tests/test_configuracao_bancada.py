@@ -7,7 +7,7 @@ from api.services import extracao_atributos
 
 
 @pytest.fixture
-def sem_arquivos(tmp_path, monkeypatch):
+def sem_arquivos(tmp_path, monkeypatch, storage_sintetico):
     monkeypatch.setattr(configuracao, 'raiz', lambda: tmp_path)
     monkeypatch.setattr(extracao_atributos, 'catalogo', lambda: {
         'categorias': [{'id': 'categoria-teste', 'nome': 'Categoria de teste'}],

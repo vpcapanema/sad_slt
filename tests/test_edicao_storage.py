@@ -12,7 +12,7 @@ from api.services import bancada_arquivos as service, storage_geoespacial as sto
 
 
 @pytest.fixture
-def original(tmp_path, monkeypatch):
+def original(tmp_path, monkeypatch, storage_sintetico):
     path = tmp_path / 'base-geoespacial' / 'original.gpkg'
     path.parent.mkdir()
     ds = ogr.GetDriverByName('GPKG').CreateDataSource(str(path))
@@ -75,7 +75,7 @@ def test_salvar_storage_revisao_curta_mesmo_arquivo_e_outras_camadas(original):
 
 
 @pytest.mark.parametrize('driver,extension', [('GeoJSON', '.geojson'), ('FlatGeobuf', '.fgb'), ('ESRI Shapefile', '.shp')])
-def test_salvar_outros_formatos_no_mesmo_caminho(tmp_path, monkeypatch, driver, extension):
+def test_salvar_outros_formatos_no_mesmo_caminho(tmp_path, monkeypatch, driver, extension, storage_sintetico):
     import geopandas as gpd
     from shapely.geometry import Point
     root = tmp_path / 'base-geoespacial'

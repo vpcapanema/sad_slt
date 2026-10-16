@@ -11,6 +11,7 @@ from api.storage_policy import configurar_temporarios
 configurar_temporarios()
 
 from urllib.parse import urlencode
+import os
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,7 +23,7 @@ from fastapi.templating import Jinja2Templates
 from api.exceptions import DatabaseUnavailableError
 from api.deps.auth import get_optional_session, require_operator
 from api.middleware.subpath_rewrite import SubpathRewriteMiddleware
-from api.path_policy import project_path
+from api.path_policy import project_path, relative_path
 from api.routers import api_router
 from api.services import storage_remoto
 from api.services.session_service import SessionUser
@@ -54,6 +55,13 @@ async def handle_database_unavailable(
     _request: Request, exc: DatabaseUnavailableError
 ) -> JSONResponse:
     """Garante resposta 503 uniforme, inclusive em rotas internas."""
+    return JSONResponse(status_code=503, content={"detail": str(exc)})
+
+
+@app.exception_handler(storage_remoto.StorageIndisponivel)
+async def handle_storage_unavailable(
+    _request: Request, exc: storage_remoto.StorageIndisponivel,
+) -> JSONResponse:
     return JSONResponse(status_code=503, content={"detail": str(exc)})
 
 app.add_middleware(
@@ -574,11 +582,51 @@ def _mount_static(path: str, directory_name: str, name: str) -> None:
     app.mount(path, RevalidateStaticFiles(directory=str(target_dir)), name=name)
 
 
+class StorageStaticFiles(RevalidateStaticFiles):
+    """Resolve dados apenas quando a rota é usada, nunca ao importar o servidor."""
+
+    async def check_config(self) -> None:
+        if not os.environ.get("SICARD_STORAGE_WRITE_DIR"):
+            return
+        try:
+            target = project_path("data")
+        except RuntimeError as exc:
+            raise HTTPException(
+                status_code=503,
+                detail="Arquivos de dados devem ser acessados pela API do storage ou pela aplicação na VM.",
+            ) from exc
+        self.directory = str(target)
+        self.all_directories = [str(target)]
+        await super().check_config()
+
+    async def get_response(self, path: str, scope):
+        if os.environ.get("SICARD_STORAGE_WRITE_DIR"):
+            return await super().get_response(path, scope)
+        from starlette.concurrency import run_in_threadpool
+        from api.services.documentacao_favorabilidade import MAPAS_BRUTOS, MAPAS_NORMALIZADOS
+        try:
+            logical = relative_path(f"data/{path}").as_posix()
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail="Arquivo não encontrado.") from exc
+        if not any(logical.startswith(f"{folder}/") for folder in (MAPAS_BRUTOS, MAPAS_NORMALIZADOS)):
+            raise HTTPException(status_code=503, detail="Este arquivo requer acesso nativo ao storage na VM.")
+        if not (logical.endswith(".png") or logical.endswith("/manifesto.json")):
+            raise HTTPException(status_code=404, detail="Arquivo não publicado.")
+        try:
+            content = await run_in_threadpool(storage_remoto.baixar, f"aplicacao/{logical}")
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=404, detail="Arquivo não encontrado no storage.") from exc
+        except storage_remoto.StorageIndisponivel as exc:
+            raise HTTPException(status_code=503, detail="Storage indisponível para leitura da documentação.") from exc
+        return Response(content, media_type="image/png" if logical.endswith(".png") else "application/json",
+                        headers={"Cache-Control": "no-cache"})
+
+
 _mount_static("/assets", "assets", "assets")
 # `config/` guarda definições versionadas do sistema; `data/` guarda o que o
 # sistema recebe e produz. A separação é a razão de existirem dois mounts.
 _mount_static("/config", "config", "config")
-_mount_static("/data", "data", "data")
+app.mount("/data", StorageStaticFiles(check_dir=False), name="data")
 _mount_static("/public/assets", "assets", "public-assets")
 _mount_static("/public/cadastro", "cadastro", "public-cadastro-assets")
 _mount_static("/public/painel", "painel", "public-painel-assets")

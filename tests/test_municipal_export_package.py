@@ -17,7 +17,7 @@ from api.routers.municipal_layer import Selecao
 
 
 @pytest.fixture
-def inputs(monkeypatch):
+def inputs(monkeypatch, storage_sintetico):
     frame = gpd.GeoDataFrame(
         {
             'CD_MUN': ['3500001', '3500002', '3500003'],

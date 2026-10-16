@@ -129,6 +129,18 @@ def _validar_diagrama(definicao: dict) -> None:
             adjacencias[origem].append(destino)
             reversas[destino].append(origem)
 
+    graus = {no_id: len(reversas[no_id]) for no_id in ids}
+    fila = [no_id for no_id, grau in graus.items() if grau == 0]
+    visitados = 0
+    while fila:
+        visitados += 1
+        for destino in adjacencias[fila.pop()]:
+            graus[destino] -= 1
+            if graus[destino] == 0:
+                fila.append(destino)
+    if visitados != len(ids):
+        raise HTTPException(status_code=422, detail="O diagrama contém referência circular")
+
     def alcancaveis(iniciais: set[str], grafo: dict[str, list[str]]) -> set[str]:
         visitados, fila = set(iniciais), list(iniciais)
         while fila:
@@ -157,11 +169,9 @@ def _validar_definicao_funcao(funcao: dict) -> None:
             status_code=422,
             detail="Uma função deve conter ao menos um algoritmo ou função.",
         )
-    erros = geoprocessamento_engine.validate_steps(passos)
-    for indice, passo in enumerate(passos, 1):
-        funcao_id = passo.get("funcao_id")
-        if funcao_id and not modelo_repo.obter(funcao_id, "funcao"):
-            erros.append(f"Etapa {indice}: função {funcao_id} não encontrada")
+    erros = geoprocessamento_engine.validate_steps(
+        passos, function_path=(str(funcao["id"]),) if funcao.get("id") else (),
+    )
     if erros:
         raise HTTPException(status_code=422, detail={"erros": erros})
 
@@ -174,17 +184,7 @@ def _validar_definicao_fluxo(fluxo: dict) -> None:
             status_code=422,
             detail="Um fluxo deve conter ao menos um algoritmo ou função.",
         )
-    erros: list[str] = []
-    for indice, item in enumerate(itens, 1):
-        if item.get("iterador"):
-            continue
-        funcao_id = item.get("funcao_id")
-        algoritmo_id = item.get("algoritmo_id")
-        if funcao_id:
-            if not modelo_repo.obter(funcao_id, "funcao"):
-                erros.append(f"Item {indice}: função {funcao_id} não encontrada")
-        elif algoritmo_id not in CATALOG:
-            erros.append(f"Item {indice}: algoritmo inválido")
+    erros = geoprocessamento_engine.validate_steps(itens)
     if erros:
         raise HTTPException(status_code=422, detail={"erros": erros})
 

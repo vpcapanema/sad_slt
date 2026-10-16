@@ -34,6 +34,7 @@ def _gpkg(caminho: Path, camadas: tuple[str, ...] = ("uf",)) -> None:
 
 @pytest.fixture
 def storage(tmp_path, monkeypatch):
+    monkeypatch.setattr(storage_geoespacial, "montado", lambda: True)
     monkeypatch.setattr(storage_geoespacial, "diretorio_storage", lambda: tmp_path)
     _gpkg(tmp_path / "base-geoespacial/vetor/uf_sp.gpkg")
     _gpkg(tmp_path / "base-geoespacial/vetor/duas.gpkg", ("rios", "lagos"))

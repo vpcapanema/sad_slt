@@ -1,4 +1,6 @@
 import hashlib
+import pytest
+pytestmark = pytest.mark.usefixtures("storage_sintetico")
 import json
 from contextlib import contextmanager
 from pathlib import Path

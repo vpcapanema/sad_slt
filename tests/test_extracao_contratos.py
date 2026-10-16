@@ -4,6 +4,7 @@ from uuid import uuid4
 
 import geopandas as gpd
 import pytest
+pytestmark = pytest.mark.usefixtures("storage_sintetico")
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from pydantic import ValidationError

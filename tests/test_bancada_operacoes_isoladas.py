@@ -6,6 +6,7 @@ from uuid import uuid4
 import geopandas as gpd
 import numpy as np
 import pytest
+pytestmark = pytest.mark.usefixtures("storage_sintetico")
 from rasterio.transform import from_origin
 from shapely.geometry import Point, box
 

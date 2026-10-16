@@ -4,6 +4,7 @@ from io import BytesIO
 
 import geopandas as gpd
 import pytest
+pytestmark = pytest.mark.usefixtures("storage_sintetico")
 from fastapi import HTTPException
 from shapely.geometry import Point, shape
 

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import logging
 from pathlib import Path
 import tempfile as _tempfile
 
@@ -42,6 +43,12 @@ def raiz_escrita() -> Path:
 
 
 def configurar_temporarios() -> None:
+    if not os.environ.get('SICARD_STORAGE_WRITE_DIR') and not os.environ.get('SICARD_STORAGE_TEMP_DIR'):
+        logging.getLogger(__name__).info(
+            'Sem montagem de escrita: acesso ao storage pela API. '
+            'Operações que exigem temporários em arquivo devem executar na VM.'
+        )
+        return
     root = str(raiz_temporaria())
     # Inclui bibliotecas nativas e o spool de uploads multipart do Starlette.
     for name in ('TMPDIR', 'TMP', 'TEMP', 'CPL_TMPDIR', 'SQLITE_TMPDIR'):

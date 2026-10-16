@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import geopandas as gpd
 import pytest
+pytestmark = pytest.mark.usefixtures("storage_sintetico")
 from shapely.geometry import box
 
 from api.services.geoespacial_service import (

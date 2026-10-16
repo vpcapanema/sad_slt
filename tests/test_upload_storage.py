@@ -5,6 +5,8 @@ import io
 import json
 import tempfile
 import unittest
+import pytest
+pytestmark = pytest.mark.usefixtures("storage_sintetico")
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path

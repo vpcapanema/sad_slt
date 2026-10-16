@@ -133,7 +133,7 @@ def get_connection() -> Generator[ConnectionDict, None, None]:
                 raise
     except DatabaseUnavailableError:
         raise
-    except Exception as exc:
+    except psycopg.Error as exc:
         raise DatabaseUnavailableError(f"Falha ao conectar ao banco SLT: {exc}") from exc
 
 

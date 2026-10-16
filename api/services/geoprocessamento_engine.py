@@ -4,6 +4,7 @@ from __future__ import annotations
 from api.services.extracao_ogr import reproject as _gdal_reproject
 
 import json
+import os
 from pathlib import Path
 from inspect import signature
 from typing import Any, Callable, Literal, cast
@@ -308,12 +309,15 @@ class GeoprocessamentoEngine:
         self.functions: dict[str, dict[str, Any]] = {}
         self.flows: dict[str, dict[str, Any]] = {}
         from api.path_policy import project_path
-        self._definitions_path = project_path("data/geoespacial/configuracoes/definicoes.json")
+        self._definitions_path = (
+            project_path("data/geoespacial/configuracoes/definicoes.json")
+            if os.environ.get("SICARD_STORAGE_WRITE_DIR") else None
+        )
         self._load_definitions()
 
     def _load_definitions(self) -> None:
         source = self._definitions_path
-        if not source.exists():
+        if source is None or not source.exists():
             from api.path_policy import project_path
             source = project_path("config/geoespacial/definicoes.json")
         if not source.exists():
@@ -327,6 +331,10 @@ class GeoprocessamentoEngine:
             self.flows = {}
 
     def save_definitions(self) -> None:
+        if self._definitions_path is None:
+            raise ValueError(
+                "Definições locais descontinuadas. Salve funções e fluxos pelo catálogo da aplicação."
+            )
         self._definitions_path.parent.mkdir(parents=True, exist_ok=True)
         payload = {
             "funcoes": list(self.functions.values()),
@@ -610,31 +618,49 @@ class GeoprocessamentoEngine:
             None,
         )
         selected_attributes = params.get('atributos_selecionados') or []
+        if not isinstance(selected_attributes, list) or any(
+            not isinstance(item, dict) for item in selected_attributes
+        ):
+            raise ValueError("Os atributos selecionados devem ser uma lista de feições.")
         feature_ids = {str(item['__gp_feature']['id']) for item in selected_attributes
                        if isinstance(item.get('__gp_feature'), dict) and item['__gp_feature'].get('id') is not None}
         if feature_ids:
-            mask = source.index.astype(str).isin(feature_ids)
+            identities = source.index.astype(str)
+            if not identities.is_unique or not feature_ids.issubset(set(identities)):
+                raise ValueError("A seleção contém identificadores ausentes ou ambíguos. Refaça a seleção.")
+            mask = identities.isin(feature_ids)
         elif not identity_column and selected_keys.issubset(set(source.index.astype(str))):
+            if not source.index.astype(str).is_unique:
+                raise ValueError("A seleção contém índices ambíguos. Refaça a seleção.")
             mask = source.index.astype(str).isin(selected_keys)
         elif identity_column:
-            mask = source[identity_column].astype(str).isin(selected_keys)
+            identities = source[identity_column].astype(str)
+            if not identities.is_unique or not selected_keys.issubset(set(identities)):
+                raise ValueError("A seleção contém identificadores ausentes ou ambíguos. Refaça a seleção.")
+            mask = identities.isin(selected_keys)
         else:
             selected_attributes = params.get("atributos_selecionados") or []
             attribute_columns = [
                 column for column in source.columns if column != source.geometry.name
             ]
-            mask = source.apply(
-                lambda row: any(
-                    all(
-                        str(row[key]) == str(attributes[key])
-                        for key in attributes
-                        if key in attribute_columns
-                    )
-                    for attributes in selected_attributes
-                    if attributes and any(key in attribute_columns for key in attributes)
-                ),
-                axis=1,
-            )
+            mask = np.zeros(len(source), dtype=bool)
+            for attributes in selected_attributes:
+                comparable = {
+                    key: value for key, value in attributes.items()
+                    if key in attribute_columns
+                }
+                if not comparable:
+                    raise ValueError("As feições selecionadas não foram localizadas por atributos válidos.")
+                matched = source.apply(
+                    lambda row: all(
+                        (pd.api.types.is_scalar(row[key]) and pd.isna(row[key]) and value is None)
+                        or str(row[key]) == str(value)
+                        for key, value in comparable.items()
+                    ), axis=1,
+                ).to_numpy(dtype=bool)
+                if matched.sum() != 1:
+                    raise ValueError("A seleção por atributos está ausente ou ambígua. Refaça a seleção.")
+                mask |= matched
         mask_values = np.asarray(mask, dtype=bool)
         subset = source.loc[mask_values].copy()
         if subset.empty:
@@ -806,6 +832,8 @@ class GeoprocessamentoEngine:
 
     async def accumulated_cost(self, p: dict[str, Any]) -> dict[str, Any]:
         cost = self._raster(p["raster_id"])
+        if np.any(cost[np.isfinite(cost)] < 0):
+            raise ValueError("O raster de custo não pode conter valores negativos.")
         rows, cols = cost.shape
         if cost.size > 1_000_000:
             raise ValueError(
@@ -815,6 +843,8 @@ class GeoprocessamentoEngine:
         sc = int(p.get("origem_coluna", 0))
         if not (0 <= sr < rows and 0 <= sc < cols):
             raise ValueError("Célula de origem fora do raster")
+        if not np.isfinite(cost[sr, sc]):
+            raise ValueError("A célula de origem deve possuir um custo válido.")
         indices = np.arange(cost.size).reshape(rows, cols)
         origins = []
         targets = []
@@ -842,6 +872,7 @@ class GeoprocessamentoEngine:
         dist = dijkstra(graph, directed=False, indices=sr * cols + sc).reshape(
             rows, cols
         )
+        dist[~np.isfinite(dist)] = np.nan
         rid = self._new_raster(dist, self.profiles[p["raster_id"]])
         return {"raster_id": rid, "shape": list(dist.shape)}
 
@@ -1167,7 +1198,9 @@ class GeoprocessamentoEngine:
         rid = self._new_raster(result, self.profiles[p["raster_id"]])
         return {"raster_id": rid, "shape": list(result.shape)}
 
-    def validate_steps(self, steps: list[dict[str, Any]]) -> list[str]:
+    def validate_steps(
+        self, steps: list[dict[str, Any]], *, function_path: tuple[str, ...] = ()
+    ) -> list[str]:
         erros: list[str] = []
         if not steps:
             erros.append(
@@ -1197,6 +1230,26 @@ class GeoprocessamentoEngine:
                         "incompatível. Esperado: campos com nome e valor. Como "
                         "corrigir: abra a função e preencha seus parâmetros novamente."
                     )
+                    continue
+                function_id = str(step["funcao_id"])
+                if function_id in function_path:
+                    erros.append(
+                        f"Etapa {indice}: referência circular entre funções: "
+                        + " → ".join((*function_path, function_id))
+                    )
+                    continue
+                from api.repositories import modelo_geoprocessamento_repository as definitions
+                function = definitions.obter(function_id, "funcao")
+                if not function:
+                    erros.append(f"Etapa {indice}: função {function_id} não encontrada")
+                    continue
+                erros.extend(
+                    f"Etapa {indice}, função {function_id}: {error}"
+                    for error in self.validate_steps(
+                        function.get("passos") or [],
+                        function_path=(*function_path, function_id),
+                    )
+                )
                 continue
             algoritmo_id = str(step.get("algoritmo_id", "")).upper()
             if algoritmo_id not in CATALOG:
@@ -1213,9 +1266,13 @@ class GeoprocessamentoEngine:
                     "abra as propriedades e preencha os parâmetros novamente."
                 )
                 continue
-            ausentes = REQUIRED_PARAMETERS.get(algoritmo_id, set()) - set(
-                step.get("parametros", {})
-            )
+            parameters = step.get("parametros", {})
+            ausentes = {
+                key for key in REQUIRED_PARAMETERS.get(algoritmo_id, set())
+                if key not in parameters or parameters[key] is None
+                or (isinstance(parameters[key], str) and not parameters[key].strip())
+                or parameters[key] == []
+            }
             if ausentes:
                 nome = CATALOG.get(algoritmo_id, algoritmo_id)
                 campos = ", ".join(sorted(ausentes))

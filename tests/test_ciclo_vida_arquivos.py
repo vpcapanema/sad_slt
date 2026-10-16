@@ -29,7 +29,7 @@ class Connection:
 
 
 @pytest.fixture
-def storage(monkeypatch, tmp_path):
+def storage(monkeypatch, tmp_path, storage_sintetico):
     monkeypatch.setattr(ciclo, 'project_path', lambda path: tmp_path / path)
     from api.services import storage_remoto
     def enviar(caminho, source):

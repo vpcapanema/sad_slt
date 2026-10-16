@@ -7,10 +7,12 @@ transcrito à mão: a página acompanha o dado, em vez de envelhecer ao lado del
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 
 from api.path_policy import project_path
+from api.services import storage_remoto
 
 MATRIZ = "config/matriz-criterios-premissas-v3.json"
 NORMALIZACAO = "data/geoespacial/outputs/normalizacao_favorabilidade_fase2.json"
@@ -19,6 +21,12 @@ MAPAS_NORMALIZADOS = "data/geoespacial/relatorios/mapas_fase2_normalizados"
 
 
 def _ler_json(relativo: str) -> Any:
+    if relativo.startswith("data/") and not os.environ.get("SICARD_STORAGE_WRITE_DIR"):
+        try:
+            content = storage_remoto.baixar(f"aplicacao/{relativo}")
+        except FileNotFoundError:
+            return None
+        return json.loads(content.decode("utf-8"))
     caminho = project_path(relativo)
     if not caminho.is_file():
         return None

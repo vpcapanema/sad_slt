@@ -100,6 +100,20 @@ Não confunda limitações do ambiente do agente com o estado do Codespace intei
 No Windows, a tarefa **SICARD: Iniciar servidor local** usa o ambiente Python
 local e acessa os bancos oficiais pelo gateway TLS da porta 443, sem túnel SSH.
 A VM não usa esse gateway. O Docker local é apenas contingência.
+O storage existente é acessado pela API do SFTPGo no Windows; não se exige
+montagem local para iniciar o backend ou descobrir os testes. Caminhos nativos
+de dados e temporários continuam restritos ao storage configurado na VM:
+não há fallback para pastas locais. Operações que dependem desses caminhos
+devem executar na aplicação da VM. A rota legada `/data` responde 503 quando
+não há acesso nativo configurado; as APIs remotas não dependem dessa rota.
+Os JSONs e mapas da documentação de favorabilidade são lidos do storage
+existente (`aplicacao/data/geoespacial`), pela montagem da VM ou pela API
+remota no Windows. As duas pastas de mapas são acessíveis na rota pública
+`/data` também sem montagem, sem criar cópia local.
+Os testes que processam arquivos sintéticos solicitam explicitamente a fixture
+`storage_sintetico`: ela simula o storage apenas durante cada teste e remove os
+arquivos ao terminar. Não monta nem copia o storage real para o Windows; testes
+da política de armazenamento e de acesso remoto não usam essa simulação.
 O terminal compartilhado é descrito em
 [PowerShell compartilhado](documentacao/TERMINAL_POWERSHELL_COMPARTILHADO.md).
 
@@ -317,6 +331,24 @@ O build usa `--pull` e dependências com faixas de versão. Registre falhas de
 build/integração; não substitua dados ou aplique migrations automaticamente
 para contornar uma falha. Deploy requer autorização do usuário; iniciar o
 servidor local não autoriza publicação.
+
+### Correção do contrato de exportação do seed geoespacial
+
+A migração `136_corrigir_contrato_exportacao_seed.sql` corrige os parâmetros de
+OP-26 na função `funcao_fase2_normalizar_exportar`. Ela modifica somente o
+contrato original conhecido, sem sobrescrever modelos personalizados.
+No Windows, a aplicação direcionada é:
+
+```powershell
+.\scripts\apply-database.ps1 -OnlyMigration 136_corrigir_contrato_exportacao_seed.sql
+```
+
+O aplicador prioriza `SLT_DATABASE_URL` quando configurada, inclusive para o
+gateway TLS, sem exigir Docker local. Em 16/10/2026, a migração foi aplicada ao
+banco oficial `slt_db`; nova conexão confirmou o contrato persistido e sua
+reaplicação retornou `UPDATE 0`, sem alterar definições ou datas dos modelos.
+Essa atualização de banco não equivale à publicação do código da aplicação
+nem à aprovação dos testes ponta a ponta da bancada.
 
 ## Testes
 

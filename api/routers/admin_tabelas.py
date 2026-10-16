@@ -142,7 +142,6 @@ def _colunas_map(colunas: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
 
 
 # ---- Ligação com arquivos em disco (conteúdo geoespacial) ----
-_DATA_ROOT = project_path("data").resolve()
 
 
 def _slug(valor: Any) -> str:
@@ -158,7 +157,7 @@ def _resolver_arquivo(caminho: Any) -> Path | None:
     alvo = Path(caminho)
     try:
         alvo = (alvo if alvo.is_absolute() else project_path(caminho)).resolve()
-        alvo.relative_to(_DATA_ROOT)
+        alvo.relative_to(project_path("data").resolve())
     except (ValueError, OSError):
         return None
     return alvo if alvo.is_file() else None

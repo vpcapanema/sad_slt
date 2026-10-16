@@ -6,6 +6,7 @@ projeto. A resolução para o filesystem ocorre somente no limite de I/O.
 from __future__ import annotations
 
 import re
+import os
 from os import PathLike
 from pathlib import Path, PurePosixPath
 
@@ -88,7 +89,12 @@ def project_relative(value: Path) -> str:
     """Retorna uma localização de I/O no formato público relativo e portátil."""
     value = value.resolve()
     from api.storage_policy import raiz_escrita, raiz_temporaria
-    for root, prefix in ((raiz_temporaria(), Path('tmp')), (raiz_escrita() / 'aplicacao', Path('.'))):
+    roots = []
+    if os.environ.get('SICARD_STORAGE_TEMP_DIR'):
+        roots.append((raiz_temporaria(), Path('tmp')))
+    if os.environ.get('SICARD_STORAGE_WRITE_DIR'):
+        roots.append((raiz_escrita() / 'aplicacao', Path('.')))
+    for root, prefix in roots:
         if value.is_relative_to(root):
             return (prefix / value.relative_to(root)).as_posix()
     try:

@@ -14,12 +14,14 @@ from pathlib import Path
 
 import geopandas as gpd
 import pytest
+pytestmark = pytest.mark.usefixtures("storage_sintetico")
 from shapely.geometry import Point
 
 warnings.filterwarnings("ignore")
 
 from api.repositories import camada_geoespacial_repository as repo
 from api.services.geoespacial_service import geoespacial_service as geo
+from api.path_policy import project_path, project_relative
 
 # `caminho_arquivo` precisa ser relativo à raiz do projeto (project_path exige
 # isso) — por isso o arquivo de teste mora dentro do próprio repositório, não
@@ -44,23 +46,25 @@ def camada_somente_banco():
 
 @pytest.fixture()
 def camada_com_arquivo():
-    DIR_TESTE.mkdir(parents=True, exist_ok=True)
-    caminho = DIR_TESTE / "camada_teste.gpkg"
+    directory = project_path(DIR_TESTE)
+    directory.mkdir(parents=True, exist_ok=True)
+    caminho = directory / "camada_teste.gpkg"
     gdf = _gdf_exemplo()
     gdf.to_file(caminho)
-    relativo = caminho.as_posix()
+    relativo = project_relative(caminho)
     camada_id = geo.registrar_camada(
         gdf, "Teste edição com arquivo", "teste", caminho_arquivo=relativo
     )
     yield camada_id, caminho
     asyncio.run(geo.excluir_recurso(camada_id))
-    shutil.rmtree(DIR_TESTE, ignore_errors=True)
+    shutil.rmtree(directory)
 
 
 def test_recusa_editar_camada_homologada(camada_somente_banco, monkeypatch):
-    monkeypatch.setattr(repo, "esta_homologada", lambda _id: True)
-    with pytest.raises(ValueError, match="somente leitura"):
-        geo.salvar_edicoes_atributos(camada_somente_banco, [{"indice": 0, "campos": {"valor": 99}}])
+    with monkeypatch.context() as patch:
+        patch.setattr(repo, "esta_homologada", lambda _id: True)
+        with pytest.raises(ValueError, match="somente leitura"):
+            geo.salvar_edicoes_atributos(camada_somente_banco, [{"indice": 0, "campos": {"valor": 99}}])
 
 
 def test_recusa_lista_de_edicoes_vazia(camada_somente_banco):

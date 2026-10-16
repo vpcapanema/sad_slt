@@ -3,6 +3,7 @@ import glob
 import os
 
 import pytest
+pytestmark = pytest.mark.usefixtures("storage_sintetico")
 
 from api.services.catalogo_arquivos import camadas_dos_arquivos
 from api.services.visualizacao_arquivo import ler_arquivo

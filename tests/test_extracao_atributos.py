@@ -4,6 +4,7 @@ from uuid import uuid4
 
 import geopandas as gpd
 import pytest
+pytestmark = pytest.mark.usefixtures("storage_sintetico")
 from shapely.geometry import LineString, Point, box
 
 from api.services.extracao_atributos_analise import analisar

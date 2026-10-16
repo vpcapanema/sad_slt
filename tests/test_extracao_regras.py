@@ -1,6 +1,7 @@
 import json
 
 import pytest
+pytestmark = pytest.mark.usefixtures("storage_sintetico")
 
 from api.services import configuracao_bancada as configuracao
 from api.services import extracao_atributos_regras as regras

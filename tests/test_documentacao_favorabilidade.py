@@ -119,3 +119,26 @@ def test_criterio_nao_supera_o_rotulo():
     h4 = float(re.search(r"\.doc-criterio h4 \{[^}]*font-size:\s*([\d.]+)rem", css).group(1))
     ficha_dd = float(re.search(r"\.doc-ficha dd \{[^}]*font-size:\s*([\d.]+)rem", css).group(1))
     assert ficha_dd <= h4, f"valor da ficha a {ficha_dd}rem, nome do critério a {h4}rem"
+
+
+def test_artefato_sem_montagem_vem_da_api(monkeypatch):
+    from api.services import documentacao_favorabilidade as service
+    monkeypatch.delenv("SICARD_STORAGE_WRITE_DIR", raising=False)
+    download = []
+    def baixar(path):
+        download.append(path)
+        return b'{"grade": {"teste": true}}'
+    monkeypatch.setattr(service.storage_remoto, "baixar", baixar)
+    assert service._ler_json(service.NORMALIZACAO) == {"grade": {"teste": True}}
+    assert download == [f"aplicacao/{service.NORMALIZACAO}"]
+
+
+def test_falha_storage_documentacao_retorna_503(monkeypatch):
+    from api.services import documentacao_favorabilidade as service
+    monkeypatch.delenv("SICARD_STORAGE_WRITE_DIR", raising=False)
+    def falhar(path):
+        raise service.storage_remoto.StorageIndisponivel("falha simulada de storage")
+    monkeypatch.setattr(service.storage_remoto, "baixar", falhar)
+    response = TestClient(app).get(ROTA)
+    assert response.status_code == 503
+    assert "falha simulada" in response.json()["detail"]

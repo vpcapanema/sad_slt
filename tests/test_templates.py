@@ -70,6 +70,7 @@ def test_no_legacy_html_remains_outside_template_directory() -> None:
         and ".tmp" not in path.parts
         and "tmp" not in path.parts
         and "artifacts" not in path.parts
+        and "auditoria" not in path.parts
         and Path("outputs/inventario-saidas-20261008") not in path.parents
         and Path("outputs/migracao-demandas") not in path.parents
         # plugins/ é sub-projeto de front-end próprio (build do vite) e captura

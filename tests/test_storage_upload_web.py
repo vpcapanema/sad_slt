@@ -84,7 +84,7 @@ def test_reescrita_preserva_algoritmo_e_subpath():
     assert '/sicard/restrict/ponte.js' in result
 
 
-def test_resultado_todas_camadas_gpkg_e_zip(tmp_path, monkeypatch):
+def test_resultado_todas_camadas_gpkg_e_zip(tmp_path, monkeypatch, storage_sintetico):
     import geopandas as gpd
     from shapely.geometry import Point
     from zipfile import ZipFile

@@ -1,6 +1,7 @@
 """Modo enriquecimento: um registro por feição (ou trecho municipal) com regras por base."""
 import geopandas as gpd
 import pytest
+pytestmark = pytest.mark.usefixtures("storage_sintetico")
 from shapely.geometry import LineString, Point, Polygon, box
 
 from api.services.extracao_atributos_enriquecimento import enriquecer, medida, preparar

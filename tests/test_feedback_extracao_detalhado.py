@@ -1,5 +1,6 @@
 """Eventos observados em operações reais pequenas; nenhum banco/serviço externo."""
 import pytest
+pytestmark = pytest.mark.usefixtures("storage_sintetico")
 import geopandas as gpd
 from shapely.geometry import Point, box
 from api.services.controle_processamento import ControleProcessamento, ProcessamentoCancelado

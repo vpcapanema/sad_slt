@@ -48,6 +48,17 @@ _OVERLAY_OGR: dict[str, str] = {
 }
 
 
+def _normalizar_raster(raster: np.ndarray, profile: dict[str, Any]) -> np.ndarray:
+    data = np.array(
+        np.ma.filled(np.asanyarray(raster, dtype="float32"), np.nan), copy=True,
+    )
+    nodata = profile.get("nodata")
+    if nodata is not None:
+        data[data == nodata] = np.nan
+    data[~np.isfinite(data)] = np.nan
+    return data
+
+
 def _prefixo_overlay(regra_nomenclatura: str, fonte_id: str) -> str:
     """Traduz a regra de nomenclatura declarada no fluxo em prefixo do OGR.
 
@@ -352,7 +363,8 @@ class GeoespacialService:
         **extras: Any,
     ) -> str:
         raster_id = f"raster_{uuid4().hex}"
-        raster_data = np.asarray(raster, dtype="float32")
+        raster_data = _normalizar_raster(raster, profile)
+        profile = {**profile, "nodata": np.nan}
         if progress:
             progress("Matriz raster normalizada para persistência")
         crs = profile.get("crs")
@@ -504,18 +516,24 @@ class GeoespacialService:
         self._verificar_resultado_disponivel(raster_id)
         cached = self._rasters.get(raster_id)
         if cached is not None:
-            return cached
+            data = _normalizar_raster(cached, self._raster_profiles[raster_id])
+            self._rasters[raster_id] = data
+            self._raster_profiles[raster_id] = {
+                **self._raster_profiles[raster_id], "nodata": np.nan,
+            }
+            return data
         loaded = camada_geoespacial_repository.carregar_raster(raster_id)
         if loaded is None:
             raise ValueError(f"Raster {raster_id} não encontrado")
         geotiff, _ = loaded
         with MemoryFile(geotiff) as memory:
             with memory.open() as dataset:
-                data = dataset.read(1).astype("float32")
+                data = dataset.read(1, masked=True).astype("float32").filled(np.nan)
+                data[~np.isfinite(data)] = np.nan
                 profile = {
                     "crs": dataset.crs,
                     "transform": dataset.transform,
-                    "nodata": dataset.nodata,
+                    "nodata": np.nan,
                 }
         self._rasters[raster_id] = data
         self._raster_profiles[raster_id] = profile
@@ -835,11 +853,13 @@ class GeoespacialService:
         if caminho is not None:
             from api.services.camada_arquivo import resolver_camada
             layer = resolver_camada(caminho, self._metadados[camada_id])
-            self._reescrever_arquivo_do_acervo(caminho, gdf, layer)
+            camada_geoespacial_repository.substituir_vetor(
+                camada_id, gdf, metadata, arquivo_editado=caminho,
+                gravar_arquivo=lambda: self._reescrever_arquivo_do_acervo(caminho, gdf, layer),
+            )
             gravado_em_arquivo = True
-        camada_geoespacial_repository.substituir_vetor(
-            camada_id, gdf, metadata
-        )
+        else:
+            camada_geoespacial_repository.substituir_vetor(camada_id, gdf, metadata)
         self._camadas[camada_id] = gdf
         return {
             "camada_id": camada_id,
@@ -908,15 +928,18 @@ class GeoespacialService:
             gdf = gdf.iloc[[i for i in range(total) if i not in set(excluidos)]].copy()
 
         gravado_em_arquivo = False
+        metadata = self._metadados[camada_id]
         caminho = self._caminho_arquivo_da_camada(camada_id)
         if caminho is not None:
             from api.services.camada_arquivo import resolver_camada
             layer = resolver_camada(caminho, self._metadados[camada_id])
-            self._reescrever_arquivo_do_acervo(caminho, gdf, layer)
+            camada_geoespacial_repository.substituir_vetor(
+                camada_id, gdf, metadata, arquivo_editado=caminho,
+                gravar_arquivo=lambda: self._reescrever_arquivo_do_acervo(caminho, gdf, layer),
+            )
             gravado_em_arquivo = True
-
-        metadata = self._metadados[camada_id]
-        camada_geoespacial_repository.substituir_vetor(camada_id, gdf, metadata)
+        else:
+            camada_geoespacial_repository.substituir_vetor(camada_id, gdf, metadata)
         self._camadas[camada_id] = gdf
         return {
             "camada_id": camada_id,
@@ -1150,7 +1173,7 @@ class GeoespacialService:
             with rasterio.open(origem_arquivo) as src:
                 if progress:
                     progress("Dataset raster aberto pelo driver GDAL")
-                data = src.read(1).astype("float32")
+                data = src.read(1, masked=True).astype("float32").filled(np.nan)
                 if progress:
                     progress("Banda raster carregada em memória")
                 profile = {"crs": src.crs, "transform": src.transform, "nodata": src.nodata}
@@ -1813,17 +1836,14 @@ class GeoespacialService:
         gdf = self.obter_camada_dados(camada_id).copy()
         gdf_ref = self.obter_camada_dados(camada_ref_id)
         if gdf.crs and gdf_ref.crs and gdf.crs != gdf_ref.crs:
-            gdf_ref = _gdal_reproject(gdf_ref, gdf.crs)
+            gdf_ref = gpd.GeoDataFrame(_gdal_reproject(gdf_ref, gdf.crs))
 
         # Spatial join
-        resultado = gpd.sjoin(gdf, gdf_ref, how="inner", predicate=tipo_selecao)
-
-        if inverter_selecao:
-            # Selecionar feições que NÃO intersectam
-            resultado = gdf[~gdf.index.isin(resultado.index)]
-
-        if not inverter_selecao:
-            resultado = gdf[gdf.index.isin(resultado.index)].copy()
+        matches = gpd.sjoin(
+            gdf.reset_index(drop=True), gdf_ref, how="inner", predicate=tipo_selecao,
+        )
+        mask = np.isin(np.arange(len(gdf)), matches.index)
+        resultado = gdf.iloc[~mask if inverter_selecao else mask].copy()
         nova_camada_id = self.registrar_camada(resultado, f"Seleção espacial de {camada_id}", "OP-07")
 
         return {
