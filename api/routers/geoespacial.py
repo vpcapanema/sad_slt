@@ -912,6 +912,24 @@ def listar_pastas_storage(caminho: str = "") -> dict[str, Any]:
         raise _erro_pasta_storage(exc) from exc
 
 
+@router.get("/storage/saidas/pastas")
+def listar_pastas_saidas(caminho: str = "saidas-geoespaciais") -> dict:
+    from api.services import saidas_storage
+    try:
+        return saidas_storage.listar_pastas(caminho)
+    except Exception as exc:
+        raise _erro_pasta_storage(exc) from exc
+
+
+@router.post("/storage/saidas/pastas", status_code=status.HTTP_201_CREATED)
+def criar_pasta_saidas(payload: PastaStorage) -> dict:
+    from api.services import saidas_storage
+    try:
+        return saidas_storage.criar_pasta(payload.caminho, payload.nome)
+    except Exception as exc:
+        raise _erro_pasta_storage(exc) from exc
+
+
 @router.post("/storage/pastas", status_code=status.HTTP_201_CREATED)
 def criar_pasta_storage(payload: PastaStorage) -> dict[str, Any]:
     from api.services import pastas_storage
@@ -1339,7 +1357,7 @@ def listar_saidas_geoespaciais(execucao_id: str | None = None,
 def baixar_saida_geoespacial(caminho: str,
                              user: SessionUser = Depends(require_geospatial_access)) -> Response:
     from api.repositories.saidas_geoespaciais_repository import referencia
-    from api.services.saidas_storage import validar, conferir
+    from api.services.saidas_storage import validar_exportacao as validar, conferir
     from pathlib import PurePosixPath
     from urllib.parse import quote
     try:
@@ -1359,7 +1377,7 @@ def baixar_saida_geoespacial(caminho: str,
 @router.get('/saidas/raster-preview')
 def preview_saida_raster(caminho: str,
                         user: SessionUser = Depends(require_geospatial_access)) -> dict:
-    from api.services.saidas_storage import validar,preview_raster
+    from api.services.saidas_storage import validar_exportacao as validar,preview_raster
     from api.repositories.saidas_geoespaciais_repository import referencia
     from api.services.session_service import is_gestor
     try:

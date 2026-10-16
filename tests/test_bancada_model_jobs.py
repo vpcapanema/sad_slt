@@ -60,6 +60,33 @@ def test_checkpoint_reaches_nested_iterator():
     assert calls == ["a"]
 
 
+def test_selected_destination_overrides_only_final_nested_function(monkeypatch):
+    from api.repositories import modelo_geoprocessamento_repository as definitions
+    calls = []
+    selected = dict(destino="storage", pasta_saida="saidas-geoespaciais/Projeto",
+                    nome_saida="Escolhido", formato_saida="GeoJSON", crs_saida="entrada")
+
+    async def execute(op, params):
+        calls.append((op, params))
+        return {"camada_id": "synthetic-result"}
+
+    stored = dict(destino="storage", pasta_saida="saidas-geoespaciais/Antigo",
+                  nome_saida="Antigo", formato_saida="GeoPackage", crs_saida="entrada")
+    function = {"passos": [
+        {"algoritmo_id": "OP-03", "parametros": {"camada_id": "$entrada"}},
+        {"algoritmo_id": "OP-27", "parametros": {**stored, "entrada": "$camada_id"}},
+    ]}
+    monkeypatch.setattr(definitions, "obter", lambda *args: function)
+    monkeypatch.setattr(engine, "execute", execute)
+    steps = [{"algoritmo_id": "OP-03", "parametros": {"camada_id": "$entrada"}},
+             {"funcao_id": "nested", "parametros": {}}]
+    asyncio.run(engine.run_steps(steps, {"entrada": "synthetic", **selected}))
+    assert len(calls) == 3
+    assert "pasta_saida" not in calls[0][1]
+    assert "pasta_saida" not in calls[1][1]
+    assert calls[2][1] == {**selected, "entrada": "synthetic-result"}
+
+
 def test_model_job_uses_inputs_and_finishes(no_lifecycle_writes):
     jobs = GeoprocessamentoJobs()
     job_id = jobs._new("modelo", ["Executar", "Finalizar"])

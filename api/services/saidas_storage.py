@@ -14,6 +14,49 @@ RAIZ = 'saidas-geoespaciais'
 GRUPOS = {'camadas', 'relatorios', 'pacotes'}
 
 
+def pasta_exportacao(caminho: str) -> str:
+    from api.services.pastas_storage import nome_valido
+    raw = str(caminho)
+    parts = raw.split('/')
+    if not parts or parts[0] != RAIZ:
+        raise ValueError('Escolha uma pasta dentro de saidas-geoespaciais.')
+    for part in parts[1:]:
+        nome_valido(part)
+    return '/'.join(parts)
+
+
+def validar_exportacao(caminho: str) -> str:
+    from api.services.pastas_storage import nome_valido
+    parent, separator, name = str(caminho).rpartition('/')
+    if not separator:
+        raise ValueError('Arquivo fora do storage de saídas.')
+    pasta_exportacao(parent)
+    nome_valido(name)
+    return caminho
+
+
+def listar_pastas(caminho: str = RAIZ) -> dict:
+    path = pasta_exportacao(caminho)
+    items = storage_remoto.listar(path, estrito=True)
+    return {
+        'caminho': path,
+        'pastas': [{'nome': item['nome'], 'caminho': f"{path}/{item['nome']}", 'raiz': False}
+                   for item in items if item['pasta']],
+        'arquivos': [item['nome'] for item in items if not item['pasta']],
+    }
+
+
+def criar_pasta(pai: str, nome: str) -> dict:
+    from api.services.pastas_storage import nome_valido
+    parent = pasta_exportacao(pai)
+    name = nome_valido(nome)
+    if name in {item['nome'] for item in storage_remoto.listar(parent, estrito=True)}:
+        raise FileExistsError('Já existe um arquivo ou pasta com esse nome.')
+    path = f'{parent}/{name}'
+    storage_remoto.criar_pasta(path)
+    return {'nome': name, 'caminho': path}
+
+
 def validar(caminho: str) -> str:
     path = PurePosixPath(str(caminho))
     if path.is_absolute() or '\\' in str(caminho) or '..' in path.parts:
@@ -36,7 +79,7 @@ def destino(execucao: str, grupo: str, nome: str) -> str:
 
 
 def conferir(caminho: str, checksum: str | None = None) -> bytes:
-    data = storage_remoto.baixar(validar(caminho))
+    data = storage_remoto.baixar(validar_exportacao(caminho))
     if checksum and sha256(data).hexdigest() != checksum:
         raise ValueError('O arquivo de saída no storage diverge do hash registrado.')
     return data
@@ -47,6 +90,15 @@ def enviar_arquivo(execucao: str, grupo: str, arquivo: Path, *, nome: str | None
     path = validar(caminho) if caminho else destino(execucao, grupo, nome or arquivo.name)
     if PurePosixPath(path).parts[2:4] != (str(UUID(str(execucao))), grupo):
         raise ValueError('O destino não corresponde à execução e ao grupo informados.')
+    return _enviar_arquivo(path, arquivo)
+
+
+def enviar_exportacao(caminho: str, arquivo: Path) -> dict:
+    path = validar_exportacao(caminho)
+    return _enviar_arquivo(path, arquivo)
+
+
+def _enviar_arquivo(path: str, arquivo: Path) -> dict:
     with arquivo.open('rb') as stream:
         digest = sha256()
         for chunk in iter(lambda: stream.read(1024 * 1024), b''):
@@ -66,11 +118,18 @@ def enviar_arquivo(execucao: str, grupo: str, arquivo: Path, *, nome: str | None
     return {'caminho': path, 'sha256': checksum, 'tamanho_bytes': arquivo.stat().st_size}
 
 
-def enviar_bytes(execucao: str, grupo: str, nome: str, data: bytes) -> dict:
-    path = destino(execucao, grupo, nome)
+def enviar_bytes(execucao: str, grupo: str, nome: str, data: bytes, *, caminho: str | None = None) -> dict:
+    path = validar(caminho) if caminho else destino(execucao, grupo, nome)
+    if caminho and PurePosixPath(path).parts[2:4] != (str(UUID(str(execucao))), grupo):
+        raise ValueError('O destino não corresponde à execução e ao grupo informados.')
+    return enviar_conteudo(path, data)
+
+
+def enviar_conteudo(caminho: str, data: bytes) -> dict:
+    path = validar_exportacao(caminho)
     checksum = sha256(data).hexdigest()
-    storage_remoto.enviar_bytes(path, data)
     try:
+        storage_remoto.enviar_bytes(path, data)
         remote = conferir(path, checksum)
         if len(remote) != len(data):
             raise ValueError('O tamanho do arquivo enviado diverge do original.')
@@ -94,15 +153,20 @@ def materializar(caminho: str, checksum: str | None = None):
 
 
 def remover(caminho: str):
-    storage_remoto.apagar_arquivo(validar(caminho))
+    storage_remoto.apagar_arquivo(validar_exportacao(caminho))
 
 
 def vetor(camada: dict):
     import geopandas as gpd
+    from io import BytesIO
+    from api.storage_policy import sem_montagem
     metadata = camada.get('metadados') or {}
     path = camada.get('storage_caminho') or metadata.get('caminho_arquivo')
-    with materializar(path, metadata.get('sha256')) as source:
-        frame = gpd.read_file(source, engine='pyogrio', layer='resultado')
+    if sem_montagem():
+        frame = gpd.read_file(BytesIO(conferir(validar(path), metadata.get('sha256'))), engine='pyogrio', layer='resultado')
+    else:
+        with materializar(path, metadata.get('sha256')) as source:
+            frame = gpd.read_file(source, engine='pyogrio', layer='resultado')
     for field in metadata.get('campos_json_arquivo', []):
         if field in frame:
             frame[field] = frame[field].map(lambda value: json.loads(value) if isinstance(value, str) else value)

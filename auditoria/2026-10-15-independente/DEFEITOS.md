@@ -286,3 +286,107 @@ A regressão libera a publicação pelo script oficial, condicionada à confirma
 de build, reinício, saúde e acesso público na VM. Permanecem os cenários
 exaustivos e de concorrência entre processos do plano original; não se declara
 que toda a matriz de auditoria foi homologada.
+
+### Regressão pós-publicação — OP-03 e reabertura de saídas
+
+Em 16/10/2026 o uso em produção reproduziu falha após a gravação da OP-03:
+“Selecione um arquivo nas áreas permitidas do storage.” A saída canônica em
+`saidas-geoespaciais/execucoes/...` era enviada ao leitor legado, limitado às
+raízes `data/geoespacial`, em vez de ser aberta pelo leitor do storage.
+
+A abertura do resultado e sua carga para nova execução agora compartilham as
+raízes de leitura declaradas pelo storage, mantendo a validação de caminhos e
+identidade. A execução só é marcada como concluída depois de preparar o resultado
+para visualização; falha de reabertura é registrada como erro, sem conclusão
+prévia de sucesso.
+
+A reprodução sintética falhou antes da correção nas duas modalidades de destino.
+Após a correção, o cenário executa a OP-03, reabre o GeoPackage, prepara seus
+metadados, verifica duas feições, atributos, coordenadas e CRS EPSG:3857 e
+reprocessa a própria saída. O arquivo original permanece byte a byte inalterado.
+Persistência é simulada no teste; motor GIS, arquivos e leitores são reais.
+
+### Interface do destino de saída
+
+O painel de parâmetros e as propriedades do modelador apresentam somente o
+campo Destino com o ícone de pasta na mesma linha. O explorador concentra a
+escolha da pasta em `saidas-geoespaciais`, do nome e do formato compatível.
+Os campos duplicados de nome e formato deixam de ser exibidos no painel;
+seus valores internos são preservados para serialização e execução.
+O teste de navegador verifica a ausência desses campos no painel, sua presença
+no explorador, a transmissão dos valores e a persistência no modelo compilado.
+
+### Processamento local sem montagem — temporários e saídas pela API
+
+Em 16/10/2026 a execução local da OP-03 leu a entrada do storage, mas falhou ao
+persistir o resultado porque exigia `SICARD_STORAGE_TEMP_DIR` como caminho nativo.
+A existência de `temporarios-sicard` no SFTPGo não atendia à exigência do código.
+
+Sem montagem configurada, a gravação canônica, as exportações vetoriais e raster,
+os relatórios JSON e os intermediários do overlay agora usam serialização em RAM
+e acesso ao storage pela API. Os arquivos temporários são enviados a subpastas
+exclusivas de `temporarios-sicard`, com conferência de hash e limpeza ao terminar.
+As saídas permanecem em `saidas-geoespaciais`. Não se cria montagem, espelho do
+acervo ou diretório temporário no disco local. Na VM, o fluxo nativo é preservado.
+Configuração parcial ou inválida de montagem continua sendo recusada.
+
+Os testes sem montagem cobrem OP-03 com gravação canônica e exportação em
+GeoPackage, GeoJSON e Shapefile, reabertura a frio, raster com NoData, relatório
+JSON, overlay, temporários ausentes e falha de envio. O acesso real pela API foi
+verificado nas duas raízes. Uma OP-03 sintética também gravou temporários e saídas
+reais no storage, com reabertura e conferência de atributos e CRS; somente o
+catálogo foi simulado, sem escrita no banco oficial. Todos os arquivos e pastas
+exclusivos dessa verificação foram removidos por seus caminhos exatos.
+Essas verificações não homologam todos os demais fluxos legados sem montagem.
+
+Regressão completa após a adaptação: 1.649 testes aprovados, 17 ignorados e
+4 subtestes aprovados. O teste de navegador do destino de saída também passou.
+O servidor local com recarga automática respondeu HTTP 200 após as alterações.
+Esta atualização ainda não foi publicada na VM.
+
+### Fechamento dos testes da rodada — 16/10/2026
+
+Resultado final: **1.664 aprovados, zero falhas, zero erros, três ignorados,
+35 avisos e quatro subtestes aprovados**, em 242,10 segundos.
+A integração Testing retornou zero testes; a execução alternativa utilizou
+o interpretador `.venv`, com `SLT_TEST_CICLO_BANCO=1` e
+`SLT_TEST_STORAGE_E2E=1`, pelo comando:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests -q --tb=short -rs -p no:cacheprovider
+```
+
+As 14 integrações antes condicionais de ciclo de vida passaram com banco real,
+storage sintético e rollback. Cobrem catálogo sem duplicação de geometria,
+exportação, extração com proprietário, publicação, limpeza e falha de validação.
+
+O novo `tests/test_bancada_storage_e2e.py` executou o Edge contra servidor
+FastAPI/GDAL real em porta exclusiva e storage pela API. O navegador abriu
+entrada sintética, selecionou pasta/nome/formato no explorador, executou OP-03,
+recarregou a página, reabriu a saída e a reprocessou. As exportações GeoPackage
+e GeoJSON continham os valores esperados `[7, 11]` e CRS EPSG:3857; a entrada
+permaneceu byte a byte inalterada. O catálogo teve suas duas exportações
+verificadas antes do rollback. Arquivos e pastas exclusivos foram removidos
+por caminhos rastreados, preservando as raízes compartilhadas.
+
+A sessão foi assinada para usuário sintético com perfil gestor; não representa
+teste de login por senha nem de todos os perfis. O teste recarrega a página,
+não reinicia o processo. A segunda bancada não recebeu novo E2E integral.
+O teste não escreve permanentemente no catálogo oficial.
+
+Também passaram os scripts `bancada-feedback-auditoria-unit.cjs`,
+`bancada-destino-storage.cjs`, `bancada-integridade-sessao.cjs` e
+`bancada-modelador-auditoria.cjs`. São regressões locais com serviços simulados.
+O último foi atualizado para os contratos atuais: Edge instalado, confirmação
+nativa, feedback no log, execução assíncrona e explorador compartilhado.
+
+Os três ignorados são: snapshot municipal autorizado não fornecido, ausência
+de arquivo com registro duplicado e ausência de Shapefile sem `.cpg`.
+Os avisos não representam falhas; incluem leitura em RAM de GeoPackage sem
+extensão no identificador interno do pyogrio.
+
+**Parecer da rodada:** correções e regressão concluídas, fluxo local
+OP-03/storage validado. Não há aprovação exaustiva da matriz histórica.
+Quedas reais, concorrência entre processos, integrações externas e homologação
+completa das duas interfaces continuam pendentes. Estes resultados são locais;
+a publicação pelo script oficial exige sua própria verificação de saúde.

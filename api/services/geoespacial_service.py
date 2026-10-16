@@ -9,7 +9,7 @@ import os
 import re
 from api import storage_policy as tempfile
 import unicodedata
-from contextlib import contextmanager
+from contextlib import contextmanager, ExitStack
 from contextvars import ContextVar
 from datetime import datetime, timezone
 from io import BytesIO
@@ -206,25 +206,41 @@ def _overlay_ogr(
     # ignore_cleanup_errors: no Windows o GDAL pode reter o handle do GeoPackage
     # por um instante após a liberação, e falhar a limpeza de um diretório
     # temporário não pode derrubar um geoprocesso que já produziu resultado.
-    with tempfile.TemporaryDirectory(prefix="slt_overlay_", ignore_cleanup_errors=True) as pasta:
+    with ExitStack() as stack:
+        remoto = tempfile.sem_montagem()
+        if remoto:
+            from api.services.arquivos_geoespaciais_memoria import diretorio, vetor
+            componentes = {
+                **vetor(gdf1, "entrada.gpkg", "GPKG", layer="entrada"),
+                **vetor(gdf2, "metodo.gpkg", "GPKG", layer="metodo"),
+            }
+            pasta = stack.enter_context(diretorio(componentes))
+        else:
+            pasta = stack.enter_context(tempfile.TemporaryDirectory(prefix="slt_overlay_", ignore_cleanup_errors=True))
         base = Path(pasta)
         caminho_1, caminho_2 = base / "entrada.gpkg", base / "metodo.gpkg"
         caminho_saida = base / "saida.gpkg"
-        gdf1.to_file(caminho_1, layer="entrada", driver="GPKG")
-        gdf2.to_file(caminho_2, layer="metodo", driver="GPKG")
+        if remoto:
+            fonte_1 = ogr.Open(pasta + "/entrada.gpkg")
+            fonte_2 = ogr.Open(pasta + "/metodo.gpkg")
+            destino = ogr.GetDriverByName("GPKG").CreateDataSource(pasta + "/saida.gpkg")
+        else:
+            gdf1.to_file(caminho_1, layer="entrada", driver="GPKG")
+            gdf2.to_file(caminho_2, layer="metodo", driver="GPKG")
 
-        fonte_1 = ogr.Open(str(caminho_1))
-        fonte_2 = ogr.Open(str(caminho_2))
+            fonte_1 = ogr.Open(str(caminho_1))
+            fonte_2 = ogr.Open(str(caminho_2))
+            destino = ogr.GetDriverByName("GPKG").CreateDataSource(str(caminho_saida))
         camada_1, camada_2 = fonte_1.GetLayer(), fonte_2.GetLayer()
 
-        destino = ogr.GetDriverByName("GPKG").CreateDataSource(str(caminho_saida))
         saida = destino.CreateLayer(
             "resultado", camada_1.GetSpatialRef(), camada_1.GetGeomType()
         )
         interrompido=[]
         def callback(fracao, mensagem, dados):
             try:
-                progresso(fracao * 100, 100)
+                if progresso is not None:
+                    progresso(fracao * 100, 100)
                 return 1
             except Exception as exc:
                 interrompido.append(exc)
@@ -247,7 +263,10 @@ def _overlay_ogr(
         # remoção do diretório temporário.
         del camada_1, camada_2, saida
         destino = fonte_1 = fonte_2 = None
-        bruto = gpd.read_file(caminho_saida, layer="resultado")
+        bruto = gpd.read_file(
+            BytesIO(bytes(gdal.VSIGetMemFileBuffer_unsafe(pasta + "/saida.gpkg"))) if remoto else caminho_saida,
+            layer="resultado", engine="pyogrio",
+        )
 
     return _restringir_dimensao(bruto, gdf1)
 
@@ -1675,6 +1694,11 @@ class GeoespacialService:
 
         if opcao_salvamento == "persistir_sistema":
             from api.services.ciclo_vida_arquivos import caminho_exportacao, registrar_exportacao
+            if tempfile.sem_montagem():
+                return await self.salvar_camada(
+                    camada_id, "data/geoespacial/outputs", nome_arquivo,
+                    crs_saida or "auto", {"GPKG": "gpkg", "GeoJSON": "geojson", "ESRI Shapefile": "shapefile"}[driver],
+                )
             caminho_completo = caminho_exportacao(nome_arquivo, "vetor")
             caminho_relativo = Path(project_relative(caminho_completo))
             if progress:
@@ -1906,6 +1930,22 @@ class GeoespacialService:
 
         if opcao_salvamento == "persistir_sistema":
             from api.services.ciclo_vida_arquivos import caminho_exportacao, registrar_exportacao
+            if tempfile.sem_montagem():
+                from api.path_policy import relative_file_name, validar_categoria_compativel
+                from api.services.ciclo_vida_arquivos import registrar_exportacao_memoria
+                filename = relative_file_name(nome_arquivo)
+                validar_categoria_compativel(filename, "raster")
+                profile = self._raster_profiles.get(raster_id)
+                if not profile:
+                    raise ValueError("Raster sem metadados espaciais para exportação")
+                with MemoryFile() as memory:
+                    with memory.open(driver="GTiff", count=1, height=raster.shape[0], width=raster.shape[1],
+                                     dtype="float32", crs=profile["crs"], transform=profile["transform"],
+                                     nodata=np.nan, compress="deflate" if comprimir_arquivo else None) as dst:
+                        dst.write(raster.astype("float32"), 1)
+                    conteudos = {filename: memory.read()}
+                record = registrar_exportacao_memoria(filename, conteudos, raster_id, "raster")
+                return {**record, "formato": formato_saida}
             caminho_completo = caminho_exportacao(nome_arquivo, "raster")
             caminho_relativo = Path(project_relative(caminho_completo))
             if progress:
@@ -1946,14 +1986,19 @@ class GeoespacialService:
     ) -> dict[str, Any]:
         """Persiste camada ou raster, inferindo o formato pela extensão da saída.
 
-        Independente do valor recebido em ``destino``, a gravação definitiva
-        ocorre no Sicard Storage, na pasta da execução.
+        Destinos em ``saidas-geoespaciais`` preservam a pasta escolhida.
+        Chamadores legados continuam usando a pasta canônica da execução.
         A categoria do dado (``vetor`` ou ``raster``) é determinada pela natureza
         do recurso em memória e validada contra a extensão do arquivo ANTES de
         qualquer I/O; ela qualifica o dado, mas não cria subpasta.
         """
         self._catalogar_persistidas()
-        del destino
+        pasta_saida = None
+        if destino.startswith("saidas-geoespaciais"):
+            from api.services.saidas_storage import pasta_exportacao
+            from api.services.pastas_storage import nome_valido
+            pasta_saida = pasta_exportacao(destino)
+            nome_valido(saida)
 
         tipo_entrada = self._metadados.get(entrada, {}).get("tipo")
         if tipo_entrada == "vetorial" or entrada in self._camadas:
@@ -1963,11 +2008,15 @@ class GeoespacialService:
         else:
             raise ValueError(f"Camada de entrada {entrada} não encontrada")
 
-        from api.services.ciclo_vida_arquivos import caminho_exportacao, registrar_exportacao
-        caminho = caminho_exportacao(saida, categoria_dado)
+        from api.services.ciclo_vida_arquivos import caminho_exportacao, registrar_exportacao, registrar_exportacao_memoria
+        from api.path_policy import relative_file_name, validar_categoria_compativel
+        from api.services.arquivos_geoespaciais_memoria import vetor
+        remoto = tempfile.sem_montagem()
+        validar_categoria_compativel(saida, categoria_dado)
+        caminho = Path(relative_file_name(saida)) if remoto else caminho_exportacao(saida, categoria_dado)
         pasta = caminho.parent
-        pasta_relativa = project_relative(pasta)
         extensao = caminho.suffix.lower()
+        conteudos = None
 
         if categoria_dado == "vetor":
             drivers = {"gpkg": "GPKG", "geojson": "GeoJSON", "json": "GeoJSON", "shapefile": "ESRI Shapefile", "shp": "ESRI Shapefile"}
@@ -1979,7 +2028,12 @@ class GeoespacialService:
             crs_final = str(camada.crs) if crs == "auto" else crs
             if crs != "auto":
                 camada = _gdal_reproject(camada, crs)
-            camada.to_file(caminho, driver=driver)
+            if not isinstance(camada, gpd.GeoDataFrame):
+                raise ValueError("A exportação vetorial requer uma camada com atributos e geometria.")
+            if remoto:
+                conteudos = vetor(camada, caminho.name, driver)
+            else:
+                camada.to_file(caminho, driver=driver)
             tipo = "vetor"
         else:
             formato_final = extensao.lstrip(".") if formato == "auto" else formato.lower()
@@ -2004,14 +2058,32 @@ class GeoespacialService:
                           dst_transform=novo_transform, dst_crs=crs,
                           resampling=Resampling.nearest, dst_nodata=np.nan)
                 raster, transform = reprojetado, novo_transform
-            with rasterio.open(caminho, "w", driver="GTiff", count=1,
-                               height=raster.shape[0], width=raster.shape[1], dtype="float32",
-                               crs=crs_final, transform=transform,
-                               nodata=np.nan, compress="deflate") as dst:
-                dst.write(raster.astype("float32"), 1)
+            options: dict[str, Any] = dict(
+                driver="GTiff", count=1, height=raster.shape[0], width=raster.shape[1],
+                dtype="float32", crs=crs_final, transform=transform, nodata=np.nan, compress="deflate",
+            )
+            if remoto:
+                with MemoryFile() as memory:
+                    with memory.open(**options) as dst:
+                        dst.write(raster.astype("float32"), 1)
+                    conteudos = {caminho.name: memory.read()}
+            else:
+                with rasterio.open(caminho, "w", **options) as dst:
+                    dst.write(raster.astype("float32"), 1)
             tipo = "raster"
 
-        record = registrar_exportacao(caminho, entrada, tipo)
+        try:
+            if conteudos is not None:
+                record = registrar_exportacao_memoria(caminho.name, conteudos, entrada, tipo, pasta_saida=pasta_saida)
+            else:
+                record = registrar_exportacao(caminho, entrada, tipo, pasta_saida=pasta_saida)
+        except Exception:
+            if not remoto and pasta_saida and pasta.is_dir():
+                for component in pasta.iterdir():
+                    if component.is_file():
+                        component.unlink()
+                pasta.rmdir()
+            raise
         return {**record, "operacao": "salvar_camada", "entrada": entrada,
                 "saida": caminho.name, "tipo": tipo,
                 "categoria": categoria_dado,

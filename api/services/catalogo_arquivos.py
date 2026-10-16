@@ -49,7 +49,7 @@ def conciliar(directory: dict, root: Path, *, inventariar: bool = True) -> dict:
         if not value.startswith(saidas_storage.RAIZ + '/'):
             return bool((path := caminho_seguro(root,value)) and path.is_file())
         try:
-            value = saidas_storage.validar(value)
+            value = saidas_storage.validar_exportacao(value)
             folder = str(Path(value).parent).replace('\\','/')
             if folder not in remote_folders:
                 remote_folders[folder] = {item['nome'] for item in storage_remoto.listar(folder) if not item['pasta']}

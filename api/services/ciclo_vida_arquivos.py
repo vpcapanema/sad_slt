@@ -6,9 +6,10 @@ import json
 import re
 import unicodedata
 from hashlib import sha256
+from io import BytesIO
 from pathlib import Path
 from uuid import uuid4
-from api.storage_policy import mkdtemp
+from api.storage_policy import mkdtemp, TemporaryDirectory, sem_montagem
 
 import geopandas as gpd
 import rasterio
@@ -35,12 +36,54 @@ def caminho_exportacao(nome: str, categoria: str) -> Path:
     return pasta / validated.name
 
 
-def registrar_exportacao(path: Path, recurso: str, tipo: str) -> dict:
-    if tipo == 'vetor':
-        frame = gpd.read_file(path, engine='pyogrio')
+def registrar_exportacao(path: Path, recurso: str, tipo: str, *, pasta_saida: str | None = None,
+                         conteudos: dict[str, bytes] | None = None) -> dict:
+    if pasta_saida is None:
+        return _registrar_exportacao(path, recurso, tipo, conteudos=conteudos)
+    from api.services.saidas_storage import pasta_exportacao
+    pasta_saida = pasta_exportacao(pasta_saida)
+    with get_connection() as conn:
+        locked = conn.execute(
+            'SELECT pg_try_advisory_lock(hashtextextended(%s,0)) AS adquirido',
+            ('saida-storage:' + pasta_saida.casefold(),),
+        ).fetchone()
+        if locked is None:
+            raise RuntimeError('O banco não confirmou o controle de concorrência da pasta de saída.')
+        if not locked['adquirido']:
+            raise ValueError('Outra saída está sendo gravada nesta pasta. Aguarde e tente novamente.')
+        try:
+            return _registrar_exportacao(path, recurso, tipo, pasta_saida=pasta_saida, conteudos=conteudos)
+        finally:
+            conn.execute(
+                'SELECT pg_advisory_unlock(hashtextextended(%s,0))',
+                ('saida-storage:' + pasta_saida.casefold(),),
+            )
+
+
+def registrar_exportacao_memoria(nome: str, conteudos: dict[str, bytes], recurso: str, tipo: str,
+                                *, pasta_saida: str | None = None) -> dict:
+    from api.services.arquivos_geoespaciais_memoria import trabalho
+    with trabalho(conteudos):
+        return registrar_exportacao(Path(nome), recurso, tipo, pasta_saida=pasta_saida, conteudos=conteudos)
+
+
+def _registrar_exportacao(path: Path, recurso: str, tipo: str, *, pasta_saida: str | None = None,
+                          conteudos: dict[str, bytes] | None = None) -> dict:
+    from api.services import saidas_storage, storage_remoto
+    if pasta_saida is not None:
+        pasta_saida = saidas_storage.pasta_exportacao(pasta_saida)
+    if tipo == 'relatorio':
+        json.loads(conteudos[path.name].decode('utf-8') if conteudos is not None else path.read_text(encoding='utf-8'))
+        validation = {'tipo': 'relatorio', 'reaberto_json': True}
+    elif tipo == 'vetor':
+        if conteudos is not None:
+            from api.services.arquivos_geoespaciais_memoria import ler_vetor
+            frame = ler_vetor(conteudos, path.name)
+        else:
+            frame = gpd.read_file(path, engine='pyogrio')
         validation = {'feicoes':len(frame), 'crs':str(frame.crs), 'reaberto_gdal':True}
     else:
-        with rasterio.open(path) as raster:
+        with rasterio.open(BytesIO(conteudos[path.name]) if conteudos is not None else path) as raster:
             for _, window in raster.block_windows(1):
                 raster.read(window=window)
             validation = {'largura':raster.width,'altura':raster.height,'crs':str(raster.crs),'reaberto_gdal':True}
@@ -50,22 +93,35 @@ def registrar_exportacao(path: Path, recurso: str, tipo: str) -> dict:
     if own:
         execution = iniciar('exportacao_direta', {'entrada':recurso})
     ident = str(uuid4())
-    from api.services import saidas_storage
     created = []
     # Um único prefixo mantém .shp, .shx, .dbf e .prj associados.
-    stem = f'{apelido(path.stem, 60) or "saida"}_{uuid4().hex[:12]}'
+    stem = path.stem if pasta_saida else f'{apelido(path.stem, 60) or "saida"}_{uuid4().hex[:12]}'
     try:
-        for component in sorted(path.parent.iterdir()):
-            if component.is_file():
-                target = f'{saidas_storage.RAIZ}/execucoes/{execution}/camadas/{stem}{component.name[len(path.stem):]}'
-                item = saidas_storage.enviar_arquivo(execution, 'camadas', component, caminho=target)
+        files = ([Path(name) for name in sorted(conteudos)] if conteudos is not None else
+                 [component for component in sorted(path.parent.iterdir()) if component.is_file()])
+        if pasta_saida:
+            existing = {item['nome'].casefold() for item in storage_remoto.listar(pasta_saida, estrito=True)}
+            if any(component.name.casefold() in existing for component in files):
+                raise FileExistsError('Já existe uma saída com esse nome na pasta escolhida. Escolha outro nome.')
+        for component in files:
+            if conteudos is not None or component.is_file():
+                if pasta_saida:
+                    target = f'{pasta_saida}/{component.name}'
+                    item = (saidas_storage.enviar_conteudo(target, conteudos[component.name]) if conteudos is not None
+                            else saidas_storage.enviar_exportacao(target, component))
+                else:
+                    target = f'{saidas_storage.RAIZ}/execucoes/{execution}/camadas/{stem}{component.name[len(path.stem):]}'
+                    item = (saidas_storage.enviar_bytes(execution, 'camadas', component.name, conteudos[component.name], caminho=target)
+                            if conteudos is not None else saidas_storage.enviar_arquivo(execution, 'camadas', component, caminho=target))
                 item['nome'] = component.name
                 created.append(item)
         relative = next(x['caminho'] for x in created if x['nome']==path.name)
         components = created
-    except Exception:
+    except Exception as exc:
         for item in created:
             saidas_storage.remover(item['caminho'])
+        if own:
+            finalizar(execution, erro=str(exc))
         raise
     committing=False
     try:
@@ -88,12 +144,30 @@ def registrar_exportacao(path: Path, recurso: str, tipo: str) -> dict:
         raise
     if own:
         finalizar(execution)
-    for component in list(path.parent.iterdir()):
-        if component.is_file():
-            component.unlink()
-    path.parent.rmdir()
+    if conteudos is None:
+        for component in list(path.parent.iterdir()):
+            if component.is_file():
+                component.unlink()
+        path.parent.rmdir()
     return {'arquivo_exportado_id':ident,'execucao_id':execution,'caminho':relative,
             'destino':str(Path(relative).parent),'componentes':components}
+
+
+def exportar_relatorio(resultado: dict, pasta: str, nome: str, origem: str) -> dict:
+    from api.services.pastas_storage import nome_valido
+    from api.services.saidas_storage import pasta_exportacao
+    pasta_exportacao(pasta)
+    nome_valido(nome)
+    filename = nome if nome.lower().endswith('.json') else nome + '.json'
+    nome_valido(filename)
+    from api.storage_policy import sem_montagem
+    if sem_montagem():
+        content = json.dumps(resultado, ensure_ascii=False, allow_nan=False, default=str).encode('utf-8')
+        return registrar_exportacao_memoria(filename, {filename: content}, origem, 'relatorio', pasta_saida=pasta)
+    with TemporaryDirectory(prefix='sicard-relatorio-') as directory:
+        path = Path(directory) / filename
+        path.write_text(json.dumps(resultado, ensure_ascii=False, allow_nan=False, default=str), encoding='utf-8')
+        return registrar_exportacao(path, origem, 'relatorio', pasta_saida=pasta)
 
 
 def migrar_exportacao(ident: str, raiz_arquivos: Path | None = None) -> dict:
@@ -221,7 +295,7 @@ def finalizar(ident: str, erro: str | None = None, temporario: bool = False) -> 
             conn.execute("UPDATE geoprocessamento.arquivo_resultado SET estado='resultado' WHERE execucao_id=%s AND estado='temporario'",(ident,))
 
 
-def validar_vetor(path: Path, frame: gpd.GeoDataFrame) -> dict:
+def validar_vetor(path: Path | BytesIO, frame: gpd.GeoDataFrame) -> dict:
     # GeoPandas usa o GDAL instalado via pyogrio. Reabre o arquivo gravado.
     loaded = gpd.read_file(path, engine='pyogrio')
     if len(loaded) != len(frame) or loaded.crs != frame.crs:
@@ -303,8 +377,11 @@ def gravar(conn, camada_id: str, metadata: dict, *, frame=None, raster_bytes=Non
     # ident e a chave primaria de arquivo_resultado, tem de continuar UUID.
     # O nome do arquivo em disco e outra coisa: leva o nome da camada.
     ident = str(existing['id']) if existing else str(uuid4())
-    pasta = Path(mkdtemp(prefix='sicard-saida-'))
-    path = _nome_de_arquivo(pasta, metadata.get('nome'), '.gpkg' if frame is not None else '.tif')
+    pasta = None if sem_montagem() else Path(mkdtemp(prefix='sicard-saida-'))
+    extension = '.gpkg' if frame is not None else '.tif'
+    path = (_nome_de_arquivo(pasta, metadata.get('nome'), extension) if pasta is not None else
+            Path((apelido(metadata.get('nome')) or 'saida') + extension))
+    content = None
     remote_path = None
     try:
         if frame is not None:
@@ -325,25 +402,42 @@ def gravar(conn, camada_id: str, metadata: dict, *, frame=None, raster_bytes=Non
                     data[column] = values
             fid = 'slt_fid_' + uuid4().hex
             geometry_column = 'slt_geom_' + uuid4().hex
-            data.to_file(path,driver='GPKG',layer='resultado',engine='pyogrio',index=False,
+            output = BytesIO() if pasta is None else path
+            data.to_file(output,driver='GPKG',layer='resultado',engine='pyogrio',index=False,
                          promote_to_multi=False, layer_options={'FID':fid,'GEOMETRY_NAME':geometry_column})
-            validation=validar_vetor(path,data)
+            if isinstance(output, BytesIO):
+                content = output.getvalue()
+            validation=validar_vetor(BytesIO(content) if content is not None else path,data)
             validation['campos_json'] = json_fields
             format_name='GPKG'
         else:
-            with path.open('xb') as output:
-                output.write(raster_bytes)
-            with rasterio.open(path) as raster:
+            if raster_bytes is None:
+                raise ValueError('Informe o conteúdo GeoTIFF para gravar o resultado raster.')
+            if pasta is None:
+                content = bytes(raster_bytes)
+            else:
+                with path.open('xb') as output:
+                    output.write(raster_bytes)
+            with rasterio.open(BytesIO(content) if content is not None else path) as raster:
                 # Lê todos os blocos para detectar arquivo truncado sem carregar tudo na RAM.
                 for _, window in raster.block_windows(1):
                     raster.read(window=window)
                 validation={'largura':raster.width,'altura':raster.height,'bandas':raster.count,
                             'crs':str(raster.crs),'reaberto_gdal':True}
-            if path.read_bytes()!=bytes(raster_bytes):
+            if content is None and path.read_bytes()!=bytes(raster_bytes):
                 raise ValueError('O GeoTIFF exportado difere do conteúdo original.')
             format_name='GTiff'
-        checksum=digest(path)
-        uploaded = saidas_storage.enviar_arquivo(execution, 'camadas', path, caminho=caminho_destino)
+        if content is not None:
+            from api.services.arquivos_geoespaciais_memoria import trabalho
+            checksum = sha256(content).hexdigest()
+            size = len(content)
+            with trabalho({path.name: content}):
+                uploaded = saidas_storage.enviar_bytes(execution, 'camadas', path.name, content, caminho=caminho_destino)
+                remote_path = uploaded['caminho']
+        else:
+            checksum = digest(path)
+            size = path.stat().st_size
+            uploaded = saidas_storage.enviar_arquivo(execution, 'camadas', path, caminho=caminho_destino)
         relative = remote_path = uploaded['caminho']
         state='temporario' if execucao_atual.get() else 'resultado'
         conn.execute('''INSERT INTO geoprocessamento.arquivo_resultado
@@ -352,7 +446,7 @@ def gravar(conn, camada_id: str, metadata: dict, *, frame=None, raster_bytes=Non
             ON CONFLICT (camada_id) DO UPDATE SET caminho=EXCLUDED.caminho,
                 sha256=EXCLUDED.sha256,tamanho_bytes=EXCLUDED.tamanho_bytes,
                 formato=EXCLUDED.formato,validacao=EXCLUDED.validacao''',
-            (ident,camada_id,execution,relative,checksum,path.stat().st_size,format_name,Jsonb(validation),state))
+            (ident,camada_id,execution,relative,checksum,size,format_name,Jsonb(validation),state))
         updated={**metadata,'caminho_arquivo':relative,'arquivo_resultado_id':ident,'execucao_id':execution,
                  'sha256':checksum,'origem_armazenamento':'storage'}
         updated['campos_json_arquivo'] = validation.get('campos_json', [])
@@ -369,8 +463,9 @@ def gravar(conn, camada_id: str, metadata: dict, *, frame=None, raster_bytes=Non
             saidas_storage.remover(remote_path)
         raise
     finally:
-        path.unlink(missing_ok=True)
-        pasta.rmdir()
+        if pasta is not None:
+            path.unlink(missing_ok=True)
+            pasta.rmdir()
 
 
 def gravar_e_confirmar(conn, camada_id, metadata, **kwargs):

@@ -21,6 +21,15 @@ def remoto(monkeypatch,tmp_path):
     monkeypatch.setattr(storage_remoto,'enviar_bytes',enviar_bytes)
     monkeypatch.setattr(storage_remoto,'baixar',lambda caminho:(tmp_path/caminho).read_bytes())
     monkeypatch.setattr(storage_remoto,'apagar_arquivo',lambda caminho:(tmp_path/caminho).unlink())
+    def listar(caminho, estrito=False):
+        path = tmp_path / caminho
+        if not path.is_dir():
+            if estrito:
+                raise FileNotFoundError(caminho)
+            return []
+        return [{'nome': p.name, 'pasta': p.is_dir()} for p in path.iterdir()]
+    monkeypatch.setattr(storage_remoto, 'listar', listar)
+    monkeypatch.setattr(storage_remoto, 'criar_pasta', lambda caminho: (tmp_path / caminho).mkdir())
     return tmp_path
 
 
@@ -117,3 +126,156 @@ def test_falha_no_registro_exportacao_remove_apenas_o_envio_novo(remoto,monkeypa
         ciclo.registrar_exportacao(source,'entrada','vetor')
     assert source.is_file()
     assert not any(p.is_file() for p in (remoto/saidas.RAIZ).rglob('*'))
+
+
+@pytest.mark.parametrize('caminho', [
+    'base-geoespacial/pasta', '/saidas-geoespaciais', 'saidas-geoespaciais/../base',
+    'saidas-geoespaciais//pasta', 'saidas-geoespaciais/.oculta',
+    'saidas-geoespaciais/pasta\\outra', 'saidas-geoespaciais/pasta/',
+])
+def test_explorador_saida_recusa_fuga_da_raiz(caminho):
+    with pytest.raises(ValueError):
+        saidas.pasta_exportacao(caminho)
+
+
+def test_explorador_saida_lista_cria_e_nao_altera_raizes_upload(remoto):
+    from api.services.pastas_storage import caminho_valido
+    (remoto / saidas.RAIZ).mkdir()
+    created = saidas.criar_pasta(saidas.RAIZ, 'Meu projeto')
+    assert created['caminho'] == 'saidas-geoespaciais/Meu projeto'
+    assert saidas.listar_pastas()['pastas'] == [dict(created, raiz=False)]
+    assert saidas.listar_pastas(created['caminho'])['arquivos'] == []
+    with pytest.raises(FileExistsError):
+        saidas.criar_pasta(saidas.RAIZ, 'Meu projeto')
+    with pytest.raises(ValueError):
+        caminho_valido(created['caminho'])
+    with pytest.raises(FileNotFoundError):
+        saidas.listar_pastas('saidas-geoespaciais/ausente')
+
+
+@pytest.fixture
+def exportacao_selecionada(remoto, monkeypatch, storage_sintetico):
+    from api.services.geoespacial_service import geoespacial_service as geo
+    folder = remoto / 'saidas-geoespaciais' / 'Projeto do usuário'
+    folder.mkdir(parents=True)
+    inserts = []
+    class Connection:
+        def execute(self, sql, params=()):
+            if 'INSERT INTO geoprocessamento.arquivo_exportado' in sql:
+                inserts.append(params)
+            return self
+        def fetchone(self):
+            return {'adquirido': True}
+        def commit(self):
+            pass
+    @contextmanager
+    def connection():
+        yield Connection()
+    monkeypatch.setattr(ciclo, 'get_connection', connection)
+    monkeypatch.setattr(ciclo, 'iniciar', lambda *args: str(uuid4()))
+    monkeypatch.setattr(ciclo, 'finalizar', lambda *args, **kwargs: None)
+    monkeypatch.setattr(ciclo, 'registrar_uso', lambda *args: None)
+    monkeypatch.setattr(geo, '_catalogar_persistidas', lambda: None)
+    monkeypatch.setattr(geo, '_camadas', {})
+    monkeypatch.setattr(geo, '_rasters', {})
+    monkeypatch.setattr(geo, '_metadados', {})
+    monkeypatch.setattr(geo, '_raster_profiles', {})
+    return geo, folder, inserts
+
+
+@pytest.mark.parametrize('formato,extensao', [
+    ('gpkg', 'gpkg'), ('geojson', 'geojson'), ('shapefile', 'shp'), ('geotiff', 'tif'),
+])
+def test_salvar_no_destino_escolhido_reabre_e_recusa_sobrescrita(exportacao_selecionada, formato, extensao):
+    import asyncio
+    import numpy as np
+    import rasterio
+    from rasterio.transform import from_origin
+    geo, folder, inserts = exportacao_selecionada
+    raster = formato == 'geotiff'
+    if raster:
+        geo._rasters['entrada'] = np.array([[1, 2], [3, np.nan]], dtype='float32')
+        geo._raster_profiles['entrada'] = dict(crs='EPSG:4326', transform=from_origin(-46, -23, .01, .01))
+    else:
+        geo._camadas['entrada'] = gpd.GeoDataFrame({'valor': [7]}, geometry=[Point(-46, -23)], crs=4326)
+    geo._metadados['entrada'] = {'tipo': 'raster' if raster else 'vetorial'}
+    relative = 'saidas-geoespaciais/Projeto do usuário'
+    result = asyncio.run(geo.salvar_camada('entrada', relative, f'Minha saída.{extensao}', 'auto', formato))
+    assert result['caminho'] == f'{relative}/Minha saída.{extensao}'
+    assert inserts[0][3] == result['caminho']
+    path = folder / f'Minha saída.{extensao}'
+    before = {p.name: p.read_bytes() for p in folder.iterdir()}
+    if raster:
+        with rasterio.open(path) as source:
+            assert source.crs.to_epsg() == 4326
+            np.testing.assert_allclose(source.read(1), geo._rasters['entrada'], equal_nan=True)
+    else:
+        frame = gpd.read_file(path, engine='pyogrio')
+        assert frame.valor.tolist() == [7]
+        assert frame.crs.to_epsg() == 4326
+        assert frame.geometry.iloc[0].equals_exact(geo._camadas['entrada'].geometry.iloc[0], 0)
+    with pytest.raises(FileExistsError, match='outro nome'):
+        asyncio.run(geo.salvar_camada('entrada', relative, f'Minha saída.{extensao}', 'auto', formato))
+    assert {p.name: p.read_bytes() for p in folder.iterdir()} == before
+    assert len(inserts) == 1
+
+
+def test_gravacoes_concorrentes_na_mesma_pasta_sao_recusadas(exportacao_selecionada, monkeypatch, tmp_path):
+    class Connection:
+        def execute(self, *args):
+            return self
+        def fetchone(self):
+            return {'adquirido': False}
+    @contextmanager
+    def connection():
+        yield Connection()
+    monkeypatch.setattr(ciclo, 'get_connection', connection)
+    with pytest.raises(ValueError, match='Outra saída'):
+        ciclo.registrar_exportacao(tmp_path / 'nao-enviado.gpkg', 'entrada', 'vetor',
+                                  pasta_saida='saidas-geoespaciais/Projeto do usuário')
+
+
+def test_relatorio_json_segue_destino_nome_e_catalogo(exportacao_selecionada):
+    geo, folder, inserts = exportacao_selecionada
+    result = ciclo.exportar_relatorio({'valido': True, 'erros': []},
+                                     'saidas-geoespaciais/Projeto do usuário', 'Diagnóstico', 'entrada')
+    import json
+    assert result['caminho'] == 'saidas-geoespaciais/Projeto do usuário/Diagnóstico.json'
+    assert json.loads((folder / 'Diagnóstico.json').read_text(encoding='utf-8')) == {'valido': True, 'erros': []}
+    assert inserts[0][5].obj['reaberto_json'] is True
+
+
+@pytest.mark.parametrize('formato,extensao', [('GeoPackage', 'gpkg'), ('GeoJSON', 'geojson'), ('Shapefile', 'shp')])
+def test_op03_completa_grava_reabre_e_reprocessa_pasta_selecionada(exportacao_selecionada, monkeypatch, remoto, formato, extensao):
+    from types import SimpleNamespace
+    from api.services import bancada_arquivos as bancada, storage_geoespacial as storage
+    geo, folder, inserts = exportacao_selecionada
+    source_path = remoto / 'base-geoespacial' / 'entrada.gpkg'
+    source_path.parent.mkdir()
+    frame = gpd.GeoDataFrame({'valor': [7]}, geometry=[Point(-46, -23)], crs=4326)
+    frame.to_file(source_path, layer='entrada', engine='pyogrio')
+    original = source_path.read_bytes()
+    monkeypatch.setattr(storage, 'diretorio_storage', lambda: remoto)
+    def registrar(frame, *args, **kwargs):
+        ident = 'resultado_' + uuid4().hex
+        geo._camadas[ident] = frame.copy()
+        geo._metadados[ident] = {'tipo': 'vetorial'}
+        return ident
+    monkeypatch.setattr(geo, 'registrar_camada', registrar)
+    source = bancada.abrir('base-geoespacial/entrada.gpkg')
+    for index in range(2):
+        params = dict(camada_id=source['id'], destino='storage',
+                      pasta_saida='saidas-geoespaciais/Projeto do usuário',
+                      nome_saida=f'Reprojeção.v{index}', formato_saida=formato,
+                      crs_saida='entrada', crs_destino='EPSG:3857')
+        result = bancada.executar('OP-03', params,
+                                 {source['id']: {'arquivo': source['arquivo'], 'revisao': source['revisao']}},
+                                 SimpleNamespace(id='teste'))
+        source = result['camada']
+        assert source['arquivo'] == f"saidas-geoespaciais/Projeto do usuário/Reprojeção.v{index}.{extensao}"
+        assert source['geojson']['features'][0]['properties']['valor'] == 7
+        assert source['geojson']['features'][0]['geometry']['coordinates'] == pytest.approx([-46, -23])
+        reread = bancada.carregar_para_execucao(source['arquivo'], source['revisao'])
+        assert reread['frame'].crs.to_epsg() == 3857
+    assert len(inserts) == 2
+    assert source_path.read_bytes() == original

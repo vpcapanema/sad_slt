@@ -81,6 +81,10 @@
 .storage-pastas-destino strong { overflow: hidden; color: #1e3a2c; text-overflow: ellipsis; white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) { .storage-pastas-btn, .importar-storage-arquivo { transition: none; } .storage-pastas-btn:not(:disabled):hover { transform: none; } }
 .storage-pastas-edicao[hidden] { display: none; }
+.storage-pastas-btn[hidden] { display: none; }
+.storage-pastas-saida { display: flex; flex-wrap: wrap; gap: 10px; }
+.storage-pastas-saida label { display: grid; flex: 1 1 180px; gap: 4px; font-weight: 600; }
+.storage-pastas-saida input, .storage-pastas-saida select { box-sizing: border-box; width: 100%; min-height: 32px; padding: 5px 8px; border: 1px solid #b9c7c0; border-radius: 6px; background: #fff; font-size: 12.2px; }
 .importar-storage .geoespacial-import-field > span { color: #4b5d54; font-size: 11.5px; font-weight: 600; }
 .importar-storage-arquivo span { font-size: 12.5px; }
 /* Camada recém-enviada: destaque breve no painel de camadas. */

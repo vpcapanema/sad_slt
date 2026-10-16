@@ -18,7 +18,6 @@
     if (!resposta.ok) throw new Error(corpo.detail || `Falha no storage (HTTP ${resposta.status})`);
     return corpo;
   }
-  const listar = (caminho) => pedir(`${API}?caminho=${encodeURIComponent(caminho || "")}`);
   const enviar = (metodo, corpo) => pedir(API, { method: metodo, headers: { "Content-Type": "application/json" }, body: JSON.stringify(corpo) });
 
   function montar() {
@@ -55,7 +54,20 @@
 
   function escolher(opcoes = {}) {
     const dialog = montar();
+    const saida = opcoes.saida;
+    const raiz = saida ? "saidas-geoespaciais" : "";
+    const api = saida ? "/api/geoespacial/storage/saidas/pastas" : API;
+    const listarPasta = caminho => pedir(`${api}?caminho=${encodeURIComponent(caminho || raiz)}`);
+    const enviarPasta = (metodo, corpo) => pedir(api, { method: metodo, headers: { "Content-Type": "application/json" }, body: JSON.stringify(corpo) });
     const $ = (seletor) => dialog.querySelector(seletor);
+    if (saida) {
+      $("#storage-pastas-titulo").textContent = "Destino da saída no storage";
+      $('[data-acao="renomear"]').hidden = true;
+      $('[data-acao="excluir"]').hidden = true;
+      $(".storage-pastas-rodape").insertAdjacentHTML("beforebegin", `<div class="storage-pastas-saida"><label>Nome da saída <input data-saida-nome required maxlength="110" value="${escapeHtml(saida.nome || "resultado")}" autocomplete="off"></label><label>Formato <select data-saida-formato>${saida.formatos.map(formato => `<option value="${escapeHtml(formato)}">${escapeHtml(formato)}</option>`).join("")}</select></label></div>`);
+      $("[data-saida-formato]").value = saida.formatos.includes(saida.formato) ? saida.formato : saida.formatos[0];
+      $('[data-acao="salvar"]').textContent = "Definir saída";
+    }
     const lista = $(".storage-pastas-lista"), status = $(".storage-pastas-status"), edicao = $(".storage-pastas-edicao");
     const estado = { atual: "", pastas: [], arquivos: [], selecionada: null, ocupado: false, leitura: 0 };
 
@@ -79,13 +91,13 @@
     function desenharTrilha() {
       const partes = estado.atual ? estado.atual.split("/") : [];
       const trilha = $(".storage-pastas-trilha");
-      trilha.innerHTML = `<button type="button" data-ir=""><i class="fas fa-hard-drive" aria-hidden="true"></i> Storage</button>`
-        + partes.map((parte, i) => `<span aria-hidden="true">/</span><button type="button" data-ir="${escapeHtml(partes.slice(0, i + 1).join("/"))}">${escapeHtml(parte)}</button>`).join("");
+      trilha.innerHTML = (raiz ? "" : `<button type="button" data-ir=""><i class="fas fa-hard-drive" aria-hidden="true"></i> Storage</button>`)
+        + partes.map((parte, i) => `${i ? '<span aria-hidden="true">/</span>' : ""}<button type="button" data-ir="${escapeHtml(partes.slice(0, i + 1).join("/"))}">${escapeHtml(parte)}</button>`).join("");
       trilha.querySelectorAll("[data-ir]").forEach((botao) => botao.addEventListener("click", () => abrir(botao.dataset.ir)));
     }
 
     function desenharLista() {
-      const acima = estado.atual ? `<div class="storage-pastas-item storage-pastas-acima" data-ir="${escapeHtml(estado.atual.split("/").slice(0, -1).join("/"))}"><i class="fas fa-arrow-turn-up" aria-hidden="true"></i><span>Voltar</span></div>` : "";
+      const acima = estado.atual && estado.atual !== raiz ? `<div class="storage-pastas-item storage-pastas-acima" data-ir="${escapeHtml(estado.atual.split("/").slice(0, -1).join("/"))}"><i class="fas fa-arrow-turn-up" aria-hidden="true"></i><span>Voltar</span></div>` : "";
       const pastas = estado.pastas.map((p) => `
         <div class="storage-pastas-item" role="option" tabindex="-1" aria-selected="false" data-caminho="${escapeHtml(p.caminho)}">
           <i class="fas ${p.raiz ? "fa-database" : "fa-folder"}" aria-hidden="true"></i><span>${escapeHtml(p.nome)}</span>
@@ -103,10 +115,11 @@
     }
 
     async function abrir(caminho, selecionar = null) {
+      if (raiz && caminho !== raiz && !caminho.startsWith(`${raiz}/`)) caminho = raiz;
       const leitura=++estado.leitura;
       estado.ocupado = true; sincronizar(); avisar("Lendo o storage…");
       try {
-        const dados = await listar(caminho);
+        const dados = await listarPasta(caminho);
         if(leitura!==estado.leitura||!dialog.isConnected)return;
         Object.assign(estado, { atual: dados.caminho, pastas: dados.pastas, arquivos: dados.arquivos, selecionada: selecionar });
         fecharEdicao(); desenharTrilha(); desenharLista(); avisar("");
@@ -133,7 +146,7 @@
     const acoes = {
       criar() {
         abrirEdicao(campoNome(`Nova pasta em ${escapeHtml(estado.atual)}`, "", "Criar"), async (nome) => {
-          const nova = await enviar("POST", { caminho: estado.atual, nome });
+          const nova = await enviarPasta("POST", { caminho: estado.atual, nome });
           await abrir(estado.atual, nova.caminho);
           avisar(`Pasta criada: ${nova.caminho}`);
         });
@@ -163,7 +176,17 @@
         const acao = e.target.closest("[data-acao]")?.dataset.acao;
         if (!acao) return;
         if (acao === "cancelar") encerrar(null);
-        else if (acao === "salvar") { if (!estado.ocupado&&destino()) encerrar(destino()); }
+        else if (acao === "salvar") {
+          if (!estado.ocupado && destino()) {
+            if (!saida) encerrar(destino());
+            else {
+              const nome = $("[data-saida-nome]");
+              if (!nome.reportValidity()) return;
+              if (/^[.\s]|[.\s]$|[<>:"/\\|?*\x00-\x1f]/.test(nome.value)) { avisar("Informe um nome de saída sem barras ou caracteres reservados.", true); return; }
+              encerrar({ pasta: destino(), nome: nome.value, formato: $("[data-saida-formato]").value });
+            }
+          }
+        }
         else if (!estado.ocupado) { avisar(""); acoes[acao](); }
       });
       dialog.addEventListener("cancel", (e) => { e.preventDefault(); encerrar(null); });
@@ -179,11 +202,45 @@
       });
       dialog.showModal();
       // Abre já na pasta escolhida antes, se houver: a pai dela, com ela selecionada.
-      const inicial = String(opcoes.inicial || "");
+      const inicial = String(opcoes.inicial || raiz);
       const partes = inicial.split("/").filter(Boolean);
-      abrir(partes.slice(0, -1).join("/"), partes.length ? partes.join("/") : null);
+      if (raiz) abrir(inicial);
+      else abrir(partes.slice(0, -1).join("/"), partes.length ? partes.join("/") : null);
     });
   }
 
-  window.StoragePastas = { escolher };
+  function configurarSaida({ destino, nome, formato, pasta, formatos, aoMudar }) {
+    if (!destino || destino.dataset.exploradorSaida) return;
+    destino.dataset.exploradorSaida = "true";
+    destino.value = "storage";
+    destino.hidden = true;
+    destino.style.display = "none";
+    for (const controle of [nome, formato]) {
+      const field = controle.closest(".field");
+      if (field) {
+        field.hidden = true;
+        field.style.display = "none";
+      }
+      controle.hidden = true;
+    }
+    destino.insertAdjacentHTML("afterend", `<div class="local-file-picker"><input type="text" class="readonly-active" data-pasta-saida readonly aria-label="Pasta de destino no storage" value="${escapeHtml(pasta || "saidas-geoespaciais")}"><button type="button" class="browse-btn" data-explorar-saida title="Escolher destino da saída" aria-label="Escolher destino da saída"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6A2 2 0 0 1 18.46 20H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h4l2 3h8a2 2 0 0 1 2 2v1"/></svg></button></div>`);
+    const campo = destino.nextElementSibling.querySelector("[data-pasta-saida]"), botao = campo.nextElementSibling;
+    campo.name = "pasta_saida";
+    botao.addEventListener("click", async () => {
+      try {
+        const resultado = await escolher({ inicial: campo.value, saida: { nome: nome.value, formato: formato.value, formatos: formatos() } });
+        if (!resultado || !destino.isConnected) return;
+        campo.value = resultado.pasta; nome.value = resultado.nome; formato.value = resultado.formato;
+        nome.dataset.userEdited = "true";
+        [campo, nome, formato].forEach(controle => controle.dispatchEvent(new Event("change", { bubbles: true })));
+        aoMudar?.(resultado);
+      } catch (erro) {
+        if (window.gpFeedback) window.gpFeedback.Notify.error("Destino da saída", erro.message);
+        else window.gpApp.log(erro.message, "error");
+      }
+    });
+    return campo;
+  }
+
+  window.StoragePastas = { escolher, configurarSaida };
 })();

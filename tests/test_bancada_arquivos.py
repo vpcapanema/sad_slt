@@ -277,6 +277,87 @@ def _preparar_execucao(monkeypatch):
     return frames
 
 
+@pytest.mark.parametrize('destino', ['memoria', 'storage'])
+def test_op03_reabre_saida_storage_e_permite_reprocessar(tmp_path, monkeypatch, destino):
+    import geopandas as gpd
+    from shapely.geometry import Point
+    from api.services import storage_geoespacial as storage
+    from api.services import bancada_camada_original
+    root = tmp_path
+    relative = 'base-geoespacial/vetor/entrada.gpkg'
+    path = root / relative
+    path.parent.mkdir(parents=True)
+    original = gpd.GeoDataFrame({'valor': [7, 9]}, geometry=[Point(-46, -23), Point(-47, -24)], crs=4326)
+    original.to_file(path, layer='entrada', driver='GPKG')
+    before = path.read_bytes()
+    monkeypatch.setattr(storage, 'diretorio_storage', lambda: root)
+    monkeypatch.setattr(service.geo, '_camadas', {})
+    monkeypatch.setattr(service.geo, '_metadados', {})
+    monkeypatch.setattr(service.geo, 'obter_camada_dados', lambda key: service.geo._camadas[key])
+    finished = []
+    monkeypatch.setattr(service.ciclo, 'iniciar', lambda *args: 'execucao-teste')
+    monkeypatch.setattr(service.ciclo, 'finalizar', lambda *args, **kwargs: finished.append(kwargs))
+    saved = []
+    def register(frame, *args, **kwargs):
+        index = len(saved) + 1
+        ident = f'camada_resultado_{index}'
+        output = f'saidas-geoespaciais/execucoes/00000000-0000-0000-0000-000000000001/camadas/resultado{index}.gpkg'
+        target = root / output
+        target.parent.mkdir(parents=True, exist_ok=True)
+        frame.to_file(target, layer='resultado', driver='GPKG')
+        service.geo._camadas[ident] = frame
+        service.geo._metadados[ident] = {'caminho_arquivo': output}
+        saved.append(target)
+        return ident
+    monkeypatch.setattr(service.geo, 'registrar_camada', register)
+    async def export(*args):
+        return {'caminho': service.geo._metadados[args[0]]['caminho_arquivo']}
+    monkeypatch.setattr(service.geo, 'salvar_camada', export)
+    ident = 'storage:' + relative + '::entrada'
+    source = service.abrir(relative, camada_id=ident)
+    for _ in range(2):
+        result = service.executar('OP-03', {
+            'camada_id': source['id'], 'crs_destino': 'EPSG:3857',
+            'destino': destino, 'nome_saida': 'Reprojetada',
+            'formato_saida': 'GeoPackage', 'crs_saida': 'entrada',
+        }, {source['id']: {'arquivo': source['arquivo'], 'revisao': source['revisao']}},
+            SimpleNamespace(id='teste'))
+        source = result['camada']
+        assert source['id'] == 'storage:' + source['arquivo']
+        assert len(source['geojson']['features']) == 2
+        assert [f['properties']['valor'] for f in source['geojson']['features']] == [7, 9]
+        assert source['geojson']['features'][0]['geometry']['coordinates'] == pytest.approx([-46, -23])
+        prepared = bancada_camada_original.preparar(source['id'], source['arquivo'])
+        assert prepared['feicoes'] == 2
+        reopened = service.carregar_para_execucao(source['arquivo'], source['revisao'])
+        assert reopened['frame'].crs.to_epsg() == 3857
+        assert service.abrir(source['arquivo'], source['revisao'])['id'] == source['id']
+    assert path.read_bytes() == before
+    assert finished == [{}, {}]
+    assert not any(key.startswith('arquivo_bancada_') for key in service.geo._camadas)
+
+
+def test_falha_reabertura_nao_finaliza_execucao_com_sucesso(source, monkeypatch):
+    original, _ = source
+    _preparar_execucao(monkeypatch)
+    finished = []
+    monkeypatch.setattr(service.ciclo, 'finalizar', lambda *args, **kwargs: finished.append(kwargs))
+    from api.services.geoprocessamento_engine import geoprocessamento_engine
+    async def execute(*args, **kwargs):
+        service.geo._metadados['resultado'] = {'caminho_arquivo': 'saidas-geoespaciais/ausente.gpkg'}
+        return {'camada_id': 'resultado'}
+    monkeypatch.setattr(geoprocessamento_engine, 'execute', execute)
+    def fail(*args, **kwargs):
+        raise FileNotFoundError('Saída indisponível para reabertura')
+    monkeypatch.setattr(service, 'abrir', fail)
+    with pytest.raises(FileNotFoundError, match='reabertura'):
+        service.executar('OP-03', {'camada_id': original['id']},
+                         {original['id']: {'arquivo': original['arquivo'], 'revisao': original['revisao']}},
+                         SimpleNamespace(id='teste'))
+    assert finished == [{'erro': 'Saída indisponível para reabertura'}]
+    assert service.geo._camadas == {}
+
+
 def test_processar_selecao_e_filtro_de_arquivo_preserva_fids(source, monkeypatch):
     original, path = source
     _gravar_fids(path, [(71, 'Original'), (92, 'Outra')])

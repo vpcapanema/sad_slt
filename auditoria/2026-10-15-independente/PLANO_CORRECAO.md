@@ -1,5 +1,27 @@
 # Plano de correção — execução parcial
 
+## Encerramento desta rodada — 16/10/2026
+
+A rodada de correções e regressão foi concluída: **1.664 testes aprovados,
+três ignorados e quatro subtestes aprovados**, com 14 integrações de banco
+revertidas e E2E real OP-03 no navegador, exportação, recarga, reabertura e
+reprocessamento. Temporários e saídas foram verificados no storage, sem
+montagem Windows nem temporários locais no fluxo testado.
+
+Os scripts de feedback, destino, integridade de sessão e modelador passaram;
+o teste do modelador foi atualizado para o Edge instalado, confirmação nativa,
+submissão de job assíncrono e carregamento do explorador compartilhado.
+Não se alterou a aplicação para acomodar os contratos antigos desses testes.
+
+Os itens de homologação exaustiva permanecem abertos conforme
+[COBERTURA_PENDENCIAS.md](COBERTURA_PENDENCIAS.md). Particularmente, faltam
+E2E completo da segunda bancada e recuperação/concorrência entre processos.
+Não há bloqueio de regressão conhecido nesta rodada; os dados ausentes dos
+três skips não foram substituídos por aprovações. A regressão permite seguir
+para a publicação pelo script oficial e sua verificação de saúde.
+
+## Plano e evidências históricos
+
 **Atualização de 16/10/2026:** as propostas abaixo são o plano original. A retomada
 confirmou correções anteriores, corrigiu ingresso legado de NoData, validação
 recursiva/ciclos, contrato do seed de exportação e proteção de custo acumulado,

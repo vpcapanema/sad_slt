@@ -9,6 +9,7 @@ import pandas as pd
 from osgeo import ogr
 
 from api.services import ciclo_vida_arquivos as ciclo
+from api.services import storage_geoespacial as storage
 from api.path_policy import project_path
 from api.repositories import camada_geoespacial_repository as repo
 from api.services.visualizacao_arquivo import ler_arquivo
@@ -16,8 +17,7 @@ from api.services.geoespacial_service import geoespacial_service as geo
 
 
 def abrir(arquivo, revisao=None, camada_id=None):
-    if camada_id and camada_id.startswith('storage:') or arquivo.startswith(('base-geoespacial/', 'superficies-indices/')):
-        from api.services import storage_geoespacial as storage
+    if (camada_id and camada_id.startswith('storage:')) or arquivo.split('/', 1)[0] in storage.RAIZES_LEITURA:
         ident = camada_id or 'storage:' + arquivo
         caminho, _ = storage.separar_id(ident)
         if caminho != arquivo:
@@ -272,7 +272,7 @@ def _carregar_arquivo(arquivo, revisao):
 
 def carregar_para_execucao(arquivo, revisao=None, camada_id=None):
     """Vetor original (CRS e FIDs do arquivo) para algoritmos, sem GeoJSON intermediário."""
-    if camada_id and camada_id.startswith('storage:') or arquivo.startswith(('base-geoespacial/', 'superficies-indices/')):
+    if (camada_id and camada_id.startswith('storage:')) or arquivo.split('/', 1)[0] in storage.RAIZES_LEITURA:
         return _carregar_storage(arquivo, revisao, camada_id or 'storage:' + arquivo)
     return _carregar_arquivo(arquivo, revisao)
 
@@ -322,23 +322,31 @@ def executar(operacao, parametros, arquivos, user, progress=None):
         report(f'Executando algoritmo {operacao}: {len(sources)} arquivo(s) de entrada')
         result = asyncio.run(geoprocessamento_engine.execute(operacao, params, **({'progress': report} if progress else {})))
         resource_id = result.get('camada_id') or result.get('raster_id')
-        if resource_id and params.get('destino') == 'storage' and operacao not in {'OP-25', 'OP-26', 'OP-27'}:
+        if resource_id and params.get('destino') == 'storage' and not result.get('arquivo_saida') and operacao not in {'OP-25', 'OP-26', 'OP-27'}:
             report('Gravando o resultado no storage')
             filename, output_format = geoprocessamento_engine._canonical_output_file(params)
             output_crs = params.get('crs_saida', 'entrada')
             result['arquivo_saida'] = asyncio.run(geo.salvar_camada(
-                resource_id, 'data/geoespacial/outputs', filename,
+                resource_id, params.get('pasta_saida') or 'data/geoespacial/outputs', filename,
                 'auto' if output_crs == 'entrada' else output_crs, output_format))
         for original, transient in temporary.items():
             if result.get('camada_id') == transient:
                 result['camada_id'] = original
-        ciclo.finalizar(execution)
         result_id = result.get('camada_id')
         metadata = geo._metadados.get(result_id) or {} if result_id else {}
-        path = metadata.get('caminho_arquivo')
+        exported = result.get('arquivo_saida') or result
+        path = exported.get('caminho') or metadata.get('caminho_arquivo')
         report('Preparando a camada resultante para visualização')
+        raster = None
+        if path and path.lower().endswith(('.tif', '.tiff')):
+            raster = {'id': 'storage:' + path, 'arquivo': path, 'tipo': 'raster',
+                      'nome': params.get('nome_saida') or metadata.get('nome') or path.rsplit('/', 1)[-1]}
+            camada = None
+        else:
+            camada = abrir(path) if path and operacao not in {'OP-02', 'OP-22', 'OP-23', 'OP-24'} else None
+        ciclo.finalizar(execution)
         return {'resultado': result, 'execucao_id': execution,
-                'camada': ler_arquivo(path) if path else None}
+                'camada': camada, **({'raster': raster} if raster else {})}
     except Exception as exc:
         ciclo.finalizar(execution, erro=str(exc))
         raise

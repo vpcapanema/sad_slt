@@ -7,6 +7,10 @@ from pathlib import Path
 import tempfile as _tempfile
 
 
+def sem_montagem() -> bool:
+    return not os.environ.get('SICARD_STORAGE_WRITE_DIR') and not os.environ.get('SICARD_STORAGE_TEMP_DIR')
+
+
 def montagem(caminho: Path) -> bool:
     """Uma pasta existente ou um espelho local não comprova uma montagem."""
     if not caminho.is_dir():
@@ -46,7 +50,7 @@ def configurar_temporarios() -> None:
     if not os.environ.get('SICARD_STORAGE_WRITE_DIR') and not os.environ.get('SICARD_STORAGE_TEMP_DIR'):
         logging.getLogger(__name__).info(
             'Sem montagem de escrita: acesso ao storage pela API. '
-            'Operações que exigem temporários em arquivo devem executar na VM.'
+            'Processamento em RAM, com temporários enviados a temporarios-sicard.'
         )
         return
     root = str(raiz_temporaria())

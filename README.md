@@ -103,8 +103,14 @@ A VM não usa esse gateway. O Docker local é apenas contingência.
 O storage existente é acessado pela API do SFTPGo no Windows; não se exige
 montagem local para iniciar o backend ou descobrir os testes. Caminhos nativos
 de dados e temporários continuam restritos ao storage configurado na VM:
-não há fallback para pastas locais. Operações que dependem desses caminhos
-devem executar na aplicação da VM. A rota legada `/data` responde 503 quando
+não há fallback para pastas locais. Sem montagem, a persistência de resultados
+e as exportações vetoriais, raster e JSON usam buffers em RAM e a API do
+SFTPGo. Arquivos de trabalho são enviados a subpastas exclusivas de
+`temporarios-sicard`, conferidos por hash e removidos ao terminar; resultados
+são gravados em `saidas-geoespaciais`. A OP-03 e o overlay não exigem montagem
+no Windows. Fluxos legados que ainda exigem caminhos nativos continuam restritos
+à VM; essa adaptação não equivale à homologação de todas as funções.
+A rota legada `/data` responde 503 quando
 não há acesso nativo configurado; as APIs remotas não dependem dessa rota.
 Os JSONs e mapas da documentação de favorabilidade são lidos do storage
 existente (`aplicacao/data/geoespacial`), pela montagem da VM ou pela API
@@ -116,6 +122,26 @@ arquivos ao terminar. Não monta nem copia o storage real para o Windows; testes
 da política de armazenamento e de acesso remoto não usam essa simulação.
 O terminal compartilhado é descrito em
 [PowerShell compartilhado](documentacao/TERMINAL_POWERSHELL_COMPARTILHADO.md).
+
+### Destino das saídas da bancada geoespacial
+
+O campo **Destino** dos algoritmos e das propriedades do modelador abre o
+explorador de `saidas-geoespaciais` no storage existente. É possível navegar,
+criar subpastas, informar o nome da saída e escolher o formato compatível:
+GeoPackage, GeoJSON ou Shapefile para vetores; GeoTIFF para rasters; JSON para
+diagnósticos e tabelas. Cancelar o explorador preserva a configuração anterior.
+No painel, apenas o campo **Destino** e o ícone de pasta são exibidos; nome e
+formato são definidos exclusivamente no explorador, sem campos duplicados.
+
+A pasta escolhida é transmitida como `pasta_saida` e respeitada pelo servidor.
+As exportações conservam o nome informado (com a extensão do formato escolhido),
+incluindo os acompanhantes de Shapefile. Nome já existente é recusado; gravações
+simultâneas na mesma pasta são recusadas pelo bloqueio de sessão do banco,
+sem sobrescrita silenciosa entre execuções da aplicação. O catálogo registra
+caminhos, componentes, hashes e execução; o conteúdo permanece no storage.
+O arquivo canônico interno de cada resultado continua associado à execução,
+independentemente da exportação escolhida. Chamadores legados sem `pasta_saida`
+mantêm o destino canônico anterior. Não é necessária migração de schema.
 
 ## Configuração
 

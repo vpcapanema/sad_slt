@@ -1,5 +1,31 @@
 # Auditoria independente SICARD — validação incompleta
 
+## Fechamento da rodada de correções e testes — 16/10/2026
+
+- Regressão completa, incluindo integrações opt-in: **1.664 aprovados, zero
+  falhas, zero erros, três ignorados e quatro subtestes aprovados**.
+- As 14 integrações de ciclo de vida passaram com banco real e rollback.
+- No Edge, o fluxo real da bancada abriu entrada sintética, escolheu destino,
+  nome e formato no explorador, executou OP-03, gravou no storage, recarregou
+  a página, reabriu e reprocessou o resultado. GeoPackage e GeoJSON foram
+  conferidos independentemente quanto a atributos e CRS; a entrada ficou intacta.
+- Temporários e saídas dessa integração foram removidos somente nas pastas
+  exclusivas do teste; os registros de catálogo foram revertidos.
+- Quatro scripts adicionais passaram: feedback local, destino, integridade
+  de sessão/tabela/edição e modelador. Seus serviços HTTP são simulados;
+  não equivalem a quatro homologações com backend real.
+- A sessão do E2E é assinada para um usuário sintético; não testa login por
+  senha. A segunda bancada não teve novo E2E completo de navegador.
+
+**Conclusão:** a rodada de correção e regressão está concluída, com o fluxo
+local de processamento sem montagem verificado. A homologação exaustiva das
+duas bancadas e de toda a matriz histórica continua pendente. Os três casos
+ignorados dependem de dados ausentes, discriminados em [DEFEITOS.md](DEFEITOS.md).
+A validação acima corresponde ao checkout local; não equivale a homologação
+pós-deploy da VM. A publicação utiliza exclusivamente o script oficial.
+
+## Registro histórico
+
 **Retomada em 16/10/2026:** foram aplicadas correções incrementais e executadas
 regressões sintéticas. O texto e os totais abaixo descrevem a auditoria original
 de 15/10, não o estado de aprovação atual. Consulte a atualização ao final de

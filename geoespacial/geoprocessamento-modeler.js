@@ -324,7 +324,45 @@
     if(type==="select")return `<div class="field model-contract-field"><label>${esc(label)}</label><select data-contract-param="${esc(key)}"><option value="">Selecione…</option>${variableOptions}${(setting||[]).map(option=>`<option value="${esc(option)}" ${String(value)===String(option)?"selected":""}>${esc(option)}</option>`).join("")}</select></div>`;
     const listId=`vars-${node.id}-${key}`;return `<div class="field model-contract-field"><label>${esc(label)}</label><input data-contract-param="${esc(key)}" data-kind="${esc(type)}" type="text" value="${esc(value)}" list="${listId}" placeholder="Ex.: ${type==="number"?"100 ou $valor_anterior":"$saida_anterior ou texto"}"><datalist id="${listId}">${variables.map(item=>`<option value="$${esc(item.ref)}">${esc(item.label)}</option>`).join("")}</datalist></div>`;
   }
+  function configurarDestino(editor,node,body,atributo){
+    const campo=chave=>body.querySelector(`[${atributo}="${chave}"]`);
+    const destino=campo("destino"),nome=campo("nome_saida"),formato=campo("formato_saida");
+    if(!destino||!nome||!formato)return;
+    const previous=JSON.stringify(node.params);
+    const source=node.kind==="output"?sourceProcess(editor,node):node;
+    const formatos=()=>["OP-02","OP-22","OP-23","OP-24"].includes(source?.ref)?["JSON"]:saidaRaster(editor,node)?["GeoTIFF"]:["GeoPackage","GeoJSON","Shapefile"];
+    const refresh=()=>{
+      const options=formatos(),current=node.params.formato_saida;
+      formato.innerHTML=options.map(valor=>`<option>${valor}</option>`).join("");
+      formato.value=options.includes(current)?current:options[0];
+      node.params.formato_saida=formato.value;
+    };
+    refresh();
+    campo("entrada")?.addEventListener("change",event=>{node.params.entrada=event.target.value;refresh();});
+    if(!nome.value)nome.value=editor.title;
+    const pasta=window.StoragePastas.configurarSaida({destino,nome,formato,pasta:node.params.pasta_saida,formatos,aoMudar:()=>{editor.dirty=true;editor.validated=false;updateModelRibbon()}});
+    pasta.setAttribute(atributo,"pasta_saida");
+    const crs=campo("crs_saida");
+    if(crs&&!crs.value)crs.value="entrada";
+    Object.assign(node.params,{destino:"storage",pasta_saida:pasta.value,nome_saida:nome.value,formato_saida:formato.value,crs_saida:crs?.value||"entrada"});
+    if(previous!==JSON.stringify(node.params)){editor.dirty=true;editor.validated=false;}
+  }
+  function saidaRaster(editor,node){
+    const source=node.kind==="output"?sourceProcess(editor,node):node;
+    if(RASTER_RESULTS.has(source?.ref))return true;
+    if(source?.kind==="function")return window.gpApp.state.functions.find(item=>item.id===source.ref)?.saidas?.some(saida=>saida.chave==="raster_id")||false;
+    if(source?.ref==="OP-27"){
+      const input=source.params.entrada;
+      return String(window.gpApp.state.layers.find(layer=>layer.id===input)?.tipo||"").includes("raster")||input==="$raster_id"||RASTER_RESULTS.has(sourceProcess(editor,source)?.ref);
+    }
+    return false;
+  }
   function inspector(editor){
+    renderInspector(editor);
+    const node=editor.nodes.find(item=>item.id===editor.selected);
+    if(node)configurarDestino(editor,node,$("#gp-model-properties-view .model-inspector-body"),node.kind==="output"?"data-output-field":"data-contract-param");
+  }
+  function renderInspector(editor){
     const body=$("#gp-model-properties-view .model-inspector-body"),node=editor.nodes.find(n=>n.id===editor.selected);
     if(!node){body.innerHTML=`<div class="field"><label>Nome</label><input data-model-name value="${esc(editor.title)}"></div><div class="field"><label>Descrição</label><textarea data-model-description>${esc(editor.description)}</textarea></div>${modelTips(editor.type)}<p class="field-help">Selecione um elemento para editar suas propriedades.</p>`;return;}
     if(node.kind==="input"){
@@ -516,8 +554,19 @@
     }));
     validateGraph(editor);
     const ordered=topological(editor),steps=ordered.map(node=>{const params={...node.params};editor.edges.filter(e=>e.to===node.id&&e.parameter).forEach(edge=>{const source=editor.nodes.find(n=>n.id===edge.from),resultKey=source?.kind==="iterator"?source.params.variavel:["input","variable","output"].includes(source?.kind)?source.ref:RASTER_RESULTS.has(source?.ref)?"raster_id":"camada_id";params[edge.parameter]=`$${resultKey||"camada_id"}`});if(node.kind==="iterator")return {iterador:node.ref,parametros:params};const outputKey=RASTER_RESULTS.has(node.ref)?"raster_id":"camada_id",mappings={};editor.edges.filter(edge=>edge.from===node.id).forEach(edge=>{const variable=editor.nodes.find(item=>item.id===edge.to);if(variable?.kind==="variable")mappings[outputKey]=variable.ref});const process=node.kind==="function"?{funcao_id:node.ref,parametros:params}:{algoritmo_id:node.ref,parametros:params};if(Object.keys(mappings).length)process.mapear_saidas=mappings;return process});
+    editor.nodes.filter(node=>node.kind==="output"&&node.params.pasta_saida&&node.params.destino==="storage").map(node=>({node,source:sourceProcess(editor,node)})).sort((a,b)=>ordered.indexOf(b.source)-ordered.indexOf(a.source)).forEach(({node,source})=>{
+      const index=ordered.indexOf(source);
+      if(index<0)throw new Error("Conecte a saída a um processo antes de escolher seu destino.");
+      if(["OP-02","OP-22","OP-23","OP-24","OP-25","OP-26","OP-27"].includes(source.ref)){
+        if(editor.nodes.filter(other=>other.kind==="output"&&other.params.pasta_saida&&sourceProcess(editor,other)?.id===source.id).length>1)throw new Error("Diagnósticos e exportações aceitam um único destino por elemento. Duplique o processo para gravar em mais de uma pasta.");
+        Object.assign(steps[index].parametros,node.params);
+        return;
+      }
+      const key=saidaRaster(editor,source)?"raster_id":"camada_id";
+      steps.splice(index+1,0,{algoritmo_id:"OP-27",parametros:{...node.params,entrada:`$${key}`,crs_saida:node.params.crs_saida||"entrada"}});
+    });
     const base={id:editor.definitionId||uid(editor.type==="function"?"funcao":"fluxo"),nome:editor.title,descricao:editor.description,categoria:editor.type==="function"?"Funções customizadas":"Fluxos customizados",toolbox:"SIRCADI Toolbox",parametros_expostos:editor.nodes.filter(n=>n.kind==="input").map(n=>({nome:n.label,chave:n.ref,tipo_entrada:iteratorKind(editor),valor:n.params.valor??""})),variaveis:editor.nodes.filter(n=>n.kind==="variable").map(n=>({nome:n.label,chave:n.ref,tipo:n.params.tipo||"dados",valor:n.params.valor??""})),diagrama:{versao:3,nos:editor.nodes,conexoes:editor.edges}};
-    const outputNodes=editor.nodes.filter(node=>node.kind==="output"),saidas=outputNodes.map(node=>{const raster=RASTER_RESULTS.has(sourceProcess(editor,node)?.ref);return {nome:node.params.nome_saida||node.label,chave:raster?"raster_id":"camada_id",crs_saida:node.params.crs_saida||"entrada",destino:node.params.destino||"memoria",formato_saida:node.params.formato_saida||(raster?"JSON":"GeoJSON")}});
+    const outputNodes=editor.nodes.filter(node=>node.kind==="output"),saidas=outputNodes.map(node=>{const raster=saidaRaster(editor,node);return {nome:node.params.nome_saida||node.label,chave:raster?"raster_id":"camada_id",crs_saida:node.params.crs_saida||"entrada",destino:node.params.destino||"memoria",pasta_saida:node.params.pasta_saida,formato_saida:node.params.formato_saida||(raster?"JSON":"GeoJSON")}});
     return editor.type==="function"?{...base,passos:steps,saidas}:{...base,itens:steps,saidas};
   }
   function processFeedback(editor,action){

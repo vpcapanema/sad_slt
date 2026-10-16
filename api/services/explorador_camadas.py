@@ -95,7 +95,7 @@ def navegar(source="", path=""):
             selected=[row for row in rows if _output_key(row)==parts[0] and str(row["execucao_id"])==parts[1]]
             metadata={}
             for parent in {str(PurePosixPath(row["arquivo"]).parent) for row in selected}:
-                from api.services.saidas_storage import validar
+                from api.services.saidas_storage import validar_exportacao as validar
                 for row in selected: validar(row["arquivo"])
                 try:
                     for entry in storage._listar(parent,incluir_ocultos=True):
@@ -146,7 +146,7 @@ def _output(ident,user):
     if not ref: raise FileNotFoundError("Arquivo não encontrado no catálogo")
     if ref["privado"] and ref.get("responsavel") and str(ref["responsavel"])!=str(user.id) and not is_gestor(user):
         raise PermissionError("Você não tem acesso a este arquivo")
-    from api.services.saidas_storage import validar
+    from api.services.saidas_storage import validar_exportacao as validar
     validar(row["arquivo"])
     if extra:
         if PurePosixPath(extra).parent!=PurePosixPath(row["arquivo"]).parent:

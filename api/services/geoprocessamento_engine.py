@@ -387,6 +387,16 @@ class GeoprocessamentoEngine:
         """Apply layer definition filters without mutating the original inputs."""
         from api.services.expressoes_atributos import selecionar
         params = dict(p)
+        if params.get('pasta_saida') and params.get('destino') == 'storage':
+            from api.services.saidas_storage import pasta_exportacao
+            from api.services.pastas_storage import nome_valido
+            pasta_exportacao(params['pasta_saida'])
+            if not params.get('nome_saida') or not params.get('formato_saida'):
+                raise ValueError('Informe o nome e o formato da saída no storage.')
+            nome_valido(str(params['nome_saida']))
+            params.setdefault('crs_saida', 'entrada')
+            if op_id in {'OP-02', 'OP-22', 'OP-23', 'OP-24'} and params['formato_saida'] != 'JSON':
+                raise ValueError('Diagnósticos e tabelas devem ser exportados no formato JSON.')
         filters = params.pop('filtros_camadas', {}) or {}
         if not isinstance(filters, dict):
             raise ValueError('Filtros de camada inválidos.')
@@ -418,6 +428,16 @@ class GeoprocessamentoEngine:
                 if scoped.get(name) != params.get(name) and isinstance(scoped.get(name), str):
                     temporary['selection:' + name] = scoped[name]
             result = await self._execute(op_id, scoped, progress)
+            if params.get('pasta_saida') and params.get('destino') == 'storage' and op_id not in {'OP-25', 'OP-26', 'OP-27'}:
+                resource = result.get('camada_id') or result.get('raster_id')
+                if resource:
+                    if progress:
+                        progress('Gravando o resultado na pasta escolhida no storage')
+                    result['arquivo_saida'] = await self.save_layer({**params, 'entrada': resource})
+                elif op_id in {'OP-02', 'OP-22', 'OP-23', 'OP-24'}:
+                    from api.services.ciclo_vida_arquivos import exportar_relatorio
+                    origin = params.get('camada_id') or params.get('raster_id') or op_id
+                    result['arquivo_saida'] = exportar_relatorio(result, params['pasta_saida'], params['nome_saida'], origin)
             return result
         finally:
             # Operações in-place devolvem a entrada: nesse caso ela é o resultado.
@@ -954,7 +974,7 @@ class GeoprocessamentoEngine:
         filename, storage_format = self._canonical_output_file(p)
         crs = "auto" if p["crs_saida"] == "entrada" else p["crs_saida"]
         return await geo.salvar_camada(
-            p["entrada"], "data/geoespacial/outputs", filename, crs, storage_format
+            p["entrada"], p.get("pasta_saida") or "data/geoespacial/outputs", filename, crs, storage_format
         )
 
     def _canonical_output_file(self, p: dict[str, Any]) -> tuple[str, str]:
@@ -968,7 +988,14 @@ class GeoprocessamentoEngine:
         if key not in formats:
             raise ValueError("Formato de saída incompatível com storage")
         extension, storage_format = formats[key]
-        name = Path(str(p["nome_saida"])).stem + extension
+        if p.get("pasta_saida"):
+            from api.services.saidas_storage import pasta_exportacao
+            from api.services.pastas_storage import nome_valido
+            pasta_exportacao(p["pasta_saida"])
+            nome_valido(str(p["nome_saida"]))
+        requested = str(p["nome_saida"])
+        known_extensions = {item[0] for item in formats.values()} | {".tiff", ".json"}
+        name = (Path(requested).stem if not p.get("pasta_saida") or Path(requested).suffix.lower() in known_extensions else requested) + extension
         return name, storage_format
 
     async def export_vector(
@@ -986,7 +1013,7 @@ class GeoprocessamentoEngine:
         filename, storage_format = self._canonical_output_file(p)
         crs = "auto" if p["crs_saida"] == "entrada" else p["crs_saida"]
         return await geo.salvar_camada(
-            p["camada_id"], "data/geoespacial/outputs", filename, crs, storage_format
+            p["camada_id"], p.get("pasta_saida") or "data/geoespacial/outputs", filename, crs, storage_format
         )
 
     async def export_raster(
@@ -1004,7 +1031,7 @@ class GeoprocessamentoEngine:
         filename, storage_format = self._canonical_output_file(p)
         crs = "auto" if p["crs_saida"] == "entrada" else p["crs_saida"]
         return await geo.salvar_camada(
-            p["raster_id"], "data/geoespacial/outputs", filename, crs, storage_format
+            p["raster_id"], p.get("pasta_saida") or "data/geoespacial/outputs", filename, crs, storage_format
         )
 
     def _new_layer(
@@ -1325,6 +1352,12 @@ class GeoprocessamentoEngine:
                 )
                 for k, v in step.get("parametros", {}).items()
             }
+            if index == len(steps) - 1 and inputs.get("pasta_saida") and inputs.get("destino") == "storage":
+                params.update({
+                    key: inputs[key]
+                    for key in ("destino", "pasta_saida", "nome_saida", "formato_saida", "crs_saida")
+                    if key in inputs
+                })
             if step.get("iterador"):
                 source = params.get("fonte", [])
                 if isinstance(source, str) and source.startswith("$"):

@@ -251,7 +251,7 @@ class GeoprocessamentoJobs:
             if destination not in {"memoria", "storage", "catalogo"}:
                 raise ValueError("Destino deve ser memoria ou storage")
             result["destino"] = destination
-            if resource_id and destination == "storage":
+            if resource_id and destination == "storage" and not result.get("arquivo_saida"):
                 requested_format = str(normalized.get("formato_saida", "")).lower()
                 if requested_format not in OUTPUT_FORMATS:
                     raise ValueError("Formato de saída incompatível com storage")
@@ -260,7 +260,7 @@ class GeoprocessamentoJobs:
                 output_crs = str(normalized.get("crs_saida") or "entrada")
                 self._start(job_id, "Salvando a camada de saída no storage")
                 result["arquivo_saida"] = asyncio.run(geo.salvar_camada(
-                    resource_id, "data/geoespacial/outputs", output_name,
+                    resource_id, normalized.get("pasta_saida") or "data/geoespacial/outputs", output_name,
                     "auto" if output_crs == "entrada" else output_crs, storage_format,
                 ))
                 self._append_dynamic(job_id, "Resultado gravado no storage")

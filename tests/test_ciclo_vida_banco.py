@@ -20,7 +20,7 @@ pytestmark = pytest.mark.skipif(os.getenv('SLT_TEST_CICLO_BANCO') != '1', reason
 
 
 @pytest.fixture
-def database(monkeypatch, tmp_path):
+def database(monkeypatch, tmp_path, storage_sintetico):
     conn = psycopg.connect(get_settings().slt_database_url, row_factory=dict_row, connect_timeout=5)
     if os.getenv('SLT_TEST_STORAGE_FINAL') == '1':
         from pathlib import Path

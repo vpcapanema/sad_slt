@@ -10,15 +10,16 @@ const server=http.createServer((req,res)=>{
 await new Promise(r=>server.listen(0,'127.0.0.1',r));
 let browser;
 try{
- browser=await chromium.launch({headless:true,args:['--no-sandbox','--no-proxy-server','--disable-dev-shm-usage']});
- const page=await browser.newPage(),errors=[],writes=[],runs=[],deletes=[];let stored,valid=true,holdSave=false,releaseSave;
+ browser=await chromium.launch({headless:true,channel:process.env.PW_BROWSER_CHANNEL||'msedge',args:['--no-sandbox','--no-proxy-server','--disable-dev-shm-usage']});
+ const page=await browser.newPage(),errors=[],writes=[],runs=[],deletes=[];let stored,valid=true,holdSave=false,releaseSave,acceptConfirmation=false;
  page.setDefaultTimeout(10000);page.setDefaultNavigationTimeout(10000);
  page.on('pageerror',e=>errors.push(e.message));
+ page.on('dialog',async dialog=>{if(dialog.type()==='confirm'&&acceptConfirmation)await dialog.accept();else await dialog.dismiss();});
  await page.route('**/api/**',async route=>{
   const req=route.request(),url=new URL(req.url()).pathname;
   if(req.method()==='DELETE'){deletes.push(url);return route.fulfill({json:{ok:true}});}
   if(url.endsWith('/validar'))return route.fulfill({json:{valido:valid,erros:valid?[]:['Entrada indisponível']}});
-  if(url.endsWith('/executar')){runs.push(req.postDataJSON());return route.fulfill({json:{camada_id:'resultado_sintetico'}});}
+  if(url.endsWith('/executar-job')){runs.push(req.postDataJSON());return route.fulfill({json:{id:'job_sintetico'}});}
   if(req.method()==='POST'||req.method()==='PUT'){
    stored=req.postDataJSON();writes.push(structuredClone(stored));if(holdSave)await new Promise(resolve=>releaseSave=resolve);
    return route.fulfill({json:{...stored,id:'modelo_sintetico'}});
@@ -26,6 +27,14 @@ try{
   return route.fulfill({json:stored?[stored]:[]});
  });
  await page.goto(`http://127.0.0.1:${server.address().port}/`);
+ await page.addScriptTag({url:'/geoespacial-storage-pastas.js'});
+ await page.evaluate(()=>{
+  const log=document.createElement('div');log.id='gp-log';document.body.append(log);
+  gpApp.waitForJob=async job=>{
+   if(job.id!=='job_sintetico')throw new Error('Job inesperado');
+   return {status:'concluido',resultado:{camada_id:'resultado_sintetico'}};
+  };
+ });
  await page.evaluate(()=>gpModeler.open('function',{id:'modelo_sintetico',nome:'Auditoria',passos:[{algoritmo_id:'OP-37',parametros:{camada_id:'$entrada'}}]}));
  const btn=action=>page.locator(`[data-model-command="model-${action}"]`);
  // Primeiro input após abrir um modelo persistido precisa habilitar Salvar.
@@ -38,7 +47,7 @@ try{
  const before=await page.evaluate(()=>gpModeler._debug.activeEditor().nodes.length);
  await page.evaluate(()=>{const e=gpModeler._debug.activeEditor();e.selected=e.nodes[0].id;gpModeler._debug.deleteSelection(e);document.querySelector('[data-close-model]').click();});
  assert.equal(await page.evaluate(()=>gpModeler._debug.activeEditor().nodes.length),before);
- assert.match(await page.locator('.gp-feedback-content').innerText(),/Aguarde a operação/);
+ assert.match(await page.locator('#gp-log').innerText(),/Aguarde a operação/);
  while(!releaseSave)await new Promise(r=>setTimeout(r,10));releaseSave();holdSave=false;
  await page.waitForFunction(()=>!gpModeler._debug.activeEditor().busy);
  assert.equal(writes[0].nome,'Auditoria persistida');
@@ -50,8 +59,8 @@ try{
  assert.equal(await btn('run').isDisabled(),true);
  valid=true;await btn('validate').click();await page.waitForFunction(()=>gpModeler._debug.activeEditor().validated);
  // Cancelar confirmação não envia execução; aceitar sincroniza resultado.
- await btn('run').click();await page.getByRole('button',{name:'Cancelar',exact:true}).click();assert.equal(runs.length,0);
- await btn('run').click();await page.getByRole('button',{name:'Executar fluxo',exact:true}).click();
+ await btn('run').click();assert.equal(runs.length,0);
+ acceptConfirmation=true;await btn('run').click();
  await page.waitForFunction(()=>window.synced?.camada_id==='resultado_sintetico');assert.equal(runs.length,1);
  await page.waitForFunction(()=>!gpModeler._debug.activeEditor().busy);
  // Configuração de saída reaberta deve mostrar exatamente o que será persistido.
@@ -74,11 +83,12 @@ try{
   assert.equal(await page.locator('#gp-editor-view [data-delete]').isVisible(),false);
  }
  await page.evaluate(()=>auditLibrary('functions'));
+ acceptConfirmation=false;
  await page.locator('#gp-editor-view [data-delete]').click();
- await page.getByRole('button',{name:'Cancelar',exact:true}).click();assert.equal(deletes.length,0);
+ assert.equal(deletes.length,0);
  assert.equal(await page.locator('#gp-editor-view [data-delete]').isEnabled(),true);
+ acceptConfirmation=true;
  await page.locator('#gp-editor-view [data-delete]').click();
- await page.getByRole('button',{name:'Excluir definição',exact:true}).click();
  await page.waitForFunction(()=>!document.querySelector('#gp-editor-view [data-delete]').disabled);
  assert.deepEqual(deletes,['/api/geoespacial/funcoes/fn']);
  assert.deepEqual(errors,[]);console.log('PASS modelador: salvar, bloquear edição em voo, fechar em voo, revalidar, cancelar/confirmar execução, sincronizar saída e restaurar parâmetros.');

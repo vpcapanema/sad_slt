@@ -19,7 +19,8 @@ def listar(execucao_id: str | None = None) -> list[dict]:
             ORDER BY e.iniciado_em DESC,c.criado_em,c.nome''',(execucao_id,execucao_id)).fetchall()
         exports=conn.execute('''SELECT 'saida_exportada_'||a.id::text AS id,
             COALESCE(a.validacao->>'nome',c.nome,a.caminho) AS nome,
-            CASE WHEN a.validacao ? 'feicoes' THEN 'vetor' ELSE 'raster' END AS tipo,
+            CASE WHEN a.validacao->>'tipo'='relatorio' THEN 'relatorio'
+                WHEN a.validacao ? 'feicoes' THEN 'vetor' ELSE 'raster' END AS tipo,
             c.geometria_tipo,COALESCE(a.validacao->>'crs',c.crs) AS crs,
             NULL::text AS formato,
             a.criado_em,c.operacao_origem AS operacao,a.validacao AS metadados,
@@ -30,8 +31,9 @@ def listar(execucao_id: str | None = None) -> list[dict]:
             LEFT JOIN (SELECT recurso_sessao_id,nome,crs,geometria_tipo,operacao_origem FROM geoprocessamento.camada_processada
                 UNION ALL SELECT recurso_sessao_id,nome,crs,geometria_tipo,NULL FROM geoprocessamento.camada_importada) c
                 ON c.recurso_sessao_id=a.recurso_origem
-            WHERE a.caminho LIKE 'saidas-geoespaciais/execucoes/%%/camadas/%%'
-              AND a.validacao->>'reaberto_gdal'='true' AND e.status='concluido'
+            WHERE a.caminho LIKE 'saidas-geoespaciais/%%'
+              AND (a.validacao->>'reaberto_gdal'='true' OR a.validacao->>'reaberto_json'='true')
+              AND e.status='concluido'
               AND (%s::uuid IS NULL OR e.id=%s::uuid)
             ORDER BY a.criado_em DESC''',(execucao_id,execucao_id)).fetchall()
         rows.extend(exports)
@@ -47,6 +49,8 @@ def listar(execucao_id: str | None = None) -> list[dict]:
             item['formato']=PurePosixPath(item['arquivo']).suffix.removeprefix('.').upper()
             if item['nome']==item['arquivo']:
                 item['nome']=PurePosixPath(item['arquivo']).stem
+            if item['tipo'] == 'relatorio':
+                item['mapeavel'] = False
         item['ferramenta']=nomes.get(item['ferramenta'],item['ferramenta'])
         result.append(item)
     return result

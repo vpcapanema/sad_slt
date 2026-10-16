@@ -669,6 +669,7 @@
   function configureOutputFields(form,raster,op){
     const destination=form.elements.destino,format=form.elements.formato_saida;
     if(!destination||!format)return;
+    destination.value="storage";
     const crs=form.elements.crs_saida,layerInput=[...form.elements].find(element=>CONTENT_INPUTS.has(element.name)&&!element.multiple);
     const refreshCrs=()=>{
       if(!crs)return;
@@ -679,11 +680,14 @@
     };
     const refresh=()=>{
       const outputRaster=op?.[0]==="OP-27"?state.layers.find(layer=>layer.id===layerInput?.value)?.tipo?.toLowerCase().includes("raster"):raster;
-      const formats=destination.value==="memoria"?["JSON"]:(outputRaster?["GeoTIFF"]:["GeoPackage","GeoJSON","Shapefile"]);
+      const formats=["OP-02","OP-22","OP-23","OP-24"].includes(op?.[0])?["JSON"]:destination.value==="memoria"?["JSON"]:(outputRaster?["GeoTIFF"]:["GeoPackage","GeoJSON","Shapefile"]);
+      const current=format.value;
       format.innerHTML=formats.map(value=>`<option value="${value}">${value}</option>`).join("");
+      if(formats.includes(current))format.value=current;
       format.disabled=false;
     };
     destination.onchange=refresh;layerInput?.addEventListener("change",refresh);layerInput?.addEventListener("change",refreshCrs);refreshCrs();refresh();
+    window.StoragePastas.configurarSaida({destino:destination,nome:form.elements.nome_saida,formato:format,formatos:()=>[...format.options].map(option=>option.value)});
   }
   function fieldHtml(f){const [id,label,type,val]=f;if(type==="check")return `<label class="field-check"><input name="${id}" type="checkbox" ${val?"checked":""}>${label}</label>`;let input;if(type==="select")input=`<select name="${id}">${val.map(x=>`<option>${x}</option>`).join("")}</select>`;else if(type==="layer")input=`<select name="${id}" required><option value="">Selecione…</option>${state.layers.filter(x=>id==="entrada"||Boolean(x.tipo?.toLowerCase().includes("raster"))===id.startsWith("raster")).map(x=>`<option value="${escapeHtml(x.id)}">${escapeHtml(x.nome)}</option>`).join("")}</select>`;else input=`<input name="${id}" type="${type}" value="${val??""}" ${["number","text"].includes(type)?"":""}>`;return `<div class="field"><label>${label}</label>${input}</div>`}
   let pastaStorageEscolhida="";
@@ -932,11 +936,17 @@
       }
       return `<div class="field"><label>${label}${required?" *":""}</label><textarea data-param="${escapeHtml(chave)}" data-tipo="json" rows="3" spellcheck="false" ${required}>${escapeHtml(defaultValue?JSON.stringify(defaultValue):"")}</textarea><p class="field-help">Tipo <code>${escapeHtml(tipo)}</code> — informe valor em JSON.</p></div>`;
     };
+    const outputKeys=new Set(["nome_saida","crs_saida","destino","formato_saida","pasta_saida"]),hasOutput=params.some(param=>(param.chave||param.nome)==="destino");
     const body=params.length
-      ?params.map(paramField).join("")
+      ?params.filter(param=>!hasOutput||!outputKeys.has(param.chave||param.nome)).map(paramField).join("")+(hasOutput?[["nome_saida","Nome da saída","text",item.nome],["crs_saida","CRS","select",["entrada","EPSG:4674","EPSG:4326","EPSG:3857"]],["destino","Destino","select",["storage"]],["formato_saida","Formato","select",["GeoPackage","GeoJSON","Shapefile"]]].map(fieldHtml).join(""):"")
       :`<div class="empty">Este ${isFn?"função":"fluxo"} não declara entradas expostas — execute diretamente.</div>`;
     $("#gp-editor-view").innerHTML=`<div class="editor-head"><button class="icon-btn" data-back title="Voltar"><i data-lucide="arrow-left"></i></button><div><h2>${escapeHtml(item.nome)}</h2><p>${escapeHtml(item.descricao||"Preencha as entradas expostas e execute o "+(isFn?"função":"fluxo")+".")}</p></div></div><form id="gp-definition-run"><div class="editor-body">${body}</div><div class="editor-actions"><button type="button" class="btn" data-back-bottom>Cancelar</button><button class="btn primary">Executar</button></div></form>`;
     const back=()=>showLibrary(kind);$("[data-back]").onclick=back;$("[data-back-bottom]").onclick=back;icons();
+    if(hasOutput){
+      const form=$("#gp-definition-run"),last=(item.passos||item.itens||[]).at(-1);
+      configureOutputFields(form,RASTER_OUTPUT.has(last?.algoritmo_id)||item.saidas?.some(saida=>saida.chave==="raster_id"));
+      for(const control of form.querySelectorAll("[name]")){control.dataset.param=control.name;control.dataset.tipo="text";}
+    }
     $("#gp-definition-run").onsubmit=async event=>{
       event.preventDefault();
       const inputs={};
