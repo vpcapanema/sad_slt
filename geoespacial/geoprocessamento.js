@@ -9,7 +9,37 @@
   function debounce(fn,atraso){let t;return(...args)=>{clearTimeout(t);t=setTimeout(()=>fn(...args),atraso)}}
   const CRS_DESCRIPTIONS={"EPSG:4674":"SIRGAS 2000","EPSG:4326":"WGS 84","EPSG:3857":"WGS 84 / Pseudo-Mercator","EPSG:31982":"SIRGAS 2000 / UTM zona 22S","EPSG:31983":"SIRGAS 2000 / UTM zona 23S","EPSG:31984":"SIRGAS 2000 / UTM zona 24S","EPSG:5880":"SIRGAS 2000 / Brazil Polyconic"};
   const CRS_VALUES=Object.keys(CRS_DESCRIPTIONS);
-  const crsLabel=value=>CRS_DESCRIPTIONS[value]?`${value} (${CRS_DESCRIPTIONS[value]})`:value;
+  function crsLabel(value){
+    const text=String(value||'').trim();
+    if(!text)return '';
+    let code=text.toUpperCase(),name='';
+    const root=text.match(/^\w+\s*\[\s*"((?:[^"]|"")*)"/);
+    if(root){
+      name=root[1].replace(/""/g,'"');code='';
+      // Only the root authority identifies the CRS: datum/ellipsoid IDs do not.
+      let depth=0,quoted=false;
+      for(let i=0;i<text.length;i++){
+        if(text[i]==='"'){if(quoted&&text[i+1]==='"'){i++;continue}quoted=!quoted;continue}
+        if(quoted)continue;
+        if(text[i]==='[')depth++;
+        else if(text[i]===']')depth--;
+        else if(depth===1){
+          const authority=text.slice(i).match(/^(?:AUTHORITY|ID)\s*\[\s*"([^"\n]+)"\s*,\s*"?(\d+)"?/i);
+          if(authority){code=`${authority[1].toUpperCase()}:${authority[2]}`;break}
+        }
+      }
+    }
+    const description=CRS_DESCRIPTIONS[code]||name;
+    const label=code&&description?`${code} (${description})`:description||code;
+    const method=text.match(/(?:PROJECTION|METHOD)\s*\[\s*"([^"]+)"/i)?.[1];
+    const methods={transverse_mercator:"Mercator Transversa",popular_visualisation_pseudo_mercator:"Pseudo-Mercator",mercator_1sp:"Mercator",polyconic:"Policônica",american_polyconic:"Policônica",lambert_conformal_conic_2sp:"Cônica Conforme de Lambert (2 paralelos padrão)",albers_conic_equal_area:"Cônica Equivalente de Albers"};
+    const known={"EPSG:31982":"Mercator Transversa","EPSG:31983":"Mercator Transversa","EPSG:31984":"Mercator Transversa","EPSG:3857":"Pseudo-Mercator","EPSG:5880":"Policônica"};
+    const projection=method?(methods[method.toLowerCase().replace(/[ -]+/g,'_')]||method.replace(/_/g,' ')):known[code];
+    if(projection)return `${label} — Projeção: ${projection}`;
+    if(/^(?:GEOGCS|GEOGCRS|GEOGRAPHICCRS)\s*\[/i.test(text)||/CS\s*\[\s*ellipsoidal\b/i.test(text)||['EPSG:4674','EPSG:4326'].includes(code))return `${label} — Geográfico`;
+    if(/^GEOCCS\s*\[/i.test(text)||/^GEODCRS\s*\[/i.test(text)&&/CS\s*\[\s*Cartesian\b/i.test(text))return `${label} — Geocêntrico, sem projeção`;
+    return `${label} — Projeção não identificada`;
+  }
   const OUTPUT_SUFFIX_BY_OPERATION={"OP-01":"camada_importada"};
   const OPS=[
     ["Entrada e preparação",[["OP-01","Importar camada","importar-camada",1],["OP-02","Validar camada","validar-camada",1],["OP-02-CORR","Reparar geometrias","reparar-geometrias",1],["OP-03","Normalizar camada","normalizar-camada",1]]],
@@ -413,7 +443,7 @@
   }
   function layerSymbol(layer,overrideColor){
     if(layer.tipo?.toLowerCase().includes("raster"))return '<span class="layer-symbol raster" title="Raster"></span>';
-    const types=tiposGeometriaCamada(layer),type=types[0]||"geometry",symbolStyle=state.layerStyles[layer.id]||{},color=overrideColor||symbolStyle.fillColor||symbolStyle.borderColor||layerColor(layer.id,types),style=` style="--layer-color:${color}"`;
+    const types=tiposGeometriaCamada(layer),type=types[0]||"geometry",symbolStyle=state.layerStyles[layer.id]||{},color=overrideColor||(type.includes("Line")?symbolStyle.borderColor||symbolStyle.fillColor:symbolStyle.fillColor||symbolStyle.borderColor)||layerColor(layer.id,types),style=` style="--layer-color:${color}"`;
     if(type.includes("Point")){const shape=symbolStyle.pointShape||"circle";if(shape!=="circle")return `<span class="layer-symbol layer-symbol-shape" title="Pontos">${symbolPreview("shape",shape,color)}</span>`;return `<span class="layer-symbol point"${style} title="Pontos"></span>`}
     if(type.includes("Line"))return `<span class="layer-symbol line"${style} title="Linhas"></span>`;
     if(type.includes("Polygon"))return `<span class="layer-symbol polygon"${style} title="Polígonos"></span>`;
@@ -1079,7 +1109,7 @@
     return `<div class="symbol-select" data-style="${styleKey}" data-kind="${kind}" data-value="${cur.value}"><button type="button" class="symbol-select-trigger" aria-haspopup="listbox" aria-expanded="false"><span class="symbol-select-preview">${symbolPreview(kind,cur.value,color)}</span><span class="symbol-select-text">${cur.label}</span><i data-lucide="chevron-down" class="symbol-select-caret"></i></button><ul class="symbol-select-list" role="listbox" hidden>${items}</ul></div>`;
   }
   function symbologyFields(layerId){
-    const types=state.geometryTypes[layerId]||[],isPoint=types.some(type=>type.includes("Point")),isLine=types.some(type=>type.includes("Line"))&&!types.some(type=>type.includes("Polygon"));
+    const types=tiposGeometriaCamada(state.layers.find(layer=>layer.id===layerId)||{id:layerId}),isPoint=types.some(type=>type.includes("Point")),isLine=types.some(type=>type.includes("Line"))&&!types.some(type=>type.includes("Polygon"));
     const isPolygon=!isPoint&&!isLine;
     const color=layerColor(layerId,types),style=currentEditStyle(layerId);
     const borderColor=style.borderColor||color,fillColor=style.fillColor||color;
@@ -1574,7 +1604,7 @@
       (geojson.features||[]).forEach(f=>walkCoords(f.geometry?.coordinates,c=>bounds.extend(c)));
       if(!bounds.isEmpty()) state.map.fitBounds(bounds,{padding:40,maxZoom:14});
     }
-    const entry={id,nome:nome||id,tipo:opts.tipo||"vetorial (memória)",origem:opts.origem||"Hierarquização",categoria:opts.categoria||"",destino:"memoria_local",crs:"EPSG:4326",geometria_tipo:opts.geometria_tipo||"Point"};
+    const entry={id,nome:nome||id,tipo:opts.tipo||"vetorial (memória)",origem:opts.origem||"Hierarquização",categoria:opts.categoria||"",destino:"memoria_local",crs:opts.crs_arquivo||"EPSG:4326",geometria_tipo:state.geometryTypes[id].join(",")||opts.geometria_tipo||""};
     const idx=state.layers.findIndex(l=>l.id===id);
     if(idx>=0) state.layers[idx]=entry; else state.layers.push(entry);
     if(!opts.lote) renderLayers();
@@ -1602,8 +1632,8 @@
     const map=state.map,sourceAtual=map.getSource(id);
     const atualizarFonte=sourceAtual?.type==="vector"&&typeof sourceAtual.setTiles==="function";
     const base=tipoGeometriaBase(info.geometria_tipo);
-    state.geometryTypes[id]=base?[base]:[];
-    const color=layerColor(id,state.geometryTypes[id]);
+    const types=base?[base]:[];
+    const color=layerColor(id,types);
     const query=storageTileQuery(info);
     if(info.revisao)query.set("v",info.revisao);
     const source={type:"vector",tiles:[info.tiles_url||`${location.origin}${API}/storage/camada/tiles/{z}/{x}/{y}.pbf?${query}`],minzoom:0,maxzoom:22};
@@ -1614,6 +1644,7 @@
       removeMapResource(id,{preserveSelection:true});
       map.addSource(id,source);
     }
+    state.geometryTypes[id]=types;
     const sourceLayer=STORAGE_TILE_SOURCE_LAYER;
     if(!atualizarFonte){
       map.addLayer({id,type:"fill",source:id,"source-layer":sourceLayer,paint:{"fill-color":color,"fill-opacity":.32,"fill-outline-color":"transparent"},filter:["match",["geometry-type"],["Polygon","MultiPolygon"],true,false]});

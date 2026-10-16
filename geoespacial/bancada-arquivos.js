@@ -109,7 +109,7 @@ function mount(file,opts={}){
   if(tiles){
     const storage=ehStorage(file),{caminho,camada}=storage?separarIdStorage(file.id):{caminho:file.arquivo,camada:null};
     app().adicionarCamadaStorageTiles(file.id,file.nome,{caminho:caminho||file.arquivo,camada,arquivo:file.arquivo,revisao:file.revisao,bounds:file.bounds,geometria_tipo:file.geometria_tipo,crs_arquivo:file.crs_arquivo,feicoes:file.feicoes,tiles_url:file.tiles_url,tiles_token:file.tiles_token,campo_fid_tile:file.campo_fid_tile},{origem:temporario(file)?'Arquivo local temporário':storage?'Arquivo no storage':'Arquivo registrado',categoria:file.categoria||'',lote:opts.lote,estiloPreparado:opts.estiloPreparado});
-  }else app().adicionarCamadaGeoJsonEmMemoria(file.id,file.nome,file.geojson,{tipo:'vetorial',origem:'Arquivo no storage',categoria:file.categoria||'',geometria_tipo:file.geojson.features[0]?.geometry?.type,lote:opts.lote,estiloPreparado:opts.estiloPreparado});
+  }else app().adicionarCamadaGeoJsonEmMemoria(file.id,file.nome,file.geojson,{tipo:'vetorial',origem:'Arquivo no storage',categoria:file.categoria||'',geometria_tipo:file.geojson.features[0]?.geometry?.type,crs_arquivo:file.crs_arquivo,lote:opts.lote,estiloPreparado:opts.estiloPreparado});
   Object.assign(app().state.layers.find(layer=>layer.id===file.id)||{}, {arquivo:file.arquivo,origem_geometria:temporario(file)?'local_temporaria':ehStorage(file)?'storage':'arquivo_registrado'});
   app().state.activeLayerId=file.id;
   if(!opts.lote)app().renderLayers();
