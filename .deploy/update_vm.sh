@@ -90,7 +90,7 @@ ok "rota ativa em $PUBLIC_URL/"
 
 step "Build/atualização do container (nativo ARM64 na própria VM)"
 docker compose -f "$COMPOSE_FILE" build --pull
-docker compose -f "$COMPOSE_FILE" run --rm --no-deps app python3 -B scripts/validar_documentacao_favorabilidade.py
+docker compose -f "$COMPOSE_FILE" run --rm --no-deps app python3 -B scripts/validar_documentacao_favorabilidade.py </dev/null
 docker compose -f "$COMPOSE_FILE" up -d --force-recreate
 ok "container sicard_app em execução"
 
