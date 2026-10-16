@@ -8,19 +8,16 @@ Regras:
   nas extrações (impressão digital de cada camada usada);
 - nada é sobrescrito: nome já usado na mesma pasta é recusado.
 
-Num servidor local, a cópia do storage em data/storage acompanha a operação para
-o explorador de camadas continuar igual ao storage. Na VM a pasta é o próprio
-storage, montado somente leitura, e nada é copiado.
+Todas as altera??es s?o feitas exclusivamente no storage remoto.
 """
 from __future__ import annotations
 
-import os
 import re
 from pathlib import PurePosixPath
 from typing import Any
 
 from api.services import storage_remoto
-from api.services.storage_geoespacial import RAIZES, diretorio_storage
+from api.services.storage_geoespacial import RAIZES
 
 _RESERVADOS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 _NOMES_WINDOWS = re.compile(r"(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(\..*)?", re.I)
@@ -66,13 +63,6 @@ def _exigir_livre(pai: str, nome: str) -> None:
         raise FileExistsError(f"Já existe “{nome}” em {pai}.")
 
 
-def _local(caminho: str):
-    base = diretorio_storage()
-    if not base.is_dir() or not os.access(base, os.W_OK):
-        return None
-    return base.joinpath(*PurePosixPath(caminho).parts)
-
-
 def listar(caminho: str | None = None) -> dict[str, Any]:
     """Raiz: as pastas publicadas. Dentro delas: subpastas e arquivos (só para contexto)."""
     if not str(caminho or "").strip("/ "):
@@ -93,9 +83,6 @@ def criar(pai: str, nome: str) -> dict[str, Any]:
     _exigir_livre(pai, nome)
     novo = f"{pai}/{nome}"
     storage_remoto.criar_pasta(novo)
-    local = _local(novo)
-    if local is not None:
-        local.mkdir(parents=True, exist_ok=True)
     return {"nome": nome, "caminho": novo}
 
 
@@ -107,9 +94,6 @@ def renomear(caminho: str, nome: str) -> dict[str, Any]:
     _exigir_livre(pai, nome)
     novo = f"{pai}/{nome}"
     storage_remoto.mover(caminho, novo)
-    antigo_local, novo_local = _local(caminho), _local(novo)
-    if antigo_local is not None and antigo_local.is_dir() and not any(antigo_local.iterdir()):
-        antigo_local.rename(novo_local)
     return {"nome": nome, "caminho": novo}
 
 
@@ -117,7 +101,4 @@ def excluir(caminho: str) -> dict[str, Any]:
     caminho = _alteravel(caminho)
     _exigir_vazia(caminho, "excluir")
     storage_remoto.apagar_pasta(caminho)
-    local = _local(caminho)
-    if local is not None and local.is_dir() and not any(local.iterdir()):
-        local.rmdir()
     return {"caminho": caminho}

@@ -1,4 +1,6 @@
 # Credenciais locais de agentes SIGMA
+/auditoria/
+/outputs/*.log
 credencias_sigma_agentes.txt
 .env
 .dev-server.log

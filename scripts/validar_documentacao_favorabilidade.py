@@ -1,6 +1,10 @@
 """Verifica os artefatos da biblioteca antes de substituir o container ativo."""
 import json
 from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from api.path_policy import project_path
 
 
 def validar() -> None:
@@ -9,12 +13,12 @@ def validar() -> None:
         "config/matriz-criterios-premissas-v3.json",
         "data/geoespacial/outputs/normalizacao_favorabilidade_fase2.json",
     ):
-        dados = json.loads((raiz / relativo).read_text(encoding="utf-8"))
+        dados = json.loads(project_path(relativo).read_text(encoding="utf-8"))
         if not dados:
             raise ValueError(f"Artefato vazio: {relativo}")
     total = 0
     for pasta in ("mapas_fase2", "mapas_fase2_normalizados"):
-        diretorio = raiz / "data/geoespacial/relatorios" / pasta
+        diretorio = project_path(f"data/geoespacial/relatorios/{pasta}")
         manifesto = json.loads((diretorio / "manifesto.json").read_text(encoding="utf-8"))
         if not manifesto.get("imagens"):
             raise ValueError(f"Manifesto sem imagens: {pasta}")

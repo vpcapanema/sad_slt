@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from hashlib import sha256
 import json
 from pathlib import Path, PurePosixPath
-from tempfile import TemporaryDirectory
+from api.storage_policy import TemporaryDirectory
 from uuid import UUID, uuid4
 
 from api.services import storage_remoto
@@ -48,7 +48,10 @@ def enviar_arquivo(execucao: str, grupo: str, arquivo: Path, *, nome: str | None
     if PurePosixPath(path).parts[2:4] != (str(UUID(str(execucao))), grupo):
         raise ValueError('O destino não corresponde à execução e ao grupo informados.')
     with arquivo.open('rb') as stream:
-        checksum = __import__('hashlib').file_digest(stream, 'sha256').hexdigest()
+        digest = sha256()
+        for chunk in iter(lambda: stream.read(1024 * 1024), b''):
+            digest.update(chunk)
+        checksum = digest.hexdigest()
     uploaded = False
     try:
         storage_remoto.enviar(path, arquivo)
@@ -64,10 +67,17 @@ def enviar_arquivo(execucao: str, grupo: str, arquivo: Path, *, nome: str | None
 
 
 def enviar_bytes(execucao: str, grupo: str, nome: str, data: bytes) -> dict:
-    with TemporaryDirectory(prefix='sicard-saida-') as directory:
-        path = Path(directory)/Path(nome).name
-        path.write_bytes(data)
-        return enviar_arquivo(execucao, grupo, path, nome=nome)
+    path = destino(execucao, grupo, nome)
+    checksum = sha256(data).hexdigest()
+    storage_remoto.enviar_bytes(path, data)
+    try:
+        remote = conferir(path, checksum)
+        if len(remote) != len(data):
+            raise ValueError('O tamanho do arquivo enviado diverge do original.')
+    except Exception:
+        storage_remoto.apagar_arquivo(path)
+        raise
+    return {'caminho': path, 'sha256': checksum, 'tamanho_bytes': len(data)}
 
 
 def enviar_json(execucao: str, nome: str, data: dict) -> dict:

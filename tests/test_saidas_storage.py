@@ -9,11 +9,16 @@ from api.services import saidas_storage as saidas, storage_remoto, ciclo_vida_ar
 
 @pytest.fixture
 def remoto(monkeypatch,tmp_path):
+    def enviar_bytes(caminho, dados):
+        target = tmp_path / caminho
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(dados)
     def enviar(caminho,arquivo):
         target=tmp_path/caminho
         target.parent.mkdir(parents=True,exist_ok=True)
         target.write_bytes(arquivo.read_bytes())
     monkeypatch.setattr(storage_remoto,'enviar',enviar)
+    monkeypatch.setattr(storage_remoto,'enviar_bytes',enviar_bytes)
     monkeypatch.setattr(storage_remoto,'baixar',lambda caminho:(tmp_path/caminho).read_bytes())
     monkeypatch.setattr(storage_remoto,'apagar_arquivo',lambda caminho:(tmp_path/caminho).unlink())
     return tmp_path

@@ -93,11 +93,14 @@ if ($statusPorcelain) {
     if (-not $Mensagem) {
         $Mensagem = "chore(deploy): atualizacao $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
     }
+    if ($LASTEXITCODE -ne 0) { Write-Error "git add falhou."; exit 1 }
     & $GitExe commit -m $Mensagem | Out-Host
+    if ($LASTEXITCODE -ne 0) { Write-Error "git commit falhou."; exit 1 }
     Write-Host "  Commit criado: $Mensagem" -ForegroundColor Green
 } else {
     Write-Host "  Nada para commitar - arvore de trabalho limpa." -ForegroundColor Yellow
 }
+$fullSha = (& $GitExe rev-parse HEAD).Trim()
 $localSha = (& $GitExe rev-parse --short HEAD).Trim()
 Write-Host "  HEAD local: $localSha"
 
@@ -153,7 +156,9 @@ $autorizacaoVm = ""
 if ($branch -ne $BranchPadrao) {
     $autorizacaoVm = "SICARD_PERMITIR_BRANCH=$branch "
 }
-$remoteCmd = "cd $AppDirVm && $autorizacaoVm" + "bash .deploy/update_vm.sh $branch"
+# Carrega o script do commit publicado, evitando executar a versao antiga
+# enquanto ela substitui o proprio arquivo durante o git reset.
+$remoteCmd = "cd $AppDirVm && git fetch origin $branch && git show ${fullSha}:.deploy/update_vm.sh | ${autorizacaoVm}bash -s -- $branch $fullSha"
 & $Plink -ssh $Vm -i $Key -hostkey $HostKey -batch $remoteCmd
 $deployExit = $LASTEXITCODE
 if ($deployExit -ne 0) {
@@ -184,7 +189,7 @@ if (-not $healthOk) {
 
 Banner "Abrindo a aplicacao"
 Write-Host "  $AppUrl/"
-Start-Process "$AppUrl/"
+Start-Process "$AppUrl/" -WindowStyle Hidden
 
 Write-Host ""
 Write-Host "==== Deploy finalizado: local -> GitHub -> VM ====" -ForegroundColor Cyan

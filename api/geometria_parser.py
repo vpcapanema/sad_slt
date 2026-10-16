@@ -5,7 +5,7 @@ import io
 from contextvars import ContextVar
 import json
 import shutil
-import tempfile
+from api import storage_policy as tempfile
 import zipfile
 import xml.etree.ElementTree as ET
 from pathlib import Path, PurePosixPath

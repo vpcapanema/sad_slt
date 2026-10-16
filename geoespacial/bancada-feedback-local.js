@@ -10,7 +10,7 @@
     row.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
     host.append(row);
     host.scrollTop = host.scrollHeight;
-    if (level === 'error' || level === 'warning') host.classList.add('open');
+    host.classList.add('open');
   }
   let atual = null;
   function iniciarCadastro(options = {}) {

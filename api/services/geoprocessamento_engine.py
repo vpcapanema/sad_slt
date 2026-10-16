@@ -307,14 +307,19 @@ class GeoprocessamentoEngine:
         self.profiles: dict[str, dict[str, Any]] = {}
         self.functions: dict[str, dict[str, Any]] = {}
         self.flows: dict[str, dict[str, Any]] = {}
-        self._definitions_path = Path("config/geoespacial/definicoes.json")
+        from api.path_policy import project_path
+        self._definitions_path = project_path("data/geoespacial/configuracoes/definicoes.json")
         self._load_definitions()
 
     def _load_definitions(self) -> None:
-        if not self._definitions_path.exists():
+        source = self._definitions_path
+        if not source.exists():
+            from api.path_policy import project_path
+            source = project_path("config/geoespacial/definicoes.json")
+        if not source.exists():
             return
         try:
-            payload = json.loads(self._definitions_path.read_text(encoding="utf-8"))
+            payload = json.loads(source.read_text(encoding="utf-8"))
             self.functions = {item["id"]: item for item in payload.get("funcoes", [])}
             self.flows = {item["id"]: item for item in payload.get("fluxos", [])}
         except (OSError, ValueError, KeyError):
@@ -626,7 +631,7 @@ class GeoprocessamentoEngine:
                         if key in attribute_columns
                     )
                     for attributes in selected_attributes
-                    if attributes
+                    if attributes and any(key in attribute_columns for key in attributes)
                 ),
                 axis=1,
             )

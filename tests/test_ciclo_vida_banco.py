@@ -44,6 +44,11 @@ def database(monkeypatch, tmp_path):
         target.parent.mkdir(parents=True,exist_ok=True)
         target.write_bytes(source.read_bytes())
     monkeypatch.setattr(storage_remoto,'enviar',enviar)
+    def enviar_bytes(caminho, dados):
+        target = tmp_path / caminho
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(dados)
+    monkeypatch.setattr(storage_remoto, 'enviar_bytes', enviar_bytes)
     monkeypatch.setattr(storage_remoto,'baixar',lambda caminho:(tmp_path/caminho).read_bytes())
     monkeypatch.setattr(storage_remoto,'apagar_arquivo',lambda caminho:(tmp_path/caminho).unlink())
     try:

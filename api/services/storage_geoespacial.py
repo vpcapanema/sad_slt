@@ -67,7 +67,8 @@ def diretorio_storage() -> Path:
 
 def montado() -> bool:
     """O storage está acessível como pasta (montagem da VM ou FUSE do Codespace)?"""
-    return any((diretorio_storage() / raiz).is_dir() for raiz in RAIZES)
+    from api.storage_policy import montagem
+    return montagem(diretorio_storage())
 
 
 def _via_api() -> bool:

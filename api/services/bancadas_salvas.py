@@ -3,7 +3,7 @@ import hashlib
 import json
 import os
 import re
-import tempfile
+from api import storage_policy as tempfile
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
 from api.path_policy import project_path
@@ -32,7 +32,7 @@ def salvar(usuario, nome, snapshot):
     if len(data) > MAX_BYTES:
         raise ValueError('A bancada excede 64 MB. Cadastre os arquivos locais no storage antes de salvar.')
     path = pasta(usuario)
-    fd, tmp = tempfile.mkstemp(dir=path, suffix='.tmp')
+    fd, tmp = tempfile.mkstemp(suffix='.tmp')
     try:
         with os.fdopen(fd, 'wb') as stream:
             stream.write(data)
@@ -119,7 +119,7 @@ def preparar_cache(usuario, data, verificar=False):
         if anterior == atual:
             preview.with_suffix('.pin').touch(exist_ok=True)
             if verificar: layer['previa_reutilizavel'] = True
-    fd, tmp = tempfile.mkstemp(dir=cache_path.parent, suffix='.tmp')
+    fd, tmp = tempfile.mkstemp(suffix='.tmp')
     try:
         with os.fdopen(fd, 'w', encoding='utf-8') as stream: json.dump(cache, stream)
         os.replace(tmp, cache_path)

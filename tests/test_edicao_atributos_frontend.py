@@ -15,7 +15,7 @@ CSS = Path("assets/css/geoprocessamento.css").read_text(encoding="utf-8")
 
 def test_botao_de_editar_existe_na_arvore_de_camadas():
     assert 'data-edit-layer="${layer.id}"' in JS
-    assert "toggleLayerEditing(editBtn.dataset.editLayer)" in JS
+    assert "window.gpAttributeTable.editarCamada(editBtn.dataset.editLayer)" in JS
 
 
 def test_toggle_liga_desliga_e_recusa_camada_homologada():

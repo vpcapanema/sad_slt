@@ -8,7 +8,7 @@ import unicodedata
 from hashlib import sha256
 from pathlib import Path
 from uuid import uuid4
-from tempfile import mkdtemp
+from api.storage_policy import mkdtemp
 
 import geopandas as gpd
 import rasterio

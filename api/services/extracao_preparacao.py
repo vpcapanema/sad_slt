@@ -16,7 +16,7 @@ TTL = 24 * 60 * 60
 
 def _pasta(dono):
     from api.path_policy import project_path
-    pasta = project_path('data/geoespacial/configuracoes/extracao-atributos/previas') / sha256(str(dono).encode()).hexdigest()
+    pasta = project_path('tmp/extracao-atributos/previas') / sha256(str(dono).encode()).hexdigest()
     pasta.mkdir(parents=True, exist_ok=True)
     return pasta
 

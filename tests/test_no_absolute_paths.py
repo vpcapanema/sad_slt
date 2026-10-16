@@ -28,6 +28,7 @@ TEXT_SUFFIXES = {
 # O teste vigia o codigo da aplicacao, onde caminho absoluto e defeito de fato.
 IGNORED_PARTS = {".git", ".tmp", ".venv", "node_modules", "__pycache__", "tmp", ".vscode", "entregas"}
 IGNORED_ROOTS = {
+    Path("auditoria"),  # Evidências e ambientes descartáveis fora do Git.
     Path("outputs/inventario-saidas-20261008"),
     Path("outputs/migracao-demandas"),
 }

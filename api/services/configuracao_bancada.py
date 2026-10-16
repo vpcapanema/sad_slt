@@ -11,7 +11,7 @@ import json
 import hashlib
 import re
 import os
-import tempfile
+from api import storage_policy as tempfile
 import unicodedata
 from threading import Lock
 from datetime import datetime, timezone
@@ -218,7 +218,7 @@ def salvar(nome: str, categorias: list[dict], user, entradas: list[dict] | None 
         raise ValueError(f'Limite de {LIMITE_ARQUIVOS} configurações atingido. Apague alguma antes.')
     temporario = None
     try:
-        with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', dir=destino.parent,
+        with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8',
                                          suffix='.tmp', delete=False) as stream:
             temporario = Path(stream.name)
             json.dump(conteudo, stream, ensure_ascii=False, indent=2)

@@ -7,7 +7,7 @@ import base64
 import hashlib
 import os
 import re
-import tempfile
+from api import storage_policy as tempfile
 import unicodedata
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -486,8 +486,10 @@ class GeoespacialService:
         caminho = self._caminho_arquivo_da_camada(camada_id)
         if caminho is None:
             return None
+        from api.services.camada_arquivo import resolver_camada
+        layer = resolver_camada(caminho, self._metadados.get(camada_id) or {})
         try:
-            frame = cast(gpd.GeoDataFrame, gpd.read_file(caminho))
+            frame = cast(gpd.GeoDataFrame, gpd.read_file(caminho, layer=layer))
             meta = self._metadados.get(camada_id) or {}
             for field in meta.get('campos_json_arquivo', (meta.get('metadados') or {}).get('campos_json_arquivo', [])):
                 if field in frame:
@@ -831,7 +833,9 @@ class GeoespacialService:
         gravado_em_arquivo = False
         caminho = self._caminho_arquivo_da_camada(camada_id)
         if caminho is not None:
-            self._reescrever_arquivo_do_acervo(caminho, gdf)
+            from api.services.camada_arquivo import resolver_camada
+            layer = resolver_camada(caminho, self._metadados[camada_id])
+            self._reescrever_arquivo_do_acervo(caminho, gdf, layer)
             gravado_em_arquivo = True
         camada_geoespacial_repository.substituir_vetor(
             camada_id, gdf, metadata
@@ -850,10 +854,9 @@ class GeoespacialService:
         """Grava edições de atributo feitas na Bancada — na fonte real da camada.
 
         "Fonte real" é o arquivo do acervo quando a camada tem um
-        (`caminho_arquivo`), reescrito por inteiro via `gdf.to_file` — não é
-        patch incremental, é a mesma estratégia que qualquer ferramenta GIS
-        usa por baixo dos panos, e funciona igual para .shp e .gpkg sem
-        tratamento por formato. O PostGIS é sempre atualizado também: tabela
+        (`caminho_arquivo`). Em GeoPackage, substitui somente a subcamada
+        identificada em uma cópia completa do contêiner, preservando as demais.
+        O PostGIS é atualizado também: tabela
         de atributos, estatística de campo da simbologia e tiles MVT
         continuam consultando o banco diretamente, e as duas cópias não podem
         divergir uma da outra.
@@ -907,7 +910,9 @@ class GeoespacialService:
         gravado_em_arquivo = False
         caminho = self._caminho_arquivo_da_camada(camada_id)
         if caminho is not None:
-            self._reescrever_arquivo_do_acervo(caminho, gdf)
+            from api.services.camada_arquivo import resolver_camada
+            layer = resolver_camada(caminho, self._metadados[camada_id])
+            self._reescrever_arquivo_do_acervo(caminho, gdf, layer)
             gravado_em_arquivo = True
 
         metadata = self._metadados[camada_id]
@@ -921,10 +926,10 @@ class GeoespacialService:
         }
 
     @staticmethod
-    def _reescrever_arquivo_do_acervo(caminho: Path, gdf: gpd.GeoDataFrame) -> None:
-        """Reescreve o arquivo do acervo inteiro com o conteúdo atual do gdf.
+    def _reescrever_arquivo_do_acervo(caminho: Path, gdf: gpd.GeoDataFrame, camada: str | None = None) -> None:
+        """Grava o gdf, preservando as outras subcamadas de um GeoPackage.
 
-        Grava primeiro num arquivo temporário no mesmo diretório e só troca
+        Grava primeiro na pasta temporária do storage e só troca
         pelo definitivo depois de a escrita ter sucesso — se o processo cair
         no meio, o arquivo original permanece intacto em vez de corrompido.
 
@@ -935,23 +940,30 @@ class GeoespacialService:
         esse risco.
         """
         sufixo = caminho.suffix
-        provisorio = caminho.with_name(f".tmp-{uuid4().hex}{sufixo}")
 
         # Sem `layer=` explícito, o GeoPackage nomeia a camada a partir do
         # nome do arquivo temporário (".tmp-<hex>"), que o GDAL rejeita por
         # ter caracteres inválidos para nome de camada. Preserva o nome que o
         # arquivo original já tinha, para a identidade da camada não mudar.
-        layer = None
+        layer = camada
         if sufixo.lower() == ".gpkg":
             import fiona
+            camadas = list(fiona.listlayers(caminho))
+            if layer is None and len(camadas) == 1:
+                layer = camadas[0]
+            if layer not in camadas:
+                raise ValueError('Informe a subcamada existente a editar no GeoPackage.')
 
-            try:
-                camadas = fiona.listlayers(caminho)
-                layer = camadas[0] if camadas else None
-            except Exception:
-                layer = None
-
+        temporaria = tempfile.TemporaryDirectory(prefix='sicard-edicao-acervo-')
+        provisorio = Path(temporaria.name) / ('camada' + sufixo)
         try:
+            if sufixo.lower() == '.gpkg':
+                # Backup SQLite inclui outras camadas, tabelas e metadados.
+                # A escrita GDAL substitui somente a camada nomeada na cópia.
+                import sqlite3
+                from contextlib import closing
+                with closing(sqlite3.connect(caminho)) as source, closing(sqlite3.connect(provisorio)) as target:
+                    source.backup(target)
             if layer:
                 gdf.to_file(provisorio, layer=layer, **({"FID": gdf.index.name} if gdf.index.name and gdf.index.name not in gdf.columns else {}))
             else:
@@ -968,8 +980,7 @@ class GeoespacialService:
                 os.replace(provisorio, caminho)
         finally:
             # Temporários da escrita não são versões nem backups.
-            for resto in provisorio.parent.glob(provisorio.stem + ".*"):
-                resto.unlink(missing_ok=True)
+            temporaria.cleanup()
 
 
     @staticmethod
@@ -1004,7 +1015,12 @@ class GeoespacialService:
         if not origem:
             raise ValueError("A camada não possui uma fonte externa atualizável")
         try:
-            atualizado = gpd.read_file(origem)
+            if meta.get('caminho_arquivo'):
+                from api.services.camada_arquivo import resolver_camada
+                arquivo = project_path(origem)
+                atualizado = gpd.read_file(arquivo, layer=resolver_camada(arquivo, meta))
+            else:
+                atualizado = gpd.read_file(origem)
         except Exception as exc:
             raise RuntimeError(f"Falha ao atualizar a fonte: {exc}") from exc
         meta["crs"] = str(atualizado.crs) if atualizado.crs else None
@@ -1806,7 +1822,8 @@ class GeoespacialService:
             # Selecionar feições que NÃO intersectam
             resultado = gdf[~gdf.index.isin(resultado.index)]
 
-        resultado = resultado.drop(columns=["index_right"], errors="ignore")
+        if not inverter_selecao:
+            resultado = gdf[gdf.index.isin(resultado.index)].copy()
         nova_camada_id = self.registrar_camada(resultado, f"Seleção espacial de {camada_id}", "OP-07")
 
         return {

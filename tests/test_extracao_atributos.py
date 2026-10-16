@@ -208,7 +208,7 @@ def test_indice_de_extracoes_e_o_destino_do_card_e_leva_a_nova_extracao():
     assert indice.status_code==200
     assert 'class="standard-section-action-row"' in indice.text and 'Nova extração' in indice.text
     assert 'href="/restrict/geoespacial/extracao-atributos/"' in indice.text
-    assert 'class="admin-table ea-indice-tabela"' in indice.text and 'mad-filter--composite' in indice.text
+    assert 'class="admin-table ea-indice-tabela"' in indice.text and 'class="admin-filter-bar"' in indice.text
     assert indice.text.index('class="col-select"') < indice.text.index('>Ação</th>') < indice.text.index('Data da extração')
     for botao in ['ea-indice-bulk-edit','ea-indice-bulk-cancel','ea-indice-bulk-save','ea-indice-bulk-delete']:
         assert f'id="{botao}"' in indice.text, botao

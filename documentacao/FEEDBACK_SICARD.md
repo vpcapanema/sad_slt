@@ -121,6 +121,6 @@ A ponte React municipal em `plugins/municipal-layer/sicard/main.jsx` também dev
 
 ## Feedback próprio da bancada de geoprocessamento
 
-A bancada usa o mesmo controlador e o mesmo modal de acompanhamento das demais telas. A página `_geoprocessamento.html` carrega `process_feedback_system.css` e `process_feedback_unified.js`; `geoespacial/bancada-feedback.js` apenas preserva o namespace `gpFeedback` e encaminha o acompanhamento ao controlador compartilhado, sem substituir `window.ProcessFeedback` nem criar um painel dentro do formulário.
+A bancada usa `geoespacial/bancada-feedback-local.js` para registrar andamento, erros e conclusoes no painel local. O adaptador do antigo controlador compartilhado permanece apenas em `tests/browser/fixtures/bancada-feedback.js` para testes de compatibilidade.
 
 As operações da bancada que usam jobs canceláveis ligam o botão CANCELAR à rota de cancelamento do job. O pedido permanece pendente até o servidor confirmar `status=cancelado`; erros permitem nova tentativa. Envios ao storage e demais operações sem interrupção segura não oferecem esse botão. O histórico do processo inicia recolhido, conforme o padrão da prévia local.

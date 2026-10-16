@@ -1,7 +1,7 @@
 """Leitura por demanda da API existente do SFTPGo, sem cache em disco.
 
 O adaptador FUSE preserva os caminhos usados por GDAL, GeoPandas e Shapefiles.
-Somente arquivos abertos para gravacao usam uma area temporaria protegida.
+Arquivos abertos para gravacao usam RAM e sao enviados ao storage no flush.
 """
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from pathlib import Path, PurePosixPath
 import errno
 import os
 import stat
-import tempfile
+from io import BytesIO
 import time
 
 from api.services import storage_remoto as remote
@@ -132,9 +132,10 @@ def mount(root, target, writable=False, foreground=False):
                 fh = next((key for key, value in self.handles.items()
                            if value['path'] == path and value['file']), None)
             if fh in self.handles and self.handles[fh]['file']:
-                s = os.fstat(self.handles[fh]['file'].fileno())
-                return dict(st_mode=stat.S_IFREG | 0o600, st_size=s.st_size,
-                            st_mtime=s.st_mtime, st_ctime=s.st_ctime, st_atime=s.st_atime,
+                size = self.handles[fh]['file'].getbuffer().nbytes
+                now = time.time()
+                return dict(st_mode=stat.S_IFREG | 0o600, st_size=size,
+                            st_mtime=now, st_ctime=now, st_atime=now,
                             st_uid=os.getuid(), st_gid=os.getgid(), st_nlink=1)
             meta = self.api.info(path)
             is_dir = bool(meta['mode'] & (1 << 31))
@@ -158,9 +159,7 @@ def mount(root, target, writable=False, foreground=False):
             self.next_handle += 1
             handle = {'file': None, 'path': path, 'dirty': False, 'failed': False}
             if write:
-                cache = Path.home()/'.cache/sicard-write'
-                cache.mkdir(parents=True, exist_ok=True, mode=0o700)
-                f = tempfile.NamedTemporaryFile(prefix='pending-', dir=cache, delete=False)
+                f = BytesIO()
                 handle['file'] = f
                 if not flags & os.O_TRUNC:
                     try:
@@ -196,7 +195,7 @@ def mount(root, target, writable=False, foreground=False):
             if handle['file'] and handle['dirty']:
                 handle['file'].flush()
                 try:
-                    remote.enviar(self.api.path(path), Path(handle['file'].name))
+                    remote.enviar_bytes(self.api.path(path), handle['file'].getvalue())
                 except Exception:
                     handle['failed'] = True
                     raise
@@ -213,10 +212,7 @@ def mount(root, target, writable=False, foreground=False):
                 self.flush(path, fh)
             finally:
                 if handle['file']:
-                    name = handle['file'].name
                     handle['file'].close()
-                    if not handle['dirty'] and not handle['failed']:
-                        Path(name).unlink()
                 self.handles.pop(fh)
             return 0
 
@@ -224,7 +220,12 @@ def mount(root, target, writable=False, foreground=False):
             own = fh is None
             if own:
                 fh = self.open(path, os.O_RDWR)
-            self.handles[fh]['file'].truncate(length)
+            stream = self.handles[fh]['file']
+            if length > stream.getbuffer().nbytes:
+                stream.seek(length - 1)
+                stream.write(b'\0')
+            else:
+                stream.truncate(length)
             self.handles[fh]['dirty'] = True
             if own:
                 self.release(path, fh)

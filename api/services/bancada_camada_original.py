@@ -82,9 +82,11 @@ def _fonte(ident: str, arquivo: str) -> Fonte:
     )
     if registro is None:
         raise ValueError("O identificador não está vinculado a este arquivo registrado.")
+    from api.services.camada_arquivo import resolver_camada
+    camada = resolver_camada(path, registro)
     return Fonte(
-        ident, path, relativo, None, str(registro.get("nome") or path.stem),
-        {"tipo": "arquivo_registrado", "categoria": registro.get("categoria_catalogo")},
+        ident, path, relativo, camada, str(registro.get("nome") or path.stem),
+        {"tipo": "arquivo_registrado", "categoria": registro.get("categoria_catalogo"), "camada": camada},
         True,
     )
 
@@ -127,11 +129,9 @@ def _abrir(fonte: Fonte) -> tuple[gdal.Dataset, ogr.Layer]:
         raise ValueError("GDAL não conseguiu abrir o arquivo vetorial.") from exc
     if dataset is None:
         raise ValueError("GDAL não conseguiu abrir o arquivo vetorial.")
-    if fonte.local and dataset.GetLayerCount() != 1:
-        raise ValueError("O arquivo registrado deve conter uma única camada vetorial.")
     if fonte.camada:
         camada = dataset.GetLayerByName(fonte.camada)
-    elif dataset.GetLayerCount() == 1 or fonte.local:
+    elif dataset.GetLayerCount() == 1:
         camada = dataset.GetLayer(0)
     else:
         camada = None

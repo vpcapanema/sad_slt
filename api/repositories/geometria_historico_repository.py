@@ -241,7 +241,7 @@ def insert_upload(
     """Registra, na transação corrente, a versão enviada por upload e seu arquivo original."""
     import hashlib, json
     from pathlib import Path
-    from tempfile import TemporaryDirectory
+    from api.storage_policy import TemporaryDirectory
     from uuid import uuid4
     from api.services import storage_remoto
     content = arquivo['conteudo_binario']

@@ -15,7 +15,7 @@ import re
 import json
 import os
 import unicodedata
-import tempfile
+from api import storage_policy as tempfile
 import zipfile
 from pathlib import Path
 

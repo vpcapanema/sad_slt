@@ -185,9 +185,9 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
 
     assert 'class="admin-table hier-register-table ami-table--database"' in html
     assert 'data-source-table="ahp.comparacao_colaborativa_ambiente"' in html
-    assert 'id="ami-filter-column"' in html
-    assert 'id="ami-filter-value"' in html
-    assert 'class="ami-composite-filter mad-filter mad-filter--composite"' in html
+    assert 'id="ami-filter-coluna"' in html
+    assert 'id="ami-filter-valor"' in html
+    assert 'class="admin-filter-bar"' in html
     assert '/assets/css/mad-filter-standard.css?v=20260820-1' in html
     assert '<div class="ami-toolbar ami-panel">' not in html
     assert html.index('class="standard-section-action-row"') < html.index('id="ami-new"')
@@ -246,13 +246,13 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
     assert 'current + "/" + maximum' in julgamentos_js
     assert "markPairConfigured(judgment, row, column)" in julgamentos_js
     assert "applyConfiguredVisuals(judgment, host)" in julgamentos_js
-    assert "Par e valor oposto validados automaticamente" in julgamentos_js
+    assert "Par e valor oposto simulados automaticamente" in julgamentos_js
     assert "if (row !== column)" in julgamentos_js
     assert "oppositePair._applySaaty(nearestFormStep(reciprocal))" in julgamentos_js
-    assert "Card oposto configurado e validado automaticamente" in julgamentos_js
+    assert "Card oposto simulado automaticamente" in julgamentos_js
     assert "pair._applySaaty = function" in julgamentos_js
-    assert 'class="admin-bulk-actions ami-table-actions"' in html
-    assert html.index('</table></div><div class="admin-bulk-actions ami-table-actions"') > html.index('class="admin-table hier-register-table ami-table--database"')
+    assert 'class="admin-bulk-actions ami-table-actions standard-table-actions"' in html
+    assert html.index('</table></div><div class="admin-bulk-actions ami-table-actions standard-table-actions"') > html.index('class="admin-table hier-register-table ami-table--database"')
     assert 'id="ami-pairwise-panel"' in html
     assert 'id="ami-live-metrics"' in html
     for metric_id in ("ami-metric-lambda", "ami-metric-ic", "ami-metric-ia", "ami-metric-rc"):
@@ -283,7 +283,7 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
     assert "Sugestão de mensagem de e-mail" in html
     assert 'id="ami-email-form-link"' in html
     assert "judgment.url_publica" in julgamentos_js
-    assert "renderEmailDraft(j);" in julgamentos_js
+    assert "renderEmailDraft(judgment);" in julgamentos_js
     assert 'api/ahp/comparacao-colaborativa/ambientes' in julgamentos_js
     assert 'renderAnalysisRounds' in julgamentos_js
     assert 'openAnalysisWorkspace' in julgamentos_js
@@ -405,17 +405,17 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
     assert 'type="datetime-local"' not in tabela_js
     assert 'id="ami-create-section"' in html
     assert ">1</span>" in html and "Dados do ambiente colaborativo" in html
-    assert ">2</span><span>Preenchimento da Matriz de Comparação Pareada" in html
-    assert 'scaleIndex.textContent = "2.1"' in julgamentos_js
-    assert ">2.2</span><span>Indicadores instantâneos" in html
-    assert '>2.3</span><span>Matriz de comparação pareada' in html
-    assert '>2.3</span><span>Formulário de comparação pareada' in html
-    assert ">3</span><span>Ambiente colaborativo" in html
-    assert ">3.1</span><span>Análise Multicritério Interativa" in html
-    assert ">3.1.1</span><span>Configuração do preenchimento" in html
+    assert ">3</span><span>Simulação de comparação pareada" in html
+    assert 'scaleIndex.textContent = "3.1"' in julgamentos_js
+    assert ">3.2</span><span>Indicadores instantâneos" in html
+    assert '>3.3</span><span>Matriz de comparação pareada' in html
+    assert '>3.3</span><span>Formulário de comparação pareada' in html
+    assert ">2</span><span>Ambiente colaborativo" in html
+    assert ">2.1</span><span>Análise Multicritério Interativa" in html
+    assert '>2.1.1</span><span id="ami-deadline-section-title">Data limite da coleta' in html
     assert 'id="ami-criteria-matrix-summary"' in html
-    assert ">3.2</span><span>Status do ambiente colaborativo" in html
-    assert ">3.3</span><span>Sugestão de mensagem de e-mail" in html
+    assert ">2.2</span><span>Status do ambiente colaborativo" in html
+    assert ">2.3</span><span>Sugestão de mensagem de e-mail" in html
     assert html.count("ami-config-field") == 3
     for field_id in ("ami-deadline", "ami-hierarchy", "ami-emails"):
         field = html.split(f'for="{field_id}"', 1)[1].split("</div>", 1)[0]

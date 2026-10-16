@@ -6,7 +6,7 @@ Leia as instruções locais vigentes antes de trabalhar. Pontos de entrada:
 - `geoespacial/geoprocessamento.js`: ferramentas, execução de jobs, camadas e biblioteca.
 - `geoespacial/geoprocessamento-{ribbon,commands,actions,toolbox,modeler,atributos}.js`: comandos dinâmicos e editores.
 - `geoespacial/bancada-arquivos.js`: sessões de arquivos, revisões e persistência.
-- `geoespacial/bancada-feedback.js`: feedback exclusivo da bancada.
+- `geoespacial/bancada-feedback-local.js`: feedback exclusivo da bancada.
 - `api/routers/geoespacial.py`, `api/services/{bancada_arquivos,geoprocessamento_engine,geoprocessamento_jobs,geoespacial_service,edicao_storage}.py`: contratos HTTP, algoritmos e gravação.
 - `tests/browser/bancada-*.cjs`, `tests/test_bancada*.py`, `tests/test_edicao_storage.py`: regressões existentes.
 

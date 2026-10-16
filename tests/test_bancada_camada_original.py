@@ -120,6 +120,7 @@ def test_prepara_arquivo_local_so_quando_id_e_caminho_estao_vinculados(
     assert result["origem"] == {
         "tipo": "arquivo_registrado",
         "categoria": "processadas",
+        "camada": "areas",
     }
     assert result["revisao"]
     assert "geojson" not in result

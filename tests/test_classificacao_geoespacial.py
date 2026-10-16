@@ -58,7 +58,7 @@ def test_conteiner_tem_precedencia_como_dataset_principal(tmp_path):
 def test_saida_de_geoprocesso_fica_na_raiz_de_outputs():
     """Toda saída vai direto para data/geoespacial/outputs, sem subpasta."""
     caminho = path_policy.geo_output_path("identity_restricao.gpkg")
-    assert caminho.parent == path_policy.PROJECT_ROOT / path_policy.GEO_OUTPUTS_DIR
+    assert caminho.parent == path_policy.project_path(path_policy.GEO_OUTPUTS_DIR)
     assert caminho.parent.name == "outputs"
 
 

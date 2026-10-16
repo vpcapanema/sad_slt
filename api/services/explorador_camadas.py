@@ -4,7 +4,7 @@ import hashlib
 import json
 import re
 from pathlib import Path, PurePosixPath
-from tempfile import TemporaryDirectory
+from api.storage_policy import TemporaryDirectory
 from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
 from datetime import datetime
 from api.repositories import cadastro_geometria_repository as demandas

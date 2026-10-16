@@ -8,7 +8,7 @@ const path=require('node:path');
   page.on('pageerror',e=>errors.push(e.message));
   await page.setContent('<html><body><button id="inicio">Inicio</button></body></html>');
   await page.addStyleTag({path:path.resolve('assets/css/process_feedback_system.css')});
-  for(const file of ['assets/js/notification_system.js','assets/js/process_feedback_unified.js','geoespacial/bancada-feedback.js'])await page.addScriptTag({path:path.resolve(file)});
+  for(const file of ['assets/js/notification_system.js','assets/js/process_feedback_unified.js','tests/browser/fixtures/bancada-feedback.js'])await page.addScriptTag({path:path.resolve(file)});
   await page.evaluate(()=>{
    window.closedSSE=0;
    window.proc=gpFeedback.ProcessFeedback.iniciarCadastro({title:'Teste',tasks:['Executar']});

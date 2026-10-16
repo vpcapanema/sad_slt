@@ -1,19 +1,19 @@
 """Conferência territorial OGR, sem buffer ou alteração do arquivo original."""
 from functools import lru_cache
-from pathlib import Path
 import json, hashlib, hmac, time
 from osgeo import ogr
 from fastapi import HTTPException
 from api.config import get_settings
 from api.db.connection import get_connection
 from api.services.normalizacao_demanda import reprojetar
+from api.services.referencias_territoriais import carregar_marinha
 
 @lru_cache(maxsize=1)
 def cobertura_marinha():
-    path=Path(__file__).resolve().parents[2]/"data/referencias-territoriais/abrangencia-marinha-sp.geojson"
-    if not path.is_file():raise HTTPException(503,"Base territorial marítima indisponível.")
-    data=json.loads(path.read_text(encoding="utf-8"))
+    data, _, _ = carregar_marinha()
     geom=ogr.CreateGeometryFromJson(json.dumps(data['features'][0]['geometry']))
+    if geom is None or geom.IsEmpty() or not geom.IsValid():
+        raise HTTPException(503, 'Geometria da referência marítima inválida no storage.')
     return reprojetar(geom,4674,5880)
 
 @lru_cache(maxsize=1)

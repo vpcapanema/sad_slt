@@ -256,7 +256,7 @@ def prepare_upload(filename: str, content: bytes) -> PreparedUpload:
     name = _safe_name(filename)
     digest = hashlib.sha256(content).hexdigest()
     staging_key = digest[:16]
-    staging = project_path("data/geoespacial/uploads/datastorage/.staging")
+    staging = project_path("tmp/uploads")
     staging.mkdir(parents=True, exist_ok=True)
     temporary = staging / f"{digest}.part"
     temporary.write_bytes(content)

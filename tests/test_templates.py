@@ -302,6 +302,7 @@ def test_restricted_home_geoprocessing_subgroups_and_independent_accesses() -> N
         "documentacao-tecnica": [
             "Arcabouço teórico-conceitual de risco e restrição",
             "Documentação da favorabilidade",
+            "Documentação da favorabilidade — v2",
             "Limite marítimo de referência de São Paulo",
             "Glossário técnico-conceitual",
         ],

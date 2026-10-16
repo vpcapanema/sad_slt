@@ -5,6 +5,11 @@ SIGMA: somente LEITURA. Demandas: banco PostgreSQL SLT (demandas.projeto).
 """
 from __future__ import annotations
 
+from api import config as _config  # Carrega o .env antes de validar as montagens.
+from api.storage_policy import configurar_temporarios
+
+configurar_temporarios()
+
 from urllib.parse import urlencode
 
 from fastapi import Depends, FastAPI, HTTPException, Request

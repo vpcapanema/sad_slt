@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from api.services import pastas_storage, storage_remoto, upload_storage
+from api.services import pastas_storage, storage_remoto, upload_storage, storage_geoespacial
 
 
 class StorageEmMemoria:
@@ -49,7 +49,7 @@ class PastasStorageTest(unittest.TestCase):
             self.addCleanup(patcher.stop)
         self.espelho = tempfile.TemporaryDirectory()
         self.addCleanup(self.espelho.cleanup)
-        patcher = patch.object(pastas_storage, "diretorio_storage", lambda: Path(self.espelho.name))
+        patcher = patch.object(storage_geoespacial, "diretorio_storage", lambda: Path(self.espelho.name))
         patcher.start()
         self.addCleanup(patcher.stop)
 
@@ -69,11 +69,11 @@ class PastasStorageTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 pastas_storage.listar(caminho)
 
-    def test_cria_pasta_e_acompanha_a_copia_local(self):
+    def test_cria_pasta_sem_copia_local(self):
         nova = pastas_storage.criar("base-geoespacial/vetor", "municipios 2024")
         self.assertEqual(nova["caminho"], "base-geoespacial/vetor/municipios 2024")
         self.assertIn("base-geoespacial/vetor/municipios 2024", self.storage.pastas)
-        self.assertTrue((Path(self.espelho.name) / "base-geoespacial/vetor/municipios 2024").is_dir())
+        self.assertFalse((Path(self.espelho.name) / "base-geoespacial/vetor/municipios 2024").is_dir())
 
     def test_nao_cria_nome_repetido_nem_invalido(self):
         with self.assertRaises(FileExistsError):

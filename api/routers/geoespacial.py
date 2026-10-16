@@ -22,7 +22,7 @@ from api.deps.auth import require_geospatial_access, require_operator
 from api.deps.execucao_geoespacial import rastrear_execucao
 from api.exceptions import DatabaseUnavailableError
 from api import path_policy
-from api.path_policy import GEO_OUTPUT_CATEGORIES, project_path
+from api.path_policy import GEO_OUTPUT_CATEGORIES, project_path, project_relative
 from api.repositories import camada_geoespacial_repository
 from api.repositories import modelo_geoprocessamento_repository as modelo_repo
 from api.repositories.geoespacial_repository import geoespacial_repository
@@ -263,7 +263,7 @@ def obter_catalogo_projeto() -> dict[str, list[dict[str, Any]]]:
             "nome": CATALOG[operacao_id],
         })
     folders = [
-        {"nome": path.name, "caminho": str(path.relative_to(project_path("."))).replace("\\", "/")}
+        {"nome": path.name, "caminho": project_relative(path)}
         for path in (project_path("data/geoespacial"), project_path("geoespacial"))
         if path.exists()
     ]
@@ -1158,11 +1158,11 @@ def navegar_diretorio_geoespacial(caminho: str = "") -> dict:
         and (unico := shapes[0])
     }
     candidates = {
-        item.relative_to(project_path(".")).as_posix()
+        project_relative(item)
         for item in items if not item.name.startswith(".")
         and item.suffix.lower() in aceitos and item.is_file()
     }
-    candidates |= {p.relative_to(project_path(".")).as_posix() for p in empacotados.values()}
+    candidates |= {project_relative(p) for p in empacotados.values()}
     try:
         registered_paths = {
             row["arquivo"] for row in camadas_dos_arquivos(candidates)
@@ -1177,7 +1177,7 @@ def navegar_diretorio_geoespacial(caminho: str = "") -> dict:
             if empacotado is None:
                 pastas.append({"nome": item.name, "caminho": item.relative_to(raiz).as_posix()})
                 continue
-            relativo_shp = empacotado.relative_to(project_path(".")).as_posix()
+            relativo_shp = project_relative(empacotado)
             if relativo_shp not in registered_paths:
                 continue
             arquivos.append({
@@ -1186,11 +1186,11 @@ def navegar_diretorio_geoespacial(caminho: str = "") -> dict:
                 "formato": "SHP (ZIP)",
             })
         elif item.is_file() and item.suffix.lower() in aceitos:
-            if item.relative_to(project_path(".")).as_posix() not in registered_paths:
+            if project_relative(item) not in registered_paths:
                 continue
             arquivos.append({
                 "nome": item.name,
-                "arquivo": item.relative_to(project_path(".")).as_posix(),
+                "arquivo": project_relative(item),
                 "formato": item.suffix.removeprefix(".").upper(),
             })
     # Subir de uma raiz volta ao nível zero, não ao pai real no filesystem.

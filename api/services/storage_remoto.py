@@ -181,6 +181,16 @@ def baixar(caminho: str) -> bytes:
     return resposta.content
 
 
+def enviar_bytes(destino: str, dados: bytes) -> None:
+    """Envia conteúdo em memória, sem arquivo intermediário no disco."""
+    with _cliente() as cliente:
+        resposta = _pedir(cliente, "POST", "/user/files/upload",
+                          params={"path": _absoluto(destino), "mkdir_parents": "true"},
+                          content=dados)
+    if resposta.status_code not in (200, 201):
+        raise StorageIndisponivel(f"O storage recusou {Path(destino).name}: {_mensagem(resposta)}")
+
+
 def enviar(destino: str, origem: Path) -> None:
     """Grava `origem` em `destino` (caminho do arquivo no storage), criando as pastas."""
     with _cliente() as cliente, origem.open("rb") as fluxo:

@@ -56,6 +56,8 @@ if [[ -n "$EXPECTED_SHA" ]]; then
         || die "origin mudou durante o deploy; execute novamente"
 fi
 
+# Dados de runtime sao lidos do storage; checkout mantem somente ponteiros LFS.
+export GIT_LFS_SKIP_SMUDGE=1
 git checkout -B "$BRANCH" "origin/$BRANCH" >/dev/null 2>&1 || git checkout "$BRANCH"
 git reset --hard "origin/$BRANCH"
 NEW_SHA=$(git rev-parse --short HEAD)
@@ -87,13 +89,8 @@ sudo systemctl reload nginx
 ok "rota ativa em $PUBLIC_URL/"
 
 step "Build/atualização do container (nativo ARM64 na própria VM)"
-git lfs pull --include="data/geoespacial/relatorios/mapas_fase2/**,data/geoespacial/relatorios/mapas_fase2_normalizados/**" --exclude=""
 docker compose -f "$COMPOSE_FILE" build --pull
-docker run --rm --entrypoint python3 sicard-app:latest scripts/validar_documentacao_favorabilidade.py
-# Preserva as prévias existentes na migração do cache temporário para o volume da VM.
-if docker inspect sicard_app >/dev/null 2>&1; then
-    docker exec sicard_app sh -c 'if [ -d /tmp/sicard-extracao-tiles ]; then mkdir -p /app/data/geoespacial/configuracoes/extracao-atributos/previas; cp -an /tmp/sicard-extracao-tiles/. /app/data/geoespacial/configuracoes/extracao-atributos/previas/; fi'
-fi
+docker compose -f "$COMPOSE_FILE" run --rm --no-deps app python3 -B scripts/validar_documentacao_favorabilidade.py
 docker compose -f "$COMPOSE_FILE" up -d --force-recreate
 ok "container sicard_app em execução"
 

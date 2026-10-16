@@ -2,7 +2,7 @@
 import json
 import math
 from pathlib import Path, PurePosixPath
-from tempfile import TemporaryDirectory
+from api.storage_policy import TemporaryDirectory
 import time
 from uuid import uuid4
 
@@ -568,7 +568,7 @@ def _validar_edicoes_geometria(edicoes, excluidos, novas):
 def _aplicar_geometrias(ds, layer, driver, geometrias, atributos, excluidos, novas):
     defn = layer.GetLayerDefn()
     srs_destino = layer.GetSpatialRef()
-    if srs_destino is None:
+    if srs_destino is None or (srs_destino.GetName() or '').lower().startswith('undefined'):
         raise ValueError('A camada não informa seu CRS.')
     srs_destino = srs_destino.Clone()
     srs_destino.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
@@ -694,7 +694,8 @@ def gravar_geometrias(ident, revisao, edicoes, excluidos, novas, user):
             tipo_camada = layer.GetGeomType()
             if ogr.GT_Flatten(tipo_camada) == ogr.wkbNone:
                 raise ValueError('A camada não possui geometrias editáveis.')
-            if layer.GetSpatialRef() is None:
+            srs = layer.GetSpatialRef()
+            if srs is None or (srs.GetName() or '').lower().startswith('undefined'):
                 raise ValueError('A camada não informa seu CRS.')
             antes = _inventario(ds)
             if antes[nome_camada][0] - len(excluidos) + len(novas) < 1:

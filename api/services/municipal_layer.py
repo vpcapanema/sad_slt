@@ -137,7 +137,7 @@ def gerar(codigo, payload, nome, user, controle=None):
         # O nome sai antes da exportação: é ele que batiza a pasta e os arquivos.
         name = nome.strip()[:200] or nome_padrao(category, dados.selection(payload['attributes']))
         base = base_arquivos(name)
-        from tempfile import TemporaryDirectory
+        from api.storage_policy import TemporaryDirectory
         from api.repositories import camada_geoespacial_repository as camadas, saidas_geoespaciais_repository as catalogo
         from api.services import saidas_storage
         with TemporaryDirectory(prefix='sicard-municipal-') as temporary:

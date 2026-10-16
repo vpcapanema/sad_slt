@@ -278,7 +278,8 @@ def validate_vector(
         result = _annotate_geometry_validation(result)
 
     if family == "ponto":
-        points = result.geometry.map(
+        geographic = _gdal_reproject(result, "EPSG:4326")
+        points = geographic.geometry.map(
             lambda geometry: (
                 geometry if geometry is None or geometry.is_empty or geometry.geom_type == "Point"
                 else geometry.centroid
@@ -349,7 +350,7 @@ def validate_raster(
             raise ValueError("O processamento analítico aceita raster de banda única")
         source_crs = dataset.crs
         source_transform = dataset.transform
-        data = dataset.read(1, masked=True).filled(np.nan).astype("float32")
+        data = dataset.read(1, masked=True).astype("float32").filled(np.nan)
         transform = source_transform
         if clip_frame is not None:
             geometries = []
@@ -359,8 +360,8 @@ def validate_raster(
                     geometries.append(geometry.__geo_interface__)
             if not geometries:
                 raise ValueError("Camada de recorte não possui geometrias utilizáveis")
-            clipped, transform = raster_mask(dataset, geometries, crop=True, filled=True, nodata=np.nan)
-            data = clipped[0].astype("float32")
+            clipped, transform = raster_mask(dataset, geometries, crop=True, filled=False)
+            data = clipped[0].astype("float32").filled(np.nan)
 
     final_crs = source_crs
     if target_crs:
@@ -459,14 +460,22 @@ async def importar_camadas(
             for layer_name, frame in _vector_layers(
                 prepared.import_path, prepared.category, source_name
             ):
+                physical_layer = layer_name
                 layer_name = _friendly_layer_alias(layer_name)
                 validated, metadata = validate_vector(
                     frame, target_crs=target_crs, clip_frame=clip_frame
                 )
+                # Apenas contêineres usam nome interno, independente do alias.
+                if prepared.import_path.suffix.lower() in CONTAINER_EXTENSIONS:
+                    metadata['camada_arquivo'] = physical_layer
                 vector_results.append((layer_name, validated, metadata))
                 if progress: progress(f"Geometrias validadas e metadados extraídos: {layer_name}")
 
         layer_names = [_friendly_layer_alias(prepared.name)] if raster_result else [item[0] for item in vector_results]
+        # Aliases legíveis podem colidir; nesses casos a identidade física
+        # participa do hash. Os hashes legados sem colisão são preservados.
+        if len(set(layer_names)) != len(layer_names):
+            layer_names = [metadata.get('camada_arquivo') or name for name, _, metadata in vector_results]
         effective_hashes = []
         for layer_name in layer_names:
             if len(layer_names) == 1 and not target_crs and not clip_layer_id:
@@ -537,7 +546,8 @@ async def importar_camadas(
                     continue
                 resource_id = geoespacial_service.registrar_camada(
                     frame, layer_name, "arquivo",
-                    hash_arquivo=effective_hashes[index], validacao=metadata, **common,
+                    hash_arquivo=effective_hashes[index], validacao=metadata,
+                    camada_arquivo=metadata.get('camada_arquivo'), **common,
                 )
                 created_ids.append(resource_id)
                 resources.append({"id": resource_id, "tipo": "vetorial", "nome": layer_name, "metadados": metadata})
@@ -585,8 +595,11 @@ def inspecionar_camadas(filename: str, content: bytes) -> dict[str, Any]:
             for layer_name, frame in _vector_layers(
                 prepared.import_path, prepared.category, source_name
             ):
+                physical_layer = layer_name
                 layer_name = _friendly_layer_alias(layer_name)
                 validated, metadata = validate_vector(frame, target_crs=None, clip_frame=None)
+                if prepared.import_path.suffix.lower() in CONTAINER_EXTENSIONS:
+                    metadata['camada_arquivo'] = physical_layer
                 vector_results.append((layer_name, validated, metadata))
                 layers.append({"nome": layer_name, **metadata})
         token = _store_inspection_ticket(filename, prepared, vector_results, raster_result)

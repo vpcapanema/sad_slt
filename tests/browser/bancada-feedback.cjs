@@ -11,7 +11,7 @@ const path=require('node:path');
   await page.setContent('<html><body><main class="gp-app"><form id="gp-op-form"><div class="editor-actions"><button type="submit">Executar</button></div></form></main></body></html>');
   await page.addStyleTag({path:path.resolve('assets/css/process_feedback_system.css')});
   await page.addScriptTag({path:path.resolve('assets/js/process_feedback_unified.js')});
-  await page.addScriptTag({path:path.resolve('geoespacial/bancada-feedback.js')});
+  await page.addScriptTag({path:path.resolve('tests/browser/fixtures/bancada-feedback.js')});
 
   await page.evaluate(()=>{
    window.cancelCalls=0;

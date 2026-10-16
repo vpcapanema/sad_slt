@@ -17,7 +17,7 @@ from api.services.extracao_ogr import reproject as _gdal_reproject
 import csv
 import io
 import json
-import tempfile
+from api import storage_policy as tempfile
 import zipfile
 from hashlib import sha256
 from pathlib import Path

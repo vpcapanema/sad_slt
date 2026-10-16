@@ -14,7 +14,7 @@ import geopandas as gpd
 import httpx
 from shapely.geometry import Point
 
-from api.services import storage_remoto, upload_storage
+from api.services import storage_remoto, upload_storage, storage_geoespacial
 from api.services.importar_camadas_service import inspecionar_camadas
 
 
@@ -48,7 +48,7 @@ class UploadStorageTest(unittest.TestCase):
             patcher = patch.object(storage_remoto, alvo, valor)
             patcher.start()
             self.addCleanup(patcher.stop)
-        patcher = patch.object(upload_storage, "diretorio_storage", lambda: Path(self.espelho.name))
+        patcher = patch.object(storage_geoespacial, "diretorio_storage", lambda: Path(self.espelho.name))
         patcher.start()
         self.addCleanup(patcher.stop)
 
@@ -66,7 +66,7 @@ class UploadStorageTest(unittest.TestCase):
         self.assertEqual(camada["id"], "storage:superficies-indices/pontos_teste.geojson::pontos_teste")
         self.assertEqual(camada["nome"], "pontos_teste")
         # Servidor local: a cópia do storage recebe o mesmo arquivo.
-        self.assertTrue((Path(self.espelho.name) / "superficies-indices" / "pontos_teste.geojson").is_file())
+        self.assertFalse((Path(self.espelho.name) / "superficies-indices" / "pontos_teste.geojson").is_file())
 
     def test_pasta_fora_do_storage_e_recusada(self):
         for pasta in ("", None, "base-geodatabase", "../base-geoespacial", "outra"):

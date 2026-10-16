@@ -176,7 +176,7 @@ class GeoprocessamentoApiTest(unittest.TestCase):
     def test_simbologia_separa_pontos_linhas_e_poligonos(self) -> None:
         script = Path("geoespacial/geoprocessamento.js").read_text(encoding="utf-8")
         self.assertIn('filter:["==",["geometry-type"],"Point"]', script)
-        self.assertIn('filter:["==",["geometry-type"],"LineString"]', script)
+        self.assertIn('filter:["match",["geometry-type"],["LineString","Polygon"],true,false]', script)
 
     def test_catalogo_padroniza_familia_entrada_e_saida(self) -> None:
         response = self.client.get("/api/geoespacial/algoritmos")
@@ -478,7 +478,7 @@ class GeoprocessamentoApiTest(unittest.TestCase):
                 (camada_id,),
             ).fetchone()
             raster_row = conn.execute(
-                """SELECT id FROM geoprocessamento.camada_processada
+                """SELECT id, storage_caminho FROM geoprocessamento.camada_processada
                    WHERE recurso_sessao_id=%s""",
                 (raster_id,),
             ).fetchone()
@@ -513,13 +513,12 @@ class GeoprocessamentoApiTest(unittest.TestCase):
                    WHERE recurso_sessao_id=%s""",
                 (raster_id,),
             ).fetchone()
-            raster_conteudo = conn.execute(
-                """SELECT 1 FROM geoprocessamento.camada_processada_raster
-                   WHERE camada_id=%s""",
-                (raster_db_id,),
-            ).fetchone()
         self.assertIsNone(raster_catalogo)
-        self.assertIsNone(raster_conteudo)
+        from api.services import storage_remoto
+        caminho = raster_row["storage_caminho"]
+        self.assertTrue(caminho)
+        itens = storage_remoto.listar(str(Path(caminho).parent).replace("\\", "/"))
+        self.assertNotIn(Path(caminho).name, [item["nome"] for item in itens])
 
     def test_rasterizacao_combinacao_e_preview(self) -> None:
         camada_id = self.carregar()
@@ -647,8 +646,8 @@ class GeoprocessamentoUiTest(unittest.TestCase):
         self.assertIn('.ribbon-action[data-action="delete-layer"] svg', styles)
         self.assertIn("function removeLayerFromMap", script)
         self.assertIn("async function deleteLayerFromSystem", script)
-        self.assertRegex(template, r'<script src="/assets/js/process_feedback_unified\.js(?:\?[^\"]*)?"')
-        self.assertLess(template.index("/assets/js/process_feedback_unified.js"),
+        self.assertRegex(template, r'<script src="/restrict/geoespacial/bancada-feedback-local\.js(?:\?[^\"]*)?"')
+        self.assertLess(template.index("/restrict/geoespacial/bancada-feedback-local.js"),
                         template.index("/restrict/geoespacial/geoprocessamento.js"))
         self.assertIn("const pf=window.gpFeedback?.ProcessFeedback", script)
         self.assertIn("pf.iniciarCadastro({title,tasks:[],onCancel})", script)

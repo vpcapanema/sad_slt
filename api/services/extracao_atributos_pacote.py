@@ -12,7 +12,7 @@ from api.services.extracao_ogr import reproject as _gdal_reproject
 import io
 import json
 import platform
-import tempfile
+from api import storage_policy as tempfile
 import textwrap
 import zipfile
 from hashlib import sha256

@@ -13,10 +13,8 @@ vetor, GeoTIFF para raster. Arquivo que já existe na pasta não é sobrescrito.
 from __future__ import annotations
 from api.services.extracao_ogr import reproject as _gdal_reproject
 
-import os
 import re
-import shutil
-import tempfile
+from api import storage_policy as tempfile
 from pathlib import Path, PurePosixPath
 from typing import Any, Callable
 
@@ -29,7 +27,7 @@ from api.services.importar_camadas_service import (
     _consume_inspection_ticket, _vector_layers, validate_raster,
 )
 from api.services.storage_geoespacial import (
-    EXTENSOES_RASTER, EXTENSOES_VETOR, RAIZES, carregar_gdf, diretorio_storage,
+    EXTENSOES_RASTER, EXTENSOES_VETOR, RAIZES, carregar_gdf,
 )
 
 _RESERVADOS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
@@ -126,23 +124,6 @@ def _camadas(raiz: str, arquivos: list[tuple[str, Path]]) -> list[dict[str, Any]
     return camadas
 
 
-def _espelhar_local(raiz: str, arquivos: list[tuple[str, Path]]) -> None:
-    """Servidor local: a cópia do storage em data/storage recebe o mesmo arquivo.
-
-    Na VM a pasta é o próprio storage, montado somente leitura; lá nada é copiado
-    e o arquivo aparece pelo SFTPGo. Localmente, sem isto, o arquivo enviado não
-    apareceria no explorador até a cópia ser sincronizada.
-    """
-    base = diretorio_storage()
-    if not base.is_dir() or not os.access(base, os.W_OK):
-        return
-    for relativo, origem in arquivos:
-        alvo = base / raiz / relativo
-        if not alvo.exists():
-            alvo.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(origem, alvo)
-
-
 def enviar_ao_storage(token: str, raiz: str | None, *, target_crs: str | None = None,
                       clip_layer_id: str | None = None,
                       progress: Callable[[str], None] | None = None) -> dict[str, Any]:
@@ -172,7 +153,6 @@ def enviar_ao_storage(token: str, raiz: str | None, *, target_crs: str | None = 
                 storage_remoto.enviar(f"{destino}/{relativo}", origem)
                 avisar(f"Enviado ao storage ({indice}/{len(arquivos)}): {destino}/{relativo}")
             camadas = _camadas(destino, arquivos)
-            _espelhar_local(destino, arquivos)
         avisar("Upload concluído no storage do SICARD")
         return {
             "status": "enviado",

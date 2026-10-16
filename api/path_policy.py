@@ -61,7 +61,19 @@ def relative_path(value: str | PathLike[str], *, label: str = "caminho") -> Path
 
 def project_path(value: str | PathLike[str], *, label: str = "caminho") -> Path:
     """Converte um caminho externo relativo em localização interna de I/O."""
-    return PROJECT_ROOT / relative_path(value, label=label)
+    path = relative_path(value, label=label)
+    if path.parts and path.parts[0] in ('data', 'tmp') and path.parts[:2] != ('data', 'storage'):
+        from api.storage_policy import raiz_escrita, raiz_temporaria
+        if path.parts[0] == 'tmp':
+            root = raiz_temporaria()
+            target = root.joinpath(*path.parts[1:])
+        else:
+            root = raiz_escrita()
+            target = root / 'aplicacao' / path
+        if not target.resolve().is_relative_to(root):
+            raise ValueError('Caminho fora da montagem do storage.')
+        return target
+    return PROJECT_ROOT / path
 
 
 def relative_file_name(value: str | PathLike[str], *, label: str = "arquivo") -> str:
@@ -74,6 +86,11 @@ def relative_file_name(value: str | PathLike[str], *, label: str = "arquivo") ->
 
 def project_relative(value: Path) -> str:
     """Retorna uma localização de I/O no formato público relativo e portátil."""
+    value = value.resolve()
+    from api.storage_policy import raiz_escrita, raiz_temporaria
+    for root, prefix in ((raiz_temporaria(), Path('tmp')), (raiz_escrita() / 'aplicacao', Path('.'))):
+        if value.is_relative_to(root):
+            return (prefix / value.relative_to(root)).as_posix()
     try:
         relative = value.relative_to(PROJECT_ROOT)
     except ValueError as exc:
@@ -83,7 +100,7 @@ def project_relative(value: Path) -> str:
 
 def geo_outputs_dir() -> Path:
     """Diretório absoluto para os arquivos de saída geridos por esta política."""
-    caminho = PROJECT_ROOT / GEO_OUTPUTS_DIR
+    caminho = project_path(GEO_OUTPUTS_DIR)
     caminho.mkdir(parents=True, exist_ok=True)
     return caminho
 
