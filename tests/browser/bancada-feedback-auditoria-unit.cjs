@@ -6,7 +6,7 @@ const rows = [], classes = new Set();
 const host = {append: row => rows.push(row), classList: {add: name => classes.add(name)}, scrollHeight: 100};
 const window = {};
 vm.runInNewContext(fs.readFileSync('geoespacial/bancada-feedback-local.js', 'utf8'), {
-  window, Date, document: {querySelector: () => host, createElement: () => ({})},
+  window, Date, document: {querySelector: selector => selector === '#gp-log' ? host : null, createElement: () => ({})},
 });
 for (const level of ['info', 'success', 'warning', 'error']) {
   classes.clear(); const before = rows.length;

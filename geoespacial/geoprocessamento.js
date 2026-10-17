@@ -175,7 +175,7 @@
   function save(k,v){localStorage.setItem(k,JSON.stringify(v));$("#gp-save-state").textContent="Alterações salvas"}
   function icons(){window.lucide?.createIcons({attrs:{"stroke-width":1.7}})}
   function emit(name,detail={}){$(".gp-app")?.dispatchEvent(new CustomEvent(`slt:geoprocessamento:${name}`,{detail,bubbles:true}))}
-  function log(msg,type=""){if(window.gpFeedback&&type){const tipo=type==="ok"?"success":type==="error"?"error":"info";window.gpFeedback.Notify[tipo]("Bancada de geoprocessamento",msg,tipo==="error"?{}:{duration:5000});}const el=$("#gp-log"),time=new Date().toLocaleTimeString();el.insertAdjacentHTML("beforeend",`<div class="log-${type}">[${time}] ${escapeHtml(msg)}</div>`);el.scrollTop=el.scrollHeight}
+  function log(msg,type=""){if(window.gpFeedback){const tipo=type==="ok"?"success":type==="error"?"error":type==="warning"?"warning":"info";window.gpFeedback.Notify[tipo]("",msg);return;}const el=$("#gp-log-messages")||$("#gp-log"),time=new Date().toLocaleTimeString();el.insertAdjacentHTML("beforeend",`<div class="log-${type}">[${time}] ${escapeHtml(msg)}</div>`);el.scrollTop=el.scrollHeight}
   function escapeHtml(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
   function slugifyName(value){return String(value??"").toLocaleLowerCase("pt-BR").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\.[a-z0-9]+$/i,"").replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"")||"camada"}
   function algorithmOutputSuffix(op){return OUTPUT_SUFFIX_BY_OPERATION[op[0]]||slugifyName(op[1])}
@@ -833,7 +833,7 @@
       const cancelled=e.name==="AbortError",message=cancelled?"Execução cancelada pelo usuário.":e.message;
       log(`${op[1]} ${cancelled?"cancelado":"falhou"}: ${message}`,cancelled?"":"error");
       state.history.unshift({at:new Date().toISOString(),op:op[0],name:op[1],status:cancelled?"cancelado":"erro",durationMs:Date.now()-startedAt,parameters:payload,result:String(message)});
-      save("gp-history",state.history.slice(0,100));if(!cancelled)$("#gp-log").classList.add("open");
+      save("gp-history",state.history.slice(0,100));
       progress?.fail(cancelled?"Execução cancelada":`Falha: ${message}`);
     }finally{if(state.activeExecution===controller){state.activeExecution=null;state.activeJob=null;}if(submit){submit.disabled=false;submit.textContent=submitLabel||"Executar"}}
   }

@@ -133,6 +133,14 @@ O terminal compartilhado é descrito em
 
 ### Destino das saídas da bancada geoespacial
 
+O feedback de processamento aparece em uma faixa compacta no rodapé do painel
+contextual, com nome da ferramenta, progresso, estado, duração e cancelamento
+quando disponível. **Exibir detalhes** abre as mensagens em um painel claro;
+o processamento não abre automaticamente um terminal sobre o mapa.
+Avisos, falhas e cancelamentos têm estados distintos. A estrutura segue o
+[padrão público de feedback do ArcGIS Pro](https://pro.arcgis.com/en/pro-app/latest/help/analysis/geoprocessing/basics/run-geoprocessing-tools.htm),
+sem utilizar assets da Esri.
+
 O botão de procurar camadas do sistema abre o explorador imediatamente, sem
 aguardar o catálogo completo do banco e do storage. As pastas são consultadas
 com a janela já aberta; o catálogo só é carregado ao acessar **Camadas
