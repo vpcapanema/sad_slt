@@ -100,7 +100,7 @@ def test_interface_processa_exporta_reabre_e_reprocessa(monkeypatch):
                "SICARD_E2E_COOKIE": cookie_name(), "SICARD_E2E_TOKEN": create_token(user),
                "SICARD_E2E_SOURCE": source, "SICARD_E2E_OUTPUT": output_folder}
         result = subprocess.run(["node", str(Path(__file__).parent / "browser" / "bancada-storage-e2e.cjs")],
-                                env=env, capture_output=True, text=True, encoding="utf-8", timeout=180)
+                                env=env, capture_output=True, text=True, encoding="utf-8", timeout=240)
         assert result.returncode == 0, result.stdout + result.stderr
         print(result.stdout)
         assert storage_remoto.baixar(source) == original_content
@@ -140,3 +140,71 @@ def test_interface_processa_exporta_reabre_e_reprocessa(monkeypatch):
                 continue
             assert not items, "A pasta exclusiva da auditoria contém arquivos não previstos: " + folder
             storage_remoto.apagar_pasta(folder)
+
+
+@pytest.mark.parametrize("kind", ["destino", "edicao"])
+@pytest.mark.parametrize("stop", ["liberacao", "interrupcao"])
+def test_bloqueio_entre_processos_e_recuperacao(monkeypatch, kind, stop):
+    from api.services import ciclo_vida_arquivos as ciclo, edicao_storage
+
+    folder = "saidas-geoespaciais/auditoria-lock-" + uuid4().hex
+    prefix = "saida-storage:" if kind == "destino" else "edicao-storage:"
+    script = """
+import sys
+import psycopg
+from api.config import get_settings
+with psycopg.connect(get_settings().slt_database_url, connect_timeout=5) as conn:
+    conn.execute("SELECT pg_advisory_lock(hashtextextended(%s,0))",
+                 (sys.argv[2] + sys.argv[1].casefold(),))
+    print("LOCKED", flush=True)
+    sys.stdin.readline()
+    conn.execute("SELECT pg_advisory_unlock(hashtextextended(%s,0))",
+                 (sys.argv[2] + sys.argv[1].casefold(),))
+"""
+    process = subprocess.Popen(
+        [sys.executable, "-c", script, folder, prefix],
+        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        text=True, encoding="utf-8",
+    )
+    ready = threading.Event()
+    received = []
+
+    def read_ready():
+        received.append(process.stdout.readline())
+        ready.set()
+
+    reader = threading.Thread(target=read_ready, daemon=True)
+    reader.start()
+    attempts = []
+
+    def register(*args, **kwargs):
+        attempts.append(kwargs["pasta_saida"])
+        return {"caminho": folder + "/saida.gpkg"}
+
+    monkeypatch.setattr(ciclo, "_registrar_exportacao", register)
+
+    def attempt():
+        if kind == "destino":
+            return ciclo.registrar_exportacao(Path("saida.gpkg"), "teste", "vetor", pasta_saida=folder)
+        with edicao_storage.bloquear_arquivo(folder):
+            return register(pasta_saida=folder)
+
+    try:
+        assert ready.wait(15), "Processo de concorrência não respondeu em 15 segundos."
+        assert received == ["LOCKED\n"], "Processo não adquiriu o bloqueio de teste."
+        with pytest.raises(ValueError, match="Outra saída|Outra edição"):
+            attempt()
+        assert not attempts, "Não pode enviar arquivos quando outra sessão detém a pasta."
+        if stop == "interrupcao":
+            process.kill()
+            process.communicate(timeout=10)
+        else:
+            process.communicate("\n", timeout=10)
+            assert process.returncode == 0
+        assert attempt() == {"caminho": folder + "/saida.gpkg"}
+        assert attempts == [folder]
+    finally:
+        if process.poll() is None:
+            process.kill()
+            process.communicate(timeout=10)
+        reader.join(timeout=5)

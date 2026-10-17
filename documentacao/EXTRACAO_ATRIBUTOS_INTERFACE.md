@@ -209,6 +209,16 @@ automaticamente impactos positivos/negativos, severidade ou pesos.
 
 ## Persistência e bancada
 
+A seção 02 incorpora por `iframe` a própria rota
+`/restrict/geoespacial/bancada/`, que renderiza
+`templates/componentes/_geoprocessamento.html`. Não existe uma segunda
+implementação da bancada. O módulo `geoespacial/extracao-atributos/mapa.js`
+conecta as camadas de entrada e resultado, a visibilidade, a remoção e a
+composição da extração ao mesmo componente e aos seus scripts.
+O teste opt-in `tests/test_bancada_storage_e2e.py` verifica essa integração
+com servidor e storage reais; os testes de composição e persistência com
+serviços simulados continuam separados.
+
 A execução usa `geoprocessamento.execucao_arquivo`. A geometria de saída é gravada
 no banco por `registrar_camada`, sem arquivo em `data/geoespacial/outputs`. O
 relatório, as etapas, a procedência da entrada e das bases e o pacote `.zip`

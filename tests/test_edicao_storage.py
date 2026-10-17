@@ -119,6 +119,41 @@ def test_duas_gravacoes_seguidas_usam_revisao_retornada(original):
     assert len(writes) == 2
 
 
+def test_edicoes_simultaneas_nao_sobrescrevem_silenciosamente(original, monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Event, current_thread
+
+    source, path, writes = original
+    entered, release = Event(), Event()
+    upload = storage_remoto.enviar
+
+    def paused_upload(destination, content):
+        if current_thread().name.startswith("primeiro-editor"):
+            entered.set()
+            assert release.wait(10), "A primeira edição não foi liberada."
+        upload(destination, content)
+
+    monkeypatch.setattr(storage_remoto, "enviar", paused_upload)
+    first = deepcopy(source["geojson"])
+    second = deepcopy(source["geojson"])
+    first["features"][0]["properties"]["valor"] = 90
+    second["features"][0]["properties"]["valor"] = 91
+    with ThreadPoolExecutor(max_workers=1, thread_name_prefix="primeiro-editor") as pool:
+        pending = pool.submit(service.salvar, source["arquivo"], source["revisao"], first,
+                              None, SimpleNamespace(id="primeiro"), source["id"])
+        try:
+            assert entered.wait(5), "A primeira edição não chegou à publicação."
+            with pytest.raises(ValueError, match="Outra edição"):
+                service.salvar(source["arquivo"], source["revisao"], second,
+                               None, SimpleNamespace(id="segundo"), source["id"])
+        finally:
+            release.set()
+        result = pending.result(timeout=10)
+    assert len(writes) == 1
+    assert result["geojson"]["features"][0]["properties"]["valor"] == 90
+    assert storage.ler_para_mapa(source["id"])["geojson"]["features"][0]["properties"]["valor"] == 90
+
+
 def test_releitura_nao_devolve_revisao_obsoleta(original, monkeypatch):
     source, path, writes = original
     original_reader = storage.ler_para_mapa

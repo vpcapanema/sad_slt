@@ -1,6 +1,7 @@
 """Substituição do arquivo original via SFTPGo, sem criar camada ou backup."""
 import json
 import math
+from contextlib import contextmanager
 from pathlib import Path, PurePosixPath
 from api.storage_policy import TemporaryDirectory
 import time
@@ -10,9 +11,34 @@ from osgeo import gdal, ogr, osr
 
 from api.services import storage_geoespacial as storage
 from api.services import storage_remoto as remoto
+from api.db.connection import get_connection
+
+
+@contextmanager
+def bloquear_arquivo(caminho):
+    # A chave é do arquivo, não da camada: um GeoPackage pode ter várias.
+    key = 'edicao-storage:' + caminho.casefold()
+    with get_connection() as conn:
+        row = conn.execute(
+            'SELECT pg_try_advisory_lock(hashtextextended(%s,0)) AS adquirido', (key,),
+        ).fetchone()
+        if row is None:
+            raise RuntimeError('O banco não confirmou o bloqueio de edição do arquivo.')
+        if not row['adquirido']:
+            raise ValueError('Outra edição está sendo gravada neste arquivo. Aguarde e reabra a camada.')
+        try:
+            yield
+        finally:
+            conn.execute('SELECT pg_advisory_unlock(hashtextextended(%s,0))', (key,))
 
 
 def gravar(source, frame, data, incluir_geojson=True):
+    caminho, _ = storage.separar_id(source['id'])
+    with bloquear_arquivo(caminho):
+        return _gravar(source, frame, data, incluir_geojson)
+
+
+def _gravar(source, frame, data, incluir_geojson):
     from api.services.bancada_arquivos import abrir
     caminho, camada = storage.separar_id(source['id'])
     original = storage.resolver(caminho)
@@ -359,6 +385,11 @@ def _verificar(ds, nome_camada, antes, esperado, excluidos, driver, adicionados=
 
 
 def _publicar(caminho, revisao, partes):
+    with bloquear_arquivo(caminho):
+        return _publicar_bloqueado(caminho, revisao, partes)
+
+
+def _publicar_bloqueado(caminho, revisao, partes):
     """Envia para nomes temporários e reverte substituições multipartes se uma falhar."""
     marca = uuid4().hex
     enviados = []

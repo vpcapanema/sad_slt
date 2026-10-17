@@ -4,7 +4,7 @@ const root=process.cwd(),prefix='/geoespacial/extracao-atributos/';
 const python=process.env.SICARD_TEST_PYTHON||path.join(root,'.venv/Scripts/python.exe');
 const html=execFileSync(python,['-c',"from jinja2 import Environment,FileSystemLoader; e=Environment(loader=FileSystemLoader('templates')); print(''.join(e.get_template('componentes/extracao_atributos/'+n+'.html').render() for n in ['_configuracao','_bancada','_resultados']))"],{encoding:'utf8'});
 (async()=>{
- const browser=await chromium.launch({headless:true});
+ const browser=await chromium.launch({headless:true,channel:process.env.PW_BROWSER_CHANNEL||'msedge'});
  try{
  const page=await browser.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
  let saved,saves=0;
@@ -22,8 +22,8 @@ const html=execFileSync(python,['-c',"from jinja2 import Environment,FileSystemL
   window.prep=await import('/geoespacial/extracao-atributos/preparacao.js');
   window.comp=await import('/geoespacial/extracao-atributos/composicao.js');
   const geojson={type:'FeatureCollection',features:[{type:'Feature',properties:{id:1},geometry:{type:'Point',coordinates:[0,0]}}]};
-  window.layer=id=>({id,nome:id,representacao:'tiles',status_validacao:'valida',tiles_url:'https://fixture/tiles'});
-  window.state={input:'entrada',inputConfig:{identificacao_confirmada:true,campo_id:'id'},entradasExtras:[],catalog:['entrada','base','extra'].map(layer),categories:[{id:'c',nome:'Categoria'}],bases:[{id:'base',category:'c',regra:{prefixo:'base_'}}],staging:[],bancadaEntradas:[],bancadaBases:[],operation:'enriquecimento',opcoes:{},nomeSaida:'Saída',camadaRecorte:'base',finalidades:[],busy:false};
+  window.layer=id=>({id,nome:id,revisao:id,representacao:'tiles',status_validacao:'valida',tiles_url:'https://fixture/tiles'});
+  window.state={input:'entrada',inputConfig:{identificacao_confirmada:true,validacao_previa:'entrada',campo_id:'id'},entradasExtras:[],catalog:['entrada','base','extra'].map(layer),categories:[{id:'c',nome:'Categoria'}],bases:[{id:'base',category:'c',regra:{prefixo:'base_'}}],staging:[],bancadaEntradas:[],bancadaBases:[],operation:'enriquecimento',opcoes:{},nomeSaida:'Saída',camadaRecorte:'base',finalidades:[],busy:false};
   prep.enviarPrevia(state);prep.limparPreparacao(state);
   state.staging=[{id:'extra',category:'c'}];state.previaVisiveis=new Set(['base:extra']);prep.enviarPrevia(state);prep.limparPreparacao(state);
  });
@@ -31,7 +31,7 @@ const html=execFileSync(python,['-c',"from jinja2 import Environment,FileSystemL
  await page.evaluate(()=>{
   const a=layer('local:pacote:a'),b=layer('local:pacote:b');a.chave='a';b.chave='b';
   const source={...layer('local:pacote'),arquivo_local:{nome:'pacote.gpkg',conteudo_base64:'YWJj',camadas:['a','b']},camadas_bancada:[a,b]};
-  state.catalog.push(source);state.input=source.id;state.inputConfig={camadas:{a:{identificacao_confirmada:true},b:{identificacao_confirmada:true}}};
+  state.catalog.push(source);state.input=source.id;state.inputConfig={camadas:{a:{identificacao_confirmada:true,validacao_previa:a.revisao},b:{identificacao_confirmada:true,validacao_previa:b.revisao}}};
   state.previaVisiveis=new Set(['entrada:local:pacote:a']);prep.enviarPrevia(state);
   state.previaVisiveis=new Set(['entrada:local:pacote:b']);prep.enviarPrevia(state);prep.limparPreparacao(state);
  });

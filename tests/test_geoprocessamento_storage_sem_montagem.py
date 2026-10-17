@@ -199,3 +199,30 @@ def test_falha_storage_limpa_temporarios_e_nao_registra_sucesso(remoto, monkeypa
     assert not files
     assert not any(folder.startswith("temporarios-sicard/") for folder in folders)
     assert not any("INSERT INTO geoprocessamento.arquivo_resultado" in sql for sql, _ in queries)
+    monkeypatch.setattr(storage_remoto, "enviar_bytes", original)
+    result = ciclo.gravar(conn, str(uuid4()), {"nome": "Recuperada"}, frame=frame)
+    assert result["caminho"] in files
+    assert not any(folder.startswith("temporarios-sicard/") for folder in folders)
+
+
+def test_falha_catalogo_remove_saida_orfa_e_permite_nova_execucao(remoto, monkeypatch):
+    from api.exceptions import DatabaseUnavailableError
+
+    files, folders, _, queries, conn = remoto
+    execute = conn.execute
+
+    def fail(sql, params=()):
+        if "INSERT INTO geoprocessamento.arquivo_resultado" in sql:
+            raise DatabaseUnavailableError("Banco indisponível durante o registro")
+        return execute(sql, params)
+
+    monkeypatch.setattr(conn, "execute", fail)
+    frame = gpd.GeoDataFrame({"valor": [7]}, geometry=[Point(-46, -23)], crs=4326)
+    with pytest.raises(DatabaseUnavailableError, match="indisponível"):
+        ciclo.gravar(conn, str(uuid4()), {"nome": "Falha"}, frame=frame)
+    assert not files, "Saída sem registro no catálogo deve ser removida."
+    assert not any(folder.startswith("temporarios-sicard/") for folder in folders)
+    monkeypatch.setattr(conn, "execute", execute)
+    result = ciclo.gravar(conn, str(uuid4()), {"nome": "Recuperada"}, frame=frame)
+    assert result["caminho"] in files
+    assert any("INSERT INTO geoprocessamento.arquivo_resultado" in sql for sql, _ in queries)

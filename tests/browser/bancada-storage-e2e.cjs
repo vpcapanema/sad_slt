@@ -63,7 +63,27 @@ const assert=require('node:assert/strict');
    return files[0].id;
   },first);
   await run(reopened,'Reprocessado','GeoJSON');
+  await page.goto(url+'/restrict/geoespacial/extracao-atributos/',{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>window.SICARDExtracao);
+  await page.evaluate(()=>SICARDExtracao.aguardarBancada());
+  const embedded=page.frame({url:url+'/restrict/geoespacial/bancada/'});
+  assert(embedded,'A extração deve incorporar a rota da própria bancada.');
+  const embeddedId=await embedded.evaluate(async id=>{
+   const files=await gpArquivos.abrirReferencias([{id,arquivo:id.slice(8),nome:'Resultado'}]);
+   const resultId=files[0]?.id;
+   if(!resultId)throw new Error('Resultado não abriu na bancada incorporada.');
+   return resultId;
+  },first);
+  await page.waitForFunction(id=>SICARDExtracao.camadasNaBancada()?.some(layer=>layer.id===id&&layer.visivel),embeddedId);
+  await embedded.evaluate(id=>{
+   for(const suffix of ['','-line','-point'])if(gpApp.state.map.getLayer(id+suffix))
+    gpApp.state.map.setLayoutProperty(id+suffix,'visibility','none');
+   gpApp.renderLayers();
+  },embeddedId);
+  await page.waitForFunction(id=>SICARDExtracao.camadasNaBancada()?.some(layer=>layer.id===id&&!layer.visivel),embeddedId);
+  await embedded.evaluate(id=>gpApp.removeLayerFromMap(id,false),embeddedId);
+  await page.waitForFunction(id=>!SICARDExtracao.camadasNaBancada()?.some(layer=>layer.id===id),embeddedId);
   assert.deepEqual(errors,[]);
-  console.log('PASS UI real: sessão assinada de teste, carregar, explorer, OP03, storage, recarregar página, reabrir e reprocessar.');
+  console.log('PASS UI real: OP03/storage, recarga/reprocessamento e extração incorporando a mesma bancada, reabertura, visibilidade e remoção pela ponte.');
  }finally{await browser.close()}
 })().catch(error=>{console.error(error);process.exitCode=1});

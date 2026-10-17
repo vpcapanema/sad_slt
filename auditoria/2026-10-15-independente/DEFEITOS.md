@@ -3,6 +3,10 @@
 Versão de referência dos achados originais: main / 26b1b6c9211279225200c8f63f488dae7846603f.
 O registro original abaixo é preservado; as correções da retomada constam ao final.
 
+O fechamento operacional de 16/10 foi expressamente delimitado à bancada única,
+ponte da extração, concorrência e recuperação controladas. A matriz exaustiva
+histórica e integrações externas não são condição desse aceite.
+
 **Atualização após testes reais:** a autenticação foi resolvida com as credenciais existentes. Foi criado ambiente isolado, com cópia idêntica dos fontes, PostGIS e SFTPGo próprios. Os registros abaixo de NUM-001/002/004 continuam sendo falhas condicionais de métodos, não falhas reproduzidas no importador novo: nesse fluxo a máscara é convertida para NaN e os três resultados reais passaram. NUM-005 e CONTRATO-001 foram posteriormente reproduzidos pela API real. As notas antigas de integração pendente devem ser interpretadas à luz desta atualização. Todos os testes de escrita ocorreram apenas no ambiente AUDIT.
 
 ## DATA-MULTICAMADA-003 — editar uma camada elimina as demais do GeoPackage
@@ -390,3 +394,62 @@ OP-03/storage validado. Não há aprovação exaustiva da matriz histórica.
 Quedas reais, concorrência entre processos, integrações externas e homologação
 completa das duas interfaces continuam pendentes. Estes resultados são locais;
 a publicação pelo script oficial exige sua própria verificação de saúde.
+
+### DATA-CONCORRENCIA-004 — sobrescrita de edições simultâneas
+
+**Impacto:** perda de atualização. Dois editores podiam conferir a mesma revisão
+antes da publicação e ambos substituir o original. A conferência de revisão,
+isoladamente, não serializa as gravações.
+
+Reprodução controlada: primeira gravação completa suspensa no envio, segunda
+gravação da mesma revisão com outro valor. O teste falhou antes da correção
+porque a segunda gravação não foi recusada.
+
+Correção: bloqueio de sessão PostgreSQL por caminho do arquivo, compartilhado
+pela gravação completa e pela publicação incremental de atributos e geometrias.
+A segunda gravação recebe erro explícito antes de substituir o original.
+O bloqueio considera o GeoPackage inteiro, não somente sua subcamada.
+Sem banco não se grava sem proteção. Não é necessária migração.
+
+Regressões aprovadas:
+
+- Dois editores de coleção completa: somente a primeira gravação publica;
+  o arquivo reaberto contém o valor do primeiro editor.
+- Dois editores incrementais: segunda publicação recusada, apenas uma
+  substituição efetiva e nenhum temporário residual.
+- Quatro casos com banco real e processos separados: bloqueio de edição e
+  destino, liberação normal e encerramento abrupto do processo detentor;
+  tentativa posterior adquire o bloqueio. Sem escrita de catálogo nesses casos.
+- Upload interrompido e indisponibilidade do catálogo simulados: erro
+  preservado, saída órfã removida, temporários limpos e nova execução aprovada.
+
+O E2E de navegador também passou na página real da extração: o `iframe`
+carrega a mesma rota da bancada, abre a saída no storage e a ponte reflete
+visibilidade e remoção. O script de fluxos da extração passou para composição,
+IndexedDB, salvar/carregar configuração, resultado obsoleto e finalidades.
+Suas fixtures foram alinhadas à exigência atual de identificação confirmada
+para a revisão validada; a regra da aplicação não foi relaxada.
+
+Limites: falhas de infraestrutura foram injetadas somente nos testes; serviços
+de produção não foram derrubados. Não há promessa de retomada automática de
+jobs após queda, proteção contra escritores externos, login por senha nesta
+rodada ou aprovação das combinações não executadas da matriz histórica.
+
+### Resultado final do encerramento operacional
+
+Suíte completa com `SLT_TEST_CICLO_BANCO=1` e `SLT_TEST_STORAGE_E2E=1`:
+**1.671 aprovados, zero falhas, zero erros, três ignorados, 38 avisos e quatro
+subtestes aprovados**, em 309,57 segundos. A execução usou o comando pytest
+documentado acima, porque a integração Testing novamente não descobriu testes.
+Os três ignorados continuam sendo os mesmos arquivos/snapshot ausentes.
+
+Também passaram cinco scripts: feedback local, destino de storage, integridade
+de sessão, modelador e fluxos de extração. Não se alteraram as regras da aplicação
+para acomodar fixtures antigas. A verificação de diagnósticos dos arquivos
+Python alterados não apontou erros.
+
+**Decisão técnica:** aceite operacional concluído no escopo expressamente
+escolhido. A correção de edição simultânea e suas regressões estão prontas para
+publicação pelo script oficial, que verifica build, reinício e saúde da VM.
+A matriz histórica permanece preservada como evidência e trabalho fora desse
+aceite, não como pendência impeditiva indefinida.

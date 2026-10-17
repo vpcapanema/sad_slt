@@ -1,5 +1,26 @@
 # Plano de correção — execução parcial
 
+## Fechamento operacional acordado — 16/10/2026
+
+**Situação:** plano operacional concluído, com 1.671 aprovações, três casos
+condicionais por dados ausentes, quatro subtestes e cinco scripts adicionais
+aprovados. Nenhuma falha ou erro na regressão final.
+
+O usuário escolheu encerrar no escopo operacional e publicar após regressão
+aprovada, sem condicionar o aceite à matriz exaustiva original.
+A integração real da extração com a bancada única foi validada; não há
+segunda implementação a homologar integralmente.
+
+A concorrência da edição revelou uma janela entre conferir a revisão e
+substituir o arquivo. Foi adicionado bloqueio de sessão PostgreSQL por arquivo
+na edição completa e na publicação incremental de atributos/geometrias.
+Os testes cobrem dois editores, liberação entre processos e encerramento
+abrupto do processo que detém o bloqueio. Falhas controladas de upload e
+catálogo verificam descarte do envio e nova execução.
+
+O plano histórico abaixo permanece como registro e possível trabalho futuro,
+não como lista ilimitada de condições para este fechamento.
+
 ## Encerramento desta rodada — 16/10/2026
 
 A rodada de correções e regressão foi concluída: **1.664 testes aprovados,

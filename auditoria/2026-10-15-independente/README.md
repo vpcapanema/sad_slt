@@ -1,4 +1,36 @@
-# Auditoria independente SICARD — validação incompleta
+# Auditoria independente SICARD — fechamento operacional
+
+**Parecer final:** encerramento operacional aprovado no escopo acordado.
+Regressão completa: **1.671 aprovados, zero falhas, zero erros, três ignorados
+por ausência dos dados específicos e quatro subtestes aprovados**.
+As integrações de banco com rollback, navegador/storage reais e os quatro casos
+de bloqueio entre processos foram habilitados. Os cinco scripts adicionais
+de feedback, destino, sessão, modelador e fluxos da extração passaram.
+O deploy segue o script oficial, com verificação de saúde interna e pública;
+os testes descritos abaixo não substituem essa verificação pós-publicação.
+
+## Escopo final acordado — 16/10/2026
+
+O encerramento considera a bancada compartilhada, sua integração com a extração,
+concorrência e recuperação em testes controlados, correções dos defeitos
+reproduzidos e regressão. A decisão expressa foi executar esse fechamento e
+publicar se os testes passassem. A matriz histórica exaustiva, todas as
+combinações de algoritmos e integrações externas ficam fora desse aceite.
+
+Há **uma bancada**, usada diretamente e incorporada na extração por `iframe`.
+O E2E agora carrega a página real da extração e a mesma rota da bancada,
+abre a saída real do storage e verifica visibilidade e remoção pela ponte.
+Não se exige outra auditoria integral do mesmo componente.
+
+O fechamento identificou e corrigiu sobrescrita de edições simultâneas:
+edição completa e publicação incremental agora compartilham bloqueio
+PostgreSQL por arquivo. A concorrência foi reproduzida com dois editores;
+os bloqueios de edição e destino foram verificados entre processos reais,
+inclusive após encerramento abrupto do processo de teste.
+Falhas controladas de upload e catálogo verificam limpeza e nova execução.
+Detalhes em [DEFEITOS.md](DEFEITOS.md).
+
+## Evidências da rodada anterior
 
 ## Fechamento da rodada de correções e testes — 16/10/2026
 

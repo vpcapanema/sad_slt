@@ -143,6 +143,13 @@ O arquivo canônico interno de cada resultado continua associado à execução,
 independentemente da exportação escolhida. Chamadores legados sem `pasta_saida`
 mantêm o destino canônico anterior. Não é necessária migração de schema.
 
+As edições do arquivo original também usam bloqueio de sessão PostgreSQL,
+pela identidade do arquivo, compartilhado entre edição completa, atributos
+incrementais e geometria. Outra gravação concorrente é recusada antes de
+substituir o original; a revisão continua sendo conferida. O bloqueio protege
+processos da aplicação, não escritores externos ao SICARD. Sem banco disponível,
+a edição não prossegue sem proteção.
+
 ## Configuração
 
 Copie `.env.example` para `.env` e configure principalmente:

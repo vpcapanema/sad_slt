@@ -120,6 +120,38 @@ def test_revisao_obsoleta_nao_envia_nada(gpkg, remoto):
     assert path.read_bytes() == before and not remoto['enviar']
 
 
+def test_publicacoes_incrementais_concorrentes_preservam_primeiro_editor(gpkg, remoto, monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Event, current_thread
+    from api.services import edicao_storage
+
+    path, arquivo, ident = gpkg
+    revision = _revisao(path)
+    entered, release = Event(), Event()
+    move = storage_remoto.mover
+
+    def paused_move(source, destination):
+        if current_thread().name.startswith("editor-incremental"):
+            entered.set()
+            assert release.wait(10), "Publicação não foi liberada."
+        move(source, destination)
+
+    monkeypatch.setattr(storage_remoto, "mover", paused_move)
+    with ThreadPoolExecutor(max_workers=1, thread_name_prefix="editor-incremental") as pool:
+        pending = pool.submit(edicao_storage.gravar_incremental, ident, revision,
+                              {"3": {"valor": 90}}, [], OPERADOR)
+        try:
+            assert entered.wait(5), "Primeiro editor não chegou à substituição."
+            with pytest.raises(ValueError, match="Outra edição"):
+                edicao_storage.gravar_incremental(ident, revision, {"3": {"valor": 91}}, [], OPERADOR)
+        finally:
+            release.set()
+        pending.result(timeout=10)
+    assert _valores(path, "editar")[0][3][0] == 90
+    assert len(remoto["mover"]) == 1
+    assert list(path.parent.iterdir()) == [path]
+
+
 @pytest.mark.parametrize('edicoes,excluidos,mensagem', [
     ({'3': {'inexistente': 1}}, [], 'não existe na camada'),
     ({'3': {'valor': 'texto'}}, [], 'inteiro'),
