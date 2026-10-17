@@ -133,6 +133,14 @@ O terminal compartilhado é descrito em
 
 ### Destino das saídas da bancada geoespacial
 
+A seleção por atributo na tabela mantém os registros selecionados ao atualizar
+o filtro visual e ao alternar **Somente selecionados**, sem interpretar a limpeza
+interna da grade como desseleção no mapa. Em arquivos nativos com paginação,
+a consulta da tabela considera a página atual, conforme indicado no formulário;
+a seleção por expressão da faixa superior consulta a camada no servidor.
+A camada ativa da tabela é respeitada pelos comandos da faixa, mesmo quando
+uma linha anterior do painel de conteúdo ainda mantém o destaque visual.
+
 O feedback de processamento aparece em uma faixa compacta no rodapé do painel
 contextual, com nome da ferramenta, progresso, estado, duração e cancelamento
 quando disponível. **Exibir detalhes** abre as mensagens em um painel claro.

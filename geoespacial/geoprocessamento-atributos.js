@@ -63,7 +63,13 @@
   }
   const filterKeys=new WeakMap();
   function withinLayer(row){const data=app().state.layerFilterFeatures?.[current.id];if(!data)return true;if(!filterKeys.has(data))filterKeys.set(data,new Set(data.features.map(key)));if(current.remote){const feature={type:'Feature',id:row.__gp_fid,properties:clean(row)};return filterKeys.get(data).has(String(row.__gp_fid))||filterKeys.get(data).has(key(feature));}return filterKeys.get(data).has(key(row.__gp_feature));}
-  function applyView(){const only=$('[data-at-only]').getAttribute('aria-pressed')==='true',ids=new Set(grid.getSelectedData().map(r=>r.__gp_row));grid.setFilter(row=>withinLayer(row)&&(!only||ids.has(row.__gp_row)));}
+  function applyView(){
+    const only=$('[data-at-only]').getAttribute('aria-pressed')==='true',ids=new Set(grid.getSelectedData().map(r=>r.__gp_row)),wasSyncing=syncing;
+    // O filtro da grade remota limpa a seleção; isso não é uma ação do usuário.
+    syncing=true;
+    try{grid.setFilter(row=>withinLayer(row)&&(!only||ids.has(row.__gp_row)));grid.selectRow([...ids]);}
+    finally{syncing=wasSyncing;}
+  }
 
   function suggestValues(){
     const field=$('[data-at-field]').value;

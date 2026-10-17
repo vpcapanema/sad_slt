@@ -1,7 +1,7 @@
 // Teste isolado: nenhuma conexão com banco, API real ou storage.
 const {chromium}=require('playwright'),assert=require('node:assert/strict'),path=require('node:path');
 (async()=>{
- const browser=await chromium.launch({headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
+ const browser=await chromium.launch({headless:true,...(process.env.PW_CHROMIUM?{executablePath:process.env.PW_CHROMIUM}:{}),args:['--no-sandbox','--disable-dev-shm-usage']});
  try{
   const page=await browser.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.setContent('<button data-action="explore">Explorar</button><button data-action="select">Selecionar</button><span id="gp-selection"></span><div class="gp-app"><button data-right-tab="tools">Tools</button><span id="gp-right-title"></span><div id="gp-tools-view"></div><div id="gp-editor-view"></div></div>');
@@ -18,6 +18,11 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
    window.fetch=async(url,options)=>{fixture.requests.push({url,body:JSON.parse(options.body)});return {ok:true,json:async()=>({feicoes_atualizadas:1})};};
   });
   await page.addScriptTag({path:path.resolve('geoespacial/geoprocessamento-commands.js')});
+  await page.evaluate(()=>{
+   gpApp.state.layers.push({id:'b',nome:'Outra camada',tipo:'vetor'});
+   const row=document.createElement('div');row.dataset.layer='b';row.className='active';document.body.append(row);
+  });
+  assert.equal(await page.evaluate(()=>gpCommands.activeLayer().id),'a','A camada ativa da tabela prevalece sobre uma marca visual anterior');
   await page.evaluate(()=>{gpCommands.setLayerSelection('a',[fixture.feature(1)]);gpCommands.explore();fixture.click(false);fixture.click(true);});
   assert.deepEqual(await page.evaluate(()=>gpApp.state.selectedGeoJSON.features.map(f=>f.id)),[1],'Explorar preserva seleção');
   assert.equal(await page.evaluate(()=>fixture.popups),2);assert.deepEqual(await page.evaluate(()=>fixture.tables),[]);

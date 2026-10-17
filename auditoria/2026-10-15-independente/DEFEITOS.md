@@ -490,3 +490,35 @@ O arquivo real foi apenas lido, sem alteração de seu conteúdo.
 Também foi aberto no navegador local pelas APIs reais: Pontos1, Linhas1 e
 Poligonos1 mantiveram respectivamente `point`, `line` e `poligon`, com os
 títulos solicitados, após duas renderizações do painel por camada.
+
+### UI-SELECAO-006 — seleção por atributo apagada pela grade paginada
+
+Reprodução posterior ao aceite operacional: no arquivo real
+`base-geoespacial/Projetos_2026_09_10.gpkg`, a consulta da tabela de Poligonos1
+informava 94 registros encontrados, mas terminava com zero registros
+selecionados na grade e no mapa. O teste anterior de seleção em memória não
+reproduzia a configuração de seleção da grade remota.
+
+Causa: a atualização do filtro visual pelo Tabulator limpa a seleção na
+configuração remota. O evento interno era interpretado como desseleção pelo
+usuário e invalidava a sincronização assíncrona com o mapa. A atualização visual
+agora preserva os identificadores selecionados e bloqueia apenas a realimentação
+dos eventos internos durante essa atualização.
+
+Também foi identificado que o comando da faixa superior priorizava a classe
+visual de uma linha anterior no painel de conteúdo em vez da camada ativa da
+tabela. A resolução agora prioriza o identificador ativo do estado da bancada.
+
+Validação com API, storage e Edge reais, sem alteração dos dados:
+
+| Camada | Seleção preservada na página da tabela | Consulta integral pela faixa |
+| --- | ---: | ---: |
+| Pontos1 | 48 | 48 |
+| Linhas1 | 100 | 339 |
+| Poligonos1 | 94 | 94 |
+
+A tabela remota mantém o escopo de página explicitamente indicado na interface.
+A regressão cobre consulta, seleção atual, resultado vazio, inversão, alternância
+de somente selecionados, troca de páginas e sincronização com o mapa. O novo
+teste reproduziu a falha antes da correção. O aceite anterior não constitui
+evidência de cobertura deste cenário; esta descoberta corrige essa lacuna.
