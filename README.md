@@ -125,6 +125,11 @@ O terminal compartilhado é descrito em
 
 ### Destino das saídas da bancada geoespacial
 
+Na legenda da bancada compartilhada, linhas usam `layer-symbol line`,
+polígonos usam `layer-symbol poligon` e pontos circulares usam
+`layer-symbol point`. Os títulos identificam o tipo vetorial em português,
+inclusive nas legendas categorizadas e graduadas.
+
 O campo **Destino** dos algoritmos e das propriedades do modelador abre o
 explorador de `saidas-geoespaciais` no storage existente. É possível navegar,
 criar subpastas, informar o nome da saída e escolher o formato compatível:

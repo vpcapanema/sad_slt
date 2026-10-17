@@ -444,13 +444,13 @@
   function layerSymbol(layer,overrideColor){
     if(layer.tipo?.toLowerCase().includes("raster"))return '<span class="layer-symbol raster" title="Raster"></span>';
     const types=tiposGeometriaCamada(layer),type=types[0]||"geometry",symbolStyle=state.layerStyles[layer.id]||{},color=overrideColor||(type.includes("Line")?symbolStyle.borderColor||symbolStyle.fillColor:symbolStyle.fillColor||symbolStyle.borderColor)||layerColor(layer.id,types),style=` style="--layer-color:${color}"`;
-    if(type.includes("Point")){const shape=symbolStyle.pointShape||"circle";if(shape!=="circle")return `<span class="layer-symbol layer-symbol-shape" title="Pontos">${symbolPreview("shape",shape,color)}</span>`;return `<span class="layer-symbol point"${style} title="Pontos"></span>`}
+    if(type.includes("Point")){const shape=symbolStyle.pointShape||"circle";if(shape!=="circle")return `<span class="layer-symbol layer-symbol-shape" title="Geometria vetorial do tipo ponto">${symbolPreview("shape",shape,color)}</span>`;return `<span class="layer-symbol point"${style} title="Geometria vetorial do tipo ponto"></span>`}
     if(type.includes("Line")){
       const width=Math.max(1,Math.min(Number(symbolStyle.lineWidth)||2,6));
       const dash=symbolStyle.lineTexture==="dashed"?' stroke-dasharray="5 3"':symbolStyle.lineTexture==="dotted"?' stroke-dasharray="1 3"':'';
-      return `<span class="layer-symbol line line-svg"${style} title="Linhas"><svg viewBox="0 0 26 16" aria-hidden="true"><path d="M2 12 L9 4 L17 12 L24 4" fill="none" stroke="var(--layer-color)" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round"${dash}/></svg></span>`;
+      return `<span class="layer-symbol line"${style} title="Geometria vetorial do tipo linha"><svg viewBox="0 0 26 16" aria-hidden="true"><path d="M2 12 L9 4 L17 12 L24 4" fill="none" stroke="var(--layer-color)" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round"${dash}/></svg></span>`;
     }
-    if(type.includes("Polygon"))return `<span class="layer-symbol polygon"${style} title="Polígonos"></span>`;
+    if(type.includes("Polygon"))return `<span class="layer-symbol poligon"${style} title="Geometria vetorial do tipo polígono"></span>`;
     return `<span class="layer-symbol geometry"${style} title="Geometria vetorial"></span>`;
   }
   function tiposGeometriaCamada(layer){

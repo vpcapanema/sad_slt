@@ -79,3 +79,15 @@ assert.match(context.layerSymbol({id:'preview',metadados_local:{tipos_geometria:
 context.adicionarCamadaGeoJsonEmMemoria('collection','Linhas', {features:[{geometry:{type:'GeometryCollection',geometries:[{type:'LineString',coordinates:[]},{type:'MultiLineString',coordinates:[]}]}}]}, {lote:true});
 assert.match(context.layerSymbol(state.layers.find(layer=>layer.id==='collection')), /layer-symbol line/);
 for(const type of ['Point','Polygon','CurvePolygon','MultiSurface'])assert.doesNotMatch(context.layerSymbol({id:'other',geometria_tipo:type}), /layer-symbol line/);
+for(const [types,cls,title] of [
+  [['LineString','MultiLineString','Linha'],'line','linha'],
+  [['Polygon','MultiPolygon','Polígono','MultiSurface'],'poligon','polígono'],
+  [['Point','MultiPoint','Ponto'],'point','ponto'],
+]){
+  for(const geometria_tipo of types){
+    const symbol=context.layerSymbol({id:'symbol-test',geometria_tipo});
+    assert.match(symbol,new RegExp(`class="layer-symbol ${cls}"`));
+    assert.ok(symbol.includes(`title="Geometria vetorial do tipo ${title}"`));
+    assert.doesNotMatch(symbol,/layer-symbol geometry/);
+  }
+}

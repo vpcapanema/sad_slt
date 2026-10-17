@@ -1,11 +1,22 @@
 const {chromium}=require('playwright'),fs=require('fs'),assert=require('node:assert/strict');
 (async()=>{const browser=await chromium.launch({channel:'msedge',headless:true});try{
- const p=await browser.newPage();await p.setContent('<div id="gp-log"></div>');
+ const p=await browser.newPage();await p.setContent('<div id="gp-log"></div><div id="symbols" class="tree-row"></div>');
+ await p.addStyleTag({path:'assets/css/geoprocessamento.css'});
  const code=fs.readFileSync('geoespacial/geoprocessamento.js','utf8');
  await p.addScriptTag({content:`const state={layerStyles:{},geometryTypes:{}};const layerColor=()=> '#1683c4';const escapeHtml=s=>String(s);${code.slice(code.indexOf('  function layerSymbol('),code.indexOf('  function camadaVisivel('))}${code.slice(code.indexOf('  function tipoGeometriaBase('),code.indexOf('  function storageTileQuery('))};window.legendTest=(type,renderer)=>{state.layerStyles.x={renderer};return layerLegend({id:'x',geometria_tipo:type})};`});
- for(const [type,cls] of [['MultiLineString','line'],['Point','point'],['MultiPolygon','polygon']]) {
+ for(const [type,cls,title] of [['MultiLineString','line','linha'],['Point','point','ponto'],['MultiPolygon','poligon','polígono']]) {
   for(const renderer of [null,{tipo:'categorizado',categorias:[{cor:'#123456',valor:'A'}],corOutros:'#654321'},{tipo:'graduado',fatias:[{cor:'#123456',rotulo:'A'}]}]){
-   const html=await p.evaluate(({type,renderer})=>legendTest(type,renderer),{type,renderer});assert.ok(html.includes(`layer-symbol ${cls}`),html);assert.ok(!html.includes('legend-swatch'));
+   const html=await p.evaluate(({type,renderer})=>legendTest(type,renderer),{type,renderer});assert.ok(html.includes(`class="layer-symbol ${cls}"`),html);assert.ok(html.includes(`title="Geometria vetorial do tipo ${title}"`),html);assert.ok(!html.includes('legend-swatch'));
+   await p.locator('#symbols').evaluate((node,html)=>node.innerHTML=html,html);
+   const symbol=p.locator('#symbols .layer-symbol').first();
+   assert.equal(await symbol.getAttribute('title'),`Geometria vetorial do tipo ${title}`);
+   if(cls==='line'){
+    assert.equal(await symbol.locator('svg path').count(),1);
+    assert.equal(await symbol.evaluate(node=>getComputedStyle(node,'::after').content),'none');
+   }else if(cls==='poligon'){
+    assert.equal(await symbol.evaluate(node=>getComputedStyle(node).borderTopWidth),'2px');
+    assert.notEqual(await symbol.evaluate(node=>getComputedStyle(node).backgroundColor),'rgba(0, 0, 0, 0)');
+   }
   }
  }
  const files=fs.readFileSync('geoespacial/bancada-arquivos.js','utf8');
