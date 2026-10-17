@@ -135,11 +135,21 @@ O terminal compartilhado é descrito em
 
 O feedback de processamento aparece em uma faixa compacta no rodapé do painel
 contextual, com nome da ferramenta, progresso, estado, duração e cancelamento
-quando disponível. **Exibir detalhes** abre as mensagens em um painel claro;
-o processamento não abre automaticamente um terminal sobre o mapa.
+quando disponível. **Exibir detalhes** abre as mensagens em um painel claro.
+O controle de cancelamento é um círculo com quadrado preenchido, à esquerda
+da barra azul fina e na mesma linha, sem substituir o progresso real do processo.
+O processamento não abre automaticamente um terminal sobre o mapa.
 Avisos, falhas e cancelamentos têm estados distintos. A estrutura segue o
 [padrão público de feedback do ArcGIS Pro](https://pro.arcgis.com/en/pro-app/latest/help/analysis/geoprocessing/basics/run-geoprocessing-tools.htm),
 sem utilizar assets da Esri.
+Na seleção de GeoPackages, o campo de entrada lista as camadas internas em vez
+do nome do arquivo. A importação segue essa ordem, mostrando o nome e a posição
+de cada camada, sua conclusão e o progresso do lote; falhas parciais são indicadas
+como avisos, sem ocultar as mensagens individuais.
+A confirmação do explorador identifica as camadas antes de fechar o modal:
+o campo já retorna preenchido, sem executar a importação. O acompanhamento
+fica exclusivamente no rodapé, sem resumo duplicado junto aos parâmetros.
+A barra permanece azul em execução, vermelha na falha e verde após sucesso.
 
 O botão de procurar camadas do sistema abre o explorador imediatamente, sem
 aguardar o catálogo completo do banco e do storage. As pastas são consultadas
@@ -401,6 +411,9 @@ nos scripts Windows/VM; o script do Codespace aceita somente `main`.
 Confira o SHA final e `/api/health/ready`, além da página alterada. Falha
 após o push significa que GitHub e produção podem estar em versões diferentes;
 não anuncie deploy concluído sem verificar a VM.
+Na tarefa de deploy do VS Code, a leitura de `docker logs` é apenas diagnóstica:
+se o driver não permitir consultá-los, um aviso é emitido e as verificações
+obrigatórias do contêiner e de `/api/health/ready` continuam normalmente.
 
 O build usa `--pull` e dependências com faixas de versão. Registre falhas de
 build/integração; não substitua dados ou aplique migrations automaticamente

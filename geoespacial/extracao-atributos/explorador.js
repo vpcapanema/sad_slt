@@ -31,7 +31,7 @@ function partesDoNome(item){
 }
 function rotulo(item){const p=partesDoNome(item);return `${p.radical}${p.extensao}${p.camada?` › ${p.camada}`:''}`;}
 
-export function escolherArquivo({catalog=[],carregarCatalogo,excluded=[],title,acao=title,multiple=false,validar=true,somenteReferencias=false,original=false,host,onClose}) {
+export function escolherArquivo({catalog=[],carregarCatalogo,excluded=[],title,acao=title,multiple=false,validar=true,somenteReferencias=false,prepararReferencias,original=false,host,onClose}) {
   return new Promise(resolve=>{
     const inline=Boolean(host?.isConnected);
     const dialog=el(inline?'section':'dialog',undefined,`ea-tool-dialog ea-storage-dialog${inline?' ea-storage-inline':''}`);
@@ -221,7 +221,13 @@ export function escolherArquivo({catalog=[],carregarCatalogo,excluded=[],title,a
     async function selectBatch(){
       if(loading||!picks.size)return;
       if(!validar&&somenteReferencias){
-        const files=[...picks.values()];
+        let files=[...picks.values()];
+        if(prepararReferencias){
+          loading=true;controls();status.textContent='Identificando as camadas selecionadas…';
+          try{files=await prepararReferencias(files);}
+          catch(error){status.textContent=`Não foi possível identificar as camadas: ${error.message}`;return;}
+          finally{loading=false;controls();}
+        }
         finish(multiple?files:files[0]);return;
       }
       loading=true;controls();

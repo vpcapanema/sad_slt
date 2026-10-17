@@ -17,16 +17,25 @@ const root=path.resolve(__dirname,'../..');
   const page=await browser.newPage({viewport:{width:1600,height:1100}}),errors=[];
   page.on('pageerror',error=>errors.push(error.stack||error.message));
   const file={id:'storage:base-geoespacial/rios.gpkg',nome:'Rios',arquivo:'base-geoespacial/rios.gpkg',geometria_tipo:'LineString',tipo:'vetor'};
+  const internalLayers=[
+   {...file,id:file.id+'::Linhas',nome:'Linhas',camada:'Linhas'},
+   {...file,id:file.id+'::Pontos',nome:'Pontos',camada:'Pontos',geometria_tipo:'Point'},
+   {...file,id:file.id+'::Poligonos',nome:'Poligonos',camada:'Poligonos',geometria_tipo:'Polygon'},
+  ],prepared=[];
   const bankFile={id:'banco-rios',nome:'Rios cadastrados',tipo:'vetor'};
-  let catalogRequests=0,inventoryRequests=0,releaseRoots,releaseCatalog,releaseInventory;
+  let catalogRequests=0,inventoryRequests=0,releaseRoots,releaseCatalog,releaseInventory,inventoryStarted;
+  const inventoryRequested=new Promise(resolve=>{inventoryStarted=resolve;});
   const rootsReady=new Promise(resolve=>{releaseRoots=resolve;});
   const catalogReady=new Promise(resolve=>{releaseCatalog=resolve;});
   const inventoryReady=new Promise(resolve=>{releaseInventory=resolve;});
   await page.route('**/api/**',async route=>{
    const url=new URL(route.request().url()).pathname;
    if(url.includes('/bancada-arquivos/tiles/'))return route.fulfill({status:204,body:''});
-   if(url.endsWith('/bancada-arquivos/preparar'))return route.fulfill({json:{...file,revisao:'a'.repeat(64),campos:[],bounds:[-46,-23,-45,-22],feicoes:1}});
-   if(url.endsWith('/storage/camadas-arquivo')){inventoryRequests++;await inventoryReady;return route.fulfill({json:{camadas:[file]}});}
+   if(url.endsWith('/bancada-arquivos/preparar')){
+    const ref=route.request().postDataJSON();prepared.push(ref.id);
+    return route.fulfill({json:{...internalLayers.find(layer=>layer.id===ref.id),revisao:'a'.repeat(64),campos:[],bounds:[-46,-23,-45,-22],feicoes:1}});
+   }
+   if(url.endsWith('/storage/camadas-arquivo')){inventoryRequests++;inventoryStarted();await inventoryReady;return route.fulfill({json:{camadas:internalLayers}});}
    if(url.endsWith('/extracao-atributos/catalogo')){catalogRequests++;await catalogReady;return route.fulfill({json:{camadas:[file,bankFile]}});}
    if(url.endsWith('/storage/pastas')){await rootsReady;return route.fulfill({json:{caminho:'',pastas:[{nome:'base-geoespacial',caminho:'base-geoespacial',raiz:true},{nome:'superficies-indices',caminho:'superficies-indices',raiz:true}],arquivos:[]}});}
    if(url.endsWith('/storage/navegar')){const path=new URL(route.request().url()).searchParams.get('caminho');return route.fulfill({json:{caminho:path,pai:null,pastas:[],arquivos:path==='superficies-indices'?[{id:'storage:superficies-indices/indice.gpkg',nome:'indice',arquivo:'superficies-indices/indice.gpkg',formato:'GPKG'}]:[{...file,inventariar:true}]}});}
@@ -94,13 +103,16 @@ const root=path.resolve(__dirname,'../..');
    },{capture:true,once:true});
   });
   await page.getByRole('button',{name:'Confirmar (1)'}).click();
+  await inventoryRequested;
+  assert.equal(inventoryRequests,1,'A seleção identifica as camadas internas antes de habilitar a importação');
+  assert.equal(await page.locator('dialog.ea-storage-dialog[open]').isVisible(),true);
+  assert.equal(await page.locator('#gp-system-load-form button[type="submit"]').isDisabled(),true);
+  releaseInventory();
   await page.locator('dialog.ea-storage-dialog[open]').waitFor({state:'detached',timeout:1000});
   const confirmMs=await page.evaluate(()=>window.pickerConfirmMs);
   assert.equal(typeof confirmMs,'number');
-  assert.ok(confirmMs<250,`Confirmação demorou ${confirmMs} ms`);
-  assert.equal(inventoryRequests,0,'Confirmar a seleção não deve ler o GeoPackage');
   await page.locator('#gp-system-load-form').waitFor();
-  assert.equal(await page.locator('#gp-system-layer-name').inputValue(),'Rios');
+  assert.equal(await page.locator('#gp-system-layer-name').inputValue(),'Linhas; Pontos; Poligonos');
   assert.equal(await page.locator('#gp-system-load-form button[type="submit"]').isDisabled(),false);
   assert.equal(await page.locator('#gp-system-load-form button[type="submit"]').innerText(),'Carregar camada');
   assert.equal(await page.locator('#gp-system-load-form button[type="submit"]').isVisible(),true);
@@ -109,17 +121,20 @@ const root=path.resolve(__dirname,'../..');
   await page.locator('dialog.ea-storage-dialog[open]').waitFor();
   await page.locator('dialog.ea-storage-dialog .ea-storage-window-controls [aria-label="Fechar"]').click();
   await page.locator('#gp-system-load-form').waitFor();
-  assert.equal(await page.locator('#gp-system-layer-name').inputValue(),'Rios');
+  assert.equal(await page.locator('#gp-system-layer-name').inputValue(),'Linhas; Pontos; Poligonos');
   assert.equal(await page.evaluate(id=>window.gpApp.state.layers.some(layer=>layer.id===id),file.id),false);
-  await Promise.all([
-   page.waitForRequest('**/storage/camadas-arquivo?*'),
-   page.locator('#gp-system-load-form button[type="submit"]').click(),
-  ]);
-  assert.equal(inventoryRequests,1,'O inventário deve ocorrer somente ao carregar a camada');
-  releaseInventory();
-  await page.waitForFunction(id=>window.gpApp.state.layers.some(layer=>layer.id===id),file.id);
+  await page.locator('#gp-system-load-form button[type="submit"]').click();
+  await page.waitForFunction(ids=>ids.every(id=>window.gpApp.state.layers.some(layer=>layer.id===id)),internalLayers.map(layer=>layer.id));
   assert.equal(inventoryRequests,1,'O mesmo arquivo não deve ser inventariado duas vezes');
-  assert.match(await page.locator('#gp-system-load-form').innerText(),/1 camada\(s\) carregada\(s\) na bancada/);
+  await page.locator('#gp-feedback-host .execution-progress.complete').waitFor();
+  assert.equal(await page.locator('[data-system-load-status]').isVisible(),false);
+  assert.equal(await page.locator('#gp-log').isVisible(),false);
+  assert.deepEqual(prepared,internalLayers.map(layer=>layer.id));
+  const messages=await page.locator('#gp-log-messages').textContent();
+  const labels=['Importando 1 de 3: Linhas','Importada 1 de 3: Linhas','Importando 2 de 3: Pontos','Importada 2 de 3: Pontos','Importando 3 de 3: Poligonos','Importada 3 de 3: Poligonos'];
+  let last=-1;for(const label of labels){const index=messages.indexOf(label);assert.ok(index>last,label);last=index;}
+  assert.equal(await page.locator('#gp-feedback-host .execution-progress.complete').count(),1);
+  assert.equal(await page.locator('#gp-feedback-host [role="progressbar"]').getAttribute('aria-valuenow'),'100');
   assert.equal(await page.locator('.gp-feedback-panel').count(),0);
   await page.evaluate(async layer=>{
    const {escolherArquivo}=await import('/restrict/geoespacial/extracao-atributos/explorador.js?v=20261016-immediate-system-confirm');
@@ -140,7 +155,7 @@ const root=path.resolve(__dirname,'../..');
   await page.locator('.ea-storage-entry[data-file]').click();
   await page.getByRole('button',{name:'Confirmar (1)'}).click();
   await page.locator('dialog.ea-storage-dialog[open]').waitFor({state:'detached'});
-  assert.deepEqual(await page.evaluate(()=>window.basePicker),[file]);
+  assert.deepEqual(await page.evaluate(()=>window.basePicker),internalLayers);
   assert.equal(inventoryRequests,2,'O fluxo padrão de bases deve continuar inventariando ao confirmar');
   const simbolos=await page.evaluate(()=>{
     const app=window.gpApp,original=app.state.layers,geometrias=app.state.geometryTypes;
@@ -167,6 +182,6 @@ const root=path.resolve(__dirname,'../..');
   await page.locator('#gp-editor-view [aria-label="Voltar às ferramentas"]').click();
   await page.waitForFunction(()=>document.querySelector('#gp-tools-view').classList.contains('active'));
   assert.deepEqual(errors,[]);
-  console.log(`Bancada: modal em ${openMs.toFixed(1)} ms, confirmação em ${confirmMs.toFixed(1)} ms sem aguardar rede e inventário único ao carregar`);
+  console.log(`Bancada: modal em ${openMs.toFixed(1)} ms, confirmação em ${confirmMs.toFixed(1)} ms, input com três camadas e feedback individual na ordem, sem repetir inventário`);
  }finally{if(browser)await browser.close();server.close();}
 })().catch(error=>{console.error(error);process.exit(1);});

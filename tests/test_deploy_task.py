@@ -84,6 +84,12 @@ class DeployTests(unittest.TestCase):
                         deploy.main()
                         health.assert_called_once()
                         browser.assert_called_once_with(deploy.URL + '/public/')
+                        remote = next(p[-1] for p in calls if p[0] == '-ssh' and 'bash -c' in p[-1])
+                        command = shlex.split(remote)[-1]
+                        self.assertIn("if ! docker logs --tail 60 sicard_app; then ", command)
+                        self.assertIn("validacao de saude continua obrigatoria.", command)
+                        self.assertIn("docker inspect --format", command)
+                        self.assertIn('sleep 5; done; exit 1', command)
                     if failure in ('commit', 'merge', 'push'):
                         self.assertFalse(any(p[0] == '-ssh' and 'bash -c' in p[-1] for p in calls))
                     if failure in ('commit', 'merge'):

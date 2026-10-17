@@ -633,7 +633,7 @@
     const host=$("#gp-editor-view");
     host.classList.add("active");
     $("#gp-right-title").textContent="Carregar do sistema";
-    let referencias=[];
+    let referencias=[],selecionando=false;
     const render=(message="")=>{
       const head=document.createElement("div");head.className="editor-head tool-parameter-head";
       const back=document.createElement("button");back.type="button";back.className="icon-btn";back.title="Voltar";back.setAttribute("aria-label","Voltar às ferramentas");back.innerHTML='<i data-lucide="arrow-left"></i>';back.onclick=()=>showTools();
@@ -642,26 +642,27 @@
       form.innerHTML='<div class="editor-body"><div class="field"><label class="required-label" for="gp-system-layer-name">Camada do sistema</label><div class="local-file-picker"><input id="gp-system-layer-name" class="readonly-active" type="text" placeholder="Selecione uma ou mais camadas" readonly required><button class="browse-btn" type="button" data-select-system-layer title="Procurar camadas do sistema" aria-label="Procurar camadas do sistema"><i data-lucide="folder-open"></i></button></div><p class="field-help">Escolha no explorador as camadas que serão carregadas na bancada.</p></div><p class="field-help" data-system-load-status role="status" aria-live="polite"></p></div><div class="editor-actions"><button class="btn primary" type="submit" disabled>Carregar camada</button></div>';
       const input=form.querySelector("#gp-system-layer-name"),submit=form.querySelector('button[type="submit"]'),status=form.querySelector("[data-system-load-status]");
       input.value=referencias.map(ref=>ref.nome||ref.arquivo||ref.id).join("; ");
-      status.textContent=message;
+      status.textContent="";
+      status.hidden=true;
+      if(message)window.gpFeedback.Notify.error("",message);
       form.querySelector("[data-select-system-layer]").onclick=async event=>{
-        const browse=event.currentTarget;browse.disabled=true;
+        const browse=event.currentTarget;browse.disabled=true;selecionando=true;
         try{
-          const escolhidas=await window.gpArquivos.selecionarReferencias({onClose:()=>render()});
+          const escolhidas=await window.gpArquivos.selecionarReferencias();
           if(escolhidas)referencias=escolhidas;
+          selecionando=false;
           render();
-        }catch(error){render(error.message);}
+        }catch(error){selecionando=false;render(error.message);}
       };
-      submit.disabled=referencias.length===0;
+      submit.disabled=selecionando||referencias.length===0;
+      form.querySelector("[data-select-system-layer]").disabled=selecionando;
       form.onsubmit=async event=>{
         event.preventDefault();
         if(!referencias.length)return;
-        submit.disabled=true;form.querySelector("[data-select-system-layer]").disabled=true;status.textContent=`Carregando ${referencias.length} camada(s)…`;
+        submit.disabled=true;form.querySelector("[data-select-system-layer]").disabled=true;
         try{
-          const abertas=await window.gpArquivos.abrirReferencias([...referencias]);
-          status.textContent=abertas.length===referencias.length
-            ?`${abertas.length} camada(s) carregada(s) na bancada.`
-            :`${abertas.length} de ${referencias.length} camada(s) carregada(s). Consulte o histórico para detalhes.`;
-        }catch(error){status.textContent=error.message;}
+          await window.gpArquivos.abrirReferencias([...referencias],{expandir:false});
+        }catch(error){window.gpFeedback.Notify.error("",error.message);}
         finally{if(form.isConnected){submit.disabled=referencias.length===0;form.querySelector("[data-select-system-layer]").disabled=false;}}
       };
       host.replaceChildren(head,form);icons();

@@ -96,7 +96,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .execution-progress-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
 .execution-progress-head strong{font-size:11px;font-weight:400;font-variant-numeric:tabular-nums}
 .execution-progress-icon{font-size:18px;line-height:20px;color:var(--accent);width:18px;flex:0 0 18px;text-align:center}
-.execution-progress-track{height:4px;margin:6px 0;background:var(--line);overflow:hidden}
+.execution-progress-row{display:flex;align-items:center;gap:8px;min-height:24px;margin:3px 0}
+.execution-progress-track{flex:1;min-width:0;height:4px;margin:0;background:var(--line);overflow:hidden}
 .execution-progress-track span{display:block;width:0;height:100%;background:var(--accent);transition:width .2s ease}
 .execution-progress-track.indeterminate span{width:35%!important;animation:gp-progress-slide 1.5s ease-in-out infinite}
 .execution-progress-stage{font-size:11px;color:var(--muted);line-height:1.4;overflow-wrap:anywhere;max-height:4.2em;overflow:auto}
@@ -104,8 +105,10 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .execution-progress-time{margin-right:auto;color:var(--muted);font-variant-numeric:tabular-nums}
 .execution-progress-link{border:0;padding:1px 0;background:none;color:var(--accent);cursor:pointer;font:inherit}
 .execution-progress-link:hover{text-decoration:underline}
-.execution-progress-cancel{width:23px;height:23px;padding:0;border:1px solid transparent;background:transparent;color:var(--ink);font-size:20px;line-height:20px;cursor:pointer}
-.execution-progress-cancel:hover{border-color:var(--line-dark);background:var(--paper)}
+.execution-progress-cancel{display:grid;place-items:center;flex:0 0 20px;width:20px;height:20px;padding:0;border:1px solid currentColor;border-radius:50%;background:transparent;color:var(--accent);cursor:pointer}
+.execution-progress-cancel span{display:block;width:8px;height:8px;background:currentColor}
+.execution-progress-cancel:hover{background:var(--accent-soft)}
+.execution-progress-cancel:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .execution-progress-cancel:disabled{opacity:.45;cursor:wait}
 .execution-progress.complete .execution-progress-icon{color:#28733a}
 .execution-progress.complete .execution-progress-track span{background:#28733a}

@@ -1,4 +1,4 @@
-import { escolherArquivo } from './extracao-atributos/explorador.js?v=20261016-immediate-system-confirm';
+import { escolherArquivo } from './extracao-atributos/explorador.js?v=20261016-confirmar-camadas';
 import { json, post } from './extracao-atributos/api.js';
 import { el } from './extracao-atributos/ui.js';
 
@@ -174,21 +174,23 @@ async function browse(){
   try{
     // Só referências: o original do storage é preparado sem trafegar o GeoJSON inteiro.
     const refs=await escolherArquivo({carregarCatalogo:async()=>(await json('/extracao-atributos/catalogo')).camadas,multiple:true,title:'Carregar do sistema',validar:false,somenteReferencias:true,host,onClose:()=>app().showTools()});
-    if(refs?.length)await abrirReferencias(refs,{host,feedback:false,onStatus:(mensagem,erros)=>mostrar('Carregar do sistema',mensagem,erros||[])});
+    if(refs?.length)await abrirReferencias(refs,{host,onStatus:(mensagem,erros)=>mostrar('Carregar do sistema',mensagem,erros||[])});
   }catch(error){mostrar('Carregar do sistema',`Não foi possível abrir o explorador: ${error.message}`);}
 }
 
 async function selecionarReferencias({onClose}={}){
   if(editor)throw new Error('Salve ou cancele a edição antes de selecionar outra camada.');
   if(busy)throw new Error('Aguarde a operação em andamento terminar.');
-  return escolherArquivo({
+  const refs=await escolherArquivo({
     carregarCatalogo:async()=>(await json('/extracao-atributos/catalogo')).camadas,
     multiple:true,
     title:'Selecionar camadas do sistema',
     validar:false,
     somenteReferencias:true,
+    prepararReferencias:expandirGeoPackages,
     onClose,
   });
+  return refs;
 }
 
 // One GeoPackage selection opens every internal vector layer, once per file.
@@ -206,9 +208,9 @@ async function expandirGeoPackages(refs){
 }
 
 async function abrirReferencias(refs,extra={}){
-  refs=await expandirGeoPackages(refs);
+  if(extra.expandir!==false)refs=await expandirGeoPackages(refs);
   const TAREFA='Preparar camadas para visualização';
-  const proc=extra.feedback===false?null:window.gpFeedback?.ProcessFeedback.iniciarCadastro({title:'Abrir arquivos na bancada',tasks:[TAREFA],host:extra.host});
+  const proc=extra.feedback===false?null:window.gpFeedback?.ProcessFeedback.iniciarCadastro({title:'Importar camadas',tasks:[TAREFA],host:extra.host});
   const atualizarStatus=mensagem=>{
     if(extra.feedback!==false||!extra.host?.isConnected)return;
     if(extra.onStatus){extra.onStatus(mensagem);return;}
@@ -221,6 +223,7 @@ async function abrirReferencias(refs,extra={}){
     }
   };
   proc?.tarefaAtual(TAREFA,`${refs.length} camada(s)`);
+  proc?.progresso(0);
   atualizarStatus(`Abrindo ${refs.length} camada(s) na bancada…`);
   const abertos=[],erros=[];
   busy=true;syncEditRibbon();
@@ -228,25 +231,30 @@ async function abrirReferencias(refs,extra={}){
     for(const [indice,ref] of refs.entries()){
       const rotulo=ref.nome||ref.arquivo||ref.id;
       atualizarStatus(`Abrindo ${indice+1} de ${refs.length}: ${rotulo}`);
-      proc?.detalhe(`${rotulo} (${indice+1}/${refs.length})`);
+      proc?.detalhe(`Importando ${indice+1} de ${refs.length}: ${rotulo}`);
       try{
-        if(String(ref.tipo).toLowerCase().includes('raster')&&ehStorage(ref)){abertos.push(await app().adicionarRasterStorage({...ref,categoria:extra.categoria||ref.categoria||''}));continue;}
-        const file=ehStorage(ref)?await abrirStorage(ref):ehArquivoLocalNativo(ref)?await prepararOriginal(ref):await post('/extracao-atributos/arquivo-mapa',{arquivo:ref.arquivo||undefined,id:ref.id});
-        if(extra.categoria)file.categoria=extra.categoria;
-        mount(file,{lote:true});abertos.push(file);
+        if(String(ref.tipo).toLowerCase().includes('raster')&&ehStorage(ref))abertos.push(await app().adicionarRasterStorage({...ref,categoria:extra.categoria||ref.categoria||''}));
+        else{
+          const file=ehStorage(ref)?await abrirStorage(ref):ehArquivoLocalNativo(ref)?await prepararOriginal(ref):await post('/extracao-atributos/arquivo-mapa',{arquivo:ref.arquivo||undefined,id:ref.id});
+          if(extra.categoria)file.categoria=extra.categoria;
+          mount(file,{lote:true});abertos.push(file);
+        }
+        app().renderLayers();
+        proc?.log(`Importada ${indice+1} de ${refs.length}: ${rotulo}`,'success');
       }catch(error){erros.push(`${rotulo}: ${error.message}`);proc?.log(`${rotulo}: ${error.message}`,'error');}
+      finally{proc?.progresso((indice+1)/refs.length*100);}
     }
   }finally{busy=false;syncEditRibbon();}
   if(abertos.length){
     app().state.activeLayerId=abertos.at(-1).id;app().renderLayers();
     await Promise.resolve(app().zoomToCatalogLayer(abertos.at(-1).id)).catch(()=>{});
   }
-  if(!erros.length){atualizarStatus(`${abertos.length} camada(s) aberta(s) na bancada.`);proc?.concluirTarefa(TAREFA,`${abertos.length} camada(s) no mapa`);proc?.sucesso({message:`${abertos.length} camada(s) aberta(s) na bancada.`});proc?.fechar();return abertos;}
+  if(!erros.length){atualizarStatus(`${abertos.length} camada(s) aberta(s) na bancada.`);proc?.concluirTarefa(TAREFA,`${abertos.length} camada(s) no mapa`);proc?.sucesso({message:`${abertos.length} camada(s) aberta(s) na bancada.`});return abertos;}
   const mensagem=erros.join('\n');
   if(!proc&&extra.feedback!==false)throw new Error(mensagem);
-  if(abertos.length)proc?.sucesso({message:`${abertos.length} camada(s) aberta(s); ${erros.length} com falha.`});else proc?.erro({message:mensagem});
+  if(abertos.length)proc?.sucesso({_status:'partial',message:`${abertos.length} camada(s) aberta(s); ${erros.length} com falha.`});else proc?.erro({message:mensagem});
   const resumo=abertos.length?`${abertos.length} camada(s) aberta(s); ${erros.length} com falha.`:`Não foi possível abrir as camadas selecionadas: ${mensagem}`;
-  if(extra.onStatus)extra.onStatus(resumo,erros);else atualizarStatus(resumo);
+  if(extra.feedback===false&&extra.onStatus)extra.onStatus(resumo,erros);else atualizarStatus(resumo);
   if(extra.feedback===false)app().log(mensagem,'error');
   return abertos;
 }

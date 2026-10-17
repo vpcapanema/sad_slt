@@ -15,6 +15,7 @@
     const feedbackHost = document.querySelector('#gp-feedback-host');
     if (!feedbackHost) panel?.classList.add('open');
     else if (!atual) {
+      feedbackHost.querySelectorAll('.execution-progress.complete,.execution-progress.failed,.execution-progress.cancelled').forEach(node => node.remove());
       let notice = feedbackHost.querySelector('.gp-feedback-notice');
       if (!notice) {
         notice = document.createElement('button');
@@ -70,6 +71,8 @@
         progressValue = document.createElement('strong');
         progressValue.textContent = '';
         head.append(progressIcon, title, progressValue);
+        const progressRow = document.createElement('div');
+        progressRow.className = 'execution-progress-row';
         const track = document.createElement('div');
         track.className = 'execution-progress-track';
         track.setAttribute('role', 'progressbar');
@@ -81,6 +84,7 @@
         progressFill = document.createElement('span');
         track.append(progressFill);
         progressTrack = track;
+        progressRow.append(track);
         progressStage = document.createElement('div');
         progressStage.className = 'execution-progress-stage';
         progressStage.setAttribute('aria-live', 'polite');
@@ -106,7 +110,7 @@
         history.textContent = 'Histórico';
         history.onclick = () => window.gpApp?.showHistory();
         footer.append(progressStatus, progressTime, details, history);
-        progressView.append(head, track, progressStage, footer);
+        progressView.append(head, progressRow, progressStage, footer);
         host.prepend(progressView);
         if (host.id === 'gp-log') host.classList.add('open');
       }
@@ -219,7 +223,9 @@
       cancelButton = document.createElement('button');
       cancelButton.type = 'button';
       cancelButton.className = 'execution-progress-cancel';
-      cancelButton.textContent = '×';
+      const stop = document.createElement('span');
+      stop.setAttribute('aria-hidden', 'true');
+      cancelButton.append(stop);
       cancelButton.title = 'Cancelar execução';
       cancelButton.setAttribute('aria-label', 'Cancelar execução');
       cancelButton.onclick = async () => {
@@ -233,7 +239,7 @@
         }
         catch (error) { registrar(error.message, 'error'); cancelButton.disabled = false; }
       };
-      progressView?.querySelector('.execution-progress-head').append(cancelButton);
+      progressView?.querySelector('.execution-progress-row').prepend(cancelButton);
     }
     atual = proc;
     return proc;
