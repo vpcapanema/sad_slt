@@ -133,6 +133,11 @@ O terminal compartilhado é descrito em
 
 ### Destino das saídas da bancada geoespacial
 
+Na execução, referências de arquivo incluem caminho e revisão; camadas abertas
+do catálogo sem arquivo associado são enviadas apenas pelos identificadores dos
+parâmetros, para resolução pelo motor. Entradas mistas preservam essa distinção.
+Referências de arquivo incompletas são recusadas antes do envio ao servidor.
+
 A seleção por atributo na tabela mantém os registros selecionados ao atualizar
 o filtro visual e ao alternar **Somente selecionados**, sem interpretar a limpeza
 interna da grade como desseleção no mapa. Em arquivos nativos com paginação,

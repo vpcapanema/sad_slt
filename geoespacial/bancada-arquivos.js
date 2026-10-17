@@ -549,7 +549,15 @@ async function execute(form){
     params.atributos_selecionados=selected.map(feature=>({__gp_feature:feature}));
   }
   params.filtros_camadas=Object.fromEntries(Object.entries(app().state.layerFilters||{}).filter(([id])=>Object.values(params).some(value=>value===id||Array.isArray(value)&&value.includes(id))));
-  const files={};for(const id of sessions.keys())if(Object.values(params).some(value=>value===id||Array.isArray(value)&&value.includes(id))){const file=await prepararTabela(id);exigirPersistido(file);files[id]={arquivo:file.arquivo,revisao:file.revisao};}
+  const files={};
+  for(const id of sessions.keys()){
+    if(!Object.values(params).some(value=>value===id||Array.isArray(value)&&value.includes(id)))continue;
+    const file=await prepararTabela(id);exigirPersistido(file);
+    // Camadas do catálogo são resolvidas pelo motor pelo ID, não como arquivos.
+    if(!file.arquivo&&!file.revisao&&!ehStorage(file)&&['banco','arquivo'].includes(file.origem_geometria))continue;
+    if(!file.arquivo||!file.revisao)throw new Error(`${file.nome||id}: a referência do arquivo está incompleta. Reabra a camada antes de executar.`);
+    files[id]={arquivo:file.arquivo,revisao:file.revisao};
+  }
   if(!await window.gpFeedback.ProcessFeedback.confirmar({title:'Executar operação da bancada',message:`Iniciar ${form.dataset.op}?`,warning:JSON.stringify(params,null,2),confirmLabel:'Executar'}))return;
   let job=null,resultadoDetalhado=null;
   const cancelar=async()=>{
