@@ -105,6 +105,42 @@ def test_prepara_storage_sem_materializar_geojson(client, storage_file):
     assert result["bounds"][3] == pytest.approx(0.0045, abs=0.001)
 
 
+@pytest.mark.parametrize("name,wkts,expected", [
+    ("linhas", [
+        "LINESTRING (0 0, 100 100)",
+        "MULTILINESTRING ((100 100, 200 200))",
+        "GEOMETRYCOLLECTION (LINESTRING (200 200, 300 300))",
+    ], ["Line String", "Multi Line String"]),
+    ("poligonos", [
+        "POLYGON ((0 0, 100 0, 100 100, 0 0))",
+        "GEOMETRYCOLLECTION (LINESTRING (0 0, 100 100), GEOMETRYCOLLECTION (POLYGON ((200 0, 300 0, 300 100, 200 0))))",
+    ], ["Polygon", "Line String"]),
+    ("pontos", ["GEOMETRYCOLLECTION (POINT (10 20))"], ["Point"]),
+])
+def test_tipo_generico_resolvido_pelas_geometrias_reais(client, tmp_path, monkeypatch, name, wkts, expected):
+    path = tmp_path / "base-geoespacial" / "generico.gpkg"
+    path.parent.mkdir()
+    dataset = ogr.GetDriverByName("GPKG").CreateDataSource(str(path))
+    srs = osr.SpatialReference()
+    srs.ImportFromEPSG(3857)
+    layer = dataset.CreateLayer(name, srs, ogr.wkbUnknown)
+    for wkt in wkts:
+        feature = ogr.Feature(layer.GetLayerDefn())
+        feature.SetGeometry(ogr.CreateGeometryFromWkt(wkt))
+        layer.CreateFeature(feature)
+    layer = feature = dataset = None
+    monkeypatch.setattr(storage_geoespacial, "diretorio_storage", lambda: tmp_path)
+    relative = "base-geoespacial/generico.gpkg"
+    before = path.read_bytes()
+    response = client.post("/api/geoespacial/bancada-arquivos/preparar",
+                           json={"id": f"storage:{relative}::{name}", "arquivo": relative})
+    assert response.status_code == 200, response.text
+    assert response.json()["geometria_tipo"] == ",".join(expected)
+    inventory = storage_geoespacial._itens_do_arquivo(path, relative)
+    assert inventory[0]["geometria_tipo"] == ",".join(expected)
+    assert path.read_bytes() == before
+
+
 def test_prepara_arquivo_local_so_quando_id_e_caminho_estao_vinculados(
     client, registered_local_file
 ):

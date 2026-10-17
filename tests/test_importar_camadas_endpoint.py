@@ -98,6 +98,45 @@ def test_catalogo_projeto_expoe_toolbox_com_nomes_de_ferramentas(
     assert "OP-36" not in ferramentas
 
 
+def test_catalogo_projeto_sem_montagem_nao_resolve_pastas_nativas(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    async def listar() -> list[dict]:
+        return []
+
+    monkeypatch.delenv("SICARD_STORAGE_WRITE_DIR", raising=False)
+    monkeypatch.delenv("SICARD_STORAGE_TEMP_DIR", raising=False)
+    monkeypatch.setattr("api.routers.geoespacial.geoespacial_repository.listar_servicos_portal", listar)
+
+    response = _client().get("/api/geoespacial/catalogo/projeto")
+
+    assert response.status_code == 200, response.text
+    catalogo = response.json()
+    assert catalogo["pastas"] == [{"nome": "geoespacial", "caminho": "geoespacial"}]
+    assert catalogo["mapas"]
+    assert catalogo["toolboxes"]
+    assert catalogo["bancos_de_dados"]
+    assert catalogo["conexoes"] == []
+
+
+def test_catalogo_projeto_com_montagem_preserva_pasta_de_dados(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    async def listar() -> list[dict]:
+        return []
+
+    monkeypatch.setattr("api.routers.geoespacial.geoespacial_repository.listar_servicos_portal", listar)
+    project_path("data/geoespacial").mkdir(parents=True)
+
+    response = _client().get("/api/geoespacial/catalogo/projeto")
+
+    assert response.status_code == 200, response.text
+    assert response.json()["pastas"] == [
+        {"nome": "geoespacial", "caminho": "data/geoespacial"},
+        {"nome": "geoespacial", "caminho": "geoespacial"},
+    ]
+
+
 def test_portal_importa_asset_stac_no_catalogo(monkeypatch: MonkeyPatch) -> None:
     async def obter(servico_id: str) -> dict:
         assert servico_id == "servico-stac"

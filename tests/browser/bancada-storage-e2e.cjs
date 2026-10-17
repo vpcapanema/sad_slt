@@ -26,6 +26,24 @@ const assert=require('node:assert/strict');
                             process.env.SICARD_E2E_SOURCE).catch(async error=>{
    console.error((await page.locator('body').innerText()).slice(-3500));throw error;
   });
+  const symbols=[{arquivo:process.env.SICARD_E2E_SOURCE,camada:'Poligonos',classe:'poligon',titulo:'polígono'},
+                 ...JSON.parse(process.env.SICARD_E2E_SYMBOLS||'[]')];
+  for(const item of symbols){
+   const id='storage:'+item.arquivo+'::'+item.camada;
+   await page.evaluate(async ({item,id})=>{
+    if(!gpArquivos.sessions.has(id))await gpArquivos.abrirReferencias([{id,arquivo:item.arquivo,nome:item.camada}]);
+   },{item,id});
+   await page.waitForFunction(id=>gpApp.state.layers.some(layer=>layer.id===id),id);
+   await page.evaluate(()=>gpApp.renderLayers());
+   const row=page.locator('#gp-layer-list [data-layer]').filter({has:page.locator(`[data-zoom-layer="${id}"]`)});
+   await row.waitFor({state:'attached'});
+   assert.equal(await row.count(),1);
+   for(let render=0;render<2;render++){
+    await page.evaluate(()=>gpApp.renderLayers());
+    assert.equal(await row.locator('.layer-symbol').getAttribute('class'),'layer-symbol '+item.classe);
+    assert.equal(await row.locator('.layer-symbol').getAttribute('title'),'Geometria vetorial do tipo '+item.titulo);
+   }
+  }
   async function run(input,filename,format){
    await page.evaluate(()=>gpApp.selectOp('OP-03'));
    await page.locator('#gp-op-form [name="camada_id"]').selectOption(input);

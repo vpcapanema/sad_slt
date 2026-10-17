@@ -21,7 +21,7 @@ from shapely.geometry import LineString, Point, Polygon
 from api.deps.auth import require_geospatial_access, require_operator
 from api.deps.execucao_geoespacial import rastrear_execucao
 from api.exceptions import DatabaseUnavailableError
-from api import path_policy
+from api import path_policy, storage_policy
 from api.path_policy import GEO_OUTPUT_CATEGORIES, project_path, project_relative
 from api.repositories import camada_geoespacial_repository
 from api.repositories import modelo_geoprocessamento_repository as modelo_repo
@@ -262,9 +262,12 @@ def obter_catalogo_projeto() -> dict[str, list[dict[str, Any]]]:
             "id": operacao_id,
             "nome": CATALOG[operacao_id],
         })
+    caminhos_pastas = ["geoespacial"]
+    if not storage_policy.sem_montagem():
+        caminhos_pastas.insert(0, "data/geoespacial")
     folders = [
         {"nome": path.name, "caminho": project_relative(path)}
-        for path in (project_path("data/geoespacial"), project_path("geoespacial"))
+        for path in map(project_path, caminhos_pastas)
         if path.exists()
     ]
     return {

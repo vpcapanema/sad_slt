@@ -453,3 +453,40 @@ escolhido. A correção de edição simultânea e suas regressões estão pronta
 publicação pelo script oficial, que verifica build, reinício e saúde da VM.
 A matriz histórica permanece preservada como evidência e trabalho fora desse
 aceite, não como pendência impeditiva indefinida.
+
+### UI-SIMBOLO-005 — geometria genérica impede símbolo de linha/polígono
+
+O rastreamento dos templates, estilos, montagem das sessões e geração da
+legenda encontrou um único gerador de `layer-symbol` no JavaScript compartilhado.
+O atributo inline define somente a cor. Não foi encontrada regra CSS que
+substitua a classe de linha ou polígono por `geometry`.
+
+A leitura do arquivo real `base-geoespacial/Projetos_2026_09_10.gpkg` confirmou
+que Linhas1 e Poligonos1 declaram `Unknown (any)` no OGR. Inventário e
+`bancada-arquivos/preparar` devolviam esse tipo sem verificar as feições;
+o frontend então entrava corretamente no fallback genérico. A alteração
+anterior de classes/títulos não corrigia esse contrato de metadados.
+
+Correção: inventário e preparação usam o mesmo resolvedor. Tipos genéricos
+são resolvidos pelas geometrias reais, com visita recursiva a coleções e
+prioridade da maior dimensão para o símbolo. O tipo não é adivinhado pelo
+nome da camada, e nenhum GeoJSON integral é enviado ao navegador.
+
+Na leitura real após a correção:
+
+| Camada | Tipos efetivos, na ordem representativa |
+| --- | --- |
+| Pontos1 | Point |
+| Linhas1 | Line String, Multi Line String, Multi Point |
+| Poligonos1 | Multi Polygon, Polygon, Line String |
+
+As coleções contêm efetivamente tipos de menor dimensão; portanto escolher
+simplesmente o primeiro tipo em ordem alfabética também seria incorreto.
+Testes reproduziram três falhas antes da correção. Após ela, regressões de
+preparação/inventário passaram, e o E2E com API e storage reais conferiu as
+classes `line`, `poligon` e `point` e seus títulos no DOM após renderizações
+repetidas de GeoPackages sintéticos com declaração genérica.
+O arquivo real foi apenas lido, sem alteração de seu conteúdo.
+Também foi aberto no navegador local pelas APIs reais: Pontos1, Linhas1 e
+Poligonos1 mantiveram respectivamente `point`, `line` e `poligon`, com os
+títulos solicitados, após duas renderizações do painel por camada.

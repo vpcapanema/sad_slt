@@ -197,7 +197,7 @@ def _metadata(fonte: Fonte, revisao: str) -> dict[str, Any]:
             "campos": _campos(camada),
             "crs_arquivo": spatial_ref.ExportToWkt(),
             "feicoes": count if count >= 0 else None,
-            "geometria_tipo": ogr.GeometryTypeToName(camada.GetGeomType()),
+            "geometria_tipo": storage_geoespacial.tipo_geometria(camada),
             "geometria_tem_z": bool(ogr.GT_HasZ(camada.GetGeomType())),
             "geometria_tem_m": bool(ogr.GT_HasM(camada.GetGeomType())),
             "bounds": _bounds(camada),

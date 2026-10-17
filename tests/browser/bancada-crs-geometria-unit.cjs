@@ -21,7 +21,7 @@ state.map = {
 const context = vm.createContext({state, window: {}, URLSearchParams,
   location: {origin: 'https://example.test'}, API: '/api/geoespacial',
   STORAGE_TILE_SOURCE_LAYER: 'camada', initPointLayer() {}, applySavedStyle() {},
-  renderLayers() {}, symbolPreview() { return ''; },
+  renderLayers() {}, save() {}, symbolPreview() { return ''; },
   symbolSelect: key => `<select data-style="${key}"></select>`, borderSwatch() { return ''; },
   CRS_DESCRIPTIONS: {'EPSG:4674': 'SIRGAS 2000', 'EPSG:31983': 'SIRGAS 2000 / UTM zona 23S'},
 });
@@ -54,6 +54,9 @@ context.adicionarCamadaGeoJsonEmMemoria('memory', 'Linha em memoria', {
   features: [{geometry: {type: 'MultiLineString', coordinates: []}}],
 }, {lote: true, crs_arquivo: wkt});
 const memory = state.layers.find(layer => layer.id === 'memory');
+assert.notEqual(state.layerColors.memory,state.layerColors.line);
+assert.equal(layers.get('memory').paint['fill-color'],state.layerColors.memory);
+assert.equal(layers.get('line').paint['fill-color'],state.layerColors.line);
 assert.equal(memory.geometria_tipo, 'MultiLineString');
 delete state.geometryTypes.memory;
 assert.match(context.layerSymbol(memory), /layer-symbol line/);

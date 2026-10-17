@@ -1,4 +1,4 @@
-import { escolherArquivo } from './extracao-atributos/explorador.js?v=detached-system-picker-roots';
+import { escolherArquivo } from './extracao-atributos/explorador.js?v=20261016-immediate-system-confirm';
 import { json, post } from './extracao-atributos/api.js';
 import { el } from './extracao-atributos/ui.js';
 
@@ -172,9 +172,8 @@ async function browse(){
   };
   mostrar('Carregar do sistema','Consultando as camadas disponíveis no storage…');
   try{
-    const catalog=await json('/extracao-atributos/catalogo');
     // Só referências: o original do storage é preparado sem trafegar o GeoJSON inteiro.
-    const refs=await escolherArquivo({catalog:catalog.camadas,multiple:true,title:'Carregar do sistema',validar:false,host,onClose:()=>app().showTools()});
+    const refs=await escolherArquivo({carregarCatalogo:async()=>(await json('/extracao-atributos/catalogo')).camadas,multiple:true,title:'Carregar do sistema',validar:false,somenteReferencias:true,host,onClose:()=>app().showTools()});
     if(refs?.length)await abrirReferencias(refs,{host,feedback:false,onStatus:(mensagem,erros)=>mostrar('Carregar do sistema',mensagem,erros||[])});
   }catch(error){mostrar('Carregar do sistema',`Não foi possível abrir o explorador: ${error.message}`);}
 }
@@ -182,12 +181,12 @@ async function browse(){
 async function selecionarReferencias({onClose}={}){
   if(editor)throw new Error('Salve ou cancele a edição antes de selecionar outra camada.');
   if(busy)throw new Error('Aguarde a operação em andamento terminar.');
-  const catalog=await json('/extracao-atributos/catalogo');
   return escolherArquivo({
-    catalog:catalog.camadas,
+    carregarCatalogo:async()=>(await json('/extracao-atributos/catalogo')).camadas,
     multiple:true,
     title:'Selecionar camadas do sistema',
     validar:false,
+    somenteReferencias:true,
     onClose,
   });
 }

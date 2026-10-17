@@ -2,6 +2,7 @@
 from contextlib import contextmanager
 from io import BytesIO
 import os
+import json
 from pathlib import Path, PurePosixPath
 import socket
 import subprocess
@@ -14,7 +15,7 @@ import geopandas as gpd
 import psycopg
 from psycopg.rows import dict_row
 import pytest
-from shapely.geometry import box
+from shapely.geometry import box, Point, LineString, GeometryCollection
 import uvicorn
 
 from api.config import get_settings
@@ -81,13 +82,30 @@ def test_interface_processa_exporta_reabre_e_reprocessa(monkeypatch):
         frame = gpd.GeoDataFrame({"valor": [7, 11]}, geometry=[box(-46, -23, -45.99, -22.99),
                                                           box(-47, -24, -46.99, -23.99)], crs=4326)
         buffer = BytesIO()
-        frame.to_file(buffer, driver="GPKG", engine="pyogrio", layer="Poligonos", index=False)
+        frame.to_file(buffer, driver="GPKG", engine="pyogrio", layer="Poligonos", index=False,
+                      geometry_type="Unknown")
         original_content = buffer.getvalue()
         storage_remoto.enviar_bytes(source, original_content)
+        symbols = []
+        for name, geometries, css, title in [
+            ("Linhas", [LineString([(-46, -23), (-45, -22)]),
+                        GeometryCollection([LineString([(-47, -24), (-46, -23)]), Point(-47, -24)])],
+             "line", "linha"),
+            ("Pontos", [Point(-46, -23), Point(-47, -24)], "point", "ponto"),
+        ]:
+            content = BytesIO()
+            gpd.GeoDataFrame(geometry=geometries, crs=4326).to_file(
+                content, driver="GPKG", engine="pyogrio", layer=name, index=False, geometry_type="Unknown")
+            symbol_source = source_folder + "/" + name + ".gpkg"
+            storage_remoto.enviar_bytes(symbol_source, content.getvalue())
+            symbols.append({"arquivo": symbol_source, "camada": name, "classe": css, "titulo": title})
         sock = socket.socket()
         sock.bind(("127.0.0.1", 0))
         port = sock.getsockname()[1]
-        server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=port, log_level="error", lifespan="off"))
+        server = uvicorn.Server(uvicorn.Config(
+            app, host="127.0.0.1", port=port, log_level="error", lifespan="off",
+            timeout_graceful_shutdown=10,
+        ))
         thread = threading.Thread(target=server.run, kwargs={"sockets": [sock]}, daemon=True)
         thread.start()
         deadline = time.monotonic() + 20
@@ -98,7 +116,8 @@ def test_interface_processa_exporta_reabre_e_reprocessa(monkeypatch):
                            username="auditoria_gestor", nome="Auditoria com rollback", tipo_usuario="GESTOR")
         env = {**os.environ, "SICARD_E2E_URL": f"http://127.0.0.1:{port}",
                "SICARD_E2E_COOKIE": cookie_name(), "SICARD_E2E_TOKEN": create_token(user),
-               "SICARD_E2E_SOURCE": source, "SICARD_E2E_OUTPUT": output_folder}
+               "SICARD_E2E_SOURCE": source, "SICARD_E2E_OUTPUT": output_folder,
+               "SICARD_E2E_SYMBOLS": json.dumps(symbols)}
         result = subprocess.run(["node", str(Path(__file__).parent / "browser" / "bancada-storage-e2e.cjs")],
                                 env=env, capture_output=True, text=True, encoding="utf-8", timeout=240)
         assert result.returncode == 0, result.stdout + result.stderr
@@ -122,7 +141,6 @@ def test_interface_processa_exporta_reabre_e_reprocessa(monkeypatch):
             server.should_exit = True
         if thread is not None:
             thread.join(timeout=20)
-            assert not thread.is_alive(), "Servidor de auditoria não encerrou."
         if sock is not None:
             sock.close()
         conn.rollback()
@@ -140,6 +158,7 @@ def test_interface_processa_exporta_reabre_e_reprocessa(monkeypatch):
                 continue
             assert not items, "A pasta exclusiva da auditoria contém arquivos não previstos: " + folder
             storage_remoto.apagar_pasta(folder)
+        assert thread is None or not thread.is_alive(), "Servidor de auditoria não encerrou."
 
 
 @pytest.mark.parametrize("kind", ["destino", "edicao"])

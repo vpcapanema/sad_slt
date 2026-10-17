@@ -220,6 +220,33 @@ def _crs_texto(srs: osr.SpatialReference | None) -> str | None:
     return f"{autoridade}:{codigo}" if autoridade and codigo else srs.GetName()
 
 
+def tipo_geometria(camada: ogr.Layer) -> str:
+    declarado = camada.GetGeomType()
+    if ogr.GT_Flatten(declarado) not in (ogr.wkbUnknown, ogr.wkbGeometryCollection):
+        return ogr.GeometryTypeToName(declarado)
+    tipos: dict[str, int] = {}
+
+    def visitar(geometria: ogr.Geometry | None) -> None:
+        if geometria is None or geometria.IsEmpty():
+            return
+        if ogr.GT_Flatten(geometria.GetGeometryType()) == ogr.wkbGeometryCollection:
+            for index in range(geometria.GetGeometryCount()):
+                visitar(geometria.GetGeometryRef(index))
+        else:
+            tipos[ogr.GeometryTypeToName(geometria.GetGeometryType())] = geometria.GetDimension()
+
+    # GeoPackage GEOMETRY não identifica a família; inspeciona as feições,
+    # inclusive coleções, sem inferir pelo nome da camada nem gerar GeoJSON.
+    camada.ResetReading()
+    try:
+        for feature in camada:
+            visitar(feature.GetGeometryRef())
+    finally:
+        camada.ResetReading()
+    # Coleções podem conter bordas/pontos: a maior dimensão representa a camada.
+    return ",".join(sorted(tipos, key=lambda tipo: (-tipos[tipo], tipo))) if tipos else ogr.GeometryTypeToName(declarado)
+
+
 @lru_cache(maxsize=256)
 def _camadas_do_arquivo(arquivo: str, _versao: tuple[int, int]) -> tuple[dict[str, Any], ...]:
     """Camadas de um arquivo vetorial. `_versao` (mtime, tamanho) invalida o cache."""
@@ -231,7 +258,7 @@ def _camadas_do_arquivo(arquivo: str, _versao: tuple[int, int]) -> tuple[dict[st
         camada = ds.GetLayer(indice)
         camadas.append({
             "camada": camada.GetName(),
-            "geometria_tipo": ogr.GeometryTypeToName(camada.GetGeomType()),
+            "geometria_tipo": tipo_geometria(camada),
             "crs": _crs_texto(camada.GetSpatialRef()),
             "feicoes": (n if (n := camada.GetFeatureCount(0)) >= 0 else None),
         })

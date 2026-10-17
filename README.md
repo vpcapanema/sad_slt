@@ -99,6 +99,10 @@ Não confunda limitações do ambiente do agente com o estado do Codespace intei
 
 No Windows, a tarefa **SICARD: Iniciar servidor local** usa o ambiente Python
 local e acessa os bancos oficiais pelo gateway TLS da porta 443, sem túnel SSH.
+A página inicial é aberta no Microsoft Edge, usando o perfil atual, após a
+verificação de prontidão do servidor; uma instância local saudável já existente
+é reutilizada. Se o Edge não for encontrado, a tarefa informa o endereço para
+abertura manual, sem recorrer a outro navegador.
 A VM não usa esse gateway. O Docker local é apenas contingência.
 O storage existente é acessado pela API do SFTPGo no Windows; não se exige
 montagem local para iniciar o backend ou descobrir os testes. Caminhos nativos
@@ -110,6 +114,10 @@ SFTPGo. Arquivos de trabalho são enviados a subpastas exclusivas de
 são gravados em `saidas-geoespaciais`. A OP-03 e o overlay não exigem montagem
 no Windows. Fluxos legados que ainda exigem caminhos nativos continuam restritos
 à VM; essa adaptação não equivale à homologação de todas as funções.
+O catálogo de projeto da bancada também funciona sem montagem: mantém mapas,
+toolboxes, banco, conexões e a pasta de código `geoespacial`; a pasta nativa
+`data/geoespacial` só é listada quando há montagem configurada e ela existe.
+O acesso remoto ao acervo permanece nas APIs de storage, sem cópia local.
 A rota legada `/data` responde 503 quando
 não há acesso nativo configurado; as APIs remotas não dependem dessa rota.
 Os JSONs e mapas da documentação de favorabilidade são lidos do storage
@@ -125,10 +133,31 @@ O terminal compartilhado é descrito em
 
 ### Destino das saídas da bancada geoespacial
 
+O botão de procurar camadas do sistema abre o explorador imediatamente, sem
+aguardar o catálogo completo do banco e do storage. As pastas são consultadas
+com a janela já aberta; o catálogo só é carregado ao acessar **Camadas
+cadastradas no banco** e é reutilizado durante a mesma seleção. A navegação
+pelo storage não exige essa consulta prévia.
+No formulário **Carregar do sistema**, **Confirmar** apenas devolve a seleção,
+sem ler ou inventariar o GeoPackage. O inventário das camadas internas ocorre
+uma vez por arquivo ao acionar **Carregar camada**. A confirmação das bases e
+entradas na extração mantém seu fluxo de inventário e validação.
+
 Na legenda da bancada compartilhada, linhas usam `layer-symbol line`,
 polígonos usam `layer-symbol poligon` e pontos circulares usam
 `layer-symbol point`. Os títulos identificam o tipo vetorial em português,
 inclusive nas legendas categorizadas e graduadas.
+O polígono é representado por um retângulo horizontal de cantos arredondados; o ponto circular
+mantém formato redondo também dentro da lista de camadas.
+Camadas vetoriais sem cor ou simbologia prévia recebem cores distintas,
+independentemente do tipo de geometria ou nome. A atribuição evita as cores
+já salvas e é mantida no navegador por identificador da camada. Simbologias
+existentes, inclusive classificações e representação por status, são preservadas.
+Quando o arquivo declara geometria genérica (`Unknown (any)`/GeoPackage
+`GEOMETRY`), o inventário e a abertura identificam os tipos pelas feições,
+incluindo os componentes de coleções, priorizando a maior dimensão geométrica
+para o símbolo. O símbolo não é inferido pelo nome
+do arquivo ou da camada.
 
 O campo **Destino** dos algoritmos e das propriedades do modelador abre o
 explorador de `saidas-geoespaciais` no storage existente. É possível navegar,

@@ -1,6 +1,6 @@
 const {chromium}=require('playwright'),fs=require('fs'),assert=require('node:assert/strict');
 (async()=>{const browser=await chromium.launch({channel:'msedge',headless:true});try{
- const p=await browser.newPage();await p.setContent('<div id="gp-log"></div><div id="symbols" class="tree-row"></div>');
+ const p=await browser.newPage();await p.setContent('<div id="gp-log"></div><div id="gp-layer-list"><div id="symbols" class="tree-row"></div></div>');
  await p.addStyleTag({path:'assets/css/geoprocessamento.css'});
  const code=fs.readFileSync('geoespacial/geoprocessamento.js','utf8');
  await p.addScriptTag({content:`const state={layerStyles:{},geometryTypes:{}};const layerColor=()=> '#1683c4';const escapeHtml=s=>String(s);${code.slice(code.indexOf('  function layerSymbol('),code.indexOf('  function camadaVisivel('))}${code.slice(code.indexOf('  function tipoGeometriaBase('),code.indexOf('  function storageTileQuery('))};window.legendTest=(type,renderer)=>{state.layerStyles.x={renderer};return layerLegend({id:'x',geometria_tipo:type})};`});
@@ -16,6 +16,11 @@ const {chromium}=require('playwright'),fs=require('fs'),assert=require('node:ass
    }else if(cls==='poligon'){
     assert.equal(await symbol.evaluate(node=>getComputedStyle(node).borderTopWidth),'2px');
     assert.notEqual(await symbol.evaluate(node=>getComputedStyle(node).backgroundColor),'rgba(0, 0, 0, 0)');
+    assert.equal(await symbol.evaluate(node=>getComputedStyle(node).borderRadius),'3px');
+    const size=await symbol.boundingBox();assert.ok(size.width>size.height);
+   }else if(cls==='point'){
+    assert.equal(await symbol.evaluate(node=>getComputedStyle(node).borderRadius),'50%');
+    const size=await symbol.boundingBox();assert.equal(size.width,size.height);
    }
   }
  }

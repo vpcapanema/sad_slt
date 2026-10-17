@@ -1,4 +1,4 @@
-"""Servidor Windows e pagina inicial no perfil atual do Chrome."""
+"""Servidor Windows e pagina inicial no perfil atual do Edge."""
 from __future__ import annotations
 
 import json
@@ -32,19 +32,19 @@ def browser_executable(name):
 
 
 def open_browsers(url=URL + '/'):
-    """Delega ao Chrome a abertura no perfil atual, sem criar ou alterar perfis."""
-    executable = browser_executable('Chrome')
+    """Delega ao Edge a abertura no perfil atual, sem criar ou alterar perfis."""
+    executable = browser_executable('Edge')
     if not executable:
-        say(f'Chrome nao encontrado. Servidor continua em {url}')
+        say(f'Edge nao encontrado. Servidor continua em {url}')
         return
     try:
         subprocess.Popen(
             [str(executable), url],
             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         )
-        say('Pagina inicial enviada ao Chrome, usando o perfil atual.')
+        say('Pagina inicial enviada ao Edge, usando o perfil atual.')
     except OSError as error:
-        say(f'Nao foi possivel abrir o Chrome ({type(error).__name__}). Servidor continua em {url}')
+        say(f'Nao foi possivel abrir o Edge ({type(error).__name__}). Servidor continua em {url}')
 
 
 def open_when_ready(server, stopped, timeout=180):
@@ -63,7 +63,7 @@ def open_when_ready(server, stopped, timeout=180):
                 with opener.open(URL + '/assets/js/admin-api.js', timeout=3) as response:
                     login_script = response.status == 200 and b'authRequest' in response.read()
                 if healthy and homepage and session_endpoint and login_script and not stopped.is_set():
-                    say('Servidor e pagina inicial disponiveis. Abrindo no Chrome com o perfil atual.')
+                    say('Servidor e pagina inicial disponiveis. Abrindo no Edge com o perfil atual.')
                     open_browsers()
                     return
             except (OSError, ValueError):

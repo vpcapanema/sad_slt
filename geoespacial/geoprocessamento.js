@@ -230,7 +230,31 @@
     const hasTool=Boolean(state.selected);
     placeholder.hidden=hasLayers||hasTool;
   }
-  function layerColor(id,types=state.geometryTypes[id]||[]){return state.layerColors[id]||(types.some(type=>type.includes("Point"))?"#d97819":"#1683c4")}
+  function layerColor(id){
+    if(state.layerColors[id])return state.layerColors[id];
+    const style=state.layerStyles[id]||{};
+    if(style.fillColor||style.borderColor)return style.fillColor||style.borderColor;
+    const used=new Set(Object.values(state.layerColors).map(color=>color.toLowerCase()));
+    for(const saved of Object.values(state.layerStyles)){
+      for(const color of [saved.fillColor,saved.borderColor,saved.renderer?.corOutros,...(saved.renderer?.categorias||[]).map(item=>item.cor),...(saved.renderer?.fatias||[]).map(item=>item.cor)]){
+        if(color)used.add(color.toLowerCase());
+      }
+    }
+    const palette=["#1683c4","#d97819","#438b69","#9b59b6","#d64550","#827717","#00838f","#ad457c","#5c6bc0","#795548","#6c8c35","#c05b28"];
+    let color=palette.find(candidate=>!used.has(candidate));
+    for(let index=0;!color;index++){
+      const hue=(index*137.508)%360;
+      const lightness=.38+(Math.floor(index/360)%4)*.08;
+      const channel=offset=>{
+        const k=(offset+hue/30)%12;
+        return Math.round(255*(lightness-.65*Math.min(lightness,1-lightness)*Math.max(-1,Math.min(k-3,9-k,1)))).toString(16).padStart(2,"0");
+      };
+      const candidate=`#${channel(0)}${channel(8)}${channel(4)}`;
+      if(!used.has(candidate))color=candidate;
+    }
+    state.layerColors[id]=color;save("gp-layer-colors",state.layerColors);
+    return color;
+  }
   function applyLayerColor(id,color,report=true){
     if(!/^#[0-9a-f]{6}$/i.test(color))return false;
     state.layerColors[id]=color.toLowerCase();save("gp-layer-colors",state.layerColors);
@@ -241,15 +265,6 @@
     if(!color||!/^#[0-9a-f]{6}$/i.test(color))return false;
     if(state.layerColors[id])return false; // respeita cor já definida pelo usuário
     return applyLayerColor(id,color,false);
-  }
-  function corPorNomeCamada(nome){
-    const n=String(nome||"").toLocaleLowerCase("pt-BR").normalize("NFD").replace(/[\u0300-\u036f]/g,"");
-    if(n.includes("restri"))return "#dc2626";
-    if(n.includes("risco"))return "#f2c200";
-    return null;
-  }
-  function aplicarCorPorNome(layer){
-    if(!layer)return;const cor=corPorNomeCamada(layer.nome);if(cor)aplicarCorPadraoCamada(layer.id,cor);
   }
   function applyLayerStyle(id,style,report=true,persist=true){
     const current=state.layerStyles[id]||{},next={...current,...style};state.layerStyles[id]=next;if(persist)save("gp-layer-styles",state.layerStyles);
@@ -1043,7 +1058,6 @@
       state.map.addLayer({id:id+"-line",type:"line",source:id,paint:{"line-color":color,"line-width":2},filter:["match",["geometry-type"],["LineString","Polygon"],true,false]});
       initPointLayer(id,color);
       applySavedStyle(id);
-      aplicarCorPorNome(resource);
       if(fit){const bounds=new maplibregl.LngLatBounds();data.features?.forEach(feature=>walkCoords(feature.geometry?.coordinates,coord=>bounds.extend(coord)));if(!bounds.isEmpty())state.map.fitBounds(bounds,{padding:40,maxZoom:15})}
       return true;
     }
@@ -1054,7 +1068,6 @@
     state.map.addLayer({id:id+"-line",type:"line",source:id,"source-layer":"camada",paint:{"line-color":color,"line-width":2},filter:["match",["geometry-type"],["LineString","Polygon"],true,false]});
     initPointLayer(id,color,true);
     applySavedStyle(id);
-    aplicarCorPorNome(resource);
     if(fit)await zoomToCatalogLayer(id);
     return true;
   }
@@ -1622,6 +1635,7 @@
     const entry={id,nome:nome||id,tipo:opts.tipo||"vetorial (memória)",origem:opts.origem||"Hierarquização",categoria:opts.categoria||"",destino:"memoria_local",crs:opts.crs_arquivo||"EPSG:4326",geometria_tipo:opts.geometria_tipo||state.geometryTypes[id].join(","),metadados_local:opts.metadados_local};
     const idx=state.layers.findIndex(l=>l.id===id);
     if(idx>=0) state.layers[idx]=entry; else state.layers.push(entry);
+    if(opts.simbologia!=="status")applySavedStyle(id);
     if(!opts.lote) renderLayers();
   }
   // Camada interna fixa do MVT gerado pelo servidor (layerName do driver MVT);

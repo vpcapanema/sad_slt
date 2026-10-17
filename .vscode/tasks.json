@@ -22,7 +22,7 @@
         "panel": "dedicated",
         "clear": true
       },
-      "detail": "Valida os bancos oficiais pelo gateway TLS, inicia http://127.0.0.1:8083 com auto-reload (alteracoes em api/ reiniciam o servidor) e abre a pagina inicial somente no Chrome, usando o perfil atual do navegador."
+      "detail": "Valida os bancos oficiais pelo gateway TLS, inicia http://127.0.0.1:8083 com auto-reload (alteracoes em api/ reiniciam o servidor) e abre a pagina inicial somente no Microsoft Edge, usando o perfil atual do navegador."
     },
     {
       "label": "SICARD: Verificar servidor local",

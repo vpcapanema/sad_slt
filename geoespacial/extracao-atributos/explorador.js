@@ -31,7 +31,7 @@ function partesDoNome(item){
 }
 function rotulo(item){const p=partesDoNome(item);return `${p.radical}${p.extensao}${p.camada?` › ${p.camada}`:''}`;}
 
-export function escolherArquivo({catalog,excluded=[],title,acao=title,multiple=false,validar=true,original=false,host,onClose}) {
+export function escolherArquivo({catalog=[],carregarCatalogo,excluded=[],title,acao=title,multiple=false,validar=true,somenteReferencias=false,original=false,host,onClose}) {
   return new Promise(resolve=>{
     const inline=Boolean(host?.isConnected);
     const dialog=el(inline?'section':'dialog',undefined,`ea-tool-dialog ea-storage-dialog${inline?' ea-storage-inline':''}`);
@@ -93,7 +93,17 @@ export function escolherArquivo({catalog,excluded=[],title,acao=title,multiple=f
     function valid(path){return path===BANK||path===ROOT||[...roots].some(root=>path===root||path.startsWith(`${root}/`));}
     async function directory(path){
       if(!valid(path))throw new Error('Escolha uma pasta dentro das bases geoespaciais do storage.');
-      if(path===BANK)return {caminho:BANK,pai:null,pastas:[],arquivos:catalog.filter(item=>!item.id.startsWith('storage:')&&!item.id.startsWith('local:'))};
+      if(path===BANK){
+        if(!cache.has(path)){
+          if(!pending.has(path))pending.set(path,(async()=>{
+            if(carregarCatalogo)catalog=await carregarCatalogo();
+            const data={caminho:BANK,pai:null,pastas:[],arquivos:catalog.filter(item=>!item.id.startsWith('storage:')&&!item.id.startsWith('local:'))};
+            cache.set(path,data);return data;
+          })().finally(()=>pending.delete(path)));
+          await pending.get(path);
+        }
+        return cache.get(path);
+      }
       if(path===ROOT){
         if(!cache.has(path)){
           if(!pending.has(path))pending.set(path,json('/storage/pastas?caminho=').then(data=>{
@@ -193,7 +203,7 @@ export function escolherArquivo({catalog,excluded=[],title,acao=title,multiple=f
       const request=++navigation;
       loading=true;browsing=true;controls();status.textContent='';
       // Navegação curta: a própria lista informa a espera; falha vai para o Notify.
-      list.setAttribute('aria-busy','true');status.textContent='Abrindo pasta do storage… Consultando camadas e subpastas.';
+      list.setAttribute('aria-busy','true');status.textContent=path===BANK?'Consultando camadas cadastradas no banco…':'Abrindo pasta do storage… Consultando camadas e subpastas.';
       const liberar=()=>list.removeAttribute('aria-busy');
       try{
         const data=await directory(path);if(closed||request!==navigation){liberar();return;}cache.set(path,data);current=path;expanded.add(path);search.value='';
@@ -209,7 +219,12 @@ export function escolherArquivo({catalog,excluded=[],title,acao=title,multiple=f
       }catch(error){liberar();if(!closed&&request===navigation){status.textContent=error.message;window.Notify.error('Storage',`Não foi possível abrir a pasta: ${error.message}`);}}finally{if(!closed&&request===navigation){loading=false;browsing=false;controls();}}
     }
     async function selectBatch(){
-      if(loading||!picks.size)return;loading=true;controls();
+      if(loading||!picks.size)return;
+      if(!validar&&somenteReferencias){
+        const files=[...picks.values()];
+        finish(multiple?files:files[0]);return;
+      }
+      loading=true;controls();
       let files=[...picks.values()];const errors=[];let next=0,done=0;
       if(validar&&!await window.ProcessFeedback.confirmar({
         title:'Carregar camadas de entrada',
