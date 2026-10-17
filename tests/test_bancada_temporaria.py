@@ -20,6 +20,7 @@ def local(tmp_path, monkeypatch):
         path.mkdir(exist_ok=True)
         return path
     monkeypatch.setattr(extracao_preparacao, '_pasta', pasta)
+    monkeypatch.setattr(extracao_preparacao, 'sem_montagem', lambda: False)
     monkeypatch.setattr(bancada_temporaria, '_pasta', pasta)
     frame = gpd.GeoDataFrame({'nome': ['Árvore', 'Sem geometria', 'Terceira'], 'valor': [7, None, 9]}, geometry=[Point(1, 2), None, Point(3, 4)], crs=4326)
     frame['fid'] = ['original-a', 'original-b', 'original-c']

@@ -20,7 +20,15 @@ from pathlib import Path
 from api.path_policy import project_path
 
 PASTA = 'data/geoespacial/configuracoes/extracao-atributos'
-SUBPASTAS = {'bases': 'config-lista-camadas-base', 'analise': 'config-analise'}
+PAPEIS_ELEGIBILIDADE = {
+    'elegibilidade-restricao': {'id': 'restricao', 'nome': 'Restrição'},
+    'elegibilidade-risco': {'id': 'risco', 'nome': 'Risco'},
+}
+SUBPASTAS = {
+    'bases': 'config-lista-camadas-base', 'analise': 'config-analise',
+    'elegibilidade-restricao': 'elegibilidade-restricao',
+    'elegibilidade-risco': 'elegibilidade-risco',
+}
 # Versão 2 guarda a regra de cada base (papel, ligação, multiplicidade, campos...).
 # Versão 3 guarda também as entradas (identificador, filtro, campos) e as
 # finalidades. Versões anteriores continuam legíveis: o que falta vira o padrão.
@@ -136,9 +144,9 @@ def montar(nome: str, categorias: list[dict], user, entradas: list[dict] | None 
     """
     from api.services import extracao_atributos_regras as regras
     from api.services.extracao_atributos_analise import OPCOES_PADRAO
-    if escopo not in ('analise','bases'):
+    if escopo not in SUBPASTAS:
         raise ValueError('Tipo de configuração inválido.')
-    if escopo == 'bases':
+    if escopo != 'analise':
         entradas, finalidades, operacao, opcoes, nome_saida = [], [], '', {}, ''
     if operacao not in ('','intersection','identity','enriquecimento','estatisticas'):
         raise ValueError('Algoritmo de processamento inválido.')
@@ -148,6 +156,9 @@ def montar(nome: str, categorias: list[dict], user, entradas: list[dict] | None 
     catalog = catalogo()
     layers = {item['id']: item for item in catalog['camadas']}
     categories = {item['id']: item for item in catalog['categorias']}
+    if escopo in PAPEIS_ELEGIBILIDADE:
+        papel = PAPEIS_ELEGIBILIDADE[escopo]
+        categories = {papel['id']: papel}
     conteudo, vistos = [], set()
     for grupo in categorias:
         if grupo['id'] not in categories:
@@ -167,7 +178,7 @@ def montar(nome: str, categorias: list[dict], user, entradas: list[dict] | None 
         if camadas:
             conteudo.append({'id': grupo['id'], 'nome': categories[grupo['id']]['nome'],
                              'camadas': camadas})
-    if not conteudo and escopo == 'bases':
+    if not conteudo and escopo != 'analise':
         raise ValueError('Selecione ao menos uma base disponível no catálogo.')
     # Restrições entre bases (uma só unidade de recorte, prefixo informado repetido).
     if operacao == 'estatisticas':
@@ -282,6 +293,8 @@ def carregar(chave: str, referencias: bool = False, escopo: str = 'analise') -> 
     catalog = catalogo()
     layers = {item['id']: item for item in catalog['camadas']}
     categories = {item['id'] for item in catalog['categorias']}
+    if escopo in PAPEIS_ELEGIBILIDADE:
+        categories = {PAPEIS_ELEGIBILIDADE[escopo]['id']}
     presentes, ausentes = [], []
     for grupo in dados.get('categorias') or []:
         if grupo.get('id') not in categories:

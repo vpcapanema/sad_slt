@@ -114,7 +114,7 @@
       $$('[data-left-tab]').forEach((item) => item.classList.toggle("active", item === tab));
       const mode = tab.dataset.leftTab === "source" ? "source" : "drawing";
       window.gpApp.state.leftTab = mode;
-      $(".gp-section-title").textContent = mode === "source" ? "Camadas por fonte" : "Ordem de desenho";
+      $("#gp-layer-section-label").textContent = mode === "source" ? "Camadas por fonte" : "Ordem de desenho";
       window.gpApp.renderLayers?.();
     });
 

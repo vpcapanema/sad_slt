@@ -18,8 +18,8 @@
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Título**                 | Metodologia do Sistema de Hierarquização de Demandas — SICARD                                                                                                         |
 | **Número**                 | NT-SICARD-001/2026                                                                                                                                                       |
-| **Versão**                 | 1.12                                                                                                                                                                      |
-| **Data de emissão**        | 05/10/2026                                                                                                                                                               |
+| **Versão**                 | 1.16                                                                                                                                                                      |
+| **Data de emissão**        | 17/10/2026                                                                                                                                                               |
 | **Classificação**         | Documento técnico-metodológico de entrega ao cliente                                                                                                                   |
 | **Sistema**                 | SICARD — Sistema de Apoio à Tomada de Decisão                                                                                                                         |
 | **Domínio de aplicação** | Logística e transportes. Concebido no âmbito do Plano de Logística Integrada do Estado de São Paulo (PLI-SP), aplica-se a qualquer objeto de demanda desse domínio. |
@@ -46,6 +46,10 @@
 | 1.10    | 26/09/2026 | `[preencher]` | Registro dos operadores nativos da extração geoespacial, preservação das correspondências na saída e distinção entre atributo nulo e ausência de incidência territorial. |
 | 1.11    | 05/10/2026 | `[preencher]` | Registro do cenário exploratório municipal segregado, com matriz retificada, superfícies por média simples, preservação de ausências e bloqueio de uso do TomTom com cobertura observada inferior a 95%, sem substituição da metodologia operacional vigente. |
 | 1.12    | 05/10/2026 | `[preencher]` | Retificação do cenário exploratório: favorabilidade da rede calculada por trecho DER, mantendo o território municipal; registro da coleta real TomTom, cobertura insuficiente e exclusão do componente da síntese. |
+| 1.13    | 17/10/2026 | `[preencher]` | Registro da preparação operacional da Elegibilidade v2: entradas do storage ou da hierarquização, preservação das geometrias cadastrais, listas separadas de restrição e risco, prévia e envio explícito à bancada, sem classificação automática ou homologação nesta entrega. |
+| 1.14    | 17/10/2026 | `[preencher]` | Explicitação da exclusividade entre as origens de entrada da Elegibilidade v2: camadas selecionadas ou demandas de uma hierarquização, com limpeza prévia para troca de origem e substituição integral da entrada no envio à bancada. |
+| 1.15    | 17/10/2026 | `[preencher]` | Separação dos estados de seleção, prévia e bancada na Elegibilidade v2, com envio por grupo à prévia e confirmação única das camadas marcadas no rodapé de seu painel, sem classificação automática ou homologação. |
+| 1.16    | 17/10/2026 | `[preencher]` | Transferência de referências sem leitura geométrica na confirmação do explorador; identificação dos componentes e validação no envio à prévia, com preservação dos estados anteriores em caso de falha e controle de conflitos entre arquivos e camadas internas. |
 
 ---
 
@@ -328,6 +332,39 @@ pesos configuráveis e regras explícitas, sem apagar a leitura individual de ca
 ## 8. Arquitetura metodológica em fases
 
 ### 8.1 Fase 1 — Triagem de restrição e risco
+
+**Preparação operacional na interface v2.** A página de elegibilidade passa a
+receber camadas vetoriais do storage ou as demandas de uma hierarquização
+cadastrada, recuperando suas informações e geometrias atuais do cadastro. Não se
+admitem as duas origens na mesma composição de entrada. A seleção de uma origem
+bloqueia a outra até a limpeza da seleção; o envio à prévia substitui
+integralmente a entrada anteriormente apresentada nessa etapa. Não se
+substituem geometrias ausentes por pontos aproximados. As bases são organizadas
+em listas distintas de restrição e risco, vedada a utilização da mesma camada em
+ambos os papéis ou simultaneamente como entrada. As listas de referências podem
+ser salvas no storage e recuperadas em novos acessos, com nova validação geométrica
+no envio à prévia. Ao salvar arquivos com múltiplas camadas, identificam-se seus
+componentes para registrar as referências individualmente.
+O fluxo distingue seleção, prévia e bancada. Os controles das seções de entrada
+e bases enviam cada grupo à prévia; alterações na seleção não se propagam
+automaticamente. O envio de uma seleção vazia retira o respectivo grupo da prévia.
+Confirmar a escolha no explorador transfere somente referências dos arquivos.
+A identificação das camadas internas e a validação geométrica ocorrem no envio
+à prévia, preservando a seleção e a prévia anterior em caso de falha. A seleção
+de um arquivo inteiro também respeita os conflitos de papel de suas camadas internas.
+Após a conferência, um único controle no rodapé do painel de camadas da prévia
+solicita confirmação para enviar as camadas marcadas à bancada. Esse envio
+substitui o conjunto anteriormente enviado pela página, preservando os papéis
+e excluindo desse conjunto as camadas desmarcadas, sem substituir outras camadas
+adicionadas diretamente na bancada. O cancelamento mantém a bancada anterior.
+Essa atribuição de papel não constitui homologação.
+
+Nesta entrega, a interface v2 limita-se à preparação dos dados: não executa
+classificação automática nem modifica resultados anteriores. O cálculo sobre
+listas livres, a consolidação e a vinculação dos novos resultados às fases
+seguintes dependem de definição posterior. A regra de classificação apresentada
+a seguir permanece como referência metodológica, conforme o módulo interno da
+Fase 1.
 
 **Função.** Classificar a **elegibilidade territorial preliminar**; a Fase 1 **não
 ranqueia** objetos de demanda. Ela cruza a geometria de cada objeto de demanda com

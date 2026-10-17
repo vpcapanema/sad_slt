@@ -7,7 +7,7 @@
   <title>Geoprocessamento | SLT</title>
   <link rel="icon" href="/assets/img/brand/sicard-simbolo.png" type="image/png">
   <link rel="stylesheet" href="/assets/vendor/maplibre-gl/maplibre-gl.css">
-  <link rel="stylesheet" href="/assets/css/geoprocessamento.css?v=20261016-feedback-cancelar">
+  <link rel="stylesheet" href="/assets/css/geoprocessamento.css?v=20261017-atualizar-camadas">
   <link rel="stylesheet" href="/assets/css/extracao-atributos.css?v=20260929-inline-explorer">
   <link rel="stylesheet" href="/assets/vendor/leaflet/leaflet.css">
   <link rel="stylesheet" href="/assets/vendor/leaflet-draw/leaflet.draw.css">
@@ -79,7 +79,7 @@
         <button class="active" data-left-tab="drawing" title="Ordem de desenho"><i data-lucide="layers-3"></i></button>
         <button data-left-tab="source" title="Por fonte"><i data-lucide="database"></i></button>
       </div>
-      <div class="gp-section-title">Ordem de desenho</div>
+      <div class="gp-section-title gp-layer-section-title"><span id="gp-layer-section-label">Ordem de desenho</span><button class="icon-btn" id="gp-refresh-layers" type="button" title="Atualizar" aria-label="Atualizar"><i data-lucide="refresh-cw"></i></button></div>
       <div id="gp-layer-list" class="gp-tree"></div>
     </aside>
     </div>
@@ -93,6 +93,7 @@
       <div class="gp-map-tools">
         <button class="icon-btn" id="gp-home" title="Extensão inicial"><i data-lucide="house"></i></button>
         <button class="icon-btn" id="gp-fit" title="Ajustar às camadas"><i data-lucide="maximize"></i></button>
+        <button class="icon-btn" id="gp-refresh-map" type="button" title="Atualizar mapa" aria-label="Atualizar mapa"><i data-lucide="refresh-cw"></i></button>
       </div>
       <div id="gp-drop-zone" class="gp-drop-zone"><i data-lucide="file-up"></i><strong>Solte arquivos geoespaciais aqui</strong><span>GeoJSON, JSON, KML, GeoTIFF ou pacote ZIP</span></div>
     </section>
@@ -166,17 +167,17 @@
   <script src="/assets/js/status-colors.js"></script>
   <script src="/assets/vendor/tabulator/tabulator.min.js"></script>
   <script src="/restrict/geoespacial/geoprocessamento-atributos.js?v=20261017-selecao-grade"></script>
-  <script src="/restrict/geoespacial/geoprocessamento.js?v=20261016-feedback-unico"></script>
+  <script src="/restrict/geoespacial/geoprocessamento.js?v=20261017-atualizar-camadas"></script>
   <script src="/restrict/geoespacial/geoprocessamento-modeler.js?v=20261015-destino-saidas"></script>
   <script src="/restrict/geoespacial/geoprocessamento-docks.js?v=20260810-simbologia"></script>
-  <script src="/restrict/geoespacial/geoprocessamento-actions.js?v=20261015-botoes-camada"></script>
+  <script src="/restrict/geoespacial/geoprocessamento-actions.js?v=20261017-atualizar-camadas"></script>
   <script src="/restrict/geoespacial/geoprocessamento-portal.js?v=20261015-auditoria-bancada"></script>
   <script src="/restrict/geoespacial/geoprocessamento-toolbox.js?v=20260926-auditoria"></script>
-  <script src="/restrict/geoespacial/geoprocessamento-commands.js?v=20261017-selecao-ativa"></script>
+  <script src="/restrict/geoespacial/geoprocessamento-commands.js?v=20261017-atualizar-camadas"></script>
   <script src="/restrict/geoespacial/geoprocessamento-ribbon.js?v=20261015-auditoria-bancada"></script>
   <script src="/assets/vendor/leaflet/leaflet.js"></script>
   <script src="/assets/vendor/leaflet-draw/leaflet.draw.js"></script>
   <script src="/restrict/geoespacial/geoespacial-storage-pastas.js?v=20261015-destino-saidas"></script>
-  <script type="module" src="/restrict/geoespacial/bancada-arquivos.js?v=20261017-entradas-operacao"></script>
+  <script type="module" src="/restrict/geoespacial/bancada-arquivos.js?v=20261017-atualizar-camadas"></script>
 </body>
 </html>

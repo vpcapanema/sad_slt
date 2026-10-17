@@ -363,16 +363,110 @@
     applyLayerFilter(id,result.geojson);return result.geojson;
   }
 
+  function validateRefresh(id) {
+    window.gpArquivos?.validarAtualizacao(id);
+    if(window.gpAttributeTable?.hasPendingChanges(id))throw new Error("Salve ou descarte as alterações da tabela antes de atualizar as camadas.");
+  }
+
+  async function refreshLayer(layer) {
+    validateRefresh(layer.id);
+    const map=state().map,activeId=state().activeLayerId;
+    const order=map.getStyle().layers.map(item=>item.id);
+    const visibility=new Map(order.map(id=>[id,map.getLayoutProperty(id,"visibility")||"visible"]));
+    try {
+      if(window.gpArquivos?.sessions.has(layer.id)){
+        await window.gpArquivos.atualizarFonte(layer.id);
+      }else if(layer.preview&&layer.destino==="storage_original"){
+        await window.gpApp.adicionarRasterStorage(layer,{fit:false});
+      }else{
+        const local=layer.destino==="memoria_local";
+        if(!local){
+          const metadata=await request(`${API}/camadas/${encodeURIComponent(layer.id)}`,{cache:"no-store"});
+          Object.assign(layer,metadata);
+          if(metadata.geometria_tipo)state().geometryTypes[layer.id]=String(metadata.geometria_tipo).split(",").map(type=>type.trim()).filter(Boolean);
+        }
+        let source=map.getSource(layer.id);
+        if(!source){
+          await window.gpApp.addCatalogLayerToMap(layer.id,false);
+          source=map.getSource(layer.id);
+        }
+        if(source?.type==="geojson"){
+          const data=local?source.serialize().data:await request(`${API}/camadas/${encodeURIComponent(layer.id)}/geojson`,{cache:"no-store"});
+          source.setData(data);
+        }else if(source?.type==="image"){
+          const preview=await request(`${API}/camadas/${encodeURIComponent(layer.id)}/preview`,{cache:"no-store"});
+          source.updateImage({url:preview.image,coordinates:preview.coordinates});
+        }else if(source?.setTiles){
+          source.setTiles(source.serialize().tiles.map(tile=>{
+            const url=new URL(tile,location.href);url.searchParams.set("atualizacao",String(Date.now()));
+            return url.href.replace(/%7B/gi,"{").replace(/%7D/gi,"}");
+          }));
+        }else throw new Error("A fonte da camada não permite atualização.");
+        await refreshLayerFilter(layer.id);
+        window.gpAttributeTable?.atualizarArquivo(layer.id);
+      }
+    }finally{
+      state().activeLayerId=activeId;
+      for(const id of order){
+        if(!map.getLayer(id))continue;
+        map.setLayoutProperty(id,"visibility",visibility.get(id));
+        map.moveLayer(id);
+      }
+      window.gpApp.renderLayers();
+    }
+  }
+
+  let refreshing=false;
+  async function refreshAllLayers() {
+    if(refreshing)return;
+    const buttons=[$("#gp-refresh-layers"),$("#gp-refresh-map")].filter(Boolean);
+    refreshing=true;
+    buttons.forEach(button=>{button.disabled=true;button.setAttribute("aria-busy","true");});
+    try{
+      const layers=[...state().layers],activeId=state().activeLayerId,failures=[];
+      for(const layer of layers)validateRefresh(layer.id);
+      for(const layer of layers){
+        try{await refreshLayer(layer);}
+        catch(error){failures.push(`${layer.nome}: ${error.message}`);}
+      }
+      // Fontes dos mapas-base são recarregadas sem mudar sua visibilidade.
+      const layerSources=new Set(layers.map(layer=>layer.id));
+      for(const [id,definition] of Object.entries(state().map.getStyle().sources)){
+        if(layerSources.has(id)||!["vector","raster"].includes(definition.type))continue;
+        const source=state().map.getSource(id);
+        if(source?.setTiles&&definition.tiles)source.setTiles(definition.tiles);
+        else if(source?.setUrl&&definition.url)source.setUrl(definition.url);
+      }
+      const positions=new Map(layers.map((layer,index)=>[layer.id,index]));
+      state().layers.sort((a,b)=>(positions.get(a.id)??layers.length)-(positions.get(b.id)??layers.length));
+      state().activeLayerId=activeId;
+      window.gpApp.renderLayers();state().map.triggerRepaint();
+      if(failures.length)throw new Error(`Não foi possível atualizar ${failures.length} camada(s):\n${failures.join("\n")}`);
+      notify(`${layers.length} camada(s) atualizada(s). Mapa atualizado.`);
+    }catch(error){
+      window.gpApp.log(error.message,"error");
+      window.gpFeedback?.Notify.error("Atualizar camadas",error.message);
+    }finally{
+      refreshing=false;
+      buttons.forEach(button=>{button.disabled=false;button.removeAttribute("aria-busy");});
+    }
+  }
+
   async function refreshSource() {
     const layer = activeLayer(); if (!layer) return notify("Selecione uma camada.");
-    if(window.gpAttributeTable?.hasPendingChanges(layer.id))return notify("Salve ou descarte as alterações da tabela antes de atualizar a fonte.");
-    if(layer.preview&&layer.destino==='storage_original'){try{await window.gpApp.adicionarRasterStorage(layer);notify('Fonte atualizada.');}catch(error){notify(error.message);}return;}
     try {
-      await request(`${API}/camadas/${layer.id}/atualizar-fonte`, { method: "POST" }); const map = state().map;
-      [`${layer.id}-point`, `${layer.id}-line`, layer.id].forEach(id => { if (map.getLayer(id)) map.removeLayer(id); }); if (map.getSource(layer.id)) map.removeSource(layer.id);
-      await window.gpApp.addCatalogLayerToMap(layer.id, false); window.gpApp.renderLayers(); notify("Fonte atualizada.");
+      validateRefresh(layer.id);
+      if(!window.gpArquivos?.sessions.has(layer.id)&&!(layer.preview&&layer.destino==="storage_original")){
+        await request(`${API}/camadas/${encodeURIComponent(layer.id)}/atualizar-fonte`,{method:"POST"});
+      }
+      await refreshLayer(layer);notify("Fonte atualizada.");
     } catch (error) { notify(error.message); }
   }
+
+  document.addEventListener("DOMContentLoaded",()=>{
+    $("#gp-refresh-layers").addEventListener("click",refreshAllLayers);
+    $("#gp-refresh-map").addEventListener("click",refreshAllLayers);
+  });
 
   function definitionPool() { return [...state().functions.map(item => ({ kind: "functions", item })), ...state().flows.map(item => ({ kind: "flows", item }))]; }
   function definitionCommand(action) {

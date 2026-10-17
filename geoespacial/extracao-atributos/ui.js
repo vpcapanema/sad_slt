@@ -17,7 +17,8 @@ export function numero(value, digits = 2) {
 // para fechar; sucesso e informação somem sozinhos em 7 s.
 export function feedback(message, type='info') {
   if (!message) return;
-  const titulo=location.pathname.includes('gerador-camadas-territoriais')?'Camadas territoriais':'Extração de atributos';
+  const titulo=document.querySelector('[data-feedback-title]')?.dataset.feedbackTitle
+    ||(location.pathname.includes('gerador-camadas-territoriais')?'Camadas territoriais':'Extração de atributos');
   const tipo=['success','error','warning','info'].includes(type)?type:'info';
   window.Notify?.[tipo](titulo,message,tipo==='error'||tipo==='warning'?{}:{duration:7000});
 }

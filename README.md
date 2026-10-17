@@ -118,6 +118,13 @@ O catálogo de projeto da bancada também funciona sem montagem: mantém mapas,
 toolboxes, banco, conexões e a pasta de código `geoespacial`; a pasta nativa
 `data/geoespacial` só é listada quando há montagem configurada e ela existe.
 O acesso remoto ao acervo permanece nas APIs de storage, sem cópia local.
+As prévias vetoriais do acervo usadas na extração de atributos e na elegibilidade
+também funcionam sem montagem: as geometrias são serializadas em RAM e enviadas
+para `temporarios-sicard/extracao-atributos/previas`, isoladas por usuário e
+conferidas por hash. Os tiles leem essa cópia pelo storage; a prévia expira
+após 24 horas e os arquivos vencidos do usuário são removidos na próxima preparação.
+Os arquivos originais não são alterados. Isso não muda a exigência de montagem
+dos fluxos legados de upload local que mantêm cópias consultáveis de atributos.
 A rota legada `/data` responde 503 quando
 não há acesso nativo configurado; as APIs remotas não dependem dessa rota.
 Os JSONs e mapas da documentação de favorabilidade são lidos do storage
@@ -132,6 +139,18 @@ O terminal compartilhado é descrito em
 [PowerShell compartilhado](documentacao/TERMINAL_POWERSHELL_COMPARTILHADO.md).
 
 ### Destino das saídas da bancada geoespacial
+
+O botão **Atualizar**, à direita de **Ordem de desenho**, e **Atualizar mapa**,
+abaixo de **Ajustar às camadas**, recarregam as camadas abertas e os mapas-base,
+inclusive camadas ocultas ou fora do filtro de pesquisa. Não adicionam recursos
+do catálogo nem alteram o enquadramento, a camada ativa ou a visibilidade.
+Arquivos nativos são relidos; camadas do catálogo recarregam metadados e a
+representação publicada, sem reimportar ou gravar a fonte. Edições pendentes
+impedem a atualização, e falhas são identificadas por camada.
+Na aba **Camadas por fonte**, as linhas exibem o caminho relativo do arquivo,
+com `::camada` para camadas internas do storage. Recursos sem arquivo usam
+`banco/<id>` ou `memoria/<id>`; serviços remotos exibem a URL de origem.
+A pesquisa nessa aba também considera o caminho.
 
 Na execução, referências de arquivo incluem caminho e revisão; camadas abertas
 do catálogo sem arquivo associado são enviadas apenas pelos identificadores dos

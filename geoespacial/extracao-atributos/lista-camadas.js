@@ -225,7 +225,7 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
 const tamanho = bytes => bytes >= 1024 ? `${(bytes / 1024).toFixed(1)} KB` : `${bytes} B`;
 
 /* Com `pasta`, o diálogo vira o explorador do diretório das configurações. */
-function escolherConfiguracao(configuracoes, pasta = '',escopo='analise') {
+export function escolherConfiguracao(configuracoes, pasta = '',escopo='analise') {
   return new Promise(resolve => {
     const dialog = el('dialog', undefined, 'ea-tool-dialog ea-config-dialog');
     const titulo = el('h2', escopo==='bases'?'Carregar listas':pasta ? 'Abrir arquivo de configuração' : 'Configurações salvas');
@@ -234,6 +234,7 @@ function escolherConfiguracao(configuracoes, pasta = '',escopo='analise') {
     const caminho = pasta ? el('p', `${pasta}/`, 'ea-config-path') : null;
     const filtro = el('input');
     filtro.type = 'search';
+    filtro.name = 'ea-config-filter';
     filtro.className = 'ea-config-filter';
     filtro.placeholder = 'Filtrar nesta pasta';
     filtro.setAttribute('aria-label', 'Filtrar arquivos de configuração por nome');

@@ -19,7 +19,7 @@ const root=path.resolve(__dirname,'../..');
   });
  });
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
- const browser=await chromium.launch({headless:true,args:['--no-sandbox','--no-proxy-server','--enable-unsafe-swiftshader','--disable-dev-shm-usage']});
+ const browser=await chromium.launch({headless:true,...(process.env.PW_CHROMIUM?{executablePath:process.env.PW_CHROMIUM}:{}),args:['--no-sandbox','--no-proxy-server','--enable-unsafe-swiftshader','--disable-dev-shm-usage']});
  try{
   const page=await browser.newPage(),errors=[],requests=[];
   page.on('pageerror',error=>errors.push(error.stack||error.message));
@@ -27,6 +27,7 @@ const root=path.resolve(__dirname,'../..');
   await page.route('**/api/**',route=>{
    const url=new URL(route.request().url()),pathname=url.pathname;
    requests.push(pathname);
+   if(pathname.endsWith('/storage/camadas-arquivo'))return route.fulfill({json:{camadas:[{id,arquivo,nome:'rios'}]}});
    if(pathname.endsWith('/bancada-arquivos/preparar'))return route.fulfill({json:{
     id,nome:'rios',arquivo,revisao:'rev-1',representacao:'tiles',
     campos:[{nome:'nome',tipo:'String'}],campo_fid_tile:'slt_fid',

@@ -504,13 +504,18 @@
     return true;
   }
   function renderLayers(){
-    const query=$("#gp-layer-search").value.toLocaleLowerCase("pt-BR"),items=state.layers.filter(layer=>layer.nome.toLocaleLowerCase("pt-BR").includes(query));
-    const base=BASEMAPS.filter(item=>item.name.toLocaleLowerCase("pt-BR").includes(query)).map(item=>`<label class="tree-row tree-indent"><input type="checkbox" data-basemap-toggle="${item.id}" ${state.basemaps.has(item.id)?"checked":""}><i data-lucide="map"></i><span class="layer-name">${item.name}</span></label>`).join("");
     const bySource=state.leftTab==="source";
     const sourcePath=(layer)=>{
-      const meta=layer.metadados||{};
-      return meta.arquivo_original||layer.caminho_arquivo||meta.caminho_arquivo||layer.url_origem||meta.url_origem||layer.nome;
+      const meta=layer.metadados||{},session=window.gpArquivos?.sessions.get(layer.id);
+      const storageId=String(layer.id).startsWith("storage:")?String(layer.id).slice(8):"";
+      const [storagePath,internalLayer]=storageId.split("::");
+      const namespace=session?.origem_geometria==="banco"?"banco":layer.destino?.startsWith("memoria")?"memoria":"banco";
+      const path=String(session?.arquivo||layer.arquivo||layer.caminho_arquivo||meta.caminho_arquivo||meta.arquivo_original||storagePath||layer.url_origem||meta.url_origem||`${namespace}/${layer.id}`).replace(/\\/g,"/");
+      return internalLayer&&!path.includes("::")?`${path}::${internalLayer}`:path;
     };
+    const query=$("#gp-layer-search").value.toLocaleLowerCase("pt-BR"),items=state.layers.filter(layer=>(bySource?`${sourcePath(layer)} ${layer.nome}`:layer.nome).toLocaleLowerCase("pt-BR").includes(query));
+    const base=BASEMAPS.filter(item=>item.name.toLocaleLowerCase("pt-BR").includes(query)).map(item=>`<label class="tree-row tree-indent"><input type="checkbox" data-basemap-toggle="${item.id}" ${state.basemaps.has(item.id)?"checked":""}><i data-lucide="map"></i><span class="layer-name">${item.name}</span></label>`).join("");
+    $("#gp-layer-list").dataset.layerView=bySource?"source":"drawing";
     const layerRow=(layer)=>{
       const onMap=camadaVisivel(layer.id);
       const display=bySource?sourcePath(layer):layer.nome;
@@ -1072,7 +1077,7 @@
     if(fit)await zoomToCatalogLayer(id);
     return true;
   }
-  async function adicionarRasterStorage(ref){
+  async function adicionarRasterStorage(ref,{fit=true}={}){
     const response=await fetch(`${API}/storage/camada/raster-preview?${new URLSearchParams({caminho:ref.arquivo})}`);
     const preview=await response.json();if(!response.ok)throw new Error(preview.detail||`HTTP ${response.status}`);
     const id=ref.id||`storage:${ref.arquivo}`;
@@ -1081,7 +1086,7 @@
     state.map.addLayer({id,type:'raster',source:id,paint:{'raster-opacity':.85}});
     const entry={...ref,id,nome:ref.nome||ref.arquivo,tipo:'raster',destino:'storage_original',origem:'Arquivo no storage',preview,bounds:preview.bounds};
     state.layers=state.layers.filter(layer=>layer.id!==id);state.layers.push(entry);state.activeLayerId=id;
-    renderLayers();await zoomToCatalogLayer(id);return entry;
+    renderLayers();if(fit)await zoomToCatalogLayer(id);return entry;
   }
   async function consumePortalService(service){
     if(service.tipo==="WFS"){
@@ -1612,7 +1617,7 @@
   function adicionarCamadaGeoJsonEmMemoria(id,nome,geojson,opts={}){
     if(!state.map){document.addEventListener("gp-modeler-state",()=>adicionarCamadaGeoJsonEmMemoria(id,nome,geojson,opts),{once:true});return}
     if(!state.map.isStyleLoaded()&&!opts.estiloPreparado){state.map.once("idle",()=>adicionarCamadaGeoJsonEmMemoria(id,nome,geojson,opts));return}
-    removeMapResource(id);
+    removeMapResource(id,{preserveSelection:opts.preserveSelection});
     // Sem isto a camada em memória fica sem tipo de geometria e o painel mostra o
     // símbolo genérico em vez de ponto, linha ou polígono.
     state.geometryTypes[id]=tiposGeojson(geojson);

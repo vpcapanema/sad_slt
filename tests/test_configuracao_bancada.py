@@ -66,3 +66,36 @@ def test_chave_invalida_nao_escapa_da_pasta(sem_arquivos):
     for chave in ['../fora', 'com/barra', '', 'MAIUSCULA']:
         with pytest.raises(ValueError):
             configuracao.arquivo(chave)
+
+
+@pytest.mark.parametrize('papel', ['restricao', 'risco'])
+def test_lista_elegibilidade_persiste_em_escopo_proprio(sem_arquivos, papel):
+    escopo = f'elegibilidade-{papel}'
+    salvo = configuracao.salvar('Referências territoriais',
+                               [{'id': papel, 'camadas': ['camada-1', 'camada-2']}],
+                               Usuario(), escopo=escopo)
+    assert (sem_arquivos / escopo / f"{salvo['chave']}.json").is_file()
+    assert configuracao.listar('bases') == []
+    assert configuracao.listar('analise') == []
+    assert configuracao.listar(escopo)[0]['chave'] == salvo['chave']
+    leitura = configuracao.carregar(salvo['chave'], referencias=True, escopo=escopo)
+    assert leitura['escopo'] == escopo
+    assert leitura['categorias'][0]['id'] == papel
+    assert [c['id'] for c in leitura['categorias'][0]['camadas']] == ['camada-1', 'camada-2']
+    assert configuracao.carregar(salvo['chave'], escopo=escopo)['ausentes'] == []
+
+
+def test_elegibilidade_nao_aceita_outro_papel_ou_lista_vazia(sem_arquivos):
+    for grupos in [[], [{'id': 'risco', 'camadas': ['camada-1']}],
+                   [{'id': 'restricao', 'camadas': ['camada-1', 'camada-1']}]]:
+        with pytest.raises(ValueError):
+            configuracao.salvar('Inválida', grupos, Usuario(), escopo='elegibilidade-restricao')
+
+
+def test_listas_de_mesmo_nome_nao_misturam_papeis(sem_arquivos):
+    for papel, camada in [('restricao', 'camada-1'), ('risco', 'camada-2')]:
+        configuracao.salvar('Território', [{'id': papel, 'camadas': [camada]}],
+                           Usuario(), escopo=f'elegibilidade-{papel}')
+    for papel, camada in [('restricao', 'camada-1'), ('risco', 'camada-2')]:
+        dados = configuracao.carregar('territorio', referencias=True, escopo=f'elegibilidade-{papel}')
+        assert dados['categorias'][0]['camadas'][0]['id'] == camada

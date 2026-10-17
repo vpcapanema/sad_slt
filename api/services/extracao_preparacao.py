@@ -10,6 +10,7 @@ from uuid import uuid4
 import re
 
 from osgeo import ogr, osr
+from api.storage_policy import sem_montagem
 
 TTL = 24 * 60 * 60
 
@@ -23,6 +24,8 @@ def _pasta(dono):
 
 def representar(frame, meta, dono, *, atributos=False):
     """WKB -> GDAL: nenhuma serialização da camada para JSON."""
+    if sem_montagem() and not atributos:
+        return _descritor(frame, meta, _gravar_remoto(frame, dono))
     pasta = _pasta(dono)
     for antigo in pasta.glob('*.gpkg'):
         if time() - antigo.stat().st_mtime > TTL and not antigo.with_suffix('.pin').exists():
@@ -54,14 +57,47 @@ def representar(frame, meta, dono, *, atributos=False):
         ds = None
         path.unlink(missing_ok=True)
         raise
-    resultado = dict(representacao='tiles', tiles_token=token, revisao=token,
+    resultado = _descritor(frame, meta, token)
+    if atributos:
+        resultado.update(origem_geometria='local_temporaria', editavel=False, campo_fid_tile=campo_fid)
+    return resultado
+
+
+def _descritor(frame, meta, token):
+    return dict(representacao='tiles', tiles_token=token, revisao=token,
                 bounds=meta['limites_wgs84'], feicoes=len(frame),
                 geometria_tipo=' '.join(meta['tipos_geometria']),
                 status_validacao='valida', metadados_local=meta,
                 crs_arquivo=str(frame.crs), campos=meta['campos'])
-    if atributos:
-        resultado.update(origem_geometria='local_temporaria', editavel=False, campo_fid_tile=campo_fid)
-    return resultado
+
+
+def _pasta_remota(dono):
+    return 'temporarios-sicard/extracao-atributos/previas/' + sha256(str(dono).encode()).hexdigest()
+
+
+def _gravar_remoto(frame, dono):
+    from api.services import storage_remoto
+    from api.services.arquivos_geoespaciais_memoria import vetor
+    storage_remoto.listar('temporarios-sicard', estrito=True)
+    pasta = _pasta_remota(dono)
+    for item in storage_remoto.listar(pasta):
+        nome = item['nome']
+        if not item['pasta'] and re.fullmatch(r'[a-f0-9]{32}\.gpkg', nome) and time() - item['modificado'] > TTL:
+            storage_remoto.apagar_arquivo(f'{pasta}/{nome}')
+    token = uuid4().hex
+    nome = f'{token}.gpkg'
+    geometria = frame.geometry
+    geometrias = frame.loc[geometria.notna() & ~geometria.is_empty, [geometria.name]]
+    conteudo = vetor(geometrias, nome, 'GPKG', layer='camada')[nome]
+    caminho = f'{pasta}/{nome}'
+    try:
+        storage_remoto.enviar_bytes(caminho, conteudo)
+        if sha256(storage_remoto.baixar(caminho)).digest() != sha256(conteudo).digest():
+            raise ValueError('A prévia no storage diverge da geometria validada.')
+    except Exception:
+        storage_remoto.apagar_arquivo(caminho)
+        raise
+    return token
 
 
 def _gravar_geometrias(frame, path):
@@ -123,6 +159,16 @@ def preparar(ident, dono):
 def tile(token, dono, z, x, y):
     if not re.fullmatch(r'[a-f0-9]{32}', token) or not 0 <= z <= 22 or not (0 <= x < 2**z and 0 <= y < 2**z):
         raise ValueError('Tile inválido.')
+    if sem_montagem():
+        from api.services import storage_remoto, storage_geoespacial
+        pasta = _pasta_remota(dono)
+        item = next((item for item in storage_remoto.listar(pasta)
+                     if item['nome'] == f'{token}.gpkg' and not item['pasta']), None)
+        if item is None or time() - item['modificado'] > TTL:
+            raise FileNotFoundError('Prévia expirada. Valide a camada novamente.')
+        path = storage_geoespacial.ArquivoStorage(
+            f'{pasta}/{token}.gpkg', item['tamanho'], item['modificado'])
+        return storage_geoespacial._tile(str(path), 'camada', token, z, x, y)
     path = _pasta(dono) / f'{token}.gpkg'
     if not path.is_file() or (time() - path.stat().st_mtime > TTL and not path.with_suffix('.pin').exists()):
         raise FileNotFoundError('Prévia expirada. Valide a camada novamente.')

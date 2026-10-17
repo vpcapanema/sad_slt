@@ -144,6 +144,10 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .layer-entry{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
 .layer-entry-head{display:flex;align-items:center;gap:6px;min-width:0}
 .layer-entry-head .layer-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gp-layer-section-title{display:flex;align-items:center;justify-content:space-between;gap:6px;padding-top:4px;padding-bottom:4px}
+.gp-layer-section-title .icon-btn{flex:0 0 auto}
+.gp-layer-section-title .icon-btn:disabled,.gp-map-tools .icon-btn:disabled{opacity:.5;cursor:wait}
+#gp-layer-list[data-layer-view="source"] .layer-name{white-space:normal;overflow-wrap:anywhere}
 .tree-layer .layer-zoom{margin-left:auto}
 .layer-legend{display:flex;flex-direction:column;gap:2px;cursor:pointer;border-radius:4px;padding:1px 2px;transition:background .12s}
 #gp-layer-list .tree-layer:hover .layer-legend,#gp-layer-list .tree-layer.active .layer-legend{background:rgba(22,131,196,.08)}

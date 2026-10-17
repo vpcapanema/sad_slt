@@ -53,6 +53,18 @@ def test_fase1_titulo_e_texto_da_secao_de_saida():
     assert "texto-saida-vazia" not in html
 
 
+def test_rota_fase1_serve_v2_sem_executor_legado(cliente):
+    resposta = cliente.get("/restrict/hierarquizacao/fase-1/")
+    assert resposta.status_code == 200
+    html = resposta.text
+    for componente in ('elegibilidade-app', 'ev-entrada-browse', 'ev-hierarquizacao',
+                       'ev-restricao-browse', 'ev-risco-browse', 'ea-input-preview',
+                       'fase1-elegibilidade-v2.js'):
+        assert componente in html
+    assert 'id="executar-fase1"' not in html
+    assert '/js/fases.js' not in html
+
+
 def test_fase2_mantem_titulo_e_texto_proprios_de_favorabilidade():
     html = Path("templates/paginas/hierarquizacao/fase2-favorabilidade.html").read_text(encoding="utf-8")
     assert 'titulo-saida="Camadas de superfícies de favorabilidade de grade e da rede"' in html

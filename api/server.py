@@ -307,7 +307,7 @@ def pagina_metodologia_hierarquizacao(request: Request) -> Response:
 
 @app.get("/restrict/hierarquizacao/fase-1/", include_in_schema=False)
 def pagina_fase_1_hierarquizacao(request: Request) -> Response:
-    return render_page(request, "paginas/hierarquizacao/fase1-elegibilidade.html")
+    return render_page(request, "paginas/hierarquizacao/fase1-elegibilidade-v2.html")
 
 
 @app.get("/restrict/hierarquizacao/fase-2/", include_in_schema=False)

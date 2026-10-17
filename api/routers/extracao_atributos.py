@@ -225,13 +225,16 @@ class EntradaExtracao(BaseModel):
     config: ConfigEntrada = ConfigEntrada()
 
 
+EscopoConfiguracao = Literal['analise', 'bases', 'elegibilidade-restricao', 'elegibilidade-risco']
+
+
 class Configuracao(BaseModel):
     nome: str = Field(min_length=1,max_length=120)
     categorias: list[Categoria] = Field(default_factory=list,max_length=30)
     # Guardadas junto com as bases para repetir a análise inteira (versão 3).
     entradas: list[EntradaExtracao] = Field(default_factory=list,max_length=10)
     finalidades: list[Finalidade] = Field(default_factory=list,max_length=20)
-    escopo: Literal['analise','bases'] = 'analise'
+    escopo: EscopoConfiguracao = 'analise'
     chave_lista: str | None = Field(default=None, max_length=80)
     categoria_ativa: str = Field(default='',max_length=120)
     operacao: Literal['','intersection','identity','enriquecimento','estatisticas'] = 'intersection'
@@ -240,7 +243,7 @@ class Configuracao(BaseModel):
 
 
 @router.get('/configuracoes')
-def listar_configuracoes(escopo: Literal['analise','bases'] = 'analise'):
+def listar_configuracoes(escopo: EscopoConfiguracao = 'analise'):
     from api.services import configuracao_bancada as configuracao
     return {'pasta': configuracao.pasta(escopo), 'configuracoes': configuracao.listar(escopo)}
 
@@ -261,7 +264,7 @@ def salvar_configuracao(payload: Configuracao, user: SessionUser = Depends(requi
 
 
 @router.get('/configuracoes/{chave}')
-def abrir_configuracao(chave: str, lista: bool = False, escopo: Literal['analise','bases'] = 'analise'):
+def abrir_configuracao(chave: str, lista: bool = False, escopo: EscopoConfiguracao = 'analise'):
     from api.services import configuracao_bancada as configuracao
     try:
         return configuracao.carregar(chave, referencias=lista, escopo=escopo)
@@ -272,7 +275,7 @@ def abrir_configuracao(chave: str, lista: bool = False, escopo: Literal['analise
 
 
 @router.delete('/configuracoes/{chave}',status_code=204)
-def apagar_configuracao(chave: str, escopo: Literal['analise','bases'] = 'analise', user: SessionUser = Depends(require_geospatial_access)):
+def apagar_configuracao(chave: str, escopo: EscopoConfiguracao = 'analise', user: SessionUser = Depends(require_geospatial_access)):
     from api.services import configuracao_bancada as configuracao
     try:
         configuracao.excluir(chave, escopo=escopo)

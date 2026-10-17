@@ -5,7 +5,7 @@ const nomeArquivo=valor=>String(valor||'Arquivo sem nome').split(/[\\/]/).pop();
 const quantidade=n=>Number(n).toLocaleString('pt-BR');
 const tamanho=n=>n==null?'Não informado':`${(n/1024).toLocaleString('pt-BR',{maximumFractionDigits:2})} KB`;
 
-export function criarPrevia(state, changed){
+export function criarPrevia(state, changed, {obterCamadas, aoMudarVisibilidade} = {}){
   const node=id=>$(`#ea-input-${id}`);
   const host=node('preview'),mapaHost=node('preview-map'),dados=node('preview-data'),lista=node('preview-layers');
   let pacote=null,selecionada=null,mapa=null,desenho=null,atual=null;
@@ -31,9 +31,10 @@ export function criarPrevia(state, changed){
     node('preview-map-status').textContent=visiveis.size?
       `${visiveis.size} camada(s) visível(is) no mapa. Somente as camadas marcadas serão enviadas à bancada.`:
       'Marque ao menos uma camada para enviar à bancada.';
+    aoMudarVisibilidade?.();
   }
   function caixaVisibilidade(itens,rotulo){
-    const checkbox=el('input',undefined,'ea-preview-visibility');checkbox.type='checkbox';
+    const checkbox=el('input',undefined,'ea-preview-visibility');checkbox.type='checkbox';checkbox.name='ea-preview-visibility';
     checkbox.setAttribute('aria-label',`Visibilidade no mapa: ${rotulo}`);
     controles.push([checkbox,itens]);
     checkbox.addEventListener('change',()=>{
@@ -210,15 +211,15 @@ export function criarPrevia(state, changed){
   }
   let assinaturaAnterior=[];
   function atualizar(){
-    const camadas=[];
-    for(const entry of entradasParaPrevia(state)){
+    const camadas=obterCamadas?obterCamadas():[];
+    for(const entry of obterCamadas?[]:entradasParaPrevia(state)){
       const {id,layer}=entry;
       for(const item of componentes(layer)){
         const identificacao=configuracaoDaCamada(entry,layer,item);
         camadas.push({...item,identificacao,chave:`entrada:${id}:${item.chave||item.id}`,entradaId:id,chaveOriginal:item.chave,arquivoOrigem:layer.arquivo_local?.nome||layer.arquivo||item.arquivo,pendente:!state.bancadaEntradas.some(e=>e.id===id&&(!e.layer.camadas_bancada||e.layer.camadas_bancada.some(c=>c.chave===item.chave))),grupo:'entrada',status_validacao:item.status_validacao||'pendente'});
       }
     }
-    for(const base of [...state.bases,...state.staging]){
+    for(const base of obterCamadas?[]:[...state.bases,...state.staging]){
       const layer=state.catalog.find(c=>c.id===base.id);if(!layer)continue;
       camadas.push({...layer,chave:`base:${layer.id}`,grupo:'base',categoriaId:base.category,arquivoOrigem:layer.arquivo_local?.nome||layer.arquivo,categoria:state.categories.find(c=>c.id===base.category)?.nome||base.category,pendente:!state.bancadaBases.some(b=>b.id===base.id),status_validacao:layer.erro?'invalida':layer.status_validacao||'pendente'});
     }

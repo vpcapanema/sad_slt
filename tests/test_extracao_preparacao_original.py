@@ -15,6 +15,7 @@ def isolado(monkeypatch, tmp_path_factory):
     from api import path_policy
     tmp_path = tmp_path_factory.mktemp('prep')
     monkeypatch.setattr(path_policy, 'project_path', lambda caminho: tmp_path / caminho)
+    monkeypatch.setattr(preparo, 'sem_montagem', lambda: False)
     monkeypatch.setattr(local, 'localizacao', lambda frame: {'status': 'consultado'})
 
     def negar(*args, **kwargs):

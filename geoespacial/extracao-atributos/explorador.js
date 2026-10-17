@@ -31,6 +31,20 @@ function partesDoNome(item){
 }
 function rotulo(item){const p=partesDoNome(item);return `${p.radical}${p.extensao}${p.camada?` › ${p.camada}`:''}`;}
 
+export async function identificarCamadas(files, {excluded=[], aoIdentificar}={}) {
+  const expandidos=[];
+  for(const file of files){
+    if(!file.inventariar){expandidos.push(file);continue;}
+    aoIdentificar?.(file);
+    const resultado=await json(`/storage/camadas-arquivo?arquivo=${encodeURIComponent(file.arquivo)}`);
+    if(!resultado.camadas?.length)throw new Error(`Nenhuma camada disponível em ${rotulo(file)}.`);
+    expandidos.push(...resultado.camadas.filter(c=>!excluded.includes(c.id)));
+  }
+  const camadas=[...new Map(expandidos.map(c=>[c.id,c])).values()];
+  if(!camadas.length)throw new Error('Todas as camadas desses arquivos já estão selecionadas.');
+  return camadas;
+}
+
 export function escolherArquivo({catalog=[],carregarCatalogo,excluded=[],title,acao=title,multiple=false,validar=true,somenteReferencias=false,prepararReferencias,original=false,host,onClose}) {
   return new Promise(resolve=>{
     const inline=Boolean(host?.isConnected);
@@ -42,7 +56,7 @@ export function escolherArquivo({catalog=[],carregarCatalogo,excluded=[],title,a
     heading.id='ea-storage-title';dialog.setAttribute('aria-labelledby',heading.id);header.append(heading,windows);
     const toolbar=el('div',undefined,'ea-storage-toolbar'),up=icon('Subir um nível (Backspace)','fa-arrow-turn-up',()=>goUp());
     const trail=el('nav',undefined,'ea-storage-path');trail.setAttribute('aria-label','Caminho da pasta');
-    const search=el('input');search.type='search';search.placeholder='Filtrar nesta pasta';search.setAttribute('aria-label','Filtrar pastas e camadas por nome');
+    const search=el('input');search.type='search';search.name='ea-storage-filter';search.placeholder='Filtrar nesta pasta';search.setAttribute('aria-label','Filtrar pastas e camadas por nome');
     toolbar.append(up,trail,search);
     const body=el('div',undefined,'ea-storage-body'),sidebar=el('aside'),tree=el('div',undefined,'ea-storage-tree');
     sidebar.setAttribute('aria-label','Árvore de pastas');sidebar.append(el('h3','Storage geoespacial'),tree);
@@ -241,16 +255,10 @@ export function escolherArquivo({catalog=[],carregarCatalogo,excluded=[],title,a
       const INVENTARIO='Identificar camadas dos arquivos',CARREGAR='Carregar camadas selecionadas';
       const processo=validar?window.ProcessFeedback.iniciarCadastro({title:acao,tasks:[...(files.some(f=>f.inventariar)?[INVENTARIO]:[]),CARREGAR]}):null;
       try{
-        const expandidos=[];
-        for(const file of files){
-          if(!file.inventariar){expandidos.push(file);continue;}
+        files=await identificarCamadas(files, {excluded, aoIdentificar:file=>{
           if(processo)processo.tarefaAtual(INVENTARIO,`${rotulo(file)}\nConsultando as camadas disponíveis no arquivo.`);
           else status.textContent=`Identificando camadas de ${rotulo(file)}…`;
-          const resultado=await json(`/storage/camadas-arquivo?arquivo=${encodeURIComponent(file.arquivo)}`);
-          expandidos.push(...resultado.camadas.filter(c=>!excluded.includes(c.id)));
-        }
-        files=[...new Map(expandidos.map(c=>[c.id,c])).values()];
-        if(!files.length)throw new Error('Todas as camadas desses arquivos já estão selecionadas.');
+        }});
         if(processo&&files.length&&processo.tasks.some(t=>t.name===INVENTARIO))processo.concluirTarefa(INVENTARIO,`${files.length} camada(s)`);
       }catch(error){loading=false;controls();if(processo)processo.erro({message:error.message});else status.textContent=`Não foi possível identificar as camadas: ${error.message}`;return;}
       // Só referências: a validação acontece ao confirmar a lista; não há desfecho a mostrar.

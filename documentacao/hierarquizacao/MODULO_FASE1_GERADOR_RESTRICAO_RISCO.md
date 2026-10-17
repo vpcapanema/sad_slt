@@ -16,6 +16,54 @@ territorial preliminar:
 
 O papel deste modulo e preparar os insumos espaciais para essa triagem.
 
+## Preparacao operacional na pagina de elegibilidade v2
+
+A rota `/restrict/hierarquizacao/fase-1/` passa a servir a pagina v2, em
+substituicao a interface de selecao de um par homologado. Nesta entrega, o fluxo
+abrange a preparacao e o envio de dados a bancada, sem executar a classificacao
+automatica nem alterar resultados existentes da hierarquizacao.
+
+1. A entrada pode ser composta por camadas vetoriais escolhidas no explorador do
+   storage ou pelas demandas de uma hierarquizacao cadastrada, sem filtro de fase.
+   Na segunda alternativa, sao recuperadas as informacoes da rodada e as geometrias
+   atuais do cadastro, preservando pontos, linhas e poligonos. A ausencia de uma
+   geometria interrompe a selecao; nao se cria um ponto substituto por coordenadas.
+   Os dois campos sao mutuamente exclusivos: selecionar camadas bloqueia o campo
+   de hierarquizacoes, e selecionar uma hierarquizacao bloqueia a escolha de
+   camadas. Limpar a selecao de entrada libera a troca de origem. O envio a previa
+   substitui integralmente a entrada anterior nessa etapa, sem acumular origens.
+2. As bases sao selecionadas em listas separadas de restricao e risco, nessa ordem.
+   Uma camada nao pode ocupar ambos os papeis nem ser simultaneamente entrada.
+3. O fluxo possui tres estados distintos: selecao, previa e bancada. Os botoes
+   das secoes 1 e 2 enviam a selecao do respectivo grupo para a previa da secao 3.
+   Confirmar no explorador transfere somente as referencias dos arquivos, sem
+   inventariar componentes nem ler geometrias. A identificacao das camadas internas
+   e a validacao geometrica ocorrem ao enviar para a previa; uma falha preserva
+   tanto a selecao quanto a previa anterior. Arquivos inteiros nao podem ser
+   atribuidos a um papel conflitante com qualquer uma de suas camadas internas.
+   Selecionar, remover ou recarregar listas nao atualiza automaticamente a previa
+   nem a bancada. Uma selecao vazia pode ser enviada para retirar o grupo da previa.
+   A previa reutiliza os componentes do extrator de atributos. Seu painel de
+   camadas possui, no rodape, o botao unico de envio das camadas marcadas a bancada,
+   mediante confirmacao explicita.
+4. As listas guardam referencias, nomes e caminhos no storage de configuracoes
+   do sistema, em escopos separados `elegibilidade-restricao` e
+   `elegibilidade-risco`. Ao salvar, arquivos multicamadas sao identificados para
+   guardar referencias de cada componente. Ao recarregar, as referencias retornam
+   a selecao; a validacao geometrica e repetida no envio a previa. Uma referencia
+   conflitante e recusada na selecao; indisponibilidade ou geometria invalida impede
+   a substituicao da previa.
+5. O envio final substitui o conjunto anteriormente enviado por esta pagina pelas
+   camadas marcadas na previa, preservando seus papeis; camadas desmarcadas deixam
+   esse conjunto. Cancelar o envio preserva a bancada. A remocao direta na bancada
+   e respeitada; outras camadas adicionadas fora deste fluxo nao sao substituidas.
+
+A atribuicao de um papel pelo usuario nao equivale a homologacao da camada.
+A regra de calculo com listas livres, sua consolidacao, a persistencia dos
+resultados e a vinculação com as fases seguintes dependem de definicao posterior.
+As regras metodologicas abaixo permanecem como referencia, nao como calculo
+automatico executado pela nova interface de preparacao.
+
 ## Produto final do modulo
 
 O modulo deve produzir um pacote homologado de Fase 1 contendo:

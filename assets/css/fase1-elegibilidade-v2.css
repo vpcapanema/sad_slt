@@ -1,0 +1,273 @@
+/* Escala de processos.css; componentes do extrator permanecem isolados nesta página. */
+.elegibilidade-v2 {
+  --process-space-1: 0.375rem;
+  --process-space-2: 0.625rem;
+  --process-space-3: 0.875rem;
+  --process-space-4: 1.25rem;
+  --process-control-height: 2.25rem;
+}
+.elegibilidade-v2.app-main {
+  margin-block: 0;
+}
+.elegibilidade-v2 .ev-layer-add-icon {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* Seções 1 e 2 lado a lado; escala interna compacta inspirada na Fase 3,
+   sem aplicar zoom à página, aos diálogos ou à bancada. */
+.elegibilidade-v2 .ev-preparacao-grid {
+  --process-space-1: 0.3125rem;
+  --process-space-2: 0.5rem;
+  --process-space-3: 0.75rem;
+  --process-space-4: 1rem;
+  --process-control-height: 2rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+.elegibilidade-v2 .ev-preparacao-grid > .ahp-step-section {
+  min-width: 0;
+  margin: 0;
+  padding: 1rem;
+}
+.elegibilidade-v2 .ev-preparacao-grid .ahp-section-label {
+  margin: -1rem -1rem 1rem;
+  padding: 0.65rem 1rem;
+}
+.elegibilidade-v2 .ev-preparacao-grid .ahp-section-body {
+  padding: 0;
+  gap: var(--process-space-4);
+}
+.elegibilidade-v2 .ev-preparacao-grid .ahp-subsection-num {
+  width: 22px;
+  height: 22px;
+  font-size: 0.72rem;
+}
+.elegibilidade-v2 .ev-preparacao-grid :is(.ea-hint, .ev-lista, .ea-field label, details) {
+  font-size: 0.75rem;
+}
+.elegibilidade-v2 .ev-preparacao-grid :is(select, .ev-input-action input) {
+  padding: 0.35rem 0.55rem;
+  font-size: 0.8rem;
+}
+.elegibilidade-v2 .ev-preparacao-grid .ev-lista li {
+  gap: var(--process-space-2);
+  padding-block: 2px;
+  flex-wrap: nowrap;
+}
+.elegibilidade-v2 .ev-preparacao-grid .ea-btn.ea-icon-button {
+  flex-basis: 28px;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+.elegibilidade-v2 .ev-preparacao-grid .ea-btn.ev-remove-layer {
+  flex-basis: 24px;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  min-height: 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+.elegibilidade-v2 .ev-preparacao-grid .ev-remove-layer:not([disabled]):is(:hover, :focus-visible) {
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+  color: var(--pli-blue);
+}
+.elegibilidade-v2 .ahp-section-label h2 {
+  margin: 0;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+}
+.elegibilidade-v2 .ahp-section-body {
+  padding: var(--process-space-4);
+  min-width: 0;
+}
+.elegibilidade-v2 .ahp-subsection-num {
+  background: #83d9a5;
+  color: var(--pli-deep);
+}
+.elegibilidade-v2 .ev-bases-grupo {
+  min-width: 0;
+  margin: 0;
+}
+.elegibilidade-v2 .ev-origens {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: start;
+  gap: var(--process-space-2);
+}
+.elegibilidade-v2 .ea-field {
+  gap: var(--process-space-1);
+  align-items: flex-start;
+  min-width: 0;
+}
+.elegibilidade-v2 .ea-field label {
+  color: var(--pli-text);
+  font-size: 0.78rem;
+}
+.elegibilidade-v2 :is(select, .ev-input-action input) {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--process-control-height);
+  padding: 0.4rem 0.6rem;
+  border-color: var(--pli-border);
+  color: var(--pli-text);
+  font-size: 0.84rem;
+}
+.elegibilidade-v2 .ev-input-action {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+#elegibilidade-app .ev-preparacao-grid :is(.ev-input-action input, select) {
+  height: 36px;
+  min-height: 36px;
+}
+.elegibilidade-v2 .ev-preparacao-grid .ev-input-action input {
+  padding-right: 38px;
+  border: 1px solid var(--pli-border);
+  border-radius: 8px;
+  font-family: inherit;
+}
+.elegibilidade-v2 .ev-input-action > .ea-icon-button {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+}
+.elegibilidade-v2 .ev-ou {
+  margin: 0;
+  width: 100%;
+  text-align: center;
+  color: var(--pli-muted);
+  font-size: 0.75rem;
+  line-height: 36px;
+  padding-top: calc(0.75rem * 1.5 + var(--process-space-1));
+}
+.elegibilidade-v2 .ev-input-action input:disabled {
+  opacity: 0.6;
+}
+.elegibilidade-v2 .ea-hint {
+  margin: 0;
+  color: var(--pli-muted);
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+.elegibilidade-v2 > #ev-status {
+  margin-bottom: var(--process-space-4);
+}
+/* O feedback compartilhado controla cores de status; não há paleta local. */
+.elegibilidade-v2 #ev-status[data-error="true"] {
+  font-weight: 700;
+}
+.elegibilidade-v2-page .ea-config-entry {
+  align-items: flex-start;
+  gap: 0.15rem;
+}
+.elegibilidade-v2-page .ea-config-entry[aria-pressed="true"] {
+  background: #eef3f7;
+  border-color: var(--pli-blue);
+  box-shadow: inset 3px 0 var(--pli-blue);
+}
+.elegibilidade-v2 :is(input, select, a, summary):focus-visible,
+.elegibilidade-v2-page dialog :is(input, select, a, summary):focus-visible {
+  outline: 3px solid var(--pli-blue);
+  outline-offset: 3px;
+}
+.elegibilidade-v2 .ea-preview-workspace > section > header {
+  background: #eef3f7;
+  border-bottom-color: #dbe4ea;
+  flex-wrap: wrap;
+}
+.elegibilidade-v2 .ea-preview-workspace > section > header h4 {
+  color: var(--pli-deep);
+  font-family: "Montserrat", sans-serif;
+  font-size: 0.75rem;
+}
+.elegibilidade-v2 .ea-preview-workspace #ea-input-preview-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--pli-muted);
+}
+.elegibilidade-v2 .ev-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--process-space-3);
+}
+.elegibilidade-v2 .ev-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+}
+.elegibilidade-v2 .ev-field-actions {
+  width: 100%;
+  justify-content: center;
+  margin-top: var(--process-space-1);
+}
+.elegibilidade-v2 .ev-lista {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+}
+.elegibilidade-v2 .ev-lista li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  padding: .5rem 0;
+}
+.elegibilidade-v2 .ev-lista span,
+.elegibilidade-v2 .ea-btn,
+.elegibilidade-v2 h2,
+.elegibilidade-v2 h3 {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.elegibilidade-v2 pre {
+  max-height: 20rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+/* O menu geral desta página é mais largo que o menu de bloco da Gestão.
+   Antecipar a quebra evita overflow sem trocar links ou alterar o componente. */
+@media (min-width: 901px) and (max-width: 1200px) {
+  .elegibilidade-v2-page .app-header-inner {
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 1024px) {
+  .elegibilidade-v2 .ev-preparacao-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 768px) {
+  .elegibilidade-v2 .ahp-section-label {
+    margin: -1rem -1rem 1rem;
+    padding: 0.75rem 1rem;
+  }
+  @media (max-width: 540px) {
+    .elegibilidade-v2 :is(.ev-grid, .ev-origens) { grid-template-columns: minmax(0, 1fr); }
+    .elegibilidade-v2 .ev-ou { line-height: 1.4; padding-top: 0; }
+  }
+  .elegibilidade-v2 .ahp-section-body { padding: var(--process-space-2); }
+  .elegibilidade-v2 .ev-lista li { flex-wrap: wrap; }
+}
