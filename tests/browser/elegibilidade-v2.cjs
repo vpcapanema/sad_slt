@@ -14,6 +14,7 @@ const assert = require('node:assert/strict');
     const reportRequests = [], downloadRequests = [], reportModels = [];
     let reportSources = [], failReport = false, failDownload = false;
     let failExecution = false;
+    let invalidGroup = false;
     let failLayer = '', missingGeometry = false, failNormalization=false,holdPreparation='',releasePreparation,holdNormalization='',releaseNormalization;
     page.on('pageerror', error => errors.push(error.message));
     await page.addLocatorHandler(page.locator('#pfsStatusOverlay.pfs-active'), async () => {
@@ -137,20 +138,25 @@ const assert = require('node:assert/strict');
       }
       if(path.includes('/storage/tiles/')||path.includes('/bancada-arquivos/tiles/'))
         return route.fulfill({body:Buffer.alloc(0),contentType:'application/vnd.mapbox-vector-tile'});
-      if(path.endsWith('/elegibilidade/preparar-demanda')){
-        const payload=req.postDataJSON(),id=payload.id;
-        normalizations.push(payload);
+      if(path.endsWith('/elegibilidade/preparar-demanda')||path.endsWith('/elegibilidade/preparar-hierarquizacao')){
+        const payload=req.postDataJSON(),grupo=path.endsWith('/preparar-hierarquizacao');
+        const id=grupo?`hierarquizacao:${payload.codigo}`:payload.id;
+        normalizations.push({...payload,id});
         if(id===holdNormalization)await new Promise(resolve=>{releaseNormalization=resolve;});
-        if(failNormalization===true||failNormalization===id)return route.fulfill({status:422,json:{detail:'Não foi possível obter um polígono válido da demanda.'}});
+        if(failNormalization===true||failNormalization===id||grupo&&payload.demandas.includes(failNormalization))
+          return route.fulfill({status:422,json:{detail:'Não foi possível obter um polígono válido da demanda.'}});
         const origem=[...layers,...packageLayers].find(item=>item.id===id);
         const colecoes=origem?.metadados_local.tipos_geometria.includes('GeometryCollection')?1:0;
+        const feicoes=grupo?payload.demandas.length:(origem?.feicoes||1);
         const arquivo=`saidas-geoespaciais/execucoes/fixture/camadas/demanda-${normalizations.length}.gpkg`;
-        const item={...layers[0],id:`storage:${arquivo}::demandas`,arquivo,nome:origem?.nome||id,
-          revisao:`derivada-${normalizations.length}`,feicoes:origem?.feicoes||1,
-          metadados_local:{crs:'EPSG:4674',tipos_geometria:['MultiPolygon'],feicoes:origem?.feicoes||1},
-          normalizacao_demanda:{...parametros,feicoes:origem?.feicoes||1,pontos_convertidos:0,
-            linhas_convertidas:id.endsWith('D-0')?1:0,poligonos_sem_buffer:id.endsWith('D-0')?0:(origem?.feicoes||1)-colecoes,
-            colecoes_convertidas:colecoes,componentes_colecoes:colecoes?{Point:1,LineString:1,Polygon:1}:{}}};
+        const item={...layers[0],id:`storage:${arquivo}::demandas`,arquivo,camada:'demandas',nome:origem?.nome||id,
+          revisao:`derivada-${normalizations.length}`,feicoes,
+          metadados_local:{crs:'EPSG:4674',tipos_geometria:['MultiPolygon'],feicoes},
+          normalizacao_demanda:{...parametros,feicoes,pontos_convertidos:0,
+            linhas_convertidas:grupo||id.endsWith('D-0')?1:0,poligonos_sem_buffer:grupo?1:id.endsWith('D-0')?0:feicoes-colecoes,
+            colecoes_convertidas:colecoes,componentes_colecoes:colecoes?{Point:1,LineString:1,Polygon:1}:{},
+            ...(grupo?{total_demandas:payload.demandas.length,origem:{hierarquizacao:payload.codigo,
+              camadas:(invalidGroup?payload.demandas.slice(1):payload.demandas).map(id=>({id}))}}:{})}};
         derivados.set(item.id,id);
         return send(item);
       }
@@ -182,6 +188,7 @@ const assert = require('node:assert/strict');
     await page.waitForFunction(() => document.querySelector('#ev-hierarquizacao')?.options.length === 2);
     assert.equal(await avisoDisponibilidade(),0,'Recarregar a página não abre notificação de disponibilidade');
     await page.waitForFunction(() => document.querySelector('iframe').contentWindow.gpApp?.state.map?.isStyleLoaded());
+    await page.waitForFunction(() => document.querySelector('#ev-run-warning').textContent.includes('Nenhuma camada de entrada'));
     const panel = async () => (await page.locator('iframe').evaluate(f => f.contentWindow.gpApp.state.layers.map(l => l.id))).map(id=>derivados.get(id)||id);
     const closeProgress=()=>page.waitForFunction(()=>!document.querySelector('#pfsProgressOverlay').classList.contains('pfs-active'));
     const inputIds = layers.map(l => l.id);
@@ -238,6 +245,60 @@ const assert = require('node:assert/strict');
       if(cancel)assert.equal(normalizations.length,antes,'Cancelar confirmação não gera arquivos derivados');
       else assert.deepEqual(await page.evaluate(()=>ProcessFeedback.atual.tasks.map(t=>t.completed)),[true,true,true,true], 'Feedback confirma conversão, arquivo e envio');
       await closeProgress();
+    }
+    if (process.env.SICARD_TEST_GROUP_ONLY === '1') {
+      await choose('#ev-restricao-browse',['restricao-a']);
+      await preview('restricao');
+      await choose('#ev-risco-browse',['risco']);
+      await preview('risco');
+      await page.selectOption('#ev-hierarquizacao','HIER-TESTE');
+      await page.waitForFunction(()=>document.querySelectorAll('#ev-hier-lista li').length===2);
+      const antes=normalizations.length;
+      await preview('entrada');
+      assert.equal(normalizations.length,antes,'A prévia não gera o arquivo do grupo');
+      const checkbox=page.locator('#ea-input-preview-layers [data-validation]')
+        .getByRole('checkbox',{name:'Visibilidade no mapa: D-0 — Demanda 0',exact:true});
+      await checkbox.uncheck();
+      await page.locator('#ea-staging-confirmar').click();
+      await page.waitForFunction(()=>document.querySelector('#ev-status').dataset.error==='true');
+      assert.match(await page.locator('#ev-status').textContent(),/todas as demandas/);
+      assert.equal(normalizations.length,antes,'Grupo incompleto não gera arquivos');
+      await checkbox.check();
+      await send(undefined,true);
+      assert.equal(normalizations.length,antes,'Cancelar não gera arquivos');
+      for(const falha of ['demanda','rastreio']){
+        failNormalization=falha==='demanda'?'cadastro:projeto:D-1':false;
+        invalidGroup=falha==='rastreio';
+        await page.locator('#ea-staging-confirmar').click();
+        await page.locator('#pfsConfirmOk').click();
+        await page.waitForFunction(()=>document.querySelector('#ev-status').dataset.error==='true');
+        await closeProgress();
+        assert.deepEqual(await panel(),[],'Falha em uma demanda ou na auditoria não altera a bancada');
+      }
+      failNormalization=false;invalidGroup=false;
+      await send();
+      await assertConferencia(['hierarquizacao:HIER-TESTE'],[inputIds[1]],[inputIds[3]]);
+      const entradas=await page.locator('iframe').evaluate(f=>[...f.contentWindow.gpArquivos.sessions.values()]
+        .filter(item=>item.origemEntrada==='hierarquizacao')
+        .map(item=>({arquivo:item.arquivo,camada:item.camada,fontes:item.fontesElegibilidade.map(fonte=>fonte.id)})));
+      assert.equal(entradas.length,1);
+      assert(entradas[0].arquivo.endsWith('.gpkg')&&entradas[0].camada==='demandas');
+      assert.deepEqual(entradas[0].fontes,['cadastro:projeto:D-0','cadastro:projeto:D-1']);
+      assert.equal(await page.locator('#ea-input-preview-layers [data-preview-layer-status]').filter({hasText:'Na bancada'}).count(),4);
+      const gravacoes=normalizations.length;
+      await send();
+      assert.equal(normalizations.length,gravacoes,'Reenvio reutiliza o único arquivo do grupo');
+      await page.locator('#ev-calcular').click();
+      await page.locator('#pfsConfirmOk').click();
+      await page.waitForFunction(()=>document.querySelector('#ev-status').textContent.includes('camada(s) de saída produzida(s)'));
+      await closeProgress();
+      assert.equal(executions.length,1,'Uma única execução de elegibilidade recebe todo o grupo');
+      assert.equal(derivados.get(executions[0].entrada.id),'hierarquizacao:HIER-TESTE');
+      assert.deepEqual(executions[0].restricao.map(c=>c.id),[inputIds[1]]);
+      assert.deepEqual(executions[0].risco.map(c=>c.id),[inputIds[3]]);
+      assert.deepEqual(errors,[]);
+      console.log('PASS: hierarquização integral em um GeoPackage/uma camada, fontes, cache, cancelamento, falhas e cálculo único com risco e restrição.');
+      return;
     }
     if (process.env.SICARD_TEST_EXECUTION_ONLY === '1') {
       await choose('#ev-entrada-browse',['pacote']);
@@ -420,22 +481,54 @@ const assert = require('node:assert/strict');
     assert.equal(await page.locator('#ev-entrada-camadas').inputValue(), '');
     assert.deepEqual(await panel(), before, 'Hierarquização permanece só na prévia');
     assert.match(await page.locator('#ev-hier-dados').textContent(), /"teste": 42/);
+    const antesDaPrevia=normalizations.length;
     await preview('entrada');
+    assert.equal(normalizations.length,antesDaPrevia,'A prévia não gera o GeoPackage consolidado');
+    const demandaVisivel=page.locator('#ea-input-preview-layers [data-validation]')
+      .getByRole('checkbox',{name:'Visibilidade no mapa: D-0 — Demanda 0',exact:true});
+    await demandaVisivel.uncheck();
+    await page.locator('#ea-staging-confirmar').click();
+    await page.waitForFunction(()=>document.querySelector('#ev-status').dataset.error==='true');
+    assert.match(await page.locator('#ev-status').textContent(),/todas as demandas da hierarquização/);
+    assert.equal(normalizations.length,antesDaPrevia,'Um grupo incompleto não inicia consolidação');
+    assert.deepEqual(await panel(),before,'Desmarcar uma demanda não envia um grupo parcial');
+    await demandaVisivel.check();
+    await send(undefined,true);
+    assert.equal(normalizations.length,antesDaPrevia,'Cancelar não gera o arquivo do grupo');
     failNormalization='cadastro:projeto:D-1';
     await page.locator('#ea-staging-confirmar').click();
     await page.locator('#pfsConfirmOk').click();
     await page.waitForFunction(()=>document.querySelector('#ev-status').dataset.error==='true');
     await closeProgress();
-    assert.deepEqual(await panel(),before,'Falha na segunda conversão não aplica o primeiro arquivo parcialmente');
+    assert.deepEqual(await panel(),before,'Falha em uma demanda não envia o grupo parcialmente');
     failNormalization=false;
+    invalidGroup=true;
+    await page.locator('#ea-staging-confirmar').click();
+    await page.locator('#pfsConfirmOk').click();
+    await page.waitForFunction(()=>document.querySelector('#ev-status').dataset.error==='true');
+    assert.match(await page.locator('#ev-status').textContent(),/não confirmou todas as demandas/);
+    await closeProgress();
+    assert.deepEqual(await panel(),before,'Arquivo sem rastreabilidade de todas as demandas não é enviado');
+    invalidGroup=false;
     await send();
-    await assertConferencia(['cadastro:projeto:D-0','cadastro:projeto:D-1'],[inputIds[1]],[inputIds[3]]);
+    await assertConferencia(['hierarquizacao:HIER-TESTE'],[inputIds[1]],[inputIds[3]]);
+    assert.equal((await panel()).length,3,'Bancada recebe uma entrada única, uma restrição e um risco');
     const actualGeometry = await page.locator('iframe').evaluate(f =>
-      [...f.contentWindow.gpArquivos.sessions.values()].filter(item=>item.fonteElegibilidade?.origemEntrada==='hierarquizacao')
-        .map(item=>({tipos:item.metadados_local.tipos_geometria,fonte:item.fonteElegibilidade.geojson.features[0].geometry})));
-    assert.deepEqual(actualGeometry.map(item=>item.fonte),geometries,'Fontes geométricas integrais preservadas na rastreabilidade');
+      [...f.contentWindow.gpArquivos.sessions.values()].filter(item=>item.origemEntrada==='hierarquizacao')
+        .map(item=>({tipos:item.metadados_local.tipos_geometria,arquivo:item.arquivo,camada:item.camada,
+          fontes:item.fontesElegibilidade.map(fonte=>fonte.geojson.features[0])})));
+    assert.equal(actualGeometry.length,1,'Somente uma camada de demandas cadastrada na bancada');
+    assert(actualGeometry[0].arquivo.endsWith('.gpkg')&&actualGeometry[0].camada==='demandas');
+    assert.deepEqual(actualGeometry[0].fontes.map(f=>f.geometry),geometries,'Todas as fontes geométricas preservadas na rastreabilidade');
     assert(actualGeometry.every(item=>item.tipos.every(tipo=>['Polygon','MultiPolygon'].includes(tipo))),'Bancada recebe exclusivamente demandas poligonais');
-    assert.equal(normalizations.find(payload=>payload.id==='cadastro:projeto:D-0').atributos.objeto_hierarquizacao.cabecalho_objeto.atributos.teste,42);
+    assert.equal(actualGeometry[0].fontes[0].properties.objeto_hierarquizacao.cabecalho_objeto.atributos.teste,42);
+    const consolidacao=normalizations.find(payload=>payload.id==='hierarquizacao:HIER-TESTE');
+    assert.deepEqual(consolidacao.demandas,['cadastro:projeto:D-0','cadastro:projeto:D-1']);
+    assert.equal(await page.locator('#ea-input-preview-layers [data-preview-layer-status]').filter({hasText:'Na bancada'}).count(),4,
+      'Todas as fontes individuais na prévia são reconhecidas como enviadas');
+    const gravacoes=normalizations.length;
+    await send();
+    assert.equal(normalizations.length,gravacoes,'Reenviar a mesma prévia reutiliza o único GeoPackage do grupo');
     assert(normalizations.every(payload=>!payload.id.includes('restricao')&&!payload.id.includes('risco')),'Bases de risco e restrição não são convertidas');
     assert.equal((await panel()).includes(inputIds[0]), false, 'Novo envio substitui entrada anterior');
     missingGeometry = true;

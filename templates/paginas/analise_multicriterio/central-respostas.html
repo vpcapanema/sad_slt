@@ -45,13 +45,17 @@
       </form>
       <section class="secao-collab-status-section ahp-section ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">2.2</span><span>Status do ambiente colaborativo</span></div><div class="ahp-section-body"><div id="ami-create-status" class="ami-empty">O status será exibido após a confirmação dos colaboradores.</div></div></section>
       <section id="ami-email-draft-card" class="secao-collab-email-draft-card ahp-section ahp-subcard is-hidden">
-        <div class="ahp-subsection-title"><span class="ahp-subsection-num">2.3</span><span>Sugestão de mensagem de e-mail</span></div>
+        <div class="ahp-subsection-title"><span class="ahp-subsection-num">2.3</span><span>Mensagem de email</span></div>
         <div class="ahp-section-body">
-          <p class="step-intro ami-email-instrucao"><i class="fas fa-circle-info" aria-hidden="true"></i><span>Use a mensagem completa abaixo para convidar os colaboradores a preencher o formulário. A mensagem inclui o link persistente e os critérios armazenados no julgamento confirmado.</span></p>
-          <div class="c-form-group"><label for="ami-email-template" class="c-form-label"><i class="fas fa-envelope-open-text"></i> Mensagem sugerida</label><div id="ami-email-template" class="c-form-control collab-email-template" role="textbox" aria-readonly="true" tabindex="0"></div>
+          <p class="step-intro ami-email-instrucao"><i class="fas fa-circle-info" aria-hidden="true"></i><span>Confira a mensagem abaixo e envie o convite pelo SICARD aos colaboradores salvos. Cada pessoa recebe um e-mail individual, com o link persistente e os critérios deste julgamento.</span></p>
+          <div class="c-form-group"><label for="ami-email-template" class="c-form-label"><i class="fas fa-envelope-open-text"></i> Mensagem aos colaboradores</label><div id="ami-email-template" class="c-form-control collab-email-template" role="textbox" aria-readonly="true" tabindex="0"></div>
           <p class="form-help" id="ami-email-link-row"><i class="fas fa-link"></i> Link persistente do formulário: <a id="ami-email-form-link" href="#" target="_blank" rel="noopener"></a></p>
           </div>
-          <div class="ahp-form-actions" id="ami-email-actions" role="group" aria-label="Controles da mensagem de e-mail"><button type="button" class="btn btn-secondary" id="ami-copy-email-link"><i class="fas fa-copy c-btn__icon" aria-hidden="true"></i>Copiar link</button><button type="button" class="btn btn-secondary" id="ami-open-mail"><i class="fas fa-envelope c-btn__icon" aria-hidden="true"></i>Abrir aplicativo de e-mail</button></div>
+          <div class="ahp-form-actions" id="ami-email-actions" role="group" aria-label="Controles da mensagem de e-mail"><button type="button" class="btn btn-secondary" id="ami-copy-email-link"><i class="fas fa-copy c-btn__icon" aria-hidden="true"></i>Copiar link</button><button type="button" class="btn btn-secondary" id="ami-open-mail" disabled><i class="fas fa-envelope c-btn__icon" aria-hidden="true"></i>Enviar e-mail</button><button type="button" class="btn btn-secondary" id="ami-email-receipts" disabled><i class="fas fa-arrows-rotate c-btn__icon" aria-hidden="true"></i>Atualizar confirmações</button></div>
+          <p class="form-help">Aceitação pelo servidor não confirma entrega. A confirmação de leitura depende do destinatário e do aplicativo de e-mail. Use “Atualizar confirmações” para consultar os retornos recebidos; ausência de confirmação não significa que a mensagem não foi lida.</p>
+          <p id="ami-email-status" class="form-help" role="status" aria-live="polite"></p>
+          <div class="matriz-table-wrap"><table class="admin-table" aria-label="Envios e confirmações de e-mail"><thead><tr><th>Destinatário</th><th>Registrado em</th><th>Envio</th><th>Entrega</th><th>Leitura</th><th>Detalhes</th></tr></thead><tbody id="ami-email-deliveries"></tbody></table></div>
+          <div class="admin-table-footer"><nav id="ami-email-status-pagination" class="admin-pagination" aria-label="Paginação dos envios de e-mail"></nav><p id="ami-email-status-count" class="admin-table-summary" aria-live="polite"></p></div>
         </div>
       </section>
     </div>
@@ -81,5 +85,6 @@
   <script src="/assets/js/admin-auth.js"></script>
   <script src="/assets/vendor/xlsx/xlsx-0.18.5.min.js"></script>
   <script src="/assets/js/paginas/analise-multicriterio-tabela.js?v=20260820-multiselect"></script>
-  <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20261019-feedback"></script>
+  <script src="/assets/js/paginas/ami-email.js?v=20261019-envio-confirmacoes"></script>
+  <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20261019-envio-confirmacoes"></script>
 {% endblock %}

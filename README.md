@@ -26,6 +26,123 @@ O backend é organizado em:
 | SQL e persistência | `api/repositories/` |
 | Conexões | `api/db/` |
 
+### Email do SICARD
+
+O SICARD pode usar a mesma conta SMTP autorizada do SIGMA, mas executa o envio
+diretamente: não chama os endpoints de email do SIGMA, não altera seu código
+nem escreve em seu banco. As cotas e a reputação do remetente são compartilhadas.
+Esta integração não dispara mensagens automaticamente ao cadastrar demandas,
+concluir processos ou executar outros fluxos.
+
+Todos os endpoints abaixo pertencem ao SICARD e exigem sessão válida de
+**Gestor ou Admin**, por cookie ou Bearer. Em produção, acrescente `/sicard`
+antes de `/api`.
+
+| Método | Endpoint | Função |
+|---|---|---|
+| GET | `/api/email/diagnostico` | Verifica a configuração, sem conectar nem enviar; não revela senha ou usuário SMTP |
+| POST | `/api/email/teste-conexao` | Verifica TLS, autenticação e resposta SMTP, sem enviar mensagem |
+| POST | `/api/email/teste` | Envia uma mensagem de teste a um único `destinatario` informado no JSON |
+| POST | `/api/email/enviar` | Envia assunto e conteúdo definidos pelo solicitante autorizado |
+
+Contrato de envio:
+
+```json
+{
+  "destinatario": "pessoa@example.com",
+  "assunto": "Atualização da demanda",
+  "texto": "Há uma atualização disponível no SICARD.",
+  "html": "<p>Há uma atualização disponível no SICARD.</p>"
+}
+```
+
+`html` é opcional; `texto` é obrigatório e usado como alternativa de leitura.
+Cada requisição aceita **um destinatário**, assunto de até 200 caracteres,
+texto de até 50.000 e HTML de até 100.000. Não aceita anexos, CC, BCC, troca de
+remetente ou credenciais no corpo. Não é um serviço de envio em massa.
+O remetente exibe o nome **SICARD** e usa o endereço autorizado da configuração.
+O retorno `aceito_smtp` inclui `id_mensagem` para correlação, mas **não comprova
+entrega à caixa de entrada**. Não há rastreamento de leitura ou de devoluções.
+
+Para ativar, preencha no `.env` privado do SICARD as variáveis de email
+documentadas em `.env.example`, preservando as demais configurações:
+
+- `SICARD_EMAIL_ENABLED=true`;
+- `SICARD_SMTP_HOST`, `SICARD_SMTP_PORT`, `SICARD_SMTP_USER` e
+  `SICARD_SMTP_PASSWORD` com a conta autorizada (para Gmail, senha de aplicativo);
+- `SICARD_SMTP_SECURITY=starttls` (normalmente porta 587) ou `ssl` (normalmente
+  porta 465). Não existe modo sem TLS e a validação do certificado é obrigatória;
+- `SICARD_EMAIL_FROM` com o endereço autorizado para envio e, opcionalmente,
+  `SICARD_EMAIL_REPLY_TO` para respostas;
+- `SICARD_SMTP_TIMEOUT` entre 1 e 60 segundos (padrão 30).
+
+O Compose já carrega o `.env` do SICARD; alterações no ambiente de produção
+precisam ser aplicadas pelo procedimento de implantação autorizado. Não montar
+o `.env` inteiro do SIGMA nem versionar credenciais. O envio fica desativado por
+padrão. Primeiro consulte o diagnóstico, depois teste a conexão e só então faça
+um envio autorizado. O diagnóstico configurado não substitui esses testes.
+
+Configuração ausente e falhas de conexão retornam HTTP 503; recusas SMTP,
+autenticação e incompatibilidades retornam 502. Interrupção durante a transmissão
+retorna 504 com resultado indeterminado: a mensagem pode já ter sido aceita.
+**Não há repetição automática**, para evitar duplicatas. As falhas trazem
+`detail` em português e o código no cabeçalho `X-SICARD-Email-Error`.
+Os logs registram usuário, identificador da mensagem e tipo de falha, sem senha,
+corpo, destinatário ou resposta bruta do provedor.
+
+#### Convites da Central de julgamentos
+
+A seção **Mensagem de email** envia a mensagem exibida pelo botão **Enviar
+e-mail**, individualmente para os colaboradores salvos do julgamento. Exige
+perfil Analista, Gestor ou Admin, julgamento aberto, prazo vigente e versão
+atual do cadastro. Durante edição o envio fica bloqueado: primeiro salve as
+alterações. O envio usa o texto completo exibido, sem abrir um aplicativo externo.
+
+Aplicar `database/137_email_convites_colaborativos.sql` antes de usar este fluxo.
+Os endpoints, todos no SICARD, são:
+
+- `GET /api/ahp/comparacao-colaborativa/ambientes/{id}/emails`: histórico;
+- `POST .../{id}/emails/enviar`: `destinatario`, `texto` e `versao` (valor de
+  `atualizadoEm` do julgamento); envia um convite salvo por requisição;
+- `POST .../{id}/emails/confirmacoes`: coleta os retornos por IMAP e atualiza o
+  histórico, sem reenviar mensagens.
+
+O registro é reservado no PostgreSQL **antes** do SMTP, com exclusividade por
+julgamento, destinatário e hash do conteúdo. Repetições idênticas já aceitas ou
+sem resultado final não são reenviadas, mesmo após recarga da página ou chamadas
+concorrentes. Falhas comprovadas podem ser tentadas novamente por ação explícita.
+Se o processo parar após a reserva, o resultado permanece sem confirmação e
+exige consulta/revisão; não há reenvio automático. O corpo não é armazenado no
+histórico; ficam hash, destinatário, Message-ID, usuário e estados do transporte.
+
+O SICARD solicita confirmação de leitura via `Disposition-Notification-To`.
+Solicita DSN de sucesso, falha e atraso **somente se o servidor SMTP anunciar
+suporte**. O Gmail da conta compartilhada não anunciou DSN no teste realizado:
+a aceitação SMTP não é apresentada como entrega. Devoluções ainda podem chegar
+à conta remetente. O aplicativo do destinatário pode ignorar ou recusar a
+solicitação de leitura; ausência de confirmação não significa ausência de leitura.
+Não há pixel de rastreamento, nem uso da abertura do formulário como prova de
+leitura do email.
+
+Para coletar os retornos, habilite `SICARD_EMAIL_IMAP_ENABLED=true`, configure
+`SICARD_EMAIL_IMAP_HOST`, `SICARD_EMAIL_IMAP_PORT` (993) e
+`SICARD_EMAIL_IMAP_FOLDER` (INBOX). Usa a mesma conta e senha SMTP; o provedor
+precisa permitir IMAP. O botão **Atualizar confirmações** executa a coleta sob
+demanda, inclusive de retornos recebidos enquanto a página estava fechada.
+**Não existe coleta agendada em segundo plano.**
+
+A consulta usa conexão TLS, seleção somente-leitura e `BODY.PEEK[]`: não marca
+mensagens como lidas, não move e não exclui. Busca apenas mensagens
+`multipart/report` contendo o Message-ID ou identificador de envelope de um
+envio desse julgamento. A interpretação exige correlação exata e destinatário
+compatível: DSN `delivered` confirma entrega, `failed` registra devolução,
+`delayed` indica adiamento; `relayed`/`expanded` não comprovam entrega final.
+MDN `displayed` registra a confirmação informada pelo aplicativo — não prova
+que uma pessoa leu ou compreendeu o conteúdo. Respostas comuns não contam.
+Relatórios repetidos não duplicam eventos. Retornos acima de 256 KiB ou mais de
+100 retornos por envio interrompem a coleta com aviso, sem truncamento silencioso.
+Os relatórios brutos e demais emails da conta não são armazenados.
+
 ### Tabelas do Explorador de camadas
 
 O modo Detalhes do Explorador de camadas geoespaciais adota o padrão da tabela

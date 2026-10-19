@@ -75,8 +75,8 @@ function camadasPrevia() {
     ...camada, chave:chave(papel, camada), grupo:papel === 'entrada' ? 'entrada' : 'base',
     categoriaId:papel, categoria:papeis[papel], arquivoOrigem:camada.arquivo || camada.nome,
     pendente:!enviados[papel].some(item => {
-      const fonte=item.fonteElegibilidade || item;
-      return fonte.id === camada.id && fonte.revisao === camada.revisao;
+      const fontes=item.fontesElegibilidade || [item.fonteElegibilidade || item];
+      return fontes.some(fonte => fonte.id === camada.id && fonte.revisao === camada.revisao);
     }),
   })));
 }
@@ -154,7 +154,8 @@ function validarPapeis(papel, camadas) {
     if ([...vistos].some(outro => conflita(id, outro))) throw new Error(`A camada "${camada.nome}" está repetida.`);
     vistos.add(id);
     for (const outro of Object.keys(papeis).filter(item => item !== papel)) {
-      if ([...selecao[outro], ...previadas[outro], ...enviados[outro]].some(item => conflita(identidade(item), id))) {
+      if ([...selecao[outro], ...previadas[outro], ...enviados[outro]]
+        .some(item => [item, ...(item.fontesElegibilidade || [])].some(fonte => conflita(identidade(fonte), id)))) {
         throw new Error(`"${camada.nome}" já é ${papeis[outro].toLowerCase()}. Remova-a da seleção, atualize a prévia e retire-a da bancada desse papel antes de reutilizá-la.`);
       }
     }
@@ -398,12 +399,21 @@ async function enviar() {
         candidato.entrada.some(c => !['camadas','hierarquizacao'].includes(c.origemEntrada)))) {
       throw new Error('A entrada deve vir somente das camadas selecionadas ou de uma hierarquização, nunca das duas origens.');
     }
+    const daHierarquizacao = candidato.entrada[0]?.origemEntrada === 'hierarquizacao';
+    const codigoHierarquizacao = daHierarquizacao ? candidato.entrada[0].geojson.features[0].properties.hierarquizacao : null;
+    if (daHierarquizacao) {
+      const objetos = hierarquizacao?.dados_hierarquizacao?.objetos ?? hierarquizacao?.objetos;
+      if (hierarquizacao?.codigo !== codigoHierarquizacao || candidato.entrada.length !== objetos?.length ||
+          candidato.entrada.some(c => c.geojson.features[0].properties.hierarquizacao !== codigoHierarquizacao)) {
+        throw new Error('Envie todas as demandas da hierarquização para a prévia e mantenha todas marcadas para gerar uma única camada do grupo.');
+      }
+    }
     for (const papel of Object.keys(papeis)) validarPapeis(papel, candidato[papel]);
     const parametros=candidato.entrada.length ? await json('/extracao-atributos/elegibilidade/parametros') : null;
     const confirmado = await window.ProcessFeedback.confirmar({
       title:'Enviar prévia para a bancada',
       message:`Enviar ${camadas.length} camada(s): ${camadas.map(c => c.nome).join(', ')}?`,
-      warning:`Este envio substitui o conjunto anteriormente enviado por esta página pelas camadas marcadas na prévia. Camadas desmarcadas deixam esse conjunto. ${parametros ? `Demandas: pontos/multipontos recebem raio de ${parametros.buffer_ponto_m} m; linhas/multilinhas, ${parametros.buffer_linha_m} m de cada lado, em ${parametros.crs_metrico}, com ${parametros.segmentos_quadrante} segmentos por quadrante. Polígonos não recebem buffer. Saída: Polygon/MultiPolygon em ${parametros.crs_saida}, com reparo MakeValid e consolidação por feição. Os arquivos derivados integrais serão usados nos cálculos; as fontes e as bases de risco/restrição não serão alteradas.` : ''} Não calcula elegibilidade nem homologa os dados.`,
+      warning:`Este envio substitui o conjunto anteriormente enviado por esta página pelas camadas marcadas na prévia. Camadas desmarcadas deixam esse conjunto. ${daHierarquizacao ? `As ${candidato.entrada.length} demandas da hierarquização ${codigoHierarquizacao} serão reunidas em um único GeoPackage, na camada demandas, preservando os registros e atributos individuais, sem dissolver demandas diferentes. ` : ''}${parametros ? `Demandas: pontos/multipontos recebem raio de ${parametros.buffer_ponto_m} m; linhas/multilinhas, ${parametros.buffer_linha_m} m de cada lado, em ${parametros.crs_metrico}, com ${parametros.segmentos_quadrante} segmentos por quadrante. Polígonos não recebem buffer. Saída: Polygon/MultiPolygon em ${parametros.crs_saida}, com reparo MakeValid e consolidação por feição. Os arquivos derivados integrais serão usados nos cálculos; as fontes e as bases de risco/restrição não serão alteradas.` : ''} Não calcula elegibilidade nem homologa os dados.`,
       confirmLabel:'Enviar para a bancada',
     });
     if (!confirmado) { avisar('Envio cancelado. A bancada foi mantida.'); return; }
@@ -416,21 +426,39 @@ async function enviar() {
     processo.concluirTarefa(tarefas[0]);
     processo.tarefaAtual(tarefas[1],parametros ? `Pontos: ${parametros.buffer_ponto_m} m; linhas: ${parametros.buffer_linha_m} m por lado; ${parametros.crs_metrico} → ${parametros.crs_saida}. Bases sem conversão.` : 'Não há demandas de entrada marcadas; as bases mantêm suas geometrias originais.');
     const entradas=[];
-    for (const fonte of candidato.entrada) {
+    const fontesEntrada=daHierarquizacao ? [{
+      id:`hierarquizacao:${codigoHierarquizacao}`, nome:`${codigoHierarquizacao} — ${hierarquizacao.nome}`,
+      fontesElegibilidade:candidato.entrada,
+      revisao:JSON.stringify(candidato.entrada.map(c => [c.id,c.revisao]).sort()),
+      origemEntrada:'hierarquizacao',
+    }] : candidato.entrada;
+    for (const fonte of fontesEntrada) {
       conferir();
-      processo.detalhe(`Demanda ${entradas.length+1} de ${candidato.entrada.length}: ${fonte.nome}. Normalizando todas as feições e verificando o arquivo derivado integral no storage.`);
+      processo.detalhe(`Entrada ${entradas.length+1} de ${fontesEntrada.length}: ${fonte.nome}. ${daHierarquizacao ? `Reunindo ${candidato.entrada.length} demandas em uma única camada de GeoPackage. ` : ''}Normalizando todas as feições e verificando o arquivo derivado integral no storage.`);
       const chaveCache=JSON.stringify([fonte.id,fonte.revisao]);
       let derivada=normalizadas.get(chaveCache);
       if (!derivada) {
-        const atributos=fonte.origemEntrada==='hierarquizacao' ? fonte.geojson?.features?.[0]?.properties : undefined;
-        const resposta=descritorOriginal(await post('/extracao-atributos/elegibilidade/preparar-demanda',{id:fonte.id,atributos}));
+        const resposta=descritorOriginal(await post(`/extracao-atributos/elegibilidade/${daHierarquizacao ? 'preparar-hierarquizacao' : 'preparar-demanda'}`,
+          daHierarquizacao ? {codigo:codigoHierarquizacao,demandas:candidato.entrada.map(c => c.id)} : {id:fonte.id}));
         if (resposta.status_validacao!=='valida' || !resposta.arquivo || !resposta.revisao || !resposta.id?.startsWith('storage:') ||
             !resposta.tiles_url || !resposta.feicoes || resposta.normalizacao_demanda?.feicoes!==resposta.feicoes ||
             !resposta.metadados_local?.tipos_geometria?.length ||
             resposta.metadados_local.tipos_geometria.some(tipo=>!['Polygon','MultiPolygon'].includes(tipo))) {
           throw new Error(`"${fonte.nome}": o servidor não confirmou o arquivo integral com todas as demandas poligonais.`);
         }
-        derivada={...resposta, nome:fonte.nome, origemEntrada:fonte.origemEntrada, fonteElegibilidade:fonte};
+        if (daHierarquizacao) {
+          const auditoria=resposta.normalizacao_demanda;
+          const origens=auditoria.origem?.camadas?.map(c => c.id) || [];
+          if (resposta.camada!=='demandas' || !resposta.arquivo.endsWith('.gpkg') ||
+              auditoria.origem?.hierarquizacao!==codigoHierarquizacao ||
+              auditoria.total_demandas!==candidato.entrada.length ||
+              origens.length!==candidato.entrada.length || new Set(origens).size!==origens.length ||
+              candidato.entrada.some(c => !origens.includes(c.id))) {
+            throw new Error('O servidor não confirmou todas as demandas da hierarquização na camada única do GeoPackage.');
+          }
+        }
+        derivada={...resposta, nome:fonte.nome, origemEntrada:fonte.origemEntrada,
+          ...(daHierarquizacao ? {fontesElegibilidade:fonte.fontesElegibilidade} : {fonteElegibilidade:fonte})};
         normalizadas.set(chaveCache,derivada);
       }
       entradas.push(derivada);
@@ -458,8 +486,9 @@ async function enviar() {
     for (const papel of Object.keys(papeis)) enviados[papel] = [...candidato[papel]];
     atualizarBancada();
     processo.concluirTarefa(tarefas[3]);
-    processo.sucesso({title:'Camadas enviadas à bancada',message:`${camadas.length} camada(s) enviada(s), incluindo ${entradas.length} arquivo(s) integral(is) de demandas poligonais. Bases de risco e restrição preservadas. A prévia continua mostrando as fontes originais. Nenhum cálculo ou homologação foi executado.`});
-    avisar(`${camadas.length} camada(s) marcada(s) na prévia enviada(s) à bancada, com os papéis de entrada, restrição e risco preservados.`, 'success');
+    const totalEnviado=Object.values(candidato).flat().length;
+    processo.sucesso({title:'Camadas enviadas à bancada',message:`${totalEnviado} camada(s) enviada(s), incluindo ${entradas.length} arquivo(s) integral(is) de demandas poligonais. ${daHierarquizacao ? `${fontesEntrada[0].fontesElegibilidade.length} demandas reunidas em um único GeoPackage e uma única camada demandas. ` : ''}Bases de risco e restrição preservadas. A prévia continua mostrando as fontes originais. Nenhum cálculo ou homologação foi executado.`});
+    avisar(`${totalEnviado} camada(s) enviada(s) à bancada, com os papéis de entrada, restrição e risco preservados.${daHierarquizacao ? ' Demandas da hierarquização reunidas em uma única camada de GeoPackage.' : ''}`, 'success');
   });
 }
 async function salvarLista(papel) {

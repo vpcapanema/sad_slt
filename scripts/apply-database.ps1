@@ -262,7 +262,8 @@ $migrations = @(
     "131_geometria_historico_storage_metadata.sql",
     "132_solicitacao_complementacao_demanda.sql",
     "133_avaliacao_geometria_historico.sql",
-    "136_corrigir_contrato_exportacao_seed.sql"
+    "136_corrigir_contrato_exportacao_seed.sql",
+    "137_email_convites_colaborativos.sql"
 )
 
 if ($OnlyMigration) {
@@ -288,6 +289,10 @@ if (-not $OnlyMigration) {
     if (Test-SchemaReady $latestSchemaQuery) {
         Write-Ok "Schema ja esta na migration 091; nenhuma migration sera reaplicada"
         $migrations = @()
+        if (-not (Test-SchemaReady "SELECT to_regclass('ahp.comparacao_colaborativa_email') IS NOT NULL;")) {
+            $migrations += "137_email_convites_colaborativos.sql"
+            Write-Ok "Historico de emails dos julgamentos pendente; aplicando migration 137"
+        }
         if (-not (Test-SchemaReady "SELECT to_regclass('dominios.categoria_extracao_atributos') IS NOT NULL;")) {
             $migrations = @("104_categorias_extracao_atributos.sql")
             Write-Ok "Dicionario de categorias pendente; aplicando migration 104"

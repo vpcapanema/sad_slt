@@ -218,6 +218,22 @@ def preparar_demanda(payload: DemandaBancada, user: SessionUser = Depends(requir
         raise HTTPException(422, str(exc)) from exc
 
 
+class HierarquizacaoBancada(BaseModel):
+    codigo: str = Field(min_length=1, max_length=200)
+    demandas: list[str] = Field(min_length=1)
+
+
+@router.post('/elegibilidade/preparar-hierarquizacao')
+def preparar_hierarquizacao(payload: HierarquizacaoBancada, user: SessionUser = Depends(require_geospatial_access)):
+    from api.services.elegibilidade_preparacao import preparar_hierarquizacao as preparar
+    try:
+        return preparar(payload.codigo, payload.demandas, user.id)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except (ValueError, RuntimeError) as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
 class CamadaElegibilidade(BaseModel):
     id: str = Field(min_length=1, max_length=1200)
     nome: str = Field(min_length=1, max_length=200)

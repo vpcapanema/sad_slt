@@ -59,6 +59,7 @@ def test_no_legacy_html_remains_outside_template_directory() -> None:
         Path("documentacao/apresentacao_hierarquizacao/index.html"),
         Path("documentacao/feedback-preview.html"),
         Path("preview/diagramas-hierarquizacao-opcoes.html"),
+        Path("tests/browser/fixtures/elegibilidade-resultados-prototipo.html"),
     }
     legacy_html = [
         path

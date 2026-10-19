@@ -10,8 +10,8 @@ from pathlib import Path
 # imitavam um caminho de rede e acusavam arquivos de dados onde nao ha caminho
 # nenhum, inclusive quando o escape vinha colado a pontuacao ("\\t.\\r").
 WINDOWS_HOST_PATH = re.compile(
-    r"(?<![A-Za-z0-9])"
-    r"(?:[A-Za-z]:[\\/]|\\\\[A-Za-z0-9_-][A-Za-z0-9._-]*[A-Za-z0-9_-][\\/])"
+    r"(?<![\w\\])"
+    r"(?:[A-Za-z]:[\\/]|(?:\\\\\\\\|\\\\)[A-Za-z0-9_-][A-Za-z0-9._-]*[A-Za-z0-9_-][\\/])"
 )
 UNIX_HOST_PATH = re.compile(
     r"(?<![A-Za-z0-9:])/(?:home|Users|opt|tmp|srv|mnt|workspace)/[A-Za-z0-9._~/-]+"
@@ -47,6 +47,8 @@ INTENTIONAL_FIXTURES = {
     # politica de caminhos o recusa. E o caso de teste, nao um vazamento.
     Path("tests/test_catalogo_arquivos.py"),
     Path("tests/test_visualizacao_arquivo.py"),
+    Path("tests/test_elegibilidade_relatorio.py"),  # Prova que aliases rejeitam caminhos.
+    Path("tests/test_no_absolute_paths.py"),  # Casos positivos e negativos do detector.
     # Metadados baixados do IPEA; o link em UNC esta no conteudo de origem.
     Path("plugins/censo2022_sp/socioeconomico_desenvolvimento/fontes/ipeadata_metadados.json"),
     # Permissoes locais do Claude Code: ignorado pelo Git, nunca chega a VM e e
@@ -87,6 +89,14 @@ VENDORED_ROOTS = (
 
 
 class TestNoAbsolutePaths(unittest.TestCase):
+    def test_detector_distingue_caminhos_de_rotulos_e_expressoes(self) -> None:
+        for caminho in (r"C:\arquivo", r"R:/dados/base", r"\\servidor\pasta", r"\\\\servidor\\pasta"):
+            with self.subTest(caminho=caminho):
+                self.assertIsNotNone(WINDOWS_HOST_PATH.search(caminho))
+        for texto in (r'Hierarquização:\n', r'[<>/\\\x00-\x1f]', r'linha\\ntexto'):
+            with self.subTest(texto=texto):
+                self.assertIsNone(WINDOWS_HOST_PATH.search(texto))
+
     def test_repositorio_nao_contem_caminhos_absolutos_de_host(self) -> None:
         violations: list[str] = []
         for file_path in Path(".").rglob("*"):

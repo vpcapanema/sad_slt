@@ -280,7 +280,11 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
     assert "wireSaatyFormPair" in julgamentos_js
     assert 'class="ami-pairwise-form-row"' not in julgamentos_js
     assert 'id="ami-email-draft-card"' in html
-    assert "Sugestão de mensagem de e-mail" in html
+    assert "Mensagem de email" in html
+    assert "Enviar e-mail" in html
+    assert "Atualizar confirmações" in html
+    assert "Abrir aplicativo de e-mail" not in html
+    assert "/assets/js/paginas/ami-email.js" in html
     assert 'id="ami-email-form-link"' in html
     assert "judgment.url_publica" in julgamentos_js
     assert "renderEmailDraft(judgment);" in julgamentos_js
@@ -415,7 +419,7 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
     assert '>2.1.1</span><span id="ami-deadline-section-title">Data limite da coleta' in html
     assert 'id="ami-criteria-matrix-summary"' in html
     assert ">2.2</span><span>Status do ambiente colaborativo" in html
-    assert ">2.3</span><span>Sugestão de mensagem de e-mail" in html
+    assert ">2.3</span><span>Mensagem de email" in html
     assert html.count("ami-config-field") == 3
     for field_id in ("ami-deadline", "ami-hierarchy", "ami-emails"):
         field = html.split(f'for="{field_id}"', 1)[1].split("</div>", 1)[0]

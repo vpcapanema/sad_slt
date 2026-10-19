@@ -4,8 +4,9 @@ from types import SimpleNamespace
 from uuid import uuid4
 
 import geopandas as gpd
+import pandas as pd
 import pytest
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 from osgeo import ogr
 from shapely.geometry import Point, LineString, Polygon, MultiPoint, MultiLineString, MultiPolygon, GeometryCollection
@@ -240,6 +241,123 @@ def test_falha_na_validacao_nao_grava_arquivo(isolado, monkeypatch):
     assert not isolado[1]
 
 
+@pytest.fixture
+def hierarquizacao_oficial(monkeypatch):
+    from api.repositories import cadastro_geometria_repository as repo
+    from api.services import hierarquizacao_service as hier
+    objetos = [
+        {'cabecalho_objeto': {'codigo': 'D-1', 'nome': 'Pontos e linhas', 'atributos': {'teste': 42}}},
+        {'cabecalho_objeto': {'codigo': 'D-2', 'nome': 'Polígono', 'prioridade': 2}},
+    ]
+    dados = {'codigo': 'H-1', 'nome': 'Grupo oficial', 'tipo_demanda': 'projeto',
+             'objetos': [], 'dados_hierarquizacao': {'objetos': objetos}}
+    geometrias = {
+        'D-1': camada([Point(-46.6, -23.5), LineString([(-46.6, -23.5), (-46.59, -23.5)])], crs=4674),
+        'D-2': camada([tipos()[4]], crs=4326).to_crs(31983),
+    }
+    chamadas = []
+
+    def oficial(tipo, codigo):
+        chamadas.append((tipo, codigo))
+        original = geometrias[codigo]
+        return {**json.loads(original.to_json()), 'crs': {'properties': {'name': original.crs.to_string()}}}
+
+    monkeypatch.setattr(hier, 'obter_hierarquizacao', lambda codigo: SimpleNamespace(model_dump=lambda **kwargs: dados))
+    monkeypatch.setattr(repo, 'exportar_original', oficial)
+    return dados, geometrias, chamadas
+
+
+def test_hierarquizacao_gera_um_geopackage_uma_camada_todas_as_feicoes(isolado, hierarquizacao_oficial):
+    dados, originais, chamadas = hierarquizacao_oficial
+    antes = {codigo: frame.copy() for codigo, frame in originais.items()}
+    resposta = service.preparar_hierarquizacao('H-1', ['cadastro:projeto:D-2', 'cadastro:projeto:D-1'], 'autor')
+    assert chamadas == [('projeto', 'D-1'), ('projeto', 'D-2')]
+    assert len(isolado[1]) == 1 and isolado[1][0]['origem'] == 'hierarquizacao:H-1'
+    arquivo = isolado[1][0]['arquivo']
+    ds = ogr.Open(str(arquivo))
+    assert ds.GetLayerCount() == 1 and ds.GetLayer(0).GetName() == 'demandas'
+    assert ds.GetLayer(0).GetFeatureCount() == 3
+    auditoria = json.loads(ds.GetLayer(0).GetMetadata()['SICARD_NORMALIZACAO'])
+    assert auditoria == resposta['normalizacao_demanda']
+    assert auditoria['total_demandas'] == 2 and auditoria['feicoes'] == 3
+    assert auditoria['pontos_convertidos'] == auditoria['linhas_convertidas'] == auditoria['poligonos_sem_buffer'] == 1
+    assert [origem['id'] for origem in auditoria['origem']['camadas']] == ['cadastro:projeto:D-1', 'cadastro:projeto:D-2']
+    assert auditoria['origem']['hierarquizacao'] == 'H-1'
+    from api.services.bancada_arquivos import carregar_para_execucao
+    frame = carregar_para_execucao(resposta['arquivo'], resposta['revisao'], resposta['id'])['frame']
+    assert resposta['arquivo'].endswith('.gpkg') and resposta['camada'] == 'demandas'
+    assert resposta['id'] == f"storage:{resposta['arquivo']}::demandas"
+    assert frame.crs.to_epsg() == 4674 and len(frame) == 3
+    assert frame.geometry.is_valid.all() and frame.geometry.geom_type.isin(['Polygon', 'MultiPolygon']).all()
+    assert frame[auditoria['campo_codigo_demanda']].tolist() == ['D-1', 'D-1', 'D-2']
+    assert frame[auditoria['campo_fid_origem']].tolist() == [0, 1, 0]
+    assert frame[auditoria['campo_camada_origem']].tolist() == ['cadastro:projeto:D-1'] * 2 + ['cadastro:projeto:D-2']
+    assert frame['valor'].tolist() == [0, 1, 0]
+    assert frame['hierarquizacao'].tolist() == ['H-1'] * 3
+    assert [json.loads(valor) for valor in frame['objeto_hierarquizacao']] == [dados['dados_hierarquizacao']['objetos'][0]] * 2 + [dados['dados_hierarquizacao']['objetos'][1]]
+    assert json.loads(frame.iloc[0]['atributos']) == {'teste': 42}
+    assert pd.isna(frame.iloc[2]['atributos'])
+    assert frame.iloc[2]['prioridade'] == 2
+    for codigo, original in originais.items():
+        assert original.equals(antes[codigo])
+        esperado, _ = service.normalizar_frame(original)
+        selecionadas = frame[frame[auditoria['campo_codigo_demanda']] == codigo]
+        assert all(a.equals(b) for a, b in zip(selecionadas.geometry, esperado.geometry))
+
+
+@pytest.mark.parametrize('referencias', [
+    [], ['cadastro:projeto:D-1'],
+    ['cadastro:projeto:D-1', 'cadastro:projeto:D-1'],
+    ['cadastro:projeto:D-1', 'cadastro:projeto:FORA-DO-GRUPO'],
+])
+def test_hierarquizacao_recusa_grupo_incompleto_duplicado_ou_estranho(isolado, hierarquizacao_oficial, referencias):
+    with pytest.raises(ValueError, match='todas as demandas'):
+        service.preparar_hierarquizacao('H-1', referencias, 'autor')
+    assert not isolado[1] and not hierarquizacao_oficial[2]
+
+
+def test_hierarquizacao_sem_objetos_ou_com_codigos_invalidos(isolado, hierarquizacao_oficial):
+    dados = hierarquizacao_oficial[0]
+    objetos = dados['dados_hierarquizacao']['objetos']
+    dados['dados_hierarquizacao']['objetos'] = []
+    with pytest.raises(ValueError, match='não contém demandas'):
+        service.preparar_hierarquizacao('H-1', ['cadastro:projeto:D-1'], 'autor')
+    dados['dados_hierarquizacao']['objetos'] = objetos
+    objetos[1]['cabecalho_objeto']['codigo'] = ''
+    with pytest.raises(ValueError, match='sem código'):
+        service.preparar_hierarquizacao('H-1', ['cadastro:projeto:D-1'], 'autor')
+    objetos[1]['cabecalho_objeto']['codigo'] = 'D-1'
+    with pytest.raises(ValueError, match='repetidas'):
+        service.preparar_hierarquizacao('H-1', ['cadastro:projeto:D-1'], 'autor')
+    assert not isolado[1]
+
+
+def test_hierarquizacao_sem_geometria_na_segunda_fonte_nao_grava_parcial(isolado, hierarquizacao_oficial):
+    hierarquizacao_oficial[1]['D-2'].geometry = [None]
+    with pytest.raises(ValueError, match='Feição|feição'):
+        service.preparar_hierarquizacao('H-1', ['cadastro:projeto:D-1', 'cadastro:projeto:D-2'], 'autor')
+    assert not isolado[1]
+
+
+def test_hierarquizacao_nao_sobrescreve_campos_de_rastreio_existentes(isolado, hierarquizacao_oficial):
+    fonte = hierarquizacao_oficial[1]['D-1']
+    for campo in ('slt_fid_origem', 'slt_camada_origem', 'slt_codigo_demanda'):
+        fonte[campo] = 'legado'
+    resposta = service.preparar_hierarquizacao('H-1', ['cadastro:projeto:D-1', 'cadastro:projeto:D-2'], 'autor')
+    frame = gpd.read_file(isolado[1][0]['arquivo'], layer='demandas', engine='pyogrio')
+    assert frame.iloc[0]['slt_fid_origem'] == 'legado'
+    assert frame['slt_fid_origem_'].tolist() == [0, 1, 0]
+    assert resposta['normalizacao_demanda']['campo_camada_origem'] == 'slt_camada_origem_'
+
+
+def test_hierarquizacao_recusa_perda_de_registros_antes_de_gravar(isolado, hierarquizacao_oficial, monkeypatch):
+    ler = service.ler_vetor
+    monkeypatch.setattr(service, 'ler_vetor', lambda *args: ler(*args).iloc[:1])
+    with pytest.raises(ValueError, match='todas as demandas'):
+        service.preparar_hierarquizacao('H-1', ['cadastro:projeto:D-1', 'cadastro:projeto:D-2'], 'autor')
+    assert not isolado[1]
+
+
 def test_sem_montagem_gera_previa_remota_sem_disco_local(isolado, monkeypatch):
     from api.services import storage_remoto
     arquivos = {}
@@ -305,3 +423,37 @@ def test_rotas_autenticadas_e_parametros_compartilhados(monkeypatch):
     monkeypatch.setattr(service, 'preparar_demanda', falha)
     resposta = client.post('/extracao-atributos/elegibilidade/preparar-demanda', json={'id': 'entrada'})
     assert resposta.status_code == 422 and resposta.json()['detail'] == 'Geometria recusada.'
+
+
+def test_rota_preparar_hierarquizacao_autenticada_e_erros_explicitos(monkeypatch):
+    from api.routers.extracao_atributos import router
+    from api.deps.auth import require_geospatial_access
+    app = FastAPI()
+    app.include_router(router)
+    app.dependency_overrides[require_geospatial_access] = lambda: SimpleNamespace(id='autor')
+    client = TestClient(app)
+    rota = '/extracao-atributos/elegibilidade/preparar-hierarquizacao'
+    payload = {'codigo': 'H-1', 'demandas': ['cadastro:projeto:D-1']}
+    monkeypatch.setattr(service, 'preparar_hierarquizacao',
+                        lambda codigo, demandas, dono: {'codigo': codigo, 'demandas': demandas, 'dono': dono})
+    assert client.post(rota, json=payload).json() == {**payload, 'dono': 'autor'}
+    assert client.post(rota, json={**payload, 'demandas': []}).status_code == 422
+    assert client.post(rota, json={**payload, 'codigo': ''}).status_code == 422
+
+    def falhar(*args):
+        raise ValueError('Grupo incompleto.')
+
+    monkeypatch.setattr(service, 'preparar_hierarquizacao', falhar)
+    resposta = client.post(rota, json=payload)
+    assert resposta.status_code == 422 and resposta.json()['detail'] == 'Grupo incompleto.'
+
+    def indisponivel(*args):
+        raise FileNotFoundError('Geometria indisponível.')
+
+    monkeypatch.setattr(service, 'preparar_hierarquizacao', indisponivel)
+    assert client.post(rota, json=payload).status_code == 404
+    def sem_sessao():
+        raise HTTPException(401, 'Sessão necessária.')
+
+    app.dependency_overrides[require_geospatial_access] = sem_sessao
+    assert client.post(rota, json=payload).status_code == 401

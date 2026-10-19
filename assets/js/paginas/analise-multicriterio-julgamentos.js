@@ -653,6 +653,7 @@
   }
   function setEnvironmentMode(mode) {
     environmentMode = mode;
+    SICARDEmailConvites.modo(mode);
     draftEditing = mode === "create";
     draftSnapshot = [];
     draftPage = 1;
@@ -740,6 +741,7 @@
     messageBox.dataset.message = message; messageBox.textContent = "";
     lines.forEach(function (line, index) { if (line === url && url) { var anchor = document.createElement("a"); anchor.href = url; anchor.target = "_blank"; anchor.rel = "noopener"; anchor.textContent = url; messageBox.appendChild(anchor); } else { messageBox.appendChild(document.createTextNode(line)); } if (index < lines.length - 1) messageBox.appendChild(document.createTextNode("\n")); });
     link.href = url || "#"; link.textContent = url || "Link indisponível"; card.classList.remove("is-hidden");
+    SICARDEmailConvites.mostrar(judgment, message, url);
   }
   function renderDraftEmails() {
     var column = $("ami-emails-filter-coluna").value, valueSelect = $("ami-emails-filter-valor");
@@ -1101,7 +1103,6 @@
       try { await navigator.clipboard.writeText(url); Notify.success("Link do julgamento", "Link copiado."); }
       catch (error) { Notify.error("Não foi possível copiar o link", error.message); }
     });
-    $("ami-open-mail").addEventListener("click", function () { var body = $("ami-email-template").dataset.message || $("ami-email-template").textContent; location.href = "mailto:" + draftEmails.map(function (convite) { return convite.email; }).join(",") + "?subject=" + encodeURIComponent("Convite para preenchimento colaborativo AHP (SAD/SLT)") + "&body=" + encodeURIComponent(body); });
     $("ami-analysis-responses").addEventListener("change", function (event) {
       var id = event.target.dataset.analysisResponse; if (!id) return;
       if (event.target.checked) analysisResponseIds.add(id); else analysisResponseIds.delete(id);

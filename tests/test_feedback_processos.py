@@ -298,8 +298,9 @@ def test_captura_do_sigma_para_respostas_do_servidor():
         assert evento in FEEDBACK_JS
     # Erros do FastAPI (detail com loc/msg) viram linhas legíveis.
     assert "e.msg && e.loc" in FEEDBACK_JS
-    assert "Date.now() - this._lastActivity" in FEEDBACK_JS
-    assert "Date.now() - this._lastContact" in FEEDBACK_JS
+    assert "const agora = Date.now()" in FEEDBACK_JS
+    assert "agora - this._lastActivity" in FEEDBACK_JS
+    assert "agora - this._lastContact" in FEEDBACK_JS
 
 
 

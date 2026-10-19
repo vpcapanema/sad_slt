@@ -71,7 +71,7 @@ def normalizar_frame(frame: gpd.GeoDataFrame) -> tuple[gpd.GeoDataFrame, dict]:
     }
 
 
-def preparar_demanda(ident: str, dono: str, atributos: dict | None = None) -> dict:
+def _carregar_demanda(ident: str, atributos: dict | None = None) -> tuple[gpd.GeoDataFrame, str, dict]:
     origem: dict = {'id': ident}
     if ident.startswith('cadastro:'):
         from api.repositories.cadastro_geometria_repository import exportar_original, TipoCadastro
@@ -97,6 +97,11 @@ def preparar_demanda(ident: str, dono: str, atributos: dict | None = None) -> di
             raise ValueError('O arquivo de origem mudou durante a leitura. Atualize a prévia e tente novamente.')
     if not isinstance(frame, gpd.GeoDataFrame):
         raise ValueError('A fonte não contém uma camada vetorial de demandas.')
+    return frame, nome, origem
+
+
+def preparar_demanda(ident: str, dono: str, atributos: dict | None = None) -> dict:
+    frame, nome, origem = _carregar_demanda(ident, atributos)
     campo_fid = 'slt_fid_origem'
     while campo_fid in frame.columns:
         campo_fid += '_'
@@ -105,6 +110,73 @@ def preparar_demanda(ident: str, dono: str, atributos: dict | None = None) -> di
     normalizada, auditoria = normalizar_frame(frame)
     auditoria['origem'] = origem
     auditoria['campo_fid_origem'] = campo_fid
+    return _gravar_demanda(normalizada, auditoria, ident, nome, dono)
+
+
+def preparar_hierarquizacao(codigo: str, demandas: list[str], dono: str) -> dict:
+    from api.services.hierarquizacao_service import obter_hierarquizacao
+
+    dados = obter_hierarquizacao(codigo).model_dump(mode='json')
+    objetos = dados['dados_hierarquizacao'].get('objetos', dados['objetos'])
+    tipo = dados['tipo_demanda']
+    if not objetos:
+        raise ValueError('A hierarquização não contém demandas.')
+    if tipo not in {'plano', 'programa', 'projeto'}:
+        raise ValueError('Tipo de demanda não reconhecido.')
+    cabecalhos = [objeto.get('cabecalho_objeto', objeto) for objeto in objetos]
+    if any(not cab.get('codigo') for cab in cabecalhos):
+        raise ValueError('Há demanda sem código; confira o cadastro da hierarquização.')
+    referencias = [f"cadastro:{tipo}:{cab['codigo']}" for cab in cabecalhos]
+    if len(set(referencias)) != len(referencias):
+        raise ValueError('A hierarquização contém demandas repetidas.')
+    if len(demandas) != len(referencias) or set(demandas) != set(referencias):
+        raise ValueError('Envie todas as demandas da hierarquização. Atualize a seleção e marque todas na prévia.')
+    fontes = []
+    for ident, cab, objeto in zip(referencias, cabecalhos, objetos):
+        frame, _, origem = _carregar_demanda(ident, {
+            **cab, 'hierarquizacao': codigo, 'objeto_hierarquizacao': objeto,
+        })
+        validar(frame, max_feicoes=None)
+        fontes.append((frame, origem, cab['codigo']))
+    campos = {campo.lower() for frame, _, _ in fontes for campo in frame.columns}
+    rastreio = {}
+    for campo in ('slt_fid_origem', 'slt_camada_origem', 'slt_codigo_demanda'):
+        livre = campo
+        while livre.lower() in campos:
+            livre += '_'
+        campos.add(livre.lower())
+        rastreio[campo] = livre
+    frames = []
+    origens = []
+    for frame, origem, codigo_demanda in fontes:
+        frame = frame.copy()
+        frame[rastreio['slt_fid_origem']] = frame.index
+        frame[rastreio['slt_camada_origem']] = origem['id']
+        frame[rastreio['slt_codigo_demanda']] = codigo_demanda
+        normalizada, auditoria = normalizar_frame(frame)
+        frames.append(normalizada)
+        origens.append({**origem, 'normalizacao': auditoria})
+    normalizada = gpd.GeoDataFrame(pd.concat(frames, ignore_index=True), geometry='geometry', crs=regra.CRS_CADASTRAL)
+    ident = f'hierarquizacao:{codigo}'
+    auditoria = {
+        **parametros(), 'feicoes': len(normalizada),
+        'origem': {'id': ident, 'hierarquizacao': codigo, 'camadas': origens},
+        'campo_fid_origem': rastreio['slt_fid_origem'],
+        'campo_camada_origem': rastreio['slt_camada_origem'],
+        'campo_codigo_demanda': rastreio['slt_codigo_demanda'],
+        'total_demandas': len(fontes),
+    }
+    for campo in ('pontos_convertidos', 'linhas_convertidas', 'poligonos_sem_buffer', 'colecoes_convertidas'):
+        auditoria[campo] = sum(origem['normalizacao'][campo] for origem in origens)
+    for campo in ('tipos_origem', 'componentes_colecoes'):
+        contagens = Counter()
+        for origem in origens:
+            contagens.update(origem['normalizacao'][campo])
+        auditoria[campo] = dict(contagens)
+    return _gravar_demanda(normalizada, auditoria, ident, f"{codigo} — {dados['nome']}", dono)
+
+
+def _gravar_demanda(normalizada: gpd.GeoDataFrame, auditoria: dict, ident: str, nome: str, dono: str) -> dict:
     for campo in normalizada.columns:
         if campo != normalizada.geometry.name and normalizada[campo].dtype == 'object':
             normalizada[campo] = normalizada[campo].map(

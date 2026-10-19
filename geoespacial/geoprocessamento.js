@@ -514,13 +514,13 @@
       return internalLayer&&!path.includes("::")?`${path}::${internalLayer}`:path;
     };
     const query=$("#gp-layer-search").value.toLocaleLowerCase("pt-BR"),items=state.layers.filter(layer=>(bySource?`${sourcePath(layer)} ${layer.nome}`:layer.nome).toLocaleLowerCase("pt-BR").includes(query));
-    const base=BASEMAPS.filter(item=>item.name.toLocaleLowerCase("pt-BR").includes(query)).map(item=>`<label class="tree-row tree-indent"><input type="checkbox" data-basemap-toggle="${item.id}" ${state.basemaps.has(item.id)?"checked":""}><i data-lucide="map"></i><span class="layer-name">${item.name}</span></label>`).join("");
+    const base=BASEMAPS.filter(item=>item.name.toLocaleLowerCase("pt-BR").includes(query)).map(item=>`<label class="tree-row tree-indent"><input type="checkbox" name="basemap-${item.id}" data-basemap-toggle="${item.id}" ${state.basemaps.has(item.id)?"checked":""}><i data-lucide="map"></i><span class="layer-name">${item.name}</span></label>`).join("");
     $("#gp-layer-list").dataset.layerView=bySource?"source":"drawing";
     const layerRow=(layer)=>{
       const onMap=camadaVisivel(layer.id);
       const display=bySource?sourcePath(layer):layer.nome;
       const editing=state.editingLayers.has(layer.id);
-      return `<div class="tree-row tree-indent tree-layer ${state.activeLayerId===layer.id?"active":""}" data-layer="${layer.id}" tabindex="0"><input type="checkbox" ${onMap?"checked":""} aria-label="Exibir ${escapeHtml(layer.nome)}"><div class="layer-entry"><div class="layer-entry-head"><span class="layer-name" title="${escapeHtml(display)}">${escapeHtml(display)}</span><button class="icon-btn layer-edit ${editing?"active":""}" type="button" data-edit-layer="${layer.id}" title="Editar atributos"><i data-lucide="pencil"></i></button><button class="icon-btn layer-zoom" type="button" data-zoom-layer="${layer.id}" title="Zoom para a camada"><i data-lucide="maximize"></i></button></div>${layerLegend(layer)}</div></div>`;
+      return `<div class="tree-row tree-indent tree-layer ${state.activeLayerId===layer.id?"active":""}" data-layer="${layer.id}" tabindex="0"><input type="checkbox" name="layer-visibility-${escapeHtml(layer.id)}" ${onMap?"checked":""} aria-label="Exibir ${escapeHtml(layer.nome)}"><div class="layer-entry"><div class="layer-entry-head"><span class="layer-name" title="${escapeHtml(display)}">${escapeHtml(display)}</span><button class="icon-btn layer-edit ${editing?"active":""}" type="button" data-edit-layer="${layer.id}" title="Editar atributos"><i data-lucide="pencil"></i></button><button class="icon-btn layer-zoom" type="button" data-zoom-layer="${layer.id}" title="Zoom para a camada"><i data-lucide="maximize"></i></button></div>${layerLegend(layer)}</div></div>`;
     };
     // Dentro de Camadas operacionais o papel de cada camada vira grupo: Camadas de
     // entrada, Camadas de base com um subgrupo por categoria, e o resultado. Grupos em
@@ -541,7 +541,7 @@
       porCategoria.get(nome).push(layer);
     }
     const group=(id,label,icon,content,empty,extra="",camadas=null)=>{
-      const marca=camadas?`<input type="checkbox" class="layer-group-check" data-layer-group-toggle="${escapeHtml(id)}"${camadas.ligadas?" checked":""}${camadas.ligadas&&camadas.ligadas<camadas.total?' data-parcial="1"':""} aria-label="Exibir todas as camadas de ${escapeHtml(camadas.rotulo)}">`:"";
+      const marca=camadas?`<input type="checkbox" name="layer-group-${escapeHtml(id)}" class="layer-group-check" data-layer-group-toggle="${escapeHtml(id)}"${camadas.ligadas?" checked":""}${camadas.ligadas&&camadas.ligadas<camadas.total?' data-parcial="1"':""} aria-label="Exibir todas as camadas de ${escapeHtml(camadas.rotulo)}">`:"";
       return `<section class="layer-group ${extra} ${state.layerGroups[id]?"collapsed":""}" data-layer-group="${escapeHtml(id)}"><div class="tree-row layer-group-head">${marca}<button class="layer-group-title" type="button" aria-expanded="${!state.layerGroups[id]}"><i data-lucide="chevron-down" class="tree-chevron"></i><i data-lucide="${icon}"></i><strong>${label}</strong></button></div><div class="layer-group-children">${content||`<div class="empty compact">${empty}</div>`}</div></section>`;
     };
     const contagem=(rotulo,lista)=>({rotulo,total:lista.length,ligadas:lista.filter(l=>camadaVisivel(l.id)).length});

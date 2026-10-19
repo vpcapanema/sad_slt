@@ -22,17 +22,17 @@
 <div id="admin-session-bar" class="admin-session-bar hidden"></div>
 <main class="conteudo-principal app-main ahp-main ea-main elegibilidade-v2" id="elegibilidade-app" data-feedback-title="Elegibilidade territorial">
   {% include "componentes/navegacao_fases_hierarquizacao.html" %}
-  <section class="card standard-page-hero">
+  <section class="secao-elegibilidade-cabecalho card card-elegibilidade-cabecalho standard-page-hero">
     <h1 class="ahp-page-title standard-page-hero__title"><i class="fas fa-shield-halved" aria-hidden="true"></i> Elegibilidade territorial</h1>
     <p class="standard-page-hero__eyebrow">Hierarquização · Fase 1</p>
     <p class="standard-page-hero__description">Escolha sua entrada, organize as camadas de restrição e de risco e confira a prévia antes de enviá-las à bancada. <a class="fase-descricao-add" href="/public/documentacao/" aria-label="Consultar a documentação metodológica"><i class="fas fa-book" aria-hidden="true"></i></a></p>
   </section>
   <p id="ev-status" class="ea-hint" role="status" aria-live="polite">Carregando hierarquizações…</p>
   <div class="ev-preparacao-grid ea-preparation-actions">
-  <section class="card ahp-step-section" aria-labelledby="ev-entrada-title">
+  <section class="secao-elegibilidade-entrada card card-elegibilidade-entrada ahp-step-section" aria-labelledby="ev-entrada-title">
     <header class="ahp-section-label"><span class="ahp-subsection-num">1</span><h2 id="ev-entrada-title">Entrada</h2></header>
     <div class="ahp-section-body">
-      <p id="ev-entrada-regra" class="ea-hint">Escolha apenas uma origem para a entrada. Para trocar de opção, limpe a seleção. Envie para a prévia da seção 3 antes de conferir e enviar à bancada.</p>
+      <p id="ev-entrada-regra" class="ea-hint">Escolha apenas uma origem para a entrada. Para trocar de opção, limpe a seleção. Envie para a prévia da seção 3 antes de conferir e enviar à bancada. Para uma hierarquização, mantenha todas as demandas na prévia e marcadas: o envio à bancada reúne o grupo em um único GeoPackage, na camada demandas.</p>
       <div class="ev-origens">
         <div class="ea-field" id="ev-coluna-camadas">
           <label for="ev-entrada-camadas">Camada de entrada</label>
@@ -60,7 +60,7 @@
       </div>
     </div>
   </section>
-  <section class="card ahp-step-section" aria-labelledby="ev-bases-title">
+  <section class="secao-elegibilidade-bases card card-elegibilidade-bases ahp-step-section" aria-labelledby="ev-bases-title">
     <header class="ahp-section-label"><span class="ahp-subsection-num">2</span><h2 id="ev-bases-title">Camadas de restrição e de risco</h2></header>
     <div class="ahp-section-body">
       <p class="ea-hint">Comece pela restrição e depois selecione o risco. A mesma camada não pode ocupar os dois papéis, nem ser usada também como entrada. Salvar uma lista não envia camadas à bancada e não homologa os dados.</p>
@@ -84,13 +84,13 @@
     </div>
   </section>
   </div>
-  <section class="card ahp-step-section" aria-labelledby="ev-previa-title">
+  <section class="secao-elegibilidade-previa card card-elegibilidade-previa ahp-step-section" aria-labelledby="ev-previa-title">
     <header class="ahp-section-label"><span class="ahp-subsection-num">3</span><h2 id="ev-previa-title">Confira a prévia</h2></header>
     <div class="ahp-section-body">
       <p class="ea-hint">Receba aqui as seleções enviadas pelas seções 1 e 2, confira o mapa e marque as camadas desejadas. O botão no rodapé do painel de camadas envia somente as marcadas para a bancada. Novas seleções só atualizam esta prévia após clicar em enviar para a prévia.</p>
       <p class="ea-hint">A prévia mostra as geometrias originais. Ao enviar à bancada, as demandas de entrada são normalizadas para Polygon/MultiPolygon pela mesma regra do cadastro; os parâmetros são apresentados na confirmação. Coleções geométricas são convertidas componente a componente e reunidas na mesma demanda. Os cálculos utilizarão os arquivos derivados integrais, sem alterar as fontes nem aplicar buffers às bases de risco ou restrição.</p>
       <div class="ea-preview-workspace">
-      <section id="ea-input-preview" class="ea-input-preview" aria-labelledby="ea-input-preview-title" hidden>
+      <section id="ea-input-preview" class="secao-elegibilidade-atributos ea-input-preview" aria-labelledby="ea-input-preview-title" hidden>
         <header><h4 id="ea-input-preview-title">Pré-visualização das camadas do geoprocesso</h4><p id="ea-input-preview-name"></p></header>
         <div class="ea-preview-layout">
           <aside class="ea-preview-panel" aria-label="Painel de camadas">
@@ -105,7 +105,7 @@
         </div>
         <p id="ea-input-preview-map-status" class="ea-hint" role="status"></p>
       </section>
-      <section id="ea-layer-information" class="ea-input-preview" aria-labelledby="ea-layer-information-title" hidden>
+      <section id="ea-layer-information" class="secao-elegibilidade-informacoes ea-input-preview" aria-labelledby="ea-layer-information-title" hidden>
         <header><h4 id="ea-layer-information-title">Informações da camada selecionada</h4></header>
         <div id="ea-input-preview-data" class="ea-preview-metadata">
           {% include "componentes/extracao_atributos/_previa_metadados.html" %}
@@ -114,12 +114,12 @@
       </div>
     </div>
   </section>
-  <section class="ea-section" id="ea-workbench" aria-labelledby="ev-bancada-title">
+  <section class="secao-elegibilidade-bancada ea-section" id="ea-workbench" aria-labelledby="ev-bancada-title">
     <header class="ea-section-head"><span class="ea-number">04</span><div><h2 id="ev-bancada-title">Bancada básica de geoprocessamento</h2><p>Confira aqui as camadas de entrada, restrição e risco confirmadas para a bancada.</p></div></header>
     <iframe id="ea-workbench-frame" class="ea-workbench-frame" src="/restrict/geoespacial/bancada/" title="Bancada de elegibilidade territorial" allow="fullscreen"></iframe>
     <div class="ea-section-body">
       <p id="ev-bancada-status" class="ea-hint" role="status">Nenhuma camada confirmada nesta página.</p>
-      <section class="ea-checkup" aria-labelledby="ev-checkup-title">
+      <section class="secao-elegibilidade-conferencia ea-checkup" aria-labelledby="ev-checkup-title">
         <h4 class="ea-checkup-title" id="ev-checkup-title">Conferir e executar</h4>
         <p class="ea-hint">Confira as demandas poligonais e as bases de restrição e risco. Somente camadas confirmadas por esta página e marcadas como visíveis na bancada aparecem nesta composição; a seleção e a prévia não alteram este conjunto.</p>
         <div class="ea-execucao-selecao" id="ea-run-selection" aria-live="polite">
@@ -144,7 +144,7 @@
       </section>
     </div>
   </section>
-  <section class="ea-section ev-resultados" id="ev-resultados" aria-labelledby="ev-resultados-title">
+  <section class="secao-elegibilidade-resultados ea-section ev-resultados" id="ev-resultados" aria-labelledby="ev-resultados-title">
     <header class="ea-section-head"><span class="ea-number">05</span><div><h2 id="ev-resultados-title">Resultados da Elegibilidade Territorial</h2><p>Consulte onde as demandas se sobrepõem às feições das camadas de restrição e risco e qual é a área dessas sobreposições.</p></div></header>
     <div class="ea-section-body">
       <p id="ev-resultados-vazio" class="ea-hint">Execute a elegibilidade territorial para apresentar os resultados.</p>
@@ -170,14 +170,14 @@
           <div class="evr-fonte risco"><h4>Risco</h4><div id="ev-resultados-fontes-risco" class="evr-chips"></div></div>
         </div>
         <div class="evr-analise">
-          <section class="evr-painel evr-mapa-painel">
+          <section class="secao-elegibilidade-mapa evr-painel evr-mapa-painel">
             <header class="evr-titulo"><h3>Onde as Demandas se Sobrepõem</h3><button class="ea-btn" id="ev-resultados-enquadrar" type="button">Ver Todas</button></header>
             <div id="ev-resultados-mapa" aria-label="Mapa interativo de demandas e interseções"></div>
             <div class="evr-legenda-mapa"><span>Azul: Demanda</span><span class="restricao">Vermelho: Restrição</span><span class="risco">Amarelo: Risco</span></div>
             <p class="ea-hint evr-instrucoes">Selecione uma demanda ou uma área sobreposta para atualizar os detalhes, destacar a tabela e ampliar o mapa.</p>
             <p class="ea-hint evr-instrucoes" id="ev-resultados-nota-mapa" role="status"></p>
           </section>
-          <section class="evr-painel">
+          <section class="secao-elegibilidade-sobreposicoes evr-painel">
             <header class="evr-titulo"><h3>Sobreposições da Demanda Selecionada</h3><span id="ev-resultados-id-ativo" class="ea-hint"></span></header>
             <div class="evr-grafico-conteudo">
               <div class="ea-field"><label for="ev-resultados-base">Camada de Base em Análise</label><select id="ev-resultados-base" name="base_resultados"></select></div>
@@ -207,7 +207,7 @@
             </div>
           </section>
         </div>
-        <section class="evr-painel">
+        <section class="secao-elegibilidade-tabela evr-painel">
           <header class="evr-titulo"><h3>Quanto Cada Demanda Sobrepõe</h3><span class="ea-hint">Área sobreposta por camada · km² e hectares</span></header>
           <div class="ea-table-wrap"><table id="ev-resultados-tabela" data-table-sort="off" aria-label="Áreas de Sobreposição por Demanda"></table></div>
           <p class="ea-hint evr-instrucoes">Cada valor soma as áreas sobrepostas às feições da camada. O travessão indica ausência de interseção; zero indica contato sem área. Selecione um nome ou um valor para atualizar os detalhes e ampliar o mapa.</p>
@@ -235,5 +235,5 @@
 <script src="/assets/vendor/maplibre-gl/maplibre-gl.js"></script>
 <script src="/assets/vendor/maplibre-gl/leaflet-maplibre-gl.js"></script>
 <script src="/restrict/hierarquizacao/js/hier-api.js"></script>
-<script type="module" src="/restrict/hierarquizacao/js/fase1-elegibilidade-v2.js?v=20261019-painel"></script>
+<script type="module" src="/restrict/hierarquizacao/js/fase1-elegibilidade-v2.js?v=20261019-grupo-gpkg"></script>
 {% endblock %}

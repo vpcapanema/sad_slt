@@ -18,7 +18,7 @@
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Título**                 | Metodologia do Sistema de Hierarquização de Demandas — SICARD                                                                                                         |
 | **Número**                 | NT-SICARD-001/2026                                                                                                                                                       |
-| **Versão**                 | 1.21                                                                                                                                                                      |
+| **Versão**                 | 1.22                                                                                                                                                                      |
 | **Data de emissão**        | 19/10/2026                                                                                                                                                               |
 | **Classificação**         | Documento técnico-metodológico de entrega ao cliente                                                                                                                   |
 | **Sistema**                 | SICARD — Sistema de Apoio à Tomada de Decisão                                                                                                                         |
@@ -55,6 +55,7 @@
 | 1.19    | 19/10/2026 | `[preencher]` | Produção da camada de elegibilidade territorial mediante interseções GDAL/OGR independentes, soma de áreas por feição, campos de restrição e risco, preservação integral da entrada e inclusão automática da saída persistida na bancada. |
 | 1.20    | 19/10/2026 | `[preencher]` | Apresentação dinâmica dos resultados por base, revisão explícita de aliases em português brasileiro, mapa-síntese e relatório PDF completo, com pacote de geometrias e verificação de integridade das saídas. |
 | 1.21    | 19/10/2026 | `[preencher]` | Persistência das áreas totais e interseções vinculadas no GeoPackage, painel integrado de mapa, tabela e gráfico por feição, apresentação em km² e hectares, percentuais por demanda e persistência da revisão dos nomes. |
+| 1.22    | 19/10/2026 | `[preencher]` | Consolidação integral das demandas de uma hierarquização em um único GeoPackage e uma única camada no envio confirmado da prévia à bancada, preservando registros, atributos e rastreabilidade das fontes, sem dissolução entre demandas. |
 
 ---
 
@@ -362,6 +363,9 @@ solicita confirmação para enviar as camadas marcadas à bancada. Esse envio
 substitui o conjunto anteriormente enviado pela página, preservando os papéis
 e excluindo desse conjunto as camadas desmarcadas, sem substituir outras camadas
 adicionadas diretamente na bancada. O cancelamento mantém a bancada anterior.
+Quando a entrada provém de uma hierarquização, exige-se que todas as demandas
+do grupo estejam na prévia e marcadas para envio, impedindo a apresentação de
+um subconjunto como se representasse o grupo integral.
 Essa atribuição de papel não constitui homologação.
 
 **Normalização geométrica das demandas.** A prévia conserva a representação da
@@ -387,8 +391,17 @@ são registrados nos metadados do arquivo e no acompanhamento do envio.
 
 Utilizam-se todas as feições da fonte integral, com preservação dos atributos
 e registro dos identificadores de origem. As geometrias cadastradas são
-recuperadas novamente no servidor; cada camada de demandas produz um
-GeoPackage derivado, reaberto e conferido antes do registro no ciclo de vida
+recuperadas novamente no servidor. Para camadas escolhidas no explorador,
+cada camada produz um GeoPackage derivado. Quando a entrada provém de uma
+hierarquização, o envio confirmado reúne todas as demandas do grupo em um único
+GeoPackage, com uma única camada vetorial `demandas`; a prévia conserva as fontes
+individuais. Confere-se a composição atual do grupo no servidor, interrompendo
+o envio se houver divergência de membros. Cada fonte é normalizada a partir
+de seu CRS original; a concatenação em EPSG:4674 conserva todas as feições e a
+união dos campos, com nulos nos atributos ausentes em determinada fonte, sem
+dissolver demandas distintas. Preservam-se o objeto da rodada e os atributos
+por registro; campos de rastreio identificam a demanda, a camada e o FID de
+origem, sem sobrescrever campos existentes. O arquivo é reaberto e conferido antes do registro no ciclo de vida
 oficial das saídas. Registram-se os parâmetros e a origem nos metadados do
 arquivo. A bancada recebe o caminho e a revisão do arquivo derivado para os
 geoprocessamentos, sem substituir a fonte original. Não se calculam áreas de

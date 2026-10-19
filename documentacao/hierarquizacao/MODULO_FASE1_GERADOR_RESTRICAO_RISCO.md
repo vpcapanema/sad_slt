@@ -55,7 +55,9 @@ automatica nem alterar resultados existentes da hierarquizacao.
    a substituicao da previa.
 5. O envio final substitui o conjunto anteriormente enviado por esta pagina pelas
    camadas marcadas na previa, preservando seus papeis; camadas desmarcadas deixam
-   esse conjunto. Cancelar o envio preserva a bancada. A remocao direta na bancada
+   esse conjunto. Quando a entrada vem de uma hierarquizacao, exige-se o grupo
+   completo na previa, com todas as demandas marcadas; nao se envia um subconjunto
+   como se fosse a hierarquizacao integral. Cancelar o envio preserva a bancada. A remocao direta na bancada
    e respeitada; outras camadas adicionadas fora deste fluxo nao sao substituidas.
 6. As demandas de entrada sao representadas na bancada exclusivamente por
    `Polygon` ou `MultiPolygon`. A conversao ocorre depois da confirmacao do envio,
@@ -79,7 +81,19 @@ automatica nem alterar resultados existentes da hierarquizacao.
    Erros de componentes indicam sua posicao na colecao, alem da feicao e do FID.
 7. A origem cadastrada e recuperada novamente no servidor; arquivos do storage
    sao lidos integralmente, preservando atributos e identificadores de origem.
-   Cada camada de demandas gera um GeoPackage derivado, reaberto e conferido
+   Para entradas escolhidas no explorador, cada camada de demandas gera um
+   GeoPackage derivado. Para a entrada de uma hierarquizacao, todas as demandas
+   do grupo sao reunidas em um unico GeoPackage, com uma unica camada vetorial
+   `demandas`, somente no envio confirmado da previa a bancada. A previa mantem
+   as fontes individuais. O servidor confere a composicao atual da hierarquizacao
+   e recupera todas as geometrias cadastrais; divergencia de membros interrompe o envio.
+   Cada fonte e normalizada em seu CRS original antes da concatenacao em EPSG:4674.
+   A concatenacao preserva todas as feicoes e a uniao dos campos, com nulos para
+   atributos inexistentes em uma fonte, sem dissolver demandas diferentes.
+   O codigo da demanda, a referencia da camada e o FID de origem ficam em campos
+   de rastreio, com sufixos se os nomes ja existirem; os atributos e o objeto
+   completo da rodada acompanham cada registro. Os metadados registram todas
+   as fontes, suas contagens e os parametros. O arquivo e reaberto e conferido
    antes do registro no ciclo de vida oficial das saidas. O arquivo inclui
    metadados de origem e parametros; a bancada recebe seu caminho e revisao
    reais para as operacoes, e nao a referencia geometrica da previa.

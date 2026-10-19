@@ -14,6 +14,8 @@ from api.routers.complementacao import router as complementacao_router
 from api.routers.configuracoes import router as configuracoes_router
 from api.routers.demandas import router as demandas_router
 from api.routers.dominios import router as dominios_router
+from api.routers.email import router as email_router
+from api.routers.email_convites import router as email_convites_router
 from api.routers.geo import router as geo_router
 from api.routers.geoespacial import router as geoespacial_router
 from api.routers.geometria import router as geometria_router
@@ -30,6 +32,8 @@ from api.routers.universo import router as universo_router
 api_router = APIRouter(prefix="/api")
 api_router.include_router(health_router)
 api_router.include_router(auth_router)
+api_router.include_router(email_router)
+api_router.include_router(email_convites_router)
 api_router.include_router(admin_tabelas_router)
 api_router.include_router(agrupamentos_demandas_router)
 api_router.include_router(sigma_router)
