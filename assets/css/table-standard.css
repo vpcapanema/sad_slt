@@ -106,3 +106,16 @@ body.escala-revisada .standard-table-section { zoom: calc(1 / var(--escala, 1));
 .admin-pagination button,
 .standard-table-section .admin-pagination button,
 .ami-espaco-page #ami-emails-pagination button { border: 0; font-weight: 700; }
+
+.standard-table-section .demandas-page-size {
+  display: flex; align-items: center; gap: 8px; grid-column: 1; grid-row: 1;
+  justify-self: start; margin: 0; color: #475569; font-size: .82rem; white-space: nowrap;
+}
+.standard-table-section .demandas-page-size select {
+  width: 76px; height: 34px; min-height: 0; padding: 4px 8px; font: inherit;
+  border: 1px solid var(--admin-border); border-radius: 7px; background: #fff;
+}
+@media (max-width: 800px) {
+  body .admin-table-footer:has(.demandas-page-size) > .admin-pagination { grid-row: 2; }
+  body .admin-table-footer:has(.demandas-page-size) > .admin-table-summary { grid-row: 3; }
+}

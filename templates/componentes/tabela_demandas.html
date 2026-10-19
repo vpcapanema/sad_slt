@@ -85,7 +85,20 @@
 
 
         <p id="lista-vazia" class="hint hidden">Nenhuma demanda encontrada.</p>
-        <div class="admin-table-footer"><nav id="demandas-pagination" class="admin-pagination" aria-label="Paginação das demandas">
+        <div class="admin-table-footer">
+        {% if not modo_complementacao %}
+        <label class="demandas-page-size" for="demandas-page-size">
+          <span>Linhas por página</span>
+          <select id="demandas-page-size">
+            <option value="15" selected>15</option>
+            <option value="25">25</option>
+            <option value="35">35</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
+        </label>
+        {% endif %}
+        <nav id="demandas-pagination" class="admin-pagination" aria-label="Paginação das demandas">
           <button type="button" id="pagination-first" title="Primeira página" aria-label="Primeira página" disabled>&lt;&lt;</button><button type="button" id="pagination-prev" title="Página anterior" aria-label="Página anterior">
             &lt;
           </button>

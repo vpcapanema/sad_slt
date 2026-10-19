@@ -245,6 +245,7 @@
     } catch (error) {
       select.innerHTML = '<option value="">Não foi possível carregar agrupamentos</option>';
       renderDemandasRegistradas(objetosRegistrados || [], error.message);
+      Notify.error("Agrupamentos da hierarquização", error.message);
     }
   }
 
@@ -405,7 +406,11 @@
       if (!Array.isArray(rows) || rows.filter(row => row && typeof row === "object" && !Array.isArray(row)).length < 2) throw new Error("A matriz deve conter ao menos dois critérios.");
       matrizCadastro = { ...(Array.isArray(parsed) ? {} : parsed), arquivo: file.name, linhas: rows };
       summary.textContent = `${file.name} · ${rows.length} critérios carregados.`;
-    } catch (err) { if (request !== matrizLeitura) return; event.target.value = ""; summary.textContent = err.message; }
+    } catch (err) {
+      if (request !== matrizLeitura) return;
+      event.target.value = ""; summary.textContent = err.message;
+      Notify.warning("Matriz de critérios", err.message);
+    }
   });
   $("nova-hierarquizacao").onsubmit = async (e) => {
     e.preventDefault();

@@ -311,11 +311,11 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
     # A matriz, as metricas e os pesos seguem o julgador selecionado; com todos,
     # a medida de tendencia central e do usuario.
     assert 'id="ami-analysis-measure"' in central_html
-    # A consolidacao acompanha o processo num modal e fecha com o semaforo.
-    assert 'id="ami-process-modal"' in central_html
-    assert 'id="ami-process-steps"' in central_html
-    assert 'id="ami-result-modal"' in central_html
-    assert 'class="ami-semaforo"' in central_html
+    # Consolidacao e homologacao usam o mesmo feedback das demais paginas.
+    assert "/assets/js/process_feedback_unified.js" in central_html
+    assert 'id="ami-process-modal"' not in central_html
+    assert 'id="ami-result-modal"' not in central_html
+    assert "ProcessFeedback.iniciarCadastro" in julgamentos_js
     assert "consolidarRespostas" in julgamentos_js
     assert "mostrarResultado" in julgamentos_js
     # Homologada a analise, o card aponta as tres fases da hierarquizacao.

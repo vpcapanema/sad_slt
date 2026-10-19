@@ -20,7 +20,7 @@
 
   async function jsonFetch(url, options = {}) {
     const resp = await fetch(url, { credentials: "include", headers: { Accept: "application/json", ...(options.headers || {}) }, ...options });
-    const body = await resp.json().catch(() => ({}));
+    const body = await resp.json();
     if (!resp.ok) throw new Error(body.detail || `Erro HTTP ${resp.status}`);
     return body;
   }
@@ -168,8 +168,9 @@
     selecao: new Map(), editando: null,
     ordenar: null, direcao: "asc",
     filtro: { coluna: null, tipo: "valor", valor: null, inverter: false }, valoresCache: {},
-    usuariosNomes: {},
+    usuariosNomes: {}, ocupado: false,
   };
+  let revisaoTabela = 0;
 
   const refs = {
     menu: $("#admin-menu"),
@@ -179,12 +180,32 @@
   };
 
   function feedback(msg, tipo) {
-    let box = $(".admin-feedback", refs.host.parentElement);
-    if (!box) { box = el("div", { class: "admin-feedback" }); refs.host.before(box); }
-    box.className = `admin-feedback show ${tipo}`;
-    box.textContent = msg;
-    clearTimeout(feedback.timer);
-    feedback.timer = setTimeout(() => box.classList.remove("show"), 5000);
+    const semResposta = msg instanceof TypeError || msg instanceof SyntaxError;
+    if (semResposta) console.error("Falha de comunicação na administração de dados.", msg);
+    const message = semResposta
+      ? "Não foi possível confirmar o resultado da solicitação. Verifique a conexão e recarregue os dados antes de tentar novamente."
+      : msg instanceof Error ? msg.message : String(msg);
+    const data = {title: "Administração de Dados", message};
+    if (tipo === "ok") window.StatusFeedback.sucesso(data);
+    else if (tipo === "partial") window.StatusFeedback.parcial(data);
+    else if (tipo === "warning") window.Notify.warning(data.title, message);
+    else window.StatusFeedback.erro(data);
+  }
+
+  function ocupar(ativo) {
+    state.ocupado = ativo;
+    refs.host.inert = ativo;
+    refs.menu.inert = ativo;
+    refs.host.setAttribute("aria-busy", String(ativo));
+    atualizarBotoes();
+  }
+
+  async function atualizarAposEscrita(mensagem, parcial = false) {
+    state.valoresCache = {};
+    if (state.filtro.coluna) await carregarValores(state.filtro.coluna);
+    const atualizada = await carregarTabela(false);
+    feedback(atualizada ? mensagem : `${mensagem} Não foi possível atualizar a lista. Recarregue-a antes de continuar.`,
+      parcial || !atualizada ? "partial" : "ok");
   }
 
   // ---------- Menu de esquemas ----------
@@ -268,10 +289,12 @@
       abrirDestinoDaUrl();
     } catch (error) {
       refs.menu.innerHTML = `<p class="admin-menu-loading">${escapeHtml(error.message)}</p>`;
+      feedback(error, "error");
     }
   }
 
   function selecionarTabela(esquema, tabela, dominio, link) {
+    if (state.ocupado) return;
     document.querySelectorAll(".admin-table-link.active").forEach((n) => n.classList.remove("active"));
     link?.classList.add("active");
     state.esquema = esquema; state.tabela = tabela; state.dominio = dominio;
@@ -285,7 +308,8 @@
     carregarTabela();
   }
 
-  async function carregarTabela() {
+  async function carregarTabela(notificar = true) {
+    const revisao = ++revisaoTabela;
     refs.titulo.textContent = aliasTabela(state.tabela);
     document.title = `${aliasTabela(state.tabela)} — Administração`;
     refs.host.innerHTML = '<p class="admin-placeholder">Carregando registros…</p>';
@@ -293,13 +317,15 @@
       const q = new URLSearchParams({ pagina: state.pagina, por_pagina: POR_PAGINA });
       if (state.ordenar) { q.set("ordenar", state.ordenar); q.set("direcao", state.direcao); }
       const f = state.filtro;
-      if (f.coluna) {
+      if (f.coluna && (f.tipo === "vazias" || f.valor != null)) {
         q.set("filtro_coluna", f.coluna);
         q.set("filtro_tipo", f.tipo);
-        if (f.tipo === "valor" && f.valor != null) q.set("filtro_valor", f.valor);
+        if (f.tipo !== "vazias" && f.valor != null) q.set("filtro_valor", f.valor);
         if (f.inverter) q.set("filtro_inverter", "true");
       }
       const data = await jsonFetch(`${API}/tabelas/${state.esquema}/${state.tabela}?${q}`);
+      if (revisao !== revisaoTabela) return false;
+      if (state.pagina > data.paginas) { state.pagina = data.paginas; return carregarTabela(notificar); }
       Object.assign(state, {
         colunas: data.colunas, chavePrimaria: data.chave_primaria,
         linhas: data.linhas, total: data.total, paginas: data.paginas, dominio: data.dominio,
@@ -308,8 +334,12 @@
       });
       refs.sub.textContent = `${state.esquema}.${state.tabela} · ${data.total} registro(s) · chave primária: ${data.chave_primaria.join(", ") || "—"}`;
       renderTabela();
+      return true;
     } catch (error) {
+      if (revisao !== revisaoTabela) return false;
       refs.host.innerHTML = `<p class="admin-placeholder">${escapeHtml(error.message)}</p>`;
+      if (notificar) feedback(error, "error");
+      return false;
     }
   }
 
@@ -324,11 +354,15 @@
   // ---------- Filtro (fora e acima da tabela) ----------
   async function carregarValores(coluna) {
     if (!coluna || state.valoresCache[coluna]) return;
+    const destino = `${state.esquema}/${state.tabela}`;
     try {
-      const b = await jsonFetch(`${API}/tabelas/${state.esquema}/${state.tabela}/valores?coluna=${encodeURIComponent(coluna)}`);
-      state.valoresCache[coluna] = b;
-    } catch (_e) {
-      state.valoresCache[coluna] = { valores: [], truncado: false };
+      const b = await jsonFetch(`${API}/tabelas/${destino}/valores?coluna=${encodeURIComponent(coluna)}`);
+      if (destino === `${state.esquema}/${state.tabela}`) state.valoresCache[coluna] = b;
+    } catch (error) {
+      console.error("Falha ao carregar sugestões do filtro.", error);
+      if (destino === `${state.esquema}/${state.tabela}`) {
+        feedback("Não foi possível carregar as sugestões. Você pode digitar o valor, ou parte dele, para filtrar.", "warning");
+      }
     }
   }
   function montarFiltro() {
@@ -340,19 +374,25 @@
     colSelect.onchange = () => aoSelecionarColuna(colSelect.value);
 
     const cache = f.coluna ? state.valoresCache[f.coluna] : null;
-    const valSelect = el("select", { class: "admin-filter-val", "aria-label": "Valor do filtro" });
-    if (!f.coluna) {
-      valSelect.append(el("option", { value: "" }, "— selecione a coluna —"));
-      valSelect.disabled = true;
-    } else {
-      valSelect.append(el("option", { value: "" }, "— Valor —"));
-      valSelect.append(el("option", { value: "__vazias__", ...(f.tipo === "vazias" ? { selected: "selected" } : {}) }, "(vazias)"));
-      (cache?.valores || []).forEach((v) => {
-        valSelect.append(el("option", { value: v, ...(f.tipo === "valor" && f.valor === v ? { selected: "selected" } : {}) }, v));
-      });
-      if (cache?.truncado) valSelect.append(el("option", { value: "", disabled: "disabled" }, "… (mostrando os primeiros 500)"));
-    }
-    valSelect.onchange = () => aoSelecionarValor(valSelect.value);
+    const valInput = el("input", { type: "text", class: "admin-filter-val", "aria-label": "Valor do filtro",
+      list: "admin-filter-suggestions", value: f.valor ?? "", autocomplete: "off",
+      placeholder: f.coluna ? "Digite um valor ou parte dele" : "Selecione a coluna",
+      title: "Busca por parte do valor, sem diferenciar maiúsculas de minúsculas. Pressione Enter ou saia do campo para aplicar.",
+    });
+    valInput.disabled = !f.coluna || f.tipo === "vazias";
+    valInput.onchange = () => aoSelecionarValor(valInput.value);
+    valInput.onkeydown = event => {
+      if (event.key === "Enter") { event.preventDefault(); aoSelecionarValor(valInput.value); }
+    };
+    const sugestoes = el("datalist", {id: "admin-filter-suggestions"},
+      ...(cache?.valores || []).map(valor => el("option", {value: valor})));
+    const vazias = el("input", {type: "checkbox", class: "admin-filter-empty"});
+    vazias.checked = f.tipo === "vazias";
+    vazias.disabled = !f.coluna;
+    vazias.onchange = () => {
+      state.filtro.tipo = vazias.checked ? "vazias" : "contem";
+      state.pagina = 1; state.selecao.clear(); carregarTabela();
+    };
 
     const inverter = el("button", {
       class: "admin-icon-btn admin-filter-inv", type: "button", "aria-label": "Inverter seleção",
@@ -370,20 +410,24 @@
 
     return el("div", { class: "admin-filter-bar" },
       el("span", { class: "admin-filter-label" }, "Filtro:"),
-      colSelect, valSelect, inverter, limpar);
+      colSelect, valInput, sugestoes,
+      el("label", {class: "admin-filter-empty-label"}, vazias, "Vazias"),
+      inverter, limpar,
+      cache?.truncado ? el("span", {class: "admin-filter-hint"}, "Até 500 sugestões; a busca considera todos os registros.") : "");
   }
   async function aoSelecionarColuna(coluna) {
-    state.filtro = { coluna: coluna || null, tipo: "valor", valor: null, inverter: state.filtro.inverter };
+    const destino = `${state.esquema}/${state.tabela}`;
+    state.filtro = { coluna: coluna || null, tipo: "contem", valor: null, inverter: state.filtro.inverter };
     if (coluna) await carregarValores(coluna);
-    // Recria só a barra (sem recarregar a tabela) até o valor ser escolhido.
-    const barra = refs.host.querySelector(".admin-filter-bar");
-    if (barra) barra.replaceWith(montarFiltro());
+    if (destino !== `${state.esquema}/${state.tabela}` || state.filtro.coluna !== (coluna || null)) return;
+    state.pagina = 1; state.selecao.clear();
+    await carregarTabela();
   }
   function aoSelecionarValor(valor) {
     if (!state.filtro.coluna) return;
-    if (valor === "__vazias__") { state.filtro.tipo = "vazias"; state.filtro.valor = null; }
-    else if (valor === "") { state.filtro.tipo = "valor"; state.filtro.valor = null; }
-    else { state.filtro.tipo = "valor"; state.filtro.valor = valor; }
+    const novoValor = valor === "" ? null : valor;
+    if (state.filtro.tipo === "contem" && state.filtro.valor === novoValor) return;
+    state.filtro.tipo = "contem"; state.filtro.valor = novoValor;
     state.pagina = 1; state.selecao.clear();
     carregarTabela();
   }
@@ -581,8 +625,8 @@
     if (resumo) resumo.textContent = `${state.selecao.size} selecionados / ${state.linhas.length} na página / ${state.totalTabela} no total`;
     const btnEdit = $(".admin-icon-btn.edit", refs.host);
     const btnDel = $(".admin-icon-btn.delete", refs.host);
-    if (btnEdit) btnEdit.disabled = state.selecao.size !== 1 || !state.chavePrimaria.length;
-    if (btnDel) btnDel.disabled = state.selecao.size < 1 || !state.chavePrimaria.length;
+    if (btnEdit) btnEdit.disabled = state.ocupado || state.selecao.size !== 1 || !state.chavePrimaria.length;
+    if (btnDel) btnDel.disabled = state.ocupado || state.selecao.size < 1 || !state.chavePrimaria.length;
   }
 
   function alternarLinha(kid, chave, marcado) {
@@ -616,6 +660,7 @@
   }
 
   async function salvarEdicao() {
+    if (state.ocupado) return;
     const kid = state.editando;
     const chave = state.selecao.get(kid) || JSON.parse(kid);
     const valores = {};
@@ -626,35 +671,50 @@
       if (coluna && coluna.udt === "bool") v = v === "" ? null : v === "true";
       valores[col] = v;
     });
+    ocupar(true);
     try {
       await jsonFetch(`${API}/tabelas/${state.esquema}/${state.tabela}`, {
         method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ chave, valores }),
       });
       state.editando = null; state.selecao.clear();
-      await carregarTabela();
-      feedback("Registro atualizado com sucesso.", "ok");
-    } catch (error) { feedback(error.message, "error"); }
+      await atualizarAposEscrita("Registro atualizado com sucesso.");
+    } catch (error) { feedback(error, "error"); }
+    finally { ocupar(false); }
   }
 
   async function excluirSelecionados() {
-    if (!state.selecao.size) return;
+    if (state.ocupado || !state.selecao.size) return;
     const qtd = state.selecao.size;
-    if (!window.confirm(`Excluir definitivamente ${qtd} registro(s) de ${aliasTabela(state.tabela)}?`)) return;
+    const chaves = [...state.selecao.values()].map(chave => ({...chave}));
+    const destino = `${API}/tabelas/${state.esquema}/${state.tabela}`;
+    ocupar(true);
     try {
-      const r = await jsonFetch(`${API}/tabelas/${state.esquema}/${state.tabela}`, {
+      if (!(await window.ProcessFeedback.confirmar({
+        title: "Excluir Registros",
+        message: `Excluir definitivamente ${qtd} registro(s) de ${aliasTabela(state.tabela)}?`,
+        warning: "Esta ação não pode ser desfeita. Somente os registros selecionados serão enviados para exclusão; arquivos vinculados também poderão ser removidos.\n\n" +
+          chaves.map(chave => Object.entries(chave).map(([nome, valor]) => `${aliasAmigavel(nome, state.tabela)}: ${valor}`).join(" · ")).join("\n"),
+        confirmLabel: "Excluir", danger: true,
+      }))) return;
+      const r = await jsonFetch(destino, {
         method: "DELETE", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chaves: [...state.selecao.values()] }),
+        body: JSON.stringify({ chaves }),
       });
+      if (!Number.isInteger(r.removidos) || r.removidos < 0 || r.removidos > qtd) {
+        throw new Error("O servidor não confirmou quantos registros foram excluídos. Recarregue a lista antes de tentar novamente.");
+      }
       state.selecao.clear();
-      await carregarTabela();
       const extra = r.arquivos_removidos ? ` e ${r.arquivos_removidos} arquivo(s) em disco` : "";
-      feedback(`${r.removidos} registro(s) excluído(s)${extra}.`, "ok");
-    } catch (error) { feedback(error.message, "error"); }
+      await atualizarAposEscrita(`${r.removidos} registro(s) excluído(s)${extra}.` +
+        (r.removidos !== qtd ? " Alguns registros selecionados já não estavam disponíveis." : ""), r.removidos !== qtd);
+    } catch (error) { feedback(error, "error"); }
+    finally { ocupar(false); }
   }
 
   // ---------- Modal de inserção (tabelas de domínio) ----------
   function abrirModalInsercao() {
+    if (state.ocupado) return;
     const editaveis = state.colunas.filter((c) => c.editavel);
     const corpo = el("div", { class: "admin-modal-body" });
     editaveis.forEach((c) => {
@@ -671,7 +731,7 @@
         campo));
     });
     const backdrop = el("div", { class: "admin-modal-backdrop" });
-    const fechar = () => backdrop.remove();
+    const fechar = () => { if (!state.ocupado) backdrop.remove(); };
     const modal = el("div", { class: "admin-modal" },
       el("div", { class: "admin-modal-head" },
         el("i", { class: "fa-solid fa-plus", "aria-hidden": "true" }),
@@ -680,13 +740,14 @@
       corpo,
       el("div", { class: "admin-modal-foot" },
         el("button", { class: "admin-btn", type: "button", onclick: fechar }, "Cancelar"),
-        el("button", { class: "admin-btn primary", type: "button", onclick: () => enviarInsercao(corpo, fechar) }, "Inserir")));
+        el("button", { class: "admin-btn primary", type: "button", onclick: () => enviarInsercao(corpo) }, "Inserir")));
     backdrop.append(modal);
     backdrop.addEventListener("click", (e) => { if (e.target === backdrop) fechar(); });
     document.body.append(backdrop);
   }
 
-  async function enviarInsercao(corpo, fechar) {
+  async function enviarInsercao(corpo) {
+    if (state.ocupado) return;
     const valores = {};
     corpo.querySelectorAll("[data-col]").forEach((campo) => {
       const col = campo.dataset.col;
@@ -697,16 +758,20 @@
       valores[col] = v;
     });
     if (!Object.keys(valores).length) { feedback("Preencha ao menos um campo.", "error"); return; }
+    ocupar(true);
+    const formulario = corpo.closest(".admin-modal-backdrop");
+    formulario.inert = true;
     try {
       await jsonFetch(`${API}/tabelas/${state.esquema}/${state.tabela}`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ valores }),
       });
-      fechar();
+      formulario.remove();
       state.pagina = 1;
-      await carregarTabela();
-      feedback("Registro inserido com sucesso.", "ok");
-    } catch (error) { feedback(error.message, "error"); }
+      state.selecao.clear();
+      await atualizarAposEscrita("Registro inserido com sucesso.");
+    } catch (error) { feedback(error, "error"); }
+    finally { formulario.inert = false; ocupar(false); }
   }
 
   document.addEventListener("DOMContentLoaded", carregarMenu);

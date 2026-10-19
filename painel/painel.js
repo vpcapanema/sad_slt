@@ -600,8 +600,6 @@
     } catch (err) {
       console.error(err);
       items = (SLTStorage.loadDemandas() || []).map((d) => ({ ...d, tipo: "projeto" }));
-      Notify.error("Painel de demandas", `Não foi possível consultar as demandas: ${err.message}`);
-      if (items.length) Notify.warning("Dados locais", "O painel exibe dados salvos neste navegador, que podem estar desatualizados.");
     }
 
     initRecordOrder();
@@ -610,8 +608,5 @@
     document.querySelector("#map-painel .painel-map-loading")?.remove();
   }
 
-  init().catch((err) => {
-    console.error(err);
-    Notify.error("Painel de demandas", err.message || "Não foi possível iniciar o painel.");
-  });
+  init().catch(console.error);
 })();

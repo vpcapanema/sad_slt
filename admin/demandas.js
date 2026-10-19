@@ -22,7 +22,8 @@
     PLANO_PEF,
   } = SLTAdminLabels;
 
-  const PAGE_SIZE = 15;
+  const PAGE_SIZES = [15, 25, 35, 50, 100];
+  let pageSize = PAGE_SIZES[0];
   const complementacao = window.SLTComplementacaoTabela;
   let tipo = "projeto";
   let rows = [];
@@ -267,8 +268,8 @@
 
   function paginatedRows(data) {
     const filtered = data || filteredRows();
-    const start = (currentPage - 1) * PAGE_SIZE;
-    return filtered.slice(start, start + PAGE_SIZE);
+    const start = (currentPage - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
   }
 
   function visibleCodigos() {
@@ -277,6 +278,8 @@
 
   function updateBulkButtons() {
     SLTTable.summary("demandas-summary", selected.size, paginatedRows().length, rows.length);
+    const seletor = $("#demandas-page-size");
+    if (seletor) seletor.disabled = editMode;
     if (complementacao) {
       complementacao.selecionar(tipo, rows.filter(row => selected.has(row.id)));
       return;
@@ -574,7 +577,7 @@
   function renderTable() {
     const cols = COLUMNS[tipo];
     const filtered = filteredRows();
-    const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+    const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
     currentPage = Math.min(currentPage, totalPages);
     const data = paginatedRows(filtered);
     const tbody = activeTable()?.querySelector('[data-demandas-body="' + tipo + '"]');
@@ -905,8 +908,20 @@
       renderTable();
     });
 
+    $("#demandas-page-size")?.addEventListener("change", event => {
+      const tamanho = Number(event.target.value);
+      if (!PAGE_SIZES.includes(tamanho)) {
+        event.target.value = String(pageSize);
+        SLTAdminUi.showToast("Selecione uma quantidade de linhas válida.", true);
+        return;
+      }
+      pageSize = tamanho;
+      currentPage = 1;
+      resetSelection();
+      renderTable();
+    });
     $("#pagination-first").addEventListener("click", () => { currentPage = 1; resetSelection(); renderTable(); });
-    $("#pagination-last").addEventListener("click", () => { currentPage = Math.max(1, Math.ceil(filteredRows().length / PAGE_SIZE)); resetSelection(); renderTable(); });
+    $("#pagination-last").addEventListener("click", () => { currentPage = Math.max(1, Math.ceil(filteredRows().length / pageSize)); resetSelection(); renderTable(); });
     $("#pagination-prev").addEventListener("click", () => {
       currentPage = Math.max(1, currentPage - 1);
       resetSelection();

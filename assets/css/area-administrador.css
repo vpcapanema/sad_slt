@@ -353,6 +353,17 @@
   height: 34px;
   padding: 0 14px;
 }
+.admin-area-page .admin-filter-bar input.admin-filter-val {
+  height: 34px; min-width: 170px; max-width: min(320px, 100%); width: 260px;
+  padding: 4px 8px; border: 1px solid var(--admin-border); border-radius: 7px;
+  background: #fff; font: inherit; font-size: 0.85rem; box-sizing: border-box;
+}
+.admin-area-page .admin-filter-empty-label {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 34px;
+  font-size: 0.85rem; color: #33475b; cursor: pointer;
+}
+.admin-area-page .admin-filter-hint { font-size: 0.75rem; color: #64748b; }
+.admin-area-page .admin-filter-bar input.admin-filter-val:disabled { background: #f4f7fa; }
 .admin-data-table tbody tr:nth-child(even) td {
   background: #f6f9fb;
 }

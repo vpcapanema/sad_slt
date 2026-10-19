@@ -11,7 +11,7 @@ import logging
 import re
 import unicodedata
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 from urllib.parse import quote
 from uuid import UUID
 
@@ -318,7 +318,7 @@ def obter_tabela(
     ordenar: str | None = Query(None),
     direcao: str = Query("asc"),
     filtro_coluna: str | None = Query(None),
-    filtro_tipo: str = Query("valor"),  # valor | vazias
+    filtro_tipo: Literal["valor", "vazias", "contem"] = Query("valor"),
     filtro_valor: str | None = Query(None),
     filtro_inverter: bool = Query(False),
     _user: SessionUser = Depends(require_admin),
@@ -342,6 +342,10 @@ def obter_tabela(
                 if filtro_tipo == "vazias":
                     base = sql.SQL("({c} IS NULL OR CAST({c} AS text) = '')").format(c=ident)
                     cond = (sql.SQL("NOT ") + base) if filtro_inverter else base
+                elif filtro_tipo == "contem":
+                    base = sql.SQL("(strpos(lower(CAST({c} AS text)), lower(%s)) > 0)").format(c=ident)
+                    cond = (sql.SQL("NOT COALESCE(") + base + sql.SQL(", FALSE)")) if filtro_inverter else base
+                    params.append(filtro_valor if filtro_valor is not None else "")
                 else:
                     comparador = "IS DISTINCT FROM" if filtro_inverter else "="
                     cond = sql.SQL("CAST({c} AS text) {op} %s").format(

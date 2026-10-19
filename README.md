@@ -461,6 +461,11 @@ linha avança do cadastro à execução. Estão disponíveis criação, consulta
 atualização, exclusão, análise e aprovação. A matriz de transições é mantida no
 banco e consultada pelo backend.
 
+Na tabela da página Demandas, o seletor à esquerda do rodapé permite exibir
+15, 25, 35, 50 ou 100 linhas por página, com 15 como padrão. A mudança retorna à
+primeira página, limpa a seleção e atualiza o contador e a paginação, preservando
+o filtro e a ordenação. O seletor fica desabilitado durante a edição de registros.
+
 Famílias: `/api/demandas`, `/api/planos`, `/api/programas`, `/api/dominios` e
 `/api/painel`.
 
@@ -492,6 +497,16 @@ hierarquizações não podem ser excluídos: a resposta identifica os agrupament
 as hierarquizações vinculadas, sem expor mensagens internas do PostgreSQL.
 Se qualquer agrupamento estiver vinculado, nenhum item do lote é excluído.
 Excluir um agrupamento livre não exclui as demandas que o compõem.
+
+Os 13 acessos dos grupos MOCAD e MAD no índice restrito usam o feedback
+compartilhado (`Notify`, `ProcessFeedback` e `StatusFeedback`). Avisos de
+carregamento e validação usam notificações; ações destrutivas usam a confirmação
+padrão; cadastros e consolidações acompanham a resposta real do servidor.
+As centrais de hierarquização, julgamentos e respostas não utilizam confirmações
+nativas nem modais próprios de progresso ou resultado. Operações já gravadas
+com falha posterior de atualização são relatadas como parciais, sem sugerir
+que o usuário repita o cadastro. O painel cartográfico restrito também informa
+falhas de consulta pelas notificações padronizadas.
 
 ### Geoprocessamento
 
@@ -533,6 +548,16 @@ Os perfis são derivados do usuário SIGMA:
   analista ou gestor.
 
 As permissões efetivas são aplicadas no backend por dependências de rota.
+
+Na Área do Administrador, o filtro de valor permite digitar um valor ou parte
+dele, com sugestões dos valores existentes. A busca é aplicada com Enter ou ao
+sair do campo e não diferencia maiúsculas de minúsculas. Os caracteres `%`, `_`
+e barras são tratados literalmente, não como curingas. As opções Vazias,
+inversão e limpeza permanecem disponíveis; a busca considera a tabela inteira,
+independentemente da página ou do limite de sugestões.
+Confirmações de exclusão, erros e resultados das operações utilizam o feedback
+padrão do SICARD. A exclusão continua limitada às chaves dos registros
+selecionados, nunca ao texto digitado no filtro.
 
 ## Dados de referência
 
