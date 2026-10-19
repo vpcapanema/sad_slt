@@ -18,8 +18,8 @@
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Título**                 | Metodologia do Sistema de Hierarquização de Demandas — SICARD                                                                                                         |
 | **Número**                 | NT-SICARD-001/2026                                                                                                                                                       |
-| **Versão**                 | 1.16                                                                                                                                                                      |
-| **Data de emissão**        | 17/10/2026                                                                                                                                                               |
+| **Versão**                 | 1.17                                                                                                                                                                      |
+| **Data de emissão**        | 18/10/2026                                                                                                                                                               |
 | **Classificação**         | Documento técnico-metodológico de entrega ao cliente                                                                                                                   |
 | **Sistema**                 | SICARD — Sistema de Apoio à Tomada de Decisão                                                                                                                         |
 | **Domínio de aplicação** | Logística e transportes. Concebido no âmbito do Plano de Logística Integrada do Estado de São Paulo (PLI-SP), aplica-se a qualquer objeto de demanda desse domínio. |
@@ -50,6 +50,7 @@
 | 1.14    | 17/10/2026 | `[preencher]` | Explicitação da exclusividade entre as origens de entrada da Elegibilidade v2: camadas selecionadas ou demandas de uma hierarquização, com limpeza prévia para troca de origem e substituição integral da entrada no envio à bancada. |
 | 1.15    | 17/10/2026 | `[preencher]` | Separação dos estados de seleção, prévia e bancada na Elegibilidade v2, com envio por grupo à prévia e confirmação única das camadas marcadas no rodapé de seu painel, sem classificação automática ou homologação. |
 | 1.16    | 17/10/2026 | `[preencher]` | Transferência de referências sem leitura geométrica na confirmação do explorador; identificação dos componentes e validação no envio à prévia, com preservação dos estados anteriores em caso de falha e controle de conflitos entre arquivos e camadas internas. |
+| 1.17    | 18/10/2026 | `[preencher]` | Aplicação da normalização cadastral poligonal às demandas no envio da prévia à bancada, com parâmetros explícitos, arquivo derivado integral e rastreabilidade; acompanhamento dos dois envios e preservação dos conjuntos anteriores em caso de falha ou cancelamento. |
 
 ---
 
@@ -358,6 +359,38 @@ substitui o conjunto anteriormente enviado pela página, preservando os papéis
 e excluindo desse conjunto as camadas desmarcadas, sem substituir outras camadas
 adicionadas diretamente na bancada. O cancelamento mantém a bancada anterior.
 Essa atribuição de papel não constitui homologação.
+
+**Normalização geométrica das demandas.** A prévia conserva a representação da
+fonte. No envio confirmado à bancada, as demandas de entrada são representadas
+exclusivamente por `Polygon` ou `MultiPolygon`, pela mesma rotina utilizada no
+cadastro. Pontos e multipontos recebem buffer de raio de 50 m; linhas e
+multilinhas recebem buffer de 25 m de cada lado, com extremidades e junções
+arredondadas. Polígonos e multipolígonos não recebem buffer. O processamento
+GDAL/OGR ocorre em EPSG:5880, com 32 segmentos por quadrante, redução a 2D,
+reparo `MakeValid`, coleta de componentes poligonais e consolidação
+`UnionCascaded` por feição. A saída é gravada em EPSG:4674, sem dissolver
+demandas distintas. Essas regras constam do módulo interno da Fase 1 e da
+rotina cadastral `normalizacao_demanda`.
+
+Utilizam-se todas as feições da fonte integral, com preservação dos atributos
+e registro dos identificadores de origem. As geometrias cadastradas são
+recuperadas novamente no servidor; cada camada de demandas produz um
+GeoPackage derivado, reaberto e conferido antes do registro no ciclo de vida
+oficial das saídas. Registram-se os parâmetros e a origem nos metadados do
+arquivo. A bancada recebe o caminho e a revisão do arquivo derivado para os
+geoprocessamentos, sem substituir a fonte original. Não se calculam áreas de
+incidência com tiles ou simplificações da prévia. CRS ausente, coordenadas
+incompatíveis, registros sem geometria utilizável, coleções geométricas ou
+impossibilidade de gerar polígono válido interrompem o envio, sem descarte
+silencioso de demandas. Essa conversão aplica-se somente às demandas; as bases
+de risco e restrição mantêm suas geometrias factuais, sem buffers adicionais.
+
+Os envios da seleção à prévia e da prévia à bancada apresentam acompanhamento
+por etapas, identificação da camada corrente e resultado explícito. Falha em
+qualquer entrada impede o envio parcial. O cancelamento aguarda a operação
+corrente e preserva os conjuntos anteriores; arquivos derivados já produzidos
+permanecem registrados. O reenvio da mesma revisão da prévia pode reutilizar o
+arquivo derivado na sessão da página, sem reaplicar buffer à geometria normalizada.
 
 Nesta entrega, a interface v2 limita-se à preparação dos dados: não executa
 classificação automática nem modifica resultados anteriores. O cálculo sobre

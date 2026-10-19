@@ -125,6 +125,21 @@ conferidas por hash. Os tiles leem essa cópia pelo storage; a prévia expira
 após 24 horas e os arquivos vencidos do usuário são removidos na próxima preparação.
 Os arquivos originais não são alterados. Isso não muda a exigência de montagem
 dos fluxos legados de upload local que mantêm cópias consultáveis de atributos.
+Na seção **3 — Confira a prévia** da elegibilidade territorial v2, a estrutura
+fixa é renderizada em HTML: grupos de entrada e base, estados vazios e a ficha
+de informações. Templates HTML definem subgrupos, linhas de camadas e botões
+do mapa. O JavaScript apenas instancia os itens dinâmicos, preenche valores e
+controla visibilidade, seleção e mapa. Os mesmos parciais são usados na extração
+de atributos; a metodologia e as regras de validação não são alteradas.
+A elegibilidade v2 acompanha os envios à prévia e à bancada pelo feedback
+padronizado, com etapas, camada corrente, cancelamento e resultado explícito.
+No envio confirmado à bancada, as demandas de entrada reutilizam a normalização
+cadastral: ponto/multiponto com raio de 50 m; linha/multilinha com 25 m por lado,
+em EPSG:5880, com 32 segmentos por quadrante e saída poligonal em EPSG:4674.
+O GeoPackage derivado integral é conferido e registrado no ciclo de vida das
+saídas; suas referências reais alimentam os geoprocessos. As fontes e as
+geometrias das bases de risco/restrição não são alteradas. A prévia continua
+mostrando as fontes originais.
 A rota legada `/data` responde 503 quando
 não há acesso nativo configurado; as APIs remotas não dependem dessa rota.
 Os JSONs e mapas da documentação de favorabilidade são lidos do storage

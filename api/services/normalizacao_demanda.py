@@ -5,6 +5,12 @@ from osgeo import ogr, osr
 ogr.UseExceptions()
 osr.UseExceptions()
 
+BUFFER_PONTO_M = 50
+BUFFER_LINHA_M = 25
+SEGMENTOS_QUADRANTE = 32
+CRS_METRICO = 5880
+CRS_CADASTRAL = 4674
+
 
 def referencia(crs):
     ref = osr.SpatialReference()
@@ -21,7 +27,7 @@ def reprojetar(geom, origem, destino):
     return copy
 
 
-def normalizar(geometry, *, crs_origem=4326, crs_saida=4674):
+def normalizar(geometry, *, crs_origem: int | str = 4326, crs_saida: int | str = CRS_CADASTRAL):
     try:
         geom = ogr.CreateGeometryFromJson(json.dumps(geometry, allow_nan=False))
         if geom is None or geom.IsEmpty():
@@ -32,10 +38,10 @@ def normalizar(geometry, *, crs_origem=4326, crs_saida=4674):
         if not (-180 <= x0 <= x1 <= 180 and -90 <= y0 <= y1 <= 90):
             raise HTTPException(422, 'Coordenadas incompatíveis com o CRS informado.')
         kind = ogr.GT_Flatten(geom.GetGeometryType())
-        radius = 50 if kind in (ogr.wkbPoint, ogr.wkbMultiPoint) else 25 if kind in (ogr.wkbLineString, ogr.wkbMultiLineString) else None
-        metric = reprojetar(geographic, 4674, 5880)
+        radius = BUFFER_PONTO_M if kind in (ogr.wkbPoint, ogr.wkbMultiPoint) else BUFFER_LINHA_M if kind in (ogr.wkbLineString, ogr.wkbMultiLineString) else None
+        metric = reprojetar(geographic, 4674, CRS_METRICO)
         if radius:
-            metric = metric.Buffer(radius, 32)
+            metric = metric.Buffer(radius, SEGMENTOS_QUADRANTE)
         metric = metric.MakeValid()
         polygons = ogr.Geometry(ogr.wkbMultiPolygon)
         def collect(g):
@@ -50,7 +56,7 @@ def normalizar(geometry, *, crs_origem=4326, crs_saida=4674):
         result = polygons.UnionCascaded()
         if result is None or result.IsEmpty():
             raise HTTPException(422, 'GDAL/OGR não conseguiu consolidar os polígonos.')
-        return json.loads(reprojetar(result, 5880, crs_saida).ExportToJson())
+        return json.loads(reprojetar(result, CRS_METRICO, crs_saida).ExportToJson())
     except HTTPException:
         raise
     except (RuntimeError, ValueError, TypeError) as exc:

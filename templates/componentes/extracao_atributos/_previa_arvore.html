@@ -1,0 +1,34 @@
+{% for origem, titulo in [("entrada", "Camadas de entrada"), ("base", "Camadas de base")] %}
+<section class="ea-preview-layer-group ea-preview-status-group" data-preview-group="{{ origem }}">
+  <div class="ea-preview-tree-row">
+    <input class="ea-preview-visibility" type="checkbox" name="ea-preview-visibility" aria-label="Visibilidade no mapa: {{ titulo }}" disabled>
+    <button class="ea-preview-group-toggle" type="button" aria-expanded="true"><span class="ea-preview-chevron" aria-hidden="true">▾</span><span>{{ titulo }}</span><span class="ea-preview-count">0</span></button>
+  </div>
+  <div class="ea-preview-tree-children" role="group" aria-label="{{ titulo }}"><p class="ea-preview-empty">Nenhuma camada.</p></div>
+</section>
+{% endfor %}
+<template id="ea-preview-empty-template"><p class="ea-preview-empty">Nenhuma camada.</p></template>
+<template id="ea-preview-group-template">
+  <section class="ea-preview-layer-group">
+    <div class="ea-preview-tree-row">
+      <input class="ea-preview-visibility" type="checkbox" name="ea-preview-visibility">
+      <button class="ea-preview-group-toggle" type="button" aria-expanded="true"><span class="ea-preview-chevron" aria-hidden="true">▾</span><span data-preview-group-name></span><span class="ea-preview-count">0</span></button>
+    </div>
+    <div class="ea-preview-tree-children" role="group"></div>
+  </section>
+</template>
+<template id="ea-preview-layer-template">
+  <div class="ea-preview-tree-row">
+    <input class="ea-preview-visibility" type="checkbox" name="ea-preview-visibility">
+    <button class="ea-preview-layer" type="button" aria-pressed="false"><span class="ea-preview-symbol" aria-hidden="true"></span><span data-preview-layer-name></span></button>
+    <small class="ea-preview-count" data-preview-layer-status></small>
+    <button class="ea-preview-remove" type="button" hidden>×</button>
+  </div>
+</template>
+<template id="ea-preview-map-tools-template">
+  <div class="leaflet-bar ea-preview-map-tools">
+    <button type="button" data-preview-map-action="fit" title="Ajustar às camadas" aria-label="Ajustar às camadas"><i class="fas fa-expand" aria-hidden="true"></i></button>
+    <button type="button" data-preview-map-action="selected" title="Zoom na camada" aria-label="Zoom na camada"><i class="fas fa-magnifying-glass-location" aria-hidden="true"></i></button>
+    <button type="button" data-preview-map-action="fullscreen" title="Tela cheia" aria-label="Tela cheia"><i class="fas fa-up-right-and-down-left-from-center" aria-hidden="true"></i></button>
+  </div>
+</template>

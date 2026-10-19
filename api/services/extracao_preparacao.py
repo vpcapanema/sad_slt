@@ -123,9 +123,7 @@ def _gravar_geometrias(frame, path):
         raise
 
 
-def preparar(ident, dono):
-    from api.services.extracao_entrada_local import validar
-    from api.services.metadados_previa import descrever_vetor
+def carregar(ident):
     from api.services.municipal_layer import carregar_para_extracao
     from api.services import storage_geoespacial as storage
     if ident.startswith('storage:'):
@@ -149,6 +147,13 @@ def preparar(ident, dono):
         arquivo = caminho_arquivo(registro)
         if arquivo:
             frame = carregar_para_extracao(ident)
+    return frame, nome, arquivo
+
+
+def preparar(ident, dono):
+    from api.services.extracao_entrada_local import validar
+    from api.services.metadados_previa import descrever_vetor
+    frame, nome, arquivo = carregar(ident)
     _, avisos = validar(frame, max_feicoes=None)
     meta = descrever_vetor(frame, formato=Path(arquivo).suffix.lstrip('.').upper() if arquivo else 'PostGIS')
     meta['avisos'].extend(avisos)

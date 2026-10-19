@@ -1,5 +1,5 @@
 import {camadaTiles} from './previa-tiles.js';
-import { $, el, feedback } from './ui.js';
+import { $, feedback } from './ui.js';
 import { removerPrevia, entradasParaPrevia, componentes, configuracaoDaCamada } from './preparacao.js';
 const nomeArquivo=valor=>String(valor||'Arquivo sem nome').split(/[\\/]/).pop();
 const quantidade=n=>Number(n).toLocaleString('pt-BR');
@@ -12,6 +12,16 @@ export function criarPrevia(state, changed, {obterCamadas, aoMudarVisibilidade} 
   const camadasMapa=new Map(),visiveis=new Set();
   let controles=[],botoes=[],niveis=[];
   const cores=['#1769aa','#b64d11','#247947','#854cb0','#b52c65','#087f8c'];
+  const clonar=id=>document.getElementById(id).content.firstElementChild.cloneNode(true);
+  const raizes=[...lista.querySelectorAll('[data-preview-group]')];
+  function ligarGrupo(section){
+    const botao=section.querySelector('.ea-preview-group-toggle'),body=section.querySelector('.ea-preview-tree-children');
+    botao.addEventListener('click',()=>{
+      body.hidden=!body.hidden;botao.setAttribute('aria-expanded',String(!body.hidden));
+      botao.querySelector('.ea-preview-chevron').textContent=body.hidden?'▸':'▾';
+    });
+  }
+  raizes.forEach(ligarGrupo);
   function selecionarCamada(item){
     if(!item)return;
     selecionada=item.chave;
@@ -33,11 +43,10 @@ export function criarPrevia(state, changed, {obterCamadas, aoMudarVisibilidade} 
       'Marque ao menos uma camada para enviar à bancada.';
     aoMudarVisibilidade?.();
   }
-  function caixaVisibilidade(itens,rotulo){
-    const checkbox=el('input',undefined,'ea-preview-visibility');checkbox.type='checkbox';checkbox.name='ea-preview-visibility';
+  function caixaVisibilidade(checkbox,itens,rotulo){
     checkbox.setAttribute('aria-label',`Visibilidade no mapa: ${rotulo}`);
     controles.push([checkbox,itens]);
-    checkbox.addEventListener('change',()=>{
+    checkbox.onchange=()=>{
       for(const item of itens){
         const camada=camadasMapa.get(item.chave);if(!camada)continue;
         if(checkbox.checked){desenho.addLayer(camada);visiveis.add(item.chave);}
@@ -45,27 +54,31 @@ export function criarPrevia(state, changed, {obterCamadas, aoMudarVisibilidade} 
       }
       sincronizarVisibilidade();
       selecionarCamada(itens.find(item=>item.chave===selecionada)||itens[0]);
-    });
-    return checkbox;
+    };
   }
   function renderLista(){
-    lista.replaceChildren();controles=[];botoes=[];
+    controles=[];botoes=[];
+    const camadasPacote=pacote?.camadas||[];
     function grupo(titulo,itens,classe=''){
-      const section=el('section',undefined,`ea-preview-layer-group ${classe}`);
-      const row=el('div',undefined,'ea-preview-tree-row');
-      const botao=el('button',undefined,'ea-preview-group-toggle');botao.type='button';
-      botao.setAttribute('aria-expanded','true');
-      const seta=el('span','▾','ea-preview-chevron');seta.setAttribute('aria-hidden','true');
-      botao.append(seta,el('span',titulo),el('span',String(itens.length),'ea-preview-count'));
-      const body=el('div',undefined,'ea-preview-tree-children');body.setAttribute('role','group');body.setAttribute('aria-label',titulo);
-      botao.addEventListener('click',()=>{body.hidden=!body.hidden;botao.setAttribute('aria-expanded',String(!body.hidden));seta.textContent=body.hidden?'▸':'▾';});
-      row.append(caixaVisibilidade(itens,titulo),botao);section.append(row,body);
+      const section=clonar('ea-preview-group-template');
+      section.classList.add(classe);
+      section.querySelector('[data-preview-group-name]').textContent=titulo;
+      section.querySelector('.ea-preview-count').textContent=String(itens.length);
+      const body=section.querySelector('.ea-preview-tree-children');body.setAttribute('aria-label',titulo);
+      caixaVisibilidade(section.querySelector('.ea-preview-visibility'),itens,titulo);
+      ligarGrupo(section);
       return {section,body};
     }
-    for(const [origem,titulo] of [['entrada','Camadas de entrada'],['base','Camadas de base']]){
-      const itens=pacote.camadas.filter(c=>c.grupo===origem);
-      const raiz=grupo(titulo,itens,'ea-preview-status-group');
-      if(!itens.length)raiz.body.append(el('p','Nenhuma camada.','ea-preview-empty'));
+    for(const section of raizes){
+      const origem=section.dataset.previewGroup,body=section.querySelector('.ea-preview-tree-children');
+      const titulo=body.getAttribute('aria-label');
+      const itens=camadasPacote.filter(c=>c.grupo===origem);
+      section.querySelector('.ea-preview-count').textContent=String(itens.length);
+      section.querySelector('.ea-preview-group-toggle').setAttribute('aria-expanded','true');
+      section.querySelector('.ea-preview-chevron').textContent='▾';body.hidden=false;
+      caixaVisibilidade(section.querySelector('.ea-preview-visibility'),itens,titulo);
+      body.replaceChildren();
+      if(!itens.length)body.append(clonar('ea-preview-empty-template'));
       const subgrupos=new Map();
       for(const item of itens){
         const chave=origem==='base'?item.categoriaId:item.arquivoOrigem||item.arquivo||item.nome;
@@ -78,28 +91,27 @@ export function criarPrevia(state, changed, {obterCamadas, aoMudarVisibilidade} 
           categoria?'ea-preview-category-group':'ea-preview-file-group');
         if(categoria)subgrupo.section.dataset.category=chave;
         for(const item of camadas){
-          const row=el('div',undefined,'ea-preview-tree-row');
-          const botao=el('button',undefined,'ea-preview-layer');botao.type='button';botao.dataset.layer=item.chave;
+          const row=clonar('ea-preview-layer-template');
+          const botao=row.querySelector('.ea-preview-layer');botao.dataset.layer=item.chave;
           botao.setAttribute('aria-pressed',String(item.chave===selecionada));
-          const index=pacote.camadas.indexOf(item);botao.style.setProperty('--layer-color',cores[index%cores.length]);
+          const index=camadasPacote.indexOf(item);botao.style.setProperty('--layer-color',cores[index%cores.length]);
           const tipo=item.tipo==='raster'?'raster':/Point/.test(item.metadados_local?.tipos_geometria?.join(''))?'point':/Line/.test(item.metadados_local?.tipos_geometria?.join(''))?'line':'polygon';
-          const simbolo=el('span',undefined,`ea-preview-symbol ea-preview-symbol--${tipo}`);simbolo.setAttribute('aria-hidden','true');
-          botao.append(simbolo,el('span',item.nome));
+          row.querySelector('.ea-preview-symbol').classList.add(`ea-preview-symbol--${tipo}`);
+          row.querySelector('[data-preview-layer-name]').textContent=item.nome;
           botao.title=item.erro||`${item.tipo==='raster'?'Raster':'Vetor'} · ${item.arquivo}`;
           botao.addEventListener('click',()=>selecionarCamada(item));botoes.push([botao,item.chave]);
           row.dataset.validation=item.status_validacao;
-          row.append(caixaVisibilidade([item],item.nome),botao);
-          const badge=el('small',item.status_validacao==='invalida'?'Não validada':item.pendente?'Na prévia':'Na bancada','ea-preview-count');row.append(badge);
+          caixaVisibilidade(row.querySelector('.ea-preview-visibility'),[item],item.nome);
+          row.querySelector('[data-preview-layer-status]').textContent=item.status_validacao==='invalida'?'Não validada':item.pendente?'Na prévia':'Na bancada';
           if(state.editandoBases){
-            const remover=el('button','×','ea-preview-remove');remover.type='button';remover.disabled=state.busy;
+            const remover=row.querySelector('.ea-preview-remove');remover.hidden=false;remover.disabled=state.busy;
             remover.setAttribute('aria-label',`Remover da prévia: ${item.nome}`);
-            remover.addEventListener('click',()=>{removerPrevia(state,item);changed();});row.append(remover);
+            remover.addEventListener('click',()=>{removerPrevia(state,item);changed();});
           }
           subgrupo.body.append(row);
         }
-        raiz.body.append(subgrupo.section);
+        body.append(subgrupo.section);
       }
-      lista.append(raiz.section);
     }
     sincronizarVisibilidade();
   }
@@ -111,7 +123,7 @@ export function criarPrevia(state, changed, {obterCamadas, aoMudarVisibilidade} 
   }
   function render(){
     host.hidden=!pacote;$('#ea-layer-information').hidden=!pacote?.camadas.length;
-    if(!pacote){desenho?.remove();desenho=null;atual=null;camadasMapa.clear();visiveis.clear();niveis=[];controles=[];botoes=[];lista.replaceChildren();dados.replaceChildren();node('preview-name').textContent='';node('preview-map-status').textContent='';selecionada=null;state.previaVisiveis=new Set();return;}
+    if(!pacote){desenho?.remove();desenho=null;atual=null;camadasMapa.clear();visiveis.clear();niveis=[];selecionada=null;renderLista();renderDetalhes(null);node('preview-name').textContent='';node('preview-map-status').textContent='';state.previaVisiveis=new Set();return;}
     const anteriores=new Set(camadasMapa.keys()), ocultas=new Set([...anteriores].filter(id=>!visiveis.has(id)));
     if(!anteriores.size&&state.previaVisiveis?.size)for(const c of pacote.camadas)if(!state.previaVisiveis.has(c.chave))ocultas.add(c.chave);
     atual=pacote;
@@ -121,13 +133,13 @@ export function criarPrevia(state, changed, {obterCamadas, aoMudarVisibilidade} 
         attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',maxNativeZoom:19,maxZoom:22,
       }).addTo(mapa).once('tileerror',()=>{feedback('Mapa de fundo indisponível. As camadas validadas continuam visíveis.','warning');});
       window.L.control.scale({imperial:false}).addTo(mapa);
-      const toolbar=el('div',undefined,'leaflet-bar ea-preview-map-tools');
+      const toolbar=clonar('ea-preview-map-tools-template');
       window.L.DomEvent.disableClickPropagation(toolbar);window.L.DomEvent.disableScrollPropagation(toolbar);
-      for(const [label,icone,action] of [
-        ['Ajustar às camadas','fa-expand',()=>{const b=desenho?.getBounds();if(b?.isValid())mapa.fitBounds(b,{padding:[30,30],maxZoom:18});}],
-        ['Zoom na camada','fa-magnifying-glass-location',()=>{const b=camadasMapa.get(selecionada)?.getBounds();if(b?.isValid())mapa.fitBounds(b,{padding:[30,30],maxZoom:20});}],
-        ['Tela cheia','fa-up-right-and-down-left-from-center',async()=>{try{if(document.fullscreenElement===host)await document.exitFullscreen();else await host.requestFullscreen();mapa.invalidateSize();}catch{feedback('O navegador não permitiu abrir a tela cheia.','warning');}}]
-      ]){const button=el('button',undefined);button.type='button';button.title=label;button.setAttribute('aria-label',label);const icon=el('i',undefined,`fas ${icone}`);icon.setAttribute('aria-hidden','true');button.append(icon);button.addEventListener('click',action);toolbar.append(button);}
+      for(const [acao,action] of [
+        ['fit',()=>{const b=desenho?.getBounds();if(b?.isValid())mapa.fitBounds(b,{padding:[30,30],maxZoom:18});}],
+        ['selected',()=>{const b=camadasMapa.get(selecionada)?.getBounds();if(b?.isValid())mapa.fitBounds(b,{padding:[30,30],maxZoom:20});}],
+        ['fullscreen',async()=>{try{if(document.fullscreenElement===host)await document.exitFullscreen();else await host.requestFullscreen();mapa.invalidateSize();}catch{feedback('O navegador não permitiu abrir a tela cheia.','warning');}}]
+      ])toolbar.querySelector(`[data-preview-map-action="${acao}"]`).addEventListener('click',action);
       const control=window.L.control({position:'topleft'});control.onAdd=()=>toolbar;control.addTo(mapa);
       mapa.on('zoomend',()=>{atualizarDetalheMapa();if(pacote)renderDetalhes(pacote.camadas.find(c=>c.chave===selecionada));});
       new ResizeObserver(()=>mapa.invalidateSize()).observe(mapaHost);
@@ -150,8 +162,13 @@ export function criarPrevia(state, changed, {obterCamadas, aoMudarVisibilidade} 
     renderLista();renderDetalhes(pacote.camadas.find(c=>c.chave===selecionada)||pacote.camadas[0]);
   }
   function renderDetalhes(layer){
-    dados.replaceChildren();
-    if(!layer){dados.append(el('p','Selecione uma camada no painel para consultar suas informações.','ea-meta-empty'));return;}
+    dados.querySelector('[data-preview-metadata-empty]').hidden=Boolean(layer);
+    for(const section of dados.querySelectorAll('[data-preview-metadata-group]'))section.hidden=!layer||(section.dataset.previewMetadataCondition==='identificacao'&&!layer.identificacao);
+    for(const row of dados.querySelectorAll('[data-preview-metadata-condition="raster"]'))row.hidden=layer?.tipo!=='raster';
+    if(!layer){
+      for(const value of dados.querySelectorAll('[data-preview-value]'))value.textContent='';
+      return;
+    }
     const meta=layer.metadados_local||{},local=meta.localizacao||{},raster=layer.tipo==='raster';
     const features=layer.geojson?.features||[];
     const informado=v=>v==null||v===''?'Não informado':String(v);
@@ -163,51 +180,40 @@ export function criarPrevia(state, changed, {obterCamadas, aoMudarVisibilidade} 
     const representacao=meta.previa||layer.representacao_previa;
     const nivel=mapa?.getZoom()<12&&representacao?.nivel_resumido?representacao.nivel_resumido:representacao;
     const situacao=({valida:'Validada',invalida:'Não validada',pendente:'Aguardando validação'})[layer.status_validacao]||'Não informada';
-    function grupo(titulo,pares){
-      const bloco=el('section',undefined,'ea-preview-meta-group');bloco.append(el('h5',titulo));
-      const lista=el('dl');
-      for(const [rotulo,valor] of pares){const linha=el('div',undefined,'ea-meta-row');linha.append(el('dt',rotulo),el('dd',informado(valor)));lista.append(linha);}
-      bloco.append(lista);dados.append(bloco);
-    }
-    grupo('Identificação',[
-      ['Camada',layer.nome],['Papel',layer.grupo==='base'?'Camada de base':'Camada de entrada'],
-      ['Arquivo',caminho?nomeArquivo(caminho):null],['Caminho do arquivo',caminho],
-      ['Componente interno',meta.componente||meta.camada||layer.camada],
-      ['Formato',meta.formato||layer.formato||(caminho?.includes('.')?caminho.split('.').pop().toUpperCase():null)],
-      ['Categoria',layer.categoria||'Não se aplica'],['Tamanho',tamanho(meta.bytes??layer.tamanho_bytes)],
-      ['Descompactado',tamanho(meta.bytes_descompactados)]]);
-    if(layer.identificacao)grupo('Identificação das demandas',[
-      ['ID da demanda',layer.identificacao.campo_id==='__feicao__'?'ID da feição':layer.identificacao.campo_id],
-      ['Categoria da demanda',layer.identificacao.categoria_demanda||layer.identificacao.categoria_pontos||'Sem categorização']]);
-    grupo('Validação e uso',[
-      ['Validação',situacao],['Motivo',layer.erro||'Sem erro informado'],
-      ['Visibilidade',visiveis.has(layer.chave)?'Visível no mapa':'Não exibida no mapa'],
-      ['Bancada',layer.pendente?'Ainda não enviada':'Camada confirmada'],
-      ['Representação',({tiles:'Visualização por tiles do original',original:'Geometria integral',simplificada:'Prévia simplificada',limites:'Limites das feições (aproximação)'})[layer.representacao==='tiles'?'tiles':nivel?.metodo]||(layer.geojson?'Prévia carregada':'Indisponível')],
-      ['Processamento',layer.status_validacao!=='valida'?'Requer validação':raster?'Os algoritmos disponíveis exigem vetores':'Utiliza a geometria original, sem simplificação da prévia']]);
-    grupo('Conteúdo geoespacial',[
-      ['Tipo',raster?'Raster':'Vetor'],['Feições originais',numero(meta.feicoes??layer.feicoes)],
-      ['Feições na prévia',layer.tiles_url?'Carregadas por região do mapa':layer.geojson?numero(features.length):'Não disponível'],
-      ['Vértices originais',raster?'Não se aplica':numero(meta.vertices??representacao?.vertices_originais)],
-      ['Geometrias',raster?'Não se aplica':unir(meta.tipos_geometria||[...new Set(features.map(f=>f.geometry?.type).filter(Boolean))])],
-      ['Quantidade de campos',numero(meta.campos_total??nomesCampos.length)],['Campos',unir(nomesCampos)],
-      ['Área total',meta.area_km2!=null?`${numero(meta.area_km2)} km²`:'Não informada'],
-      ['Comprimento total',meta.comprimento_km!=null?`${numero(meta.comprimento_km)} km`:'Não informado'],
-      ...(raster?[
-        ['Dimensões',meta.largura!=null&&meta.altura!=null?`${meta.largura} × ${meta.altura} pixels`:null],
-        ['Bandas',meta.bandas?.map(b=>`${b.banda}: ${b.tipo} (NoData: ${b.nodata??'não informado'})`).join('; ')],
-        ['Resolução',unir(meta.resolucao)]]:[])]);
-    grupo('Sistema de coordenadas',[
-      ['CRS original',meta.crs||layer.crs||layer.crs_arquivo],['Nome do CRS',meta.crs_nome],
-      ['Unidade',({degree:'grau',metre:'metro'})[meta.unidade]||meta.unidade],
-      ['CRS da prévia',layer.tiles_url?'Web Mercator · EPSG:3857':layer.geojson?'WGS 84 · EPSG:4326':'Prévia indisponível'],
-      ['Limites O / S / L / N',meta.limites_wgs84?.map(n=>Number(n).toFixed(6)).join(' · ')]]);
-    grupo('Localização cadastral',[
-      ['UF',unir(local.ufs)],['Municípios / IBGE',local.municipios?.map(m=>`${m.nm_mun} (${m.cd_mun}) / ${m.sigla_uf}`).join('; ')||(local.status==='consultado'?'Nenhum município identificado na cobertura consultada':'Não confirmados')],
-      ['Fonte',local.fonte],['Cobertura',local.cobertura],
-      ['Consulta',[local.aviso,local.aviso_ufs].filter(Boolean).join(' ')||(local.status==='consultado'?'Consulta concluída':'Não informada')]]);
-    grupo('Observações',[
-      ['Avisos',[...(meta.avisos||[]),...(layer.mensagem?[layer.mensagem]:[])].join(' ')||'Sem observações adicionais']]);
+    const valores={
+      nome:layer.nome,papel:layer.grupo==='base'?'Camada de base':'Camada de entrada',
+      arquivo:caminho?nomeArquivo(caminho):null,caminho,
+      componente:meta.componente||meta.camada||layer.camada,
+      formato:meta.formato||layer.formato||(caminho?.includes('.')?caminho.split('.').pop().toUpperCase():null),
+      categoria:layer.categoria||'Não se aplica',tamanho:tamanho(meta.bytes??layer.tamanho_bytes),
+      descompactado:tamanho(meta.bytes_descompactados),
+      demanda_id:layer.identificacao?.campo_id==='__feicao__'?'ID da feição':layer.identificacao?.campo_id,
+      demanda_categoria:layer.identificacao?.categoria_demanda||layer.identificacao?.categoria_pontos||'Sem categorização',
+      validacao:situacao,motivo:layer.erro||'Sem erro informado',
+      visibilidade:visiveis.has(layer.chave)?'Visível no mapa':'Não exibida no mapa',
+      bancada:layer.pendente?'Ainda não enviada':'Camada confirmada',
+      representacao:({tiles:'Visualização por tiles do original',original:'Geometria integral',simplificada:'Prévia simplificada',limites:'Limites das feições (aproximação)'})[layer.representacao==='tiles'?'tiles':nivel?.metodo]||(layer.geojson?'Prévia carregada':'Indisponível'),
+      processamento:layer.status_validacao!=='valida'?'Requer validação':raster?'Os algoritmos disponíveis exigem vetores':'Utiliza a geometria original, sem simplificação da prévia',
+      tipo:raster?'Raster':'Vetor',feicoes:numero(meta.feicoes??layer.feicoes),
+      feicoes_previa:layer.tiles_url?'Carregadas por região do mapa':layer.geojson?numero(features.length):'Não disponível',
+      vertices:raster?'Não se aplica':numero(meta.vertices??representacao?.vertices_originais),
+      geometrias:raster?'Não se aplica':unir(meta.tipos_geometria||[...new Set(features.map(f=>f.geometry?.type).filter(Boolean))]),
+      campos_total:numero(meta.campos_total??nomesCampos.length),campos:unir(nomesCampos),
+      area:meta.area_km2!=null?`${numero(meta.area_km2)} km²`:'Não informada',
+      comprimento:meta.comprimento_km!=null?`${numero(meta.comprimento_km)} km`:'Não informado',
+      dimensoes:meta.largura!=null&&meta.altura!=null?`${meta.largura} × ${meta.altura} pixels`:null,
+      bandas:meta.bandas?.map(b=>`${b.banda}: ${b.tipo} (NoData: ${b.nodata??'não informado'})`).join('; '),
+      resolucao:unir(meta.resolucao),
+      crs:meta.crs||layer.crs||layer.crs_arquivo,crs_nome:meta.crs_nome,
+      unidade:({degree:'grau',metre:'metro'})[meta.unidade]||meta.unidade,
+      crs_previa:layer.tiles_url?'Web Mercator · EPSG:3857':layer.geojson?'WGS 84 · EPSG:4326':'Prévia indisponível',
+      limites:meta.limites_wgs84?.map(n=>Number(n).toFixed(6)).join(' · '),
+      ufs:unir(local.ufs),municipios:local.municipios?.map(m=>`${m.nm_mun} (${m.cd_mun}) / ${m.sigla_uf}`).join('; ')||(local.status==='consultado'?'Nenhum município identificado na cobertura consultada':'Não confirmados'),
+      fonte:local.fonte,cobertura:local.cobertura,
+      consulta:[local.aviso,local.aviso_ufs].filter(Boolean).join(' ')||(local.status==='consultado'?'Consulta concluída':'Não informada'),
+      avisos:[...(meta.avisos||[]),...(layer.mensagem?[layer.mensagem]:[])].join(' ')||'Sem observações adicionais',
+    };
+    for(const value of dados.querySelectorAll('[data-preview-value]'))value.textContent=informado(valores[value.dataset.previewValue]);
   }
   let assinaturaAnterior=[];
   function atualizar(){

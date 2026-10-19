@@ -171,7 +171,9 @@
           <p id="ea-input-preview-name"></p></header>
         <div class="ea-preview-layout">
           <aside class="ea-preview-panel" aria-label="Painel de camadas">
-            <div id="ea-input-preview-layers" class="ea-preview-layers" aria-label="Camadas de entrada e de base"></div>
+            <div id="ea-input-preview-layers" class="ea-preview-layers" aria-label="Camadas de entrada e de base">
+              {% include "componentes/extracao_atributos/_previa_arvore.html" %}
+            </div>
         <footer class="ea-staging-actions" id="ea-staging-actions" role="toolbar">
           <button type="button" class="ea-btn ea-btn-primary ea-staging-symbol ea-icon-button" id="ea-staging-confirmar" aria-label="Enviar pra bancada" title="Enviar pra bancada"><i class="fas fa-arrow-right-to-bracket" aria-hidden="true"></i><span class="ea-sr-only">Enviar pra bancada</span></button>
           <button type="button" class="ea-btn ea-staging-symbol ea-icon-button" id="ea-staging-editar" aria-label="Editar camadas da prévia" title="Editar camadas da prévia"><i class="fas fa-pen-to-square" aria-hidden="true"></i><span class="ea-sr-only">Editar camadas da prévia</span></button>
@@ -186,7 +188,9 @@
       </section>
       <section id="ea-layer-information" class="ea-input-preview" aria-labelledby="ea-layer-information-title" hidden>
         <header><h4 id="ea-layer-information-title">Informações das camadas do geoprocesso</h4></header>
-        <div id="ea-input-preview-data" class="ea-preview-metadata"></div>
+        <div id="ea-input-preview-data" class="ea-preview-metadata">
+          {% include "componentes/extracao_atributos/_previa_metadados.html" %}
+        </div>
       </section>
       </div>
       <!-- Cada grupo tem a cor e a seta do subcard de origem: a aréola liga o que

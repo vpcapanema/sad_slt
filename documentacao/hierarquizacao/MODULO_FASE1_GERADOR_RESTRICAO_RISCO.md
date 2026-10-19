@@ -26,7 +26,7 @@ automatica nem alterar resultados existentes da hierarquizacao.
 1. A entrada pode ser composta por camadas vetoriais escolhidas no explorador do
    storage ou pelas demandas de uma hierarquizacao cadastrada, sem filtro de fase.
    Na segunda alternativa, sao recuperadas as informacoes da rodada e as geometrias
-   atuais do cadastro, preservando pontos, linhas e poligonos. A ausencia de uma
+   atuais do cadastro, preservando pontos, linhas e poligonos na previa. A ausencia de uma
    geometria interrompe a selecao; nao se cria um ponto substituto por coordenadas.
    Os dois campos sao mutuamente exclusivos: selecionar camadas bloqueia o campo
    de hierarquizacoes, e selecionar uma hierarquizacao bloqueia a escolha de
@@ -57,6 +57,34 @@ automatica nem alterar resultados existentes da hierarquizacao.
    camadas marcadas na previa, preservando seus papeis; camadas desmarcadas deixam
    esse conjunto. Cancelar o envio preserva a bancada. A remocao direta na bancada
    e respeitada; outras camadas adicionadas fora deste fluxo nao sao substituidas.
+6. As demandas de entrada sao representadas na bancada exclusivamente por
+   `Polygon` ou `MultiPolygon`. A conversao ocorre depois da confirmacao do envio,
+   sobre todas as feicoes da fonte integral, nunca sobre tiles ou geometrias
+   simplificadas. Reutiliza-se a rotina cadastral
+   `api/services/normalizacao_demanda.py`: pontos e multipontos recebem buffer
+   de raio de 50 m; linhas e multilinhas recebem buffer de 25 m de cada lado,
+   com extremidades e juncoes arredondadas; poligonos e multipoligonos nao
+   recebem buffer. O processamento utiliza GDAL/OGR em EPSG:5880, com 32
+   segmentos por quadrante, reducao a 2D, `MakeValid`, coleta de componentes
+   poligonais e `UnionCascaded` por feicao; a saida e gravada em EPSG:4674.
+   Nao se dissolvem demandas diferentes nem se descartam registros sem geometria
+   utilizavel. CRS ausente, coordenadas incompativeis, colecoes geometricas ou
+   impossibilidade de gerar poligono valido interrompem o envio.
+7. A origem cadastrada e recuperada novamente no servidor; arquivos do storage
+   sao lidos integralmente, preservando atributos e identificadores de origem.
+   Cada camada de demandas gera um GeoPackage derivado, reaberto e conferido
+   antes do registro no ciclo de vida oficial das saidas. O arquivo inclui
+   metadados de origem e parametros; a bancada recebe seu caminho e revisao
+   reais para as operacoes, e nao a referencia geometrica da previa.
+   A fonte original permanece intacta. Risco e restricao nao recebem esta
+   conversao: o buffer cadastral de demandas nao cria zonas derivadas dos criterios.
+8. Os dois envios apresentam acompanhamento no sistema de feedback: etapas,
+   camada corrente, total de camadas, sucesso, falha e cancelamento.
+   O cancelamento aguarda a operacao corrente terminar e impede a substituicao
+   do conjunto; arquivos derivados ja produzidos permanecem registrados para
+   rastreabilidade. Uma falha em qualquer entrada impede o envio parcial.
+   Nesta sessao da pagina, o derivado da mesma revisao da previa pode ser
+   reutilizado nos reenvios, sem aplicar novo buffer a uma demanda normalizada.
 
 A atribuicao de um papel pelo usuario nao equivale a homologacao da camada.
 A regra de calculo com listas livres, sua consolidacao, a persistencia dos

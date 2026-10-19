@@ -88,12 +88,15 @@
     <header class="ahp-section-label"><span class="ahp-subsection-num">3</span><h2 id="ev-previa-title">Confira a prévia</h2></header>
     <div class="ahp-section-body">
       <p class="ea-hint">Receba aqui as seleções enviadas pelas seções 1 e 2, confira o mapa e marque as camadas desejadas. O botão no rodapé do painel de camadas envia somente as marcadas para a bancada. Novas seleções só atualizam esta prévia após clicar em enviar para a prévia.</p>
+      <p class="ea-hint">A prévia mostra as geometrias originais. Ao enviar à bancada, as demandas de entrada são normalizadas para Polygon/MultiPolygon pela mesma regra do cadastro; os parâmetros são apresentados na confirmação. Os cálculos utilizarão os arquivos derivados integrais, sem alterar as fontes nem aplicar buffers às bases de risco ou restrição.</p>
       <div class="ea-preview-workspace">
       <section id="ea-input-preview" class="ea-input-preview" aria-labelledby="ea-input-preview-title" hidden>
         <header><h4 id="ea-input-preview-title">Pré-visualização das camadas do geoprocesso</h4><p id="ea-input-preview-name"></p></header>
         <div class="ea-preview-layout">
           <aside class="ea-preview-panel" aria-label="Painel de camadas">
-            <div id="ea-input-preview-layers" class="ea-preview-layers"></div>
+            <div id="ea-input-preview-layers" class="ea-preview-layers" aria-label="Camadas de entrada e de base">
+              {% include "componentes/extracao_atributos/_previa_arvore.html" %}
+            </div>
             <footer class="ea-staging-actions" id="ea-staging-actions" role="toolbar" aria-label="Envio da prévia">
               <button type="button" class="ea-btn ea-btn-primary ea-staging-symbol ea-icon-button" id="ea-staging-confirmar" aria-label="Enviar pra bancada" title="Enviar pra bancada" disabled><i class="fas fa-arrow-right-to-bracket" aria-hidden="true"></i><span class="ea-sr-only">Enviar pra bancada</span></button>
             </footer>
@@ -102,8 +105,11 @@
         </div>
         <p id="ea-input-preview-map-status" class="ea-hint" role="status"></p>
       </section>
-      <section id="ea-layer-information" class="ea-input-preview" hidden>
-        <header><h4>Informações da camada selecionada</h4></header><div id="ea-input-preview-data" class="ea-preview-metadata"></div>
+      <section id="ea-layer-information" class="ea-input-preview" aria-labelledby="ea-layer-information-title" hidden>
+        <header><h4 id="ea-layer-information-title">Informações da camada selecionada</h4></header>
+        <div id="ea-input-preview-data" class="ea-preview-metadata">
+          {% include "componentes/extracao_atributos/_previa_metadados.html" %}
+        </div>
       </section>
       </div>
     </div>
@@ -124,5 +130,5 @@
 <script src="/assets/vendor/maplibre-gl/maplibre-gl.js"></script>
 <script src="/assets/vendor/maplibre-gl/leaflet-maplibre-gl.js"></script>
 <script src="/restrict/hierarquizacao/js/hier-api.js"></script>
-<script type="module" src="/restrict/hierarquizacao/js/fase1-elegibilidade-v2.js"></script>
+<script type="module" src="/restrict/hierarquizacao/js/fase1-elegibilidade-v2.js?v=20261018-feedback-demandas"></script>
 {% endblock %}

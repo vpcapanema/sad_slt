@@ -190,6 +190,34 @@ def previa_tile(token: str, z: int, x: int, y: int,
         raise HTTPException(422, str(exc)) from exc
 
 
+class DemandaBancada(BaseModel):
+    id: str = Field(min_length=1, max_length=1200)
+    atributos: dict = Field(default_factory=dict, max_length=100)
+
+    @model_validator(mode='after')
+    def tamanho_atributos(self):
+        if len(json.dumps(self.atributos, allow_nan=False).encode('utf8')) > 100_000:
+            raise ValueError('As informações da demanda excedem 100 KB.')
+        return self
+
+
+@router.get('/elegibilidade/parametros')
+def parametros_demanda():
+    from api.services.elegibilidade_preparacao import parametros
+    return parametros()
+
+
+@router.post('/elegibilidade/preparar-demanda')
+def preparar_demanda(payload: DemandaBancada, user: SessionUser = Depends(require_geospatial_access)):
+    from api.services.elegibilidade_preparacao import preparar_demanda as preparar
+    try:
+        return preparar(payload.id, user.id, payload.atributos)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except (ValueError, RuntimeError) as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
 @router.post('/pastas',status_code=201)
 def criar_pasta(payload: NovaPasta):
     from api.services.pastas_geoespaciais import criar_pasta as criar

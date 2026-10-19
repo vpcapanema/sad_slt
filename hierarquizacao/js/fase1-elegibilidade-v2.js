@@ -1,9 +1,9 @@
 import {$, el, feedback} from '../../geoespacial/extracao-atributos/ui.js';
 import {json, post} from '../../geoespacial/extracao-atributos/api.js';
 import {escolherArquivo, identificarCamadas} from '../../geoespacial/extracao-atributos/explorador.js';
-import {validarCamada} from '../../geoespacial/extracao-atributos/camada-validada.js';
+import {validarCamada, descritorOriginal} from '../../geoespacial/extracao-atributos/camada-validada.js';
 import {escolherConfiguracao} from '../../geoespacial/extracao-atributos/lista-camadas.js';
-import {criarPrevia} from '../../geoespacial/extracao-atributos/previa.js';
+import {criarPrevia} from '../../geoespacial/extracao-atributos/previa.js?v=20261018-html';
 import {criarMapa} from '../../geoespacial/extracao-atributos/mapa.js';
 
 const papeis = {entrada:'Entrada', restricao:'Restrição', risco:'Risco'};
@@ -11,10 +11,12 @@ const selecao = {entrada:[], restricao:[], risco:[]};
 const previadas = {entrada:[], restricao:[], risco:[]};
 const enviados = {entrada:[], restricao:[], risco:[]};
 const state = {busy:false, previaVisiveis:new Set(), origemEntrada:null};
+const normalizadas = new Map();
 let hierarquizacao = null;
 const node = id => $(`#ev-${id}`);
 const chave = (papel, camada) => `${papel}:${camada.id}`;
 const identidade = camada => {
+  if (camada.fonteElegibilidade) return identidade(camada.fonteElegibilidade);
   const arquivo = camada.id.startsWith('storage:') ? camada.id.slice(8) : camada.arquivo;
   if (!arquivo) return camada.id;
   return arquivo.includes('::') ? arquivo : `${arquivo}::${camada.camada || ''}`;
@@ -34,15 +36,44 @@ async function ocupar(mensagem, acao) {
   node('status').textContent = mensagem;
   node('status').dataset.error = 'false';
   controles();
-  try { await acao(); }
-  catch (erro) { avisar(`${mensagem} ${erro.message}`, 'error'); }
+  let processo, cancelado=false;
+  const iniciar = (titulo, tarefas, mensagemCancelamento='Envio cancelado. A seleção e os conjuntos anteriores foram mantidos.') => {
+    processo = window.ProcessFeedback.iniciarCadastro({
+      title:titulo, tasks:tarefas,
+      onCancel:async () => {
+        cancelado=true;
+        processo.detalhe('Cancelamento solicitado. Aguardando a operação atual terminar; nenhuma substituição será confirmada.');
+      },
+    });
+    return {
+      processo,
+      conferir:() => {
+        if (cancelado) throw new DOMException(mensagemCancelamento, 'AbortError');
+      },
+    };
+  };
+  try { await acao(iniciar); }
+  catch (erro) {
+    if (erro.name === 'AbortError') {
+      processo?.confirmarCancelamento(erro.message);
+      processo?.fechar();
+      avisar(erro.message);
+    } else {
+      processo?.erro({title:'Envio não concluído', message:erro.message,
+        detail:'A seleção e os conjuntos anteriores foram mantidos. Corrija o problema e tente novamente; arquivos derivados já gerados permanecem registrados.'});
+      avisar(`${mensagem} ${erro.message}`, 'error');
+    }
+  }
   finally { state.busy = false; render(); }
 }
 function camadasPrevia() {
   return Object.keys(papeis).flatMap(papel => previadas[papel].map(camada => ({
     ...camada, chave:chave(papel, camada), grupo:papel === 'entrada' ? 'entrada' : 'base',
     categoriaId:papel, categoria:papeis[papel], arquivoOrigem:camada.arquivo || camada.nome,
-    pendente:!enviados[papel].some(item => item.id === camada.id && item.revisao === camada.revisao),
+    pendente:!enviados[papel].some(item => {
+      const fonte=item.fonteElegibilidade || item;
+      return fonte.id === camada.id && fonte.revisao === camada.revisao;
+    }),
   })));
 }
 function marcadas(papel) {
@@ -66,6 +97,8 @@ function controles() {
   node('hier-limpar').disabled = state.busy || state.origemEntrada !== 'hierarquizacao';
   for (const papel of ['restricao','risco']) node(`${papel}-camadas`).disabled = node(`${papel}-browse`).disabled;
   $('#ea-staging-confirmar').disabled = state.busy || !Object.keys(papeis).some(papel => marcadas(papel).length);
+  if (state.busy) for (const checkbox of document.querySelectorAll('#ea-input-preview .ea-preview-visibility')) checkbox.disabled=true;
+  $('#elegibilidade-app').setAttribute('aria-busy',String(state.busy));
 }
 function render() {
   node('entrada-lista').replaceChildren();
@@ -121,15 +154,22 @@ function validarPapeis(papel, camadas) {
     }
   }
 }
-async function preparar(referencias) {
+async function preparar(referencias, acompanhamento) {
   if (!referencias.length) return [];
   referencias = await identificarCamadas(referencias, {
-    aoIdentificar:ref => { node('status').textContent = `Identificando camadas de ${ref.nome || ref.arquivo}…`; },
+    aoIdentificar:ref => {
+      acompanhamento?.conferir();
+      const detalhe=`Identificando camadas de ${ref.nome || ref.arquivo}…`;
+      node('status').textContent=detalhe;acompanhamento?.processo.detalhe(detalhe);
+    },
   });
+  acompanhamento?.conferir();
   const camadas = [];
   for (const ref of referencias) {
     node('status').textContent = `Validando ${camadas.length + 1} de ${referencias.length}: ${ref.nome || ref.id}`;
+    acompanhamento?.processo.detalhe(`${node('status').textContent}. Leitura integral da fonte, conferência de CRS e geometrias; o original não será alterado.`);
     const camada = await validarCamada(ref);
+    acompanhamento?.conferir();
     if (camada.tipo === 'raster') throw new Error(`"${camada.nome}" é raster. Selecione camadas vetoriais para esta preparação.`);
     camadas.push(camada);
   }
@@ -215,18 +255,31 @@ function atualizarBancada() {
   controles();
 }
 async function enviarPrevia(papel) {
-  await ocupar('Enviando seleção para a prévia.', async () => {
+  await ocupar('Enviando seleção para a prévia.', async iniciar => {
+    const tarefas=['Conferir seleção','Identificar e validar camadas','Atualizar prévia'];
+    const acompanhamento=iniciar(`Enviar ${papeis[papel].toLowerCase()} para a prévia`,tarefas), {processo, conferir}=acompanhamento;
+    processo.tarefaAtual(tarefas[0],`${selecao[papel].length} referência(s). A bancada não será alterada.`);
     validarPapeis(papel, selecao[papel]);
+    processo.concluirTarefa(tarefas[0]);
+    processo.tarefaAtual(tarefas[1],'Identificação dos componentes e validação das fontes completas.');
     const camadas = papel === 'entrada' && state.origemEntrada === 'hierarquizacao'
-      ? selecao[papel] : await preparar(selecao[papel]);
+      ? selecao[papel] : await preparar(selecao[papel],acompanhamento);
+    conferir();
     validarPapeis(papel, camadas);
+    processo.concluirTarefa(tarefas[1],`${camadas.length} camada(s) disponível(is).`);
+    processo.tarefaAtual(tarefas[2],'Substituir somente este grupo na prévia, preservando a bancada.');
+    const anteriores=previadas[papel];
     previadas[papel] = papel === 'entrada'
       ? camadas.map(c => ({...c, origemEntrada:state.origemEntrada})) : [...camadas];
+    try { previa.render(); }
+    catch (erro) { previadas[papel]=anteriores;throw erro; }
+    processo.concluirTarefa(tarefas[2]);
+    processo.sucesso({title:'Prévia atualizada',message:`${camadas.length} camada(s) de ${papeis[papel].toLowerCase()} na prévia. A bancada foi mantida. Confira as geometrias originais e marque as camadas antes de enviar à bancada.`});
     avisar(`${papeis[papel]} atualizada na prévia. Confira e marque as camadas na seção 3; o envio à bancada fica no rodapé do painel de camadas.`);
   });
 }
 async function enviar() {
-  await ocupar('Enviando camadas à bancada.', async () => {
+  await ocupar('Enviando camadas à bancada.', async iniciar => {
     mapa.assertReady();
     const candidato = Object.fromEntries(Object.keys(papeis).map(papel => [papel, marcadas(papel)]));
     const camadas = Object.values(candidato).flat();
@@ -236,13 +289,49 @@ async function enviar() {
       throw new Error('A entrada deve vir somente das camadas selecionadas ou de uma hierarquização, nunca das duas origens.');
     }
     for (const papel of Object.keys(papeis)) validarPapeis(papel, candidato[papel]);
+    const parametros=candidato.entrada.length ? await json('/extracao-atributos/elegibilidade/parametros') : null;
     const confirmado = await window.ProcessFeedback.confirmar({
       title:'Enviar prévia para a bancada',
       message:`Enviar ${camadas.length} camada(s): ${camadas.map(c => c.nome).join(', ')}?`,
-      warning:'Este envio substitui o conjunto anteriormente enviado por esta página pelas camadas marcadas na prévia. Camadas desmarcadas deixam esse conjunto. Não calcula elegibilidade nem homologa os dados.',
+      warning:`Este envio substitui o conjunto anteriormente enviado por esta página pelas camadas marcadas na prévia. Camadas desmarcadas deixam esse conjunto. ${parametros ? `Demandas: pontos/multipontos recebem raio de ${parametros.buffer_ponto_m} m; linhas/multilinhas, ${parametros.buffer_linha_m} m de cada lado, em ${parametros.crs_metrico}, com ${parametros.segmentos_quadrante} segmentos por quadrante. Polígonos não recebem buffer. Saída: Polygon/MultiPolygon em ${parametros.crs_saida}, com reparo MakeValid e consolidação por feição. Os arquivos derivados integrais serão usados nos cálculos; as fontes e as bases de risco/restrição não serão alteradas.` : ''} Não calcula elegibilidade nem homologa os dados.`,
       confirmLabel:'Enviar para a bancada',
     });
     if (!confirmado) { avisar('Envio cancelado. A bancada foi mantida.'); return; }
+    const tarefas=['Conferir camadas marcadas','Normalizar demandas e gravar arquivos','Sincronizar bancada','Conferir envio'];
+    const {processo,conferir}=iniciar('Enviar prévia para a bancada',tarefas,
+      'Envio cancelado. Os conjuntos anteriores foram mantidos. Arquivos derivados já gerados permanecem registrados no storage.');
+    processo.tarefaAtual(tarefas[0],`${camadas.length} camada(s) marcada(s); ${candidato.entrada.length} entrada(s).`);
+    mapa.assertReady();
+    conferir();
+    processo.concluirTarefa(tarefas[0]);
+    processo.tarefaAtual(tarefas[1],parametros ? `Pontos: ${parametros.buffer_ponto_m} m; linhas: ${parametros.buffer_linha_m} m por lado; ${parametros.crs_metrico} → ${parametros.crs_saida}. Bases sem conversão.` : 'Não há demandas de entrada marcadas; as bases mantêm suas geometrias originais.');
+    const entradas=[];
+    for (const fonte of candidato.entrada) {
+      conferir();
+      processo.detalhe(`Demanda ${entradas.length+1} de ${candidato.entrada.length}: ${fonte.nome}. Normalizando todas as feições e verificando o arquivo derivado integral no storage.`);
+      const chaveCache=JSON.stringify([fonte.id,fonte.revisao]);
+      let derivada=normalizadas.get(chaveCache);
+      if (!derivada) {
+        const atributos=fonte.origemEntrada==='hierarquizacao' ? fonte.geojson?.features?.[0]?.properties : undefined;
+        const resposta=descritorOriginal(await post('/extracao-atributos/elegibilidade/preparar-demanda',{id:fonte.id,atributos}));
+        if (resposta.status_validacao!=='valida' || !resposta.arquivo || !resposta.revisao || !resposta.id?.startsWith('storage:') ||
+            !resposta.tiles_url || !resposta.feicoes || resposta.normalizacao_demanda?.feicoes!==resposta.feicoes ||
+            !resposta.metadados_local?.tipos_geometria?.length ||
+            resposta.metadados_local.tipos_geometria.some(tipo=>!['Polygon','MultiPolygon'].includes(tipo))) {
+          throw new Error(`"${fonte.nome}": o servidor não confirmou o arquivo integral com todas as demandas poligonais.`);
+        }
+        derivada={...resposta, nome:fonte.nome, origemEntrada:fonte.origemEntrada, fonteElegibilidade:fonte};
+        normalizadas.set(chaveCache,derivada);
+      }
+      entradas.push(derivada);
+      processo.log(`${fonte.nome}: ${derivada.normalizacao_demanda.feicoes} feição(ões); ${derivada.normalizacao_demanda.pontos_convertidos} ponto(s), ${derivada.normalizacao_demanda.linhas_convertidas} linha(s), ${derivada.normalizacao_demanda.poligonos_sem_buffer} polígono(s) sem buffer. Arquivo: ${derivada.arquivo}.`,'info');
+      conferir();
+    }
+    candidato.entrada=entradas;
+    processo.concluirTarefa(tarefas[1],`${entradas.length} arquivo(s) de demandas poligonais validado(s).`);
+    processo.tarefaAtual(tarefas[2],'Adicionar as camadas e substituir apenas o conjunto confirmado por esta página.');
+    conferir();
+    mapa.assertReady();
     const itens = grupos => Object.keys(papeis).flatMap(tipo => grupos[tipo].map(camada => ({
       ...camada, key:chave(tipo, camada), grupo:papeis[tipo],
       papelExtracao:tipo === 'entrada' ? 'entrada' : 'base', arquivoGrupo:camada.arquivo || camada.nome,
@@ -250,8 +339,12 @@ async function enviar() {
     mapa.sync(itens(candidato));
     try { mapa.assertReady(Object.values(candidato).flat().map(c => c.id)); }
     catch (erro) { mapa.sync(itens(enviados)); throw erro; }
+    processo.concluirTarefa(tarefas[2]);
+    processo.tarefaAtual(tarefas[3],'Conferir presença e referências dos arquivos na bancada.');
     for (const papel of Object.keys(papeis)) enviados[papel] = [...candidato[papel]];
     atualizarBancada();
+    processo.concluirTarefa(tarefas[3]);
+    processo.sucesso({title:'Camadas enviadas à bancada',message:`${camadas.length} camada(s) enviada(s), incluindo ${entradas.length} arquivo(s) integral(is) de demandas poligonais. Bases de risco e restrição preservadas. A prévia continua mostrando as fontes originais. Nenhum cálculo ou homologação foi executado.`});
     avisar(`${camadas.length} camada(s) marcada(s) na prévia enviada(s) à bancada, com os papéis de entrada, restrição e risco preservados.`, 'success');
   });
 }

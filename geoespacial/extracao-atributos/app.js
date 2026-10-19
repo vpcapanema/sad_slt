@@ -7,7 +7,7 @@ import {composicaoVisivel,validarComposicao,pedidoDaComposicao} from './composic
 import { $, feedback, camposCamada } from "./ui.js";
 import { conectarIntegracao, disponivel, chamar } from "./integracao.js";
 import { criarMapa } from "./mapa.js";
-import { criarConfiguracao } from "./configuracao.js";
+import { criarConfiguracao } from "./configuracao.js?v=20261018-previa-html";
 import { criarResultados } from "./resultados.js";
 
 import { adaptador, json, esperar } from './api.js';

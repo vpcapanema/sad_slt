@@ -1,0 +1,35 @@
+<p class="ea-meta-empty" data-preview-metadata-empty>Selecione uma camada no painel para consultar suas informações.</p>
+  {% for titulo, condicao, campos in [
+    ("Identificação", "", [
+      ("nome", "Camada"), ("papel", "Papel"), ("arquivo", "Arquivo"),
+      ("caminho", "Caminho do arquivo"), ("componente", "Componente interno"),
+      ("formato", "Formato"), ("categoria", "Categoria"), ("tamanho", "Tamanho"),
+      ("descompactado", "Descompactado")]),
+    ("Identificação das demandas", "identificacao", [
+      ("demanda_id", "ID da demanda"), ("demanda_categoria", "Categoria da demanda")]),
+    ("Validação e uso", "", [
+      ("validacao", "Validação"), ("motivo", "Motivo"), ("visibilidade", "Visibilidade"),
+      ("bancada", "Bancada"), ("representacao", "Representação"), ("processamento", "Processamento")]),
+    ("Conteúdo geoespacial", "", [
+      ("tipo", "Tipo"), ("feicoes", "Feições originais"), ("feicoes_previa", "Feições na prévia"),
+      ("vertices", "Vértices originais"), ("geometrias", "Geometrias"),
+      ("campos_total", "Quantidade de campos"), ("campos", "Campos"),
+      ("area", "Área total"), ("comprimento", "Comprimento total"),
+      ("dimensoes", "Dimensões"), ("bandas", "Bandas"), ("resolucao", "Resolução")]),
+    ("Sistema de coordenadas", "", [
+      ("crs", "CRS original"), ("crs_nome", "Nome do CRS"), ("unidade", "Unidade"),
+      ("crs_previa", "CRS da prévia"), ("limites", "Limites O / S / L / N")]),
+    ("Localização cadastral", "", [
+      ("ufs", "UF"), ("municipios", "Municípios / IBGE"), ("fonte", "Fonte"),
+      ("cobertura", "Cobertura"), ("consulta", "Consulta")]),
+    ("Observações", "", [("avisos", "Avisos")])
+  ] %}
+  <section class="ea-preview-meta-group" data-preview-metadata-group{% if condicao %} data-preview-metadata-condition="{{ condicao }}"{% endif %} hidden>
+    <h5>{{ titulo }}</h5>
+    <dl>
+      {% for campo, rotulo in campos %}
+      <div class="ea-meta-row"{% if campo in ["dimensoes", "bandas", "resolucao"] %} data-preview-metadata-condition="raster" hidden{% endif %}><dt>{{ rotulo }}</dt><dd data-preview-value="{{ campo }}">Não informado</dd></div>
+      {% endfor %}
+    </dl>
+  </section>
+  {% endfor %}

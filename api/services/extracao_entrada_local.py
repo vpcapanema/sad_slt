@@ -82,7 +82,7 @@ def exigir_geometrias_utilizaveis(frame):
         raise ValueError(f'{len(problemas)} feição(ões) sem geometria utilizável: {referencias}{restante}. Corrija a camada original antes de enviar à prévia ou à bancada. Nenhum registro foi descartado.')
 
 
-def validar(frame, max_feicoes=MAX_FEICOES):
+def validar(frame, max_feicoes: int | None = MAX_FEICOES):
     if frame.crs is None:
         raise ValueError('A camada não informa o sistema de coordenadas. Inclua o .prj no ZIP ou defina o CRS no arquivo.')
     if max_feicoes is not None and (frame.empty or len(frame) > max_feicoes):
