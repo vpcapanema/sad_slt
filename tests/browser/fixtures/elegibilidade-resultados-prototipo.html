@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Resultados da Elegibilidade — Protótipo SICARD</title>
+<link rel="stylesheet" href="http://127.0.0.1:8083/assets/vendor/leaflet/leaflet.css">
+<style>
+:root{--azul:#003b5a;--azul-claro:#eef4f8;--linha:#d6e1e9;--texto:#243e50;--suave:#637b8d;--re:#852c38;--re-claro:#fbf0f1;--ri:#856100;--ri-claro:#fff8df}
+*{box-sizing:border-box}body{margin:0;background:#eef2f5;color:var(--texto);font:14px Arial,sans-serif}
+button,input,select{font:inherit}button{cursor:pointer}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,tr:focus-visible{outline:3px solid #258bbd;outline-offset:3px}
+button:disabled{opacity:.5;cursor:not-allowed}[hidden]{display:none!important}
+.nota{max-width:1480px;margin:18px auto 10px;padding:0 22px;color:var(--suave);font-size:12px}
+.secao{max-width:1480px;margin:0 auto 24px;background:white;border:1px solid var(--linha);border-radius:10px;overflow:hidden}
+.cabecalho{padding:19px 24px;display:flex;align-items:center;gap:14px;background:#f5f8fb;border-bottom:1px solid var(--linha)}
+.numero{width:32px;height:32px;border-radius:50%;background:#176ca3;color:white;display:grid;place-items:center;font-weight:bold;flex-shrink:0}
+h1,h2,h3,p{margin:0}h1{font-size:20px;color:var(--azul)}h2{font-size:14px;color:var(--azul)}h3{font-size:13px}
+.subtitulo{font-size:12px;color:var(--suave);line-height:1.6;margin-top:4px}.selo{margin-left:auto;color:var(--suave);font-size:11px;border:1px solid var(--linha);border-radius:5px;padding:6px 9px;white-space:nowrap}
+.conteudo{padding:20px 24px;display:grid;gap:18px}.linha{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.btn{border:1px solid var(--linha);background:white;color:var(--azul);padding:8px 12px;border-radius:6px;font-size:12px;font-weight:bold;min-height:34px}
+.primario{background:var(--azul);color:white;border-color:var(--azul)}
+.identificacao{display:flex;gap:24px;align-items:center;flex-wrap:wrap}.identificacao small{display:block;color:var(--suave);font-size:11px;margin-bottom:5px}.identificacao strong{font-size:14px;color:var(--azul)}
+.revisao{background:#f7fafc;border:1px solid var(--linha);border-radius:8px;padding:16px}
+.campos-alias{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:14px 0}
+.campos-alias label{font-size:12px;color:var(--suave)}.campos-alias input{display:block;width:100%;border:1px solid var(--linha);padding:9px;border-radius:5px;margin-top:6px;color:var(--texto)}
+.fontes{display:grid;grid-template-columns:1fr 1fr;gap:16px}.fonte{border:1px solid var(--linha);border-left:4px solid;border-radius:7px;padding:12px 15px}
+.restricao{border-color:#e5c7cc;border-left-color:var(--re);background:var(--re-claro)}.risco{border-color:#e5d797;border-left-color:var(--ri);background:var(--ri-claro)}
+.restricao h3{color:var(--re)}.risco h3{color:var(--ri)}.itens-fontes{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.chip{background:#ffffffba;border:1px solid #00000012;border-radius:5px;padding:6px 9px;font-size:12px;display:flex;align-items:center;gap:7px}
+.ponto{width:7px;height:7px;border-radius:50%;background:currentColor}.restricao .chip{color:var(--re)}.risco .chip{color:var(--ri)}
+.analise{display:grid;grid-template-columns:minmax(0,1fr) minmax(540px,1.15fr);gap:16px;align-items:stretch}
+.painel{border:1px solid var(--linha);border-radius:8px;overflow:hidden;min-width:0;background:white}
+.titulo-painel{padding:12px 15px;border-bottom:1px solid var(--linha);display:flex;align-items:center;justify-content:space-between;gap:10px}
+#mapa{height:390px;background:#eef2f4}.legenda{padding:10px 15px;font-size:11px;display:flex;gap:15px;flex-wrap:wrap;color:var(--suave)}
+.legenda span{display:flex;align-items:center;gap:6px}.amostra{width:13px;height:10px;display:inline-block;border:2px solid var(--azul);background:#e4eef5}
+.amostra.re{border-color:var(--re);background:#c65a6a}.amostra.ri{border-color:var(--ri);background:#dbb83f}
+.instrucoes{font-size:11px;color:var(--suave);padding:0 15px 12px}.grafico-conteudo{padding:15px;display:grid;gap:14px}
+.selecionado{font-size:11px;color:var(--suave);text-transform:uppercase;letter-spacing:.5px}.demanda-titulo{margin-top:5px;font-size:16px;color:var(--azul)}
+.area-total{background:var(--azul-claro);border-radius:6px;padding:12px;display:flex;justify-content:space-between;align-items:center}
+.area-total span{font-size:12px}.valor{font-size:23px;color:var(--azul);font-weight:bold}.unidade{font-size:12px;font-weight:normal}.hectares{display:block;font-size:11px;color:var(--suave);margin-top:3px;font-weight:normal}
+.controle-base label{display:block;font-size:11px;color:var(--suave);margin-bottom:6px}.controle-base select{width:100%;padding:8px;border:1px solid var(--linha);border-radius:5px;color:var(--texto);background:white}
+.indicadores{display:grid;grid-template-columns:1fr 1fr;gap:12px}.indicador{padding:10px 12px;border:1px solid var(--linha);border-radius:6px}.indicador>small{display:block;font-size:11px;color:var(--suave);margin-bottom:7px}
+.indicador .valor{font-size:22px}.explicacao{font-size:10px;line-height:1.5;color:var(--suave)}
+.detalhes-rosca{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+.detalhes{display:grid;gap:12px;min-width:0}.detalhes dl{margin:0;display:grid;gap:10px}.detalhes dt{font-size:11px;color:var(--suave);margin-bottom:4px}.detalhes dd{margin:0;font-size:12px;overflow-wrap:anywhere}
+.detalhes .area-total{display:block}.detalhes .area-total .valor{display:block;margin-top:8px}.detalhes .indicadores{grid-template-columns:1fr;gap:8px}
+.categoria{font-weight:bold}.categoria.re{color:var(--re)}.categoria.ri{color:var(--ri)}
+.rosca-bloco{margin:0;min-width:0}.rosca-bloco h3{font-size:12px;color:var(--azul);text-align:center}
+#rosca{display:block;width:100%;max-width:240px;margin:8px auto}#rosca path{cursor:pointer;stroke:white;stroke-width:2;transition:opacity .15s}#rosca path:focus-visible{outline:none;stroke:var(--azul);stroke-width:4}
+.legenda-classes{display:grid;gap:5px}.classe-legenda{display:flex;align-items:center;gap:7px;padding:5px 6px;border:1px solid transparent;background:white;border-radius:5px;color:var(--texto);text-align:left;font-size:11px;min-width:0;width:100%}
+.classe-legenda .ponto{flex-shrink:0;width:9px;height:9px}.classe-legenda small{display:block;color:var(--suave);font-size:10px;margin-top:2px}.classe-legenda.ativa{background:var(--azul-claro);border-color:var(--linha);font-weight:bold}.classe-legenda.atenuada{opacity:.5}
+.aviso-selecao{font-size:11px;color:var(--suave);line-height:1.5}
+.tabela-scroll{overflow:auto;max-height:300px}table{border-collapse:separate;border-spacing:0;width:100%;font-size:12px}th,td{padding:11px 12px;text-align:left;border-right:1px solid #ffffff30;border-bottom:1px solid var(--linha)}
+thead th{font-weight:600;white-space:nowrap;color:white;background:var(--azul)}thead tr:first-child th{text-align:center;font-size:12px;padding:9px}
+thead .re{background:var(--re)}thead .ri{background:var(--ri)}thead tr:nth-child(2) th{font-size:11px;background:#174c68}thead tr:nth-child(2) .re{background:#973d49}thead tr:nth-child(2) .ri{background:#967316}
+tbody tr{cursor:pointer;background:white}tbody tr:nth-child(even){background:#f8fafc}tbody tr:hover{background:#eef5fa}
+tbody tr.ativo{background:#e8f2f9;box-shadow:inset 4px 0 #0879b2}tbody tr.ativo td{font-weight:bold}
+td .secundario{display:block;color:var(--suave);font-size:10px;font-weight:normal;margin-top:4px}.rodape-tabela{padding:10px 15px;display:flex;justify-content:space-between;color:var(--suave);font-size:11px}
+.rodape{display:flex;align-items:center;justify-content:space-between;gap:16px;border-top:1px solid var(--linha);padding-top:18px}
+.rodape p{font-size:11px;color:var(--suave);line-height:1.6;max-width:680px}.mensagem{font-size:12px;color:var(--azul);min-height:15px}
+.leaflet-tooltip{font:12px Arial,sans-serif}.leaflet-control-layers{font:11px Arial,sans-serif}
+@media(max-width:1000px){.analise{grid-template-columns:1fr}.campos-alias{grid-template-columns:1fr 1fr}#mapa{height:350px}}
+@media(max-width:620px){.conteudo{padding:15px}.cabecalho{padding:16px}.selo{display:none}.fontes,.campos-alias{grid-template-columns:1fr}.rodape{align-items:stretch;flex-direction:column}.identificacao{gap:15px}.analise{display:block}.grafico{margin-top:15px}h1{font-size:18px}.nota{padding:0 16px}}
+@media(max-width:460px){.detalhes-rosca{grid-template-columns:1fr}.rosca-bloco{border-top:1px solid var(--linha);padding-top:14px}}
+</style>
+</head>
+<body>
+<p class="nota">SICARD · Protótipo da seção inteira de resultados · Dados fictícios · Não altera a página funcional</p>
+<section class="secao" aria-labelledby="titulo">
+  <header class="cabecalho"><span class="numero">05</span><div><h1 id="titulo">Resultados da Elegibilidade Territorial</h1><p class="subtitulo">Explore cada demanda no mapa, na tabela e nos gráficos. A seleção é compartilhada entre os três elementos.</p></div><span class="selo">Demonstração Interativa</span></header>
+  <div class="conteudo">
+    <div class="linha">
+      <div class="identificacao"><div><small>Camada de Entrada</small><strong>Demandas de Infraestrutura</strong></div><div><small>Feições Analisadas</small><strong>3 demandas</strong></div><div><small>Composição Utilizada</small><strong>2 restrições · 2 riscos</strong></div></div>
+      <button class="btn" id="editar-nomes" type="button">Revisar Nomes</button>
+    </div>
+    <form class="revisao" id="revisao" hidden>
+      <h2>Revisão dos Nomes de Apresentação</h2>
+      <p class="subtitulo">Após confirmar, este bloco é recolhido. Neste protótipo, os aliases ficam salvos neste navegador.</p>
+      <div class="campos-alias" id="campos-alias"></div>
+      <button class="btn primario" type="submit">Confirmar Nomes e Recolher</button>
+    </form>
+    <div>
+      <div class="linha" style="margin-bottom:10px"><h2>Fontes Utilizadas</h2><span class="subtitulo">Composição desta análise</span></div>
+      <div class="fontes">
+        <div class="fonte restricao"><h3>Restrição</h3><div class="itens-fontes" id="fontes-re"></div></div>
+        <div class="fonte risco"><h3>Risco</h3><div class="itens-fontes" id="fontes-ri"></div></div>
+      </div>
+    </div>
+    <div class="analise">
+      <section class="painel">
+        <header class="titulo-painel"><h2>Mapa de Demandas e Interseções</h2><button class="btn" id="enquadrar" type="button">Ver Todas</button></header>
+        <div id="mapa" aria-label="Mapa interativo de demandas e interseções"></div>
+        <div class="legenda"><span><i class="amostra"></i>Demanda de Entrada</span><span><i class="amostra re"></i>Interseção de Restrição</span><span><i class="amostra ri"></i>Interseção de Risco</span></div>
+        <p class="instrucoes">Clique na demanda ou em uma interseção. A tabela destaca a mesma feição e os indicadores são atualizados.</p>
+      </section>
+      <section class="painel grafico" aria-labelledby="grafico-titulo">
+        <header class="titulo-painel"><h2 id="grafico-titulo">Análise da Feição Selecionada</h2><span id="id-ativo" class="subtitulo"></span></header>
+        <div class="grafico-conteudo">
+          <div class="controle-base"><label for="base-ativa">Camada de Base em Análise</label><select id="base-ativa" name="base_ativa"></select></div>
+          <div class="detalhes-rosca">
+            <div class="detalhes" aria-live="polite">
+              <div><div class="selecionado">Demanda Selecionada</div><h3 class="demanda-titulo" id="nome-ativo"></h3></div>
+              <dl id="detalhes-base" hidden>
+                <div><dt>Categoria</dt><dd id="categoria-ativa" class="categoria"></dd></div>
+                <div><dt>Camada de Base</dt><dd id="nome-base"></dd></div>
+                <div id="detalhes-classe" hidden><dt>Classe de Sobreposição</dt><dd id="nome-classe"></dd></div>
+                <div id="detalhes-feicoes" hidden><dt>Feições Sobrepostas</dt><dd id="nomes-feicoes"></dd></div>
+              </dl>
+              <div class="area-total"><span>Área Total da Demanda</span><strong class="valor" id="total-km"></strong><small class="hectares" id="total-ha"></small></div>
+              <div class="indicadores" id="metricas-sobreposicao" hidden>
+                <div class="indicador"><small id="rotulo-sobreposta">Área Total Sobreposta</small><strong class="valor" id="sobreposta-km"></strong><span class="hectares" id="sobreposta-ha"></span></div>
+                <div class="indicador"><small>Percentual da Demanda</small><strong class="valor" id="percentual"></strong><span class="hectares">Área sobreposta ÷ área total</span></div>
+              </div>
+              <p class="aviso-selecao" id="aviso-selecao">Selecione uma camada de base ou uma fatia para consultar os detalhes da sobreposição.</p>
+            </div>
+            <figure class="rosca-bloco">
+              <h3>Classes de Sobreposição</h3>
+              <svg id="rosca" viewBox="0 0 240 240" role="group" aria-label="Distribuição das áreas sobrepostas por classe"></svg>
+              <div id="legenda-classes" class="legenda-classes" aria-label="Legenda das classes"></div>
+            </figure>
+          </div>
+          <p class="explicacao">Todas as classes da demanda permanecem no gráfico. A seleção apenas destaca as fatias. Seu tamanho representa a participação na soma das áreas sobrepostas, não o percentual da demanda; interseções de bases diferentes podem ocupar o mesmo local. Classes A e B são fictícias, apenas para demonstrar a interação.</p>
+        </div>
+      </section>
+    </div>
+    <section class="painel">
+      <header class="titulo-painel"><h2>Tabela de Resultados por Demanda</h2><span class="subtitulo">Áreas em km² · Equivalente em hectares abaixo</span></header>
+      <div class="tabela-scroll"><table id="tabela" aria-label="Resultados por demanda"><thead id="cabecalho-tabela"></thead><tbody id="linhas"></tbody></table></div>
+      <div class="rodape-tabela"><span>3 de 3 demandas · Clique em uma linha para selecionar</span><span id="selecao-status" aria-live="polite"></span></div>
+    </section>
+    <p id="mensagem" class="mensagem" role="status"></p>
+    <footer class="rodape">
+      <p><strong>Relatório completo e geometrias processadas</strong><br>Na versão funcional, o pacote reunirá o PDF, a saída integral, as interseções vinculadas às demandas e os metadados. O relatório não será limitado à feição selecionada.</p>
+      <button class="btn primario" id="download" type="button" disabled title="Disponível após a implementação funcional">Baixar Relatório e Camadas (.zip)</button>
+    </footer>
+  </div>
+</section>
+<script src="http://127.0.0.1:8083/assets/vendor/leaflet/leaflet.js"></script>
+<script>
+// Fonte única fictícia: cada saída contém atributos, geometria e interseções ligadas ao seu identificador.
+const bases=[
+ {id:'re_app',papel:'re',alias:'Áreas de Preservação Permanente',cores:['#852c38','#c65a6a']},
+ {id:'re_uc',papel:'re',alias:'Unidades de Conservação',cores:['#654880','#a98abe']},
+ {id:'ri_inund',papel:'ri',alias:'Áreas Suscetíveis à Inundação',cores:['#997400','#d9b33d']},
+ {id:'ri_eros',papel:'ri',alias:'Áreas Suscetíveis à Erosão',cores:['#b76521','#73894a']}
+];
+const poligono=(x,y,w,h)=>({type:'Polygon',coordinates:[[[x,y],[x+w,y],[x+w,y+h],[x,y+h],[x,y]]]});
+const area=g=>{const r=g.coordinates[0],a=r[0],b=r[2];return 6371.0088**2*Math.abs((b[0]-a[0])*Math.PI/180*(Math.sin(b[1]*Math.PI/180)-Math.sin(a[1]*Math.PI/180)))};
+const arquivoSaida={type:'FeatureCollection',features:[
+ {id:'DEM-001',nome:'Terminal Logístico Norte',x:-46.76,y:-23.38,w:.035,h:.022,frac:[.24,.12,.45,.08]},
+ {id:'DEM-002',nome:'Centro de Distribuição Leste',x:-46.64,y:-23.43,w:.031,h:.026,frac:[.08,0,.3,.2]},
+ {id:'DEM-003',nome:'Pátio Intermodal Sul',x:-46.71,y:-23.51,w:.038,h:.020,frac:[0,.18,0,.36]}
+].map(d=>{
+ const geometry=poligono(d.x,d.y,d.w,d.h),intersecoes=d.frac.flatMap((f,i)=>{
+  if(!f)return [];
+  let deslocamento=0;
+  return [.4,.35,.25].map((parte,j)=>{
+   const classe=j===1?1:0,geometry=poligono(d.x+(i%2?d.w*(1-f):0)+d.w*f*deslocamento,d.y,d.w*f*parte,d.h);
+   deslocamento+=parte;
+   return {type:'Feature',properties:{demanda_id:d.id,base_id:bases[i].id,classe_id:`${bases[i].id}:${classe}`,
+    classe:classe?'Classe B':'Classe A',cor:bases[i].cores[classe],nome:['Setor Norte','Setor Central','Setor Sul'][j],area_km2:area(geometry)},geometry};
+  });
+ });
+ return {type:'Feature',id:d.id,properties:{id:d.id,nome:d.nome,area_total_km2:area(geometry),
+   areas:Object.fromEntries(bases.map(b=>[b.id,intersecoes.filter(i=>i.properties.base_id===b.id).reduce((s,i)=>s+area(i.geometry),0)]))},
+   geometry,intersecoes}
+})};
+const $=id=>document.getElementById(id),km=v=>v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const criar=(tag,texto)=>{const el=document.createElement(tag);if(texto!==undefined)el.textContent=texto;return el};
+const chaveStorage='sicard-prototipo-elegibilidade-aliases-v1';
+try{const salvos=JSON.parse(localStorage.getItem(chaveStorage)||'{}');for(const b of bases)if(typeof salvos[b.id]==='string'&&salvos[b.id].trim())b.alias=salvos[b.id]}catch(e){$('mensagem').textContent='Não foi possível recuperar os nomes salvos neste navegador.'}
+let ativo=arquivoSaida.features[0].id,baseAtiva='',classeAtiva='';
+const mapa=L.map('mapa',{scrollWheelZoom:false}).setView([-23.44,-46.68],11);
+const fundo=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles © Esri — demonstração com dados fictícios'}).addTo(mapa);
+fundo.on('tileerror',()=>{$('mensagem').textContent='O mapa-base não pôde ser carregado. As geometrias fictícias continuam disponíveis.'});
+const saidas=L.featureGroup().addTo(mapa),restricoes=L.featureGroup().addTo(mapa),riscos=L.featureGroup().addTo(mapa);
+const camadas=new Map(),recortes=[];
+for(const f of arquivoSaida.features){
+ const layer=L.geoJSON(f,{style:{color:'#003b5a',weight:2,fillColor:'#2584af',fillOpacity:.09}}).addTo(saidas);
+ layer.bindTooltip(()=>{const c=criar('span',f.properties.nome);return c});
+ layer.on('click',()=>selecionar(f.id));camadas.set(f.id,layer);
+ for(const item of f.intersecoes){
+  const b=bases.find(b=>b.id===item.properties.base_id),cor=b.papel==='re'?'#852c38':'#997400';
+  const trecho=L.geoJSON(item,{style:{color:cor,weight:1.5,fillColor:cor,fillOpacity:.3}});
+  trecho.addTo(b.papel==='re'?restricoes:riscos);
+  trecho.bindTooltip(()=>criar('span',`${b.alias} · ${item.properties.classe} · ${item.properties.nome}`));
+  trecho.on('click',()=>{selecionar(f.id);baseAtiva=b.id;classeAtiva=item.properties.classe_id;selecionar(f.id)});
+  recortes.push({demanda:f.id,base:b.id,classe:item.properties.classe_id,layer:trecho,cor});
+ }
+}
+L.control.layers({}, {'Demandas de Entrada':saidas,'Interseções de Restrição':restricoes,'Interseções de Risco':riscos},{collapsed:true}).addTo(mapa);
+$('enquadrar').onclick=()=>mapa.fitBounds(saidas.getBounds(),{padding:[30,30]});
+function atualizarNomes(){
+ for(const papel of ['re','ri']){
+  const alvo=$('fontes-'+papel);alvo.replaceChildren();
+  for(const b of bases.filter(b=>b.papel===papel)){const chip=criar('span');chip.className='chip';const ponto=criar('i');ponto.className='ponto';chip.append(ponto,document.createTextNode(b.alias));alvo.append(chip)}
+ }
+ $('base-ativa').replaceChildren(new Option('Todas as Camadas — Sem Destaque',''),...bases.map(b=>new Option(`${b.papel==='re'?'Restrição':'Risco'} · ${b.alias}`,b.id)));
+ const agrupamentos=criar('tr');
+ for(const [nome,papel,n]of [['Camada de Entrada','',2],['Restrição','re',2],['Risco','ri',2]]){const th=criar('th',nome);th.colSpan=n;th.scope='colgroup';th.className=papel;agrupamentos.append(th)}
+ const rotulos=criar('tr');
+ for(const [nome,papel]of [['Identificador',''],['Nome',''],...bases.map(b=>[b.alias,b.papel])]){const th=criar('th',nome);th.scope='col';th.className=papel;rotulos.append(th)}
+ $('cabecalho-tabela').replaceChildren(agrupamentos,rotulos);
+ const linhas=$('linhas');linhas.replaceChildren();
+ for(const f of arquivoSaida.features){
+  const tr=criar('tr');tr.dataset.id=f.id;tr.tabIndex=0;
+  tr.append(criar('td',f.id),criar('td',f.properties.nome));
+  for(const b of bases){const valor=f.properties.areas[b.id],td=criar('td',`${km(valor)} km²`),ha=criar('span',`${km(valor*100)} ha`);ha.className='secundario';td.append(ha);tr.append(td)}
+  tr.onclick=()=>selecionar(f.id,true);tr.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();selecionar(f.id,true)}};
+  linhas.append(tr);
+ }
+ selecionar(ativo);
+}
+function classesDaDemanda(f){
+ const classes=new Map();
+ for(const {properties:p}of f.intersecoes){
+  if(!classes.has(p.classe_id))classes.set(p.classe_id,{id:p.classe_id,base:p.base_id,nome:p.classe,cor:p.cor,area:0,feicoes:new Set()});
+  const classe=classes.get(p.classe_id);classe.area+=p.area_km2;classe.feicoes.add(p.nome);
+ }
+ return [...classes.values()];
+}
+function desenharRosca(classes){
+ const svg=$('rosca'),legenda=$('legenda-classes');svg.replaceChildren();legenda.replaceChildren();
+ const criarSvg=(tag,atributos,texto)=>{const el=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [k,v]of Object.entries(atributos))el.setAttribute(k,v);if(texto!==undefined)el.textContent=texto;return el};
+ const total=classes.reduce((s,c)=>s+c.area,0),ponto=(r,a)=>`${120+r*Math.cos(a)},${120+r*Math.sin(a)}`;
+ svg.append(criarSvg('circle',{cx:120,cy:120,r:84,fill:'none',stroke:'#edf1f4','stroke-width':38}));
+ let inicio=-Math.PI/2;
+ for(const c of classes){
+  const fim=inicio+Math.min(c.area/total*2*Math.PI,2*Math.PI-.000001),grande=fim-inicio>Math.PI?1:0;
+  const destacada=classeAtiva?c.id===classeAtiva:c.base===baseAtiva,atenuada=Boolean(baseAtiva)&&!destacada;
+  const b=bases.find(b=>b.id===c.base),rotulo=`${b.alias} · ${c.nome}: ${km(c.area)} km²`;
+  const d=`M ${ponto(103,inicio)} A 103 103 0 ${grande} 1 ${ponto(103,fim)} L ${ponto(65,fim)} A 65 65 0 ${grande} 0 ${ponto(65,inicio)} Z`;
+  const path=criarSvg('path',{d,fill:c.cor,opacity:atenuada?.25:1,tabindex:0,role:'button','aria-label':rotulo,'aria-pressed':String(destacada),'data-classe':c.id});
+  path.append(criarSvg('title',{},rotulo));
+  const escolher=()=>{baseAtiva=c.base;classeAtiva=c.id;selecionar(ativo)};
+  path.onclick=escolher;path.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();escolher()}};
+  svg.append(path);inicio=fim;
+  const botao=criar('button');botao.type='button';botao.className='classe-legenda'+(destacada?' ativa':'')+(atenuada?' atenuada':'');botao.dataset.classe=c.id;botao.setAttribute('aria-pressed',String(destacada));
+  const cor=criar('span');cor.className='ponto';cor.style.background=c.cor;
+  const texto=criar('span',c.nome);texto.append(criar('small',b.alias));botao.append(cor,texto);botao.onclick=escolher;legenda.append(botao);
+ }
+ svg.append(criarSvg('text',{x:120,y:117,'text-anchor':'middle',fill:'#003b5a','font-size':30,'font-weight':'bold'},classes.length));
+ svg.append(criarSvg('text',{x:120,y:139,'text-anchor':'middle',fill:'#637b8d','font-size':12},classes.length?'Classes':'Sem Interseção'));
+}
+function selecionar(id,enquadrar=false){
+ if(ativo!==id)classeAtiva='';
+ ativo=id;const f=arquivoSaida.features.find(f=>f.id===id),b=bases.find(b=>b.id===baseAtiva),total=f.properties.area_total_km2;
+ const classes=classesDaDemanda(f),classe=classes.find(c=>c.id===classeAtiva);
+ if(!classe)classeAtiva='';
+ $('id-ativo').textContent=id;$('nome-ativo').textContent=f.properties.nome;
+ $('total-km').textContent=`${km(total)} km²`;$('total-ha').textContent=`${km(total*100)} ha`;
+ $('detalhes-base').hidden=!b;$('metricas-sobreposicao').hidden=!b;$('detalhes-classe').hidden=!classe;$('detalhes-feicoes').hidden=!classe;
+ if(b){
+  const valor=classe?classe.area:f.properties.areas[b.id],cor=classe?classe.cor:b.cores[0];
+  $('categoria-ativa').textContent=b.papel==='re'?'Restrição':'Risco';$('categoria-ativa').className=`categoria ${b.papel}`;$('nome-base').textContent=b.alias;
+  $('nome-classe').textContent=classe?classe.nome:'';$('nomes-feicoes').textContent=classe?[...classe.feicoes].join(' · '):'';
+  $('rotulo-sobreposta').textContent=classe?'Área Sobreposta da Classe':'Área Total Sobreposta da Base';
+  $('sobreposta-km').textContent=`${km(valor)} km²`;$('sobreposta-ha').textContent=`${km(valor*100)} ha`;$('percentual').textContent=`${km(valor/total*100)}%`;
+  $('sobreposta-km').style.color=cor;$('percentual').style.color=cor;
+ }
+ $('base-ativa').value=baseAtiva;
+ $('aviso-selecao').textContent=classe?'As métricas correspondem à fatia selecionada e incluem todas as suas feições sobrepostas.':b?(classes.some(c=>c.base===b.id)?'Camada destacada. Clique em uma fatia para consultar a classe e suas feições.':'Esta base não apresenta interseções com a demanda selecionada.'):'Selecione uma camada de base ou uma fatia para consultar os detalhes da sobreposição.';
+ for(const tr of $('linhas').children){tr.classList.toggle('ativo',tr.dataset.id===id);tr.setAttribute('aria-selected',String(tr.dataset.id===id))}
+ for(const [fid,layer]of camadas)layer.setStyle({weight:fid===id?4:2,color:fid===id?'#087fb7':'#466171',fillOpacity:fid===id?.12:.04});
+ for(const recorte of recortes){
+  const destacado=recorte.demanda===id&&(classeAtiva?recorte.classe===classeAtiva:baseAtiva?recorte.base===baseAtiva:true);
+  recorte.layer.setStyle({fillOpacity:destacado?.55:.12,weight:destacado?3:1});
+ }
+ $('selecao-status').textContent=`Selecionada: ${id}`;
+ desenharRosca(classes);
+ if(enquadrar)mapa.fitBounds(camadas.get(id).getBounds(),{padding:[60,60],maxZoom:13});
+}
+$('base-ativa').onchange=e=>{baseAtiva=e.target.value;classeAtiva='';selecionar(ativo)};
+$('editar-nomes').onclick=()=>{
+ $('campos-alias').replaceChildren();
+ bases.forEach((b,i)=>{const label=criar('label',b.papel==='re'?'Restrição':'Risco'),input=criar('input');input.id=`alias-${i}`;input.name=b.id;input.value=b.alias;input.required=true;label.htmlFor=input.id;label.append(input);$('campos-alias').append(label)});
+ $('revisao').hidden=false;$('editar-nomes').hidden=true;
+};
+$('revisao').onsubmit=e=>{
+ e.preventDefault();const nomes=Object.fromEntries(new FormData(e.target));
+ try{localStorage.setItem(chaveStorage,JSON.stringify(nomes))}catch(erro){$('mensagem').textContent='O navegador não permitiu salvar os aliases. A revisão continua aberta.';return}
+ for(const b of bases)b.alias=nomes[b.id];
+ atualizarNomes();$('revisao').hidden=true;$('editar-nomes').hidden=false;$('mensagem').textContent='Nomes confirmados e salvos neste navegador. A revisão foi recolhida.';
+};
+atualizarNomes();mapa.fitBounds(saidas.getBounds(),{padding:[30,30]});
+window.prototipo={arquivoSaida,bases,mapa,camadas,recortes,selecionar,get selecao(){return {demanda:ativo,base:baseAtiva,classe:classeAtiva}}};
+</script>
+</body>
+</html>

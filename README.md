@@ -60,9 +60,12 @@ Os logins `/sicard/storage/web/client/login` e
 `/sicard/storage/web/admin/login` usam sempre o tema claro, independentemente
 da preferência do navegador ou do tema salvo pelo usuário. Essa regra é
 restrita aos dois logins e não altera o tema das áreas internas do SFTPGo.
-Os nomes das áreas aparecem como subtítulos em caixa alta abaixo do logo.
+Os nomes das áreas aparecem como subtítulos em caixa alta abaixo do logo e
+também logo abaixo do título externo “SICARD Storage”, acima do card.
 O acesso à gestão de dados usa detalhes azuis; a administração de acesso usa
 vermelho escuro no subtítulo, nos controles, no contorno do card e no fundo.
+As linhas e os elementos geométricos do fundo usam azul escuro na gestão de
+dados e vermelho escuro na administração, preservando o fundo claro.
 
 A personalização está no template comum
 `.deploy/storage/templates/common/base.html` e em

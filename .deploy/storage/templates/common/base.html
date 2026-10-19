@@ -39,6 +39,18 @@ explicit grant from the SFTPGo Team (support@sftpgo.com).
 			var storageSavedTheme = localStorage.getItem("data-bs-theme");
 			document.documentElement.setAttribute("data-sicard-storage-login", storageLogin[1]);
 			document.documentElement.setAttribute("data-bs-theme-mode", "light");
+			window.addEventListener("DOMContentLoaded", function () {
+				var card = document.querySelector("#app_root .bg-body.rounded");
+				var areaHeading = card.querySelector(".row .col-7 h1");
+				var header = document.createElement("header");
+				header.className = "sicard-storage-login-header";
+				var title = document.createElement("h1");
+				title.textContent = "SICARD Storage";
+				var subtitle = document.createElement("p");
+				subtitle.textContent = areaHeading.textContent.trim();
+				header.append(title, subtitle);
+				card.before(header);
+			}, { once: true });
 			// O tema do SFTPGo persiste a cor ao iniciar, mesmo sem seletor no login.
 			window.addEventListener("load", function () {
 				if (storageSavedTheme === null) {

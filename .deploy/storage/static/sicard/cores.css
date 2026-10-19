@@ -439,13 +439,12 @@ body.app-blank #app_root .bg-body.rounded {
 
 [data-sicard-storage-login] body.app-blank {
   background-color: #eef5f9;
-  background-image: url("fundo-login.svg"), linear-gradient(135deg, #dcecf4 0%, #f8fbfd 55%, #e3eef4 100%);
+  background-image: linear-gradient(135deg, #dcecf4 0%, #f8fbfd 55%, #e3eef4 100%);
 }
 
 [data-sicard-storage-login=admin] body.app-blank {
   background-color: #f8eff1;
-  background-image: url("fundo-login.svg"),
-    linear-gradient(135deg, #751f30 0%, #501522 13%, transparent 13%),
+  background-image: linear-gradient(135deg, #751f30 0%, #501522 13%, transparent 13%),
     radial-gradient(ellipse at bottom right, rgba(117, 31, 48, 0.24), transparent 65%),
     linear-gradient(135deg, #fff9fa 0%, #f3e5e8 100%);
   background-size: cover;
@@ -454,8 +453,49 @@ body.app-blank #app_root .bg-body.rounded {
 }
 
 [data-sicard-storage-login] body.app-blank #app_root .flex-center.flex-column:has(> .bg-body.rounded)::before {
+  content: none;
+}
+
+/* A mascara reaproveita os mesmos tracados do SVG com a cor de cada area. */
+[data-sicard-storage-login] body.app-blank::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-color: var(--sicard-login-strong);
+  -webkit-mask: url("fundo-login.svg") center / cover no-repeat;
+  mask: url("fundo-login.svg") center / cover no-repeat;
+}
+
+[data-sicard-storage-login] body.app-blank #app_root {
+  position: relative;
+}
+
+[data-sicard-storage-login] .sicard-storage-login-header {
+  max-width: 500px;
+  margin-bottom: 1.75rem;
+  text-align: center;
+  font-family: "Montserrat", Verdana, sans-serif;
+}
+
+[data-sicard-storage-login] .sicard-storage-login-header h1 {
+  margin: 0;
+  font-size: clamp(2rem, 8vw, 2.8rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
   color: var(--sicard-login-strong);
   text-shadow: none;
+}
+
+[data-sicard-storage-login] .sicard-storage-login-header p {
+  margin: 0.75rem 0 0;
+  color: var(--sicard-login-strong);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1.5;
+  text-transform: uppercase;
 }
 
 [data-sicard-storage-login] body.app-blank #app_root .bg-body.rounded {

@@ -45,12 +45,22 @@ const path=require('node:path');
       const heading=page.locator('form .row .col-7 h1');
       assert.equal((await heading.textContent()).trim(),subtitle);
       assert.equal(await heading.evaluate(e=>getComputedStyle(e).textTransform),'uppercase');
+      const header=page.locator('.sicard-storage-login-header');
+      assert.equal(await header.locator('h1').textContent(),'SICARD Storage');
+      assert.equal(await header.locator('p').textContent(),subtitle);
+      assert.equal(await header.locator('p').evaluate(e=>getComputedStyle(e).textTransform),'uppercase');
+      assert.ok(await header.evaluate(e=>{
+       const title=e.querySelector('h1').getBoundingClientRect(),subtitle=e.querySelector('p').getBoundingClientRect();
+       return title.bottom<=subtitle.top&&e.getBoundingClientRect().bottom<=e.nextElementSibling.getBoundingClientRect().top;
+      }),'Page subtitle must sit below the title and above the card');
       const state=await page.evaluate(()=>{
        const root=document.documentElement,card=document.querySelector('#app_root .bg-body.rounded');
        return {theme:root.dataset.bsTheme,mode:root.getAttribute('data-bs-theme-mode'),area:root.dataset.sicardStorageLogin,
         saved:localStorage.getItem('data-bs-theme'),scheme:getComputedStyle(root).colorScheme,
         card:getComputedStyle(card).backgroundColor,border:getComputedStyle(card).borderTopColor,
-        background:getComputedStyle(document.body).backgroundImage};
+        background:getComputedStyle(document.body).backgroundImage,
+        patternColor:getComputedStyle(document.body,'::before').backgroundColor,
+        patternMask:getComputedStyle(document.body,'::before').maskImage};
       });
       assert.equal(state.theme,'light');
       assert.equal(state.mode,'light');
@@ -59,6 +69,8 @@ const path=require('node:path');
       assert.equal(state.scheme,'light');
       assert.equal(state.card,'rgb(255, 255, 255)');
       assert.equal(state.border,area==='admin'?'rgb(117, 31, 48)':'rgb(17, 101, 147)');
+      assert.equal(state.patternColor,area==='admin'?'rgb(80, 21, 34)':'rgb(0, 59, 90)');
+      assert.match(state.patternMask,/fundo-login\.svg/);
       if(area==='admin')assert.match(state.background,/rgb\(117, 31, 48\)/);
       await page.emulateMedia({colorScheme:colorScheme==='dark'?'light':'dark'});
       assert.equal(await page.locator('html').getAttribute('data-bs-theme'),'light');
@@ -69,6 +81,7 @@ const path=require('node:path');
        overflow:[...document.querySelectorAll('body *')].filter(e=>e.getBoundingClientRect().right>innerWidth).slice(0,8).map(e=>({tag:e.tagName,class:e.className,width:e.getBoundingClientRect().width,text:e.textContent.trim().slice(0,80)}))}));
       assert.ok(layout.scroll<=layout.width,JSON.stringify({area,colorScheme,stored,layout}));
       assert.equal(await heading.evaluate(e=>e.getBoundingClientRect().right<=innerWidth),true);
+      assert.equal(await header.evaluate(e=>e.getBoundingClientRect().left>=0&&e.getBoundingClientRect().right<=innerWidth),true);
       if(process.env.SICARD_STORAGE_SCREENSHOT_DIR&&colorScheme==='dark'&&stored==='dark'){
        const directory=process.env.SICARD_STORAGE_SCREENSHOT_DIR;
        await page.screenshot({path:path.join(directory,`storage-login-${area}-mobile.png`),fullPage:true});
@@ -87,6 +100,6 @@ const path=require('node:path');
     }finally{await context.close();}
    }
   }
-  console.log('PASS Storage logins: always light, uppercase subtitles, distinct admin colors, preserved internal preferences, responsive layout and no remote writes');
+  console.log('PASS Storage logins: always light, uppercase card/page subtitles, dark red/blue background geometry, preserved internal preferences, responsive layout and no remote writes');
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exit(1);});
