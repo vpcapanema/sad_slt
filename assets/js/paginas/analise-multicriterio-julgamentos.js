@@ -40,10 +40,29 @@
   function escapeHtml(value) { var node = document.createElement("span"); node.textContent = value == null ? "" : String(value); return node.innerHTML.replace(/"/g, "&quot;"); }
   function api(url, options) {
     return fetch(url, Object.assign({ credentials: "same-origin", headers: { "Content-Type": "application/json" } }, options || {})).then(async function (response) {
-      var body = await response.json().catch(function () { return {}; });
-      if (!response.ok) throw new Error(body.detail && (body.detail.message || body.detail) || "Não foi possível concluir a operação.");
+      var body = response.status === 204 ? null : await response.json();
+      if (!response.ok) throw new Error(Array.isArray(body?.detail)
+        ? body.detail.map(function (item) { return item.msg; }).join("; ")
+        : body?.detail?.message || body?.detail || "Não foi possível concluir a operação.");
       return body;
     });
+  }
+  async function executarOperacao(titulo, request, atualizar) {
+    const tarefa = "Aguardando confirmação do servidor";
+    const proc = ProcessFeedback.iniciarCadastro({title: titulo, tasks: [tarefa]});
+    proc.tarefaAtual(tarefa);
+    let confirmada = false;
+    try {
+      const resultado = await request();
+      confirmada = true;
+      proc.concluirTarefa(tarefa);
+      await atualizar(resultado);
+      proc.sucesso({title: titulo, message: "Operação confirmada pelo servidor."});
+    } catch (error) {
+      if (confirmada) proc.sucesso({_status: "partial", title: "Operação registrada; tela não atualizada",
+        message: `O servidor confirmou a operação, mas a tela não foi atualizada: ${error.message}. Recarregue antes de tentar novamente.`});
+      else proc.erro({message: error.message});
+    }
   }
   function matrixRows(matrix) { if (Array.isArray(matrix)) return matrix.filter(function (row) { return row && typeof row === "object"; }); if (!matrix || typeof matrix !== "object") return []; var rows = matrix.linhas || matrix.rows || matrix.criterios || matrix.dados || []; return Array.isArray(rows) ? rows.filter(function (row) { return row && typeof row === "object"; }) : []; }
   function matrixSummary(message, isError) { var node = $("ami-criteria-matrix-summary"); node.textContent = message || ""; node.classList.toggle("hidden", !message); node.classList.toggle("ahp-info-note--error", Boolean(isError)); }
@@ -481,42 +500,25 @@
     { id: "recarga", titulo: "Atualizar o espa\u00e7o anal\u00edtico", detalhe: "Recarrega as se\u00e7\u00f5es com o resultado rec\u00e9m-gravado." }
   ];
   var estadoEtapas = {};
+  var processoConsolidacao = null;
   function abrirModalProcesso(subtitulo) {
     estadoEtapas = {};
     ETAPAS_CONSOLIDACAO.forEach(function (etapa) { estadoEtapas[etapa.id] = "pendente"; });
-    $("ami-process-modal-subtitle").textContent = subtitulo;
-    $("ami-process-modal").classList.remove("is-hidden");
-    desenharEtapas();
+    processoConsolidacao = ProcessFeedback.iniciarCadastro({title: "Consolidar respostas", subtitle: subtitulo,
+      tasks: ETAPAS_CONSOLIDACAO.map(function (etapa) { return etapa.titulo; })});
   }
-  function fecharModalProcesso() { $("ami-process-modal").classList.add("is-hidden"); }
   function marcarEtapa(id, situacao, mensagem) {
     estadoEtapas[id] = situacao;
-    if (mensagem) estadoEtapas[id + ":msg"] = mensagem;
-    desenharEtapas();
-  }
-  function desenharEtapas() {
-    var concluidas = ETAPAS_CONSOLIDACAO.filter(function (etapa) { return estadoEtapas[etapa.id] === "ok"; }).length;
-    $("ami-process-bar-fill").style.width = (concluidas / ETAPAS_CONSOLIDACAO.length * 100).toFixed(0) + "%";
-    $("ami-process-steps").innerHTML = ETAPAS_CONSOLIDACAO.map(function (etapa) {
-      var situacao = estadoEtapas[etapa.id] || "pendente";
-      var icone = situacao === "ok" ? "fa-circle-check" : situacao === "erro" ? "fa-circle-xmark" : situacao === "andamento" ? "fa-spinner fa-spin" : "fa-circle";
-      return '<li class="ami-process-step is-' + situacao + '"><i class="fa-solid ' + icone + '" aria-hidden="true"></i><div><strong>' + etapa.titulo + '</strong>' +
-        '<span>' + escapeHtml(estadoEtapas[etapa.id + ":msg"] || etapa.detalhe) + '</span></div></li>';
-    }).join("");
+    var etapa = ETAPAS_CONSOLIDACAO.find(function (item) { return item.id === id; });
+    if (situacao === "andamento") processoConsolidacao.tarefaAtual(etapa.titulo, mensagem || etapa.detalhe);
+    if (situacao === "ok") processoConsolidacao.concluirTarefa(etapa.titulo, mensagem);
   }
   // --- Modal de veredito, em semaforo ---------------------------------------
   function mostrarResultado(cor, titulo, texto, campos) {
-    var semaforo = $("ami-result-semaforo");
-    semaforo.className = "ami-semaforo is-" + cor;
-    semaforo.setAttribute("aria-label", titulo);
-    $("ami-result-title").textContent = titulo;
-    $("ami-result-text").textContent = texto;
-    $("ami-result-fields").innerHTML = (campos || []).map(function (campo) {
-      return '<dt>' + escapeHtml(campo[0]) + '</dt><dd>' + escapeHtml(campo[1]) + '</dd>';
-    }).join("");
-    $("ami-result-modal").classList.remove("is-hidden");
+    var dados = {title: titulo, message: texto, details: (campos || []).map(function (campo) { return campo.join(": "); }).join("\n")};
+    if (cor === "vermelha") processoConsolidacao.erro(dados);
+    else processoConsolidacao.sucesso(Object.assign(dados, {_status: cor === "amarela" ? "partial" : undefined}));
   }
-  function fecharModalResultado() { $("ami-result-modal").classList.add("is-hidden"); }
   // Consolidacao completa: cada etapa alimenta o modal de processo e o desfecho
   // vai para o semaforo.
   function consolidarRespostas() {
@@ -532,7 +534,6 @@
     marcarEtapa("selecao", "andamento");
     if (!selecionadas.length) {
       marcarEtapa("selecao", "erro", "Nenhuma resposta selecionada.");
-      fecharModalProcesso();
       mostrarResultado("vermelha", "Consolida\u00e7\u00e3o n\u00e3o realizada", "Selecione ao menos uma resposta enviada para consolidar.", [["Respostas enviadas", String(enviadas)], ["Selecionadas", "0"]]);
       return;
     }
@@ -551,7 +552,6 @@
     }).then(function (data) {
       marcarEtapa("recarga", "ok", "Se\u00e7\u00f5es 2.1 a 2.7 atualizadas.");
       renderAnalysisWorkspace(data);
-      fecharModalProcesso();
       var incluidas = criada.respostas_incluidas || selecionadas.length;
       var campos = [
         ["An\u00e1lise", (criada.nome || "") + (criada.codigo ? " (" + criada.codigo + ")" : "")],
@@ -572,9 +572,9 @@
     }).catch(function (erro) {
       var pendente = ETAPAS_CONSOLIDACAO.filter(function (etapa) { return estadoEtapas[etapa.id] === "andamento"; })[0];
       if (pendente) marcarEtapa(pendente.id, "erro", erro.message);
-      fecharModalProcesso();
       $("ami-analysis-feedback").textContent = erro.message;
-      mostrarResultado("vermelha", "Consolida\u00e7\u00e3o n\u00e3o conclu\u00edda", erro.message,
+      mostrarResultado(criada ? "amarela" : "vermelha", criada ? "Análise gravada; tela não atualizada" : "Consolida\u00e7\u00e3o n\u00e3o conclu\u00edda",
+        criada ? "A análise foi gravada. Recarregue o espaço analítico antes de tentar novamente. " + erro.message : erro.message,
         [["Etapa", pendente ? pendente.titulo : "\u2014"], ["Selecionadas", String(selecionadas.length)]]);
     }).finally(function () { analysisSaving = false; $("ami-analysis-calculate").disabled = false; });
   }
@@ -609,14 +609,21 @@
   function renderConsolidatedAnalyses(items, homologadaId) {
     $("ami-analysis-consolidations").innerHTML = items.map(function (item) { var official = item.id === homologadaId || item.status === "homologada"; return '<article class="info-card"><h3>' + escapeHtml(item.nome) + ' <small>' + escapeHtml(item.codigo) + '</small></h3><div class="ami-kpis"><div><strong>' + item.respostas_incluidas + '</strong><span>respostas</span></div><div><strong>' + fmtNumber(item.razao_consistencia) + '</strong><span>RC</span></div><div><strong>' + (item.consistente ? "Sim" : "Não") + '</strong><span>consistente</span></div></div><div class="ahp-collab-grid2"><div><h4>Pesos finais</h4><div class="matriz-table-wrap"><table class="admin-table"><thead><tr><th>Critério</th><th>Peso final</th></tr></thead><tbody>' + item.pesos_consolidados.map(function (w,i) { return '<tr><td>' + escapeHtml(criterionName(analysisWorkspace.ambiente.criterios[i], i)) + '</td><td>' + fmtNumber(w) + '</td></tr>'; }).join("") + '</tbody></table></div></div><div><h4>Matriz consolidada</h4>' + analysisMatrixTable(item) + '</div></div>' + (official ? analiseHomologadaAviso() : '<button type="button" class="btn btn-success" data-homologate-analysis="' + escapeHtml(item.id) + '" ' + (!item.consistente ? "disabled" : "") + '>Homologar análise</button>') + '</article>'; }).join("") || '<p class="ami-empty">Nenhuma análise consolidada.</p>';
     $("ami-analysis-consolidations").querySelectorAll("table:not(.ami-matrix)").forEach(SLTAnalysisTable);
-    $("ami-analysis-consolidations").querySelectorAll("[data-homologate-analysis]").forEach(function (button) { button.addEventListener("click", function () {
+    $("ami-analysis-consolidations").querySelectorAll("[data-homologate-analysis]").forEach(function (button) { button.addEventListener("click", async function () {
       var ambienteId = analysisWorkspace.ambiente.id;
-      if (button.disabled) return;
+      if (button.disabled || analysisSaving) return;
+      analysisSaving = true;
       button.disabled = true;
-      api("/api/ahp/comparacao-colaborativa/analises/" + button.dataset.homologateAnalysis + "/homologar", {method:"POST"})
-        .then(function () { if (analysisWorkspace.ambiente.id === ambienteId) openAnalysisWorkspace(ambienteId); })
-        .catch(function (e) { $("ami-analysis-feedback").textContent=e.message; })
-        .finally(function () { button.disabled = false; });
+      try {
+        if (!(await ProcessFeedback.confirmar({title: "Homologar análise",
+          message: "Confirmar esta análise como referência de pesos da hierarquização?", confirmLabel: "Homologar"}))) return;
+        await executarOperacao("Homologar análise", function () {
+          return api("/api/ahp/comparacao-colaborativa/analises/" + button.dataset.homologateAnalysis + "/homologar", {method:"POST"});
+        }, async function () {
+          const data = await api("/api/ahp/comparacao-colaborativa/ambientes/" + encodeURIComponent(ambienteId) + "/espaco-analitico");
+          if (analysisWorkspace.ambiente.id === ambienteId) renderAnalysisWorkspace(data);
+        });
+      } finally { analysisSaving = false; button.disabled = false; }
     }); });
   }
   function openAnalysisWorkspace(ambienteId) {
@@ -627,7 +634,12 @@
     api("/api/ahp/comparacao-colaborativa/ambientes/" + encodeURIComponent(ambienteId) + "/espaco-analitico").then(function (data) {
       if (request !== analysisRequest) return;
       $("ami-analysis-feedback").textContent=""; renderAnalysisWorkspace(data);
-    }).catch(function (e) { if (request === analysisRequest) $("ami-analysis-feedback").textContent=e.message; });
+    }).catch(function (e) {
+      if (request === analysisRequest) {
+        $("ami-analysis-feedback").textContent=e.message;
+        Notify.error("Central de respostas", e.message);
+      }
+    });
   }
   function setEnvironmentMode(mode) {
     environmentMode = mode;
@@ -687,12 +699,14 @@
     feedbackNode.textContent = "Salvando alterações…";
     environmentSaving = true; $("ami-environment-save").disabled = true;
     var updatePayload = { hierarquizacao_id: selectedHierarchy.dataset.hierarquizacaoId, convites: draftEmails.map(function (convite) { return { email: convite.email, nome: convite.nome }; }), valido_ate: deadlineEndOfDay() }; if (criteriaMatrixFileBase64) { updatePayload.arquivo_matriz_base64 = criteriaMatrixFileBase64; updatePayload.arquivo_matriz_nome = criteriaMatrixFileName; }
-    api("/api/ahp/comparacao-colaborativa/ambientes/" + encodeURIComponent(judgment.id), { method: "PATCH", body: JSON.stringify(updatePayload) }).then(function (updated) {
+    executarOperacao("Salvar julgamento", function () {
+      return api("/api/ahp/comparacao-colaborativa/ambientes/" + encodeURIComponent(judgment.id), { method: "PATCH", body: JSON.stringify(updatePayload) });
+    }, function (updated) {
       var index = julgamentos.findIndex(function (item) { return item.id === updated.id; });
       if (index >= 0) julgamentos[index] = updated;
       selectedIds.clear(); selectedIds.add(updated.id); updateSelectedId(); render(); viewSelectedEnvironment();
       $("ami-create-feedback").textContent = "Alterações salvas no banco com sucesso.";
-    }).catch(function (err) { feedbackNode.textContent = err.message; }).finally(function () { environmentSaving = false; updateDraftControls(); });
+    }).finally(function () { environmentSaving = false; updateDraftControls(); });
   }
   function parseEmails(value) { return Array.from(new Set(value.split(/[\n,;]+/).map(function (v) { return v.trim().toLowerCase(); }).filter(Boolean))); }
   function deadlineLabel(value) { if (!value) return ""; return new Date(value).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }); }
@@ -905,7 +919,10 @@
     button.className = "admin-icon-btn is-disabled"; button.id = "ami-judgments-view-action"; button.type = "button"; button.title = modo === "julgamentos" ? "Analisar respostas do julgamento" : "Visualizar ambiente colaborativo"; button.setAttribute("aria-label", button.title); button.disabled = true; button.innerHTML = '<i class="fa-solid fa-eye" aria-hidden="true"></i>';
     toolbar.insertBefore(button, edit); button.addEventListener("click", modo === "julgamentos" ? openAnalysisWorkspace : function () { environmentId = selectedId; viewSelectedEnvironment(); });
   }
-  function feedback(message, isError) { var node = $("ami-judgments-feedback"); node.textContent = message || ""; node.classList.toggle("is-error", Boolean(isError)); }
+  function feedback(message, isError) {
+    var node = $("ami-judgments-feedback"); node.textContent = message || ""; node.classList.toggle("is-error", Boolean(isError));
+    if (message) Notify[isError ? "error" : "info"]("Análise multicritério", message);
+  }
   function selectedRecord() { var source = modo === "julgamentos" ? respostasCentral : julgamentos; return source.find(function (item) { return item.id === selectedId; }); }
   function startInlineEdit() { if (!selectedRecord()) return; editingId = selectedId; feedback(""); render(); var input = $("ami-judgments").querySelector("[data-edit-field]"); if (input) input.focus(); }
   function cancelInlineEdit() { editingId = null; feedback("Alterações descartadas."); render(); }
@@ -916,22 +933,30 @@
     return { convites: emails.map(function (email) { return { email: email }; }), valido_ate: endOfDayIso(fields.valido_ate) };
   }
   function saveInlineEdit() {
-    if (!editingId) return;
+    if (!editingId || environmentSaving) return;
+    var id = editingId;
+    environmentSaving = true;
     var endpoint = modo === "julgamentos" ? "/api/ahp/comparacao-colaborativa/respostas/" : "/api/ahp/comparacao-colaborativa/ambientes/";
-    api(endpoint + encodeURIComponent(editingId), { method: "PATCH", body: JSON.stringify(inlinePayload()) }).then(function (updated) {
-      var source = modo === "julgamentos" ? respostasCentral : julgamentos, index = source.findIndex(function (item) { return item.id === editingId; });
-      if (index >= 0) source[index] = Object.assign({}, source[index], updated); editingId = null; feedback("Alterações salvas no banco."); render();
-    }).catch(function (error) { feedback(error.message, true); });
+    executarOperacao("Salvar alterações", function () { return api(endpoint + encodeURIComponent(id), { method: "PATCH", body: JSON.stringify(inlinePayload()) }); }, function (updated) {
+      var source = modo === "julgamentos" ? respostasCentral : julgamentos, index = source.findIndex(function (item) { return item.id === id; });
+      if (index >= 0) source[index] = Object.assign({}, source[index], updated); editingId = null; render();
+    }).finally(function () { environmentSaving = false; });
   }
-  function deleteSelected() {
+  async function deleteSelected() {
+    if (environmentSaving) return;
     var record = selectedRecord(); if (!record) return;
+    var id = record.id;
     var label = modo === "julgamentos" ? "esta resposta" : "este julgamento e todas as respostas vinculadas";
-    if (!window.confirm("Deseja excluir definitivamente " + label + "?")) return;
-    var endpoint = modo === "julgamentos" ? "/api/ahp/comparacao-colaborativa/respostas/" : "/api/ahp/comparacao-colaborativa/ambientes/";
-    api(endpoint + encodeURIComponent(selectedId), { method: "DELETE" }).then(function () {
-      if (modo === "julgamentos") respostasCentral = respostasCentral.filter(function (item) { return item.id !== selectedId; }); else julgamentos = julgamentos.filter(function (item) { return item.id !== selectedId; });
-      selectedIds.delete(selectedId); updateSelectedId(); editingId = null; feedback("Registro excluído do banco."); render();
-    }).catch(function (error) { feedback(error.message, true); });
+    environmentSaving = true;
+    try {
+      if (!(await ProcessFeedback.confirmar({title: "Excluir registro", message: "Deseja excluir definitivamente " + label + "?",
+        warning: "Esta ação não pode ser desfeita.", danger: true, confirmLabel: "Excluir"}))) return;
+      var endpoint = modo === "julgamentos" ? "/api/ahp/comparacao-colaborativa/respostas/" : "/api/ahp/comparacao-colaborativa/ambientes/";
+      await executarOperacao("Excluir registro", function () { return api(endpoint + encodeURIComponent(id), { method: "DELETE" }); }, function () {
+        if (modo === "julgamentos") respostasCentral = respostasCentral.filter(function (item) { return item.id !== id; }); else julgamentos = julgamentos.filter(function (item) { return item.id !== id; });
+        selectedIds.delete(id); updateSelectedId(); editingId = null; render();
+      });
+    } finally { environmentSaving = false; }
   }
   function openPairwise(mode) { var judgment = julgamentos.find(function (item) { return item.id === selectedId; }); if (!judgment) return; pairwiseMode = mode; [["ami-judgments-matrix-action", "matrix"], ["ami-judgments-form-action", "form"]].forEach(function (entry) { var active = mode === entry[1]; $(entry[0]).classList.toggle("is-active", active); $(entry[0]).setAttribute("aria-pressed", String(active)); }); $("ami-pairwise-panel").classList.remove("is-hidden"); loadSaatyScale().then(function () { renderPairwise(judgment); $("ami-pairwise-panel").scrollIntoView({ behavior: "smooth", block: "start" }); }); }
   function setupMode() {
@@ -967,14 +992,14 @@
     createViewButton();
     setupEnvironmentFilters();
     if (modo === "julgamentos") {
-      api(ambientesSourceUrl).then(function (values) { respostasCentral = values; syncEnvironmentFilterOptions(); render(); }).catch(function (err) { $("ami-judgments").innerHTML = '<tr><td colspan="10" class="ami-empty">' + escapeHtml(err.message) + "</td></tr>"; });
+      api(ambientesSourceUrl).then(function (values) { respostasCentral = values; syncEnvironmentFilterOptions(); render(); }).catch(function (err) { feedback(err.message, true); $("ami-judgments").innerHTML = '<tr><td colspan="10" class="ami-empty">' + escapeHtml(err.message) + "</td></tr>"; });
     } else {
-      api(ambientesSourceUrl).then(function (values) { julgamentos = values; syncEnvironmentFilterOptions(); render(); }).catch(function (err) { $("ami-judgments").innerHTML = '<tr><td colspan="17" class="ami-empty">' + escapeHtml(err.message) + "</td></tr>"; });
+      api(ambientesSourceUrl).then(function (values) { julgamentos = values; syncEnvironmentFilterOptions(); render(); }).catch(function (err) { feedback(err.message, true); $("ami-judgments").innerHTML = '<tr><td colspan="17" class="ami-empty">' + escapeHtml(err.message) + "</td></tr>"; });
       api(hierarquizacoesSourceUrl).then(function (values) {
       hierarquizacoes = values;
       $("ami-hierarchy").dataset.source = hierarquizacoesSourceUrl;
       $("ami-hierarchy").insertAdjacentHTML("beforeend", hierarquizacoes.map(function (h) { return '<option value="' + escapeHtml(h.id) + '" data-hierarquizacao-id="' + escapeHtml(h.id) + '">' + escapeHtml((h.nome || "Sem nome") + " — " + (h.codigo || "Sem código")) + "</option>"; }).join(""));
-      }).catch(function (err) { $("ami-hierarchy-summary").textContent = "Não foi possível carregar as hierarquizações: " + err.message; });
+      }).catch(function (err) { Notify.error("Central de julgamentos", err.message); $("ami-hierarchy-summary").textContent = "Não foi possível carregar as hierarquizações: " + err.message; });
     }
 
     if ($("ami-search")) $("ami-search").addEventListener("input", function () { currentPage = 1; render(); });
@@ -1032,7 +1057,7 @@
     $("ami-delete-emails").addEventListener("click", function () { var selected = Array.from($("ami-email-list").querySelectorAll("[data-draft-index]:checked")).map(function (checkbox) { return Number(checkbox.dataset.draftIndex); }); draftEmails = draftEmails.filter(function (_email, index) { return !selected.includes(index); }); renderDraftEmails(); });
     $("ami-hierarchy").addEventListener("change", function () { var option = $("ami-hierarchy").selectedOptions[0], h = option && hierarquizacoes.find(function (item) { return item.id === option.dataset.hierarquizacaoId; }); $("ami-hierarchy-summary").textContent = h ? "Grupo selecionado: " + h.nome + " — " + h.codigo : ""; criteriaMatrix = h && h.dados_hierarquizacao && h.dados_hierarquizacao.cabecalho_grupo && h.dados_hierarquizacao.cabecalho_grupo.matriz_premissas_criterios; criteriaMatrixFileBase64 = null; criteriaMatrixFileName = null; matrixSummary(h ? (matrixRows(criteriaMatrix).length >= 2 ? "Matriz da hierarquização: " + matrixRows(criteriaMatrix).length + " critérios carregados." : "Esta hierarquização não possui matriz cadastrada. Regularize o cadastro antes de criar o julgamento.") : "", h && matrixRows(criteriaMatrix).length < 2); });
 
-    $("ami-create-form").addEventListener("submit", function (event) {
+    $("ami-create-form").addEventListener("submit", async function (event) {
       event.preventDefault();
       var feedback = $("ami-create-feedback");
       if (environmentMode !== "create" || environmentSaving) return;
@@ -1042,16 +1067,23 @@
       if (matrixRows(criteriaMatrix).length < 2) { feedback.textContent = "Selecione uma hierarquização com matriz cadastrada de ao menos dois critérios."; return; }
       feedback.textContent = "Criando ambiente colaborativo…";
       var selectedHierarchy = $("ami-hierarchy").selectedOptions[0];
-      if (julgamentos.some(function (j) { return j.status === "ativa" && j.hierarquizacao_id === selectedHierarchy.dataset.hierarquizacaoId; }) && !window.confirm("Esta hierarquiza\u00e7\u00e3o possui um julgamento aberto. Criar uma nova rodada encerrar\u00e1 a coleta anterior. Continuar?")) return;
       environmentSaving = true; updateDraftControls();
-      api("/api/ahp/comparacao-colaborativa/ambientes", { method: "POST", body: JSON.stringify({ hierarquizacao_id: selectedHierarchy.dataset.hierarquizacaoId, convites: draftEmails.map(function (convite) { return { email: convite.email, nome: convite.nome }; }), valido_ate: deadlineEndOfDay() }) }).then(function (j) {
+      try {
+      if (julgamentos.some(function (j) { return j.status === "ativa" && j.hierarquizacao_id === selectedHierarchy.dataset.hierarquizacaoId; }) && !(await ProcessFeedback.confirmar({
+        title: "Criar nova rodada", message: "Esta hierarquização possui um julgamento aberto.",
+        warning: "Criar uma nova rodada encerrará a coleta anterior.", confirmLabel: "Criar rodada",
+      }))) { feedback.textContent = ""; return; }
+      await executarOperacao("Criar julgamento", function () {
+        return api("/api/ahp/comparacao-colaborativa/ambientes", { method: "POST", body: JSON.stringify({ hierarquizacao_id: selectedHierarchy.dataset.hierarquizacaoId, convites: draftEmails.map(function (convite) { return { email: convite.email, nome: convite.nome }; }), valido_ate: deadlineEndOfDay() }) });
+      }, function (j) {
         julgamentos.unshift(j); currentPage = 1; selectedIds.clear(); selectedIds.add(j.id); updateSelectedId(); render();
         var links = actionLinks(j);
         $("ami-create-status").className = "ami-create-success";
         $("ami-create-status").innerHTML = '<strong>Ambiente colaborativo criado.</strong><span>Situação: ' + escapeHtml(statusLabel(j.status)) + '</span><span>Data limite: ' + escapeHtml(deadlineLabel(j.valido_ate)) + '</span><div class="ami-actions"><a class="btn btn-primary" href="' + escapeHtml(links.workspace) + '">Abrir espaço do julgamento</a><a class="btn btn-secondary" href="' + escapeHtml(links.public) + '">Abrir formulário público</a></div>';
         environmentId = j.id; viewSelectedEnvironment();
         feedback.textContent = "Colaboradores confirmados e ambiente criado.";
-      }).catch(function (err) { feedback.textContent = err.message; }).finally(function () { environmentSaving = false; updateDraftControls(); });
+      });
+      } finally { environmentSaving = false; updateDraftControls(); }
     });
     $("ami-copy-email-link").addEventListener("click", function () { var judgment = julgamentos.find(function (item) { return item.id === environmentId; }), url = persistentPublicUrl(judgment); if (url && navigator.clipboard) navigator.clipboard.writeText(url); });
     $("ami-open-mail").addEventListener("click", function () { var body = $("ami-email-template").dataset.message || $("ami-email-template").textContent; location.href = "mailto:" + draftEmails.map(function (convite) { return convite.email; }).join(",") + "?subject=" + encodeURIComponent("Convite para preenchimento colaborativo AHP (SAD/SLT)") + "&body=" + encodeURIComponent(body); });
@@ -1062,9 +1094,6 @@
     });
     ["ami-analysis-rc", "ami-analysis-exclude-inconsistent"].forEach(function (id) { $(id).addEventListener("change", function () { if (analysisWorkspace) renderFioDerivado(analysisWorkspace); }); });
     $("ami-analysis-calculate").addEventListener("click", consolidarRespostas);
-    document.querySelectorAll("[data-result-close]").forEach(function (botao) { botao.addEventListener("click", fecharModalResultado); });
-    $("ami-result-modal").addEventListener("click", function (evento) { if (evento.target === $("ami-result-modal")) fecharModalResultado(); });
-    document.addEventListener("keydown", function (evento) { if (evento.key === "Escape") fecharModalResultado(); });
     [['nome','Colaboradores'],['email','Email'],['prazo','Data limite']].forEach(function (entry) { $('ami-emails-filter-coluna').add(new Option(entry[1],entry[0])); });
     function filterDrafts() { draftPage = 1; renderDraftEmails(); }
     $('ami-emails-filter-coluna').onchange = function () { $('ami-emails-filter-valor').value = ''; filterDrafts(); };

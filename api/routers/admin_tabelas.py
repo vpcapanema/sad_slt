@@ -7,6 +7,7 @@ PostgreSQL (information_schema/pg_catalog) antes de compor SQL, evitando injeç�
 from __future__ import annotations
 
 import json
+import logging
 import re
 import unicodedata
 from pathlib import Path
@@ -16,6 +17,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Response
 from psycopg import sql
+from psycopg.errors import ForeignKeyViolation
 from psycopg.types.json import Jsonb
 
 from api.db.connection import get_connection
@@ -25,6 +27,7 @@ from api.repositories import sigma_usuario_repository
 from api.services.session_service import SessionUser
 
 router = APIRouter(prefix="/admin", tags=["admin-tabelas"])
+logger = logging.getLogger(__name__)
 
 # Esquemas liberados para a área do administrador.
 ESQUEMAS_PERMITIDOS: tuple[str, ...] = (
@@ -572,6 +575,33 @@ def atualizar_registro(
     return {"ok": True, "afetados": afetados}
 
 
+def _validar_exclusao_agrupamentos(conn: Any, chaves: list[dict[str, Any]]) -> None:
+    vinculos = conn.execute(
+        """
+        SELECT g.codigo AS grupo_codigo, g.nome AS grupo_nome,
+               h.codigo AS hierarquizacao_codigo, h.nome AS hierarquizacao_nome
+          FROM hierarquizacao_demandas.hierarquizacao_portfolio h
+          JOIN demandas.grupos_demandas g ON g.id = h.grupo_demanda_id
+         WHERE h.grupo_demanda_id = ANY(%s::uuid[])
+         ORDER BY g.codigo, h.codigo
+        """,
+        ([registro["id"] for registro in chaves],),
+    ).fetchall()
+    if vinculos:
+        detalhes = "\n".join(
+            f'{row["grupo_nome"]} ({row["grupo_codigo"]}) — '
+            f'{row["hierarquizacao_nome"]} ({row["hierarquizacao_codigo"]})'
+            for row in vinculos
+        )
+        raise HTTPException(
+            status_code=409,
+            detail="Não é possível excluir agrupamentos utilizados por hierarquizações.\n\n"
+            "Agrupamento — Hierarquização:\n" + detalhes + "\n\n"
+            "Revise os vínculos na página Gestão das Hierarquizações antes de tentar novamente. "
+            "Nenhum agrupamento foi excluído; as demandas permanecem preservadas.",
+        )
+
+
 @router.delete("/tabelas/{esquema}/{tabela}")
 def excluir_registros(
     esquema: str,
@@ -598,11 +628,14 @@ def excluir_registros(
                 if not chave:
                     erro = (422, "Tabela sem chave primária; exclusão indisponível.")
                 else:
+                    chaves_validadas = []
                     for registro in chaves:
                         if set(registro) != set(chave):
-                            erro = (422, "Chave primária incompleta.")
-                            break
-                        chave_valores = {k: _coagir_valor(registro[k], colunas_map[k]) for k in chave}
+                            raise HTTPException(status_code=422, detail="Chave primária incompleta.")
+                        chaves_validadas.append({k: _coagir_valor(registro[k], colunas_map[k]) for k in chave})
+                    if (esquema, tabela) == ("demandas", "grupos_demandas"):
+                        _validar_exclusao_agrupamentos(conn, chaves_validadas)
+                    for chave_valores in chaves_validadas:
                         # Coleta os arquivos antes de excluir o registro.
                         arquivos |= _arquivos_da_linha(conn, esquema, tabela, chave_valores, chave, colunas_map)
                         condicao = sql.SQL(" AND ").join(
@@ -613,11 +646,22 @@ def excluir_registros(
                             chave_valores,
                         )
                         removidos += cursor.rowcount
-                    if erro:
-                        conn.rollback()
-                        arquivos.clear()
-                    else:
-                        conn.commit()
+                    conn.commit()
+            except HTTPException as exc:
+                conn.rollback()
+                arquivos.clear()
+                erro = (exc.status_code, str(exc.detail))
+            except ForeignKeyViolation as exc:
+                conn.rollback()
+                arquivos.clear()
+                logger.warning("Exclusão bloqueada por vínculo em %s.%s", esquema, tabela, exc_info=True)
+                erro = (
+                    (409, "Um dos agrupamentos está vinculado a outros registros. "
+                     "Revise as hierarquizações que o utilizam antes de tentar novamente. "
+                     "Nenhum agrupamento foi excluído; as demandas permanecem preservadas.")
+                    if (esquema, tabela) == ("demandas", "grupos_demandas")
+                    else (422, str(exc).strip())
+                )
             except Exception as exc:
                 conn.rollback()
                 arquivos.clear()

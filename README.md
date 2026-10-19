@@ -486,6 +486,13 @@ O fluxo metodológico possui:
 
 Família: `/api/ahp/hierarquizacoes`.
 
+Na página Agrupamento de Demandas, a exclusão exige confirmação pelo feedback
+padronizado e utiliza somente os IDs selecionados. Agrupamentos utilizados por
+hierarquizações não podem ser excluídos: a resposta identifica os agrupamentos e
+as hierarquizações vinculadas, sem expor mensagens internas do PostgreSQL.
+Se qualquer agrupamento estiver vinculado, nenhum item do lote é excluído.
+Excluir um agrupamento livre não exclui as demandas que o compõem.
+
 ### Geoprocessamento
 
 Inclui importação e catálogo de camadas, visualização vetorial e raster,

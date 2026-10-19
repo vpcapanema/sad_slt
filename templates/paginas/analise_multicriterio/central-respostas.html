@@ -5,7 +5,7 @@
 {% set requer_autenticacao = true %}
 {% set modo_pagina = request.query_params.get('modo', 'julgamentos') if request.query_params is defined else 'julgamentos' %}
 {% block titulo %}{% if modo_pagina == 'julgamentos' %}Central de respostas{% elif modo_pagina == 'formulario' %}Formulário dos especialistas{% else %}Central de julgamentos{% endif %} — SICARD{% endblock %}
-{% block classes_body %}ahp-module-page ami-page{% if modo_pagina == 'espaco' %} ami-espaco-page{% endif %}{% endblock %}
+{% block classes_body %}ahp-module-page ami-page feedback-proprio{% if modo_pagina == 'espaco' %} ami-espaco-page{% endif %}{% endblock %}
 {% block estilos_pagina %}
   <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
   <link rel="stylesheet" href="/assets/css/ahp-module.css">
@@ -81,5 +81,5 @@
   <script src="/assets/js/admin-auth.js"></script>
   <script src="/assets/vendor/xlsx/xlsx-0.18.5.min.js"></script>
   <script src="/assets/js/paginas/analise-multicriterio-tabela.js?v=20260820-multiselect"></script>
-  <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20261015-fluxo-integrado"></script>
+  <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20261019-feedback"></script>
 {% endblock %}

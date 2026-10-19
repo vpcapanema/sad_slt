@@ -26,6 +26,7 @@
     h=>h.criadoEm, h=>h.atualizadoEm, h=>rotuloTipoDemanda(h.tipo_demanda||h.tipo_demanda_id), h=>h.grupo_id, h=>JSON.stringify(h.dados_hierarquizacao)
   ], () => { paginaHier=1; selecionadasHier.clear(); renderTabela(); }, () => !hierEditMode);
   let paginaHier = 1;
+  let operando = false;
   const selecionadasHier = new Set();
   const HIER_FILTER_COLUMNS = [
     ["status", "Situação"], ["codigo", "Código da hierarquização"], ["julgamento_id", "ID Julgamento"],
@@ -65,10 +66,14 @@
       $("hier-loading").classList.add("hidden");
       atualizarOpcoesFiltroHier();
       renderTabela();
+      $("hier-error").classList.add("hidden");
+      return true;
     } catch (e) {
       $("hier-loading").classList.add("hidden");
       $("hier-error").textContent = e.message;
       $("hier-error").classList.remove("hidden");
+      Notify.error("Central de hierarquização", e.message);
+      return false;
     }
   }
   function matrizDaHier(h) {
@@ -192,11 +197,12 @@
     if (sa) sa.checked = rows.length > 0 && rows.every((h) => selecionadasHier.has(h.codigo));
   }
   function atualizarBotoesLote() {
-    document.querySelectorAll('#hier-filter-coluna, #hier-filter-valor, #hier-filter-inverter, #hier-filter-limpar, #hier-select-all, .hier-row-select').forEach(el => { el.disabled = hierEditMode; });
-    if (hierEditMode) document.querySelectorAll('#hier-pagination button').forEach(el => { el.disabled = true; });
+    document.querySelectorAll('#hier-filter-coluna, #hier-filter-valor, #hier-filter-inverter, #hier-filter-limpar, #hier-select-all, .hier-row-select').forEach(el => { el.disabled = hierEditMode || operando; });
+    if (hierEditMode || operando) document.querySelectorAll('#hier-pagination button').forEach(el => { el.disabled = true; });
     SLTTable.summary("hier-filter-count", selecionadasHier.size, hierarquizacoesFiltradas().slice((paginaHier - 1) * 15, paginaHier * 15).length, listaCache.length);
     const has = selecionadasHier.size > 0;
-    const set = (id, dis) => { const el = $(id); if (el) el.disabled = dis; };
+    const set = (id, dis) => { const el = $(id); if (el) el.disabled = dis || operando; };
+    set("hier-new", false);
     set("hier-bulk-edit", !has || hierEditMode);
     set("hier-bulk-view", selecionadasHier.size !== 1 || hierEditMode);
     set("hier-bulk-cancel", !hierEditMode);
@@ -359,6 +365,7 @@
     preencherModal("modal-matriz", `Matriz de critérios e premissas — ${codigo}`, matrizHtml(matrizAtual.matriz));
   }
   function erro(msg) {
+    Notify.warning("Cadastro da hierarquização", msg);
     const container = $("form-error");
     const texto = String(msg || "Erro na requisição.");
     const linhas = texto.split(/\r?\n/);
@@ -402,9 +409,15 @@
   });
   $("nova-hierarquizacao").onsubmit = async (e) => {
     e.preventDefault();
+    if (operando) return;
     if (!$("hier-agrupamento").value)
       return erro("Selecione um agrupamento salvo antes de criar a hierarquização.");
     if (!matrizCadastro) return erro("Anexe e aguarde a leitura da matriz de premissas e critérios.");
+    operando = true;
+    atualizarBotoesLote();
+    const proc = ProcessFeedback.iniciarCadastro({title: "Cadastrar hierarquização", tasks: ["Gravar hierarquização"]});
+    proc.tarefaAtual("Gravar hierarquização");
+    let gravada = false;
     try {
       await HierApi.criar({
         nome: $("hier-nome").value.trim(),
@@ -412,9 +425,19 @@
         grupo_demanda_id: $("hier-agrupamento").value,
         matriz_premissas_criterios: matrizCadastro,
       });
-      location.reload();
+      gravada = true;
+      proc.concluirTarefa("Gravar hierarquização");
+      $("hier-create-section").classList.add("hidden");
+      const atualizada = await carregarLista();
+      proc.sucesso({title: "Hierarquização cadastrada", message: atualizada
+        ? "O cadastro foi registrado e a lista foi atualizada."
+        : "O cadastro foi registrado, mas a lista não foi atualizada. Recarregue-a antes de continuar.",
+        _status: atualizada ? undefined : "partial"});
     } catch (err) {
-      erro(err.message);
+      proc.erro({message: gravada ? `Cadastro registrado, mas a tela não foi atualizada: ${err.message}` : err.message});
+    } finally {
+      operando = false;
+      atualizarBotoesLote();
     }
   };
   window.SLTDemandasGrupo.bindModalClosures();
@@ -434,31 +457,51 @@
   bindLote("hier-bulk-edit", () => { if (!selecionadasHier.size) return; hierEditMode = true; renderTabela(); });
   bindLote("hier-bulk-view", visualizarHierarquizacaoSelecionada);
   bindLote("hier-bulk-cancel", () => { hierEditMode = false; renderTabela(); });
-  bindLote("hier-bulk-save", async () => {
-    const codigos = [...selecionadasHier];
-    try {
-      for (const cod of codigos) {
-        const tr = $("hier-tbody").querySelector(`tr[data-codigo="${cod.replace(/"/g, '\\"')}"]`);
-        if (!tr) continue;
-        const payload = {};
-        tr.querySelectorAll("[data-k]").forEach((el) => { payload[el.dataset.k] = el.value; });
-        await HierApi.atualizar(cod, payload);
-      }
-      hierEditMode = false;
-      await carregarLista();
-    } catch (e) { $("hier-error").textContent = e.message; $("hier-error").classList.remove("hidden"); }
-  });
-  bindLote("hier-bulk-delete", async () => {
+  async function executarLote(excluir) {
+    if (operando) return;
     const codigos = [...selecionadasHier];
     if (!codigos.length) return;
-    if (!window.confirm(`Excluir definitivamente ${codigos.length} hierarquização(ões)? Esta ação não pode ser desfeita.`)) return;
+    operando = true;
+    atualizarBotoesLote();
+    let proc, concluidas = 0;
     try {
-      for (const cod of codigos) await HierApi.excluir(cod);
+      if (excluir && !(await ProcessFeedback.confirmar({
+        title: "Excluir hierarquizações", message: `Excluir ${codigos.length} hierarquização(ões)?`,
+        warning: `${codigos.join("\n")}\nEsta ação não pode ser desfeita.`, confirmLabel: "Excluir", danger: true,
+      }))) return;
+      const tarefa = excluir ? "Excluir registros selecionados" : "Salvar alterações";
+      proc = ProcessFeedback.iniciarCadastro({title: excluir ? "Excluir hierarquizações" : "Salvar hierarquizações", tasks: [tarefa]});
+      proc.tarefaAtual(tarefa);
+      for (const cod of codigos) {
+        if (excluir) await HierApi.excluir(cod);
+        else {
+          const tr = $("hier-tbody").querySelector(`tr[data-codigo="${CSS.escape(cod)}"]`);
+          if (!tr) throw new Error(`Registro ${cod} não está disponível para edição.`);
+          const payload = {};
+          tr.querySelectorAll("[data-k]").forEach(el => { payload[el.dataset.k] = el.value; });
+          await HierApi.atualizar(cod, payload);
+        }
+        concluidas++;
+        selecionadasHier.delete(cod);
+      }
+      proc.concluirTarefa(tarefa);
       selecionadasHier.clear();
       hierEditMode = false;
-      await carregarLista();
-    } catch (e) { $("hier-error").textContent = e.message; $("hier-error").classList.remove("hidden"); }
-  });
+      const atualizada = await carregarLista();
+      proc.sucesso({message: `${concluidas} registro(s) ${excluir ? "excluído(s)" : "atualizado(s)"}.${atualizada ? "" : " Não foi possível atualizar a lista; recarregue-a."}`,
+        _status: atualizada ? undefined : "partial"});
+    } catch (e) {
+      if (concluidas) proc.sucesso({_status: "partial", title: "Operação parcialmente realizada",
+        message: `${concluidas} de ${codigos.length} registros confirmados. ${e.message} Confira a lista antes de tentar novamente.`});
+      else if (proc) proc.erro({message: e.message});
+      else StatusFeedback.erro({message: e.message});
+    } finally {
+      operando = false;
+      atualizarBotoesLote();
+    }
+  }
+  bindLote("hier-bulk-save", () => executarLote(false));
+  bindLote("hier-bulk-delete", () => executarLote(true));
   if ($("hier-select-all")) {
     $("hier-select-all").onchange = () => {
       if ($("hier-select-all").checked) hierarquizacoesFiltradas().slice((paginaHier - 1) * 15, paginaHier * 15).forEach((h) => selecionadasHier.add(h.codigo));

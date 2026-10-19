@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
   <link rel="stylesheet" href="/assets/css/template-painel-mapa.css">
   <link rel="stylesheet" href="/assets/css/navbar-modulo.css">
+  <link rel="stylesheet" href="/assets/css/process_feedback_system.css?v=20261019-acompanhamento">
   {% block estilos_pagina %}{% endblock %}
 </head>
 <body class="pagina-painel-mapa layout-with-sidebar {% block classes_body %}{% endblock %}" data-navegacao="painel_{{ navegacao }}"{% if requer_autenticacao %} data-requer-autenticacao="true"{% endif %}>
@@ -30,6 +31,8 @@
     </div>
   </div>
 
+  <script src="/assets/js/notification_system.js"></script>
+  <script src="/assets/js/process_feedback_unified.js?v=20261019-acompanhamento"></script>
   {% block scripts_pagina %}{% endblock %}
   <script src="/assets/js/table-sort.js"></script>
   <script src="/assets/js/template-base.js"></script>

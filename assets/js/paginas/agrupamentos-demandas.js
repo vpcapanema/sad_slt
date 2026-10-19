@@ -198,6 +198,7 @@
     todos.checked = lista.length > 0 && lista.every(g => gruposSelecionados.has(g.id));
     todos.indeterminate = !todos.checked && lista.some(g => gruposSelecionados.has(g.id));
     todos.disabled = ocupado || Boolean(grupoEditando) || !lista.length;
+    $$('[data-grupo-id]').forEach(checkbox => { checkbox.disabled = ocupado || Boolean(grupoEditando); });
     for (const el of document.querySelectorAll('.agrupamentos-list-section .admin-filter-bar input, .agrupamentos-list-section .admin-filter-bar select, #grupos-filtro-inverter, #grupos-filtro-limpar')) el.disabled = ocupado || Boolean(grupoEditando) || (el.id === 'grupos-filtro-valor' && !$('#grupos-filtro-coluna').value);
   }
 
@@ -208,23 +209,55 @@
     if (acao === 'cancel') { grupoEditando = null; renderGrupos(); return; }
     if (!SLTAdminAuth.can('administer')) return;
     if (acao === 'edit' && gruposSelecionados.size === 1) { grupoEditando = [...gruposSelecionados][0]; renderGrupos(); $('#grupo-nome-edicao').focus(); return; }
-    let body, method;
+    let body, method, selecionados = [];
     if (acao === 'save' && grupoEditando) {
       const nome = $('#grupo-nome-edicao').value.trim();
       if (!nome) { erro('Informe o nome do agrupamento.', '#agrupamentos-error'); return; }
       body = {chave: {id: grupoEditando}, valores: {nome}}; method = 'PATCH';
     } else if (acao === 'delete' && gruposSelecionados.size) {
-      const selecionados = grupos.filter(g => gruposSelecionados.has(g.id));
-      if (!window.confirm(`Excluir os agrupamentos selecionados?\n${selecionados.map(g => g.codigo + ' — ' + g.nome).join('\n')}`)) return;
+      selecionados = grupos.filter(g => gruposSelecionados.has(g.id));
       body = {chaves: selecionados.map(g => ({id:g.id}))}; method = 'DELETE';
     } else return;
     ocupado = true; controlesGrupos(); limparErro('#agrupamentos-error');
     try {
+      if (method === 'DELETE' && !(await window.ProcessFeedback.confirmar({
+        title: 'Excluir Agrupamentos',
+        message: selecionados.length === 1 ? 'Excluir o agrupamento selecionado?' : `Excluir os ${selecionados.length} agrupamentos selecionados?`,
+        warning: selecionados.map(g => `${g.codigo} — ${g.nome}`).join('\n') +
+          '\n\nAs demandas não serão excluídas. Agrupamentos utilizados por hierarquizações não podem ser excluídos. ' +
+          'Se houver algum vínculo, nenhum agrupamento desta seleção será excluído.',
+        confirmLabel: 'Excluir', danger: true,
+      }))) return;
       const response = await fetch('/api/admin/tabelas/demandas/grupos_demandas', {method, credentials:'same-origin', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
       const result = await response.json();
       if (!response.ok) throw new Error(result.detail || 'Não foi possível concluir a operação.');
-      grupoEditando = null; gruposSelecionados.clear(); await carregarGrupos();
-    } catch (error) { erro(error.message, '#agrupamentos-error'); }
+      if (method === 'DELETE' && (!Number.isInteger(result.removidos) || result.removidos < 0 || result.removidos > selecionados.length)) {
+        throw new Error('O servidor não confirmou quantos agrupamentos foram excluídos. Recarregue a lista para conferir antes de tentar novamente.');
+      }
+      grupoEditando = null; gruposSelecionados.clear();
+      const atualizada = await carregarGrupos();
+      const mensagem = method === 'DELETE'
+        ? `${result.removidos === 1 ? '1 agrupamento excluído' : `${result.removidos} agrupamentos excluídos`}. As demandas foram preservadas.`
+        : 'O nome do agrupamento foi atualizado.';
+      if (!atualizada) {
+        window.StatusFeedback.parcial({title: 'Operação Realizada; Lista Não Atualizada',
+          message: `${mensagem} Não foi possível atualizar a lista. Recarregue-a antes de continuar.`});
+      } else if (method === 'DELETE' && result.removidos !== selecionados.length) {
+        window.StatusFeedback.parcial({title: 'Confira o Resultado da Exclusão',
+          message: `${mensagem} Alguns agrupamentos selecionados já não estavam disponíveis.`});
+      } else {
+        window.StatusFeedback.sucesso({title: method === 'DELETE' ? 'Agrupamentos Excluídos' : 'Agrupamento Atualizado', message: mensagem});
+      }
+    } catch (error) {
+      const semConfirmacao = error instanceof TypeError || error instanceof SyntaxError;
+      if (semConfirmacao) console.error('Não foi possível confirmar a operação sobre os agrupamentos.', error);
+      window.StatusFeedback.erro({
+        title: method === 'DELETE' ? 'Exclusão de Agrupamentos' : 'Alteração de Agrupamento',
+        message: semConfirmacao
+          ? 'Não foi possível confirmar o resultado da operação. Verifique a conexão e recarregue a lista antes de tentar novamente.'
+          : error.message,
+      });
+    }
     finally { ocupado = false; controlesGrupos(); }
   }
 
@@ -239,6 +272,7 @@
     if (!elemento) return;
     elemento.textContent = mensagem || "Não foi possível concluir a operação.";
     elemento.classList.remove("hidden");
+    Notify.error("Agrupamento de demandas", elemento.textContent);
   }
 
   function limparErro(destino = "#agrupamento-form-error") {
@@ -389,8 +423,9 @@
       const valor = $('#grupos-filtro-valor').value;
       valoresFiltroGrupo(); $('#grupos-filtro-valor').value = valor;
       renderGrupos();
+      return true;
     }
-    catch (error) { erro(error.message, "#agrupamentos-error"); $("#agrupamentos-tbody").innerHTML = '<tr><td colspan="7">Não foi possível carregar os agrupamentos.</td></tr>'; }
+    catch (error) { erro(error.message, "#agrupamentos-error"); $("#agrupamentos-tbody").innerHTML = '<tr><td colspan="7">Não foi possível carregar os agrupamentos.</td></tr>'; return false; }
   }
 
   function iniciar() {
@@ -464,13 +499,25 @@
       if (salvandoGrupo) return;
       if (!grupoConfirmado || !membrosGrupo.size) return erro("Adicione as demandas à tabela do grupo e confirme os registros antes de salvar.");
       salvandoGrupo = true; atualizarComposicao();
+      const tarefa = "Gravar agrupamento";
+      const proc = ProcessFeedback.iniciarCadastro({title: agrupamentoEmEdicao ? "Atualizar agrupamento" : "Criar agrupamento", tasks: [tarefa]});
+      proc.tarefaAtual(tarefa);
+      let gravado = false;
       try {
         const payload = { nome: $("#agrupamento-nome").value.trim(), descricao: $("#agrupamento-descricao").value.trim() || null, tipo_demanda: $("#agrupamento-tipo").value, demanda_ids: [...membrosGrupo.keys()] };
         if (agrupamentoEmEdicao) await HierApi.atualizarAgrupamento(agrupamentoEmEdicao, payload);
         else await HierApi.criarAgrupamento(payload);
+        gravado = true;
+        proc.concluirTarefa(tarefa);
         abrir.classList.add("hidden");
-        await carregarGrupos();
-      } catch (error) { erro(error.message); }
+        const atualizada = await carregarGrupos();
+        proc.sucesso({title: "Agrupamento salvo", message: atualizada ? "O agrupamento foi registrado e a lista foi atualizada."
+          : "O agrupamento foi registrado, mas a lista não foi atualizada. Recarregue-a antes de continuar.",
+          _status: atualizada ? undefined : "partial"});
+      } catch (error) {
+        if (gravado) proc.sucesso({_status: "partial", message: `Agrupamento registrado, mas a tela não foi atualizada: ${error.message}`});
+        else proc.erro({message: error.message});
+      }
       finally { salvandoGrupo = false; atualizarComposicao(); }
     };
     carregarGrupos();
