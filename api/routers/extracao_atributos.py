@@ -218,6 +218,114 @@ def preparar_demanda(payload: DemandaBancada, user: SessionUser = Depends(requir
         raise HTTPException(422, str(exc)) from exc
 
 
+class CamadaElegibilidade(BaseModel):
+    id: str = Field(min_length=1, max_length=1200)
+    nome: str = Field(min_length=1, max_length=200)
+    revisao: str | None = Field(default=None, max_length=200)
+
+
+class ExecucaoElegibilidade(BaseModel):
+    entrada: CamadaElegibilidade
+    restricao: list[CamadaElegibilidade] = Field(default_factory=list)
+    risco: list[CamadaElegibilidade] = Field(default_factory=list)
+    lote_id: UUID | None = None
+    total_entradas: int = Field(default=1, ge=1)
+
+    @model_validator(mode='after')
+    def conferir_papeis(self):
+        bases = self.restricao + self.risco
+        if not bases:
+            raise ValueError('Selecione ao menos uma base de restrição ou risco.')
+        ids = [self.entrada.id, *(base.id for base in bases)]
+        if len(ids) != len(set(ids)):
+            raise ValueError('Uma camada não pode participar mais de uma vez ou ocupar papéis diferentes.')
+        return self
+
+
+@router.post('/elegibilidade/execucoes', status_code=202)
+def executar_elegibilidade(payload: ExecucaoElegibilidade, user: SessionUser = Depends(require_geospatial_access)):
+    from api.services import elegibilidade_jobs
+    try:
+        return elegibilidade_jobs.iniciar(payload.model_dump(), user.id)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@router.get('/elegibilidade/execucoes/{ident}')
+def consultar_elegibilidade(ident: str, user: SessionUser = Depends(require_geospatial_access)):
+    from api.services import elegibilidade_jobs
+    try:
+        return elegibilidade_jobs.consultar(ident, user.id)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+
+
+@router.post('/elegibilidade/execucoes/{ident}/cancelar')
+def cancelar_elegibilidade(ident: str, user: SessionUser = Depends(require_geospatial_access)):
+    from api.services import elegibilidade_jobs
+    try:
+        return elegibilidade_jobs.cancelar(ident, user.id)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+class ReferenciasResultadosElegibilidade(BaseModel):
+    execucoes: list[str] = Field(min_length=1)
+
+
+class ApresentacaoElegibilidade(ReferenciasResultadosElegibilidade):
+    nomes: dict[str, str]
+    revisados: bool
+
+
+@router.post('/elegibilidade/resultados/preparar')
+def preparar_resultados_elegibilidade(payload: ReferenciasResultadosElegibilidade,
+                                      user: SessionUser = Depends(require_geospatial_access)):
+    from api.services import elegibilidade_relatorio
+    try:
+        return elegibilidade_relatorio.preparar(payload.execucoes, user.id)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@router.post('/elegibilidade/resultados/visualizar')
+def visualizar_resultados_elegibilidade(payload: ApresentacaoElegibilidade,
+                                       user: SessionUser = Depends(require_geospatial_access)):
+    from api.services import elegibilidade_relatorio
+    try:
+        modelo, _ = elegibilidade_relatorio.montar(payload.execucoes, payload.nomes, user.id, payload.revisados)
+        return modelo
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc)) from exc
+
+
+@router.post('/elegibilidade/resultados/pacote')
+def pacote_resultados_elegibilidade(payload: ApresentacaoElegibilidade,
+                                   user: SessionUser = Depends(require_geospatial_access)):
+    from urllib.parse import quote
+    from api.services import elegibilidade_relatorio
+    try:
+        modelo, arquivos = elegibilidade_relatorio.montar(payload.execucoes, payload.nomes, user.id, payload.revisados)
+        dados, caminho = elegibilidade_relatorio.pacote(modelo, arquivos)
+        return Response(dados, media_type='application/zip', headers={
+            'Content-Disposition': "attachment; filename=\"Relatorio e Camadas.zip\"; filename*=UTF-8''" + quote('Relatório e Camadas.zip'),
+            'Cache-Control': 'no-store', 'X-SICARD-Package': quote(caminho)})
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc)) from exc
+
+
 @router.post('/pastas',status_code=201)
 def criar_pasta(payload: NovaPasta):
     from api.services.pastas_geoespaciais import criar_pasta as criar

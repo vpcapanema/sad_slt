@@ -105,6 +105,40 @@ def test_prepara_storage_sem_materializar_geojson(client, storage_file):
     assert result["bounds"][3] == pytest.approx(0.0045, abs=0.001)
 
 
+@pytest.mark.parametrize("driver,ext", [("GPKG", ".gpkg"), ("ESRI Shapefile", ".shp"), ("GeoJSON", ".geojson")])
+def test_tabela_retorna_fid_real_por_feicao_nos_tres_formatos(tmp_path, monkeypatch, driver, ext):
+    path = tmp_path / "base-geoespacial" / f"identificadores{ext}"
+    path.parent.mkdir()
+    dataset = ogr.GetDriverByName(driver).CreateDataSource(str(path))
+    srs = osr.SpatialReference()
+    srs.ImportFromEPSG(4326)
+    layer = dataset.CreateLayer("identificadores", srs, ogr.wkbPoint)
+    layer.CreateField(ogr.FieldDefn("nome", ogr.OFTString))
+    for fid in (3, 7, 12):
+        feature = ogr.Feature(layer.GetLayerDefn())
+        feature.SetFID(fid)
+        feature.SetField("nome", "mesmo atributo")
+        feature.SetGeometry(ogr.CreateGeometryFromWkt("POINT (-47 -23)"))
+        assert layer.CreateFeature(feature) == 0
+    dataset = None
+    dataset = ogr.Open(str(path))
+    layer = dataset.GetLayer(0)
+    nome = layer.GetName()
+    expected = [str(feature.GetFID()) for feature in layer]
+    dataset = None
+    monkeypatch.setattr(storage_geoespacial, "diretorio_storage", lambda: tmp_path)
+    arquivo = f"base-geoespacial/{path.name}"
+    ident = f"storage:{arquivo}::{nome}"
+    before = path.read_bytes()
+    meta = bancada_camada_original.preparar(ident, arquivo)
+    rows = []
+    for offset in (0, 2):
+        rows.extend(bancada_camada_original.ler_tabela(ident, arquivo, meta["revisao"], offset, 2)["linhas"])
+    assert [row["id"] for row in rows] == expected
+    assert len({row["id"] for row in rows}) == 3
+    assert path.read_bytes() == before
+
+
 @pytest.mark.parametrize("fid,offset,ids", [("0", 0, ["0", "1"]), ("118", 6, ["118"])])
 def test_tabela_localiza_fid_esparso_na_pagina_correta(client, storage_file, fid, offset, ids):
     source = bancada_camada_original._fonte(f"storage:{storage_file}::areas", storage_file)

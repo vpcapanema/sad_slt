@@ -9,7 +9,8 @@
 <link rel="stylesheet" href="/assets/css/geoespacial.css">
 <link rel="stylesheet" href="/assets/css/page-title-standard.css?v=20260820-3">
 <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
-<link rel="stylesheet" href="/restrict/geoespacial/explorador-camadas.css?v=20261009-all-files-1">
+<link rel="stylesheet" href="/assets/css/admin-table-controls.css?v=20261015-hero-topo">
+<link rel="stylesheet" href="/restrict/geoespacial/explorador-camadas.css?v=20261019-footer-count">
 {% endblock %}
 {% block conteudo %}
 <main class="conteudo-principal app-main geo-explorer-main">
@@ -28,10 +29,31 @@
       </div>
       <label class="geo-explorer-search"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input id="explorer-search" type="search" placeholder="Pesquisar nesta pasta" aria-label="Pesquisar nesta pasta"></label>
     </div>
-    <p id="explorer-status" role="status" aria-live="polite"></p>
+    <div id="explorer-filters" class="admin-filter-bar" hidden>
+      <span class="admin-filter-label">Filtro:</span>
+      <select id="explorer-filter-column" class="admin-filter-col" aria-label="Coluna do filtro">
+        <option value="">— Coluna —</option>
+      </select>
+      <select id="explorer-filter-value" class="admin-filter-val" aria-label="Valor do filtro" disabled><option value="">— selecione a coluna —</option></select>
+      <button id="explorer-inverter" class="admin-icon-btn admin-filter-inv" type="button" aria-label="Inverter seleção" title="Inverter seleção" aria-pressed="false"><i class="fa-solid fa-right-left" aria-hidden="true"></i></button>
+      <button id="explorer-limpar" class="admin-icon-btn" type="button" aria-label="Limpar" title="Limpar filtros"><i class="fa-solid fa-filter-circle-xmark" aria-hidden="true"></i></button>
+    </div>
     <div id="explorer-content" aria-busy="true"></div>
+    <div id="explorer-controls" hidden>
+      <div class="admin-actions" role="group" aria-label="Controles da tabela de camadas">
+        <button class="admin-icon-btn reload" type="button" data-control="reload" title="Recarregar" aria-label="Recarregar"><i class="fa-solid fa-rotate-right" aria-hidden="true"></i></button>
+        <button class="admin-icon-btn" type="button" data-control="details" title="Detalhes do selecionado" aria-label="Detalhes do selecionado" disabled><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button>
+        <button class="admin-icon-btn" type="button" data-control="map" title="Visualizar selecionado no mapa" aria-label="Visualizar selecionado no mapa" disabled><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i></button>
+        <button class="admin-icon-btn" type="button" data-control="download" title="Baixar selecionado em ZIP" aria-label="Baixar selecionado em ZIP" disabled><i class="fa-solid fa-download" aria-hidden="true"></i></button>
+      </div>
+      <div class="admin-table-footer">
+        <label class="geo-explorer-page-size">Registros por página <select id="explorer-page-size" aria-label="Registros por página"><option value="15">15</option><option value="30">30</option><option value="50">50</option><option value="100">100</option></select></label>
+        <nav id="explorer-pagination" class="admin-pagination" aria-label="Paginar camadas"></nav>
+        <p id="explorer-summary" class="admin-table-summary" aria-live="polite"></p>
+      </div>
+    </div>
   </section>
   <dialog id="explorer-details" aria-labelledby="explorer-details-title"><header><h2 id="explorer-details-title">Metadados</h2><form method="dialog"><button aria-label="Fechar" title="Fechar"><i class="fa-solid fa-xmark"></i></button></form></header><div id="explorer-details-body"></div></dialog>
 </main>
 {% endblock %}
-{% block scripts_pagina %}<script src="/assets/js/file-icons.js?v=20261009-all-files-1"></script><script src="/restrict/geoespacial/explorador-camadas.js?v=20261009-all-files-1"></script>{% endblock %}
+{% block scripts_pagina %}<script src="/assets/js/file-icons.js?v=20261009-all-files-1"></script><script src="/assets/js/table-standard.js?v=20261019-page-size"></script><script src="/restrict/geoespacial/explorador-camadas.js?v=20261019-footer-count"></script>{% endblock %}

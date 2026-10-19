@@ -26,6 +26,50 @@ O backend é organizado em:
 | SQL e persistência | `api/repositories/` |
 | Conexões | `api/db/` |
 
+### Tabelas do Explorador de camadas
+
+O modo Detalhes do Explorador de camadas geoespaciais adota o padrão da tabela
+administrativa de Status da Demanda: filtros por coluna e valor, inversão e
+limpeza do filtro, linhas compactas, controles abaixo da tabela, paginação
+centralizada e contador de selecionados, itens na página e total da pasta.
+A contagem aparece somente no rodapé, sem uma linha de status acima da tabela.
+São exibidos 15 registros por página inicialmente, com opções de 30, 50 e 100.
+A seleção e as ações ocupam as duas primeiras colunas, fixas durante a rolagem
+horizontal. A seleção de todas as linhas abrange somente a página atual e é
+limpa ao mudar página, filtro, pesquisa, ordenação ou pasta. Os controles
+permitem recarregar as camadas da tabela e consultar detalhes, visualizar no mapa ou baixar
+uma camada selecionada; não incluem edição ou exclusão dos arquivos.
+O botão Recarregar atualiza somente os dados da tabela, sem recarregar a página,
+preservando pesquisa, filtros, ordenação, quantidade por página e rolagem.
+A página atual é mantida quando ainda existir e a seleção é limpa após a atualização.
+Se a consulta falhar, os dados anteriores permanecem visíveis com aviso de erro.
+As colunas Geometria e Camada interna são preenchidas pelo inventário real dos
+arquivos do Storage e Outputs. Arquivos multicamadas continuam em uma única
+linha, com todos os tipos geométricos e nomes internos; o título das células
+relaciona cada camada ao seu tipo. As colunas e suas opções de filtro são
+ocultadas quando não se aplicam a nenhum item da pasta, independentemente da
+página ou do filtro atual. Demandas usam o tipo geométrico cadastrado no PostGIS
+e não têm camada interna; rasters simples não têm camada interna.
+Falhas de leitura são sinalizadas na tabela e nas notificações padrão, sem
+ocultar a coluna nem apresentar metadados não consultados como valores válidos.
+Os modos Lista e Ícones e a navegação entre grupos permanecem disponíveis.
+
+### Logins do SICARD Storage
+
+Os logins `/sicard/storage/web/client/login` e
+`/sicard/storage/web/admin/login` usam sempre o tema claro, independentemente
+da preferência do navegador ou do tema salvo pelo usuário. Essa regra é
+restrita aos dois logins e não altera o tema das áreas internas do SFTPGo.
+Os nomes das áreas aparecem como subtítulos em caixa alta abaixo do logo.
+O acesso à gestão de dados usa detalhes azuis; a administração de acesso usa
+vermelho escuro no subtítulo, nos controles, no contorno do card e no fundo.
+
+A personalização está no template comum
+`.deploy/storage/templates/common/base.html` e em
+`.deploy/storage/static/sicard/cores.css`, montados pela composição própria
+do Storage. A instância usa uma pasta externa ao checkout da aplicação;
+alterações nesses arquivos precisam ser publicadas nessa instalação.
+
 ## Executar em desenvolvimento no Codespace
 
 O Codespace executa o código local; GitHub guarda o código publicado; a VM
@@ -131,6 +175,49 @@ de informações. Templates HTML definem subgrupos, linhas de camadas e botões
 do mapa. O JavaScript apenas instancia os itens dinâmicos, preenche valores e
 controla visibilidade, seleção e mapa. Os mesmos parciais são usados na extração
 de atributos; a metodologia e as regras de validação não são alteradas.
+A ficha usa o arquivo real para informar tamanho, formato e componente interno;
+pacotes preservam a contagem de bytes compactados e descompactados do leitor.
+As demandas de uma hierarquização recebem contagem de vértices, medidas
+geodésicas, limites e descrição do CRS obtido do SRID cadastrado. Essa leitura
+reutiliza a geometria recuperada e não dispara consultas municipais adicionais.
+Geometrias em banco não recebem nomes, caminhos ou tamanhos de arquivos fictícios:
+esses campos indicam que não se aplicam. UF e municípios continuam sem confirmação
+quando não houve consulta à base territorial; ausência de metadados não é tratada
+como contagem zero. Os atributos acrescentados pela rodada também aparecem na ficha.
+Anexo à bancada da elegibilidade v2, o bloco **Conferir e executar** resume
+separadamente Entrada, Restrição e Risco, com os arquivos ou referências integrais.
+A conferência acompanha a visibilidade e as remoções na bancada, sem usar a seleção
+ou a prévia como composição. Camadas acrescentadas diretamente na bancada são
+sinalizadas e não recebem um papel automaticamente. O botão **Calcular Elegibilidade
+Territorial** exige uma entrada e ao menos uma base de restrição ou risco marcadas.
+Após confirmação, executa interseções GDAL/OGR independentes da entrada integral
+com cada base, primeiro restrição e depois risco. Soma as áreas dos fragmentos por
+feição em EPSG:5880, em m², sem união ou dissolução, acrescentando campos `re_*`
+e `ri_*`; ausência de interseção permanece `NULL`. A saída preserva todas as
+geometrias, atributos e o CRS da entrada da bancada. O GeoPackage é reaberto e
+conferido antes do registro no storage, com o nome
+`[nome da camada de entrada]_elegibilidade_territorial.gpkg`, em pasta exclusiva
+para evitar sobrescrita. Cada saída é adicionada automaticamente à bancada sem
+remover as fontes. Há acompanhamento e cancelamento seguro antes da gravação;
+classificação e integração com as fases seguintes não são executadas nesta etapa.
+A seção **Resultados** permite revisar os nomes amigáveis das entradas e das bases
+dinâmicas antes da apresentação. Os aliases confirmados são usados na tela e no
+PDF, em title case do português brasileiro; sugestões automáticas não substituem
+a revisão de significado, ortografia e gramática. A seção contém resumo por
+entrada, fontes, mapa-síntese e tabela paginada. No rodapé, **Baixar Relatório e
+Camadas (.zip)** entrega o PDF completo (todas as feições e bases), os GeoPackages
+sem alteração e os metadados da análise. A exportação verifica o SHA-256 das
+saídas, não repete interseções e grava o pacote no storage antes do download.
+O mapa distingue feições inteiras com/sem interseção, sem atribuir classes de
+elegibilidade; lotes parciais são identificados no relatório.
+A tabela de atributos da bancada sempre exibe a identificação técnica da feição
+em coluna fixa e somente leitura: nos arquivos, o FID real retornado pelo GDAL,
+com o nome da coluna nativa quando disponível; nas leituras em memória, o ID
+GeoJSON quando completo e único, ou um índice de sessão explicitamente identificado.
+IDs GeoJSON incompletos ou repetidos continuam visíveis ao lado do índice, sem
+serem apresentados como únicos. A coluna também integra a seleção por atributo e
+o CSV; FIDs de 64 bits são mantidos sem arredondamento. Os identificadores técnicos
+não são inseridos como novos atributos nos arquivos e não constituem UUIDs globais.
 A elegibilidade v2 acompanha os envios à prévia e à bancada pelo feedback
 padronizado, com etapas, camada corrente, cancelamento e resultado explícito.
 No envio confirmado à bancada, as demandas de entrada reutilizam a normalização

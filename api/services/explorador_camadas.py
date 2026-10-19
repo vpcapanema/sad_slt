@@ -2,10 +2,12 @@
 from __future__ import annotations
 import hashlib
 import json
+import logging
 import re
 from pathlib import Path, PurePosixPath
+from functools import lru_cache
 from api.storage_policy import TemporaryDirectory
-from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
+from zipfile import BadZipFile, ZipFile, ZipInfo, ZIP_DEFLATED
 from datetime import datetime
 from api.repositories import cadastro_geometria_repository as demandas
 from api.repositories import saidas_geoespaciais_repository as saidas
@@ -16,6 +18,7 @@ ROOTS = (("demandas","DEMANDAS"),("storage","SICARD Storage"),("saidas","Geometr
 STORAGE_ROOTS = (("base-geodatabase","Base-Geodatabase"),("base-geoespacial","Base-Geoespacial"),("superficies-indices","Superfícies-Índice"))
 TYPES = {"plano":"Plano","programa":"Programa","projeto":"Projeto"}
 SIDECARS = {".shp",".shx",".dbf",".prj",".cpg",".qpj",".sbn",".sbx"}
+logger = logging.getLogger(__name__)
 
 
 _SIGLAS = set("sp aprm ucs uc ibama cetesb iphan condephaat sigam uf ig mma pli pef zee ugrhi ra rg rm sma idesp sicg cecav incra pol pto lin".split())
@@ -40,8 +43,75 @@ def _file(row, source):
         "nome_arquivo":PurePosixPath(path).name if path else str(row.get("codigo") or row["id"])+".geojson",
         "tamanho_bytes":row.get("tamanho_bytes"),"modificado_em":row.get("modificado_em") or row.get("criado_em"),
         "camada":row.get("camada"),"geometria_tipo":str(row.get("geometria_tipo") or "").removeprefix("ST_") or None,
+        "geometria_aplicavel":source=="demandas","camada_aplicavel":False,
         "status":row.get("status"),"tipo":row.get("tipo"),"inventariar":row.get("inventariar",False),
         "mapeavel":row.get("mapeavel",not path or PurePosixPath(path).suffix.lower() in storage.EXTENSOES_VETOR | storage.EXTENSOES_RASTER | storage.storage_pacotes.COMPACTADOS)}
+
+
+@lru_cache(maxsize=256)
+def _camadas_geopackage(arquivo, _versao):
+    dataset=storage.gdal.OpenEx(arquivo,storage.gdal.OF_VECTOR | storage.gdal.OF_RASTER)
+    layers=[]
+    for index in range(dataset.GetLayerCount()):
+        layer=dataset.GetLayer(index)
+        count=layer.GetFeatureCount(0)
+        layers.append({"camada":layer.GetName(),"geometria_tipo":storage.tipo_geometria(layer),
+                       "crs":storage._crs_texto(layer.GetSpatialRef()),"feicoes":count if count>=0 else None})
+    result=dataset.ExecuteSQL("SELECT table_name FROM gpkg_contents WHERE data_type IN ('tiles','2d-gridded-coverage') ORDER BY table_name")
+    try:
+        layers.extend({"camada":feature.GetField("table_name"),"geometria_tipo":"Raster"} for feature in result)
+        return tuple(layers)
+    finally:
+        dataset.ReleaseResultSet(result)
+
+
+def _itens_geopackage(file, relative):
+    state=file.stat()
+    base={"arquivo":relative,"tamanho_bytes":state.st_size,"modificado_em":state.st_mtime}
+    try:
+        layers=_camadas_geopackage(str(file),(state.st_mtime_ns,state.st_size))
+    except RuntimeError:
+        logger.warning("Falha ao abrir GeoPackage no explorador: %s",relative)
+        return [{**base,"camada":None,"erro":"Arquivo não pôde ser lido pelo GDAL"}]
+    return [{**base,**layer,"id":f"storage:{relative}::{layer['camada']}",
+             "tipo":"raster" if layer["geometria_tipo"]=="Raster" else "vetor",
+             "nome":file.stem if len(layers)==1 else layer["camada"]} for layer in layers]
+
+
+def _metadados_arquivo(item, entry):
+    relative=item["arquivo"]
+    extension=PurePosixPath(relative).suffix.lower()
+    if extension not in storage.EXTENSOES_VETOR | storage.EXTENSOES_RASTER | storage.storage_pacotes.COMPACTADOS:
+        return item
+    item.update(geometria_tipo=None,camada=None,geometria_aplicavel=True,camada_aplicavel=extension not in storage.EXTENSOES_RASTER)
+    try:
+        file=storage._resolver_listado(relative,entry)
+        if isinstance(file,Path) and not file.resolve().is_relative_to(storage.diretorio_storage().resolve()):
+            raise ValueError("Arquivo fora do Storage")
+        if extension in storage.EXTENSOES_RASTER:
+            dataset=storage.gdal.OpenEx(str(file),storage.gdal.OF_RASTER)
+            if dataset is None or not dataset.RasterCount:
+                raise ValueError("Arquivo raster sem bandas legíveis")
+            dataset=None
+        if extension==".gpkg":
+            layers=_itens_geopackage(file,relative)
+        else:
+            layers=storage._itens_do_arquivo(file,relative)
+        errors=[layer["erro"] for layer in layers if layer.get("erro")]
+        if errors:
+            raise ValueError("; ".join(dict.fromkeys(errors)))
+        metadata=[{"camada":layer.get("nome_interno",layer.get("camada")),
+                   "geometria_tipo":layer.get("geometria_tipo")} for layer in layers]
+        geometries=list(dict.fromkeys(layer["geometria_tipo"] for layer in metadata
+                                     if layer["geometria_tipo"] not in (None,"","None")))
+        names=list(dict.fromkeys(layer["camada"] for layer in metadata if layer["camada"]))
+        item.update(camadas=metadata,geometria_tipo="; ".join(geometries) or None,camada="; ".join(names) or None,
+                    geometria_aplicavel=bool(geometries),camada_aplicavel=bool(names))
+    except (OSError,RuntimeError,ValueError,BadZipFile) as exc:
+        message=str(exc) if isinstance(exc,ValueError) else "Não foi possível ler os metadados geoespaciais do arquivo."
+        logger.warning("Falha nos metadados do explorador para %s: %s",relative,message)
+        item["metadados_erro"]=message
+    return item
 
 
 def _parts(path):
@@ -77,9 +147,9 @@ def navegar(source="", path=""):
                     items.append(_folder(_friendly(entry["nome"]),relative,source))
                 else:
                     ident=f"storage:{relative}"
-                    items.append(_file(dict(id=ident,arquivo=relative,
+                    items.append(_metadados_arquivo(_file(dict(id=ident,arquivo=relative,
                         alias=nome_camada(ident,_friendly(PurePosixPath(entry["nome"]).stem)),
-                        tamanho_bytes=entry.get("tamanho"),modificado_em=entry.get("modificado")),source))
+                        tamanho_bytes=entry.get("tamanho"),modificado_em=entry.get("modificado")),source),entry))
         else: raise ValueError("Pasta do Storage inválida")
     elif source=="saidas":
         rows=saidas.listar()
@@ -110,14 +180,14 @@ def navegar(source="", path=""):
                     try:
                         file=storage.resolver(row["arquivo"]);stat=file.stat();item.update(tamanho_bytes=stat.st_size,modificado_em=stat.st_mtime)
                     except FileNotFoundError: pass
-                items.append(item)
+                items.append(_metadados_arquivo(item,meta))
             catalogued={row["arquivo"] for row in selected}
             for relative,meta in metadata.items():
                 if relative in catalogued: continue
                 anchor=next(row for row in selected if PurePosixPath(row["arquivo"]).parent==PurePosixPath(relative).parent)
-                items.append(_file(dict(id=f"arquivo-saida:{anchor['id']}::{relative}",arquivo=relative,
+                items.append(_metadados_arquivo(_file(dict(id=f"arquivo-saida:{anchor['id']}::{relative}",arquivo=relative,
                     nome=_friendly(PurePosixPath(relative).stem),tamanho_bytes=meta.get("tamanho"),
-                    modificado_em=meta.get("modificado"),mapeavel=False),source))
+                    modificado_em=meta.get("modificado"),mapeavel=False),source),meta))
 
         else: raise ValueError("Pasta de saídas inválida")
     else: raise ValueError("Repositório desconhecido")
@@ -175,14 +245,17 @@ def detalhes(source,ident,user):
         result={"arquivo":path,"nome":file.name,"extensao":file.suffix.lstrip('.').upper(),
                 "tamanho_bytes":stat.st_size,"modificado_em":stat.st_mtime}
         if file.suffix.lower() in storage.EXTENSOES_VETOR | storage.EXTENSOES_RASTER | storage.storage_pacotes.COMPACTADOS:
-            result["camadas"]=storage._itens_do_arquivo(file,path)
+            if file.suffix.lower()==".gpkg":
+                result["camadas"]=_itens_geopackage(file,path)
+            else:
+                result["camadas"]=storage._itens_do_arquivo(file,path)
             if layer:
                 result["camadas"]=[row for row in result["camadas"] if row.get("camada")==layer]
                 if not result["camadas"]: raise FileNotFoundError("Camada interna não encontrada")
         return dict(result,observacao="O download preserva o arquivo original; SHP inclui seus componentes associados.")
     if source=="saidas":
         row,ref=_output(ident,user)
-        return dict(row,sha256=ref.get("sha256"))
+        return dict(_metadados_arquivo(dict(row),{}),sha256=ref.get("sha256"))
     raise ValueError("Repositório desconhecido")
 
 

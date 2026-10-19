@@ -16,8 +16,8 @@
   function summary(id, selected, visible, total) {
     get(id).textContent = `${selected} selecionados / ${visible} na página / ${total} no total`;
   }
-  function paginate(id, rows, page, change) {
-    const count = Math.max(1, Math.ceil(rows.length / 15));
+  function paginate(id, rows, page, change, pageSize = 15) {
+    const count = Math.max(1, Math.ceil(rows.length / pageSize));
     page = Math.max(1, Math.min(page, count));
     const nav = get(id);
     nav.replaceChildren();
@@ -27,7 +27,7 @@
     }
     label.textContent = `Página ${page} de ${count}`; label.setAttribute('aria-live', 'polite');
     nav.append(first, prev, label, next, last);
-    return { page, rows: rows.slice((page - 1) * 15, page * 15) };
+    return { page, rows: rows.slice((page - 1) * pageSize, page * pageSize) };
   }
   function values(select, rows, value) {
     const previous = select.value;

@@ -18,8 +18,8 @@
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Título**                 | Metodologia do Sistema de Hierarquização de Demandas — SICARD                                                                                                         |
 | **Número**                 | NT-SICARD-001/2026                                                                                                                                                       |
-| **Versão**                 | 1.18                                                                                                                                                                      |
-| **Data de emissão**        | 18/10/2026                                                                                                                                                               |
+| **Versão**                 | 1.20                                                                                                                                                                      |
+| **Data de emissão**        | 19/10/2026                                                                                                                                                               |
 | **Classificação**         | Documento técnico-metodológico de entrega ao cliente                                                                                                                   |
 | **Sistema**                 | SICARD — Sistema de Apoio à Tomada de Decisão                                                                                                                         |
 | **Domínio de aplicação** | Logística e transportes. Concebido no âmbito do Plano de Logística Integrada do Estado de São Paulo (PLI-SP), aplica-se a qualquer objeto de demanda desse domínio. |
@@ -52,6 +52,8 @@
 | 1.16    | 17/10/2026 | `[preencher]` | Transferência de referências sem leitura geométrica na confirmação do explorador; identificação dos componentes e validação no envio à prévia, com preservação dos estados anteriores em caso de falha e controle de conflitos entre arquivos e camadas internas. |
 | 1.17    | 18/10/2026 | `[preencher]` | Aplicação da normalização cadastral poligonal às demandas no envio da prévia à bancada, com parâmetros explícitos, arquivo derivado integral e rastreabilidade; acompanhamento dos dois envios e preservação dos conjuntos anteriores em caso de falha ou cancelamento. |
 | 1.18    | 18/10/2026 | `[preencher]` | Tratamento recursivo de coleções geométricas na normalização das demandas, com conversão de todos os componentes segundo seu tipo, união por feição e rastreabilidade, sem perda de pontos, linhas, atributos ou identificadores de origem. |
+| 1.19    | 19/10/2026 | `[preencher]` | Produção da camada de elegibilidade territorial mediante interseções GDAL/OGR independentes, soma de áreas por feição, campos de restrição e risco, preservação integral da entrada e inclusão automática da saída persistida na bancada. |
+| 1.20    | 19/10/2026 | `[preencher]` | Apresentação dinâmica dos resultados por base, revisão explícita de aliases em português brasileiro, mapa-síntese e relatório PDF completo, com pacote de geometrias e verificação de integridade das saídas. |
 
 ---
 
@@ -402,12 +404,62 @@ corrente e preserva os conjuntos anteriores; arquivos derivados já produzidos
 permanecem registrados. O reenvio da mesma revisão da prévia pode reutilizar o
 arquivo derivado na sessão da página, sem reaplicar buffer à geometria normalizada.
 
-Nesta entrega, a interface v2 limita-se à preparação dos dados: não executa
-classificação automática nem modifica resultados anteriores. O cálculo sobre
-listas livres, a consolidação e a vinculação dos novos resultados às fases
-seguintes dependem de definição posterior. A regra de classificação apresentada
-a seguir permanece como referência metodológica, conforme o módulo interno da
-Fase 1.
+**Produção da camada de saída.** A execução utiliza exclusivamente as entradas
+e bases confirmadas e marcadas na bancada, exigindo ao menos uma entrada e uma
+base de restrição ou risco. Produz-se uma saída para cada entrada. Verifica-se
+a unicidade e a ausência de valores nulos em `ID_FEICAO`; quando inexistente,
+acrescenta-se um identificador sequencial à cópia, sem alterar a fonte.
+
+Processam-se primeiro as bases de restrição e depois as de risco, uma por vez,
+sempre pela interseção GDAL/OGR da entrada integral com a base corrente.
+Calcula-se a área dos fragmentos em EPSG:5880, em metros quadrados, e soma-se
+por identificador da entrada, sem união ou dissolução. Sobreposições internas
+da mesma base participam dessa soma. Não se encadeiam os resultados de
+interseções. Cada base acrescenta um campo `re_*` ou `ri_*`, com mapeamento
+registrado nos metadados e sufixos numéricos em caso de colisão de nomes.
+Feições sem interseção conservam `NULL`; interseções sem área recebem zero.
+
+A saída conserva todas as geometrias, atributos e o CRS da entrada poligonal
+da bancada. Os intermediários de cada base são descartados após a transferência
+dos valores. O GeoPackage é serializado em memória e reaberto para conferência
+antes do registro no storage oficial, sem temporários em disco local.
+O arquivo recebe o nome `[nome da camada de entrada]_elegibilidade_territorial.gpkg`,
+sem a extensão original, em pasta exclusiva para evitar sobrescrita, e é adicionado
+automaticamente à bancada sem remover os insumos. A execução apresenta etapas
+e cancelamento seguro antes da gravação final; saídas anteriormente concluídas
+permanecem registradas em caso de interrupção posterior.
+
+**Apresentação e relatório de resultados.** A seção de resultados utiliza a
+composição registrada na execução, independentemente de alterações posteriores
+na seleção de camadas. Os nomes amigáveis são sugeridos a partir da biblioteca,
+do dicionário ou de formatação automática e submetidos à revisão explícita do
+usuário quanto ao significado, à ortografia e à gramática. Emprega-se title case
+em português brasileiro, com conectivos internos em minúsculas e preservação
+de siglas, sem expansão presumida de abreviações desconhecidas. Os mesmos
+aliases identificam as camadas na tela, no mapa e no PDF, mantendo intactos os
+nomes técnicos dos arquivos e campos.
+
+Para cada entrada apresentam-se resumo, fontes por papel, mapa-síntese e tabela
+de áreas por feição e base. A tela pagina os registros; o PDF inclui todas as
+feições e bases em blocos de colunas com identificação repetida. O travessão
+representa nulo, distinguindo-se de zero, e os valores decimais são preservados.
+O mapa representa as feições inteiras em EPSG:5880, com escala e norte e sem
+mapa-base. O destaque indica interseção registrada em alguma base, inclusive
+contato sem área; não representa os recortes de interseção nem classifica
+elegibilidade.
+
+O controle de download ao final da seção entrega um ZIP com o PDF completo,
+os GeoPackages processados e metadados com aliases e assinaturas de integridade.
+O PDF reúne identificação, datas, fontes, metodologia, resumos, mapas e tabelas.
+Cada GeoPackage é incluído sem alteração de seu conteúdo binário. A comparação
+do SHA-256 com a assinatura da produção impede a emissão sobre saída modificada.
+Não se repetem interseções na exportação; o pacote é persistido e conferido no
+storage antes do download. Lotes parcialmente concluídos são assim identificados.
+
+Esta entrega produz a camada vetorial e seu relatório, sem classificação automática ou alteração
+de resultados anteriores da hierarquização. A apresentação de classificações e
+a vinculação às fases seguintes dependem de definição posterior. A regra abaixo
+permanece como referência metodológica, conforme o módulo interno da Fase 1.
 
 **Função.** Classificar a **elegibilidade territorial preliminar**; a Fase 1 **não
 ranqueia** objetos de demanda. Ela cruza a geometria de cada objeto de demanda com

@@ -63,9 +63,9 @@ services:
       - ./dados:/srv/sftpgo/data
       - ./backups:/srv/sftpgo/backups
       - ./config:/var/lib/sftpgo
-      # Tamanhos em kB/MB/GB (base 1000) em vez de KiB/MiB/GiB. O SFTPGo não tem
-      # opção para isso: a unidade está fixa em templates/common/base.html, então
-      # a cópia ajustada substitui só esse arquivo. Refazer ao trocar de versão.
+      # O template comum ajusta tamanhos para base 1000 e fixa o modo claro
+      # somente nos logins admin/client, preservando o tema das áreas internas.
+      # Refazer e validar a cópia ajustada ao trocar a versão do SFTPGo.
       - ./templates/common/base.html:/usr/share/sftpgo/templates/common/base.html:ro
       # Marca do SICARD (logo, ícone e cores) e a tradução da área de arquivos.
       - ./static/sicard:/usr/share/sftpgo/static/sicard:ro

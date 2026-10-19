@@ -34,6 +34,20 @@ explicit grant from the SFTPGo Team (support@sftpgo.com).
     var defaultThemeMode = "system";
     var themeMode;
 	if ( document.documentElement ) {
+		var storageLogin = window.location.pathname.match(/\/web\/(admin|client)\/login\/?$/);
+		if (storageLogin) {
+			var storageSavedTheme = localStorage.getItem("data-bs-theme");
+			document.documentElement.setAttribute("data-sicard-storage-login", storageLogin[1]);
+			document.documentElement.setAttribute("data-bs-theme-mode", "light");
+			// O tema do SFTPGo persiste a cor ao iniciar, mesmo sem seletor no login.
+			window.addEventListener("load", function () {
+				if (storageSavedTheme === null) {
+					localStorage.removeItem("data-bs-theme");
+				} else {
+					localStorage.setItem("data-bs-theme", storageSavedTheme);
+				}
+			}, { once: true });
+		}
 		if ( document.documentElement.hasAttribute("data-bs-theme-mode")) {
 			themeMode = document.documentElement.getAttribute("data-bs-theme-mode");
 		} else {

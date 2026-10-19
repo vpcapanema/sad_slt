@@ -188,7 +188,8 @@ def _construir(path, titulo, historia):
         canvas.drawRightString(A4[0] - MARGEM, MARGEM - 7, f'Página {doc.page}')
         canvas.restoreState()
 
-    SimpleDocTemplate(str(path), pagesize=A4, leftMargin=MARGEM, rightMargin=MARGEM, topMargin=MARGEM,
+    SimpleDocTemplate(str(path) if isinstance(path, (str, Path)) else path,
+                      pagesize=A4, leftMargin=MARGEM, rightMargin=MARGEM, topMargin=MARGEM,
                       bottomMargin=MARGEM + 6, title=f'{titulo} - SICARD').build(
         historia, onFirstPage=rodape, onLaterPages=rodape)
 

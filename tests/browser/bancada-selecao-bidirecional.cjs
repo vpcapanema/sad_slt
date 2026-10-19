@@ -30,10 +30,11 @@ const root=path.resolve(__dirname,'../..');
     sourcePreparations++;
     await new Promise(resolve=>{releaseSource=resolve;sourceStarted();});
     const p=route.request().postDataJSON();
-    return route.fulfill({json:{...p,nome:'Remota',revisao:'r1',campo_fid_tile:'slt_fid',feicoes:105,campos:[{nome:'nome',tipo:'String'}],geometria_tipo:'Point',bounds:[-47,-24,-46,-23]}});
+    return route.fulfill({json:{...p,nome:'Remota',revisao:'r1',coluna_fid:'OBJECTID',campo_fid_tile:'slt_fid',feicoes:105,campos:[{nome:'nome',tipo:'String'}],geometria_tipo:'Point',bounds:[-47,-24,-46,-23]}});
    }
    if(pathname.endsWith('/bancada-arquivos/tabela')){
     const p=route.request().postDataJSON();
+    if(p.id==='storage:identificadores.gpkg::teste')return route.fulfill({json:{revisao:p.revisao,total:3,linhas:['0','9007199254740993','9007199254740995'].map(id=>({id,atributos:{}}))}});
     if(holdLocate&&p.localizar_fid!=null){await new Promise(resolve=>{releaseLocate=resolve;locateStarted();});holdLocate=false;return route.fulfill({status:422,json:{detail:'Localização antiga indisponível.'}});}
     const offset=p.localizar_fid==null?p.offset:Math.floor(Number(p.localizar_fid)/3/p.limite)*p.limite;
     return route.fulfill({json:{id:p.id,arquivo:p.arquivo,revisao:p.revisao,total:105,offset,limite:p.limite,has_more:offset+p.limite<105,
@@ -43,7 +44,7 @@ const root=path.resolve(__dirname,'../..');
     const p=route.request().postDataJSON();
     if(failGeometry)return route.fulfill({status:422,json:{detail:'Falha sintética na geometria.'}});
     if(delayGeometry){await new Promise(resolve=>{releaseGeometry=resolve;geometryStarted();});delayGeometry=false;}
-    return route.fulfill({json:{type:'FeatureCollection',features:p.ids.map(id=>({type:'Feature',id,properties:{},geometry:{type:'Point',coordinates:[-46.5+Number(id)/10000,-23.5]}}))}});
+    return route.fulfill({json:{type:'FeatureCollection',features:p.ids.map(id=>({type:'Feature',id,properties:{},geometry:{type:'Point',coordinates:[p.id==='storage:identificadores.gpkg::teste'?-46.5:-46.5+Number(id)/10000,-23.5]}}))}});
    }
    if(pathname.includes('/tiles/'))return route.fulfill({body:Buffer.alloc(0),contentType:'application/x-protobuf'});
    if(pathname.endsWith('/camadas')||pathname.endsWith('/funcoes')||pathname.endsWith('/fluxos'))return route.fulfill({json:[]});
@@ -66,6 +67,9 @@ const root=path.resolve(__dirname,'../..');
    clickFeature('memoria',map.getSource('memoria')._data.features[104]);
   });
   await page.waitForFunction(()=>gpAttributeTable.grid?.getData().length===105);
+  assert.equal(await page.evaluate(()=>gpAttributeTable.grid.getColumn('__gp_row')?.getDefinition().title),'Índice (sessão)','Feições sem FID devem mostrar o índice técnico, sem inventar um ID persistente');
+  assert.equal(await page.evaluate(()=>gpAttributeTable.grid.getColumn('__gp_row').getDefinition().frozen),true,'Identificador permanece visível ao rolar horizontalmente');
+  assert.equal(await page.locator('.tabulator-col[tabulator-field="__gp_row"]').isVisible(),true);
   await page.evaluate(()=>gpAttributeTable.sync());
   assert.equal(await page.evaluate(()=>gpAttributeTable.grid.getSelectedData().length),1,'Atributos iguais não identificam a mesma feição');
   assert.equal(await page.evaluate(()=>gpAttributeTable.grid.getSelectedData()[0].__gp_row),104);
@@ -81,6 +85,7 @@ const root=path.resolve(__dirname,'../..');
   assert.equal(await page.evaluate(()=>gpApp.state.selectedGeoJSON.features.length),1);
   await page.evaluate(()=>{gpFeedback.ProcessFeedback.confirmar=async()=>true;});
   await page.locator('[data-at-action="edit"]').click();
+  assert.equal(await page.evaluate(()=>{const cell=gpAttributeTable.grid.getRow(102).getCell('__gp_row');return cell.getColumn().getDefinition().editable(cell);}),false,'Identificador técnico não é editável');
   await page.locator('[data-at-delete]').click();
   await page.waitForFunction(()=>gpAttributeTable.grid.getData().length===104);
   await page.locator('[data-at-save]').click();
@@ -111,6 +116,8 @@ const root=path.resolve(__dirname,'../..');
    clickFeature('storage:teste.gpkg::teste',{type:'Feature',properties:{slt_fid:303},geometry:null});
   });
   await page.waitForFunction(()=>gpAttributeTable.grid?.getSelectedData().map(row=>row.__gp_fid).join()==='303');
+  assert.equal(await page.evaluate(()=>gpAttributeTable.grid.getColumn('__gp_fid').getDefinition().title),'OBJECTID');
+  assert.equal(await page.evaluate(()=>gpAttributeTable.grid.getRow('303').getCell('__gp_fid').getValue()),'303','Tabela mostra o FID esparso real, não o número da linha');
   assert.equal(await page.evaluate(()=>originalGrid===gpAttributeTable.grid),true,'Um clique não recria a tabela aberta');
   await page.evaluate(()=>clickFeature('storage:teste.gpkg::teste',{type:'Feature',properties:{slt_fid:306},geometry:null},true));
   assert.deepEqual(await page.evaluate(()=>gpAttributeTable.grid.getSelectedData().map(row=>row.__gp_fid)),['303','306']);
@@ -143,8 +150,52 @@ const root=path.resolve(__dirname,'../..');
   await page.evaluate(()=>clickFeature('',null));
   assert.equal(await page.evaluate(()=>gpAttributeTable.grid.getSelectedData().length),0);
   assert.equal(await page.evaluate(()=>gpApp.state.selectedGeoJSON.features.length),0);
+  await page.evaluate(async()=>{
+   const id='storage:identificadores.gpkg::teste',file={id,nome:'Sem atributos',arquivo:'identificadores.gpkg',revisao:'r1',representacao:'tiles',coluna_fid:'OBJECTID',feicoes:3,campos:[]};
+   gpArquivos.sessions.set(id,file);
+   gpApp.adicionarCamadaStorageTiles(id,file.nome,{...file,caminho:file.arquivo,tiles_url:`${location.origin}/api/tiles/{z}/{x}/{y}.pbf`,geometria_tipo:'Point'},{lote:true,estiloPreparado:true});
+   await gpApp.showAttributes(id);
+  });
+  await page.waitForFunction(()=>gpAttributeTable.grid?.getData().length===3);
+  assert.deepEqual(await page.evaluate(()=>gpAttributeTable.grid.getData().map(row=>row.__gp_fid)),['0','9007199254740993','9007199254740995'],'FID 0 e inteiros de 64 bits não perdem precisão');
+  assert.equal(await page.locator('.tabulator-col[tabulator-field="__gp_fid"]').isVisible(),true,'Camada sem atributos também mostra seu identificador');
+  await page.locator('[data-at-action="edit"]').click();
+  assert.equal(await page.evaluate(()=>{const cell=gpAttributeTable.grid.getRow('0').getCell('__gp_fid');return cell.getColumn().getDefinition().editable(cell);}),false);
+  await page.locator('[data-at-query]').evaluate(form=>form.closest('details').open=true);
+  await page.locator('[data-at-field]').selectOption('__gp_fid');
+  await page.locator('[data-at-operator]').selectOption('>');
+  await page.locator('[data-at-value]').fill('9007199254740993');
+  await page.locator('[data-at-query] button').click();
+  await page.waitForFunction(()=>gpAttributeTable.grid.getSelectedData().map(row=>row.__gp_fid).join()==='9007199254740995');
+  const downloadPromise=page.waitForEvent('download');
+  await page.locator('[data-at-action="csv"]').click();
+  const stream=await (await downloadPromise).createReadStream(),chunks=[];
+  for await(const chunk of stream)chunks.push(chunk);
+  const csv=Buffer.concat(chunks).toString('utf8');
+  assert.match(csv,/OBJECTID/);
+  for(const fid of ['9007199254740993','9007199254740995'])assert(csv.includes(fid),'CSV preserva identificadores sem arredondar');
+  await page.evaluate(async()=>{
+   gpCommands.clearSelection();
+   gpApp.adicionarCamadaGeoJsonEmMemoria('ids-geojson','IDs GeoJSON',{type:'FeatureCollection',features:['original-A','original-B'].map(id=>({
+    type:'Feature',id,properties:{FID:5,OBJECTID:8},geometry:{type:'Point',coordinates:[-47,-23]},
+   }))},{lote:true,estiloPreparado:true});
+   await gpApp.showAttributes('ids-geojson');
+  });
+  await page.waitForFunction(()=>gpAttributeTable.grid?.getData().length===2);
+  assert.deepEqual(await page.evaluate(()=>gpAttributeTable.grid.getData().map(row=>row.__gp_feature_id)),['original-A','original-B']);
+  assert.equal(await page.locator('.tabulator-col[tabulator-field="__gp_feature_id"]').isVisible(),true);
+  assert.deepEqual(await page.evaluate(()=>gpAttributeTable.grid.getData().map(row=>[row.FID,row.OBJECTID])),[[5,8],[5,8]],'Atributos chamados FID/OBJECTID não substituem a identidade real da feição');
+  await page.evaluate(async()=>{
+   gpApp.adicionarCamadaGeoJsonEmMemoria('ids-repetidos','IDs repetidos',{type:'FeatureCollection',features:[0,1].map(()=>({
+    type:'Feature',id:'repetido',properties:{},geometry:{type:'Point',coordinates:[-47,-23]},
+   }))},{lote:true,estiloPreparado:true});
+   await gpApp.showAttributes('ids-repetidos');
+  });
+  await page.waitForFunction(()=>gpAttributeTable.grid?.getColumn('__gp_row')&&gpAttributeTable.grid.getData().length===2);
+  assert.deepEqual(await page.evaluate(()=>gpAttributeTable.grid.getData().map(row=>row.__gp_row)),[0,1]);
+  assert.deepEqual(await page.evaluate(()=>gpAttributeTable.grid.getData().map(row=>row.__gp_feature_id)),['repetido','repetido'],'ID GeoJSON repetido é exibido, mas não apresentado como único');
   assert.deepEqual(errors,[]);
-  console.log('OK: mapa ↔ tabela, duplicatas sem ID, páginas, FID 0, Shift, desseleção e resposta atrasada.');
+  console.log('OK: IDs visíveis e somente leitura, camada sem atributos, FID 0/64 bits, CSV, mapa ↔ tabela, páginas e respostas atrasadas.');
  }finally{
   releaseGeometry?.();releaseLocate?.();releaseSource?.();
   await browser.close();server.closeAllConnections?.();await new Promise(resolve=>server.close(resolve));

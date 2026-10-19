@@ -174,19 +174,25 @@ export function criarPrevia(state, changed, {obterCamadas, aoMudarVisibilidade} 
     const informado=v=>v==null||v===''?'Não informado':String(v);
     const numero=v=>v!=null&&Number.isFinite(Number(v))?quantidade(v):'Não informado';
     const unir=v=>Array.isArray(v)&&v.length?v.join(' · '):'Não informado';
-    const caminho=layer.arquivoOrigem||layer.arquivo||meta.arquivo;
+    const cadastro=layer.id?.startsWith('cadastro:');
+    const semArquivo=(cadastro||meta.formato==='PostGIS')&&!layer.arquivo&&!meta.arquivo;
+    const caminho=semArquivo?null:layer.arquivoOrigem||layer.arquivo||meta.arquivo;
+    const naoSeAplica=semArquivo?'Não se aplica (geometria em banco)':null;
     const campos=meta.campos||layer.campos||[];
-    const nomesCampos=campos.length?campos.map(c=>typeof c==='string'?c:c.nome):[...new Set(features.flatMap(f=>Object.keys(f.properties||{})))];
+    const nomesCampos=[...new Set([...campos.map(c=>typeof c==='string'?c:c.nome),...features.flatMap(f=>Object.keys(f.properties||{}))])];
+    const camposConhecidos=Array.isArray(meta.campos)||Array.isArray(layer.campos)||Boolean(layer.geojson);
+    const totalCampos=meta.campos_total!=null?Math.max(meta.campos_total,nomesCampos.length):camposConhecidos?nomesCampos.length:null;
+    const limites=meta.limites_wgs84||layer.bounds;
     const representacao=meta.previa||layer.representacao_previa;
     const nivel=mapa?.getZoom()<12&&representacao?.nivel_resumido?representacao.nivel_resumido:representacao;
     const situacao=({valida:'Validada',invalida:'Não validada',pendente:'Aguardando validação'})[layer.status_validacao]||'Não informada';
     const valores={
       nome:layer.nome,papel:layer.grupo==='base'?'Camada de base':'Camada de entrada',
-      arquivo:caminho?nomeArquivo(caminho):null,caminho,
-      componente:meta.componente||meta.camada||layer.camada,
-      formato:meta.formato||layer.formato||(caminho?.includes('.')?caminho.split('.').pop().toUpperCase():null),
-      categoria:layer.categoria||'Não se aplica',tamanho:tamanho(meta.bytes??layer.tamanho_bytes),
-      descompactado:tamanho(meta.bytes_descompactados),
+      arquivo:naoSeAplica||(caminho?nomeArquivo(caminho):null),caminho:naoSeAplica||caminho,
+      componente:meta.componente||meta.camada||layer.camada||(layer.id?.includes('::')?layer.id.split('::').slice(1).join('::'):null),
+      formato:meta.formato||layer.formato||(cadastro?'PostGIS':caminho?.includes('.')?caminho.split('.').pop().toUpperCase():null),
+      categoria:layer.categoria||'Não se aplica',tamanho:naoSeAplica||tamanho(meta.bytes??layer.tamanho_bytes),
+      descompactado:naoSeAplica||tamanho(meta.bytes_descompactados),
       demanda_id:layer.identificacao?.campo_id==='__feicao__'?'ID da feição':layer.identificacao?.campo_id,
       demanda_categoria:layer.identificacao?.categoria_demanda||layer.identificacao?.categoria_pontos||'Sem categorização',
       validacao:situacao,motivo:layer.erro||'Sem erro informado',
@@ -194,11 +200,11 @@ export function criarPrevia(state, changed, {obterCamadas, aoMudarVisibilidade} 
       bancada:layer.pendente?'Ainda não enviada':'Camada confirmada',
       representacao:({tiles:'Visualização por tiles do original',original:'Geometria integral',simplificada:'Prévia simplificada',limites:'Limites das feições (aproximação)'})[layer.representacao==='tiles'?'tiles':nivel?.metodo]||(layer.geojson?'Prévia carregada':'Indisponível'),
       processamento:layer.status_validacao!=='valida'?'Requer validação':raster?'Os algoritmos disponíveis exigem vetores':'Utiliza a geometria original, sem simplificação da prévia',
-      tipo:raster?'Raster':'Vetor',feicoes:numero(meta.feicoes??layer.feicoes),
+      tipo:raster?'Raster':'Vetor',feicoes:numero(meta.feicoes??layer.feicoes??(layer.representacao==='original'?features.length:null)),
       feicoes_previa:layer.tiles_url?'Carregadas por região do mapa':layer.geojson?numero(features.length):'Não disponível',
       vertices:raster?'Não se aplica':numero(meta.vertices??representacao?.vertices_originais),
       geometrias:raster?'Não se aplica':unir(meta.tipos_geometria||[...new Set(features.map(f=>f.geometry?.type).filter(Boolean))]),
-      campos_total:numero(meta.campos_total??nomesCampos.length),campos:unir(nomesCampos),
+      campos_total:numero(totalCampos),campos:nomesCampos.length?unir(nomesCampos):camposConhecidos?'Sem campos de atributos':'Não informado',
       area:meta.area_km2!=null?`${numero(meta.area_km2)} km²`:'Não informada',
       comprimento:meta.comprimento_km!=null?`${numero(meta.comprimento_km)} km`:'Não informado',
       dimensoes:meta.largura!=null&&meta.altura!=null?`${meta.largura} × ${meta.altura} pixels`:null,
@@ -207,10 +213,11 @@ export function criarPrevia(state, changed, {obterCamadas, aoMudarVisibilidade} 
       crs:meta.crs||layer.crs||layer.crs_arquivo,crs_nome:meta.crs_nome,
       unidade:({degree:'grau',metre:'metro'})[meta.unidade]||meta.unidade,
       crs_previa:layer.tiles_url?'Web Mercator · EPSG:3857':layer.geojson?'WGS 84 · EPSG:4326':'Prévia indisponível',
-      limites:meta.limites_wgs84?.map(n=>Number(n).toFixed(6)).join(' · '),
-      ufs:unir(local.ufs),municipios:local.municipios?.map(m=>`${m.nm_mun} (${m.cd_mun}) / ${m.sigla_uf}`).join('; ')||(local.status==='consultado'?'Nenhum município identificado na cobertura consultada':'Não confirmados'),
+      limites:limites?.map(n=>Number(n).toFixed(6)).join(' · '),
+      ufs:local.ufs?.length?unir(local.ufs):local.status==='consultado'?'Nenhuma UF identificada na cobertura consultada':'Não confirmada',
+      municipios:local.municipios?.map(m=>`${m.nm_mun} (${m.cd_mun}) / ${m.sigla_uf}`).join('; ')||(local.status==='consultado'?'Nenhum município identificado na cobertura consultada':'Não confirmados'),
       fonte:local.fonte,cobertura:local.cobertura,
-      consulta:[local.aviso,local.aviso_ufs].filter(Boolean).join(' ')||(local.status==='consultado'?'Consulta concluída':'Não informada'),
+      consulta:[local.aviso,local.aviso_ufs].filter(Boolean).join(' ')||(local.status==='consultado'?'Consulta concluída':local.status==='nao_consultado'?'Não consultada':'Não informada'),
       avisos:[...(meta.avisos||[]),...(layer.mensagem?[layer.mensagem]:[])].join(' ')||'Sem observações adicionais',
     };
     for(const value of dados.querySelectorAll('[data-preview-value]'))value.textContent=informado(valores[value.dataset.previewValue]);

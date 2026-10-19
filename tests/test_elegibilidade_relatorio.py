@@ -1,0 +1,166 @@
+from copy import deepcopy
+from hashlib import sha256
+from io import BytesIO
+import json
+from types import SimpleNamespace
+from zipfile import ZipFile
+
+import geopandas as gpd
+import pytest
+from pypdf import PdfReader
+from shapely.geometry import box, Polygon
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+from api.services import elegibilidade_relatorio as service
+from api.services.arquivos_geoespaciais_memoria import vetor
+
+
+@pytest.fixture
+def analise(monkeypatch):
+    fontes = [{'id': f'base-{i}', 'nome': f'base_tecnica_{i}', 'papel': 'restricao' if i < 4 else 'risco',
+               'campo': f'campo_{i}', 'unidade': 'm²'} for i in range(7)]
+    geometria = [box(5000000 + i*20, 7000000, 5000010 + i*20, 7000010) for i in range(63)]
+    frame = gpd.GeoDataFrame({'ID_FEICAO': [f'Feição {i}' for i in range(63)],
+                             'nome': [f'Demanda {i}' for i in range(63)]}, geometry=geometria, crs=5880)
+    for i in range(7):
+        frame[f'campo_{i}'] = [None, 0., 0.0000001] + [float(i+1)]*60
+    nome = 'entrada_tecnica_elegibilidade_territorial.gpkg'
+    conteudo = vetor(frame, nome, 'GPKG', layer='elegibilidade_territorial')[nome]
+    dados = {}
+    resultados = {}
+    for i in (1, 2):
+        arquivo = f'saidas-geoespaciais/saida-{i}/{nome}'
+        dados[arquivo] = conteudo
+        resultados[f'job-{i}'] = {'arquivo': arquivo, 'sha256': sha256(conteudo).hexdigest(),
+            'lote_id': 'lote', 'total_entradas': 2, 'concluido_em': '2026-10-19T15:00:00+00:00',
+            'elegibilidade': {'entrada': {'id': f'entrada-{i}', 'nome': f'entrada_tecnica_{i}'},
+                              'campo_id': 'ID_FEICAO', 'feicoes': len(frame), 'campos': fontes}}
+    def consultar(ident, dono):
+        if dono != 'autor' or ident not in resultados:
+            raise FileNotFoundError('Execução não encontrada.')
+        return {'status': 'concluido', 'resultado': deepcopy(resultados[ident])}
+    monkeypatch.setattr(service.jobs, 'consultar', consultar)
+    monkeypatch.setattr(service.storage_remoto, 'baixar', dados.__getitem__)
+    monkeypatch.setattr(service.storage_remoto, 'enviar_bytes', dados.__setitem__)
+    nomes = {f'base-{i}': f'Bacia Hidrográfica do Setor {i}' for i in range(7)}
+    nomes.update({'entrada-1': 'Demandas do Setor Norte', 'entrada-2': 'Demandas do Setor Sul'})
+    return resultados, dados, nomes
+
+
+@pytest.mark.parametrize(('original', 'esperado'), [
+    ('áreas de preservação permanente (APP)', 'Áreas de Preservação Permanente (APP)'),
+    ('ÁREAS DE RISCO', 'Áreas de Risco'), ('rede do DER em SP', 'Rede do DER em SP'),
+    ('Áreas da XYZ', 'Áreas da XYZ'), ('bacia à jusante', 'Bacia à Jusante'),
+])
+def test_title_case_portugues_e_siglas(original, esperado):
+    assert service.titulo(original) == esperado
+
+
+@pytest.mark.parametrize('nome', ['', 'risco_inundacao', '<script>', 'C:\\arquivo', 'Camada.gpkg'])
+def test_alias_bruto_ou_invalido_e_recusado(nome):
+    with pytest.raises(ValueError):
+        service.titulo(nome)
+
+
+def test_fontes_dinamicas_revisao_obrigatoria_e_aliases_exatos(analise):
+    _, _, nomes = analise
+    preparacao = service.preparar(['job-1', 'job-2'], 'autor')
+    assert len(preparacao['fontes']) == 9
+    assert all('_' not in f['nome'] for f in preparacao['fontes'])
+    assert preparacao['previstas'] == preparacao['concluidas'] == 2
+    with pytest.raises(ValueError, match='Revise'):
+        service.montar(['job-1', 'job-2'], nomes, 'autor', False)
+    with pytest.raises(ValueError, match='exatamente'):
+        service.montar(['job-1', 'job-2'], {**nomes, 'extra': 'Extra'}, 'autor', True)
+    with pytest.raises(ValueError, match='distintos'):
+        service.montar(['job-1', 'job-2'], {**nomes, 'base-1': nomes['base-0']}, 'autor', True)
+
+
+def test_tabela_mapa_e_pdf_completos_sem_nomes_tecnicos(analise):
+    _, _, nomes = analise
+    modelo, arquivos = service.montar(['job-1', 'job-2'], nomes, 'autor', True)
+    assert len(arquivos) == 2 and len({n for n, _ in arquivos}) == 2
+    entrada = modelo['entradas'][0]
+    assert entrada['feicoes'] == 63 and len(entrada['campos']) == 7
+    assert entrada['com_intersecao'] == 62 and entrada['sem_intersecao'] == 1
+    assert entrada['linhas'][0]['areas_texto'] == ['—']*7
+    assert entrada['linhas'][1]['areas_texto'] == ['0,0']*7
+    assert entrada['linhas'][2]['areas_texto'] == ['0,0000001']*7
+    assert len(entrada['mapa']['formas']) == 63
+    assert not entrada['mapa']['formas'][0]['intersecao']
+    assert entrada['mapa']['formas'][1]['intersecao']
+    documento = PdfReader(BytesIO(service.pdf(modelo)))
+    texto = '\n'.join(p.extract_text() for p in documento.pages)
+    assert len(documento.pages) >= 7
+    assert 'Feição 62' in texto and '0,0000001' in texto
+    assert 'Bacia Hidrográfica do Setor 6' in texto
+    assert 'Demandas do Setor Norte' in texto and 'Demandas do Setor Sul' in texto
+    assert 'entrada_tecnica' not in texto and 'base_tecnica' not in texto and 'campo_0' not in texto
+    assert 'Metodologia' in texto and 'Mapa-Síntese' in texto
+    for pagina in documento.pages:
+        assert float(pagina.mediabox.width) == pytest.approx(595.2756, abs=.01)
+        assert float(pagina.mediabox.height) == pytest.approx(841.8898, abs=.01)
+
+
+def test_pacote_persistido_preserva_geometrias_e_aliases(analise):
+    _, dados, nomes = analise
+    modelo, arquivos = service.montar(['job-1', 'job-2'], nomes, 'autor', True)
+    zip_bytes, caminho = service.pacote(modelo, arquivos)
+    assert dados[caminho] == zip_bytes and caminho.startswith('saidas-geoespaciais/')
+    with ZipFile(BytesIO(zip_bytes)) as pacote:
+        assert pacote.testzip() is None
+        assert pacote.read('Relatório de Elegibilidade Territorial.pdf').startswith(b'%PDF')
+        for nome, conteudo in arquivos:
+            assert pacote.read(nome) == conteudo
+        manifesto = json.loads(pacote.read('Metadados da Análise.json'))
+        assert manifesto['nomes_revisados'] is True
+        assert {f['nome'] for f in manifesto['fontes']} == set(nomes.values())
+        assert manifesto['arquivos'][0]['sha256'] == sha256(arquivos[0][1]).hexdigest()
+
+
+def test_saida_alterada_impede_resultados_e_exportacao(analise):
+    resultados, dados, nomes = analise
+    dados[resultados['job-1']['arquivo']] += b'alterado'
+    with pytest.raises(ValueError, match='mudou'):
+        service.montar(['job-1', 'job-2'], nomes, 'autor', True)
+
+
+def test_parcial_identificado_e_lotes_distintos_recusados(analise):
+    resultados, _, nomes = analise
+    del nomes['entrada-2']
+    modelo, _ = service.montar(['job-1'], nomes, 'autor', True)
+    texto = ' '.join(p.extract_text() for p in PdfReader(BytesIO(service.pdf(modelo))).pages)
+    assert 'RELATÓRIO PARCIAL' in texto
+    resultados['job-2']['lote_id'] = 'outro'
+    with pytest.raises(ValueError, match='mesma execução'):
+        service.preparar(['job-1', 'job-2'], 'autor')
+    with pytest.raises(FileNotFoundError):
+        service.preparar(['job-1'], 'outro')
+
+
+def test_mapa_preserva_aneis_internos():
+    poligono = Polygon([(0,0),(10,0),(10,10),(0,10)], [[(2,2),(2,8),(8,8),(8,2)]])
+    mapa = service._mapa(gpd.GeoDataFrame(geometry=[poligono], crs=5880), [True])
+    assert len(mapa['formas'][0]['aneis']) == 2
+
+
+def test_rotas_exportacao_autenticadas_e_revisadas(analise):
+    from api.deps.auth import require_geospatial_access
+    from api.routers.extracao_atributos import router
+    app = FastAPI()
+    app.include_router(router)
+    app.dependency_overrides[require_geospatial_access] = lambda: SimpleNamespace(id='autor')
+    _, _, nomes = analise
+    payload = {'execucoes': ['job-1','job-2'], 'nomes': nomes, 'revisados': True}
+    rota = '/extracao-atributos/elegibilidade/resultados'
+    with TestClient(app) as client:
+        assert client.post(rota+'/preparar', json={'execucoes': payload['execucoes']}).status_code == 200
+        assert client.post(rota+'/visualizar', json={**payload, 'revisados':False}).status_code == 422
+        assert client.post(rota+'/visualizar', json=payload).status_code == 200
+        resposta = client.post(rota+'/pacote', json=payload)
+        assert resposta.status_code == 200 and resposta.headers['content-type'] == 'application/zip'
+        assert 'filename*=' in resposta.headers['content-disposition']
+        assert 'X-SICARD-Package' in resposta.headers
+        app.dependency_overrides[require_geospatial_access] = lambda: SimpleNamespace(id='outro')
+        assert client.post(rota+'/pacote', json=payload).status_code == 404

@@ -1055,13 +1055,25 @@ def listar_filtros_cadastro() -> list[dict[str, Any]]:
 
 
 @router.get("/cadastro-geometrias/{tipo}")
-def listar_geometrias_cadastro(tipo: str, codigo: str | None = None) -> dict[str, Any]:
+def listar_geometrias_cadastro(tipo: str, codigo: str | None = None, metadados: bool = False) -> dict[str, Any]:
     """Geometrias materializadas de planos, programas ou projetos (PostGIS) para o visualizador."""
     from api.repositories import cadastro_geometria_repository
     if tipo not in cadastro_geometria_repository._TABELAS:
         raise HTTPException(404, "Tipo de cadastro desconhecido")
     try:
-        return {"tipo": tipo, "itens": cadastro_geometria_repository.listar(tipo, codigo)}
+        itens = cadastro_geometria_repository.listar(tipo, codigo)
+        if metadados:
+            from api.services.metadados_previa import descrever_geojson
+            for item in itens:
+                meta = descrever_geojson(item, formato='PostGIS',
+                                        componente=cadastro_geometria_repository._TABELAS[tipo],
+                                        consultar_localizacao=False)
+                if not item.get('crs_arquivo'):
+                    meta.update(crs=None, crs_nome=None, unidade=None)
+                meta['localizacao'] = {'status': 'nao_consultado',
+                                       'aviso': 'Consulta territorial não executada nesta leitura de metadados.'}
+                item['metadados_local'] = meta
+        return {"tipo": tipo, "itens": itens}
     except DatabaseUnavailableError as exc:
         logger.exception("Falha ao consultar geometrias do cadastro: %s", tipo)
         raise HTTPException(503, "Banco de cadastro indisponível") from exc

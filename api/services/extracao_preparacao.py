@@ -4,7 +4,6 @@ As referências de execução continuam apontando para as fontes originais. A c�
 temporária de arquivos locais preserva atributos para consulta, nunca para os cálculos.
 """
 from hashlib import sha256
-from pathlib import Path
 from time import time
 from uuid import uuid4
 import re
@@ -124,6 +123,7 @@ def _gravar_geometrias(frame, path):
 
 
 def carregar(ident):
+    import pyogrio
     from api.services.municipal_layer import carregar_para_extracao
     from api.services import storage_geoespacial as storage
     if ident.startswith('storage:'):
@@ -132,9 +132,12 @@ def carregar(ident):
         arquivo, camada = storage.separar_id(ident)
         path = storage.resolver(arquivo)
         if path.suffix.lower() in storage_pacotes.COMPACTADOS:
-            frame, _ = storage_pacotes.carregar(path, camada)
+            frame, meta = storage_pacotes.carregar(path, camada)
+            fonte = {'metadados': meta}
         else:
+            info = pyogrio.read_info(path, layer=camada)
             frame = gpd.read_file(path, layer=camada, engine='pyogrio', fid_as_index=True)
+            fonte = {'arquivo': path, 'formato': info['driver'], 'componente': info['layer_name']}
         nome = camada or path.stem
     else:
         from api.repositories import camada_geoespacial_repository as repo
@@ -142,11 +145,19 @@ def carregar(ident):
         if item is None:
             raise FileNotFoundError('Camada não encontrada no catálogo.')
         frame, registro = item
+        tabela = repo.STORAGES.get(registro.get('categoria') or '', (None, None))[1]
+        fonte = {'formato': 'PostGIS', 'componente': f'geoprocessamento.{tabela}' if tabela else None}
         nome = registro['nome']
         from api.services.extracao_atributos import caminho_arquivo
         arquivo = caminho_arquivo(registro)
         if arquivo:
             frame = carregar_para_extracao(ident)
+            from api.path_policy import project_path
+            from api.services.camada_arquivo import resolver_camada
+            path = project_path(arquivo)
+            info = pyogrio.read_info(path, layer=resolver_camada(path, registro))
+            fonte = {'arquivo': path, 'formato': info['driver'], 'componente': info['layer_name']}
+    frame.attrs['sicard_fonte_previa'] = fonte
     return frame, nome, arquivo
 
 
@@ -155,7 +166,14 @@ def preparar(ident, dono):
     from api.services.metadados_previa import descrever_vetor
     frame, nome, arquivo = carregar(ident)
     _, avisos = validar(frame, max_feicoes=None)
-    meta = descrever_vetor(frame, formato=Path(arquivo).suffix.lstrip('.').upper() if arquivo else 'PostGIS')
+    fonte = frame.attrs.get('sicard_fonte_previa', {})
+    if 'metadados' in fonte:
+        pacote = fonte['metadados']
+        meta = descrever_vetor(frame, formato=pacote.get('formato'), componente=pacote.get('componente'))
+        meta.update({key: pacote[key] for key in ('arquivo', 'bytes', 'bytes_descompactados', 'sha256') if key in pacote})
+        meta['avisos'].extend(pacote.get('avisos', []))
+    else:
+        meta = descrever_vetor(frame, **fonte)
     meta['avisos'].extend(avisos)
     return dict(id=ident, nome=nome, arquivo=arquivo, tipo='vetor',
                 **representar(frame, meta, dono))

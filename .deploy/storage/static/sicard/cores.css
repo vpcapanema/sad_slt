@@ -412,3 +412,81 @@ body.app-blank #app_root .bg-body.rounded {
   white-space: normal;
   line-height: 1.35;
 }
+
+[data-sicard-storage-login] {
+  color-scheme: light;
+  --sicard-login-accent: #116593;
+  --sicard-login-strong: #003b5a;
+  --sicard-login-border: #b9d2e0;
+  --sicard-login-shadow: rgba(0, 59, 90, 0.16);
+}
+
+[data-sicard-storage-login=admin] {
+  --sicard-login-accent: #751f30;
+  --sicard-login-strong: #501522;
+  --sicard-login-border: #c48d98;
+  --sicard-login-shadow: rgba(80, 21, 34, 0.2);
+  --bs-primary: #751f30;
+  --bs-primary-rgb: 117, 31, 48;
+  --bs-primary-active: #501522;
+  --bs-primary-light: #f8ecef;
+  --bs-text-primary: #751f30;
+  --bs-link-color: #751f30;
+  --bs-link-color-rgb: 117, 31, 48;
+  --bs-link-hover-color: #501522;
+  --bs-focus-ring-color: rgba(117, 31, 48, 0.25);
+}
+
+[data-sicard-storage-login] body.app-blank {
+  background-color: #eef5f9;
+  background-image: url("fundo-login.svg"), linear-gradient(135deg, #dcecf4 0%, #f8fbfd 55%, #e3eef4 100%);
+}
+
+[data-sicard-storage-login=admin] body.app-blank {
+  background-color: #f8eff1;
+  background-image: url("fundo-login.svg"),
+    linear-gradient(135deg, #751f30 0%, #501522 13%, transparent 13%),
+    radial-gradient(ellipse at bottom right, rgba(117, 31, 48, 0.24), transparent 65%),
+    linear-gradient(135deg, #fff9fa 0%, #f3e5e8 100%);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+[data-sicard-storage-login] body.app-blank #app_root .flex-center.flex-column:has(> .bg-body.rounded)::before {
+  color: var(--sicard-login-strong);
+  text-shadow: none;
+}
+
+[data-sicard-storage-login] body.app-blank #app_root .bg-body.rounded {
+  width: 100%;
+  max-width: 500px;
+  min-width: 0;
+  border: 1px solid var(--sicard-login-border);
+  border-top: 5px solid var(--sicard-login-accent);
+  box-shadow: 0 18px 50px var(--sicard-login-shadow) !important;
+}
+
+[data-sicard-storage-login] body.app-blank #app_root .bg-body.rounded a {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+[data-sicard-storage-login] body.app-blank img[alt="Logo"] {
+  max-width: 100%;
+  height: auto !important;
+  max-height: 100px;
+}
+
+[data-sicard-storage-login] .row > .col-5:has(img[alt="Logo"]) + .col-7 > :is(h1, a) {
+  display: block;
+  padding: 0.3rem 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--sicard-login-accent) !important;
+  font-family: "Montserrat", Verdana, sans-serif;
+  font-size: 1rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}

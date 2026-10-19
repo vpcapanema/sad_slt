@@ -15,6 +15,7 @@ def conteudo(arquivo):
 
 def inventario(arquivo, relativo):
     from api.services.extracao_entrada_local import MAX_DESCOMPACTADO
+    from api.services.storage_geoespacial import tipo_geometria
     with abrir(componentes(conteudo(arquivo), arquivo.name, MAX_DESCOMPACTADO), incluir_invalidas=True) as (opcoes, _, _raiz):
         itens=[]
         for o in opcoes:
@@ -24,7 +25,11 @@ def inventario(arquivo, relativo):
                 item['erro']=str(o['erro'])
             elif o['tipo']=='vetor':
                 lyr=o['layer'];srs=lyr.GetSpatialRef()
-                item.update(crs=srs.ExportToWkt() if srs else None,feicoes=lyr.GetFeatureCount())
+                item.update(crs=srs.ExportToWkt() if srs else None,feicoes=lyr.GetFeatureCount(),
+                            nome_interno=lyr.GetName(),geometria_tipo=tipo_geometria(lyr))
+            elif o['tipo']=='raster':
+                item["geometria_tipo"]="Raster"
+                item["nome_interno"]=o["nome"]
             itens.append(item)
         return itens
 

@@ -19,6 +19,9 @@ for (const [bodyClass, css] of [['agrupamentos-demandas-page','assets/css/pagina
  await p.evaluate(cls=>{document.body.className=cls},bodyClass);
  assert.deepEqual(await p.locator('button').first().evaluate(e=>{const s=getComputedStyle(e);return [s.borderTopWidth,s.fontWeight]}),['0px','700'],bodyClass);
 }
+await p.evaluate(()=>{result=SLTTable.paginate('pager',rows,2,change,30)});
+assert.equal(await p.locator('span').textContent(),'Página 2 de 2');
+assert.deepEqual(await p.evaluate(()=>result.rows),Array.from({length:16},(_,i)=>i+30));
 await p.evaluate(()=>{rows=[];change(4)});assert.equal(await p.locator('span').textContent(),'Página 1 de 1');assert.equal(await p.locator('button:disabled').count(),4);
 console.log('OK: first/previous/next/last, boundaries, empty table, border and bold.');
 }finally{await browser.close()}})().catch(e=>{console.error(e);process.exit(1)});

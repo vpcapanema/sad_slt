@@ -16,7 +16,7 @@
 <link rel="stylesheet" href="/assets/css/ahp-module.css">
 <link rel="stylesheet" href="/assets/css/page-title-standard.css">
 <link rel="stylesheet" href="/assets/css/extracao-atributos.css">
-<link rel="stylesheet" href="/assets/css/fase1-elegibilidade-v2.css">
+<link rel="stylesheet" href="/assets/css/fase1-elegibilidade-v2.css?v=20261019-resultados">
 {% endblock %}
 {% block conteudo %}
 <div id="admin-session-bar" class="admin-session-bar hidden"></div>
@@ -119,9 +119,71 @@
     <iframe id="ea-workbench-frame" class="ea-workbench-frame" src="/restrict/geoespacial/bancada/" title="Bancada de elegibilidade territorial" allow="fullscreen"></iframe>
     <div class="ea-section-body">
       <p id="ev-bancada-status" class="ea-hint" role="status">Nenhuma camada confirmada nesta página.</p>
-      <p class="ea-hint">Esta versão prepara e envia os dados. A classificação automática com múltiplas camadas será definida em uma próxima etapa. Nenhum resultado de elegibilidade, das fases seguintes ou do ranking é alterado por estes envios.</p>
+      <section class="ea-checkup" aria-labelledby="ev-checkup-title">
+        <h4 class="ea-checkup-title" id="ev-checkup-title">Conferir e executar</h4>
+        <p class="ea-hint">Confira as demandas poligonais e as bases de restrição e risco. Somente camadas confirmadas por esta página e marcadas como visíveis na bancada aparecem nesta composição; a seleção e a prévia não alteram este conjunto.</p>
+        <div class="ea-execucao-selecao" id="ea-run-selection" aria-live="polite">
+          <div class="ea-execucao-linha"><strong>Análise:</strong> <span>Elegibilidade territorial · Fase 1</span></div>
+          <div class="ea-checkup-tables">
+            {% for papel, rotulo in [("entrada", "Entrada"), ("restricao", "Restrição"), ("risco", "Risco")] %}
+            <div class="ea-table-wrap">
+              <table aria-label="Camadas de {{ rotulo|lower }} para conferência">
+                <thead><tr><th scope="col">{{ rotulo }}</th><th scope="col">Arquivo ou referência integral</th></tr></thead>
+                <tbody id="ev-run-{{ papel }}"><tr><td colspan="2">Nenhuma camada deste grupo marcada na bancada.</td></tr></tbody>
+              </table>
+            </div>
+            {% endfor %}
+          </div>
+          <p class="ea-hint" id="ev-run-count">Entrada: 0 marcada(s) · Restrição: 0 marcada(s) · Risco: 0 marcada(s)</p>
+          <p class="ea-hint" id="ev-run-warning" role="status">Aguarde o carregamento da bancada.</p>
+        </div>
+        <div class="ea-execute">
+          <p id="ev-run-pending" class="ea-hint">A execução utiliza as camadas confirmadas e marcadas na bancada. Produz uma cópia integral de cada entrada com as áreas de sobreposição em m² nos campos re_* e ri_*. A saída é gravada no storage e adicionada automaticamente à bancada.</p>
+          <button class="ea-btn ea-btn-primary" id="ev-calcular" type="button" aria-describedby="ev-run-pending" disabled>Calcular Elegibilidade Territorial</button>
+        </div>
+      </section>
     </div>
   </section>
+  <section class="ea-section ev-resultados" id="ev-resultados" aria-labelledby="ev-resultados-title">
+    <header class="ea-section-head"><span class="ea-number">05</span><div><h2 id="ev-resultados-title">Resultados</h2><p>Confira a análise e baixe o relatório completo com as camadas processadas.</p></div></header>
+    <div class="ea-section-body">
+      <p id="ev-resultados-vazio" class="ea-hint">Execute a elegibilidade territorial para apresentar os resultados.</p>
+      <p id="ev-resultados-status" class="ea-hint" role="status" aria-live="polite"></p>
+      <button id="ev-resultados-tentar" class="ea-btn" type="button" hidden>Tentar Carregar Resultados</button>
+      <form id="ev-resultados-aliases" hidden>
+        <h3>Revisão dos Nomes de Apresentação</h3>
+        <p class="ea-hint">Os nomes abaixo são sugestões. Confira o significado, a ortografia, a acentuação e a gramática em português brasileiro. Siglas desconhecidas não são expandidas automaticamente. A mesma identificação será utilizada nas tabelas, no mapa e no PDF, com as palavras principais iniciadas em maiúscula.</p>
+        <div id="ev-resultados-nomes" class="ev-resultados-nomes"></div>
+        <label class="ev-resultados-confirmacao"><input id="ev-resultados-revisados" name="nomes_revisados" type="checkbox" required> Revisei os nomes e confirmo que identificam corretamente as camadas desta análise.</label>
+        <button class="ea-btn ea-btn-primary" id="ev-resultados-mostrar" type="submit">Apresentar Resultados</button>
+      </form>
+      <div id="ev-resultados-conteudo" hidden>
+        <div class="ea-field"><label for="ev-resultados-entrada">Camada de Entrada</label><select id="ev-resultados-entrada" name="entrada_resultados"></select></div>
+        <p id="ev-resultados-resumo" class="ea-hint"></p>
+        <h3>Fontes Utilizadas</h3>
+        <ul id="ev-resultados-fontes"></ul>
+        <h3>Mapa-Síntese</h3>
+        <div id="ev-resultados-mapa" class="ev-resultados-mapa"></div>
+        <p class="ea-hint">Azul: Com Interseção Registrada · Cinza-Claro: Sem Interseção</p>
+        <p id="ev-resultados-nota-mapa" class="ea-hint"></p>
+        <h3>Tabela de Resultados</h3>
+        <p class="ea-hint">Áreas em m². O travessão representa ausência de interseção; zero representa interseção sem área. O PDF inclui todas as feições e todas as bases.</p>
+        <div class="ea-table-wrap"><table id="ev-resultados-tabela" data-table-sort="off" aria-label="Áreas de Sobreposição por Feição"></table></div>
+        <nav class="ev-resultados-paginacao" aria-label="Paginação dos Resultados">
+          <button id="ev-resultados-anterior" class="ea-btn" type="button">Anterior</button>
+          <span id="ev-resultados-pagina" class="ea-hint"></span>
+          <button id="ev-resultados-proxima" class="ea-btn" type="button">Próxima</button>
+        </nav>
+        <details><summary>Metodologia da Análise</summary><p id="ev-resultados-metodologia" class="ea-hint"></p></details>
+      </div>
+      <footer class="ev-resultados-download">
+        <button class="ea-btn ea-btn-primary" id="ev-resultados-download" type="button" disabled>Baixar Relatório e Camadas (.zip)</button>
+        <p class="ea-hint">Relatório PDF, GeoPackages completos e metadados da análise. A exportação não repete as interseções.</p>
+      </footer>
+    </div>
+  </section>
+  <template id="ev-tpl-run-row"><tr><td data-name></td><td data-source></td></tr></template>
+  <template id="ev-tpl-run-empty"><tr><td colspan="2">Nenhuma camada deste grupo marcada na bancada.</td></tr></template>
 </main>
 {% endblock %}
 {% block scripts_pagina %}
@@ -130,5 +192,5 @@
 <script src="/assets/vendor/maplibre-gl/maplibre-gl.js"></script>
 <script src="/assets/vendor/maplibre-gl/leaflet-maplibre-gl.js"></script>
 <script src="/restrict/hierarquizacao/js/hier-api.js"></script>
-<script type="module" src="/restrict/hierarquizacao/js/fase1-elegibilidade-v2.js?v=20261018-feedback-colecoes"></script>
+<script type="module" src="/restrict/hierarquizacao/js/fase1-elegibilidade-v2.js?v=20261019-resultados"></script>
 {% endblock %}

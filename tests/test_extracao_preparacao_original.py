@@ -90,3 +90,38 @@ def test_limite_de_upload_nao_restringe_base_cadastrada(monkeypatch, isolado):
     assert preparo.preparar('base', 'autor')['feicoes'] == 1
     with pytest.raises(ValueError, match='entre 1'):
         validar(original, max_feicoes=0)
+
+
+def test_preparacao_storage_preenche_tamanho_componente_e_formato(monkeypatch, isolado):
+    from api.services import storage_geoespacial
+    path = isolado / 'origem.gpkg'
+    frame().to_file(path, layer='demandas_reais', driver='GPKG', engine='pyogrio')
+    monkeypatch.setattr(storage_geoespacial, 'resolver', lambda _: path)
+    result = preparo.preparar('storage:base-geoespacial/origem.gpkg::demandas_reais', 'autor')
+    meta = result['metadados_local']
+    assert meta['bytes'] == path.stat().st_size
+    assert meta['bytes_descompactados'] == path.stat().st_size
+    assert meta['componente'] == 'demandas_reais'
+    assert meta['formato'] == 'GPKG'
+    assert meta['vertices'] == 1
+
+
+def test_pacote_preserva_bytes_reais_e_consulta_localizacao(monkeypatch, isolado):
+    import zipfile
+    from api.services import storage_geoespacial, storage_pacotes
+    content = json.dumps({'type': 'FeatureCollection', 'features': [
+        {'type': 'Feature', 'properties': {'codigo': '001'},
+         'geometry': {'type': 'Point', 'coordinates': [-47, -23]}},
+    ]}).encode()
+    path = isolado / 'pacote.zip'
+    with zipfile.ZipFile(path, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr('pontos.geojson', content)
+    relative = 'base-geoespacial/pacote.zip'
+    monkeypatch.setattr(storage_geoespacial, 'resolver', lambda _: path)
+    ident = storage_pacotes.inventario(path, relative)[0]['id']
+    meta = preparo.preparar(ident, 'autor')['metadados_local']
+    assert meta['bytes'] == path.stat().st_size
+    assert meta['bytes_descompactados'] == len(content)
+    assert meta['formato'] == 'GeoJSON'
+    assert meta['componente']
+    assert meta['localizacao']['status'] == 'consultado'

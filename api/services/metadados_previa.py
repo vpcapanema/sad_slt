@@ -7,7 +7,7 @@ from shapely.geometry.polygon import orient
 from pyproj import CRS
 
 
-def descrever_vetor(frame, *, arquivo=None, formato=None, componente=None, campos=None):
+def descrever_vetor(frame, *, arquivo=None, formato=None, componente=None, campos=None, consultar_localizacao=True):
     crs = CRS.from_user_input(frame.crs) if frame.crs else None
     fields = campos if campos is not None else [
         {'nome': c, 'tipo': str(frame[c].dtype)} for c in frame.columns if c != frame.geometry.name]
@@ -18,9 +18,15 @@ def descrever_vetor(frame, *, arquivo=None, formato=None, componente=None, campo
             'crs': crs.to_string() if crs else None, 'crs_nome': crs.name if crs else None,
             'unidade': crs.axis_info[0].unit_name if crs and crs.axis_info else None, 'avisos': []}
     if arquivo:
-        path = Path(arquivo)
+        from api.services.storage_geoespacial import ArquivoStorage
+        path = arquivo if isinstance(arquivo, ArquivoStorage) else Path(arquivo)
         meta['formato'] = formato or path.suffix.lstrip('.').upper()
-        if path.is_file():
+        if isinstance(path, ArquivoStorage):
+            from api.services.pacote_geoespacial_memoria import COMPACTADOS
+            meta['bytes'] = path.stat().st_size
+            if path.suffix.lower() != '.shp' and path.suffix.lower() not in COMPACTADOS:
+                meta['bytes_descompactados'] = meta['bytes']
+        elif path.is_file():
             meta['bytes'] = path.stat().st_size
             parts = [path]
             if path.suffix.lower() == '.shp':
@@ -52,20 +58,22 @@ def descrever_vetor(frame, *, arquivo=None, formato=None, componente=None, campo
         meta.update(area_km2=area/1e6, comprimento_km=comprimento/1000)
         if invalidas:
             meta['avisos'].append(f'{invalidas} geometria(s) inválida(s) excluída(s) das medições de área e comprimento.')
-        from api.services.extracao_entrada_local import localizacao
-        meta['localizacao'] = localizacao(frame)
+        if consultar_localizacao:
+            from api.services.extracao_entrada_local import localizacao
+            meta['localizacao'] = localizacao(frame)
     from api.services.extracao_identificacao import inspecionar
     meta['identificacao'] = inspecionar(frame)
     return meta
 
 
-def descrever_geojson(data, *, arquivo=None, formato=None, componente=None, camada_ogr=None):
+def descrever_geojson(data, *, arquivo=None, formato=None, componente=None, camada_ogr=None, consultar_localizacao=True):
     # O GeoJSON integral desses leitores já está em WGS84; recupera o CRS original
     # antes de montar a ficha. Não usa a prévia de camadas simplificadas.
     frame = gpd.GeoDataFrame.from_features(data['geojson']['features'], crs=4326)
     if data.get('crs_arquivo'):
         frame = _gdal_reproject(frame, data['crs_arquivo'])
-    meta = descrever_vetor(frame, arquivo=arquivo, formato=formato, componente=componente, campos=data.get('campos'))
+    meta = descrever_vetor(frame, arquivo=arquivo, formato=formato, componente=componente,
+                          campos=data.get('campos'), consultar_localizacao=consultar_localizacao)
     if camada_ogr is not None:
         camada_ogr.ResetReading()
         vertices, tipos = 0, set()

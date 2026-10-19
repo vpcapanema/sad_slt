@@ -137,16 +137,24 @@
       rows=grid.getRows().filter(row=>type==='is_null'?row.getData()[field]==null:row.getData()[field]!=null);
     }else{
       let value=$('[data-at-value]').value;
-      const column=current.body.colunas.find(c=>c.nome===field);
-      if(/int|float|real|double/i.test(column?.tipo||'')&&type!=='like'){
-        if(!value.trim())throw Error('Informe um número válido.');
-        value=Number(value);if(!Number.isFinite(value))throw Error('Informe um número válido.');
+      const column=current.colunas.find(c=>c.nome===field);
+      if(column?.fid&&type!=='like'){
+        if(!/^-?\d+$/.test(value.trim()))throw Error('Informe um FID inteiro válido.');
+        const target=BigInt(value.trim()),compare={
+          '=':(a,b)=>a===b,'!=':(a,b)=>a!==b,'>':(a,b)=>a>b,'>=':(a,b)=>a>=b,'<':(a,b)=>a<b,'<=':(a,b)=>a<=b,
+        };
+        rows=grid.getRows().filter(row=>compare[type](BigInt(row.getData()[field]),target));
+      }else{
+        if(/int|float|real|double/i.test(column?.tipo||'')&&type!=='like'){
+          if(!value.trim())throw Error('Informe um número válido.');
+          value=Number(value);if(!Number.isFinite(value))throw Error('Informe um número válido.');
+        }
+        if(/bool/i.test(column?.tipo||'')&&type!=='like'){
+          if(!['true','false'].includes(String(value).toLowerCase()))throw Error('Escolha true ou false.');
+          value=String(value).toLowerCase()==='true';
+        }
+        rows=grid.searchRows(field,type,value);
       }
-      if(/bool/i.test(column?.tipo||'')&&type!=='like'){
-        if(!['true','false'].includes(String(value).toLowerCase()))throw Error('Escolha true ou false.');
-        value=String(value).toLowerCase()==='true';
-      }
-      rows=grid.searchRows(field,type,value);
     }
     rows=rows.filter(row=>withinLayer(row.getData()));
     if($('[data-at-scope]').value==='selection'){
@@ -220,7 +228,7 @@
     endAttributeDrag();
     ready=false;if(grid)grid.destroy();
     const session=window.gpArquivos?.sessions.get(id),remote=session?.representacao==='tiles';
-    let d=drafts.get(id);if(!d||!changed(d)){const rows=remote?[]:body.registros.map((r,i)=>({...structuredClone(r),__gp_row:i}));const layerReadOnly=Boolean(body.homologada||body.somente_leitura||app().state.layers.find(l=>l.id===id)?.previaAproximada),unsupportedFile=Boolean(session)&&(!remote||!id.startsWith('storage:'));d={id,body,rows,original:structuredClone(rows),remote,total:body.total,edits:new Map(),excluidos:new Set(),originalByFid:new Map(),editing:false,readonly:layerReadOnly||unsupportedFile,readonlyReason:body.somente_leitura|| (unsupportedFile?'Edição incremental disponível apenas para arquivos nativos do storage.':layerReadOnly?'Camada somente leitura.':'')};drafts.set(id,d);}else{d.body=body;d.total=body.total;d.remote=remote;}current=d;d.editing=app().state.editingLayers.has(id);
+    let d=drafts.get(id);if(!d||!changed(d)){const rows=remote?[]:body.registros.map((r,i)=>({...structuredClone(r),__gp_row:i,__gp_feature_id:r.__gp_feature?.id!=null?String(r.__gp_feature.id):null}));const layerReadOnly=Boolean(body.homologada||body.somente_leitura||app().state.layers.find(l=>l.id===id)?.previaAproximada),unsupportedFile=Boolean(session)&&(!remote||!id.startsWith('storage:'));d={id,body,rows,original:structuredClone(rows),remote,total:body.total,edits:new Map(),excluidos:new Set(),originalByFid:new Map(),editing:false,readonly:layerReadOnly||unsupportedFile,readonlyReason:body.somente_leitura|| (unsupportedFile?'Edição incremental disponível apenas para arquivos nativos do storage.':layerReadOnly?'Camada somente leitura.':'')};drafts.set(id,d);}else{d.body=body;d.total=body.total;d.remote=remote;}current=d;d.editing=app().state.editingLayers.has(id);
     const host=document.querySelector('#gp-editor-view');host.replaceChildren(document.querySelector('#gp-attribute-template').content.cloneNode(true));root=host.firstElementChild;
     bindAttributeDrag();
     if(remote){
@@ -232,8 +240,20 @@
     }
     $('[data-at-title]').textContent=app().state.layers.find(l=>l.id===id)?.nome||id;
     const tabs=$('[data-at-layers]');(app().state.attributeTableLayers||[]).filter(id=>app().state.layers.some(l=>l.id===id)).forEach(layerId=>{const button=document.createElement('button');button.type='button';button.dataset.attributeLayer=layerId;button.textContent=app().state.layers.find(l=>l.id===layerId)?.nome||layerId;button.classList.toggle('active',layerId===id);button.onclick=()=>app().showAttributes(layerId);tabs.append(button);});
-    const columns=d.body.colunas.filter(c=>c.nome!=='_indice'&&!c.nome.startsWith('__gp_'));
-    columns.forEach(c=>{const option=document.createElement('option');option.value=option.textContent=c.nome;$('[data-at-field]').append(option);});
+    const ids=d.rows.map(row=>row.__gp_feature_id);
+    const idsUnicos=ids.length>0&&ids.every(value=>value!=null&&value.trim()!=='')&&new Set(ids).size===ids.length;
+    const featureId={nome:'__gp_feature_id',rotulo:'ID da feição',tipo:'string',identificador:true,descricao:'ID informado pela feição GeoJSON. Somente leitura.'};
+    const identificadores=remote
+      ? [{nome:'__gp_fid',rotulo:session.coluna_fid||'FID (GDAL)',tipo:'string',identificador:true,fid:true,descricao:'FID real da feição no arquivo original. Somente leitura.'}]
+      : idsUnicos ? [featureId] : [
+        {nome:'__gp_row',rotulo:'Índice (sessão)',tipo:'integer',identificador:true,descricao:'Posição única nesta tabela em memória; não é um identificador persistente da fonte. Somente leitura.'},
+        ...(ids.some(value=>value!=null)?[featureId]:[]),
+      ];
+    const campos=d.body.colunas.filter(c=>c.nome!=='_indice'&&!c.nome.startsWith('__gp_'));
+    const columns=[...identificadores,...campos];
+    d.colunas=columns;
+    columns.forEach(c=>{const option=document.createElement('option');option.value=c.nome;option.textContent=c.rotulo||c.nome;$('[data-at-field]').append(option);});
+    if(campos.length)$('[data-at-field]').value=campos[0].nome;
     const config=remote?{ajaxURL:'/api/geoespacial/bancada-arquivos/tabela',ajaxConfig:'POST',ajaxRequestFunc:async(_url,_config,params)=>{
       const page=Math.max(1,Number(params.page)||1),size=Math.min(500,Math.max(1,Number(params.size)||100)),file=window.gpArquivos.sessions.get(id);
       d.loadingPage=true;
@@ -252,7 +272,7 @@
         return {last_page:lastPage,data:rows};
       }catch(error){d.loadingPage=false;if(current===d&&root?.isConnected)status(error.message,true);throw error;}
     }}:{data:d.rows};
-    grid=new Tabulator($('[data-at-grid]'),{...config,index:'__gp_row',height:'100%',layout:'fitDataStretch',nestedFieldSeparator:false,history:true,movableColumns:true,selectableRows:true,selectableRowsPersistence:!remote,selectableRowsRangeMode:'click',editTriggerEvent:'dblclick',pagination:true,paginationMode:remote?'remote':'local',paginationSize:100,paginationSizeSelector:[25,50,100,500],locale:'pt-br',langs:{'pt-br':{pagination:{page_size:'Por página',first:pageSymbol(['m11 17-5-5 5-5','m18 17-5-5 5-5']),first_title:'Primeira página',last:pageSymbol(['m6 17 5-5-5-5','m13 17 5-5-5-5']),last_title:'Última página',prev:pageSymbol(['m15 18-6-6 6-6']),prev_title:'Página anterior',next:pageSymbol(['m9 18 6-6-6-6']),next_title:'Próxima página',page_title:'Ir para a página',all:'Todos'}}},placeholder:'Nenhum registro encontrado',rowHeader:{formatter:'rowSelection',titleFormatter:'rowSelection',titleFormatterParams:{rowRange:'active'},headerSort:false,hozAlign:'center',width:38,frozen:true},columns:columns.map(c=>({title:esc(c.nome),field:c.nome,minWidth:135,headerSort:!remote,formatter:'plaintext',editor:/bool/i.test(c.tipo)?'tickCross':/int|float|real|double/i.test(c.tipo)?'number':'input',editorParams:/int|float|real|double/i.test(c.tipo)?{step:/int/i.test(c.tipo)?1:'any'}:{},editable:cell=>d.editing&&!d.readonly&&!d.busy&&(cell.getValue()===null||typeof cell.getValue()!=='object'),validator:/int/i.test(c.tipo)?'integer':undefined}))});
+    grid=new Tabulator($('[data-at-grid]'),{...config,index:'__gp_row',height:'100%',layout:'fitDataStretch',nestedFieldSeparator:false,history:true,movableColumns:true,selectableRows:true,selectableRowsPersistence:!remote,selectableRowsRangeMode:'click',editTriggerEvent:'dblclick',pagination:true,paginationMode:remote?'remote':'local',paginationSize:100,paginationSizeSelector:[25,50,100,500],locale:'pt-br',langs:{'pt-br':{pagination:{page_size:'Por página',first:pageSymbol(['m11 17-5-5 5-5','m18 17-5-5 5-5']),first_title:'Primeira página',last:pageSymbol(['m6 17 5-5-5-5','m13 17 5-5-5-5']),last_title:'Última página',prev:pageSymbol(['m15 18-6-6 6-6']),prev_title:'Página anterior',next:pageSymbol(['m9 18 6-6-6-6']),next_title:'Próxima página',page_title:'Ir para a página',all:'Todos'}}},placeholder:'Nenhum registro encontrado',rowHeader:{formatter:'rowSelection',titleFormatter:'rowSelection',titleFormatterParams:{rowRange:'active'},headerSort:false,hozAlign:'center',width:38,frozen:true},columns:columns.map(c=>({title:esc(c.rotulo||c.nome),field:c.nome,minWidth:135,frozen:Boolean(c.identificador),headerTooltip:c.descricao||false,headerSort:!remote,formatter:'plaintext',editor:c.identificador?false:/bool/i.test(c.tipo)?'tickCross':/int|float|real|double/i.test(c.tipo)?'number':'input',editorParams:/int|float|real|double/i.test(c.tipo)?{step:/int/i.test(c.tipo)?1:'any'}:{},editable:cell=>d.editing&&!d.readonly&&!d.busy&&!c.identificador&&(cell.getValue()===null||typeof cell.getValue()!=='object'),validator:/int/i.test(c.tipo)?'integer':undefined}))});
     // Após trocar de página, a seleção do mapa é reaplicada às linhas carregadas.
     // dataLoaded/pageLoaded disparam antes da troca das linhas; a limpeza de seleção do Tabulator vem depois.
     function pageReady(){if(current!==d)return;d.rows=grid.getData();if(d.remote&&d.loadingPage){d.loadingPage=false;if(ready)sync({preserveFocus:true});}controls();}
@@ -294,7 +314,6 @@
     const fields=Array.isArray(file.campos)?file.campos:[];
     const fallback=Object.keys(file.geojson?.features?.[0]?.properties||{}).map(nome=>({nome,tipo:typeof file.geojson.features[0].properties[nome]==='number'?'float64':typeof file.geojson.features[0].properties[nome]==='boolean'?'bool':'string'}));
     const colunas=(fields.length?fields:fallback).filter(field=>field.nome).map(field=>({nome:field.nome,tipo:/bool/i.test(field.subtipo||'')?'bool':field.tipo||field.subtipo||'string'}));
-    if(!colunas.length){editor.firstElementChild.textContent=`${file.nome||layerId}: o servidor não retornou os metadados dos campos.`;return;}
     const body={revisao:file.revisao,total:file.feicoes??null,colunas,registros:[],remoteFile:true};
     try{await window.gpCommands?.refreshLayerFilter?.(layerId);}catch(error){if(requestId===nativeTableRequest)editor.firstElementChild.textContent=error.message;return;}
     if(requestId!==nativeTableRequest||window.gpArquivos.sessions.get(layerId)!==file)return;

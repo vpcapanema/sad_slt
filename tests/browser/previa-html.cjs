@@ -50,6 +50,13 @@ const routes=['/restrict/hierarquizacao/fase-1/','/restrict/geoespacial/extracao
    const toolbar=await page.locator('#ea-preview-map-tools-template').evaluate(template=>[...template.content.querySelectorAll('button')].map(button=>({name:button.getAttribute('aria-label'),icon:button.querySelector('i').className})));
    assert.deepEqual(toolbar.map(item=>item.name),['Ajustar às camadas','Zoom na camada','Tela cheia']);
    assert.ok(toolbar.every(item=>item.icon.startsWith('fas ')));
+   if(route.includes('/fase-1/')){
+    assert.equal(await page.locator('#ea-workbench .ea-checkup-title').textContent(),'Conferir e executar');
+    assert.equal(await page.locator('#ev-calcular').textContent(),'Calcular Elegibilidade Territorial');
+    assert.equal(await page.locator('#ev-calcular').isDisabled(),true,'Cálculo indisponível também sem JavaScript');
+    for(const papel of ['entrada','restricao','risco'])assert.equal(await page.locator(`#ev-run-${papel} td`).count(),1,'Estados vazios da conferência vêm do HTML');
+    assert.match(await page.locator('#ev-run-pending').textContent(),/aguarda a definição do fluxo/);
+   }
    await page.close();
   }
   await nojs.close();
@@ -63,7 +70,7 @@ const routes=['/restrict/hierarquizacao/fase-1/','/restrict/geoespacial/extracao
    await page.route('**/geoespacial/bancada/',request=>request.fulfill({body:'<!doctype html><title>Bancada</title>',contentType:'text/html'}));
    await page.goto(base+route,{waitUntil:'domcontentloaded'});
    await page.evaluate(async()=>{
-    const {criarPrevia}=await import('/restrict/geoespacial/extracao-atributos/previa.js?v=20261018-html');
+    const {criarPrevia}=await import('/restrict/geoespacial/extracao-atributos/previa.js?v=20261019-metadados');
     window.previewState={busy:false,previaVisiveis:new Set()};
     window.previewItems=[];
     window.originalMetadata=document.querySelector('[data-preview-value="nome"]');
@@ -107,6 +114,7 @@ const routes=['/restrict/hierarquizacao/fase-1/','/restrict/geoespacial/extracao
    await page.locator('.ea-preview-layer[data-layer="base:invalida"]').click();
    assert.equal(await page.locator('[data-preview-value="validacao"]').textContent(),'Não validada');
    assert.equal(await page.locator('[data-preview-value="motivo"]').textContent(),'CRS não identificado');
+   assert.equal(await page.locator('[data-preview-value="campos_total"]').textContent(),'Não informado','Ausência de metadados não equivale a zero campos');
    assert.equal(await page.getByRole('checkbox',{name:'Visibilidade no mapa: Inválida',exact:true}).isDisabled(),true);
    await page.locator('.ea-preview-layer[data-layer="entrada:vetor"]').click();
    await page.locator('[data-preview-map-action="fit"]').click();
@@ -125,6 +133,25 @@ const routes=['/restrict/hierarquizacao/fase-1/','/restrict/geoespacial/extracao
    assert.equal(await page.locator('.ea-preview-map-tools').count(),1);
    assert.equal(await page.locator('[data-preview-value="dimensoes"]').isVisible(),false);
    assert.equal(await page.locator('[data-preview-metadata-condition="identificacao"]').isVisible(),true);
+   const cadastro={...valid,id:'cadastro:projeto:D-1',chave:'entrada:cadastro',nome:'D-1 — Demanda',
+    arquivo:null,arquivoOrigem:'Nome de demanda não é caminho de arquivo',bounds:[-47,-23.2,-46.8,-23],
+    metadados_local:{...valid.metadados_local,bytes:null,bytes_descompactados:null,formato:'PostGIS',componente:'demandas.projeto',
+     crs:'EPSG:4674',crs_nome:'SIRGAS 2000',campos:[{nome:'codigo'}],campos_total:1,
+     localizacao:{status:'nao_consultado',aviso:'Consulta territorial não executada nesta leitura de metadados.'}},
+    geojson:{...valid.geojson,features:valid.geojson.features.map(f=>({...f,properties:{...f.properties,rodada:{codigo:'HIER-1'}}}))}};
+   await page.evaluate(item=>{window.previewItems=[item];preview.render();},cadastro);
+   assert.equal(await page.locator('[data-preview-value="arquivo"]').textContent(),'Não se aplica (geometria em banco)');
+   assert.equal(await page.locator('[data-preview-value="caminho"]').textContent(),'Não se aplica (geometria em banco)');
+   assert.equal(await page.locator('[data-preview-value="tamanho"]').textContent(),'Não se aplica (geometria em banco)');
+   assert.equal(await page.locator('[data-preview-value="descompactado"]').textContent(),'Não se aplica (geometria em banco)');
+   assert.equal(await page.locator('[data-preview-value="crs_nome"]').textContent(),'SIRGAS 2000');
+   assert.equal(await page.locator('[data-preview-value="unidade"]').textContent(),'grau');
+   assert.equal(await page.locator('[data-preview-value="campos_total"]').textContent(),'2');
+   assert.equal(await page.locator('[data-preview-value="campos"]').textContent(),'codigo · rodada');
+   assert.equal(await page.locator('[data-preview-value="limites"]').textContent(),'-47.000000 · -23.200000 · -46.800000 · -23.000000');
+   assert.match(await page.locator('[data-preview-value="consulta"]').textContent(),/não executada/);
+   assert.equal(await page.locator('[data-preview-value="ufs"]').textContent(),'Não confirmada');
+   await page.evaluate(item=>{window.previewItems=[item];preview.render();},valid);
    for(const width of [390,768,1440]){
     await page.setViewportSize({width,height:1000});
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`Sem transbordamento em ${width}px`);

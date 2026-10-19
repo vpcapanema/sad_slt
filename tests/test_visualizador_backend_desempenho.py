@@ -8,7 +8,7 @@ from api.services import storage_geoespacial as storage
 def test_recarga_pontual_parametrizada_preserva_geometria(monkeypatch):
     geometry = {"type": "Polygon", "coordinates": [[[-47,-23],[-46,-23],[-46,-22],[-47,-23]]]}
     row = dict(codigo="projeto-1", nome="Projeto", status="Em análise", criado_em=datetime(2026,10,9),
-               posicao=[-47,-23], geometria=geometry, geometria_tipo="ST_Polygon", bounds=[-47,-23,-46,-22])
+               posicao=[-47,-23], geometria=geometry, geometria_tipo="ST_Polygon", geometria_srid=4674, bounds=[-47,-23,-46,-22])
     calls = []
     class Connection:
         def execute(self, query, params):
@@ -22,6 +22,7 @@ def test_recarga_pontual_parametrizada_preserva_geometria(monkeypatch):
     selected = repo.listar("projeto", "projeto-1")
     assert selected == all_rows
     assert selected[0]["geojson"]["features"][0]["geometry"] is geometry
+    assert selected[0]["crs_arquivo"] == "EPSG:4674"
     assert calls[0][1] == ()
     assert calls[1][1] == ("projeto-1",)
     assert "AND t.codigo = %s" in calls[1][0]

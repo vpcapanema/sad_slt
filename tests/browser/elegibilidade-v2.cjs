@@ -10,6 +10,10 @@ const assert = require('node:assert/strict');
     const page = await browser.newPage({viewport:{width:1440,height:1000}});
     const errors = [], writes = [], saved = new Map();
     const inventories = [], preparations = [], selectionTimes = [], normalizations=[], derivados=new Map();
+    const executions = [], executionJobs = new Map();
+    const reportRequests = [], downloadRequests = [];
+    let reportSources = [], failReport = false, failDownload = false;
+    let failExecution = false;
     let failLayer = '', missingGeometry = false, failNormalization=false,holdPreparation='',releasePreparation,holdNormalization='',releaseNormalization;
     page.on('pageerror', error => errors.push(error.message));
     await page.addLocatorHandler(page.locator('#pfsStatusOverlay.pfs-active'), async () => {
@@ -70,6 +74,59 @@ const assert = require('node:assert/strict');
         return send([...layers,...packageLayers].find(l => l.id === id));
       }
       if(path.endsWith('/elegibilidade/parametros'))return send(parametros);
+      if(path.endsWith('/elegibilidade/resultados/preparar')){
+        const payload=req.postDataJSON(),fontes=new Map();
+        for(const id of payload.execucoes){
+          const exec=executions[Number(id.split('-').at(-1))-1];
+          for(const papel of ['entrada','restricao','risco']){
+            for(const camada of papel==='entrada'?[exec.entrada]:exec[papel])
+              fontes.set(camada.id,{id:camada.id,nome:camada.nome.replaceAll('-',' ').replaceAll('_',' '),papel});
+          }
+        }
+        reportSources=[...fontes.values()];
+        return send({fontes:reportSources,concluidas:payload.execucoes.length,previstas:payload.execucoes.length});
+      }
+      if(path.endsWith('/elegibilidade/resultados/visualizar')){
+        const payload=req.postDataJSON();
+        reportRequests.push(payload);
+        if(failReport)return route.fulfill({status:422,json:{detail:'A camada de saída mudou; relatório recusado.'}});
+        const fontes=reportSources.map(f=>({...f,nome:payload.nomes[f.id]}));
+        const entradas=payload.execucoes.map(id=>{
+          const exec=executions[Number(id.split('-').at(-1))-1];
+          const campos=fontes.filter(f=>f.papel!=='entrada');
+          return {id,nome:payload.nomes[exec.entrada.id],feicoes:53,com_intersecao:52,sem_intersecao:1,
+            concluido_em:'2026-10-19T15:00:00Z',campos,
+            linhas:Array.from({length:53},(_,i)=>({id:`F-${i}`,nome:`Demanda ${i}`,
+              areas:campos.map(()=>i===0?null:i===1?0:12.5),
+              areas_texto:campos.map(()=>i===0?'—':i===1?'0':'12,5')})),
+            mapa:{largura:720,altura:400,formas:[{aneis:[[[60,60],[320,60],[320,300],[60,300],[60,60]]],intersecao:true}],
+              metros_escala:100,cor_intersecao:'#1769aa',cor_ausencia:'#eef3f7',nota:'Feições inteiras, sem mapa-base.'}};
+        });
+        return send({fontes,entradas,concluidas:entradas.length,previstas:entradas.length,metodologia:'Interseções independentes em EPSG:5880, com áreas em m².'});
+      }
+      if(path.endsWith('/elegibilidade/resultados/pacote')){
+        downloadRequests.push(req.postDataJSON());
+        if(failDownload)return route.fulfill({status:503,json:{detail:'Storage indisponível; tente novamente.'}});
+        return route.fulfill({contentType:'application/zip',body:Buffer.from('PK\\x03\\x04-fixture'),
+          headers:{'content-disposition':'attachment; filename="Relatorio e Camadas.zip"'}});
+      }
+      if(path.endsWith('/elegibilidade/execucoes') && req.method()==='POST'){
+        const payload=req.postDataJSON(),id=`execucao-${executions.length+1}`;
+        executions.push(payload);
+        const nome=`${payload.entrada.nome}_elegibilidade_territorial.gpkg`;
+        const arquivo=`saidas-geoespaciais/elegibilidade-${id}/${nome}`;
+        executionJobs.set(id,{id,status:failExecution?'erro':'concluido',cancelavel:false,
+          erro:failExecution?'Falha OGR simulada.':null,resultado:failExecution?null:{
+            ...layers[0],id:`storage:${arquivo}::elegibilidade_territorial`,nome,arquivo,
+            camada:'elegibilidade_territorial',tiles_token:undefined,revisao:'123-456'}});
+        return send({id,status:'executando',etapa:'Intersectar entrada integral',cancelavel:true});
+      }
+      if(path.includes('/elegibilidade/execucoes/')){
+        const id=path.split('/').at(-1);
+        return send(executionJobs.get(id));
+      }
+      if(path.includes('/storage/tiles/')||path.includes('/bancada-arquivos/tiles/'))
+        return route.fulfill({body:Buffer.alloc(0),contentType:'application/vnd.mapbox-vector-tile'});
       if(path.endsWith('/elegibilidade/preparar-demanda')){
         const payload=req.postDataJSON(),id=payload.id;
         normalizations.push(payload);
@@ -112,6 +169,15 @@ const assert = require('node:assert/strict');
     const panel = async () => (await page.locator('iframe').evaluate(f => f.contentWindow.gpApp.state.layers.map(l => l.id))).map(id=>derivados.get(id)||id);
     const closeProgress=()=>page.waitForFunction(()=>!document.querySelector('#pfsProgressOverlay').classList.contains('pfs-active'));
     const inputIds = layers.map(l => l.id);
+    async function assertConferencia(entrada=[],restricao=[],risco=[]) {
+      for (const [papel,ids] of Object.entries({entrada,restricao,risco})) {
+        const atuais = await page.locator(`#ev-run-${papel} tr[data-id]`).evaluateAll(rows => rows.map(row => row.dataset.id));
+        assert.deepEqual(atuais.map(id => derivados.get(id)||id),ids,`Conferência de ${papel} acompanha somente a bancada`);
+        if (!ids.length) assert.match(await page.locator(`#ev-run-${papel}`).textContent(),/Nenhuma camada deste grupo marcada/);
+      }
+      assert.equal(await page.locator('#ev-calcular').isDisabled(),!(entrada.length&&(restricao.length||risco.length)),
+        'Execução exige entrada e ao menos uma base confirmadas e marcadas');
+    }
     const assertNamedFields = async () => assert.deepEqual(
       await page.evaluate(() => {
         const documents = [document, document.querySelector('#ea-workbench-frame').contentDocument];
@@ -157,6 +223,20 @@ const assert = require('node:assert/strict');
       else assert.deepEqual(await page.evaluate(()=>ProcessFeedback.atual.tasks.map(t=>t.completed)),[true,true,true,true], 'Feedback confirma conversão, arquivo e envio');
       await closeProgress();
     }
+    if (process.env.SICARD_TEST_EXECUTION_ONLY === '1') {
+      await choose('#ev-entrada-browse',['pacote']);
+      await preview('entrada');
+      await choose('#ev-restricao-browse',['restricao-a']);
+      await preview('restricao');
+      await choose('#ev-risco-browse',['risco']);
+      await preview('risco');
+      await send();
+      await verificarExecucao();
+      await verificarResultados();
+      assert.deepEqual(errors, [], 'Sem erros JavaScript na execução');
+      console.log('Elegibilidade: execução, cancelamento da confirmação, fontes visíveis, saída automática, falha explícita e múltiplas entradas OK');
+      return;
+    }
     assert.equal(await page.getByLabel('Camada de entrada', {exact:true}).getAttribute('placeholder'), 'Selecione as camadas de entrada.');
     assert.equal(await page.getByLabel('Hierarquizações:', {exact:true}).locator('option').first().textContent(), 'Selecione uma hierarquização');
     assert.equal(await page.locator('#ev-entrada-title').evaluate(title => title.closest('section').querySelectorAll('section').length), 0, 'Entrada sem subcontainers 1.1 e 1.2');
@@ -170,7 +250,10 @@ const assert = require('node:assert/strict');
       assert.equal(await button.locator('.fa-folder-open').count(), 0, 'Adicionar camada não usa mais o ícone de pasta');
     }
     assert.equal(await page.locator('#ev-risco-browse').isDisabled(), true);
+    await assertConferencia();
+    assert.match(await page.locator('#ev-run-warning').textContent(),/Nenhuma camada de entrada/);
     await choose('#ev-entrada-browse', ['entrada']);
+    await assertConferencia();
     assert.equal(await page.locator('#ea-input-preview').isHidden(), true, 'Selecionar não envia automaticamente para prévia');
     assert.equal(await page.locator('.ev-preparacao-grid [aria-label*="bancada"]').count(), 0, 'Seções 1 e 2 não enviam à bancada');
     assert.equal(await page.locator('#ea-input-preview .ea-preview-panel > footer #ea-staging-confirmar').count(), 1, 'Envio à bancada está no rodapé do painel de camadas');
@@ -183,6 +266,7 @@ const assert = require('node:assert/strict');
     assert.equal((await panel()).length, 0, 'Prévia não envia automaticamente');
     await send('entrada', true);
     assert.equal((await panel()).length, 0, 'Cancelar preserva a bancada');
+    await assertConferencia();
     failNormalization=true;
     await page.locator('#ea-staging-confirmar').click();
     await page.locator('#pfsConfirmOk').click();
@@ -209,6 +293,8 @@ const assert = require('node:assert/strict');
     assert.match(await page.locator('#ev-status').textContent(),/cancelado.*mantidos.*derivados/s);
     await send('entrada');
     assert.deepEqual(await panel(), [inputIds[0]]);
+    await assertConferencia([inputIds[0]]);
+    assert.match(await page.locator('#ev-run-entrada [data-source]').textContent(),/^saidas-geoespaciais\/execucoes\/.*\.gpkg::demandas$/,'Conferência aponta para o arquivo poligonal integral, não para a prévia ou fonte original');
     assert.match(await page.locator('#pfsProgressOverlay').textContent(),/1 coleção\(ões\) normalizada\(s\).*Point: 1.*LineString: 1.*Polygon: 1/s,'Feedback registra as coleções e todos os tipos de componentes');
     const entradaDerivada=await page.locator('iframe').evaluate(f=>{
       const win=f.contentWindow,id=win.gpApp.state.layers[0].id,file=win.gpArquivos.sessions.get(id);
@@ -219,6 +305,7 @@ const assert = require('node:assert/strict');
     assert.match(entradaDerivada.request.revisao,/^derivada-/);
     assert.equal(await page.getByRole('checkbox',{name:'Visibilidade no mapa: entrada',exact:true}).count(),1,'Prévia preserva referência original');
     await choose('#ev-restricao-browse', ['restricao-a','restricao-b']);
+    await assertConferencia([inputIds[0]]);
     assert.deepEqual(await panel(), [inputIds[0]], 'Selecionar restrição não altera bancada');
     assert.equal(await page.getByRole('checkbox', {name:'Visibilidade no mapa: restricao-b',exact:true}).count(), 0, 'Restrição selecionada ainda não está na prévia');
     const trash = page.locator('#ev-restricao-lista .ev-remove-layer').first();
@@ -252,12 +339,14 @@ const assert = require('node:assert/strict');
     await visibility.uncheck();
     await send();
     assert.deepEqual(new Set(await panel()), new Set([inputIds[0],inputIds[1]]), 'Somente camadas marcadas');
+    await assertConferencia([inputIds[0]],[inputIds[1]]);
     const entryVisible = page.getByRole('checkbox', {name:'Visibilidade no mapa: entrada',exact:true});
     const restrictionVisible = page.getByRole('checkbox', {name:'Visibilidade no mapa: restricao-a',exact:true});
     await entryVisible.uncheck();
     await restrictionVisible.uncheck();
     assert.equal(await page.locator('#ea-staging-confirmar').isDisabled(), true, 'Sem camadas marcadas não há envio à bancada');
     assert.deepEqual(new Set(await panel()), new Set([inputIds[0],inputIds[1]]), 'Desmarcar não altera bancada sem confirmação');
+    await assertConferencia([inputIds[0]],[inputIds[1]]);
     await entryVisible.check();
     await restrictionVisible.check();
     await visibility.check();
@@ -275,8 +364,33 @@ const assert = require('node:assert/strict');
     assert.deepEqual(saved.get('elegibilidade-restricao').categorias[0].camadas, [inputIds[1],inputIds[2]]);
     await choose('#ev-risco-browse', ['risco']);
     await send('risco');
+    await assertConferencia([inputIds[0]],[inputIds[1]],[inputIds[3]]);
+    const antesDaConferencia = [inventories.length,preparations.length,normalizations.length,writes.length];
+    const restricaoNaBancada = page.frameLocator('#ea-workbench-frame').getByRole('checkbox',{name:'Exibir restricao-a',exact:true,includeHidden:true});
+    await restricaoNaBancada.evaluate(input => input.click());
+    await assertConferencia([inputIds[0]],[],[inputIds[3]]);
+    await restricaoNaBancada.evaluate(input => input.click());
+    await assertConferencia([inputIds[0]],[inputIds[1]],[inputIds[3]]);
+    const entradaNaBancada = page.frameLocator('#ea-workbench-frame').getByRole('checkbox',{name:'Exibir entrada',exact:true,includeHidden:true});
+    await entradaNaBancada.evaluate(input => input.click());
+    await assertConferencia([],[inputIds[1]],[inputIds[3]]);
+    assert.match(await page.locator('#ev-run-warning').textContent(),/Nenhuma camada de entrada/);
+    await entradaNaBancada.evaluate(input => input.click());
+    await page.locator('iframe').evaluate(f => f.contentWindow.gpApp.adicionarCamadaGeoJsonEmMemoria('adicional-conferencia','Camada adicional',
+      {type:'FeatureCollection',features:[{type:'Feature',properties:{},geometry:{type:'Point',coordinates:[-47,-23]}}]},{categoria:'Restrição',lote:false}));
+    await page.waitForFunction(() => document.querySelector('iframe').contentWindow.gpApp.state.layers.some(layer => layer.id==='adicional-conferencia'));
+    await assertConferencia([inputIds[0]],[inputIds[1]],[inputIds[3]]);
+    assert.match(await page.locator('#ev-run-warning').textContent(),/1 camada.*adicionada.*não integra/s,'Camadas adicionadas diretamente não recebem um papel silenciosamente');
+    await page.locator('iframe').evaluate(f => f.contentWindow.gpApp.removeLayerFromMap('adicional-conferencia',false));
+    assert.equal(await page.locator('#ev-run-warning').textContent(),'');
+    await page.locator('iframe').evaluate(f => f.contentWindow.gpApp.removeLayerFromMap(f.contentWindow.gpApp.state.layers.find(layer => layer.nome==='restricao-a').id,false));
+    await assertConferencia([inputIds[0]],[],[inputIds[3]]);
+    assert.deepEqual([inventories.length,preparations.length,normalizations.length,writes.length],antesDaConferencia,'Conferir, desmarcar ou remover não prepara arquivos nem chama geoprocessos');
+    await send();
+    await assertConferencia([inputIds[0]],[inputIds[1]],[inputIds[3]]);
     const before = await panel();
     await page.locator('#ev-entrada-limpar').click();
+    await assertConferencia([inputIds[0]],[inputIds[1]],[inputIds[3]]);
     assert.equal(await page.locator('#ev-entrada-camadas').inputValue(), '');
     assert.equal(await page.locator('#ev-hierarquizacao').isDisabled(), false);
     assert.deepEqual(await panel(), before, 'Limpar a prévia não altera entrada já confirmada');
@@ -299,6 +413,7 @@ const assert = require('node:assert/strict');
     assert.deepEqual(await panel(),before,'Falha na segunda conversão não aplica o primeiro arquivo parcialmente');
     failNormalization=false;
     await send();
+    await assertConferencia(['cadastro:projeto:D-0','cadastro:projeto:D-1'],[inputIds[1]],[inputIds[3]]);
     const actualGeometry = await page.locator('iframe').evaluate(f =>
       [...f.contentWindow.gpArquivos.sessions.values()].filter(item=>item.fonteElegibilidade?.origemEntrada==='hierarquizacao')
         .map(item=>({tipos:item.metadados_local.tipos_geometria,fonte:item.fonteElegibilidade.geojson.features[0].geometry})));
@@ -381,6 +496,14 @@ const assert = require('node:assert/strict');
     for (const width of [390,768,1025,1440]) {
       await page.setViewportSize({width,height:1000});
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `Sem transbordamento em ${width}px`);
+      const conferenciaLayout = await page.locator('.ea-checkup-tables').evaluate(container => {
+        const box = container.getBoundingClientRect();
+        const tables = [...container.children].map(table => table.getBoundingClientRect());
+        return {colunas:getComputedStyle(container).gridTemplateColumns.split(' ').length,
+          dentro:tables.every(table => table.left >= box.left && table.right <= box.right+1)};
+      });
+      assert.equal(conferenciaLayout.colunas,width>1024?3:1,`Três grupos responsivos em ${width}px`);
+      assert(conferenciaLayout.dentro,'Tabelas de conferência respeitam a largura do bloco');
       assert.equal(await page.locator('#ea-staging-actions').evaluate(footer => {
         const f=footer.getBoundingClientRect(), p=footer.parentElement.getBoundingClientRect();
         return f.left >= p.left && f.right <= p.right && Math.abs(f.bottom-p.bottom) <= 2;
@@ -457,6 +580,103 @@ const assert = require('node:assert/strict');
       await page.screenshot({path:process.env.SICARD_TEST_SCREENSHOT,fullPage:true});
     }
     assert.equal(writes.some(path => /hierarquizacoes.*(?:executar|fases)/.test(path)), false, 'Nenhum cálculo legado');
+    assert.equal(executions.length,0,'Seleção, prévia, envio e conferência não executam cálculos automaticamente');
+    await choose('#ev-risco-browse',['risco']);
+    await send();
+    await send('risco');
+    await verificarExecucao();
+    await verificarResultados();
+    async function verificarResultados(){
+      await page.waitForFunction(()=>!document.querySelector('#ev-resultados-aliases').hidden);
+      assert.equal(await page.locator('#ev-resultados-download').isDisabled(),true,'Exportação aguarda revisão');
+      const campos=page.locator('#ev-resultados-nomes input');
+      assert.equal(await campos.count(),4,'Dois aliases de entrada e bases dinâmicas compartilhadas');
+      const nomes=['Demandas Lineares','Faixas de Proteção','Áreas Suscetíveis à Erosão','Demandas Pontuais'];
+      for(let i=0;i<4;i++)await campos.nth(i).fill(nomes[i]);
+      await page.locator('#ev-resultados-mostrar').click();
+      assert.equal(reportRequests.length,0,'Revisão explícita obrigatória');
+      await page.locator('#ev-resultados-revisados').check();
+      await page.locator('#ev-resultados-mostrar').click();
+      await page.waitForFunction(()=>!document.querySelector('#ev-resultados-conteudo').hidden);
+      assert.equal(await page.locator('#ev-resultados-entrada option').count(),2);
+      assert.equal(await page.locator('#ev-resultados-tabela tbody tr').count(),50,'Paginação na tela');
+      assert.match(await page.locator('#ev-resultados-tabela thead').textContent(),/Faixas de Proteção.*Áreas Suscetíveis à Erosão/);
+      assert.equal(await page.locator('#ev-resultados-tabela th').last().evaluate(th=>getComputedStyle(th).textTransform),'none',
+        'Aliases permanecem em title case, sem transformação visual em caixa alta');
+      assert.equal(await page.locator('#ev-resultados-mapa svg path').count(),3,'Mapa de feições, norte e escala');
+      assert.match(await page.locator('#ev-resultados-tabela tbody tr').first().textContent(),/—/);
+      assert.match(await page.locator('#ev-resultados-tabela tbody tr').nth(1).textContent(),/0/);
+      await page.locator('#ev-resultados-proxima').click();
+      assert.equal(await page.locator('#ev-resultados-tabela tbody tr').count(),3);
+      assert.match(await page.locator('#ev-resultados-tabela tbody').textContent(),/F-52/);
+      await page.selectOption('#ev-resultados-entrada','1');
+      assert.match(await page.locator('#ev-resultados-resumo').textContent(),/Demandas Pontuais/);
+      for(const width of [390,1440]){
+        await page.setViewportSize({width,height:1000});
+        assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`Resultados responsivos em ${width}px`);
+      }
+      failDownload=true;
+      await page.locator('#ev-resultados-download').click();
+      await page.waitForFunction(()=>document.querySelector('#ev-resultados-status').textContent.includes('Storage indisponível'));
+      assert.equal(await page.locator('#ev-resultados-conteudo').isVisible(),true,'Falha no download preserva resultados');
+      failDownload=false;
+      const download=page.waitForEvent('download');
+      await page.locator('#ev-resultados-download').click();
+      assert.equal((await download).suggestedFilename(),'Relatório e Camadas.zip');
+      assert.deepEqual(downloadRequests.at(-1),reportRequests.at(-1),'PDF e tela usam os mesmos aliases e execuções, não a página da tabela');
+      if(process.env.SICARD_TEST_RESULT_SCREENSHOT)
+        await page.locator('#ev-resultados').screenshot({path:process.env.SICARD_TEST_RESULT_SCREENSHOT});
+      await campos.nth(1).fill('Faixas de Proteção Revisadas');
+      assert.equal(await page.locator('#ev-resultados-download').isDisabled(),true,'Editar alias invalida exportação anterior');
+      assert.equal(await page.locator('#ev-resultados-revisados').isChecked(),false);
+      failReport=true;
+      await page.locator('#ev-resultados-revisados').check();
+      await page.locator('#ev-resultados-mostrar').click();
+      await page.waitForFunction(()=>document.querySelector('#ev-resultados-status').textContent.includes('relatório recusado'));
+      assert.equal(await page.locator('#ev-resultados-download').isDisabled(),true);
+      failReport=false;
+    }
+    async function verificarExecucao() {
+      const checkboxBancada = nome => page.frameLocator('#ea-workbench-frame').getByRole('checkbox',{name:`Exibir ${nome}`,exact:true,includeHidden:true});
+      await checkboxBancada('pontos').evaluate(input=>input.click());
+      await checkboxBancada('risco').evaluate(input=>input.click());
+      await page.locator('iframe').evaluate(f=>f.contentWindow.gpApp.adicionarCamadaGeoJsonEmMemoria('fora-do-calculo','Adicional',
+        {type:'FeatureCollection',features:[{type:'Feature',properties:{},geometry:{type:'Point',coordinates:[-47,-23]}}]}));
+      const antesDoCalculo=await panel();
+      await page.locator('#ev-calcular').click();
+      await page.locator('#pfsConfirmCancel').click();
+      assert.equal(executions.length,0,'Cancelar confirmação não inicia cálculo');
+      await page.locator('#ev-calcular').click();
+      await page.locator('#pfsConfirmOk').click();
+      await page.waitForFunction(()=>document.querySelector('#ev-status').textContent.includes('camada(s) de saída produzida(s)'));
+      await closeProgress();
+      assert.equal(executions.length,1,'Entrada desmarcada fica fora da execução');
+      assert.equal(executions[0].entrada.nome,'linhas');
+      assert.deepEqual(executions[0].restricao.map(c=>c.id),[inputIds[1]]);
+      assert.deepEqual(executions[0].risco,[],'Risco desmarcado fica fora da execução');
+      const resultado=executionJobs.get('execucao-1').resultado;
+      assert.deepEqual(new Set(await panel()),new Set([...antesDoCalculo,resultado.id]),'Saída adicionada sem remover insumos e camadas manuais');
+      const saidaNaBancada=await page.locator('iframe').evaluate((f,id)=>f.contentWindow.gpApp.state.layers.find(l=>l.id===id),resultado.id);
+      assert.equal(saidaNaBancada.nome,'linhas_elegibilidade_territorial.gpkg');
+      assert.equal(saidaNaBancada.arquivo,resultado.arquivo);
+      failExecution=true;
+      await page.locator('#ev-calcular').click();
+      await page.locator('#pfsConfirmOk').click();
+      await page.waitForFunction(()=>document.querySelector('#ev-status').dataset.error==='true');
+      assert.match(await page.locator('#ev-status').textContent(),/Falha OGR simulada/);
+      assert.deepEqual(new Set(await panel()),new Set([...antesDoCalculo,resultado.id]),'Falha não remove saída anterior nem adiciona sucesso falso');
+      await closeProgress();
+      failExecution=false;
+      await checkboxBancada('pontos').evaluate(input=>input.click());
+      await checkboxBancada('risco').evaluate(input=>input.click());
+      await page.locator('#ev-calcular').click();
+      await page.locator('#pfsConfirmOk').click();
+      await page.waitForFunction(()=>document.querySelector('#ev-status').textContent.startsWith('2 camada(s) de saída'));
+      await closeProgress();
+      assert.equal(executions.length,4,'Cada entrada gera uma saída independente');
+      assert.equal(executionJobs.get('execucao-4').resultado.nome,'pontos_elegibilidade_territorial.gpkg');
+      assert.deepEqual(executions[3].risco.map(c=>c.id),[inputIds[3]]);
+    }
     assert.deepEqual(errors, [], 'Sem erros JavaScript');
     const buttonStyle = selector => page.locator(selector).evaluate(el => {
       const css = getComputedStyle(el);
@@ -498,9 +718,18 @@ const assert = require('node:assert/strict');
       };
     });
     const workbench = await workbenchStyle();
+    const checkupStyle = () => page.locator('.ea-checkup').evaluate(section => {
+      const style = el => {
+        const css = getComputedStyle(el);
+        return Object.fromEntries(['backgroundColor','color','fontFamily','fontSize','fontWeight','borderRadius','borderTopColor','borderTopWidth','paddingTop','paddingLeft'].map(key => [key,css[key]]));
+      };
+      return {section:style(section),title:style(section.querySelector('h4')),hint:style(section.querySelector('.ea-hint')),button:style(section.querySelector('.ea-execute button'))};
+    });
+    const conferenciaStyle = await checkupStyle();
     await page.goto(`${base}/restrict/geoespacial/extracao-atributos/`, {waitUntil:'networkidle'});
     await page.waitForFunction(() => document.querySelector('#ea-workbench-frame').contentDocument.body.classList.contains('ea-embedded-workbench'));
     assert.deepEqual(await workbenchStyle(), workbench, 'Bancada usa o mesmo visual, documento e dimensões verticais do extrator');
+    assert.deepEqual(await checkupStyle(),conferenciaStyle,'Conferir e executar preserva o visual da página de extração');
     assert.deepEqual(buttonSkin(await buttonStyle('#ea-input-browse')), buttonSkin(normal), 'Botão menor preserva cores e tipografia da referência');
     assert.deepEqual(buttonSkin(await buttonStyle('#ea-identificacao-confirmar')), buttonSkin(primary), 'Botão primário menor preserva a referência');
     await page.locator('#ea-input-browse').hover();
@@ -518,7 +747,7 @@ const assert = require('node:assert/strict');
     await defaultExplorer.locator('#pfsConfirmOk').click();
     await defaultExplorer.waitFor({state:'detached'});
     assert.deepEqual([inventories.length, preparations.length], defaultReads.map(n => n+1), 'Fluxo padrão do extrator continua identificando e validando no seu próprio momento');
-    console.log('PASS: seleção -> prévia -> bancada, coleções e componentes no feedback, cancelamento, origens exclusivas, listas, conflitos, geometrias completas e responsividade.');
+    console.log('PASS: seleção -> prévia -> bancada, conferência por papel, visibilidade, remoções, camadas adicionais, referências integrais, cálculo bloqueado, paridade visual, cancelamento e responsividade.');
     console.log(`Confirmar: máximo ${Math.max(...selectionTimes)} ms; nenhuma chamada de inventário/preparação. Campos identificados: OK.`);
   } finally { await browser.close(); }
 })().catch(error => {console.error(error); process.exitCode = 1;});

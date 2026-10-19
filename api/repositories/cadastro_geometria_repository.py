@@ -22,11 +22,12 @@ _SQL = """
         SELECT t.codigo, t.nome, t.status, t.criado_em,
                {posicao} AS posicao,
                ST_Transform(t.geometria,4326) AS geometria_mapa,
+               ST_SRID(t.geometria) AS geometria_srid,
                ST_GeometryType(t.geometria) AS geometria_tipo
         FROM {tabela} t
         WHERE t.geometria IS NOT NULL {filtro}
     )
-    SELECT codigo, nome, status, criado_em, posicao, geometria_tipo,
+    SELECT codigo, nome, status, criado_em, posicao, geometria_tipo, geometria_srid,
            ST_AsGeoJSON(geometria_mapa)::jsonb AS geometria,
            ARRAY[ST_XMin(geometria_mapa), ST_YMin(geometria_mapa),
                  ST_XMax(geometria_mapa), ST_YMax(geometria_mapa)] AS bounds
@@ -54,6 +55,7 @@ def listar(tipo: TipoCadastro, codigo: str | None = None) -> list[dict[str, Any]
             "status": row["status"],
             "criado_em": row["criado_em"].isoformat() if row.get("criado_em") else None,
             "geometria_tipo": (row["geometria_tipo"] or "").replace("ST_", ""),
+            "crs_arquivo": f"EPSG:{row['geometria_srid']}" if row.get('geometria_srid') else None,
             "bounds": [float(v) for v in row["bounds"]],
             "posicao": [float(v) for v in row["posicao"]] if row.get("posicao") else None,
             "geojson": {

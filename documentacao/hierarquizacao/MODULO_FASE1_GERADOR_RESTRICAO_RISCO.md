@@ -20,7 +20,7 @@ O papel deste modulo e preparar os insumos espaciais para essa triagem.
 
 A rota `/restrict/hierarquizacao/fase-1/` passa a servir a pagina v2, em
 substituicao a interface de selecao de um par homologado. Nesta entrega, o fluxo
-abrange a preparacao e o envio de dados a bancada, sem executar a classificacao
+abrange a preparacao, o envio a bancada e a producao da camada de sobreposicoes, sem executar a classificacao
 automatica nem alterar resultados existentes da hierarquizacao.
 
 1. A entrada pode ser composta por camadas vetoriais escolhidas no explorador do
@@ -94,10 +94,81 @@ automatica nem alterar resultados existentes da hierarquizacao.
    reutilizado nos reenvios, sem aplicar novo buffer a uma demanda normalizada.
 
 A atribuicao de um papel pelo usuario nao equivale a homologacao da camada.
-A regra de calculo com listas livres, sua consolidacao, a persistencia dos
-resultados e a vinculação com as fases seguintes dependem de definicao posterior.
+A vinculacao com as fases seguintes e a apresentacao de classificacoes dependem
+de definicao posterior.
 As regras metodologicas abaixo permanecem como referencia, nao como calculo
 automatico executado pela nova interface de preparacao.
+
+### Producao da camada de elegibilidade territorial
+
+O comando de execucao utiliza somente as entradas e bases confirmadas e
+atualmente marcadas na bancada. Exige uma entrada e ao menos uma base de
+restricao ou risco. Camadas adicionadas diretamente, sem papel definido neste
+fluxo, nao participam. Cada entrada gera sua propria saida.
+
+1. Verifica-se `ID_FEICAO`, quando existente, exigindo valores unicos e nao nulos.
+   Na ausencia desse campo, cria-se na copia de saida um identificador sequencial
+   unico, sem modificar a fonte.
+2. A saida e uma copia integral da entrada poligonal da bancada, incluindo todas
+   as feicoes, geometrias, atributos e CRS. Copias de calculo sao reprojetadas por
+   GDAL/OGR para EPSG:5880.
+3. Processam-se primeiro as bases de restricao e depois as de risco, uma por vez.
+   Cada `OGR Layer.Intersection` utiliza sempre a entrada integral, nunca o
+   resultado da intersecao anterior. Calcula-se a area dos fragmentos em metros
+   quadrados e soma-se por identificador da entrada. Nao se aplica uniao nem
+   dissolucao; fragmentos sobrepostos da mesma base participam da soma.
+4. Cada base acrescenta um campo numerico `re_*` ou `ri_*`. Exemplos:
+   `re_app`, `re_uc`, `re_ti`, `re_quil`, `ri_inund`, `ri_eros`, `ri_escor`,
+   `ri_inc`. Nomes restantes sao normalizados; colisoes recebem sufixos
+   numericos, sem sobrescrever atributos. O mapeamento consta dos metadados.
+   Ausencia de intersecao permanece `NULL`; intersecao sem area recebe zero.
+5. Apos cada base, descartam-se os intermediarios de intersecao. A saida final
+   e serializada em memoria e reaberta para conferir feicoes, geometrias,
+   atributos e resultados, antes do registro no storage oficial.
+6. Grava-se `[nome da camada de entrada]_elegibilidade_territorial.gpkg`,
+   retirando apenas a extensao original quando presente. Uma pasta exclusiva
+   por saida evita sobrescritas sem alterar o nome solicitado. Nao se utilizam
+   temporarios em disco local. A camada e adicionada automaticamente a bancada,
+   preservando as entradas, bases e demais camadas.
+
+O acompanhamento apresenta etapas e permite cancelamento em pontos seguros
+antes da gravacao final. Uma falha nao e convertida em resultados nulos.
+Saidas de entradas anteriores ja concluidas permanecem registradas e visiveis.
+Esta etapa produz a camada vetorial; nao aplica classificacao, ranking ou
+homologacao automatica.
+
+### Apresentacao dos resultados e entrega do pacote
+
+A secao Resultados acompanha as saidas concluidas da mesma execucao da pagina,
+sem depender de uma lista fixa de bases. A composicao de restricao e risco e
+recuperada dos metadados de processamento, nao da selecao posteriormente editada.
+
+1. Sugerem-se nomes amigaveis a partir da biblioteca e do dicionario existentes;
+   fontes nao cadastradas recebem somente uma sugestao de formatacao. O usuario
+   revisa significado, ortografia, acentuacao e gramatica e confirma os nomes antes
+   da apresentacao e da exportacao. Aplica-se title case em portugues brasileiro,
+   com conectivos internos em minusculas e preservacao de siglas. Nao se inferem
+   expansoes de abreviacoes desconhecidas. Nomes tecnicos dos arquivos e campos
+   permanecem intactos; os aliases revisados sao comuns a tela, mapa e PDF.
+2. Cada entrada possui resumo, fontes por papel, mapa-sintese e tabela de areas
+   por feicao, com uma coluna por base. A tela pagina 50 feicoes; o PDF apresenta
+   todas as feicoes e bases em blocos de colunas, repetindo a identificacao.
+   Nulos sao apresentados como travessao e nao se confundem com zero. A formatacao
+   decimal preserva os valores, inclusive areas positivas inferiores a 0,01 m².
+3. O mapa apresenta as geometrias inteiras, em EPSG:5880, com escala e norte,
+   sem mapa-base. Distingue feicoes com intersecao registrada em alguma base
+   daquelas sem intersecao, incluindo contatos de area zero. Nao representa
+   recortes espaciais nem atribui classes de elegibilidade.
+4. O botao final gera um ZIP com relatorio PDF, uma copia binaria de cada
+   GeoPackage processado e metadados da analise com os aliases e assinaturas.
+   Pastas numeradas evitam colisoes entre arquivos de mesmo nome. O PDF inclui
+   identificacao, datas, fontes, metodologia, resumos, mapas e tabelas completas.
+   Saidas parciais sao explicitamente identificadas, sem apresentacao como lote
+   completo. O pacote e gravado e conferido no storage antes do download.
+5. A exportacao nao repete as intersecoes. Antes da leitura, compara-se o SHA-256
+   de cada saida com a assinatura registrada na producao. Divergencia impede a
+   emissao. Editar aliases invalida a apresentacao anterior e exige nova
+   confirmacao. Falha na exportacao preserva as geometrias e os resultados.
 
 ## Produto final do modulo
 

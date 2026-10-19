@@ -4,7 +4,7 @@ import { escolherArquivo } from './explorador.js';
 import { salvarRascunhoMunicipal } from './municipal.js';
 import { criarEntradaLocal } from './entrada-local.js';
 import { criarUploadStorage } from './storage-upload.js';
-import { criarPrevia } from './previa.js?v=20261018-html';
+import { criarPrevia } from './previa.js?v=20261019-metadados';
 import { criarListaCamadas } from './lista-camadas.js';
 import { editarRegra, resumoRegra, editarEstatisticas, resumoEstatisticas } from './regras.js';
 

@@ -1,4 +1,56 @@
 /* Escala de processos.css; componentes do extrator permanecem isolados nesta página. */
+.elegibilidade-v2 .ev-resultados [hidden] { display: none !important; }
+.elegibilidade-v2 .ev-resultados .ea-section-body,
+.elegibilidade-v2 #ev-resultados-aliases,
+.elegibilidade-v2 #ev-resultados-conteudo {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+.elegibilidade-v2 .ev-resultados h3 {
+  margin: 0;
+  color: var(--pli-deep);
+  font-size: 0.95rem;
+}
+.elegibilidade-v2 .ev-resultados-nomes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 0.75rem;
+}
+.elegibilidade-v2 .ev-resultados-nomes input {
+  width: 100%;
+  min-width: 0;
+  min-height: 36px;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--pli-border);
+  border-radius: 8px;
+  font: inherit;
+}
+.elegibilidade-v2 .ev-resultados-confirmacao {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+}
+.elegibilidade-v2 .ev-resultados-mapa {
+  border: 1px solid var(--pli-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.elegibilidade-v2 .ev-resultados-mapa svg { width: 100%; max-height: 480px; display: block; }
+.elegibilidade-v2 .ev-resultados-paginacao,
+.elegibilidade-v2 .ev-resultados-download {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+.elegibilidade-v2 .ev-resultados-download { border-top: 1px solid var(--pli-border); padding-top: 1rem; }
+.elegibilidade-v2 .ev-resultados-download p { flex-basis: 100%; text-align: center; }
+.elegibilidade-v2 #ev-resultados-mostrar { justify-self: start; }
+.elegibilidade-v2 #ev-resultados-tabela th { text-transform: none; }
+.elegibilidade-v2 #ev-resultados-fontes { margin: 0; padding-left: 1.25rem; font-size: 0.84rem; }
 .elegibilidade-v2 {
   --process-space-1: 0.375rem;
   --process-space-2: 0.625rem;
@@ -210,6 +262,15 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--process-space-3);
 }
+.elegibilidade-v2 .ea-checkup-tables {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.elegibilidade-v2 .ea-checkup .ea-hint {
+  margin: .3rem 0;
+  color: #647486;
+  font-size: .7rem;
+  line-height: 1.4;
+}
 .elegibilidade-v2 .ev-actions {
   display: flex;
   flex-wrap: wrap;
@@ -255,7 +316,8 @@
   }
 }
 @media (max-width: 1024px) {
-  .elegibilidade-v2 .ev-preparacao-grid {
+  .elegibilidade-v2 .ev-preparacao-grid,
+  .elegibilidade-v2 .ea-checkup-tables {
     grid-template-columns: minmax(0, 1fr);
   }
 }

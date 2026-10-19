@@ -3,6 +3,7 @@ from zipfile import ZipFile
 from hashlib import sha256
 from pathlib import Path
 from uuid import uuid4
+from osgeo import gdal, ogr
 import pytest
 from fastapi.testclient import TestClient
 from api.server import app
@@ -41,6 +42,8 @@ def test_demand_virtual_catalog_without_geometry(client,monkeypatch):
     assert result['folha'] is True
     file=result['itens'][0]
     assert file['extensao']=='GEOJSON' and file['nome_arquivo']=='PRJ-1.geojson'
+    assert file['geometria_tipo']=='Polygon'
+    assert file['geometria_aplicavel'] is True and file['camada_aplicavel'] is False
     assert 'geojson' not in file
     meta=client.get('/api/geoespacial/explorador/detalhes',params={'fonte':'demandas','id':file['id']}).json()
     assert meta['arquivo_virtual'] is True and meta['srid']==4674
@@ -169,3 +172,142 @@ def test_outputs_include_uncatalogued_companions_and_keep_access_checks(client,m
     companion=next(x for x in files if x['nome_arquivo']=='dados.dbf')
     monkeypatch.setattr(explorer.saidas,'referencia',lambda path:dict(privado=True,responsavel='another-user'))
     assert client.get('/api/geoespacial/explorador/download',params={'fonte':'saidas','id':companion['id']}).status_code==403
+
+
+def _multilayer_file(path):
+    dataset=ogr.GetDriverByName('GPKG').CreateDataSource(str(path))
+    dataset.CreateLayer('municipios',geom_type=ogr.wkbMultiPolygon)
+    dataset.CreateLayer('sedes',geom_type=ogr.wkbPoint)
+    dataset=None
+
+
+def test_storage_listing_reads_real_layers_without_duplicating_files(client,mounted):
+    path=mounted/'base-geoespacial/vetor/dados.gpkg'
+    _multilayer_file(path)
+    original=path.read_bytes()
+    response=client.get('/api/geoespacial/explorador/navegar',params={'fonte':'storage','caminho':'base-geoespacial/vetor'})
+    assert response.status_code==200
+    items=response.json()['itens']
+    assert len(items)==1
+    item=items[0]
+    assert item['id']=='storage:base-geoespacial/vetor/dados.gpkg'
+    assert item['geometria_tipo']=='Multi Polygon; Point'
+    assert item['camada']=='municipios; sedes'
+    assert item['geometria_aplicavel'] is True and item['camada_aplicavel'] is True
+    assert [(layer['camada'],layer['geometria_tipo']) for layer in item['camadas']]==[('municipios','Multi Polygon'),('sedes','Point')]
+    assert 'metadados_erro' not in item
+    assert path.read_bytes()==original
+
+
+def test_listing_distinguishes_rasters_auxiliary_files_and_read_errors(client,mounted):
+    parent=mounted/'base-geoespacial/vetor'
+    raster=gdal.GetDriverByName('GTiff').Create(str(parent/'imagem.tif'),4,4,1,gdal.GDT_Byte)
+    raster=None
+    (parent/'dados.prj').write_text('auxiliar',encoding='ascii')
+    (parent/'corrompido.gpkg').write_bytes(b'not-a-geopackage')
+    response=client.get('/api/geoespacial/explorador/navegar',params={'fonte':'storage','caminho':'base-geoespacial/vetor'})
+    assert response.status_code==200
+    items={item['nome_arquivo']:item for item in response.json()['itens']}
+    assert items['imagem.tif']['geometria_tipo']=='Raster'
+    assert items['imagem.tif']['camada_aplicavel'] is False
+    assert items['dados.prj']['geometria_aplicavel'] is False
+    assert items['dados.prj']['camada_aplicavel'] is False
+    broken=items['corrompido.gpkg']
+    assert broken['metadados_erro']
+    assert broken['geometria_aplicavel'] is True and broken['camada_aplicavel'] is True
+
+
+def test_output_metadata_comes_from_file_not_stale_catalogue(client,monkeypatch,mounted):
+    execution=str(uuid4())
+    parent=mounted/f'saidas-geoespaciais/execucoes/{execution}/camadas'
+    parent.mkdir(parents=True)
+    path=parent/'dados.gpkg'
+    _multilayer_file(path)
+    relative=path.relative_to(mounted).as_posix()
+    row=dict(id='output-real',arquivo=relative,nome='Resultado',execucao_id=execution,ferramenta='Teste',geometria_tipo='ST_LineString')
+    monkeypatch.setattr(explorer.saidas,'listar',lambda:[row])
+    monkeypatch.setattr(explorer.saidas,'referencia',lambda path:dict(privado=False,sha256=None))
+    tool=explorer.navegar('saidas')['itens'][0]
+    folder=explorer.navegar('saidas',tool['caminho'])['itens'][0]
+    item=explorer.navegar('saidas',folder['caminho'])['itens'][0]
+    assert item['geometria_tipo']=='Multi Polygon; Point'
+    assert item['camada']=='municipios; sedes'
+    assert item['id']=='output-real'
+    detail=client.get('/api/geoespacial/explorador/detalhes',params={'fonte':'saidas','id':item['id']})
+    assert detail.status_code==200
+    assert detail.json()['geometria_tipo']=='Multi Polygon; Point'
+    assert detail.json()['camada']=='municipios; sedes'
+
+
+def test_archive_lists_actual_internal_layer_names_and_geometry(client,mounted):
+    parent=mounted/'base-geoespacial/vetor'
+    original=parent/'original.gpkg'
+    _multilayer_file(original)
+    with ZipFile(parent/'dados.zip','w') as archive:
+        archive.writestr('pasta/dados.gpkg',original.read_bytes())
+    original.unlink()
+    response=client.get('/api/geoespacial/explorador/navegar',params={'fonte':'storage','caminho':'base-geoespacial/vetor'})
+    assert response.status_code==200
+    item=response.json()['itens'][0]
+    assert item['geometria_tipo']=='Multi Polygon; Point'
+    assert item['camada']=='municipios; sedes'
+
+
+@pytest.mark.parametrize('with_vector',[False,True])
+def test_geopackage_raster_tables_are_not_omitted(client,mounted,with_vector):
+    parent=mounted/'base-geoespacial/vetor'
+    source=parent/'origem.tif'
+    dataset=gdal.GetDriverByName('GTiff').Create(str(source),4,4,1,gdal.GDT_Byte)
+    dataset.SetGeoTransform([-47,0.1,0,-23,0,-0.1])
+    dataset=None
+    path=parent/'dados.gpkg'
+    dataset=gdal.Translate(str(path),str(source),format='GPKG',creationOptions=['RASTER_TABLE=imagem','RASTER_IDENTIFIER=Alias da imagem'])
+    dataset=None
+    if with_vector:
+        dataset=ogr.Open(str(path),1)
+        dataset.CreateLayer('pontos',geom_type=ogr.wkbPoint)
+        dataset=None
+    source.unlink()
+    response=client.get('/api/geoespacial/explorador/navegar',params={'fonte':'storage','caminho':'base-geoespacial/vetor'})
+    assert response.status_code==200
+    item=response.json()['itens'][0]
+    assert item['geometria_tipo']==('Point; Raster' if with_vector else 'Raster')
+    assert item['camada']==('pontos; imagem' if with_vector else 'imagem')
+    assert item['camada_aplicavel'] is True
+    assert 'metadados_erro' not in item
+    detail=client.get('/api/geoespacial/explorador/detalhes',params={'fonte':'storage','id':item['id']})
+    assert detail.status_code==200
+    assert any(layer['camada']=='imagem' and layer['geometria_tipo']=='Raster' for layer in detail.json()['camadas'])
+
+
+def test_metadata_cache_refreshes_when_file_changes(client,mounted):
+    import os
+    path=mounted/'base-geoespacial/vetor/dados.gpkg'
+    _multilayer_file(path)
+    query={'fonte':'storage','caminho':'base-geoespacial/vetor'}
+    first=client.get('/api/geoespacial/explorador/navegar',params=query).json()['itens'][0]
+    timestamp=path.stat().st_mtime_ns+1_000_000_000
+    dataset=ogr.Open(str(path),1)
+    dataset.CreateLayer('rios',geom_type=ogr.wkbLineString)
+    dataset=None
+    os.utime(path,ns=(timestamp,timestamp))
+    updated=client.get('/api/geoespacial/explorador/navegar',params=query).json()['itens'][0]
+    assert first['camada']=='municipios; sedes'
+    assert updated['camada']=='municipios; sedes; rios'
+    assert updated['geometria_tipo']=='Multi Polygon; Point; Line String'
+
+
+def test_remote_metadata_reuses_directory_listing(monkeypatch,mounted):
+    path=mounted/'base-geoespacial/vetor/remoto.gpkg'
+    _multilayer_file(path)
+    state=path.stat()
+    monkeypatch.setattr(storage,'_via_api',lambda:True)
+    monkeypatch.setattr(storage,'_listar',lambda *args,**kwargs:[dict(nome=path.name,pasta=False,tamanho=state.st_size,modificado=state.st_mtime)])
+    monkeypatch.setattr(storage.ArquivoStorage,'__str__',lambda self:str(path))
+    def unexpected_lookup(*args):
+        raise AssertionError('A pasta não deve ser consultada novamente para cada arquivo')
+    monkeypatch.setattr(storage,'_meta_remoto',unexpected_lookup)
+    item=explorer.navegar('storage','base-geoespacial/vetor')['itens'][0]
+    assert item['camada']=='municipios; sedes'
+    assert item['geometria_tipo']=='Multi Polygon; Point'
+    assert 'metadados_erro' not in item

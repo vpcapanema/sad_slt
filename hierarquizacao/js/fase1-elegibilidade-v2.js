@@ -1,10 +1,11 @@
 import {$, el, feedback} from '../../geoespacial/extracao-atributos/ui.js';
-import {json, post} from '../../geoespacial/extracao-atributos/api.js';
+import {json, post, esperar} from '../../geoespacial/extracao-atributos/api.js';
 import {escolherArquivo, identificarCamadas} from '../../geoespacial/extracao-atributos/explorador.js';
 import {validarCamada, descritorOriginal} from '../../geoespacial/extracao-atributos/camada-validada.js';
 import {escolherConfiguracao} from '../../geoespacial/extracao-atributos/lista-camadas.js';
-import {criarPrevia} from '../../geoespacial/extracao-atributos/previa.js?v=20261018-html';
+import {criarPrevia} from '../../geoespacial/extracao-atributos/previa.js?v=20261019-metadados';
 import {criarMapa} from '../../geoespacial/extracao-atributos/mapa.js';
+import {criarResultados} from './elegibilidade-resultados.js';
 
 const papeis = {entrada:'Entrada', restricao:'Restrição', risco:'Risco'};
 const selecao = {entrada:[], restricao:[], risco:[]};
@@ -23,7 +24,10 @@ const identidade = camada => {
 };
 const conflita = (a, b) => a === b || (a.endsWith('::') && b.startsWith(a)) || (b.endsWith('::') && a.startsWith(b));
 const mapa = criarMapa(atualizarBancada);
+const observadorPainel = new MutationObserver(atualizarBancada);
+let painelObservado = null;
 const previa = criarPrevia(state, render, {obterCamadas:camadasPrevia, aoMudarVisibilidade:controles});
+const resultados = criarResultados({avisar, aoOcupar:busy => { state.busy = busy; controles(); }});
 
 function avisar(mensagem, tipo='info') {
   node('status').textContent = mensagem;
@@ -99,6 +103,8 @@ function controles() {
   $('#ea-staging-confirmar').disabled = state.busy || !Object.keys(papeis).some(papel => marcadas(papel).length);
   if (state.busy) for (const checkbox of document.querySelectorAll('#ea-input-preview .ea-preview-visibility')) checkbox.disabled=true;
   $('#elegibilidade-app').setAttribute('aria-busy',String(state.busy));
+  conferirBancada();
+  resultados.atualizar(state.busy);
 }
 function render() {
   node('entrada-lista').replaceChildren();
@@ -219,7 +225,7 @@ async function selecionarHierarquizacao(codigo) {
         const cab = objeto.cabecalho_objeto || objeto;
         if (!cab.codigo) throw new Error('Há demanda sem código; confira o cadastro da hierarquização.');
         node('status').textContent = `Recuperando geometria ${camadas.length + 1} de ${objetos.length}: ${cab.codigo}`;
-        const resposta = await json(`/cadastro-geometrias/${dados.tipo_demanda}?codigo=${encodeURIComponent(cab.codigo)}`);
+        const resposta = await json(`/cadastro-geometrias/${dados.tipo_demanda}?codigo=${encodeURIComponent(cab.codigo)}&metadados=true`);
         const camada = resposta.itens.find(item => item.codigo === cab.codigo);
         if (!camada?.geojson?.features?.length || camada.geojson.features.some(f => !f.geometry)) {
           throw new Error(`A demanda ${cab.codigo} não possui geometria cadastrada. Nenhum ponto aproximado será criado; a prévia anterior foi mantida.`);
@@ -230,9 +236,9 @@ async function selecionarHierarquizacao(codigo) {
           geojson:{type:'FeatureCollection', features:camada.geojson.features.map(f => ({
             ...f, properties:{...f.properties, ...cab, hierarquizacao:codigo, objeto_hierarquizacao:objeto},
           }))},
-          metadados_local:{crs:'EPSG:4326', feicoes:camada.geojson.features.length,
+          metadados_local:{...camada.metadados_local, feicoes:camada.geojson.features.length,
             tipos_geometria:[...new Set(camada.geojson.features.map(f => f.geometry.type))],
-            limites_wgs84:camada.bounds, avisos:['Geometria atual do cadastro; informações da rodada preservadas nos atributos.']},
+            limites_wgs84:camada.bounds, avisos:[...(camada.metadados_local?.avisos||[]),'Geometria atual do cadastro; informações da rodada preservadas nos atributos.']},
         });
       }
       validarPapeis('entrada', camadas);
@@ -246,9 +252,113 @@ async function selecionarHierarquizacao(codigo) {
     }
   });
 }
+function conferirBancada() {
+  const atuais = mapa.camadas();
+  const visiveis = new Map((atuais || []).filter(camada => camada.visivel).map(camada => [camada.id, camada]));
+  node('calcular').disabled = state.busy || !enviados.entrada.some(c => visiveis.has(c.id))
+    || ![...enviados.restricao, ...enviados.risco].some(c => visiveis.has(c.id));
+  const conhecidos = new Set(Object.values(enviados).flat().map(camada => camada.id));
+  const contagens = [];
+  for (const [papel, nome] of Object.entries(papeis)) {
+    const camadas = enviados[papel].filter(camada => visiveis.has(camada.id));
+    contagens.push(`${nome}: ${camadas.length} marcada(s)`);
+    const linhas = camadas.map(camada => {
+      const fragmento = node('tpl-run-row').content.cloneNode(true);
+      fragmento.querySelector('tr').dataset.id = camada.id;
+      fragmento.querySelector('[data-name]').textContent = visiveis.get(camada.id).nome;
+      fragmento.querySelector('[data-source]').textContent = camada.id.startsWith('storage:')
+        ? camada.id.slice(8) : camada.arquivo || camada.id;
+      return fragmento;
+    });
+    node(`run-${papel}`).replaceChildren(...(linhas.length ? linhas : [node('tpl-run-empty').content.cloneNode(true)]));
+  }
+  node('run-count').textContent = contagens.join(' · ');
+  const adicionais = [...visiveis.keys()].filter(id => !conhecidos.has(id)).length;
+  const avisos = [];
+  if (!atuais) avisos.push('Aguarde o carregamento da bancada.');
+  else if (!enviados.entrada.some(camada => visiveis.has(camada.id))) avisos.push('Nenhuma camada de entrada marcada na bancada.');
+  if (adicionais) avisos.push(`${adicionais} camada(s) marcada(s) adicionada(s) diretamente na bancada não integra(m) esta composição. Envie as fontes pela prévia no papel correspondente.`);
+  node('run-warning').textContent = avisos.join(' ');
+}
+async function calcularElegibilidade() {
+  if (state.busy) return;
+  state.busy = true;
+  controles();
+  let processo, job, resultado;
+  const concluidas = [];
+  let cancelado = false;
+  const rota = '/extracao-atributos/elegibilidade/execucoes';
+  try {
+    const visiveis = new Set((mapa.camadas() || []).filter(c => c.visivel).map(c => c.id));
+    const conjunto = Object.fromEntries(Object.keys(papeis).map(p => [p, enviados[p].filter(c => visiveis.has(c.id))]));
+    mapa.assertReady(Object.values(conjunto).flat().map(c => c.id));
+    if (!conjunto.entrada.length || !conjunto.restricao.length && !conjunto.risco.length)
+      throw new Error('Marque uma entrada e ao menos uma base de restrição ou risco na bancada.');
+    const confirmado = await window.ProcessFeedback.confirmar({
+      title:'Executar elegibilidade territorial',
+      message:`Processar ${conjunto.entrada.length} entrada(s), ${conjunto.restricao.length} base(s) de restrição e ${conjunto.risco.length} de risco?`,
+      warning:'Cada base será intersectada separadamente com a entrada integral. As áreas serão somadas por feição, em m². Cada saída será gravada no storage e adicionada à bancada, sem alterar as fontes.',
+      confirmLabel:'Executar elegibilidade',
+    });
+    if (!confirmado) return;
+    resultados.iniciar();
+    const lote = crypto.randomUUID();
+    const referencia = c => ({id:c.id, nome:c.nome});
+    for (const entrada of conjunto.entrada) {
+      if (cancelado) break;
+      resultado = null;
+      job = null;
+      mapa.assertReady(Object.values(conjunto).flat().map(c => c.id));
+      processo = window.ProcessFeedback.iniciarCadastro({
+        title:`Elegibilidade territorial — ${entrada.nome}`,
+        tasks:['Preparar entrada integral','Intersectar bases e somar áreas','Gravar e conferir saída'],
+        onCancel:async () => {
+          if (job) await post(`${rota}/${job.id}/cancelar`, {});
+          cancelado = true;
+        },
+      });
+      job = await post(rota, {lote_id:lote, total_entradas:conjunto.entrada.length,
+        entrada:{...referencia(entrada), revisao:entrada.revisao},
+        restricao:conjunto.restricao.map(referencia), risco:conjunto.risco.map(referencia)});
+      if (cancelado) await post(`${rota}/${job.id}/cancelar`, {});
+      resultado = await esperar(job, id => `${rota}/${id}`);
+      resultados.adicionar(job.id);
+      const win = $('#ea-workbench-frame').contentWindow;
+      win.gpArquivos.adicionar({...resultado, categoria:'Elegibilidade territorial'}, {estiloPreparado:true});
+      mapa.assertReady([resultado.id]);
+      concluidas.push(resultado.nome);
+      await mapa.enquadrar([resultado.id], resultado.bounds);
+      processo.sucesso({title:'Camada de saída produzida',
+        message:`${resultado.nome} gravada no storage e adicionada à bancada.`,
+        detail:resultado.arquivo});
+    }
+    avisar(`${concluidas.length} camada(s) de saída produzida(s) e adicionada(s) à bancada: ${concluidas.join(', ')}.`, 'success');
+  } catch (erro) {
+    const persistida = resultado?.arquivo ? ` A saída já está gravada em ${resultado.arquivo}; abra esse arquivo na bancada, sem repetir o cálculo.` : '';
+    const anteriores = concluidas.length ? ` Saídas anteriores mantidas: ${concluidas.join(', ')}.` : '';
+    if (erro.name === 'AbortError') {
+      processo?.confirmarCancelamento(erro.message);
+      avisar(erro.message + anteriores);
+    } else {
+      const mensagem = erro.message + persistida + anteriores + (job && !resultado ? ` Execução: ${job.id}.` : '');
+      processo?.erro({title:'Elegibilidade não concluída', message:mensagem});
+      avisar(mensagem, 'error');
+    }
+  } finally {
+    await resultados.finalizar();
+    state.busy = false;
+    controles();
+  }
+}
 function atualizarBancada() {
   const atuais = mapa.camadas();
   if (!atuais) return;
+  const painel = $('#ea-workbench-frame').contentDocument.querySelector('#gp-layer-list');
+  if (painel && painel !== painelObservado) {
+    observadorPainel.disconnect();
+    observadorPainel.observe(painel, {childList:true});
+    painelObservado = painel;
+  }
   const ids = new Set(atuais.map(item => item.id));
   for (const papel of Object.keys(papeis)) enviados[papel] = enviados[papel].filter(item => ids.has(item.id));
   node('bancada-status').textContent = Object.entries(papeis).map(([papel, nome]) => `${nome}: ${enviados[papel].length}`).join(' · ');
@@ -400,6 +510,7 @@ node('entrada-limpar').onclick = () => { limparEntrada(); render(); };
 node('hier-limpar').onclick = node('entrada-limpar').onclick;
 node('hier-enviar').onclick = () => enviarPrevia('entrada');
 $('#ea-staging-confirmar').onclick = enviar;
+node('calcular').onclick = calcularElegibilidade;
 node('hierarquizacao').onchange = event => selecionarHierarquizacao(event.target.value);
 window.SLTAdminAuth.requireAuth();
 render();
