@@ -4,14 +4,26 @@ const assert = require('node:assert/strict');
 (async () => {
   const browser = await chromium.launch({channel: 'msedge', headless: true});
   try {
+    for (const prefix of ['', '/sicard']) {
     const page = await browser.newPage();
     const errors = [], requests = [];
     const meta = {token: 'fixture-token', escopo: 'Teste', objetivo: 'Comparar critérios',
       criterios: [], valido_ate: '2035-12-31', status: 'ativa', email_autorizado: false};
     page.on('pageerror', error => errors.push(error.message));
-    await page.route('**/api/**', async route => {
-      const request = route.request(), path = new URL(request.url()).pathname;
+    await page.route('http://127.0.0.1:8083/**', async route => {
+      const request = route.request(), url = new URL(request.url()), path = url.pathname;
+      if (!path.startsWith(prefix + '/api/')) {
+        if (prefix && path.startsWith(prefix + '/')) {
+          url.pathname = path.slice(prefix.length);
+          const response = await route.fetch({url: url.href,
+            headers: {...request.headers(), 'x-forwarded-prefix': prefix}});
+          return route.fulfill({response});
+        }
+        return route.continue();
+      }
       if (!path.includes('/publico/')) return route.fulfill({json: []});
+      const expected = prefix + '/api/ahp/comparacao-colaborativa/publico/fixture-token';
+      assert.ok(path === expected || path.startsWith(expected + '/'), 'URL pública inválida: ' + path);
       if (request.method() === 'GET') return route.fulfill({json: meta});
       const body = request.postDataJSON();
       requests.push({path, body});
@@ -25,7 +37,7 @@ const assert = require('node:assert/strict');
       return route.fulfill({json: {id: 'resposta', status: path.endsWith('/respostas') ? 'enviada' : 'em_preenchimento',
         matriz_comparacao: [[1, 1], [1, 1]]}});
     });
-    await page.goto('http://127.0.0.1:8083/public/analise-multicriterio/fixture-token/');
+    await page.goto('http://127.0.0.1:8083' + prefix + '/public/analise-multicriterio/fixture-token/');
     assert.equal(await page.locator('#collab-form-section').isVisible(), false);
     await page.locator('#colab-nome').fill('Nome livre do participante');
     await page.locator('#colab-inst').fill('Instituição de teste');
@@ -55,7 +67,9 @@ const assert = require('node:assert/strict');
     assert.equal(new URL(page.url()).searchParams.has('token_acesso'), false);
     assert.deepEqual(await page.evaluate(() => Object.values(localStorage).filter(value => value.includes('012345'))), []);
     assert.deepEqual(errors, []);
-    console.log('PASS: token obrigatório, erro sem liberar formulário, zeros iniciais, identificação travada e autorização no progresso/envio.');
+    console.log('PASS ' + (prefix || '/') + ': URLs corretas, token obrigatório, zeros iniciais, identificação travada e autorização no progresso/envio.');
+    await page.close();
+    }
   } finally {
     await browser.close();
   }

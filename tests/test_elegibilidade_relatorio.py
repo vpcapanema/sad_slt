@@ -144,6 +144,27 @@ def test_saida_alterada_impede_resultados_e_exportacao(analise):
         service.montar(['job-1', 'job-2'], nomes, 'autor', True)
 
 
+def test_nome_cadastral_nao_e_validado_como_alias_de_arquivo(analise, monkeypatch):
+    _, _, nomes = analise
+    ler = service._ler
+    cadastral = 'PROPOSTA FEPASA - CAMELÓDROMO COMPLEXO DO EIXO FERROVIÁRIO - ASSIS/SP'
+    longo = 'Demanda / setor _ especial ' * 10
+
+    def com_nomes(resultado):
+        frame, dados = ler(resultado)
+        frame.loc[0, 'nome'] = cadastral
+        frame.loc[1, 'nome'] = longo
+        return frame, dados
+
+    monkeypatch.setattr(service, '_ler', com_nomes)
+    modelo, _ = service.montar(['job-1', 'job-2'], nomes, 'autor', True)
+    assert modelo['entradas'][0]['linhas'][0]['nome'] == cadastral
+    assert modelo['entradas'][0]['linhas'][1]['nome'] == longo
+    assert service.pdf(modelo).startswith(b'%PDF')
+    with pytest.raises(ValueError, match='nome amigável'):
+        service.montar(['job-1', 'job-2'], {**nomes, 'entrada-1': 'Arquivo/indevido'}, 'autor', True)
+
+
 def test_parcial_identificado_e_lotes_distintos_recusados(analise):
     resultados, _, nomes = analise
     del nomes['entrada-2']

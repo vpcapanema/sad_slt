@@ -108,6 +108,20 @@ automatica nem alterar resultados existentes da hierarquizacao.
    reutilizado nos reenvios, sem aplicar novo buffer a uma demanda normalizada.
 
 A atribuicao de um papel pelo usuario nao equivale a homologacao da camada.
+O estado e o resultado das execucoes de elegibilidade sao publicados no storage
+por usuario e identificador, com substituicao atomica do registro. A consulta e
+o pedido de cancelamento funcionam entre os processos da API; o resultado
+final permanece consultavel apos reinicio, sem depender da memoria do worker.
+O bloqueio por usuario impede calculos simultaneos em processos distintos.
+Falhas na persistencia do acompanhamento sao informadas explicitamente.
+A apresentacao conserva os nomes cadastrais das demandas, inclusive barras
+como em `ASSIS/SP`; as regras de validacao dos aliases revisados de camadas
+nao sao aplicadas a esses atributos cadastrais.
+Os tiles do mapa sao representacoes: a geracao recorta na extensao do tile,
+separa componentes multipartes e subdivide representacoes complexas em
+fragmentos com ate 16.000 vertices, preservando o identificador da fonte.
+A simplificacao e limitada a resolucao do tile e nao modifica o arquivo,
+as geometrias integrais nem os valores usados nos calculos e relatorios.
 A vinculacao com as fases seguintes e a apresentacao de classificacoes dependem
 de definicao posterior.
 As regras metodologicas abaixo permanecem como referencia, nao como calculo

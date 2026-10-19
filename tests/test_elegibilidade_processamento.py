@@ -204,7 +204,25 @@ def test_arquivo_persistido_reabre_com_descritor_real_da_bancada(storage_sinteti
     assert original.ri_inund.iloc[0] == 100 and original.nome.iloc[0] == 'A'
 
 
-def test_job_cancelado_e_erro_explicito(monkeypatch, caplog):
+@pytest.fixture
+def jobs_compartilhados(monkeypatch):
+    from contextlib import nullcontext
+    from api.services import elegibilidade_jobs as jobs
+    arquivos = {}
+
+    def baixar(caminho):
+        if caminho not in arquivos:
+            raise FileNotFoundError(caminho)
+        return arquivos[caminho]
+
+    monkeypatch.setattr(jobs.storage_remoto, 'baixar', baixar)
+    monkeypatch.setattr(jobs.storage_remoto, 'enviar_bytes', arquivos.__setitem__)
+    monkeypatch.setattr(jobs.storage_remoto, 'mover', lambda origem, destino: arquivos.__setitem__(destino, arquivos.pop(origem)))
+    monkeypatch.setattr(jobs, 'bloquear_arquivo', lambda caminho: nullcontext())
+    return arquivos
+
+
+def test_job_cancelado_e_erro_explicito(monkeypatch, caplog, jobs_compartilhados):
     from api.services import elegibilidade_jobs as jobs
     tarefas = []
     monkeypatch.setattr(jobs, '_jobs', {})
@@ -225,7 +243,7 @@ def test_job_cancelado_e_erro_explicito(monkeypatch, caplog):
     assert 'Falha na execução de elegibilidade' in caplog.text
 
 
-def test_rotas_jobs_privados_e_validacao(monkeypatch):
+def test_rotas_jobs_privados_e_validacao(monkeypatch, jobs_compartilhados):
     from api.services import elegibilidade_jobs as jobs
     from api.routers.extracao_atributos import router
     from api.deps.auth import require_geospatial_access
@@ -257,7 +275,7 @@ def test_rotas_jobs_privados_e_validacao(monkeypatch):
                            json={**payload, 'restricao': []}).status_code == 422
 
 
-def test_lote_longo_com_mais_de_trinta_entradas_preserva_resultados(monkeypatch):
+def test_lote_longo_com_mais_de_trinta_entradas_preserva_resultados(monkeypatch, jobs_compartilhados):
     from api.services import elegibilidade_jobs as jobs
     clock = [100.]
     monkeypatch.setattr(jobs, 'monotonic', lambda: clock[0])

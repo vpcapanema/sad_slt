@@ -5,9 +5,12 @@ header `X-Forwarded-Prefix`. Sem esse header (dev local), não faz nada.
 A aplicação usa caminhos absolutos fixos em templates e JS estáticos
 (`/assets/...`, `/api/...`, `/public/...`, `/restrict/...`, `/data/...`).
 Este middleware prefixa essas strings nas respostas texto (HTML/CSS/JS/JSON)
-e no header `Location`, sem exigir mudanças nos templates.
+e no header `Location`, sem exigir mudanças nos templates. Apenas raízes
+completas são reescritas: `/publico` não é a raiz `/public`.
 """
 from __future__ import annotations
+
+import re
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -16,6 +19,13 @@ from starlette.responses import Response
 # "/config/" leva a barra de propósito: sem ela, textos como "/configuracao/"
 # (comparados com location.pathname no AHP) também seriam prefixados.
 _REWRITE_PREFIXES = ("/assets", "/api", "/public", "/restrict", "/data", "/config/", "/favicon.ico")
+_ROOT_BOUNDARY = r"""(?=[/?#"'`]|$)"""
+_REWRITE_PATTERN = re.compile(
+    r"""(["'`])("""
+    + "|".join(re.escape(path) + ("" if path.endswith("/") else _ROOT_BOUNDARY)
+               for path in _REWRITE_PREFIXES)
+    + ")"
+)
 _REWRITE_CONTENT_TYPES = (
     "text/html",
     "text/css",
@@ -50,9 +60,7 @@ class SubpathRewriteMiddleware(BaseHTTPMiddleware):
             return Response(content=body, status_code=response.status_code, headers=dict(response.headers))
 
         text = body.decode("utf-8", errors="ignore")
-        for path in _REWRITE_PREFIXES:
-            for quote in ('"', "'", "`"):
-                text = text.replace(f"{quote}{path}", f"{quote}{prefix}{path}")
+        text = _REWRITE_PATTERN.sub(lambda match: f"{match[1]}{prefix}{match[2]}", text)
         new_body = text.encode("utf-8")
 
         raw_headers = [

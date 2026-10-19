@@ -1683,7 +1683,8 @@
     const color=layerColor(id,types);
     const query=storageTileQuery(info);
     if(info.revisao)query.set("v",info.revisao);
-    const source={type:"vector",tiles:[info.tiles_url||`${location.origin}${API}/storage/camada/tiles/{z}/{x}/{y}.pbf?${query}`],minzoom:0,maxzoom:22};
+    const tileUrl=info.tiles_url||`${location.origin}${API}/storage/camada/tiles/{z}/{x}/{y}.pbf?${query}`;
+    const source={type:"vector",tiles:[`${tileUrl}${tileUrl.includes("?")?"&":"?"}representacao=segmentos-20261019`],minzoom:0,maxzoom:22};
     const b=info.bounds;
     if(Array.isArray(b)&&b.length===4&&b.every(Number.isFinite))source.bounds=[Math.max(-180,b[0]),Math.max(-85.0511,b[1]),Math.min(180,b[2]),Math.min(85.0511,b[3])];
     if(atualizarFonte)sourceAtual.setTiles(source.tiles);

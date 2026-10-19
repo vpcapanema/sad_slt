@@ -543,6 +543,52 @@ def tile(caminho: str, camada: str | None, z: int, x: int, y: int) -> bytes:
     return _tile(str(arquivo), camada, (estado.st_mtime_ns, estado.st_size), z, x, y)
 
 
+def _limitar_vertices_tile(ds, resolucao):
+    camada = ds.GetLayer(0)
+    def vertices(geom):
+        return geom.GetPointCount() + sum(vertices(geom.GetGeometryRef(i)) for i in range(geom.GetGeometryCount()))
+    complexas = [feicao.Clone() for feicao in camada if vertices(feicao.GetGeometryRef()) > 16000]
+    for feicao in complexas:
+        pendentes = [(feicao.GetGeometryRef().SimplifyPreserveTopology(resolucao / 4), 0)]
+        fragmentos = []
+        while pendentes:
+            geom, profundidade = pendentes.pop()
+            if geom is None:
+                raise RuntimeError('Não foi possível preparar a geometria complexa do tile.')
+            if geom.IsEmpty():
+                continue
+            if vertices(geom) <= 16000:
+                fragmentos.append(geom)
+                continue
+            if profundidade >= 32:
+                raise RuntimeError('A geometria excede o limite de complexidade da representação do mapa.')
+            xmin, xmax, ymin, ymax = geom.GetEnvelope()
+            if xmax - xmin >= ymax - ymin:
+                meio = (xmin + xmax) / 2
+                caixas = [(xmin, ymin, meio, ymax), (meio, ymin, xmax, ymax)]
+            else:
+                meio = (ymin + ymax) / 2
+                caixas = [(xmin, ymin, xmax, meio), (xmin, meio, xmax, ymax)]
+            for x0, y0, x1, y1 in caixas:
+                caixa = ogr.CreateGeometryFromWkt(f'POLYGON(({x0} {y0},{x1} {y0},{x1} {y1},{x0} {y1},{x0} {y0}))')
+                recorte = geom.Intersection(caixa)
+                if recorte is None:
+                    raise RuntimeError('Não foi possível subdividir a representação do tile.')
+                if not recorte.IsEmpty() and recorte.GetDimension() == geom.GetDimension():
+                    pendentes.append((recorte, profundidade + 1))
+        if not fragmentos:
+            raise RuntimeError('A subdivisão não preservou a representação da feição.')
+        if camada.DeleteFeature(feicao.GetFID()) != 0:
+            raise RuntimeError('Não foi possível substituir a representação complexa do tile.')
+        for geom in fragmentos:
+            fragmento = feicao.Clone()
+            fragmento.SetFID(-1)
+            fragmento.SetGeometry(geom)
+            if camada.CreateFeature(fragmento) != 0:
+                raise RuntimeError('Não foi possível criar o fragmento da representação do tile.')
+    camada.ResetReading()
+
+
 @lru_cache(maxsize=256)
 def _tile(arquivo: str, camada: str | None, _versao: tuple[int, int], z: int, x: int, y: int) -> bytes:
     """Um tile MVT (camada interna "camada", sem compressão) gerado do arquivo.
@@ -565,11 +611,20 @@ def _tile(arquivo: str, camada: str | None, _versao: tuple[int, int], z: int, x:
         campo_fid = campo_fid_tile(lyr)
         nome_sql = lyr.GetName().replace('"', '""')
         consulta = f'SELECT FID AS "{campo_fid}", * FROM "{nome_sql}"'
+        memoria = gdal.VectorTranslate(
+            '', ds, format='Memory', SQLStatement=consulta, SQLDialect='OGRSQL',
+            layerName='camada', spatFilter=filtro, dstSRS='EPSG:3857',
+            clipDst=[limites.left - margem, limites.bottom - margem, limites.right + margem, limites.top + margem],
+            explodeCollections=True, makeValid=True,
+        )
+        if memoria is None:
+            raise RuntimeError('Não foi possível recortar as feições para o tile.')
+        _limitar_vertices_tile(memoria, (limites.right - limites.left) / _EXTENSAO_TILE)
         gdal.VectorTranslate(
-            destino, ds, format="MVT", SQLStatement=consulta, SQLDialect="OGRSQL",
-            layerName="camada", spatFilter=filtro,
+            destino, memoria, format="MVT", layerName="camada",
             datasetCreationOptions=[
                 f"MINZOOM={z}", f"MAXZOOM={z}", "COMPRESS=NO", "FORMAT=DIRECTORY",
+                "SIMPLIFICATION=1", "SIMPLIFICATION_MAX_ZOOM=1",
             ],
         )
         alvo = f"{destino}/{z}/{x}/{y}.pbf"

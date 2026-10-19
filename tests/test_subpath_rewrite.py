@@ -2,6 +2,7 @@
 from fastapi.testclient import TestClient
 from fastapi import FastAPI
 from fastapi.responses import Response
+import pytest
 
 from api.middleware.subpath_rewrite import SubpathRewriteMiddleware
 from api.server import app
@@ -35,3 +36,35 @@ def test_texto_que_so_comeca_com_config_nao_e_prefixado():
 def test_sem_cabecalho_de_prefixo_nada_muda():
     js = TestClient(app).get("/assets/js/catalog.js").text
     assert '"/config/catalogo-slt.json"' in js
+
+
+def test_cliente_colaborativo_prefixa_base_mas_nao_segmento_publico():
+    js = TestClient(app).get("/restrict/ahp/js/colaborativa-api.js", headers=PREFIXO).text
+    assert 'var BASE = "/sicard/api/ahp/comparacao-colaborativa"' in js
+    assert 'request("/publico/"' in js
+    assert "/sicard/publico/" not in js
+
+
+@pytest.mark.parametrize("aspas", ['"', "'", "`"])
+def test_reescrita_respeita_limites_dos_segmentos(aspas):
+    caminhos = [
+        "/public", "/public/formulario", "/api?pagina=1", "/assets#inicio",
+        "/restrict/", "/data/base.json", "/config/matriz.json", "/favicon.ico",
+        "/publico/", "/apiario/", "/assets-extra/", "/database/", "/restriction/",
+        "/favicon.ico.backup", "/configuracao/", "/sicard/public/formulario",
+    ]
+    esperado = [
+        "/sicard/public", "/sicard/public/formulario", "/sicard/api?pagina=1", "/sicard/assets#inicio",
+        "/sicard/restrict/", "/sicard/data/base.json", "/sicard/config/matriz.json", "/sicard/favicon.ico",
+        *caminhos[8:],
+    ]
+    probe = FastAPI()
+    probe.add_middleware(SubpathRewriteMiddleware)
+
+    @probe.get("/probe.js")
+    def source():
+        return Response(",".join(aspas + path + aspas for path in caminhos),
+                        media_type="application/javascript")
+
+    response = TestClient(probe).get("/probe.js", headers=PREFIXO)
+    assert response.text == ",".join(aspas + path + aspas for path in esperado)

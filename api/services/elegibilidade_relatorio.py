@@ -271,7 +271,7 @@ def montar(identificadores: list[str], nomes: dict[str, str], dono, revisados: b
         for registro in registros(frame):
             areas = [registro[c['campo']] for c in campos]
             linhas.append({'id': texto(registro[audit['campo_id']]),
-                           'nome': titulo(aliases.automatico(texto(registro[nome_coluna]))) if nome_coluna and registro[nome_coluna] else '',
+                           'nome': texto(registro[nome_coluna]) if nome_coluna and registro[nome_coluna] else '',
                            'areas': areas, 'areas_texto': ['—' if v is None else texto(v) for v in areas]})
         ocorrencias = [any(v is not None for v in linha['areas']) for linha in linhas]
         painel = _painel(frame, conteudo, audit, nomes, linhas)

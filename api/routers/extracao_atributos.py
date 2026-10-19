@@ -265,6 +265,8 @@ def executar_elegibilidade(payload: ExecucaoElegibilidade, user: SessionUser = D
         return elegibilidade_jobs.iniciar(payload.model_dump(), user.id)
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc)) from exc
 
 
 @router.get('/elegibilidade/execucoes/{ident}')
@@ -274,6 +276,10 @@ def consultar_elegibilidade(ident: str, user: SessionUser = Depends(require_geos
         return elegibilidade_jobs.consultar(ident, user.id)
     except FileNotFoundError as exc:
         raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc)) from exc
 
 
 @router.post('/elegibilidade/execucoes/{ident}/cancelar')
@@ -285,6 +291,8 @@ def cancelar_elegibilidade(ident: str, user: SessionUser = Depends(require_geosp
         raise HTTPException(404, str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(409, str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc)) from exc
 
 
 class ReferenciasResultadosElegibilidade(BaseModel):
@@ -306,6 +314,8 @@ def preparar_resultados_elegibilidade(payload: ReferenciasResultadosElegibilidad
         raise HTTPException(404, str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc)) from exc
 
 
 @router.post('/elegibilidade/resultados/visualizar')

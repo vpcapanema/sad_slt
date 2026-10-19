@@ -11,7 +11,7 @@ from pathlib import Path
 import mercantile
 import pytest
 from fastapi.testclient import TestClient
-from osgeo import ogr, osr
+from osgeo import gdal, ogr, osr
 
 from api.server import app
 from api.services import storage_geoespacial
@@ -30,6 +30,47 @@ def _gpkg(caminho: Path, camadas: tuple[str, ...] = ("uf",)) -> None:
         feicao.SetGeometry(ogr.CreateGeometryFromWkt("POLYGON((-50 -24,-45 -24,-45 -20,-50 -20,-50 -24))"))
         lyr.CreateFeature(feicao)
     ds = None
+
+
+@pytest.mark.parametrize('com_furos', [False, True])
+def test_tile_fragmenta_multipoligono_acima_do_limite_de_vertices(tmp_path, com_furos):
+    from hashlib import sha256
+    import geopandas as gpd
+    from shapely.geometry import MultiPolygon, Polygon, box
+    alvo = mercantile.tile(-47.5, -22, 6)
+    limites = mercantile.xy_bounds(alvo)
+    escala = (limites.right - limites.left) / 4096
+    partes = [box(limites.left + (100 + i % 130 * 20) * escala,
+                  limites.bottom + (100 + i // 130 * 20) * escala,
+                  limites.left + (105 + i % 130 * 20) * escala,
+                  limites.bottom + (105 + i // 130 * 20) * escala) for i in range(17000)]
+    arquivo = tmp_path / 'complexa.gpkg'
+    geometria = (Polygon(box(limites.left + 50 * escala, limites.bottom + 50 * escala,
+                            limites.left + 2800 * escala, limites.bottom + 2800 * escala).exterior,
+                         [parte.exterior for parte in partes]) if com_furos else MultiPolygon(partes))
+    gpd.GeoDataFrame({'codigo': ['ORIGINAL']}, geometry=[geometria], crs=3857).to_file(
+        arquivo, layer='entrada', driver='GPKG', engine='pyogrio')
+    assinatura = sha256(arquivo.read_bytes()).hexdigest()
+    conteudo = storage_geoespacial._tile(str(arquivo), 'entrada', (0, 0), alvo.z, alvo.x, alvo.y)
+    nome = '/vsimem/sicard-teste-vertices.pbf'
+    gdal.FileFromMemBuffer(nome, conteudo)
+    try:
+        ds = gdal.OpenEx(nome, gdal.OF_VECTOR)
+        camada = ds.GetLayer(0)
+        def pontos(geometria):
+            return geometria.GetPointCount() + sum(pontos(geometria.GetGeometryRef(i))
+                                                   for i in range(geometria.GetGeometryCount()))
+        feicoes = list(camada)
+        assert len(feicoes) > 1
+        if not com_furos:
+            assert len(feicoes) == 17000
+        assert max(pontos(f.GetGeometryRef()) for f in feicoes) < 65535
+        assert {f.GetField('slt_fid') for f in feicoes} == {1}
+        assert {f.GetField('codigo') for f in feicoes} == {'ORIGINAL'}
+        ds = None
+    finally:
+        gdal.Unlink(nome)
+    assert sha256(arquivo.read_bytes()).hexdigest() == assinatura
 
 
 @pytest.fixture

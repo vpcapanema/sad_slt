@@ -18,7 +18,7 @@
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Título**                 | Metodologia do Sistema de Hierarquização de Demandas — SICARD                                                                                                         |
 | **Número**                 | NT-SICARD-001/2026                                                                                                                                                       |
-| **Versão**                 | 1.22                                                                                                                                                                      |
+| **Versão**                 | 1.23                                                                                                                                                                      |
 | **Data de emissão**        | 19/10/2026                                                                                                                                                               |
 | **Classificação**         | Documento técnico-metodológico de entrega ao cliente                                                                                                                   |
 | **Sistema**                 | SICARD — Sistema de Apoio à Tomada de Decisão                                                                                                                         |
@@ -56,6 +56,7 @@
 | 1.20    | 19/10/2026 | `[preencher]` | Apresentação dinâmica dos resultados por base, revisão explícita de aliases em português brasileiro, mapa-síntese e relatório PDF completo, com pacote de geometrias e verificação de integridade das saídas. |
 | 1.21    | 19/10/2026 | `[preencher]` | Persistência das áreas totais e interseções vinculadas no GeoPackage, painel integrado de mapa, tabela e gráfico por feição, apresentação em km² e hectares, percentuais por demanda e persistência da revisão dos nomes. |
 | 1.22    | 19/10/2026 | `[preencher]` | Consolidação integral das demandas de uma hierarquização em um único GeoPackage e uma única camada no envio confirmado da prévia à bancada, preservando registros, atributos e rastreabilidade das fontes, sem dissolução entre demandas. |
+| 1.23    | 19/10/2026 | `[preencher]` | Persistência do acompanhamento das execuções entre processos e reinícios, preservação dos nomes cadastrais na apresentação e limitação da complexidade dos tiles por fragmentação visual, sem alteração dos arquivos, áreas ou geometrias de cálculo. |
 
 ---
 
@@ -367,6 +368,21 @@ Quando a entrada provém de uma hierarquização, exige-se que todas as demandas
 do grupo estejam na prévia e marcadas para envio, impedindo a apresentação de
 um subconjunto como se representasse o grupo integral.
 Essa atribuição de papel não constitui homologação.
+
+O estado e o resultado das execuções são registrados no storage por usuário
+e identificador, com substituição atômica. A consulta e o cancelamento são
+compartilhados entre os processos da API, e os resultados concluídos permanecem
+consultáveis após reinício. Um bloqueio por usuário impede cálculos simultâneos
+em processos distintos; falhas na persistência do acompanhamento são explícitas.
+Os nomes cadastrais das demandas, inclusive barras de identificação territorial,
+são preservados na apresentação, sem aplicar-lhes a validação dos aliases
+revisados das camadas.
+
+Os tiles constituem somente representações cartográficas: são recortados na
+extensão de exibição, com separação de componentes multipartes e subdivisão de
+representações complexas em fragmentos de até 16.000 vértices, preservando o
+identificador de origem. A simplificação observa a resolução do tile; não altera
+os arquivos, as geometrias integrais, as áreas calculadas nem os relatórios.
 
 **Normalização geométrica das demandas.** A prévia conserva a representação da
 fonte. No envio confirmado à bancada, as demandas de entrada são representadas
