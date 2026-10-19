@@ -205,7 +205,7 @@ async function carregarHierarquizacoes() {
   select.replaceChildren(new Option('Selecione uma hierarquização', ''),
     ...lista.map(item => new Option(`${item.codigo} — ${item.nome}`, item.codigo)));
   select.value = anterior;
-  avisar(`${lista.length} hierarquização(ões) disponível(is).`);
+  node('status').textContent = `${lista.length} hierarquização(ões) disponível(is).`;
 }
 async function selecionarHierarquizacao(codigo) {
   if (!codigo) {

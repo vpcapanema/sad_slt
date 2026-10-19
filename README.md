@@ -242,6 +242,13 @@ o CSV; FIDs de 64 bits são mantidos sem arredondamento. Os identificadores téc
 não são inseridos como novos atributos nos arquivos e não constituem UUIDs globais.
 A elegibilidade v2 acompanha os envios à prévia e à bancada pelo feedback
 padronizado, com etapas, camada corrente, cancelamento e resultado explícito.
+O modal compartilhado mostra a etapa e a atividade atuais, a situação, o tempo
+decorrido, a última etapa concluída e os avisos que exigem atenção. O percentual
+da atividade e o avanço das etapas são apresentados separadamente; sem medição,
+a barra correspondente permanece indeterminada, sem estimativa de tempo restante.
+Ocultar o acompanhamento não cancela a execução. O histórico técnico não aparece
+na interface; os registros limitados de diagnóstico e sua exportação programática
+permanecem disponíveis ao suporte.
 No envio confirmado à bancada, as demandas de entrada reutilizam a normalização
 cadastral: ponto/multiponto com raio de 50 m; linha/multilinha com 25 m por lado,
 em EPSG:5880, com 32 segmentos por quadrante e saída poligonal em EPSG:4674.

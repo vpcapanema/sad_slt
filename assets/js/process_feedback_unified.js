@@ -49,36 +49,44 @@
       <button type="button" class="pfs-close" id="pfsProgressClose" aria-label="Ocultar acompanhamento" title="Ocultar acompanhamento"><i class="fas fa-minus" aria-hidden="true"></i></button>
     </div>
     <div class="pfs-body">
-      <div class="pfs-result-icon pfs-progress-icon"><i class="fas fa-cog fa-spin" aria-hidden="true"></i></div>
-      <h2 class="pfs-result-title pfs-progress-title">Acompanhamento do processo</h2>
-      <p class="pfs-progress-description" role="status" aria-live="polite" data-pfs="current-summary">Iniciando processo...</p>
+      <section class="pfs-current-stage" aria-label="Etapa atual">
+        <h4>Etapa Atual</h4>
+        <p class="pfs-progress-description" role="status" aria-live="polite" data-pfs="current-summary">Preparando a execução...</p>
+      </section>
+      <dl class="pfs-run-info">
+        <div><dt>Situação</dt><dd data-pfs="run-state" role="status" aria-live="polite">Em execução</dd></div>
+        <div><dt>Tempo Decorrido</dt><dd data-pfs="elapsed">00:00</dd></div>
+      </dl>
       <div class="pfs-task-card pfs-hidden" id="pfsTaskCard">
         <div class="pfs-task-step"><span class="pfs-task-step-num" data-pfs="task-step-num">1</span><span class="pfs-task-step-total" data-pfs="task-step-total">de 1</span></div>
         <div class="pfs-task-info"><div class="pfs-task-name" data-pfs="task-name">Iniciando...</div><div class="pfs-task-desc" data-pfs="task-desc"></div></div>
         <div class="pfs-task-spinner"><i class="fas fa-circle-notch fa-spin" aria-hidden="true"></i></div>
       </div>
+      <section class="pfs-messages" aria-label="Atividade em andamento">
+        <div class="pfs-activity-panel"><h4>O Que Está Sendo Feito</h4><div class="pfs-active-details" role="status" aria-live="polite" data-pfs="active-detail"></div></div>
+        <p class="pfs-contact" data-pfs="contact-status" role="status"></p>
+      </section>
+      <section class="pfs-warning-panel" id="pfsProgressWarning" hidden role="alert">
+        <h4 data-pfs="warning-title">Atenção</h4><p data-pfs="warning-message"></p>
+      </section>
       <div class="pfs-task-progress" id="pfsTaskProgress">
-        <div class="pfs-progress-info"><span data-pfs="task-progress-detail">Aguardando medição da tarefa</span><span data-pfs="task-progress-percent">Em andamento</span></div>
+        <h4>Progresso da Atividade</h4>
+        <div class="pfs-progress-info"><span data-pfs="task-progress-detail">Percentual ainda não disponível</span><span data-pfs="task-progress-percent">Em andamento</span></div>
         <div class="pfs-progress-bar pfs-progress-indeterminate" id="pfsTaskProgressBar" role="progressbar" aria-label="Progresso da tarefa atual" aria-valuemin="0" aria-valuemax="100"><div class="pfs-progress-fill" id="pfsTaskProgressFill"></div></div>
       </div>
-      <section class="pfs-messages" aria-label="Mensagens do processamento">
-        <div class="pfs-active-details" role="status" aria-live="polite" aria-label="Atividade em execução" data-pfs="active-detail"></div>
-        <p class="pfs-contact" data-pfs="contact-status"></p>
-        <details class="pfs-history-details"><summary>Histórico recebido</summary>
-          <div class="pfs-log-tools"><button type="button" id="pfsFollowLog" aria-pressed="true">Seguir atualizações</button><button type="button" id="pfsDownloadLog">Baixar histórico recebido</button></div>
-          <p class="pfs-history-note" data-pfs="history-note"></p>
-          <div class="pfs-log" id="pfsLog" role="log" aria-live="off" aria-label="Histórico recebido do processo" tabindex="0"></div>
-          <details class="pfs-completed-details"><summary>Operações concluídas <span data-pfs="completed-count">0</span> (até 100 recentes)</summary><div class="pfs-completed-list" id="pfsCompletedList"></div></details>
-        </details>
-      </section>
+      <div class="pfs-progress-wrapper">
+        <h4>Avanço das Etapas</h4>
+        <div class="pfs-progress-info"><span data-pfs="progress-meta">Etapas ainda não informadas</span><span class="pfs-progress-percent" data-pfs="progress-percent">Em andamento</span></div>
+        <div class="pfs-progress-bar" role="progressbar" aria-label="Avanço das etapas do processo; não representa tempo restante" aria-valuemin="0" aria-valuemax="100"><div class="pfs-progress-fill" id="pfsProgressFill"></div></div>
+        <div class="pfs-segments" id="pfsSegments"></div>
+        <p class="pfs-progress-note">O avanço das etapas não representa uma estimativa do tempo restante.</p>
+      </div>
+      <p class="pfs-last-completed" data-pfs="last-completed"></p>
+      <p class="pfs-progress-guidance">Mantenha esta página aberta para acompanhar o resultado. Ocultar este painel não cancela o processamento.</p>
+      <div id="pfsDiagnostics" hidden aria-hidden="true"><div class="pfs-log" id="pfsLog"></div><div class="pfs-completed-list" id="pfsCompletedList"></div></div>
     </div>
     <div class="pfs-progress-footer">
       <button type="button" class="pfs-btn pfs-btn--cancel" id="pfsCancelBtn" hidden><i class="fas fa-ban" aria-hidden="true"></i><span class="pfs-cancel-label">CANCELAR</span></button>
-    </div>
-    <div class="pfs-progress-wrapper">
-      <div class="pfs-progress-info"><span data-pfs="progress-meta">Tarefa 0 de 0</span><span class="pfs-progress-percent" data-pfs="progress-percent">0%</span></div>
-      <div class="pfs-progress-bar" role="progressbar" aria-label="Avanço das etapas do processo; não representa tempo restante" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="pfs-progress-fill" id="pfsProgressFill"></div></div>
-      <div class="pfs-segments" id="pfsSegments"></div>
     </div>
   </div>
 </div>
@@ -270,19 +278,6 @@
                 this.cancelBtn.dataset.pfsBound = '1';
                 this.cancelBtn.addEventListener('click', () => _progressSystem?.cancelar());
                 q('#pfsProgressClose')?.addEventListener('click', () => _progressSystem?.ocultar());
-                q('#pfsFollowLog')?.addEventListener('click', () => {
-                    const p = _progressSystem; if (!p) return;
-                    p._followLog = !p._followLog;
-                    q('#pfsFollowLog').setAttribute('aria-pressed', String(p._followLog));
-                    if (p._followLog) p.logEl.scrollTop = p.logEl.scrollHeight;
-                });
-                q('#pfsDownloadLog')?.addEventListener('click', () => _progressSystem?.baixarHistorico());
-                this.logEl.addEventListener('scroll', () => {
-                    const p = _progressSystem; if (!p) return;
-                    if (p.logEl.scrollHeight - p.logEl.scrollTop - p.logEl.clientHeight > 40) {
-                        p._followLog = false; q('#pfsFollowLog').setAttribute('aria-pressed', 'false');
-                    }
-                });
                 this.box.addEventListener('keydown', e => {
                     if (e.key !== 'Tab' || !this.overlay.classList.contains('pfs-active')) return;
                     const nodes = [...this.box.querySelectorAll('button, summary, [tabindex="0"]')].filter(n => !n.disabled && n.getClientRects().length);
@@ -316,16 +311,16 @@
             this._history = []; this._historyDropped = 0; this._followLog = true; this._completedCount = 0;
             clearTimeout(this._summaryTimer); this._summaryTimer = null; this._summary = null;
             this._cancelPending = false; this._finalizado = false;
-            q('#pfsFollowLog')?.setAttribute('aria-pressed', 'true');
-            pfsText('completed-count', '0'); pfsText('history-note', ''); pfsText('contact-status', '');
+            this._estadoFinal = '';
+            q('#pfsProgressWarning').hidden = true;
+            pfsText('warning-message', ''); pfsText('last-completed', ''); pfsText('contact-status', '');
             pfsText('current-summary', autoSub);
             pfsText('active-detail', '');
-            q('.pfs-history-details', this.box).open = false;
             this.resumo(autoSub);
             this.progressFill.style.width = '0%';
-            this._barra(0);
+            this._barra(this.tasks.length ? 0 : null);
             this.progressoTarefa(null);
-            pfsText('progress-meta', `Tarefa 0 de ${this.tasks.length}`);
+            pfsText('progress-meta', this.tasks.length ? `0 de ${this.tasks.length} etapas concluídas` : 'Etapas ainda não informadas');
 
             /* Task card */
             if (this.tasks.length > 0) {
@@ -380,7 +375,7 @@
             pfsText('task-step-total', `de ${this.tasks.length}`);
             pfsText('task-name', taskName);
             pfsText('task-desc', description || this.tasks[idx].desc);
-            this.resumo(`${taskName}. Por favor, mantenha esta aba aberta.`);
+            this.resumo(taskName);
             if (description) pfsText('active-detail', description);
             pfsText('progress-meta', `Tarefa ${idx + 1} de ${this.tasks.length}`);
             this.taskCard.classList.remove('pfs-hidden');
@@ -426,6 +421,7 @@
             this.completedList.appendChild(item);
             while (this.completedList.children.length > 100) this.completedList.firstElementChild.remove();
             pfsText('completed-count', ++this._completedCount);
+            pfsText('last-completed', `Última etapa concluída: ${taskName}.`);
 
             /* Auto-progress */
             const totalW = this.tasks.reduce((s, t) => s + t.weight, 0);
@@ -442,11 +438,14 @@
             this._percent = Math.min(100, Math.max(0, Math.round(Number(percent) || 0)));
             if (this.progressFill) this.progressFill.style.width = this._percent + '%';
             this._barra(this._percent);
-            if (!this._hasTaskMeasure) this.progressoTarefa(null);
         }
         _barra(pct) {
-            pfsText('progress-percent', pct + '%');
-            q('#pfsProgressFill')?.parentElement.setAttribute('aria-valuenow', String(pct));
+            pfsText('progress-percent', pct === null ? 'Em andamento' : pct + '%');
+            const bar = q('#pfsProgressFill')?.parentElement;
+            if (!bar) return;
+            bar.classList.toggle('pfs-progress-indeterminate', pct === null);
+            if (pct === null) { bar.removeAttribute('aria-valuenow'); this.progressFill.style.width = ''; }
+            else bar.setAttribute('aria-valuenow', String(pct));
         }
 
         /* A barra individual usa somente medidas recebidas; ausência é indeterminada. */
@@ -456,21 +455,19 @@
             const bar=q('#pfsTaskProgressBar'), fill=q('#pfsTaskProgressFill');
             if(!bar)return;
             const measured=typeof percent==='number' && Number.isFinite(percent);
-            this._hasTaskMeasure = measured;
-            const overall = !measured && this._percent > 0;
-            const pct=measured?Math.min(100,Math.max(0,percent)):overall?this._percent:null;
-            bar.setAttribute('aria-label', measured || !overall ? 'Progresso da tarefa atual' : 'Avanço das etapas do processo');
+            const pct=measured?Math.min(100,Math.max(0,percent)):null;
+            bar.setAttribute('aria-label', 'Progresso da tarefa atual');
             bar.classList.toggle('pfs-progress-indeterminate',pct===null);
             if(pct!==null){bar.setAttribute('aria-valuenow',String(pct));fill.style.width=pct+'%';}
             else{bar.removeAttribute('aria-valuenow');fill.style.width='';}
             pfsText('task-progress-percent',pct!==null?`${Math.round(pct)}%`:'Em andamento');
-            pfsText('task-progress-detail',!measured && overall?'Avanço das etapas do processo':Number.isFinite(feitas)&&Number.isFinite(total)&&total>0
+            pfsText('task-progress-detail',Number.isFinite(feitas)&&Number.isFinite(total)&&total>0
                 ?`${feitas.toLocaleString('pt-BR')} de ${total.toLocaleString('pt-BR')} ${unidade||'itens'}`
-                :measured?'Progresso da tarefa atual':'Tarefa em execução; percentual ainda não informado');
+                :measured?'Progresso informado para esta atividade':'Percentual desta atividade ainda não disponível');
         }
 
         /* ── Log ── */
-        log(message, type, eventTime, activity = true) {
+        log(message, type, eventTime, activity = true, publico = true) {
             if (activity) this._touch();
             if (!this.logEl || message == null || message === '') return;
             const icons = {
@@ -487,8 +484,14 @@
             const parsed = new Date(em);
             const hora = Number.isNaN(parsed.getTime()) ? String(em) : parsed.toLocaleTimeString('pt-BR');
             this._history.push({ em, tipo: type, mensagem: String(message) });
-            if (type === 'step' || type === 'info' || type === 'warning' || type === 'error') {
+            if (publico && (type === 'step' || type === 'info')) {
                 pfsText('active-detail', message);
+            }
+            if (publico && (type === 'warning' || type === 'error')) {
+                const aviso = q('#pfsProgressWarning');
+                aviso.hidden = false; aviso.classList.toggle('pfs-warning-error', type === 'error');
+                pfsText('warning-title', type === 'error' ? 'Problema Identificado' : 'Atenção');
+                pfsText('warning-message', message);
             }
             if (this._history.length > 5000) { this._history.shift(); this._historyDropped++; }
             pfsText('history-note', `Últimas 250 mensagens na tela; ${this._history.length} disponíveis para baixar.${this._historyDropped ? ` ${this._historyDropped} mensagens anteriores saíram da retenção local.` : ''}`);
@@ -569,6 +572,8 @@
         sucesso(data) {
             if (this._finalizado) return;
             this._finalizado = true;
+            this._estadoFinal = data && data._status === 'partial' ? 'Concluído com ressalvas' : 'Concluído';
+            this._atualizarAcompanhamento();
             this._stop();
             const elapsed = this._elapsed();
             this.progresso(100);
@@ -586,6 +591,8 @@
         erro(data) {
             if (this._finalizado) return;
             this._finalizado = true;
+            this._estadoFinal = 'Interrompido por erro';
+            this._atualizarAcompanhamento();
             this._stop();
             const elapsed = this._elapsed();
             this.log('Erro no processo!', 'error');
@@ -604,6 +611,7 @@
         async cancelar() {
             if (this._finalizado || this._cancelPending || !this.config.onCancel) return;
             this._cancelPending = true; this.cancelBtn.disabled = true;
+            this._atualizarAcompanhamento();
             this.cancelBtn.querySelector('.pfs-cancel-label').textContent = 'CANCELAMENTO SOLICITADO';
             const msg = 'Cancelamento solicitado; aguardando confirmação do servidor em um ponto seguro.';
             this.log(msg, 'warning'); this.resumo(msg);
@@ -611,6 +619,7 @@
             catch (error) {
                 if (this._finalizado) return;
                 this._cancelPending = false; this.cancelBtn.disabled = false;
+                this._atualizarAcompanhamento();
                 this.cancelBtn.querySelector('.pfs-cancel-label').textContent = 'TENTAR CANCELAR';
                 const falha = `Não foi possível confirmar o cancelamento: ${error.message}. O acompanhamento continua.`;
                 this.log(falha, 'warning', null, false); this.resumo(falha);
@@ -619,6 +628,7 @@
         confirmarCancelamento(message) {
             if (this._finalizado) return;
             this._finalizado = true; this._cancelPending = false; this._stop();
+            this._estadoFinal = 'Cancelado'; this._atualizarAcompanhamento();
             this.log(message || 'Cancelamento confirmado pelo servidor.', 'warning');
             this.resumo(message || 'Processamento cancelado pelo servidor.');
             this.cancelBtn.hidden = true;
@@ -646,11 +656,20 @@
         _startActivityMonitor() {
             this._stopActivityMonitor();
             this._lastActivity = Date.now();
-            this._activityTimer = setInterval(() => {
-                const trabalho = Math.floor((Date.now() - this._lastActivity) / 1000);
-                const contato = Math.floor((Date.now() - this._lastContact) / 1000);
-                pfsText('contact-status', trabalho >= 30 ? `Sem novo avanço informado há ${trabalho}s. Último contato há ${contato}s. A operação pode continuar no servidor.` : '');
-            }, 15000);
+            this._lastContact = Date.now();
+            this._atualizarAcompanhamento();
+            this._activityTimer = setInterval(() => this._atualizarAcompanhamento(), 1000);
+        }
+        _atualizarAcompanhamento() {
+            const agora = Date.now(), segundos = Math.max(0, Math.floor((agora - this._startTime) / 1000));
+            const minutos = Math.floor(segundos / 60);
+            pfsText('elapsed', `${String(minutos).padStart(2,'0')}:${String(segundos % 60).padStart(2,'0')}`);
+            const trabalho = Math.floor((agora - this._lastActivity) / 1000);
+            const contato = Math.floor((agora - this._lastContact) / 1000);
+            pfsText('run-state', this._estadoFinal || (this._cancelPending ? 'Cancelamento solicitado' : trabalho >= 30 ? 'Aguardando atualização' : 'Em execução'));
+            pfsText('contact-status', this._finalizado || trabalho < 30 ? '' : contato < 30
+                ? 'O processamento continua sendo acompanhado, mas ainda não há novo avanço informado.'
+                : 'Não há atualização recente. A execução pode continuar no servidor; aguarde a confirmação antes de tentar novamente.');
         }
         _stopActivityMonitor() { if (this._activityTimer) { clearInterval(this._activityTimer); this._activityTimer = null; } }
         _closeSSE() { if (this._eventSource) { this._eventSource.close(); this._eventSource = null; } }
@@ -1330,7 +1349,7 @@
         _aplicarLogs(p, st, job) {
             const logs = job.logs || job.etapas || [];
             if (Number.isFinite(job.historico_inicio) && job.historico_inicio > st.seq + 1) {
-                p.log(`Histórico incompleto: eventos ${st.seq + 1} a ${job.historico_inicio - 1} não recebidos (retenção do servidor).`, 'warning', logs[0]?.em, false);
+                p.log(`Histórico incompleto: eventos ${st.seq + 1} a ${job.historico_inicio - 1} não recebidos (retenção do servidor).`, 'warning', logs[0]?.em, false, false);
                 st.seq = job.historico_inicio - 1;
             }
             const niveis = { sucesso: 'success', erro: 'error', aviso: 'warning', atencao: 'warning', info: 'info' };
@@ -1338,7 +1357,7 @@
                 const seq = Number.isFinite(e?.sequencia) ? e.sequencia : i + 1;
                 const msg = e?.mensagem ?? e?.message;
                 if (seq <= st.seq || !msg) return;
-                if (seq > st.seq + 1) p.log(`Histórico incompleto: eventos ${st.seq + 1} a ${seq - 1} não recebidos (retenção do servidor).`, 'warning', e.em, false);
+                if (seq > st.seq + 1) p.log(`Histórico incompleto: eventos ${st.seq + 1} a ${seq - 1} não recebidos (retenção do servidor).`, 'warning', e.em, false, false);
                 st.seq = seq;
                 const nivel = niveis[e.nivel] || 'info';
                 const detalhes = e.detalhes ? Object.entries(e.detalhes).map(([k,v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`).join(' · ') : '';

@@ -31,6 +31,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
   });
   assert.equal(await page.locator('.pfs-completed-item').count(),1);
   assert.equal(await page.locator('.pfs-log-entry').filter({hasText:'Histórico incompleto'}).count(),1);
+  assert.equal(await page.locator('#pfsProgressWarning').isHidden(),true,'Lacunas do diagnóstico não são avisos para o usuário');
   await page.evaluate(()=>{
    window.cancelCalls=0;
    ProcessFeedback.permitirCancelamento(async()=>{cancelCalls++;await new Promise(r=>window.resolveCancel=r);});
@@ -54,15 +55,10 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
   });
   assert.equal(await page.locator('#pfsLog .pfs-log-entry').count(),250);
   assert.equal(await page.evaluate(()=>ProcessFeedback.atual._history.length),5000);
-  await page.locator('.pfs-history-details > summary').click();
-  await page.locator('#pfsLog').evaluate(n=>{n.scrollTop=0;n.dispatchEvent(new Event('scroll'));});
-  await page.evaluate(()=>ProcessFeedback.log('Atualização enquanto leio','info'));
-  assert.equal(await page.locator('#pfsFollowLog').getAttribute('aria-pressed'),'false');
-  assert.equal(await page.locator('#pfsLog').evaluate(n=>n.scrollTop),0);
-  const download=page.waitForEvent('download');await page.locator('#pfsDownloadLog').click();
+  assert.equal(await page.locator('#pfsDiagnostics').isHidden(),true);
+  assert.equal(await page.locator('.pfs-history-details, #pfsFollowLog, #pfsDownloadLog').count(),0);
+  const download=page.waitForEvent('download');await page.evaluate(()=>ProcessFeedback.atual.baixarHistorico());
   assert.match((await download).suggestedFilename(),/sicard_historico_.*\.json/);
-  await page.locator('#pfsFollowLog').click();
-  assert.equal(await page.locator('#pfsFollowLog').getAttribute('aria-pressed'),'true');
   // SSE terminal não carrega resultado: só REST completo encerra esperar().
   const apiPage=await browser.newPage();let polls=0;
   const fs=require('node:fs');
@@ -99,7 +95,61 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
   });
   assert.equal(await page.evaluate(()=>ProcessFeedback.atual._finalizado),true);
   assert.equal(await page.locator('#pfsCancelBtn').isVisible(),false);
+  await page.evaluate(()=>{
+   ProcessFeedback.iniciarCadastro({title:'Elegibilidade Territorial',tasks:['Preparar entrada','Analisar sobreposições','Salvar resultado'],onCancel:async()=>{}});
+   ProcessFeedback.tarefa('Preparar entrada');
+   ProcessFeedback.concluirTarefa('Preparar entrada');
+   ProcessFeedback.tarefa('Analisar sobreposições');
+   ProcessFeedback.atual.detalhe('Comparando as demandas com as áreas de proteção ambiental.');
+   ProcessFeedback.atual.progressoTarefa(32,32,100,'demandas');
+  });
+  assert.equal(await page.locator('#pfsProgressBox .pfs-progress-wrapper').isVisible(),true);
+  assert.equal(await page.locator('#pfsTaskProgressBar').getAttribute('aria-valuenow'),'32');
+  assert.equal(await page.locator('#pfsProgressFill').locator('..').getAttribute('aria-valuenow'),'33');
+  assert.match(await page.locator('[data-pfs="last-completed"]').innerText(),/Preparar entrada/);
+  await page.waitForFunction(()=>document.querySelector('[data-pfs="elapsed"]').textContent!=='00:00');
+  const accessibility=await page.locator('#pfsProgressBox').ariaSnapshot();
+  assert.doesNotMatch(accessibility,/Histórico recebido|Seguir atualizações|Baixar histórico|Processo iniciado/);
+  await page.evaluate(()=>{
+   ProcessFeedback.log('Uma camada não possui informação de data. Confira a atualidade da fonte.','warning');
+   ProcessFeedback.log('Analisando a demanda Rodovia Municipal.','info');
+  });
+  assert.match(await page.locator('#pfsProgressWarning').innerText(),/Confira a atualidade/,'Aviso permanece após novas atualizações');
+  assert.match(await page.locator('[data-pfs="active-detail"]').innerText(),/Rodovia Municipal/);
+  await page.waitForFunction(()=>document.querySelector('[data-pfs="current-summary"]').textContent==='Analisar sobreposições');
+  if(process.env.SICARD_FEEDBACK_SCREENSHOT)await page.screenshot({path:process.env.SICARD_FEEDBACK_SCREENSHOT});
+  for(const viewport of [{width:360,height:640},{width:320,height:480},{width:900,height:400}]){
+   await page.setViewportSize(viewport);
+   const dimensions=await page.locator('#pfsProgressBox').evaluate(box=>{
+    const rect=box.getBoundingClientRect(),body=box.querySelector('.pfs-body');
+    return {left:rect.left,right:rect.right,top:rect.top,bottom:rect.bottom,overflow:body.scrollWidth>body.clientWidth};
+   });
+   assert.ok(dimensions.left>=0 && dimensions.right<=viewport.width && dimensions.top>=0 && dimensions.bottom<=viewport.height);
+   assert.equal(dimensions.overflow,false);
+   assert.equal(await page.locator('#pfsCancelBtn').isVisible(),true);
+  }
+  await page.evaluate(()=>{
+   const p=ProcessFeedback.atual;
+   p._startTime=Date.now()-65000;p._lastActivity=Date.now()-35000;p._lastContact=Date.now();
+   p._atualizarAcompanhamento();
+  });
+  assert.equal(await page.locator('[data-pfs="elapsed"]').innerText(),'01:05');
+  assert.equal(await page.locator('[data-pfs="run-state"]').innerText(),'Aguardando atualização');
+  assert.match(await page.locator('[data-pfs="contact-status"]').innerText(),/continua sendo acompanhado/);
+  await page.evaluate(()=>{const p=ProcessFeedback.atual;p._lastContact=Date.now()-35000;p._atualizarAcompanhamento();});
+  assert.match(await page.locator('[data-pfs="contact-status"]').innerText(),/aguarde a confirmação antes de tentar novamente/);
+  await page.locator('#pfsCancelBtn').click();
+  assert.equal(await page.locator('[data-pfs="run-state"]').innerText(),'Cancelamento solicitado');
+  await page.evaluate(()=>ProcessFeedback.atual.confirmarCancelamento());
+  assert.equal(await page.locator('[data-pfs="run-state"]').innerText(),'Cancelado');
+  assert.equal(await page.locator('[data-pfs="contact-status"]').textContent(),'');
+  await page.evaluate(()=>ProcessFeedback.iniciarCadastro({title:'Novo processo'}));
+  assert.equal(await page.locator('#pfsProgressWarning').isHidden(),true);
+  assert.equal(await page.locator('[data-pfs="last-completed"]').textContent(),'');
+  assert.equal(await page.locator('#pfsProgressFill').locator('..').getAttribute('aria-valuenow'),null);
+  assert.equal(await page.locator('#pfsTaskProgressBar').getAttribute('aria-valuenow'),null);
+  assert.equal(await page.evaluate(()=>ProcessFeedback.atual._history.length),1,'Novo processo não conserva o histórico anterior');
   assert.deepEqual(errors,[]);
-  console.log('PASS: conclusão explícita, horário da origem, revisão, lacuna, cancelamento pendente/recusado/confirmado, retenção, download e rolagem voluntária.');
+  console.log('PASS: conclusão explícita, horário da origem, revisão, lacuna, cancelamento pendente/recusado/confirmado e diagnóstico retido fora da interface.');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exit(1)});

@@ -175,6 +175,12 @@ const assert = require('node:assert/strict');
     const base = process.env.SICARD_TEST_URL || 'http://127.0.0.1:8083';
     await page.goto(`${base}/restrict/hierarquizacao/fase-1/`, {waitUntil:'domcontentloaded'});
     await page.waitForFunction(() => document.querySelector('#ev-hierarquizacao')?.options.length === 2);
+    const avisoDisponibilidade = () => page.locator('.notification-toast, #pfsStatusOverlay.pfs-active')
+      .filter({hasText:/hierarquização\(ões\) disponível\(is\)/}).count();
+    assert.equal(await avisoDisponibilidade(),0,'Carregar hierarquizações não abre notificação de disponibilidade');
+    await page.reload({waitUntil:'domcontentloaded'});
+    await page.waitForFunction(() => document.querySelector('#ev-hierarquizacao')?.options.length === 2);
+    assert.equal(await avisoDisponibilidade(),0,'Recarregar a página não abre notificação de disponibilidade');
     await page.waitForFunction(() => document.querySelector('iframe').contentWindow.gpApp?.state.map?.isStyleLoaded());
     const panel = async () => (await page.locator('iframe').evaluate(f => f.contentWindow.gpApp.state.layers.map(l => l.id))).map(id=>derivados.get(id)||id);
     const closeProgress=()=>page.waitForFunction(()=>!document.querySelector('#pfsProgressOverlay').classList.contains('pfs-active'));

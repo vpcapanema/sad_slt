@@ -67,13 +67,16 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   assert.equal(await page.locator('.pfs-completed-item').filter({hasText:'Gravando camada'}).count(),1);
   assert.equal(await page.locator('.pfs-log-entry--warning').filter({hasText:'CRS ausente'}).count(),1);
   assert.equal(await page.locator('[data-pfs="progress-percent"]').innerText(),'33%');
-  assert.equal(await page.locator('#pfsTaskProgressBar').getAttribute('aria-valuenow'),'33','Sem medição da tarefa, barra usa avanço real das etapas');
+  assert.equal(await page.locator('#pfsTaskProgressBar').getAttribute('aria-valuenow'),null,'Sem medição da atividade, não reutiliza o percentual das etapas');
 
   // Medidas individuais e detalhes atualizam sem recriar a tarefa nem zerar a barra.
   await page.evaluate(()=>{ProcessFeedback.acompanhar({id:'medicao',tarefa_id:1,etapa:'Cruzar base',percentual:40,progresso_tarefa:32,tarefa_concluidas:32,tarefa_total:100,unidade_tarefa:'feições',logs:[{sequencia:1,mensagem:'32 feições processadas'}]});ProcessFeedback.acompanhar({id:'medicao',tarefa_id:1,etapa:'Cruzar base',detalhe:'12 correspondências',percentual:40,progresso_tarefa:32,tarefa_concluidas:32,tarefa_total:100,unidade_tarefa:'feições',logs:[{sequencia:1,mensagem:'32 feições processadas'}]});});
   assert.equal(await page.locator('#pfsTaskProgressBar').getAttribute('aria-valuenow'),'32');
   assert.match(await page.locator('[data-pfs="task-progress-detail"]').innerText(),/32 de 100 feições/);
   assert.equal(await page.locator('.pfs-log-entry').filter({hasText:'32 feições processadas'}).count(),1);
+  await page.evaluate(()=>ProcessFeedback.acompanhar({id:'medicao',tarefa_id:1,etapa:'Cruzar base',percentual:41,progresso_tarefa:null,tarefa_concluidas:33,tarefa_total:100,unidade_tarefa:'feições',logs:[]}));
+  assert.equal(await page.locator('#pfsTaskProgressBar').getAttribute('aria-valuenow'),null);
+  assert.match(await page.locator('[data-pfs="task-progress-detail"]').innerText(),/33 de 100 feições/,'Avanço geral não apaga contagens da atividade sem percentual');
 
   // Sucesso → modal verde com resumo, subprocessos e ação em código.
   await page.evaluate(()=>{window.acionado=false;ProcessFeedback.sucesso({title:'Fase 1 calculada',message:'Confira o relatório.',summary:[{label:'Demandas',value:148}],
@@ -169,10 +172,11 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
         return size;
       });
     });
-    assert.deepEqual(sizes.slice(1,4),[sizes[0],sizes[0],sizes[0]],'Acompanhamento e resultados têm dimensões idênticas');
-    assert.equal(sizes[0][1],expectedHeight);
+    assert.deepEqual(sizes.slice(2,4),[sizes[1],sizes[1]],'Resultados mantêm dimensões idênticas');
+    assert.equal(sizes[0][0],sizes[1][0],'Acompanhamento mantém a largura dos resultados, com altura ajustada ao conteúdo');
+    assert.equal(sizes[1][1],expectedHeight);
     assert.ok(sizes.every(([w,h])=>w<=width-16&&h<=height-16),'Nenhum grupo ultrapassa a tela');
-    if(width===1100){assert.deepEqual(sizes[0],[540,450]);assert.deepEqual(sizes[4],[520,255]);assert.deepEqual(sizes[5],[520,390]);}
+    if(width===1100){assert.deepEqual(sizes[1],[540,450]);assert.deepEqual(sizes[4],[520,255]);assert.deepEqual(sizes[5],[520,390]);}
   }
   await page.evaluate(()=>{
     ProcessFeedback.fechar();

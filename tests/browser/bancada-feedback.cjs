@@ -34,7 +34,8 @@ const path=require('node:path');
    proc.sync({id:'x',status:'executando',etapa_atual:'Interseção',percentual:40,progresso_tarefa:32,tarefa_concluidas:32,tarefa_total:100,unidade_tarefa:'feições',logs:[{sequencia:1,mensagem:'32 registros analisados'}]});
   });
   assert.equal(await page.locator('#pfsProgressBox').getAttribute('role'),'dialog');
-  assert.equal(await page.locator('#pfsProgressBox .pfs-history-details').evaluate(node=>node.open),false);
+  assert.equal(await page.locator('#pfsProgressBox .pfs-history-details').count(),0);
+  assert.equal(await page.locator('#pfsDiagnostics').isHidden(),true);
   assert.equal(await page.locator('#pfsCancelBtn').isVisible(),true);
   assert.equal(await page.locator('#pfsTaskProgressBar').getAttribute('aria-valuenow'),'32');
   assert.equal(await page.locator('#gp-op-form > .gp-feedback-panel').count(),0);
@@ -44,6 +45,6 @@ const path=require('node:path');
   await page.evaluate(()=>gpFeedback.ProcessFeedback.acompanhar({id:'x',status:'cancelado',etapa_atual:'Interseção'}));
   assert.equal(await page.locator('#pfsCancelBtn').isVisible(),false);
   assert.deepEqual(errors,[]);
-  console.log('Bancada: prévia unificada, confirmação, histórico recolhido e cancelamento real OK');
+  console.log('Bancada: prévia unificada, confirmação, diagnóstico fora da interface e cancelamento real OK');
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exit(1);});
