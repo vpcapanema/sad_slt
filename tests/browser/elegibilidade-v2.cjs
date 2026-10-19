@@ -256,6 +256,9 @@ const assert = require('node:assert/strict');
       const antes=normalizations.length;
       await preview('entrada');
       assert.equal(normalizations.length,antes,'A prévia não gera o arquivo do grupo');
+      await page.selectOption('#ev-hierarquizacao','');
+      assert.equal(await page.locator('#ev-hier-lista li').count(),0,'Limpar a seleção não altera o grupo já enviado à prévia');
+      assert.equal(await page.locator('#ea-input-preview-layers [data-validation]').count(),4);
       const checkbox=page.locator('#ea-input-preview-layers [data-validation]')
         .getByRole('checkbox',{name:'Visibilidade no mapa: D-0 — Demanda 0',exact:true});
       await checkbox.uncheck();

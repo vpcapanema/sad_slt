@@ -233,6 +233,8 @@ async function selecionarHierarquizacao(codigo) {
         }
         camadas.push({
           ...camada, nome:`${cab.codigo} — ${cab.nome || camada.nome}`, tipo:'vetor', origemEntrada:'hierarquizacao',
+          grupoHierarquizacao:{codigo, nome:dados.nome, demandas:objetos.map(item =>
+            `cadastro:${dados.tipo_demanda}:${(item.cabecalho_objeto || item).codigo}`)},
           status_validacao:'valida', representacao:'original', revisao:crypto.randomUUID(),
           geojson:{type:'FeatureCollection', features:camada.geojson.features.map(f => ({
             ...f, properties:{...f.properties, ...cab, hierarquizacao:codigo, objeto_hierarquizacao:objeto},
@@ -401,10 +403,11 @@ async function enviar() {
     }
     const daHierarquizacao = candidato.entrada[0]?.origemEntrada === 'hierarquizacao';
     const codigoHierarquizacao = daHierarquizacao ? candidato.entrada[0].geojson.features[0].properties.hierarquizacao : null;
+    const grupoHierarquizacao = daHierarquizacao ? candidato.entrada[0].grupoHierarquizacao : null;
     if (daHierarquizacao) {
-      const objetos = hierarquizacao?.dados_hierarquizacao?.objetos ?? hierarquizacao?.objetos;
-      if (hierarquizacao?.codigo !== codigoHierarquizacao || candidato.entrada.length !== objetos?.length ||
-          candidato.entrada.some(c => c.geojson.features[0].properties.hierarquizacao !== codigoHierarquizacao)) {
+      if (grupoHierarquizacao?.codigo !== codigoHierarquizacao || candidato.entrada.length !== grupoHierarquizacao?.demandas.length ||
+          candidato.entrada.some(c => !grupoHierarquizacao.demandas.includes(c.id) ||
+            c.geojson.features[0].properties.hierarquizacao !== codigoHierarquizacao)) {
         throw new Error('Envie todas as demandas da hierarquização para a prévia e mantenha todas marcadas para gerar uma única camada do grupo.');
       }
     }
@@ -427,7 +430,7 @@ async function enviar() {
     processo.tarefaAtual(tarefas[1],parametros ? `Pontos: ${parametros.buffer_ponto_m} m; linhas: ${parametros.buffer_linha_m} m por lado; ${parametros.crs_metrico} → ${parametros.crs_saida}. Bases sem conversão.` : 'Não há demandas de entrada marcadas; as bases mantêm suas geometrias originais.');
     const entradas=[];
     const fontesEntrada=daHierarquizacao ? [{
-      id:`hierarquizacao:${codigoHierarquizacao}`, nome:`${codigoHierarquizacao} — ${hierarquizacao.nome}`,
+      id:`hierarquizacao:${codigoHierarquizacao}`, nome:`${codigoHierarquizacao} — ${grupoHierarquizacao.nome}`,
       fontesElegibilidade:candidato.entrada,
       revisao:JSON.stringify(candidato.entrada.map(c => [c.id,c.revisao]).sort()),
       origemEntrada:'hierarquizacao',
