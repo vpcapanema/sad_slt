@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from unittest.mock import MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
@@ -16,6 +17,89 @@ from api.services.session_service import SessionUser, cookie_name, create_token
 AMBIENTE_ID = "22222222-2222-2222-2222-222222222222"
 HIERARQUIZACAO_ID = "44444444-4444-4444-4444-444444444444"
 CONFIG_ID = "55555555-5555-5555-5555-555555555555"
+
+
+@pytest.mark.parametrize("numero,esperado", [(0, "000000"), (7, "000007"), (999999, "999999")])
+def test_token_acesso_tem_seis_digitos_incluindo_zeros(monkeypatch, numero, esperado):
+    gerar = MagicMock(return_value=numero)
+    monkeypatch.setattr(service.secrets, "randbelow", gerar)
+    assert service.gerar_token_acesso() == esperado
+    gerar.assert_called_once_with(1_000_000)
+
+
+def test_token_legado_e_atomico_e_preserva_versao(monkeypatch):
+    contexto = MagicMock()
+    conn = contexto.__enter__.return_value
+    conn.execute.return_value.fetchone.return_value = {"token_acesso": "012345"}
+    monkeypatch.setattr(repo, "get_connection", lambda: contexto)
+    versao = datetime.now(timezone.utc)
+    assert repo.garantir_token_acesso(AMBIENTE_ID, versao, "999999") == "012345"
+    query, params = conn.execute.call_args.args
+    assert "COALESCE(token_acesso, %s)" in query
+    assert "atualizado_em=%s" in query and "valido_ate >= now()" in query
+    assert "atualizado_em" not in query.split("WHERE")[0]
+    assert params == ("999999", AMBIENTE_ID, versao)
+
+
+def test_token_legado_nao_grava_em_versao_obsoleta(monkeypatch):
+    contexto = MagicMock()
+    contexto.__enter__.return_value.execute.return_value.fetchone.return_value = None
+    monkeypatch.setattr(repo, "get_connection", lambda: contexto)
+    with pytest.raises(DemandaValidationError, match="julgamento mudou"):
+        repo.garantir_token_acesso(AMBIENTE_ID, datetime.now(timezone.utc), "012345")
+
+
+@pytest.mark.parametrize("operacao", ["acesso", "respostas/iniciar", "respostas/progresso", "respostas"])
+@pytest.mark.parametrize("caso", [
+    "ausente", "incorreto", "curto", "longo", "letras", "unicode",
+    "email", "removido", "sem_codigo", "encerrado", "expirado",
+])
+def test_rotas_publicas_exigem_email_e_token_antes_de_ler_ou_gravar(monkeypatch, operacao, caso):
+    row = _ambiente_row()
+    payload = {
+        "token_acesso": "012345", "email": "a@x.gov.br",
+        "identificacao": {"nome_completo": "Outro nome permitido", "email": "a@x.gov.br", "instituicao": "Instituição"},
+        "matriz_comparacao": [[1, 2], [0.5, 1]],
+    }
+    if caso == "ausente":
+        del payload["token_acesso"]
+    elif caso in {"incorreto", "curto", "longo", "letras", "unicode"}:
+        payload["token_acesso"] = {
+            "incorreto": "999999", "curto": "12345", "longo": "1234567",
+            "letras": "abcdef", "unicode": "０１２３４５",
+        }[caso]
+    elif caso == "email":
+        payload["email"] = payload["identificacao"]["email"] = "fora@x.gov.br"
+    elif caso == "removido":
+        row["convites"] = []
+    elif caso == "sem_codigo":
+        row["token_acesso"] = None
+    elif caso == "encerrado":
+        row["status"] = "encerrada"
+    elif caso == "expirado":
+        row["valido_ate"] = datetime(2000, 1, 1, tzinfo=timezone.utc)
+    monkeypatch.setattr(repo, "get_ambiente_by_token", lambda _: row)
+    acesso_respostas = MagicMock(side_effect=AssertionError("Não pode acessar respostas sem autorização"))
+    monkeypatch.setattr(repo, "get_resposta_by_ambiente_email", acesso_respostas)
+    client = TestClient(app)
+    response = client.request(
+        "PATCH" if operacao == "respostas/progresso" else "POST",
+        f"/api/ahp/comparacao-colaborativa/publico/tok-abc/{operacao}", json=payload,
+    )
+    assert response.status_code == 422, response.text
+    acesso_respostas.assert_not_called()
+
+
+def test_validacao_normaliza_email_e_nao_retorna_codigo(monkeypatch):
+    monkeypatch.setattr(repo, "get_ambiente_by_token", lambda _: _ambiente_row())
+    monkeypatch.setattr(service.hierarq_repo, "get_by_id", lambda _: {"nome": "Teste"})
+    response = TestClient(app).post("/api/ahp/comparacao-colaborativa/publico/tok-abc/acesso",
+                                   json={"email": " A@X.GOV.BR ", "token_acesso": "012345"})
+    assert response.status_code == 200, response.text
+    assert response.json()["email_autorizado"] is True
+    assert response.json()["criterios"] == ["Custo", "Prazo"]
+    assert "token_acesso" not in response.json()
+    assert response.headers["cache-control"] == "no-store"
 
 
 def _client_autenticado(perfil: str = "ANALISTA") -> TestClient:
@@ -37,6 +121,7 @@ def _ambiente_row(**extra) -> dict:
         "hierarquizacao_id": HIERARQUIZACAO_ID,
         "hierarquizacao_codigo": "HIER-001",
         "token": "tok-abc",
+        "token_acesso": "012345",
         "convites": [{"email": "a@x.gov.br"}],
         "valido_ate": datetime(2030, 1, 1, tzinfo=timezone.utc),
         "status": "ativa",
@@ -217,6 +302,7 @@ def test_resposta_usa_snapshot_de_criterios_e_ambiente_correto(monkeypatch) -> N
 
     monkeypatch.setattr(repo, "insert_resposta", fake_insert)
     payload = service.RespostaColaborativaCreateSchema.model_validate({
+        "token_acesso": "012345",
         "identificacao": {
             "nome_completo": "Ana",
             "email": "A@X.GOV.BR",
@@ -240,6 +326,7 @@ def test_resposta_rejeita_matriz_ahp_invalida(monkeypatch, matriz) -> None:
     monkeypatch.setattr(repo, "get_ambiente_by_token", lambda _token: _ambiente_row())
     monkeypatch.setattr(repo, "get_resposta_by_ambiente_email", lambda _ambiente, _email: None)
     payload = service.RespostaColaborativaCreateSchema.model_validate({
+        "token_acesso": "012345",
         "identificacao": {
             "nome_completo": "Ana",
             "email": "a@x.gov.br",
@@ -652,35 +739,45 @@ def test_fluxo_colaborativo_completo(monkeypatch) -> None:
     assert resp.status_code == 200, resp.text
     assert resp.json()["valido_ate"].startswith("2031-01-31")
 
-    # 2. Participante acessa o link público e valida o e-mail.
+    # 2. O link sozinho não libera critérios; e-mail e código são necessários.
     publico = TestClient(app)
     resp = publico.get(f"/api/ahp/comparacao-colaborativa/publico/{token}?email=a@x.gov.br")
     assert resp.status_code == 200
+    assert resp.json()["email_autorizado"] is False
+    assert resp.json()["criterios"] == []
+    assert "token_acesso" not in ambiente
+    codigo = fake.ambientes[ambiente["id"]]["token_acesso"]
+    assert len(codigo) == 6 and codigo.isascii() and codigo.isdigit()
+    resp = publico.post(f"/api/ahp/comparacao-colaborativa/publico/{token}/acesso",
+                        json={"email": "a@x.gov.br", "token_acesso": codigo})
+    assert resp.status_code == 200, resp.text
     dados = resp.json()
     assert dados["email_autorizado"] is True
     assert dados["criterios"] == ["Custo", "Prazo"]
 
     # E-mail não convidado não é autorizado.
-    resp = publico.get(f"/api/ahp/comparacao-colaborativa/publico/{token}?email=z@x.gov.br")
-    assert resp.json()["email_autorizado"] is False
+    resp = publico.post(f"/api/ahp/comparacao-colaborativa/publico/{token}/acesso",
+                        json={"email": "z@x.gov.br", "token_acesso": codigo})
+    assert resp.status_code == 422
 
     # 3. Dois participantes enviam respostas consistentes.
     for email, valor in (("a@x.gov.br", 3.0), ("b@x.gov.br", 1 / 3)):
         inicio = publico.post(
             f"/api/ahp/comparacao-colaborativa/publico/{token}/respostas/iniciar",
-            json={"identificacao": {"nome_completo": "Participante", "email": email, "instituicao": "SP Águas"}},
+            json={"token_acesso": codigo, "identificacao": {"nome_completo": "Participante", "email": email, "instituicao": "SP Águas"}},
         )
         assert inicio.status_code == 200, inicio.text
         assert inicio.json()["status"] == "em_preenchimento"
         progresso = publico.patch(
             f"/api/ahp/comparacao-colaborativa/publico/{token}/respostas/progresso",
-            json={"email": email, "matriz_comparacao": [[1.0, valor], [1.0 / valor, 1.0]]},
+            json={"email": email, "token_acesso": codigo, "matriz_comparacao": [[1.0, valor], [1.0 / valor, 1.0]]},
         )
         assert progresso.status_code == 200, progresso.text
         assert progresso.json()["status"] == "em_preenchimento"
         resp = publico.post(
             f"/api/ahp/comparacao-colaborativa/publico/{token}/respostas",
             json={
+                "token_acesso": codigo,
                 "identificacao": {
                     "nome_completo": "Participante",
                     "email": email,
@@ -697,6 +794,7 @@ def test_fluxo_colaborativo_completo(monkeypatch) -> None:
     resp = publico.post(
         f"/api/ahp/comparacao-colaborativa/publico/{token}/respostas",
         json={
+            "token_acesso": codigo,
             "identificacao": {
                 "nome_completo": "Participante",
                 "email": "a@x.gov.br",

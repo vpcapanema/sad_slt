@@ -9,7 +9,7 @@ from api.repositories import comparacao_colaborativa_repository as ambientes
 from api.repositories import email_convites_repository as repo
 from api.schemas.email import ConviteEmailEnvioSchema, EmailEnvioSchema
 from api.services import email_service
-from api.services.comparacao_colaborativa_service import _validar_ambiente_ativo
+from api.services.comparacao_colaborativa_service import _validar_ambiente_ativo, gerar_token_acesso
 
 ASSUNTO = "Convite para preenchimento colaborativo AHP - SICARD"
 
@@ -25,11 +25,25 @@ def enviar(ambiente_id: str, dados: ConviteEmailEnvioSchema, usuario_id: str) ->
     autorizados = {str(c["email"]).strip().lower() for c in ambiente["convites"]}
     if destinatario not in autorizados:
         raise DemandaValidationError("O destinatário não pertence aos colaboradores salvos.", field="destinatario")
-    # O texto é exatamente a mensagem visível, incluindo o link persistente.
+    # O servidor acrescenta o codigo persistido, nunca um codigo fornecido pelo cliente.
     if f"/public/analise-multicriterio/{ambiente['token']}/" not in dados.texto:
         raise DemandaValidationError("A mensagem não contém o link deste julgamento.", field="texto")
     config = email_service._config()
-    resumo = sha256((ASSUNTO + "\n" + dados.texto).encode()).hexdigest()
+    codigo = ambiente.get("token_acesso")
+    if not codigo:
+        codigo = ambientes.garantir_token_acesso(ambiente_id, dados.versao, gerar_token_acesso())
+    texto = (
+        f"{dados.texto}\n\nToken de acesso: {codigo}\n"
+        "Para liberar o formulário, informe seu nome, o e-mail convidado e este token de seis dígitos. "
+        "O token é válido somente para este julgamento, dentro do prazo informado."
+    )
+    if len(texto) > 50000:
+        raise DemandaValidationError(
+            "Reduza a mensagem para que o texto, incluindo as instruções do token, tenha até 50.000 caracteres.",
+            field="texto",
+        )
+    mensagem = EmailEnvioSchema(destinatario=dados.destinatario, assunto=ASSUNTO, texto=texto)
+    resumo = sha256((ASSUNTO + "\n" + texto).encode()).hexdigest()
     registro, novo = repo.reservar(
         ambiente_id, destinatario, resumo, f"<sicard.{uuid4().hex}@{str(config.remetente).rsplit('@', 1)[1]}>",
         usuario_id, dados.versao,
@@ -38,7 +52,7 @@ def enviar(ambiente_id: str, dados: ConviteEmailEnvioSchema, usuario_id: str) ->
         return {**registro, "reutilizado": True}
     try:
         resultado = email_service.enviar(
-            EmailEnvioSchema(destinatario=dados.destinatario, assunto=ASSUNTO, texto=dados.texto),
+            mensagem,
             usuario_id=usuario_id, id_mensagem=registro["mensagem_id"], solicitar_confirmacoes=True,
         )
     except email_service.FalhaEmail as exc:

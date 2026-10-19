@@ -9,6 +9,14 @@
   var stats = { inicio_ms: null, pares: {} };
   var draftActive = false;
   var saveTimer = null;
+  var acesso = null;
+  var verificando = false;
+
+  function bloquearIdentificacao(bloqueado) {
+    ["colab-nome", "colab-inst", "colab-email", "colab-token", "btn-liberar-form"].forEach(function (id) {
+      el(id).disabled = bloqueado;
+    });
+  }
 
   function qp(name) {
     return new URLSearchParams(global.location.search).get(name);
@@ -71,7 +79,7 @@
     el("metricICValue").textContent = res.CI.toFixed(4);
     el("metricLambdaValue").textContent = res.lambdaMax.toFixed(4);
     var btn = el("btn-enviar-resposta");
-    if (btn) btn.disabled = res.CR >= 0.1;
+    if (btn) btn.disabled = !draftActive || res.CR >= 0.1;
     submitFeedback(
       res.CR < 0.1
         ? "Matriz consistente (RC < 0,10). Você pode enviar."
@@ -104,9 +112,8 @@
     if (draftActive) {
       clearTimeout(saveTimer);
       saveTimer = setTimeout(function () {
-        var email = (el("colab-email").value || "").trim().toLowerCase();
         global.SLTColaborativaApi.salvarProgresso(token, {
-          email: email, matriz_comparacao: matrix,
+          email: acesso.identificacao.email, token_acesso: acesso.token_acesso, matriz_comparacao: matrix,
           estatisticas: { revisoes_por_par: stats.pares, duracao_ms: stats.inicio_ms ? Date.now() - stats.inicio_ms : null },
         }).then(function () { submitFeedback("Progresso salvo automaticamente.", "success"); })
           .catch(function (err) { submitFeedback("Não foi possível salvar o progresso: " + (err.message || err), "error"); });
@@ -117,29 +124,39 @@
   global.updateLiveMetrics = updateCollabMetrics;
 
   function liberarFormulario() {
+    if (verificando || draftActive) return;
     var nome = (el("colab-nome").value || "").trim();
     var inst = (el("colab-inst").value || "").trim();
     var email = (el("colab-email").value || "").trim().toLowerCase();
+    var codigo = (el("colab-token").value || "").trim();
     if (!nome || !inst || !email) {
       feedback("Informe nome, instituição e e-mail para iniciar o preenchimento.", "error");
       return;
     }
+    if (!/^[0-9]{6}$/.test(codigo)) {
+      feedback("Informe o token de seis números recebido por e-mail.", "error");
+      return;
+    }
+    verificando = true;
+    bloquearIdentificacao(true);
     feedback("Verificando convite…", "info");
-    global.SLTColaborativaApi.obterPublico(token, email)
+    var candidato = { token_acesso: codigo, identificacao: { nome_completo: nome, email: email, instituicao: inst } };
+    global.SLTColaborativaApi.validarAcesso(token, email, codigo)
       .then(function (m) {
         if (m.status !== "ativa") {
           feedback("Este formulário não está mais disponível.", "error");
           return;
         }
         if (!m.email_autorizado) {
-          feedback("E-mail não autorizado para este ambiente.", "error");
+          feedback("E-mail ou token inválido. Confira o convite recebido.", "error");
           return;
         }
         meta = m;
-        return global.SLTColaborativaApi.iniciarResposta(token, { identificacao: { nome_completo: nome, email: email, instituicao: inst } });
+        return global.SLTColaborativaApi.iniciarResposta(token, candidato);
       }).then(function (resposta) {
         if (!resposta) return;
         if (resposta.status === "enviada") { feedback("Este e-mail já enviou a resposta deste julgamento.", "error"); return; }
+        acesso = candidato;
         if (typeof global.setAhpCriteria === "function") global.setAhpCriteria(meta.criterios || []); else global.criteria = meta.criterios || [];
         global.ahpCollaborativeDraftMatrix = resposta.matriz_comparacao || null;
         feedback("Formulário liberado. O progresso será salvo automaticamente.", "success");
@@ -159,15 +176,15 @@
       })
       .catch(function (err) {
         feedback(err.message || String(err), "error");
+      }).finally(function () {
+        verificando = false;
+        bloquearIdentificacao(draftActive);
       });
   }
 
   function enviarResposta() {
-    var nome = (el("colab-nome").value || "").trim();
-    var inst = (el("colab-inst").value || "").trim();
-    var email = (el("colab-email").value || "").trim().toLowerCase();
-    if (!nome || !inst || !email) {
-      submitFeedback("Preencha nome, instituição e e-mail.", "error");
+    if (!draftActive || !acesso) {
+      submitFeedback("Valide seu e-mail e token antes de enviar.", "error");
       return;
     }
     var matrix = buildLiveMatrix();
@@ -182,9 +199,12 @@
     }
     var duracao_ms = stats.inicio_ms ? Date.now() - stats.inicio_ms : null;
     submitFeedback("Enviando…", "info");
+    clearTimeout(saveTimer);
+    draftActive = false;
     el("btn-enviar-resposta").disabled = true;
     global.SLTColaborativaApi.enviarResposta(token, {
-      identificacao: { nome_completo: nome, email: email, instituicao: inst },
+      identificacao: acesso.identificacao,
+      token_acesso: acesso.token_acesso,
       matriz_comparacao: matrix,
       estatisticas: { duracao_ms: duracao_ms, revisoes_por_par: stats.pares },
     })
@@ -193,6 +213,7 @@
         submitFeedback("Resposta enviada com sucesso. Obrigado!", "success");
       })
       .catch(function (err) {
+        draftActive = true;
         el("btn-enviar-resposta").disabled = false;
         submitFeedback(err.message || String(err), "error");
       });

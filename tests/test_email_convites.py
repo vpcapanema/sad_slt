@@ -24,7 +24,7 @@ def ambiente(monkeypatch):
     row = {
         "id": str(uuid4()), "atualizado_em": datetime.now(timezone.utc),
         "status": "ativa", "valido_ate": datetime.now(timezone.utc) + timedelta(days=2),
-        "convites": [{"email": DEST}], "token": "token-teste",
+        "convites": [{"email": DEST}], "token": "token-teste", "token_acesso": "012345",
     }
     monkeypatch.setattr(service.ambientes, "get_ambiente_by_id", lambda _: row)
     return row
@@ -73,16 +73,48 @@ def payload(ambiente, **extras):
     })
 
 
-def test_envia_texto_exato_e_nao_repete_apos_recarga(ambiente, smtp, registros):
+def test_preserva_texto_acrescenta_token_e_nao_repete_apos_recarga(ambiente, smtp, registros):
     dados = payload(ambiente)
     result = service.enviar(ambiente["id"], dados, "analista")
     assert result["envio_status"] == "aceito_smtp"
-    assert smtp.call_args.args[0].texto == dados.texto
+    texto = smtp.call_args.args[0].texto
+    assert texto.startswith(dados.texto + "\n\n")
+    assert "Token de acesso: 012345" in texto
+    assert registros[0]["conteudo_hash"] == sha256((service.ASSUNTO + "\n" + texto).encode()).hexdigest()
     assert smtp.call_args.kwargs["solicitar_confirmacoes"] is True
     assert smtp.call_args.kwargs["id_mensagem"] == registros[0]["mensagem_id"]
     assert "sicard." in registros[0]["mensagem_id"]
     assert service.enviar(ambiente["id"], dados, "analista")["reutilizado"] is True
     smtp.assert_called_once()
+
+
+def test_legado_persiste_token_antes_de_reservar_e_enviar(ambiente, smtp, registros, monkeypatch):
+    ambiente["token_acesso"] = None
+    garantir = MagicMock(return_value="000123")
+    monkeypatch.setattr(service.ambientes, "garantir_token_acesso", garantir)
+    service.enviar(ambiente["id"], payload(ambiente), "analista")
+    garantir.assert_called_once()
+    assert len(garantir.call_args.args[2]) == 6
+    assert "Token de acesso: 000123" in smtp.call_args.args[0].texto
+
+
+def test_falha_ao_persistir_token_nao_envia(ambiente, smtp, registros, monkeypatch):
+    ambiente["token_acesso"] = None
+    monkeypatch.setattr(service.ambientes, "garantir_token_acesso",
+                        MagicMock(side_effect=DatabaseUnavailableError("indisponivel")))
+    with pytest.raises(DatabaseUnavailableError):
+        service.enviar(ambiente["id"], payload(ambiente), "analista")
+    smtp.assert_not_called()
+    assert registros == []
+
+
+def test_texto_com_token_acima_do_limite_nao_reserva_envio(ambiente, smtp, registros):
+    dados = payload(ambiente)
+    texto = dados.texto + "x" * (50000 - len(dados.texto))
+    with pytest.raises(DemandaValidationError, match="Reduza a mensagem"):
+        service.enviar(ambiente["id"], payload(ambiente, texto=texto), "analista")
+    smtp.assert_not_called()
+    assert registros == []
 
 
 @pytest.mark.parametrize("alteracao", ["destinatario", "versao", "texto", "encerrado", "expirado"])

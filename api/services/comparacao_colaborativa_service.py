@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import math
+import logging
 import secrets
 import unicodedata
 import base64
@@ -32,6 +33,27 @@ from api.schemas.comparacao_colaborativa import (
     RespostaColaborativaUpdateSchema,
 )
 from api.services import ahp_engine
+
+logger = logging.getLogger(__name__)
+
+
+def gerar_token_acesso() -> str:
+    return f"{secrets.randbelow(1_000_000):06d}"
+
+
+def _validar_email_token(row: dict[str, Any], email: str, token_acesso: str | None) -> None:
+    _validar_ambiente_ativo(row)
+    codigo = row.get("token_acesso")
+    codigo_valido = (
+        isinstance(token_acesso, str) and token_acesso.isascii()
+        and isinstance(codigo, str) and len(codigo) == 6 and secrets.compare_digest(codigo, token_acesso)
+    )
+    if not codigo_valido or email.strip().lower() not in _emails_convites(row.get("convites") or []):
+        logger.warning("Acesso colaborativo recusado ambiente=%s", row["id"])
+        raise DemandaValidationError(
+            "E-mail ou token inválido. Confira os dados do convite recebido.",
+            field="token_acesso",
+        )
 
 
 def _iso(value: Any) -> str | None:
@@ -254,6 +276,7 @@ def criar_ambiente(
             "arquivo_excel_matriz_criterios_premissas": None if hierarq else _arquivo_matriz(payload.arquivo_matriz_base64),
             "arquivo_matriz_nome": _nome_arquivo_hierarquizacao(hierarq) if hierarq else payload.arquivo_matriz_nome,
             "token": token,
+            "token_acesso": gerar_token_acesso(),
             "convites": convites,
             "valido_ate": valido_ate,
             "status": "ativa",
@@ -469,14 +492,21 @@ def listar_ambientes_hierarquizacao(
     ]
 
 
-def obter_ambiente_publico(token: str, email: str | None = None) -> AmbientePublicoSchema:
+def obter_ambiente_publico(
+    token: str, email: str | None = None, token_acesso: str | None = None,
+) -> AmbientePublicoSchema:
     """Metadados públicos do ambiente (sem matriz de respostas de terceiros)."""
     row = repo.get_ambiente_by_token(token)
     if not row:
         raise DemandaValidationError("Link de preenchimento inválido ou expirado.", field="token")
 
+    autorizado = email is not None
+    if email is not None:
+        _validar_email_token(row, email, token_acesso)
     criterios_snapshot = row.get("criterios") or []
-    if criterios_snapshot:
+    if not autorizado:
+        criterios = []
+    elif criterios_snapshot:
         criterios = _criterio_nomes(criterios_snapshot)
     else:
         hierarq = _carregar_hierarquizacao(row["hierarquizacao_id"])
@@ -490,9 +520,6 @@ def obter_ambiente_publico(token: str, email: str | None = None) -> AmbientePubl
     status = row["status"]
     if status == "ativa" and valido_ate and valido_ate < datetime.now(timezone.utc):
         status = "encerrada"
-
-    emails_ok = _emails_convites(row.get("convites") or [])
-    email_norm = (email or "").strip().lower()
 
     # Tenta carregar a hierarquização para preencher escopo e objetivo
     try:
@@ -510,7 +537,7 @@ def obter_ambiente_publico(token: str, email: str | None = None) -> AmbientePubl
         criterios=criterios,
         valido_ate=_iso(valido_ate) or "",
         status=status,
-        email_autorizado=bool(email_norm and email_norm in emails_ok),
+        email_autorizado=autorizado,
     )
 
 
@@ -564,8 +591,7 @@ def iniciar_resposta(token: str, payload: RespostaColaborativaInicioSchema) -> R
     _validar_ambiente_ativo(ambiente)
     ident = payload.identificacao
     email = str(ident.email).strip().lower()
-    if email not in _emails_convites(ambiente.get("convites") or []):
-        raise DemandaValidationError("Este e-mail não está autorizado a preencher este formulário.", field="email")
+    _validar_email_token(ambiente, email, payload.token_acesso)
     existente = repo.get_resposta_by_ambiente_email(str(ambiente["id"]), email)
     if existente:
         return _resposta_to_response(existente)
@@ -593,6 +619,7 @@ def salvar_progresso_resposta(token: str, payload: RespostaColaborativaProgresso
         raise DemandaValidationError("Ambiente não encontrado.", field="token")
     _validar_ambiente_ativo(ambiente)
     email = payload.email.strip().lower()
+    _validar_email_token(ambiente, email, payload.token_acesso)
     resposta = repo.get_resposta_by_ambiente_email(str(ambiente["id"]), email)
     if not resposta:
         raise DemandaValidationError("Inicie o preenchimento antes de salvar o progresso.", field="email")
@@ -613,11 +640,7 @@ def registrar_resposta(token: str, payload: RespostaColaborativaCreateSchema) ->
 
     ident: IdentificacaoColaboradorSchema = payload.identificacao
     email = str(ident.email).strip().lower()
-    convites = _emails_convites(row.get("convites") or [])
-    if email not in convites:
-        raise DemandaValidationError(
-            "Este e-mail não está autorizado a preencher este formulário.", field="email"
-        )
+    _validar_email_token(row, email, payload.token_acesso)
 
     existente = repo.get_resposta_by_ambiente_email(str(row["id"]), email)
     if existente and existente.get("status", "enviada") == "enviada":

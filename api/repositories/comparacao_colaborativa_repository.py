@@ -2,11 +2,30 @@
 from __future__ import annotations
 
 from typing import Any
+from datetime import datetime
 
 from psycopg import sql
 from psycopg.types.json import Jsonb
 
 from api.db.connection import get_connection
+from api.exceptions import DemandaValidationError
+
+
+def garantir_token_acesso(ambiente_id: str, versao: datetime, candidato: str) -> str:
+    with get_connection() as conn:
+        row = conn.execute(
+            """UPDATE ahp.comparacao_colaborativa_ambiente
+               SET token_acesso=COALESCE(token_acesso, %s)
+               WHERE id=%s AND atualizado_em=%s AND status='ativa' AND valido_ate >= now()
+               RETURNING token_acesso""",
+            (candidato, ambiente_id, versao),
+        ).fetchone()
+    if not row:
+        raise DemandaValidationError(
+            "O julgamento mudou ou seu prazo encerrou. Reabra o registro antes de enviar.",
+            field="ambiente_id",
+        )
+    return row["token_acesso"]
 
 
 def _touch_ambiente_query() -> sql.SQL:

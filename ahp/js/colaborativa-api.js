@@ -38,9 +38,14 @@
     listarAmbientesConfig: function (tipo, codigo) {
       return request("/ambientes/configuracao/" + encodeURIComponent(tipo) + "/" + encodeURIComponent(codigo));
     },
-    obterPublico: function (token, email) {
-      var qs = email ? "?email=" + encodeURIComponent(email) : "";
-      return request("/publico/" + encodeURIComponent(token) + qs);
+    obterPublico: function (token) {
+      return request("/publico/" + encodeURIComponent(token));
+    },
+    validarAcesso: function (token, email, tokenAcesso) {
+      return request("/publico/" + encodeURIComponent(token) + "/acesso", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email, token_acesso: tokenAcesso }),
+      });
     },
     enviarResposta: function (token, payload) {
       return request("/publico/" + encodeURIComponent(token) + "/respostas", {

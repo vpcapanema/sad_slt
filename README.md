@@ -96,9 +96,11 @@ A seção **Mensagem de email** envia a mensagem exibida pelo botão **Enviar
 e-mail**, individualmente para os colaboradores salvos do julgamento. Exige
 perfil Analista, Gestor ou Admin, julgamento aberto, prazo vigente e versão
 atual do cadastro. Durante edição o envio fica bloqueado: primeiro salve as
-alterações. O envio usa o texto completo exibido, sem abrir um aplicativo externo.
+alterações. O envio usa o texto completo exibido e acrescenta, no servidor, o
+token de acesso de seis dígitos e suas instruções, sem abrir um aplicativo externo.
 
-Aplicar `database/137_email_convites_colaborativos.sql` antes de usar este fluxo.
+Aplicar `database/137_email_convites_colaborativos.sql` e
+`database/138_token_acesso_julgamento.sql` antes de usar este fluxo.
 Os endpoints, todos no SICARD, são:
 
 - `GET /api/ahp/comparacao-colaborativa/ambientes/{id}/emails`: histórico;
@@ -106,6 +108,29 @@ Os endpoints, todos no SICARD, são:
   `atualizadoEm` do julgamento); envia um convite salvo por requisição;
 - `POST .../{id}/emails/confirmacoes`: coleta os retornos por IMAP e atualiza o
   histórico, sem reenviar mensagens.
+
+O código é único por julgamento (compartilhado pelos convidados), gerado por
+fonte criptográfica e gravado em `ahp.comparacao_colaborativa_ambiente.token_acesso`.
+Zeros iniciais são preservados. O código não muda nos reenvios ou nas edições;
+é válido enquanto o julgamento estiver aberto e dentro do prazo. E-mails
+removidos da lista de convidados perdem o acesso, mesmo conhecendo o código.
+O token do link público continua distinto desse código de seis dígitos.
+
+No formulário público, nome e instituição identificam a resposta; a autorização
+é feita pelo par **e-mail convidado + token de acesso**, no servidor:
+`POST /api/ahp/comparacao-colaborativa/publico/{token}/acesso`.
+O corpo contém `email` e `token_acesso`; os endpoints de início, progresso e envio
+também exigem `token_acesso`, além dos seus campos anteriores. O GET público
+retorna apenas contexto, sem critérios ou autorização por e-mail. O código
+não é devolvido pelas respostas das APIs de julgamentos nem incluído em URLs
+ou armazenamento local do navegador.
+
+Julgamentos antigos permanecem sem código até o primeiro envio de convite após
+a migração; o envio gera e persiste o código de forma atômica, sem alterar as
+respostas existentes. Convites antigos precisam ser reenviados explicitamente
+para que seus destinatários recebam o código; não há envio automático.
+Por decisão operacional, não há bloqueio por quantidade de tentativas erradas:
+o código curto fica mais exposto à adivinhação automatizada.
 
 O registro é reservado no PostgreSQL **antes** do SMTP, com exclusividade por
 julgamento, destinatário e hash do conteúdo. Repetições idênticas já aceitas ou

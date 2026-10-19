@@ -3,11 +3,12 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
 from api.deps.auth import require_analyst, require_authenticated
 from api.exceptions import DatabaseUnavailableError, DemandaValidationError
 from api.schemas.comparacao_colaborativa import (
+    AcessoColaborativoSchema,
     AmbienteColaborativoCreateSchema,
     AmbienteColaborativoResponseSchema,
     AmbienteColaborativoUpdateSchema,
@@ -255,15 +256,29 @@ def obter_ambiente_hierarquizacao(
 @router.get("/publico/{token}", response_model=AmbientePublicoSchema)
 def obter_ambiente_publico(
     token: str,
-    email: str | None = Query(None),
+    response: Response,
 ) -> AmbientePublicoSchema:
     """Metadados públicos do ambiente (participante)."""
     try:
-        return service.obter_ambiente_publico(token, email=email)
+        response.headers["Cache-Control"] = "no-store"
+        return service.obter_ambiente_publico(token)
     except DemandaValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except DatabaseUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.post("/publico/{token}/acesso", response_model=AmbientePublicoSchema)
+def validar_acesso_publico(
+    token: str, body: AcessoColaborativoSchema, response: Response,
+) -> AmbientePublicoSchema:
+    response.headers["Cache-Control"] = "no-store"
+    try:
+        return service.obter_ambiente_publico(token, email=body.email, token_acesso=body.token_acesso)
+    except DemandaValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc), headers={"Cache-Control": "no-store"}) from exc
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc), headers={"Cache-Control": "no-store"}) from exc
 
 
 @router.post("/publico/{token}/respostas", response_model=RespostaColaborativaResponseSchema, status_code=201)

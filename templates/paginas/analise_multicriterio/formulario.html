@@ -23,10 +23,11 @@
 		<section class="card-colab-nome secao-colab-nome card ahp-step-section">
 			<div class="ahp-section-label"><i class="fas fa-id-card"></i><span>Identificação</span></div>
 			<div class="ahp-section-body">
-				<p class="step-intro">Informe seus dados. O e-mail deve ser o mesmo convidado pelo gestor da análise.</p>
+				<p class="step-intro">Informe seus dados e o token de seis números recebido no convite. O acesso é validado pelo e-mail convidado e pelo token deste julgamento; o nome é usado para identificar sua resposta.</p>
 				<div class="c-form-group"><label for="colab-nome" class="c-form-label">Nome completo</label><input id="colab-nome" class="c-form-control" required></div>
 				<div class="c-form-group"><label for="colab-inst" class="c-form-label">Instituição vinculada</label><input id="colab-inst" class="c-form-control" required></div>
 				<div class="c-form-group"><label for="colab-email" class="c-form-label">E-mail</label><input id="colab-email" type="email" class="c-form-control" required></div>
+				<div class="c-form-group"><label for="colab-token" class="c-form-label">Token de acesso</label><input id="colab-token" name="token_acesso" type="text" class="c-form-control" inputmode="numeric" pattern="[0-9]{6}" minlength="6" maxlength="6" autocomplete="one-time-code" aria-describedby="colab-token-help" required><p id="colab-token-help" class="form-help">Digite os seis números do e-mail, incluindo eventuais zeros no início.</p></div>
 				<button type="button" class="btn btn-primary" id="btn-liberar-form"><i class="fas fa-unlock c-btn__icon"></i>Liberar formulário</button>
 				<p id="colab-id-feedback" class="ahp-matriz-edit-feedback" role="status"></p>
 			</div>
@@ -50,7 +51,7 @@
 
 {% block scripts_pagina %}
 	<script src="/restrict/ahp/js/ahp-core.js"></script>
-	<script src="/restrict/ahp/js/colaborativa-api.js"></script>
+	<script src="/restrict/ahp/js/colaborativa-api.js?v=20261019-token-acesso"></script>
 	<script src="/restrict/ahp/js/script.js?v=20260820-draft-response"></script>
-	<script src="/restrict/ahp/js/colaborativa.js?v=20260820-draft-response"></script>
+	<script src="/restrict/ahp/js/colaborativa.js?v=20261019-token-acesso"></script>
 {% endblock %}

@@ -92,18 +92,25 @@ class IdentificacaoColaboradorSchema(BaseModel):
     instituicao: str = Field(..., min_length=2, max_length=300)
 
 
-class RespostaColaborativaCreateSchema(BaseModel):
+class TokenAcessoColaborativoSchema(BaseModel):
+    token_acesso: str = Field(..., pattern=r"^[0-9]{6}$", min_length=6, max_length=6)
+
+
+class AcessoColaborativoSchema(TokenAcessoColaborativoSchema):
+    email: str = Field(..., min_length=3, max_length=320)
+
+
+class RespostaColaborativaCreateSchema(TokenAcessoColaborativoSchema):
     identificacao: IdentificacaoColaboradorSchema
     matriz_comparacao: list[list[float]]
     estatisticas: dict[str, Any] | None = None
 
 
-class RespostaColaborativaInicioSchema(BaseModel):
+class RespostaColaborativaInicioSchema(TokenAcessoColaborativoSchema):
     identificacao: IdentificacaoColaboradorSchema
 
 
-class RespostaColaborativaProgressoSchema(BaseModel):
-    email: str = Field(..., min_length=3, max_length=320)
+class RespostaColaborativaProgressoSchema(AcessoColaborativoSchema):
     matriz_comparacao: list[list[float]]
     estatisticas: dict[str, Any] | None = None
 

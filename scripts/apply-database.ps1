@@ -263,7 +263,8 @@ $migrations = @(
     "132_solicitacao_complementacao_demanda.sql",
     "133_avaliacao_geometria_historico.sql",
     "136_corrigir_contrato_exportacao_seed.sql",
-    "137_email_convites_colaborativos.sql"
+    "137_email_convites_colaborativos.sql",
+    "138_token_acesso_julgamento.sql"
 )
 
 if ($OnlyMigration) {
@@ -293,8 +294,12 @@ if (-not $OnlyMigration) {
             $migrations += "137_email_convites_colaborativos.sql"
             Write-Ok "Historico de emails dos julgamentos pendente; aplicando migration 137"
         }
+        if (-not (Test-SchemaReady "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='ahp' AND table_name='comparacao_colaborativa_ambiente' AND column_name='token_acesso');")) {
+            $migrations += "138_token_acesso_julgamento.sql"
+            Write-Ok "Token de acesso dos julgamentos pendente; aplicando migration 138"
+        }
         if (-not (Test-SchemaReady "SELECT to_regclass('dominios.categoria_extracao_atributos') IS NOT NULL;")) {
-            $migrations = @("104_categorias_extracao_atributos.sql")
+            $migrations += "104_categorias_extracao_atributos.sql"
             Write-Ok "Dicionario de categorias pendente; aplicando migration 104"
         }
         if (-not (Test-SchemaReady "SELECT to_regclass('geoprocessamento.arquivo_resultado') IS NOT NULL;")) {
