@@ -275,6 +275,13 @@ O terminal compartilhado é descrito em
 
 ### Destino das saídas da bancada geoespacial
 
+O gerador de camadas territoriais entrega o ZIP original já gravado no Storage,
+com a geometria e os arquivos auxiliares da exportação, sem remontá-lo a partir
+de diretórios locais. Novas gerações conferem o SHA-256 registrado antes do
+download. Se a leitura do pacote falhar após a geração, o feedback distingue
+essa falha da criação da camada e orienta a consultar as saídas no acervo, sem
+repetir a geração apenas para baixar o arquivo.
+
 O botão **Atualizar**, à direita de **Ordem de desenho**, e **Atualizar mapa**,
 abaixo de **Ajustar às camadas**, recarregam as camadas abertas e os mapas-base,
 inclusive camadas ocultas ou fora do filtro de pesquisa. Não adicionam recursos

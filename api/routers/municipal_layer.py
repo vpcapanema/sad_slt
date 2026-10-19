@@ -1,3 +1,4 @@
+import logging
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Response
@@ -6,8 +7,10 @@ from pydantic import BaseModel, Field
 from api.deps.auth import require_geospatial_access
 from api.services import municipal_layer as service
 from api.services.session_service import SessionUser
+from api.services.storage_remoto import StorageIndisponivel
 
 router = APIRouter(prefix='/municipal', dependencies=[Depends(require_geospatial_access)])
+logger = logging.getLogger(__name__)
 
 
 class Selecao(BaseModel):
@@ -87,6 +90,10 @@ def pacote_job(categoria: str, ident: str, user: SessionUser = Depends(require_g
     from api.services import municipal_jobs
     try:
         package,result=municipal_jobs.pacote(ident,user)
+    except (StorageIndisponivel, OSError) as exc:
+        logger.exception("Falha ao recuperar pacote municipal do job %s", ident)
+        raise HTTPException(503, 'A camada foi gerada, mas não foi possível baixar o pacote salvo no Storage. '
+                            'Consulte as saídas no acervo; não gere outra camada apenas para repetir o download.') from exc
     except LookupError as exc:
         raise HTTPException(404,str(exc)) from exc
     except ValueError as exc:

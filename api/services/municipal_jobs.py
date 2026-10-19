@@ -59,13 +59,7 @@ def pacote(ident,user):
     job=obter(ident,user)
     if job['controle'].status!='concluido':
         raise ValueError('O pacote ainda não está disponível.')
-    # Refaz apenas o contêiner ZIP dos arquivos já validados no acervo.
-    from api.path_policy import project_path
-    from io import BytesIO
-    from zipfile import ZipFile, ZIP_DEFLATED
-    folder=project_path(job['resultado']['arquivo']).parent
-    buffer=BytesIO()
-    with ZipFile(buffer,'w',ZIP_DEFLATED) as archive:
-        for path in sorted(folder.iterdir()):
-            if path.is_file():archive.write(path,path.name)
-    return buffer.getvalue(),job['resultado']
+    from api.services import saidas_storage
+    resultado = job['resultado']
+    package = saidas_storage.conferir(resultado['pacote_caminho'], resultado.get('pacote_sha256'))
+    return package, resultado

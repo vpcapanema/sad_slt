@@ -2,7 +2,7 @@
 const {chromium}=require('playwright');const assert=require('node:assert/strict');
 (async()=>{const browser=await chromium.launch({headless:true,args:['--no-sandbox','--no-proxy-server','--enable-unsafe-swiftshader']});
 try{
-const p=await browser.newPage(),errors=[];let estado='executando',exportacoes=0,cancelamentos=0;
+const p=await browser.newPage(),errors=[];let estado='executando',exportacoes=0,cancelamentos=0,erroPacote=false;
 p.on('pageerror',e=>errors.push(e.message));
 const job=()=>({id:'j1',status:estado,cancelavel:estado==='executando',percentual:33,progresso_tarefa:65,
  etapa:'Preparando atributos',etapas:[{sequencia:1,mensagem:'Municípios carregados.'},{sequencia:2,mensagem:'Preparando indicador 13 de 20.'}],erro:estado==='erro'?'Geração indisponível no teste.':null});
@@ -15,12 +15,16 @@ await p.route('**/api/**',async r=>{
  if(path.endsWith('/jobs')){assert.equal(r.request().postDataJSON().format,'geojson');exportacoes++;return r.fulfill({json:job()});}
  if(path.endsWith('/cancelar')){cancelamentos++;estado='cancelado';return r.fulfill({json:job()});}
  if(path.endsWith('/jobs/j1'))return r.fulfill({json:job()});
- if(path.endsWith('/pacote'))return r.fulfill({contentType:'application/zip',headers:{'X-Camada-Arquivo':'data/geoespacial/teste.fgb','X-Camada-Id':'teste-gerado'},body:'ZIP simulado'});
+ if(path.endsWith('/pacote')){
+  if(erroPacote)return r.fulfill({status:503,json:{detail:'A camada foi gerada, mas não foi possível baixar o pacote salvo no Storage. Consulte as saídas no acervo; não gere outra camada apenas para repetir o download.'}});
+  return r.fulfill({contentType:'application/zip',headers:{'X-Camada-Arquivo':'data/geoespacial/teste.fgb','X-Camada-Id':'teste-gerado'},body:'ZIP simulado'});
+ }
  return r.fulfill({json:[]});
 });
-await p.goto('http://127.0.0.1:8083/restrict/geoespacial/gerador-camadas-territoriais/',{waitUntil:'domcontentloaded'});
+await p.goto('http://127.0.0.1:8083/restrict/geoespacial/gerador-camadas-territoriais/?categoria=social',{waitUntil:'domcontentloaded'});
 await p.locator('#admin-session-bar:not(.hidden)').waitFor();
 assert.match(await p.locator('#admin-session-bar').textContent(),/Teste.*analista.*Administrador/s);
+await p.locator('#territorial-category').selectOption('social');
 await p.locator('.mlb-attribute input').check();
 assert.equal(await p.locator('.mlb-output select').locator('option').count(),4);
 await p.locator('.mlb-output select').selectOption('geojson');
@@ -30,8 +34,15 @@ assert.equal(await p.locator('[data-pfs="progress-percent"]').innerText(),'33%')
 assert.match(await p.locator('#pfsProgressBox .pfs-body').textContent(),/Municípios carregados.*Preparando indicador 13/s);
 await p.getByRole('button',{name:'CANCELAR',exact:true}).click();await p.locator('.notification-toast.info').waitFor();assert.equal(cancelamentos,1);
 await p.evaluate(()=>Notify.clearAll());assert.equal(await p.locator('.mlb-attribute input').isChecked(),true);assert.equal(await p.locator('#territorial-result').isVisible(),false);
+await p.locator('#pfsProgressClose').click();
 estado='executando';await iniciar();estado='concluido';await p.locator('#pfsSuccessBox.pfs-active').waitFor();assert.equal(await p.locator('#territorial-result').isVisible(),true);assert.equal(await p.locator('#territorial-download').getAttribute('download'),'municipios_sp_geojson.zip');
-assert.equal(await p.locator('.mlb-status,#ea-feedback').count(),0);await p.locator('#pfsStatusOverlay .pfs-box.pfs-active .pfs-footer .pfs-btn').click();
+assert.equal(await p.locator('.mlb-status:visible,#ea-feedback:visible').count(),0);await p.locator('#pfsSuccessOk').click();
 estado='executando';await iniciar();estado='erro';await p.locator('#pfsErrorBox.pfs-active').waitFor();assert.match(await p.locator('#pfsErrorBox').textContent(),/Geração indisponível/);
+await p.locator('#pfsErrorBox .pfs-close').click();
+estado='executando';erroPacote=true;await iniciar();const pedidos=exportacoes;estado='concluido';
+await p.locator('#pfsErrorBox.pfs-active').waitFor();
+assert.match(await p.locator('[data-pfs="error-message"]').innerText(),/A camada foi gerada.*não gere outra camada/);
+assert.equal(exportacoes,pedidos,'Falha de download não dispara uma nova geração');
+assert.equal(await p.locator('.mlb-attribute input').isChecked(),true);
 assert.deepEqual(errors,[]);console.log('PASS: quatro formatos, GeoJSON no pedido e download ZIP, progresso, cancelamento, seleção preservada, sucesso e erro.');
 }finally{await browser.close();}})().catch(e=>{console.error(e);process.exit(1)});

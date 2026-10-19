@@ -161,7 +161,8 @@ def gerar(codigo, payload, nome, user, controle=None):
             catalogo.registrar_documento(execution,ident,report,validacao={'json':True,'tipo':'metadados_municipais'})
             ciclo.finalizar(execution)
             return package, {'id':ident,'arquivo':metadata['caminho_arquivo'],
-                             'pacote_caminho':archive['caminho'],'execucao_id':execution,'nome':name}
+                             'pacote_caminho':archive['caminho'],'pacote_sha256':archive['sha256'],
+                             'execucao_id':execution,'nome':name}
     except Exception as exc:
         if execution:
             ciclo.finalizar(execution, erro=str(exc))
