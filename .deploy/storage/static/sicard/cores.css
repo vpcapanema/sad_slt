@@ -439,7 +439,8 @@ body.app-blank #app_root .bg-body.rounded {
 
 [data-sicard-storage-login] body.app-blank {
   background-color: #eef5f9;
-  background-image: linear-gradient(135deg, #dcecf4 0%, #f8fbfd 55%, #e3eef4 100%);
+  background-image: linear-gradient(135deg, var(--sicard-login-accent) 0%, var(--sicard-login-strong) 13%, transparent 13%),
+    linear-gradient(135deg, #dcecf4 0%, #f8fbfd 55%, #e3eef4 100%);
 }
 
 [data-sicard-storage-login=admin] body.app-blank {

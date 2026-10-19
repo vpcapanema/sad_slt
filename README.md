@@ -66,6 +66,8 @@ O acesso à gestão de dados usa detalhes azuis; a administração de acesso usa
 vermelho escuro no subtítulo, nos controles, no contorno do card e no fundo.
 As linhas e os elementos geométricos do fundo usam azul escuro na gestão de
 dados e vermelho escuro na administração, preservando o fundo claro.
+Ambos os logins têm um detalhe diagonal no canto superior esquerdo, em azul
+na gestão de dados e vermelho escuro na administração.
 
 A personalização está no template comum
 `.deploy/storage/templates/common/base.html` e em

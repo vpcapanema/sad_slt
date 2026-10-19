@@ -55,6 +55,9 @@ thead th{font-weight:600;white-space:nowrap;color:white;background:var(--azul)}t
 thead .re{background:var(--re)}thead .ri{background:var(--ri)}thead tr:nth-child(2) th{font-size:11px;background:#174c68}thead tr:nth-child(2) .re{background:#973d49}thead tr:nth-child(2) .ri{background:#967316}
 tbody tr{cursor:pointer;background:white}tbody tr:nth-child(even){background:#f8fafc}tbody tr:hover{background:#eef5fa}
 tbody tr.ativo{background:#e8f2f9;box-shadow:inset 4px 0 #0879b2}tbody tr.ativo td{font-weight:bold}
+td.celula-base{padding:0}td.celula-base button{display:block;width:100%;padding:11px 12px;border:0;background:transparent;text-align:left;color:inherit;font:inherit}
+td.celula-ativa.re{background:var(--re-claro);box-shadow:inset 0 0 0 2px var(--re)}td.celula-ativa.ri{background:var(--ri-claro);box-shadow:inset 0 0 0 2px var(--ri)}
+.classe-tabela{display:block;font-size:10px;margin-top:6px;color:var(--azul)}
 td .secundario{display:block;color:var(--suave);font-size:10px;font-weight:normal;margin-top:4px}.rodape-tabela{padding:10px 15px;display:flex;justify-content:space-between;color:var(--suave);font-size:11px}
 .rodape{display:flex;align-items:center;justify-content:space-between;gap:16px;border-top:1px solid var(--linha);padding-top:18px}
 .rodape p{font-size:11px;color:var(--suave);line-height:1.6;max-width:680px}.mensagem{font-size:12px;color:var(--azul);min-height:15px}
@@ -126,7 +129,7 @@ td .secundario{display:block;color:var(--suave);font-size:10px;font-weight:norma
     <section class="painel">
       <header class="titulo-painel"><h2>Tabela de Resultados por Demanda</h2><span class="subtitulo">Áreas em km² · Equivalente em hectares abaixo</span></header>
       <div class="tabela-scroll"><table id="tabela" aria-label="Resultados por demanda"><thead id="cabecalho-tabela"></thead><tbody id="linhas"></tbody></table></div>
-      <div class="rodape-tabela"><span>3 de 3 demandas · Clique em uma linha para selecionar</span><span id="selecao-status" aria-live="polite"></span></div>
+      <div class="rodape-tabela"><span>Valores totais por base · Clique no nome para selecionar a demanda ou em uma área para destacar a base e ampliar o mapa.</span><span id="selecao-status" aria-live="polite"></span></div>
     </section>
     <p id="mensagem" class="mensagem" role="status"></p>
     <footer class="rodape">
@@ -178,13 +181,13 @@ const camadas=new Map(),recortes=[];
 for(const f of arquivoSaida.features){
  const layer=L.geoJSON(f,{style:{color:'#003b5a',weight:2,fillColor:'#2584af',fillOpacity:.09}}).addTo(saidas);
  layer.bindTooltip(()=>{const c=criar('span',f.properties.nome);return c});
- layer.on('click',()=>selecionar(f.id));camadas.set(f.id,layer);
+ layer.on('click',()=>selecionarOrigem(f.id));camadas.set(f.id,layer);
  for(const item of f.intersecoes){
   const b=bases.find(b=>b.id===item.properties.base_id),cor=b.papel==='re'?'#852c38':'#997400';
   const trecho=L.geoJSON(item,{style:{color:cor,weight:1.5,fillColor:cor,fillOpacity:.3}});
   trecho.addTo(b.papel==='re'?restricoes:riscos);
   trecho.bindTooltip(()=>criar('span',`${b.alias} · ${item.properties.classe} · ${item.properties.nome}`));
-  trecho.on('click',()=>{selecionar(f.id);baseAtiva=b.id;classeAtiva=item.properties.classe_id;selecionar(f.id)});
+  trecho.on('click',()=>selecionarOrigem(f.id,b.id,item.properties.classe_id));
   recortes.push({demanda:f.id,base:b.id,classe:item.properties.classe_id,layer:trecho,cor});
  }
 }
@@ -205,8 +208,13 @@ function atualizarNomes(){
  for(const f of arquivoSaida.features){
   const tr=criar('tr');tr.dataset.id=f.id;tr.tabIndex=0;
   tr.append(criar('td',f.id),criar('td',f.properties.nome));
-  for(const b of bases){const valor=f.properties.areas[b.id],td=criar('td',`${km(valor)} km²`),ha=criar('span',`${km(valor*100)} ha`);ha.className='secundario';td.append(ha);tr.append(td)}
-  tr.onclick=()=>selecionar(f.id,true);tr.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();selecionar(f.id,true)}};
+  for(const b of bases){
+   const valor=f.properties.areas[b.id],td=criar('td'),botao=criar('button',`${km(valor)} km²`),ha=criar('span',`${km(valor*100)} ha`),foco=criar('span');
+   td.dataset.base=b.id;td.className=`celula-base ${b.papel}`;botao.type='button';botao.setAttribute('aria-label',`${f.properties.nome} · ${b.alias} · ${km(valor)} km²`);
+   ha.className='secundario';foco.className='classe-tabela';foco.hidden=true;botao.append(ha,foco);td.append(botao);tr.append(td);
+   botao.onclick=e=>{e.stopPropagation();selecionarOrigem(f.id,b.id)};
+  }
+  tr.onclick=()=>selecionarOrigem(f.id);tr.onkeydown=e=>{if(e.target===tr&&(e.key==='Enter'||e.key===' ')){e.preventDefault();selecionarOrigem(f.id)}};
   linhas.append(tr);
  }
  selecionar(ativo);
@@ -232,7 +240,7 @@ function desenharRosca(classes){
   const d=`M ${ponto(103,inicio)} A 103 103 0 ${grande} 1 ${ponto(103,fim)} L ${ponto(65,fim)} A 65 65 0 ${grande} 0 ${ponto(65,inicio)} Z`;
   const path=criarSvg('path',{d,fill:c.cor,opacity:atenuada?.25:1,tabindex:0,role:'button','aria-label':rotulo,'aria-pressed':String(destacada),'data-classe':c.id});
   path.append(criarSvg('title',{},rotulo));
-  const escolher=()=>{baseAtiva=c.base;classeAtiva=c.id;selecionar(ativo)};
+  const escolher=()=>selecionarOrigem(ativo,c.base,c.id);
   path.onclick=escolher;path.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();escolher()}};
   svg.append(path);inicio=fim;
   const botao=criar('button');botao.type='button';botao.className='classe-legenda'+(destacada?' ativa':'')+(atenuada?' atenuada':'');botao.dataset.classe=c.id;botao.setAttribute('aria-pressed',String(destacada));
@@ -241,6 +249,9 @@ function desenharRosca(classes){
  }
  svg.append(criarSvg('text',{x:120,y:117,'text-anchor':'middle',fill:'#003b5a','font-size':30,'font-weight':'bold'},classes.length));
  svg.append(criarSvg('text',{x:120,y:139,'text-anchor':'middle',fill:'#637b8d','font-size':12},classes.length?'Classes':'Sem Interseção'));
+}
+function selecionarOrigem(id,base='',classe=''){
+ ativo=id;baseAtiva=base;classeAtiva=classe;selecionar(id,true);
 }
 function selecionar(id,enquadrar=false){
  if(ativo!==id)classeAtiva='';
@@ -260,17 +271,30 @@ function selecionar(id,enquadrar=false){
  }
  $('base-ativa').value=baseAtiva;
  $('aviso-selecao').textContent=classe?'As métricas correspondem à fatia selecionada e incluem todas as suas feições sobrepostas.':b?(classes.some(c=>c.base===b.id)?'Camada destacada. Clique em uma fatia para consultar a classe e suas feições.':'Esta base não apresenta interseções com a demanda selecionada.'):'Selecione uma camada de base ou uma fatia para consultar os detalhes da sobreposição.';
- for(const tr of $('linhas').children){tr.classList.toggle('ativo',tr.dataset.id===id);tr.setAttribute('aria-selected',String(tr.dataset.id===id))}
+ for(const tr of $('linhas').children){
+  const linhaAtiva=tr.dataset.id===id;tr.classList.toggle('ativo',linhaAtiva);tr.setAttribute('aria-selected',String(linhaAtiva));
+  for(const td of tr.querySelectorAll('[data-base]')){
+   const selecionada=linhaAtiva&&td.dataset.base===baseAtiva;td.classList.toggle('celula-ativa',selecionada);td.querySelector('button').setAttribute('aria-pressed',String(selecionada));
+   const foco=td.querySelector('.classe-tabela');foco.hidden=!(selecionada&&classe);foco.textContent=selecionada&&classe?`Em foco: ${classe.nome}`:'';
+  }
+ }
  for(const [fid,layer]of camadas)layer.setStyle({weight:fid===id?4:2,color:fid===id?'#087fb7':'#466171',fillOpacity:fid===id?.12:.04});
  for(const recorte of recortes){
   const destacado=recorte.demanda===id&&(classeAtiva?recorte.classe===classeAtiva:baseAtiva?recorte.base===baseAtiva:true);
   recorte.layer.setStyle({fillOpacity:destacado?.55:.12,weight:destacado?3:1});
  }
- $('selecao-status').textContent=`Selecionada: ${id}`;
+ $('selecao-status').textContent=`Selecionada: ${id}${b?` · ${b.alias}`:''}${classe?` · ${classe.nome}`:''}`;
  desenharRosca(classes);
- if(enquadrar)mapa.fitBounds(camadas.get(id).getBounds(),{padding:[60,60],maxZoom:13});
+ if(enquadrar){
+  const alvos=recortes.filter(r=>r.demanda===id&&(classeAtiva?r.classe===classeAtiva:baseAtiva?r.base===baseAtiva:false));
+  if(!mapa.hasLayer(saidas))saidas.addTo(mapa);
+  if(b){const grupo=b.papel==='re'?restricoes:riscos;if(!mapa.hasLayer(grupo))grupo.addTo(mapa)}
+  for(const alvo of alvos)alvo.layer.bringToFront();
+  const limites=alvos.length?L.featureGroup(alvos.map(r=>r.layer)).getBounds():camadas.get(id).getBounds();
+  mapa.fitBounds(limites,{padding:[24,24],maxZoom:16,animate:false});
+ }
 }
-$('base-ativa').onchange=e=>{baseAtiva=e.target.value;classeAtiva='';selecionar(ativo)};
+$('base-ativa').onchange=e=>selecionarOrigem(ativo,e.target.value);
 $('editar-nomes').onclick=()=>{
  $('campos-alias').replaceChildren();
  bases.forEach((b,i)=>{const label=criar('label',b.papel==='re'?'Restrição':'Risco'),input=criar('input');input.id=`alias-${i}`;input.name=b.id;input.value=b.alias;input.required=true;label.htmlFor=input.id;label.append(input);$('campos-alias').append(label)});

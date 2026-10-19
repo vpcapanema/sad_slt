@@ -71,7 +71,10 @@ const path=require('node:path');
       assert.equal(state.border,area==='admin'?'rgb(117, 31, 48)':'rgb(17, 101, 147)');
       assert.equal(state.patternColor,area==='admin'?'rgb(80, 21, 34)':'rgb(0, 59, 90)');
       assert.match(state.patternMask,/fundo-login\.svg/);
-      if(area==='admin')assert.match(state.background,/rgb\(117, 31, 48\)/);
+      assert.ok(state.background.startsWith(area==='admin'
+       ?'linear-gradient(135deg, rgb(117, 31, 48) 0%, rgb(80, 21, 34) 13%, rgba(0, 0, 0, 0) 13%)'
+       :'linear-gradient(135deg, rgb(17, 101, 147) 0%, rgb(0, 59, 90) 13%, rgba(0, 0, 0, 0) 13%)'),
+       'Both logins must display the diagonal upper-left accent in their area color');
       await page.emulateMedia({colorScheme:colorScheme==='dark'?'light':'dark'});
       assert.equal(await page.locator('html').getAttribute('data-bs-theme'),'light');
       assert.equal(await page.locator('form input[type=password]').count(),1);
