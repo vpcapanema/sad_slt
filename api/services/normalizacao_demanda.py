@@ -37,12 +37,7 @@ def normalizar(geometry, *, crs_origem: int | str = 4326, crs_saida: int | str =
         x0, x1, y0, y1 = geographic.GetEnvelope()
         if not (-180 <= x0 <= x1 <= 180 and -90 <= y0 <= y1 <= 90):
             raise HTTPException(422, 'Coordenadas incompatíveis com o CRS informado.')
-        kind = ogr.GT_Flatten(geom.GetGeometryType())
-        radius = BUFFER_PONTO_M if kind in (ogr.wkbPoint, ogr.wkbMultiPoint) else BUFFER_LINHA_M if kind in (ogr.wkbLineString, ogr.wkbMultiLineString) else None
         metric = reprojetar(geographic, 4674, CRS_METRICO)
-        if radius:
-            metric = metric.Buffer(radius, SEGMENTOS_QUADRANTE)
-        metric = metric.MakeValid()
         polygons = ogr.Geometry(ogr.wkbMultiPolygon)
         def collect(g):
             if ogr.GT_Flatten(g.GetGeometryType()) == ogr.wkbPolygon:
@@ -50,7 +45,27 @@ def normalizar(geometry, *, crs_origem: int | str = 4326, crs_saida: int | str =
             else:
                 for i in range(g.GetGeometryCount()):
                     collect(g.GetGeometryRef(i))
-        collect(metric)
+        def processar(g, caminho='geometria'):
+            if g is None or g.IsEmpty():
+                raise HTTPException(422, f'{caminho}: geometria vazia; nenhum componente foi descartado.')
+            kind = ogr.GT_Flatten(g.GetGeometryType())
+            if kind == ogr.wkbGeometryCollection:
+                for i in range(g.GetGeometryCount()):
+                    processar(g.GetGeometryRef(i), f'{caminho} > componente {i + 1}')
+                return
+            if kind not in (ogr.wkbPoint, ogr.wkbMultiPoint, ogr.wkbLineString,
+                            ogr.wkbMultiLineString, ogr.wkbPolygon, ogr.wkbMultiPolygon):
+                raise HTTPException(422, f'{caminho}: tipo {g.GetGeometryName()} não aceito; nenhum componente foi descartado.')
+            radius = BUFFER_PONTO_M if kind in (ogr.wkbPoint, ogr.wkbMultiPoint) else BUFFER_LINHA_M if kind in (ogr.wkbLineString, ogr.wkbMultiLineString) else None
+            parte = g.Buffer(radius, SEGMENTOS_QUADRANTE) if radius else g
+            parte = parte.MakeValid()
+            if parte is None or parte.IsEmpty():
+                raise HTTPException(422, f'{caminho}: não foi possível obter um polígono válido da demanda.')
+            anteriores = polygons.GetGeometryCount()
+            collect(parte)
+            if polygons.GetGeometryCount() == anteriores:
+                raise HTTPException(422, f'{caminho}: não foi possível obter um polígono válido da demanda.')
+        processar(metric)
         if polygons.IsEmpty():
             raise HTTPException(422, 'Não foi possível obter um polígono válido da demanda.')
         result = polygons.UnionCascaded()

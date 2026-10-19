@@ -67,9 +67,16 @@ automatica nem alterar resultados existentes da hierarquizacao.
    recebem buffer. O processamento utiliza GDAL/OGR em EPSG:5880, com 32
    segmentos por quadrante, reducao a 2D, `MakeValid`, coleta de componentes
    poligonais e `UnionCascaded` por feicao; a saida e gravada em EPSG:4674.
+   `GeometryCollection`, inclusive aninhada, e processada recursivamente:
+   cada componente recebe a regra de seu tipo original e os resultados
+   poligonais sao reunidos na mesma feicao. Nao se extraem somente os poligonos,
+   pois isso descartaria os pontos e as linhas da colecao. Preservam-se o FID
+   de origem, os atributos e uma unica demanda por registro; os metadados e o
+   feedback registram as colecoes e seus tipos de componentes.
    Nao se dissolvem demandas diferentes nem se descartam registros sem geometria
-   utilizavel. CRS ausente, coordenadas incompativeis, colecoes geometricas ou
-   impossibilidade de gerar poligono valido interrompem o envio.
+   utilizavel. CRS ausente, coordenadas incompativeis, componentes vazios ou
+   nao suportados e impossibilidade de gerar poligono valido interrompem o envio.
+   Erros de componentes indicam sua posicao na colecao, alem da feicao e do FID.
 7. A origem cadastrada e recuperada novamente no servidor; arquivos do storage
    sao lidos integralmente, preservando atributos e identificadores de origem.
    Cada camada de demandas gera um GeoPackage derivado, reaberto e conferido

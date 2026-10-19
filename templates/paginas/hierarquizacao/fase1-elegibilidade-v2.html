@@ -88,7 +88,7 @@
     <header class="ahp-section-label"><span class="ahp-subsection-num">3</span><h2 id="ev-previa-title">Confira a prévia</h2></header>
     <div class="ahp-section-body">
       <p class="ea-hint">Receba aqui as seleções enviadas pelas seções 1 e 2, confira o mapa e marque as camadas desejadas. O botão no rodapé do painel de camadas envia somente as marcadas para a bancada. Novas seleções só atualizam esta prévia após clicar em enviar para a prévia.</p>
-      <p class="ea-hint">A prévia mostra as geometrias originais. Ao enviar à bancada, as demandas de entrada são normalizadas para Polygon/MultiPolygon pela mesma regra do cadastro; os parâmetros são apresentados na confirmação. Os cálculos utilizarão os arquivos derivados integrais, sem alterar as fontes nem aplicar buffers às bases de risco ou restrição.</p>
+      <p class="ea-hint">A prévia mostra as geometrias originais. Ao enviar à bancada, as demandas de entrada são normalizadas para Polygon/MultiPolygon pela mesma regra do cadastro; os parâmetros são apresentados na confirmação. Coleções geométricas são convertidas componente a componente e reunidas na mesma demanda. Os cálculos utilizarão os arquivos derivados integrais, sem alterar as fontes nem aplicar buffers às bases de risco ou restrição.</p>
       <div class="ea-preview-workspace">
       <section id="ea-input-preview" class="ea-input-preview" aria-labelledby="ea-input-preview-title" hidden>
         <header><h4 id="ea-input-preview-title">Pré-visualização das camadas do geoprocesso</h4><p id="ea-input-preview-name"></p></header>
@@ -130,5 +130,5 @@
 <script src="/assets/vendor/maplibre-gl/maplibre-gl.js"></script>
 <script src="/assets/vendor/maplibre-gl/leaflet-maplibre-gl.js"></script>
 <script src="/restrict/hierarquizacao/js/hier-api.js"></script>
-<script type="module" src="/restrict/hierarquizacao/js/fase1-elegibilidade-v2.js?v=20261018-feedback-demandas"></script>
+<script type="module" src="/restrict/hierarquizacao/js/fase1-elegibilidade-v2.js?v=20261018-feedback-colecoes"></script>
 {% endblock %}

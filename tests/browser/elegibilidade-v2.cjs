@@ -32,6 +32,7 @@ const assert = require('node:assert/strict');
       tiles_token:'a'.repeat(32), feicoes:2, bounds:[-47.2,-23.4,-46.5,-22.9],
       campos:[{nome:'codigo'}], metadados_local:{crs:'EPSG:4674',tipos_geometria:['Polygon'],feicoes:2},
     }));
+    layers[0].metadados_local.tipos_geometria=['GeometryCollection','Polygon'];
     const packageFile = {id:'storage:base-geoespacial/pacote.gpkg',nome:'pacote',arquivo:'base-geoespacial/pacote.gpkg',inventariar:true};
     const packageLayers = ['linhas','pontos'].map(nome => ({
       ...layers[0], id:`${packageFile.id}::${nome}`, nome, arquivo:packageFile.arquivo, camada:nome,
@@ -75,12 +76,14 @@ const assert = require('node:assert/strict');
         if(id===holdNormalization)await new Promise(resolve=>{releaseNormalization=resolve;});
         if(failNormalization===true||failNormalization===id)return route.fulfill({status:422,json:{detail:'Não foi possível obter um polígono válido da demanda.'}});
         const origem=[...layers,...packageLayers].find(item=>item.id===id);
+        const colecoes=origem?.metadados_local.tipos_geometria.includes('GeometryCollection')?1:0;
         const arquivo=`saidas-geoespaciais/execucoes/fixture/camadas/demanda-${normalizations.length}.gpkg`;
         const item={...layers[0],id:`storage:${arquivo}::demandas`,arquivo,nome:origem?.nome||id,
           revisao:`derivada-${normalizations.length}`,feicoes:origem?.feicoes||1,
           metadados_local:{crs:'EPSG:4674',tipos_geometria:['MultiPolygon'],feicoes:origem?.feicoes||1},
           normalizacao_demanda:{...parametros,feicoes:origem?.feicoes||1,pontos_convertidos:0,
-            linhas_convertidas:id.endsWith('D-0')?1:0,poligonos_sem_buffer:id.endsWith('D-0')?0:origem?.feicoes||1}};
+            linhas_convertidas:id.endsWith('D-0')?1:0,poligonos_sem_buffer:id.endsWith('D-0')?0:(origem?.feicoes||1)-colecoes,
+            colecoes_convertidas:colecoes,componentes_colecoes:colecoes?{Point:1,LineString:1,Polygon:1}:{}}};
         derivados.set(item.id,id);
         return send(item);
       }
@@ -206,6 +209,7 @@ const assert = require('node:assert/strict');
     assert.match(await page.locator('#ev-status').textContent(),/cancelado.*mantidos.*derivados/s);
     await send('entrada');
     assert.deepEqual(await panel(), [inputIds[0]]);
+    assert.match(await page.locator('#pfsProgressOverlay').textContent(),/1 coleção\(ões\) normalizada\(s\).*Point: 1.*LineString: 1.*Polygon: 1/s,'Feedback registra as coleções e todos os tipos de componentes');
     const entradaDerivada=await page.locator('iframe').evaluate(f=>{
       const win=f.contentWindow,id=win.gpApp.state.layers[0].id,file=win.gpArquivos.sessions.get(id);
       return {id,arquivo:file.arquivo,request:win.gpArquivos.requestPayload(file)};
@@ -514,7 +518,7 @@ const assert = require('node:assert/strict');
     await defaultExplorer.locator('#pfsConfirmOk').click();
     await defaultExplorer.waitFor({state:'detached'});
     assert.deepEqual([inventories.length, preparations.length], defaultReads.map(n => n+1), 'Fluxo padrão do extrator continua identificando e validando no seu próprio momento');
-    console.log('PASS: seleção -> prévia -> bancada, envio único no rodapé, cancelamento, origens exclusivas, listas, conflitos, geometrias completas e responsividade.');
+    console.log('PASS: seleção -> prévia -> bancada, coleções e componentes no feedback, cancelamento, origens exclusivas, listas, conflitos, geometrias completas e responsividade.');
     console.log(`Confirmar: máximo ${Math.max(...selectionTimes)} ms; nenhuma chamada de inventário/preparação. Campos identificados: OK.`);
   } finally { await browser.close(); }
 })().catch(error => {console.error(error); process.exitCode = 1;});

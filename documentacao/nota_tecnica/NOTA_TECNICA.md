@@ -18,7 +18,7 @@
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Título**                 | Metodologia do Sistema de Hierarquização de Demandas — SICARD                                                                                                         |
 | **Número**                 | NT-SICARD-001/2026                                                                                                                                                       |
-| **Versão**                 | 1.17                                                                                                                                                                      |
+| **Versão**                 | 1.18                                                                                                                                                                      |
 | **Data de emissão**        | 18/10/2026                                                                                                                                                               |
 | **Classificação**         | Documento técnico-metodológico de entrega ao cliente                                                                                                                   |
 | **Sistema**                 | SICARD — Sistema de Apoio à Tomada de Decisão                                                                                                                         |
@@ -51,6 +51,7 @@
 | 1.15    | 17/10/2026 | `[preencher]` | Separação dos estados de seleção, prévia e bancada na Elegibilidade v2, com envio por grupo à prévia e confirmação única das camadas marcadas no rodapé de seu painel, sem classificação automática ou homologação. |
 | 1.16    | 17/10/2026 | `[preencher]` | Transferência de referências sem leitura geométrica na confirmação do explorador; identificação dos componentes e validação no envio à prévia, com preservação dos estados anteriores em caso de falha e controle de conflitos entre arquivos e camadas internas. |
 | 1.17    | 18/10/2026 | `[preencher]` | Aplicação da normalização cadastral poligonal às demandas no envio da prévia à bancada, com parâmetros explícitos, arquivo derivado integral e rastreabilidade; acompanhamento dos dois envios e preservação dos conjuntos anteriores em caso de falha ou cancelamento. |
+| 1.18    | 18/10/2026 | `[preencher]` | Tratamento recursivo de coleções geométricas na normalização das demandas, com conversão de todos os componentes segundo seu tipo, união por feição e rastreabilidade, sem perda de pontos, linhas, atributos ou identificadores de origem. |
 
 ---
 
@@ -372,6 +373,15 @@ reparo `MakeValid`, coleta de componentes poligonais e consolidação
 demandas distintas. Essas regras constam do módulo interno da Fase 1 e da
 rotina cadastral `normalizacao_demanda`.
 
+Coleções `GeometryCollection`, inclusive aninhadas, são processadas
+recursivamente: os componentes pontuais e lineares recebem os respectivos
+buffers cadastrais, e os componentes poligonais não recebem buffer adicional.
+Os resultados poligonais são reunidos em uma única geometria por feição,
+mantendo os atributos e o identificador de origem. Não se extraem apenas os
+polígonos da coleção, pois esse procedimento eliminaria componentes pontuais
+e lineares. A quantidade de coleções tratadas e os tipos de seus componentes
+são registrados nos metadados do arquivo e no acompanhamento do envio.
+
 Utilizam-se todas as feições da fonte integral, com preservação dos atributos
 e registro dos identificadores de origem. As geometrias cadastradas são
 recuperadas novamente no servidor; cada camada de demandas produz um
@@ -380,7 +390,7 @@ oficial das saídas. Registram-se os parâmetros e a origem nos metadados do
 arquivo. A bancada recebe o caminho e a revisão do arquivo derivado para os
 geoprocessamentos, sem substituir a fonte original. Não se calculam áreas de
 incidência com tiles ou simplificações da prévia. CRS ausente, coordenadas
-incompatíveis, registros sem geometria utilizável, coleções geométricas ou
+incompatíveis, registros sem geometria utilizável, componentes vazios ou não suportados e
 impossibilidade de gerar polígono válido interrompem o envio, sem descarte
 silencioso de demandas. Essa conversão aplica-se somente às demandas; as bases
 de risco e restrição mantêm suas geometrias factuais, sem buffers adicionais.

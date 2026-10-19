@@ -325,6 +325,10 @@ async function enviar() {
       }
       entradas.push(derivada);
       processo.log(`${fonte.nome}: ${derivada.normalizacao_demanda.feicoes} feição(ões); ${derivada.normalizacao_demanda.pontos_convertidos} ponto(s), ${derivada.normalizacao_demanda.linhas_convertidas} linha(s), ${derivada.normalizacao_demanda.poligonos_sem_buffer} polígono(s) sem buffer. Arquivo: ${derivada.arquivo}.`,'info');
+      if (derivada.normalizacao_demanda.colecoes_convertidas) {
+        const auditoria=derivada.normalizacao_demanda;
+        processo.log(`${fonte.nome}: ${auditoria.colecoes_convertidas} coleção(ões) normalizada(s) por componente (${Object.entries(auditoria.componentes_colecoes).map(([tipo,total])=>`${tipo}: ${total}`).join('; ')}), reunindo os resultados na mesma demanda e preservando seus atributos e identificadores.`,'info');
+      }
       conferir();
     }
     candidato.entrada=entradas;

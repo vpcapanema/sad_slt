@@ -105,6 +105,35 @@ def test_prepara_storage_sem_materializar_geojson(client, storage_file):
     assert result["bounds"][3] == pytest.approx(0.0045, abs=0.001)
 
 
+@pytest.mark.parametrize("fid,offset,ids", [("0", 0, ["0", "1"]), ("118", 6, ["118"])])
+def test_tabela_localiza_fid_esparso_na_pagina_correta(client, storage_file, fid, offset, ids):
+    source = bancada_camada_original._fonte(f"storage:{storage_file}::areas", storage_file)
+    dataset = ogr.Open(str(source.caminho), 1)
+    layer = dataset.GetLayerByName("areas")
+    for value in (0, 118):
+        feature = ogr.Feature(layer.GetLayerDefn())
+        feature.SetFID(value)
+        feature.SetField("nome", f"feição-{value}")
+        layer.CreateFeature(feature)
+    dataset = None
+    metadata = bancada_camada_original.preparar(source.ident, storage_file)
+    payload = {"id": source.ident, "arquivo": storage_file, "revisao": metadata["revisao"],
+               "offset": 0, "limite": 2, "localizar_fid": fid}
+    response = client.post("/api/geoespacial/bancada-arquivos/tabela", json=payload)
+    assert response.status_code == 200, response.text
+    result = response.json()
+    assert result["offset"] == offset
+    assert [row["id"] for row in result["linhas"]] == ids
+    assert result["linhas"][0]["atributos"]["nome"] == f"feição-{fid}"
+    response = client.post("/api/geoespacial/bancada-arquivos/tabela",
+                          json={**payload, "localizar_fid": "999"})
+    assert response.status_code == 422
+    assert "não encontrada" in response.json()["detail"]
+    response = client.post("/api/geoespacial/bancada-arquivos/tabela",
+                          json={**payload, "revisao": "desatualizada"})
+    assert response.status_code == 422
+
+
 @pytest.mark.parametrize("name,wkts,expected", [
     ("linhas", [
         "LINESTRING (0 0, 100 100)",

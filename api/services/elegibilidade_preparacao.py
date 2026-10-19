@@ -7,7 +7,7 @@ from collections import Counter
 import geopandas as gpd
 import pandas as pd
 from fastapi import HTTPException
-from shapely.geometry import mapping, shape
+from shapely.geometry import GeometryCollection, mapping, shape
 
 from api.services import extracao_preparacao as previa
 from api.services import normalizacao_demanda as regra
@@ -17,7 +17,7 @@ from api.services.arquivos_geoespaciais_memoria import vetor, ler_vetor
 from api.services.extracao_entrada_local import validar
 from api.services.metadados_previa import descrever_vetor
 
-TIPOS = {'Point', 'MultiPoint', 'LineString', 'MultiLineString', 'Polygon', 'MultiPolygon'}
+TIPOS = {'Point', 'MultiPoint', 'LineString', 'MultiLineString', 'Polygon', 'MultiPolygon', 'GeometryCollection'}
 
 
 def parametros() -> dict:
@@ -28,6 +28,7 @@ def parametros() -> dict:
         'crs_metrico': f'EPSG:{regra.CRS_METRICO}',
         'crs_saida': f'EPSG:{regra.CRS_CADASTRAL}',
         'reparo': 'MakeValid', 'consolidacao': 'UnionCascaded por feição',
+        'colecoes': 'Normalização recursiva de todos os componentes, reunidos na mesma feição',
     }
 
 
@@ -38,6 +39,7 @@ def normalizar_frame(frame: gpd.GeoDataFrame) -> tuple[gpd.GeoDataFrame, dict]:
         raise ValueError('A camada de demandas não informa seu CRS.')
     geometrias = []
     tipos = Counter(frame.geometry.geom_type)
+    componentes_colecoes = Counter()
     for pos, (fid, geometria) in enumerate(frame.geometry.items(), 1):
         if geometria.geom_type not in TIPOS:
             raise ValueError(f'Feição {pos} (FID/índice {fid}): tipo {geometria.geom_type} não aceito como demanda. Nenhum registro foi descartado.')
@@ -48,6 +50,14 @@ def normalizar_frame(frame: gpd.GeoDataFrame) -> tuple[gpd.GeoDataFrame, dict]:
         if resultado.geom_type not in {'Polygon', 'MultiPolygon'} or resultado.is_empty or not resultado.is_valid:
             raise ValueError(f'Feição {pos} (FID/índice {fid}): a normalização não produziu um polígono válido.')
         geometrias.append(resultado)
+        if isinstance(geometria, GeometryCollection):
+            pendentes = list(geometria.geoms)
+            while pendentes:
+                componente = pendentes.pop()
+                if isinstance(componente, GeometryCollection):
+                    pendentes.extend(componente.geoms)
+                else:
+                    componentes_colecoes[componente.geom_type] += 1
     resultado = frame.copy()
     resultado = resultado.set_geometry(gpd.GeoSeries(geometrias, index=frame.index, crs=regra.CRS_CADASTRAL))
     validar(resultado, max_feicoes=None)
@@ -56,6 +66,8 @@ def normalizar_frame(frame: gpd.GeoDataFrame) -> tuple[gpd.GeoDataFrame, dict]:
         'pontos_convertidos': tipos['Point'] + tipos['MultiPoint'],
         'linhas_convertidas': tipos['LineString'] + tipos['MultiLineString'],
         'poligonos_sem_buffer': tipos['Polygon'] + tipos['MultiPolygon'],
+        'colecoes_convertidas': tipos['GeometryCollection'],
+        'componentes_colecoes': dict(componentes_colecoes),
     }
 
 
@@ -117,6 +129,8 @@ def preparar_demanda(ident: str, dono: str, atributos: dict | None = None) -> di
     meta = descrever_vetor(reaberta, formato='GPKG', componente='demandas')
     meta['normalizacao_demanda'] = auditoria
     meta['avisos'].append('Demanda normalizada segundo a regra cadastral. O arquivo de origem não foi alterado; os cálculos devem usar este arquivo derivado integral.')
+    if auditoria['colecoes_convertidas']:
+        meta['avisos'].append(f"{auditoria['colecoes_convertidas']} coleção(ões) geométrica(s) normalizada(s) componente a componente e reunida(s) por feição, preservando os atributos e identificadores originais.")
     representacao = previa.representar(reaberta, meta, dono)
     exportacao = ciclo.registrar_exportacao_memoria(nome_arquivo, conteudos, ident, 'vetor')
     caminho = exportacao['caminho']

@@ -1443,6 +1443,7 @@
     showEditor();$("#gp-right-title").textContent="Tabela de Atributos";
     if(!layerId||layer?.tipo?.toLowerCase().includes("raster")){$("#gp-editor-view").innerHTML='<div class="empty">Selecione uma camada vetorial.</div>';return}
     ensureAttributesTab(layerId);
+    if(window.gpAttributeTable.isOpen(layerId))return;
     $("#gp-editor-view").innerHTML='<div class="empty">Carregando atributos…</div>';
     try{
       let file=window.gpArquivos?.sessions.get(layerId);
@@ -1464,7 +1465,7 @@
       if(local?.type==="FeatureCollection"){
         const features=local.features||[];
         const names=[...new Set([...(file?.campos||[]).map(c=>c.nome),...features.flatMap(f=>Object.keys(f.properties||{}))])];
-        body={revisao:file?.revisao,colunas:names.map(nome=>({nome,tipo:(file?.campos?.find(c=>c.nome===nome)?.subtipo==="Boolean"?"bool":file?.campos?.find(c=>c.nome===nome)?.tipo)||(features.some(f=>typeof f.properties?.[nome]==="number")?"float64":features.some(f=>typeof f.properties?.[nome]==="boolean")?"bool":"string")})),registros:features.map(f=>({...f.properties,__gp_feature:f})),total:features.length,offset,limite:100};
+        body={revisao:file?.revisao,colunas:names.map(nome=>({nome,tipo:(file?.campos?.find(c=>c.nome===nome)?.subtipo==="Boolean"?"bool":file?.campos?.find(c=>c.nome===nome)?.tipo)||(features.some(f=>typeof f.properties?.[nome]==="number")?"float64":features.some(f=>typeof f.properties?.[nome]==="boolean")?"bool":"string")})),registros:features.map((f,i)=>({...f.properties,_indice:i,__gp_feature:f})),total:features.length,offset,limite:100};
       }else{
         const response=await fetch(`${API}/camadas/${encodeURIComponent(layerId)}/atributos/tabela`);
         body=await response.json();
@@ -1618,6 +1619,7 @@
     if(!state.map){document.addEventListener("gp-modeler-state",()=>adicionarCamadaGeoJsonEmMemoria(id,nome,geojson,opts),{once:true});return}
     if(!state.map.isStyleLoaded()&&!opts.estiloPreparado){state.map.once("idle",()=>adicionarCamadaGeoJsonEmMemoria(id,nome,geojson,opts));return}
     removeMapResource(id,{preserveSelection:opts.preserveSelection});
+    geojson={...geojson,features:(geojson.features||[]).map((f,i)=>({...f,properties:{...f.properties,__gp_indice:i}}))};
     // Sem isto a camada em memória fica sem tipo de geometria e o painel mostra o
     // símbolo genérico em vez de ponto, linha ou polígono.
     state.geometryTypes[id]=tiposGeojson(geojson);

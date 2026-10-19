@@ -2152,6 +2152,7 @@ class LerTabelaCamadaOriginal(PrepararCamadaOriginal):
     revisao: str = Field(min_length=1, max_length=128)
     offset: int = Field(default=0, ge=0, le=10_000_000)
     limite: int = Field(default=100, ge=1, le=500)
+    localizar_fid: str | None = Field(default=None, pattern=r"^[0-9]+$", max_length=20)
 
 
 class LerGeometriasCamadaOriginal(PrepararCamadaOriginal):
@@ -2204,6 +2205,7 @@ async def ler_tabela_camada_original(payload: LerTabelaCamadaOriginal) -> dict[s
             payload.revisao,
             payload.offset,
             payload.limite,
+            localizar_fid=payload.localizar_fid,
         )
     except (FileNotFoundError, ValueError, DatabaseUnavailableError, RuntimeError) as exc:
         raise _erro_bancada_camada_original(exc) from exc

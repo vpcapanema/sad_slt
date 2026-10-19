@@ -244,7 +244,7 @@ def ler_tabela(
     revisao: str,
     offset: int,
     limite: int,
-    *, _source: Fonte | None = None,
+    *, _source: Fonte | None = None, localizar_fid: str | None = None,
 ) -> dict[str, Any]:
     fonte = _source or _fonte(ident, arquivo)
     atual = _revisao(fonte)
@@ -255,6 +255,21 @@ def ler_tabela(
     try:
         count = camada.GetFeatureCount(0)
         total = count if count >= 0 else None
+        if localizar_fid is not None:
+            fid = _fids([localizar_fid])[0]
+            definition = camada.GetLayerDefn()
+            camada.SetIgnoredFields([
+                "OGR_GEOMETRY",
+                *[definition.GetFieldDefn(i).GetName() for i in range(definition.GetFieldCount())],
+            ])
+            camada.ResetReading()
+            for position, feature in enumerate(camada):
+                if feature.GetFID() == fid:
+                    offset = (position // limite) * limite
+                    break
+            else:
+                raise ValueError(f"Feição {fid} não encontrada na revisão informada.")
+            camada.SetIgnoredFields([])
         camada.ResetReading()
         if offset:
             try:

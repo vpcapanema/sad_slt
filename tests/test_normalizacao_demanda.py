@@ -1,6 +1,8 @@
 import pytest
+import geopandas as gpd
 from pyproj import Geod, Transformer
-from shapely.geometry import shape, Point
+from shapely.geometry import shape, mapping, Point, LineString, Polygon, MultiPoint, MultiLineString, MultiPolygon, GeometryCollection
+from shapely.ops import unary_union
 from fastapi import HTTPException
 from api.services.normalizacao_demanda import normalizar
 
@@ -36,3 +38,43 @@ def test_reprojecao_e_idempotencia_nao_aplica_buffer_a_poligono():
 def test_coordenadas_projetadas_sem_crs_sao_recusadas():
     with pytest.raises(HTTPException):
         normalizar({'type': 'Point', 'coordinates': [300000, 7400000]})
+
+
+@pytest.mark.parametrize('geometria', [
+    Point(-46.6, -23.5),
+    LineString([(-46.6, -23.5), (-46.59, -23.5)]),
+    Polygon([(-46.6, -23.5), (-46.59, -23.5), (-46.59, -23.49), (-46.6, -23.5)]),
+    MultiPoint([(-46.6, -23.5), (-46.59, -23.5)]),
+    MultiLineString([[(-46.6, -23.5), (-46.59, -23.5)], [(-46.58, -23.5), (-46.57, -23.5)]]),
+    MultiPolygon([Polygon([(-46.6, -23.5), (-46.59, -23.5), (-46.59, -23.49), (-46.6, -23.5)])]),
+])
+def test_colecao_aplica_a_mesma_regra_do_componente(geometria):
+    resultado = shape(normalizar(mapping(GeometryCollection([geometria]))))
+    esperado = shape(normalizar(mapping(geometria)))
+    assert resultado.is_valid and resultado.geom_type in {'Polygon', 'MultiPolygon'}
+    assert resultado.equals_exact(esperado, 1e-10)
+
+
+def test_colecao_mista_aninhada_preserva_todas_as_partes():
+    partes = [
+        Point(-46.6, -23.5),
+        LineString([(-46.59, -23.5), (-46.58, -23.5)]),
+        Polygon([(-46.57, -23.5), (-46.56, -23.5), (-46.56, -23.49), (-46.57, -23.5)]),
+    ]
+    geometria = GeometryCollection([partes[0], GeometryCollection(partes[1:])])
+    resultado = shape(normalizar(mapping(geometria)))
+    esperado = unary_union(gpd.GeoSeries([shape(normalizar(mapping(parte))) for parte in partes], crs=4674).to_crs(5880))
+    metrica = gpd.GeoSeries([resultado], crs=4674).to_crs(5880).iloc[0]
+    assert resultado.geom_type == 'MultiPolygon' and resultado.is_valid
+    assert metrica.symmetric_difference(esperado).area < .01
+    for parte in partes:
+        assert resultado.covers(parte.representative_point())
+
+
+def test_colecao_com_componente_vazio_nao_descarta_parte():
+    geometria = {'type': 'GeometryCollection', 'geometries': [
+        {'type': 'Point', 'coordinates': [-46.6, -23.5]},
+        {'type': 'Polygon', 'coordinates': []},
+    ]}
+    with pytest.raises(HTTPException, match='componente 2.*vazi'):
+        normalizar(geometria)

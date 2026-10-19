@@ -88,7 +88,7 @@
     });
   }
   function featureKey(properties = {}, featureId = null) {
-    const identity = featureId ?? properties.OBJECTID ?? properties.ObjectID ?? properties.objectid ?? properties.FID ?? properties.fid ?? properties.id;
+    const identity = featureId ?? properties.__gp_indice ?? properties.OBJECTID ?? properties.ObjectID ?? properties.objectid ?? properties.FID ?? properties.fid ?? properties.id;
     return identity != null ? String(identity) : JSON.stringify(properties);
   }
   function tagSelection(data, layerId) {
@@ -117,17 +117,19 @@
     });
   }
   function selectFeature(layerId,feature,add=false){
+    ++mapSelectionRequest;
     const tagged=tagSelection({type:"FeatureCollection",features:[feature]},layerId).features;
     const previous=add?(state().selectedGeoJSON?.features||[]):[];
     state().activeLayerId=layerId;
     renderSelection({type:"FeatureCollection",features:[...new Map([...previous,...tagged].map(f=>[`${f.properties.__gp_layer_id}:${f.properties.__gp_selection_key}`,f])).values()]});
   }
   function setLayerSelection(layerId,features){
+    ++mapSelectionRequest;
     const others=(state().selectedGeoJSON?.features||[]).filter(f=>f.properties?.__gp_layer_id!==layerId);
     const tagged=tagSelection({type:'FeatureCollection',features},layerId);
     renderSelection({type:'FeatureCollection',features:[...others,...tagged.features]});
   }
-  function clearSelection() { removeSelectionLayers(); state().selectedGeoJSON = { type: "FeatureCollection", features: [] }; $("#gp-selection").textContent = "0 selecionadas"; window.gpApp.syncAttributeSelection?.(); window.gpApp.configureSelectionScope?.(); }
+  function clearSelection() { ++mapSelectionRequest; removeSelectionLayers(); state().selectedGeoJSON = { type: "FeatureCollection", features: [] }; $("#gp-selection").textContent = "0 selecionadas"; window.gpApp.syncAttributeSelection?.(); window.gpApp.configureSelectionScope?.(); }
   async function fitSelection() {
     const data = state().selectedGeoJSON; if (!data?.features?.length) return notify("Não há feições selecionadas.");
     const features = data.features.filter(feature => feature.geometry), pending = new Map();
@@ -171,16 +173,44 @@
     };
     map.on("click", state().exploreHandler); notify("Explorar ativo: clique em uma feição para consultar seus atributos.");
   }
+  let mapSelectionRequest=0;
+  const selectionPreparations=new Map();
+  function prepareSelectionSource(layerId,event,requestId,handler){
+    if(!selectionPreparations.has(layerId)){
+      const pending=window.gpArquivos.prepararTabela(layerId).then(()=>new Promise((resolve,reject)=>{
+        const map=state().map;
+        const done=()=>{clearTimeout(timer);map.off('idle',done);resolve();};
+        const timer=setTimeout(()=>{map.off('idle',done);reject(Error('Os tiles da fonte original não terminaram de carregar. Tente novamente.'));},15000);
+        map.once('idle',done);
+      })).finally(()=>selectionPreparations.delete(layerId));
+      selectionPreparations.set(layerId,pending);
+    }
+    notify('Preparando a fonte original para sincronizar mapa e tabela…');
+    selectionPreparations.get(layerId).then(()=>{
+      if(requestId===mapSelectionRequest&&state().selectionHandler===handler)handler(event);
+    }).catch(error=>{
+      if(requestId===mapSelectionRequest)notify(`Não foi possível selecionar a feição: ${error.message}`);
+    });
+  }
+  function showSelectedAttributes(layerId,requestId) {
+    Promise.resolve(window.gpApp.showAttributes(layerId)).then(()=>{
+      if(requestId===mapSelectionRequest)return window.gpAttributeTable?.focusSelection(layerId);
+    }).catch(error=>notify(`Seleção mantida no mapa; não foi possível exibi-la na tabela: ${error.message}`));
+  }
   function selectOnMap() {
     const map = state().map; stopMapHandlers(); map.dragPan.disable(); map.getCanvas().style.cursor = SELECT_CURSOR;
     setActiveMapTool("select");
     state().selectionHandler = event => {
+      const requestId=++mapSelectionRequest;
       const box = [[event.point.x - 4, event.point.y - 4], [event.point.x + 4, event.point.y + 4]];
       const allowed = new Set(state().layers.filter(layer=>!layer.tipo?.toLowerCase().includes('raster')).map(layer => layer.id));
       const hits=map.queryRenderedFeatures(box).filter(feature=>allowed.has(feature.source));
       const hit=hits.find(feature=>feature.source===state().activeLayerId)||hits[0];
       const native=hit&&nativeSession(hit.source);
       if(native){
+        if(!native.campo_fid_tile&&native.tiles_token&&native.arquivo&&window.gpArquivos?.prepararTabela){
+          prepareSelectionSource(hit.source,event,requestId,state().selectionHandler);return;
+        }
         // O tile traz geometria recortada/generalizada: seleciona só pelo FID original.
         const field=native.campo_fid_tile,fid=field?hit.properties?.[field]:null;
         if(fid==null||!/^\d+$/.test(String(fid)))return notify(`${native.nome||native.id}: os tiles desta camada não trazem o FID original; a seleção no mapa está indisponível.`);
@@ -188,14 +218,15 @@
         const tagged=tagSelection({type:'FeatureCollection',features:[{type:'Feature',id:String(fid),geometry:null,properties}]},hit.source).features;
         const prior=event.originalEvent?.shiftKey?(state().selectedGeoJSON?.features||[]):[];
         renderSelection({type:'FeatureCollection',features:[...new Map([...prior,...tagged].map(f=>[`${f.properties.__gp_layer_id}:${f.properties.__gp_selection_key}`,f])).values()]});
-        state().activeLayerId=hit.source;window.gpApp.showAttributes(hit.source);return;
+        state().activeLayerId=hit.source;showSelectedAttributes(hit.source,mapSelectionRequest);return;
       }
       const local=hit&&(window.gpArquivos?.sessions.get(hit.source)?.geojson||map.getSource(hit.source)?._data);
-      const full=hit&&(local?.features?.find(feature=>featureKey(feature.properties,feature.id)===featureKey(hit.properties,hit.id))||hit);
-      const features=hit?tagSelection({type:'FeatureCollection',features:[{type:'Feature',id:full.id,geometry:full.geometry,properties:full.properties}]},hit.source).features:[];
+      const position=hit?.properties?.__gp_indice;
+      const full=hit&&((position!=null?local?.features?.[Number(position)]:null)||local?.features?.find(feature=>featureKey(feature.properties,feature.id)===featureKey(hit.properties,hit.id))||hit);
+      const features=hit?tagSelection({type:'FeatureCollection',features:[{type:'Feature',id:full.id,geometry:full.geometry,properties:{...full.properties,...(position!=null?{__gp_indice:position}:{})}}]},hit.source).features:[];
       const previous = event.originalEvent?.shiftKey ? (state().selectedGeoJSON?.features || []) : [];
       renderSelection({ type: "FeatureCollection", features: [...new Map([...previous,...features].map(f=>[`${f.properties.__gp_layer_id}:${f.properties.__gp_selection_key}`,f])).values()] });
-      if(features.length){state().activeLayerId=features[0].properties.__gp_layer_id;window.gpApp.showAttributes(state().activeLayerId);}
+      if(features.length){state().activeLayerId=features[0].properties.__gp_layer_id;showSelectedAttributes(state().activeLayerId,mapSelectionRequest);}
     };
     map.on("click", state().selectionHandler); notify("Clique no mapa para selecionar; Shift adiciona à seleção.");
   }

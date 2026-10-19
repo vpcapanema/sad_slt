@@ -83,3 +83,17 @@ def test_tile_utiliza_mesmos_fids_da_tabela(local):
     finally:
         dataset = None
         gdal.Unlink(path)
+
+
+def test_localizar_fid_da_selecao_sem_carregar_tabela_inteira(local):
+    client, payload, _, _ = local
+    rows = client.post('/bancada-arquivos/local/tabela', json=payload).json()['linhas']
+    fid = rows[-1]['id']
+    response = client.post('/bancada-arquivos/local/tabela',
+                          json={**payload, 'limite': 1, 'localizar_fid': fid})
+    assert response.status_code == 200, response.text
+    assert response.json()['offset'] == 2
+    assert response.json()['linhas'] == [rows[-1]]
+    response = client.post('/bancada-arquivos/local/tabela',
+                          json={**payload, 'localizar_fid': 'invalido'})
+    assert response.status_code == 422

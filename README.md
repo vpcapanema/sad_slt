@@ -140,6 +140,10 @@ O GeoPackage derivado integral é conferido e registrado no ciclo de vida das
 saídas; suas referências reais alimentam os geoprocessos. As fontes e as
 geometrias das bases de risco/restrição não são alteradas. A prévia continua
 mostrando as fontes originais.
+Coleções geométricas, inclusive aninhadas, são convertidas por componente e
+reunidas na mesma demanda, preservando pontos, linhas, atributos e identificadores
+de origem. A auditoria e o feedback registram os componentes tratados; componentes
+vazios ou não suportados interrompem o envio com indicação da feição, FID e posição.
 A rota legada `/data` responde 503 quando
 não há acesso nativo configurado; as APIs remotas não dependem dessa rota.
 Os JSONs e mapas da documentação de favorabilidade são lidos do storage
@@ -179,6 +183,24 @@ a consulta da tabela considera a página atual, conforme indicado no formulário
 a seleção por expressão da faixa superior consulta a camada no servidor.
 A camada ativa da tabela é respeitada pelos comandos da faixa, mesmo quando
 uma linha anterior do painel de conteúdo ainda mantém o destaque visual.
+Na ferramenta **Selecionar**, o clique no mapa seleciona a linha correspondente
+na tabela, abre a página correta e leva a linha à área visível, sem recriar uma
+tabela já aberta. A seleção na tabela destaca a mesma feição no mapa; Shift
+permite acumular seleções no mapa. Em arquivos paginados, a localização usa o
+FID original e a revisão do arquivo, sem confundir FID com número de linha.
+Em memória, a posição da feição distingue registros com atributos iguais e
+sem ID. Respostas de geometria atrasadas não substituem uma seleção mais
+recente. Filtros existentes são preservados; se ocultarem a linha, a tabela
+informa a situação. **Explorar** continua identificando sem alterar a seleção.
+Quando uma camada chega apenas como prévia sem FID, a seleção primeiro troca
+a representação pelos tiles do arquivo original e refaz a consulta no ponto
+clicado, sem deduzir a identidade pela geometria simplificada.
+A tabela de atributos maximizada pode ser reposicionada ao segurar e arrastar
+o cabeçalho. O arraste mantém o tamanho, os dados e a seleção e deixa uma área
+do cabeçalho acessível dentro da bancada, inclusive após redimensionar a janela.
+**Restaurar painel** ou **Esc** devolvem a tabela ao painel lateral; uma nova
+maximização começa na posição padrão. A mesma interação funciona na bancada
+incorporada às páginas de hierarquização.
 
 O feedback de processamento aparece em uma faixa compacta no rodapé do painel
 contextual, com nome da ferramenta, progresso, estado, duração e cancelamento

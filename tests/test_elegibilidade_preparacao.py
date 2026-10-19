@@ -84,7 +84,7 @@ def test_crs_projetado_e_poligonos_nao_recebem_novo_buffer():
     assert auditoria['poligonos_sem_buffer'] == 1
 
 
-@pytest.mark.parametrize('geometria', [None, Point(), GeometryCollection([Point(-46.6, -23.5)])])
+@pytest.mark.parametrize('geometria', [None, Point(), GeometryCollection()])
 def test_sem_descartes_silenciosos(geometria):
     with pytest.raises(ValueError, match='feição|Feição'):
         service.normalizar_frame(camada([Point(-46.6, -23.5), geometria]))
@@ -111,6 +111,62 @@ def test_entrada_3d_e_normalizada_em_2d():
     resultado, _ = service.normalizar_frame(camada([Point(-46.6, -23.5, 100)]))
     assert not resultado.geometry.iloc[0].has_z
     assert resultado.geometry.iloc[0].is_valid
+
+
+def test_colecao_na_feicao_115_preserva_fid_atributos_e_componentes():
+    colecao = GeometryCollection([
+        Point(-46.6, -23.5),
+        GeometryCollection([
+            LineString([(-46.59, -23.5), (-46.58, -23.5)]),
+            Polygon([(-46.57, -23.5), (-46.56, -23.5), (-46.56, -23.49), (-46.57, -23.5)]),
+        ]),
+    ])
+    original = camada([Point(-46.7, -23.5)] * 114 + [colecao])
+    original.index = list(range(114)) + [118]
+    antes = original.copy()
+    resultado, auditoria = service.normalizar_frame(original)
+    assert len(resultado) == 115 and resultado.index[-1] == 118
+    assert resultado.iloc[-1]['codigo'] == 'D-114'
+    assert resultado[['codigo', 'valor']].equals(original[['codigo', 'valor']])
+    assert original.equals(antes)
+    assert resultado.geometry.iloc[-1].geom_type == 'MultiPolygon'
+    assert len(resultado.geometry.iloc[-1].geoms) == 3
+    assert auditoria['colecoes_convertidas'] == 1
+    assert auditoria['componentes_colecoes'] == {'Point': 1, 'LineString': 1, 'Polygon': 1}
+
+
+def test_componente_vazio_identifica_feicao_fid_e_caminho():
+    geometria = GeometryCollection([
+        Point(-46.6, -23.5),
+        GeometryCollection([Point(-46.59, -23.5), Polygon()]),
+    ])
+    original = camada([geometria])
+    original.index = [118]
+    with pytest.raises(ValueError, match=r'Feição 1 \(FID/índice 118\).*componente 2 > componente 2.*vazia'):
+        service.normalizar_frame(original)
+
+
+def test_colecao_gera_arquivo_poligonal_integral_para_calculos(isolado):
+    root, gravados = isolado
+    arquivo = root / 'base-geoespacial' / 'colecao.gpkg'
+    arquivo.parent.mkdir()
+    original = camada([GeometryCollection(tipos())])
+    original.to_file(arquivo, layer='entrada', driver='GPKG', engine='pyogrio')
+    antes = sha256(arquivo.read_bytes()).hexdigest()
+    resposta = service.preparar_demanda('storage:base-geoespacial/colecao.gpkg::entrada', 'autor')
+    from api.services.bancada_arquivos import carregar_para_execucao
+    frame = carregar_para_execucao(resposta['arquivo'], resposta['revisao'], resposta['id'])['frame']
+    assert len(frame) == 1 and frame.iloc[0]['codigo'] == 'D-0'
+    assert frame.geometry.iloc[0].geom_type in {'Polygon', 'MultiPolygon'} and frame.geometry.iloc[0].is_valid
+    esperado, _ = service.normalizar_frame(original)
+    assert frame.geometry.iloc[0].equals(esperado.geometry.iloc[0])
+    assert frame[resposta['normalizacao_demanda']['campo_fid_origem']].tolist() == [1]
+    assert resposta['normalizacao_demanda']['colecoes_convertidas'] == 1
+    assert set(resposta['normalizacao_demanda']['componentes_colecoes']) == {g.geom_type for g in tipos()}
+    ds = ogr.Open(str(gravados[0]['arquivo']))
+    auditoria = json.loads(ds.GetLayerByName('demandas').GetMetadata()['SICARD_NORMALIZACAO'])
+    assert auditoria['colecoes_convertidas'] == 1 and sum(auditoria['componentes_colecoes'].values()) == 6
+    assert sha256(arquivo.read_bytes()).hexdigest() == antes
 
 
 @pytest.mark.parametrize('ident', ['cadastro:inexistente:D-1', 'cadastro:projeto:', 'cadastro:projeto'])

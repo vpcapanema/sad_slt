@@ -62,8 +62,10 @@ async function prepararTabela(id){
   // camada no painel, mas tabela, FIDs e tiles passam a usar o mesmo original.
   if(sessions.get(id)!==file)return sessions.get(id);
   const previous=app().state.layers.find(layer=>layer.id===id);
+  const activeId=app().state.activeLayerId;
   const atualizado={...file,...original};delete atualizado.tiles_token;
   mount(atualizado,{estiloPreparado:true,lote:true});
+  app().state.activeLayerId=activeId;
   const layer=app().state.layers.find(layer=>layer.id===id);
   if(previous&&layer)Object.assign(layer,{papelExtracao:previous.papelExtracao,arquivoGrupo:previous.arquivoGrupo,categoria:previous.categoria});
   app().renderLayers();
