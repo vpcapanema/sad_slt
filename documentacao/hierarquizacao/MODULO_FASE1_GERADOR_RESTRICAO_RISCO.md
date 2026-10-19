@@ -122,9 +122,10 @@ fluxo, nao participam. Cada entrada gera sua propria saida.
    `ri_inc`. Nomes restantes sao normalizados; colisoes recebem sufixos
    numericos, sem sobrescrever atributos. O mapeamento consta dos metadados.
    Ausencia de intersecao permanece `NULL`; intersecao sem area recebe zero.
-5. Apos cada base, descartam-se os intermediarios de intersecao. A saida final
-   e serializada em memoria e reaberta para conferir feicoes, geometrias,
-   atributos e resultados, antes do registro no storage oficial.
+5. Apos cada base, libera-se a estrutura temporaria do OGR, conservando os
+   recortes e seus vinculos para a camada `intersecoes` do mesmo GeoPackage.
+   A saida final e serializada em memoria e reaberta para conferir feicoes,
+   geometrias, atributos, vinculos e resultados, antes do registro no storage oficial.
 6. Grava-se `[nome da camada de entrada]_elegibilidade_territorial.gpkg`,
    retirando apenas a extensao original quando presente. Uma pasta exclusiva
    por saida evita sobrescritas sem alterar o nome solicitado. Nao se utilizam
@@ -142,6 +143,13 @@ homologacao automatica.
 A secao Resultados acompanha as saidas concluidas da mesma execucao da pagina,
 sem depender de uma lista fixa de bases. A composicao de restricao e risco e
 recuperada dos metadados de processamento, nao da selecao posteriormente editada.
+O GeoPackage de saida versao 2 acrescenta a area total de cada demanda em m²,
+sem sobrescrever atributos existentes, e a camada `intersecoes`, em EPSG:5880.
+Cada recorte conserva sua area e os vinculos com a posicao da demanda na camada
+integral, a base e a feicao de origem. Os nomes originais das feicoes e o campo
+utilizado para identifica-las constam dos metadados; na ausencia de nome,
+apresenta-se um identificador explicito de feicao. A soma por base permanece
+inalterada, inclusive quando diferentes feicoes da mesma base se sobrepoem.
 
 1. Sugerem-se nomes amigaveis a partir da biblioteca e do dicionario existentes;
    fontes nao cadastradas recebem somente uma sugestao de formatacao. O usuario
@@ -150,15 +158,29 @@ recuperada dos metadados de processamento, nao da selecao posteriormente editada
    com conectivos internos em minusculas e preservacao de siglas. Nao se inferem
    expansoes de abreviacoes desconhecidas. Nomes tecnicos dos arquivos e campos
    permanecem intactos; os aliases revisados sao comuns a tela, mapa e PDF.
-2. Cada entrada possui resumo, fontes por papel, mapa-sintese e tabela de areas
-   por feicao, com uma coluna por base. A tela pagina 50 feicoes; o PDF apresenta
-   todas as feicoes e bases em blocos de colunas, repetindo a identificacao.
+   A revisao inclui as feicoes sobrepostas e fica recolhida apos confirmacao.
+   Os nomes sao persistidos em arquivo de apresentacao no storage, vinculado ao
+   usuario e a assinatura da saida, sem modificar o GeoPackage processado.
+2. Cada entrada possui resumo, fontes em duas colunas (Restricao e Risco),
+   mapa Leaflet, grafico de rosca e tabela de areas por feicao, com uma coluna
+   por base. A tela pagina 50 feicoes; o PDF apresenta todas as demandas,
+   bases e feicoes sobrepostas, inclusive suas areas totais e percentuais.
+   A apresentacao utiliza km² e hectares; o processamento e o GeoPackage mantem m².
    Nulos sao apresentados como travessao e nao se confundem com zero. A formatacao
    decimal preserva os valores, inclusive areas positivas inferiores a 0,01 m².
-3. O mapa apresenta as geometrias inteiras, em EPSG:5880, com escala e norte,
-   sem mapa-base. Distingue feicoes com intersecao registrada em alguma base
-   daquelas sem intersecao, incluindo contatos de area zero. Nao representa
-   recortes espaciais nem atribui classes de elegibilidade.
+3. O mapa da tela apresenta demandas integrais e recortes do mesmo arquivo de
+   saida, sobre mapa-base Leaflet. Selecao no grafico ou na tabela atualiza os
+   detalhes, destaca os elementos relacionados e enquadra as geometrias;
+   a selecao no mapa tambem atualiza tabela e grafico. No PDF, o mapa usa
+   EPSG:5880, escala e norte, sem mapa-base, com recortes vermelhos para restricao
+   e amarelos para risco. Nenhum desses mapas classifica elegibilidade.
+   Categoria significa Restricao ou Risco; classe significa a propria feicao
+   da base, identificada por origem, mesmo quando houver nomes iguais.
+   Cada fatia representa sua participacao na soma das areas sobrepostas; nao
+   representa cobertura exclusiva da demanda. O percentual dos detalhes e a
+   area sobreposta dividida pela area total da demanda, podendo superar 100%
+   na soma de feicoes. Contatos de area zero aparecem na legenda, sem fatia
+   proporcional. Selecionar uma base destaca suas fatias sem ocultar as demais.
 4. O botao final gera um ZIP com relatorio PDF, uma copia binaria de cada
    GeoPackage processado e metadados da analise com os aliases e assinaturas.
    Pastas numeradas evitam colisoes entre arquivos de mesmo nome. O PDF inclui
@@ -169,6 +191,9 @@ recuperada dos metadados de processamento, nao da selecao posteriormente editada
    de cada saida com a assinatura registrada na producao. Divergencia impede a
    emissao. Editar aliases invalida a apresentacao anterior e exige nova
    confirmacao. Falha na exportacao preserva as geometrias e os resultados.
+   A soma dos recortes e conferida contra os campos por base antes da
+   apresentacao. Saidas anteriores sem recortes persistidos exigem nova
+   execucao; nao se simulam dados ausentes para liberar o painel.
 
 ## Produto final do modulo
 

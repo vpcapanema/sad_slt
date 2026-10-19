@@ -8,12 +8,13 @@ from zipfile import ZipFile
 import geopandas as gpd
 import pytest
 from pypdf import PdfReader
-from shapely.geometry import box, Polygon
+from shapely.geometry import box, Polygon, LineString
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from api.services import elegibilidade_relatorio as service
 from api.services.arquivos_geoespaciais_memoria import vetor
+from api.services.elegibilidade_processamento import serializar
 
 
 @pytest.fixture
@@ -25,25 +26,41 @@ def analise(monkeypatch):
                              'nome': [f'Demanda {i}' for i in range(63)]}, geometry=geometria, crs=5880)
     for i in range(7):
         frame[f'campo_{i}'] = [None, 0., 0.0000001] + [float(i+1)]*60
+    frame['area_total_m2'] = 100.
+    feicoes_base = [{'id': f'feicao-{i}', 'base_id': f'base-{i}', 'nome': f'trecho_do_setor_{i}',
+                     'tipo': 'feicao', 'papel': fontes[i]['papel'], 'posicao': i, 'campo_nome': 'nome'} for i in range(7)]
+    recortes = [{'demanda_pos': pos, 'base_id': f'base-{i}', 'feicao_id': f'feicao-{i}',
+                 'area_m2': frame.iloc[pos][f'campo_{i}'],
+                 'geometry': LineString([(5000000+pos*20,7000000),(5000000+pos*20,7000010)]) if pos == 1
+                 else box(5000000+pos*20,7000000,5000000+pos*20+frame.iloc[pos][f'campo_{i}']/10,7000010)}
+                for pos in range(1,63) for i in range(7)]
     nome = 'entrada_tecnica_elegibilidade_territorial.gpkg'
-    conteudo = vetor(frame, nome, 'GPKG', layer='elegibilidade_territorial')[nome]
     dados = {}
     resultados = {}
     for i in (1, 2):
+        auditoria = {'entrada': {'id': f'entrada-{i}', 'nome': f'entrada_tecnica_{i}'},
+                     'campo_id': 'ID_FEICAO', 'feicoes': len(frame), 'campos': fontes,
+                     'campo_area_total': 'area_total_m2', 'feicoes_base': feicoes_base,
+                     'versao_saida': 2, 'camada_intersecoes': 'intersecoes'}
+        conteudo = serializar(frame, auditoria, recortes, nome)[nome]
         arquivo = f'saidas-geoespaciais/saida-{i}/{nome}'
         dados[arquivo] = conteudo
         resultados[f'job-{i}'] = {'arquivo': arquivo, 'sha256': sha256(conteudo).hexdigest(),
             'lote_id': 'lote', 'total_entradas': 2, 'concluido_em': '2026-10-19T15:00:00+00:00',
-            'elegibilidade': {'entrada': {'id': f'entrada-{i}', 'nome': f'entrada_tecnica_{i}'},
-                              'campo_id': 'ID_FEICAO', 'feicoes': len(frame), 'campos': fontes}}
+            'elegibilidade': auditoria}
     def consultar(ident, dono):
         if dono != 'autor' or ident not in resultados:
             raise FileNotFoundError('Execução não encontrada.')
         return {'status': 'concluido', 'resultado': deepcopy(resultados[ident])}
     monkeypatch.setattr(service.jobs, 'consultar', consultar)
-    monkeypatch.setattr(service.storage_remoto, 'baixar', dados.__getitem__)
+    def baixar(caminho):
+        if caminho not in dados:
+            raise FileNotFoundError(caminho)
+        return dados[caminho]
+    monkeypatch.setattr(service.storage_remoto, 'baixar', baixar)
     monkeypatch.setattr(service.storage_remoto, 'enviar_bytes', dados.__setitem__)
     nomes = {f'base-{i}': f'Bacia Hidrográfica do Setor {i}' for i in range(7)}
+    nomes.update({f'feicao-{i}': f'Trecho do Setor {i}' for i in range(7)})
     nomes.update({'entrada-1': 'Demandas do Setor Norte', 'entrada-2': 'Demandas do Setor Sul'})
     return resultados, dados, nomes
 
@@ -66,7 +83,7 @@ def test_alias_bruto_ou_invalido_e_recusado(nome):
 def test_fontes_dinamicas_revisao_obrigatoria_e_aliases_exatos(analise):
     _, _, nomes = analise
     preparacao = service.preparar(['job-1', 'job-2'], 'autor')
-    assert len(preparacao['fontes']) == 9
+    assert len(preparacao['fontes']) == 16
     assert all('_' not in f['nome'] for f in preparacao['fontes'])
     assert preparacao['previstas'] == preparacao['concluidas'] == 2
     with pytest.raises(ValueError, match='Revise'):
@@ -87,13 +104,14 @@ def test_tabela_mapa_e_pdf_completos_sem_nomes_tecnicos(analise):
     assert entrada['linhas'][0]['areas_texto'] == ['—']*7
     assert entrada['linhas'][1]['areas_texto'] == ['0,0']*7
     assert entrada['linhas'][2]['areas_texto'] == ['0,0000001']*7
-    assert len(entrada['mapa']['formas']) == 63
+    assert len(entrada['mapa']['formas']) == 63 + 62*7
     assert not entrada['mapa']['formas'][0]['intersecao']
     assert entrada['mapa']['formas'][1]['intersecao']
     documento = PdfReader(BytesIO(service.pdf(modelo)))
     texto = '\n'.join(p.extract_text() for p in documento.pages)
     assert len(documento.pages) >= 7
-    assert 'Feição 62' in texto and '0,0000001' in texto
+    assert 'Feição 62' in texto and '0,0000000000001' in texto
+    assert 'km²' in texto and ' ha' in texto and 'Trecho do Setor 6' in texto
     assert 'Bacia Hidrográfica do Setor 6' in texto
     assert 'Demandas do Setor Norte' in texto and 'Demandas do Setor Sul' in texto
     assert 'entrada_tecnica' not in texto and 'base_tecnica' not in texto and 'campo_0' not in texto
@@ -139,10 +157,89 @@ def test_parcial_identificado_e_lotes_distintos_recusados(analise):
         service.preparar(['job-1'], 'outro')
 
 
+def test_painel_usa_geometrias_areas_e_feicoes_do_mesmo_arquivo(analise):
+    _, _, nomes = analise
+    modelo, _ = service.montar(['job-1','job-2'], nomes, 'autor', True)
+    entrada = modelo['entradas'][0]
+    assert len(entrada['geometrias']['features']) == 63
+    assert len(entrada['intersecoes']['features']) == 62*7
+    assert entrada['linhas'][0]['sobreposicoes'] == []
+    contato = entrada['linhas'][1]['sobreposicoes'][0]
+    assert contato['area_m2'] == contato['percentual'] == 0
+    linha = entrada['linhas'][3]
+    assert linha['area_total_m2'] == 100
+    assert linha['sobreposicoes'][-1]['nome'] == 'Trecho do Setor 6'
+    assert linha['sobreposicoes'][-1]['area_m2'] == linha['areas'][-1] == 7.
+    assert linha['sobreposicoes'][-1]['percentual'] == pytest.approx(7.)
+    assert entrada['geometrias']['features'][3]['properties']['chave'] == linha['chave']
+
+
+def test_nomes_confirmados_persistem_vinculados_ao_usuario_e_assinatura(analise):
+    resultados, dados, nomes = analise
+    assert service.preparar(['job-1','job-2'], 'autor')['revisados'] is False
+    nomes['feicao-1'] = 'Feição Revisada'
+    modelo, _ = service.montar(['job-1','job-2'], nomes, 'autor', True)
+    service.salvar_nomes(['job-1','job-2'], modelo, 'autor')
+    preparacao = service.preparar(['job-1','job-2'], 'autor')
+    assert preparacao['revisados'] is True
+    assert next(f for f in preparacao['fontes'] if f['id'] == 'feicao-1')['nome'] == 'Feição Revisada'
+    caminho = resultados['job-1']['arquivo'] + '.nomes.json'
+    revisao = json.loads(dados[caminho])
+    revisao['sha256'] = 'assinatura diferente'
+    dados[caminho] = json.dumps(revisao).encode()
+    with pytest.raises(ValueError, match='proprietário ou à saída'):
+        service.preparar(['job-1','job-2'], 'autor')
+
+
+def test_nomes_de_feicoes_iguais_nao_unem_classes_e_legado_e_explicito(analise):
+    resultados, _, nomes = analise
+    nomes['feicao-1'] = nomes['feicao-0']
+    modelo, _ = service.montar(['job-1','job-2'], nomes, 'autor', True)
+    classes = modelo['entradas'][0]['linhas'][3]['sobreposicoes']
+    assert classes[0]['nome'] == classes[1]['nome'] and classes[0]['id'] != classes[1]['id']
+    resultados['job-1']['elegibilidade']['versao_saida'] = 1
+    with pytest.raises(ValueError, match='Execute novamente'):
+        service.montar(['job-1','job-2'], nomes, 'autor', True)
+
+
 def test_mapa_preserva_aneis_internos():
     poligono = Polygon([(0,0),(10,0),(10,10),(0,10)], [[(2,2),(2,8),(8,8),(8,2)]])
     mapa = service._mapa(gpd.GeoDataFrame(geometry=[poligono], crs=5880), [True])
     assert len(mapa['formas'][0]['aneis']) == 2
+
+
+def test_processamento_real_alimenta_painel_e_pdf_sem_recalcular(monkeypatch):
+    from api.services import elegibilidade_processamento as processamento
+    from api.services.controle_processamento import ControleProcessamento
+    entrada = gpd.GeoDataFrame({'nome': ['Demanda Norte', 'Demanda Sul']},
+        geometry=[box(5000000,7000000,5000010,7000010), box(5000020,7000000,5000030,7000010)], crs=5880)
+    base = gpd.GeoDataFrame({'nome': ['Margens do Rio Claro', 'Reserva do Vale Verde']},
+        geometry=[box(5000000,7000000,5000008,7000010), box(5000002,7000000,5000010,7000010)], crs=5880)
+    recortes = []
+    saida, audit = processamento.calcular(entrada, [('restricao','Proteção','base',base)],
+                                          ControleProcessamento(), intersecoes=recortes)
+    audit['entrada'] = {'id':'entrada','nome':'Demandas'}
+    dados = processamento.serializar(saida, audit, recortes, 'saida.gpkg')['saida.gpkg']
+    resultado = {'arquivo':'saidas-geoespaciais/saida.gpkg','sha256':sha256(dados).hexdigest(),'elegibilidade':audit}
+    monkeypatch.setattr(service.jobs,'consultar',lambda ident,dono: {'status':'concluido','resultado':resultado})
+    monkeypatch.setattr(service.storage_remoto,'baixar',lambda caminho: dados)
+    nomes = {f['id']:f['nome'] for f in service._fontes([resultado])}
+    modelo, arquivos = service.montar(['job'],nomes,'autor',True)
+    linha = modelo['entradas'][0]['linhas'][0]
+    assert linha['area_total_m2'] == 100 and linha['areas'] == [160.]
+    assert [c['area_m2'] for c in linha['sobreposicoes']] == [80.,80.]
+    assert sum(c['percentual'] for c in linha['sobreposicoes']) == 160.
+    assert modelo['entradas'][0]['linhas'][1]['sobreposicoes'] == []
+    assert arquivos[0][1] == dados
+    texto = ' '.join(p.extract_text() for p in PdfReader(BytesIO(service.pdf(modelo))).pages)
+    assert 'Margens do Rio Claro' in texto and 'Reserva do Vale Verde' in texto
+    assert '80,00%' in texto and 'Demanda Sul' in texto
+    recortes[0]['area_m2'] = 99.
+    adulterado = processamento.serializar(saida,audit,recortes,'saida.gpkg')['saida.gpkg']
+    resultado['sha256'] = sha256(adulterado).hexdigest()
+    monkeypatch.setattr(service.storage_remoto,'baixar',lambda caminho: adulterado)
+    with pytest.raises(ValueError, match='soma das interseções diverge'):
+        service.montar(['job'],nomes,'autor',True)
 
 
 def test_rotas_exportacao_autenticadas_e_revisadas(analise):

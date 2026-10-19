@@ -1,4 +1,5 @@
 import json
+from io import BytesIO
 from types import SimpleNamespace
 from concurrent.futures import Future
 
@@ -51,6 +52,37 @@ def test_contato_sem_area_zero_e_ausencia_null():
     ], ControleProcessamento())
     assert saida.loc[0, 're_app'] == 0
     assert pd.isna(saida.loc[1, 're_app'])
+
+
+def test_intersecoes_persistidas_por_feicao_sem_agrupar_nomes_iguais():
+    entrada = fonte()
+    entrada['area_total_m2'] = 'atributo original'
+    recortes = []
+    saida, auditoria = service.calcular(entrada, [
+        ('restricao', 'APP', 'base-a', frame([box(0,0,8,10), box(2,0,10,10)], nome=['Mesmo Nome','Mesmo Nome'])),
+        ('risco', 'Contato', 'base-b', frame([box(10,0,11,10)], nome=['Limite']))],
+        ControleProcessamento(), intersecoes=recortes)
+    assert saida.area_total_m2.tolist() == ['atributo original']*3
+    assert saida[auditoria['campo_area_total']].tolist() == [100.]*3
+    assert saida.re_app.iloc[0] == 160.
+    assert len({r['feicao_id'] for r in recortes}) == 3
+    assert [r['area_m2'] for r in recortes] == [80.,80.,0.]
+    assert recortes[2]['geometry'].geom_type in {'LineString','MultiLineString'}
+    assert [f['nome'] for f in auditoria['feicoes_base']] == ['Mesmo Nome','Mesmo Nome','Limite']
+    dados = service.serializar(saida, auditoria, recortes, 'teste.gpkg')
+    persistidos = gpd.read_file(BytesIO(dados['teste.gpkg']), engine='pyogrio', layer='intersecoes')
+    assert persistidos.area_m2.tolist() == [80.,80.,0.]
+    assert persistidos.demanda_pos.tolist() == [0,0,0]
+
+
+def test_saida_sem_intersecoes_possui_camada_vazia_e_entrada_completa():
+    recortes = []
+    saida, auditoria = service.calcular(fonte(), [
+        ('risco', 'Distante', 'base', frame([box(1000,1000,1010,1010)]))],
+        ControleProcessamento(), intersecoes=recortes)
+    dados = service.serializar(saida, auditoria, recortes, 'vazia.gpkg')
+    assert gpd.read_file(BytesIO(dados['vazia.gpkg']), engine='pyogrio', layer='intersecoes').empty
+    assert len(gpd.read_file(BytesIO(dados['vazia.gpkg']), engine='pyogrio', layer='elegibilidade_territorial')) == 3
 
 
 def test_identificador_tecnico_e_colisoes_nao_sobrescrevem_atributos():
@@ -161,7 +193,7 @@ def test_arquivo_persistido_reabre_com_descritor_real_da_bancada(storage_sinteti
     assert resultado['arquivo'].endswith('/Demandas_elegibilidade_territorial.gpkg')
     assert resultado['id'] == f"storage:{resultado['arquivo']}::elegibilidade_territorial"
     assert len(resultado['bounds']) == 4
-    assert {campo['nome'] for campo in resultado['campos']} == {'nome', 'ID_FEICAO', 'ri_inund'}
+    assert {campo['nome'] for campo in resultado['campos']} == {'nome', 'ID_FEICAO', 'ri_inund', 'area_total_m2'}
     dataset = ogr.Open(str(root / resultado['arquivo']))
     auditoria = json.loads(dataset.GetLayerByName('elegibilidade_territorial').GetMetadata()['SICARD_ELEGIBILIDADE'])
     dataset = None

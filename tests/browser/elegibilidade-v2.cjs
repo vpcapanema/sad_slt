@@ -11,7 +11,7 @@ const assert = require('node:assert/strict');
     const errors = [], writes = [], saved = new Map();
     const inventories = [], preparations = [], selectionTimes = [], normalizations=[], derivados=new Map();
     const executions = [], executionJobs = new Map();
-    const reportRequests = [], downloadRequests = [];
+    const reportRequests = [], downloadRequests = [], reportModels = [];
     let reportSources = [], failReport = false, failDownload = false;
     let failExecution = false;
     let failLayer = '', missingGeometry = false, failNormalization=false,holdPreparation='',releasePreparation,holdNormalization='',releaseNormalization;
@@ -80,8 +80,12 @@ const assert = require('node:assert/strict');
           const exec=executions[Number(id.split('-').at(-1))-1];
           for(const papel of ['entrada','restricao','risco']){
             for(const camada of papel==='entrada'?[exec.entrada]:exec[papel])
-              fontes.set(camada.id,{id:camada.id,nome:camada.nome.replaceAll('-',' ').replaceAll('_',' '),papel});
+              fontes.set(camada.id,{id:camada.id,nome:camada.nome.replaceAll('-',' ').replaceAll('_',' '),papel,tipo:'camada'});
           }
+        }
+        for(const camada of [...fontes.values()].filter(c=>c.papel!=='entrada')){
+          for(let i=0;i<2;i++)fontes.set(`${camada.id}::feicao:${i}`,{id:`${camada.id}::feicao:${i}`,
+            nome:`Trecho ${i+1} de ${camada.nome}`,papel:camada.papel,tipo:'feicao',base_id:camada.id});
         }
         reportSources=[...fontes.values()];
         return send({fontes:reportSources,concluidas:payload.execucoes.length,previstas:payload.execucoes.length});
@@ -93,16 +97,22 @@ const assert = require('node:assert/strict');
         const fontes=reportSources.map(f=>({...f,nome:payload.nomes[f.id]}));
         const entradas=payload.execucoes.map(id=>{
           const exec=executions[Number(id.split('-').at(-1))-1];
-          const campos=fontes.filter(f=>f.papel!=='entrada');
+          const campos=fontes.filter(f=>f.tipo==='camada'&&f.papel!=='entrada');
+          const linhas=Array.from({length:53},(_,i)=>({id:`F-${i}`,chave:String(i),nome:`Demanda ${i}`,area_total_m2:100,
+            areas:campos.map(()=>i===0?null:i===1?0:12.5),
+            sobreposicoes:i===0?[]:fontes.filter(f=>f.tipo==='feicao').map(f=>{
+              const v=i===1?0:12.5*(f.id.endsWith(':0')?.6:.4);
+              return {id:f.id,base_id:f.base_id,nome:f.nome,papel:f.papel,area_m2:v,percentual:v,identificador:f.id.endsWith(':0')?1:2};
+            })}));
+          const geo=(i,w=.001)=>{const x=-47+(i%10)*.002,y=-23+Math.floor(i/10)*.002;return {type:'Polygon',coordinates:[[[x,y],[x+w,y],[x+w,y+.001],[x,y+.001],[x,y]]]}};
           return {id,nome:payload.nomes[exec.entrada.id],feicoes:53,com_intersecao:52,sem_intersecao:1,
-            concluido_em:'2026-10-19T15:00:00Z',campos,
-            linhas:Array.from({length:53},(_,i)=>({id:`F-${i}`,nome:`Demanda ${i}`,
-              areas:campos.map(()=>i===0?null:i===1?0:12.5),
-              areas_texto:campos.map(()=>i===0?'—':i===1?'0':'12,5')})),
-            mapa:{largura:720,altura:400,formas:[{aneis:[[[60,60],[320,60],[320,300],[60,300],[60,60]]],intersecao:true}],
-              metros_escala:100,cor_intersecao:'#1769aa',cor_ausencia:'#eef3f7',nota:'Feições inteiras, sem mapa-base.'}};
+            concluido_em:'2026-10-19T15:00:00Z',campos,linhas,
+            geometrias:{type:'FeatureCollection',features:linhas.map((l,i)=>({type:'Feature',properties:{chave:l.chave},geometry:geo(i)}))},
+            intersecoes:{type:'FeatureCollection',features:linhas.flatMap((l,i)=>l.sobreposicoes.map(c=>({
+              type:'Feature',properties:{chave:l.chave,base_id:c.base_id,feicao_id:c.id},geometry:geo(i,c.id.endsWith(':0')?.0006:.0004)})))}};
         });
-        return send({fontes,entradas,concluidas:entradas.length,previstas:entradas.length,metodologia:'Interseções independentes em EPSG:5880, com áreas em m².'});
+        const modelo={fontes,entradas,concluidas:entradas.length,previstas:entradas.length,metodologia:'Interseções independentes em EPSG:5880, com áreas em m².'};
+        reportModels.push(modelo);return send(modelo);
       }
       if(path.endsWith('/elegibilidade/resultados/pacote')){
         downloadRequests.push(req.postDataJSON());
@@ -590,7 +600,14 @@ const assert = require('node:assert/strict');
       await page.waitForFunction(()=>!document.querySelector('#ev-resultados-aliases').hidden);
       assert.equal(await page.locator('#ev-resultados-download').isDisabled(),true,'Exportação aguarda revisão');
       const campos=page.locator('#ev-resultados-nomes input');
-      assert.equal(await campos.count(),4,'Dois aliases de entrada e bases dinâmicas compartilhadas');
+      assert.equal(await campos.count(),8,'Entradas, bases e feições com nomes revisáveis');
+      await page.evaluate(()=>window.L.Map.addInitHook(function(){
+        if(this.getContainer().id==='ev-resultados-mapa'){
+          window.__mapaResultado=this;
+          const fit=this.fitBounds;
+          this.fitBounds=function(bounds,options){window.__enquadramento=window.L.latLngBounds(bounds);return fit.call(this,bounds,options)};
+        }
+      }));
       const nomes=['Demandas Lineares','Faixas de Proteção','Áreas Suscetíveis à Erosão','Demandas Pontuais'];
       for(let i=0;i<4;i++)await campos.nth(i).fill(nomes[i]);
       await page.locator('#ev-resultados-mostrar').click();
@@ -603,9 +620,28 @@ const assert = require('node:assert/strict');
       assert.match(await page.locator('#ev-resultados-tabela thead').textContent(),/Faixas de Proteção.*Áreas Suscetíveis à Erosão/);
       assert.equal(await page.locator('#ev-resultados-tabela th').last().evaluate(th=>getComputedStyle(th).textTransform),'none',
         'Aliases permanecem em title case, sem transformação visual em caixa alta');
-      assert.equal(await page.locator('#ev-resultados-mapa svg path').count(),3,'Mapa de feições, norte e escala');
+      assert.equal(await page.locator('#ev-resultados-aliases').isHidden(),true,'Revisão recolhida após confirmação');
+      assert.ok(await page.locator('#ev-resultados-mapa .leaflet-overlay-pane path').count()>53,'Demandas e interseções reais no Leaflet');
       assert.match(await page.locator('#ev-resultados-tabela tbody tr').first().textContent(),/—/);
       assert.match(await page.locator('#ev-resultados-tabela tbody tr').nth(1).textContent(),/0/);
+      await page.locator('#ev-resultados-tabela tbody tr').nth(2).locator('td[data-base] button').first().click();
+      assert.equal(await page.locator('#ev-resultados-rosca path').count(),4);
+      assert.equal(await page.locator('#ev-resultados-rosca path[aria-pressed="true"]').count(),2,'Tabela destaca as feições da base sem filtrar outras');
+      const baseId=reportModels.at(-1).entradas[0].campos[0].id,classeId=`${baseId}::feicao:0`;
+      await page.locator('#ev-resultados-rosca').scrollIntoViewIfNeeded();
+      const svgBox=await page.locator('#ev-resultados-rosca').boundingBox();
+      const x=svgBox.x+(120+84*Math.cos(-Math.PI/2+.3*Math.PI))*svgBox.width/240;
+      const y=svgBox.y+(120+84*Math.sin(-Math.PI/2+.3*Math.PI))*svgBox.height/240;
+      await page.mouse.move(x,y);await page.mouse.down();
+      assert.equal(await page.locator('#ev-resultados-rosca path').first().evaluate(p=>getComputedStyle(p).outlineStyle),'none','Sem retângulo de foco durante o clique');
+      await page.mouse.up();
+      assert.equal(await page.locator('#ev-resultados-percentual').textContent(),'7,50%');
+      assert.equal(await page.locator('#ev-resultados-tabela td.ativa').getAttribute('data-base'),baseId);
+      const geos=reportModels.at(-1).entradas[0].intersecoes.features.filter(f=>f.properties.chave==='2'&&f.properties.feicao_id===classeId);
+      assert.equal(await page.evaluate(features=>{
+        const bounds=window.L.geoJSON({type:'FeatureCollection',features}).getBounds();
+        return window.__enquadramento.equals(bounds)&&window.__mapaResultado.getBounds().contains(bounds);
+      },geos),true,'Zoom enquadra exatamente as interseções da feição selecionada');
       await page.locator('#ev-resultados-proxima').click();
       assert.equal(await page.locator('#ev-resultados-tabela tbody tr').count(),3);
       assert.match(await page.locator('#ev-resultados-tabela tbody').textContent(),/F-52/);
@@ -624,8 +660,11 @@ const assert = require('node:assert/strict');
       await page.locator('#ev-resultados-download').click();
       assert.equal((await download).suggestedFilename(),'Relatório e Camadas.zip');
       assert.deepEqual(downloadRequests.at(-1),reportRequests.at(-1),'PDF e tela usam os mesmos aliases e execuções, não a página da tabela');
+      await page.locator('#ev-resultados-tabela tbody tr').nth(2).locator('td[data-base] button').first().click();
+      await page.locator('#ev-resultados-legenda button').first().click();
       if(process.env.SICARD_TEST_RESULT_SCREENSHOT)
         await page.locator('#ev-resultados').screenshot({path:process.env.SICARD_TEST_RESULT_SCREENSHOT});
+      await page.locator('#ev-resultados-editar').click();
       await campos.nth(1).fill('Faixas de Proteção Revisadas');
       assert.equal(await page.locator('#ev-resultados-download').isDisabled(),true,'Editar alias invalida exportação anterior');
       assert.equal(await page.locator('#ev-resultados-revisados').isChecked(),false);

@@ -18,7 +18,7 @@
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Título**                 | Metodologia do Sistema de Hierarquização de Demandas — SICARD                                                                                                         |
 | **Número**                 | NT-SICARD-001/2026                                                                                                                                                       |
-| **Versão**                 | 1.20                                                                                                                                                                      |
+| **Versão**                 | 1.21                                                                                                                                                                      |
 | **Data de emissão**        | 19/10/2026                                                                                                                                                               |
 | **Classificação**         | Documento técnico-metodológico de entrega ao cliente                                                                                                                   |
 | **Sistema**                 | SICARD — Sistema de Apoio à Tomada de Decisão                                                                                                                         |
@@ -54,6 +54,7 @@
 | 1.18    | 18/10/2026 | `[preencher]` | Tratamento recursivo de coleções geométricas na normalização das demandas, com conversão de todos os componentes segundo seu tipo, união por feição e rastreabilidade, sem perda de pontos, linhas, atributos ou identificadores de origem. |
 | 1.19    | 19/10/2026 | `[preencher]` | Produção da camada de elegibilidade territorial mediante interseções GDAL/OGR independentes, soma de áreas por feição, campos de restrição e risco, preservação integral da entrada e inclusão automática da saída persistida na bancada. |
 | 1.20    | 19/10/2026 | `[preencher]` | Apresentação dinâmica dos resultados por base, revisão explícita de aliases em português brasileiro, mapa-síntese e relatório PDF completo, com pacote de geometrias e verificação de integridade das saídas. |
+| 1.21    | 19/10/2026 | `[preencher]` | Persistência das áreas totais e interseções vinculadas no GeoPackage, painel integrado de mapa, tabela e gráfico por feição, apresentação em km² e hectares, percentuais por demanda e persistência da revisão dos nomes. |
 
 ---
 
@@ -439,14 +440,33 @@ de siglas, sem expansão presumida de abreviações desconhecidas. Os mesmos
 aliases identificam as camadas na tela, no mapa e no PDF, mantendo intactos os
 nomes técnicos dos arquivos e campos.
 
-Para cada entrada apresentam-se resumo, fontes por papel, mapa-síntese e tabela
-de áreas por feição e base. A tela pagina os registros; o PDF inclui todas as
-feições e bases em blocos de colunas com identificação repetida. O travessão
-representa nulo, distinguindo-se de zero, e os valores decimais são preservados.
-O mapa representa as feições inteiras em EPSG:5880, com escala e norte e sem
-mapa-base. O destaque indica interseção registrada em alguma base, inclusive
-contato sem área; não representa os recortes de interseção nem classifica
-elegibilidade.
+O GeoPackage de saída inclui a camada integral das demandas, um campo de área
+total em metros quadrados, sem sobrescrita dos atributos originais, e uma camada
+de interseções em EPSG:5880. Cada recorte registra sua área e os vínculos com a
+posição da demanda, a camada de base e a feição de origem. A soma dos recortes é
+conferida contra os campos por base antes da apresentação. Mantém-se a soma
+independente, sem união ou dissolução.
+
+Para cada entrada apresentam-se resumo, fontes em colunas de Restrição e Risco,
+mapa Leaflet, gráfico de rosca e tabela paginada, com seleção sincronizada e
+enquadramento das geometrias selecionadas. Categoria designa Restrição ou Risco;
+classe designa a própria feição da base, identificada por sua origem, sem reunir
+feições distintas apenas por possuírem nomes iguais. As fatias representam a
+distribuição da soma das áreas sobrepostas, e não uma cobertura exclusiva da
+demanda. Nos detalhes, o percentual corresponde à área sobreposta dividida pela
+área total da demanda. A soma das áreas de diferentes feições pode superar a
+área da demanda, conforme o operador de agregação adotado.
+
+As áreas são apresentadas em km², com equivalência em hectares; os cálculos e os
+campos do GeoPackage permanecem em metros quadrados. O travessão representa nulo,
+distinguindo-se do contato de área zero, apresentado na legenda sem fatia
+proporcional. O PDF inclui todas as demandas, bases e feições sobrepostas, suas
+áreas e percentuais, além de mapas das demandas e recortes em EPSG:5880, com
+escala e norte, sem mapa-base. Não se atribui classificação de elegibilidade.
+A revisão dos nomes das camadas e feições é recolhida após confirmação e
+persistida no storage, vinculada ao usuário e à assinatura da saída, sem alterar
+o arquivo geoespacial processado. Saídas anteriores sem interseções persistidas
+exigem nova execução para utilização do painel.
 
 O controle de download ao final da seção entrega um ZIP com o PDF completo,
 os GeoPackages processados e metadados com aliases e assinaturas de integridade.

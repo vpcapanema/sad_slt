@@ -16,7 +16,7 @@
 <link rel="stylesheet" href="/assets/css/ahp-module.css">
 <link rel="stylesheet" href="/assets/css/page-title-standard.css">
 <link rel="stylesheet" href="/assets/css/extracao-atributos.css">
-<link rel="stylesheet" href="/assets/css/fase1-elegibilidade-v2.css?v=20261019-resultados">
+<link rel="stylesheet" href="/assets/css/fase1-elegibilidade-v2.css?v=20261019-painel">
 {% endblock %}
 {% block conteudo %}
 <div id="admin-session-bar" class="admin-session-bar hidden"></div>
@@ -145,40 +145,83 @@
     </div>
   </section>
   <section class="ea-section ev-resultados" id="ev-resultados" aria-labelledby="ev-resultados-title">
-    <header class="ea-section-head"><span class="ea-number">05</span><div><h2 id="ev-resultados-title">Resultados</h2><p>Confira a análise e baixe o relatório completo com as camadas processadas.</p></div></header>
+    <header class="ea-section-head"><span class="ea-number">05</span><div><h2 id="ev-resultados-title">Resultados da Elegibilidade Territorial</h2><p>Consulte onde as demandas se sobrepõem às feições das camadas de restrição e risco e qual é a área dessas sobreposições.</p></div></header>
     <div class="ea-section-body">
       <p id="ev-resultados-vazio" class="ea-hint">Execute a elegibilidade territorial para apresentar os resultados.</p>
       <p id="ev-resultados-status" class="ea-hint" role="status" aria-live="polite"></p>
       <button id="ev-resultados-tentar" class="ea-btn" type="button" hidden>Tentar Carregar Resultados</button>
       <form id="ev-resultados-aliases" hidden>
         <h3>Revisão dos Nomes de Apresentação</h3>
-        <p class="ea-hint">Os nomes abaixo são sugestões. Confira o significado, a ortografia, a acentuação e a gramática em português brasileiro. Siglas desconhecidas não são expandidas automaticamente. A mesma identificação será utilizada nas tabelas, no mapa e no PDF, com as palavras principais iniciadas em maiúscula.</p>
+        <p class="ea-hint">Confira os nomes das camadas e das feições, incluindo significado, ortografia e acentuação. As alterações serão salvas no storage e utilizadas no mapa, na tabela, no gráfico e no PDF. Siglas desconhecidas não são expandidas automaticamente.</p>
         <div id="ev-resultados-nomes" class="ev-resultados-nomes"></div>
         <label class="ev-resultados-confirmacao"><input id="ev-resultados-revisados" name="nomes_revisados" type="checkbox" required> Revisei os nomes e confirmo que identificam corretamente as camadas desta análise.</label>
-        <button class="ea-btn ea-btn-primary" id="ev-resultados-mostrar" type="submit">Apresentar Resultados</button>
+        <button class="ea-btn ea-btn-primary" id="ev-resultados-mostrar" type="submit">Confirmar Nomes e Apresentar Resultados</button>
       </form>
       <div id="ev-resultados-conteudo" hidden>
-        <div class="ea-field"><label for="ev-resultados-entrada">Camada de Entrada</label><select id="ev-resultados-entrada" name="entrada_resultados"></select></div>
+        <div class="evr-identificacao">
+          <div class="ea-field"><label for="ev-resultados-entrada">Camada das Demandas</label><select id="ev-resultados-entrada" name="entrada_resultados"></select></div>
+          <button class="ea-btn" id="ev-resultados-editar" type="button">Revisar Nomes</button>
+        </div>
         <p id="ev-resultados-resumo" class="ea-hint"></p>
-        <h3>Fontes Utilizadas</h3>
-        <ul id="ev-resultados-fontes"></ul>
-        <h3>Mapa-Síntese</h3>
-        <div id="ev-resultados-mapa" class="ev-resultados-mapa"></div>
-        <p class="ea-hint">Azul: Com Interseção Registrada · Cinza-Claro: Sem Interseção</p>
-        <p id="ev-resultados-nota-mapa" class="ea-hint"></p>
-        <h3>Tabela de Resultados</h3>
-        <p class="ea-hint">Áreas em m². O travessão representa ausência de interseção; zero representa interseção sem área. O PDF inclui todas as feições e todas as bases.</p>
-        <div class="ea-table-wrap"><table id="ev-resultados-tabela" data-table-sort="off" aria-label="Áreas de Sobreposição por Feição"></table></div>
-        <nav class="ev-resultados-paginacao" aria-label="Paginação dos Resultados">
-          <button id="ev-resultados-anterior" class="ea-btn" type="button">Anterior</button>
-          <span id="ev-resultados-pagina" class="ea-hint"></span>
-          <button id="ev-resultados-proxima" class="ea-btn" type="button">Próxima</button>
-        </nav>
+        <h3>Composição da Análise</h3>
+        <p id="ev-resultados-composicao" class="ea-hint"></p>
+        <div class="evr-fontes">
+          <div class="evr-fonte restricao"><h4>Restrição</h4><div id="ev-resultados-fontes-restricao" class="evr-chips"></div></div>
+          <div class="evr-fonte risco"><h4>Risco</h4><div id="ev-resultados-fontes-risco" class="evr-chips"></div></div>
+        </div>
+        <div class="evr-analise">
+          <section class="evr-painel evr-mapa-painel">
+            <header class="evr-titulo"><h3>Onde as Demandas se Sobrepõem</h3><button class="ea-btn" id="ev-resultados-enquadrar" type="button">Ver Todas</button></header>
+            <div id="ev-resultados-mapa" aria-label="Mapa interativo de demandas e interseções"></div>
+            <div class="evr-legenda-mapa"><span>Azul: Demanda</span><span class="restricao">Vermelho: Restrição</span><span class="risco">Amarelo: Risco</span></div>
+            <p class="ea-hint evr-instrucoes">Selecione uma demanda ou uma área sobreposta para atualizar os detalhes, destacar a tabela e ampliar o mapa.</p>
+            <p class="ea-hint evr-instrucoes" id="ev-resultados-nota-mapa" role="status"></p>
+          </section>
+          <section class="evr-painel">
+            <header class="evr-titulo"><h3>Sobreposições da Demanda Selecionada</h3><span id="ev-resultados-id-ativo" class="ea-hint"></span></header>
+            <div class="evr-grafico-conteudo">
+              <div class="ea-field"><label for="ev-resultados-base">Camada de Base em Análise</label><select id="ev-resultados-base" name="base_resultados"></select></div>
+              <p id="ev-resultados-frase" class="evr-frase" aria-live="polite"></p>
+              <div class="evr-detalhes-rosca">
+                <div class="evr-detalhes" aria-live="polite">
+                  <div><small>Demanda Selecionada</small><h4 id="ev-resultados-nome-ativo"></h4></div>
+                  <dl id="ev-resultados-detalhes-base" hidden>
+                    <div><dt>Categoria</dt><dd id="ev-resultados-categoria"></dd></div>
+                    <div><dt>Camada de Base</dt><dd id="ev-resultados-nome-base"></dd></div>
+                    <div id="ev-resultados-detalhes-classe" hidden><dt>Classe — Feição Sobreposta</dt><dd id="ev-resultados-nome-classe"></dd></div>
+                  </dl>
+                  <div class="evr-metrica evr-total"><small>Área Total da Demanda</small><strong id="ev-resultados-total-km"></strong><span id="ev-resultados-total-ha"></span></div>
+                  <div id="ev-resultados-metricas" class="evr-metricas" hidden>
+                    <div class="evr-metrica"><small id="ev-resultados-rotulo-area">Área Sobreposta</small><strong id="ev-resultados-area-km"></strong><span id="ev-resultados-area-ha"></span></div>
+                    <div class="evr-metrica"><small>Percentual da Área da Demanda</small><strong id="ev-resultados-percentual"></strong><span>Área sobreposta ÷ área total da demanda</span></div>
+                  </div>
+                  <p id="ev-resultados-aviso" class="ea-hint"></p>
+                </div>
+                <figure class="evr-rosca-bloco">
+                  <h4>Feições Sobrepostas</h4>
+                  <svg id="ev-resultados-rosca" viewBox="0 0 240 240" role="group" aria-label="Distribuição das áreas sobrepostas por feição"></svg>
+                  <div id="ev-resultados-legenda" class="evr-legenda-classes"></div>
+                </figure>
+              </div>
+              <p class="ea-hint">Cada fatia representa uma feição sobreposta à demanda. Seu tamanho indica a participação na soma das áreas sobrepostas, não o percentual da demanda. Uma mesma área pode se sobrepor a mais de uma feição. Contatos sem área aparecem na legenda, sem fatia proporcional. Selecionar uma camada não oculta as demais.</p>
+            </div>
+          </section>
+        </div>
+        <section class="evr-painel">
+          <header class="evr-titulo"><h3>Quanto Cada Demanda Sobrepõe</h3><span class="ea-hint">Área sobreposta por camada · km² e hectares</span></header>
+          <div class="ea-table-wrap"><table id="ev-resultados-tabela" data-table-sort="off" aria-label="Áreas de Sobreposição por Demanda"></table></div>
+          <p class="ea-hint evr-instrucoes">Cada valor soma as áreas sobrepostas às feições da camada. O travessão indica ausência de interseção; zero indica contato sem área. Selecione um nome ou um valor para atualizar os detalhes e ampliar o mapa.</p>
+          <nav class="ev-resultados-paginacao" aria-label="Paginação dos Resultados">
+            <button id="ev-resultados-anterior" class="ea-btn" type="button">Anterior</button>
+            <span id="ev-resultados-pagina" class="ea-hint"></span>
+            <button id="ev-resultados-proxima" class="ea-btn" type="button">Próxima</button>
+          </nav>
+        </section>
         <details><summary>Metodologia da Análise</summary><p id="ev-resultados-metodologia" class="ea-hint"></p></details>
       </div>
       <footer class="ev-resultados-download">
+        <p class="ea-hint"><strong>Relatório e Camadas da Análise</strong><br>O pacote inclui o PDF, todas as demandas processadas, suas interseções e os metadados, independentemente da seleção em tela. Não é necessário repetir o processamento.</p>
         <button class="ea-btn ea-btn-primary" id="ev-resultados-download" type="button" disabled>Baixar Relatório e Camadas (.zip)</button>
-        <p class="ea-hint">Relatório PDF, GeoPackages completos e metadados da análise. A exportação não repete as interseções.</p>
       </footer>
     </div>
   </section>
@@ -192,5 +235,5 @@
 <script src="/assets/vendor/maplibre-gl/maplibre-gl.js"></script>
 <script src="/assets/vendor/maplibre-gl/leaflet-maplibre-gl.js"></script>
 <script src="/restrict/hierarquizacao/js/hier-api.js"></script>
-<script type="module" src="/restrict/hierarquizacao/js/fase1-elegibilidade-v2.js?v=20261019-resultados"></script>
+<script type="module" src="/restrict/hierarquizacao/js/fase1-elegibilidade-v2.js?v=20261019-painel"></script>
 {% endblock %}

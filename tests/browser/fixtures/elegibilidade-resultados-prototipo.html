@@ -28,10 +28,12 @@ h1,h2,h3,p{margin:0}h1{font-size:20px;color:var(--azul)}h2{font-size:14px;color:
 .restricao h3{color:var(--re)}.risco h3{color:var(--ri)}.itens-fontes{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .chip{background:#ffffffba;border:1px solid #00000012;border-radius:5px;padding:6px 9px;font-size:12px;display:flex;align-items:center;gap:7px}
 .ponto{width:7px;height:7px;border-radius:50%;background:currentColor}.restricao .chip{color:var(--re)}.risco .chip{color:var(--ri)}
-.analise{display:grid;grid-template-columns:minmax(0,1fr) minmax(540px,1.15fr);gap:16px;align-items:stretch}
+.analise{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:stretch}
 .painel{border:1px solid var(--linha);border-radius:8px;overflow:hidden;min-width:0;background:white}
 .titulo-painel{padding:12px 15px;border-bottom:1px solid var(--linha);display:flex;align-items:center;justify-content:space-between;gap:10px}
+.analise>.painel>.titulo-painel{min-height:59px}.mapa-painel{display:flex;flex-direction:column}
 #mapa{height:390px;background:#eef2f4}.legenda{padding:10px 15px;font-size:11px;display:flex;gap:15px;flex-wrap:wrap;color:var(--suave)}
+.mapa-painel #mapa{flex:1;min-height:350px}.resumo{font-size:12px;line-height:1.6;color:var(--texto)}
 .legenda span{display:flex;align-items:center;gap:6px}.amostra{width:13px;height:10px;display:inline-block;border:2px solid var(--azul);background:#e4eef5}
 .amostra.re{border-color:var(--re);background:#c65a6a}.amostra.ri{border-color:var(--ri);background:#dbb83f}
 .instrucoes{font-size:11px;color:var(--suave);padding:0 15px 12px}.grafico-conteudo{padding:15px;display:grid;gap:14px}
@@ -46,9 +48,9 @@ h1,h2,h3,p{margin:0}h1{font-size:20px;color:var(--azul)}h2{font-size:14px;color:
 .detalhes .area-total{display:block}.detalhes .area-total .valor{display:block;margin-top:8px}.detalhes .indicadores{grid-template-columns:1fr;gap:8px}
 .categoria{font-weight:bold}.categoria.re{color:var(--re)}.categoria.ri{color:var(--ri)}
 .rosca-bloco{margin:0;min-width:0}.rosca-bloco h3{font-size:12px;color:var(--azul);text-align:center}
-#rosca{display:block;width:100%;max-width:240px;margin:8px auto}#rosca path{cursor:pointer;stroke:white;stroke-width:2;transition:opacity .15s}#rosca path:focus-visible{outline:none;stroke:var(--azul);stroke-width:4}
-.legenda-classes{display:grid;gap:5px}.classe-legenda{display:flex;align-items:center;gap:7px;padding:5px 6px;border:1px solid transparent;background:white;border-radius:5px;color:var(--texto);text-align:left;font-size:11px;min-width:0;width:100%}
-.classe-legenda .ponto{flex-shrink:0;width:9px;height:9px}.classe-legenda small{display:block;color:var(--suave);font-size:10px;margin-top:2px}.classe-legenda.ativa{background:var(--azul-claro);border-color:var(--linha);font-weight:bold}.classe-legenda.atenuada{opacity:.5}
+#rosca{display:block;width:100%;max-width:240px;margin:8px auto}#rosca path{cursor:pointer;stroke:white;stroke-width:2;outline:none;transition:opacity .15s}#rosca path:focus-visible{outline:none;stroke:var(--azul);stroke-width:4}
+.legenda-classes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 6px}.classe-legenda{display:flex;align-items:center;gap:6px;padding:5px 4px;border:1px solid transparent;background:white;border-radius:5px;color:var(--texto);text-align:left;font-size:10.5px;line-height:1.4;min-width:0;width:100%}
+.classe-legenda .ponto{flex-shrink:0;width:8px;height:8px}.classe-legenda small{display:block;color:var(--suave);font-size:10px;margin-top:2px}.classe-legenda.ativa{background:var(--azul-claro);border-color:var(--linha);font-weight:bold}.classe-legenda.atenuada .ponto{opacity:.45}
 .aviso-selecao{font-size:11px;color:var(--suave);line-height:1.5}
 .tabela-scroll{overflow:auto;max-height:300px}table{border-collapse:separate;border-spacing:0;width:100%;font-size:12px}th,td{padding:11px 12px;text-align:left;border-right:1px solid #ffffff30;border-bottom:1px solid var(--linha)}
 thead th{font-weight:600;white-space:nowrap;color:white;background:var(--azul)}thead tr:first-child th{text-align:center;font-size:12px;padding:9px}
@@ -60,7 +62,7 @@ td.celula-ativa.re{background:var(--re-claro);box-shadow:inset 0 0 0 2px var(--r
 .classe-tabela{display:block;font-size:10px;margin-top:6px;color:var(--azul)}
 td .secundario{display:block;color:var(--suave);font-size:10px;font-weight:normal;margin-top:4px}.rodape-tabela{padding:10px 15px;display:flex;justify-content:space-between;color:var(--suave);font-size:11px}
 .rodape{display:flex;align-items:center;justify-content:space-between;gap:16px;border-top:1px solid var(--linha);padding-top:18px}
-.rodape p{font-size:11px;color:var(--suave);line-height:1.6;max-width:680px}.mensagem{font-size:12px;color:var(--azul);min-height:15px}
+.rodape p{font-size:11px;color:var(--suave);line-height:1.6;max-width:680px}.mensagem{font-size:12px;color:var(--azul)}.mensagem:empty{display:none}
 .leaflet-tooltip{font:12px Arial,sans-serif}.leaflet-control-layers{font:11px Arial,sans-serif}
 @media(max-width:1000px){.analise{grid-template-columns:1fr}.campos-alias{grid-template-columns:1fr 1fr}#mapa{height:350px}}
 @media(max-width:620px){.conteudo{padding:15px}.cabecalho{padding:16px}.selo{display:none}.fontes,.campos-alias{grid-template-columns:1fr}.rodape{align-items:stretch;flex-direction:column}.identificacao{gap:15px}.analise{display:block}.grafico{margin-top:15px}h1{font-size:18px}.nota{padding:0 16px}}
@@ -70,70 +72,71 @@ td .secundario{display:block;color:var(--suave);font-size:10px;font-weight:norma
 <body>
 <p class="nota">SICARD · Protótipo da seção inteira de resultados · Dados fictícios · Não altera a página funcional</p>
 <section class="secao" aria-labelledby="titulo">
-  <header class="cabecalho"><span class="numero">05</span><div><h1 id="titulo">Resultados da Elegibilidade Territorial</h1><p class="subtitulo">Explore cada demanda no mapa, na tabela e nos gráficos. A seleção é compartilhada entre os três elementos.</p></div><span class="selo">Demonstração Interativa</span></header>
+  <header class="cabecalho"><span class="numero">05</span><div><h1 id="titulo">Resultados da Elegibilidade Territorial</h1><p class="subtitulo">Consulte onde as demandas se sobrepõem às feições das camadas de restrição e risco e qual é a área dessas sobreposições.</p></div><span class="selo">Demonstração Interativa</span></header>
   <div class="conteudo">
     <div class="linha">
-      <div class="identificacao"><div><small>Camada de Entrada</small><strong>Demandas de Infraestrutura</strong></div><div><small>Feições Analisadas</small><strong>3 demandas</strong></div><div><small>Composição Utilizada</small><strong>2 restrições · 2 riscos</strong></div></div>
+      <div class="identificacao"><div><small>Camada das Demandas</small><strong>Demandas de Infraestrutura</strong></div><div><small>Demandas Analisadas</small><strong>3 demandas</strong></div><div><small>Camadas Comparadas</small><strong>2 de restrição · 2 de risco</strong></div></div>
       <button class="btn" id="editar-nomes" type="button">Revisar Nomes</button>
     </div>
     <form class="revisao" id="revisao" hidden>
       <h2>Revisão dos Nomes de Apresentação</h2>
-      <p class="subtitulo">Após confirmar, este bloco é recolhido. Neste protótipo, os aliases ficam salvos neste navegador.</p>
+      <p class="subtitulo">Confira como os nomes das camadas serão apresentados. Ao confirmar, a revisão será recolhida e os nomes ficarão salvos neste navegador.</p>
       <div class="campos-alias" id="campos-alias"></div>
       <button class="btn primario" type="submit">Confirmar Nomes e Recolher</button>
     </form>
     <div>
-      <div class="linha" style="margin-bottom:10px"><h2>Fontes Utilizadas</h2><span class="subtitulo">Composição desta análise</span></div>
+      <div class="linha" style="margin-bottom:10px"><h2>Composição da Análise</h2></div>
+      <p id="resumo-composicao" class="subtitulo" style="margin-bottom:10px"></p>
       <div class="fontes">
         <div class="fonte restricao"><h3>Restrição</h3><div class="itens-fontes" id="fontes-re"></div></div>
         <div class="fonte risco"><h3>Risco</h3><div class="itens-fontes" id="fontes-ri"></div></div>
       </div>
     </div>
     <div class="analise">
-      <section class="painel">
-        <header class="titulo-painel"><h2>Mapa de Demandas e Interseções</h2><button class="btn" id="enquadrar" type="button">Ver Todas</button></header>
+      <section class="painel mapa-painel">
+        <header class="titulo-painel"><h2>Onde as Demandas se Sobrepõem</h2><button class="btn" id="enquadrar" type="button">Ver Todas</button></header>
         <div id="mapa" aria-label="Mapa interativo de demandas e interseções"></div>
         <div class="legenda"><span><i class="amostra"></i>Demanda de Entrada</span><span><i class="amostra re"></i>Interseção de Restrição</span><span><i class="amostra ri"></i>Interseção de Risco</span></div>
-        <p class="instrucoes">Clique na demanda ou em uma interseção. A tabela destaca a mesma feição e os indicadores são atualizados.</p>
+        <p class="instrucoes">Selecione uma demanda ou uma área sobreposta para consultar seus detalhes no gráfico e na tabela. O mapa amplia a área selecionada.</p>
       </section>
       <section class="painel grafico" aria-labelledby="grafico-titulo">
-        <header class="titulo-painel"><h2 id="grafico-titulo">Análise da Feição Selecionada</h2><span id="id-ativo" class="subtitulo"></span></header>
+        <header class="titulo-painel"><h2 id="grafico-titulo">Sobreposições da Demanda Selecionada</h2><span id="id-ativo" class="subtitulo"></span></header>
         <div class="grafico-conteudo">
           <div class="controle-base"><label for="base-ativa">Camada de Base em Análise</label><select id="base-ativa" name="base_ativa"></select></div>
+          <p id="resumo-demanda" class="resumo" aria-live="polite"></p>
           <div class="detalhes-rosca">
             <div class="detalhes" aria-live="polite">
               <div><div class="selecionado">Demanda Selecionada</div><h3 class="demanda-titulo" id="nome-ativo"></h3></div>
               <dl id="detalhes-base" hidden>
                 <div><dt>Categoria</dt><dd id="categoria-ativa" class="categoria"></dd></div>
                 <div><dt>Camada de Base</dt><dd id="nome-base"></dd></div>
-                <div id="detalhes-classe" hidden><dt>Classe de Sobreposição</dt><dd id="nome-classe"></dd></div>
-                <div id="detalhes-feicoes" hidden><dt>Feições Sobrepostas</dt><dd id="nomes-feicoes"></dd></div>
+                <div id="detalhes-classe" hidden><dt>Classe — Feição Sobreposta</dt><dd id="nome-classe"></dd></div>
               </dl>
               <div class="area-total"><span>Área Total da Demanda</span><strong class="valor" id="total-km"></strong><small class="hectares" id="total-ha"></small></div>
               <div class="indicadores" id="metricas-sobreposicao" hidden>
                 <div class="indicador"><small id="rotulo-sobreposta">Área Total Sobreposta</small><strong class="valor" id="sobreposta-km"></strong><span class="hectares" id="sobreposta-ha"></span></div>
-                <div class="indicador"><small>Percentual da Demanda</small><strong class="valor" id="percentual"></strong><span class="hectares">Área sobreposta ÷ área total</span></div>
+                <div class="indicador"><small>Percentual da Área da Demanda</small><strong class="valor" id="percentual"></strong><span class="hectares">Parcela da demanda que se sobrepõe à seleção</span></div>
               </div>
               <p class="aviso-selecao" id="aviso-selecao">Selecione uma camada de base ou uma fatia para consultar os detalhes da sobreposição.</p>
             </div>
             <figure class="rosca-bloco">
-              <h3>Classes de Sobreposição</h3>
+              <h3>Feições Sobrepostas</h3>
               <svg id="rosca" viewBox="0 0 240 240" role="group" aria-label="Distribuição das áreas sobrepostas por classe"></svg>
               <div id="legenda-classes" class="legenda-classes" aria-label="Legenda das classes"></div>
             </figure>
           </div>
-          <p class="explicacao">Todas as classes da demanda permanecem no gráfico. A seleção apenas destaca as fatias. Seu tamanho representa a participação na soma das áreas sobrepostas, não o percentual da demanda; interseções de bases diferentes podem ocupar o mesmo local. Classes A e B são fictícias, apenas para demonstrar a interação.</p>
+          <p class="explicacao">Cada fatia representa uma feição sobreposta à demanda. Seu tamanho indica a participação na soma das áreas sobrepostas; o percentual da demanda aparece nos detalhes. Uma mesma área pode se sobrepor a mais de uma feição. Selecionar uma camada apenas destaca suas fatias, sem ocultar as demais.</p>
         </div>
       </section>
     </div>
     <section class="painel">
-      <header class="titulo-painel"><h2>Tabela de Resultados por Demanda</h2><span class="subtitulo">Áreas em km² · Equivalente em hectares abaixo</span></header>
+      <header class="titulo-painel"><h2>Quanto Cada Demanda Sobrepõe</h2><span class="subtitulo">Área sobreposta por camada · km² e hectares</span></header>
       <div class="tabela-scroll"><table id="tabela" aria-label="Resultados por demanda"><thead id="cabecalho-tabela"></thead><tbody id="linhas"></tbody></table></div>
-      <div class="rodape-tabela"><span>Valores totais por base · Clique no nome para selecionar a demanda ou em uma área para destacar a base e ampliar o mapa.</span><span id="selecao-status" aria-live="polite"></span></div>
+      <div class="rodape-tabela"><span>Cada valor soma as áreas sobrepostas às feições da camada. Selecione um nome ou um valor para atualizar os detalhes e ampliar o mapa.</span><span id="selecao-status" aria-live="polite"></span></div>
     </section>
     <p id="mensagem" class="mensagem" role="status"></p>
     <footer class="rodape">
-      <p><strong>Relatório completo e geometrias processadas</strong><br>Na versão funcional, o pacote reunirá o PDF, a saída integral, as interseções vinculadas às demandas e os metadados. O relatório não será limitado à feição selecionada.</p>
+      <p><strong>Relatório e Camadas da Análise</strong><br>O pacote incluirá o relatório em PDF, todas as demandas processadas, suas interseções e os dados da análise, independentemente da seleção em tela. O download ficará disponível na versão funcional.</p>
       <button class="btn primario" id="download" type="button" disabled title="Disponível após a implementação funcional">Baixar Relatório e Camadas (.zip)</button>
     </footer>
   </div>
@@ -142,10 +145,10 @@ td .secundario{display:block;color:var(--suave);font-size:10px;font-weight:norma
 <script>
 // Fonte única fictícia: cada saída contém atributos, geometria e interseções ligadas ao seu identificador.
 const bases=[
- {id:'re_app',papel:'re',alias:'Áreas de Preservação Permanente',cores:['#852c38','#c65a6a']},
- {id:'re_uc',papel:'re',alias:'Unidades de Conservação',cores:['#654880','#a98abe']},
- {id:'ri_inund',papel:'ri',alias:'Áreas Suscetíveis à Inundação',cores:['#997400','#d9b33d']},
- {id:'ri_eros',papel:'ri',alias:'Áreas Suscetíveis à Erosão',cores:['#b76521','#73894a']}
+ {id:'re_app',papel:'re',alias:'Áreas de Preservação Permanente',cores:['#852c38','#c65a6a'],feicoes:['Margens do Rio Claro','Nascentes do Córrego Azul']},
+ {id:'re_uc',papel:'re',alias:'Unidades de Conservação',cores:['#654880','#a98abe'],feicoes:['Parque da Serra Norte','Reserva do Vale Verde']},
+ {id:'ri_inund',papel:'ri',alias:'Áreas Suscetíveis à Inundação',cores:['#997400','#d9b33d'],feicoes:['Planície do Rio Claro','Várzea do Ribeirão Sul']},
+ {id:'ri_eros',papel:'ri',alias:'Áreas Suscetíveis à Erosão',cores:['#b76521','#73894a'],feicoes:['Encosta do Morro Norte','Vertente do Vale Leste']}
 ];
 const poligono=(x,y,w,h)=>({type:'Polygon',coordinates:[[[x,y],[x+w,y],[x+w,y+h],[x,y+h],[x,y]]]});
 const area=g=>{const r=g.coordinates[0],a=r[0],b=r[2];return 6371.0088**2*Math.abs((b[0]-a[0])*Math.PI/180*(Math.sin(b[1]*Math.PI/180)-Math.sin(a[1]*Math.PI/180)))};
@@ -158,10 +161,10 @@ const arquivoSaida={type:'FeatureCollection',features:[
   if(!f)return [];
   let deslocamento=0;
   return [.4,.35,.25].map((parte,j)=>{
-   const classe=j===1?1:0,geometry=poligono(d.x+(i%2?d.w*(1-f):0)+d.w*f*deslocamento,d.y,d.w*f*parte,d.h);
+   const feicao=j===1?1:0,geometry=poligono(d.x+(i%2?d.w*(1-f):0)+d.w*f*deslocamento,d.y,d.w*f*parte,d.h);
    deslocamento+=parte;
-   return {type:'Feature',properties:{demanda_id:d.id,base_id:bases[i].id,classe_id:`${bases[i].id}:${classe}`,
-    classe:classe?'Classe B':'Classe A',cor:bases[i].cores[classe],nome:['Setor Norte','Setor Central','Setor Sul'][j],area_km2:area(geometry)},geometry};
+   return {type:'Feature',properties:{demanda_id:d.id,base_id:bases[i].id,feicao_id:`${bases[i].id}:${feicao}`,
+    cor:bases[i].cores[feicao],nome:bases[i].feicoes[feicao],area_km2:area(geometry)},geometry};
   });
  });
  return {type:'Feature',id:d.id,properties:{id:d.id,nome:d.nome,area_total_km2:area(geometry),
@@ -186,14 +189,16 @@ for(const f of arquivoSaida.features){
   const b=bases.find(b=>b.id===item.properties.base_id),cor=b.papel==='re'?'#852c38':'#997400';
   const trecho=L.geoJSON(item,{style:{color:cor,weight:1.5,fillColor:cor,fillOpacity:.3}});
   trecho.addTo(b.papel==='re'?restricoes:riscos);
-  trecho.bindTooltip(()=>criar('span',`${b.alias} · ${item.properties.classe} · ${item.properties.nome}`));
-  trecho.on('click',()=>selecionarOrigem(f.id,b.id,item.properties.classe_id));
-  recortes.push({demanda:f.id,base:b.id,classe:item.properties.classe_id,layer:trecho,cor});
+  trecho.bindTooltip(()=>criar('span',`${f.properties.nome} sobrepõe ${item.properties.nome} · ${b.alias}`));
+  trecho.on('click',()=>selecionarOrigem(f.id,b.id,item.properties.feicao_id));
+  recortes.push({demanda:f.id,base:b.id,classe:item.properties.feicao_id,layer:trecho,cor});
  }
 }
 L.control.layers({}, {'Demandas de Entrada':saidas,'Interseções de Restrição':restricoes,'Interseções de Risco':riscos},{collapsed:true}).addTo(mapa);
 $('enquadrar').onclick=()=>mapa.fitBounds(saidas.getBounds(),{padding:[30,30]});
 function atualizarNomes(){
+ const demandas=arquivoSaida.features.filter(f=>f.intersecoes.length),camadasSobrepostas=new Set(demandas.flatMap(f=>f.intersecoes.map(i=>i.properties.base_id)));
+ $('resumo-composicao').textContent=`Nesta análise, ${demandas.length} de ${arquivoSaida.features.length} demandas apresentam sobreposição com feições de ${camadasSobrepostas.size} camadas. As fontes utilizadas estão organizadas abaixo por categoria.`;
  for(const papel of ['re','ri']){
   const alvo=$('fontes-'+papel);alvo.replaceChildren();
   for(const b of bases.filter(b=>b.papel===papel)){const chip=criar('span');chip.className='chip';const ponto=criar('i');ponto.className='ponto';chip.append(ponto,document.createTextNode(b.alias));alvo.append(chip)}
@@ -222,8 +227,8 @@ function atualizarNomes(){
 function classesDaDemanda(f){
  const classes=new Map();
  for(const {properties:p}of f.intersecoes){
-  if(!classes.has(p.classe_id))classes.set(p.classe_id,{id:p.classe_id,base:p.base_id,nome:p.classe,cor:p.cor,area:0,feicoes:new Set()});
-  const classe=classes.get(p.classe_id);classe.area+=p.area_km2;classe.feicoes.add(p.nome);
+  if(!classes.has(p.feicao_id))classes.set(p.feicao_id,{id:p.feicao_id,base:p.base_id,nome:p.nome,cor:p.cor,area:0});
+  classes.get(p.feicao_id).area+=p.area_km2;
  }
  return [...classes.values()];
 }
@@ -245,10 +250,13 @@ function desenharRosca(classes){
   svg.append(path);inicio=fim;
   const botao=criar('button');botao.type='button';botao.className='classe-legenda'+(destacada?' ativa':'')+(atenuada?' atenuada':'');botao.dataset.classe=c.id;botao.setAttribute('aria-pressed',String(destacada));
   const cor=criar('span');cor.className='ponto';cor.style.background=c.cor;
-  const texto=criar('span',c.nome);texto.append(criar('small',b.alias));botao.append(cor,texto);botao.onclick=escolher;legenda.append(botao);
+  const texto=criar('span',c.nome);
+  if(classes.some(outra=>outra.id!==c.id&&outra.nome===c.nome))texto.append(criar('small',b.alias));
+  botao.title=`${b.papel==='re'?'Restrição':'Risco'} · ${b.alias}`;botao.setAttribute('aria-label',rotulo);
+  botao.append(cor,texto);botao.onclick=escolher;legenda.append(botao);
  }
  svg.append(criarSvg('text',{x:120,y:117,'text-anchor':'middle',fill:'#003b5a','font-size':30,'font-weight':'bold'},classes.length));
- svg.append(criarSvg('text',{x:120,y:139,'text-anchor':'middle',fill:'#637b8d','font-size':12},classes.length?'Classes':'Sem Interseção'));
+ svg.append(criarSvg('text',{x:120,y:139,'text-anchor':'middle',fill:'#637b8d','font-size':12},classes.length?'Feições':'Sem Sobreposição'));
 }
 function selecionarOrigem(id,base='',classe=''){
  ativo=id;baseAtiva=base;classeAtiva=classe;selecionar(id,true);
@@ -260,17 +268,30 @@ function selecionar(id,enquadrar=false){
  if(!classe)classeAtiva='';
  $('id-ativo').textContent=id;$('nome-ativo').textContent=f.properties.nome;
  $('total-km').textContent=`${km(total)} km²`;$('total-ha').textContent=`${km(total*100)} ha`;
- $('detalhes-base').hidden=!b;$('metricas-sobreposicao').hidden=!b;$('detalhes-classe').hidden=!classe;$('detalhes-feicoes').hidden=!classe;
+ $('detalhes-base').hidden=!b;$('metricas-sobreposicao').hidden=!b;$('detalhes-classe').hidden=!classe;
+ const classesDaBase=classes.filter(c=>c.base===baseAtiva);
+ $('resumo-demanda').textContent=classe
+  ?`A demanda “${f.properties.nome}” apresenta sobreposição com “${classe.nome}”.`
+  :b
+   ?classesDaBase.length
+    ?`A demanda “${f.properties.nome}” apresenta sobreposição com ${classesDaBase.length} ${classesDaBase.length===1?'feição':'feições'} da camada “${b.alias}”.`
+    :`Não foi identificada sobreposição entre a demanda “${f.properties.nome}” e as feições da camada “${b.alias}”.`
+   :classes.length
+    ?`A demanda “${f.properties.nome}” apresenta sobreposição com ${classes.length} ${classes.length===1?'feição':'feições'} das camadas analisadas.`
+    :`Não foi identificada sobreposição entre a demanda “${f.properties.nome}” e as camadas analisadas.`;
  if(b){
   const valor=classe?classe.area:f.properties.areas[b.id],cor=classe?classe.cor:b.cores[0];
   $('categoria-ativa').textContent=b.papel==='re'?'Restrição':'Risco';$('categoria-ativa').className=`categoria ${b.papel}`;$('nome-base').textContent=b.alias;
-  $('nome-classe').textContent=classe?classe.nome:'';$('nomes-feicoes').textContent=classe?[...classe.feicoes].join(' · '):'';
-  $('rotulo-sobreposta').textContent=classe?'Área Sobreposta da Classe':'Área Total Sobreposta da Base';
+  $('nome-classe').textContent=classe?classe.nome:'';
+  $('rotulo-sobreposta').textContent=classe?'Área Sobreposta à Feição':'Área Sobreposta à Camada';
   $('sobreposta-km').textContent=`${km(valor)} km²`;$('sobreposta-ha').textContent=`${km(valor*100)} ha`;$('percentual').textContent=`${km(valor/total*100)}%`;
   $('sobreposta-km').style.color=cor;$('percentual').style.color=cor;
  }
  $('base-ativa').value=baseAtiva;
- $('aviso-selecao').textContent=classe?'As métricas correspondem à fatia selecionada e incluem todas as suas feições sobrepostas.':b?(classes.some(c=>c.base===b.id)?'Camada destacada. Clique em uma fatia para consultar a classe e suas feições.':'Esta base não apresenta interseções com a demanda selecionada.'):'Selecione uma camada de base ou uma fatia para consultar os detalhes da sobreposição.';
+ $('aviso-selecao').textContent=classe
+  ?`${km(classe.area/total*100)}% da área de “${f.properties.nome}” se sobrepõe a “${classe.nome}”.`
+  :b?(classesDaBase.length?'Selecione uma fatia para consultar a área sobreposta a cada feição.':'O mapa mostra a demanda, pois não há área sobreposta a esta camada.')
+  :'Selecione uma camada ou uma feição no gráfico para consultar as áreas sobrepostas.';
  for(const tr of $('linhas').children){
   const linhaAtiva=tr.dataset.id===id;tr.classList.toggle('ativo',linhaAtiva);tr.setAttribute('aria-selected',String(linhaAtiva));
   for(const td of tr.querySelectorAll('[data-base]')){
@@ -285,6 +306,7 @@ function selecionar(id,enquadrar=false){
  }
  $('selecao-status').textContent=`Selecionada: ${id}${b?` · ${b.alias}`:''}${classe?` · ${classe.nome}`:''}`;
  desenharRosca(classes);
+ mapa.invalidateSize({pan:false});
  if(enquadrar){
   const alvos=recortes.filter(r=>r.demanda===id&&(classeAtiva?r.classe===classeAtiva:baseAtiva?r.base===baseAtiva:false));
   if(!mapa.hasLayer(saidas))saidas.addTo(mapa);

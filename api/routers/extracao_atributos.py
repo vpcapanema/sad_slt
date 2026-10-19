@@ -298,6 +298,7 @@ def visualizar_resultados_elegibilidade(payload: ApresentacaoElegibilidade,
     from api.services import elegibilidade_relatorio
     try:
         modelo, _ = elegibilidade_relatorio.montar(payload.execucoes, payload.nomes, user.id, payload.revisados)
+        elegibilidade_relatorio.salvar_nomes(payload.execucoes, modelo, user.id)
         return modelo
     except FileNotFoundError as exc:
         raise HTTPException(404, str(exc)) from exc

@@ -5,7 +5,7 @@ import {validarCamada, descritorOriginal} from '../../geoespacial/extracao-atrib
 import {escolherConfiguracao} from '../../geoespacial/extracao-atributos/lista-camadas.js';
 import {criarPrevia} from '../../geoespacial/extracao-atributos/previa.js?v=20261019-metadados';
 import {criarMapa} from '../../geoespacial/extracao-atributos/mapa.js';
-import {criarResultados} from './elegibilidade-resultados.js';
+import {criarResultados} from './elegibilidade-resultados.js?v=20261019-painel';
 
 const papeis = {entrada:'Entrada', restricao:'Restrição', risco:'Risco'};
 const selecao = {entrada:[], restricao:[], risco:[]};

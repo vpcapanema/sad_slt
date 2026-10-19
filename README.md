@@ -208,16 +208,30 @@ conferido antes do registro no storage, com o nome
 para evitar sobrescrita. Cada saída é adicionada automaticamente à bancada sem
 remover as fontes. Há acompanhamento e cancelamento seguro antes da gravação;
 classificação e integração com as fases seguintes não são executadas nesta etapa.
-A seção **Resultados** permite revisar os nomes amigáveis das entradas e das bases
-dinâmicas antes da apresentação. Os aliases confirmados são usados na tela e no
+A seção **Resultados** permite revisar os nomes amigáveis das entradas, bases
+dinâmicas e feições sobrepostas antes da apresentação. Os aliases confirmados são
+persistidos no storage, vinculados ao usuário e ao SHA-256 da saída; a revisão é
+recolhida após confirmação e pode ser reaberta. Os nomes são usados na tela e no
 PDF, em title case do português brasileiro; sugestões automáticas não substituem
-a revisão de significado, ortografia e gramática. A seção contém resumo por
-entrada, fontes, mapa-síntese e tabela paginada. No rodapé, **Baixar Relatório e
+a revisão de significado, ortografia e gramática. O painel integra mapa Leaflet,
+gráfico de rosca e tabela paginada, com seleção bidirecional e zoom nas geometrias
+selecionadas. As fontes são separadas em Restrição e Risco. Cada fatia corresponde
+a uma feição da base, não a uma classificação de elegibilidade; nomes iguais não
+unem feições distintas. Áreas aparecem em km², com hectares abaixo, e os detalhes
+informam o percentual da demanda. A proporção da rosca usa a soma das áreas
+sobrepostas, que podem ocupar o mesmo local, não uma cobertura exclusiva.
+No rodapé, **Baixar Relatório e
 Camadas (.zip)** entrega o PDF completo (todas as feições e bases), os GeoPackages
 sem alteração e os metadados da análise. A exportação verifica o SHA-256 das
 saídas, não repete interseções e grava o pacote no storage antes do download.
-O mapa distingue feições inteiras com/sem interseção, sem atribuir classes de
-elegibilidade; lotes parciais são identificados no relatório.
+O GeoPackage contém a entrada integral em `elegibilidade_territorial`, a área total
+em `area_total_m2` (ou nome livre equivalente em caso de colisão) e a camada
+`intersecoes`, com vínculos por posição da demanda, base e feição de origem. As
+áreas de processamento continuam em m², sem união nem dissolução. O PDF inclui
+mapas com recortes, tabelas por base e detalhes de todas as demandas e feições,
+mesmo fora da página ou seleção visível. Lotes parciais são identificados.
+Saídas anteriores, sem interseções persistidas, exigem nova execução para esse
+painel; não são criados recortes ou resultados substitutos.
 A tabela de atributos da bancada sempre exibe a identificação técnica da feição
 em coluna fixa e somente leitura: nos arquivos, o FID real retornado pelo GDAL,
 com o nome da coluna nativa quando disponível; nas leituras em memória, o ID
