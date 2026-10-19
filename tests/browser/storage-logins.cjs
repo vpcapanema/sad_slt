@@ -6,6 +6,7 @@ const path=require('node:path');
 
 (async()=>{
  const origin=process.env.SICARD_STORAGE_TEST_URL||'https://56.125.163.194';
+ const published=process.argv.includes('--published');
  const template=fs.readFileSync(path.join('.deploy','storage','templates','common','base.html'),'utf8');
  const definition=template.indexOf('{{- define "theme-setup"}}');
  const opening=template.indexOf('<script',definition);
@@ -26,15 +27,17 @@ const path=require('node:path');
       assert.ok(['GET','HEAD'].includes(route.request().method()),'Login validation must not send writes');
       return route.continue();
      });
-     await context.route('**/static/sicard/cores.css',route=>route.fulfill({contentType:'text/css',body:css}));
-     await context.route(/\/web\/(?:admin|client)\/login\/?$/,async route=>{
+     if(!published){
+      await context.route('**/static/sicard/cores.css',route=>route.fulfill({contentType:'text/css',body:css}));
+      await context.route(/\/web\/(?:admin|client)\/login\/?$/,async route=>{
       const response=await route.fetch();
       assert.equal(response.status(),200);
       const html=await response.text();
       const setup=[...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)].find(match=>match[1].includes('var defaultThemeMode'));
       assert.ok(setup,'SFTPGo theme initialization script');
       await route.fulfill({response,body:html.replace(setup[1],themeScript)});
-     });
+      });
+     }
      for(const [area,subtitle] of [['client','Gestão de dados geoespaciais'],['admin','Administração de acesso ao storage']]){
       const page=await context.newPage(),errors=[];
       page.on('pageerror',error=>errors.push(error.message));

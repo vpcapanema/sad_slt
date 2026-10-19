@@ -17,6 +17,56 @@ info() { printf "  \033[1;34m·\033[0m %s\n" "$1"; }
 warn() { printf "  \033[1;33m!\033[0m %s\n" "$1"; }
 die()  { printf "  \033[1;31m✗\033[0m %s\n" "$1"; exit 1; }
 
+sync_storage_branding() {
+    local storage_dir="/opt/sicard-storage"
+    local template_mount css_mount image relative src dst changed=0
+    step "Publicando identidade visual dos logins do Storage"
+    image=$(docker inspect --format '{{.Config.Image}}' sicard_storage) \
+        || die "container sicard_storage nao encontrado"
+    [[ "$image" == "drakkan/sftpgo:v2.7.5" ]] \
+        || die "versao do Storage incompativel com o template: $image"
+    template_mount=$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/usr/share/sftpgo/templates/common/base.html"}}{{.Source}}{{end}}{{end}}' sicard_storage)
+    css_mount=$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/usr/share/sftpgo/static/sicard"}}{{.Source}}{{end}}{{end}}' sicard_storage)
+    [[ "$template_mount" == "$storage_dir/templates/common/base.html" ]] \
+        || die "montagem inesperada do template do Storage: $template_mount"
+    [[ "$css_mount" == "$storage_dir/static/sicard" ]] \
+        || die "montagem inesperada do CSS do Storage: $css_mount"
+    for relative in templates/common/base.html static/sicard/cores.css; do
+        src="$APP_DIR/.deploy/storage/$relative"
+        dst="$storage_dir/$relative"
+        [[ -f "$src" && ! -L "$src" && -f "$dst" && ! -L "$dst" ]] \
+            || die "arquivo de marca ausente ou link simbolico: $relative"
+    done
+    for relative in templates/common/base.html static/sicard/cores.css; do
+        src="$APP_DIR/.deploy/storage/$relative"
+        dst="$storage_dir/$relative"
+        if ! cmp -s "$src" "$dst"; then
+            # Mantem o inode do template, que e montado como arquivo individual.
+            sudo cp "$src" "$dst"
+            changed=1
+            info "Storage atualizado: $relative"
+        fi
+    done
+    if [[ "$changed" -eq 1 ]]; then
+        docker restart sicard_storage >/dev/null
+    else
+        info "template e CSS do Storage ja estao atualizados"
+    fi
+    local attempt admin_html client_html published_css expected_css
+    expected_css=$(cat "$APP_DIR/.deploy/storage/static/sicard/cores.css")
+    for attempt in $(seq 1 12); do
+        if admin_html=$(curl --max-time 5 -fsS http://127.0.0.1:8095/sicard/storage/web/admin/login) \
+            && client_html=$(curl --max-time 5 -fsS http://127.0.0.1:8095/sicard/storage/web/client/login) \
+            && published_css=$(curl --max-time 5 -fsS http://127.0.0.1:8095/sicard/storage/static/sicard/cores.css) \
+            && [[ "$admin_html" == *storageSavedTheme* && "$client_html" == *storageSavedTheme* && "$published_css" == "$expected_css" ]]; then
+            ok "logins do Storage servem o template e o CSS publicados"
+            return
+        fi
+        sleep 5
+    done
+    die "Storage nao confirmou os logins atualizados; verifique docker logs sicard_storage"
+}
+
 [[ "$APP_DIR" == "/opt/sicard" ]] || die "diretorio inesperado: $APP_DIR"
 [[ -d "$APP_DIR/.git" ]] || die "clone git nao encontrado em $APP_DIR (rode bootstrap_vm.sh primeiro)"
 cd "$APP_DIR"
@@ -50,6 +100,8 @@ OLD_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "none")
 git fetch origin "$BRANCH"
 # The Windows task pins the fetched revision to the commit just published.
 EXPECTED_SHA="${2:-}"
+DEPLOY_SCOPE="${3:-all}"
+[[ "$DEPLOY_SCOPE" == "all" || "$DEPLOY_SCOPE" == "storage" ]] || die "escopo de deploy invalido"
 if [[ -n "$EXPECTED_SHA" ]]; then
     [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]] || die "SHA esperado invalido"
     [[ "$(git rev-parse "origin/$BRANCH")" == "$EXPECTED_SHA" ]] \
@@ -67,6 +119,15 @@ else
     ok "codigo atualizado: $OLD_SHA -> $NEW_SHA"
     info "arquivos alterados:"
     git diff --name-only "$OLD_SHA" "$NEW_SHA" 2>/dev/null | sed 's/^/    /' || true
+fi
+
+if [[ "$DEPLOY_SCOPE" == "storage" ]]; then
+    sync_storage_branding
+    step "DEPLOY DO STORAGE CONCLUÍDO"
+    echo "  Commit: $NEW_SHA"
+    echo "  URL:    $PUBLIC_URL/storage/web/client/login"
+    echo "  URL:    $PUBLIC_URL/storage/web/admin/login"
+    exit 0
 fi
 
 [[ -f "$COMPOSE_FILE" ]] || die "$COMPOSE_FILE nao encontrado"
@@ -119,6 +180,8 @@ for i in $(seq 1 12); do
     sleep 5
 done
 [[ "$PUB_OK" -eq 1 ]] || warn "rota pública ainda não respondeu 200 (verifique manualmente: $PUBLIC_URL/api/health)"
+
+sync_storage_branding
 
 step "DEPLOY CONCLUÍDO"
 echo "  Commit:  $NEW_SHA"

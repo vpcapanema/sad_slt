@@ -19,7 +19,8 @@
 #   consciente; o caminho normal e sempre 'main'.
 param(
     [string]$Mensagem = "",
-    [string]$BranchAlternativa = ""
+    [string]$BranchAlternativa = "",
+    [switch]$SomenteStorage
 )
 
 $ErrorActionPreference = "Continue"
@@ -145,8 +146,13 @@ if ($ahead -gt 0) {
 # ---------------------------------------------------------------------------
 Banner "Etapa 3/3 - Atualizacao e deploy na VM"
 Write-Host "  Host: $Vm"
-Write-Host "  A VM executa: git fetch + reset --hard origin/$branch, rebuild (ARM64 nativo),"
-Write-Host "  restart do container sicard_app e healthcheck interno + publico."
+if ($SomenteStorage) {
+    Write-Host "  A VM sincroniza o checkout e publica somente template/CSS dos logins do Storage."
+    Write-Host "  Nao ha rebuild nem restart de sicard_app; dados e credenciais nao sao alterados."
+} else {
+    Write-Host "  A VM executa: git fetch + reset --hard origin/$branch, rebuild (ARM64 nativo),"
+    Write-Host "  restart de sicard_app, healthchecks e sincronizacao dos logins do Storage."
+}
 Write-Host ""
 
 # A VM tem a mesma guarda de branch. Quando o deploy fora de 'main' ja foi
@@ -158,7 +164,8 @@ if ($branch -ne $BranchPadrao) {
 }
 # Carrega o script do commit publicado, evitando executar a versao antiga
 # enquanto ela substitui o proprio arquivo durante o git reset.
-$remoteCmd = "cd $AppDirVm && git fetch origin $branch && git show ${fullSha}:.deploy/update_vm.sh | ${autorizacaoVm}bash -s -- $branch $fullSha"
+$deployScope = if ($SomenteStorage) { "storage" } else { "all" }
+$remoteCmd = "cd $AppDirVm && git fetch origin $branch && git show ${fullSha}:.deploy/update_vm.sh | ${autorizacaoVm}bash -s -- $branch $fullSha $deployScope"
 & $Plink -ssh $Vm -i $Key -hostkey $HostKey -batch $remoteCmd
 $deployExit = $LASTEXITCODE
 if ($deployExit -ne 0) {
@@ -187,10 +194,17 @@ if (-not $healthOk) {
     Write-Warning "Healthcheck publico ainda nao confirmou 200 em $AppUrl/api/health."
 }
 
-Banner "Abrindo a aplicacao"
-Write-Host "  $AppUrl/"
-Start-Process "$AppUrl/" -WindowStyle Hidden
+if ($SomenteStorage) {
+    Banner "Abrindo os logins do Storage"
+    Write-Host "  $AppUrl/storage/web/client/login"
+    Write-Host "  $AppUrl/storage/web/admin/login"
+    Start-Process "$AppUrl/storage/web/client/login" -WindowStyle Hidden
+    Start-Process "$AppUrl/storage/web/admin/login" -WindowStyle Hidden
+} else {
+    Banner "Abrindo a aplicacao"
+    Write-Host "  $AppUrl/"
+    Start-Process "$AppUrl/" -WindowStyle Hidden
+}
 
 Write-Host ""
 Write-Host "==== Deploy finalizado: local -> GitHub -> VM ====" -ForegroundColor Cyan
-

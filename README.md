@@ -67,8 +67,11 @@ vermelho escuro no subtítulo, nos controles, no contorno do card e no fundo.
 A personalização está no template comum
 `.deploy/storage/templates/common/base.html` e em
 `.deploy/storage/static/sicard/cores.css`, montados pela composição própria
-do Storage. A instância usa uma pasta externa ao checkout da aplicação;
-alterações nesses arquivos precisam ser publicadas nessa instalação.
+do Storage. A instância usa `/opt/sicard-storage`, fora do checkout da aplicação.
+O deploy sincroniza explicitamente o template e o CSS com os arquivos montados
+no container e o reinicia somente se houver alteração, sem modificar dados,
+usuários, configuração ou credenciais. A validação exige que os dois logins
+sirvam o template atualizado e que o CSS servido corresponda ao commit.
 
 ## Executar em desenvolvimento no Codespace
 
@@ -557,7 +560,19 @@ Esse script Windows usa Plink/PPK locais e inclui todas as alterações pelo
 Ele não é o comando de inicialização do Codespace.
 
 Ambos convergem em `.deploy/update_vm.sh`: sincronização de `origin/main`,
-build, reinício de `sicard_app` e verificações HTTP. A implantação usa
+build, reinício de `sicard_app`, verificações HTTP e publicação do template/CSS
+dos logins do Storage. Para uma alteração restrita aos logins, no Windows:
+
+```powershell
+.\scripts\deploy-vm.ps1 -Mensagem "atualiza logins do Storage" -SomenteStorage
+```
+
+Esse escopo mantém o fluxo único de commit/push/sincronização e as guardas de
+branch e SHA, mas não reconstrói nem reinicia a aplicação. Os testes continuam
+obrigatórios antes da publicação. A conferência visual real, sem substituição
+local dos arquivos, é executada com `node tests/browser/storage-logins.cjs --published`.
+
+A implantação da aplicação usa
 `docker-compose.vm.yml`, um worker, porta interna 8080 e publicação local
 na VM em 8070, acessível pelo Nginx em `/sicard/`. Volumes persistem uploads,
 configurações e saídas; o storage bruto é montado para leitura.
