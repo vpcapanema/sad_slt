@@ -96,7 +96,7 @@ const assert = require('node:assert/strict');
       await dialog.locator('.ea-storage-confirm-button').click();
       await dialog.waitFor({state: 'detached'});
     }
-    await page.goto('http://127.0.0.1:8083/restrict/hierarquizacao/fase-1/');
+    await page.goto('http://127.0.0.1:8083/restrict/hierarquizacao/fase-1/', {waitUntil:'domcontentloaded'});
     assert.equal(await page.locator('#ev-resultados-vazio').innerText(),
       'Execute a elegibilidade territorial ou selecione uma análise já realizada para apresentar os resultados.');
     let dialog = await explorar();

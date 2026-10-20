@@ -72,7 +72,7 @@ def test_storage_zip_preserves_original_and_shapefile_companions(client,mounted)
     assert {file.name:file.read_bytes() for file in parent.iterdir()}==files
 
 
-@pytest.mark.parametrize('path',['../secret.gpkg','base-geoespacial/../../secret.gpkg','/etc/secrets','saidas-geoespaciais/other.gpkg'])
+@pytest.mark.parametrize('path',['../secret.gpkg','base-geoespacial/../../secret.gpkg','/etc/secrets','C:/secret.gpkg','base-geoespacial\\secret.gpkg'])
 def test_storage_traversal_rejected(client,path):
     response=client.get('/api/geoespacial/explorador/download',params={'fonte':'storage','id':'storage:'+path})
     assert response.status_code==422
@@ -146,6 +146,125 @@ def test_explorer_lists_every_physical_file_including_hidden_and_sidecars(client
     assert next(x for x in items if x['nome_arquivo']=='dados.shx')['mapeavel'] is False
     assert next(x for x in items if x['nome_arquivo']=='imagem.tif')['mapeavel'] is True
     assert '.oculto' not in {x['nome'] for x in storage._listar('base-geoespacial/vetor')}
+
+
+def test_storage_root_lists_real_folders_and_files(client,mounted):
+    for name in ('base-geodatabase','superficies-indices','documentos','.oculta','saidas-geoespaciais'):
+        (mounted/name).mkdir()
+    (mounted/'leia-me.txt').write_bytes(b'root-file')
+    (mounted/'.indice').write_bytes(b'hidden-file')
+    response=client.get('/api/geoespacial/explorador/navegar',params={'fonte':'storage'})
+    assert response.status_code==200
+    items=response.json()['itens']
+    assert {item['caminho'] for item in items if item['pasta']}=={
+        'base-geoespacial','base-geodatabase','superficies-indices','documentos','.oculta','saidas-geoespaciais'}
+    assert {item['arquivo'] for item in items if not item['pasta']}=={'leia-me.txt','.indice'}
+    assert all(not item.get('arquivo','').startswith('/') for item in items)
+
+
+def test_storage_root_does_not_invent_missing_folders(client,mounted):
+    items=client.get('/api/geoespacial/explorador/navegar',params={'fonte':'storage'}).json()['itens']
+    assert [item['caminho'] for item in items]==['base-geoespacial']
+
+
+def test_new_storage_folders_and_root_files_support_details_and_download(client,mounted):
+    folder=mounted/'documentos/subpasta/.interna'
+    folder.mkdir(parents=True)
+    for relative in ('leia-me.txt','documentos/subpasta/.interna/arquivo.bin'):
+        target=mounted/relative
+        target.write_bytes(b'original')
+        parent=target.relative_to(mounted).parent.as_posix()
+        response=client.get('/api/geoespacial/explorador/navegar',params={
+            'fonte':'storage','caminho':'' if parent=='.' else parent})
+        assert response.status_code==200
+        item=next(item for item in response.json()['itens'] if item.get('arquivo')==relative)
+        query={'fonte':'storage','id':item['id']}
+        details=client.get('/api/geoespacial/explorador/detalhes',params=query)
+        assert details.status_code==200
+        assert details.json()['tamanho_bytes']==len(b'original')
+        download=client.get('/api/geoespacial/explorador/download',params=query)
+        assert download.status_code==200
+        with ZipFile(BytesIO(download.content)) as archive:
+            assert archive.read(target.name)==b'original'
+    items=explorer.navegar('storage','documentos')['itens']
+    assert items[0]['caminho']=='documentos/subpasta'
+    assert explorer.navegar('storage','documentos/subpasta')['itens'][0]['caminho']=='documentos/subpasta/.interna'
+
+
+def test_remote_storage_root_and_new_folders(client,monkeypatch):
+    calls=[]
+    listings={
+        '':[dict(nome='documentos',pasta=True,tamanho=0,modificado=1),
+            dict(nome='raiz.txt',pasta=False,tamanho=5,modificado=1)],
+        'documentos':[dict(nome='.subpasta',pasta=True,tamanho=0,modificado=1)],
+        'documentos/.subpasta':[dict(nome='notas.txt',pasta=False,tamanho=7,modificado=1)],
+    }
+    def listing(path,estrito=False):
+        assert estrito is True
+        calls.append(path)
+        return listings[path]
+    monkeypatch.setattr(storage,'_via_api',lambda:True)
+    monkeypatch.setattr(explorer.storage_remoto,'listar',listing)
+    for path in listings:
+        response=client.get('/api/geoespacial/explorador/navegar',params={'fonte':'storage','caminho':path})
+        assert response.status_code==200
+        assert len(response.json()['itens'])==len(listings[path])
+    assert calls==list(listings)
+    details=client.get('/api/geoespacial/explorador/detalhes',params={
+        'fonte':'storage','id':'storage:documentos/.subpasta/notas.txt'})
+    assert details.status_code==200 and details.json()['tamanho_bytes']==7
+    details=client.get('/api/geoespacial/explorador/detalhes',params={
+        'fonte':'storage','id':'storage:raiz.txt'})
+    assert details.status_code==200 and details.json()['tamanho_bytes']==5
+
+
+@pytest.mark.parametrize('path',['../fora','documentos/../../fora','/etc','C:/Windows','documentos\\fora'])
+def test_storage_navigation_rejects_paths_outside_storage(client,path):
+    assert client.get('/api/geoespacial/explorador/navegar',params={
+        'fonte':'storage','caminho':path}).status_code==422
+
+
+def test_private_outputs_cannot_be_downloaded_through_storage(client,mounted,monkeypatch):
+    relative=f'saidas-geoespaciais/execucoes/{uuid4()}/camadas/privado.txt'
+    file=mounted/relative
+    file.parent.mkdir(parents=True)
+    file.write_bytes(b'private')
+    monkeypatch.setattr(explorer.saidas,'listar',lambda:[dict(id='private',arquivo=relative)])
+    monkeypatch.setattr(explorer.saidas,'referencia',lambda path:dict(privado=True,responsavel='another-user'))
+    for action in ('detalhes','download'):
+        response=client.get('/api/geoespacial/explorador/'+action,params={
+            'fonte':'storage','id':'storage:'+relative})
+        assert response.status_code==403
+
+
+def test_storage_output_listing_does_not_read_private_contents(client,mounted,monkeypatch):
+    parent=mounted/'saidas-geoespaciais/privada'
+    parent.mkdir(parents=True)
+    (parent/'privado.gpkg').write_bytes(b'private')
+    def forbidden(*args):
+        raise AssertionError('A navegação não deve abrir arquivos de saídas')
+    monkeypatch.setattr(explorer,'_camadas_geopackage',forbidden)
+    response=client.get('/api/geoespacial/explorador/navegar',params={
+        'fonte':'storage','caminho':'saidas-geoespaciais/privada'})
+    assert response.status_code==200
+    item=response.json()['itens'][0]
+    assert item['arquivo']=='saidas-geoespaciais/privada/privado.gpkg'
+    assert item['mapeavel'] is False
+    assert 'camadas' not in item
+
+
+def test_storage_new_folder_reads_layer_metadata_without_expanding_map_roots(client,mounted):
+    folder=mounted/'outra-base'
+    folder.mkdir()
+    _multilayer_file(folder/'dados.gpkg')
+    response=client.get('/api/geoespacial/explorador/navegar',params={
+        'fonte':'storage','caminho':'outra-base'})
+    assert response.status_code==200
+    item=response.json()['itens'][0]
+    assert item['geometria_tipo']=='Multi Polygon; Point'
+    assert item['camada']=='municipios; sedes'
+    assert item['mapeavel'] is False
+    assert 'metadados_erro' not in item
 
 
 def test_generic_file_details_and_download_preserve_bytes(client,mounted):

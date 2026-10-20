@@ -79,6 +79,9 @@ export function criarResultados({avisar, aoOcupar}) {
     node('status').textContent = modelo.concluidas === modelo.previstas
       ? 'Resultados conferidos. Os nomes foram salvos; o pacote inclui todas as demandas, independentemente da seleção em tela.'
       : `Resultados parciais: ${modelo.concluidas} de ${modelo.previstas} entradas. O PDF identificará essa condição.`;
+    if (modelo.relatorios_hierarquizacao?.length) {
+      node('status').textContent += ' PDF gravado no Storage e associado ao Relatório da Fase 1 em Gestão das hierarquizações.';
+    }
   }
   async function carregar(dados) {
     if (!dados) dados = await post(`${rota}/preparar`, {execucoes});

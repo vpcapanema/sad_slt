@@ -149,6 +149,63 @@ def test_saida_alterada_impede_resultados_e_exportacao(analise):
         service.montar(['job-1', 'job-2'], nomes, 'autor', True)
 
 
+@pytest.mark.parametrize('segunda_hierarquizacao', [None, 'HIER-SUL'])
+def test_pdf_automatico_associado_so_a_hierarquizacao_de_origem(analise, monkeypatch, segunda_hierarquizacao):
+    from api.services import hierarquizacao_service
+    resultados, dados, nomes = analise
+    resultados['job-1']['elegibilidade']['hierarquizacao'] = 'HIER-NORTE'
+    if segunda_hierarquizacao:
+        resultados['job-2']['elegibilidade']['hierarquizacao'] = segunda_hierarquizacao
+    chamadas = []
+    monkeypatch.setattr(hierarquizacao_service, 'registrar_saida_geoespacial_fase1',
+                        lambda *args: chamadas.append(args))
+    modelo, _ = service.montar(['job-1', 'job-2'], nomes, 'autor', True)
+    service.registrar_relatorios(['job-1', 'job-2'], modelo, 'autor')
+    assert len(chamadas) == (2 if segunda_hierarquizacao else 1)
+    for i, (codigo, _, _, documento) in enumerate(chamadas):
+        assert sha256(dados[documento['arquivo']]).hexdigest() == documento['sha256']
+        texto = ' '.join(p.extract_text() for p in PdfReader(BytesIO(dados[documento['arquivo']])).pages)
+        presente, ausente = ('Norte', 'Sul') if codigo == 'HIER-NORTE' else ('Sul', 'Norte')
+        assert f'Demandas do Setor {presente}' in texto and f'Demandas do Setor {ausente}' not in texto
+        assert modelo['relatorios_hierarquizacao'][i]['arquivo'] == documento['arquivo']
+    chamadas.clear()
+    del resultados['job-1']['elegibilidade']['hierarquizacao']
+    resultados['job-2']['elegibilidade'].pop('hierarquizacao', None)
+    anteriores = dict(dados)
+    service.registrar_relatorios(['job-1', 'job-2'], modelo, 'autor')
+    assert not chamadas and dados == anteriores
+
+
+def test_download_de_relatorio_exige_vinculo_autenticacao_e_assinatura(analise, monkeypatch):
+    from api.deps.auth import require_authenticated
+    from api.routers.hierarquizacoes import router
+    from api.services import hierarquizacao_service
+    arquivo = 'saidas-geoespaciais/relatorio.pdf'
+    analise[1][arquivo] = b'%PDF-relatorio'
+    registro = {'arquivo': analise[0]['job-1']['arquivo'], 'sha256': analise[0]['job-1']['sha256'],
+                'relatorio': {'arquivo': arquivo, 'sha256': sha256(analise[1][arquivo]).hexdigest()}}
+    monkeypatch.setattr(hierarquizacao_service.repo, 'get_by_codigo',
+                        lambda codigo: {'relatorio_fase1': {'analises_geoespaciais': [registro]}})
+    app = FastAPI()
+    app.include_router(router)
+    app.dependency_overrides[require_authenticated] = lambda: SimpleNamespace(id='leitor')
+    rota = '/ahp/hierarquizacoes/HIER-NORTE/relatorios/fase1/arquivo'
+    with TestClient(app) as client:
+        resposta = client.get(rota, params={'arquivo': arquivo})
+        assert resposta.status_code == 200 and resposta.content == b'%PDF-relatorio'
+        assert resposta.headers['content-type'] == 'application/pdf'
+        assert 'attachment;' in resposta.headers['content-disposition']
+        assert client.get(rota, params={'arquivo': 'saidas-geoespaciais/outro.pdf'}).status_code == 404
+        assert client.get(rota.replace('/fase1/', '/fase2/'), params={'arquivo': arquivo}).status_code == 404
+        analise[1][arquivo] += b'mudou'
+        assert client.get(rota, params={'arquivo': arquivo}).status_code == 422
+        from fastapi import HTTPException
+        def sem_acesso():
+            raise HTTPException(401, 'Autenticação necessária.')
+        app.dependency_overrides[require_authenticated] = sem_acesso
+        assert client.get(rota, params={'arquivo': arquivo}).status_code == 401
+
+
 def test_reabrir_geopackage_reutiliza_saida_e_revisao_sem_recalcular(analise):
     resultados, dados, nomes = analise
     arquivo = resultados['job-1']['arquivo']

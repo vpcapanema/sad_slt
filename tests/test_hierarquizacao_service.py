@@ -85,6 +85,33 @@ def _mock_persistencia(monkeypatch: pytest.MonkeyPatch, row: dict) -> None:
     monkeypatch.setattr(service.repo, "update", update)
 
 
+def test_registrar_saida_e_pdf_sem_perder_analises_ou_alterar_situacao(monkeypatch):
+    from contextlib import nullcontext
+    from api.db import connection
+    row = _db_row(_dados([1, 2, 3], []))
+    row['status'] = 'homologada'
+    row['relatorio_fase1'] = {'resumo': {'anterior': 1}}
+    dados_antes = deepcopy(row['dados_hierarquizacao'])
+    _mock_persistencia(monkeypatch, row)
+    locks = []
+    def carregar(codigo, *, for_update=False):
+        locks.append(for_update)
+        return deepcopy(row)
+    monkeypatch.setattr(service.repo, 'get_by_codigo', carregar)
+    monkeypatch.setattr(connection, 'atomic_connection', nullcontext)
+    resultado = {'arquivo': 'saidas-geoespaciais/saida.gpkg', 'sha256': 'original',
+                 'elegibilidade': {'entrada': {'id': 'entrada'}, 'campos': []}}
+    pdf = {'arquivo': 'saidas-geoespaciais/relatorio.pdf', 'sha256': 'pdf'}
+    service.registrar_saida_geoespacial_fase1('HIER-TESTE', resultado, 'autor')
+    service.registrar_saida_geoespacial_fase1('HIER-TESTE', resultado, 'autor', pdf)
+    service.registrar_saida_geoespacial_fase1('HIER-TESTE', {**resultado, 'arquivo': 'saidas-geoespaciais/outra.gpkg'}, 'autor')
+    analises = row['relatorio_fase1']['analises_geoespaciais']
+    assert len(analises) == 2 and analises[0]['relatorio'] == pdf
+    assert row['relatorio_fase1']['resumo'] == {'anterior': 1}
+    assert row['status'] == 'homologada' and row['dados_hierarquizacao'] == dados_antes
+    assert locks == [True, True, True]
+
+
 def test_rodada_pode_executar_somente_fase_1(monkeypatch: pytest.MonkeyPatch) -> None:
     from uuid import UUID
 

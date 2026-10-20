@@ -12,6 +12,7 @@ from uuid import uuid4
 
 import geopandas as gpd
 import pandas as pd
+from pyogrio import read_info
 from osgeo import gdal
 
 from api.services import extracao_ogr as ogr
@@ -200,6 +201,18 @@ def executar(payload: dict, controle: ControleProcessamento) -> dict:
     entrada_ref = payload['entrada']
     arquivo = nome_saida(entrada_ref['nome'])
     entrada = _carregar(entrada_ref)
+    codigo = payload.get('hierarquizacao')
+    if codigo:
+        caminho, camada = storage.separar_id(entrada_ref['id'])
+        info = read_info(BytesIO(storage_remoto.baixar(caminho)), layer=camada)
+        metadados = (info.get('layer_metadata') or {}).get('SICARD_NORMALIZACAO')
+        try:
+            normalizacao = json.loads(metadados) if metadados else {}
+        except json.JSONDecodeError as exc:
+            raise ValueError('Os metadados de origem da entrada são inválidos.') from exc
+        origem = normalizacao.get('origem') if isinstance(normalizacao, dict) else None
+        if not isinstance(origem, dict) or origem.get('hierarquizacao') != codigo:
+            raise ValueError('A entrada não foi preparada a partir da hierarquização informada.')
     def bases():
         for papel in ('restricao', 'risco'):
             for ref in payload[papel]:
@@ -209,6 +222,8 @@ def executar(payload: dict, controle: ControleProcessamento) -> dict:
     intersecoes = []
     saida, auditoria = calcular(entrada, bases(), controle, intersecoes=intersecoes)
     auditoria['entrada'] = entrada_ref
+    if codigo:
+        auditoria['hierarquizacao'] = codigo
     controle.mensagem('Gravar GeoPackage em memória e reabrir para conferir integridade')
     conteudos = serializar(saida, auditoria, intersecoes, arquivo)
     reaberta = gpd.read_file(BytesIO(conteudos[arquivo]), engine='pyogrio', layer='elegibilidade_territorial')

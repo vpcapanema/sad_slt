@@ -46,6 +46,13 @@ acompanham. O acesso é de leitura; gravar continua sendo papel do SFTPGo. Na VM
 nada disso é acionado, porque lá a pasta já está montada — e `SICARD_STORAGE_DIR`
 é apenas esse ponto de montagem, que no Windows permanece vazio.
 
+Na página **Explorador de camadas geoespaciais**, a fonte **SICARD Storage**
+lista o conteúdo real da raiz e permite navegar por todas as suas pastas e
+subpastas, incluindo itens ocultos e arquivos não geoespaciais. A listagem não
+se limita às pastas de bases geoespaciais. Detalhes e downloads preservam a
+contenção no storage e a autorização das saídas catalogadas; a visualização
+no mapa continua limitada às raízes publicadas pelo visualizador.
+
 Depois que esta instância terminar o startup, o script espera `/api/health` e
 a página inicial responderem. Abre `http://127.0.0.1:8083/` no **Edge e Chrome
 externos ao VS Code**, com DevTools na aba Console. O prazo é de 180 segundos;

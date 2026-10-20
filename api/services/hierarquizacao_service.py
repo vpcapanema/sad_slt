@@ -134,6 +134,53 @@ def _carregar(codigo: str) -> dict[str, Any]:
     return row
 
 
+def registrar_saida_geoespacial_fase1(codigo: str, resultado: dict, dono, relatorio: dict | None = None) -> None:
+    from api.db.connection import atomic_connection
+
+    with atomic_connection():
+        row = repo.get_by_codigo(codigo, for_update=True)
+        if not row:
+            raise ValueError(f'A hierarquização {codigo} não foi encontrada para registrar a saída {resultado["arquivo"]}.')
+        registro = deepcopy(row.get('relatorio_fase1') or {})
+        analises = registro.setdefault('analises_geoespaciais', [])
+        if not isinstance(analises, list) or any(not isinstance(a, dict) or 'arquivo' not in a or 'sha256' not in a for a in analises):
+            raise ValueError('O registro de análises geoespaciais desta hierarquização possui estrutura inválida.')
+        analise = next((a for a in analises if a['arquivo'] == resultado['arquivo']
+                        and a['sha256'] == resultado['sha256']), None)
+        if analise is None:
+            analise = {
+                'arquivo': resultado['arquivo'], 'sha256': resultado['sha256'],
+                'camada': 'elegibilidade_territorial', 'lote_id': resultado.get('lote_id'),
+                'concluido_em': resultado.get('concluido_em'),
+                'registrado_em': datetime.now(timezone.utc).isoformat(), 'registrado_por': str(dono),
+                'entrada': resultado['elegibilidade']['entrada'],
+                'bases': resultado['elegibilidade']['campos'],
+            }
+            analises.append(analise)
+        if relatorio is not None:
+            analise['relatorio'] = relatorio
+        repo.update(codigo, {'relatorio_fase1': registro})
+
+
+def arquivo_relatorio(codigo: str, tipo: str, arquivo: str) -> tuple[bytes, str]:
+    from hashlib import sha256
+    from pathlib import PurePosixPath
+    from api.services import storage_remoto
+
+    if tipo not in {'fase1', 'fase2', 'fase3', 'consolidado'}:
+        raise ValueError('Tipo de relatório inválido.')
+    registro = _carregar(codigo).get(f'relatorio_{tipo}') or {}
+    for analise in registro.get('analises_geoespaciais', []):
+        for item in (analise, analise.get('relatorio') or {}):
+            if item.get('arquivo') != arquivo:
+                continue
+            dados = storage_remoto.baixar(arquivo)
+            if not item.get('sha256') or sha256(dados).hexdigest() != item['sha256']:
+                raise ValueError('O arquivo no Storage diverge do registrado na hierarquização.')
+            return dados, PurePosixPath(arquivo).name
+    raise FileNotFoundError('Arquivo não associado a este relatório da hierarquização.')
+
+
 def _linhas_matriz(matriz: Any) -> list[dict[str, Any]]:
     rows = matriz.get("linhas", []) if isinstance(matriz, dict) else (matriz or [])
     return [r for r in rows if isinstance(r, dict)]

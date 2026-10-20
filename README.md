@@ -387,6 +387,24 @@ conferido antes do registro no storage, com o nome
 para evitar sobrescrita. Cada saída é adicionada automaticamente à bancada sem
 remover as fontes. Há acompanhamento e cancelamento seguro antes da gravação;
 classificação e integração com as fases seguintes não são executadas nesta etapa.
+Quando a origem da entrada é a opção **Hierarquizações**, o GeoPackage produzido
+é registrado automaticamente em `relatorio_fase1.analises_geoespaciais` da rodada
+correspondente, com caminho no Storage, SHA-256, origem e identificação do registro.
+O vínculo informado pela página é conferido contra o metadado
+`SICARD_NORMALIZACAO` da entrada preparada para o grupo e é preservado no metadado
+da saída. Entradas escolhidas pela opção **Camada de entrada** não são associadas
+a nenhuma hierarquização. O registro não altera situação, classificação ou
+resultados das outras fases, e novas análises não apagam as anteriores.
+Após confirmar os nomes na seção de resultados, o PDF é gerado, conferido e salvo
+no Storage, sendo associado à mesma análise na coluna **Relatório da Fase 1**.
+Não é necessário clicar em baixar o ZIP para registrar o PDF. Se houver entradas
+de origens diferentes, cada PDF vinculado inclui somente as da respectiva rodada.
+Em **Gestão das hierarquizações**, as colunas **Relatório da Fase 1**,
+**Relatório da Fase 2**, **Relatório da Fase 3** e **Relatório consolidado** exibem
+os registros disponíveis. Na Fase 1, o modal permite baixar o GeoPackage e o PDF
+associados, com autenticação e conferência de SHA-256; os relatórios sem arquivo
+persistido continuam consultáveis como dados estruturados. A ausência de relatório
+é indicada por **Não produzido**, sem ocultar a coluna.
 A seção **Resultados** permite revisar os nomes amigáveis das entradas, bases
 dinâmicas e feições sobrepostas antes da apresentação. O link **selecione uma
 análise já realizada** abre o explorador diretamente em `saidas-geoespaciais`,

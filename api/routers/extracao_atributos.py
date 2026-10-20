@@ -7,6 +7,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel, Field, model_validator
 
 from api.deps.auth import require_geospatial_access
+from api.exceptions import DatabaseUnavailableError
 from api.services import extracao_atributos as service
 from api.services.extracao_atributos_regras import ConfigEntrada, Finalidade, RegraBase
 from api.services.session_service import SessionUser
@@ -246,6 +247,7 @@ class ExecucaoElegibilidade(BaseModel):
     risco: list[CamadaElegibilidade] = Field(default_factory=list)
     lote_id: UUID | None = None
     total_entradas: int = Field(default=1, ge=1)
+    hierarquizacao: str | None = Field(default=None, min_length=1, max_length=200)
 
     @model_validator(mode='after')
     def conferir_papeis(self):
@@ -343,12 +345,13 @@ def visualizar_resultados_elegibilidade(payload: ApresentacaoElegibilidade,
     try:
         modelo, _ = elegibilidade_relatorio.montar(payload.execucoes, payload.nomes, user.id, payload.revisados)
         elegibilidade_relatorio.salvar_nomes(payload.execucoes, modelo, user.id)
+        elegibilidade_relatorio.registrar_relatorios(payload.execucoes, modelo, user.id)
         return modelo
     except FileNotFoundError as exc:
         raise HTTPException(404, str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
-    except RuntimeError as exc:
+    except (RuntimeError, DatabaseUnavailableError) as exc:
         raise HTTPException(503, str(exc)) from exc
 
 
@@ -359,6 +362,7 @@ def pacote_resultados_elegibilidade(payload: ApresentacaoElegibilidade,
     from api.services import elegibilidade_relatorio
     try:
         modelo, arquivos = elegibilidade_relatorio.montar(payload.execucoes, payload.nomes, user.id, payload.revisados)
+        elegibilidade_relatorio.registrar_relatorios(payload.execucoes, modelo, user.id)
         dados, caminho = elegibilidade_relatorio.pacote(modelo, arquivos)
         return Response(dados, media_type='application/zip', headers={
             'Content-Disposition': "attachment; filename=\"Relatorio e Camadas.zip\"; filename*=UTF-8''" + quote('Relatório e Camadas.zip'),
@@ -367,7 +371,7 @@ def pacote_resultados_elegibilidade(payload: ApresentacaoElegibilidade,
         raise HTTPException(404, str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
-    except RuntimeError as exc:
+    except (RuntimeError, DatabaseUnavailableError) as exc:
         raise HTTPException(503, str(exc)) from exc
 
 

@@ -15,7 +15,6 @@ from api.services import storage_geoespacial as storage, storage_remoto
 from api.services.session_service import is_gestor
 
 ROOTS = (("demandas","DEMANDAS"),("storage","SICARD Storage"),("saidas","Geometrias de saída"))
-STORAGE_ROOTS = (("base-geodatabase","Base-Geodatabase"),("base-geoespacial","Base-Geoespacial"),("superficies-indices","Superfícies-Índice"))
 TYPES = {"plano":"Plano","programa":"Programa","projeto":"Projeto"}
 SIDECARS = {".shp",".shx",".dbf",".prj",".cpg",".qpj",".sbn",".sbx"}
 logger = logging.getLogger(__name__)
@@ -85,7 +84,7 @@ def _metadados_arquivo(item, entry):
         return item
     item.update(geometria_tipo=None,camada=None,geometria_aplicavel=True,camada_aplicavel=extension not in storage.EXTENSOES_RASTER)
     try:
-        file=storage._resolver_listado(relative,entry)
+        file=_resolver_storage(relative,entry) if item.get("fonte")=="storage" else storage._resolver_listado(relative,entry)
         if isinstance(file,Path) and not file.resolve().is_relative_to(storage.diretorio_storage().resolve()):
             raise ValueError("Arquivo fora do Storage")
         if extension in storage.EXTENSOES_RASTER:
@@ -116,9 +115,26 @@ def _metadados_arquivo(item, entry):
 
 def _parts(path):
     parts=PurePosixPath(path).parts if path else ()
-    if path.startswith('/') or '\\' in path or '..' in parts:
+    if path.startswith('/') or '\\' in path or '..' in parts or any(':' in part or '\0' in part for part in parts):
         raise ValueError("Pasta inválida")
     return parts
+
+
+def _resolver_storage(path,entry=None):
+    parts=_parts(path)
+    if not parts: raise ValueError("Arquivo do Storage inválido")
+    if storage._via_api():
+        if entry is None:
+            parent=PurePosixPath(path).parent
+            entry=next((item for item in storage._listar("" if str(parent)=="." else str(parent),incluir_ocultos=True)
+                        if item["nome"]==parts[-1] and not item["pasta"]),None)
+        if entry is None: raise FileNotFoundError("Arquivo não encontrado no Storage")
+        return storage.ArquivoStorage(path,entry["tamanho"],entry["modificado"])
+    file=storage.diretorio_storage().joinpath(*parts)
+    if not file.resolve().is_relative_to(storage.diretorio_storage().resolve()):
+        raise ValueError("Arquivo fora do Storage")
+    if not file.is_file(): raise FileNotFoundError("Arquivo não encontrado no Storage")
+    return file
 
 
 def navegar(source="", path=""):
@@ -133,24 +149,26 @@ def navegar(source="", path=""):
             items=[_file(row,source) for row in demandas.listar_arquivos(parts[0])]
         else: raise ValueError("Pasta de demandas inválida")
     elif source=="storage":
-        if not parts:
-            items=[_folder(label,key,source) for key,label in STORAGE_ROOTS]
-        elif parts[0] in dict(STORAGE_ROOTS):
-            if not storage._via_api() and not storage.diretorio_storage().joinpath(*parts).resolve().is_relative_to(storage.diretorio_storage().resolve()):
-                raise ValueError("Pasta fora do Storage")
-            entries=storage._listar(path,incluir_ocultos=True)
-            from api.services.extracao_atributos_aliases import nome_camada
-            items=[]
-            for entry in entries:
-                relative=f"{path}/{entry['nome']}"
-                if entry["pasta"]:
-                    items.append(_folder(_friendly(entry["nome"]),relative,source))
+        if not storage._via_api() and not storage.diretorio_storage().joinpath(*parts).resolve().is_relative_to(storage.diretorio_storage().resolve()):
+            raise ValueError("Pasta fora do Storage")
+        entries=storage._listar(path,incluir_ocultos=True)
+        from api.services.extracao_atributos_aliases import nome_camada
+        items=[]
+        for entry in entries:
+            relative="/".join((*parts,entry["nome"]))
+            if entry["pasta"]:
+                items.append(_folder(_friendly(entry["nome"]),relative,source))
+            else:
+                ident=f"storage:{relative}"
+                item=_file(dict(id=ident,arquivo=relative,
+                    alias=nome_camada(ident,_friendly(PurePosixPath(entry["nome"]).stem)),
+                    tamanho_bytes=entry.get("tamanho"),modificado_em=entry.get("modificado")),source)
+                if parts and parts[0]=="saidas-geoespaciais":
+                    item["mapeavel"]=False
+                    items.append(item)
                 else:
-                    ident=f"storage:{relative}"
-                    items.append(_metadados_arquivo(_file(dict(id=ident,arquivo=relative,
-                        alias=nome_camada(ident,_friendly(PurePosixPath(entry["nome"]).stem)),
-                        tamanho_bytes=entry.get("tamanho"),modificado_em=entry.get("modificado")),source),entry))
-        else: raise ValueError("Pasta do Storage inválida")
+                    item["mapeavel"]=item["mapeavel"] and relative.split('/')[0] in storage.RAIZES_LEITURA
+                    items.append(_metadados_arquivo(item,entry))
     elif source=="saidas":
         rows=saidas.listar()
         if not parts:
@@ -194,13 +212,21 @@ def navegar(source="", path=""):
     return {"itens":items,"folha":bool(parts) and not any(item["pasta"] for item in items)}
 
 
-def _storage_identity(ident):
+def _storage_identity(ident,user):
     path,layer=storage.separar_id(ident)
     parts=_parts(path)
-    if not parts or parts[0] not in dict(STORAGE_ROOTS): raise ValueError("Arquivo fora dos repositórios do explorador")
-    file=storage.resolver(path)
-    if isinstance(file,Path) and not file.resolve().is_relative_to(storage.diretorio_storage().resolve()):
-        raise ValueError("Arquivo fora do Storage")
+    if not parts: raise ValueError("Arquivo do Storage inválido")
+    if parts[0]=="saidas-geoespaciais":
+        parent=PurePosixPath(path).parent
+        rows=saidas.listar()
+        row=next((row for row in rows if row["arquivo"]==path),None)
+        if row:
+            _output(str(row["id"]),user)
+        else:
+            row=next((row for row in rows if PurePosixPath(row["arquivo"]).parent==parent),None)
+            if not row: raise PermissionError("Arquivo não encontrado no catálogo de saídas")
+            _output(f"arquivo-saida:{row['id']}::{path}",user)
+    file=_resolver_storage(path)
     return path,layer,file
 
 
@@ -240,7 +266,7 @@ def detalhes(source,ident,user):
         return dict(row,formato="GeoJSON (exportação)",arquivo_virtual=True,
                     observacao="Geometria cadastrada no PostGIS. O ZIP exporta a geometria no CRS cadastral; não é o arquivo original enviado no cadastro.")
     if source=="storage":
-        path,layer,file=_storage_identity(ident)
+        path,layer,file=_storage_identity(ident,user)
         stat=file.stat()
         result={"arquivo":path,"nome":file.name,"extensao":file.suffix.lstrip('.').upper(),
                 "tamanho_bytes":stat.st_size,"modificado_em":stat.st_mtime}
@@ -288,7 +314,7 @@ def pacote(source,ident,user):
             else:
                 checksum=None
                 if source=="storage":
-                    relative,_,file=_storage_identity(ident)
+                    relative,_,file=_storage_identity(ident,user)
                 elif source=="saidas":
                     row,ref=_output(ident,user);relative=row['arquivo'];file=storage.resolver(relative);checksum=ref.get('sha256')
                 else: raise ValueError("Repositório desconhecido")
@@ -301,7 +327,7 @@ def pacote(source,ident,user):
                         raise ValueError("Shapefile incompleto: faltam SHP, SHX ou DBF")
                     for item in entries:
                         component=f"{parent}/{item['nome']}"
-                        resolved=storage.resolver(component)
+                        resolved=_resolver_storage(component) if source=="storage" else storage.resolver(component)
                         if isinstance(resolved,Path) and not resolved.resolve().is_relative_to(storage.diretorio_storage().resolve()): raise ValueError("Componente fora do Storage")
                         digest=_copy_zip(archive,resolved,component,item['nome'])
                         if component==relative and checksum and digest!=checksum: raise ValueError("Hash do arquivo diverge do catálogo")

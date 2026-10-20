@@ -64,6 +64,10 @@
                   <th>Julgamentos dos projetos</th>
                   <th>Pesos dos projetos</th>
                   <th>Classificação resultante</th>
+                  <th>Relatório da Fase 1</th>
+                  <th>Relatório da Fase 2</th>
+                  <th>Relatório da Fase 3</th>
+                  <th>Relatório consolidado</th>
                   <th>Data da homologação</th>
                   <th>Responsável pela homologação</th>
                   <th>Responsável pelo cadastro</th>
@@ -76,13 +80,13 @@
               </thead>
               <tbody id="hier-tbody">
                 <tr class="empty-row">
-                  <td colspan="19"></td>
+                  <td colspan="23"></td>
                 </tr>
                 <tr class="empty-row">
-                  <td colspan="19"></td>
+                  <td colspan="23"></td>
                 </tr>
                 <tr class="empty-row">
-                  <td colspan="19"></td>
+                  <td colspan="23"></td>
                 </tr>
               </tbody>
             </table>
@@ -195,6 +199,15 @@
     {% include "componentes/modal/_modal_classificacao_resultante_hierarquizacoes_realizadas_gestao_das_hierarquizacoes.html" %}
     {% include "componentes/modal/_modal_matriz_de_criterios_e_premissas_hierarquizacoes_realizadas_gestao_das_hierarquizacoes.html" %}
     {% include "componentes/modal/_modal_dados_completos_da_hierarquizacao_hierarquizacoes_realizadas_gestao_das_hierarquizacoes.html" %}
+    <div id="modal-relatorios" class="json-modal-backdrop hidden" data-modal role="dialog" aria-modal="true" aria-labelledby="modal-relatorios-title">
+      <div class="json-modal">
+        <header class="json-modal-head">
+          <h2 id="modal-relatorios-title" data-modal-title>Relatório da hierarquização</h2>
+          <button class="json-modal-close" data-modal-close aria-label="Fechar"><i class="fas fa-xmark" aria-hidden="true"></i></button>
+        </header>
+        <div class="json-modal-body" data-modal-body></div>
+      </div>
+    </div>
 {% endblock %}
 
 {% block scripts_pagina %}
@@ -210,6 +223,6 @@
   <script src="/restrict/hierarquizacao/js/demandas-grupo.js?v=20261004-1"></script>
   <script src="/assets/vendor/xlsx/xlsx-0.18.5.min.js"></script>
   <script src="/assets/js/matriz-criterios-arquivo.js?v=20261009"></script>
-  <script src="/restrict/hierarquizacao/js/processos.js?v=20261019-feedback"></script>
+  <script src="/restrict/hierarquizacao/js/processos.js?v=20261020-relatorios"></script>
   <script src="/assets/js/paginas/hierarquizacao-home-inline-1.js"></script>
 {% endblock %}

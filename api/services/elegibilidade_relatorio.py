@@ -158,6 +158,38 @@ def salvar_nomes(identificadores: list[str], modelo: dict, dono) -> None:
             raise ValueError('A revisão de nomes não foi preservada no storage. Confirme novamente.')
 
 
+def registrar_relatorios(identificadores: list[str], modelo: dict, dono) -> None:
+    from api.services.hierarquizacao_service import registrar_saida_geoespacial_fase1
+
+    grupos = {}
+    for resultado in _selecionar(identificadores, dono):
+        codigo = resultado['elegibilidade'].get('hierarquizacao')
+        if codigo:
+            grupos.setdefault(codigo, []).append(resultado)
+    documentos = []
+    for codigo, resultados in grupos.items():
+        ids = {r['execucao_id'] for r in resultados}
+        fontes = {f['id'] for f in _fontes(resultados)}
+        recorte = {**modelo,
+                   'entradas': [e for e in modelo['entradas'] if e['id'] in ids],
+                   'fontes': [f for f in modelo['fontes'] if f['id'] in fontes],
+                   'concluidas': len(resultados),
+                   'previstas': resultados[0].get('total_entradas', len(resultados))}
+        dados = pdf(recorte)
+        caminho = f'saidas-geoespaciais/relatorios-elegibilidade/{uuid4().hex}/Relatório de Elegibilidade Territorial.pdf'
+        assinatura = sha256(dados).hexdigest()
+        storage_remoto.enviar_bytes(caminho, dados)
+        if sha256(storage_remoto.baixar(caminho)).hexdigest() != assinatura:
+            raise ValueError('O PDF no Storage diverge do relatório conferido. O vínculo não foi registrado.')
+        documento = {'arquivo': caminho, 'sha256': assinatura, 'gerado_em': modelo['gerado_em'],
+                     'nomes_revisados': True, 'registrado_por': str(dono)}
+        for resultado in resultados:
+            registrar_saida_geoespacial_fase1(codigo, resultado, dono, documento)
+        documentos.append({'hierarquizacao': codigo, **documento})
+    if documentos:
+        modelo['relatorios_hierarquizacao'] = documentos
+
+
 def _mapa(frame: gpd.GeoDataFrame, ocorrencias: list[bool], recortes=None,
           papeis: dict[str, str] | None = None) -> dict:
     projetada = reproject(frame, 5880)
@@ -231,6 +263,8 @@ def _auditoria(dados: bytes) -> dict:
         raise ValueError('Os metadados de elegibilidade do GeoPackage são inválidos.') from exc
     if not isinstance(auditoria, dict) or auditoria.get('versao_saida') != 2:
         raise ValueError('Esta saída não contém o painel interativo. Execute novamente para gravar áreas totais e interseções.')
+    if 'hierarquizacao' in auditoria and (not isinstance(auditoria['hierarquizacao'], str) or not auditoria['hierarquizacao']):
+        raise ValueError('A identificação da hierarquização nos metadados é inválida.')
     if (not all(isinstance(auditoria.get(c), str) and auditoria[c]
                 for c in ('campo_id', 'campo_area_total', 'camada_intersecoes'))
             or type(auditoria.get('feicoes')) is not int or auditoria['feicoes'] <= 0

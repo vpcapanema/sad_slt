@@ -5,7 +5,7 @@ import {validarCamada, descritorOriginal} from '../../geoespacial/extracao-atrib
 import {escolherConfiguracao} from '../../geoespacial/extracao-atributos/lista-camadas.js';
 import {criarPrevia} from '../../geoespacial/extracao-atributos/previa.js?v=20261019-metadados';
 import {criarMapa} from '../../geoespacial/extracao-atributos/mapa.js';
-import {criarResultados} from './elegibilidade-resultados.js?v=20261020-controles-tabela';
+import {criarResultados} from './elegibilidade-resultados.js?v=20261020-vinculo-hierarquizacao';
 
 const papeis = {entrada:'Entrada', restricao:'Restrição', risco:'Risco'};
 const selecao = {entrada:[], restricao:[], risco:[]};
@@ -321,6 +321,8 @@ async function calcularElegibilidade() {
         },
       });
       job = await post(rota, {lote_id:lote, total_entradas:conjunto.entrada.length,
+        ...(entrada.origemEntrada === 'hierarquizacao'
+          ? {hierarquizacao:entrada.normalizacao_demanda.origem.hierarquizacao} : {}),
         entrada:{...referencia(entrada), revisao:entrada.revisao},
         restricao:conjunto.restricao.map(referencia), risco:conjunto.risco.map(referencia)});
       if (cancelado) await post(`${rota}/${job.id}/cancelar`, {});
@@ -333,7 +335,8 @@ async function calcularElegibilidade() {
       await mapa.enquadrar([resultado.id], resultado.bounds);
       processo.sucesso({title:'Camada de saída produzida',
         message:`${resultado.nome} gravada no storage e adicionada à bancada.`,
-        detail:resultado.arquivo});
+        detail:resultado.arquivo + (resultado.elegibilidade?.hierarquizacao
+          ? ` · Saída registrada na hierarquização ${resultado.elegibilidade.hierarquizacao}. O PDF será associado após confirmar os nomes.` : '')});
     }
     avisar(`${concluidas.length} camada(s) de saída produzida(s) e adicionada(s) à bancada: ${concluidas.join(', ')}.`, 'success');
   } catch (erro) {

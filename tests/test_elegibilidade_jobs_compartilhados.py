@@ -132,3 +132,36 @@ def test_registrar_saida_nao_oculta_storage_indisponivel(ambiente, monkeypatch):
     monkeypatch.setattr(jobs.storage_remoto, 'enviar_bytes', falhar)
     with pytest.raises(RuntimeError, match='Storage indisponível'):
         jobs.registrar_saida({'arquivo': 'saidas-geoespaciais/resultado.gpkg', 'sha256': 'original'}, 'autor')
+
+
+@pytest.mark.parametrize('codigo', [None, 'HIER-TESTE'])
+def test_conclusao_vincula_somente_entradas_de_hierarquizacao(ambiente, monkeypatch, codigo):
+    from api.services import hierarquizacao_service
+    chamadas = []
+    resultado = {'arquivo': 'saidas-geoespaciais/resultado.gpkg', 'sha256': 'original',
+                 'elegibilidade': {'entrada': {}, 'campos': [], **({'hierarquizacao': codigo} if codigo else {})}}
+    monkeypatch.setattr(jobs, 'executar', lambda *args: resultado)
+    monkeypatch.setattr(hierarquizacao_service, 'registrar_saida_geoespacial_fase1',
+                        lambda *args: chamadas.append(args))
+    inicial = iniciar()
+    ambiente[1].pop()()
+    assert jobs.consultar(inicial['id'], 'autor')['status'] == 'concluido'
+    assert len(chamadas) == (1 if codigo else 0)
+    if codigo:
+        assert chamadas[0] == (codigo, resultado, 'autor')
+
+
+def test_falha_ao_vincular_nao_oculta_saida_ja_gravada(ambiente, monkeypatch):
+    from api.services import hierarquizacao_service
+    resultado = {'arquivo': 'saidas-geoespaciais/resultado.gpkg', 'sha256': 'original',
+                 'elegibilidade': {'hierarquizacao': 'HIER-TESTE'}}
+    monkeypatch.setattr(jobs, 'executar', lambda *args: resultado)
+    def falhar(*args):
+        raise RuntimeError('Banco indisponível para registrar a saída.')
+    monkeypatch.setattr(hierarquizacao_service, 'registrar_saida_geoespacial_fase1', falhar)
+    inicial = iniciar()
+    ambiente[1].pop()()
+    final = jobs.consultar(inicial['id'], 'autor')
+    assert final['status'] == 'erro' and final['resultado']['arquivo'] == resultado['arquivo']
+    assert 'Banco indisponível' in final['erro'] and resultado['arquivo'] in final['erro']
+    assert 'sem repetir o cálculo' in final['erro']

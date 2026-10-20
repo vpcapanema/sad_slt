@@ -13,6 +13,12 @@
             "'": "&#39;",
           })[c],
       );
+  const RELATORIOS = {
+    relatorio_fase1: "Relatório da Fase 1",
+    relatorio_fase2: "Relatório da Fase 2",
+    relatorio_fase3: "Relatório da Fase 3",
+    relatorio_consolidado: "Relatório consolidado",
+  };
   let listaCache = [],
     agrupamentosCache = [],
     hierEditMode = false,
@@ -22,6 +28,7 @@
   const ordenarHier = SLTTable.sorting($('hier-tbody').closest('table'), () => [null,
     h=>rotuloSituacaoHier(h.status), h=>h.codigo, h=>h.julgamento_id, h=>h.nome, h=>h.descricao,
     h=>JSON.stringify(matrizDaHier(h)), ...['objetos','julgamento_projetos','pesos_projetos','ranking'].map(key=>h=>JSON.stringify(h[key])),
+    ...Object.keys(RELATORIOS).map(key=>h=>JSON.stringify(h[key])),
     h=>h.homologadoEm, h=>h.homologadoPorNome||h.homologadoPor, h=>h.criadoPorNome||h.criadoPor,
     h=>h.criadoEm, h=>h.atualizadoEm, h=>rotuloTipoDemanda(h.tipo_demanda||h.tipo_demanda_id), h=>h.grupo_id, h=>JSON.stringify(h.dados_hierarquizacao)
   ], () => { paginaHier=1; selecionadasHier.clear(); renderTabela(); }, () => !hierEditMode);
@@ -35,13 +42,14 @@
     ["criadoEm", "Data de cadastro"], ["atualizadoEm", "Última atualização"]
   ];
   const STATUS_HIER = ["em_julgamento", "calculada", "homologada", "arquivada"];
-  // Modais componentizados (templates/componentes/modal/): um por coluna da tabela.
+  // Os quatro relatórios compartilham o visualizador de arquivos e metadados.
   const MODAIS_COLUNA = {
     objetos: { modal: "modal-objetos", titulo: "Demandas do grupo" },
     julgamento_projetos: { modal: "modal-julgamentos", titulo: "Julgamentos dos projetos" },
     pesos_projetos: { modal: "modal-pesos", titulo: "Pesos dos projetos" },
     ranking: { modal: "modal-ranking", titulo: "Classificação resultante" },
     dados_hierarquizacao: { modal: "modal-completo", titulo: "Dados completos da hierarquização" },
+    ...Object.fromEntries(Object.entries(RELATORIOS).map(([key, titulo]) => [key, {modal:"modal-relatorios", titulo}])),
   };
   function preencherModal(id, titulo, conteudo) {
     const m = $(id);
@@ -135,6 +143,8 @@
       `<td>${jsonButton(h, "julgamento_projetos", "Visualizar julgamentos")}</td>` +
       `<td>${jsonButton(h, "pesos_projetos", "Visualizar pesos")}</td>` +
       `<td>${jsonButton(h, "ranking", "Visualizar classificação")}</td>` +
+      Object.keys(RELATORIOS).map(key => `<td>${h[key] && Object.keys(h[key]).length
+        ? jsonButton(h, key, "Visualizar relatório") : "Não produzido"}</td>`).join("") +
       `<td>${esc(fmtDataCelula(h.homologadoEm))}</td>` +
       `<td>${esc(h.homologadoPorNome || h.homologadoPor || "—")}</td>` +
       `<td>${esc(h.criadoPorNome || h.criadoPor || "—")}</td>` +
@@ -348,8 +358,32 @@
     let conteudo;
     if (key === "objetos") conteudo = renderDemandasGrupo(h);
     else if (key === "dados_hierarquizacao") conteudo = renderCompleto(h);
+    else if (key in RELATORIOS) conteudo = renderRelatorio(h, key);
     else conteudo = jvViewer(h[key]);
     preencherModal(cfg.modal, `${cfg.titulo} — ${h.codigo}`, conteudo);
+  }
+  function renderRelatorio(h, key) {
+    const wrapper = document.createElement("div");
+    for (const analise of h[key]?.analises_geoespaciais || []) {
+      const lista = document.createElement("ul");
+      for (const [item, rotulo] of [[analise, "Baixar camada GeoPackage"], [analise.relatorio, "Baixar relatório PDF"]]) {
+        if (!item?.arquivo) continue;
+        const linha = document.createElement("li"), link = document.createElement("a");
+        const prefix = location.pathname.includes("/sicard/") ? "/sicard" : "";
+        const tipo = key.replace("relatorio_", "");
+        link.href = `${prefix}/api/ahp/hierarquizacoes/${encodeURIComponent(h.codigo)}/relatorios/${tipo}/arquivo?${new URLSearchParams({arquivo:item.arquivo})}`;
+        link.textContent = `${rotulo} — ${item.arquivo.split("/").pop()}`;
+        linha.appendChild(link); lista.appendChild(linha);
+      }
+      wrapper.appendChild(lista);
+      if (!analise.relatorio?.arquivo) {
+        const aviso = document.createElement("p");
+        aviso.textContent = "Camada registrada. Confirme os nomes nos resultados da Elegibilidade territorial para gerar e associar o PDF.";
+        wrapper.appendChild(aviso);
+      }
+    }
+    wrapper.appendChild(jvViewer(h[key]));
+    return wrapper;
   }
   function matrizHtml(m) {
     const linhas = Array.isArray(m) ? m : (m && Array.isArray(m.linhas) ? m.linhas : []);

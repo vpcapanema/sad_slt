@@ -151,6 +151,11 @@ def iniciar(payload, dono):
             resultado['total_entradas'] = payload.get('total_entradas', 1)
             with _lock:
                 job['resultado'] = resultado
+            codigo = resultado.get('elegibilidade', {}).get('hierarquizacao')
+            if codigo:
+                from api.services.hierarquizacao_service import registrar_saida_geoespacial_fase1
+                registrar_saida_geoespacial_fase1(codigo, resultado, dono)
+            with _lock:
                 controle.encerrar('concluido')
         except ProcessamentoCancelado:
             controle.encerrar('cancelado')
@@ -158,6 +163,8 @@ def iniciar(payload, dono):
             _log.exception('Falha na execução de elegibilidade %s', ident)
             with _lock:
                 job['erro'] = str(exc)
+                if job.get('resultado', {}).get('arquivo'):
+                    job['erro'] += f' A saída já foi gravada em {job["resultado"]["arquivo"]}. Abra o GeoPackage pelos resultados para recuperar a análise sem repetir o cálculo.'
                 controle.encerrar('erro')
         finally:
             with _lock:

@@ -6,7 +6,7 @@ exige gestor autenticado.
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 
 from api.deps.auth import require_authenticated, require_gestor, require_operator
 from api.exceptions import (
@@ -33,6 +33,25 @@ from api.services import hierarquizacao_service as service
 from api.services.session_service import SessionUser
 
 router = APIRouter(prefix="/ahp/hierarquizacoes", tags=["ahp-hierarquizacoes"])
+
+
+@router.get("/{codigo}/relatorios/{tipo}/arquivo")
+def baixar_arquivo_relatorio(codigo: str, tipo: str, arquivo: str,
+                            _user: SessionUser = Depends(require_authenticated)):
+    from urllib.parse import quote
+
+    try:
+        dados, nome = service.arquivo_relatorio(codigo, tipo, arquivo)
+        media = 'application/pdf' if nome.lower().endswith('.pdf') else 'application/geopackage+sqlite3'
+        return Response(dados, media_type=media, headers={
+            'Content-Disposition': "attachment; filename*=UTF-8''" + quote(nome), 'Cache-Control': 'no-store',
+        })
+    except (HierarquizacaoNotFoundError, FileNotFoundError) as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    except (DatabaseUnavailableError, RuntimeError) as exc:
+        raise HTTPException(503, str(exc)) from exc
 
 
 @router.get("/fatiamentos/fase1", response_model=list[dict])

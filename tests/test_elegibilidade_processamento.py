@@ -13,7 +13,7 @@ from shapely.geometry import box
 
 from api.services import elegibilidade_processamento as service
 from api.services.controle_processamento import ControleProcessamento, ProcessamentoCancelado
-from api.services.arquivos_geoespaciais_memoria import ler_vetor
+from api.services.arquivos_geoespaciais_memoria import ler_vetor, vetor
 
 
 def frame(geometrias, **atributos):
@@ -141,11 +141,17 @@ def test_erro_ogr_nao_vira_null_e_libera_temporarios(monkeypatch):
     assert fechado == [True]
 
 
-def test_saida_real_gpkg_nome_exato_null_geometrias_e_metadados(monkeypatch):
+@pytest.mark.parametrize('codigo', [None, 'HIER-TESTE'])
+def test_saida_real_gpkg_nome_exato_null_geometrias_e_metadados(monkeypatch, codigo):
     entrada = fonte()
     base = frame([box(0, 0, 5, 10)])
     gravados = []
-    monkeypatch.setattr(service, '_carregar', lambda ref: entrada if ref['id'] == 'entrada' else base)
+    entrada_id = 'storage:saidas-geoespaciais/demandas.gpkg::demandas' if codigo else 'entrada'
+    monkeypatch.setattr(service, '_carregar', lambda ref: entrada if ref['id'] == entrada_id else base)
+    if codigo:
+        dados = vetor(entrada, 'demandas.gpkg', 'GPKG', layer='demandas',
+                      layer_metadata={'SICARD_NORMALIZACAO': json.dumps({'origem': {'hierarquizacao': codigo}})})
+        monkeypatch.setattr(service.storage_remoto, 'baixar', lambda caminho: dados['demandas.gpkg'])
     monkeypatch.setattr(service.storage_remoto, 'listar', lambda *a, **k: [])
     monkeypatch.setattr(service.storage_remoto, 'criar_pasta', lambda pasta: None)
     def registrar(nome, conteudos, recurso, tipo, *, pasta_saida):
@@ -155,7 +161,7 @@ def test_saida_real_gpkg_nome_exato_null_geometrias_e_metadados(monkeypatch):
     monkeypatch.setattr(service, 'descritor_original', lambda ident, arquivo: {
         'id': ident, 'arquivo': arquivo, 'revisao': '123', 'feicoes': 3, 'campos': []})
     controle = ControleProcessamento()
-    resultado = service.executar({'entrada': {'id': 'entrada', 'nome': 'Projetos.gpkg'},
+    resultado = service.executar({'entrada': {'id': entrada_id, 'nome': 'Projetos.gpkg'}, 'hierarquizacao': codigo,
                                  'restricao': [{'id': 'app', 'nome': 'APP'}], 'risco': []}, controle)
     nome, conteudos, pasta = gravados[0]
     assert nome == resultado['nome'] == 'Projetos_elegibilidade_territorial.gpkg'
@@ -166,6 +172,26 @@ def test_saida_real_gpkg_nome_exato_null_geometrias_e_metadados(monkeypatch):
     assert reaberta.geometry.to_wkb().equals(entrada.geometry.to_wkb())
     pd.testing.assert_frame_equal(reaberta[entrada.columns], entrada)
     assert controle.cancelavel is False
+    auditoria = resultado['elegibilidade']
+    assert auditoria.get('hierarquizacao') == codigo
+    persistida = json.loads(service.read_info(BytesIO(conteudos[nome]), layer='elegibilidade_territorial')
+                            ['layer_metadata']['SICARD_ELEGIBILIDADE'])
+    assert persistida.get('hierarquizacao') == codigo
+    if not codigo:
+        assert 'hierarquizacao' not in auditoria
+
+
+@pytest.mark.parametrize('normalizacao', [
+    {'origem': {'id': 'camada-avulsa'}}, {'origem': {'hierarquizacao': 'OUTRA'}}, [], None,
+])
+def test_entrada_avulsa_nao_pode_declarar_outra_hierarquizacao(monkeypatch, normalizacao):
+    monkeypatch.setattr(service, '_carregar', lambda ref: fonte())
+    monkeypatch.setattr(service.storage_remoto, 'baixar', lambda caminho: b'')
+    monkeypatch.setattr(service, 'read_info', lambda *args, **kwargs: {
+        'layer_metadata': {'SICARD_NORMALIZACAO': json.dumps(normalizacao)}})
+    with pytest.raises(ValueError, match='não foi preparada'):
+        service.executar({'entrada': {'id': 'storage:saidas-geoespaciais/a.gpkg::demandas', 'nome': 'A'},
+                          'hierarquizacao': 'HIER-TESTE', 'restricao': [], 'risco': []}, ControleProcessamento())
 
 
 def test_revisao_alterada_impede_leitura(monkeypatch):
