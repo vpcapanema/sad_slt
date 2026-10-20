@@ -125,6 +125,12 @@ retorna apenas contexto, sem critérios ou autorização por e-mail. O código
 não é devolvido pelas respostas das APIs de julgamentos nem incluído em URLs
 ou armazenamento local do navegador.
 
+A contextualização pública preserva o objetivo informado ou, quando ausente,
+descreve a hierarquização de planos, programas ou projetos conforme o tipo
+cadastrado. O prazo usa `dd/mm/aaaa, hh:mm:ss`, em horário de Brasília.
+A identificação distribui nome/instituição e e-mail/token em duas linhas de
+duas colunas, com uma coluna em telas de até 600 px.
+
 No formulário colaborativo, o card de RC permanece neutro em zero, fica verde
 quando `0 < RC < 0,10` e vermelho quando `RC >= 0,10`. Cada ajuste da escala
 reinicia uma espera de três segundos; sem novos ajustes, o par e seu bloco de
@@ -321,6 +327,15 @@ O catálogo de projeto da bancada também funciona sem montagem: mantém mapas,
 toolboxes, banco, conexões e a pasta de código `geoespacial`; a pasta nativa
 `data/geoespacial` só é listada quando há montagem configurada e ela existe.
 O acesso remoto ao acervo permanece nas APIs de storage, sem cópia local.
+O gerador de camadas territoriais também usa esse fluxo no servidor local:
+sem montagem, gera e reabre FGB, GeoPackage, Shapefile e GeoJSON em RAM,
+preservando dicionário, aliases, relatório e tabelas CSV/XLSX/TXT do pacote.
+Os arquivos de trabalho passam por `temporarios-sicard`; a camada validada,
+o ZIP original e os metadados são enviados à execução em
+`saidas-geoespaciais/execucoes`. O banco registra as referências e os hashes;
+o download recupera o ZIP do storage oficial, sem gravá-lo em uma pasta local.
+O XLSX sem montagem permanece em memória e entra no orçamento da exportação;
+seleções que excedem a capacidade são recusadas com orientação para dividi-las.
 As prévias vetoriais do acervo usadas na extração de atributos e na elegibilidade
 também funcionam sem montagem: as geometrias são serializadas em RAM e enviadas
 para `temporarios-sicard/extracao-atributos/previas`, isoladas por usuário e

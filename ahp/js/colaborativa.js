@@ -46,12 +46,22 @@
   function renderContext() {
     var box = el("collab-context");
     if (!box || !meta) return;
+    var prazo = "Não informado";
+    if (meta.valido_ate) {
+      var data = new Date(meta.valido_ate);
+      prazo = isNaN(data.getTime()) ? "Data inválida — solicite a revisão ao responsável." :
+        new Intl.DateTimeFormat("pt-BR", {
+          timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", year: "numeric",
+          hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23",
+        }).format(data);
+    }
     box.replaceChildren();
     [["Escopo", meta.escopo], ["Objetivo", meta.objetivo],
-      ["Prazo", meta.valido_ate], ["Status", meta.status]].forEach(function (item) {
+      ["Prazo", prazo], ["Status da rodada de julgamento", meta.status]].forEach(function (item) {
       var line = document.createElement("p"), label = document.createElement("strong");
       label.textContent = item[0] + ": ";
       line.append(label, document.createTextNode(item[1] || "—"));
+      if (item[0] === "Prazo") line.title = "Horário de Brasília";
       box.appendChild(line);
     });
   }

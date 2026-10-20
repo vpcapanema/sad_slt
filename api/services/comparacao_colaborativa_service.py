@@ -12,6 +12,7 @@ from typing import Any
 from urllib.parse import quote
 from uuid import UUID
 
+from api.constants import TIPO_DEMANDA_ID_TO_COD
 from api.exceptions import DemandaValidationError
 from api.repositories import comparacao_colaborativa_repository as repo
 from api.repositories import hierarquizacao_repository as hierarq_repo
@@ -526,6 +527,14 @@ def obter_ambiente_publico(
         hierarq = _carregar_hierarquizacao(row["hierarquizacao_id"])
         escopo = hierarq.get("nome") or hierarq.get("codigo")
         objetivo = hierarq.get("objetivo")
+        if not objetivo or not objetivo.strip():
+            tipo = TIPO_DEMANDA_ID_TO_COD.get(hierarq.get("tipo_demanda_id"))
+            demandas = f"os {tipo}s" if tipo else "as demandas"
+            objetivo = (
+                f"Hierarquizar {demandas} quanto à favorabilidade à sua implantação "
+                "ou execução, com base nos critérios definidos para esta análise, "
+                "para subsidiar a definição de prioridades."
+            )
     except DemandaValidationError:
         escopo = None
         objetivo = None

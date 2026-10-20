@@ -4,16 +4,17 @@ const assert = require('node:assert/strict');
 (async () => {
   const browser = await chromium.launch({channel: 'msedge', headless: true});
   try {
-    const page = await browser.newPage({viewport: {width: 1280, height: 900}});
+    const page = await browser.newPage({viewport: {width: 1280, height: 900}, timezoneId: 'UTC'});
     const errors = [], saves = [];
     let criteria = ['Custo', 'Prazo', 'Benefício'], starts = 0, failSend = false;
+    let deadline = '2026-10-27T02:59:59+00:00';
     page.on('pageerror', error => errors.push(error.message));
     await page.addInitScript(() => localStorage.setItem('ahp_criteria', '["Critério de outro julgamento","Outro"]'));
     await page.route('**/api/**', async route => {
       const req = route.request(), path = new URL(req.url()).pathname;
       if (!path.includes('/publico/')) return route.fulfill({json: []});
       const meta = {token: 'feedback', escopo: '<b>Texto literal</b>', objetivo: 'Comparação',
-        criterios: criteria, status: 'ativa', valido_ate: '2035-12-31', email_autorizado: true};
+        criterios: criteria, status: 'ativa', valido_ate: deadline, email_autorizado: true};
       if (req.method() === 'GET' || path.endsWith('/acesso')) return route.fulfill({json: meta});
       if (path.endsWith('/respostas/iniciar')) starts++;
       if (path.endsWith('/respostas/progresso')) saves.push(req.postDataJSON());
@@ -30,6 +31,27 @@ const assert = require('node:assert/strict');
       await page.locator('#btn-liberar-form').click();
     }
     await page.goto('http://127.0.0.1:8083/public/analise-multicriterio/feedback/');
+    await page.getByText('Prazo: 26/10/2026, 23:59:59', {exact: true}).waitFor();
+    assert.equal(await page.getByText('Status da rodada de julgamento: ativa', {exact: true}).count(), 1);
+    assert.equal(await page.getByText('Objetivo: Comparação', {exact: true}).count(), 1);
+    async function checkIdentificationGrid(width) {
+      const boxes = await Promise.all(['nome', 'inst', 'email', 'token'].map(
+        id => page.locator(`#colab-${id}`).boundingBox()));
+      if (width > 600) {
+        assert.equal(boxes[0].y, boxes[1].y);
+        assert.equal(boxes[2].y, boxes[3].y);
+        assert.equal(boxes[0].x, boxes[2].x);
+        assert.equal(boxes[1].x, boxes[3].x);
+        assert.ok(boxes[1].x >= boxes[0].x + boxes[0].width);
+        assert.ok(boxes[2].y > boxes[0].y);
+      } else {
+        for (let i = 1; i < boxes.length; i++) {
+          assert.equal(boxes[i].x, boxes[0].x);
+          assert.ok(boxes[i].y > boxes[i - 1].y);
+        }
+      }
+    }
+    await checkIdentificationGrid(1280);
     await identify();
     await page.locator('#collab-form-section').waitFor({state: 'visible'});
     assert.equal(await page.locator('#collab-context b').count(), 0);
@@ -92,6 +114,7 @@ const assert = require('node:assert/strict');
     assert.doesNotMatch(await page.locator('main').innerText(), /Ã[§£ª¡©³µ]|Â[\u00a0-\u00bf]|�/);
     for (const width of [320, 390, 768, 1024, 1280]) {
       await page.setViewportSize({width, height: 900});
+      await checkIdentificationGrid(width);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `Overflow em ${width}px`);
     }
     failSend = true;
@@ -110,6 +133,15 @@ const assert = require('node:assert/strict');
     await page.getByText('Este julgamento não possui critérios suficientes. Solicite a revisão ao responsável.', {exact: true}).waitFor();
     assert.equal(await page.locator('#collab-form-section').isVisible(), false);
     assert.equal(starts, 1);
+    for (const [value, expected] of [
+      ['2026-10-27T03:00:00+00:00', '27/10/2026, 00:00:00'],
+      ['', 'Não informado'],
+      ['invalida', 'Data inválida — solicite a revisão ao responsável.'],
+    ]) {
+      deadline = value;
+      await page.reload();
+      await page.getByText(`Prazo: ${expected}`, {exact: true}).waitFor();
+    }
     console.log('PASS: 2999/3000ms, reinício, teclado/mouse/toque, par/inverso, RC real e fronteira 0.10, retomada, UTF-8, responsividade e envio.');
     await page.close();
   } finally { await browser.close(); }

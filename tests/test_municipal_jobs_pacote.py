@@ -109,3 +109,23 @@ def test_rota_informa_falha_no_download_sem_induzir_nova_geracao(client, monkeyp
     assert "não gere outra camada" in response.json()["detail"]
     assert "interno" not in response.text
     assert "job-teste" in caplog.text
+
+
+@pytest.mark.parametrize("falha,mensagem", [
+    (ValueError("Divida a seleção em mais de uma camada."), "Divida a seleção"),
+    (storage_remoto.StorageIndisponivel("Detalhe interno da conexão"), "Storage oficial"),
+    (RuntimeError("Detalhe interno inesperado"), "Confira os indicadores"),
+])
+def test_job_registra_excecao_e_informa_falha_sem_expor_detalhes_internos(monkeypatch, caplog, falha, mensagem):
+    def gerar(*args):
+        raise falha
+
+    monkeypatch.setattr(jobs, "_jobs", {})
+    monkeypatch.setattr(jobs, "_pool", SimpleNamespace(submit=lambda fn: fn()))
+    monkeypatch.setattr(jobs.municipal_layer, "gerar", gerar)
+    result = jobs.iniciar("social", {"attributes": ["teste"], "format": "fgb"}, SimpleNamespace(id=uuid4()))
+    assert result["status"] == "erro"
+    assert mensagem in result["erro"]
+    assert "interno" not in result["erro"]
+    assert str(falha) in caplog.text
+    assert result["id"] in caplog.text

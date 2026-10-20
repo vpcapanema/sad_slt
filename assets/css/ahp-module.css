@@ -1,5 +1,22 @@
 /* Módulo AHP — conteúdo SIGMA adaptado ao visual SLT (app.css) */
 
+.ami-public-page .collab-identificacao-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--ami-space-sm) var(--ami-space-md);
+}
+
+.ami-public-page .collab-identificacao-grid > .c-form-group {
+  min-width: 0;
+  margin: 0;
+}
+
+@media (max-width: 600px) {
+  .ami-public-page .collab-identificacao-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* ---- Hierarquização: utilidades de layout ---- */
 .hier-subcard-header {
   display: flex;

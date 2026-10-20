@@ -102,6 +102,30 @@ def test_validacao_normaliza_email_e_nao_retorna_codigo(monkeypatch):
     assert response.headers["cache-control"] == "no-store"
 
 
+@pytest.mark.parametrize("tipo_id,demandas", [
+    (1, "os planos"), (2, "os programas"), (3, "os projetos"),
+    (None, "as demandas"),
+])
+@pytest.mark.parametrize("objetivo", [None, "", "   ", "Objetivo específico cadastrado"])
+def test_contexto_publico_descreve_objetivo_por_tipo(monkeypatch, tipo_id, demandas, objetivo):
+    monkeypatch.setattr(repo, "get_ambiente_by_token", lambda _: _ambiente_row())
+    monkeypatch.setattr(service.hierarq_repo, "get_by_id", lambda _: {
+        "nome": "HIERARQUIZAÇÃO TESTE 01", "tipo_demanda_id": tipo_id, "objetivo": objetivo,
+    })
+    response = TestClient(app).get("/api/ahp/comparacao-colaborativa/publico/tok-abc")
+    assert response.status_code == 200
+    contexto = response.json()
+    assert contexto["escopo"] == "HIERARQUIZAÇÃO TESTE 01"
+    assert contexto["objetivo"] == (objetivo if objetivo and objetivo.strip() else (
+        f"Hierarquizar {demandas} quanto à favorabilidade à sua implantação "
+        "ou execução, com base nos critérios definidos para esta análise, "
+        "para subsidiar a definição de prioridades."
+    ))
+    assert contexto["criterios"] == []
+    assert contexto["email_autorizado"] is False
+    assert "token_acesso" not in contexto
+
+
 def _client_autenticado(perfil: str = "ANALISTA") -> TestClient:
     client = TestClient(app)
     user = SessionUser(

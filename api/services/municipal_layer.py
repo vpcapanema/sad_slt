@@ -104,7 +104,8 @@ def materializar(payload, folder=None, base=None, controle=None):
     components = {}
     with ZipFile(io.BytesIO(package)) as archive:
         for member in archive.infolist():
-            if Path(member.filename).name != member.filename or '\\' in member.filename:
+            if (Path(member.filename).name != member.filename or '\\' in member.filename
+                    or member.filename in components):
                 raise ValueError('Pacote municipal com caminho inválido.')
             components[member.filename] = archive.read(member)
     path = None
@@ -123,7 +124,7 @@ def materializar(payload, folder=None, base=None, controle=None):
         frame = gpd.read_file(path, engine='pyogrio')
     if len(frame) != 645:
         raise ValueError('A camada gerada não contém os 645 municípios.')
-    if frame.crs.to_epsg() != 4674 or not frame.CD_MUN.is_unique or not frame.CD_MUN.str.fullmatch(r'\d{7}').all():
+    if frame.crs is None or frame.crs.to_epsg() != 4674 or not frame.CD_MUN.is_unique or not frame.CD_MUN.str.fullmatch(r'\d{7}').all():
         raise ValueError('CRS ou códigos municipais inválidos.')
     manifest = json.loads(components[f'{base}_metadados.json'])
     if any(item['export_field'] not in frame for item in manifest['attributes']):

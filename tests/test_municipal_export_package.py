@@ -5,6 +5,8 @@ import csv
 import io
 import json
 import zipfile
+from types import SimpleNamespace
+from uuid import uuid4
 
 import geopandas as gpd
 import pandas as pd
@@ -16,19 +18,35 @@ from api.services import base_municipal as dados
 from api.routers.municipal_layer import Selecao
 
 
+@pytest.fixture
+def storage_api(monkeypatch):
+    from api import storage_policy
+    from api.services import storage_remoto
+    import tempfile
+
+    def forbid(*args, **kwargs):
+        raise AssertionError('A geração tentou criar temporários no disco local.')
+
+    for key in ('SICARD_STORAGE_WRITE_DIR', 'SICARD_STORAGE_TEMP_DIR'):
+        monkeypatch.delenv(key, raising=False)
+    monkeypatch.setattr(storage_policy, 'raiz_temporaria', forbid)
+    monkeypatch.setattr(tempfile, 'mkstemp', forbid)
+    monkeypatch.setattr(tempfile, 'NamedTemporaryFile', forbid)
+    files = {}
+    monkeypatch.setattr(storage_remoto, 'listar', lambda *a, **kw: [])
+    monkeypatch.setattr(storage_remoto, 'criar_pasta', lambda path: None)
+    monkeypatch.setattr(storage_remoto, 'apagar_pasta', lambda path: None)
+    monkeypatch.setattr(storage_remoto, 'enviar_bytes', lambda path, data: files.update({path: data}))
+    monkeypatch.setattr(storage_remoto, 'baixar', lambda path: files[path])
+    monkeypatch.setattr(storage_remoto, 'apagar_arquivo', lambda path: files.pop(path, None))
+    yield files
+    assert not any(path.startswith('temporarios-sicard/') for path in files)
+
+
 @pytest.fixture(params=['montado', 'api'])
 def inputs(monkeypatch, storage_sintetico, request):
     if request.param == 'api':
-        from api.services import storage_remoto
-        monkeypatch.delenv('SICARD_STORAGE_WRITE_DIR')
-        monkeypatch.delenv('SICARD_STORAGE_TEMP_DIR')
-        files = {}
-        monkeypatch.setattr(storage_remoto, 'listar', lambda *a, **kw: [])
-        monkeypatch.setattr(storage_remoto, 'criar_pasta', lambda path: None)
-        monkeypatch.setattr(storage_remoto, 'apagar_pasta', lambda path: None)
-        monkeypatch.setattr(storage_remoto, 'enviar_bytes', lambda path, data: files.update({path: data}))
-        monkeypatch.setattr(storage_remoto, 'baixar', lambda path: files[path])
-        monkeypatch.setattr(storage_remoto, 'apagar_arquivo', files.pop)
+        request.getfixturevalue('storage_api')
     frame = gpd.GeoDataFrame(
         {
             'CD_MUN': ['3500001', '3500002', '3500003'],
@@ -141,3 +159,51 @@ def test_package_preserves_universe_and_blank_values(inputs, tmp_path, fmt):
     assert 'Feições de entrada: 3; feições de saída: 3' in report
     if fmt == 'shp':
         assert {f'{base}{e}' for e in ['.shp', '.shx', '.dbf', '.prj', '.cpg']} <= names
+    if fmt == 'gpkg':
+        from osgeo import gdal
+        assert manifest['alias_no_arquivo'] is True
+        dataset = gdal.OpenEx(str(tmp_path / f'{base}.gpkg'), gdal.OF_VECTOR)
+        definition = dataset.GetLayer(0).GetLayerDefn()
+        aliases = {definition.GetFieldDefn(i).GetName(): definition.GetFieldDefn(i).GetAlternativeName()
+                   for i in range(definition.GetFieldCount())}
+        assert aliases['CD_MUN'] == dados.CAMPOS_FIXOS['CD_MUN'][0]
+        assert all(aliases[i['export_field']] == i['alias'] for i in manifest['attributes'])
+        dataset = None
+
+
+@pytest.mark.parametrize('fmt', ['fgb', 'gpkg', 'shp', 'geojson'])
+def test_geracao_registra_camada_pacote_e_metadados_no_storage(inputs, monkeypatch, request, fmt):
+    from api.services import municipal_layer as service, ciclo_vida_arquivos as ciclo, saidas_storage
+    from api.repositories import camada_geoespacial_repository as camadas, saidas_geoespaciais_repository as catalogo
+    from api.services.arquivos_geoespaciais_memoria import vetor, ler_vetor
+    items, source = inputs
+    files = request.getfixturevalue('storage_api')
+    malha = source.iloc[[i % len(source) for i in range(645)]].copy()
+    malha.index = pd.Index([str(3500001 + i) for i in range(645)], name='CD_MUN')
+    monkeypatch.setattr(dados, 'malha', malha.copy)
+    monkeypatch.setattr(service, 'categoria', lambda code: {'id': code, 'nome': 'Social'})
+    execution = str(uuid4())
+    monkeypatch.setattr(ciclo, 'iniciar', lambda *a: execution)
+    ended = []
+    monkeypatch.setattr(ciclo, 'finalizar', lambda *a, **kw: ended.append((a, kw)))
+    documents = []
+    monkeypatch.setattr(catalogo, 'registrar_documento', lambda *a, **kw: documents.append(a[2]))
+
+    def salvar_vetor(*, gdf, metadados, **kwargs):
+        assert ciclo.execucao_atual.get() == execution
+        content = vetor(gdf, 'resultado.gpkg', 'GPKG', layer='resultado')['resultado.gpkg']
+        result = saidas_storage.enviar_bytes(execution, 'camadas', 'resultado.gpkg', content)
+        metadados['caminho_arquivo'] = result['caminho']
+
+    monkeypatch.setattr(camadas, 'salvar_vetor', salvar_vetor)
+    payload = {'attributes': [i['id'] for i in items], 'format': fmt}
+    package, result = service.gerar('social', payload, 'Camada de teste', SimpleNamespace(id=uuid4()))
+    assert result['arquivo'].startswith(f'saidas-geoespaciais/execucoes/{execution}/camadas/')
+    assert saidas_storage.conferir(result['pacote_caminho'], result['pacote_sha256']) == package
+    actual = ler_vetor({'resultado.gpkg': files[result['arquivo']]}, 'resultado.gpkg')
+    assert len(actual) == 645 and actual.crs.to_epsg() == 4674
+    assert actual.CD_MUN.is_unique
+    assert len(documents) == 2
+    assert all(document['caminho'] in files for document in documents)
+    assert ended == [((execution,), {})]
+    assert not service._lock.locked()
