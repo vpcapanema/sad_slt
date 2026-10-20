@@ -26,13 +26,66 @@
     footer { margin-top: 24px; color: #52667a; font-size: 13px; }
     #demoStatus { min-height: 24px; }
     /* Proposta visual restrita a este HTML. O componente da aplicação não é alterado. */
+    #pfsComponente #pfsSuccessBox .pfs-result-title,
+    #pfsComponente #pfsSuccessBox .pfs-result-message,
+    #pfsComponente #pfsPartialBox .pfs-result-title,
+    #pfsComponente #pfsPartialBox .pfs-result-message,
+    #pfsComponente #pfsErrorBox .pfs-error-title,
+    #pfsComponente #pfsErrorBox .pfs-error-message { text-align: center; }
     #pfsComponente #pfsProgressBox { width: min(960px, 100%); }
+    #previewFlowTitle {
+      margin: 0 0 22px; text-align: center; color: #17334b;
+      font-size: clamp(20px, 3vw, 28px); font-weight: 650; line-height: 1.3;
+    }
+    #previewFlowTitle .preview-flow-icon {
+      display: block; margin-bottom: 12px; color: #27739d; font-size: 36px;
+    }
+    #previewFlowTitle .preview-flow-name { display: block; }
+    #pfsComponente #pfsProgressBox .pfs-run-info > div:first-child { display: none; }
+    #pfsComponente #pfsProgressBox .pfs-run-info {
+      grid-template-columns: minmax(0, 260px); justify-content: center; text-align: center;
+    }
+    #pfsComponente #pfsProgressBox [data-pfs="progress-current-task"] { display: none; }
     #pfsComponente #pfsProgressBox .pfs-body { padding: 30px 28px; }
-    #pfsComponente #pfsProgressBox .pfs-body > :not(#previewFlat) { display: none !important; }
-    #previewFlat { display: grid; gap: 28px; width: 100%; }
+    #pfsComponente #pfsProgressBox .pfs-current-stage,
+    #pfsComponente #pfsProgressBox #pfsHierarchy,
+    #pfsComponente #pfsProgressBox [data-pfs="contact-status"] { display: none !important; }
+    #pfsComponente #pfsProgressBox .pfs-progress-guidance {
+      display: flex; align-items: flex-start; gap: 9px; margin: 0;
+      font-size: 12px; line-height: 1.6; color: #52667a;
+    }
+    .preview-info-icon { flex: none; margin-top: 3px; color: #27739d; }
+    #pfsComponente #pfsProgressBox #pfsDiagnostics { margin-top: 18px; }
+    #pfsComponente #pfsProgressBox #pfsDiagnostics #pfsLog,
+    #pfsComponente #pfsProgressBox #pfsDiagnostics #pfsCompletedList,
+    #pfsComponente #pfsProgressBox #pfsDiagnostics .pfs-messages { display: none !important; }
+    #previewTechnicalDetail { white-space: pre-line; font-size: 13px; color: #52667a; }
+    #pfsComponente #pfsConfirmBox {
+      width: min(560px, 100%); height: auto; max-height: calc(100dvh - 32px);
+    }
+    #pfsComponente #pfsConfirmBox .pfs-confirm-body {
+      padding: 32px 28px; text-align: center; justify-content: flex-start;
+      flex: 0 1 auto; min-height: 0; overflow-y: auto; gap: 20px;
+    }
+    #pfsComponente #pfsConfirmBox .pfs-header,
+    #pfsComponente #pfsConfirmBox .pfs-footer { flex-shrink: 0; }
+    #pfsComponente #pfsConfirmBox .pfs-confirm-body > * { flex-shrink: 0; margin: 0; }
+    #previewConfirmHeading { margin-bottom: 20px; text-align: center; }
+    #pfsComponente #pfsConfirmBox #pfsConfirmIcon {
+      display: flex; justify-content: center; align-items: center;
+      width: auto; height: auto; margin: 0 0 12px; padding: 0;
+      background: none; color: #bb4138; font-size: 36px;
+    }
+    #pfsComponente #pfsConfirmBox #pfsConfirmTitle {
+      margin: 0; color: #17334b; font-size: clamp(20px, 3vw, 28px); line-height: 1.3;
+    }
+    #pfsComponente #pfsConfirmBox #pfsConfirmIcon:has(.fa-layer-group) { color: #27739d; }
+    #pfsComponente #pfsConfirmBox .pfs-confirm-message { font-size: 14px; line-height: 1.7; }
+    #pfsComponente #pfsConfirmBox .pfs-confirm-prompt { display: none; }
+    #pfsComponente #pfsConfirmBox .pfs-footer { justify-content: center; gap: 12px; flex-wrap: wrap; padding: 18px 24px; }
+    #previewFlat { display: grid; gap: 24px; width: 100%; margin: 22px 0; }
     .preview-level { min-width: 0; margin: 0; padding: 0; border: 0; background: none; }
     .preview-line { display: flex; align-items: baseline; gap: 12px; min-width: 0; margin-bottom: 9px; white-space: nowrap; }
-    .preview-label { flex: 0 0 90px; color: #527087; font-size: 11px; font-weight: 750; letter-spacing: .08em; }
     .preview-message { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: #17334b; font-size: 14px; font-weight: 550; }
     .preview-percent { flex: 0 0 42px; text-align: right; font-size: 13px; font-weight: 700; color: #235f84; font-variant-numeric: tabular-nums; }
     .preview-bar { width: 100%; height: 8px; overflow: hidden; background: #e1e8ee; border-radius: 4px; }
@@ -46,7 +99,6 @@
     @media (max-width: 600px) {
       #pfsComponente #pfsProgressBox .pfs-body { padding: 24px 16px; }
       .preview-line { gap: 7px; }
-      .preview-label { flex-basis: 70px; font-size: 9px; }
       .preview-message { font-size: 12px; }
       .preview-percent { flex-basis: 33px; font-size: 12px; }
     }
@@ -56,15 +108,17 @@
 <body>
   <main>
     <div class="eyebrow">SICARD · Prévia local</div>
-    <h1>Operation → Task → Workflow</h1>
-    <p class="intro">Proposta para aprovação: três mensagens, três barras da mesma largura.
+    <h1>Acompanhamento do processamento</h1>
+    <p class="intro">Proposta para aprovação: o modal completo, com três frases e três barras da mesma largura no lugar dos blocos de hierarquia e de mensagens e detalhes da execução.
       A ação concreta vem primeiro; depois, a etapa à qual pertence; por último, a execução completa.
       Sem caixas aninhadas e sem um segundo bloco de mensagens.</p>
     <section class="examples" aria-label="Exemplos de feedback">
-      <button class="example" data-demo="progress"><i class="fas fa-layer-group" aria-hidden="true"></i><strong>Três níveis em andamento</strong><span>Operation, task e workflow, cada mensagem imediatamente acima de sua barra.</span></button>
+      <button class="example" data-demo="progress"><i class="fas fa-layer-group" aria-hidden="true"></i><strong>Processamento em andamento</strong><span>A ação atual, a etapa e a execução completa, cada frase imediatamente acima de sua barra.</span></button>
       <button class="example" data-demo="live"><i class="fas fa-play-circle" aria-hidden="true"></i><strong>Simular atualizações</strong><span>Contagens sintéticas avançam. Experimente ocultar, reabrir e solicitar cancelamento.</span></button>
       <button class="example" data-demo="unknown"><i class="fas fa-spinner" aria-hidden="true"></i><strong>Progresso indeterminado</strong><span>Operação em execução sem total conhecido, sem percentual inventado.</span></button>
-      <button class="example" data-demo="many"><i class="fas fa-list" aria-hidden="true"></i><strong>Execução com 60 operações</strong><span>A operação atual, o avanço da task e o total do workflow, sem empilhar caixas.</span></button>
+      <button class="example" data-demo="many"><i class="fas fa-list" aria-hidden="true"></i><strong>Execução com 60 operações</strong><span>A ação atual, o avanço da etapa e o total do processamento, sem empilhar caixas.</span></button>
+      <button class="example" data-demo="confirm"><i class="fas fa-question-circle" aria-hidden="true"></i><strong>Confirmar cancelamento</strong><span>Revise a confirmação antes de solicitar a interrupção da simulação.</span></button>
+      <button class="example" data-demo="start"><i class="fas fa-play-circle" aria-hidden="true"></i><strong>Confirmar início</strong><span>Revise o fluxo antes de iniciar a simulação de processamento.</span></button>
       <button class="example" data-demo="success"><i class="fas fa-check-circle" aria-hidden="true"></i><strong>Sucesso</strong><span>Resultado confirmado, resumo e detalhes da execução.</span></button>
       <button class="example" data-demo="partial"><i class="fas fa-exclamation-circle" aria-hidden="true"></i><strong>Resultado parcial</strong><span>Parte do trabalho concluída e uma saída que exige revisão.</span></button>
       <button class="example" data-demo="error"><i class="fas fa-times-circle" aria-hidden="true"></i><strong>Erro</strong><span>Falha identificada, detalhes e orientação para correção.</span></button>
@@ -74,8 +128,8 @@
       <p><strong>Demonstração segura:</strong> nenhum pedido é enviado ao servidor e nenhum arquivo de negócio é processado.</p>
       <p>Na simulação, cada atualização representa dez unidades fictícias concluídas. O botão Cancelar abre a confirmação;
         a resposta sintética chega após um pequeno intervalo. Ocultar mantém a simulação ativa.</p>
-      <p>A linha Operation informa a ação e suas unidades; Task informa a etapa e suas operações concluídas;
-        Workflow informa o processo e suas tasks concluídas. “Ver acompanhamento” retorna ao painel ocultado.</p>
+      <p>As frases apresentam a ação e suas unidades, o andamento da etapa e o avanço do processo.
+        As demais informações e controles do modal permanecem disponíveis. “Ver acompanhamento” retorna ao painel ocultado.</p>
     </div>
     <p id="demoStatus" role="status">Preparando a demonstração…</p>
     <footer>Esta alteração visual existe apenas nesta prévia. A aplicação será ajustada depois da aprovação.</footer>
@@ -92,41 +146,111 @@
         ['Analisar relações espaciais', ['Cruzar feições com a base territorial', 'Consolidar os atributos']],
         ['Preparar as saídas', ['Gerar o GeoPackage', 'Montar o pacote de resultados']]
       ];
+      function styleConfirmation() {
+        const box = document.querySelector('#pfsConfirmBox');
+        if (box.querySelector('#previewConfirmHeading')) return;
+        const heading = document.createElement('div');
+        heading.id = 'previewConfirmHeading';
+        heading.append(box.querySelector('#pfsConfirmIcon'), box.querySelector('#pfsConfirmTitle'));
+        box.querySelector('.pfs-confirm-body').prepend(heading);
+        const headerLabel = document.createElement('span');
+        headerLabel.textContent = 'Confirmação';
+        box.querySelector('.pfs-header-text').append(headerLabel);
+      }
       function renderFlat(workflow) {
         // Substitui apenas a apresentação nesta instância de demonstração.
         // Os elementos originais permanecem ocultos para preservar as APIs do componente.
         const body = this.box.querySelector('.pfs-body');
+        this.box.classList.add('pfs-has-hierarchy');
+        let flowTitle = body.querySelector('#previewFlowTitle');
+        if (!flowTitle) {
+          flowTitle = document.createElement('h2');
+          flowTitle.id = 'previewFlowTitle';
+          const icon = document.createElement('i');
+          icon.className = 'fas fa-layer-group preview-flow-icon';
+          icon.setAttribute('aria-hidden', 'true');
+          const name = document.createElement('span');
+          name.className = 'preview-flow-name';
+          flowTitle.append(icon, name);
+          body.querySelector('#pfsHierarchy').before(flowTitle);
+        }
+        flowTitle.querySelector('.preview-flow-name').textContent = workflow.nome;
+        this.box.setAttribute('aria-labelledby', 'previewFlowTitle');
+        const guidance = body.querySelector('.pfs-progress-guidance');
+        if (!guidance.querySelector('i')) {
+          const icon = document.createElement('i');
+          icon.className = 'fas fa-info-circle preview-info-icon';
+          icon.setAttribute('aria-hidden', 'true');
+          guidance.prepend(icon);
+        }
+        flowTitle.after(guidance);
+        const diagnostics = body.querySelector('#pfsDiagnostics');
+        diagnostics.querySelector('summary').textContent = 'Detalhes da execução';
+        const activity = body.querySelector('.pfs-messages');
+        if (activity.parentElement !== diagnostics) diagnostics.append(activity);
+        let technicalDetail = diagnostics.querySelector('#previewTechnicalDetail');
+        if (!technicalDetail) {
+          technicalDetail = document.createElement('p');
+          technicalDetail.id = 'previewTechnicalDetail';
+          diagnostics.append(technicalDetail);
+        }
         let flat = body.querySelector('#previewFlat');
         if (!flat) {
           flat = document.createElement('div');
           flat.id = 'previewFlat';
-          flat.setAttribute('aria-label', 'Operation, task e workflow');
+          flat.setAttribute('aria-label', 'Andamento do processamento');
           for (const label of ['Operation', 'Task', 'Workflow']) {
             const row = document.createElement('section');
             row.className = 'preview-level';
             row.dataset.level = label.toLowerCase();
-            row.innerHTML = `<div class="preview-line"><span class="preview-label">${label.toUpperCase()}</span><span class="preview-message"></span><span class="preview-percent"></span></div><div class="preview-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100"><div class="preview-fill"></div></div>`;
+            row.innerHTML = `<div class="preview-line"><span class="preview-message"></span><span class="preview-percent"></span></div><div class="preview-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100"><div class="preview-fill"></div></div>`;
             flat.appendChild(row);
           }
-          body.prepend(flat);
+          body.querySelector('#pfsHierarchy').before(flat);
         }
         const tasks = workflow.tasks;
         const active = items => items.find(item => ['executando','erro','parcial','cancelado','interrompido'].includes(item.estado)) ||
           items.find(item => item.estado === 'pendente') || items.at(-1);
         const task = active(tasks);
         const op = active(task.operations);
-        const states = {concluido:'Concluído', erro:'Falhou', parcial:'Parcial', cancelado:'Cancelado',
-          interrompido:'Interrompido', pendente:'Aguardando início', nao_executado:'Não executado'};
-        const stateText = entity => states[entity.estado] ? ` · ${states[entity.estado]}` : '';
+        // Este espaço recebe somente diagnóstico adicional explícito.
+        // Nomes, progresso, mensagens e histórico dos três níveis não são reutilizados.
+        technicalDetail.textContent = job.diagnostico_tecnico ||
+          'Nenhum detalhe técnico adicional disponível.';
         const countOps = task.operations.filter(item => item.estado === 'concluido').length;
         const countTasks = tasks.filter(item => item.estado === 'concluido').length;
-        const units = op.total ? `${op.feitas}/${op.total} ${op.unidade}` : 'total ainda não informado';
+        const units = op.total ? `${op.feitas}/${op.total} ${op.unidade}` : 'registros sem total informado';
+        const actions = [
+          ['Ler camada de entrada', `Lendo ${units} da camada de entrada`],
+          ['Validar as geometrias', `Validando as geometrias de ${units}`],
+          ['Cruzar feições com a base territorial', `Cruzando ${units} com a base territorial`],
+          ['Consolidar os atributos', `Consolidando os atributos de ${units}`],
+          ['Gerar o GeoPackage', `Gerando o GeoPackage com ${units}`],
+          ['Montar o pacote de resultados', `Montando o pacote de resultados com ${units}`]
+        ];
+        const operationPhrase = actions.find(([name]) => op.nome.startsWith(name))?.[1] || `Processando ${units}`;
+        const batch = op.nome.match(/lote (\d+)/);
+        const taskPhrases = [
+          `Preparando os dados com ${countOps}/${task.operations.length} operações concluídas`,
+          `Analisando relações espaciais com ${countOps}/${task.operations.length} operações concluídas`,
+          `Preparando as saídas com ${countOps}/${task.operations.length} operações concluídas`
+        ];
+        const describe = (entity, phrase, subject, count) => {
+          const endings = {
+            concluido: 'concluído', erro: 'encerrado com erro', parcial: 'encerrado parcialmente',
+            cancelado: 'cancelado', interrompido: 'interrompido',
+            pendente: 'aguardando início', nao_executado: 'não executado'
+          };
+          return endings[entity.estado]
+            ? `${subject} ${endings[entity.estado]} com ${count}.`
+            : `${phrase}.`;
+        };
         const rows = [
-          [op, `${op.nome} · ${units}${stateText(op)}`],
-          [task, `${task.nome} · ${countOps}/${task.operations.length} operações concluídas${stateText(task)}`],
+          [op, describe(op, `${operationPhrase}${batch ? ` no lote ${batch[1]}` : ''}`, 'Processamento dos registros', units)],
+          [task, describe(task, taskPhrases[tasks.indexOf(task)], 'Processamento da etapa', `${countOps}/${task.operations.length} operações concluídas`)],
           [workflow, job.cancelamento_solicitado && workflow.estado === 'executando' ?
-            `${workflow.nome} · cancelamento solicitado; aguardando confirmação` :
-            `${workflow.nome} · ${countTasks}/${tasks.length} tasks concluídas${stateText(workflow)}`]
+            'Aguardando a confirmação do cancelamento da extração de atributos territoriais.' :
+            describe(workflow, `Extraindo ${countTasks}/${tasks.length} de atributos territoriais`, 'Processamento dos atributos territoriais', `${countTasks}/${tasks.length} etapas concluídas`)]
         ];
         rows.forEach(([entity, text], index) => {
           const row = flat.children[index];
@@ -137,7 +261,7 @@
           const pct = Number.isFinite(entity.percentual) ? entity.percentual : null;
           row.querySelector('.preview-percent').textContent = pct === null ? '—' : `${Math.round(pct)}%`;
           const bar = row.querySelector('.preview-bar');
-          bar.setAttribute('aria-label', `${['Operation','Task','Workflow'][index]}: ${text}`);
+          bar.setAttribute('aria-label', text);
           bar.classList.toggle('is-indeterminate', pct === null && entity.estado === 'executando');
           if (pct === null) bar.removeAttribute('aria-valuenow');
           else bar.setAttribute('aria-valuenow', String(pct));
@@ -185,9 +309,23 @@
         }
         publish();
       }
-      function open(kind) {
+      async function open(kind) {
         stop();
         StatusFeedback.fechar();
+        if (kind === 'start') {
+          process?.ocultar();
+          const confirmation = ProcessFeedback.confirmar({
+            title: 'Iniciar extração de atributos territoriais?',
+            message: 'O fluxo preparará os dados, analisará as relações espaciais e gerará os arquivos de resultado.',
+            warning: 'Nesta prévia, apenas dados fictícios serão usados. Nenhum processamento será enviado ao servidor.',
+            prompt: '', icon: 'fas fa-layer-group',
+            cancelLabel: 'Voltar', confirmLabel: 'Iniciar processamento'
+          });
+          styleConfirmation();
+          if (await confirmation) open('live');
+          else status('Início não confirmado. Nenhum processamento foi iniciado.');
+          return;
+        }
         job = build(kind === 'many');
         const ops = job.workflow.tasks.flatMap(task => task.operations);
         const prepared = job.workflow.tasks[0].operations.length;
@@ -199,7 +337,7 @@
           ops[prepared].detalhe = 'A biblioteca está executando a análise, mas não informa o total de trabalho.';
         }
         aggregate();
-        process = ProcessFeedback.iniciarCadastro({title: 'Extração de atributos · demonstração', onCancel: async () => {
+        process = ProcessFeedback.iniciarCadastro({title: 'Acompanhamento do processamento', onCancel: async () => {
           clearInterval(timer);
           job.cancelamento_solicitado = true;
           publish();
@@ -211,7 +349,10 @@
           }, 1000);
         }});
         process.renderWorkflow = renderFlat;
+        styleConfirmation();
+        process.box.querySelector('#pfsDiagnostics').open = false;
         publish();
+        if (kind === 'confirm') process.box.querySelector('#pfsCancelBtn').click();
         status('Exemplo aberto. Ocultar não encerra o acompanhamento.');
         if (kind === 'live') {
           timer = setInterval(() => {
@@ -255,7 +396,7 @@
       }
       document.querySelectorAll('[data-demo]').forEach(button => button.addEventListener('click', () => open(button.dataset.demo)));
       window.addEventListener('pagehide', stop);
-      open('progress');
+      open(window.location.hash === '#start' ? 'start' : window.location.hash === '#confirm' ? 'confirm' : 'progress');
     })();
   </script>
 </body>
