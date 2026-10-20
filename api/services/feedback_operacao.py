@@ -3,10 +3,16 @@ from contextlib import contextmanager
 from time import monotonic
 
 
+def capacidade(progress, nome, padrao=None):
+    """Adapta callbacks legados ligados a um ControleProcessamento."""
+    owner = getattr(progress, "__self__", None) or getattr(getattr(progress, "concluir", None), "__self__", None)
+    return getattr(progress, nome, getattr(owner, nome, padrao))
+
+
 @contextmanager
 def operacao(progress, mensagem):
     """Anuncia antes do trabalho e conclui só no retorno normal do bloco."""
-    iniciar = getattr(progress, 'iniciar_operacao', progress)
+    iniciar = capacidade(progress, 'iniciar_operacao', progress)
     ident = iniciar(mensagem) if progress else None
     ultimo = 0.0
 
@@ -15,29 +21,30 @@ def operacao(progress, mensagem):
         if not progress:
             return
         # Cancelamento é consultado a cada checkpoint, mesmo sem publicar.
-        verificar = getattr(progress, 'verificar', None)
+        verificar = capacidade(progress, 'verificar')
         if verificar:
             verificar()
         agora = monotonic()
         if not forcar and feitas not in (0, total) and agora - ultimo < .25:
             return
         ultimo = agora
-        if hasattr(progress, 'medir_operacao'):
-            progress.medir_operacao(ident, feitas, total, unidade)
-        elif hasattr(progress, 'tarefa'):
-            progress.tarefa(feitas, total, unidade)
+        medir_op = capacidade(progress, 'medir_operacao')
+        if medir_op:
+            medir_op(ident, feitas, total, unidade)
+        elif capacidade(progress, 'tarefa'):
+            capacidade(progress, 'tarefa')(feitas, total, unidade)
         texto = detalhe or f'{mensagem}: {feitas}/{total} {unidade}.'
-        getattr(progress, 'detalhe', progress)(texto)
+        capacidade(progress, 'detalhe', progress)(texto)
 
     try:
         yield medir
     except BaseException as exc:
-        if progress and hasattr(progress, 'falhar'):
-            progress.falhar(ident, exc)
+        if progress and capacidade(progress, 'falhar'):
+            capacidade(progress, 'falhar')(ident, exc)
         raise
     else:
-        if progress and hasattr(progress, 'concluir'):
-            progress.concluir(ident, mensagem)
+        if progress and capacidade(progress, 'concluir'):
+            capacidade(progress, 'concluir')(ident, mensagem)
 
 
 def contexto(progress, nome):
@@ -46,12 +53,12 @@ def contexto(progress, nome):
         return None
     def emitir(mensagem):
         return progress(f'{nome} — {mensagem}')
-    emitir.detalhe = lambda mensagem: getattr(progress, 'detalhe', progress)(f'{nome} — {mensagem}')
-    if hasattr(progress, 'iniciar_operacao'):
-        emitir.iniciar_operacao = lambda mensagem: progress.iniciar_operacao(f'{nome} — {mensagem}')
-    if hasattr(progress, 'concluir'):
-        emitir.concluir = lambda ident=None, mensagem=None: progress.concluir(ident, f'{nome} — {mensagem}' if mensagem else None)
+    emitir.detalhe = lambda mensagem: capacidade(progress, 'detalhe', progress)(f'{nome} — {mensagem}')
+    if capacidade(progress, 'iniciar_operacao'):
+        emitir.iniciar_operacao = lambda mensagem: capacidade(progress, 'iniciar_operacao')(f'{nome} — {mensagem}')
+    if capacidade(progress, 'concluir'):
+        emitir.concluir = lambda ident=None, mensagem=None: capacidade(progress, 'concluir')(ident, f'{nome} — {mensagem}' if mensagem else None)
     for chave in ('tarefa', 'verificar', 'progresso_fase', 'fase', 'medir_operacao', 'falhar', 'concluir_fase'):
-        if hasattr(progress, chave):
-            setattr(emitir, chave, getattr(progress, chave))
+        if capacidade(progress, chave):
+            setattr(emitir, chave, capacidade(progress, chave))
     return emitir

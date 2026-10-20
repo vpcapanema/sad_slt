@@ -606,6 +606,8 @@
 }
 /* Hierarquia persistente no mesmo modal; expansão e foco sobrevivem aos snapshots. */
 .pfs-hierarchy { max-height: min(48vh, 520px); overflow: auto; padding: 4px; overscroll-behavior: contain; }
+.pfs-reopen { position: fixed; right: 16px; bottom: 16px; z-index: 10020; padding: 10px 16px; background: #173c60; color: #fff; border: 2px solid #fff; border-radius: 6px; cursor: pointer; }
+.pfs-reopen[hidden] { display: none; }
 .pfs-entity { margin: 8px 0; padding: 10px; border: 1px solid #64748b; border-radius: 6px; background: #fff; color: #172033; }
 .pfs-entity--task { margin-left: 8px; border-left: 4px solid #245a86; }
 .pfs-entity--operation { margin-left: 8px; background: #f4f7fb; }

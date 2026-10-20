@@ -170,9 +170,7 @@ class ControleProcessamento:
                 return
             self.status = status
             self.cancelavel = False
-            if status == 'concluido':
-                self.concluir()
-            elif status in ('cancelado', 'erro'):
+            if status in ('cancelado', 'erro', 'parcial', 'interrompido'):
                 self.tarefa_estado = status
                 self._log(
                     'Operação cancelada.' if status == 'cancelado' else 'Operação interrompida por erro.',
@@ -184,15 +182,16 @@ class ControleProcessamento:
 
     def snapshot(self, *, com_etapas=True):
         with self.lock:
-            return {'workflow': self.hierarquia.snapshot(),
+            workflow = self.hierarquia.snapshot()
+            return {'workflow': workflow,
                     'revisao': self.revisao, 'tarefa_estado': self.tarefa_estado,
                     'historico_inicio': self.logs[-250]['sequencia'] if len(self.logs) >= 250 else (self.logs[0]['sequencia'] if self.logs else 1),
                     'status': self.status, 'etapas': list(self.logs) if com_etapas else [],
-                    'percentual': 100 if self.status == 'concluido' else round((max(0, self.fase_atual-1) + self.fracao_fase) / self.total_fases * 100),
+                    'percentual': round(workflow['percentual']) if workflow['percentual'] is not None else None,
                     'logs': list(self.logs[-250:]), 'detalhe': self.descricao,
                     'tarefa_concluidas': self.feitas, 'tarefa_total': self.total, 'unidade_tarefa': self.unidade,
                     'progresso_tarefa': self.percentual_tarefa, 'tarefa_id': self.tarefa_id, 'cancelavel': self.cancelavel,
                     'cancelamento_solicitado': self.solicitado,
                     'etapa': getattr(self, 'etapa', 'Aguardando processamento'),
-                    'fases_concluidas': self.total_fases if self.status == 'concluido' else max(0,self.fase_atual-1),
+                    'fases_concluidas': sum(t['estado'] == 'concluido' for t in workflow['tasks']),
                     'total_fases': self.total_fases}

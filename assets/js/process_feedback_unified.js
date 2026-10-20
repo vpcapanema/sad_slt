@@ -38,6 +38,7 @@
        Componente (equivalente a componente_process_feedback_system.html)
        ============================================================ */
     const COMPONENTE = `
+<button type="button" id="pfsReopen" class="pfs-reopen" hidden>Ver acompanhamento</button>
 <div class="pfs-overlay" id="pfsProgressOverlay">
   <div class="pfs-box" id="pfsProgressBox" role="dialog" aria-modal="true" aria-labelledby="pfsProgressTitle" tabindex="-1">
     <div class="pfs-header pfs-header--progress">
@@ -277,7 +278,15 @@
             /* O componente é compartilhado: os botões falam com o processo corrente. */
             if (!this.cancelBtn.dataset.pfsBound) {
                 this.cancelBtn.dataset.pfsBound = '1';
-                this.cancelBtn.addEventListener('click', () => _progressSystem?.cancelar());
+                this.cancelBtn.addEventListener('click', async () => {
+                    const current = _progressSystem;
+                    if (!current || current._cancelPending || current._finalizado) return;
+                    const accepted = await _confirmSystem.confirmar({title:'Solicitar cancelamento?',
+                        message:'O servidor interromperá o processamento no próximo ponto seguro. Saídas já concluídas podem ser preservadas.',
+                        confirmLabel:'Solicitar cancelamento', cancelLabel:'Continuar execução', danger:true});
+                    if (accepted && _progressSystem === current) current.cancelar();
+                });
+                q('#pfsReopen')?.addEventListener('click', () => _progressSystem?.reabrir());
                 q('#pfsProgressClose')?.addEventListener('click', () => _progressSystem?.ocultar());
                 this.box.addEventListener('keydown', e => {
                     if (e.key === 'Escape' && !q('#pfsConfirmOverlay.pfs-active')) { _progressSystem?.ocultar(); return; }
@@ -300,6 +309,7 @@
             this._hierarchyNodes = new Map();
             q('#pfsHierarchy').replaceChildren();
             q('#pfsHierarchy').hidden = true;
+            q('#pfsReopen').hidden = true;
             this.box.classList.remove('pfs-has-hierarchy');
             _statusSystem.fechar();
             this._startTime = Date.now();
@@ -661,6 +671,8 @@
         }
         reabrir() {
             if (_progressSystem !== this) return;
+            _statusSystem.fechar();
+            q('#pfsReopen').hidden = true;
             this.overlay.classList.add('pfs-active'); this.box.classList.add('pfs-active');
             abrirComFoco(this.box);
         }
@@ -712,6 +724,7 @@
             if (this.overlay && this.box.classList.contains('pfs-active')) {
                 this.overlay.classList.remove('pfs-active'); this.box.classList.remove('pfs-active');
                 devolverFoco(this.box);
+                if (_progressSystem === this) q('#pfsReopen').hidden = false;
             }
         }
         /* Um processo que terminou não fecha o overlay de outro que já começou. */

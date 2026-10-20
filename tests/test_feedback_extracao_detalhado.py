@@ -53,8 +53,8 @@ def test_operacoes_reais_contagens_exatas_e_geometrias_preservadas():
 
 def test_troca_de_mensagem_nao_conclui_tarefa_anterior():
     c, p, _ = acompanhar()
-    primeira = p('Camada')
-    segunda = p('Preparação da base')
+    primeira = c.iniciar_operacao('Camada')
+    segunda = c.iniciar_operacao('Preparação da base')
     assert not any(e['tipo']=='concluido' for e in c.logs)
     c.concluir(segunda, 'Preparação concluída')
     assert c.logs[-1]['tarefa_id']==segunda

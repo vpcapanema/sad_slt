@@ -97,10 +97,10 @@ def test_cancelamento_extracao_exige_autorizacao(monkeypatch):
 
 def test_nova_tarefa_nao_herda_percentual_da_anterior():
     c = ControleProcessamento()
-    c.mensagem('Cruzando camada A')
+    c.iniciar_operacao('Cruzando camada A')
     primeira = c.snapshot()['tarefa_id']
     c.tarefa(9, 10)
-    c.mensagem('Cruzando camada B')
+    c.iniciar_operacao('Cruzando camada B')
     atual = c.snapshot()
     assert atual['tarefa_id'] > primeira
     assert atual['progresso_tarefa'] is None
