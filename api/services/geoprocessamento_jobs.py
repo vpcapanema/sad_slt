@@ -12,6 +12,7 @@ from api.services.progresso_eventos import CanalProgresso
 from api.services.feedback_hierarquia import Hierarquia, FINAIS
 from typing import Any, Callable
 from uuid import uuid4
+from contextlib import contextmanager
 
 from api.repositories import camada_geoespacial_repository
 from api.services.geoespacial_service import geoespacial_service as geo
@@ -73,6 +74,7 @@ class GeoprocessamentoJobs:
         with self._lock:
             self._jobs[job_id] = job
             tree = Hierarquia(f"{kind.replace('_', ' ').capitalize()}", job_id)
+            tree.status = "pendente"
             tree.task("execucao", "Executar " + kind.replace("_", " "))
             self._hierarquias[job_id] = tree
             job["workflow"] = tree.snapshot()
@@ -90,6 +92,9 @@ class GeoprocessamentoJobs:
             return self._eventos.get(job_id)
 
     def _publicar(self, job_id):
+        tree = self._hierarquias[job_id]
+        if tree.status not in FINAIS:
+            tree.status = self._jobs[job_id]["status"]
         self._jobs[job_id]["workflow"] = self._hierarquias[job_id].snapshot()
         canal = self._eventos.get(job_id)
         if canal:
@@ -101,7 +106,7 @@ class GeoprocessamentoJobs:
             job = self._jobs.get(job_id)
             if not job or job.get('responsavel') != responsavel:
                 raise KeyError('Execução não encontrada')
-            if job['status'] in {'concluido', 'erro', 'cancelado'}:
+            if job['status'] in FINAIS:
                 return deepcopy(job)
             if not job.get('cancelavel'):
                 raise ValueError('O algoritmo já iniciou; esta etapa não oferece interrupção segura. Aguarde a conclusão.')
@@ -159,19 +164,27 @@ class GeoprocessamentoJobs:
             self._publicar(job_id)
 
     def _complete(self, job_id: str, result: dict[str, Any]) -> None:
-        self._advance(job_id, "Processo finalizado")
+        partial = result.get("status") in {"parcial", "partial"} or result.get("_status") == "partial"
+        if not partial:
+            self._advance(job_id, "Processo finalizado")
         with self._lock:
             job = self._jobs[job_id]
-            job["status"] = "concluido"
-            job["concluidas"] = job["total"]
-            job["percentual"] = 100
-            job["progresso_tarefa"] = 100
+            if job["status"] in FINAIS:
+                return
+            job["status"] = "parcial" if partial else "concluido"
+            if not partial:
+                job["concluidas"] = job["total"]
+                job["percentual"] = 100
+                job["progresso_tarefa"] = 100
+            job["tarefa_estado"] = job["status"]
             job["resultado"] = result
             tree = self._hierarquias[job_id]
             # Retorno normal confirma o bloco externo; operações internas sem
             # término continuam explicitamente interrompidas, nunca inferidas.
-            tree.terminar_task("execucao")
-            tree.encerrar("concluido")
+            if partial:
+                tree.terminar(job["tarefa_id"], "parcial")
+            tree.terminar_task("execucao", job["status"])
+            tree.encerrar(job["status"])
             job["cancelavel"] = False
             self._publicar(job_id)
             snapshot = deepcopy(job)
@@ -182,6 +195,8 @@ class GeoprocessamentoJobs:
     def _fail(self, job_id: str, exc: Exception) -> None:
         with self._lock:
             job = self._jobs[job_id]
+            if job["status"] in FINAIS:
+                return
             job["status"] = "cancelado" if isinstance(exc, OperacaoCancelada) else "erro"
             job["erro"] = str(exc)
             job["tarefa_estado"] = job["status"]
@@ -355,6 +370,27 @@ class GeoprocessamentoJobs:
                 self._jobs[job_id]["resultados_parciais"].append(deepcopy(result))
                 self._publicar(job_id)
 
+        @contextmanager
+        def operation(step):
+            with self._lock:
+                tree = self._hierarquias[job_id]
+                task = tree.task(f"passo-{len(tree.tasks)}", step.get("nome") or step["algoritmo_id"])
+                ident = tree.iniciar(task, f"Executar {step['algoritmo_id']}", f"modelo-{len(tree.operations)}")
+                self._publicar(job_id)
+            try:
+                yield
+            except Exception:
+                with self._lock:
+                    tree.terminar(ident, "erro")
+                    tree.terminar_task(task, "erro")
+                    self._publicar(job_id)
+                raise
+            else:
+                with self._lock:
+                    tree.terminar(ident)
+                    tree.terminar_task(task)
+                    self._publicar(job_id)
+
         try:
             defaults = {item["chave"]: item.get("valor")
                         for item in definition.get("variaveis", []) + definition.get("parametros_expostos", [])
@@ -363,7 +399,7 @@ class GeoprocessamentoJobs:
             self._start(job_id, "Executando modelo; o cancelamento aguarda a etapa atual terminar")
             result = asyncio.run(geoprocessamento_engine.run_steps(
                 definition.get("passos" if kind == "funcao" else "itens", []),
-                {**defaults, **inputs}, checkpoint=checkpoint, on_result=completed))
+                {**defaults, **inputs}, checkpoint=checkpoint, on_result=completed, on_operation=operation))
             checkpoint()
             result["execucao_id"] = execution_id
             ciclo.finalizar(execution_id)

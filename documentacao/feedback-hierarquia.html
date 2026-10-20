@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>SICARD · Demonstração do feedback hierárquico</title>
+  <link rel="stylesheet" href="../assets/vendor/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="../assets/css/process_feedback_system.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #eef3f7; color: #17334b; font: 15px/1.6 system-ui, sans-serif; }
+    main { max-width: 1080px; margin: auto; padding: 56px 24px; }
+    .eyebrow { color: #346c8e; font-size: 12px; font-weight: 750; letter-spacing: .14em; text-transform: uppercase; }
+    h1 { max-width: 760px; margin: 12px 0; font-size: clamp(28px,4vw,42px); line-height: 1.15; }
+    .intro { max-width: 750px; color: #52667a; }
+    .examples { display: grid; grid-template-columns: repeat(auto-fit,minmax(230px,1fr)); gap: 14px; margin: 30px 0; }
+    .example { padding: 22px; text-align: left; background: white; border: 1px solid #ccd9e3; border-radius: 12px; color: inherit; cursor: pointer; font: inherit; }
+    .example:hover { border-color: #27739d; box-shadow: 0 5px 18px #17334b12; }
+    button:focus-visible { outline: 3px solid #27739d; outline-offset: 4px; }
+    .example strong, .example span { display: block; }
+    .example strong { margin: 8px 0; font-size: 17px; }
+    .example span { font-size: 13px; color: #52667a; }
+    .example i { color: #27739d; font-size: 22px; }
+    .note { padding: 20px; border-left: 4px solid #27739d; background: #e2edf5; border-radius: 4px; }
+    .note p { margin: 5px 0; }
+    footer { margin-top: 24px; color: #52667a; font-size: 13px; }
+    #demoStatus { min-height: 24px; }
+    /* Proposta visual restrita a este HTML. O componente da aplicação não é alterado. */
+    #pfsComponente #pfsProgressBox { width: min(960px, 100%); }
+    #pfsComponente #pfsProgressBox .pfs-body { padding: 30px 28px; }
+    #pfsComponente #pfsProgressBox .pfs-body > :not(#previewFlat) { display: none !important; }
+    #previewFlat { display: grid; gap: 28px; width: 100%; }
+    .preview-level { min-width: 0; margin: 0; padding: 0; border: 0; background: none; }
+    .preview-line { display: flex; align-items: baseline; gap: 12px; min-width: 0; margin-bottom: 9px; white-space: nowrap; }
+    .preview-label { flex: 0 0 90px; color: #527087; font-size: 11px; font-weight: 750; letter-spacing: .08em; }
+    .preview-message { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: #17334b; font-size: 14px; font-weight: 550; }
+    .preview-percent { flex: 0 0 42px; text-align: right; font-size: 13px; font-weight: 700; color: #235f84; font-variant-numeric: tabular-nums; }
+    .preview-bar { width: 100%; height: 8px; overflow: hidden; background: #e1e8ee; border-radius: 4px; }
+    .preview-fill { height: 100%; width: 0; border-radius: inherit; background: #27739d; transition: width .25s ease; }
+    .preview-level[data-state="concluido"] .preview-fill { background: #21825b; }
+    .preview-level[data-state="erro"] .preview-fill { background: #bb4138; }
+    .preview-level[data-state="parcial"] .preview-fill,
+    .preview-level[data-state="cancelado"] .preview-fill { background: #aa701b; }
+    .preview-bar.is-indeterminate .preview-fill { width: 25% !important; animation: previewSlide 1.6s ease-in-out infinite; }
+    @keyframes previewSlide { from { transform: translateX(-100%); } to { transform: translateX(400%); } }
+    @media (max-width: 600px) {
+      #pfsComponente #pfsProgressBox .pfs-body { padding: 24px 16px; }
+      .preview-line { gap: 7px; }
+      .preview-label { flex-basis: 70px; font-size: 9px; }
+      .preview-message { font-size: 12px; }
+      .preview-percent { flex-basis: 33px; font-size: 12px; }
+    }
+    @media (prefers-reduced-motion: reduce) { .preview-bar.is-indeterminate .preview-fill { animation: none; } }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="eyebrow">SICARD · Prévia local</div>
+    <h1>Operation → Task → Workflow</h1>
+    <p class="intro">Proposta para aprovação: três mensagens, três barras da mesma largura.
+      A ação concreta vem primeiro; depois, a etapa à qual pertence; por último, a execução completa.
+      Sem caixas aninhadas e sem um segundo bloco de mensagens.</p>
+    <section class="examples" aria-label="Exemplos de feedback">
+      <button class="example" data-demo="progress"><i class="fas fa-layer-group" aria-hidden="true"></i><strong>Três níveis em andamento</strong><span>Operation, task e workflow, cada mensagem imediatamente acima de sua barra.</span></button>
+      <button class="example" data-demo="live"><i class="fas fa-play-circle" aria-hidden="true"></i><strong>Simular atualizações</strong><span>Contagens sintéticas avançam. Experimente ocultar, reabrir e solicitar cancelamento.</span></button>
+      <button class="example" data-demo="unknown"><i class="fas fa-spinner" aria-hidden="true"></i><strong>Progresso indeterminado</strong><span>Operação em execução sem total conhecido, sem percentual inventado.</span></button>
+      <button class="example" data-demo="many"><i class="fas fa-list" aria-hidden="true"></i><strong>Execução com 60 operações</strong><span>A operação atual, o avanço da task e o total do workflow, sem empilhar caixas.</span></button>
+      <button class="example" data-demo="success"><i class="fas fa-check-circle" aria-hidden="true"></i><strong>Sucesso</strong><span>Resultado confirmado, resumo e detalhes da execução.</span></button>
+      <button class="example" data-demo="partial"><i class="fas fa-exclamation-circle" aria-hidden="true"></i><strong>Resultado parcial</strong><span>Parte do trabalho concluída e uma saída que exige revisão.</span></button>
+      <button class="example" data-demo="error"><i class="fas fa-times-circle" aria-hidden="true"></i><strong>Erro</strong><span>Falha identificada, detalhes e orientação para correção.</span></button>
+      <button class="example" data-demo="cancelled"><i class="fas fa-ban" aria-hidden="true"></i><strong>Cancelamento confirmado</strong><span>Trabalho concluído preservado e operações restantes interrompidas.</span></button>
+    </section>
+    <div class="note">
+      <p><strong>Demonstração segura:</strong> nenhum pedido é enviado ao servidor e nenhum arquivo de negócio é processado.</p>
+      <p>Na simulação, cada atualização representa dez unidades fictícias concluídas. O botão Cancelar abre a confirmação;
+        a resposta sintética chega após um pequeno intervalo. Ocultar mantém a simulação ativa.</p>
+      <p>A linha Operation informa a ação e suas unidades; Task informa a etapa e suas operações concluídas;
+        Workflow informa o processo e suas tasks concluídas. “Ver acompanhamento” retorna ao painel ocultado.</p>
+    </div>
+    <p id="demoStatus" role="status">Preparando a demonstração…</p>
+    <footer>Esta alteração visual existe apenas nesta prévia. A aplicação será ajustada depois da aprovação.</footer>
+  </main>
+  <script src="../assets/js/process_feedback_unified.js"></script>
+  <script>
+    (() => {
+      'use strict';
+      let timer, cancelTimer, sequence = 0, job, process;
+      const status = text => { document.querySelector('#demoStatus').textContent = text; };
+      const stop = () => { clearInterval(timer); clearTimeout(cancelTimer); timer = cancelTimer = null; };
+      const names = [
+        ['Preparar os dados', ['Ler camada de entrada', 'Validar as geometrias']],
+        ['Analisar relações espaciais', ['Cruzar feições com a base territorial', 'Consolidar os atributos']],
+        ['Preparar as saídas', ['Gerar o GeoPackage', 'Montar o pacote de resultados']]
+      ];
+      function renderFlat(workflow) {
+        // Substitui apenas a apresentação nesta instância de demonstração.
+        // Os elementos originais permanecem ocultos para preservar as APIs do componente.
+        const body = this.box.querySelector('.pfs-body');
+        let flat = body.querySelector('#previewFlat');
+        if (!flat) {
+          flat = document.createElement('div');
+          flat.id = 'previewFlat';
+          flat.setAttribute('aria-label', 'Operation, task e workflow');
+          for (const label of ['Operation', 'Task', 'Workflow']) {
+            const row = document.createElement('section');
+            row.className = 'preview-level';
+            row.dataset.level = label.toLowerCase();
+            row.innerHTML = `<div class="preview-line"><span class="preview-label">${label.toUpperCase()}</span><span class="preview-message"></span><span class="preview-percent"></span></div><div class="preview-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100"><div class="preview-fill"></div></div>`;
+            flat.appendChild(row);
+          }
+          body.prepend(flat);
+        }
+        const tasks = workflow.tasks;
+        const active = items => items.find(item => ['executando','erro','parcial','cancelado','interrompido'].includes(item.estado)) ||
+          items.find(item => item.estado === 'pendente') || items.at(-1);
+        const task = active(tasks);
+        const op = active(task.operations);
+        const states = {concluido:'Concluído', erro:'Falhou', parcial:'Parcial', cancelado:'Cancelado',
+          interrompido:'Interrompido', pendente:'Aguardando início', nao_executado:'Não executado'};
+        const stateText = entity => states[entity.estado] ? ` · ${states[entity.estado]}` : '';
+        const countOps = task.operations.filter(item => item.estado === 'concluido').length;
+        const countTasks = tasks.filter(item => item.estado === 'concluido').length;
+        const units = op.total ? `${op.feitas}/${op.total} ${op.unidade}` : 'total ainda não informado';
+        const rows = [
+          [op, `${op.nome} · ${units}${stateText(op)}`],
+          [task, `${task.nome} · ${countOps}/${task.operations.length} operações concluídas${stateText(task)}`],
+          [workflow, job.cancelamento_solicitado && workflow.estado === 'executando' ?
+            `${workflow.nome} · cancelamento solicitado; aguardando confirmação` :
+            `${workflow.nome} · ${countTasks}/${tasks.length} tasks concluídas${stateText(workflow)}`]
+        ];
+        rows.forEach(([entity, text], index) => {
+          const row = flat.children[index];
+          row.dataset.state = entity.estado;
+          const message = row.querySelector('.preview-message');
+          message.textContent = text;
+          message.title = text;
+          const pct = Number.isFinite(entity.percentual) ? entity.percentual : null;
+          row.querySelector('.preview-percent').textContent = pct === null ? '—' : `${Math.round(pct)}%`;
+          const bar = row.querySelector('.preview-bar');
+          bar.setAttribute('aria-label', `${['Operation','Task','Workflow'][index]}: ${text}`);
+          bar.classList.toggle('is-indeterminate', pct === null && entity.estado === 'executando');
+          if (pct === null) bar.removeAttribute('aria-valuenow');
+          else bar.setAttribute('aria-valuenow', String(pct));
+          bar.firstElementChild.style.width = `${pct || 0}%`;
+        });
+      }
+      function build(many = false) {
+        const id = `demonstracao-${++sequence}`;
+        return {id, revisao: 0, status: 'executando', cancelavel: true,
+          workflow: {id, nome: 'Extração de atributos territoriais', estado: 'executando', percentual: 40,
+            tasks: names.map(([nome, operations], index) => {
+              const taskId = `task-${index}`;
+              return {id: taskId, workflow_id: id, nome, estado: 'pendente', percentual: 0,
+                operations: Array.from({length: many ? 20 : 2}, (_, i) => ({
+                  id: `operation-${index}-${i}`, task_id: taskId,
+                  nome: many ? `${operations[i % 2]} · lote ${i + 1}` : operations[i],
+                  estado: 'pendente', percentual: 0, feitas: 0, total: 100, unidade: 'registros'
+                }))};
+            })}
+        };
+      }
+      function aggregate() {
+        for (const task of job.workflow.tasks) {
+          task.percentual = task.operations.some(op => op.percentual === null) ? null :
+            task.operations.reduce((sum, op) => sum + op.percentual, 0) / task.operations.length;
+          task.estado = task.operations.every(op => op.estado === 'concluido') ? 'concluido' :
+            task.operations.some(op => op.estado === 'executando') ? 'executando' : 'pendente';
+        }
+        job.workflow.percentual = job.workflow.tasks.some(task => task.percentual === null) ? null :
+          job.workflow.tasks.reduce((sum, task) => sum + task.percentual, 0) / job.workflow.tasks.length;
+      }
+      function publish() {
+        job.revisao++;
+        ProcessFeedback.acompanhar(structuredClone(job));
+      }
+      function finish(state) {
+        stop();
+        job.status = job.workflow.estado = state;
+        job.cancelavel = false;
+        for (const task of job.workflow.tasks) {
+          if (task.estado !== 'concluido') task.estado = task.estado === 'pendente' ? 'nao_executado' : state;
+          for (const op of task.operations) {
+            if (op.estado !== 'concluido') op.estado = op.estado === 'pendente' ? 'nao_executado' : state;
+          }
+        }
+        publish();
+      }
+      function open(kind) {
+        stop();
+        StatusFeedback.fechar();
+        job = build(kind === 'many');
+        const ops = job.workflow.tasks.flatMap(task => task.operations);
+        const prepared = job.workflow.tasks[0].operations.length;
+        ops.slice(0, prepared).forEach(op => { op.estado = 'concluido'; op.percentual = op.feitas = 100; });
+        ops[prepared].estado = 'executando';
+        ops[prepared].percentual = ops[prepared].feitas = 40;
+        if (kind === 'unknown') {
+          ops[prepared].percentual = ops[prepared].total = ops[prepared].feitas = null;
+          ops[prepared].detalhe = 'A biblioteca está executando a análise, mas não informa o total de trabalho.';
+        }
+        aggregate();
+        process = ProcessFeedback.iniciarCadastro({title: 'Extração de atributos · demonstração', onCancel: async () => {
+          clearInterval(timer);
+          job.cancelamento_solicitado = true;
+          publish();
+          const owner = process;
+          cancelTimer = setTimeout(() => {
+            if (ProcessFeedback.atual !== owner) return;
+            finish('cancelado');
+            status('Cancelamento confirmado pela resposta sintética. Nenhuma operação real foi executada.');
+          }, 1000);
+        }});
+        process.renderWorkflow = renderFlat;
+        publish();
+        status('Exemplo aberto. Ocultar não encerra o acompanhamento.');
+        if (kind === 'live') {
+          timer = setInterval(() => {
+            if (ProcessFeedback.atual !== process || process._finalizado) { stop(); return; }
+            const current = ops.find(op => op.estado !== 'concluido');
+            if (!current) {
+              finish('concluido');
+              process.sucesso({title: 'Simulação concluída', message: 'Todas as unidades fictícias foram processadas.'});
+              return;
+            }
+            current.estado = 'executando';
+            current.feitas = current.percentual = Math.min(100, current.feitas + 10);
+            current.detalhe = `${current.feitas} de 100 registros sintéticos processados.`;
+            if (current.feitas === 100) current.estado = 'concluido';
+            aggregate();
+            job.etapa = current.nome;
+            publish();
+          }, 600);
+        } else if (kind === 'success') {
+          ops.forEach(op => { op.estado = 'concluido'; op.percentual = op.feitas = 100; });
+          aggregate(); finish('concluido');
+          process.sucesso({title: 'Extração concluída', message: 'O pacote de demonstração está pronto.',
+            summary: [{label: 'Camadas', value: '3'}, {label: 'Registros', value: '600'}],
+            subprocesses: names.map(([name]) => ({name, status: 'success', detail: 'Etapa concluída na demonstração.'}))});
+        } else if (kind === 'partial') {
+          finish('parcial');
+          process.sucesso({_status: 'partial', title: 'Resultado parcial',
+            message: 'A análise foi concluída para parte das bases. Uma saída precisa de revisão.',
+            subprocesses: [{name: 'Preparar os dados', status: 'success', detail: 'Dados validados.'},
+              {name: 'Base territorial', status: 'warning', detail: 'Parte dos registros não pôde ser consolidada.'}]});
+        } else if (kind === 'error') {
+          finish('erro');
+          process.erro({title: 'Não foi possível concluir a análise',
+            message: 'A base de demonstração não contém o campo obrigatório.',
+            errors: ['Base territorial: campo codigo_municipio ausente.'],
+            solution: 'Revise a seleção dos campos e inicie uma nova execução.'});
+        } else if (kind === 'cancelled') {
+          finish('cancelado');
+          status('Exemplo de cancelamento já confirmado. O histórico estrutural permanece no painel.');
+        }
+      }
+      document.querySelectorAll('[data-demo]').forEach(button => button.addEventListener('click', () => open(button.dataset.demo)));
+      window.addEventListener('pagehide', stop);
+      open('progress');
+    })();
+  </script>
+</body>
+</html>

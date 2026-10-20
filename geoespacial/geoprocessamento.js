@@ -852,7 +852,7 @@
       set:(value,label)=>{if(label)proc.tarefaAtual(label);proc.progresso(value);},
       configure:(count,label)=>{total=Number(count)||0;done=0;if(label)proc.tarefaAtual(label);proc.progresso(0);return true;},
       advance:label=>{done++;if(label)proc.etapa(label);proc.progresso(total?done/total*100:0);},
-      sync:job=>pf.acompanhar(job),
+      sync:job=>{if(pf.atual===proc)pf.acompanhar(job);},
       note:label=>proc.etapa(label),
       remove:()=>proc.fechar(),
       complete:data=>proc.sucesso({message:"Operação concluída.",...data}),
@@ -861,12 +861,12 @@
   }
   async function waitForJob(initial,progress=null,signal=null){
     let job=initial;if(progress){progress.configure(job.total,job.etapa_atual);progress.sync(job)}
-    while(!["concluido","erro","cancelado"].includes(job.status)){
+    while(!["concluido","parcial","erro","cancelado","interrompido"].includes(job.status)){
       await new Promise((resolve,reject)=>{const abort=()=>{clearTimeout(timer);reject(new DOMException("Cancelado","AbortError"))};const timer=setTimeout(()=>{signal?.removeEventListener("abort",abort);resolve();},250);if(signal?.aborted)abort();else signal?.addEventListener("abort",abort,{once:true})});
       const response=await fetch(`${API}/operacoes-jobs/status/${job.id}`,{signal});job=await response.json();if(!response.ok)throw new Error(job.detail||`HTTP ${response.status}`);progress?.sync(job);if(state.activeJob?.id===job.id)state.activeJob=job;
     }
     if(job.status==="cancelado")throw new DOMException(job.erro||"Execução cancelada","AbortError");
-    if(job.status==="erro")throw new Error(job.erro||"Falha no processamento");
+    if(["erro","interrompido"].includes(job.status))throw new Error(job.erro||"Falha no processamento");
     return job;
   }
   async function requestExecutionCancellation(){

@@ -36,6 +36,10 @@ def _snapshot(job):
     tree = job.get("_feedback")
     if tree:
         op = tree.operations["validar"]
+        if job["status"] in {"pendente", "executando"}:
+            tree.status = job["status"]
+            tree.tasks["validacao"]["estado"] = job["status"]
+            op["estado"] = job["status"]
         op["detalhe"] = job.get("etapa", "")
         pct = job.get("percentual")
         tree.medir("validar", pct, 100)

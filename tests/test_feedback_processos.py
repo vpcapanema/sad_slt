@@ -64,7 +64,8 @@ def test_confirmacao_nao_foca_o_botao_perigoso():
 
 def test_processo_pode_ser_recolhido_sem_cancelar():
     """Ocultar o acompanhamento não cancela; CANCELAR só aparece com onCancel."""
-    assert "q('#pfsProgressClose')?.addEventListener('click', () => _progressSystem?.ocultar())" in FEEDBACK_JS
+    assert "else _progressSystem?.ocultar();" in FEEDBACK_JS
+    assert "if (_progressSystem?._finalizado) _progressSystem.fechar();" in FEEDBACK_JS
     assert "this.cancelBtn.hidden = !this.config.onCancel;" in FEEDBACK_JS
     cancelar = FEEDBACK_JS.split("        async cancelar() {", 1)[1].split("\n        }", 1)[0]
     assert "await this.config.onCancel()" in cancelar

@@ -11,7 +11,7 @@ def test_porcentagens_observadas_e_eventos_sequenciais():
     assert c.snapshot()['progresso_tarefa'] is None
     c.fase(1,'Lendo entrada');c.tarefa(3,10)
     assert c.snapshot()['progresso_tarefa']==30
-    assert c.snapshot()['percentual']==0
+    assert c.snapshot()['percentual']==10
     c.fase(2,'Analisando');c.tarefa(7,10)
     s=c.snapshot()
     assert s['percentual']==33 and s['progresso_tarefa']==70
@@ -148,6 +148,6 @@ def test_detalhes_preservam_tarefa_contador_e_progresso():
     assert snapshot['tarefa_id'] == tarefa
     assert snapshot['progresso_tarefa'] == 32
     assert snapshot['tarefa_concluidas'] == 32
-    assert snapshot['percentual'] == 44
+    assert snapshot['percentual'] == 11
     assert c.eventos.atual['logs'][-1]['mensagem'].startswith('32 registros')
     assert len(c.eventos.atual['logs']) == 2

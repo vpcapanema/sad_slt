@@ -56,7 +56,7 @@ export async function esperar(job,statusPath,aoAtualizar) {
   }
   notificar(job);
   if(job.status==='cancelado'){const error=new Error('Processamento cancelado. A configuração foi mantida.');error.name='AbortError';throw error;}
-  if(job.status!=='concluido')throw new Error(job.erro||'O processamento não foi concluído.');
+  if(!['concluido','parcial'].includes(job.status))throw new Error(job.erro||'O processamento não foi concluído.');
   return job.resultado;
 }
 export const adaptador={

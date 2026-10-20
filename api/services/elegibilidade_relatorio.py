@@ -7,12 +7,15 @@ from hashlib import sha256
 from io import BytesIO
 import json
 import math
+from numbers import Real
 from pathlib import PurePosixPath
 import re
 from uuid import uuid4
 from zipfile import ZipFile, ZIP_DEFLATED
 
 import geopandas as gpd
+from pyogrio import read_info
+from pyogrio.errors import DataLayerError, DataSourceError
 from reportlab.lib import colors
 from reportlab.platypus import Flowable, PageBreak, Spacer, Paragraph
 from shapely.geometry import Polygon, MultiPolygon, mapping
@@ -22,6 +25,7 @@ from api.services import extracao_atributos_aliases as aliases
 from api.services import extracao_atributos_relatorios as estilo
 from api.services.extracao_atributos_exportacao import registros, texto
 from api.services.extracao_ogr import reproject
+from api.services.storage_geoespacial import RAIZES_LEITURA
 
 CONECTIVOS = {'a', 'as', 'o', 'os', 'de', 'da', 'das', 'do', 'dos', 'e', 'em', 'na', 'nas',
               'no', 'nos', 'por', 'para', 'com', 'sem', 'à', 'às', 'ao', 'aos'}
@@ -104,22 +108,37 @@ def _fontes(resultados: list[dict]) -> list[dict]:
     return list(fontes.values())
 
 
+def _caminho_revisao(resultado: dict, dono) -> str:
+    if resultado.get('origem') != 'arquivo':
+        return resultado['arquivo'] + '.nomes.json'
+    usuario = sha256(str(dono).encode()).hexdigest()
+    arquivo = sha256(resultado['arquivo'].encode()).hexdigest()
+    return f'saidas-geoespaciais/elegibilidade-revisoes/{usuario}/{arquivo}.json'
+
+
 def preparar(identificadores: list[str], dono) -> dict:
     resultados = _selecionar(identificadores, dono)
     fontes = _fontes(resultados)
     salvos = {}
     for resultado in resultados:
-        try:
-            revisao = json.loads(storage_remoto.baixar(resultado['arquivo'] + '.nomes.json'))
-        except FileNotFoundError:
-            continue
-        if not isinstance(revisao, dict) or not isinstance(revisao.get('nomes'), dict):
-            raise ValueError('O arquivo de revisão dos nomes possui estrutura inválida.')
-        if revisao.get('sha256') != resultado['sha256'] or revisao.get('dono') != str(dono):
-            raise ValueError('A revisão de nomes não corresponde ao proprietário ou à saída atual.')
-        if any(not isinstance(k, str) or not isinstance(v, str) for k, v in revisao['nomes'].items()):
-            raise ValueError('A revisão de nomes contém valores inválidos.')
-        salvos.update(revisao['nomes'])
+        caminhos = [_caminho_revisao(resultado, dono)]
+        if resultado.get('origem') == 'arquivo':
+            caminhos.append(resultado['arquivo'] + '.nomes.json')
+        for caminho in caminhos:
+            try:
+                revisao = json.loads(storage_remoto.baixar(caminho))
+            except FileNotFoundError:
+                continue
+            if not isinstance(revisao, dict) or not isinstance(revisao.get('nomes'), dict):
+                raise ValueError('O arquivo de revisão dos nomes possui estrutura inválida.')
+            if revisao.get('sha256') != resultado['sha256'] or revisao.get('dono') != str(dono):
+                if resultado.get('origem') == 'arquivo':
+                    continue
+                raise ValueError('A revisão de nomes não corresponde ao proprietário ou à saída atual.')
+            if any(not isinstance(k, str) or not isinstance(v, str) for k, v in revisao['nomes'].items()):
+                raise ValueError('A revisão de nomes contém valores inválidos.')
+            salvos.update(revisao['nomes'])
+            break
     for fonte in fontes:
         if fonte['id'] in salvos:
             fonte['nome'] = titulo(salvos[fonte['id']])
@@ -133,7 +152,7 @@ def salvar_nomes(identificadores: list[str], modelo: dict, dono) -> None:
     for resultado in _selecionar(identificadores, dono):
         dados = json.dumps({'dono': str(dono), 'sha256': resultado['sha256'], 'nomes': nomes},
                            ensure_ascii=False).encode('utf-8')
-        caminho = resultado['arquivo'] + '.nomes.json'
+        caminho = _caminho_revisao(resultado, dono)
         storage_remoto.enviar_bytes(caminho, dados)
         if storage_remoto.baixar(caminho) != dados:
             raise ValueError('A revisão de nomes não foi preservada no storage. Confirme novamente.')
@@ -184,23 +203,94 @@ def _mapa(frame: gpd.GeoDataFrame, ocorrencias: list[bool], recortes=None,
             'cor_intersecao': '#1769aa', 'cor_ausencia': '#eef3f7', 'nota': NOTA_MAPA}
 
 
+def _conferir_estrutura(frame: gpd.GeoDataFrame, auditoria: dict) -> None:
+    exigidos = [auditoria['campo_id'], *(c['campo'] for c in auditoria['campos'])]
+    if len(frame) != auditoria['feicoes'] or any(c not in frame for c in exigidos):
+        raise ValueError('A estrutura da saída diverge dos metadados da análise.')
+    if frame.crs is None or frame.geometry.isna().any() or frame.geometry.is_empty.any() or not frame.geometry.is_valid.all():
+        raise ValueError('A saída contém geometrias inválidas ou não informa o CRS.')
+
+
 def _ler(resultado: dict) -> tuple[gpd.GeoDataFrame, bytes]:
     dados = storage_remoto.baixar(resultado['arquivo'])
     if not resultado.get('sha256') or sha256(dados).hexdigest() != resultado['sha256']:
         raise ValueError('A camada de saída mudou ou não possui assinatura verificável. Não será emitido um relatório divergente.')
     frame = gpd.read_file(BytesIO(dados), engine='pyogrio', layer='elegibilidade_territorial')
-    auditoria = resultado['elegibilidade']
-    exigidos = [auditoria['campo_id'], *(c['campo'] for c in auditoria['campos'])]
-    if len(frame) != auditoria['feicoes'] or any(c not in frame for c in exigidos):
-        raise ValueError('A estrutura da saída diverge da execução registrada.')
+    _conferir_estrutura(frame, resultado['elegibilidade'])
     return frame, dados
 
 
+def _auditoria(dados: bytes) -> dict:
+    info = read_info(BytesIO(dados), layer='elegibilidade_territorial')
+    metadados = info.get('layer_metadata') or {}
+    if info.get('driver') != 'GPKG' or 'SICARD_ELEGIBILIDADE' not in metadados:
+        raise ValueError('O GeoPackage não contém os metadados de uma análise de elegibilidade territorial.')
+    try:
+        auditoria = json.loads(metadados['SICARD_ELEGIBILIDADE'])
+    except json.JSONDecodeError as exc:
+        raise ValueError('Os metadados de elegibilidade do GeoPackage são inválidos.') from exc
+    if not isinstance(auditoria, dict) or auditoria.get('versao_saida') != 2:
+        raise ValueError('Esta saída não contém o painel interativo. Execute novamente para gravar áreas totais e interseções.')
+    if (not all(isinstance(auditoria.get(c), str) and auditoria[c]
+                for c in ('campo_id', 'campo_area_total', 'camada_intersecoes'))
+            or type(auditoria.get('feicoes')) is not int or auditoria['feicoes'] <= 0
+            or not isinstance(auditoria.get('entrada'), dict)
+            or not all(isinstance(auditoria['entrada'].get(c), str) and auditoria['entrada'][c] for c in ('id', 'nome'))
+            or not isinstance(auditoria.get('campos'), list)
+            or not isinstance(auditoria.get('feicoes_base'), list)):
+        raise ValueError('Os metadados de elegibilidade não identificam a entrada, os campos e as interseções.')
+    for campo in auditoria['campos']:
+        if (not isinstance(campo, dict)
+                or not all(isinstance(campo.get(c), str) and campo[c] for c in ('id', 'nome', 'campo'))
+                or campo.get('papel') not in ('restricao', 'risco')):
+            raise ValueError('Os metadados contêm uma base de elegibilidade inválida.')
+    bases = {c['id']: c['papel'] for c in auditoria['campos']}
+    fontes = [auditoria['entrada']['id'], *(c['id'] for c in auditoria['campos'])]
+    for feicao in auditoria['feicoes_base']:
+        if (not isinstance(feicao, dict)
+                or not all(isinstance(feicao.get(c), str) and feicao[c] for c in ('id', 'nome', 'base_id'))
+                or feicao.get('tipo') != 'feicao' or feicao['base_id'] not in bases
+                or feicao.get('papel') != bases[feicao['base_id']]
+                or type(feicao.get('posicao')) is not int or feicao['posicao'] < 0):
+            raise ValueError('Os metadados contêm uma feição de origem inválida.')
+        fontes.append(feicao['id'])
+    if len(fontes) != len(set(fontes)) or len({c['campo'] for c in auditoria['campos']}) != len(auditoria['campos']):
+        raise ValueError('Os metadados contêm identificadores ou campos de elegibilidade repetidos.')
+    return auditoria
+
+
 def abrir(arquivo: str, dono) -> dict:
-    ident = jobs.localizar_saida(arquivo, dono)
-    resultado = _selecionar([ident], dono)[0]
-    _ler(resultado)
+    caminho = PurePosixPath(arquivo)
+    if (not caminho.parts or caminho.parts[0] not in RAIZES_LEITURA
+            or caminho.is_absolute() or '..' in caminho.parts or '\\' in arquivo
+            or str(caminho) != arquivo or caminho.suffix.lower() != '.gpkg'):
+        raise ValueError('Selecione um GeoPackage em uma pasta acessível do Storage.')
+    dados = storage_remoto.baixar(arquivo)
+    try:
+        auditoria = _auditoria(dados)
+        frame = gpd.read_file(BytesIO(dados), engine='pyogrio', layer='elegibilidade_territorial')
+        _conferir_estrutura(frame, auditoria)
+        nomes = {f['id']: f['nome'] for f in _fontes([{'elegibilidade': auditoria}])}
+        _painel(frame, dados, auditoria, nomes, _linhas(frame, auditoria))
+    except (DataSourceError, DataLayerError) as exc:
+        raise ValueError('O arquivo não é um GeoPackage de elegibilidade válido com as camadas de resultados e interseções.') from exc
+    ident = jobs.registrar_saida({'arquivo': arquivo, 'sha256': sha256(dados).hexdigest(),
+                                 'elegibilidade': auditoria}, dono)
     return {'execucoes': [ident], **preparar([ident], dono)}
+
+
+def _linhas(frame: gpd.GeoDataFrame, auditoria: dict) -> list[dict]:
+    nome_coluna = next((c for c in frame.columns if c.lower() in {'nome', 'name', 'denominacao', 'denominação'}), None)
+    linhas = []
+    for registro in registros(frame):
+        areas = [registro[c['campo']] for c in auditoria['campos']]
+        if any(v is not None and (not isinstance(v, (int, float, Decimal)) or isinstance(v, bool)
+                                  or not math.isfinite(v) or v < 0) for v in areas):
+            raise ValueError('A saída contém um valor de área de sobreposição inválido.')
+        linhas.append({'id': texto(registro[auditoria['campo_id']]),
+                       'nome': texto(registro[nome_coluna]) if nome_coluna and registro[nome_coluna] else '',
+                       'areas': areas, 'areas_texto': ['—' if v is None else texto(v) for v in areas]})
+    return linhas
 
 
 def _painel(frame: gpd.GeoDataFrame, dados: bytes, auditoria: dict, nomes: dict[str, str], linhas: list[dict]) -> dict:
@@ -210,6 +300,8 @@ def _painel(frame: gpd.GeoDataFrame, dados: bytes, auditoria: dict, nomes: dict[
     if campo_area not in frame:
         raise ValueError('A saída não contém a área total das demandas.')
     recortes = gpd.read_file(BytesIO(dados), engine='pyogrio', layer=auditoria['camada_intersecoes'])
+    if any(c not in recortes for c in ('demanda_pos', 'base_id', 'feicao_id', 'area_m2')) or recortes.crs is None:
+        raise ValueError('A camada de interseções não contém os vínculos, as áreas e o CRS da análise.')
     campos = {c['id']: c for c in auditoria['campos']}
     feicoes = {f['id']: f for f in auditoria['feicoes_base']}
     grupos = {}
@@ -219,7 +311,8 @@ def _painel(frame: gpd.GeoDataFrame, dados: bytes, auditoria: dict, nomes: dict[
         if (pos is None or int(pos) != pos or not 0 <= int(pos) < len(linhas)
                 or not isinstance(base, str) or not isinstance(ident, str) or base not in campos or ident not in feicoes):
             raise ValueError('Interseção com vínculo inválido na camada de saída.')
-        if feicoes[ident]['base_id'] != base or r['area_m2'] is None or not math.isfinite(r['area_m2']) or r['area_m2'] < 0:
+        if (feicoes[ident]['base_id'] != base or not isinstance(r['area_m2'], (int, float, Decimal))
+                or not math.isfinite(r['area_m2']) or r['area_m2'] < 0):
             raise ValueError('Interseção com base ou área inválida na camada de saída.')
         vinculos.append({'chave': str(int(pos)), 'base_id': base, 'feicao_id': ident})
         grupo = grupos.setdefault((int(pos), ident), {'id': ident, 'base_id': base, 'nome': nomes[ident],
@@ -230,9 +323,10 @@ def _painel(frame: gpd.GeoDataFrame, dados: bytes, auditoria: dict, nomes: dict[
     for (pos, _), grupo in grupos.items():
         por_demanda.setdefault(pos, []).append(grupo)
     for pos, linha in enumerate(linhas):
-        total = float(frame.iloc[pos][campo_area])
-        if not math.isfinite(total) or total <= 0:
+        total = frame.iloc[pos][campo_area]
+        if not isinstance(total, (Real, Decimal)) or not math.isfinite(total) or total <= 0:
             raise ValueError('Área total da demanda inválida na saída.')
+        total = float(total)
         sobreposicoes = por_demanda.get(pos, [])
         for campo, esperado in zip(auditoria['campos'], linha['areas']):
             encontrados = [g['area_m2'] for g in sobreposicoes if g['base_id'] == campo['id']]
@@ -273,13 +367,7 @@ def montar(identificadores: list[str], nomes: dict[str, str], dono, revisados: b
         frame, conteudo = _ler(resultado)
         audit = resultado['elegibilidade']
         campos = [{**c, 'nome': nomes[c['id']]} for c in audit['campos']]
-        nome_coluna = next((c for c in frame.columns if c.lower() in {'nome', 'name', 'denominacao', 'denominação'}), None)
-        linhas = []
-        for registro in registros(frame):
-            areas = [registro[c['campo']] for c in campos]
-            linhas.append({'id': texto(registro[audit['campo_id']]),
-                           'nome': texto(registro[nome_coluna]) if nome_coluna and registro[nome_coluna] else '',
-                           'areas': areas, 'areas_texto': ['—' if v is None else texto(v) for v in areas]})
+        linhas = _linhas(frame, audit)
         ocorrencias = [any(v is not None for v in linha['areas']) for linha in linhas]
         painel = _painel(frame, conteudo, audit, nomes, linhas)
         entrada = {'id': resultado['execucao_id'], 'nome': nomes[audit['entrada']['id']],

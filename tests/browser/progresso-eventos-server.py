@@ -21,9 +21,11 @@ def index():
     </script></body></html>''')
 @app.get('/eventos')
 def eventos():return resposta(controle.eventos,'teste')
+@app.get('/estado')
+def estado(): return {"id": "teste", **controle.snapshot(), "eventos_url": "/eventos"}
 @app.post('/tarefa')
 def tarefa(body:dict):
-    if 'mensagem' in body:controle.mensagem(body['mensagem'])
+    if 'mensagem' in body:controle.iniciar_operacao(body['mensagem'])
     if 'feitas' in body:controle.tarefa(body['feitas'],body['total'])
     if 'status' in body:controle.encerrar(body['status'])
     return {'ok':True}

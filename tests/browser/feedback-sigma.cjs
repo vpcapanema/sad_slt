@@ -54,7 +54,7 @@ const BASE='http://sicard.teste';
   await page.evaluate(async()=>{ProcessFeedback.iniciarCadastro({title:'Importar pacote',tasks:['Ler shapefile','Gravar']});await ProcessFeedback.processar(()=>fetch('/api/stream'));});
   assert.equal(await page.locator('.pfs-completed-item').filter({hasText:'Ler shapefile'}).count(),1);
   assert.equal(await page.locator('.pfs-log-entry--warning').filter({hasText:'CRS ausente'}).count(),1);
-  assert.equal(await page.locator('[data-pfs="progress-percent"]').innerText(),'100%');
+  assert.equal(await page.locator('[data-pfs="progress-percent"]').innerText(),'80%');
   await aguardar('#pfsPartialBox');assert.equal(await page.locator('[data-pfs="partial-title"]').innerText(),'Gravado com ressalvas');
   assert.equal(await page.locator('[data-pfs="partial-header-title"]').innerText(),'Importar pacote');
   await fecharResultado();

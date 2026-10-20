@@ -3,12 +3,16 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from contextlib import contextmanager
 from threading import Lock
+import tempfile as stdlib_tempfile
 
 import pytest
 
 
 @pytest.fixture
 def storage_sintetico(monkeypatch):
+    # Os serviços podem configurar tempfile.tempdir para o storage sintético.
+    # Restaurar o diretório global antes do próximo teste, após remover a fixture.
+    monkeypatch.setattr(stdlib_tempfile, "tempdir", stdlib_tempfile.gettempdir())
     from api import storage_policy
     from api.services import storage_geoespacial
     from api.services import edicao_storage

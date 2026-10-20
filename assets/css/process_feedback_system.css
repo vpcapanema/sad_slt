@@ -619,7 +619,7 @@
 .pfs-entity[data-state="cancelado"], .pfs-entity[data-state="parcial"] { border-color: #975b00; }
 .pfs-entity summary:focus-visible, #pfsDiagnostics summary:focus-visible { outline: 3px solid #245a86; outline-offset: 2px; }
 .pfs-has-hierarchy #pfsTaskCard, .pfs-has-hierarchy #pfsTaskProgress,
-.pfs-has-hierarchy .pfs-progress-wrapper { display: none; }
+.pfs-has-hierarchy .pfs-progress-wrapper { display: none !important; }
 #pfsDiagnostics { margin-top: 12px; }
 #pfsDiagnostics .pfs-log { max-height: 180px; overflow: auto; }
 @media (max-width: 600px) {

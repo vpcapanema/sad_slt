@@ -44,10 +44,14 @@ const fs = require('node:fs');
     // SSE indisponível: polling atualizado permanece aceito.
     await page.evaluate(() => { sources[0].onerror(); ProcessFeedback.acompanhar(job('a',5,80)); });
     assert.equal(await page.locator('.pfs-entity--workflow > [role=progressbar]').getAttribute('aria-valuenow'),'80');
-    await page.evaluate(async () => {
+    await page.evaluate(() => {
       ProcessFeedback.permitirCancelamento(async()=>{});
-      await ProcessFeedback.atual.cancelar();
     });
+    await page.locator('#pfsCancelBtn').click();
+    await page.locator('#pfsConfirmCancel').click();
+    assert.equal(await page.evaluate(()=>ProcessFeedback.atual._cancelPending),false);
+    await page.locator('#pfsCancelBtn').click();
+    await page.locator('#pfsConfirmOk').click();
     assert.equal(await page.locator('#pfsCancelBtn').isDisabled(),true);
     assert.equal(await page.evaluate(()=>ProcessFeedback.atual._finalizado),false);
     await page.evaluate(() => sources[0].emit(job('a',6,80,'cancelado'),6));
@@ -62,6 +66,7 @@ const fs = require('node:fs');
     assert.equal(await page.locator('#pfsHierarchy').evaluate(n=>n.scrollHeight>n.clientHeight),true);
     await page.setViewportSize({width:390,height:800});
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+    await page.waitForTimeout(600);
     await page.screenshot({path:'outputs/feedback-hierarquia-mobile.png'});
     // Resultado antigo agendado não pode aparecer sobre nova execução.
     await page.evaluate(() => { ProcessFeedback.sucesso({}); ProcessFeedback.iniciarCadastro({title:'Nova'}); });
@@ -69,6 +74,12 @@ const fs = require('node:fs');
     assert.equal(await page.locator('#pfsStatusOverlay').evaluate(n=>n.classList.contains('pfs-active')),false);
     await page.evaluate(()=>{ProcessFeedback.acompanhar(job('c',1));ProcessFeedback.acompanhar(job('d',1));ProcessFeedback.acompanhar(job('c',99));});
     assert.equal(await page.evaluate(()=>ProcessFeedback.atual._sicard.job),'d');
+    await page.evaluate(()=>{ProcessFeedback.acompanhar(job('d',2,50,'parcial'));ProcessFeedback.sucesso({message:'Resultado parcial confirmado'});});
+    await page.waitForFunction(()=>document.querySelector('#pfsPartialBox').classList.contains('pfs-active'));
+    assert.equal(await page.locator('.pfs-entity--workflow > [role=progressbar]').getAttribute('aria-valuenow'),'50');
+    await page.evaluate(()=>{const old=ProcessFeedback.atual;ProcessFeedback.iniciarCadastro({title:'Isolamento final'});old.tarefaAtual('Mensagem atrasada');old.erro({message:'Erro atrasado'});});
+    assert.equal(await page.locator('[data-pfs="progress-title"]').innerText(),'Isolamento final');
+    assert.equal(await page.locator('#pfsStatusOverlay').evaluate(n=>n.classList.contains('pfs-active')),false);
     assert.deepEqual(errors,[]);
     console.log('PASS: hierarquia, medidas, duplicação, ordenação, fallback, cancelamento, isolamento, expansão e responsividade.');
   } finally { await browser.close(); }

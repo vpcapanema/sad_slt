@@ -49,6 +49,9 @@ class ControleProcessamento:
         """Término explícito, chamado somente depois da operação retornar."""
         with self.lock:
             ident = self.tarefa_id if tarefa_id is None else tarefa_id
+            op = self.hierarquia.operations.get(str(ident))
+            if self.status in FINAIS or (op and op["estado"] in FINAIS):
+                return
             self.hierarquia.terminar(ident)
             if ident == self.tarefa_id and self.tarefa_estado == "concluido":
                 return
@@ -65,7 +68,7 @@ class ControleProcessamento:
 
     def cancelar(self):
         with self.lock:
-            if self.status == 'cancelado':
+            if self.status == 'cancelado' or self.solicitado:
                 return
             if not self.cancelavel or self.status != 'executando':
                 raise ValueError('A gravação final já começou ou o processo terminou. Não é seguro interromper esta etapa.')
@@ -75,6 +78,8 @@ class ControleProcessamento:
 
     def fase(self, indice, mensagem, cancelavel=True):
         with self.lock:
+            if self.status in FINAIS:
+                return
             self.verificar()
             self.fase_atual = indice
             self.fracao_fase = 0
@@ -87,6 +92,8 @@ class ControleProcessamento:
     def mensagem(self, mensagem):
         """Texto de apresentação; nunca descobre trabalho por mudança de texto."""
         with self.lock:
+            if self.status in FINAIS:
+                return self.tarefa_id
             self.verificar()
             self.etapa = mensagem
             self.descricao = mensagem
@@ -117,6 +124,8 @@ class ControleProcessamento:
 
     def falhar(self, ident, erro):
         with self.lock:
+            if self.status in FINAIS:
+                return
             self.hierarquia.terminar(ident, "cancelado" if isinstance(erro, ProcessamentoCancelado) else "erro")
             self._publicar()
 
@@ -129,15 +138,33 @@ class ControleProcessamento:
 
     def medir_operacao(self, ident, feitas, total, unidade="itens"):
         with self.lock:
+            if self.status in FINAIS:
+                return
             self.verificar()
             self.hierarquia.medir(ident, feitas, total, unidade)
             if ident == self.tarefa_id:
-                self.feitas, self.total, self.unidade = feitas, total, unidade
                 self.percentual_tarefa = percentual(feitas, total)
+                self.feitas, self.total = (feitas, total) if self.percentual_tarefa is not None else (None, None)
+                self.unidade = unidade
+            self._publicar()
+
+    def detalhe_operacao(self, ident, mensagem):
+        with self.lock:
+            if self.status in FINAIS:
+                return
+            self.verificar()
+            op = self.hierarquia.operations.get(str(ident))
+            if op and op["estado"] not in FINAIS:
+                op["detalhe"] = mensagem
+            if ident == self.tarefa_id:
+                self.descricao = mensagem
+            self._log(mensagem, tarefa_id=ident)
             self._publicar()
 
     def detalhe(self, mensagem):
         with self.lock:
+            if self.status in FINAIS:
+                return
             self.verificar()
             self.descricao = mensagem
             op = self.hierarquia.operations.get(str(self.tarefa_id))
@@ -148,6 +175,8 @@ class ControleProcessamento:
 
     def progresso_fase(self, feitas, total):
         with self.lock:
+            if self.status in FINAIS:
+                return
             self.verificar()
             pct = percentual(feitas, total)
             self.fracao_fase = pct / 100 if pct is not None else 0
@@ -158,9 +187,12 @@ class ControleProcessamento:
 
     def tarefa(self, feitas, total, unidade='itens'):
         with self.lock:
+            if self.status in FINAIS:
+                return
             self.verificar()
-            self.feitas, self.total, self.unidade = feitas, total, unidade
             self.percentual_tarefa = percentual(feitas, total)
+            self.feitas, self.total = (feitas, total) if self.percentual_tarefa is not None else (None, None)
+            self.unidade = unidade
             self.hierarquia.medir(self.tarefa_id, feitas, total, unidade)
             self._publicar()
 
@@ -178,6 +210,9 @@ class ControleProcessamento:
                     'aviso' if status == 'cancelado' else 'erro',
                 )
             self.hierarquia.encerrar(status)
+            if self.tarefa_estado == "running":
+                atual = self.hierarquia.operations.get(str(self.tarefa_id))
+                self.tarefa_estado = atual["estado"] if atual else status
             self._publicar()
 
     def snapshot(self, *, com_etapas=True):

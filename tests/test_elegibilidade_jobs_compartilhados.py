@@ -98,34 +98,37 @@ def test_storage_indisponivel_nao_retorna_sucesso(ambiente, monkeypatch):
     assert not ambiente[1] and not jobs._jobs
 
 
-def test_localizar_saida_concluida_apos_reinicio_e_restrita_ao_autor(ambiente, monkeypatch):
-    inicial = iniciar()
-    arquivo = 'saidas-geoespaciais/resultado.gpkg'
-    with pytest.raises(FileNotFoundError):
-        jobs.localizar_saida(arquivo, 'autor')
-    ambiente[1].pop()()
-    assert jobs.localizar_saida(arquivo, 'autor') == inicial['id']
+def test_referencia_de_arquivo_validado_persiste_sem_historico_ou_worker(ambiente, monkeypatch):
+    resultado = {'arquivo': 'saidas-geoespaciais/resultado.gpkg', 'sha256': 'original'}
+    ident = jobs.registrar_saida(resultado, 'outro')
     monkeypatch.setattr(jobs, '_jobs', {})
-    assert jobs.localizar_saida(arquivo, 'autor') == inicial['id']
+    registro = jobs.consultar(ident, 'outro')
+    assert registro['status'] == 'concluido' and registro['cancelavel'] is False
+    assert registro['resultado']['arquivo'] == resultado['arquivo']
+    assert registro['resultado']['sha256'] == 'original'
+    assert registro['resultado']['origem'] == 'arquivo'
+    assert registro['resultado']['total_entradas'] == 1
+    assert 'concluido_em' not in registro['resultado']
+    assert not ambiente[1] and not jobs._jobs
     with pytest.raises(FileNotFoundError):
-        jobs.localizar_saida(arquivo, 'outro')
-    with pytest.raises(FileNotFoundError):
-        jobs.localizar_saida('saidas-geoespaciais/inexistente.gpkg', 'autor')
+        jobs.consultar(ident, 'autor')
+    assert jobs.registrar_saida(resultado, 'autor') == ident
+    assert jobs.consultar(ident, 'autor')['resultado']['arquivo'] == resultado['arquivo']
+    assert len(ambiente[0]) == 2
 
 
-@pytest.mark.parametrize('arquivo', [
-    '../saida.gpkg', '/saidas-geoespaciais/saida.gpkg', 'base-geoespacial/saida.gpkg',
-    'saidas-geoespaciais/../saida.gpkg', 'saidas-geoespaciais/saida.fgb',
-    'saidas-geoespaciais\\saida.gpkg', 'saidas-geoespaciais//saida.gpkg',
-])
-def test_localizar_saida_recusa_caminho_ou_formato_invalido(ambiente, arquivo):
-    with pytest.raises(ValueError, match='GeoPackage'):
-        jobs.localizar_saida(arquivo, 'autor')
+def test_referencia_preserva_assinatura_de_cada_versao_do_arquivo(ambiente):
+    resultado = {'arquivo': 'saidas-geoespaciais/resultado.gpkg', 'sha256': 'original'}
+    original = jobs.registrar_saida(resultado, 'autor')
+    atualizado = jobs.registrar_saida({**resultado, 'sha256': 'nova assinatura'}, 'autor')
+    assert original != atualizado
+    assert jobs.consultar(original, 'autor')['resultado']['sha256'] == 'original'
+    assert jobs.consultar(atualizado, 'autor')['resultado']['sha256'] == 'nova assinatura'
 
 
-def test_localizar_saida_nao_oculta_storage_indisponivel(ambiente, monkeypatch):
+def test_registrar_saida_nao_oculta_storage_indisponivel(ambiente, monkeypatch):
     def falhar(*args):
         raise RuntimeError('Storage indisponível.')
-    monkeypatch.setattr(jobs.storage_remoto, 'listar', falhar)
+    monkeypatch.setattr(jobs.storage_remoto, 'enviar_bytes', falhar)
     with pytest.raises(RuntimeError, match='Storage indisponível'):
-        jobs.localizar_saida('saidas-geoespaciais/resultado.gpkg', 'autor')
+        jobs.registrar_saida({'arquivo': 'saidas-geoespaciais/resultado.gpkg', 'sha256': 'original'}, 'autor')

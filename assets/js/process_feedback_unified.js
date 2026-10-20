@@ -65,7 +65,7 @@
         <div class="pfs-task-spinner"><i class="fas fa-circle-notch fa-spin" aria-hidden="true"></i></div>
       </div>
       <section class="pfs-messages" aria-label="Atividade em andamento">
-        <div class="pfs-activity-panel"><h4>O Que Está Sendo Feito</h4><div class="pfs-active-details" role="status" aria-live="polite" data-pfs="active-detail"></div></div>
+        <div class="pfs-activity-panel"><h4>O Que Está Sendo Feito</h4><div class="pfs-active-details" data-pfs="active-detail"></div></div>
         <p class="pfs-contact" data-pfs="contact-status" role="status"></p>
       </section>
       <section class="pfs-warning-panel" id="pfsProgressWarning" hidden role="alert">
@@ -236,7 +236,7 @@
     const focoAnterior = new WeakMap();
     function abrirComFoco(box, alvo) {
         if (!focoAnterior.has(box)) focoAnterior.set(box, document.activeElement);
-        setTimeout(() => { (alvo || box).focus?.({ preventScroll: true }); }, 30);
+        setTimeout(() => { if (box.classList.contains('pfs-active')) (alvo || box).focus?.({ preventScroll: true }); }, 30);
     }
     function devolverFoco(box) {
         const anterior = focoAnterior.get(box);
@@ -287,7 +287,10 @@
                     if (accepted && _progressSystem === current) current.cancelar();
                 });
                 q('#pfsReopen')?.addEventListener('click', () => _progressSystem?.reabrir());
-                q('#pfsProgressClose')?.addEventListener('click', () => _progressSystem?.ocultar());
+                q('#pfsProgressClose')?.addEventListener('click', () => {
+                    if (_progressSystem?._finalizado) _progressSystem.fechar();
+                    else _progressSystem?.ocultar();
+                });
                 this.box.addEventListener('keydown', e => {
                     if (e.key === 'Escape' && !q('#pfsConfirmOverlay.pfs-active')) { _progressSystem?.ocultar(); return; }
                     if (e.key !== 'Tab' || !this.overlay.classList.contains('pfs-active')) return;
@@ -379,6 +382,7 @@
 
         /* ── Tarefa atual ── */
         tarefaAtual(taskName, description, taskId, eventTime) {
+            if (_progressSystem && _progressSystem !== this) return;
             this._bind(); this._touch();
             let idx = this.tasks.findIndex(t => taskId != null ? t.id === taskId : t.name === taskName);
             if (idx === -1) {
@@ -413,16 +417,18 @@
 
         /* ── Descrição da tarefa atual (detalhe que muda sem trocar de tarefa) ── */
         detalhe(description) {
+            if (_progressSystem && _progressSystem !== this) return;
             this._touch();
             pfsText('task-desc', description || '');
             if (description) pfsText('active-detail', description);
         }
 
         /* ── Etapa ── */
-        etapa(message) { this._touch(); this.log(message, 'step'); }
+        etapa(message) { if (_progressSystem && _progressSystem !== this) return; this._touch(); this.log(message, 'step'); }
 
         /* ── Concluir tarefa ── */
         concluirTarefa(taskName, message, taskId, eventTime, silent = false) {
+            if (_progressSystem && _progressSystem !== this) return;
             this._touch();
             const idx = this.tasks.findIndex(t => taskId != null ? t.id === taskId : t.name === taskName);
             if (idx >= 0) {
@@ -455,6 +461,7 @@
 
         /* ── Progresso ── */
         progresso(percent) {
+            if (_progressSystem && _progressSystem !== this) return;
             if (this._percent !== Math.round(Number(percent))) this._touch();
             this._percent = Math.min(100, Math.max(0, Math.round(Number(percent) || 0)));
             if (this.progressFill) this.progressFill.style.width = this._percent + '%';
@@ -471,6 +478,7 @@
 
         /* A barra individual usa somente medidas recebidas; ausência é indeterminada. */
         progressoTarefa(percent, feitas, total, unidade) {
+            if (_progressSystem && _progressSystem !== this) return;
             const assinatura = JSON.stringify([percent, feitas, total, unidade]);
             if (assinatura !== this._taskMeasure) { this._touch(); this._taskMeasure = assinatura; }
             const bar=q('#pfsTaskProgressBar'), fill=q('#pfsTaskProgressFill');
@@ -489,6 +497,7 @@
 
         /* ── Log ── */
         log(message, type, eventTime, activity = true, publico = true) {
+            if (_progressSystem && _progressSystem !== this) return;
             if (activity) this._touch();
             if (!this.logEl || message == null || message === '') return;
             const icons = {
@@ -525,6 +534,7 @@
         }
 
         resumo(texto) {
+            if (_progressSystem && _progressSystem !== this) return;
             if (this._summary === texto) return;
             this._summary = texto;
             if (this._summaryTimer) return;
@@ -556,11 +566,13 @@
             this.iniciar(opts.title || 'Processando', opts.subtitle || 'Conectando...', opts.tasks || []);
             try {
                 const resp = await fetchFn();
+                if (_progressSystem && _progressSystem !== this) { await resp.body?.cancel(); return; }
                 if (!resp.ok) {
                     let ed; try { ed = await resp.json(); } catch { ed = { detail: await resp.text() }; }
                     this.erro(ed); return;
                 }
                 const reader = resp.body.getReader(), dec = new TextDecoder();
+                this._reader = reader;
                 let buf = '';
                 while (true) {
                     const { done, value } = await reader.read();
@@ -592,7 +604,7 @@
 
         /* ── Sucesso → delega ao StatusFeedbackSystem ── */
         sucesso(data) {
-            if (this._finalizado) return;
+            if (this._finalizado || (_progressSystem && _progressSystem !== this)) return;
             const confirmado = this._sicard?.snapshot?.status;
             if (['erro', 'interrompido'].includes(confirmado)) { this.erro(data); return; }
             if (confirmado === 'cancelado') { this.confirmarCancelamento(); return; }
@@ -618,7 +630,7 @@
 
         /* ── Erro → delega ao StatusFeedbackSystem ── */
         erro(data) {
-            if (this._finalizado) return;
+            if (this._finalizado || (_progressSystem && _progressSystem !== this)) return;
             this._finalizado = true;
             this._estadoFinal = 'Interrompido por erro';
             this._atualizarAcompanhamento();
@@ -668,6 +680,7 @@
         fechar() {
             if (this._finalizado) this._stop();
             this.ocultar();
+            if (this._finalizado && _progressSystem === this) q('#pfsReopen').hidden = true;
         }
         reabrir() {
             if (_progressSystem !== this) return;
@@ -702,11 +715,11 @@
                 const bar = node.querySelector('[role="progressbar"]');
                 const pct = Number.isFinite(entity.percentual) ? Math.min(100, Math.max(0, entity.percentual)) : null;
                 bar.setAttribute('aria-label', `${kind}: ${entity.nome}`);
-                bar.classList.toggle('pfs-progress-indeterminate', pct === null && !['concluido','parcial','erro','cancelado','interrompido','nao_executado'].includes(entity.estado));
+                bar.classList.toggle('pfs-progress-indeterminate', pct === null && ['executando','running'].includes(entity.estado));
                 if (pct === null) bar.removeAttribute('aria-valuenow');
                 else bar.setAttribute('aria-valuenow', String(pct));
-                bar.firstElementChild.style.width = pct === null ? '' : `${pct}%`;
-                node.querySelector('.pfs-entity-measure').textContent = (pct === null ? 'Progresso indeterminado' : `${Math.round(pct)}%`) +
+                bar.firstElementChild.style.width = pct === null ? (bar.classList.contains('pfs-progress-indeterminate') ? '' : '0%') : `${pct}%`;
+                node.querySelector('.pfs-entity-measure').textContent = (entity.estado === 'pendente' ? 'Aguardando início' : pct === null ? 'Progresso indeterminado' : `${Math.round(pct)}%`) +
                     (Number.isFinite(entity.feitas) && entity.total > 0 ? ` · ${entity.feitas} / ${entity.total} ${entity.unidade || 'itens'}` : '');
                 return node.querySelector('.pfs-entity-children');
             };
@@ -728,11 +741,11 @@
             }
         }
         /* Um processo que terminou não fecha o overlay de outro que já começou. */
-        _fecharSeCorrente() { if (!_progressSystem || _progressSystem === this) this.fechar(); else this._stop(); }
+        _fecharSeCorrente() { if (!_progressSystem || _progressSystem === this) this.ocultar(); else this._stop(); }
 
         /* ── Internals ── */
         _touch() { this._lastActivity = Date.now(); }
-        _stop() { clearTimeout(this._resultTimer); this._resultTimer = null; clearTimeout(this._summaryTimer); this._summaryTimer = null; this._stopActivityMonitor(); this._closeSSE(); this._sicardStop?.(); }
+        _stop() { this._reader?.cancel().catch(() => {}); this._reader = null; clearTimeout(this._resultTimer); this._resultTimer = null; clearTimeout(this._summaryTimer); this._summaryTimer = null; this._stopActivityMonitor(); this._closeSSE(); this._sicardStop?.(); }
 
         _startActivityMonitor() {
             this._stopActivityMonitor();
@@ -1272,17 +1285,22 @@
 
         /* ── Processar fetch (old API) ── */
         async processar(fetchFn, onSuccess, onError) {
+            const owner = _progressSystem;
             try {
                 const resp = await fetchFn();
+                if (owner !== _progressSystem || owner?._finalizado) { await resp?.body?.cancel(); return; }
                 if (!resp) return;
                 const ct = resp.headers?.get('content-type') || '';
 
                 if (ct.includes('text/event-stream') || ct.includes('application/x-ndjson')) {
                     if (_progressSystem) { _progressSystem.config.onSuccess = onSuccess; _progressSystem.config.onError = onError; }
                     const reader = resp.body.getReader(), dec = new TextDecoder();
+                    if (owner) owner._reader = reader;
                     let buf = '';
                     while (true) {
                         const { done, value } = await reader.read();
+                        if (owner !== _progressSystem) { await reader.cancel(); return; }
+                        if (owner?._finalizado) { await reader.cancel(); break; }
                         if (done) break;
                         buf += dec.decode(value, { stream: true });
                         const lines = buf.split('\n'); buf = lines.pop();
@@ -1296,11 +1314,13 @@
 
                 let result;
                 const texto = await resp.text();
+                if (owner !== _progressSystem || owner?._finalizado) return;
                 try { result = texto ? JSON.parse(texto) : {}; } catch { result = { detail: texto }; }
                 if (resp.ok) { if (_progressSystem) _progressSystem.sucesso(result); if (onSuccess) onSuccess(result); }
                 else { if (_progressSystem) _progressSystem.erro(result); if (onError) onError(result); }
                 return { ok: resp.ok, status: resp.status, data: result };
             } catch (err) {
+                if (owner !== _progressSystem || owner?._finalizado) return;
                 const ed = { detail: err.message || 'Erro de conexão' };
                 if (_progressSystem) _progressSystem.erro(ed); if (onError) onError(ed);
                 return { ok: false, status: 0, data: ed };
@@ -1391,6 +1411,10 @@
                     p.tasks = []; p.currentTaskIndex = -1; p._history = [];
                     p.logEl.replaceChildren(); p.completedList.replaceChildren(); p.segmentsEl.replaceChildren();
                     p._hierarchyNodes = new Map(); q('#pfsHierarchy').replaceChildren();
+                    q('#pfsHierarchy').hidden = true; p.box.classList.remove('pfs-has-hierarchy');
+                    pfsText('active-detail', ''); pfsText('last-completed', '');
+                    q('#pfsProgressWarning').hidden = true;
+                    p.progressoTarefa(null); p._barra(null);
                     p._cancelPending = false; st.terminal = false; st.detalhe = null;
                 }
                 st.job = String(job.id ?? ''); st.seq = 0; st.chave = null; st.tarefa = null; st.snapshot = null; st.versao = -1; st.revisao = -1;

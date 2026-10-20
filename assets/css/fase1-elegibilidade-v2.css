@@ -99,6 +99,25 @@
 .ev-resultados .evr-foco { display: block; font-size: 10px; margin-top: 5px; color: #003b5a; }
 .ev-resultados .ev-resultados-nomes { max-height: 340px; overflow: auto; padding: 4px; }
 .ev-resultados .evr-painel .ea-table-wrap { max-height: 370px; overflow: auto; }
+.elegibilidade-v2 .secao-elegibilidade-tabela { font-size: 10.5px; }
+.elegibilidade-v2 .secao-elegibilidade-tabela .evr-titulo h3 { font-size: 12px; }
+.elegibilidade-v2 .secao-elegibilidade-tabela .ea-hint { font-size: 10px; }
+.elegibilidade-v2 .secao-elegibilidade-tabela #ev-resultados-tabela { font-size: inherit; min-width: 0; }
+.elegibilidade-v2 .secao-elegibilidade-tabela #ev-resultados-tabela :is(th,td) { font-size: inherit; padding: 7px 8px; }
+.elegibilidade-v2 .secao-elegibilidade-tabela #ev-resultados-tabela td[data-base] { padding: 0; }
+.elegibilidade-v2 .secao-elegibilidade-tabela #ev-resultados-tabela td button { font-size: inherit; padding: 7px 8px; }
+.elegibilidade-v2 .secao-elegibilidade-tabela :is(.evr-secundario,.evr-foco) { font-size: 9.5px; }
+.elegibilidade-v2 .secao-elegibilidade-tabela .ea-btn { font-size: inherit; }
+.elegibilidade-v2 .secao-elegibilidade-tabela .evr-controles {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; padding: 8px 12px;
+}
+.elegibilidade-v2 .secao-elegibilidade-tabela .evr-controles .ea-icon-button {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; min-width: 32px; height: 32px; min-height: 32px; padding: 0; font-size: 11px;
+}
+.elegibilidade-v2 .secao-elegibilidade-tabela .evr-controles [aria-pressed="true"] {
+  background: #eef4f8; border-color: var(--pli-deep); color: var(--pli-deep);
+}
 @media(max-width:1100px) { .ev-resultados .evr-analise { grid-template-columns: 1fr; } }
 @media(max-width:620px) { .ev-resultados .evr-fontes { grid-template-columns: 1fr; }.ev-resultados .evr-titulo { flex-wrap: wrap; } }
 @media(max-width:460px) { .ev-resultados .evr-detalhes-rosca { grid-template-columns: 1fr; } }

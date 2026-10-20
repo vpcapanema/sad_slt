@@ -24,12 +24,21 @@ export function criarResultados({avisar, aoOcupar}) {
   let ocupado = false, externo = false, chave = '0', baseAtiva = '', classeAtiva = '';
   let mapa = null, demandas = null, restricoes = null, riscos = null, camadas = new Map(), recortes = [];
   let linhasPorChave = new Map(), basesPorId = new Map();
+  let ocultarVazias = false, linhasTabela = [], camposTabela = [];
   const entrada = () => modelo.entradas[indice];
   const linhaAtual = () => linhasPorChave.get(chave);
   const payload = () => ({execucoes, nomes:Object.fromEntries([...campos].map(([id,campo]) => [id,campo.value])),
     revisados:node('revisados').checked});
   const corCategoria = papel => papel === 'restricao' ? '#852c38' : '#856100';
   const corClasse = id => cores.get(id);
+  const vazio = valor => valor == null || (typeof valor === 'string' && !valor.trim());
+
+  function atualizarVisaoTabela() {
+    const e = entrada();
+    camposTabela = e.campos.map((campo, posicao) => ({campo, posicao}))
+      .filter(({posicao}) => !ocultarVazias || e.linhas.some(l => !vazio(l.areas[posicao])));
+    linhasTabela = ocultarVazias ? e.linhas.filter(l => l.areas.some(valor => !vazio(valor))) : e.linhas;
+  }
 
   function controles() {
     const bloqueado = ocupado || externo;
@@ -37,7 +46,8 @@ export function criarResultados({avisar, aoOcupar}) {
     document.getElementById('ev-resultados').querySelectorAll('input,button,select').forEach(c => { c.disabled = bloqueado; });
     node('download').disabled = bloqueado || !modelo;
     node('anterior').disabled = bloqueado || !modelo || pagina === 0;
-    node('proxima').disabled = bloqueado || !modelo || (pagina+1)*50 >= entrada().linhas.length;
+    node('proxima').disabled = bloqueado || !modelo || (pagina+1)*50 >= linhasTabela.length;
+    node('vazias').disabled = bloqueado || !modelo;
   }
   function invalidar() {
     modelo = null;
@@ -108,7 +118,8 @@ export function criarResultados({avisar, aoOcupar}) {
     const classe = linha.sobreposicoes.find(c => c.id === classeAtiva);
     const daBase = linha.sobreposicoes.filter(c => c.base_id === baseAtiva), nome = nomeDemanda(linha);
     if (!classe) classeAtiva = '';
-    pagina = Math.floor(e.linhas.indexOf(linha) / 50);
+    const posicao = linhasTabela.indexOf(linha);
+    if (posicao >= 0) pagina = Math.floor(posicao / 50);
     node('id-ativo').textContent = linha.id; node('nome-ativo').textContent = nome;
     node('total-km').textContent = `${area(linha.area_total_m2)} km²`;
     node('total-ha').textContent = `${area(linha.area_total_m2,1e4)} ha`;
@@ -152,22 +163,22 @@ export function criarResultados({avisar, aoOcupar}) {
   function tabela() {
     const e = entrada(), head = el('thead'), grupos = el('tr'), nomes = el('tr');
     for (const [nome,papel,n] of [['Camada de Entrada','',2],
-      ...['restricao','risco'].map(p => [papeis[p],p,e.campos.filter(c => c.papel === p).length])]) {
+      ...['restricao','risco'].map(p => [papeis[p],p,camposTabela.filter(({campo}) => campo.papel === p).length])]) {
       if (!n) continue;
       const th = el('th',nome,papel); th.colSpan = n; th.scope = 'colgroup'; grupos.append(th);
     }
-    for (const [nome,papel] of [['Identificador',''],['Nome',''],...e.campos.map(c => [c.nome,c.papel])]) {
+    for (const [nome,papel] of [['Identificador',''],['Nome',''],...camposTabela.map(({campo}) => [campo.nome,campo.papel])]) {
       const th = el('th',nome,papel); th.scope = 'col'; nomes.append(th);
     }
     head.append(grupos,nomes);
     const body = el('tbody');
-    for (const l of e.linhas.slice(pagina*50,(pagina+1)*50)) {
+    for (const l of linhasTabela.slice(pagina*50,(pagina+1)*50)) {
       const tr = el('tr',undefined,l.chave === chave ? 'ativo' : '');
       tr.dataset.chave = l.chave; tr.tabIndex = 0; tr.setAttribute('aria-selected',String(l.chave === chave));
       tr.append(el('td',l.id),el('td',nomeDemanda(l)));
-      e.campos.forEach((c,i) => {
+      camposTabela.forEach(({campo:c, posicao}) => {
         const selecionada = l.chave === chave && c.id === baseAtiva;
-        const td = el('td',undefined,`${c.papel}${selecionada ? ' ativa' : ''}`), valor = l.areas[i];
+        const td = el('td',undefined,`${c.papel}${selecionada ? ' ativa' : ''}`), valor = l.areas[posicao];
         td.dataset.base = c.id;
         const botao = el('button',valor === null ? '—' : `${area(valor)} km²`);
         botao.type = 'button'; botao.setAttribute('aria-pressed',String(selecionada));
@@ -182,8 +193,21 @@ export function criarResultados({avisar, aoOcupar}) {
       tr.onkeydown = event => { if (event.target === tr && ['Enter',' '].includes(event.key)) { event.preventDefault(); selecionar(l.chave); } };
       body.append(tr);
     }
+    if (!linhasTabela.length) {
+      const tr = el('tr'), td = el('td', 'Nenhuma demanda com valores de sobreposição. Use o botão de mostrar vazias para restaurar a tabela.');
+      td.colSpan = camposTabela.length + 2;
+      tr.append(td); body.append(tr);
+    }
     node('tabela').replaceChildren(head,body);
-    node('pagina').textContent = `Página ${pagina+1} de ${Math.max(1,Math.ceil(e.linhas.length/50))} · ${e.feicoes} demandas`;
+    node('pagina').textContent = `Página ${pagina+1} de ${Math.max(1,Math.ceil(linhasTabela.length/50))} · ` +
+      (ocultarVazias ? `${linhasTabela.length} de ${e.feicoes} demandas · ${camposTabela.length} de ${e.campos.length} camadas` : `${e.feicoes} demandas`);
+    const botao = node('vazias'), rotulo = `${ocultarVazias ? 'Mostrar' : 'Ocultar'} linhas e colunas vazias`;
+    botao.title = rotulo; botao.setAttribute('aria-label', rotulo); botao.setAttribute('aria-pressed', String(ocultarVazias));
+    botao.querySelector('i').className = `fas fa-eye${ocultarVazias ? '' : '-slash'}`;
+    const linhasOcultas = e.linhas.length-linhasTabela.length, colunasOcultas = e.campos.length-camposTabela.length;
+    node('visibilidade').textContent = ocultarVazias
+      ? `Ocultas: ${linhasOcultas} ${linhasOcultas === 1 ? 'linha' : 'linhas'} e ${colunasOcultas} ${colunasOcultas === 1 ? 'coluna' : 'colunas'}. Zero é um valor válido.`
+      : 'Todas as linhas e colunas visíveis.';
   }
   function grafico(linha) {
     const svg = node('rosca'), legenda = node('legenda'), classes = linha.sobreposicoes;
@@ -218,6 +242,7 @@ export function criarResultados({avisar, aoOcupar}) {
   }
   function entradaAtual() {
     const e = entrada();
+    atualizarVisaoTabela();
     linhasPorChave = new Map(e.linhas.map(l => [l.chave,l]));
     basesPorId = new Map(e.campos.map(c => [c.id,c]));
     pagina = 0; baseAtiva = ''; classeAtiva = ''; chave = e.linhas[0].chave;
@@ -263,6 +288,11 @@ export function criarResultados({avisar, aoOcupar}) {
   node('enquadrar').onclick = () => mapa.fitBounds(demandas.getBounds(),{padding:[30,30],animate:false});
   node('anterior').onclick = () => { pagina--; tabela(); controles(); };
   node('proxima').onclick = () => { pagina++; tabela(); controles(); };
+  node('vazias').onclick = () => {
+    if (ocupado || externo || !modelo) return;
+    ocultarVazias = !ocultarVazias; pagina = 0;
+    atualizarVisaoTabela(); tabela(); controles();
+  };
   node('revisados').onchange = () => { if (!node('revisados').checked) { modelo = null; node('conteudo').hidden = true; controles(); } };
   node('tentar').onclick = () => operar(carregar);
   node('abrir').onclick = event => {

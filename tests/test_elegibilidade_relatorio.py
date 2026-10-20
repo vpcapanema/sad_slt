@@ -48,10 +48,14 @@ def analise(monkeypatch):
         resultados[f'job-{i}'] = {'arquivo': arquivo, 'sha256': sha256(conteudo).hexdigest(),
             'lote_id': 'lote', 'total_entradas': 2, 'concluido_em': '2026-10-19T15:00:00+00:00',
             'elegibilidade': auditoria}
+    consultar_persistido = service.jobs.consultar
     def consultar(ident, dono):
-        if dono != 'autor' or ident not in resultados:
-            raise FileNotFoundError('Execução não encontrada.')
-        return {'status': 'concluido', 'resultado': deepcopy(resultados[ident])}
+        if ident in resultados:
+            if dono != 'autor':
+                raise FileNotFoundError('Execução não encontrada.')
+            return {'status': 'concluido', 'resultado': deepcopy(resultados[ident])}
+        return consultar_persistido(ident, dono)
+    monkeypatch.setattr(service.jobs, '_jobs', {})
     monkeypatch.setattr(service.jobs, 'consultar', consultar)
     def baixar(caminho):
         if caminho not in dados:
@@ -59,6 +63,7 @@ def analise(monkeypatch):
         return dados[caminho]
     monkeypatch.setattr(service.storage_remoto, 'baixar', baixar)
     monkeypatch.setattr(service.storage_remoto, 'enviar_bytes', dados.__setitem__)
+    monkeypatch.setattr(service.storage_remoto, 'mover', lambda a, b: dados.__setitem__(b, dados.pop(a)))
     nomes = {f'base-{i}': f'Bacia Hidrográfica do Setor {i}' for i in range(7)}
     nomes.update({f'feicao-{i}': f'Trecho do Setor {i}' for i in range(7)})
     nomes.update({'entrada-1': 'Demandas do Setor Norte', 'entrada-2': 'Demandas do Setor Sul'})
@@ -144,17 +149,13 @@ def test_saida_alterada_impede_resultados_e_exportacao(analise):
         service.montar(['job-1', 'job-2'], nomes, 'autor', True)
 
 
-def test_reabrir_geopackage_reutiliza_saida_e_revisao_sem_recalcular(analise, monkeypatch):
+def test_reabrir_geopackage_reutiliza_saida_e_revisao_sem_recalcular(analise):
     resultados, dados, nomes = analise
     arquivo = resultados['job-1']['arquivo']
-    def localizar(caminho, dono):
-        assert caminho == arquivo and dono == 'autor'
-        return 'job-1'
-    monkeypatch.setattr(service.jobs, 'localizar_saida', localizar)
     reabertura = service.abrir(arquivo, 'autor')
-    assert reabertura['execucoes'] == ['job-1']
+    assert len(reabertura['execucoes']) == 1
     assert reabertura['revisados'] is False
-    assert reabertura['concluidas'] == 1 and reabertura['previstas'] == 2
+    assert reabertura['concluidas'] == reabertura['previstas'] == 1
     nomes_unicos = {ident: nome for ident, nome in nomes.items() if ident != 'entrada-2'}
     modelo, _ = service.montar(reabertura['execucoes'], nomes_unicos, 'autor', True)
     service.salvar_nomes(reabertura['execucoes'], modelo, 'autor')
@@ -164,32 +165,117 @@ def test_reabrir_geopackage_reutiliza_saida_e_revisao_sem_recalcular(analise, mo
     assert dados[arquivo].startswith(b'SQLite format 3')
     dados[arquivo] += b'alterado'
     with pytest.raises(ValueError, match='mudou'):
-        service.abrir(arquivo, 'autor')
+        service.montar(reabertura['execucoes'], nomes_unicos, 'autor', True)
+
+
+def test_reabrir_saida_de_outro_usuario_sem_historico_e_sem_recalcular(analise, monkeypatch):
+    resultados, dados, nomes = analise
+    arquivo = resultados['job-1']['arquivo']
+    original = dados[arquivo]
+    def nao_consultar_historico(*args, **kwargs):
+        pytest.fail('A reabertura deve ler o GeoPackage, não procurar o histórico do autor.')
+    monkeypatch.setattr(service.storage_remoto, 'listar', nao_consultar_historico)
+    reabertura = service.abrir(arquivo, 'outro')
+    nomes_unicos = {ident: nome for ident, nome in nomes.items() if ident != 'entrada-2'}
+    modelo, arquivos = service.montar(reabertura['execucoes'], nomes_unicos, 'outro', True)
+    assert len(modelo['entradas'][0]['linhas']) == 63
+    assert modelo['entradas'][0]['linhas'][1]['areas'] == [0.] * 7
+    assert modelo['entradas'][0]['linhas'][3]['areas'] == [float(i + 1) for i in range(7)]
+    assert arquivos[0][1] == dados[arquivo] == original
+    assert service.pdf(modelo).startswith(b'%PDF')
+    monkeypatch.setattr(service.jobs, '_jobs', {})
+    assert service.preparar(reabertura['execucoes'], 'outro')['fontes'] == reabertura['fontes']
+    with pytest.raises(FileNotFoundError):
+        service.preparar(reabertura['execucoes'], 'autor')
+
+
+def test_reabrir_saida_compartilhada_nao_bloqueia_ou_sobrescreve_revisao_de_outro(analise):
+    resultados, dados, nomes = analise
+    arquivo = resultados['job-1']['arquivo']
+    nomes_unicos = {ident: nome for ident, nome in nomes.items() if ident != 'entrada-2'}
+    modelo, _ = service.montar(['job-1'], nomes_unicos, 'autor', True)
+    service.salvar_nomes(['job-1'], modelo, 'autor')
+    revisao_autor = dados[arquivo + '.nomes.json']
+    assert service.abrir(arquivo, 'autor')['revisados'] is True
+    reabertura = service.abrir(arquivo, 'outro')
+    assert reabertura['revisados'] is False
+    modelo, _ = service.montar(reabertura['execucoes'], nomes_unicos, 'outro', True)
+    service.salvar_nomes(reabertura['execucoes'], modelo, 'outro')
+    assert service.abrir(arquivo, 'outro')['revisados'] is True
+    assert dados[arquivo + '.nomes.json'] == revisao_autor
+    assert service.abrir(arquivo, 'autor')['revisados'] is True
 
 
 def test_rota_reabrir_geopackage_preserva_autorizacao_e_erros(analise, monkeypatch):
+    from fastapi import HTTPException
     from api.deps.auth import require_geospatial_access
     from api.routers.extracao_atributos import router
     app = FastAPI()
     app.include_router(router)
     app.dependency_overrides[require_geospatial_access] = lambda: SimpleNamespace(id='autor')
     arquivo = analise[0]['job-1']['arquivo']
-    def localizar(caminho, dono):
-        if caminho != arquivo or dono != 'autor':
-            raise FileNotFoundError('Saída concluída não encontrada para este usuário.')
-        return 'job-1'
-    monkeypatch.setattr(service.jobs, 'localizar_saida', localizar)
     rota = '/extracao-atributos/elegibilidade/resultados/abrir'
     with TestClient(app) as client:
         resposta = client.post(rota, json={'arquivo': arquivo})
         assert resposta.status_code == 200
-        assert resposta.json()['execucoes'] == ['job-1']
+        assert len(resposta.json()['execucoes']) == 1
         assert client.post(rota, json={'arquivo': ''}).status_code == 422
         app.dependency_overrides[require_geospatial_access] = lambda: SimpleNamespace(id='outro')
-        assert client.post(rota, json={'arquivo': arquivo}).status_code == 404
-        app.dependency_overrides[require_geospatial_access] = lambda: SimpleNamespace(id='autor')
-        analise[1][arquivo] += b'alterado'
+        assert client.post(rota, json={'arquivo': arquivo}).status_code == 200
+        assert client.post(rota, json={'arquivo': 'saidas-geoespaciais/inexistente.gpkg'}).status_code == 404
+        analise[1][arquivo] = b'arquivo corrompido'
         assert client.post(rota, json={'arquivo': arquivo}).status_code == 422
+        def sem_acesso():
+            raise HTTPException(403, 'Acesso geoespacial não autorizado.')
+        app.dependency_overrides[require_geospatial_access] = sem_acesso
+        assert client.post(rota, json={'arquivo': arquivo}).status_code == 403
+
+
+@pytest.mark.parametrize('arquivo', [
+    '../saida.gpkg', '/saidas-geoespaciais/saida.gpkg', 'pasta-privada/saida.gpkg',
+    'saidas-geoespaciais/../saida.gpkg', 'saidas-geoespaciais/saida.fgb',
+    'saidas-geoespaciais\\saida.gpkg', 'saidas-geoespaciais//saida.gpkg',
+])
+def test_reabrir_recusa_caminho_ou_formato_invalido(analise, arquivo):
+    with pytest.raises(ValueError, match='GeoPackage'):
+        service.abrir(arquivo, 'outro')
+
+
+def test_reabrir_recusa_geopackage_sem_metadados_e_nao_grava_referencia(analise):
+    _, dados, _ = analise
+    arquivo = 'saidas-geoespaciais/nao-elegibilidade.gpkg'
+    frame = gpd.GeoDataFrame({'id': [1]}, geometry=[box(0, 0, 1, 1)], crs=5880)
+    dados[arquivo] = vetor(frame, 'saida.gpkg', 'GPKG', layer='elegibilidade_territorial')['saida.gpkg']
+    anteriores = dict(dados)
+    with pytest.raises(ValueError, match='metadados'):
+        service.abrir(arquivo, 'outro')
+    assert dados == anteriores
+
+
+@pytest.mark.parametrize(('campo', 'valor'), [
+    ('entrada', None), ('campos', [{}]), ('campos', [{'id': 'base', 'nome': 'Base', 'campo': 'a', 'papel': []}]),
+    ('feicoes_base', [{}]), ('campo_id', None), ('feicoes', 1), ('versao_saida', 1),
+])
+def test_reabrir_recusa_metadados_incompativeis_sem_registrar(analise, campo, valor):
+    resultados, dados, _ = analise
+    arquivo = resultados['job-1']['arquivo']
+    auditoria = deepcopy(resultados['job-1']['elegibilidade'])
+    auditoria[campo] = valor
+    frame = gpd.read_file(BytesIO(dados[arquivo]), engine='pyogrio', layer='elegibilidade_territorial')
+    dados[arquivo] = vetor(frame, 'saida.gpkg', 'GPKG', layer='elegibilidade_territorial',
+                          layer_metadata={'SICARD_ELEGIBILIDADE': json.dumps(auditoria)})['saida.gpkg']
+    anteriores = dict(dados)
+    with pytest.raises(ValueError):
+        service.abrir(arquivo, 'outro')
+    assert dados == anteriores
+
+
+def test_reabrir_nao_oculta_storage_indisponivel(analise, monkeypatch):
+    def falhar(*args, **kwargs):
+        raise RuntimeError('Storage indisponível.')
+    monkeypatch.setattr(service.storage_remoto, 'baixar', falhar)
+    with pytest.raises(RuntimeError, match='Storage indisponível'):
+        service.abrir(analise[0]['job-1']['arquivo'], 'outro')
 
 
 def test_nome_cadastral_nao_e_validado_como_alias_de_arquivo(analise, monkeypatch):

@@ -190,7 +190,7 @@ def iniciar(payload, user):
         encerrados=[chave for chave,valor in _controles.items() if valor.status!='executando']
         for chave in encerrados[:-99]:_controles.pop(chave,None)
         _progress[ident] = [_etapa('Na fila de processamento')]
-        _controles[str(ident)] = ControleProcessamento()
+        _controles[str(ident)] = ControleProcessamento(nome="Extração de atributos", workflow_id=str(ident))
     try:
         if entradas_locais:
             _pool.submit(_execute,ident,params,entrada_local,bases_locais,entradas_locais)
@@ -216,7 +216,7 @@ def _etapa(mensagem):
 
 def _execute(ident, params, entrada_local=None, bases_locais=None, entradas_locais=None):
     token = ciclo.execucao_atual.set(ident)
-    with _lock: controle = _controles.setdefault(str(ident), ControleProcessamento())
+    with _lock: controle = _controles.setdefault(str(ident), ControleProcessamento(nome="Extração de atributos", workflow_id=str(ident)))
     def progress(message):
         tarefa_id = controle.mensagem(message)
         # O modal de acompanhamento lê esta lista; o corte evita crescer sem limite.
@@ -229,6 +229,7 @@ def _execute(ident, params, entrada_local=None, bases_locais=None, entradas_loca
     progress.iniciar_operacao = controle.iniciar_operacao
     progress.medir_operacao = controle.medir_operacao
     progress.falhar = controle.falhar
+    progress.detalhe_operacao = controle.detalhe_operacao
     progress.concluir_fase = controle.concluir_fase
     progress.verificar = controle.verificar
     progress.tarefa = controle.tarefa

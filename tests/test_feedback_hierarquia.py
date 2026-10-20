@@ -128,3 +128,36 @@ def test_operacoes_concorrentes_medidas_por_id():
     ops = c.snapshot()["workflow"]["tasks"][0]["operations"][1:]
     assert len({op["id"] for op in ops}) == 20
     assert all(op["estado"] == "concluido" for op in ops)
+
+
+def test_terminal_publicado_atomicamente_e_imune_a_callbacks_atrasados():
+    c = ControleProcessamento(total_fases=1)
+    c.fase(1, "Ler")
+    c.tarefa(float("nan"), 10)
+    json.dumps(c.snapshot(), allow_nan=False)
+    c.encerrar("erro")
+    antes = c.snapshot()
+    c.mensagem("atrasado")
+    c.tarefa(10, 10)
+    c.concluir()
+    assert c.snapshot() == antes
+    assert c.eventos.atual["workflow"]["estado"] == "erro"
+    assert c.eventos.atual["status"] == "erro"
+
+
+def test_job_generico_parcial_nao_vira_sucesso(monkeypatch):
+    from api.services.geoprocessamento_jobs import GeoprocessamentoJobs
+    monkeypatch.setattr("api.services.geoprocessamento_jobs.geoprocessamento_relatorio.salvar", lambda _: [])
+    jobs = GeoprocessamentoJobs()
+    try:
+        ident = jobs._new("teste", ["Processar", "Finalizar"])
+        jobs._start(ident, "Processar")
+        jobs._complete(ident, {"status": "parcial", "resultado": "fixture"})
+        job = jobs.get(ident)
+        assert job["status"] == job["workflow"]["estado"] == "parcial"
+        assert job["workflow"]["percentual"] != 100
+        assert all(o["estado"] != "executando" for t in job["workflow"]["tasks"] for o in t["operations"])
+        jobs._start(ident, "Evento tardio")
+        assert jobs.get(ident) == job
+    finally:
+        jobs._executor.shutdown(wait=True)

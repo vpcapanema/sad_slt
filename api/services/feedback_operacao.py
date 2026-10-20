@@ -34,7 +34,10 @@ def operacao(progress, mensagem):
         elif capacidade(progress, 'tarefa'):
             capacidade(progress, 'tarefa')(feitas, total, unidade)
         texto = detalhe or f'{mensagem}: {feitas}/{total} {unidade}.'
-        capacidade(progress, 'detalhe', progress)(texto)
+        if capacidade(progress, 'detalhe_operacao'):
+            capacidade(progress, 'detalhe_operacao')(ident, texto)
+        else:
+            capacidade(progress, 'detalhe', progress)(texto)
 
     try:
         yield medir
@@ -58,7 +61,7 @@ def contexto(progress, nome):
         emitir.iniciar_operacao = lambda mensagem: capacidade(progress, 'iniciar_operacao')(f'{nome} — {mensagem}')
     if capacidade(progress, 'concluir'):
         emitir.concluir = lambda ident=None, mensagem=None: capacidade(progress, 'concluir')(ident, f'{nome} — {mensagem}' if mensagem else None)
-    for chave in ('tarefa', 'verificar', 'progresso_fase', 'fase', 'medir_operacao', 'falhar', 'concluir_fase'):
+    for chave in ('tarefa', 'verificar', 'progresso_fase', 'fase', 'medir_operacao', 'falhar', 'concluir_fase', 'detalhe_operacao'):
         if capacidade(progress, chave):
             setattr(emitir, chave, capacidade(progress, chave))
     return emitir

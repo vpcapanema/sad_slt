@@ -16,7 +16,7 @@
 <link rel="stylesheet" href="/assets/css/ahp-module.css">
 <link rel="stylesheet" href="/assets/css/page-title-standard.css">
 <link rel="stylesheet" href="/assets/css/extracao-atributos.css">
-<link rel="stylesheet" href="/assets/css/fase1-elegibilidade-v2.css?v=20261019-painel">
+<link rel="stylesheet" href="/assets/css/fase1-elegibilidade-v2.css?v=20261020-controles-tabela">
 <link rel="stylesheet" href="/assets/css/paginas/hierarquizacao-fases-visual.css?v=20261020-cabecalhos-linha-unica">
 {% endblock %}
 {% block conteudo %}
@@ -213,12 +213,16 @@
         <section class="secao-elegibilidade-tabela evr-painel">
           <header class="evr-titulo"><h3>Quanto Cada Demanda Sobrepõe</h3><span class="ea-hint">Área sobreposta por camada · km² e hectares</span></header>
           <div class="ea-table-wrap"><table id="ev-resultados-tabela" data-table-sort="off" aria-label="Áreas de Sobreposição por Demanda"></table></div>
-          <p class="ea-hint evr-instrucoes">Cada valor soma as áreas sobrepostas às feições da camada. O travessão indica ausência de interseção; zero indica contato sem área. Selecione um nome ou um valor para atualizar os detalhes e ampliar o mapa.</p>
+          <div class="evr-controles" role="toolbar" aria-label="Controles da tabela de sobreposições">
+            <button id="ev-resultados-vazias" class="ea-btn ea-icon-button" type="button" title="Ocultar linhas e colunas vazias" aria-label="Ocultar linhas e colunas vazias" aria-pressed="false" aria-controls="ev-resultados-tabela"><i class="fas fa-eye-slash" aria-hidden="true"></i></button>
+            <span id="ev-resultados-visibilidade" class="ea-hint" role="status">Todas as linhas e colunas visíveis.</span>
+          </div>
           <nav class="ev-resultados-paginacao" aria-label="Paginação dos Resultados">
             <button id="ev-resultados-anterior" class="ea-btn" type="button">Anterior</button>
             <span id="ev-resultados-pagina" class="ea-hint"></span>
             <button id="ev-resultados-proxima" class="ea-btn" type="button">Próxima</button>
           </nav>
+          <p class="ea-hint evr-instrucoes">Cada valor soma as áreas sobrepostas às feições da camada. O travessão indica ausência de interseção; zero indica contato sem área. O botão de ocultar vazias considera os valores de sobreposição de todas as páginas, sem contar identificador e nome. Selecione um nome ou um valor para atualizar os detalhes e ampliar o mapa.</p>
         </section>
         <details><summary>Metodologia da Análise</summary><p id="ev-resultados-metodologia" class="ea-hint"></p></details>
       </div>
@@ -238,5 +242,5 @@
 <script src="/assets/vendor/maplibre-gl/maplibre-gl.js"></script>
 <script src="/assets/vendor/maplibre-gl/leaflet-maplibre-gl.js"></script>
 <script src="/restrict/hierarquizacao/js/hier-api.js"></script>
-<script type="module" src="/restrict/hierarquizacao/js/fase1-elegibilidade-v2.js?v=20261020-reabrir-saida"></script>
+<script type="module" src="/restrict/hierarquizacao/js/fase1-elegibilidade-v2.js?v=20261020-controles-tabela"></script>
 {% endblock %}

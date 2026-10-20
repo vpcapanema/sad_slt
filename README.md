@@ -390,13 +390,21 @@ classificação e integração com as fases seguintes não são executadas nesta
 A seção **Resultados** permite revisar os nomes amigáveis das entradas, bases
 dinâmicas e feições sobrepostas antes da apresentação. O link **selecione uma
 análise já realizada** abre o explorador diretamente em `saidas-geoespaciais`,
-limitado a GeoPackages. A seleção recupera uma execução concluída do próprio
-usuário, inclusive após reiniciar o servidor, e verifica a assinatura e a
-estrutura da saída antes de reutilizar o mesmo fluxo de revisão, mapa, gráfico,
-tabela e exportação. Os nomes anteriormente confirmados são reaproveitados;
+limitado a GeoPackages. A seleção lê diretamente o arquivo no Storage e seus
+metadados `SICARD_ELEGIBILIDADE`, sem exigir histórico de execução nem autoria
+do usuário atual. Qualquer saída de elegibilidade válida em uma pasta de leitura
+publicada pelo Storage pode ser aberta por quem já possui acesso geoespacial.
+São conferidos os campos, as geometrias, as áreas totais e os vínculos e somas
+das interseções antes de reutilizar o mesmo fluxo de revisão, mapa, gráfico,
+tabela e exportação. Uma referência ao conteúdo validado e ao seu SHA-256 é
+persistida para manter a apresentação e a exportação consistentes, inclusive
+após reiniciar o servidor; ela não depende do registro do processamento original.
+Os nomes anteriormente confirmados pelo mesmo usuário são reaproveitados;
 não há novo processamento espacial. Cancelar ou selecionar um arquivo inválido
 preserva os resultados já apresentados. Os aliases confirmados são
-persistidos no storage, vinculados ao usuário e ao SHA-256 da saída; a revisão é
+persistidos no storage, vinculados ao usuário e ao SHA-256 da saída. Nas análises
+reabertas, as revisões ficam separadas por usuário, sem bloquear o acesso ao
+GeoPackage nem sobrescrever a revisão de outro usuário; a revisão é
 recolhida após confirmação e pode ser reaberta. Os nomes são usados na tela e no
 PDF, em title case do português brasileiro; sugestões automáticas não substituem
 a revisão de significado, ortografia e gramática. O painel integra mapa Leaflet,
@@ -406,6 +414,13 @@ a uma feição da base, não a uma classificação de elegibilidade; nomes iguai
 unem feições distintas. Áreas aparecem em km², com hectares abaixo, e os detalhes
 informam o percentual da demanda. A proporção da rosca usa a soma das áreas
 sobrepostas, que podem ocupar o mesmo local, não uma cobertura exclusiva.
+A tabela utiliza tipografia compacta em todos os seus componentes. Entre a
+tabela e o paginador, a barra de controles inclui o botão de ocultar/mostrar
+linhas e colunas vazias: a verificação considera os valores de sobreposição de
+todas as páginas da entrada selecionada, sem contar identificador e nome.
+Zero continua sendo um valor válido; somente ausências são ocultadas. A
+paginação acompanha as linhas visíveis. O filtro é reversível e exclusivamente
+visual, sem alterar mapa, gráfico, arquivos, dados salvos ou relatório completo.
 No rodapé, **Baixar Relatório e
 Camadas (.zip)** entrega o PDF completo (todas as feições e bases), os GeoPackages
 sem alteração e os metadados da análise. A exportação verifica o SHA-256 das

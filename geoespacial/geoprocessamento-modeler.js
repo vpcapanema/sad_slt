@@ -572,7 +572,7 @@
   function processFeedback(editor,action){
     if(window.gpFeedback){const verbos={save:"Salvar",validate:"Validar",run:"Executar"},proc=window.gpFeedback.ProcessFeedback.iniciarCadastro({title:editor.title,onCancel:action==="run"?cancelModelExecution:undefined,subtitle:`${verbos[action]} ${editor.type==="function"?"função":"fluxo"}`});return {
       step:(message,status)=>status==="success"||status==="error"?proc.log(message,status):proc.tarefaAtual(message),
-      sync:job=>proc.sync(job),cancel:message=>proc.confirmarCancelamento(message),complete:message=>proc.sucesso({message}),fail:message=>proc.erro({message})};}
+      sync:job=>{const pf=window.gpFeedback.ProcessFeedback;if(pf.atual===proc)pf.acompanhar(job);},cancel:message=>proc.confirmarCancelamento(message),complete:message=>proc.sucesso({message}),fail:message=>proc.erro({message})};}
     document.querySelector(".model-process-backdrop")?.remove();
     const labels={save:"Salvamento",validate:"Validação",run:"Execução"},kind=editor.type==="function"?"função":"fluxo",backdrop=document.createElement("div");
     backdrop.className="model-process-backdrop";backdrop.innerHTML=`<section class="model-process-modal" role="dialog" aria-modal="true" aria-labelledby="model-process-title"><header><div><small>${labels[action]} de ${kind}</small><h2 id="model-process-title">${esc(editor.title)}</h2></div><span class="model-process-running" data-process-state>Em andamento</span></header><div class="model-process-track"><span></span></div><ol class="model-process-log" aria-live="polite"></ol><footer><strong data-process-final>Aguardando processamento…</strong><button type="button" class="btn" data-process-close disabled>Fechar</button></footer></section>`;

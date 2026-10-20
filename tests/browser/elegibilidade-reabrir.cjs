@@ -9,7 +9,7 @@ const assert = require('node:assert/strict');
     const errors = [], calls = [], folders = [];
     const pasta = 'saidas-geoespaciais/elegibilidade-teste';
     const arquivo = `${pasta}/demandas_elegibilidade_territorial.gpkg`;
-    let revisados = false, failView = false;
+    let revisados = false, failView = false, modoTabela = 'normal';
     let fontes = [
       {id: 'entrada', nome: 'Demandas do Setor Norte', papel: 'entrada', tipo: 'camada'},
       {id: 'base', nome: 'Área de Proteção', papel: 'restricao', tipo: 'camada'},
@@ -53,13 +53,24 @@ const assert = require('node:assert/strict');
         assert.equal(payload.revisados, true);
         fontes = fontes.map(f => ({...f, nome: payload.nomes[f.id]}));
         revisados = true;
+        const campos = fontes.filter(f => f.tipo === 'camada' && f.papel !== 'entrada');
+        const linhas = Array.from({length: modoTabela === 'paginada' ? 55 : 1}, (_, i) => {
+          const areas = modoTabela === 'normal' ? [25] :
+            modoTabela === 'vazia' || i === 0 || i === 52 ? campos.map(() => null) :
+              [i === 1 ? 0 : 25, i === 1 ? 0 : null, null, i === 54 ? 50 : null];
+          return {chave: String(i), id: `D-${modoTabela === 'normal' ? 1 : i}`,
+            nome: modoTabela === 'normal' ? 'Demanda Norte' : `Demanda ${i}`, area_total_m2: 100, areas,
+            sobreposicoes: campos.flatMap((campo, posicao) => areas[posicao] === null ? [] :
+              [{...fontes.find(f => f.tipo === 'feicao' && f.base_id === campo.id),
+                identificador: 1, area_m2: areas[posicao], percentual: areas[posicao]}])};
+        });
+        const comIntersecao = linhas.filter(l => l.areas.some(valor => valor !== null)).length;
         return send({fontes, concluidas: 1, previstas: 1, metodologia: 'Áreas da saída original, sem recalcular.',
-          entradas: [{id: 'execucao-anterior', nome: fontes[0].nome, feicoes: 1,
-            com_intersecao: 1, sem_intersecao: 0, campos: [fontes[1]],
-            linhas: [{chave: '0', id: 'D-1', nome: 'Demanda Norte', area_total_m2: 100, areas: [25],
-              sobreposicoes: [{...fontes[2], identificador: 1, area_m2: 25, percentual: 25}]}],
-            geometrias: geojson({chave: '0'}),
-            intersecoes: geojson({chave: '0', base_id: 'base', feicao_id: 'feicao'})}]});
+          entradas: [{id: 'execucao-anterior', nome: fontes[0].nome, feicoes: linhas.length,
+            com_intersecao: comIntersecao, sem_intersecao: linhas.length - comIntersecao, campos, linhas,
+            geometrias: {type: 'FeatureCollection', features: linhas.flatMap(l => geojson({chave: l.chave}).features)},
+            intersecoes: {type: 'FeatureCollection', features: linhas.flatMap(l => l.sobreposicoes.flatMap(c =>
+              geojson({chave: l.chave, base_id: c.base_id, feicao_id: c.id}).features))}}]});
       }
       if (path.endsWith('/elegibilidade/resultados/pacote')) {
         assert.deepEqual(request.postDataJSON().execucoes, ['execucao-anterior']);
@@ -125,10 +136,95 @@ const assert = require('node:assert/strict');
     const download = page.waitForEvent('download');
     await page.locator('#ev-resultados-download').click();
     await download;
+    modoTabela = 'paginada';
+    fontes = [fontes[0], fontes[1],
+      {id: 'contato', nome: 'Contatos Sem Área', papel: 'restricao', tipo: 'camada'},
+      {id: 'vazia', nome: 'Camada Vazia', papel: 'risco', tipo: 'camada'},
+      {id: 'tardia', nome: 'Sobreposição Posterior', papel: 'risco', tipo: 'camada'},
+      fontes[2],
+      {id: 'feicao-contato', nome: 'Contato', papel: 'restricao', tipo: 'feicao', base_id: 'contato'},
+      {id: 'feicao-tardia', nome: 'Feição Posterior', papel: 'risco', tipo: 'feicao', base_id: 'tardia'}];
+    await page.reload();
+    await escolher('demandas_elegibilidade_territorial.gpkg');
+    await page.locator('#ev-resultados-conteudo').waitFor({state: 'visible'});
+    const tabela = page.locator('#ev-resultados-tabela'), barra = page.getByRole('toolbar', {name: 'Controles da tabela de sobreposições'});
+    assert.equal(await tabela.locator('tbody tr[data-chave]').count(), 50);
+    assert.equal(await tabela.locator('thead tr').last().locator('th').count(), 6);
+    assert.equal(await barra.getByRole('button').count(), 1);
+    const callsBeforeFilter = calls.length;
+    const geometryCount = await page.locator('#ev-resultados-mapa .leaflet-overlay-pane path').count();
+    await barra.getByRole('button', {name: 'Ocultar linhas e colunas vazias'}).click();
+    assert.equal(await barra.getByRole('button', {name: 'Mostrar linhas e colunas vazias'}).getAttribute('aria-pressed'), 'true');
+    assert.equal(await tabela.locator('thead tr').last().locator('th').count(), 5);
+    assert.equal(await tabela.getByRole('columnheader', {name: 'Camada Vazia', exact: true}).count(), 0);
+    assert.equal(await tabela.getByRole('columnheader', {name: 'Sobreposição Posterior', exact: true}).count(), 1,
+      'Não oculta coluna cujo único valor está em outra página');
+    assert.equal(await tabela.getByRole('columnheader', {name: 'Contatos Sem Área', exact: true}).count(), 1,
+      'Coluna com somente zero não está vazia');
+    assert.equal(await tabela.locator('thead tr').first().locator('th').last().getAttribute('colspan'), '1');
+    assert.equal(await tabela.locator('tbody tr').first().getAttribute('data-chave'), '1', 'Oculta a linha sem sobreposição');
+    assert.match(await tabela.locator('tbody tr').first().locator('[data-base="contato"]').innerText(), /0,00/);
+    assert.match(await page.locator('#ev-resultados-pagina').innerText(), /53 de 55 demandas · 3 de 4 camadas/);
+    assert.match(await page.locator('#ev-resultados-visibilidade').innerText(), /2 linhas e 1 coluna/);
+    await tabela.locator('tbody tr').last().locator('td').first().click();
+    assert.match(await page.locator('#ev-resultados-pagina').innerText(), /Página 1 de 2/,
+      'Seleção usa a posição filtrada, não o índice original da demanda');
+    await page.locator('#ev-resultados-proxima').click();
+    assert.equal(await tabela.locator('tbody tr').count(), 3);
+    await tabela.locator('tbody tr').last().locator('[data-base="tardia"] button').click();
+    assert.match(await page.locator('#ev-resultados-pagina').innerText(), /Página 2 de 2/);
+    assert.equal(await page.locator('#ev-resultados-nome-ativo').innerText(), 'Demanda 54');
+    assert.match(await page.locator('#ev-resultados-percentual').innerText(), /50,00%/);
+    await page.locator('#ev-resultados-legenda button').last().click();
+    assert.equal(await tabela.locator('.evr-foco').evaluate(el => getComputedStyle(el).fontSize), '9.5px');
+    assert.equal(await page.locator('#ev-resultados-mapa .leaflet-overlay-pane path').count(), geometryCount);
+    assert.equal(calls.length, callsBeforeFilter, 'Filtro e navegação não escrevem nem recalculam resultados');
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({width, height: 1000});
+      const layout = await page.locator('.secao-elegibilidade-tabela').evaluate(panel => {
+        const rect = selector => panel.querySelector(selector).getBoundingClientRect();
+        return {
+          tableBottom: rect('.ea-table-wrap').bottom, toolbarTop: rect('.evr-controles').top,
+          toolbarBottom: rect('.evr-controles').bottom, pagerTop: rect('.ev-resultados-paginacao').top,
+          fonts: [...panel.querySelectorAll('h3,th,td,button,span,p,i')]
+            .filter(el => el.getBoundingClientRect().height)
+            .map(el => parseFloat(getComputedStyle(el).fontSize)),
+          cellFont: getComputedStyle(panel.querySelector('td')).fontSize,
+        };
+      });
+      assert.ok(layout.tableBottom <= layout.toolbarTop && layout.toolbarBottom <= layout.pagerTop,
+        'Barra fica abaixo da tabela e acima do paginador');
+      assert.equal(layout.cellFont, '10.5px');
+      assert.ok(layout.fonts.every(size => size <= 12), `Todos os componentes da tabela têm fonte compacta em ${width}px`);
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+    }
+    const fullDownload = page.waitForEvent('download');
+    await page.locator('#ev-resultados-download').click();
+    await fullDownload;
+    assert.deepEqual(Object.keys(calls.at(-1).payload).sort(), ['execucoes', 'nomes', 'revisados'],
+      'Relatório não recebe o filtro visual');
+    await barra.getByRole('button', {name: 'Mostrar linhas e colunas vazias'}).click();
+    assert.equal(await tabela.locator('thead tr').last().locator('th').count(), 6);
+    assert.equal(await tabela.locator('tbody tr').first().getAttribute('data-chave'), '0');
+    await page.locator('#ev-resultados-proxima').click();
+    assert.equal(await tabela.locator('tbody tr').count(), 5, 'Mostrar restaura todas as linhas e a paginação');
+    modoTabela = 'vazia';
+    await page.reload();
+    await escolher('demandas_elegibilidade_territorial.gpkg');
+    await page.locator('#ev-resultados-conteudo').waitFor({state: 'visible'});
+    await barra.getByRole('button', {name: 'Ocultar linhas e colunas vazias'}).click();
+    assert.equal(await tabela.locator('thead tr').last().locator('th').count(), 2, 'Identificador e nome são preservados');
+    assert.equal(await tabela.locator('tbody tr[data-chave]').count(), 0);
+    assert.match(await tabela.locator('tbody').innerText(), /Nenhuma demanda com valores de sobreposição/);
+    assert.equal(await page.locator('#ev-resultados-anterior').isDisabled(), true);
+    assert.equal(await page.locator('#ev-resultados-proxima').isDisabled(), true);
+    assert.equal(await barra.getByRole('button', {name: 'Mostrar linhas e colunas vazias'}).isEnabled(), true);
+    await barra.getByRole('button', {name: 'Mostrar linhas e colunas vazias'}).click();
+    assert.equal(await tabela.locator('tbody tr[data-chave]').count(), 1);
     assert.equal(calls.some(c => c.path.endsWith('/elegibilidade/execucoes')), false, 'Não inicia novo processamento');
     assert.equal(calls.some(c => c.path.includes('/arquivo-mapa') || c.path.includes('/camadas-arquivo')), false);
     assert.deepEqual(errors, []);
-    console.log('PASS: explorador na pasta de saídas, somente GPKG, cancelamento, leitura sem processamento, nomes persistidos, mapa/tabela, arquivo inválido, retry, download e mobile.');
+    console.log('PASS: reabertura GPKG, cancelamento e erros; barra de controles, vazias em todas as páginas, zeros preservados, seleção, paginação, filtro reversível, fontes compactas, relatório completo e mobile.');
   } finally {
     await browser.close();
   }
