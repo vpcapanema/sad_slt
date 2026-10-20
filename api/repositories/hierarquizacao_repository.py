@@ -12,7 +12,7 @@ from uuid import UUID
 from psycopg import sql
 from psycopg.types.json import Jsonb
 
-from api.db.connection import get_connection
+from api.db.connection import get_connection, commit_unless_atomic
 
 _TABLE = sql.Identifier("hierarquizacao_demandas", "hierarquizacao_portfolio")
 
@@ -137,8 +137,10 @@ def get_by_id(hierarquizacao_id: Any) -> dict[str, Any] | None:
         return conn.execute(query, (hierarquizacao_id,)).fetchone()
 
 
-def get_by_codigo(codigo: str) -> dict[str, Any] | None:
+def get_by_codigo(codigo: str, *, for_update: bool = False) -> dict[str, Any] | None:
     query = _SELECT_BASE + " WHERE h.codigo = %s"
+    if for_update:
+        query += " FOR UPDATE OF h"
     with get_connection() as conn:
         return conn.execute(query, (codigo,)).fetchone()
 
@@ -182,7 +184,7 @@ def update(codigo: str, data: dict[str, Any]) -> dict[str, Any] | None:
     )
     with get_connection() as conn:
         conn.execute(query, params)
-        conn.commit()
+        commit_unless_atomic(conn)
     return get_by_codigo(codigo)
 
 

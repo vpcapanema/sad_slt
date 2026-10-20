@@ -6,14 +6,13 @@
   const status = document.querySelector("#complementacao-status");
   const salvar = form.querySelector('button[type="submit"]');
   let itens = [];
-  let atual = null;
   let selecionada = null;
   let tipo = "projeto";
   let revisao = 0;
   const editor = document.querySelector('#complementacao-editor');
   const controles = [...document.querySelectorAll('[data-complementacao]')];
   const cadastro = document.querySelector('#complementacao-cadastro');
-  const grupos = ['cadastro', 'geometria', 'atributos'];
+  const grupos = ['cadastro', 'geometria'];
   const camposCadastro = {
     origem_sei_processo: ['Processo SEI', 'text'],
     nome: ['Nome', 'text'], descricao: ['Descrição', 'textarea'],
@@ -37,7 +36,6 @@
       if (tipo !== tipoDemanda || selecionada?.id !== proxima?.id) {
         revisao += 1;
         editor.classList.add('hidden');
-        atual = null;
         mensagem('');
         controles.forEach(button => button.setAttribute('aria-pressed', 'false'));
       }
@@ -62,14 +60,14 @@
     editor.classList.remove('hidden');
     grupos.forEach(grupo => document.querySelector(`#complementacao-${grupo}`).classList.add('hidden'));
     controles.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.complementacao === modo)));
-    document.querySelector('#complementacao-editor-titulo').textContent = controles.find(button => button.dataset.complementacao === modo).textContent;
+    document.querySelector('#complementacao-editor-titulo').textContent = `1.1 ${controles.find(button => button.dataset.complementacao === modo).textContent.trim()}`;
     resumo.textContent = `${alvo.id} — ${alvo.nome}`;
     mensagem('Carregando…');
     try {
       const registro = await api(caminho(tipoAlvo, alvo.id));
       if (revisao !== versao) return;
       if (modo === 'cadastro') {
-        document.querySelector('#complementacao-editor-titulo').textContent = tipoAlvo === 'projeto' ? 'Informa\u00e7\u00f5es do Projeto' : 'Dados cadastrais';
+        document.querySelector('#complementacao-editor-titulo').textContent = tipoAlvo === 'projeto' ? '1.1 Informa\u00e7\u00f5es do Projeto' : '1.1 Dados cadastrais';
         document.querySelector('#complementacao-cadastro-campos').classList.toggle('complementacao-grid', tipoAlvo !== 'projeto');
         document.querySelector('#complementacao-cadastro-campos').innerHTML = tipoAlvo === 'projeto'
           ? SLTProjectForm.html(registro)
@@ -83,16 +81,6 @@
             : `<input ${attrs} type="${formato}" value="${esc(valor)}"${formato === 'number' ? ' step="0.01" min="0"' : ''}>`}</div>`;
         }).join('');
         if (tipoAlvo === 'projeto') SLTProjectForm.bind(registro);
-      } else if (modo === 'atributos') {
-        const dados = await api('/api/complementacao/objetos');
-        if (revisao !== versao) return;
-        itens = dados.filter(item => item.objeto_codigo === alvo.id);
-        select.innerHTML = itens.map((item, indice) => `<option value="${indice}">${esc(item.hierarquizacao_nome || item.hierarquizacao_codigo)}</option>`).join('');
-        select.disabled = !itens.length;
-        document.querySelector('#complementacao-sem-atributos').classList.toggle('hidden', itens.length > 0);
-        form.classList.toggle('hidden', !itens.length);
-        atual = null;
-        if (itens.length) render(itens[0]);
       } else {
         document.querySelector('#complementacao-arquivo').value = '';
       }
@@ -160,76 +148,157 @@
     return corpo;
   }
 
-  function input(coluna, valor, bloqueado) {
-    const id = `attr-${coluna.id}`;
-    const obrigatorio = coluna.mandatorio && !bloqueado ? " required" : "";
-    if (coluna.tipo === "booleano") {
-      return `<select id="${id}" data-id="${coluna.id}"${obrigatorio}${bloqueado ? " disabled" : ""}><option value="">— Não informado —</option><option value="true">Sim</option><option value="false">Não</option></select>`;
-    }
-    if (coluna.tipo === "numerico") {
-      return `<input id="${id}" data-id="${coluna.id}" type="number" step="${coluna.formato === "inteiro" ? "1" : "any"}" value="${esc(valor ?? "")}"${obrigatorio}${bloqueado ? " readonly" : ""}>`;
-    }
-    return `<input id="${id}" data-id="${coluna.id}" type="text" value="${esc(valor ?? "")}"${obrigatorio}${bloqueado ? " readonly" : ""}>`;
+  const containerAtributos = document.querySelector('#complementacao-atributos-container');
+  const statusAtributos = document.querySelector('#complementacao-atributos-status');
+  const editar = document.querySelector('#complementacao-atributos-editar');
+  const cancelar = document.querySelector('#complementacao-atributos-cancelar');
+  const recarregar = document.querySelector('#complementacao-atributos-recarregar');
+  let atual = null, editando = false, alterado = false, ocupado = false;
+  let hierarquiaAtual = '', revisaoAtributos = 0;
+  const caminhoAtributos = codigo => `/api/complementacao/hierarquizacoes/${encodeURIComponent(codigo)}`;
+
+  function mensagemAtributos(texto, erro = false) {
+    statusAtributos.textContent = texto;
+    statusAtributos.classList.toggle('is-error', erro);
   }
 
-  function render(item) {
+  function atualizarAcoes() {
+    select.disabled = ocupado || !itens.length;
+    const editavel = atual?.pode_editar && campos.querySelector('[data-atributo-coluna]');
+    editar.disabled = ocupado || editando || !editavel;
+    salvar.disabled = ocupado || !editando;
+    cancelar.disabled = ocupado || !editando;
+    AtributosObjetos.definirEdicao(!ocupado && editando && atual?.pode_editar);
+    form.setAttribute('aria-busy', String(ocupado));
+  }
+
+  async function render(item) {
+    await AtributosObjetos.render(item, {complementacao: true, colunas: item.colunas, dominios: item.dominios});
+    SLTResumoFase.secao1(document.querySelector('#complementacao-resumo-hierarquizacao'), item, {mostrarDataCriacao: true});
     atual = item;
-    campos.innerHTML = item.colunas.map((coluna) => {
-      const slot = item.valores[coluna.id] || {};
-      const cadastral = slot.origem === "cadastro";
-      const bloqueado = cadastral || !item.pode_editar;
-      const origem = cadastral ? "Obtido do cadastro" : (item.pode_editar ? "Complementação" : "Somente leitura");
-      const valorBruto = slot.valor_bruto ?? slot.valor;
-      return `<div class="complementacao-campo${bloqueado ? " is-readonly" : ""}"><label for="attr-${coluna.id}">${esc(coluna.alias || coluna.criterio)}${coluna.mandatorio ? ' <span class="req">*</span>' : ""}</label><div class="complementacao-meta">${esc(coluna.unidade || "Sem unidade")} ${esc(coluna.relacao_simbolo || "")} · ${origem}</div>${input(coluna, valorBruto, bloqueado)}${coluna.premissa ? `<p class="complementacao-premissa">${esc(coluna.premissa)}</p>` : ""}</div>`;
-    }).join("");
+    editando = false;
+    alterado = false;
     form.classList.remove("hidden");
-    salvar.disabled = !item.pode_editar;
-    salvar.classList.toggle("hidden", !item.pode_editar);
-    resumo.textContent = `${item.objeto_codigo} · ${item.tipo_demanda} · ${item.atributos_preenchidos} de ${item.total_atributos} atributos preenchidos · ${item.hierarquizacao_nome || item.hierarquizacao_codigo} · ${item.pode_editar ? "Edição permitida" : "Somente leitura"}`;
-    status.className = "complementacao-status";
-    status.textContent = item.pode_editar ? "" : "Você pode consultar esta demanda, mas somente o responsável pode complementá-la.";
-    for (const coluna of item.colunas) {
-      const elemento = document.querySelector(`#attr-${CSS.escape(coluna.id)}`);
-      const slot = item.valores[coluna.id] || {};
-      const valor = slot.valor_bruto ?? slot.valor;
-      if (elemento && coluna.tipo === "booleano" && valor != null) elemento.value = String(valor).toLowerCase();
+    document.querySelector('#complementacao-atributos-resumo').textContent = `${item.nome || item.codigo} · ${item.dados_hierarquizacao.objetos.length} demanda(s) autorizada(s)`;
+    atualizarAcoes();
+    mensagemAtributos('Valores salvos. Clique em Editar atributos para complementar.');
+  }
+
+  async function podeDescartar() {
+    if (!alterado) return true;
+    ocupado = true;
+    atualizarAcoes();
+    try {
+      return await SLTAdminUi.showConfirm({
+        title: 'Descartar alterações dos atributos',
+        message: 'Existem alterações não confirmadas. Deseja descartá-las?',
+        confirmLabel: 'Descartar alterações', cancelLabel: 'Continuar editando',
+      });
+    } finally { ocupado = false; atualizarAcoes(); }
+  }
+
+  async function carregarAtributos() {
+    ocupado = true;
+    atualizarAcoes();
+    recarregar.classList.add('hidden');
+    mensagemAtributos('Carregando hierarquizações autorizadas…');
+    try {
+      itens = await api('/api/complementacao/objetos');
+      const hierarquizacoes = [...new Map(itens.map(item => [item.hierarquizacao_codigo, item])).values()];
+      select.innerHTML = '<option value="">Selecione uma hierarquização</option>' + hierarquizacoes.map(item =>
+        `<option value="${esc(item.hierarquizacao_codigo)}">${esc(item.hierarquizacao_codigo)} — ${esc(item.hierarquizacao_nome || '')}</option>`).join('');
+      document.querySelector('#complementacao-sem-atributos').classList.toggle('hidden', itens.length > 0);
+      mensagemAtributos(itens.length ? 'Selecione uma hierarquização para abrir a tabela de atributos.' : '');
+    } catch (erro) {
+      select.innerHTML = '<option value="">Não foi possível carregar as hierarquizações</option>';
+      recarregar.classList.remove('hidden');
+      mensagemAtributos(erro.message, true);
+    } finally {
+      ocupado = false;
+      atualizarAcoes();
     }
   }
 
-  select.addEventListener("change", () => {
-    const item = itens[Number(select.value)];
-    if (item) render(item);
-    else form.classList.add("hidden");
+  select.addEventListener('change', async () => {
+    const proxima = select.value;
+    select.value = hierarquiaAtual;
+    if (ocupado || !await podeDescartar()) return;
+    hierarquiaAtual = select.value = proxima;
+    atual = null;
+    editando = alterado = false;
+    form.classList.add('hidden');
+    document.querySelector('#complementacao-resumo-hierarquizacao').classList.add('hidden');
+    containerAtributos.classList.toggle('hidden', !proxima);
+    if (!proxima) {
+      atualizarAcoes();
+      mensagemAtributos('Selecione uma hierarquização para abrir a tabela de atributos.');
+      return;
+    }
+    const versao = ++revisaoAtributos;
+    ocupado = true;
+    atualizarAcoes();
+    mensagemAtributos('Carregando a tabela de atributos das demandas…');
+    try {
+      const item = await api(caminhoAtributos(proxima));
+      if (versao === revisaoAtributos) await render(item);
+    } catch (erro) {
+      if (versao === revisaoAtributos) {
+        hierarquiaAtual = select.value = '';
+        containerAtributos.classList.add('hidden');
+        mensagemAtributos(erro.message, true);
+      }
+    } finally {
+      ocupado = false;
+      atualizarAcoes();
+    }
+  });
+
+  editar.addEventListener('click', () => {
+    if (!atual?.pode_editar || ocupado) return;
+    editando = true;
+    atualizarAcoes();
+    mensagemAtributos('Edite os atributos e confirme para gravar ou cancele para descartar as alterações.');
+    campos.querySelector('[data-atributo-coluna]:not([disabled])')?.focus();
+  });
+  cancelar.addEventListener('click', async () => {
+    if (ocupado || !await podeDescartar()) return;
+    await render(atual);
+    mensagemAtributos('Edição cancelada. Os valores salvos foram preservados.');
+  });
+  campos.addEventListener('input', () => { if (editando) alterado = true; });
+  campos.addEventListener('change', () => { if (editando) alterado = true; });
+  recarregar.addEventListener('click', carregarAtributos);
+  window.addEventListener('beforeunload', event => {
+    if (alterado || ocupado) { event.preventDefault(); event.returnValue = ''; }
   });
 
   form.addEventListener("submit", async (evento) => {
     evento.preventDefault();
-    if (!atual?.pode_editar) return;
-    const versao = revisao;
+    if (!atual?.pode_editar || !editando || ocupado) return;
+    const versao = revisaoAtributos;
     const alvo = atual;
-    salvar.disabled = true;
-    const valores = {};
-    campos.querySelectorAll("[data-id]:not([disabled]):not([readonly])").forEach((elemento) => {
-      let valor = elemento.value;
-      if (valor === "") valor = null;
-      else if (elemento.type === "number") valor = Number(valor);
-      else if (valor === "true" || valor === "false") valor = valor === "true";
-      valores[elemento.dataset.id] = valor;
-    });
-    status.className = "complementacao-status";
-    status.textContent = "Salvando…";
+    const {valores} = AtributosObjetos.coletar();
+    if (!Object.keys(valores).length) {
+      await render(atual);
+      mensagemAtributos('Nenhum atributo foi alterado.');
+      return;
+    }
+    ocupado = true;
+    atualizarAcoes();
+    mensagemAtributos("Confirmando e salvando os atributos…");
     try {
-      const salvo = await api(`/api/complementacao/${encodeURIComponent(alvo.hierarquizacao_codigo)}/${encodeURIComponent(alvo.objeto_codigo)}`, {
+      const salvo = await api(caminhoAtributos(alvo.codigo), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ valores }),
       });
-      if (revisao !== versao) return;
-      render(salvo);
-      mensagem("Complementação salva com sucesso.");
+      if (revisaoAtributos !== versao) return;
+      await render(salvo);
+      mensagemAtributos("Complementação de atributos salva com sucesso.");
     } catch (erro) {
-      if (revisao === versao) mensagem(erro.message, true);
-    } finally { salvar.disabled = !atual?.pode_editar; }
+      if (revisaoAtributos === versao) mensagemAtributos(erro.message, true);
+    } finally { ocupado = false; atualizarAcoes(); }
   });
 
+  carregarAtributos();
 })();

@@ -65,6 +65,7 @@
         alias: item.configuracao_por_tipo?.[tipo]?.rotulo || item.nome || nomes[item.codigo],
         unidade: item.unidade || (item.tipo_dado === "categoria" ? "escala ordinal" : null),
         tipo: ["inteiro", "monetario"].includes(item.tipo_dado) ? "numerico" : "categorico",
+        formato: item.tipo_dado === "inteiro" ? "inteiro" : "decimal",
         tipo_dado: ["inteiro", "monetario"].includes(item.tipo_dado) ? "numerico" : "ordinal",
         direcao: direcoes[item.codigo] || "maior_melhor",
         relacao: direcoes[item.codigo] || "maior_melhor",
@@ -247,7 +248,31 @@
     }));
   }
 
-  function montarTabela(raiz, objetos, colunas) {
+  function campoComplementacao(objeto, coluna, valor, editavel) {
+    const escolhas = coluna.tipo_dado === "booleano"
+      ? [["true", "Sim"], ["false", "Não"]]
+      : Object.keys(coluna.mapeamento || {}).map(chave => [chave, coluna.rotulos?.[chave] || chave]);
+    const input = document.createElement(escolhas.length ? "select" : "input");
+    if (escolhas.length) {
+      input.add(new Option("Não informado", ""));
+      escolhas.forEach(([chave, rotulo]) => input.add(new Option(rotulo, chave)));
+      if (valor != null && !escolhas.some(([chave]) => chave === String(valor))) {
+        input.add(new Option(String(valor), String(valor)));
+      }
+    } else {
+      input.type = "text";
+    }
+    input.className = "atributo-input";
+    input.dataset.atributoColuna = coluna.id;
+    input.dataset.atributoObjeto = objeto.cabecalho_objeto.codigo;
+    input.setAttribute("aria-label", `${coluna.alias} — ${objeto.cabecalho_objeto.codigo}`);
+    input.value = valor == null ? "" : String(valor);
+    if (!escolhas.length && coluna.tipo_dado === "numerico") SLTInputMasks.aplicarColuna(input, coluna, valor);
+    input.disabled = !editavel;
+    return input;
+  }
+
+  function montarTabela(raiz, objetos, colunas, opcoes = {}) {
     const linhaCabecalho = $("[data-atributos-thead] tr", raiz);
     const corpo = $("[data-atributos-tbody]", raiz);
     const tplColuna = $("#tpl-atributo-coluna", raiz);
@@ -271,6 +296,7 @@
     objetos.forEach((objeto, indiceObjeto) => {
       const cabecalho = objeto.cabecalho_objeto || {};
       const tr = tplLinha.content.firstElementChild.cloneNode(true);
+      tr.dataset.objetoId = cabecalho.codigo || "";
       $(".objeto-codigo", tr).textContent = cabecalho.nome || "—";
       $(".objeto-nome", tr).textContent = cabecalho.codigo || "";
       colunas.forEach((coluna, indiceColuna) => {
@@ -311,6 +337,12 @@
         $(".atributo-valor-normalizado", td).textContent = normalizado === null ? "—" : normalizado.toFixed(4);
         const procedencia = coluna.grupo === "cadastro" ? procedenciaCadastro(objeto, coluna) : null;
         $(".atributo-valor-original", td).textContent = `${originalFormatado(originais[indiceObjeto], coluna)}${procedencia ? ` · referência: ${procedencia}` : ""}`;
+        td.dataset.colId = coluna.id;
+        if (opcoes.complementacao) {
+          $(".atributo-valor-normalizado", td).hidden = true;
+          $(".atributo-valor-original", td).hidden = true;
+          td.appendChild(campoComplementacao(objeto, coluna, originais[indiceObjeto], opcoes.editavel));
+        }
         td.classList.toggle("is-vazio", normalizado === null);
         tr.appendChild(td);
       });
@@ -367,21 +399,26 @@
     $(`[data-soma-pesos="${grupo}"]`, raiz).textContent = itens.reduce((soma, coluna) => soma + estado.pesos[coluna.id], 0).toFixed(3).replace(".", ",");
   }
 
-  async function render(hierarquizacao) {
+  async function render(hierarquizacao, opcoes = {}) {
     const raiz = $("[data-atributos-objetos]");
     if (!raiz || !hierarquizacao?.codigo) return;
     limpar(raiz);
     try {
-      const [respostaColunas, dominios] = await Promise.all([json(API_COLUNAS(hierarquizacao.codigo)), json(API_DOMINIOS)]);
+      const [respostaColunas, dominios] = await Promise.all([
+        opcoes.colunas === undefined ? json(API_COLUNAS(hierarquizacao.codigo)) : Promise.resolve({colunas: opcoes.colunas}),
+        opcoes.dominios === undefined ? json(API_DOMINIOS) : Promise.resolve(opcoes.dominios),
+      ]);
       const objetos = hierarquizacao.dados_hierarquizacao?.objetos || [];
       const tipo = tipoObjeto(hierarquizacao);
       const colunas = [
         ...colunasCadastro(dominios, tipo),
         ...colunasDinamicas(respostaColunas.colunas || []),
-        ...colunasRisco(objetos),
+        ...(opcoes.complementacao ? [] : colunasRisco(objetos)),
       ];
       estado = {
         colunas,
+        objetos,
+        complementacao: Boolean(opcoes.complementacao),
         pesos: pesosIniciais(colunas, hierarquizacao.dados_hierarquizacao?.cabecalho_grupo?.configuracoes?.fase_3),
       };
       const homologada = hierarquizacao.dados_hierarquizacao?.comparacao_colaborativa;
@@ -390,10 +427,11 @@
         colunas.filter(c => c.grupo !== "risco").forEach(c => { estado.pesos[c.id] = pesos[c.id] ?? 0; });
       }
       const titulo = document.getElementById("fase3-titulo-atributos");
-      if (titulo) titulo.textContent = `2. Critérios atributo de ${tituloTipo(tipo)}`;
-      montarTabela(raiz, objetos, colunas);
-      montarPesos(raiz);
-      if (homologada?.analise_homologada_id) {
+      if (titulo) titulo.textContent = `${opcoes.complementacao ? "2.2" : "2."} Critérios atributo de ${tituloTipo(tipo)}`;
+      montarTabela(raiz, objetos, colunas, opcoes);
+      $("[data-atributos-pesos]", raiz).hidden = true;
+      if (!opcoes.complementacao) montarPesos(raiz);
+      if (!opcoes.complementacao && homologada?.analise_homologada_id) {
         raiz.querySelectorAll('.atributo-peso-numero, .atributo-peso-barra').forEach(input => { input.disabled = true; input.title = 'Peso da análise homologada desta hierarquização'; });
         const faltantes = colunas.filter(c => c.grupo !== 'risco' && !(c.id in (homologada.pesos_por_atributo || {})));
         if (faltantes.length || homologada.erro_vinculo_pesos) {
@@ -410,6 +448,7 @@
       const aviso = $("[data-atributos-erro]", raiz);
       aviso.textContent = `Não foi possível carregar os atributos: ${erro.message}`;
       aviso.hidden = false;
+      if (opcoes.complementacao) throw erro;
     }
   }
 
@@ -455,5 +494,28 @@
     return { tratamentos };
   }
 
-  global.AtributosObjetos = { render, criteriosPayload, atributosAusentes, tratamentosRiscosPayload, coletar: () => ({ valores: {} }) };
+  function definirEdicao(editavel) {
+    document.querySelectorAll("[data-atributo-coluna]").forEach(input => { input.disabled = !editavel; });
+  }
+
+  function coletar() {
+    const valores = {};
+    if (!estado.complementacao) return {valores};
+    document.querySelectorAll("[data-atributo-coluna]:not([disabled])").forEach(input => {
+      const coluna = estado.colunas.find(item => item.id === input.dataset.atributoColuna);
+      const objeto = estado.objetos.find(item => item.cabecalho_objeto.codigo === input.dataset.atributoObjeto);
+      const original = coluna.grupo === "cadastro" ? valorCadastro(objeto, coluna) : valorDinamico(objeto, coluna);
+      const numerico = coluna.tipo_dado === "numerico";
+      const formatado = numerico ? SLTInputMasks.formatarValor(original, coluna) : String(original ?? "");
+      if (input.value === formatado) return;
+      const valor = input.value === "" ? null : coluna.tipo_dado === "booleano"
+        ? input.value === "true" : numerico ? SLTInputMasks.parseValor(input.value, SLTInputMasks.perfilColuna(coluna)) : input.value;
+      if (valor === (original ?? null)) return;
+      valores[input.dataset.atributoObjeto] ||= {};
+      valores[input.dataset.atributoObjeto][coluna.id] = valor;
+    });
+    return {valores};
+  }
+
+  global.AtributosObjetos = { render, criteriosPayload, atributosAusentes, tratamentosRiscosPayload, definirEdicao, coletar };
 })(window);

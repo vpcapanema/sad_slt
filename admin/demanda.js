@@ -114,36 +114,7 @@
     return (root || document).querySelector(sel);
   }
 
-  function formatCentsBR(cents) {
-    const padded = String(cents).padStart(3, "0");
-    const inteiro = padded.slice(0, -2).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-    return `${inteiro},${padded.slice(-2)}`;
-  }
-
-  /** Número (reais) -> string mascarada "1.234,56" para o input. */
-  function currencyInputValue(value) {
-    if (value == null || value === "") return "";
-    const cents = Math.round(Number(value) * 100);
-    return Number.isFinite(cents) ? formatCentsBR(cents) : "";
-  }
-
-  /** String mascarada -> número em reais (ou null). */
-  function parseCurrencyBR(text) {
-    const digits = String(text ?? "").replace(/\D/g, "");
-    return digits ? Number(digits) / 100 : null;
-  }
-
-  /** Máscara de moeda (BRL): dígitos digitados são interpretados como centavos. */
-  function attachCurrencyMask(input) {
-    if (!input || input.dataset.currencyMask) return;
-    input.dataset.currencyMask = "1";
-    const apply = () => {
-      const digits = input.value.replace(/\D/g, "");
-      input.value = digits ? formatCentsBR(Number(digits)) : "";
-    };
-    input.addEventListener("input", apply);
-    apply();
-  }
+  const {currencyInputValue, parseCurrencyBR, attachCurrencyMask} = SLTInputMasks;
 
   function paramsFromUrl() {
     const sp = new URLSearchParams(location.search);

@@ -56,3 +56,15 @@ def test_colunas_configuradas_tolera_banco_fora(monkeypatch) -> None:
 
     monkeypatch.setattr(router.geoespacial_repository, "listar_atributos_fase3", _falha)
     assert asyncio.run(router._colunas_configuradas()) == []
+
+
+def test_colunas_configuradas_nao_oculta_falha_durante_complementacao(monkeypatch) -> None:
+    import pytest
+    from api.exceptions import DatabaseUnavailableError
+
+    async def falhar():
+        raise DatabaseUnavailableError("indisponível")
+
+    monkeypatch.setattr(router.geoespacial_repository, "listar_atributos_fase3", falhar)
+    with pytest.raises(DatabaseUnavailableError):
+        router.colunas_da_hierarquizacao({}, estrito=True)

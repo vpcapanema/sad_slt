@@ -33,11 +33,13 @@ def _matriz_da_hierarquizacao(row: dict[str, Any]) -> Any:
     return cabecalho.get("matriz_premissas_criterios")
 
 
-async def _colunas_configuradas() -> list[dict[str, Any]]:
+async def _colunas_configuradas(*, estrito: bool = False) -> list[dict[str, Any]]:
     """Atributos da Fase 3 cadastrados no Configurador, normalizados como coluna."""
     try:
         atributos = await geoespacial_repository.listar_atributos_fase3()
     except DatabaseUnavailableError:
+        if estrito:
+            raise
         return []
     colunas: list[dict[str, Any]] = []
     for atributo in atributos:
@@ -64,6 +66,11 @@ def _mesclar(da_matriz: list[dict[str, Any]], do_configurador: list[dict[str, An
     return resultado
 
 
+def colunas_da_hierarquizacao(row: dict[str, Any], *, estrito: bool = False) -> list[dict[str, Any]]:
+    return _mesclar(extrair_colunas(_matriz_da_hierarquizacao(row)),
+                    asyncio.run(_colunas_configuradas(estrito=estrito)))
+
+
 @router.get("/hierarquizacoes/{codigo}/colunas")
 def colunas_por_hierarquizacao(
     codigo: str,
@@ -73,15 +80,15 @@ def colunas_por_hierarquizacao(
     row = hierarquizacao_repository.get_by_codigo(codigo)
     if row is None:
         raise HTTPException(status_code=404, detail=f"Hierarquização não encontrada: {codigo}")
-    da_matriz = extrair_colunas(_matriz_da_hierarquizacao(row))
-    colunas = _mesclar(da_matriz, asyncio.run(_colunas_configuradas()))
+    colunas = colunas_da_hierarquizacao(row)
+    total_matriz = sum(coluna["origem"] == "matriz_premissas_criterios" for coluna in colunas)
     return {
         "codigo": codigo,
         "total": len(colunas),
         "colunas": colunas,
         "por_origem": {
-            "matriz_premissas_criterios": len(da_matriz),
-            "configurador_fase3": len(colunas) - len(da_matriz),
+            "matriz_premissas_criterios": total_matriz,
+            "configurador_fase3": len(colunas) - total_matriz,
         },
     }
 

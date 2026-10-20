@@ -651,6 +651,49 @@ o filtro e a ordenação. O seletor fica desabilitado durante a edição de regi
 Famílias: `/api/demandas`, `/api/planos`, `/api/programas`, `/api/dominios` e
 `/api/painel`.
 
+Na página `/restrict/complementacao/`, os dois fluxos são independentes.
+**Complementação de Dados Cadastrais e Geometria** mantém a tabela de demandas
+com status aguardando complementação e suas ações cadastrais e de geometria.
+**Complementação de Atributos de demanda** permanece visível: o usuário escolhe
+a hierarquização e, no contêiner abaixo, consulta a mesma tabela de atributos
+da Fase 3, limitada às suas demandas autorizadas. São reconhecidos os atributos
+cadastrais já existentes, sem duplicá-los entre os atributos da matriz.
+Acima da tabela, o **Resumo da hierarquização** reproduz o resumo da Fase 3,
+inclui a data de criação e mantém o clique nas demandas para abrir seus detalhes.
+As duas seções utilizam a hierarquia tipográfica e a escala da Fase 3.
+Isso inclui os textos gerados por JavaScript, os campos e o modal de detalhes.
+Na tabela de atributos, a coluna de identificação das demandas permanece fixa
+durante a rolagem horizontal; nomes e códigos completos quebram linha, sem corte.
+Os campos numéricos recebem máscaras durante a digitação e na consulta, conforme
+a unidade e o formato declarados na coluna: reais (inclusive R$/ano) com duas
+casas decimais, inteiros sem frações e demais números com agrupamento de milhar
+e vírgula decimal. Reutiliza-se a entrada monetária em centavos da análise de
+demandas: digitar `123456` resulta em `1.234,56`. Percentuais são armazenados
+na unidade informada, sem conversão automática em fração. As máscaras não mudam
+os valores numéricos enviados à API; campos vazios permanecem distintos de zero,
+e entradas inválidas impedem a confirmação com mensagem de validação.
+A numeração é **1. Complementação de Dados Cadastrais e Geometria**, com
+**1.1** para o editor cadastral ou de geometria aberto; e
+**2. Complementação de Atributos de demanda**, com
+**2.1 Resumo da hierarquização** e **2.2 Critérios atributo de projeto**
+(ou do tipo de demanda selecionado).
+A disponibilidade desses atributos não exige
+o status cadastral aguardando complementação; operadores continuam limitados à
+autoria ou representação do cadastro atual, e os perfis de análise e gestão
+mantêm seu acesso autorizado.
+
+Os atributos abrem em consulta; **Editar**, **Confirmar** e **Cancelar** controlam
+a edição dos valores originais na tabela. Confirmar grava os atributos da matriz
+na hierarquização e os atributos cadastrais no cadastro oficial e na cópia da
+rodada selecionada, em uma única transação. Outras rodadas não são reescritas.
+Cancelar preserva os valores salvos. Trocar de hierarquização com alterações
+pendentes exige confirmação de descarte. O seletor permanece disponível na
+seção, e abrir os editores cadastral ou de geometria apenas desloca a seção de
+atributos para baixo, sem ocultá-la ou perder seu rascunho. Na Fase 3, os valores
+continuam somente leitura; os controles de pesos ficam exclusivos dessa fase.
+O modelo da matriz permanece inalterado. A alteração não muda os métodos de
+normalização, os pesos ou as regras de cálculo da hierarquização.
+
 ### AHP
 
 O módulo permite configurações avulsas e de portfólio, definição de universo,

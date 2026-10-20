@@ -8,6 +8,7 @@ import pytest
 
 from api.db import connection as db
 from api.exceptions import DatabaseUnavailableError
+from api.repositories import demanda_repository, plano_repository, programa_repository, hierarquizacao_repository
 
 
 @pytest.fixture
@@ -46,3 +47,32 @@ def test_sucesso_confirma_transacao(connection):
         assert conn is connection
     connection.commit.assert_called_once()
     connection.rollback.assert_not_called()
+
+
+@pytest.mark.parametrize('repo', [
+    demanda_repository, plano_repository, programa_repository, hierarquizacao_repository,
+])
+def test_update_participa_da_transacao_atomica(connection, monkeypatch, repo):
+    monkeypatch.setattr(repo, 'get_by_codigo', lambda codigo: {'codigo': codigo})
+    with db.atomic_connection():
+        data = {'dados_hierarquizacao': {'objetos': []}} if repo is hierarquizacao_repository else {
+            'prazo_referencia_meses': 24, 'atributos_cadastrais': {'data_base_capex': '2026-10-01'},
+        }
+        repo.update('X', data)
+        params = connection.execute.call_args.args[1]
+        assert all(chave in params for chave in data)
+        connection.commit.assert_not_called()
+    connection.commit.assert_called_once()
+    connection.rollback.assert_not_called()
+
+
+def test_falha_em_lote_nao_confirma_updates_parciais(connection, monkeypatch):
+    for repo in (demanda_repository, hierarquizacao_repository):
+        monkeypatch.setattr(repo, 'get_by_codigo', lambda codigo: {'codigo': codigo})
+    with pytest.raises(RuntimeError, match='falha'):
+        with db.atomic_connection():
+            demanda_repository.update('X', {'nome': 'Nome atualizado'})
+            hierarquizacao_repository.update('H', {'dados_hierarquizacao': {'objetos': []}})
+            raise RuntimeError('falha')
+    connection.commit.assert_not_called()
+    connection.rollback.assert_called_once()

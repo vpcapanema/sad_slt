@@ -46,7 +46,7 @@
     modal.classList.remove("hidden");
   }
 
-  function secao1(box, hierarquizacao) {
+  function secao1(box, hierarquizacao, opcoes = {}) {
     if (!box) return;
     const objs = objetos(hierarquizacao);
     const itens = objs
@@ -56,11 +56,14 @@
       })
       .join("");
     box.classList.add("fase1-summary");
+    const dataCriacao = hierarquizacao.criado_em
+      ? new Date(hierarquizacao.criado_em).toLocaleDateString("pt-BR") : "Não informada";
     box.innerHTML = `
       <div class="fase1-summary-meta">
         <div class="fase1-meta-card"><small>Nome</small><strong>${esc(hierarquizacao.nome || "—")}</strong></div>
         <div class="fase1-meta-card"><small>Código</small><strong>${esc(hierarquizacao.codigo || "—")}</strong></div>
         <div class="fase1-meta-card"><small>Tipo de objeto</small><strong>${esc(tipoLabel(hierarquizacao, objs))}</strong></div>
+        ${opcoes.mostrarDataCriacao ? `<div class="fase1-meta-card"><small>Data de criação</small><strong>${esc(dataCriacao)}</strong></div>` : ""}
       </div>
       <div class="fase1-objs-card">
         <h4><i class="fas fa-list-ul"></i> Objetos do grupo (${objs.length})</h4>

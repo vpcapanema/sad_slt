@@ -311,7 +311,7 @@ def update(codigo: str, data: dict[str, Any]) -> dict[str, Any] | None:
     )
     with get_connection() as conn:
         conn.execute(query, params)
-        conn.commit()
+        commit_unless_atomic(conn)
     return get_by_codigo(codigo)
 
 

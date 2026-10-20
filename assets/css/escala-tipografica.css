@@ -107,6 +107,45 @@ body.escala-revisada .admin-area-shell { min-height: calc(100vh / var(--escala, 
 .escala-revisada .step-intro { font-size: 12px; }       /* 14 → 9pt */
 .escala-revisada .field-help { font-size: 11.5px; }     /* 11 → 8,6pt */
 
+/* Complementação: papéis equivalentes aos da Fase 3, nos dois fluxos. */
+.escala-revisada #complementacao-cadastral,
+.escala-revisada #complementacao-atributos { zoom: 1; }
+.escala-revisada #complementacao-cadastral-titulo,
+.escala-revisada #complementacao-atributos-titulo,
+.escala-revisada #complementacao-cadastral .admin-tab { font-size: 13.3px; }
+.escala-revisada #complementacao-editor-titulo,
+.escala-revisada #complementacao-resumo-titulo,
+.escala-revisada #complementacao-atributos #fase3-titulo-atributos,
+.escala-revisada #complementacao-cadastral .admin-table thead th { font-size: 12.7px; }
+.escala-revisada #complementacao-cadastral .admin-table tbody td,
+.escala-revisada #complementacao-cadastral .admin-table tbody td :is(code, small, strong, span, button, a, input, select),
+.escala-revisada #complementacao-cadastral .admin-filter-label,
+.escala-revisada #complementacao-cadastral .admin-filter-bar :is(select, input, label),
+.escala-revisada #complementacao-cadastral .admin-pagination,
+.escala-revisada #complementacao-cadastral .admin-pagination button,
+.escala-revisada #complementacao-cadastral .demandas-page-size,
+.escala-revisada #complementacao-cadastral .demandas-page-size select,
+.escala-revisada #complementacao-editor :is(label, input, select, textarea),
+.escala-revisada #complementacao-editor .admin-info-subcard-title,
+.escala-revisada #complementacao-editor .admin-info-label,
+.escala-revisada #complementacao-editor .admin-info-value,
+.escala-revisada #complementacao-cadastral > .admin-card-body > .field-help,
+.escala-revisada #complementacao-atributos label[for="complementacao-hierarquizacao"],
+.escala-revisada #complementacao-atributos > .admin-card-body > .field-help { font-size: 12px; }
+.escala-revisada #complementacao-atributos .admin-table tbody td,
+.escala-revisada #complementacao-atributos .objeto-codigo,
+.escala-revisada #complementacao-hierarquizacao,
+.escala-revisada #complementacao-atributos .atributo-input { font-size: 12px; }
+.escala-revisada #complementacao-atributos .objeto-nome { font-size: 0.68rem; }
+.escala-revisada #complementacao-status,
+.escala-revisada #complementacao-cadastral .admin-table-summary,
+.escala-revisada #complementacao-atributos-status { font-size: 11.5px; }
+.escala-revisada #complementacao-atributos .admin-icon-btn { font-size: 13.3px; }
+.escala-revisada.complementacao-page #modal-objetos .json-modal-head h2 { font-size: 13.3px; }
+.escala-revisada.complementacao-page #modal-objetos .demanda-grupo-titulo { font-size: 12.7px; }
+.escala-revisada.complementacao-page #modal-objetos :is(.demanda-corpo, .jv-campo, .jv-root, .jv-list, .jv-key, .jv-val) { font-size: 12px; }
+.escala-revisada.complementacao-page #modal-objetos :is(.jv-count, .jv-mapa-aviso) { font-size: 11.5px; }
+
 /* Formulários e ações */
 .escala-revisada form label,
 .escala-revisada .cadastro-campo,

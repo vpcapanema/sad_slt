@@ -34,8 +34,12 @@
   </div>
 
   <div class="atributos-legenda" aria-hidden="true">
+    {% if atributos_complementacao %}
+    <span>Valores originais. Use Editar atributos para preencher; confirme para gravar ou cancele para descartar.</span>
+    {% else %}
     <span><strong>1ª linha:</strong> valor normalizado (0–1)</span>
     <span><strong>2ª linha:</strong> valor original</span>
+    {% endif %}
   </div>
   <div class="fase-actions atributos-riscos-acoes" data-atributos-riscos-acoes hidden>
     <button id="salvar-tratamentos-riscos-fase3" class="btn btn--primary" type="button">

@@ -8,8 +8,11 @@
 {% block estilos_pagina %}
 <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
 <link rel="stylesheet" href="/assets/css/admin-analysis-layout.css">
-<link rel="stylesheet" href="/assets/css/complementacao.css?v=20261014-tabela">
-<link rel="stylesheet" href="/assets/css/escala-tipografica.css">
+<link rel="stylesheet" href="/assets/css/complementacao.css?v=20261020-coluna-fixa-tipografia">
+<link rel="stylesheet" href="/assets/css/atributos-objetos.css">
+<link rel="stylesheet" href="/assets/css/fase1-execucao.css">
+<link rel="stylesheet" href="/assets/vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="/assets/css/escala-tipografica.css?v=20261020-textos-dinamicos">
   <link rel="stylesheet" href="/assets/css/table-standard.css?v=20261015-fontes-ordem">
 {% endblock %}
 {% block conteudo %}
@@ -17,12 +20,12 @@
 <main class="conteudo-principal app-main admin-main">
   <section class="secao-complementacao-introducao card card-complementacao-introducao standard-page-hero" aria-labelledby="complementacao-title">
     <h1 class="standard-page-hero__title" id="complementacao-title">Complementação de cadastro</h1>
-    <p class="standard-page-hero__description">Selecione uma demanda aguardando complementação e escolha entre dados cadastrais, geometria ou atributos da demanda.</p>
+    <p class="standard-page-hero__description">Complemente os dados cadastrais e a geometria ou preencha, de forma independente, os atributos das demandas vinculadas a uma hierarquização.</p>
   </section>
   {% set modo_complementacao = true %}
   {% include "componentes/tabela_demandas.html" %}
   <section id="complementacao-editor" class="secao-complementacao-editor card-complementacao-editor card hidden" aria-labelledby="complementacao-editor-titulo">
-    <h2 id="complementacao-editor-titulo"></h2>
+    <h3 id="complementacao-editor-titulo"></h3>
     <p id="complementacao-resumo" class="field-help" aria-live="polite"></p>
     <form id="complementacao-cadastro" class="admin-dashboard-page hidden">
       <div id="complementacao-cadastro-campos"></div>
@@ -34,18 +37,41 @@
       <input type="file" id="complementacao-arquivo" accept=".zip,.gpkg,.kml,.kmz,.geojson,.json">
       <div class="btn-row"><button type="button" class="btn btn-primary" id="complementacao-enviar">Enviar/substituir geometria</button></div>
     </div>
-    <div id="complementacao-atributos" class="hidden">
-      <label for="complementacao-hierarquizacao">Hierarquização</label>
-      <select id="complementacao-hierarquizacao"></select>
-      <p id="complementacao-sem-atributos" class="field-help hidden">Esta demanda não possui atributos adicionais em uma matriz vigente.</p>
-      <form id="complementacao-form" class="card-complementacao-atributos hidden">
-        <h3>Atributos da demanda</h3>
-        <div id="complementacao-campos" class="complementacao-grid"></div>
-        <div class="btn-row"><button type="submit" class="btn btn-primary">Salvar complementação</button></div>
-      </form>
-    </div>
   </section>
   <p id="complementacao-status" class="complementacao-status" aria-live="polite"></p>
+  <section id="complementacao-atributos" class="card admin-card standard-table-section" aria-labelledby="complementacao-atributos-titulo">
+    <div class="admin-card-body">
+      <h2 id="complementacao-atributos-titulo">2. Complementação de Atributos de demanda</h2>
+      <p class="field-help">Selecione a hierarquização para consultar e complementar os atributos das demandas autorizadas, independentemente do status cadastral. Os atributos do cadastro também serão atualizados no cadastro oficial.</p>
+      <div class="form-field">
+        <label for="complementacao-hierarquizacao">Hierarquização</label>
+        <select id="complementacao-hierarquizacao" disabled><option value="">Carregando hierarquizações…</option></select>
+      </div>
+      <p id="complementacao-sem-atributos" class="field-help hidden">Nenhuma hierarquização com demandas autorizadas está disponível para seu usuário.</p>
+      <button type="button" id="complementacao-atributos-recarregar" class="btn btn-secondary hidden">Tentar novamente</button>
+      <div id="complementacao-atributos-container" class="card-complementacao-atributos hidden">
+        <section aria-labelledby="complementacao-resumo-titulo">
+          <h3 id="complementacao-resumo-titulo">2.1 Resumo da hierarquização</h3>
+          <div id="complementacao-resumo-hierarquizacao" class="hidden"></div>
+        </section>
+        <form id="complementacao-form" class="hidden">
+          <h3 id="fase3-titulo-atributos">2.2 Critérios atributo de objeto</h3>
+          <p id="complementacao-atributos-resumo" class="field-help"></p>
+          <div id="complementacao-campos">
+            {% set atributos_complementacao = true %}
+            {% include "componentes/_tabela_atributos_objetos.html" %}
+          </div>
+          <div class="standard-table-actions" role="group" aria-label="Ações dos atributos da demanda">
+            <button type="button" class="admin-icon-btn edit" id="complementacao-atributos-editar" title="Editar atributos" aria-label="Editar atributos" disabled><i class="fas fa-pen" aria-hidden="true"></i></button>
+            <button type="submit" class="admin-icon-btn save" id="complementacao-atributos-confirmar" title="Confirmar atributos" aria-label="Confirmar atributos" disabled><i class="fas fa-check" aria-hidden="true"></i></button>
+            <button type="button" class="admin-icon-btn" id="complementacao-atributos-cancelar" title="Cancelar edição dos atributos" aria-label="Cancelar edição dos atributos" disabled><i class="fas fa-xmark" aria-hidden="true"></i></button>
+          </div>
+        </form>
+      </div>
+      <p id="complementacao-atributos-status" class="complementacao-status" role="status" aria-live="polite"></p>
+    </div>
+  </section>
+  {% include "componentes/modal/_modal_demandas_do_grupo_hierarquizacoes_realizadas_gestao_das_hierarquizacoes.html" %}
 </main>
 {% endblock %}
 {% block scripts_pagina %}
@@ -59,6 +85,11 @@
 <script src="/assets/js/admin-ui.js"></script>
 <script src="/assets/js/admin-analysis-info.js?v=20261014-cadastro"></script>
 <script src="/assets/js/project-form.js?v=20261014-completo"></script>
-<script src="/assets/js/complementacao.js?v=20261014-completo"></script>
+<script src="/assets/vendor/leaflet/leaflet.js"></script>
+<script src="/assets/js/objeto-detalhe.js"></script>
+<script src="/assets/js/resumo-fase.js?v=20261020-data-criacao"></script>
+<script src="/assets/js/input-masks.js?v=20261020-unidades"></script>
+<script src="/restrict/hierarquizacao/js/atributos-objetos.js?v=20261020-mascaras-unidades"></script>
+<script src="/assets/js/complementacao.js?v=20261020-secoes-numeradas"></script>
 <script src="/restrict/demandas.js?v=20261015-fontes-ordem"></script>
 {% endblock %}

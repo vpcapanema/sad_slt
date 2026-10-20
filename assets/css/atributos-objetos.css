@@ -19,7 +19,7 @@
 }
 
 /* o atributo hidden precisa vencer o display:inline-block das pílulas .fase-status */
-.componente-atributos-objetos .fase-status[hidden] { display: none; }
+.componente-atributos-objetos [hidden] { display: none; }
 
 /* Shell e tabela idênticos à "Hierarquizações realizadas" */
 .atributos-table-shell {
