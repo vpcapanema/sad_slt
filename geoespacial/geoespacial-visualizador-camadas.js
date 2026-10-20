@@ -58,6 +58,84 @@
     { caminho: "base-geoespacial", rotulo: "Base-Geoespacial" },
     { caminho: "superficies-indices", rotulo: "Superfícies-Índice" },
   ];
+  const FAVORABILIDADE = {
+    "superficies-indices/hierarquizacao/favorabilidade/favorabilidade_rede_trechos.gpkg": { camada: "subtrechos", campo: "fav_rede_dim" },
+    "superficies-indices/hierarquizacao/favorabilidade/indicadores_municipais.gpkg": { camada: "municipios", campo: "fav_territorial_dim" },
+  };
+  const FAVORABILIDADE_CORES = ["#440154", "#3b528b", "#21918c", "#5ec962", "#fde725"];
+  const favorabilidadeClasses = new Map();
+  const FAVORABILIDADE_SEM_DADO = "#9ca3af";
+  const FAVORABILIDADE_GRADIENTE = `linear-gradient(90deg, ${FAVORABILIDADE_CORES.map((cor, i) => `${cor} ${i * 25}%`).join(", ")})`;
+  function favorabilidade(camada) {
+    const config = camada.fonte === "storage" ? FAVORABILIDADE[camada.arquivo] : null;
+    return config && (!camada.camada || camada.camada === config.camada) ? config : null;
+  }
+  function corFavorabilidade(proporcao) {
+    const posicao = proporcao * (FAVORABILIDADE_CORES.length - 1);
+    const indice = Math.min(Math.floor(posicao), FAVORABILIDADE_CORES.length - 2);
+    const canais = FAVORABILIDADE_CORES.slice(indice, indice + 2).map(cor => cor.slice(1).match(/../g).map(canal => parseInt(canal, 16)));
+    return `#${canais[0].map((canal, i) => Math.round(canal + (posicao - indice) * (canais[1][i] - canal)).toString(16).padStart(2, "0")).join("")}`;
+  }
+  function paradasFavorabilidade(classificacao) {
+    const limites = [...new Set([classificacao.min, ...classificacao.quebras, classificacao.max])];
+    if (limites.length === 1) return [[0, corFavorabilidade(.5)], [1, corFavorabilidade(.5)]];
+    const intervalos = limites.length - 1;
+    // Inclui as inflexões de Jenks e da paleta, sem saturar valores dentro do intervalo observado.
+    const proporcoes = [...new Set([...limites.map((_, i) => i / intervalos), ...FAVORABILIDADE_CORES.map((_, i) => i / (FAVORABILIDADE_CORES.length - 1))])].sort((a, b) => a - b);
+    const paradas = proporcoes.map(proporcao => {
+      const posicao = proporcao * intervalos, indice = Math.min(Math.floor(posicao), intervalos - 1);
+      return [limites[indice] + (posicao - indice) * (limites[indice + 1] - limites[indice]), corFavorabilidade(proporcao)];
+    });
+    if (limites[0] > 0) paradas.unshift([0, FAVORABILIDADE_CORES[0]]);
+    if (limites[intervalos] < 1) paradas.push([1, FAVORABILIDADE_CORES[FAVORABILIDADE_CORES.length - 1]]);
+    return paradas;
+  }
+  async function carregarClassesFavorabilidade(camada) {
+    const config = favorabilidade(camada);
+    if (!config) return;
+    favorabilidadeClasses.delete(camada.id);
+    renderLegend();
+    let response = await fetch(`${API}/bancada-arquivos/preparar`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: camada.id, arquivo: camada.arquivo }) });
+    const meta = await response.json();
+    if (!response.ok) throw new Error(meta.detail || "Não foi possível ler a revisão da superfície.");
+    response = await fetch(`${API}/bancada-arquivos/classificacao`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ camada_id: camada.id, arquivo: camada.arquivo, revisao: meta.revisao, campo: config.campo, metodo: "jenks", classes: 5, dominio: [0, 1] }) });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.detail || "Não foi possível calcular as classes Jenks.");
+    if (data.metodo !== "jenks" || data.campo !== config.campo || !Number.isInteger(data.classes) || data.classes < 1 || data.classes > 5 ||
+        !Number.isFinite(data.min) || !Number.isFinite(data.max) || data.min < 0 || data.max > 1 || data.min > data.max ||
+        !Array.isArray(data.quebras) || data.quebras.length !== data.classes - 1 ||
+        data.quebras.some((valor, i) => !Number.isFinite(valor) || valor <= data.min || valor > data.max || (i > 0 && valor <= data.quebras[i - 1]))) {
+      throw new Error("A classificação Jenks retornou limites inválidos para a superfície.");
+    }
+    favorabilidadeClasses.set(camada.id, data);
+    renderLegend();
+  }
+  function aplicarFavorabilidade(camada) {
+    const config = favorabilidade(camada), info = GeoespacialMap.layers.get(camada.id), map = GeoespacialMap.map;
+    if (!config || !info) return;
+    const classificacao = favorabilidadeClasses.get(camada.id);
+    if (!classificacao) throw new Error("A classificação da superfície ainda não está disponível.");
+    const paradas = paradasFavorabilidade(classificacao);
+    const valor = ["number", ["get", config.campo], -1];
+    const color = ["case",
+      ["==", ["get", "slt_geometria_valida"], false], "#dc2626",
+      ["all", [">=", valor, 0], ["<=", valor, 1]],
+      ["interpolate", ["linear"], valor, ...paradas.flat()],
+      FAVORABILIDADE_SEM_DADO,
+    ];
+    const [fillId, lineId, pointId] = info.mapLayerIds;
+    if (map.getLayer(fillId)) {
+      map.setPaintProperty(fillId, "fill-color", color);
+      map.setPaintProperty(fillId, "fill-outline-color", "rgba(0, 0, 0, 0)");
+      map.setPaintProperty(fillId, "fill-opacity", 1);
+      map.setPaintProperty(fillId, "fill-antialias", false);
+    }
+    if (map.getLayer(lineId)) {
+      map.setPaintProperty(lineId, "line-color", color);
+      map.setFilter(lineId, ["==", ["geometry-type"], "LineString"]);
+    }
+    if (map.getLayer(pointId)) map.setPaintProperty(pointId, "circle-color", color);
+  }
   // Siglas preservadas ao humanizar nomes de arquivo do storage.
   const SIGLAS = new Set(["sp", "aprm", "ucs", "uc", "ibama", "cetesb", "iphan", "condephaat", "sigam", "uf", "ig", "mma", "pli", "pef", "zee", "ugrhi", "ra", "rg", "rm", "sma", "idesp", "sicg", "cecav", "incra", "pol", "pto", "lin"]);
   const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
@@ -82,7 +160,7 @@
   }
   function showDetails() { const tab = document.querySelector('[data-context-tab="details"]'); tab.hidden = false; activateContextTab("details"); setContextCollapsed(false); }
   function geometryType(camada) { const type = String(camada.geometria_tipo || "").toLowerCase(); return type.includes("ponto") || type.includes("point") ? "point" : type.includes("linha") || type.includes("line") ? "line" : "polygon"; }
-  function layerSymbol(camada) { const type = geometryType(camada), style = GeoespacialMap.getLayerStyle(camada.id); return `<span class="geo-layer-tree-symbol geo-layer-tree-symbol--${type}" style="--symbol-color:${style.color};--symbol-fill:${style.fillColor || style.color};--symbol-opacity:${Math.round(style.fillOpacity * 100)}%;--symbol-width:${style.lineWidth}px;--symbol-radius:${style.pointRadius}px" aria-label="Editar símbolo da camada" title="Editar propriedades"></span>`; }
+  function layerSymbol(camada) { const type = geometryType(camada), style = GeoespacialMap.getLayerStyle(camada.id), thematic = favorabilidade(camada); return `<span class="geo-layer-tree-symbol geo-layer-tree-symbol--${type}${thematic ? " geo-layer-tree-symbol--continuous" : ""}" style="--symbol-color:${style.color};--symbol-fill:${style.fillColor || style.color};--symbol-opacity:${Math.round(style.fillOpacity * 100)}%;--symbol-width:${style.lineWidth}px;--symbol-radius:${style.pointRadius}px;${thematic ? `background:${FAVORABILIDADE_GRADIENTE};border:0` : ""}" aria-label="Editar símbolo da camada" title="Editar propriedades"></span>`; }
   function displayName(camada) { return GeoespacialMap.getLayerProperties(camada.id).alias || camada.nome; }
   function statusBadge(camada) {
     if (!camada.status || !window.SLTStatusColors) return "";
@@ -95,14 +173,33 @@
     const style = GeoespacialMap.getLayerStyle(camada.id), saved = GeoespacialMap.getLayerProperties(camada.id), host = document.getElementById("geoespacial-properties-content");
     host.innerHTML = `<form class="geo-properties-form"><label>Alias da camada<input name="alias" value="${escapeHtml(saved.alias || camada.nome)}" required></label><div class="geo-properties-grid"><label>Cor do contorno/linha<input name="color" type="color" value="${style.color}"></label><label>Cor do preenchimento<input name="fillColor" type="color" value="${style.fillColor || style.color}"></label><label>Espessura da linha (px)<input name="lineWidth" type="number" min="0.5" max="12" step="0.5" value="${style.lineWidth}"></label><label>Tamanho do ponto (px)<input name="pointRadius" type="number" min="2" max="24" step="0.5" value="${style.pointRadius}"></label><label>Tipo de linha<select name="lineStyle"><option value="solid">Contínua</option><option value="dashed">Tracejada</option><option value="dotted">Pontilhada</option></select></label><label>Preenchimento<select name="fillMode"><option value="translucent">Translúcido</option><option value="solid">Sólido</option><option value="outline">Somente contorno</option></select></label></div><label>Opacidade do preenchimento<input name="fillOpacity" type="range" min="0" max="1" step="0.05" value="${style.fillOpacity}"></label><div class="geo-properties-feedback"></div><footer><button class="btn btn-primary" type="submit">Salvar propriedades</button></footer></form>`;
     const form = host.querySelector("form"); form.elements.lineStyle.value = style.lineStyle || "solid"; form.elements.fillMode.value = style.fillMode || "translucent";
-    form.addEventListener("submit", (event) => { event.preventDefault(); const data = new FormData(form), props = { alias: String(data.get("alias")).trim(), color: String(data.get("color")), fillColor: String(data.get("fillColor")), lineWidth: Number(data.get("lineWidth")), pointRadius: Number(data.get("pointRadius")), lineStyle: String(data.get("lineStyle")), fillMode: String(data.get("fillMode")), fillOpacity: Number(data.get("fillOpacity")) }; GeoespacialMap.saveLayerProperties(camada.id, props); row.querySelector(".layer-group-name").textContent = props.alias; row.querySelector(".geo-layer-tree-symbol").outerHTML = layerSymbol(camada); renderLegend(); form.querySelector(".geo-properties-feedback").textContent = "Propriedades salvas e aplicadas."; });
+    const thematic = favorabilidade(camada);
+    if (thematic) {
+      form.elements.color.disabled = true; form.elements.fillColor.disabled = true;
+      if (geometryType(camada) === "polygon") {
+        form.elements.fillMode.value = "solid"; form.elements.fillMode.disabled = true;
+        form.elements.fillOpacity.value = "1"; form.elements.fillOpacity.disabled = true;
+      }
+      form.insertAdjacentHTML("afterbegin", `<p class="hint">Rampa contínua Viridis do índice <strong>${thematic.campo}</strong>, por dimensões, com contraste distribuído por Jenks entre o mínimo e o máximo observados, sem classes de cores. Polígonos sem borda e 100% opacos. Valores ausentes ou fora de 0–1 aparecem em cinza.</p>`);
+    }
+    form.addEventListener("submit", (event) => { event.preventDefault(); const data = new FormData(form), polygon = thematic && geometryType(camada) === "polygon", props = { alias: String(data.get("alias")).trim(), color: String(data.get("color") ?? style.color), fillColor: String(data.get("fillColor") ?? style.fillColor ?? style.color), lineWidth: Number(data.get("lineWidth")), pointRadius: Number(data.get("pointRadius")), lineStyle: String(data.get("lineStyle")), fillMode: polygon ? "solid" : String(data.get("fillMode")), fillOpacity: polygon ? 1 : Number(data.get("fillOpacity")) }; GeoespacialMap.saveLayerProperties(camada.id, props); aplicarFavorabilidade(camada); row.querySelector(".layer-group-name").textContent = props.alias; row.querySelector(".geo-layer-tree-symbol").outerHTML = layerSymbol(camada); renderLegend(); form.querySelector(".geo-properties-feedback").textContent = "Propriedades salvas e aplicadas."; });
   }
   let legendFrame = null;
   function renderLegend() {
     if(legendFrame!==null)return;
     legendFrame=requestAnimationFrame(()=>{
       legendFrame=null;
-    const rows = [...registro.values()].filter((camada) => layerShown(camada)).map((camada) => { const symbol = geometryType(camada), style = GeoespacialMap.getLayerStyle(camada.id); return `<div class="geo-legend-item"><span class="geo-legend-symbol geo-legend-symbol--${symbol}" style="--legend-color:${style.fillColor || style.color};--legend-opacity:${Math.round(style.fillOpacity * 100)}%;--legend-width:${style.lineWidth}px;--legend-radius:${style.pointRadius}px"></span><span>${escapeHtml(displayName(camada))}</span></div>`; }).join("");
+    const rows = [...registro.values()].filter((camada) => layerShown(camada)).map((camada) => {
+      const thematic = favorabilidade(camada);
+      if (thematic) {
+        const classificacao = favorabilidadeClasses.get(camada.id);
+        if (!classificacao) return `<div class="geo-legend-continuous" data-campo="${thematic.campo}"><strong>${escapeHtml(displayName(camada))}</strong><span role="status">Preparando rampa contínua…</span></div>`;
+        const paradas = paradasFavorabilidade(classificacao);
+        const gradiente = `linear-gradient(0deg, ${paradas.map(([valor, cor]) => `${cor} ${valor * 100}%`).join(", ")})`;
+        return `<div class="geo-legend-continuous" data-campo="${thematic.campo}"><strong>${escapeHtml(displayName(camada))}</strong><span class="geo-legend-field">Índice por dimensões · ${thematic.campo}</span><div class="geo-legend-raster"><div class="geo-legend-ramp" role="img" aria-label="Índice de favorabilidade: rampa contínua de 0 a 1, com contraste Jenks" style="background:${gradiente}"></div><div class="geo-legend-scale"><span>1 · Maior</span><span>0,75</span><span>0,5</span><span>0,25</span><span>0 · Menor</span></div></div><span class="geo-legend-missing"><span style="background:${FAVORABILIDADE_SEM_DADO}" aria-hidden="true"></span>Sem dado ou fora de 0–1</span><span class="geo-legend-field">Rampa contínua; contraste Jenks calculado na camada inteira. Referência provisória; pesos iguais entre dimensões.</span></div>`;
+      }
+      const symbol = geometryType(camada), style = GeoespacialMap.getLayerStyle(camada.id); return `<div class="geo-legend-item"><span class="geo-legend-symbol geo-legend-symbol--${symbol}" style="--legend-color:${style.fillColor || style.color};--legend-opacity:${Math.round(style.fillOpacity * 100)}%;--legend-width:${style.lineWidth}px;--legend-radius:${style.pointRadius}px"></span><span>${escapeHtml(displayName(camada))}</span></div>`;
+    }).join("");
     document.getElementById("geoespacial-legend").innerHTML = rows || '<p class="hint">Ative uma camada para visualizar sua legenda.</p>';
     });
   }
@@ -376,9 +473,10 @@
   /* Liga/desliga uma camada de qualquer fonte, criando-a no mapa na primeira vez. */
   async function toggle(camada, visible, fit = true) {
     if (!visible) { camadasVisiveis.delete(camada.id); GeoespacialMap.toggleLayer(camada.id, false); syncProjectPin(camada, false); renderLegend(); return; }
-    if (fit) detail(camada); camadasVisiveis.add(camada.id); renderLegend();
-    if (GeoespacialMap.layers.has(camada.id)) { GeoespacialMap.toggleLayer(camada.id, layerShown(camada)); syncProjectPin(camada, layerShown(camada)); return; }
+    if (fit) { detail(camada); if (favorabilidade(camada)) activateContextTab("legend"); } camadasVisiveis.add(camada.id); renderLegend();
+    if (GeoespacialMap.layers.has(camada.id)) { aplicarFavorabilidade(camada); GeoespacialMap.toggleLayer(camada.id, layerShown(camada)); syncProjectPin(camada, layerShown(camada)); return; }
     await mapReady();
+    await carregarClassesFavorabilidade(camada);
     const opcoes = { tolerance: 0, uniqueStyle: true, label: displayName(camada), labelsVisible: rotulosAtivos && camada.fonte === "saida" };
     if (!camadasVisiveis.has(camada.id)) return;
     if (camada.fonte.startsWith("saida") && camada.tipo === "raster") {
@@ -409,6 +507,7 @@
       if (!response.ok) throw new Error("Extensão da camada indisponível");
       GeoespacialMap.layers.get(camada.id).bounds = (await response.json()).bounds;
     }
+    aplicarFavorabilidade(camada);
     GeoespacialMap.toggleLayer(camada.id, layerShown(camada));
     syncProjectPin(camada, layerShown(camada));
     if (fit && camadasVisiveis.has(camada.id)) GeoespacialMap.fitBounds(camada.id);
@@ -465,6 +564,7 @@
       input.checked = false; camadasVisiveis.delete(camada.id); GeoespacialMap.removeLayer(camada.id); syncProjectPin(camada, false);
       aviso = error.message;
       document.getElementById("geoespacial-details-content").innerHTML = `<p class="hint" role="alert">${escapeHtml(error.message)}</p>`;
+      showDetails(); feedback(error.message, "error");
       renderLegend();
     }
     await loadProgress.end(operation);

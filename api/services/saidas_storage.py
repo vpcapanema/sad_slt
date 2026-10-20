@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
+from datetime import datetime, timezone
 from hashlib import sha256
 import json
 from pathlib import Path, PurePosixPath
+import re
 from api.storage_policy import TemporaryDirectory
 from uuid import UUID, uuid4
 
@@ -12,6 +14,49 @@ from api.services import storage_remoto
 
 RAIZ = 'saidas-geoespaciais'
 GRUPOS = {'camadas', 'relatorios', 'pacotes'}
+
+
+def pasta_analise(ferramenta: str, nome: str, referencia: str, *,
+                  quando: datetime | None = None, hierarquizacao: str | None = None,
+                  fase: str | None = None, exportacao: bool = False) -> str:
+    from api.services.ciclo_vida_arquivos import apelido
+    from api.services.pastas_storage import nome_valido
+    ident = UUID(str(referencia)).hex
+    titulo = apelido(nome, 60) or 'analise'
+    data = quando.astimezone(timezone.utc).strftime('%Y%m%dT%H%M%SZ_') if quando else ''
+    analise = f'{data}{titulo}_{ident}'
+    if hierarquizacao:
+        if fase not in {'fase-1', 'fase-2', 'fase-3', 'consolidado'}:
+            raise ValueError('Informe a fase da hierarquização para salvar a análise.')
+        return pasta_exportacao(f'{RAIZ}/hierarquizacoes/{nome_valido(hierarquizacao)}/{fase}/{analise}')
+    if fase:
+        raise ValueError('Uma fase exige o código da hierarquização.')
+    if exportacao:
+        return f'{RAIZ}/exportacoes/{analise}'
+    ferramenta = apelido(ferramenta, 60).replace('_', '-') or 'geoprocessamento'
+    return f'{RAIZ}/analises-avulsas/{ferramenta}/{analise}'
+
+
+def pasta_execucao(execucao: str, *, conn=None) -> str:
+    if conn is None:
+        from api.db.connection import get_connection
+        with get_connection() as connection:
+            return pasta_execucao(execucao, conn=connection)
+    ident = str(UUID(str(execucao)))
+    registro = conn.execute(
+        'SELECT operacao,parametros,iniciado_em FROM geoprocessamento.execucao_arquivo WHERE id=%s',
+        (ident,),
+    ).fetchone()
+    if not registro:
+        raise ValueError('Execução não encontrada para organizar a saída no Storage.')
+    parametros = registro['parametros']
+    operacao = registro['operacao']
+    ferramenta = operacao.rstrip('/').removesuffix('/executar').rsplit('/', 1)[-1]
+    ferramenta = {'gerar_camada_municipal': 'gerador-camadas-territoriais',
+                  'extracao_atributos': 'extracao-atributos'}.get(ferramenta, ferramenta)
+    nome = parametros.get('nome_saida') or parametros.get('nome') or ferramenta
+    return pasta_analise(ferramenta, nome, ident, quando=registro['iniciado_em'],
+                         exportacao=operacao == 'exportacao_direta')
 
 
 def pasta_exportacao(caminho: str) -> str:
@@ -57,25 +102,60 @@ def criar_pasta(pai: str, nome: str) -> dict:
     return {'nome': name, 'caminho': path}
 
 
+def garantir_pasta(caminho: str) -> str:
+    parts = pasta_exportacao(caminho).split('/')
+    for indice in range(2, len(parts) + 1):
+        path = '/'.join(parts[:indice])
+        try:
+            storage_remoto.listar(path, estrito=True)
+        except FileNotFoundError:
+            try:
+                storage_remoto.criar_pasta(path)
+            except storage_remoto.StorageIndisponivel:
+                # Outro worker pode ter criado o mesmo diretório nesse intervalo.
+                storage_remoto.listar(path, estrito=True)
+    return caminho
+
+
 def validar(caminho: str) -> str:
+    validar_exportacao(caminho)
     path = PurePosixPath(str(caminho))
-    if path.is_absolute() or '\\' in str(caminho) or '..' in path.parts:
-        raise ValueError('Caminho de saída inválido.')
-    if len(path.parts) != 5 or path.parts[:2] != (RAIZ, 'execucoes') or path.parts[3] not in GRUPOS:
+    parts = path.parts
+    if len(parts) == 5 and parts[1] == 'execucoes' and parts[3] in GRUPOS:
+        UUID(parts[2])
+        return str(path)
+    organizada = ((len(parts) == 5 and parts[1] == 'analises-avulsas')
+                  or (len(parts) == 4 and parts[1] == 'exportacoes')
+                  or (len(parts) == 6 and parts[1] == 'hierarquizacoes'
+                      and parts[3] in {'fase-1', 'fase-2', 'fase-3', 'consolidado'}))
+    if not organizada or not re.fullmatch(r'[a-z0-9_]+_[a-f0-9]{32}', parts[-2], re.I):
         raise ValueError('Arquivo fora do destino oficial de saídas.')
-    UUID(path.parts[2])
-    if not path.name or path.name.startswith('.'):
-        raise ValueError('Nome de arquivo de saída inválido.')
     return str(path)
 
 
-def destino(execucao: str, grupo: str, nome: str) -> str:
+def destino(execucao: str, grupo: str, nome: str, *, pasta: str | None = None) -> str:
     if grupo not in GRUPOS:
         raise ValueError('Grupo de saída inválido.')
     from api.services.ciclo_vida_arquivos import apelido
     suffix = Path(nome).suffix.lower()
     safe = apelido(Path(nome).stem, 60) or 'saida'
-    return validar(f'{RAIZ}/execucoes/{UUID(str(execucao))}/{grupo}/{safe}_{uuid4().hex[:12]}{suffix}')
+    parent = pasta if pasta is not None else pasta_execucao(execucao)
+    path = validar(f'{parent}/{safe}_{uuid4().hex[:12]}{suffix}')
+    _conferir_execucao(path, execucao, grupo)
+    return path
+
+
+def _conferir_execucao(caminho: str, execucao: str, grupo: str) -> None:
+    if grupo not in GRUPOS:
+        raise ValueError('Grupo de saída inválido.')
+    parts = PurePosixPath(caminho).parts
+    ident = UUID(str(execucao))
+    if parts[1] == 'execucoes':
+        corresponde = parts[2:4] == (str(ident), grupo)
+    else:
+        corresponde = parts[-2].endswith('_' + ident.hex)
+    if not corresponde:
+        raise ValueError('O destino não corresponde à execução e ao grupo informados.')
 
 
 def conferir(caminho: str, checksum: str | None = None) -> bytes:
@@ -88,8 +168,7 @@ def conferir(caminho: str, checksum: str | None = None) -> bytes:
 def enviar_arquivo(execucao: str, grupo: str, arquivo: Path, *, nome: str | None = None,
                    caminho: str | None = None) -> dict:
     path = validar(caminho) if caminho else destino(execucao, grupo, nome or arquivo.name)
-    if PurePosixPath(path).parts[2:4] != (str(UUID(str(execucao))), grupo):
-        raise ValueError('O destino não corresponde à execução e ao grupo informados.')
+    _conferir_execucao(path, execucao, grupo)
     return _enviar_arquivo(path, arquivo)
 
 
@@ -120,8 +199,7 @@ def _enviar_arquivo(path: str, arquivo: Path) -> dict:
 
 def enviar_bytes(execucao: str, grupo: str, nome: str, data: bytes, *, caminho: str | None = None) -> dict:
     path = validar(caminho) if caminho else destino(execucao, grupo, nome)
-    if caminho and PurePosixPath(path).parts[2:4] != (str(UUID(str(execucao))), grupo):
-        raise ValueError('O destino não corresponde à execução e ao grupo informados.')
+    _conferir_execucao(path, execucao, grupo)
     return enviar_conteudo(path, data)
 
 

@@ -31,12 +31,12 @@ function partesDoNome(item){
 }
 function rotulo(item){const p=partesDoNome(item);return `${p.radical}${p.extensao}${p.camada?` › ${p.camada}`:''}`;}
 
-export async function identificarCamadas(files, {excluded=[], aoIdentificar}={}) {
+export async function identificarCamadas(files, {excluded=[], aoIdentificar, incluirRasters=false}={}) {
   const expandidos=[];
   for(const file of files){
     if(!file.inventariar){expandidos.push(file);continue;}
     aoIdentificar?.(file);
-    const resultado=await json(`/storage/camadas-arquivo?arquivo=${encodeURIComponent(file.arquivo)}`);
+    const resultado=await json(`/storage/camadas-arquivo?arquivo=${encodeURIComponent(file.arquivo)}${incluirRasters?'&incluir_rasters=true':''}`);
     if(!resultado.camadas?.length)throw new Error(`Nenhuma camada disponível em ${rotulo(file)}.`);
     expandidos.push(...resultado.camadas.filter(c=>!excluded.includes(c.id)));
   }
@@ -45,7 +45,7 @@ export async function identificarCamadas(files, {excluded=[], aoIdentificar}={})
   return camadas;
 }
 
-export function escolherArquivo({catalog=[],carregarCatalogo,excluded=[],title,acao=title,multiple=false,validar=true,somenteReferencias=false,prepararReferencias,original=false,host,onClose,raiz,pastaInicial=raiz||ROOT,extensoes}) {
+export function escolherArquivo({catalog=[],carregarCatalogo,excluded=[],title,acao=title,multiple=false,validar=true,somenteReferencias=false,prepararReferencias,original=false,host,onClose,raiz,pastaInicial=raiz||ROOT,extensoes,incluirRasters=false}) {
   return new Promise(resolve=>{
     const inline=Boolean(host?.isConnected);
     const dialog=el(inline?'section':'dialog',undefined,`ea-tool-dialog ea-storage-dialog${inline?' ea-storage-inline':''}`);
@@ -135,7 +135,7 @@ export function escolherArquivo({catalog=[],carregarCatalogo,excluded=[],title,a
         return cache.get(path);
       }
       if(!cache.has(path)){
-        if(!pending.has(path))pending.set(path,json(`/storage/navegar?detalhar=false&caminho=${encodeURIComponent(path)}`).then(data=>{cache.set(path,data);return data;}).finally(()=>pending.delete(path)));
+        if(!pending.has(path))pending.set(path,json(`/storage/navegar?detalhar=false&caminho=${encodeURIComponent(path)}${incluirRasters?'&incluir_rasters=true':''}`).then(data=>{cache.set(path,data);return data;}).finally(()=>pending.delete(path)));
         await pending.get(path);
       }
       return cache.get(path);
@@ -212,7 +212,7 @@ export function escolherArquivo({catalog=[],carregarCatalogo,excluded=[],title,a
         if(item.folder){const seta=el('span',undefined,'ea-storage-entry-open');seta.append(fa('fa-chevron-right'));row.append(seta);}
         list.append(row);
       }
-      if(!count)list.append(el('p',term?'Nenhum nome corresponde ao filtro.':'Esta pasta não contém subpastas ou camadas vetoriais.','ea-empty-small'));
+      if(!count)list.append(el('p',term?'Nenhum nome corresponde ao filtro.':incluirRasters?'Esta pasta não contém subpastas ou camadas geoespaciais.':'Esta pasta não contém subpastas ou camadas vetoriais.','ea-empty-small'));
       status.textContent=`${folders.length} pasta(s) · ${files.length} ${files.some(f=>f.inventariar)?'arquivo(s) — as camadas serão lidas ao confirmar':'camada(s)'}. Clique numa pasta para abrir. ${multiple?'Clique nas camadas para marcar ou desmarcar; a seleção é mantida entre pastas.':'Clique numa camada para selecionar; duplo clique confirma.'}`;
       controls();
     }
@@ -260,7 +260,7 @@ export function escolherArquivo({catalog=[],carregarCatalogo,excluded=[],title,a
       const INVENTARIO='Identificar camadas dos arquivos',CARREGAR='Carregar camadas selecionadas';
       const processo=validar?window.ProcessFeedback.iniciarCadastro({title:acao,tasks:[...(files.some(f=>f.inventariar)?[INVENTARIO]:[]),CARREGAR]}):null;
       try{
-        files=await identificarCamadas(files, {excluded, aoIdentificar:file=>{
+        files=await identificarCamadas(files, {excluded, incluirRasters, aoIdentificar:file=>{
           if(processo)processo.tarefaAtual(INVENTARIO,`${rotulo(file)}\nConsultando as camadas disponíveis no arquivo.`);
           else status.textContent=`Identificando camadas de ${rotulo(file)}…`;
         }});

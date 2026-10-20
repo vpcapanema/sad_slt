@@ -27,6 +27,10 @@ const assert=require('node:assert/strict');
  (0,eval)(chunk+';window.filtersTest={initLayerFilter,loadFilterMetadata,refreshSources};');
  },source.slice(source.indexOf('  let layerFilterApi ='),source.indexOf('  const projectPins =')));
  await page.evaluate(async()=>{await filtersTest.loadFilterMetadata();filtersTest.initLayerFilter();});
+ assert.deepEqual(await page.evaluate(()=>[...document.querySelectorAll('label[for]')].filter(label=>!label.control).map(label=>label.htmlFor)),[],'labels must not reference non-labelable custom dropdowns');
+ for(const name of ['Campo do filtro','Valor do filtro']){
+  assert.equal(await page.getByRole('combobox',{name,exact:true}).count(),1,`accessible name: ${name}`);
+ }
  for(const [field,value] of [['status','analise_aprovada'],['nome','Projeto A'],['plano','Plano A'],['programa','Programa A'],['abrangencia','SP'],['instituicao','Instituição A']]){
   await page.locator('.painel-layer-filter-field').click();await page.locator(`.painel-layer-filter-field [data-value="${field}"]`).click();
   await page.locator('.painel-layer-filter-value').click();await page.locator(`.painel-layer-filter-value [data-value="${value}"]`).click();

@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import json
 from collections import Counter
+from datetime import datetime, timezone
+from uuid import uuid4
 
 import geopandas as gpd
 import pandas as pd
@@ -204,7 +206,13 @@ def _gravar_demanda(normalizada: gpd.GeoDataFrame, auditoria: dict, ident: str, 
     if auditoria['colecoes_convertidas']:
         meta['avisos'].append(f"{auditoria['colecoes_convertidas']} coleção(ões) geométrica(s) normalizada(s) componente a componente e reunida(s) por feição, preservando os atributos e identificadores originais.")
     representacao = previa.representar(reaberta, meta, dono)
-    exportacao = ciclo.registrar_exportacao_memoria(nome_arquivo, conteudos, ident, 'vetor')
+    from api.services import saidas_storage
+    codigo = auditoria['origem'].get('hierarquizacao')
+    pasta = saidas_storage.pasta_analise(
+        'elegibilidade-territorial', 'preparacao-demandas', str(uuid4()),
+        quando=datetime.now(timezone.utc), hierarquizacao=codigo, fase='fase-1' if codigo else None)
+    saidas_storage.garantir_pasta(pasta)
+    exportacao = ciclo.registrar_exportacao_memoria(nome_arquivo, conteudos, ident, 'vetor', pasta_saida=pasta)
     caminho = exportacao['caminho']
     estado = storage.resolver(caminho).stat()
     return {

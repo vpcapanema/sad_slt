@@ -91,12 +91,13 @@ def _registrar_exportacao(path: Path, recurso: str, tipo: str, *, pasta_saida: s
     execution = execucao_atual.get()
     own = execution is None
     if own:
-        execution = iniciar('exportacao_direta', {'entrada':recurso})
+        execution = iniciar('exportacao_direta', {'entrada':recurso, 'nome_saida':path.stem})
     ident = str(uuid4())
     created = []
     # Um único prefixo mantém .shp, .shx, .dbf e .prj associados.
     stem = path.stem if pasta_saida else f'{apelido(path.stem, 60) or "saida"}_{uuid4().hex[:12]}'
     try:
+        pasta_automatica = saidas_storage.pasta_execucao(execution) if not pasta_saida else None
         files = ([Path(name) for name in sorted(conteudos)] if conteudos is not None else
                  [component for component in sorted(path.parent.iterdir()) if component.is_file()])
         if pasta_saida:
@@ -110,7 +111,7 @@ def _registrar_exportacao(path: Path, recurso: str, tipo: str, *, pasta_saida: s
                     item = (saidas_storage.enviar_conteudo(target, conteudos[component.name]) if conteudos is not None
                             else saidas_storage.enviar_exportacao(target, component))
                 else:
-                    target = f'{saidas_storage.RAIZ}/execucoes/{execution}/camadas/{stem}{component.name[len(path.stem):]}'
+                    target = f'{pasta_automatica}/{stem}{component.name[len(path.stem):]}'
                     item = (saidas_storage.enviar_bytes(execution, 'camadas', component.name, conteudos[component.name], caminho=target)
                             if conteudos is not None else saidas_storage.enviar_arquivo(execution, 'camadas', component, caminho=target))
                 item['nome'] = component.name
@@ -196,8 +197,9 @@ def migrar_exportacao(ident: str, raiz_arquivos: Path | None = None) -> dict:
         name=Path(row['caminho']).stem
         stem=apelido(name,60)+'_'+uuid4().hex[:12]
         try:
+            pasta = saidas_storage.pasta_execucao(str(row['execucao_id']), conn=conn)
             for item,source in sources:
-                destination=f"{saidas_storage.RAIZ}/execucoes/{row['execucao_id']}/camadas/{stem}{source.name[len(name):]}"
+                destination=f"{pasta}/{stem}{source.name[len(name):]}"
                 record=saidas_storage.enviar_arquivo(str(row['execucao_id']),'camadas',source,caminho=destination)
                 record['nome']=source.name
                 uploaded.append(record)
@@ -373,7 +375,8 @@ def gravar(conn, camada_id: str, metadata: dict, *, frame=None, raster_bytes=Non
         conn.execute('''INSERT INTO geoprocessamento.execucao_arquivo(id,operacao,status,finalizado_em,responsavel,parametros)
             VALUES (%s,%s,%s,now(),%s,%s)''',(execution,'regularizacao_legado' if regularizacao else metadata.get('origem','registro_direto'),
                                     'regularizacao' if regularizacao else 'concluido',responsavel,
-                                    Jsonb({'linhagem_original':metadata.get('linhagem'), 'regularizacao':regularizacao})))
+                                    Jsonb({'linhagem_original':metadata.get('linhagem'), 'regularizacao':regularizacao,
+                                           'nome_saida':metadata.get('nome')})))
     # ident e a chave primaria de arquivo_resultado, tem de continuar UUID.
     # O nome do arquivo em disco e outra coisa: leva o nome da camada.
     ident = str(existing['id']) if existing else str(uuid4())
@@ -431,13 +434,17 @@ def gravar(conn, camada_id: str, metadata: dict, *, frame=None, raster_bytes=Non
             from api.services.arquivos_geoespaciais_memoria import trabalho
             checksum = sha256(content).hexdigest()
             size = len(content)
+            destino = caminho_destino or saidas_storage.destino(
+                execution, 'camadas', path.name, pasta=saidas_storage.pasta_execucao(execution, conn=conn))
             with trabalho({path.name: content}):
-                uploaded = saidas_storage.enviar_bytes(execution, 'camadas', path.name, content, caminho=caminho_destino)
+                uploaded = saidas_storage.enviar_bytes(execution, 'camadas', path.name, content, caminho=destino)
                 remote_path = uploaded['caminho']
         else:
             checksum = digest(path)
             size = path.stat().st_size
-            uploaded = saidas_storage.enviar_arquivo(execution, 'camadas', path, caminho=caminho_destino)
+            destino = caminho_destino or saidas_storage.destino(
+                execution, 'camadas', path.name, pasta=saidas_storage.pasta_execucao(execution, conn=conn))
+            uploaded = saidas_storage.enviar_arquivo(execution, 'camadas', path, caminho=destino)
         relative = remote_path = uploaded['caminho']
         state='temporario' if execucao_atual.get() else 'resultado'
         conn.execute('''INSERT INTO geoprocessamento.arquivo_resultado

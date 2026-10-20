@@ -24,10 +24,17 @@ PAPEIS_ELEGIBILIDADE = {
     'elegibilidade-restricao': {'id': 'restricao', 'nome': 'Restrição'},
     'elegibilidade-risco': {'id': 'risco', 'nome': 'Risco'},
 }
+PAPEIS_LISTAS = {
+    **PAPEIS_ELEGIBILIDADE,
+    'favorabilidade-grade': {'id': 'grade', 'nome': 'Favorabilidade territorial de grade'},
+    'favorabilidade-rede': {'id': 'rede', 'nome': 'Favorabilidade territorial de rede'},
+}
 SUBPASTAS = {
     'bases': 'config-lista-camadas-base', 'analise': 'config-analise',
     'elegibilidade-restricao': 'elegibilidade-restricao',
     'elegibilidade-risco': 'elegibilidade-risco',
+    'favorabilidade-grade': 'favorabilidade-grade',
+    'favorabilidade-rede': 'favorabilidade-rede',
 }
 # Versão 2 guarda a regra de cada base (papel, ligação, multiplicidade, campos...).
 # Versão 3 guarda também as entradas (identificador, filtro, campos) e as
@@ -134,6 +141,30 @@ def arquivo(chave: str, escopo: str = 'analise') -> Path:
     return destino
 
 
+def _catalogo_lista(escopo: str, grupos: list[dict]) -> dict:
+    if not escopo.startswith('favorabilidade-'):
+        from api.services.extracao_atributos import catalogo
+        return catalogo()
+    from api.services import storage_geoespacial
+    arquivos = set()
+    camadas = []
+    for grupo in grupos:
+        for item in grupo.get('camadas') or []:
+            ident = item if isinstance(item, str) else item['id']
+            if not ident.startswith('storage:'):
+                raise ValueError('As listas de favorabilidade aceitam somente referências do Storage.')
+            caminho, _ = storage_geoespacial.separar_id(ident)
+            if caminho in arquivos:
+                continue
+            arquivos.add(caminho)
+            try:
+                camadas.extend(storage_geoespacial.inventariar_arquivo(caminho, incluir_rasters=True)['camadas'])
+            except FileNotFoundError:
+                # O salvamento rejeita referências ausentes; a leitura as informa em ausentes.
+                continue
+    return {'categorias': [PAPEIS_LISTAS[escopo]], 'camadas': camadas}
+
+
 def montar(nome: str, categorias: list[dict], user, entradas: list[dict] | None = None,
            finalidades: list[dict] | None = None, *, operacao: str = 'intersection',
            opcoes: dict | None = None, nome_saida: str = '', escopo: str = 'analise', categoria_ativa: str = '') -> dict:
@@ -152,12 +183,11 @@ def montar(nome: str, categorias: list[dict], user, entradas: list[dict] | None 
         raise ValueError('Algoritmo de processamento inválido.')
     if set(opcoes or {}) - set(OPCOES_PADRAO):
         raise ValueError('Opção do algoritmo desconhecida.')
-    from api.services.extracao_atributos import catalogo
-    catalog = catalogo()
+    catalog = _catalogo_lista(escopo, categorias)
     layers = {item['id']: item for item in catalog['camadas']}
     categories = {item['id']: item for item in catalog['categorias']}
-    if escopo in PAPEIS_ELEGIBILIDADE:
-        papel = PAPEIS_ELEGIBILIDADE[escopo]
+    if escopo in PAPEIS_LISTAS:
+        papel = PAPEIS_LISTAS[escopo]
         categories = {papel['id']: papel}
     conteudo, vistos = [], set()
     for grupo in categorias:
@@ -174,6 +204,7 @@ def montar(nome: str, categorias: list[dict], user, entradas: list[dict] | None 
             vistos.add(ident)
             camadas.append({'id': ident, 'nome': layers[ident]['nome'],
                             'arquivo': layers[ident].get('arquivo'),
+                            **({'tipo': layers[ident]['tipo']} if escopo.startswith('favorabilidade-') else {}),
                             'regra': regras.normalizar((grupo.get('regras') or {}).get(ident))})
         if camadas:
             conteudo.append({'id': grupo['id'], 'nome': categories[grupo['id']]['nome'],
@@ -235,7 +266,7 @@ def salvar(nome: str, categorias: list[dict], user, entradas: list[dict] | None 
             json.dump(conteudo, stream, ensure_ascii=False, indent=2)
             stream.flush()
             os.fsync(stream.fileno())
-        os.replace(temporario, destino)
+        tempfile.publicar_arquivo(temporario, destino)
     finally:
         if temporario is not None:
             temporario.unlink(missing_ok=True)
@@ -289,12 +320,11 @@ def carregar(chave: str, referencias: bool = False, escopo: str = 'analise') -> 
                 'categorias': grupos, 'ausentes': [], 'entradas': [], 'finalidades': []}
     from api.services import extracao_atributos_regras as regras
     # O catálogo muda com o tempo: separar o que ainda existe do que se perdeu.
-    from api.services.extracao_atributos import catalogo
-    catalog = catalogo()
+    catalog = _catalogo_lista(escopo, dados.get('categorias') or [])
     layers = {item['id']: item for item in catalog['camadas']}
     categories = {item['id'] for item in catalog['categorias']}
-    if escopo in PAPEIS_ELEGIBILIDADE:
-        categories = {PAPEIS_ELEGIBILIDADE[escopo]['id']}
+    if escopo in PAPEIS_LISTAS:
+        categories = {PAPEIS_LISTAS[escopo]['id']}
     presentes, ausentes = [], []
     for grupo in dados.get('categorias') or []:
         if grupo.get('id') not in categories:
@@ -309,6 +339,7 @@ def carregar(chave: str, referencias: bool = False, escopo: str = 'analise') -> 
                     # Arquivo editado à mão com regra inválida: a camada volta com o padrão.
                     regra = regras.normalizar(None)
                 camadas.append({'id': item['id'], 'nome': layers[item['id']]['nome'],
+                                **({'tipo': layers[item['id']]['tipo']} if escopo.startswith('favorabilidade-') else {}),
                                 'arquivo': layers[item['id']].get('arquivo'), 'regra': regra})
             else:
                 ausentes.append(item.get('nome') or item.get('id'))

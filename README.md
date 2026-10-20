@@ -344,11 +344,60 @@ O gerador de camadas territoriais também usa esse fluxo no servidor local:
 sem montagem, gera e reabre FGB, GeoPackage, Shapefile e GeoJSON em RAM,
 preservando dicionário, aliases, relatório e tabelas CSV/XLSX/TXT do pacote.
 Os arquivos de trabalho passam por `temporarios-sicard`; a camada validada,
-o ZIP original e os metadados são enviados à execução em
-`saidas-geoespaciais/execucoes`. O banco registra as referências e os hashes;
+o ZIP original e os metadados ficam juntos em
+`saidas-geoespaciais/analises-avulsas/gerador-camadas-territoriais/<analise>`.
+O banco registra as referências e os hashes;
 o download recupera o ZIP do storage oficial, sem gravá-lo em uma pasta local.
 O XLSX sem montagem permanece em memória e entra no orçamento da exportação;
 seleções que excedem a capacidade são recusadas com orientação para dividi-las.
+
+As novas saídas usam uma organização por contexto, não por formato de arquivo:
+
+```text
+saidas-geoespaciais/
+  hierarquizacoes/<codigo>/<fase-1|fase-2|fase-3|consolidado>/<analise>/
+  analises-avulsas/<ferramenta>/<analise>/
+  exportacoes/<exportacao>/
+```
+
+Cada análise reúne camadas, relatórios, metadados e pacotes. O nome da pasta
+combina um título normalizado e o identificador único; execuções registradas no
+banco também incluem a data UTC de início. Na elegibilidade, o lote identifica
+a análise, e os arquivos de entrada recebem um sufixo próprio para evitar
+colisões de nomes. Somente entradas comprovadamente oriundas de uma hierarquização
+usam sua pasta de fase; entradas avulsas não ganham vínculo com uma rodada.
+PDFs e ZIPs recebem identificadores próprios para preservar versões anteriores.
+Revisões de nomes ficam em `revisoes/<hash_usuario>/` dentro da análise.
+Preparações de demandas ficam identificadas como `preparacao-demandas` no
+mesmo contexto territorial, sem modificar as fontes.
+
+Exportações automáticas diretas usam `exportacoes`; uma pasta explicitamente
+selecionada pelo usuário continua sendo respeitada. Bases, originais das demandas,
+configurações e temporários permanecem separados. Os registros de acompanhamento
+da elegibilidade passam para
+`aplicacao/data/geoespacial/configuracoes/extracao-atributos/execucoes-elegibilidade`.
+Arquivos, vínculos, históricos e revisões antigos continuam legíveis.
+O utilitário `scripts/migrar_destinos_storage.py` reorganiza o acervo existente
+na montagem oficial da VM: sem argumentos, apenas confere o plano; com
+`--aplicar`, copia, verifica os hashes pela API, atualiza referências por chave
+primária e só então exclui as origens conferidas e os diretórios vazios.
+Ele requer o código atualizado e a migração SQL 139 aplicada.
+Os manifestos e backups dos JSONs alterados ficam em
+`aplicacao/data/geoespacial/configuracoes/migracoes-storage/<identificador>/`.
+GeoPackages, PDFs e ZIPs preservam os bytes originais e sua auditoria histórica.
+Relatórios e revisões de análises migradas usam a pasta física organizada,
+sem exigir a regravação dos metadados dos GeoPackages.
+
+Na VM, os diretórios de configurações compartilham o grupo do Storage
+(`1000`, diretórios `2770`). A publicação atômica dos JSONs aplica o grupo
+do destino e o modo `0660` antes da troca do arquivo, evitando o modo
+privado `0600` dos temporários sem conceder acesso a outros usuários do SO.
+Antes de usar as novas gravações, aplique
+[139_centralizar_destinos_saidas_storage.sql](database/139_centralizar_destinos_saidas_storage.sql)
+pelo aplicador de banco, com `-OnlyMigration 139_centralizar_destinos_saidas_storage.sql`.
+A migração amplia a restrição de caminhos sem alterar dados ou referências,
+preservando exatamente as permissões de caminhos legados da versão instalada.
+
 As prévias vetoriais do acervo usadas na extração de atributos e na elegibilidade
 também funcionam sem montagem: as geometrias são serializadas em RAM e enviadas
 para `temporarios-sicard/extracao-atributos/previas`, isoladas por usuário e
@@ -371,6 +420,26 @@ Geometrias em banco não recebem nomes, caminhos ou tamanhos de arquivos fictíc
 esses campos indicam que não se aplicam. UF e municípios continuam sem confirmação
 quando não houve consulta à base territorial; ausência de metadados não é tratada
 como contagem zero. Os atributos acrescentados pela rodada também aparecem na ficha.
+
+A **Favorabilidade de grade e da rede V2** é servida na mesma rota
+`/restrict/hierarquizacao/fase-2/`. O template
+`templates/paginas/hierarquizacao/fase2-favorabilidade.html` e seu executor
+`hierarquizacao/js/fase2.js` permanecem intactos como backup da versão anterior,
+sem serem carregados pela V2. A nova página adapta Entrada, Superfícies e Prévia
+da Elegibilidade, usando a bancada atual de `componentes/_geoprocessamento.html`.
+Grade e rede podem ser preparadas em qualquer ordem, com os exploradores abrindo
+em `superficies-indices/hierarquizacao/favorabilidade`. As listas de referências
+ficam isoladas nos escopos `favorabilidade-grade` e `favorabilidade-rede`.
+Entradas vetoriais e geometrias cadastradas das demandas são preservadas, sem
+buffers ou conversão geométrica. Superfícies vetoriais usam a prévia comum por
+tiles; rasters usam imagem reduzida vinculada ao arquivo original. A preparação
+não comprova homologação ou normalização dos índices. Apenas as camadas marcadas
+na prévia são confirmadas na bancada, nos papéis de entrada, grade e rede;
+camadas adicionadas diretamente à bancada não recebem esses papéis.
+Esta atualização cobre a preparação até a bancada, sem executar extração de
+índices ou alterar a metodologia. Os resultados anteriormente registrados na
+hierarquização continuam consultáveis e não são substituídos por esse envio.
+
 Anexo à bancada da elegibilidade v2, o bloco **Conferir e executar** resume
 separadamente Entrada, Restrição e Risco, com os arquivos ou referências integrais.
 A conferência acompanha a visibilidade e as remoções na bancada, sem usar a seleção
@@ -652,12 +721,24 @@ Rotas públicas principais:
 | Rota | Uso |
 |---|---|
 | `/public/` | Entrada geral |
-| `/public/cadastro/` | Cadastro de demandas |
-| `/public/painel/` | Acompanhamento publicado |
-| `/public/transparencia/` | Transparência e resultados |
+| `/public/cadastro/` | Orientações e catálogos públicos; envio exige Operador ou superior |
+| `/public/painel/` | Consulta de registros, localização e situação; não publica ranking |
+| `/public/transparencia/` | Acesso à consulta cartográfica e documentação |
 | `/public/documentacao/` | Documentação funcional |
 | `/public/login/` | Entrada da área restrita |
 | `/public/analise-multicriterio/{token}/` | Formulário do especialista por token |
+
+O painel consulta planos, programas e projetos de todos os status e omite os
+dados do representante (`painel_service`, `public_only=True`); não há filtro de
+aprovação/publicação nessa consulta. Presença no painel não comprova aprovação
+ou homologação. Falha da API é apresentada explicitamente, sem substituir a
+consulta por cadastros locais do navegador. Uma resposta vazia é distinta de erro.
+Os catálogos usam as referências em `config/referencia-institucional.json` e
+`config/referencia-classificacao.json`, não a listagem operacional do banco.
+O formulário legado `/public/ahp/colaborativa/` retorna 410; o convite ativo usa
+a rota por token e exige validação de e-mail e código de acesso na API.
+Os relatórios em `/public/documentacao/saidas_modelos/` e a apresentação
+conceitual não certificam homologação nem execução integral do modelo.
 
 Rotas restritas principais:
 

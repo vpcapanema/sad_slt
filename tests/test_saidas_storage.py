@@ -1,4 +1,5 @@
 from contextlib import contextmanager
+from datetime import datetime, timezone
 from pathlib import PurePosixPath
 from uuid import uuid4
 import geopandas as gpd
@@ -7,8 +8,118 @@ from shapely.geometry import Point
 from api.services import saidas_storage as saidas, storage_remoto, ciclo_vida_arquivos as ciclo
 
 
+@pytest.mark.parametrize(('codigo', 'fase', 'exportacao', 'raiz'), [
+    (None, None, False, 'saidas-geoespaciais/analises-avulsas/gerador-territorial/'),
+    (None, None, True, 'saidas-geoespaciais/exportacoes/'),
+    ('HIER-001', 'fase-1', False, 'saidas-geoespaciais/hierarquizacoes/HIER-001/fase-1/'),
+    ('HIER-001', 'fase-2', False, 'saidas-geoespaciais/hierarquizacoes/HIER-001/fase-2/'),
+    ('HIER-001', 'fase-3', False, 'saidas-geoespaciais/hierarquizacoes/HIER-001/fase-3/'),
+    ('HIER-001', 'consolidado', False, 'saidas-geoespaciais/hierarquizacoes/HIER-001/consolidado/'),
+])
+def test_pasta_por_contexto_nome_data_e_identificador(codigo, fase, exportacao, raiz):
+    ident = uuid4()
+    pasta = saidas.pasta_analise(
+        'Gerador territorial', 'Análise São Paulo', str(ident),
+        quando=datetime(2026, 10, 20, 15, 30, tzinfo=timezone.utc),
+        hierarquizacao=codigo, fase=fase, exportacao=exportacao)
+    assert pasta == f'{raiz}20261020T153000Z_analise_sao_paulo_{ident.hex}'
+    assert saidas.validar(pasta + '/resultado.gpkg') == pasta + '/resultado.gpkg'
+    assert saidas.pasta_analise('x', 'Mesmo nome', str(uuid4())) != saidas.pasta_analise('x', 'Mesmo nome', str(uuid4()))
+
+
+@pytest.mark.parametrize(('codigo', 'fase'), [('HIER/001', 'fase-1'), ('..', 'fase-1'),
+    ('HIER-001', None), ('HIER-001', 'fase-4'), (None, 'fase-1')])
+def test_organizacao_recusa_contexto_invalido(codigo, fase):
+    with pytest.raises(ValueError):
+        saidas.pasta_analise('ferramenta', 'nome', str(uuid4()), hierarquizacao=codigo, fase=fase)
+
+
+def test_destinos_reconstroem_mesma_pasta_pelo_registro_persistido(monkeypatch):
+    from api.db import connection
+    ident = str(uuid4())
+    registro = {'operacao': 'gerar_camada_municipal', 'parametros': {'nome_saida': 'Índices sociais'},
+                'iniciado_em': datetime(2026, 10, 20, 15, 0, tzinfo=timezone.utc)}
+    class Connection:
+        def execute(self, sql, params):
+            assert params == (ident,)
+            return self
+        def fetchone(self):
+            return registro
+    @contextmanager
+    def conectar():
+        yield Connection()
+    monkeypatch.setattr(connection, 'get_connection', conectar)
+    paths = [saidas.destino(ident, grupo, nome) for grupo, nome in [
+        ('camadas', 'camada.gpkg'), ('relatorios', 'metadados.json'), ('pacotes', 'camada.zip')]]
+    assert len({str(PurePosixPath(path).parent) for path in paths}) == 1
+    assert all(path.startswith('saidas-geoespaciais/analises-avulsas/gerador-camadas-territoriais/20261020T150000Z_indices_sociais_') for path in paths)
+    registro['operacao'] = 'exportacao_direta'
+    assert saidas.destino(ident, 'camadas', 'exportado.gpkg').startswith('saidas-geoespaciais/exportacoes/')
+    with pytest.raises(ValueError, match='não corresponde'):
+        saidas.enviar_bytes(str(uuid4()), 'camadas', 'camada.gpkg', b'nao enviar', caminho=paths[0])
+
+
+def test_execucao_ausente_nao_inventa_destino():
+    class Connection:
+        def execute(self, *args):
+            return self
+        def fetchone(self):
+            return None
+    with pytest.raises(ValueError, match='Execução não encontrada'):
+        saidas.pasta_execucao(str(uuid4()), conn=Connection())
+
+
+def test_migration_139_registrada_no_aplicador():
+    from pathlib import Path
+    script = Path('scripts/apply-database.ps1').read_text(encoding='utf-8')
+    assert script.count('"139_centralizar_destinos_saidas_storage.sql"') == 2
+    assert "139: saidas por contexto; destinos legados preservados" in script
+
+
+def test_leitura_legada_continua_valida(remoto, storage_sintetico):
+    from hashlib import sha256
+    path = f'saidas-geoespaciais/execucoes/{uuid4()}/camadas/antigo.gpkg'
+    storage_remoto.enviar_bytes(path, b'original')
+    checksum = sha256(b'original').hexdigest()
+    assert saidas.validar(path) == path
+    assert saidas.conferir(path, checksum) == b'original'
+    with saidas.materializar(path, checksum) as local:
+        assert local.read_bytes() == b'original'
+    assert (remoto / path).read_bytes() == b'original'
+
+
+def test_criacao_de_pastas_organizadas_e_idempotente(remoto):
+    (remoto / saidas.RAIZ).mkdir()
+    pasta = saidas.pasta_analise('ferramenta', 'Analise', str(uuid4()))
+    assert saidas.garantir_pasta(pasta) == pasta
+    assert (remoto / pasta).is_dir()
+    (remoto / pasta / 'preservado.txt').write_text('original', encoding='utf-8')
+    assert saidas.garantir_pasta(pasta) == pasta
+    assert (remoto / pasta / 'preservado.txt').read_text(encoding='utf-8') == 'original'
+
+
+def test_pasta_criada_por_outro_worker_e_reconhecida(remoto, monkeypatch):
+    (remoto / saidas.RAIZ).mkdir()
+    criar = storage_remoto.criar_pasta
+    def concorrer(caminho):
+        criar(caminho)
+        raise storage_remoto.StorageIndisponivel('Pasta já criada por outro worker.')
+    monkeypatch.setattr(storage_remoto, 'criar_pasta', concorrer)
+    pasta = saidas.pasta_analise('ferramenta', 'nome', str(uuid4()))
+    assert saidas.garantir_pasta(pasta) == pasta
+    assert (remoto / pasta).is_dir()
+
+
+def test_falha_no_storage_nao_e_ocultada_ao_preparar_pasta(monkeypatch):
+    def falhar(*args, **kwargs):
+        raise storage_remoto.StorageIndisponivel('Storage indisponível.')
+    monkeypatch.setattr(storage_remoto, 'listar', falhar)
+    with pytest.raises(storage_remoto.StorageIndisponivel, match='indisponível'):
+        saidas.garantir_pasta('saidas-geoespaciais/analises-avulsas')
+
+
 @pytest.fixture
-def remoto(monkeypatch,tmp_path):
+def remoto(monkeypatch,tmp_path,execucoes_sinteticas):
     def enviar_bytes(caminho, dados):
         target = tmp_path / caminho
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -68,6 +179,8 @@ def test_companheiros_shapefile_mantem_nome_e_reabrem(remoto,monkeypatch,tmp_pat
     result=ciclo.registrar_exportacao(path,'entrada_teste','vetor')
     stems={PurePosixPath(item['caminho']).stem for item in result['componentes']}
     assert len(stems)==1
+    assert result['caminho'].startswith('saidas-geoespaciais/analises-avulsas/')
+    assert len({str(PurePosixPath(item['caminho']).parent) for item in result['componentes']}) == 1
     restored=gpd.read_file(remoto/result['caminho'],engine='pyogrio')
     assert restored.nome.tolist()==frame.nome.tolist()
     assert restored.geometry.iloc[0].equals_exact(frame.geometry.iloc[0],0)
@@ -95,7 +208,7 @@ def test_preview_raster_preserva_nodata_e_nao_altera_arquivo(remoto):
     assert sha256((remoto/file['caminho']).read_bytes()).hexdigest()==file['sha256']
 
 
-def test_download_pacote_nao_permite_outro_proprietario(monkeypatch):
+def test_download_pacote_nao_permite_outro_proprietario(monkeypatch, execucoes_sinteticas):
     from types import SimpleNamespace
     from fastapi import HTTPException
     from api.routers.geoespacial import baixar_saida_geoespacial

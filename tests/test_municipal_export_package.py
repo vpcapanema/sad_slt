@@ -183,7 +183,12 @@ def test_geracao_registra_camada_pacote_e_metadados_no_storage(inputs, monkeypat
     monkeypatch.setattr(dados, 'malha', malha.copy)
     monkeypatch.setattr(service, 'categoria', lambda code: {'id': code, 'nome': 'Social'})
     execution = str(uuid4())
-    monkeypatch.setattr(ciclo, 'iniciar', lambda *a: execution)
+    def iniciar(operacao, parametros, responsavel):
+        assert parametros['nome_saida'] == 'Camada de teste'
+        return execution
+    monkeypatch.setattr(ciclo, 'iniciar', iniciar)
+    pasta = saidas_storage.pasta_analise('gerador-camadas-territoriais', 'Camada de teste', execution)
+    monkeypatch.setattr(saidas_storage, 'pasta_execucao', lambda *a, **kw: pasta)
     ended = []
     monkeypatch.setattr(ciclo, 'finalizar', lambda *a, **kw: ended.append((a, kw)))
     documents = []
@@ -198,12 +203,14 @@ def test_geracao_registra_camada_pacote_e_metadados_no_storage(inputs, monkeypat
     monkeypatch.setattr(camadas, 'salvar_vetor', salvar_vetor)
     payload = {'attributes': [i['id'] for i in items], 'format': fmt}
     package, result = service.gerar('social', payload, 'Camada de teste', SimpleNamespace(id=uuid4()))
-    assert result['arquivo'].startswith(f'saidas-geoespaciais/execucoes/{execution}/camadas/')
+    assert result['arquivo'].startswith(pasta + '/')
     assert saidas_storage.conferir(result['pacote_caminho'], result['pacote_sha256']) == package
     actual = ler_vetor({'resultado.gpkg': files[result['arquivo']]}, 'resultado.gpkg')
     assert len(actual) == 645 and actual.crs.to_epsg() == 4674
     assert actual.CD_MUN.is_unique
     assert len(documents) == 2
     assert all(document['caminho'] in files for document in documents)
+    assert all(document['caminho'].rsplit('/', 1)[0] == pasta for document in documents)
+    assert result['arquivo'].rsplit('/', 1)[0] == pasta
     assert ended == [((execution,), {})]
     assert not service._lock.locked()

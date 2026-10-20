@@ -138,7 +138,7 @@ def test_envio_bytes_nao_materializa_arquivo(monkeypatch):
     monkeypatch.setattr(storage_remoto, 'enviar_bytes', upload)
     monkeypatch.setattr(storage_remoto, 'baixar', lambda path: b'conteudo')
     monkeypatch.setattr(saidas_storage, 'destino', lambda *args: 'saidas-geoespaciais/execucoes/00000000-0000-0000-0000-000000000001/relatorios/a.json')
-    result = saidas_storage.enviar_bytes('execucao', 'relatorios', 'a.json', b'conteudo')
+    result = saidas_storage.enviar_bytes('00000000-0000-0000-0000-000000000001', 'relatorios', 'a.json', b'conteudo')
     upload.assert_called_once_with(result['caminho'], b'conteudo')
     assert result['tamanho_bytes'] == 8
 
@@ -150,7 +150,7 @@ def test_envio_corrompido_e_recusado(monkeypatch):
     monkeypatch.setattr(storage_remoto, 'apagar_arquivo', remove)
     monkeypatch.setattr(saidas_storage, 'destino', lambda *args: 'saidas-geoespaciais/execucoes/00000000-0000-0000-0000-000000000001/relatorios/a.json')
     with pytest.raises(ValueError, match='hash'):
-        saidas_storage.enviar_bytes('execucao', 'relatorios', 'a.json', b'conteudo')
+        saidas_storage.enviar_bytes('00000000-0000-0000-0000-000000000001', 'relatorios', 'a.json', b'conteudo')
     remove.assert_called_once()
 
 

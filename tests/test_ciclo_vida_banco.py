@@ -19,6 +19,56 @@ from api.services import ciclo_vida_arquivos as ciclo
 pytestmark = pytest.mark.skipif(os.getenv('SLT_TEST_CICLO_BANCO') != '1', reason='Integração opt-in com rollback')
 
 
+@pytest.mark.parametrize('legado_local', [False, True])
+def test_migration_139_preserva_predicado_legado_e_aceita_novos_destinos(legado_local):
+    from pathlib import Path
+    from api.services import saidas_storage
+
+    migration = Path('database/139_centralizar_destinos_saidas_storage.sql').read_text(encoding='utf-8')
+    migration = migration.replace('BEGIN;', '', 1).rsplit('COMMIT;', 1)[0]
+    migration = migration.replace('geoprocessamento.arquivo_resultado', 'pg_temp.sicard_destinos_teste')
+    conn = psycopg.connect(get_settings().slt_database_url, connect_timeout=5,
+                           options='-c statement_timeout=5000')
+    try:
+        legado = "caminho LIKE 'saidas-geoespaciais/execucoes/%'"
+        if legado_local:
+            legado += " OR caminho LIKE 'data/geoespacial/outputs/%'"
+        conn.execute(f'''CREATE TEMP TABLE sicard_destinos_teste (
+            caminho text NOT NULL, estado text NOT NULL DEFAULT 'resultado',
+            CONSTRAINT ck_arquivo_resultado_destino CHECK (({legado}) AND caminho NOT LIKE '%..%')
+        )''')
+        antigo = f'saidas-geoespaciais/execucoes/{uuid4()}/camadas/original.gpkg'
+        conn.execute('INSERT INTO sicard_destinos_teste(caminho) VALUES (%s)', (antigo,))
+        conn.execute(migration)
+        for codigo, fase, exportacao in [(None, None, False), (None, None, True),
+                                          ('HIER-001', 'fase-1', False),
+                                          ('HIER-001', 'fase-2', False),
+                                          ('HIER-001', 'fase-3', False),
+                                          ('HIER-001', 'consolidado', False)]:
+            pasta = saidas_storage.pasta_analise('ferramenta', 'nome', str(uuid4()),
+                                               hierarquizacao=codigo, fase=fase, exportacao=exportacao)
+            conn.execute('INSERT INTO sicard_destinos_teste(caminho) VALUES (%s)', (pasta + '/saida.gpkg',))
+        for invalido in ['base-geoespacial/saida.gpkg', pasta + '/../saida.gpkg',
+                         pasta.replace('consolidado', 'fase-4') + '/saida.gpkg']:
+            with pytest.raises(psycopg.errors.CheckViolation), conn.transaction():
+                conn.execute('INSERT INTO sicard_destinos_teste(caminho) VALUES (%s)', (invalido,))
+        if legado_local:
+            conn.execute("INSERT INTO sicard_destinos_teste(caminho) VALUES ('data/geoespacial/outputs/original.gpkg')")
+        else:
+            with pytest.raises(psycopg.errors.CheckViolation), conn.transaction():
+                conn.execute("INSERT INTO sicard_destinos_teste(caminho) VALUES ('data/geoespacial/outputs/original.gpkg')")
+        consulta = """SELECT pg_get_constraintdef(oid) FROM pg_constraint
+                      WHERE conrelid='pg_temp.sicard_destinos_teste'::regclass
+                      AND conname='ck_arquivo_resultado_destino'"""
+        anterior = conn.execute(consulta).fetchone()
+        conn.execute(migration)
+        assert conn.execute(consulta).fetchone() == anterior
+        assert conn.execute('SELECT caminho FROM sicard_destinos_teste WHERE caminho=%s', (antigo,)).fetchone()[0] == antigo
+    finally:
+        conn.rollback()
+        conn.close()
+
+
 @pytest.fixture
 def database(monkeypatch, tmp_path, storage_sintetico):
     conn = psycopg.connect(get_settings().slt_database_url, row_factory=dict_row, connect_timeout=5)

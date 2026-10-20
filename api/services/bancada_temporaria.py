@@ -25,5 +25,5 @@ def consultar(acao, payload, dono):
         return original.consultar(*args, payload.expressao, payload.inverter_selecao, payload.offset, payload.limite, _source=fonte)
     if acao == 'classificacao':
         from api.services.bancada_classificacao import classificar
-        return classificar(*args, payload.campo, payload.metodo, payload.classes, _source=fonte)
+        return classificar(*args, payload.campo, payload.metodo, payload.classes, getattr(payload, 'dominio', None), _source=fonte)
     raise ValueError("Operação temporária não suportada.")

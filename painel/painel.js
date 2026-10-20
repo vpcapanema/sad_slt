@@ -110,11 +110,12 @@
     popoverEl.className = "painel-detail-popover hidden";
     popoverEl.setAttribute("role", "dialog");
     popoverEl.setAttribute("aria-modal", "false");
+    popoverEl.setAttribute("aria-labelledby", "painel-detail-title");
     popoverEl.innerHTML = `
       <div class="painel-detail-header">
         <div class="painel-detail-header-text">
           <p class="painel-detail-kicker"></p>
-          <h3 class="painel-detail-title"></h3>
+          <h3 id="painel-detail-title" class="painel-detail-title"></h3>
         </div>
         <button type="button" class="painel-detail-close" aria-label="Fechar">×</button>
       </div>
@@ -597,14 +598,24 @@
 
     try {
       items = await SLTDemandasApi.listPainelDemandas();
+      if (!Array.isArray(items)) throw new Error("Resposta inválida do painel.");
     } catch (err) {
       console.error(err);
-      items = (SLTStorage.loadDemandas() || []).map((d) => ({ ...d, tipo: "projeto" }));
+      items = [];
+      $("layers-container").replaceChildren();
+      $("layers-container").setAttribute("aria-busy", "false");
+      $("painel-load-status").textContent = "Não foi possível carregar as demandas do servidor. Atualize a página para tentar novamente.";
+      document.querySelector("#map-painel .painel-map-loading")?.remove();
+      return;
     }
 
     initRecordOrder();
     renderSidebar();
     buildMapLayers();
+    $("layers-container").setAttribute("aria-busy", "false");
+    $("painel-load-status").textContent = items.length
+      ? `${items.length} registro(s) carregado(s). A presença no painel não comprova aprovação ou homologação.`
+      : "Consulta concluída: nenhum registro retornado pelo servidor.";
     document.querySelector("#map-painel .painel-map-loading")?.remove();
   }
 

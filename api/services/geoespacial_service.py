@@ -756,7 +756,7 @@ class GeoespacialService:
 
     def classificar_serie(self, camada_id, campo, serie, metodo="intervalos_iguais", classes=5):
         """Contrato comum para valores do catálogo e leituras de campo do arquivo."""
-        if metodo not in {"valores_unicos", "intervalos_iguais", "quantis", "desvio_padrao", "quebras_naturais", "manual"}:
+        if metodo not in {"valores_unicos", "intervalos_iguais", "quantis", "desvio_padrao", "quebras_naturais", "jenks", "manual"}:
             raise ValueError("Método de classificação inválido")
         if metodo == "valores_unicos":
             limite = 100
@@ -805,6 +805,8 @@ class GeoespacialService:
         """Retorna as quebras internas (comprimento classes-1) do método escolhido."""
         if maximo <= minimo:
             return []
+        if metodo == "jenks":
+            return self._jenks_exato(valores, classes)
         if metodo == "quantis":
             fracoes = np.linspace(0, 1, classes + 1)[1:-1]
             internas = np.quantile(valores, fracoes)
@@ -821,6 +823,51 @@ class GeoespacialService:
         internas = np.unique(np.round(internas.astype("float64"), 6))
         internas = internas[(internas > minimo) & (internas < maximo)]
         return [float(v) for v in internas]
+
+    def _jenks_exato(self, valores: np.ndarray, classes: int) -> list[float]:
+        """Minimiza a variancia intraclasse em 1D, sem amostragem."""
+        unicos, contagens = np.unique(valores, return_counts=True)
+        total = len(unicos)
+        classes = min(classes, total)
+        if classes <= 1:
+            return []
+        centrados = unicos - unicos[0]
+        pesos = np.concatenate(([0], np.cumsum(contagens)))
+        somas = np.concatenate(([0.0], np.cumsum(centrados * contagens)))
+        quadrados = np.concatenate(([0.0], np.cumsum(centrados ** 2 * contagens)))
+        cortes = np.zeros((classes + 1, total + 1), dtype=np.int64)
+        anterior = np.full(total + 1, np.inf)
+        anterior[0] = 0
+
+        for grupo in range(1, classes + 1):
+            atual = np.full(total + 1, np.inf)
+
+            def preencher(esquerda, direita, inicio, fim):
+                if esquerda > direita:
+                    return
+                meio = (esquerda + direita) // 2
+                candidatos = np.arange(inicio, min(fim, meio - 1) + 1)
+                soma = somas[meio] - somas[candidatos]
+                variancias = quadrados[meio] - quadrados[candidatos] - soma ** 2 / (pesos[meio] - pesos[candidatos])
+                custos = anterior[candidatos] + np.maximum(variancias, 0)
+                indice = int(np.argmin(custos))
+                corte = int(candidatos[indice])
+                atual[meio] = custos[indice]
+                cortes[grupo, meio] = corte
+                # O corte otimo e monotonico para a soma de quadrados em 1D.
+                preencher(esquerda, meio - 1, inicio, corte)
+                preencher(meio + 1, direita, corte, fim)
+
+            preencher(grupo, total, grupo - 1, total - 1)
+            anterior = atual
+
+        quebras = []
+        fim = total
+        for grupo in range(classes, 1, -1):
+            inicio = int(cortes[grupo, fim])
+            quebras.append(float(unicos[inicio]))
+            fim = inicio
+        return list(reversed(quebras))
 
     def _jenks_kmeans(self, valores: np.ndarray, classes: int) -> list[float]:
         """Aproxima quebras naturais (Jenks) por k-means 1D com amostragem."""

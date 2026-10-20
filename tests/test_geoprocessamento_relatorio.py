@@ -15,7 +15,7 @@ from api.services import geoprocessamento_relatorio as rel
 
 
 @pytest.fixture(autouse=True)
-def storage_relatorio(monkeypatch, tmp_path):
+def storage_relatorio(monkeypatch, tmp_path, execucoes_sinteticas):
     from api.services import storage_remoto, ciclo_vida_arquivos as ciclo
     from api.repositories import saidas_geoespaciais_repository as catalogo
     from uuid import uuid4
@@ -82,7 +82,7 @@ def test_relatorio_no_storage_preserva_proveniencia_sem_sidecar_local(job_conclu
 
     sidecar = produto.with_name(produto.name + rel.SIDECAR_SUFFIX)
     assert not sidecar.exists(), "não deve criar outra cópia permanente na aplicação"
-    assert len(gravados)==1 and gravados[0].startswith('saidas-geoespaciais/execucoes/')
+    assert len(gravados)==1 and gravados[0].startswith('saidas-geoespaciais/analises-avulsas/')
     conteudo = json.loads((tmp_path/gravados[0]).read_text(encoding="utf-8"))
     assert conteudo["saidas"][0]["sha256"], "a saída deve ser identificada por hash"
     assert conteudo["saidas"][0]["bytes"] == len(b"conteudo do produto")

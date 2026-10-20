@@ -42,7 +42,9 @@ export function criarMapa(aoMudarPainel) {
           const lote=item!==ultimo;
           const metodo=item.metadados_local?.previa?.metodo||item.representacao_previa?.metodo;const aproximada=metodo&&metodo!=='original';
           const nomeMapa=aproximada?`${item.nome} · prévia aproximada`:item.nome;
-          if(item.representacao==='tiles'){
+          if(item.tipo==='raster'){
+            app.adicionarRasterPreview({...item,id,categoria:item.grupo},item.preview);
+          }else if(item.representacao==='tiles'){
             // O descritor de tiles não é uma sessão de arquivo: saídas PostGIS
             // não têm caminho, e a revisão da prévia não é a do original.
             if(item.arquivo||item.origem_geometria==='local_temporaria')files.sessions.set(id,{...item,id});
@@ -53,8 +55,8 @@ export function criarMapa(aoMudarPainel) {
           if(!app.state.layers.some(layer=>layer.id===id))throw new Error(`${item.nome} ainda não foi adicionada ao painel. Tente novamente após o mapa carregar.`);
           app.state.layers.find(layer=>layer.id===id).previaAproximada=Boolean(aproximada);
           mounted.set(item.key,{id,geojson:item.geojson,revisao:item.revisao,color:item.color});
-          if(item.color)app.applyLayerColor(id,item.color,false);
-        }else if(previous.color!==item.color){app.applyLayerColor(id,item.color,false);previous.color=item.color;}
+          if(item.color&&item.tipo!=='raster')app.applyLayerColor(id,item.color,false);
+        }else if(previous.color!==item.color){if(item.tipo!=='raster')app.applyLayerColor(id,item.color,false);previous.color=item.color;}
         const registro=app.state.layers.find(l=>l.id===id);
         if(registro&&(registro.papelExtracao!==item.papelExtracao||registro.arquivoGrupo!==item.arquivoGrupo||registro.categoria!==item.grupo)){
           Object.assign(registro,{papelExtracao:item.papelExtracao,arquivoGrupo:item.arquivoGrupo,categoria:item.grupo});gruposAlterados=true;
@@ -115,7 +117,7 @@ export function criarMapa(aoMudarPainel) {
     const app=context()?.gpApp;
     if(!ready||!app)return null;
     return app.state.layers.map(item=>({id:item.id,nome:item.nome,categoria:String(item.categoria||''),
-      color:app.state.map.getLayer(item.id)?app.state.map.getPaintProperty?.(item.id,'fill-color'):null,visivel:camadaVisivel(app.state.map,item.id)}));
+      color:item.tipo!=='raster'&&app.state.map.getLayer(item.id)?app.state.map.getPaintProperty?.(item.id,'fill-color'):null,visivel:camadaVisivel(app.state.map,item.id)}));
   }
   frame.addEventListener('load',connect);connect();
   function assertReady(ids=[]){

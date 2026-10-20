@@ -1,0 +1,17 @@
+.favorabilidade-v2 .ev-preparacao-grid :is(.ev-input-action input, select) {
+  height: 36px;
+  min-height: 36px;
+}
+.favorabilidade-v2 > #fv-status {
+  margin-bottom: var(--process-space-4);
+}
+.favorabilidade-v2 #fv-status[data-error="true"] {
+  font-weight: 700;
+}
+.favorabilidade-v2 .ev-preparacao-grid :is(select, .ev-input-action input) {
+  font-size: 0.75rem;
+}
+.favorabilidade-v2 #fv-auditoria pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

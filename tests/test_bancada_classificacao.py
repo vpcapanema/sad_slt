@@ -1,12 +1,16 @@
 """Synthetic GPKG classifications; no persistent catalog or database access."""
 from types import SimpleNamespace
+from itertools import combinations
 
 from osgeo import ogr, osr
+import numpy as np
+import pandas as pd
 import pytest
 
 from api.services import bancada_camada_original as original
 from api.services.bancada_classificacao import classificar
 from api.services import bancada_temporaria
+from api.services.geoespacial_service import geoespacial_service
 
 
 @pytest.fixture
@@ -77,5 +81,68 @@ def test_temporary_classification_scoped_to_owner(source, monkeypatch):
                               campo='valor', metodo='quantis', classes=3)
     result = bancada_temporaria.consultar('classificacao', payload, 'owner')
     assert result['quebras'] == [10.0, 20.0]
+    payload.metodo = 'jenks'
+    payload.classes = 5
+    payload.dominio = (0, 20)
+    assert bancada_temporaria.consultar('classificacao', payload, 'owner')['quebras'] == [10, 20]
     with pytest.raises(FileNotFoundError):
         bancada_temporaria.consultar('classificacao', payload, 'other')
+
+
+@pytest.mark.parametrize("seed", range(8))
+def test_jenks_exato_minimiza_variancia_global_sem_amostragem(seed):
+    valores = np.random.default_rng(seed).integers(0, 12, size=24).astype(float)
+    unicos = np.unique(valores)
+    classes = min(5, len(unicos))
+    resultado = geoespacial_service.classificar_serie("teste", "valor", pd.Series(valores), "jenks", classes)
+
+    def variancia(quebras):
+        grupos = np.searchsorted(quebras, valores, side="right")
+        return sum(float(np.sum((grupo - grupo.mean()) ** 2))
+                   for indice in range(classes) if (grupo := valores[grupos == indice]).size)
+
+    otimo = min(variancia(quebras) for quebras in combinations(unicos[1:], classes - 1))
+    assert variancia(resultado["quebras"]) == pytest.approx(otimo, abs=1e-10)
+    assert resultado["classes"] == classes
+    assert resultado["quebras"] == sorted(set(resultado["quebras"]))
+
+
+def test_jenks_preserva_precisao_pesos_e_casos_degenerados():
+    valores = np.repeat([.10000001, .10000002, .10000003, .10000004, .10000005],
+                        [30000, 2000, 10000, 8000, 500])
+    resultado = geoespacial_service.classificar_serie("teste", "valor", pd.Series(valores), "jenks", 5)
+    assert resultado["quebras"] == [.10000002, .10000003, .10000004, .10000005]
+    constante = geoespacial_service.classificar_serie("teste", "valor", pd.Series([.3, .3, None]), "jenks", 5)
+    assert constante["classes"] == 1 and constante["quebras"] == []
+    reduzido = geoespacial_service.classificar_serie("teste", "valor", pd.Series([0, .5, 1]), "jenks", 5)
+    assert reduzido["classes"] == 3 and reduzido["quebras"] == [.5, 1]
+
+
+def test_classificacao_jenks_filtra_dominio_sem_alterar_a_fonte(source):
+    resultado = classificar(source.ident, "", "a" * 32, "valor", "jenks", 5, (0, 20), _source=source)
+    assert resultado["min"] == 0 and resultado["max"] == 20
+    assert resultado["quebras"] == [10, 20]
+    with pytest.raises(ValueError, match="Domínio"):
+        classificar(source.ident, "", "a" * 32, "valor", "jenks", 5, (1, 0), _source=source)
+    with pytest.raises(ValueError, match="não possui valores numéricos"):
+        classificar(source.ident, "", "a" * 32, "valor", "jenks", 5, (.1, .2), _source=source)
+
+
+def test_api_jenks_encaminha_dominio_e_revisao(source, monkeypatch):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from api.routers.bancada_arquivos import router
+    from api.deps.auth import require_geospatial_access
+
+    app = FastAPI()
+    app.include_router(router, prefix="/api/geoespacial")
+    app.dependency_overrides[require_geospatial_access] = lambda: SimpleNamespace(id="teste")
+    monkeypatch.setattr(original, "_fonte", lambda *args: source)
+    with TestClient(app) as client:
+        payload = {"camada_id": source.ident, "arquivo": "origem.gpkg", "revisao": "a" * 32,
+                   "campo": "valor", "metodo": "jenks", "classes": 5, "dominio": [0, 20]}
+        response = client.post("/api/geoespacial/bancada-arquivos/classificacao", json=payload)
+        assert response.status_code == 200, response.text
+        assert response.json()["quebras"] == [10, 20]
+        payload["revisao"] = "desatualizada"
+        assert client.post("/api/geoespacial/bancada-arquivos/classificacao", json=payload).status_code == 422

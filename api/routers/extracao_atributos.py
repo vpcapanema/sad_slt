@@ -410,7 +410,10 @@ class EntradaExtracao(BaseModel):
     config: ConfigEntrada = ConfigEntrada()
 
 
-EscopoConfiguracao = Literal['analise', 'bases', 'elegibilidade-restricao', 'elegibilidade-risco']
+EscopoConfiguracao = Literal[
+    'analise', 'bases', 'elegibilidade-restricao', 'elegibilidade-risco',
+    'favorabilidade-grade', 'favorabilidade-rede',
+]
 
 
 class Configuracao(BaseModel):

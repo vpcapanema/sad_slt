@@ -23,13 +23,24 @@ _log = logging.getLogger(__name__)
 
 def _pasta(dono):
     usuario = sha256(str(dono).encode()).hexdigest()
-    return f'saidas-geoespaciais/elegibilidade-execucoes/{usuario}'
+    return f'aplicacao/data/geoespacial/configuracoes/extracao-atributos/execucoes-elegibilidade/{usuario}'
 
 
 def _caminho(ident, dono):
     if not re.fullmatch(r'[a-f0-9]{32}', ident):
         raise FileNotFoundError('Execução de elegibilidade não encontrada nesta sessão.')
     return f'{_pasta(dono)}/{ident}.json'
+
+
+def _registro(ident, dono):
+    caminho = _caminho(ident, dono)
+    try:
+        dados = storage_remoto.baixar(caminho)
+    except FileNotFoundError:
+        usuario = sha256(str(dono).encode()).hexdigest()
+        caminho = f'saidas-geoespaciais/elegibilidade-execucoes/{usuario}/{ident}.json'
+        dados = storage_remoto.baixar(caminho)
+    return caminho, json.loads(dados)
 
 
 def _publicar(job, estado, *, forcar=False):
@@ -87,7 +98,7 @@ def consultar(ident, dono):
             _obter(ident, dono)
             return {'id': ident, **deepcopy(job['estado']), 'erro': job.get('erro'),
                     'resultado': deepcopy(job.get('resultado'))}
-    registro = json.loads(storage_remoto.baixar(_caminho(ident, dono)))
+    _, registro = _registro(ident, dono)
     if registro.get('id') != ident or registro.get('dono') != str(dono):
         raise FileNotFoundError('Execução de elegibilidade não encontrada nesta sessão.')
     if registro.get('status') not in {'executando', 'concluido', 'erro', 'cancelado'}:
@@ -116,7 +127,8 @@ def cancelar(ident, dono):
         return estado
     if not estado.get('cancelavel') or estado['status'] != 'executando':
         raise ValueError('A gravação final já começou ou o processo terminou. Não é seguro interromper esta etapa.')
-    storage_remoto.enviar_bytes(_caminho(ident, dono) + '.cancelar', b'cancelar')
+    caminho, _ = _registro(ident, dono)
+    storage_remoto.enviar_bytes(caminho + '.cancelar', b'cancelar')
     return {**estado, 'cancelamento_solicitado': True}
 
 
@@ -124,6 +136,7 @@ def iniciar(payload, dono):
     nome_saida(payload['entrada']['nome'])
     ident = uuid4().hex
     lote = str(payload.get('lote_id') or ident)
+    payload = {**payload, 'lote_id': lote}
     with _lock:
         agora = monotonic()
         atividade = {}

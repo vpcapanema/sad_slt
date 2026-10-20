@@ -32,6 +32,122 @@ def _gpkg(caminho: Path, camadas: tuple[str, ...] = ("uf",)) -> None:
     ds = None
 
 
+def _linhas_gpkg(caminho, pontos, quantidade=1):
+    ds = ogr.GetDriverByName("GPKG").CreateDataSource(str(caminho))
+    srs = osr.SpatialReference()
+    srs.ImportFromEPSG(3857)
+    camada = ds.CreateLayer("malha", srs, ogr.wkbLineString)
+    camada.CreateField(ogr.FieldDefn("codigo", ogr.OFTString))
+    geometria = ogr.Geometry(ogr.wkbLineString)
+    for ponto in pontos:
+        geometria.AddPoint_2D(*ponto)
+    for indice in range(quantidade):
+        feicao = ogr.Feature(camada.GetLayerDefn())
+        feicao.SetField("codigo", f"{indice:04d}-" + "x" * 1500)
+        feicao.SetGeometry(geometria)
+        assert camada.CreateFeature(feicao) == 0
+    feicao = camada = ds = None
+
+
+def _ler_linhas_tile(conteudo, alvo):
+    import uuid
+    nome = f"/vsimem/sicard-teste-linhas-{uuid.uuid4().hex}.pbf"
+    gdal.FileFromMemBuffer(nome, conteudo)
+    ds = None
+    try:
+        ds = gdal.OpenEx(nome, gdal.OF_VECTOR, open_options=[
+            f"X={alvo.x}", f"Y={alvo.y}", f"Z={alvo.z}", "CLIP=NO",
+        ])
+        return [(f.GetField("slt_fid"), f.GetField("codigo"),
+                 f.GetGeometryRef().Clone()) for f in ds.GetLayer(0)]
+    finally:
+        ds = None
+        gdal.Unlink(nome)
+
+
+@pytest.mark.parametrize("zoom", [0, 6, 14])
+def test_tile_preserva_vertices_da_linha_sem_generalizacao(tmp_path, zoom):
+    from hashlib import sha256
+    alvo = mercantile.tile(-47.5, -22, zoom)
+    limites = mercantile.xy_bounds(alvo)
+    escala = (limites.right - limites.left) / 4096
+    pontos = [(limites.left + (1000 + i * 5) * escala,
+               limites.bottom + (2000 + i % 2) * escala) for i in range(101)]
+    arquivo = tmp_path / "malha.gpkg"
+    _linhas_gpkg(arquivo, pontos)
+    assinatura = sha256(arquivo.read_bytes()).hexdigest()
+    conteudo = storage_geoespacial._tile(str(arquivo), "malha", (0, 0), alvo.z, alvo.x, alvo.y)
+    feicoes = _ler_linhas_tile(conteudo, alvo)
+    assert len(feicoes) == 1
+    geometria = feicoes[0][2]
+    assert geometria.GetPointCount() == len(pontos)
+    for indice, esperado in enumerate(pontos):
+        assert geometria.GetPoint_2D(indice) == pytest.approx(esperado, abs=escala * 1e-6)
+    assert sha256(arquivo.read_bytes()).hexdigest() == assinatura
+
+
+def test_fragmentacao_da_linha_preserva_ate_vertices_subpixel():
+    ds = ogr.GetDriverByName("Memory").CreateDataSource("")
+    camada = ds.CreateLayer("malha", geom_type=ogr.wkbLineString)
+    camada.CreateField(ogr.FieldDefn("codigo", ogr.OFTString))
+    original = ogr.Geometry(ogr.wkbLineString)
+    pontos = [(i * .1, (i % 2) * .01) for i in range(20001)]
+    for ponto in pontos:
+        original.AddPoint_2D(*ponto)
+    feicao = ogr.Feature(camada.GetLayerDefn())
+    feicao.SetField("codigo", "MALHA")
+    feicao.SetGeometry(original)
+    assert camada.CreateFeature(feicao) == 0
+    storage_geoespacial._limitar_vertices_tile(ds)
+    fragmentos = list(camada)
+    assert len(fragmentos) == 2
+    reconstruida = []
+    for indice, fragmento in enumerate(fragmentos):
+        assert fragmento.GetField("codigo") == "MALHA"
+        geometria = fragmento.GetGeometryRef()
+        assert geometria.GetPointCount() <= 16000
+        reconstruida.extend(geometria.GetPoint_2D(i)
+                           for i in range(1 if indice else 0, geometria.GetPointCount()))
+    assert reconstruida == pontos
+
+
+def test_tile_fragmenta_linha_complexa_preservando_todos_os_vertices(tmp_path):
+    alvo = mercantile.tile(-47.5, -22, 6)
+    limites = mercantile.xy_bounds(alvo)
+    escala = (limites.right - limites.left) / 4096
+    pontos = [(limites.left + (1000 + i % 200) * escala,
+               limites.bottom + (1000 + i // 200 * 3 + i % 2) * escala)
+              for i in range(20001)]
+    arquivo = tmp_path / "malha-complexa.gpkg"
+    _linhas_gpkg(arquivo, pontos)
+    conteudo = storage_geoespacial._tile(str(arquivo), "malha", (0, 0), alvo.z, alvo.x, alvo.y)
+    feicoes = _ler_linhas_tile(conteudo, alvo)
+    assert len(feicoes) == 2
+    assert {f[0] for f in feicoes} == {1}
+    assert len({f[1] for f in feicoes}) == 1
+    restaurados = [f[2].GetPoint_2D(i) for f in feicoes for i in range(f[2].GetPointCount())]
+    assert len(restaurados) == len(pontos) + 1
+    quantizar = lambda ponto: (round((ponto[0] - limites.left) / escala),
+                              round((ponto[1] - limites.bottom) / escala))
+    assert {quantizar(p) for p in restaurados} == {quantizar(p) for p in pontos}
+
+
+def test_tile_acima_de_500kb_nao_reduz_precisao_nem_descarta_linhas(tmp_path):
+    alvo = mercantile.tile(-47.5, -22, 6)
+    limites = mercantile.xy_bounds(alvo)
+    escala = (limites.right - limites.left) / 4096
+    pontos = [(limites.left + (1000 + i * 5) * escala,
+               limites.bottom + (2000 + i % 2) * escala) for i in range(101)]
+    arquivo = tmp_path / "malha-densa.gpkg"
+    _linhas_gpkg(arquivo, pontos, quantidade=400)
+    conteudo = storage_geoespacial._tile(str(arquivo), "malha", (0, 0), alvo.z, alvo.x, alvo.y)
+    assert len(conteudo) > 500000
+    feicoes = _ler_linhas_tile(conteudo, alvo)
+    assert len(feicoes) == 400
+    assert {f[0] for f in feicoes} == set(range(1, 401))
+    assert {f[2].GetPointCount() for f in feicoes} == {101}
+
+
 @pytest.mark.parametrize('com_furos', [False, True])
 def test_tile_fragmenta_multipoligono_acima_do_limite_de_vertices(tmp_path, com_furos):
     from hashlib import sha256

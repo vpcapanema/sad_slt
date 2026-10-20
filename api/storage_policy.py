@@ -83,3 +83,12 @@ def mkdtemp(**kwargs):
 
 def mkstemp(**kwargs):
     return _tempfile.mkstemp(**_diretorio(kwargs))
+
+
+def publicar_arquivo(temporario: str | Path, destino: str | Path) -> None:
+    """Publica sem perder o acesso do grupo que atende a API do Storage."""
+    destino = Path(destino)
+    if os.name == 'posix':
+        os.chown(temporario, -1, destino.parent.stat().st_gid)
+        os.chmod(temporario, 0o660)
+    os.replace(temporario, destino)

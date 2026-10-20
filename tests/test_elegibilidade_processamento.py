@@ -164,8 +164,13 @@ def test_saida_real_gpkg_nome_exato_null_geometrias_e_metadados(monkeypatch, cod
     resultado = service.executar({'entrada': {'id': entrada_id, 'nome': 'Projetos.gpkg'}, 'hierarquizacao': codigo,
                                  'restricao': [{'id': 'app', 'nome': 'APP'}], 'risco': []}, controle)
     nome, conteudos, pasta = gravados[0]
-    assert nome == resultado['nome'] == 'Projetos_elegibilidade_territorial.gpkg'
+    from hashlib import sha256
+    assert nome == resultado['nome'] == f'Projetos_elegibilidade_territorial_{sha256(entrada_id.encode()).hexdigest()[:12]}.gpkg'
     assert resultado['arquivo'] == f'{pasta}/{nome}'
+    raiz = (f'saidas-geoespaciais/hierarquizacoes/{codigo}/fase-1/' if codigo else
+            'saidas-geoespaciais/analises-avulsas/elegibilidade-territorial/')
+    assert pasta.startswith(raiz)
+    assert resultado['pasta_analise'] == pasta
     reaberta = ler_vetor(conteudos, nome)
     assert len(reaberta) == 3 and reaberta.re_app.iloc[0] == 50
     assert reaberta.re_app.iloc[1:].isna().all()
@@ -177,8 +182,17 @@ def test_saida_real_gpkg_nome_exato_null_geometrias_e_metadados(monkeypatch, cod
     persistida = json.loads(service.read_info(BytesIO(conteudos[nome]), layer='elegibilidade_territorial')
                             ['layer_metadata']['SICARD_ELEGIBILIDADE'])
     assert persistida.get('hierarquizacao') == codigo
+    assert persistida['pasta_analise'] == pasta
     if not codigo:
         assert 'hierarquizacao' not in auditoria
+
+
+def test_lote_reune_entradas_sem_misturar_hierarquizacoes():
+    pasta = service.pasta_saida('mesmo-lote', 'HIER-001')
+    assert service.pasta_saida('mesmo-lote', 'HIER-001') == pasta
+    assert service.pasta_saida('mesmo-lote', 'HIER-002') != pasta
+    assert service.pasta_saida('outro-lote', 'HIER-001') != pasta
+    assert service.pasta_saida('mesmo-lote').startswith('saidas-geoespaciais/analises-avulsas/')
 
 
 @pytest.mark.parametrize('normalizacao', [
@@ -209,6 +223,8 @@ def test_arquivo_persistido_reabre_com_descritor_real_da_bancada(storage_sinteti
     monkeypatch.setattr(service, '_carregar', lambda ref: entrada.copy())
     monkeypatch.setattr(service.storage_remoto, 'listar', lambda *a, **k: [])
     monkeypatch.setattr(service.storage_remoto, 'criar_pasta', lambda pasta: (root / pasta).mkdir())
+    monkeypatch.setattr(service.saidas_storage, 'garantir_pasta',
+                        lambda pasta: (root / pasta).mkdir(parents=True, exist_ok=True))
     def registrar(nome, conteudos, recurso, tipo, *, pasta_saida):
         (root / pasta_saida / nome).write_bytes(conteudos[nome])
         return {'caminho': f'{pasta_saida}/{nome}'}
@@ -216,7 +232,7 @@ def test_arquivo_persistido_reabre_com_descritor_real_da_bancada(storage_sinteti
     resultado = service.executar({'entrada': {'id': 'entrada', 'nome': 'Demandas'},
         'restricao': [], 'risco': [{'id': 'base', 'nome': 'Inundação'}]}, ControleProcessamento())
     assert resultado['feicoes'] == 1 and resultado['representacao'] == 'tiles'
-    assert resultado['arquivo'].endswith('/Demandas_elegibilidade_territorial.gpkg')
+    assert resultado['arquivo'].rsplit('/', 1)[-1].startswith('Demandas_elegibilidade_territorial_')
     assert resultado['id'] == f"storage:{resultado['arquivo']}::elegibilidade_territorial"
     assert len(resultado['bounds']) == 4
     assert {campo['nome'] for campo in resultado['campos']} == {'nome', 'ID_FEICAO', 'ri_inund', 'area_total_m2'}

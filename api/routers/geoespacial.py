@@ -997,10 +997,10 @@ def listar_diretorio_camadas() -> dict[str, Any]:
 
 
 @router.get("/storage/camadas-arquivo")
-def camadas_arquivo_storage(arquivo: str) -> dict[str, Any]:
+def camadas_arquivo_storage(arquivo: str, incluir_rasters: bool = False) -> dict[str, Any]:
     from api.services import storage_geoespacial
     try:
-        return storage_geoespacial.inventariar_arquivo(arquivo)
+        return storage_geoespacial.inventariar_arquivo(arquivo, **({'incluir_rasters': True} if incluir_rasters else {}))
     except FileNotFoundError as exc:
         raise HTTPException(404, str(exc)) from exc
     except (ValueError, RuntimeError) as exc:
@@ -1008,14 +1008,14 @@ def camadas_arquivo_storage(arquivo: str) -> dict[str, Any]:
 
 
 @router.get("/storage/navegar")
-def navegar_storage(caminho: str = "", detalhar: bool = True) -> dict[str, Any]:
-    """Uma pasta do storage (subpastas e camadas vetoriais), para o explorador da extração.
+def navegar_storage(caminho: str = "", detalhar: bool = True, incluir_rasters: bool = False) -> dict[str, Any]:
+    """Uma pasta do storage; rasters são opcionais para os seletores de superfícies.
 
     Cada camada leva ``alias``: o nome amigável da biblioteca de critérios/dicionário
     da extração, ou a regra automática quando não há registro."""
     from api.services import extracao_atributos_aliases, storage_geoespacial
     try:
-        resultado = storage_geoespacial.navegar(caminho, detalhar)
+        resultado = storage_geoespacial.navegar(caminho, detalhar, **({'incluir_rasters': True} if incluir_rasters else {}))
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
     except FileNotFoundError as exc:

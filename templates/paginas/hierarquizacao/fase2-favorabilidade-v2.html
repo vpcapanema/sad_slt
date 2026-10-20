@@ -1,0 +1,160 @@
+{% extends "bases/base_conteudo.html" %}
+{% macro icone_adicionar_camada() -%}
+<svg class="ev-layer-add-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M2 7 10 3 18 7 10 11Z M2 11 10 15 13 13.5 M2 15 10 19 11 18.5"/><path d="M18 13v8m-4-4h8"/></svg>
+{%- endmacro %}
+{% set subtitulo = "" %}
+{% set navegacao = "restrita" %}
+{% set requer_autenticacao = true %}
+{% set fase_ativa = 2 %}
+{% block titulo %}Favorabilidade de grade e da rede{% endblock %}
+{% block classes_body %}ahp-module-page elegibilidade-v2-page favorabilidade-v2-page feedback-proprio fases-padrao-agrupamento{% endblock %}
+{% block base_url %}<base href="/restrict/hierarquizacao/">{% endblock %}
+{% block estilos_pagina %}
+<link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="/assets/vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="/assets/vendor/maplibre-gl/maplibre-gl.css">
+<link rel="stylesheet" href="/assets/css/ahp-module.css">
+<link rel="stylesheet" href="/assets/css/page-title-standard.css">
+<link rel="stylesheet" href="/assets/css/extracao-atributos.css">
+<link rel="stylesheet" href="/assets/css/fase1-elegibilidade-v2.css?v=20261020-controles-tabela">
+<link rel="stylesheet" href="/assets/css/fase23-execucao.css">
+<link rel="stylesheet" href="/assets/css/fase2-favorabilidade-v2.css">
+<link rel="stylesheet" href="/assets/css/paginas/hierarquizacao-fases-visual.css?v=20261020-cabecalhos-linha-unica">
+{% endblock %}
+{% block conteudo %}
+<div id="admin-session-bar" class="admin-session-bar hidden"></div>
+<main class="conteudo-principal app-main ahp-main ea-main elegibilidade-v2 favorabilidade-v2" id="favorabilidade-app" data-feedback-title="Favorabilidade de grade e da rede">
+  {% include "componentes/navegacao_fases_hierarquizacao.html" %}
+  <section class="secao-favorabilidade-cabecalho card card-favorabilidade-cabecalho standard-page-hero">
+    <h1 class="ahp-page-title standard-page-hero__title"><i class="fas fa-map-location-dot" aria-hidden="true"></i><span>Favorabilidade de grade e da rede</span></h1>
+    <p class="standard-page-hero__eyebrow">Hierarquização · Fase 2</p>
+    <p class="standard-page-hero__description">Escolha a entrada e as superfícies de favorabilidade de grade e da rede. Confira a prévia antes de enviá-las à bancada. <a class="fase-descricao-add" href="/public/documentacao/favorabilidade/" aria-label="Consultar a documentação da favorabilidade de grade e da rede"><i class="fas fa-book-atlas" aria-hidden="true"></i></a></p>
+  </section>
+  <p id="fv-status" class="ea-hint" role="status" aria-live="polite">Carregando hierarquizações…</p>
+  <div class="ev-preparacao-grid ea-preparation-actions">
+    <section class="secao-favorabilidade-entrada card card-favorabilidade-entrada ahp-step-section" aria-labelledby="fv-entrada-title">
+      <header class="ahp-section-label"><span class="ahp-subsection-num">1</span><h2 id="fv-entrada-title">Entrada</h2></header>
+      <div class="ahp-section-body">
+        <p id="fv-entrada-regra" class="ea-hint">Escolha apenas uma origem: camadas de entrada ou uma hierarquização. Para trocar de origem, limpe a seleção. Envie a seleção para a prévia da seção 3; as geometrias originais serão preservadas, sem buffers.</p>
+        <div class="ev-origens">
+          <div class="ea-field">
+            <label for="fv-entrada-camadas">Camada de entrada</label>
+            <div class="ev-input-action">
+              <input id="fv-entrada-camadas" type="text" placeholder="Selecione as camadas de entrada." readonly aria-describedby="fv-entrada-regra">
+              <button id="fv-entrada-browse" type="button" class="ea-btn ea-icon-button" aria-label="Adicionar camada de entrada" title="Adicionar camada">{{ icone_adicionar_camada() }}</button>
+            </div>
+            <div class="ev-actions ev-field-actions">
+              <button id="fv-entrada-enviar" type="button" class="ea-btn ea-btn-primary ea-icon-button" aria-label="Enviar entrada para a prévia" title="Enviar entrada para a prévia" disabled><i class="fas fa-arrow-right-to-bracket" aria-hidden="true"></i></button>
+              <button id="fv-entrada-limpar" type="button" class="ea-btn ea-icon-button ea-cancel-icon" aria-label="Limpar seleção de entrada" title="Limpar seleção de entrada" disabled><i class="fas fa-xmark" aria-hidden="true"></i></button>
+            </div>
+            <ul id="fv-entrada-lista" class="ev-lista" aria-label="Camadas de entrada selecionadas"></ul>
+          </div>
+          <p class="ev-ou">ou</p>
+          <div class="ea-field">
+            <label for="fv-hierarquizacao">Hierarquizações:</label>
+            <select id="fv-hierarquizacao" aria-describedby="fv-entrada-regra"><option value="">Selecione uma hierarquização</option></select>
+            <div class="ev-actions ev-field-actions">
+              <button id="fv-hier-enviar" type="button" class="ea-btn ea-btn-primary ea-icon-button" aria-label="Enviar hierarquização para a prévia" title="Enviar hierarquização para a prévia" disabled><i class="fas fa-arrow-right-to-bracket" aria-hidden="true"></i></button>
+              <button id="fv-hier-limpar" type="button" class="ea-btn ea-icon-button ea-cancel-icon" aria-label="Limpar seleção de hierarquização" title="Limpar seleção de hierarquização" disabled><i class="fas fa-xmark" aria-hidden="true"></i></button>
+            </div>
+            <ul id="fv-hier-lista" class="ev-lista" aria-label="Demandas da hierarquização selecionadas"></ul>
+            <details id="fv-hier-detalhes" hidden><summary>Informações da hierarquização e das demandas</summary><pre id="fv-hier-dados"></pre></details>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="secao-favorabilidade-superficies card card-favorabilidade-superficies ahp-step-section" aria-labelledby="fv-superficies-title">
+      <header class="ahp-section-label"><span class="ahp-subsection-num">2</span><h2 id="fv-superficies-title">Camadas de superfícies de favorabilidade de grade e da rede</h2></header>
+      <div class="ahp-section-body">
+        <p class="ea-hint">Selecione as superfícies de grade e da rede, em qualquer ordem. Uma camada não pode ocupar os dois papéis nem ser usada também como entrada. As listas guardam referências; não calculam nem homologam índices.</p>
+        <div class="ev-grid">
+          {% for papel, rotulo in [("grade", "Favorabilidade territorial de grade"), ("rede", "Favorabilidade territorial de rede")] %}
+          <div class="ev-bases-grupo ea-field">
+            <label id="fv-{{ papel }}-title" for="fv-{{ papel }}-camadas">{{ rotulo }}</label>
+            <div class="ev-input-action">
+              <input id="fv-{{ papel }}-camadas" type="text" placeholder="Selecione as superfícies de {{ papel }}." readonly>
+              <button id="fv-{{ papel }}-browse" type="button" class="ea-btn ea-icon-button" aria-label="Adicionar superfície de {{ papel }}" title="Adicionar camada">{{ icone_adicionar_camada() }}</button>
+            </div>
+            <div class="ev-actions ev-field-actions">
+              <button id="fv-{{ papel }}-salvar" type="button" class="ea-btn ea-icon-button" aria-label="Salvar lista de {{ papel }}" title="Salvar lista de {{ papel }}" disabled><i class="fas fa-floppy-disk" aria-hidden="true"></i></button>
+              <button id="fv-{{ papel }}-carregar" type="button" class="ea-btn ea-icon-button" aria-label="Carregar lista de {{ papel }}" title="Carregar lista de {{ papel }}"><i class="fas fa-folder-open" aria-hidden="true"></i></button>
+              <button id="fv-{{ papel }}-enviar" type="button" class="ea-btn ea-btn-primary ea-icon-button" aria-label="Enviar {{ papel }} para a prévia" title="Enviar {{ papel }} para a prévia" disabled><i class="fas fa-arrow-right-to-bracket" aria-hidden="true"></i></button>
+            </div>
+            <ul id="fv-{{ papel }}-lista" class="ev-lista" aria-label="Superfícies de {{ papel }} selecionadas"></ul>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+  </div>
+  <section class="secao-favorabilidade-previa card card-favorabilidade-previa ahp-step-section" aria-labelledby="fv-previa-title">
+    <header class="ahp-section-label"><span class="ahp-subsection-num">3</span><h2 id="fv-previa-title">Confira a prévia</h2></header>
+    <div class="ahp-section-body">
+      <p class="ea-hint">Confira as seleções enviadas pelas seções 1 e 2. Marque as camadas desejadas e envie-as à bancada pelo botão no rodapé do painel. Alterações na seleção só chegam à prévia após um novo envio.</p>
+      <p class="ea-hint">As demandas mantêm suas geometrias cadastradas, sem criação de pontos aproximados, buffers ou conversão para polígonos. Superfícies vetoriais mantêm os atributos; rasters são exibidos por uma imagem de prévia, com referência ao arquivo original. Enviar à bancada não calcula índices nem altera os resultados da rodada.</p>
+      <div class="ea-preview-workspace">
+        <section id="ea-input-preview" class="secao-favorabilidade-atributos ea-input-preview" aria-labelledby="ea-input-preview-title" hidden>
+          <header><h4 id="ea-input-preview-title">Pré-visualização das camadas de favorabilidade</h4><p id="ea-input-preview-name"></p></header>
+          <div class="ea-preview-layout">
+            <aside class="ea-preview-panel" aria-label="Painel de camadas">
+              <div id="ea-input-preview-layers" class="ea-preview-layers" aria-label="Demandas e superfícies de favorabilidade">
+                {% with titulo_bases_previa = "Superfícies de favorabilidade" %}
+                {% include "componentes/extracao_atributos/_previa_arvore.html" %}
+                {% endwith %}
+              </div>
+              <footer class="ea-staging-actions" id="ea-staging-actions" role="toolbar" aria-label="Envio da prévia">
+                <button type="button" class="ea-btn ea-btn-primary ea-staging-symbol ea-icon-button" id="ea-staging-confirmar" aria-label="Enviar pra bancada" title="Enviar pra bancada" disabled><i class="fas fa-arrow-right-to-bracket" aria-hidden="true"></i><span class="ea-sr-only">Enviar pra bancada</span></button>
+              </footer>
+            </aside>
+            <div id="ea-input-preview-map" role="region" aria-label="Mapa de prévia da favorabilidade de grade e da rede"></div>
+          </div>
+          <p id="ea-input-preview-map-status" class="ea-hint" role="status"></p>
+        </section>
+        <section id="ea-layer-information" class="secao-favorabilidade-informacoes ea-input-preview" aria-labelledby="ea-layer-information-title" hidden>
+          <header><h4 id="ea-layer-information-title">Informações da camada selecionada</h4></header>
+          <div id="ea-input-preview-data" class="ea-preview-metadata">
+            {% include "componentes/extracao_atributos/_previa_metadados.html" %}
+          </div>
+        </section>
+      </div>
+    </div>
+  </section>
+  <section class="secao-favorabilidade-bancada ea-section" id="ea-workbench" aria-labelledby="fv-bancada-title">
+    <header class="ea-section-head"><span class="ea-number">4</span><h2 id="fv-bancada-title">Bancada de geoprocessamento</h2></header>
+    <iframe id="ea-workbench-frame" class="ea-workbench-frame" src="/restrict/geoespacial/bancada/" title="Bancada de favorabilidade de grade e da rede" allow="fullscreen"></iframe>
+    <div class="ea-section-body">
+      <p class="ea-hint">Componente atualizado de geoprocessamento do SICARD. A composição abaixo acompanha as camadas confirmadas nesta página e marcadas como visíveis na bancada.</p>
+      <p id="fv-bancada-status" class="ea-hint" role="status">Nenhuma camada confirmada nesta página.</p>
+      <div class="ea-checkup-tables">
+        {% for papel, rotulo in [("entrada", "Entrada"), ("grade", "Favorabilidade territorial de grade"), ("rede", "Favorabilidade territorial de rede")] %}
+        <div class="ea-table-wrap"><table aria-label="Camadas de {{ rotulo|lower }} confirmadas">
+          <thead><tr><th scope="col">{{ rotulo }}</th><th scope="col">Arquivo ou referência integral</th></tr></thead>
+          <tbody id="fv-run-{{ papel }}"><tr><td colspan="2">Nenhuma camada deste grupo marcada na bancada.</td></tr></tbody>
+        </table></div>
+        {% endfor %}
+      </div>
+      <p id="fv-run-warning" class="ea-hint" role="status"></p>
+    </div>
+  </section>
+  <section class="secao-favorabilidade-resultados card card-favorabilidade-resultados ahp-step-section" aria-labelledby="fv-resultados-title">
+    <header class="ahp-section-label"><span class="ahp-subsection-num">5</span><h2 id="fv-resultados-title">Resultados registrados na hierarquização</h2></header>
+    <div class="ahp-section-body">
+      <p class="ea-hint">Consulta dos índices já registrados na rodada selecionada. A preparação e o envio à bancada não executam o cálculo nem substituem esses resultados.</p>
+      <p id="fv-resultados-vazio" class="ea-hint">Selecione uma hierarquização para consultar os resultados registrados.</p>
+      <div id="fv-indicadores" class="fase-summary-grid"></div>
+      <div class="fase-table-wrap"><table class="fase-table" aria-label="Índices registrados nas demandas"><thead><tr><th>Demanda</th><th>Índice de grade</th><th>Índice de rede</th></tr></thead><tbody id="fv-resultados"></tbody></table></div>
+      <details id="fv-auditoria" hidden><summary>Auditoria da execução registrada</summary><pre id="fv-auditoria-dados"></pre></details>
+    </div>
+  </section>
+  <template id="fv-tpl-run-row"><tr><td data-name></td><td data-source></td></tr></template>
+  <template id="fv-tpl-run-empty"><tr><td colspan="2">Nenhuma camada deste grupo marcada na bancada.</td></tr></template>
+</main>
+{% endblock %}
+{% block scripts_pagina %}
+<script src="/assets/js/admin-auth.js"></script>
+<script src="/assets/vendor/leaflet/leaflet.js"></script>
+<script src="/assets/vendor/maplibre-gl/maplibre-gl.js"></script>
+<script src="/assets/vendor/maplibre-gl/leaflet-maplibre-gl.js"></script>
+<script src="/restrict/hierarquizacao/js/hier-api.js"></script>
+<script type="module" src="/restrict/hierarquizacao/js/fase2-favorabilidade-v2.js"></script>
+{% endblock %}

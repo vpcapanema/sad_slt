@@ -170,7 +170,7 @@ def test_pacote_leva_camadas_apelidos_dicionario_e_configuracao(tmp_path):
 @pytest.mark.parametrize('modo', ['enriquecimento', 'estatisticas'])
 @pytest.mark.parametrize('base_memoria', [False, True])
 @pytest.mark.parametrize('entrada_memoria', [False, True])
-def test_execucao_do_servico_grava_camadas_pacote_e_finaliza_sem_erro(monkeypatch, modo, entrada_memoria, base_memoria):
+def test_execucao_do_servico_grava_camadas_pacote_e_finaliza_sem_erro(monkeypatch, modo, entrada_memoria, base_memoria, execucoes_sinteticas):
     """Caminho completo do serviço com banco e gravação de camada simulados."""
     from contextlib import contextmanager
     from api.services import ciclo_vida_arquivos as ciclo

@@ -5,7 +5,7 @@ const nomeArquivo=valor=>String(valor||'Arquivo sem nome').split(/[\\/]/).pop();
 const quantidade=n=>Number(n).toLocaleString('pt-BR');
 const tamanho=n=>n==null?'Não informado':`${(n/1024).toLocaleString('pt-BR',{maximumFractionDigits:2})} KB`;
 
-export function criarPrevia(state, changed, {obterCamadas, aoMudarVisibilidade} = {}){
+export function criarPrevia(state, changed, {obterCamadas, aoMudarVisibilidade, descreverProcessamento} = {}){
   const node=id=>$(`#ea-input-${id}`);
   const host=node('preview'),mapaHost=node('preview-map'),dados=node('preview-data'),lista=node('preview-layers');
   let pacote=null,selecionada=null,mapa=null,desenho=null,atual=null;
@@ -199,9 +199,9 @@ export function criarPrevia(state, changed, {obterCamadas, aoMudarVisibilidade} 
       visibilidade:visiveis.has(layer.chave)?'Visível no mapa':'Não exibida no mapa',
       bancada:layer.pendente?'Ainda não enviada':'Camada confirmada',
       representacao:({tiles:'Visualização por tiles do original',original:'Geometria integral',simplificada:'Prévia simplificada',limites:'Limites das feições (aproximação)'})[layer.representacao==='tiles'?'tiles':nivel?.metodo]||(layer.geojson?'Prévia carregada':'Indisponível'),
-      processamento:layer.status_validacao!=='valida'?'Requer validação':raster?'Os algoritmos disponíveis exigem vetores':'Utiliza a geometria original, sem simplificação da prévia',
-      tipo:raster?'Raster':'Vetor',feicoes:numero(meta.feicoes??layer.feicoes??(layer.representacao==='original'?features.length:null)),
-      feicoes_previa:layer.tiles_url?'Carregadas por região do mapa':layer.geojson?numero(features.length):'Não disponível',
+      processamento:layer.status_validacao!=='valida'?'Requer validação':descreverProcessamento?descreverProcessamento(layer):raster?'Os algoritmos disponíveis exigem vetores':'Utiliza a geometria original, sem simplificação da prévia',
+      tipo:raster?'Raster':'Vetor',feicoes:raster?'Não se aplica':numero(meta.feicoes??layer.feicoes??(layer.representacao==='original'?features.length:null)),
+      feicoes_previa:raster?'Imagem de visualização':layer.tiles_url?'Carregadas por região do mapa':layer.geojson?numero(features.length):'Não disponível',
       vertices:raster?'Não se aplica':numero(meta.vertices??representacao?.vertices_originais),
       geometrias:raster?'Não se aplica':unir(meta.tipos_geometria||[...new Set(features.map(f=>f.geometry?.type).filter(Boolean))]),
       campos_total:numero(totalCampos),campos:nomesCampos.length?unir(nomesCampos):camposConhecidos?'Sem campos de atributos':'Não informado',

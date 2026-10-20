@@ -138,10 +138,11 @@ def gerar(codigo, payload, nome, user, controle=None):
         raise ValueError('Há uma camada municipal sendo gerada. Aguarde e tente novamente.')
     execution = None
     try:
-        params = {'plugin': 'municipal-layer', 'versao': '1.0.0', 'categoria': category, **payload}
+        name = nome.strip()[:200] or nome_padrao(category, dados.selection(payload['attributes']))
+        params = {'plugin': 'municipal-layer', 'versao': '1.0.0', 'categoria': category,
+                  **payload, 'nome_saida': name}
         execution = ciclo.iniciar('gerar_camada_municipal', params, str(user.id))
         # O nome sai antes da exportação: é ele que batiza a pasta e os arquivos.
-        name = nome.strip()[:200] or nome_padrao(category, dados.selection(payload['attributes']))
         base = base_arquivos(name)
         from api.storage_policy import TemporaryDirectory, sem_montagem
         from api.repositories import camada_geoespacial_repository as camadas, saidas_geoespaciais_repository as catalogo

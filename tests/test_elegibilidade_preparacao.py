@@ -26,8 +26,10 @@ def isolado(storage_sintetico, monkeypatch, tmp_path):
     monkeypatch.setattr(local, 'localizacao', lambda frame: {'status': 'consultado'})
     gravados = []
 
-    def registrar(nome, conteudos, ident, tipo):
-        caminho = f'saidas-geoespaciais/execucoes/{uuid4()}/camadas/{nome}'
+    from api.services import saidas_storage
+    monkeypatch.setattr(saidas_storage, 'garantir_pasta', lambda pasta: pasta)
+    def registrar(nome, conteudos, ident, tipo, *, pasta_saida):
+        caminho = f'{pasta_saida}/{nome}'
         path = root / caminho
         path.parent.mkdir(parents=True)
         path.write_bytes(conteudos[nome])

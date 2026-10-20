@@ -49,7 +49,7 @@ def test_cabecalho_segue_o_hero_padrao(cliente, rota):
 @pytest.mark.parametrize("rota", PAGINAS_VISUAL)
 def test_secoes_numeradas_em_medalhao(cliente, rota):
     html = cliente.get(rota).text
-    if rota == "/restrict/hierarquizacao/fase-1/":
+    if rota in {"/restrict/hierarquizacao/fase-1/", "/restrict/hierarquizacao/fase-2/"}:
         # A v2 reutiliza os índices da entrada/prévia e da bancada de extração.
         indices = re.findall(r'<span class="(?:ahp-subsection-num|ea-number)">(\d+)</span>', html)
         assert [int(numero) for numero in indices] == [1, 2, 3, 4, 5]
@@ -105,7 +105,7 @@ def test_homologacao_legada_direciona_para_saidas_do_storage(cliente):
 
 SUBSECOES_ESPERADAS = {
     "/restrict/hierarquizacao/fase-1/": ["Restrição", "Risco"],
-    "/restrict/hierarquizacao/fase-2/": ["2.1", "2.2"],
+    "/restrict/hierarquizacao/fase-2/": ["Favorabilidade territorial de grade", "Favorabilidade territorial de rede"],
     "/restrict/hierarquizacao/fase-3/": ["1.1", "1.2", "3.1", "3.2", "4.1", "4.2", "5.1", "5.2"],
     "/public/documentacao/favorabilidade/": ["1.1", "1.2", "2.1", "2.2"],
 }
@@ -117,6 +117,11 @@ def test_subsecoes_numeradas_na_ordem_da_secao(cliente, rota, esperado):
     if rota == "/restrict/hierarquizacao/fase-1/":
         # As categorias da v2 são campos lado a lado, não subcards numerados.
         categorias = re.findall(r'<label id="ev-(?:restricao|risco)-title"[^>]*>([^<]+)</label>', html)
+        assert categorias == esperado
+        assert html.count('class="ev-bases-grupo ea-field"') == 2
+        return
+    if rota == "/restrict/hierarquizacao/fase-2/":
+        categorias = re.findall(r'<label id="fv-(?:grade|rede)-title"[^>]*>([^<]+)</label>', html)
         assert categorias == esperado
         assert html.count('class="ev-bases-grupo ea-field"') == 2
         return

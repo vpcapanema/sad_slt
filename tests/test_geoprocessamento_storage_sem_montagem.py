@@ -18,7 +18,7 @@ from api.services.geoprocessamento_engine import geoprocessamento_engine as engi
 
 
 @pytest.fixture
-def remoto(monkeypatch):
+def remoto(monkeypatch, execucoes_sinteticas):
     for key in ("SICARD_STORAGE_WRITE_DIR", "SICARD_STORAGE_TEMP_DIR"):
         monkeypatch.delenv(key, raising=False)
     files = {}

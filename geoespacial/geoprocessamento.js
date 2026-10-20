@@ -1080,13 +1080,20 @@
   async function adicionarRasterStorage(ref,{fit=true}={}){
     const response=await fetch(`${API}/storage/camada/raster-preview?${new URLSearchParams({caminho:ref.arquivo})}`);
     const preview=await response.json();if(!response.ok)throw new Error(preview.detail||`HTTP ${response.status}`);
+    const entry=adicionarRasterPreview(ref,preview);
+    if(fit)await zoomToCatalogLayer(entry.id);return entry;
+  }
+  function adicionarRasterPreview(ref,preview){
+    if(!preview?.image||!Array.isArray(preview.coordinates)||preview.coordinates.length!==4||!Array.isArray(preview.bounds)){
+      throw new Error('A prévia do raster não possui imagem e limites válidos.');
+    }
     const id=ref.id||`storage:${ref.arquivo}`;
     removeMapResource(id);
     state.map.addSource(id,{type:'image',url:preview.image,coordinates:preview.coordinates});
     state.map.addLayer({id,type:'raster',source:id,paint:{'raster-opacity':.85}});
     const entry={...ref,id,nome:ref.nome||ref.arquivo,tipo:'raster',destino:'storage_original',origem:'Arquivo no storage',preview,bounds:preview.bounds};
     state.layers=state.layers.filter(layer=>layer.id!==id);state.layers.push(entry);state.activeLayerId=id;
-    renderLayers();if(fit)await zoomToCatalogLayer(id);return entry;
+    renderLayers();return entry;
   }
   async function consumePortalService(service){
     if(service.tipo==="WFS"){
@@ -1720,5 +1727,5 @@
     if(!(Array.isArray(extent)&&extent.length===4&&extent.every(Number.isFinite)))throw new Error('A camada não possui limites válidos para aproximar.');
     state.map.fitBounds([[extent[0],extent[1]],[extent[2],extent[3]]],{padding:40,maxZoom:16});
   }
-  window.gpApp={state,adicionarRasterStorage,showOperationResult,syncExecutionResults,operationFields:FIELDS,operationLibraries:TOOL_LIBRARY,operations:OPS.flatMap(group=>group[1]).map(item=>({id:item[0],nome:item[1]})),selectOp,configureLoadOperation,openSystemLoadForm,cancelExecution,createTaskProgress:createExecutionProgress,waitForJob,applyLayerColor,consumePortalService,showTools,openToolboxScope,showBasemapPanel,showInfoPanel,newFunction,newFlow,showProperties,showAttributes,syncAttributeSelection,configureSelectionScope:()=>configureSelectionScope($("#gp-op-form")),showLibrary,showHistory,log,refreshLayers,renderLayers,setBasemap,renderToolbox,removeLayerFromMap,deleteLayerFromSystem,addCatalogLayerToMap,zoomToCatalogLayer,carregarPorId,carregarPorIds,adicionarCamadaGeoJsonEmMemoria,adicionarCamadaStorageTiles,ajustarStorageBounds,aplicarCorPadraoCamada,openSymbology};
+  window.gpApp={state,adicionarRasterStorage,adicionarRasterPreview,showOperationResult,syncExecutionResults,operationFields:FIELDS,operationLibraries:TOOL_LIBRARY,operations:OPS.flatMap(group=>group[1]).map(item=>({id:item[0],nome:item[1]})),selectOp,configureLoadOperation,openSystemLoadForm,cancelExecution,createTaskProgress:createExecutionProgress,waitForJob,applyLayerColor,consumePortalService,showTools,openToolboxScope,showBasemapPanel,showInfoPanel,newFunction,newFlow,showProperties,showAttributes,syncAttributeSelection,configureSelectionScope:()=>configureSelectionScope($("#gp-op-form")),showLibrary,showHistory,log,refreshLayers,renderLayers,setBasemap,renderToolbox,removeLayerFromMap,deleteLayerFromSystem,addCatalogLayerToMap,zoomToCatalogLayer,carregarPorId,carregarPorIds,adicionarCamadaGeoJsonEmMemoria,adicionarCamadaStorageTiles,ajustarStorageBounds,aplicarCorPadraoCamada,openSymbology};
 })();

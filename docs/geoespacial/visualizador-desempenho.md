@@ -72,6 +72,13 @@ Os provedores de basemap são OpenStreetMap, OpenFreeMap e Esri World Imagery.
 7. **Nomes sobre os controles.** A linha usa colunas próprias para checkbox, nome e
    ações, com largura mínima zero e elipse para nomes longos. Barras só aparecem
    durante carregamento. Espaçamento entre grupos e gradiente amarelo/âmbar permanecem.
+8. **Associação inválida dos rótulos dos filtros.** Ao substituir os dois `select`
+   por comboboxes customizados em `div`, o componente compartilhado também converte
+   seus rótulos em `span`, preservando identificadores, classes e conteúdo.
+   A associação passa a ser exclusivamente por `aria-labelledby`, sem `label[for]`
+   apontando para elementos que não aceitam rótulos nativos. Antes da inicialização,
+   os `select` mantêm seus rótulos HTML originais. O teste de navegador dos filtros
+   verifica os dois nomes acessíveis e a ausência dessas associações inválidas.
 
 Esta refatoração não adiciona simplificação, remoção de vértices, redução de coordenadas, alteração
 de CRS persistido ou alteração dos arquivos de origem. O visualizador passa
@@ -80,6 +87,97 @@ desse tipo de fonte. O componente compartilhado oferece essa opção sem mudar o
 padrão das demais páginas.
 
 ## Verificação
+
+### Preservação das linhas nos tiles (20/10/2026)
+
+O gerador compartilhado de tiles do Storage não aplica simplificação geométrica.
+Foram removidos tanto o `SimplifyPreserveTopology` da preparação de feições
+complexas quanto os fatores `SIMPLIFICATION=1` e `SIMPLIFICATION_MAX_ZOOM=1` do
+driver MVT. Os dois fatores passam a zero em todos os níveis de zoom.
+Esse gerador também atende os tiles de arquivos locais e das prévias da bancada.
+
+Linhas extensas são fragmentadas por sequência de vértices, com até 16.000
+vértices por fragmento e um vértice compartilhado na emenda, preservando os
+atributos e o identificador da feição. Não há simplificação prévia nem
+interseção espacial usada para subdividir essas linhas. O limite de feições do
+driver acompanha a quantidade efetiva de fragmentos, com margem de uma feição.
+O orçamento de tamanho é o maior inteiro positivo de 32 bits, evitando a redução
+automática de precisão ou o descarte pelo limite padrão de 500 kB.
+
+**Limite do formato:** MVT representa coordenadas em uma grade inteira de 4.096
+unidades por tile. Permanecem a reprojeção para Web Mercator, o recorte nos
+limites com margem e a quantização dessa grade; pontos que coincidam na grade
+podem colapsar. Portanto, o tile não é uma cópia numérica das coordenadas do
+GeoPackage. As coordenadas completas permanecem no arquivo original, sem edição.
+Essa quantização não deve ser confundida com autorização para simplificar linhas.
+
+Os testes em `tests/test_storage_geoespacial.py` comparam os vértices decodificados
+em zooms 0, 6 e 14; reconstroem uma linha de 20.001 vértices, inclusive com
+detalhes subpixel antes da codificação; e verificam um tile acima de 500 kB sem
+perder suas 400 linhas ou os 101 vértices de cada uma. Os testes de polígonos
+complexos continuam cobrindo a fragmentação e a integridade dos arquivos.
+
+### Simbologia das superfícies de favorabilidade (20/10/2026)
+
+Somente as camadas `subtrechos` de `favorabilidade_rede_trechos.gpkg` e
+`municipios` de `indicadores_municipais.gpkg`, na pasta do Storage
+`superficies-indices/hierarquizacao/favorabilidade`, recebem simbologia contínua
+pelos campos `fav_rede_dim` e `fav_territorial_dim`, respectivamente.
+São solicitadas cinco classes por quebras naturais de Jenks, calculadas
+separadamente sobre todos os valores válidos de cada camada, não apenas os
+tiles visíveis. O método exato minimiza a soma dos quadrados intraclasse, sem
+amostragem, considerando a frequência dos valores repetidos. Essas classes
+servem somente para distribuir o contraste da rampa; não são exibidas como
+categorias nem como cores em degraus.
+
+O visualizador reutiliza os endpoints de preparação e classificação de arquivos,
+vinculando a leitura à revisão da fonte. O método `jenks` é distinto da opção
+legada `quebras_naturais`, que continua sendo uma aproximação por k-means.
+O domínio numérico opcional `[0, 1]` é aplicado antes do cálculo das quebras:
+nulos e valores fora do domínio não influenciam os limites. Se houver menos
+de cinco valores distintos, não são inventadas classes vazias.
+
+Mapa e legenda usam as mesmas paradas de interpolação, em precisão integral,
+com a paleta sequencial Viridis, já utilizada na bancada: roxo, azul, verde-azulado,
+verde e amarelo. O mínimo e o máximo observados recebem os extremos da paleta;
+os intervalos delimitados por Jenks distribuem continuamente o contraste.
+As paradas incluem tanto os limites distintos de Jenks quanto as inflexões da
+paleta, com interpolação linear de RGB, sem saltos ou cores fixas por classe.
+Não há saturação antes do mínimo ou do máximo observados, como ocorria ao
+posicionar as cores nos centros das classes. A rampa é estendida a 0 e 1 mantendo
+as cores extremas somente fora do intervalo observado. Limites coincidentes são
+unificados; com apenas um valor distinto, é usada a cor central da paleta.
+A legenda apresenta uma barra vertical contínua, como a de um raster, com
+marcações numéricas de 0 a 1, e não uma lista de classes ou caixas de cores.
+As cores indicam posição relativa dentro de cada camada: não representam
+necessariamente a mesma faixa numérica na rede e nos municípios.
+Nulos, campos ausentes e valores não numéricos ou fora do domínio aparecem em
+cinza; zero é válido. O alerta vermelho de geometria inválida permanece prioritário.
+
+Os polígonos são 100% opacos, sem antialias de preenchimento nem contorno.
+A camada de traço filtra apenas geometrias lineares, sem desenhar as bordas
+dos municípios. Preferências antigas de transparência ou contorno não anulam
+essas regras. A alteração é exclusivamente visual e não simplifica linhas.
+
+A configuração é reaplicada ao abrir, recarregar ou reativar essas camadas e ao
+salvar suas propriedades; não depende do armazenamento local de uma sessão.
+Alias e espessura das linhas continuam usando a persistência existente no navegador.
+Nos polígonos, os controles de preenchimento e opacidade refletem a configuração
+fixa e ficam desabilitados. As cores dessas duas camadas são determinadas pelas
+paradas da rampa do índice, não pelos seletores de cor única. Arquivos homônimos em outras
+pastas e demais camadas não são afetados. Falhas ou limites inválidos de classificação
+são apresentados ao usuário, sem substituir Jenks por outra classificação.
+A legenda identifica a composição como referência provisória de pesos iguais entre
+dimensões; não há recálculo, alteração dos produtos ou homologação de pesos AHP.
+
+O teste `tests/browser/visualizador-favorabilidade.cjs` cobre cores efetivamente
+renderizadas no mapa e na barra contínua da legenda, a igualdade das paradas,
+cores intermediárias e diferenciação de valores próximos nas caudas inferior
+e superior, opacidade e ausência de bordas, preferências antigas,
+contraste Jenks independente, rejeição de classificação inválida,
+recarga e isolamento das demais camadas. Os testes de
+`tests/test_bancada_classificacao.py` comparam o resultado Jenks com partições
+exaustivas e verificam frequências, precisão, domínio e revisão da fonte.
 
 Os testes de navegador cobrem progresso baseado em fonte desenhada, fontes com erro,
 progresso de camada/pasta/grupo, seleção de 95 camadas, interrupção da fila, filtros,

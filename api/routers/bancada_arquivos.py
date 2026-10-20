@@ -1,7 +1,7 @@
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, FiniteFloat
 
 from api.deps.auth import require_geospatial_access
 from api.services import bancada_arquivos as service
@@ -147,8 +147,9 @@ class ConsultaTemporaria(TabelaTemporaria):
 
 class ParametrosClassificacao(BaseModel):
     campo: str = Field(min_length=1, max_length=200)
-    metodo: Literal['valores_unicos', 'intervalos_iguais', 'quantis', 'desvio_padrao', 'quebras_naturais', 'manual'] = 'intervalos_iguais'
+    metodo: Literal['valores_unicos', 'intervalos_iguais', 'quantis', 'desvio_padrao', 'quebras_naturais', 'jenks', 'manual'] = 'intervalos_iguais'
     classes: int = Field(default=5, ge=2, le=12)
+    dominio: tuple[FiniteFloat, FiniteFloat] | None = None
 
 
 class ClassificacaoArquivo(Arquivo, ParametrosClassificacao):
@@ -163,7 +164,7 @@ class ClassificacaoTemporaria(LeituraTemporaria, ParametrosClassificacao):
 def classificacao_arquivo(payload: ClassificacaoArquivo):
     from api.services.bancada_classificacao import classificar
     return resposta(classificar, payload.camada_id, payload.arquivo, payload.revisao,
-                    payload.campo, payload.metodo, payload.classes)
+                    payload.campo, payload.metodo, payload.classes, payload.dominio)
 
 
 @router.post('/local/classificacao')

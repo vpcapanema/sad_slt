@@ -264,7 +264,8 @@ $migrations = @(
     "133_avaliacao_geometria_historico.sql",
     "136_corrigir_contrato_exportacao_seed.sql",
     "137_email_convites_colaborativos.sql",
-    "138_token_acesso_julgamento.sql"
+    "138_token_acesso_julgamento.sql",
+    "139_centralizar_destinos_saidas_storage.sql"
 )
 
 if ($OnlyMigration) {
@@ -385,6 +386,10 @@ if (-not $OnlyMigration) {
         if (-not (Test-SchemaReady "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='demandas' AND table_name='analise_demanda' AND column_name='avaliacao_geometria') AND EXISTS (SELECT 1 FROM pg_constraint c JOIN pg_class r ON r.oid=c.conrelid JOIN pg_namespace n ON n.oid=r.relnamespace WHERE n.nspname='demandas' AND r.relname='projeto_geometria_historico' AND c.conname='ck_projeto_geometria_historico_origem' AND pg_get_constraintdef(c.oid) LIKE '%nao_identificada%');")) {
             $migrations += "133_avaliacao_geometria_historico.sql"
             Write-Ok "Migração 133 pendente: avaliação informativa e origem histórica indeterminada."
+        }
+        if (-not (Test-SchemaReady "SELECT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid=to_regclass('geoprocessamento.arquivo_resultado') AND conname='ck_arquivo_resultado_destino' AND obj_description(oid, 'pg_constraint')='139: saidas por contexto; destinos legados preservados');")) {
+            $migrations += "139_centralizar_destinos_saidas_storage.sql"
+            Write-Ok "Migration 139 pendente: destinos de saida agrupados por contexto."
         }
     } elseif (Test-SchemaReady $schema090Query) {
         Write-Ok "Schema ja esta na migration 090; aplicando somente migrations pendentes (>= 091)"

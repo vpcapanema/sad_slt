@@ -18,8 +18,8 @@
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Título**                 | Metodologia do Sistema de Hierarquização de Demandas — SICARD                                                                                                         |
 | **Número**                 | NT-SICARD-001/2026                                                                                                                                                       |
-| **Versão**                 | 1.23                                                                                                                                                                      |
-| **Data de emissão**        | 19/10/2026                                                                                                                                                               |
+| **Versão**                 | 1.24                                                                                                                                                                      |
+| **Data de emissão**        | 20/10/2026                                                                                                                                                               |
 | **Classificação**         | Documento técnico-metodológico de entrega ao cliente                                                                                                                   |
 | **Sistema**                 | SICARD — Sistema de Apoio à Tomada de Decisão                                                                                                                         |
 | **Domínio de aplicação** | Logística e transportes. Concebido no âmbito do Plano de Logística Integrada do Estado de São Paulo (PLI-SP), aplica-se a qualquer objeto de demanda desse domínio. |
@@ -57,6 +57,7 @@
 | 1.21    | 19/10/2026 | `[preencher]` | Persistência das áreas totais e interseções vinculadas no GeoPackage, painel integrado de mapa, tabela e gráfico por feição, apresentação em km² e hectares, percentuais por demanda e persistência da revisão dos nomes. |
 | 1.22    | 19/10/2026 | `[preencher]` | Consolidação integral das demandas de uma hierarquização em um único GeoPackage e uma única camada no envio confirmado da prévia à bancada, preservando registros, atributos e rastreabilidade das fontes, sem dissolução entre demandas. |
 | 1.23    | 19/10/2026 | `[preencher]` | Persistência do acompanhamento das execuções entre processos e reinícios, preservação dos nomes cadastrais na apresentação e limitação da complexidade dos tiles por fragmentação visual, sem alteração dos arquivos, áreas ou geometrias de cálculo. |
+| 1.24    | 20/10/2026 | `[preencher]` | Explicitação dos limites da documentação pública: distinção entre especificação metodológica, disponibilidade operacional e homologação, sem alteração dos critérios, operadores ou cálculos. |
 
 ---
 
@@ -81,6 +82,13 @@
 ---
 
 ## 1. Sumário executivo
+
+A documentação e as apresentações públicas descrevem fundamentos e requisitos do
+modelo. Sua publicação não comprova execução integral da especificação nem
+homologação de pesos ou produtos. Conforme os módulos das Fases 2 e 3, a composição
+ponderada depende dos pesos definidos e de sua validação; produtos não ponderados
+de referência não os substituem. A disponibilidade operacional deve ser conferida
+nas ferramentas implementadas e na procedência de cada execução.
 
 O Sistema de Hierarquização de Demandas do SICARD é o motor de apoio à decisão que
 cadastra, analisa, hierarquiza e acompanha **objetos de demanda — planos, programas e

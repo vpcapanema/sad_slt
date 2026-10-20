@@ -1,4 +1,5 @@
 from contextlib import nullcontext
+from hashlib import sha256
 import json
 from types import SimpleNamespace
 
@@ -63,6 +64,21 @@ def test_cancelamento_recebido_por_outro_worker(ambiente, monkeypatch):
     ambiente[1].pop()()
     assert jobs.consultar(inicial['id'], 'autor')['status'] == 'cancelado'
     assert jobs.consultar(inicial['id'], 'autor')['resultado'] is None
+
+
+def test_historico_antigo_continua_legivel_e_cancelavel(ambiente, monkeypatch):
+    arquivos, tarefas = ambiente
+    inicial = iniciar()
+    caminho = jobs._caminho(inicial['id'], 'autor')
+    assert caminho.startswith('aplicacao/data/geoespacial/configuracoes/')
+    usuario = sha256(b'autor').hexdigest()
+    antigo = f"saidas-geoespaciais/elegibilidade-execucoes/{usuario}/{inicial['id']}.json"
+    arquivos[antigo] = arquivos.pop(caminho)
+    monkeypatch.setattr(jobs, '_jobs', {})
+    assert jobs.consultar(inicial['id'], 'autor')['status'] == 'executando'
+    assert jobs.cancelar(inicial['id'], 'autor')['cancelamento_solicitado']
+    assert arquivos[antigo + '.cancelar'] == b'cancelar'
+    assert caminho not in arquivos
 
 
 def test_falha_preservada_para_outro_worker(ambiente, monkeypatch):

@@ -9,6 +9,20 @@ import pytest
 
 
 @pytest.fixture
+def execucoes_sinteticas(monkeypatch):
+    from datetime import datetime, timezone
+    from api.services import saidas_storage
+
+    def pasta(execucao, *, conn=None):
+        return saidas_storage.pasta_analise(
+            'geoprocessamento', 'resultado', execucao,
+            quando=datetime(2026, 10, 20, 15, 0, tzinfo=timezone.utc))
+
+    monkeypatch.setattr(saidas_storage, 'pasta_execucao', pasta)
+    return pasta
+
+
+@pytest.fixture
 def storage_sintetico(monkeypatch):
     # Os serviços podem configurar tempfile.tempdir para o storage sintético.
     # Restaurar o diretório global antes do próximo teste, após remover a fixture.

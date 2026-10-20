@@ -312,7 +312,7 @@ def pagina_fase_1_hierarquizacao(request: Request) -> Response:
 
 @app.get("/restrict/hierarquizacao/fase-2/", include_in_schema=False)
 def pagina_fase_2_hierarquizacao(request: Request) -> Response:
-    return render_page(request, "paginas/hierarquizacao/fase2-favorabilidade.html")
+    return render_page(request, "paginas/hierarquizacao/fase2-favorabilidade-v2.html")
 
 
 # Cadastro e upload de camada homologada. Uma página só, parametrizada: o que

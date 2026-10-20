@@ -20,7 +20,8 @@ from reportlab.lib import colors
 from reportlab.platypus import Flowable, PageBreak, Spacer, Paragraph
 from shapely.geometry import Polygon, MultiPolygon, mapping
 
-from api.services import elegibilidade_jobs as jobs, storage_remoto
+from api.services import elegibilidade_jobs as jobs, storage_remoto, saidas_storage
+from api.services.elegibilidade_processamento import pasta_saida
 from api.services import extracao_atributos_aliases as aliases
 from api.services import extracao_atributos_relatorios as estilo
 from api.services.extracao_atributos_exportacao import registros, texto
@@ -108,7 +109,37 @@ def _fontes(resultados: list[dict]) -> list[dict]:
     return list(fontes.values())
 
 
-def _caminho_revisao(resultado: dict, dono) -> str:
+def _pasta_resultados(resultados: list[dict]) -> str:
+    pastas = set()
+    codigos = set()
+    for resultado in resultados:
+        auditoria = resultado['elegibilidade']
+        pasta = auditoria.get('pasta_analise')
+        caminho = PurePosixPath(resultado['arquivo'])
+        if len(caminho.parts) > 1 and caminho.parts[1] in {
+                'hierarquizacoes', 'analises-avulsas', 'exportacoes'}:
+            try:
+                saidas_storage.validar(str(caminho))
+            except ValueError:
+                # Arquivos avulsos também podem estar em pastas escolhidas pelo usuário.
+                pass
+            else:
+                pasta = str(caminho.parent)
+        pastas.add(pasta if pasta and str(caminho.parent) == pasta else None)
+        codigo = auditoria.get('hierarquizacao')
+        if codigo is not None and not isinstance(codigo, str):
+            raise ValueError('O código da hierarquização nos metadados da saída é inválido.')
+        codigos.add(codigo)
+    if len(pastas) == 1 and None not in pastas:
+        pasta = pastas.pop()
+        saidas_storage.validar(pasta + '/analise.json')
+        return pasta
+    codigo = next(iter(codigos)) if len(codigos) == 1 else None
+    referencia = (resultados[0].get('lote_id') if len(resultados) > 1 else None) or resultados[0]['arquivo']
+    return pasta_saida(referencia, codigo)
+
+
+def _caminho_revisao_legada(resultado: dict, dono) -> str:
     if resultado.get('origem') != 'arquivo':
         return resultado['arquivo'] + '.nomes.json'
     usuario = sha256(str(dono).encode()).hexdigest()
@@ -116,12 +147,18 @@ def _caminho_revisao(resultado: dict, dono) -> str:
     return f'saidas-geoespaciais/elegibilidade-revisoes/{usuario}/{arquivo}.json'
 
 
+def _caminho_revisao(resultado: dict, dono) -> str:
+    usuario = sha256(str(dono).encode()).hexdigest()
+    arquivo = sha256(resultado['arquivo'].encode()).hexdigest()
+    return f'{_pasta_resultados([resultado])}/revisoes/{usuario}/{arquivo}.json'
+
+
 def preparar(identificadores: list[str], dono) -> dict:
     resultados = _selecionar(identificadores, dono)
     fontes = _fontes(resultados)
     salvos = {}
     for resultado in resultados:
-        caminhos = [_caminho_revisao(resultado, dono)]
+        caminhos = [_caminho_revisao(resultado, dono), _caminho_revisao_legada(resultado, dono)]
         if resultado.get('origem') == 'arquivo':
             caminhos.append(resultado['arquivo'] + '.nomes.json')
         for caminho in caminhos:
@@ -176,7 +213,7 @@ def registrar_relatorios(identificadores: list[str], modelo: dict, dono) -> None
                    'concluidas': len(resultados),
                    'previstas': resultados[0].get('total_entradas', len(resultados))}
         dados = pdf(recorte)
-        caminho = f'saidas-geoespaciais/relatorios-elegibilidade/{uuid4().hex}/Relatório de Elegibilidade Territorial.pdf'
+        caminho = f'{_pasta_resultados(resultados)}/Relatório de Elegibilidade Territorial_{uuid4().hex[:12]}.pdf'
         assinatura = sha256(dados).hexdigest()
         storage_remoto.enviar_bytes(caminho, dados)
         if sha256(storage_remoto.baixar(caminho)).hexdigest() != assinatura:
@@ -395,7 +432,8 @@ def montar(identificadores: list[str], nomes: dict[str, str], dono, revisados: b
     modelo = {'gerado_em': datetime.now(timezone.utc).isoformat(),
               'fontes': [{**f, 'nome': nomes[f['id']]} for f in fontes],
               'concluidas': len(resultados), 'previstas': resultados[0].get('total_entradas', len(resultados)),
-              'metodologia': METODOLOGIA, 'nomes_revisados': True, 'entradas': []}
+              'metodologia': METODOLOGIA, 'nomes_revisados': True, 'entradas': [],
+              'pasta_analise': _pasta_resultados(resultados)}
     arquivos = []
     for indice, resultado in enumerate(resultados, 1):
         frame, conteudo = _ler(resultado)
@@ -540,7 +578,9 @@ def pacote(modelo: dict, arquivos: list[tuple[str, bytes]]) -> tuple[bytes, str]
     with ZipFile(BytesIO(dados)) as zipado:
         if zipado.testzip() is not None:
             raise ValueError('O pacote não passou na conferência de integridade.')
-    caminho = f'saidas-geoespaciais/relatorios-elegibilidade/{uuid4().hex}/Relatório e Camadas.zip'
+    pasta = saidas_storage.pasta_exportacao(modelo['pasta_analise'])
+    saidas_storage.validar(pasta + '/analise.json')
+    caminho = f'{pasta}/Relatório e Camadas_{uuid4().hex[:12]}.zip'
     storage_remoto.enviar_bytes(caminho, dados)
     if sha256(storage_remoto.baixar(caminho)).digest() != sha256(dados).digest():
         raise ValueError('O pacote no storage diverge do conteúdo conferido.')

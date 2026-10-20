@@ -136,7 +136,13 @@
       const rotulo = document.querySelector(`label[for="${CSS.escape(originalEl.id)}"]`);
       if (rotulo) {
         if (!rotulo.id) rotulo.id = `${originalEl.id}-rotulo`;
-        root.setAttribute("aria-labelledby", rotulo.id);
+        const texto = document.createElement("span");
+        for (const atributo of rotulo.attributes) {
+          if (atributo.name !== "for") texto.setAttribute(atributo.name, atributo.value);
+        }
+        texto.append(...rotulo.childNodes);
+        rotulo.replaceWith(texto);
+        root.setAttribute("aria-labelledby", texto.id);
       }
     }
     if (originalEl.name) root.setAttribute("name", originalEl.name);

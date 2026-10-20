@@ -1,4 +1,4 @@
-{% for origem, titulo in [("entrada", "Camadas de entrada"), ("base", "Camadas de base")] %}
+{% for origem, titulo in [("entrada", "Camadas de entrada"), ("base", titulo_bases_previa|default("Camadas de base"))] %}
 <section class="ea-preview-layer-group ea-preview-status-group" data-preview-group="{{ origem }}">
   <div class="ea-preview-tree-row">
     <input class="ea-preview-visibility" type="checkbox" name="ea-preview-visibility" aria-label="Visibilidade no mapa: {{ titulo }}" disabled>

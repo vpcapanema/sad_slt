@@ -8,7 +8,7 @@ import unicodedata
 from hashlib import sha256
 from io import BytesIO
 from pathlib import PurePosixPath
-from uuid import uuid4
+from uuid import NAMESPACE_URL, uuid4, uuid5
 
 import geopandas as gpd
 import pandas as pd
@@ -18,7 +18,7 @@ from osgeo import gdal
 from api.services import extracao_ogr as ogr
 from api.services import extracao_preparacao as previa
 from api.services import ciclo_vida_arquivos as ciclo, storage_geoespacial as storage
-from api.services import storage_remoto
+from api.services import storage_remoto, saidas_storage
 from api.services.arquivos_geoespaciais_memoria import vetor
 from api.services.bancada_camada_original import preparar as descritor_original
 from api.services.controle_processamento import ControleProcessamento
@@ -197,6 +197,13 @@ def _carregar(ref: dict):
     return frame
 
 
+def pasta_saida(lote: str, codigo: str | None = None) -> str:
+    return saidas_storage.pasta_analise(
+        'elegibilidade-territorial', 'elegibilidade-territorial',
+        str(uuid5(NAMESPACE_URL, 'sicard:elegibilidade:' + str(lote))),
+        hierarquizacao=codigo, fase='fase-1' if codigo else None)
+
+
 def executar(payload: dict, controle: ControleProcessamento) -> dict:
     entrada_ref = payload['entrada']
     arquivo = nome_saida(entrada_ref['nome'])
@@ -224,6 +231,10 @@ def executar(payload: dict, controle: ControleProcessamento) -> dict:
     auditoria['entrada'] = entrada_ref
     if codigo:
         auditoria['hierarquizacao'] = codigo
+    lote = str(payload.get('lote_id') or uuid4().hex)
+    pasta = pasta_saida(lote, codigo)
+    auditoria['pasta_analise'] = pasta
+    arquivo = f'{PurePosixPath(arquivo).stem}_{sha256(entrada_ref["id"].encode()).hexdigest()[:12]}.gpkg'
     controle.mensagem('Gravar GeoPackage em memória e reabrir para conferir integridade')
     conteudos = serializar(saida, auditoria, intersecoes, arquivo)
     reaberta = gpd.read_file(BytesIO(conteudos[arquivo]), engine='pyogrio', layer='elegibilidade_territorial')
@@ -238,9 +249,7 @@ def executar(payload: dict, controle: ControleProcessamento) -> dict:
     except AssertionError as exc:
         raise ValueError('A saída gravada não preservou os atributos ou os valores calculados.') from exc
     controle.fase(3, 'Persistir saída conferida no storage', cancelavel=False)
-    storage_remoto.listar('saidas-geoespaciais', estrito=True)
-    pasta = f'saidas-geoespaciais/elegibilidade-{uuid4().hex}'
-    storage_remoto.criar_pasta(pasta)
+    saidas_storage.garantir_pasta(pasta)
     exportacao = ciclo.registrar_exportacao_memoria(arquivo, conteudos, entrada_ref['id'], 'vetor', pasta_saida=pasta)
     caminho = exportacao['caminho']
     ident = f'storage:{caminho}::elegibilidade_territorial'
@@ -252,4 +261,4 @@ def executar(payload: dict, controle: ControleProcessamento) -> dict:
     return {**descritor, 'nome': arquivo, 'tipo': 'vetor', 'representacao': 'tiles',
             'sha256': sha256(conteudos[arquivo]).hexdigest(),
             'status_validacao': 'valida', 'camada': 'elegibilidade_territorial',
-            'elegibilidade': auditoria, 'exportacao': exportacao}
+            'elegibilidade': auditoria, 'exportacao': exportacao, 'pasta_analise': pasta}

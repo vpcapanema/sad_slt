@@ -375,8 +375,8 @@ def _percorrer(relativo: str) -> Iterator[str]:
             yield filho
 
 
-def navegar(caminho: str = "", detalhar: bool = True) -> dict[str, Any]:
-    """Uma pasta do storage: subpastas e camadas vetoriais, para o explorador."""
+def navegar(caminho: str = "", detalhar: bool = True, *, incluir_rasters: bool = False) -> dict[str, Any]:
+    """Lista vetores por padrão; superfícies raster exigem opção explícita."""
     relativo = str(caminho or "").strip().replace("\\", "/").strip("/") or RAIZES[0]
     partes = PurePosixPath(relativo).parts
     if ".." in partes or partes[0] not in RAIZES_LEITURA:
@@ -388,6 +388,8 @@ def navegar(caminho: str = "", detalhar: bool = True) -> dict[str, Any]:
         sufixo = PurePosixPath(nome).suffix.lower()
         if item["pasta"]:
             pastas.append({"nome": nome, "caminho": item_relativo})
+        elif incluir_rasters and sufixo in EXTENSOES_RASTER:
+            arquivos.extend(_itens_do_arquivo(_resolver_listado(item_relativo, item), item_relativo))
         elif not detalhar and sufixo in EXTENSOES_VETOR | storage_pacotes.COMPACTADOS:
             arquivos.append({'id': f'storage:{item_relativo}', 'nome': PurePosixPath(nome).stem,
                              'arquivo': item_relativo, 'formato': sufixo.lstrip('.').upper(),
@@ -426,9 +428,11 @@ def contagens(raiz: str) -> dict[str, int]:
     return resultado
 
 
-def inventariar_arquivo(caminho: str) -> dict[str, Any]:
-    """Abre somente o arquivo escolhido; navegar não precisa ler geometrias."""
+def inventariar_arquivo(caminho: str, *, incluir_rasters: bool = False) -> dict[str, Any]:
+    """Identifica o arquivo escolhido, incluindo rasters somente quando solicitado."""
     arquivo = resolver(caminho)
+    if incluir_rasters and arquivo.suffix.lower() in EXTENSOES_RASTER:
+        return {'arquivo': caminho, 'camadas': _itens_do_arquivo(arquivo, caminho)}
     if arquivo.suffix.lower() not in EXTENSOES_VETOR | storage_pacotes.COMPACTADOS:
         raise ValueError('Selecione um arquivo vetorial ou pacote compatível.')
     itens = _itens_do_arquivo(arquivo, caminho)
@@ -543,13 +547,13 @@ def tile(caminho: str, camada: str | None, z: int, x: int, y: int) -> bytes:
     return _tile(str(arquivo), camada, (estado.st_mtime_ns, estado.st_size), z, x, y)
 
 
-def _limitar_vertices_tile(ds, resolucao):
+def _limitar_vertices_tile(ds):
     camada = ds.GetLayer(0)
     def vertices(geom):
         return geom.GetPointCount() + sum(vertices(geom.GetGeometryRef(i)) for i in range(geom.GetGeometryCount()))
     complexas = [feicao.Clone() for feicao in camada if vertices(feicao.GetGeometryRef()) > 16000]
     for feicao in complexas:
-        pendentes = [(feicao.GetGeometryRef().SimplifyPreserveTopology(resolucao / 4), 0)]
+        pendentes = [(feicao.GetGeometryRef().Clone(), 0)]
         fragmentos = []
         while pendentes:
             geom, profundidade = pendentes.pop()
@@ -559,6 +563,18 @@ def _limitar_vertices_tile(ds, resolucao):
                 continue
             if vertices(geom) <= 16000:
                 fragmentos.append(geom)
+                continue
+            if ogr.GT_Flatten(geom.GetGeometryType()) == ogr.wkbLineString:
+                # Fragmentos contiguos compartilham o vertice da emenda.
+                for inicio in range(0, geom.GetPointCount() - 1, 15999):
+                    segmento = ogr.Geometry(ogr.wkbLineString)
+                    for indice in range(inicio, min(inicio + 16000, geom.GetPointCount())):
+                        segmento.AddPoint_2D(*geom.GetPoint_2D(indice))
+                    fragmentos.append(segmento)
+                continue
+            if ogr.GT_Flatten(geom.GetGeometryType()) == ogr.wkbMultiLineString:
+                pendentes.extend((geom.GetGeometryRef(i).Clone(), profundidade)
+                                 for i in reversed(range(geom.GetGeometryCount())))
                 continue
             if profundidade >= 32:
                 raise RuntimeError('A geometria excede o limite de complexidade da representação do mapa.')
@@ -619,12 +635,16 @@ def _tile(arquivo: str, camada: str | None, _versao: tuple[int, int], z: int, x:
         )
         if memoria is None:
             raise RuntimeError('Não foi possível recortar as feições para o tile.')
-        _limitar_vertices_tile(memoria, (limites.right - limites.left) / _EXTENSAO_TILE)
+        _limitar_vertices_tile(memoria)
+        # O padrao do GDAL reduz precisao ou descarta feicoes acima de 500 kB.
+        total_feicoes = memoria.GetLayer(0).GetFeatureCount()
         gdal.VectorTranslate(
             destino, memoria, format="MVT", layerName="camada",
             datasetCreationOptions=[
                 f"MINZOOM={z}", f"MAXZOOM={z}", "COMPRESS=NO", "FORMAT=DIRECTORY",
-                "SIMPLIFICATION=1", "SIMPLIFICATION_MAX_ZOOM=1",
+                "SIMPLIFICATION=0", "SIMPLIFICATION_MAX_ZOOM=0",
+                f"EXTENT={_EXTENSAO_TILE}", f"BUFFER={_MARGEM_TILE}",
+                "MAX_SIZE=2147483647", f"MAX_FEATURES={total_feicoes + 1}",
             ],
         )
         alvo = f"{destino}/{z}/{x}/{y}.pbf"

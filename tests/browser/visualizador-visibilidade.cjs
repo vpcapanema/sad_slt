@@ -11,6 +11,7 @@ const assert=require('node:assert/strict');
  await page.evaluate(helpers=>{
   window.loadProgress={active:null,begin:()=>({controller:new AbortController()}),plan:()=>{},repaint:()=>{},task:async(op,kind,label,job)=>job(),end:async()=>{}};window.displayName=x=>x.nome || x.id;window.registro=new Map(); window.camadasVisiveis=new Set(); window.aviso=''; window.escapeHtml=x=>x; window.renderLegend=()=>{};
   window.GeoespacialMap={layers:new Map(),map:{fitBounds:()=>{}},removeLayer:id=>camadasVisiveis.delete(id)}; window.syncProjectPin=()=>{}; window.matchesLayerFilter=()=>true; window.applyLayerFilter=()=>visibilityTest.syncVisibility();
+  window.showDetails=()=>{window.detailsShown=true;};window.feedback=(message,state)=>{window.lastFeedback={message,state};};
   window.toggle=async(layer,on)=>{if(layer.fail)throw Error('indisponível'); if(on)camadasVisiveis.add(layer.id);else camadasVisiveis.delete(layer.id);};
   (0,eval)(helpers+';window.visibilityTest={syncVisibility,setGroupVisibility,setLayerVisibility,groupInput};');
  },helpers);
@@ -26,7 +27,7 @@ const assert=require('node:assert/strict');
   await setLayerVisibility(root.querySelector('[data-id="a"]'),false);const partial=groupInput(root).indeterminate&&!groupInput(root).checked;
   await setGroupVisibility(root,false);const cleared=camadasVisiveis.size===0&&!groupInput(root).indeterminate&&!groupInput(root).checked;
   parent.querySelector('.layer-group-body').append(row('error',true));
-  await setGroupVisibility(root,true);const failed=!root.querySelector('[data-id="error"] input').checked&&groupInput(root).indeterminate;
+  await setGroupVisibility(root,true);const failed=!root.querySelector('[data-id="error"] input').checked&&groupInput(root).indeterminate&&detailsShown&&lastFeedback.state==='error';
   return {initial,selected,partial,cleared,failed};
  });
  for(const [name,passed] of Object.entries(result))assert.equal(passed,true,name);
@@ -74,4 +75,3 @@ const assert=require('node:assert/strict');
  console.log('PASS: 95 camadas selecionadas, subpastas lazy, estado parcial, ocultação, falhas, alfinetes e interrupção real da fila de 40 camadas');
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exit(1);});
-

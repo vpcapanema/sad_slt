@@ -322,7 +322,25 @@
     container.innerHTML = html;
   }
 
+  async function iniciarPagina(renderizar) {
+    const container = document.getElementById("conteudo");
+    container.setAttribute("aria-busy", "true");
+    container.textContent = "Carregando referências…";
+    try {
+      await loadReferencia("../");
+      renderizar(container);
+      const hash = location.hash.replace("#", "");
+      if (hash) document.getElementById(hash)?.scrollIntoView({ behavior: "smooth" });
+    } catch (error) {
+      console.error(error);
+      container.textContent = "Não foi possível carregar as referências. Atualize a página para tentar novamente.";
+    } finally {
+      container.setAttribute("aria-busy", "false");
+    }
+  }
+
   global.SLTReferencia = {
+    iniciarPagina,
     loadReferencia,
     getClassificacao,
     renderDiretoriasPage,

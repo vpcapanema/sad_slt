@@ -142,11 +142,51 @@ def test_pacote_persistido_preserva_geometrias_e_aliases(analise):
         assert manifesto['arquivos'][0]['sha256'] == sha256(arquivos[0][1]).hexdigest()
 
 
+def test_nova_analise_reune_camadas_pdf_zip_e_revisoes_sem_sobrescrever(analise, monkeypatch):
+    from api.services import hierarquizacao_service
+    resultados, dados, nomes = analise
+    pasta = service.pasta_saida('lote', 'HIER-001')
+    for indice, resultado in enumerate(resultados.values(), 1):
+        anterior = resultado['arquivo']
+        resultado['arquivo'] = f'{pasta}/demanda_{indice}.gpkg'
+        dados[resultado['arquivo']] = dados.pop(anterior)
+        resultado['elegibilidade'].update(hierarquizacao='HIER-001', pasta_analise=pasta)
+    monkeypatch.setattr(hierarquizacao_service, 'registrar_saida_geoespacial_fase1', lambda *args: None)
+    modelo, arquivos = service.montar(['job-1', 'job-2'], nomes, 'autor', True)
+    service.salvar_nomes(['job-1', 'job-2'], modelo, 'autor')
+    service.registrar_relatorios(['job-1', 'job-2'], modelo, 'autor')
+    _, pacote = service.pacote(modelo, arquivos)
+    pdf = modelo['relatorios_hierarquizacao'][0]['arquivo']
+    assert modelo['pasta_analise'] == pasta
+    assert pacote.rsplit('/', 1)[0] == pdf.rsplit('/', 1)[0] == pasta
+    assert all(caminho.startswith(pasta + '/') for caminho in dados)
+    assert all(service._caminho_revisao(r, 'autor').startswith(pasta + '/revisoes/') for r in resultados.values())
+    anteriores = dict(dados)
+    service.registrar_relatorios(['job-1', 'job-2'], modelo, 'autor')
+    _, novo_pacote = service.pacote(modelo, arquivos)
+    assert novo_pacote != pacote and modelo['relatorios_hierarquizacao'][0]['arquivo'] != pdf
+    assert all(dados[caminho] == conteudo for caminho, conteudo in anteriores.items())
+
+
 def test_saida_alterada_impede_resultados_e_exportacao(analise):
     resultados, dados, nomes = analise
     dados[resultados['job-1']['arquivo']] += b'alterado'
     with pytest.raises(ValueError, match='mudou'):
         service.montar(['job-1', 'job-2'], nomes, 'autor', True)
+
+
+def test_saida_migrada_reutiliza_pasta_fisica_sem_regravar_geopackage(analise):
+    resultados, dados, _ = analise
+    resultado = resultados['job-1']
+    arquivo_antigo = resultado['arquivo']
+    pasta = service.pasta_saida('lote-migrado', 'HIER-001')
+    resultado['arquivo'] = pasta + '/analise.gpkg'
+    original = dados.pop(arquivo_antigo)
+    dados[resultado['arquivo']] = original
+    resultado['elegibilidade'].pop('pasta_analise', None)
+    assert service._pasta_resultados([resultado]) == pasta
+    assert service._caminho_revisao(resultado, 'autor').startswith(pasta + '/revisoes/')
+    assert dados[resultado['arquivo']] == original
 
 
 @pytest.mark.parametrize('segunda_hierarquizacao', [None, 'HIER-SUL'])
@@ -252,6 +292,7 @@ def test_reabrir_saida_compartilhada_nao_bloqueia_ou_sobrescreve_revisao_de_outr
     nomes_unicos = {ident: nome for ident, nome in nomes.items() if ident != 'entrada-2'}
     modelo, _ = service.montar(['job-1'], nomes_unicos, 'autor', True)
     service.salvar_nomes(['job-1'], modelo, 'autor')
+    dados[arquivo + '.nomes.json'] = dados.pop(service._caminho_revisao(resultados['job-1'], 'autor'))
     revisao_autor = dados[arquivo + '.nomes.json']
     assert service.abrir(arquivo, 'autor')['revisados'] is True
     reabertura = service.abrir(arquivo, 'outro')
@@ -395,7 +436,7 @@ def test_nomes_confirmados_persistem_vinculados_ao_usuario_e_assinatura(analise)
     preparacao = service.preparar(['job-1','job-2'], 'autor')
     assert preparacao['revisados'] is True
     assert next(f for f in preparacao['fontes'] if f['id'] == 'feicao-1')['nome'] == 'Feição Revisada'
-    caminho = resultados['job-1']['arquivo'] + '.nomes.json'
+    caminho = service._caminho_revisao(resultados['job-1'], 'autor')
     revisao = json.loads(dados[caminho])
     revisao['sha256'] = 'assinatura diferente'
     dados[caminho] = json.dumps(revisao).encode()
