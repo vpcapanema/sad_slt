@@ -301,7 +301,9 @@ def test_captura_do_sigma_para_respostas_do_servidor():
     assert "e.msg && e.loc" in FEEDBACK_JS
     assert "const agora = Date.now()" in FEEDBACK_JS
     assert "agora - this._lastActivity" in FEEDBACK_JS
-    assert "agora - this._lastContact" in FEEDBACK_JS
+    assert "this._lastContact = Date.now()" in FEEDBACK_JS
+    # O contato continua registrado, mas o aviso de inatividade foi removido do visual aprovado.
+    assert "Não há atualização recente." not in FEEDBACK_JS
 
 
 
