@@ -20,7 +20,10 @@
       const nav = document.createElement('nav'), summary = document.createElement('p');
       nav.id = prefix + '-pagination'; nav.className = 'admin-pagination'; nav.setAttribute('aria-label', 'Paginar registros');
       summary.id = prefix + '-summary'; summary.className = 'admin-table-summary'; summary.setAttribute('aria-live','polite');
-      host.append(nav, summary);
+      const footer = document.createElement('div');
+      footer.className = 'admin-table-footer';
+      footer.append(nav, summary);
+      host.append(footer);
       const column = filter.querySelector('select'), value = filter.querySelectorAll('select')[1];
       headers.forEach((h, i) => { if (!h.querySelector('input')) column.add(new Option(h.textContent.trim(), String(i))); });
       state = table.analysisControls = {prefix, column, value, page:1, rows:[]};

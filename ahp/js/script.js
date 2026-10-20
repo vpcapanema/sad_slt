@@ -25,7 +25,7 @@ function normalizeCriteriaNames(list) {
 // pois `let criteria` não é acessível via window.criteria.
 function setAhpCriteria(list) {
   criteria = normalizeCriteriaNames(list);
-  if (!criteria.length) {
+  if (!criteria.length && !document.body.classList.contains("ahp-colaborativa-page")) {
     try {
       criteria = normalizeCriteriaNames(JSON.parse(localStorage.getItem("ahp_criteria") || "[]"));
     } catch (_e) {
@@ -877,13 +877,14 @@ function wireSaaty(pair) {
   let idx = SAATY_CENTER;
   let dragging = false;
 
-  function apply(newIdx) {
+  function apply(newIdx, fromUser = false) {
     idx = Math.max(0, Math.min(lastIdx, newIdx));
     handle.style.left = (idx / lastIdx) * 100 + "%";
     scale.setAttribute("aria-valuenow", idx);
     input.value = SAATY_STEPS[idx].v;
     updateSaatyReadout(pair, idx);
     updateSaatyReciprocal(pair, idx);
+    if (fromUser) pair.dispatchEvent(new CustomEvent("saaty:change", { bubbles: true }));
     if (typeof updateLiveMetrics === "function") updateLiveMetrics();
   }
 
@@ -901,12 +902,12 @@ function wireSaaty(pair) {
     dragging = true;
     pair.classList.add("saaty-pair--touched");
     scale.classList.add("saaty-scale--active");
-    apply(idxFromX(pointerX(e)));
+    apply(idxFromX(pointerX(e)), true);
     e.preventDefault();
   }
   function move(e) {
     if (!dragging) return;
-    apply(idxFromX(pointerX(e)));
+    apply(idxFromX(pointerX(e)), true);
     e.preventDefault();
   }
   function up() {
@@ -920,23 +921,24 @@ function wireSaaty(pair) {
   scale.addEventListener("touchstart", down, { passive: false });
   document.addEventListener("touchmove", move, { passive: false });
   document.addEventListener("touchend", up);
+  document.addEventListener("touchcancel", up);
 
   scale.addEventListener("keydown", (e) => {
     if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
       pair.classList.add("saaty-pair--touched");
-      apply(idx - 1);
+      apply(idx - 1, true);
       e.preventDefault();
     } else if (e.key === "ArrowRight" || e.key === "ArrowUp") {
       pair.classList.add("saaty-pair--touched");
-      apply(idx + 1);
+      apply(idx + 1, true);
       e.preventDefault();
     } else if (e.key === "Home") {
       pair.classList.add("saaty-pair--touched");
-      apply(0);
+      apply(0, true);
       e.preventDefault();
     } else if (e.key === "End") {
       pair.classList.add("saaty-pair--touched");
-      apply(lastIdx);
+      apply(lastIdx, true);
       e.preventDefault();
     }
   });
@@ -980,6 +982,7 @@ function updateSaatyReadout(pair, idx) {
     mod = "neg";
   }
   el.textContent = txt;
+  pair.querySelector(".saaty-scale").setAttribute("aria-valuetext", txt);
   el.className = "saaty-readout saaty-readout--" + mod;
   pair.classList.toggle("saaty-pair--filled", idx !== SAATY_CENTER);
   pair.classList.toggle("saaty-pair--equal", idx === SAATY_CENTER);
@@ -997,7 +1000,7 @@ function updateSaatyReciprocal(pair, idx) {
   if (valueEl) valueEl.textContent = formatSaatyValue(reciprocal);
   if (textEl) {
     textEl.textContent =
-      criteria[j] + " em relaÃ§Ã£o a " + criteria[i] + " = " + formatSaatyValue(reciprocal);
+      criteria[j] + " em relação a " + criteria[i] + " = " + formatSaatyValue(reciprocal);
   }
   box.classList.remove("is-updated", "is-positive", "is-negative", "is-equal");
   box.classList.add(idx > SAATY_CENTER ? "is-negative" : idx < SAATY_CENTER ? "is-positive" : "is-equal");

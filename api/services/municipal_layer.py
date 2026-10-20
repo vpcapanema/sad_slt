@@ -10,6 +10,7 @@ import re
 import threading
 import unicodedata
 from collections import Counter
+from contextlib import nullcontext
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -95,30 +96,36 @@ def base_arquivos(nome: str) -> str:
     return '_'.join(parte for parte in (dados.PREFIXO, curto, texto) if parte)
 
 
-def materializar(payload, folder, base=None, controle=None):
-    """Exporta a base municipal e reabre o arquivo pelo GDAL antes do registro."""
+def materializar(payload, folder=None, base=None, controle=None):
+    """Reabre pelo GDAL; sem montagem retorna caminho None e mantém tudo em RAM."""
     base = base or dados.PREFIXO
     package = dados.export_layer(payload, base, controle) if controle else dados.export_layer(payload, base)
     fmt = payload['format']
+    components = {}
     with ZipFile(io.BytesIO(package)) as archive:
         for member in archive.infolist():
-            path = (folder/member.filename).resolve()
-            if Path(member.filename).name != member.filename or not path.is_relative_to(folder.resolve()):
+            if Path(member.filename).name != member.filename or '\\' in member.filename:
                 raise ValueError('Pacote municipal com caminho inválido.')
-            with path.open('xb') as stream:
-                stream.write(archive.read(member))
-    path = folder/f'{base}.{fmt}'
-    dataset = gdal.OpenEx(str(path), gdal.OF_VECTOR | gdal.OF_READONLY)
-    if dataset is None or dataset.GetLayerCount() != 1:
-        raise ValueError('A exportação deve conter uma camada vetorial.')
-    layer = dataset.GetLayer(0)
-    if layer.GetFeatureCount() != 645:
+            components[member.filename] = archive.read(member)
+    path = None
+    if folder is None:
+        from api.services.arquivos_geoespaciais_memoria import ler_vetor
+        frame = ler_vetor(components, f'{base}.{fmt}')
+    else:
+        for name, content in components.items():
+            with (folder/name).open('xb') as stream:
+                stream.write(content)
+        path = folder/f'{base}.{fmt}'
+        dataset = gdal.OpenEx(str(path), gdal.OF_VECTOR | gdal.OF_READONLY)
+        if dataset is None or dataset.GetLayerCount() != 1:
+            raise ValueError('A exportação deve conter uma camada vetorial.')
+        dataset = None
+        frame = gpd.read_file(path, engine='pyogrio')
+    if len(frame) != 645:
         raise ValueError('A camada gerada não contém os 645 municípios.')
-    dataset = None
-    frame = gpd.read_file(path, engine='pyogrio')
     if frame.crs.to_epsg() != 4674 or not frame.CD_MUN.is_unique or not frame.CD_MUN.str.fullmatch(r'\d{7}').all():
         raise ValueError('CRS ou códigos municipais inválidos.')
-    manifest = json.loads((folder/f'{base}_metadados.json').read_text(encoding='utf-8'))
+    manifest = json.loads(components[f'{base}_metadados.json'])
     if any(item['export_field'] not in frame for item in manifest['attributes']):
         raise ValueError('Um atributo selecionado não foi materializado.')
     return package, path, manifest, frame
@@ -129,26 +136,23 @@ def gerar(codigo, payload, nome, user, controle=None):
     if not _lock.acquire(blocking=False):
         raise ValueError('Há uma camada municipal sendo gerada. Aguarde e tente novamente.')
     execution = None
-    folder = None
-    registering = False
     try:
         params = {'plugin': 'municipal-layer', 'versao': '1.0.0', 'categoria': category, **payload}
         execution = ciclo.iniciar('gerar_camada_municipal', params, str(user.id))
         # O nome sai antes da exportação: é ele que batiza a pasta e os arquivos.
         name = nome.strip()[:200] or nome_padrao(category, dados.selection(payload['attributes']))
         base = base_arquivos(name)
-        from api.storage_policy import TemporaryDirectory
+        from api.storage_policy import TemporaryDirectory, sem_montagem
         from api.repositories import camada_geoespacial_repository as camadas, saidas_geoespaciais_repository as catalogo
         from api.services import saidas_storage
-        with TemporaryDirectory(prefix='sicard-municipal-') as temporary:
-            folder = Path(temporary)
-            package, path, manifest, frame = materializar(payload, folder, base, controle) if controle else materializar(payload, folder, base)
+        with (nullcontext(None) if sem_montagem() else TemporaryDirectory(prefix='sicard-municipal-')) as temporary:
+            folder = Path(temporary) if temporary is not None else None
+            package, _, manifest, frame = materializar(payload, folder, base, controle) if controle else materializar(payload, folder, base)
             ident = 'camada_' + uuid4().hex
             metadata = {'origem_ferramenta':'municipal-layer', 'base_arquivos':base,
                         'categoria_extracao':category, 'execucao_id':execution,
                         'manifesto':manifest, 'feicoes':len(frame), 'colunas':list(frame.columns)}
             if controle:controle.fase(3,'Registrando a camada validada no Sicard Storage',cancelavel=False)
-            registering = True
             token = ciclo.execucao_atual.set(execution)
             try:
                 camadas.salvar_vetor(recurso_id=ident,nome=name,origem='OP-MUNICIPAL',

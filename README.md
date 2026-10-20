@@ -125,6 +125,15 @@ retorna apenas contexto, sem critérios ou autorização por e-mail. O código
 não é devolvido pelas respostas das APIs de julgamentos nem incluído em URLs
 ou armazenamento local do navegador.
 
+No formulário colaborativo, o card de RC permanece neutro em zero, fica verde
+quando `0 < RC < 0,10` e vermelho quando `RC >= 0,10`. Cada ajuste da escala
+reinicia uma espera de três segundos; sem novos ajustes, o par e seu bloco de
+valor inverso recebem confirmação visual verde. Movimentos posteriores
+reabrem a edição normalmente, inclusive por teclado e toque. Essa indicação
+não altera o cálculo AHP nem substitui o envio final. O salvamento do progresso
+tem mensagem própria, preserva estatísticas de retomada e é concluído em ordem
+antes do envio final, evitando gravações concorrentes fora de sequência.
+
 Julgamentos antigos permanecem sem código até o primeiro envio de convite após
 a migração; o envio gera e persiste o código de forma atômica, sem alterar as
 respostas existentes. Convites antigos precisam ser reenviados explicitamente

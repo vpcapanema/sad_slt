@@ -1,5 +1,6 @@
 """Join conservativo e documentos do pacote, compartilhados com o SICARD."""
 from datetime import datetime, timezone
+from io import BytesIO
 import json
 
 import geopandas as gpd
@@ -39,6 +40,11 @@ def join_attributes(frame, columns):
 def reopen_and_validate(path, expected):
     """Recusa perda/duplicação de feições, valores ou geometrias na gravação."""
     actual = gpd.read_file(path)
+    return validate_layer(actual, expected)
+
+
+def validate_layer(actual, expected):
+    """Confere também camadas reabertas de buffers, sem materialização local."""
     if len(actual) != len(expected) or not actual.CD_MUN.is_unique:
         raise ValueError('A exportação alterou a quantidade de feições da malha.')
     if set(actual.CD_MUN) != set(expected.CD_MUN) or actual.crs != expected.crs:
@@ -60,22 +66,39 @@ def reopen_and_validate(path, expected):
     return actual
 
 
-def write_tables_and_report(folder, base, actual, manifest, controle=None, metadata_name=None):
+def write_tables_and_report(folder, base, actual, manifest, controle=None, metadata_name=None, *, components=None):
     """Tabelas derivadas do arquivo reaberto: mesmos nomes, valores e registros."""
+    def write_text(name, text, encoding='utf-8'):
+        if components is None:
+            (folder / name).write_text(text, encoding=encoding)
+        else:
+            components[name] = text.encode(encoding)
+
     table = actual.drop(columns=actual.geometry.name)
     if controle:
         controle.mensagem('Gerando tabela de atributos em CSV, XLSX e TXT e relatório do join')
-    table.to_csv(folder / f'{base}_atributos.csv', index=False, encoding='utf-8-sig', na_rep='')
-    table.to_csv(folder / f'{base}_atributos.txt', index=False, encoding='utf-8', sep='\t', na_rep='')
+    if components is None:
+        table.to_csv(folder / f'{base}_atributos.csv', index=False, encoding='utf-8-sig', na_rep='')
+        table.to_csv(folder / f'{base}_atributos.txt', index=False, encoding='utf-8', sep='\t', na_rep='')
+    else:
+        write_text(f'{base}_atributos.csv', table.to_csv(index=False, na_rep=''), 'utf-8-sig')
+        write_text(f'{base}_atributos.txt', table.to_csv(index=False, sep='\t', na_rep=''))
     # Modo streaming evita materializar milhões de células simultaneamente.
-    workbook = Workbook(write_only=True)
-    sheet = workbook.create_sheet('Atributos')
+    workbook = Workbook(write_only=components is None)
+    sheet = workbook.create_sheet('Atributos') if components is None else workbook.active
+    sheet.title = 'Atributos'
     sheet.append([_excel_cell(sheet, v) for v in table.columns])
     for index, row in enumerate(table.itertuples(index=False, name=None), 1):
         sheet.append([_excel_cell(sheet, v) for v in row])
         if controle and (index % 25 == 0 or index == len(table)):
             controle.tarefa(index, len(table))
-    workbook.save(folder / f'{base}_atributos.xlsx')
+    if components is None:
+        workbook.save(folder / f'{base}_atributos.xlsx')
+    else:
+        output = BytesIO()
+        workbook.save(output)
+        components[f'{base}_atributos.xlsx'] = output.getvalue()
+    workbook.close()
     join = manifest['join']
     manifest['gerado_em_utc'] = datetime.now(timezone.utc).isoformat()
     manifest['validacao_reabertura'] = 'Contagem, códigos, CRS, geometrias, campos, valores e nulos conferidos.'
@@ -100,10 +123,11 @@ def write_tables_and_report(folder, base, actual, manifest, controle=None, metad
                       f"Referência: {item.get('url') or ''}; cobertura informada no catálogo: {item.get('coverage')}",
                       json.dumps(join['campos'][item['field']], ensure_ascii=False)])
     lines.extend(['', 'ARQUIVOS DO PACOTE'])
-    names = sorted({p.name for p in folder.iterdir()} | {f'{base}_relatorio_join.txt', metadata_name or f'{base}_metadados.json'})
+    existing = {p.name for p in folder.iterdir()} if components is None else set(components)
+    names = sorted(existing | {f'{base}_relatorio_join.txt', metadata_name or f'{base}_metadados.json'})
     manifest['arquivos'] = names
     lines.extend(names)
-    (folder / f'{base}_relatorio_join.txt').write_text('\n'.join(lines) + '\n', encoding='utf-8')
+    write_text(f'{base}_relatorio_join.txt', '\n'.join(lines) + '\n')
 
 
 def _excel_cell(sheet, value):

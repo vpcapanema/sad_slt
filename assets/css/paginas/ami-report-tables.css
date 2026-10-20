@@ -14,3 +14,22 @@
   border: 1px solid currentColor;
   border-radius: 7px;
 }
+
+.ami-page .admin-table-footer > .admin-pagination {
+  font-size: var(--ami-font-child);
+}
+
+.ami-page .admin-table-footer > .admin-table-summary {
+  font-size: var(--ami-font-help);
+}
+
+.ami-page .admin-table-footer > .admin-pagination button,
+.ami-page .admin-table-footer > .admin-pagination button:hover:not(:disabled),
+.ami-page .admin-table-footer > .admin-pagination button:active:not(:disabled) {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  font: inherit;
+  font-weight: 700;
+}

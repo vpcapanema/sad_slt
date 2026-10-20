@@ -216,7 +216,7 @@ def dicionario(items: list[dict], fmt: str) -> list[dict]:
              'municipios_com_valor': item.get('coverage')} for item in items]
 
 
-def aplicar_aliases(caminho: Path, entradas: list[dict]) -> bool:
+def aplicar_aliases(caminho: str | Path, entradas: list[dict]) -> bool:
     """Grava o alias no próprio arquivo quando o formato suporta (GeoPackage)."""
     from osgeo import gdal, ogr
     alias = {e['campo_exportado']: e['alias'] for e in entradas}
@@ -287,7 +287,9 @@ def orcamento_mb() -> int | None:
 
 
 def estimativa_mb(quantos: int) -> int:
-    return int(CUSTO_BASE_MB + quantos * CUSTO_POR_ATRIBUTO_MB)
+    # Sem montagem, as células XLSX também precisam permanecer em RAM.
+    custo = CUSTO_POR_ATRIBUTO_MB + (1 if tempfile.sem_montagem() else 0)
+    return int(CUSTO_BASE_MB + quantos * custo)
 
 
 def conferir_capacidade(quantos: int) -> None:
@@ -298,7 +300,8 @@ def conferir_capacidade(quantos: int) -> None:
     preciso = estimativa_mb(quantos)
     if preciso <= orcamento:
         return
-    cabem = max(1, int((orcamento - CUSTO_BASE_MB) / CUSTO_POR_ATRIBUTO_MB))
+    custo = CUSTO_POR_ATRIBUTO_MB + (1 if tempfile.sem_montagem() else 0)
+    cabem = max(1, int((orcamento - CUSTO_BASE_MB) / custo))
     raise ValueError(
         f'A seleção de {quantos} atributos precisa de cerca de {preciso} MB e este '
         f'servidor tem {orcamento} MB livres agora. Gere até {cabem} atributos por vez, '
@@ -337,6 +340,8 @@ def export_layer(payload: dict, base: str = PREFIXO, controle=None) -> bytes:
                           'Shapefile aceita 10 caracteres por campo: lá o nome é a sigla do tema '
                           'mais um sequencial, e o nome por extenso está no alias.',
                           'Anos dos indicadores não alteram a malha de referência de 2022.']}
+    if tempfile.sem_montagem():
+        return _exportar_memoria(frame, fmt, base, entradas, manifest, controle)
     with tempfile.TemporaryDirectory(prefix='base-municipal-') as temp:
         folder = Path(temp)
         output = folder / f'{base}.{fmt}'
@@ -346,17 +351,7 @@ def export_layer(payload: dict, base: str = PREFIXO, controle=None) -> bytes:
         if controle:controle.mensagem('Preparando metadados e dicionário de campos')
         manifest['alias_no_arquivo'] = bool(fmt == 'gpkg' and aplicar_aliases(output, entradas))
         (folder / f'{base}.qml').write_text(estilo_qgis(entradas), encoding='utf-8')
-        with (folder / f'{base}_dicionario.csv').open('w', encoding='utf-8-sig', newline='') as arquivo:
-            writer = csv.DictWriter(arquivo, fieldnames=['campo_exportado', 'alias', 'significado',
-                                                         'campo_bruto', 'fonte', 'tema', 'ano',
-                                                         'unidade', 'url', 'municipios_com_valor'])
-            writer.writeheader()
-            for campo, (rotulo, texto) in CAMPOS_FIXOS.items():
-                writer.writerow({'campo_exportado': campo, 'alias': rotulo, 'significado': texto,
-                                 'campo_bruto': campo, 'fonte': ORIGEM_MALHA, 'tema': 'Malha municipal',
-                                 'ano': ANO_MALHA})
-            for entrada in entradas:
-                writer.writerow({chave: entrada[chave] for chave in writer.fieldnames})
+        (folder / f'{base}_dicionario.csv').write_bytes(_dicionario_csv(entradas))
         if controle:controle.mensagem('Reabrindo camada para conferir feições, atributos e geometrias')
         actual = export_support.reopen_and_validate(output, frame)
         export_support.write_tables_and_report(folder, base, actual, manifest, controle)
@@ -370,3 +365,47 @@ def export_layer(payload: dict, base: str = PREFIXO, controle=None) -> bytes:
                     controle.tarefa(indice,len(arquivos))
                 archive.write(arquivo, arquivo.name)
         return buffer.getvalue()
+
+
+def _exportar_memoria(frame, fmt, base, entradas, manifest, controle):
+    from osgeo import gdal
+    from api.services.arquivos_geoespaciais_memoria import vetor, ler_vetor, diretorio, trabalho
+    if controle:
+        controle.mensagem('Gerando a camada em RAM e conferindo os arquivos no Storage')
+    name = f'{base}.{fmt}'
+    components = vetor(frame, name, DRIVERS[fmt], encoding='UTF-8',
+                       **({'COORDINATE_PRECISION': 17, 'SIGNIFICANT_FIGURES': 17} if fmt == 'geojson' else {}))
+    manifest['alias_no_arquivo'] = False
+    if fmt == 'gpkg':
+        with diretorio(components) as root:
+            manifest['alias_no_arquivo'] = aplicar_aliases(root + '/' + name, entradas)
+            components[name] = bytes(gdal.VSIGetMemFileBuffer_unsafe(root + '/' + name))
+    actual = export_support.validate_layer(ler_vetor(components, name), frame)
+    components[f'{base}.qml'] = estilo_qgis(entradas).encode('utf-8')
+    components[f'{base}_dicionario.csv'] = _dicionario_csv(entradas)
+    export_support.write_tables_and_report(None, base, actual, manifest, controle, components=components)
+    components[f'{base}_metadados.json'] = json.dumps(manifest, ensure_ascii=False, indent=2).encode('utf-8')
+    with trabalho(components):
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as archive:
+            for index, (name, content) in enumerate(components.items(), 1):
+                if controle:
+                    controle.mensagem(f'Compactando {name}')
+                    controle.tarefa(index, len(components))
+                archive.writestr(name, content)
+        return buffer.getvalue()
+
+
+def _dicionario_csv(entradas):
+    glossary = io.StringIO(newline='')
+    writer = csv.DictWriter(glossary, fieldnames=['campo_exportado', 'alias', 'significado',
+                                                 'campo_bruto', 'fonte', 'tema', 'ano',
+                                                 'unidade', 'url', 'municipios_com_valor'])
+    writer.writeheader()
+    for campo, (rotulo, texto) in CAMPOS_FIXOS.items():
+        writer.writerow({'campo_exportado': campo, 'alias': rotulo, 'significado': texto,
+                         'campo_bruto': campo, 'fonte': ORIGEM_MALHA, 'tema': 'Malha municipal',
+                         'ano': ANO_MALHA})
+    for entrada in entradas:
+        writer.writerow({chave: entrada[chave] for chave in writer.fieldnames})
+    return glossary.getvalue().encode('utf-8-sig')

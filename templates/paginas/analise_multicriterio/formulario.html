@@ -6,7 +6,7 @@
 {% block classes_body %}ahp-module-page ahp-colaborativa-page ami-public-page{% endblock %}
 {% block base_url %}<base href="/public/analise-multicriterio/">{% endblock %}
 {% block estilos_pagina %}
-	<link rel="stylesheet" href="/assets/css/ahp-module.css?v=20260814-collab-1">
+	<link rel="stylesheet" href="/assets/css/ahp-module.css?v=20261020-feedback-colaborativo">
 	<link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
 	<link rel="stylesheet" href="/assets/css/analise-multicriterio.css?v=20260819-ui6">
 {% endblock %}
@@ -35,14 +35,15 @@
 		<section class="card-collab-form-section secao-collab-form-section card ahp-step-section is-hidden" id="collab-form-section">
 			<div class="ahp-section-label"><i class="fas fa-scale-balanced"></i><span>Comparação pareada</span></div>
 			<div class="ahp-section-body">
-				<p class="step-intro"><i class="fas fa-circle-info" aria-hidden="true"></i> Para cada par, indique qual critério é mais importante para o objetivo desta análise e com que intensidade. Se ambos tiverem a mesma importância, escolha 1 (igual importância).</p>
-				<div id="liveMetrics" class="ahp-live-metrics is-initial">
-					<div class="ahp-metric-card"><div class="ahp-metric-card__label">RC</div><div class="ahp-metric-card__value" id="metricRCValue">—</div></div>
+				<p class="step-intro"><i class="fas fa-circle-info" aria-hidden="true"></i> Para cada par, indique qual critério é mais importante para o objetivo desta análise e com que intensidade. Se ambos tiverem a mesma importância, escolha 1 (igual importância). Após 3 segundos sem novos ajustes, o par e seu valor inverso ficam verdes. Para alterar a resposta, mova a barra novamente. Essa confirmação visual não substitui o envio final.</p>
+				<div id="liveMetrics" class="ahp-live-metrics">
+					<div class="ahp-metric-card"><div class="ahp-metric-card__label">RC</div><div class="ahp-metric-card__value" id="metricRCValue">—</div><div id="collab-rc-status" class="ahp-metric-card__sub" role="status">RC zero</div></div>
 					<div class="ahp-metric-card"><div class="ahp-metric-card__label">IC</div><div class="ahp-metric-card__value" id="metricICValue">—</div></div>
 					<div class="ahp-metric-card"><div class="ahp-metric-card__label">λmax</div><div class="ahp-metric-card__value" id="metricLambdaValue">—</div></div>
 				</div>
 				<div id="comparisonContent" class="ahp-comparison-content"></div>
 				<p id="collab-submit-feedback" class="ahp-matriz-edit-feedback" role="status"></p>
+				<p id="collab-save-feedback" class="form-help" role="status"></p>
 				<button type="button" class="btn btn-success" id="btn-enviar-resposta" disabled><i class="fas fa-paper-plane c-btn__icon"></i>Enviar resposta</button>
 			</div>
 		</section>
@@ -52,6 +53,6 @@
 {% block scripts_pagina %}
 	<script src="/restrict/ahp/js/ahp-core.js"></script>
 	<script src="/restrict/ahp/js/colaborativa-api.js?v=20261019-subpath-publico"></script>
-	<script src="/restrict/ahp/js/script.js?v=20260820-draft-response"></script>
-	<script src="/restrict/ahp/js/colaborativa.js?v=20261019-token-acesso"></script>
+	<script src="/restrict/ahp/js/script.js?v=20261020-feedback-colaborativo"></script>
+	<script src="/restrict/ahp/js/colaborativa.js?v=20261020-feedback-colaborativo"></script>
 {% endblock %}

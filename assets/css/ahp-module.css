@@ -2919,6 +2919,62 @@ a.ahp-progress-step:hover {
   background: rgba(217, 119, 6, 0.08);
 }
 
+.ahp-colaborativa-page .app-header-inner {
+  flex-wrap: wrap;
+}
+
+.ahp-colaborativa-page .ahp-comparison-content {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.ahp-colaborativa-page .saaty-pair {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 480px) {
+  .ahp-colaborativa-page .ahp-collab-reciprocal-hint {
+    display: block;
+  }
+}
+
+.ahp-colaborativa-page .ahp-metric-card.is-success,
+.ahp-colaborativa-page .saaty-pair.is-auto-validated,
+.ahp-colaborativa-page .saaty-pair.is-auto-validated .saaty-reciprocal {
+  border-color: var(--pfs-green-dark);
+  background: var(--pfs-green-light);
+}
+
+.ahp-colaborativa-page .ahp-metric-card.is-success,
+.ahp-colaborativa-page .saaty-pair.is-auto-validated .saaty-auto-status,
+.ahp-colaborativa-page .saaty-pair.is-auto-validated .saaty-reciprocal__label,
+.ahp-colaborativa-page .saaty-pair.is-auto-validated .saaty-reciprocal__value,
+.ahp-colaborativa-page .saaty-pair.is-auto-validated .saaty-reciprocal__text {
+  color: var(--pfs-green-dark);
+}
+
+.ahp-colaborativa-page .ahp-metric-card.is-failure {
+  border-color: var(--pfs-red-dark);
+  background: var(--pfs-red-light);
+  color: var(--pfs-red-dark);
+}
+
+.ahp-colaborativa-page .saaty-pair.is-auto-editing {
+  border-color: var(--pfs-amber);
+}
+
+.ahp-colaborativa-page .saaty-auto-status {
+  margin: 0.25rem 0 0;
+  color: var(--pli-muted);
+  font-size: 0.76rem;
+  text-align: center;
+}
+
+.ahp-colaborativa-page .saaty-scale:focus-visible {
+  outline: 2px solid var(--pli-blue);
+  outline-offset: 3px;
+}
+
 /* ===========================================================
    Etapa 6 — Priorização das alternativas
    =========================================================== */

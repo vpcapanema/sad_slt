@@ -6,11 +6,14 @@
 
   var token = "";
   var meta = null;
-  var stats = { inicio_ms: null, pares: {} };
+  var stats = { inicio_ms: null, duracao_anterior_ms: 0, pares: {} };
   var draftActive = false;
   var saveTimer = null;
   var acesso = null;
   var verificando = false;
+  var pairTimers = new Map();
+  var saveQueue = Promise.resolve();
+  var editVersion = 0;
 
   function bloquearIdentificacao(bloqueado) {
     ["colab-nome", "colab-inst", "colab-email", "colab-token", "btn-liberar-form"].forEach(function (id) {
@@ -43,30 +46,61 @@
   function renderContext() {
     var box = el("collab-context");
     if (!box || !meta) return;
-    box.innerHTML =
-      "<p><strong>Escopo:</strong> " +
-      (meta.escopo || "—") +
-      "</p><p><strong>Objetivo:</strong> " +
-      (meta.objetivo || "—") +
-      "</p><p><strong>Prazo:</strong> " +
-      meta.valido_ate +
-      " · <strong>Status:</strong> " +
-      meta.status +
-      "</p>";
+    box.replaceChildren();
+    [["Escopo", meta.escopo], ["Objetivo", meta.objetivo],
+      ["Prazo", meta.valido_ate], ["Status", meta.status]].forEach(function (item) {
+      var line = document.createElement("p"), label = document.createElement("strong");
+      label.textContent = item[0] + ": ";
+      line.append(label, document.createTextNode(item[1] || "—"));
+      box.appendChild(line);
+    });
   }
 
   function trackPair(pid) {
     stats.pares[pid] = (stats.pares[pid] || 0) + 1;
   }
 
+  function duracaoTotal() {
+    return stats.duracao_anterior_ms + (stats.inicio_ms ? Date.now() - stats.inicio_ms : 0);
+  }
+
   function patchSaatyTracking() {
-    document.querySelectorAll(".saaty-scale").forEach(function (scale) {
-      scale.addEventListener("mousedown", function () {
-        trackPair(scale.dataset.pid);
+    document.querySelectorAll("#comparisonContent .saaty-pair").forEach(function (pair) {
+      var status = document.createElement("p");
+      status.className = "saaty-auto-status";
+      status.setAttribute("role", "status");
+      status.textContent = "Ajuste a barra para confirmar este par.";
+      pair.appendChild(status);
+      pair.addEventListener("saaty:change", function () {
+        if (!draftActive) return;
+        trackPair(pair.querySelector(".saaty-scale").dataset.pid);
+        clearTimeout(pairTimers.get(pair));
+        pair.classList.remove("is-auto-validated");
+        pair.classList.add("is-auto-editing");
+        status.textContent = "Em edição. Confirmação após 3 segundos sem novos ajustes.";
+        pairTimers.set(pair, setTimeout(function () {
+          pairTimers.delete(pair);
+          pair.classList.remove("is-auto-editing");
+          pair.classList.add("is-auto-validated");
+          status.textContent = "Par e valor inverso confirmados. Você pode ajustar novamente.";
+          updateProgressHint(SLTAhp.analyzeMatrix(buildLiveMatrix()).CR);
+        }, 3000));
       });
-      scale.addEventListener("touchstart", function () {
-        trackPair(scale.dataset.pid);
-      });
+    });
+  }
+
+  function queueProgress(matrix, version) {
+    var payload = {
+      email: acesso.identificacao.email, token_acesso: acesso.token_acesso, matriz_comparacao: matrix,
+      estatisticas: { revisoes_por_par: Object.assign({}, stats.pares),
+        duracao_ms: duracaoTotal() },
+    };
+    saveQueue = saveQueue.then(function () {
+      return global.SLTColaborativaApi.salvarProgresso(token, payload);
+    }).then(function () {
+      if (draftActive && version === editVersion) el("collab-save-feedback").textContent = "Progresso salvo automaticamente.";
+    }).catch(function (err) {
+      el("collab-save-feedback").textContent = "Não foi possível salvar o progresso: " + (err.message || err);
     });
   }
 
@@ -78,6 +112,10 @@
     el("metricRCValue").textContent = res.CR.toFixed(4);
     el("metricICValue").textContent = res.CI.toFixed(4);
     el("metricLambdaValue").textContent = res.lambdaMax.toFixed(4);
+    var rcCard = el("metricRCValue").closest(".ahp-metric-card");
+    rcCard.classList.toggle("is-success", res.CR > 0 && res.CR < 0.1);
+    rcCard.classList.toggle("is-failure", res.CR >= 0.1);
+    el("collab-rc-status").textContent = res.CR === 0 ? "RC zero" : res.CR < 0.1 ? "Dentro do aceitável" : "Fora do aceitável";
     var btn = el("btn-enviar-resposta");
     if (btn) btn.disabled = !draftActive || res.CR >= 0.1;
     submitFeedback(
@@ -86,40 +124,27 @@
         : "RC = " + res.CR.toFixed(4) + " — ajuste as comparações (necessário RC < 0,10).",
       res.CR < 0.1 ? "success" : "error"
     );
+    updateProgressHint(res.CR);
+    if (draftActive) {
+      var version = ++editVersion;
+      el("collab-save-feedback").textContent = "Alterações aguardando salvamento…";
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(function () { queueProgress(matrix, version); }, 600);
+    }
   }
 
   function updateProgressHint(cr) {
     var hint = el("collab-reciprocal-hint");
     if (!hint) return;
     var total = document.querySelectorAll(".saaty-pair").length;
-    var touched = document.querySelectorAll(".saaty-pair--touched").length;
+    var touched = document.querySelectorAll("#comparisonContent .saaty-pair.is-auto-validated").length;
     hint.innerHTML =
       '<i class="fas fa-circle-check" aria-hidden="true"></i> ' +
-      "Pares revisados: <strong>" + touched + "/" + total + "</strong>. " +
-      "Cada ajuste preenche automaticamente o valor oposto da comparaÃ§Ã£o. " +
-      (cr < 0.1 ? "A consistÃªncia estÃ¡ adequada para envio." : "Acompanhe o RC acima antes de enviar.");
+      "Pares confirmados: <strong>" + touched + "/" + total + "</strong>. " +
+      "Cada ajuste preenche automaticamente o valor inverso da comparação. " +
+      (cr < 0.1 ? "A consistência está adequada para envio." : "Acompanhe o RC acima antes de enviar.");
     hint.className = "ahp-collab-reciprocal-hint " + (cr < 0.1 ? "is-ok" : "is-warn");
   }
-
-  var originalUpdateCollabMetrics = updateCollabMetrics;
-  updateCollabMetrics = function () {
-    originalUpdateCollabMetrics();
-    if (typeof buildLiveMatrix !== "function" || typeof SLTAhp === "undefined") return;
-    var matrix = buildLiveMatrix();
-    if (!matrix) return;
-    var res = SLTAhp.analyzeMatrix(matrix);
-    updateProgressHint(res.CR);
-    if (draftActive) {
-      clearTimeout(saveTimer);
-      saveTimer = setTimeout(function () {
-        global.SLTColaborativaApi.salvarProgresso(token, {
-          email: acesso.identificacao.email, token_acesso: acesso.token_acesso, matriz_comparacao: matrix,
-          estatisticas: { revisoes_por_par: stats.pares, duracao_ms: stats.inicio_ms ? Date.now() - stats.inicio_ms : null },
-        }).then(function () { submitFeedback("Progresso salvo automaticamente.", "success"); })
-          .catch(function (err) { submitFeedback("Não foi possível salvar o progresso: " + (err.message || err), "error"); });
-      }, 600);
-    }
-  };
 
   global.updateLiveMetrics = updateCollabMetrics;
 
@@ -152,6 +177,11 @@
           return;
         }
         meta = m;
+        global.setAhpCriteria(meta.criterios || []);
+        if (normalizeCriteriaNames(meta.criterios).length < 2) {
+          feedback("Este julgamento não possui critérios suficientes. Solicite a revisão ao responsável.", "error");
+          return;
+        }
         return global.SLTColaborativaApi.iniciarResposta(token, candidato);
       }).then(function (resposta) {
         if (!resposta) return;
@@ -159,6 +189,12 @@
         acesso = candidato;
         if (typeof global.setAhpCriteria === "function") global.setAhpCriteria(meta.criterios || []); else global.criteria = meta.criterios || [];
         global.ahpCollaborativeDraftMatrix = resposta.matriz_comparacao || null;
+        var anteriores = resposta.estatisticas || {};
+        stats.pares = {};
+        Object.entries(anteriores.revisoes_por_par || {}).forEach(function (entry) {
+          if (/^\d+_\d+$/.test(entry[0]) && Number.isInteger(entry[1]) && entry[1] >= 0) stats.pares[entry[0]] = entry[1];
+        });
+        stats.duracao_anterior_ms = Number.isFinite(anteriores.duracao_ms) && anteriores.duracao_ms >= 0 ? anteriores.duracao_ms : 0;
         feedback("Formulário liberado. O progresso será salvo automaticamente.", "success");
         el("collab-form-section").classList.remove("is-hidden");
         stats.inicio_ms = Date.now(); draftActive = false;
@@ -197,23 +233,25 @@
       submitFeedback("RC ≥ 0,10 — envio bloqueado.", "error");
       return;
     }
-    var duracao_ms = stats.inicio_ms ? Date.now() - stats.inicio_ms : null;
+    var duracao_ms = duracaoTotal();
     submitFeedback("Enviando…", "info");
     clearTimeout(saveTimer);
     draftActive = false;
     el("btn-enviar-resposta").disabled = true;
-    global.SLTColaborativaApi.enviarResposta(token, {
+    el("comparisonContent").inert = true;
+    saveQueue.then(function () { return global.SLTColaborativaApi.enviarResposta(token, {
       identificacao: acesso.identificacao,
       token_acesso: acesso.token_acesso,
       matriz_comparacao: matrix,
       estatisticas: { duracao_ms: duracao_ms, revisoes_por_par: stats.pares },
-    })
+    }); })
       .then(function () {
         draftActive = false;
         submitFeedback("Resposta enviada com sucesso. Obrigado!", "success");
       })
       .catch(function (err) {
         draftActive = true;
+        el("comparisonContent").inert = false;
         el("btn-enviar-resposta").disabled = false;
         submitFeedback(err.message || String(err), "error");
       });
@@ -235,7 +273,7 @@
         renderContext();
       })
       .catch(function (err) {
-        el("collab-context").innerHTML = "<p>" + (err.message || err) + "</p>";
+        el("collab-context").textContent = err.message || String(err);
       });
     el("btn-liberar-form").addEventListener("click", liberarFormulario);
     el("btn-enviar-resposta").addEventListener("click", enviarResposta);

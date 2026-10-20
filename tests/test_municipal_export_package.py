@@ -16,8 +16,19 @@ from api.services import base_municipal as dados
 from api.routers.municipal_layer import Selecao
 
 
-@pytest.fixture
-def inputs(monkeypatch, storage_sintetico):
+@pytest.fixture(params=['montado', 'api'])
+def inputs(monkeypatch, storage_sintetico, request):
+    if request.param == 'api':
+        from api.services import storage_remoto
+        monkeypatch.delenv('SICARD_STORAGE_WRITE_DIR')
+        monkeypatch.delenv('SICARD_STORAGE_TEMP_DIR')
+        files = {}
+        monkeypatch.setattr(storage_remoto, 'listar', lambda *a, **kw: [])
+        monkeypatch.setattr(storage_remoto, 'criar_pasta', lambda path: None)
+        monkeypatch.setattr(storage_remoto, 'apagar_pasta', lambda path: None)
+        monkeypatch.setattr(storage_remoto, 'enviar_bytes', lambda path, data: files.update({path: data}))
+        monkeypatch.setattr(storage_remoto, 'baixar', lambda path: files[path])
+        monkeypatch.setattr(storage_remoto, 'apagar_arquivo', files.pop)
     frame = gpd.GeoDataFrame(
         {
             'CD_MUN': ['3500001', '3500002', '3500003'],

@@ -1,11 +1,14 @@
 """Acompanhamento temporário, privado por usuário, da geração municipal."""
+import logging
 from concurrent.futures import ThreadPoolExecutor
 from threading import RLock
 from time import monotonic
 from uuid import uuid4
 from api.services.controle_processamento import ControleProcessamento, ProcessamentoCancelado
 from api.services import municipal_layer
+from api.services.storage_remoto import StorageIndisponivel
 
+logger = logging.getLogger(__name__)
 _jobs = {}
 _lock = RLock()
 _pool = ThreadPoolExecutor(max_workers=1,thread_name_prefix='municipal')
@@ -43,7 +46,13 @@ def iniciar(categoria,payload,user):
             controle.encerrar('concluido')
         except ProcessamentoCancelado:
             controle.encerrar('cancelado')
+        except (ValueError, StorageIndisponivel) as exc:
+            logger.exception('Falha ao gerar camada municipal no job %s', ident)
+            job['erro'] = (str(exc) if isinstance(exc, ValueError) else
+                           'Não foi possível acessar o Storage oficial. Verifique a conexão e tente novamente.')
+            controle.encerrar('erro')
         except Exception:
+            logger.exception('Falha ao gerar camada municipal no job %s', ident)
             job['erro']='Não foi possível gerar a camada. Confira os indicadores e tente novamente.'
             controle.encerrar('erro')
     _pool.submit(executar)
