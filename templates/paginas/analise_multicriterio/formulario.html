@@ -3,12 +3,14 @@
 {% set navegacao = "publica" %}
 {% set requer_autenticacao = false %}
 {% block titulo %}Julgamento interativo — SICARD{% endblock %}
-{% block classes_body %}ahp-module-page ahp-colaborativa-page ami-public-page{% endblock %}
+{% block classes_body %}ahp-module-page ahp-colaborativa-page ami-public-page escala-revisada{% endblock %}
 {% block base_url %}<base href="/public/analise-multicriterio/">{% endblock %}
 {% block estilos_pagina %}
 	<link rel="stylesheet" href="/assets/css/ahp-module.css?v=20261020-contexto-identificacao">
 	<link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
 	<link rel="stylesheet" href="/assets/css/analise-multicriterio.css?v=20260819-ui6">
+	<link rel="stylesheet" href="/assets/css/escala-tipografica.css">
+	<link rel="stylesheet" href="/assets/css/paginas/ahp-formulario-publico.css?v=20261020-contexto-visual">
 {% endblock %}
 
 {% block conteudo %}
@@ -16,8 +18,8 @@
 		<section class="card-collab-context secao-collab-context card ahp-step-section">
 			<div class="ahp-section-label"><i class="fas fa-compass"></i><span>Contextualização</span></div>
 			<div class="ahp-section-body">
-				<p class="step-intro"><i class="fas fa-circle-info" aria-hidden="true"></i> Sua participação consiste em indicar a intensidade de importância entre os critérios apresentados. Essas comparações serão consolidadas para calcular os pesos dos critérios. Após a homologação, a fase 3 da hierarquização aplica esses pesos aos valores de cada demanda nos critérios correspondentes para calcular sua prioridade.</p>
-				<div id="collab-context"></div>
+				<div id="collab-context" aria-live="polite"><p>Carregando os dados desta rodada de julgamento…</p></div>
+				<p class="step-intro"><i class="fas fa-circle-info" aria-hidden="true"></i> Para contribuir com esse objetivo, compare os critérios apresentados e indique a importância de um em relação ao outro. As respostas dos colaboradores serão consolidadas para calcular os pesos dos critérios. Após a homologação, a etapa de Priorização por atributos aplicará esses pesos aos valores de cada demanda para calcular sua prioridade.</p>
 			</div>
 		</section>
 		<section class="card-colab-nome secao-colab-nome card ahp-step-section">

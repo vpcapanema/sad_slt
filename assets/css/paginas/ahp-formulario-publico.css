@@ -1,0 +1,74 @@
+/* Escala da Fase 3; o gap controla o ritmo sem somar margens dos filhos. */
+body.ami-public-page {
+  --ami-font-child: 12px;
+  --ami-font-help: 11.5px;
+}
+
+.ami-public-page .ahp-step-section.card {
+  margin-bottom: 1.25rem;
+}
+
+.ami-public-page .ahp-step-section .ahp-section-body {
+  gap: 1.25rem;
+  text-align: left;
+}
+
+.ami-public-page .ahp-step-section .ahp-section-body > * {
+  margin: 0;
+}
+
+.ami-public-page #collab-context {
+  display: grid;
+  gap: 0.5rem;
+  font-size: var(--ami-font-child);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.ami-public-page #collab-context p {
+  margin: 0;
+  font-size: inherit;
+}
+
+.ami-public-page #collab-context strong {
+  font-size: inherit;
+}
+
+.ami-public-page .collab-identificacao-grid {
+  gap: 1rem;
+}
+
+.ami-public-page .collab-identificacao-grid .c-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+}
+
+.ami-public-page .collab-identificacao-grid .c-form-group > * {
+  margin: 0;
+}
+
+.ami-public-page .collab-identificacao-grid .c-form-label {
+  font-size: 12.7px;
+}
+
+.ami-public-page .ahp-section-body .step-intro,
+.ami-public-page .ahp-section-body .form-help,
+.ami-public-page .ahp-section-body .ahp-matriz-edit-feedback,
+.ami-public-page .saaty-auto-status,
+.ami-public-page .ahp-collab-reciprocal-hint {
+  font-size: var(--ami-font-help);
+  line-height: 1.5;
+}
+
+.ami-public-page .ahp-section-body > .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  align-self: flex-end;
+}
+
+.ami-public-page .ahp-section-body > [role="status"]:empty {
+  display: none;
+}

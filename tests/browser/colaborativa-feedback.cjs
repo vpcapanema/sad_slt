@@ -5,6 +5,27 @@ const assert = require('node:assert/strict');
   const browser = await chromium.launch({channel: 'msedge', headless: true});
   try {
     const page = await browser.newPage({viewport: {width: 1280, height: 900}, timezoneId: 'UTC'});
+    const reference = await browser.newPage({viewport: {width: 1280, height: 900}});
+    await reference.route('**/api/**', route => {
+      const path = new URL(route.request().url()).pathname;
+      return route.fulfill({json: path.endsWith('/auth/me') ? {id: 'u', tipo_usuario: 'ANALISTA'} :
+        path.endsWith('/auth/session') ? {authenticated: true, user: {id: 'u', tipo_usuario: 'ANALISTA'}} : []});
+    });
+    await reference.goto('http://127.0.0.1:8083/restrict/hierarquizacao/fase-3/');
+    const referenceStyles = await reference.evaluate(() => {
+      const style = selector => getComputedStyle(document.querySelector(selector));
+      return {
+        title: style('.ahp-section-label span:last-child').fontSize,
+        label: style('.fase-grid-2 label').fontSize,
+        help: style('.ahp-help-text').fontSize,
+        bodyGap: style('.ahp-section-body').gap,
+        fieldGap: style('.fase-grid-2').gap,
+        cardPadding: style('.ahp-step-section').padding,
+        cardMargin: style('.ahp-step-section').marginBottom,
+        zoom: getComputedStyle(document.body).zoom,
+      };
+    });
+    await reference.close();
     const errors = [], saves = [];
     let criteria = ['Custo', 'Prazo', 'Benefício'], starts = 0, failSend = false;
     let deadline = '2026-10-27T02:59:59+00:00';
@@ -13,7 +34,8 @@ const assert = require('node:assert/strict');
     await page.route('**/api/**', async route => {
       const req = route.request(), path = new URL(req.url()).pathname;
       if (!path.includes('/publico/')) return route.fulfill({json: []});
-      const meta = {token: 'feedback', escopo: '<b>Texto literal</b>', objetivo: 'Comparação',
+      const meta = {token: 'feedback', escopo: '<b>Texto literal</b>',
+        objetivo: 'Hierarquizar os projetos quanto à favorabilidade à sua implantação ou execução, com base nos critérios definidos para esta análise, para subsidiar a definição de prioridades.',
         criterios: criteria, status: 'ativa', valido_ate: deadline, email_autorizado: true};
       if (req.method() === 'GET' || path.endsWith('/acesso')) return route.fulfill({json: meta});
       if (path.endsWith('/respostas/iniciar')) starts++;
@@ -33,7 +55,37 @@ const assert = require('node:assert/strict');
     await page.goto('http://127.0.0.1:8083/public/analise-multicriterio/feedback/');
     await page.getByText('Prazo: 26/10/2026, 23:59:59', {exact: true}).waitFor();
     assert.equal(await page.getByText('Status da rodada de julgamento: ativa', {exact: true}).count(), 1);
-    assert.equal(await page.getByText('Objetivo: Comparação', {exact: true}).count(), 1);
+    assert.match(await page.locator('#collab-context').innerText(), /Objetivo: Hierarquizar os projetos quanto à favorabilidade/);
+    const publicStyles = await page.evaluate(() => {
+      const style = selector => getComputedStyle(document.querySelector(selector));
+      return {
+        title: style('.ahp-section-label span:last-child').fontSize,
+        label: style('.c-form-label').fontSize,
+        help: style('.form-help').fontSize,
+        bodyGap: style('.ahp-section-body').gap,
+        fieldGap: style('.collab-identificacao-grid').gap,
+        cardPadding: style('.ahp-step-section').padding,
+        cardMargin: style('.ahp-step-section').marginBottom,
+        zoom: getComputedStyle(document.body).zoom,
+      };
+    });
+    assert.deepEqual(publicStyles, referenceStyles, 'Escala e espaçamento seguem a Fase 3');
+    assert.deepEqual(await page.locator('#collab-context p').evaluateAll(elements => elements.map(el => ({
+      font: getComputedStyle(el).fontSize, margin: getComputedStyle(el).margin,
+    }))), Array(4).fill({font: '12px', margin: '0px'}));
+    assert.equal(await page.locator('#colab-id-feedback').isVisible(), false);
+    assert.equal(await page.locator('.card-collab-context .step-intro').evaluate(el =>
+      getComputedStyle(el).fontSize), referenceStyles.help);
+    assert.equal(await page.locator('.card-collab-context .ahp-section-body').evaluate(el =>
+      el.firstElementChild.id), 'collab-context');
+    for (const selector of ['.card-collab-context', '.card-colab-nome']) {
+      const geometry = await page.locator(`${selector} .ahp-section-body`).evaluate(el => {
+        const children = [...el.children].filter(child => child.getBoundingClientRect().height);
+        return children.slice(1).map((child, index) =>
+          child.getBoundingClientRect().top - children[index].getBoundingClientRect().bottom);
+      });
+      for (const gap of geometry) assert.ok(Math.abs(gap - 20 * Number(referenceStyles.zoom)) < 1);
+    }
     async function checkIdentificationGrid(width) {
       const boxes = await Promise.all(['nome', 'inst', 'email', 'token'].map(
         id => page.locator(`#colab-${id}`).boundingBox()));
@@ -142,7 +194,7 @@ const assert = require('node:assert/strict');
       await page.reload();
       await page.getByText(`Prazo: ${expected}`, {exact: true}).waitFor();
     }
-    console.log('PASS: 2999/3000ms, reinício, teclado/mouse/toque, par/inverso, RC real e fronteira 0.10, retomada, UTF-8, responsividade e envio.');
+    console.log('PASS: contexto visível, escala/espaçamento iguais à Fase 3, layout responsivo, 2999/3000ms, RC, retomada e envio.');
     await page.close();
   } finally { await browser.close(); }
 })().catch(error => {console.error(error); process.exitCode = 1;});

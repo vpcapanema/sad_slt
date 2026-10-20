@@ -130,6 +130,10 @@ descreve a hierarquização de planos, programas ou projetos conforme o tipo
 cadastrado. O prazo usa `dd/mm/aaaa, hh:mm:ss`, em horário de Brasília.
 A identificação distribui nome/instituição e e-mail/token em duas linhas de
 duas colunas, com uma coluna em telas de até 600 px.
+A apresentação do formulário público segue a escala tipográfica da Fase 3:
+dados de contexto em 12 px, instruções e ajuda em 11,5 px, rótulos em 12,7 px
+e títulos de seção em 13,3 px. O espaçamento entre blocos é de 1,25 rem e
+entre campos de 1 rem, sem acumular margens com o `gap` dos contêineres.
 
 No formulário colaborativo, o card de RC permanece neutro em zero, fica verde
 quando `0 < RC < 0,10` e vermelho quando `RC >= 0,10`. Cada ajuste da escala
