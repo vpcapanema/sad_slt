@@ -106,3 +106,147 @@ body.ami-public-page {
 .ami-public-page .ahp-section-body > [role="status"]:empty {
   display: none;
 }
+
+/* Seção 3 da Central de julgamentos: mesma escala visual, sem alterar
+   os estados de validação públicos fornecidos por status-colors.js. */
+.ami-public-page #collab-form-section {
+  --ami-font-child: 0.70rem;
+  --ami-font-help: 0.64rem;
+}
+
+.ami-public-page #collab-form-section .collab-comparison-subcard {
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid #00527d;
+  border-radius: 8px;
+}
+
+.ami-public-page #collab-form-section .ahp-subsection-title {
+  box-sizing: border-box;
+  min-height: 3rem;
+  margin: -1rem -1rem 0.875rem;
+  padding: 0.72rem 1rem;
+  gap: 0.625rem;
+  background: #00527d;
+  color: #fff;
+  border-bottom: 1px solid #003b5a;
+  border-radius: 7px 7px 0 0;
+  font-size: 0.75rem;
+}
+
+.ami-public-page #collab-form-section .ahp-subsection-title > :last-child {
+  min-width: 0;
+  color: inherit;
+}
+
+.ami-public-page #collab-form-section .ahp-subsection-num {
+  box-sizing: border-box;
+  flex-shrink: 0;
+  width: auto;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 0.25rem;
+  background: #83d9a5;
+  color: #003b5a;
+  font-size: 0.78rem;
+}
+
+.ami-public-page #collab-form-section .ahp-live-metrics {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+}
+
+.ami-public-page #collab-form-section .saaty-form {
+  gap: var(--ami-space-md);
+  padding: var(--ami-space-sm) 0;
+}
+
+.ami-public-page #collab-form-section .saaty-pair,
+.ami-public-page #collab-form-section .saaty-pair * {
+  font-size: var(--ami-font-child);
+}
+
+.ami-public-page #collab-form-section .saaty-pair {
+  gap: var(--ami-space-xs);
+  padding: var(--ami-space-sm);
+}
+
+.ami-public-page #collab-form-section :is(
+  .saaty-tick-desc, .saaty-readout, .saaty-reciprocal__label,
+  .saaty-reciprocal__text, .saaty-reciprocal__value,
+  .saaty-auto-status, .saaty-auto-status *
+) {
+  font-size: var(--ami-font-help);
+}
+
+.ami-public-page #collab-form-section :is(.saaty-criteria, .saaty-dir) {
+  margin-top: var(--ami-space-xs);
+}
+
+.ami-public-page #collab-form-section .saaty-arrow {
+  left: 1rem;
+  right: 1rem;
+  background: linear-gradient(to right, #7b1a1a 0%, #c0392b 18%, #f4a7a0 40%, #f5f5f5 50%, #a9cdec 60%, #2f6fad 82%, #0d3b66 100%);
+  border: 0;
+}
+
+.ami-public-page #collab-form-section .saaty-arrow::before {
+  left: -10px;
+  border-right-color: #7b1a1a;
+  border-right-width: 10px;
+}
+
+.ami-public-page #collab-form-section .saaty-arrow::after {
+  right: -10px;
+  border-left-color: #0d3b66;
+  border-left-width: 10px;
+}
+
+.ami-public-page #collab-form-section .saaty-rail {
+  left: 2.65rem;
+  right: 2.65rem;
+}
+
+.ami-public-page #collab-form-section .saaty-handle {
+  transition: left 0.08s ease, background-color 0.12s ease;
+}
+
+.ami-public-page #collab-form-section .saaty-reciprocal {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.ami-public-page #collab-form-section :is(.saaty-crit--left, .saaty-crit--right) {
+  background: #f4f6f8;
+  border-color: #cbd5df;
+  color: var(--pli-deep);
+  text-align: left;
+  flex-direction: row;
+}
+
+.ami-public-page #collab-form-section .saaty-crit__tag {
+  background: #71808e;
+  color: #fff;
+}
+
+.ami-public-page #collab-form-section .saaty-auto-status {
+  order: -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  width: 100%;
+  min-height: 1.2rem;
+  margin: 0;
+}
+
+@media (max-width: 800px) {
+  .ami-public-page #collab-form-section .ahp-live-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .ami-public-page #collab-form-section .ahp-live-metrics {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
