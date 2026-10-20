@@ -74,8 +74,20 @@ const assert = require('node:assert/strict');
       font: getComputedStyle(el).fontSize, margin: getComputedStyle(el).margin,
     }))), Array(4).fill({font: '12px', margin: '0px'}));
     assert.equal(await page.locator('#colab-id-feedback').isVisible(), false);
-    assert.equal(await page.locator('.card-collab-context .step-intro').evaluate(el =>
+    assert.equal(await page.getByText('Hierarquização: <b>Texto literal</b>', {exact: true}).count(), 1);
+    const scope = page.locator('.collab-scope');
+    await scope.getByRole('heading', {name: 'Escopo do formulário', exact: true}).waitFor();
+    assert.equal(await scope.locator('h3').count(), 4);
+    assert.equal(await scope.locator('ol > li').count(), 6);
+    const scopeText = await scope.innerText();
+    for (const topic of ['AHP', 'Saaty', '1/3', 'RC < 0,10', 'média geométrica',
+      'somar 1', 'homologação', 'Priorização por atributos']) {
+      assert.ok(scopeText.includes(topic), `Escopo explica ${topic}`);
+    }
+    assert.equal(await scope.locator('p').first().evaluate(el =>
       getComputedStyle(el).fontSize), referenceStyles.help);
+    assert.equal(await scope.getByRole('heading', {name: 'Escopo do formulário'}).evaluate(el =>
+      getComputedStyle(el).fontSize), referenceStyles.label);
     assert.equal(await page.locator('.card-collab-context .ahp-section-body').evaluate(el =>
       el.firstElementChild.id), 'collab-context');
     for (const selector of ['.card-collab-context', '.card-colab-nome']) {

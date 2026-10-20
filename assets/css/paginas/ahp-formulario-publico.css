@@ -34,6 +34,40 @@ body.ami-public-page {
   font-size: inherit;
 }
 
+.ami-public-page .collab-scope,
+.ami-public-page .collab-scope > section {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.ami-public-page .collab-scope {
+  row-gap: 1rem;
+  font-size: var(--ami-font-help);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.ami-public-page .collab-scope :is(h2, h3, p, ol) {
+  margin: 0;
+}
+
+.ami-public-page .collab-scope :is(h2, h3) {
+  font-size: 12.7px;
+  line-height: 1.5;
+  color: var(--pli-deep);
+}
+
+.ami-public-page .collab-scope :is(p, li) {
+  font-size: var(--ami-font-help);
+}
+
+.ami-public-page .collab-scope ol {
+  display: grid;
+  gap: 0.5rem;
+  padding-left: 1.25rem;
+}
+
 .ami-public-page .collab-identificacao-grid {
   gap: 1rem;
 }

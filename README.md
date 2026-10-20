@@ -128,6 +128,11 @@ ou armazenamento local do navegador.
 A contextualização pública preserva o objetivo informado ou, quando ausente,
 descreve a hierarquização de planos, programas ou projetos conforme o tipo
 cadastrado. O prazo usa `dd/mm/aaaa, hh:mm:ss`, em horário de Brasília.
+O nome da rodada aparece como “Hierarquização”, separado do “Escopo do
+formulário”: texto explicativo visível antes da identificação, com finalidade,
+método AHP e escala de Saaty, seis passos de participação, interpretação da RC
+e uso posterior das respostas na consolidação e homologação. Esse conteúdo
+descreve o fluxo existente, sem alterar regras de cálculo ou de autorização.
 A identificação distribui nome/instituição e e-mail/token em duas linhas de
 duas colunas, com uma coluna em telas de até 600 px.
 A apresentação do formulário público segue a escala tipográfica da Fase 3:
