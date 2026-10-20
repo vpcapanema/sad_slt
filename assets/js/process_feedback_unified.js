@@ -69,6 +69,7 @@
       <section class="pfs-warning-panel" id="pfsProgressWarning" hidden role="alert">
         <h4 data-pfs="warning-title">Atenção</h4><p data-pfs="warning-message"></p>
       </section>
+      <section id="pfsExecutionHierarchy" class="pfs-execution-hierarchy" aria-label="Workflow, tarefas e operações" hidden></section>
       <div class="pfs-task-progress" id="pfsTaskProgress">
         <h4>Progresso da Atividade</h4>
         <div class="pfs-progress-info"><span data-pfs="task-progress-detail">Percentual ainda não disponível</span><span data-pfs="task-progress-percent">Em andamento</span></div>
@@ -250,6 +251,9 @@
             this.config = config;
             this.tasks = [];
             this.currentTaskIndex = -1;
+            this._hierarquia = null;
+            const hierarchyHost = q("#pfsExecutionHierarchy");
+            if (hierarchyHost) { hierarchyHost.hidden = true; hierarchyHost.replaceChildren(); }
             this._percent = 0;
             this._startTime = null;
             this._activityTimer = null;
@@ -354,6 +358,95 @@
             this._startActivityMonitor();
             this.log(`${title || 'Processo'} iniciado`, 'info');
             pfsText('active-detail', '');
+        }
+
+
+        /* Hierarquia de execução: workflow > tasks > operations.
+           Percentuais desconhecidos permanecem indeterminados. */
+        atualizarHierarquia(snapshot) {
+            this._bind();
+            const host = q('#pfsExecutionHierarchy');
+            if (!host || !snapshot) return;
+            const state = this._hierarquia || (this._hierarquia = { workflow: null, tasks: new Map() });
+            const workflow = snapshot.workflow || {};
+            if (workflow.id && state.workflow?.id !== workflow.id) {
+                state.tasks.clear();
+            }
+            state.workflow = { ...state.workflow, ...workflow };
+            const tasks = Array.isArray(snapshot.tasks) ? snapshot.tasks : [];
+            tasks.forEach(task => {
+                if (!task || task.id == null) return;
+                const key = String(task.id);
+                const previous = state.tasks.get(key) || { operations: new Map() };
+                const operations = previous.operations;
+                (task.operations || []).forEach(op => {
+                    if (op && op.id != null) operations.set(String(op.id), { ...operations.get(String(op.id)), ...op });
+                });
+                state.tasks.set(key, { ...previous, ...task, operations });
+            });
+            const pct = item => Number.isFinite(item?.percent) ? Math.max(0, Math.min(100, item.percent)) : null;
+            const aggregate = items => {
+                if (!items.length) return null;
+                let weight = 0, completed = 0;
+                for (const item of items) {
+                    const p = pct(item);
+                    if (p === null) return null;
+                    const w = Number.isFinite(item.weight) && item.weight > 0 ? item.weight : 1;
+                    weight += w; completed += w * p;
+                }
+                return weight ? completed / weight : null;
+            };
+            const node = (item, level, children) => {
+                const section = document.createElement('section');
+                section.className = 'pfs-hierarchy-node pfs-hierarchy-node--' + level;
+                const heading = document.createElement('div');
+                heading.className = 'pfs-hierarchy-heading';
+                const label = document.createElement('strong');
+                label.textContent = item.name || item.id || level;
+                const value = document.createElement('span');
+                const valuePct = pct(item);
+                value.textContent = valuePct === null ? (item.status || 'Em andamento') : Math.round(valuePct) + '%';
+                heading.append(label, value);
+                const bar = document.createElement('div');
+                bar.className = 'pfs-hierarchy-bar' + (valuePct === null ? ' pfs-hierarchy-indeterminate' : '');
+                bar.setAttribute('role', 'progressbar');
+                bar.setAttribute('aria-label', String(item.name || level));
+                bar.setAttribute('aria-valuemin', '0');
+                bar.setAttribute('aria-valuemax', '100');
+                if (valuePct !== null) bar.setAttribute('aria-valuenow', String(Math.round(valuePct)));
+                const fill = document.createElement('div');
+                fill.className = 'pfs-hierarchy-fill';
+                if (valuePct !== null) fill.style.width = valuePct + '%';
+                bar.appendChild(fill);
+                section.append(heading, bar);
+                if (item.description) {
+                    const detail = document.createElement('small');
+                    detail.textContent = item.description;
+                    section.appendChild(detail);
+                }
+                if (children?.length) {
+                    const nested = document.createElement('div');
+                    nested.className = 'pfs-hierarchy-children';
+                    children.forEach(child => nested.appendChild(child));
+                    section.appendChild(nested);
+                }
+                return section;
+            };
+            const taskNodes = [...state.tasks.values()].map(task => {
+                const ops = [...task.operations.values()];
+                const operationNodes = ops.map(op => node(op, 'operation'));
+                const computed = aggregate(ops);
+                const progress = pct(task) ?? computed;
+                return node({ ...task, percent: task.status === 'concluido' ? 100 : progress }, 'task', operationNodes);
+            });
+            const taskValues = [...state.tasks.values()].map(t => {
+                const computed = aggregate([...t.operations.values()]);
+                return { ...t, percent: t.status === 'concluido' ? 100 : pct(t) ?? computed };
+            });
+            const workflowProgress = pct(workflow) ?? aggregate(taskValues);
+            host.replaceChildren(node({ name: workflow.name || this._actionTitle || 'Workflow', ...workflow,
+                percent: workflow.status === 'concluido' ? 100 : workflowProgress }, 'workflow', taskNodes));
+            host.hidden = false;
         }
 
         /* ── Tarefa atual ── */
@@ -556,6 +649,7 @@
         _handleEvent(ev) {
             this._lastContact = Date.now();
             const type = ev.type || ev.event || '';
+            if (type === 'hierarchy' || type === 'workflow_state') { this.atualizarHierarquia(ev.data || ev); return; }
             switch (type) {
                 case 'task': this.tarefaAtual(ev.name || ev.task || '', ev.description || ''); break;
                 case 'log': case 'step': this.log(ev.message || ev.msg || '', ev.level || 'step', ev.em || ev.timestamp); break;
@@ -1386,6 +1480,7 @@
                 try { p.config.onProgressSnapshot(this.resumoProgresso(job), origem); } catch { /* Observabilidade não altera o fluxo. */ }
             }
             st.snapshot = job;
+            if (job.hierarquia) p.atualizarHierarquia(job.hierarquia);
             p._progressoExterno = true;
             this._aplicarLogs(p, st, job);
             const etapa = Object.hasOwn(job, 'etapa_atual') ? job.etapa_atual : job.etapa;
