@@ -323,6 +323,7 @@ def export_layer(payload: dict, base: str = PREFIXO, controle=None) -> bytes:
     conferir_capacidade(len(items))
     if controle:controle.fase(1,'Lendo municípios e indicadores selecionados')
     frame = layer(items,controle) if controle else layer(items)
+    if controle: controle.concluir_fase(1)
     if controle:controle.fase(2,'Gerando geometria, atributos e dicionário')
     entradas = dicionario(items, fmt)
     fields = {e['campo_bruto']: e['campo_exportado'] for e in entradas}

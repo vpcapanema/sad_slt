@@ -226,6 +226,10 @@ def _execute(ident, params, entrada_local=None, bases_locais=None, entradas_loca
             del etapas[:-LIMITE_ETAPAS]
         return tarefa_id
     progress.concluir = controle.concluir
+    progress.iniciar_operacao = controle.iniciar_operacao
+    progress.medir_operacao = controle.medir_operacao
+    progress.falhar = controle.falhar
+    progress.concluir_fase = controle.concluir_fase
     progress.verificar = controle.verificar
     progress.tarefa = controle.tarefa
     def detalhe(message):
@@ -252,7 +256,7 @@ def _execute(ident, params, entrada_local=None, bases_locais=None, entradas_loca
         for categoria in params['categorias']:
             camadas = []
             for base in categoria['camadas']:
-                progress(f"Lendo a base {base['nome']}")
+                controle.iniciar_operacao(f"Lendo a base {base['nome']}")
                 frame = bases_locais[base['id']] if bases_locais and base['id'] in bases_locais else carregar_para_extracao(base['id'])
                 camadas.append({**base,'frame':frame})
                 controle.detalhe(f"{base['nome']}: {len(frame):,} feições e {len(frame.columns)-1} campos carregados; CRS {frame.crs}.")
@@ -261,9 +265,11 @@ def _execute(ident, params, entrada_local=None, bases_locais=None, entradas_loca
                 lidas += 1
                 controle.progresso_fase(lidas, leituras)
             categories.append({**categoria,'camadas':camadas})
+        controle.concluir_fase(1)
         controle.fase(2, 'Analisando as relações entre entrada e bases')
         if params['operacao'] in ('enriquecimento', 'estatisticas'):
             _executar_enriquecimento(ident,params,source,categories,progress,inicio,entradas_locais)
+            controle.concluir_fase(3)
             controle.encerrar('concluido')
             return
         result, frame = analisar(source,categories,params['operacao'],progress,params.get('opcoes'))
@@ -273,6 +279,7 @@ def _execute(ident, params, entrada_local=None, bases_locais=None, entradas_loca
         progress('Montando a tabela de atributos da geometria de saída')
         from api.services.extracao_atributos_saida import montar as montar_tabela_saida
         saida, result['tabela_saida'] = montar_tabela_saida(result,frame,source)
+        controle.concluir_fase(2)
         controle.fase(3, 'Salvando saídas e preparando o pacote', cancelavel=False)
         progress('Gravando a geometria resultante no banco')
         nome_saida = params.get('nome_saida') or f"Extração de {params['input_nome']}"
@@ -317,6 +324,8 @@ def _execute(ident, params, entrada_local=None, bases_locais=None, entradas_loca
                  pacote_ref['caminho'],relatorio_ref['caminho']))
             ciclo.registrar_uso(conn,layer_id,'relatorio',ident)
         ciclo.finalizar(ident)
+        controle.concluir()
+        controle.concluir_fase(3)
         controle.encerrar('concluido')
     except ProcessamentoCancelado as exc:
         ciclo.finalizar(ident,erro=str(exc))
@@ -362,6 +371,7 @@ def _executar_enriquecimento(ident, params, source, categories, progress, inicio
     saida = executar_lote(entradas, categories, params['operacao'], progress,
                          finalidades=params.get('finalidades') or [])
     nome_saida = params.get('nome_saida') or f"Extração de {params['input_nome']}"
+    if hasattr(progress, 'concluir_fase'): progress.concluir_fase(2)
     if hasattr(progress,'fase'):progress.fase(3, 'Salvando saídas e preparando o pacote', cancelavel=False)
     camadas = {}
     for indice_saida, (nome, frame) in enumerate(saida['camadas'].items()):

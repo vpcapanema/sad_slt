@@ -196,6 +196,13 @@ def _ler(resultado: dict) -> tuple[gpd.GeoDataFrame, bytes]:
     return frame, dados
 
 
+def abrir(arquivo: str, dono) -> dict:
+    ident = jobs.localizar_saida(arquivo, dono)
+    resultado = _selecionar([ident], dono)[0]
+    _ler(resultado)
+    return {'execucoes': [ident], **preparar([ident], dono)}
+
+
 def _painel(frame: gpd.GeoDataFrame, dados: bytes, auditoria: dict, nomes: dict[str, str], linhas: list[dict]) -> dict:
     if auditoria.get('versao_saida') != 2:
         raise ValueError('Esta saída é anterior ao painel interativo. Execute novamente para gravar áreas totais e interseções.')

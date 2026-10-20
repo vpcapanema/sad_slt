@@ -388,7 +388,14 @@ para evitar sobrescrita. Cada saída é adicionada automaticamente à bancada se
 remover as fontes. Há acompanhamento e cancelamento seguro antes da gravação;
 classificação e integração com as fases seguintes não são executadas nesta etapa.
 A seção **Resultados** permite revisar os nomes amigáveis das entradas, bases
-dinâmicas e feições sobrepostas antes da apresentação. Os aliases confirmados são
+dinâmicas e feições sobrepostas antes da apresentação. O link **selecione uma
+análise já realizada** abre o explorador diretamente em `saidas-geoespaciais`,
+limitado a GeoPackages. A seleção recupera uma execução concluída do próprio
+usuário, inclusive após reiniciar o servidor, e verifica a assinatura e a
+estrutura da saída antes de reutilizar o mesmo fluxo de revisão, mapa, gráfico,
+tabela e exportação. Os nomes anteriormente confirmados são reaproveitados;
+não há novo processamento espacial. Cancelar ou selecionar um arquivo inválido
+preserva os resultados já apresentados. Os aliases confirmados são
 persistidos no storage, vinculados ao usuário e ao SHA-256 da saída; a revisão é
 recolhida após confirmação e pode ser reaberta. Os nomes são usados na tela e no
 PDF, em title case do português brasileiro; sugestões automáticas não substituem

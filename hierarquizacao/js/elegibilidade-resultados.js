@@ -1,5 +1,6 @@
 import {post, base} from '../../geoespacial/extracao-atributos/api.js';
 import {el} from '../../geoespacial/extracao-atributos/ui.js';
+import {escolherArquivo} from '../../geoespacial/extracao-atributos/explorador.js?v=20261020-saidas';
 
 const rota = '/extracao-atributos/elegibilidade/resultados';
 const papeis = {entrada:'Entrada', restricao:'Restrição', risco:'Risco'};
@@ -32,6 +33,7 @@ export function criarResultados({avisar, aoOcupar}) {
 
   function controles() {
     const bloqueado = ocupado || externo;
+    node('abrir').setAttribute('aria-disabled', String(bloqueado));
     document.getElementById('ev-resultados').querySelectorAll('input,button,select').forEach(c => { c.disabled = bloqueado; });
     node('download').disabled = bloqueado || !modelo;
     node('anterior').disabled = bloqueado || !modelo || pagina === 0;
@@ -68,8 +70,8 @@ export function criarResultados({avisar, aoOcupar}) {
       ? 'Resultados conferidos. Os nomes foram salvos; o pacote inclui todas as demandas, independentemente da seleção em tela.'
       : `Resultados parciais: ${modelo.concluidas} de ${modelo.previstas} entradas. O PDF identificará essa condição.`;
   }
-  async function carregar() {
-    const dados = await post(`${rota}/preparar`, {execucoes});
+  async function carregar(dados) {
+    if (!dados) dados = await post(`${rota}/preparar`, {execucoes});
     fontes = dados.fontes;
     campos.clear(); node('nomes').replaceChildren();
     for (const [i, fonte] of fontes.entries()) {
@@ -90,6 +92,11 @@ export function criarResultados({avisar, aoOcupar}) {
       node('status').textContent = `${dados.concluidas} de ${dados.previstas} entradas concluídas. Confira os nomes das camadas e das feições.`;
       formulario.hidden = false;
     }
+  }
+  async function selecionarExecucoes(identificadores, dados) {
+    execucoes = [...identificadores]; invalidar(); formulario.hidden = true;
+    try { await carregar(dados); }
+    catch (erro) { node('tentar').hidden = false; throw erro; }
   }
   function selecionar(novaChave, novaBase='', novaClasse='', zoom=true) {
     if (ocupado || externo) return;
@@ -258,6 +265,19 @@ export function criarResultados({avisar, aoOcupar}) {
   node('proxima').onclick = () => { pagina++; tabela(); controles(); };
   node('revisados').onchange = () => { if (!node('revisados').checked) { modelo = null; node('conteudo').hidden = true; controles(); } };
   node('tentar').onclick = () => operar(carregar);
+  node('abrir').onclick = event => {
+    event.preventDefault();
+    operar(async () => {
+      const arquivo = await escolherArquivo({
+        title:'Selecionar análise de elegibilidade já realizada',
+        raiz:'saidas-geoespaciais', extensoes:['gpkg'], validar:false, somenteReferencias:true,
+      });
+      if (!arquivo) return;
+      node('status').textContent = 'Lendo e conferindo o GeoPackage da análise selecionada no storage…';
+      const dados = await post(`${rota}/abrir`, {arquivo:arquivo.arquivo});
+      await selecionarExecucoes(dados.execucoes, dados);
+    });
+  };
   node('download').onclick = () => operar(async () => {
     node('status').textContent = 'Gerando o PDF completo e gravando o pacote com todas as demandas e interseções no storage…';
     const response = await fetch(`${base}${rota}/pacote`,{method:'POST',credentials:'same-origin',
@@ -282,8 +302,8 @@ export function criarResultados({avisar, aoOcupar}) {
     adicionar(ident) { pendentes.push(ident); },
     async finalizar() {
       if (!pendentes.length) return;
-      execucoes = [...pendentes]; pendentes = []; invalidar(); formulario.hidden = true; node('vazio').hidden = true;
-      try { await carregar(); }
+      const identificadores = [...pendentes]; pendentes = [];
+      try { await selecionarExecucoes(identificadores); }
       catch (erro) {
         node('status').textContent = `As camadas foram produzidas, mas os resultados não puderam ser preparados: ${erro.message}`;
         node('tentar').hidden = false; avisar(node('status').textContent,'error');

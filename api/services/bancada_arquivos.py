@@ -377,14 +377,18 @@ def iniciar_execucao(operacao, parametros, arquivos, user):
         jobs._jobs[ident].update(responsavel=str(user.id), cancelavel=False)
 
     def run():
+        jobs._start(ident, f"Executar {operacao} nos arquivos selecionados")
         def report(message, feitas=None, total=None):
             # A duração do algoritmo nativo é desconhecida: não inventar percentual.
             with jobs._lock:
                 job = jobs._jobs[ident]
                 job['logs'].append({'sequencia': len(job['logs']) + 1, 'mensagem': message, 'nivel': 'info'})
-                job.update(status='executando', etapa_atual=message, tarefa_id=job['tarefa_id'] + 1,
+                job.update(status='executando', etapa_atual=message,
                            percentual=None, progresso_tarefa=feitas / total * 100 if total else None,
                            tarefa_concluidas=feitas, tarefa_total=total, unidade_tarefa='arquivos')
+                tree = jobs._hierarquias[ident]
+                tree.medir(job["tarefa_id"], feitas, total, "arquivos")
+                tree.operations[str(job["tarefa_id"])]["detalhe"] = message
                 jobs._publicar(ident)
         try:
             result = executar(operacao, parametros, arquivos, user, progress=report)

@@ -304,6 +304,24 @@ class ApresentacaoElegibilidade(ReferenciasResultadosElegibilidade):
     revisados: bool
 
 
+class ArquivoResultadosElegibilidade(BaseModel):
+    arquivo: str = Field(min_length=1)
+
+
+@router.post('/elegibilidade/resultados/abrir')
+def abrir_resultados_elegibilidade(payload: ArquivoResultadosElegibilidade,
+                                  user: SessionUser = Depends(require_geospatial_access)):
+    from api.services import elegibilidade_relatorio
+    try:
+        return elegibilidade_relatorio.abrir(payload.arquivo, user.id)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc)) from exc
+
+
 @router.post('/elegibilidade/resultados/preparar')
 def preparar_resultados_elegibilidade(payload: ReferenciasResultadosElegibilidade,
                                       user: SessionUser = Depends(require_geospatial_access)):

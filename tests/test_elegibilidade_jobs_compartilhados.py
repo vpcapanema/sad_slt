@@ -23,6 +23,10 @@ def ambiente(monkeypatch):
     monkeypatch.setattr(jobs.storage_remoto, 'baixar', baixar)
     monkeypatch.setattr(jobs.storage_remoto, 'enviar_bytes', arquivos.__setitem__)
     monkeypatch.setattr(jobs.storage_remoto, 'mover', lambda a, b: arquivos.__setitem__(b, arquivos.pop(a)))
+    monkeypatch.setattr(jobs.storage_remoto, 'listar', lambda pasta: [
+        {'nome': caminho[len(pasta) + 1:], 'pasta': False}
+        for caminho in arquivos if caminho.startswith(pasta + '/') and '/' not in caminho[len(pasta) + 1:]
+    ])
     return arquivos, tarefas
 
 
@@ -92,3 +96,36 @@ def test_storage_indisponivel_nao_retorna_sucesso(ambiente, monkeypatch):
     with pytest.raises(RuntimeError, match='Storage indisponível'):
         iniciar()
     assert not ambiente[1] and not jobs._jobs
+
+
+def test_localizar_saida_concluida_apos_reinicio_e_restrita_ao_autor(ambiente, monkeypatch):
+    inicial = iniciar()
+    arquivo = 'saidas-geoespaciais/resultado.gpkg'
+    with pytest.raises(FileNotFoundError):
+        jobs.localizar_saida(arquivo, 'autor')
+    ambiente[1].pop()()
+    assert jobs.localizar_saida(arquivo, 'autor') == inicial['id']
+    monkeypatch.setattr(jobs, '_jobs', {})
+    assert jobs.localizar_saida(arquivo, 'autor') == inicial['id']
+    with pytest.raises(FileNotFoundError):
+        jobs.localizar_saida(arquivo, 'outro')
+    with pytest.raises(FileNotFoundError):
+        jobs.localizar_saida('saidas-geoespaciais/inexistente.gpkg', 'autor')
+
+
+@pytest.mark.parametrize('arquivo', [
+    '../saida.gpkg', '/saidas-geoespaciais/saida.gpkg', 'base-geoespacial/saida.gpkg',
+    'saidas-geoespaciais/../saida.gpkg', 'saidas-geoespaciais/saida.fgb',
+    'saidas-geoespaciais\\saida.gpkg', 'saidas-geoespaciais//saida.gpkg',
+])
+def test_localizar_saida_recusa_caminho_ou_formato_invalido(ambiente, arquivo):
+    with pytest.raises(ValueError, match='GeoPackage'):
+        jobs.localizar_saida(arquivo, 'autor')
+
+
+def test_localizar_saida_nao_oculta_storage_indisponivel(ambiente, monkeypatch):
+    def falhar(*args):
+        raise RuntimeError('Storage indisponível.')
+    monkeypatch.setattr(jobs.storage_remoto, 'listar', falhar)
+    with pytest.raises(RuntimeError, match='Storage indisponível'):
+        jobs.localizar_saida('saidas-geoespaciais/resultado.gpkg', 'autor')

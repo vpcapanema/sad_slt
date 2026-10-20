@@ -6,7 +6,8 @@ from time import monotonic
 @contextmanager
 def operacao(progress, mensagem):
     """Anuncia antes do trabalho e conclui só no retorno normal do bloco."""
-    ident = progress(mensagem) if progress else None
+    iniciar = getattr(progress, 'iniciar_operacao', progress)
+    ident = iniciar(mensagem) if progress else None
     ultimo = 0.0
 
     def medir(feitas, total, unidade="itens", detalhe=None, forcar=False):
@@ -21,14 +22,22 @@ def operacao(progress, mensagem):
         if not forcar and feitas not in (0, total) and agora - ultimo < .25:
             return
         ultimo = agora
-        if hasattr(progress, 'tarefa'):
+        if hasattr(progress, 'medir_operacao'):
+            progress.medir_operacao(ident, feitas, total, unidade)
+        elif hasattr(progress, 'tarefa'):
             progress.tarefa(feitas, total, unidade)
         texto = detalhe or f'{mensagem}: {feitas}/{total} {unidade}.'
         getattr(progress, 'detalhe', progress)(texto)
 
-    yield medir
-    if progress and hasattr(progress, 'concluir'):
-        progress.concluir(ident, mensagem)
+    try:
+        yield medir
+    except BaseException as exc:
+        if progress and hasattr(progress, 'falhar'):
+            progress.falhar(ident, exc)
+        raise
+    else:
+        if progress and hasattr(progress, 'concluir'):
+            progress.concluir(ident, mensagem)
 
 
 def contexto(progress, nome):
@@ -38,9 +47,11 @@ def contexto(progress, nome):
     def emitir(mensagem):
         return progress(f'{nome} — {mensagem}')
     emitir.detalhe = lambda mensagem: getattr(progress, 'detalhe', progress)(f'{nome} — {mensagem}')
+    if hasattr(progress, 'iniciar_operacao'):
+        emitir.iniciar_operacao = lambda mensagem: progress.iniciar_operacao(f'{nome} — {mensagem}')
     if hasattr(progress, 'concluir'):
         emitir.concluir = lambda ident=None, mensagem=None: progress.concluir(ident, f'{nome} — {mensagem}' if mensagem else None)
-    for chave in ('tarefa', 'verificar', 'progresso_fase', 'fase'):
+    for chave in ('tarefa', 'verificar', 'progresso_fase', 'fase', 'medir_operacao', 'falhar', 'concluir_fase'):
         if hasattr(progress, chave):
             setattr(emitir, chave, getattr(progress, chave))
     return emitir

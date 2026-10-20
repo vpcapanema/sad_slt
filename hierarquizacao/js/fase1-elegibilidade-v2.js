@@ -1,11 +1,11 @@
 import {$, el, feedback} from '../../geoespacial/extracao-atributos/ui.js';
 import {json, post, esperar} from '../../geoespacial/extracao-atributos/api.js';
-import {escolherArquivo, identificarCamadas} from '../../geoespacial/extracao-atributos/explorador.js';
+import {escolherArquivo, identificarCamadas} from '../../geoespacial/extracao-atributos/explorador.js?v=20261020-saidas';
 import {validarCamada, descritorOriginal} from '../../geoespacial/extracao-atributos/camada-validada.js';
 import {escolherConfiguracao} from '../../geoespacial/extracao-atributos/lista-camadas.js';
 import {criarPrevia} from '../../geoespacial/extracao-atributos/previa.js?v=20261019-metadados';
 import {criarMapa} from '../../geoespacial/extracao-atributos/mapa.js';
-import {criarResultados} from './elegibilidade-resultados.js?v=20261019-painel';
+import {criarResultados} from './elegibilidade-resultados.js?v=20261020-reabrir-saida';
 
 const papeis = {entrada:'Entrada', restricao:'Restrição', risco:'Risco'};
 const selecao = {entrada:[], restricao:[], risco:[]};

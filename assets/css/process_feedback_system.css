@@ -604,3 +604,27 @@
   #pfsComponente #pfsProgressBox .pfs-body { gap: 7px; }
   #pfsComponente .pfs-confirm-message, #pfsComponente .pfs-credential-message { margin-bottom: 7px; }
 }
+/* Hierarquia persistente no mesmo modal; expansão e foco sobrevivem aos snapshots. */
+.pfs-hierarchy { max-height: min(48vh, 520px); overflow: auto; padding: 4px; overscroll-behavior: contain; }
+.pfs-entity { margin: 8px 0; padding: 10px; border: 1px solid #64748b; border-radius: 6px; background: #fff; color: #172033; }
+.pfs-entity--task { margin-left: 8px; border-left: 4px solid #245a86; }
+.pfs-entity--operation { margin-left: 8px; background: #f4f7fb; }
+.pfs-entity-title { cursor: pointer; overflow-wrap: anywhere; }
+.pfs-entity-title span { display: inline-block; font-size: .82rem; margin-left: 8px; }
+.pfs-entity-detail, .pfs-entity-measure { margin: 6px 0; font-size: .82rem; overflow-wrap: anywhere; }
+.pfs-entity[data-state="erro"] { border-color: #b91c1c; }
+.pfs-entity[data-state="concluido"] { border-color: #167044; }
+.pfs-entity[data-state="cancelado"], .pfs-entity[data-state="parcial"] { border-color: #975b00; }
+.pfs-entity summary:focus-visible, #pfsDiagnostics summary:focus-visible { outline: 3px solid #245a86; outline-offset: 2px; }
+.pfs-has-hierarchy #pfsTaskCard, .pfs-has-hierarchy #pfsTaskProgress,
+.pfs-has-hierarchy .pfs-progress-wrapper { display: none; }
+#pfsDiagnostics { margin-top: 12px; }
+#pfsDiagnostics .pfs-log { max-height: 180px; overflow: auto; }
+@media (max-width: 600px) {
+    .pfs-entity { padding: 7px; }
+    .pfs-entity--task, .pfs-entity--operation { margin-left: 3px; }
+    .pfs-hierarchy { max-height: 42vh; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .pfs-progress-indeterminate .pfs-progress-fill { animation: none !important; }
+}

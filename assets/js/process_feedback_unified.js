@@ -53,6 +53,7 @@
         <h4>Etapa Atual</h4>
         <p class="pfs-progress-description" role="status" aria-live="polite" data-pfs="current-summary">Preparando a execução...</p>
       </section>
+      <section id="pfsHierarchy" class="pfs-hierarchy" aria-label="Workflow, tasks e operations" hidden></section>
       <dl class="pfs-run-info">
         <div><dt>Situação</dt><dd data-pfs="run-state" role="status" aria-live="polite">Em execução</dd></div>
         <div><dt>Tempo Decorrido</dt><dd data-pfs="elapsed">00:00</dd></div>
@@ -83,7 +84,7 @@
       </div>
       <p class="pfs-last-completed" data-pfs="last-completed"></p>
       <p class="pfs-progress-guidance">Mantenha esta página aberta para acompanhar o resultado. Ocultar este painel não cancela o processamento.</p>
-      <div id="pfsDiagnostics" hidden aria-hidden="true"><div class="pfs-log" id="pfsLog"></div><div class="pfs-completed-list" id="pfsCompletedList"></div></div>
+      <details id="pfsDiagnostics"><summary>Mensagens e detalhes da execução</summary><div class="pfs-log" id="pfsLog"></div><div class="pfs-completed-list" id="pfsCompletedList"></div></details>
     </div>
     <div class="pfs-progress-footer">
       <button type="button" class="pfs-btn pfs-btn--cancel" id="pfsCancelBtn" hidden><i class="fas fa-ban" aria-hidden="true"></i><span class="pfs-cancel-label">CANCELAR</span></button>
@@ -279,6 +280,7 @@
                 this.cancelBtn.addEventListener('click', () => _progressSystem?.cancelar());
                 q('#pfsProgressClose')?.addEventListener('click', () => _progressSystem?.ocultar());
                 this.box.addEventListener('keydown', e => {
+                    if (e.key === 'Escape' && !q('#pfsConfirmOverlay.pfs-active')) { _progressSystem?.ocultar(); return; }
                     if (e.key !== 'Tab' || !this.overlay.classList.contains('pfs-active')) return;
                     const nodes = [...this.box.querySelectorAll('button, summary, [tabindex="0"]')].filter(n => !n.disabled && n.getClientRects().length);
                     if (e.shiftKey && document.activeElement === nodes[0]) { e.preventDefault(); nodes.at(-1)?.focus(); }
@@ -291,6 +293,15 @@
         /* ── Abrir overlay com tarefas ── */
         iniciar(title, subtitle, tasks) {
             this._bind();
+            this._stop();
+            this._sicard = null;
+            this._progressoExterno = false;
+            this._taskMeasure = null;
+            this._hierarchyNodes = new Map();
+            q('#pfsHierarchy').replaceChildren();
+            q('#pfsHierarchy').hidden = true;
+            this.box.classList.remove('pfs-has-hierarchy');
+            _statusSystem.fechar();
             this._startTime = Date.now();
             this._actionTitle = title || 'Processando';
             this.tasks = (tasks || []).map(t => ({
@@ -554,6 +565,7 @@
 
         /* ── Event router ── */
         _handleEvent(ev) {
+            if (this._finalizado || (_progressSystem && _progressSystem !== this)) return;
             this._lastContact = Date.now();
             const type = ev.type || ev.event || '';
             switch (type) {
@@ -571,15 +583,22 @@
         /* ── Sucesso → delega ao StatusFeedbackSystem ── */
         sucesso(data) {
             if (this._finalizado) return;
+            const confirmado = this._sicard?.snapshot?.status;
+            if (['erro', 'interrompido'].includes(confirmado)) { this.erro(data); return; }
+            if (confirmado === 'cancelado') { this.confirmarCancelamento(); return; }
+            if (confirmado === 'parcial') data = { ...(data || {}), _status: 'partial' };
             this._finalizado = true;
             this._estadoFinal = data && data._status === 'partial' ? 'Concluído com ressalvas' : 'Concluído';
             this._atualizarAcompanhamento();
             this._stop();
             const elapsed = this._elapsed();
-            this.progresso(100);
-            this.progressoTarefa(100);
+            if (data?._status !== 'partial') {
+                this.progresso(100);
+                this.progressoTarefa(100);
+            }
             this.log(data && data._status === 'partial' ? 'Processo concluído com ressalvas.' : 'Processo concluído com sucesso!', data && data._status === 'partial' ? 'warning' : 'success');
-            setTimeout(() => {
+            this._resultTimer = setTimeout(() => {
+                if (_progressSystem !== this) return;
                 this._fecharSeCorrente();
                 if (data && data._status === 'partial') _statusSystem.mostrarParcial({ actionTitle: this._actionTitle, ...data, _elapsed: elapsed });
                 else _statusSystem.mostrarSucesso({ actionTitle: this._actionTitle, ...data, _elapsed: elapsed });
@@ -600,7 +619,8 @@
                 const seg = this.segmentsEl.children[this.currentTaskIndex];
                 if (seg) { seg.classList.remove('pfs-segment--active'); seg.classList.add('pfs-segment--error'); }
             }
-            setTimeout(() => {
+            this._resultTimer = setTimeout(() => {
+                if (_progressSystem !== this) return;
                 this._fecharSeCorrente();
                 _statusSystem.mostrarErro({ actionTitle: this._actionTitle, ...(typeof data === 'string' ? { message: data } : data), _elapsed: elapsed });
                 if (this.config.onError) this.config.onError(data);
@@ -636,8 +656,56 @@
 
         /* ── Fechar ── */
         fechar() {
-            this._stop();
+            if (this._finalizado) this._stop();
             this.ocultar();
+        }
+        reabrir() {
+            if (_progressSystem !== this) return;
+            this.overlay.classList.add('pfs-active'); this.box.classList.add('pfs-active');
+            abrirComFoco(this.box);
+        }
+
+        renderWorkflow(workflow) {
+            const root = q('#pfsHierarchy');
+            root.hidden = false;
+            this.box.classList.add('pfs-has-hierarchy');
+            this._hierarchyNodes ||= new Map();
+            const labels = {executando:'Em execução', running:'Em execução', pendente:'Pendente',
+                concluido:'Concluído', parcial:'Parcial', erro:'Falhou', cancelado:'Cancelado',
+                interrompido:'Interrompido', nao_executado:'Não executado'};
+            const render = (entity, kind, parent, key) => {
+                let node = this._hierarchyNodes.get(key);
+                if (!node) {
+                    node = document.createElement(kind === 'operation' ? 'article' : 'details');
+                    node.className = `pfs-entity pfs-entity--${kind}`;
+                    if (kind !== 'operation') node.open = true;
+                    node.innerHTML = `<${kind === 'operation' ? 'div' : 'summary'} class="pfs-entity-title"><strong></strong> <span></span></${kind === 'operation' ? 'div' : 'summary'}><p class="pfs-entity-detail"></p><div class="pfs-progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100"><div class="pfs-progress-fill"></div></div><p class="pfs-entity-measure"></p><div class="pfs-entity-children"></div>`;
+                    parent.appendChild(node); this._hierarchyNodes.set(key, node);
+                }
+                node.dataset.state = entity.estado;
+                const title = node.firstElementChild;
+                title.querySelector('strong').textContent = `${kind === 'workflow' ? 'Workflow' : kind === 'task' ? 'Task' : 'Operation'}: ${entity.nome}`;
+                title.querySelector('span').textContent = labels[entity.estado] || entity.estado;
+                node.querySelector('.pfs-entity-detail').textContent = entity.detalhe || '';
+                const bar = node.querySelector('[role="progressbar"]');
+                const pct = Number.isFinite(entity.percentual) ? Math.min(100, Math.max(0, entity.percentual)) : null;
+                bar.setAttribute('aria-label', `${kind}: ${entity.nome}`);
+                bar.classList.toggle('pfs-progress-indeterminate', pct === null && !['concluido','parcial','erro','cancelado','interrompido','nao_executado'].includes(entity.estado));
+                if (pct === null) bar.removeAttribute('aria-valuenow');
+                else bar.setAttribute('aria-valuenow', String(pct));
+                bar.firstElementChild.style.width = pct === null ? '' : `${pct}%`;
+                node.querySelector('.pfs-entity-measure').textContent = (pct === null ? 'Progresso indeterminado' : `${Math.round(pct)}%`) +
+                    (Number.isFinite(entity.feitas) && entity.total > 0 ? ` · ${entity.feitas} / ${entity.total} ${entity.unidade || 'itens'}` : '');
+                return node.querySelector('.pfs-entity-children');
+            };
+            const tasksRoot = render(workflow, 'workflow', root, workflow.id);
+            for (const task of workflow.tasks || []) {
+                if (task.workflow_id !== workflow.id) continue;
+                const opsRoot = render(task, 'task', tasksRoot, `${workflow.id}/${task.id}`);
+                for (const op of task.operations || []) {
+                    if (op.task_id === task.id) render(op, 'operation', opsRoot, `${workflow.id}/${task.id}/${op.id}`);
+                }
+            }
         }
         /* Ocultar não encerra o acompanhamento ou o cancelamento em curso. */
         ocultar() {
@@ -651,7 +719,7 @@
 
         /* ── Internals ── */
         _touch() { this._lastActivity = Date.now(); }
-        _stop() { clearTimeout(this._summaryTimer); this._summaryTimer = null; this._stopActivityMonitor(); this._closeSSE(); this._sicardStop?.(); }
+        _stop() { clearTimeout(this._resultTimer); this._resultTimer = null; clearTimeout(this._summaryTimer); this._summaryTimer = null; this._stopActivityMonitor(); this._closeSSE(); this._sicardStop?.(); }
 
         _startActivityMonitor() {
             this._stopActivityMonitor();
@@ -1165,6 +1233,7 @@
         erro(data) { if (_progressSystem) _progressSystem.erro(data); else _statusSystem.mostrarErro(data); }
         progresso(pct) { if (_progressSystem) _progressSystem.progresso(pct); }
         fechar() { if (_progressSystem) _progressSystem.fechar(); }
+        reabrir() { _progressSystem?.reabrir(); }
 
         /* ── V2 API ── */
         start(title, msg) { const p = this.iniciarCadastro(title || 'Processando', []); if (msg) p.log(msg, 'info'); return p; }
@@ -1302,6 +1371,15 @@
             if (!p || !job || p._finalizado) return;
             const st = p._sicard || (p._sicard = { job: null, seq: 0, chave: null, canal: null, url: null, versao: -1, revisao: -1, vivo: false });
             if (String(job.id ?? '') !== st.job) {
+                p._retiredJobs ||= new Set();
+                if (p._retiredJobs.has(String(job.id ?? ''))) return;
+                if (st.job !== null) {
+                    p._retiredJobs.add(st.job);
+                    p.tasks = []; p.currentTaskIndex = -1; p._history = [];
+                    p.logEl.replaceChildren(); p.completedList.replaceChildren(); p.segmentsEl.replaceChildren();
+                    p._hierarchyNodes = new Map(); q('#pfsHierarchy').replaceChildren();
+                    p._cancelPending = false; st.terminal = false; st.detalhe = null;
+                }
                 st.job = String(job.id ?? ''); st.seq = 0; st.chave = null; st.tarefa = null; st.snapshot = null; st.versao = -1; st.revisao = -1;
                 this._fecharCanal(p, st); st.url = null;
                 if (job.eventos_url && window.EventSource) {
@@ -1311,7 +1389,7 @@
             }
             p._lastContact = Date.now();
             /* Com o canal entregando, o retrato do polling (que pode estar atrasado) não sobrescreve. */
-            if (st.vivo && st.canal) { this._aplicarLogs(p, st, job); return; }
+            if (st.vivo && st.canal && !Number.isFinite(job.revisao)) return;
             this._aplicarJob(p, st, job, 'polling');
         }
 
@@ -1330,7 +1408,7 @@
                     st.vivo = true; p._lastContact = Date.now();
                     if (Number.isFinite(versao)) { if (versao <= st.versao) return; st.versao = versao; }
                     this._aplicarJob(p, st, atual, 'sse');
-                    if (['concluido', 'erro', 'cancelado'].includes(atual.status)) { st.url = null; this._fecharCanal(p, st); }
+                    if (['concluido', 'parcial', 'erro', 'cancelado', 'interrompido'].includes(atual.status)) { st.url = null; this._fecharCanal(p, st); }
                 } catch { /* retrato inválido: o polling de quem chamou continua valendo */ }
             });
             if (!st.rede) {
@@ -1362,7 +1440,7 @@
                 const nivel = niveis[e.nivel] || 'info';
                 const detalhes = e.detalhes ? Object.entries(e.detalhes).map(([k,v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`).join(' · ') : '';
                 p.log(detalhes ? `${msg} — ${detalhes}` : msg, nivel, e.em);
-                if (e.tarefa_id != null && (e.tipo === 'concluido' || (!e.tipo && e.nivel === 'sucesso'))) {
+                if (!job.workflow && e.tarefa_id != null && (e.tipo === 'concluido' || (!e.tipo && e.nivel === 'sucesso'))) {
                     const key = `${job.id ?? ''}:${e.tarefa_id}`;
                     let task = p.tasks.find(t => t.id === key);
                     if (!task) {
@@ -1377,6 +1455,7 @@
         }
 
         _aplicarJob(p, st, job, origem = 'polling') {
+            if (st.terminal) return;
             const revisao = job.revisao;
             if (Number.isFinite(revisao)) {
                 if (revisao <= st.revisao) return;
@@ -1388,6 +1467,28 @@
             st.snapshot = job;
             p._progressoExterno = true;
             this._aplicarLogs(p, st, job);
+            if (job.cancelamento_solicitado) {
+                p._cancelPending = true; p.cancelBtn.disabled = true;
+                p.cancelBtn.querySelector('.pfs-cancel-label').textContent = 'CANCELAMENTO SOLICITADO';
+            }
+            if (job.cancelavel === false && !p._cancelPending) p.cancelBtn.hidden = true;
+            if (job.workflow) {
+                const structure = JSON.stringify(job.workflow);
+                if (structure !== st.structure) { p._touch(); st.structure = structure; }
+                p.renderWorkflow(job.workflow);
+                p.resumo(job.etapa_atual || job.etapa || job.workflow.nome);
+                pfsText('active-detail', job.detalhe || '');
+                if (Number.isFinite(job.workflow.percentual)) p.progresso(job.workflow.percentual);
+                else p._barra(null);
+                if (['concluido','parcial','erro','cancelado','interrompido'].includes(job.status)) {
+                    st.terminal = true; st.url = null; this._fecharCanal(p, st);
+                    p._estadoFinal = {concluido:'Concluído',parcial:'Resultado parcial',erro:'Interrompido por erro',cancelado:'Cancelado',interrompido:'Interrompido'}[job.status];
+                    p._atualizarAcompanhamento(); p._stopActivityMonitor(); p.cancelBtn.hidden = true;
+                    p._sicardStop?.();
+                    if (job.status === 'cancelado') p.confirmarCancelamento();
+                }
+                return;
+            }
             const etapa = Object.hasOwn(job, 'etapa_atual') ? job.etapa_atual : job.etapa;
             const nome = job.atividade || etapa;
             const chave = job.tarefa_id != null ? `${job.id ?? ''}:${job.tarefa_id}` : nome;

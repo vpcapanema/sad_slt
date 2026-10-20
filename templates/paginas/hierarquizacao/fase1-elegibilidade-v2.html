@@ -7,7 +7,7 @@
 {% set requer_autenticacao = true %}
 {% set fase_ativa = 1 %}
 {% block titulo %}Elegibilidade territorial{% endblock %}
-{% block classes_body %}ahp-module-page elegibilidade-v2-page feedback-proprio{% endblock %}
+{% block classes_body %}ahp-module-page elegibilidade-v2-page feedback-proprio fases-padrao-agrupamento{% endblock %}
 {% block base_url %}<base href="/restrict/hierarquizacao/">{% endblock %}
 {% block estilos_pagina %}
 <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
@@ -17,13 +17,14 @@
 <link rel="stylesheet" href="/assets/css/page-title-standard.css">
 <link rel="stylesheet" href="/assets/css/extracao-atributos.css">
 <link rel="stylesheet" href="/assets/css/fase1-elegibilidade-v2.css?v=20261019-painel">
+<link rel="stylesheet" href="/assets/css/paginas/hierarquizacao-fases-visual.css?v=20261020-cabecalhos-linha-unica">
 {% endblock %}
 {% block conteudo %}
 <div id="admin-session-bar" class="admin-session-bar hidden"></div>
 <main class="conteudo-principal app-main ahp-main ea-main elegibilidade-v2" id="elegibilidade-app" data-feedback-title="Elegibilidade territorial">
   {% include "componentes/navegacao_fases_hierarquizacao.html" %}
   <section class="secao-elegibilidade-cabecalho card card-elegibilidade-cabecalho standard-page-hero">
-    <h1 class="ahp-page-title standard-page-hero__title"><i class="fas fa-shield-halved" aria-hidden="true"></i> Elegibilidade territorial</h1>
+    <h1 class="ahp-page-title standard-page-hero__title"><i class="fas fa-shield-halved" aria-hidden="true"></i><span>Elegibilidade territorial</span></h1>
     <p class="standard-page-hero__eyebrow">Hierarquização · Fase 1</p>
     <p class="standard-page-hero__description">Escolha sua entrada, organize as camadas de restrição e de risco e confira a prévia antes de enviá-las à bancada. <a class="fase-descricao-add" href="/public/documentacao/" aria-label="Consultar a documentação metodológica"><i class="fas fa-book" aria-hidden="true"></i></a></p>
   </section>
@@ -115,9 +116,10 @@
     </div>
   </section>
   <section class="secao-elegibilidade-bancada ea-section" id="ea-workbench" aria-labelledby="ev-bancada-title">
-    <header class="ea-section-head"><span class="ea-number">04</span><div><h2 id="ev-bancada-title">Bancada básica de geoprocessamento</h2><p>Confira aqui as camadas de entrada, restrição e risco confirmadas para a bancada.</p></div></header>
+    <header class="ea-section-head"><span class="ea-number">4</span><h2 id="ev-bancada-title">Bancada básica de geoprocessamento</h2></header>
     <iframe id="ea-workbench-frame" class="ea-workbench-frame" src="/restrict/geoespacial/bancada/" title="Bancada de elegibilidade territorial" allow="fullscreen"></iframe>
     <div class="ea-section-body">
+      <p class="ea-hint">Confira aqui as camadas de entrada, restrição e risco confirmadas para a bancada.</p>
       <p id="ev-bancada-status" class="ea-hint" role="status">Nenhuma camada confirmada nesta página.</p>
       <section class="secao-elegibilidade-conferencia ea-checkup" aria-labelledby="ev-checkup-title">
         <h4 class="ea-checkup-title" id="ev-checkup-title">Conferir e executar</h4>
@@ -145,9 +147,10 @@
     </div>
   </section>
   <section class="secao-elegibilidade-resultados ea-section ev-resultados" id="ev-resultados" aria-labelledby="ev-resultados-title">
-    <header class="ea-section-head"><span class="ea-number">05</span><div><h2 id="ev-resultados-title">Resultados da Elegibilidade Territorial</h2><p>Consulte onde as demandas se sobrepõem às feições das camadas de restrição e risco e qual é a área dessas sobreposições.</p></div></header>
+    <header class="ea-section-head"><span class="ea-number">5</span><h2 id="ev-resultados-title">Resultados da Elegibilidade Territorial</h2></header>
     <div class="ea-section-body">
-      <p id="ev-resultados-vazio" class="ea-hint">Execute a elegibilidade territorial para apresentar os resultados.</p>
+      <p class="ea-hint">Consulte onde as demandas se sobrepõem às feições das camadas de restrição e risco e qual é a área dessas sobreposições.</p>
+      <p id="ev-resultados-vazio" class="ea-hint">Execute a elegibilidade territorial ou <a id="ev-resultados-abrir" href="#ev-resultados">selecione uma análise já realizada</a> para apresentar os resultados.</p>
       <p id="ev-resultados-status" class="ea-hint" role="status" aria-live="polite"></p>
       <button id="ev-resultados-tentar" class="ea-btn" type="button" hidden>Tentar Carregar Resultados</button>
       <form id="ev-resultados-aliases" hidden>
@@ -235,5 +238,5 @@
 <script src="/assets/vendor/maplibre-gl/maplibre-gl.js"></script>
 <script src="/assets/vendor/maplibre-gl/leaflet-maplibre-gl.js"></script>
 <script src="/restrict/hierarquizacao/js/hier-api.js"></script>
-<script type="module" src="/restrict/hierarquizacao/js/fase1-elegibilidade-v2.js?v=20261019-grupo-gpkg"></script>
+<script type="module" src="/restrict/hierarquizacao/js/fase1-elegibilidade-v2.js?v=20261020-reabrir-saida"></script>
 {% endblock %}

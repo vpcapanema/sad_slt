@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from hashlib import sha256
 import json
 import logging
+from pathlib import PurePosixPath
 import re
 from threading import RLock
 from time import monotonic
@@ -21,11 +22,15 @@ _pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix='elegibilidade')
 _log = logging.getLogger(__name__)
 
 
+def _pasta(dono):
+    usuario = sha256(str(dono).encode()).hexdigest()
+    return f'saidas-geoespaciais/elegibilidade-execucoes/{usuario}'
+
+
 def _caminho(ident, dono):
     if not re.fullmatch(r'[a-f0-9]{32}', ident):
         raise FileNotFoundError('Execução de elegibilidade não encontrada nesta sessão.')
-    usuario = sha256(str(dono).encode()).hexdigest()
-    return f'saidas-geoespaciais/elegibilidade-execucoes/{usuario}/{ident}.json'
+    return f'{_pasta(dono)}/{ident}.json'
 
 
 def _publicar(job, estado, *, forcar=False):
@@ -89,6 +94,30 @@ def consultar(ident, dono):
     if registro.get('status') not in {'executando', 'concluido', 'erro', 'cancelado'}:
         raise ValueError('O registro persistido da execução possui estado inválido.')
     return {k: v for k, v in registro.items() if k != 'dono'}
+
+
+def localizar_saida(arquivo: str, dono) -> str:
+    caminho = PurePosixPath(arquivo)
+    if (not caminho.parts or caminho.parts[0] != 'saidas-geoespaciais'
+            or caminho.is_absolute() or '..' in caminho.parts or '\\' in arquivo
+            or str(caminho) != arquivo or caminho.suffix.lower() != '.gpkg'):
+        raise ValueError('Selecione um GeoPackage de saída em saidas-geoespaciais.')
+    with _lock:
+        identificadores = [ident for ident, job in _jobs.items() if job['dono'] == str(dono)]
+    vistos = set(identificadores)
+    for ident in identificadores:
+        job = consultar(ident, dono)
+        if job['status'] == 'concluido' and job.get('resultado') and job['resultado'].get('arquivo') == arquivo:
+            return ident
+    for item in storage_remoto.listar(_pasta(dono)):
+        nome = item['nome']
+        if item['pasta'] or not re.fullmatch(r'[a-f0-9]{32}\.json', nome) or nome[:-5] in vistos:
+            continue
+        ident = nome[:-5]
+        job = consultar(ident, dono)
+        if job['status'] == 'concluido' and job.get('resultado') and job['resultado'].get('arquivo') == arquivo:
+            return ident
+    raise FileNotFoundError('Não foi encontrada uma execução concluída deste usuário para o GeoPackage selecionado.')
 
 
 def cancelar(ident, dono):

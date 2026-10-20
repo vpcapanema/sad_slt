@@ -91,11 +91,14 @@ def calcular(entrada: gpd.GeoDataFrame, bases, controle: ControleProcessamento, 
     if any(not math.isfinite(v) or v <= 0 for v in saida[campo_area]):
         raise ValueError('A entrada contém área total não positiva ou não finita.')
     existentes.add(campo_area.casefold())
+    controle.concluir_fase(1)
     campos = []
     feicoes_base = {}
     for numero, (papel, nome, ident, base) in enumerate(bases, 1):
         controle.verificar()
-        controle.fase(2, f'Base {numero}: {nome} — interseção, área e soma por {campo_id}')
+        if numero == 1:
+            controle.fase(2, 'Analisar as bases de elegibilidade')
+        controle.iniciar_operacao(f'Base {numero}: {nome} — interseção, área e soma por {campo_id}')
         _validar(base, nome)
         base_metrica = ogr.reproject(base, CRS_METRICO, name=nome, progress=controle.mensagem)
         campo = campo_saida(nome, papel, existentes)
@@ -130,6 +133,7 @@ def calcular(entrada: gpd.GeoDataFrame, bases, controle: ControleProcessamento, 
         saida[campo] = pd.array([totais.get(ident) for ident in ids], dtype='Float64')
         campos.append({'id': ident, 'nome': nome, 'papel': papel, 'campo': campo, 'unidade': 'm²'})
         controle.concluir(mensagem=f'{nome}: campo {campo} preenchido; interseções vinculadas à saída.')
+    controle.concluir_fase(2)
     return saida, {'campo_id': campo_id, 'crs_calculo': f'EPSG:{CRS_METRICO}',
                    'unidade': 'm²', 'campos': campos, 'feicoes': len(saida),
                    'campo_area_total': campo_area, 'feicoes_base': list(feicoes_base.values()),
@@ -229,6 +233,7 @@ def executar(payload: dict, controle: ControleProcessamento) -> dict:
         descritor = descritor_original(ident, caminho)
     except Exception as exc:
         raise RuntimeError(f'A saída foi gravada em {caminho}, mas não foi possível prepará-la para visualização: {exc}') from exc
+    controle.concluir_fase(3)
     return {**descritor, 'nome': arquivo, 'tipo': 'vetor', 'representacao': 'tiles',
             'sha256': sha256(conteudos[arquivo]).hexdigest(),
             'status_validacao': 'valida', 'camada': 'elegibilidade_territorial',

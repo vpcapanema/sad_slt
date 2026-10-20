@@ -10,7 +10,7 @@ import {validarCamada} from './camada-validada.js';
 // escolha de uma única camada, o duplo clique já confirma. Backspace sobe uma pasta.
 const ROOT='@storage';
 const BANK='@banco';
-const ROOT_NAMES={[ROOT]:'Storage geoespacial','base-geoespacial':'Bases geoespaciais','superficies-indices':'Superfícies e índices',[BANK]:'Camadas cadastradas no banco'};
+const ROOT_NAMES={[ROOT]:'Storage geoespacial','base-geoespacial':'Bases geoespaciais','superficies-indices':'Superfícies e índices','saidas-geoespaciais':'Saídas geoespaciais',[BANK]:'Camadas cadastradas no banco'};
 // Ícone por formato, pela convenção mais comum: GeoPackage é um banco SQLite;
 // Shapefile, geometria vetorial; GeoJSON, texto estruturado; KML, o globo do
 // Google Earth; FlatGeobuf, arquivo binário; rasters, imagem.
@@ -45,7 +45,7 @@ export async function identificarCamadas(files, {excluded=[], aoIdentificar}={})
   return camadas;
 }
 
-export function escolherArquivo({catalog=[],carregarCatalogo,excluded=[],title,acao=title,multiple=false,validar=true,somenteReferencias=false,prepararReferencias,original=false,host,onClose}) {
+export function escolherArquivo({catalog=[],carregarCatalogo,excluded=[],title,acao=title,multiple=false,validar=true,somenteReferencias=false,prepararReferencias,original=false,host,onClose,raiz,pastaInicial=raiz||ROOT,extensoes}) {
   return new Promise(resolve=>{
     const inline=Boolean(host?.isConnected);
     const dialog=el(inline?'section':'dialog',undefined,`ea-tool-dialog ea-storage-dialog${inline?' ea-storage-inline':''}`);
@@ -84,6 +84,10 @@ export function escolherArquivo({catalog=[],carregarCatalogo,excluded=[],title,a
     if(inline)host.replaceChildren(dialog);
     else{document.body.append(dialog);dialog.showModal();}
     const cache=new Map(),pending=new Map(),expanded=new Set([ROOT]),roots=new Set();let current=ROOT,loading=false,browsing=false,navigation=0,closed=false,mode='list';
+    if(raiz){
+      roots.add(raiz);
+      cache.set(ROOT,{caminho:ROOT,pai:null,pastas:[{caminho:raiz,nome:ROOT_NAMES[raiz]||raiz}],arquivos:[]});
+    }
     const picks=new Map(),loaded=new Map();let visibleFiles=[];
     function button(label,action,className='ea-btn'){const b=el('button',label,className);b.type='button';b.onclick=action;return b;}
     function setIcon(b,label,simbolo){b.title=label;b.setAttribute('aria-label',label);b.querySelector('i').className=`fa-solid ${simbolo}`;}
@@ -104,7 +108,7 @@ export function escolherArquivo({catalog=[],carregarCatalogo,excluded=[],title,a
       event.preventDefault();goUp();
     });
     function goUp(){if(current!==ROOT)navigate(cache.get(current)?.pai||ROOT);}
-    function valid(path){return path===BANK||path===ROOT||[...roots].some(root=>path===root||path.startsWith(`${root}/`));}
+    function valid(path){return (!raiz&&path===BANK)||path===ROOT||[...roots].some(root=>path===root||path.startsWith(`${root}/`));}
     async function directory(path){
       if(!valid(path))throw new Error('Escolha uma pasta dentro das bases geoespaciais do storage.');
       if(path===BANK){
@@ -155,7 +159,7 @@ export function escolherArquivo({catalog=[],carregarCatalogo,excluded=[],title,a
         if(aberta)for(const folder of cache.get(path)?.pastas||[])branch(folder.caminho,folder.nome,depth+1);
       }
       branch(ROOT,ROOT_NAMES[ROOT],0);
-      branch(BANK,ROOT_NAMES[BANK],0);
+      if(!raiz)branch(BANK,ROOT_NAMES[BANK],0);
     }
     function toggleFile(item){
       if(multiple){if(picks.has(item.id))picks.delete(item.id);else picks.set(item.id,item);}
@@ -166,7 +170,7 @@ export function escolherArquivo({catalog=[],carregarCatalogo,excluded=[],title,a
     function paintList(){
       const data=cache.get(current);if(!data)return;
       const term=search.value.trim().toLocaleLowerCase('pt-BR');
-      const folders=data.pastas,files=data.arquivos;
+      const folders=data.pastas,files=data.arquivos.filter(item=>!extensoes||extensoes.includes(partesDoNome(item).formato));
       list.replaceChildren();
       list.dataset.mode=mode;
       for(const option of views.children)option.setAttribute('aria-checked',String(option.dataset.view===mode));
@@ -213,13 +217,14 @@ export function escolherArquivo({catalog=[],carregarCatalogo,excluded=[],title,a
       controls();
     }
     async function navigate(path){
-      if((loading&&!browsing)||closed||!valid(path))return;
+      if((loading&&!browsing)||closed)return;
       const request=++navigation;
       loading=true;browsing=true;controls();status.textContent='';
       // Navegação curta: a própria lista informa a espera; falha vai para o Notify.
       list.setAttribute('aria-busy','true');status.textContent=path===BANK?'Consultando camadas cadastradas no banco…':'Abrindo pasta do storage… Consultando camadas e subpastas.';
       const liberar=()=>list.removeAttribute('aria-busy');
       try{
+        if(path!==ROOT&&path!==BANK&&!cache.has(ROOT))await directory(ROOT);
         const data=await directory(path);if(closed||request!==navigation){liberar();return;}cache.set(path,data);current=path;expanded.add(path);search.value='';
         trail.replaceChildren();let target='';
         for(const [index,name] of ['storage',...path.split('/').filter(Boolean)].entries()){
@@ -289,6 +294,6 @@ export function escolherArquivo({catalog=[],carregarCatalogo,excluded=[],title,a
       processo.concluirTarefa(CARREGAR,'Camadas carregadas');processo.fechar();finish(multiple?unique:unique[0]);
     }
     search.addEventListener('input',()=>{if(!loading)paintList();});
-    paintTree();navigate(ROOT);
+    paintTree();navigate(pastaInicial);
   });
 }

@@ -1,15 +1,16 @@
 """Canal de acompanhamento: estado atual publicado pelo worker, sem polling de logs."""
 import asyncio
 import json
+from copy import deepcopy
 from threading import Lock
 from dataclasses import dataclass
 from typing import Any
 
 from starlette.responses import StreamingResponse
 
-CAMPOS = ('revisao','tarefa_estado','historico_inicio','id','status','etapa','etapa_atual','tarefa_id','percentual','progresso_geral',
+CAMPOS = ('workflow','revisao','tarefa_estado','historico_inicio','id','status','etapa','etapa_atual','tarefa_id','percentual','progresso_geral',
           'progresso_tarefa','atividade','detalhe','concluidas','total','total_fases','fases_concluidas','tarefa_concluidas','tarefa_total','unidade_tarefa','unidade','cancelavel','cancelamento_solicitado','erro')
-FINAIS = {'concluido','erro','cancelado'}
+FINAIS = {'concluido','parcial','erro','cancelado','interrompido'}
 
 
 @dataclass(eq=False)
@@ -27,7 +28,7 @@ class CanalProgresso:
         self.ouvintes = set()
 
     def publicar(self, estado):
-        resumo = {k:estado[k] for k in CAMPOS if k in estado}
+        resumo = deepcopy({k:estado[k] for k in CAMPOS if k in estado})
         logs = estado.get('logs') or estado.get('etapas') or []
         if logs:
             resumo['logs'] = [{k:v for k,v in row.items() if k in ('sequencia','mensagem','nivel','em','instante','detalhes','tipo','tarefa_id')}

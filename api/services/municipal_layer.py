@@ -149,6 +149,7 @@ def gerar(codigo, payload, nome, user, controle=None):
         with (nullcontext(None) if sem_montagem() else TemporaryDirectory(prefix='sicard-municipal-')) as temporary:
             folder = Path(temporary) if temporary is not None else None
             package, _, manifest, frame = materializar(payload, folder, base, controle) if controle else materializar(payload, folder, base)
+            if controle: controle.concluir_fase(2)
             ident = 'camada_' + uuid4().hex
             metadata = {'origem_ferramenta':'municipal-layer', 'base_arquivos':base,
                         'categoria_extracao':category, 'execucao_id':execution,
@@ -165,6 +166,7 @@ def gerar(codigo, payload, nome, user, controle=None):
             report = saidas_storage.enviar_json(execution,base+'_metadados.json',manifest)
             catalogo.registrar_documento(execution,ident,report,validacao={'json':True,'tipo':'metadados_municipais'})
             ciclo.finalizar(execution)
+            if controle: controle.concluir_fase(3)
             return package, {'id':ident,'arquivo':metadata['caminho_arquivo'],
                              'pacote_caminho':archive['caminho'],'pacote_sha256':archive['sha256'],
                              'execucao_id':execution,'nome':name}

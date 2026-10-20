@@ -4,6 +4,8 @@ from multiprocessing import get_context
 from threading import RLock
 from time import monotonic
 from uuid import uuid4
+from copy import deepcopy
+from api.services.feedback_hierarquia import Hierarquia
 
 _jobs = {}
 _lock = RLock()
@@ -31,7 +33,21 @@ def _obter(ident, dono):
 
 
 def _snapshot(job):
-    return {k: v for k, v in job.items() if k not in ('dono', 'criado', 'solicitado')}
+    tree = job.get("_feedback")
+    if tree:
+        op = tree.operations["validar"]
+        op["detalhe"] = job.get("etapa", "")
+        pct = job.get("percentual")
+        tree.medir("validar", pct, 100)
+        if job["status"] == "concluido":
+            tree.terminar("validar")
+            tree.terminar_task("validacao")
+        if job["status"] in {"concluido", "erro", "cancelado"}:
+            tree.encerrar(job["status"])
+        job["workflow"] = tree.snapshot()
+        job["cancelamento_solicitado"] = job["solicitado"]
+    job["revisao"] = job.get("revisao", 0) + 1
+    return deepcopy({k: v for k, v in job.items() if k not in ('dono', 'criado', 'solicitado', '_feedback')})
 
 
 def obter(ident, dono):
@@ -69,6 +85,10 @@ def iniciar(conteudo, nome, dono, original=False):
         job = dict(id=ident, dono=str(dono), criado=monotonic(), solicitado=False,
                    status='pendente', cancelavel=True, percentual=None, progresso_tarefa=None,
                    etapas=[], etapa='Aguardando validação do arquivo')
+        tree = Hierarquia("Validar arquivo", ident)
+        tree.task("validacao", "Inspecionar arquivo enviado")
+        tree.iniciar("validacao", "Ler e validar conteúdo", "validar")
+        job["_feedback"] = tree
         _jobs[ident] = job
         _pool.submit(_executar, ident, conteudo, nome, original)
         return _snapshot(job)

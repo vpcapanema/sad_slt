@@ -5,7 +5,7 @@
 
 {% block titulo %}Favorabilidade de grade e da rede{% endblock %}
 {% set fase_ativa = 2 %}
-{% block classes_body %}ahp-module-page feedback-proprio{% endblock %}
+{% block classes_body %}ahp-module-page feedback-proprio fases-padrao-agrupamento{% endblock %}
 {% block base_url %}<base href="/restrict/hierarquizacao/">{% endblock %}
 
 {% block estilos_pagina %}
@@ -15,13 +15,18 @@
   <link rel="stylesheet" href="/assets/vendor/leaflet/leaflet.css" crossorigin="">
   <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
   <link rel="stylesheet" href="/assets/css/page-title-standard.css">
+  <link rel="stylesheet" href="/assets/css/paginas/hierarquizacao-fases-visual.css?v=20261020-cabecalhos-linha-unica">
 {% endblock %}
 
 {% block conteudo %}
 <div id="admin-session-bar" class="admin-session-bar hidden"></div>
 <main class="conteudo-principal app-main ahp-main fase-execucao-page">
   {% include "componentes/navegacao_fases_hierarquizacao.html" %}
-  <section class="secao-fase-2-favorabilidade-territorial card-fase-2-favorabilidade-territorial card ahp-step-intro standard-page-hero"><h1 class="standard-page-hero__title"><i class="fas fa-map-location-dot"></i> Favorabilidade de grade e da rede<span class="fase-info" tabindex="0" role="button" aria-label="Sobre esta fase"><i class="fas fa-circle-info"></i><span class="fase-info-pop">A favorabilidade territorial mede o quanto o território onde cada demanda se encontra é propício à sua implantação, tomando como base uma superfície contínua homologada cujos valores variam de zero a um. O cálculo extrai o valor dessa superfície no ponto de cada demanda, sem transformar em zero as ausências de cobertura ou os dados NoData, e, com os índices válidos, ordena as demandas em um ranking auditável. Para operar, selecione a rodada, escolha o pacote de favorabilidade e o método de extração, execute a extração e acompanhe os indicadores e o ranking no card de resultados.</span></span></h1><p class="standard-page-hero__eyebrow">Hierarquização · Fase 2</p><p class="standard-page-hero__description">Mede o quanto o território de cada demanda é propício à implantação, a partir das superfícies homologadas de favorabilidade de grade e da rede. Selecione a rodada e as camadas abaixo e execute a extração. <a class="fase-descricao-add" href="/public/documentacao/favorabilidade/" title="Abrir a biblioteca da favorabilidade de grade e da rede" aria-label="Abrir a biblioteca da favorabilidade de grade e da rede"><i class="fas fa-book-atlas"></i></a></p></section>
+  <section class="secao-fase-2-favorabilidade-territorial card-fase-2-favorabilidade-territorial card ahp-step-intro standard-page-hero">
+    <h1 class="ahp-page-title standard-page-hero__title"><i class="fas fa-map-location-dot" aria-hidden="true"></i><span>Favorabilidade de grade e da rede</span></h1>
+    <p class="standard-page-hero__eyebrow">Hierarquização · Fase 2<span class="fase-info" tabindex="0" role="button" aria-label="Sobre esta fase"><i class="fas fa-circle-info" aria-hidden="true"></i><span class="fase-info-pop">A favorabilidade territorial mede o quanto o território onde cada demanda se encontra é propício à sua implantação, tomando como base uma superfície contínua homologada cujos valores variam de zero a um. O cálculo extrai o valor dessa superfície no ponto de cada demanda, sem transformar em zero as ausências de cobertura ou os dados NoData, e, com os índices válidos, ordena as demandas em um ranking auditável. Para operar, selecione a rodada, escolha o pacote de favorabilidade e o método de extração, execute a extração e acompanhe os indicadores e o ranking no card de resultados.</span></span></p>
+    <p class="standard-page-hero__description">Mede o quanto o território de cada demanda é propício à implantação, a partir das superfícies homologadas de favorabilidade de grade e da rede. Selecione a rodada e as camadas abaixo e execute a extração. <a class="fase-descricao-add" href="/public/documentacao/favorabilidade/" title="Abrir a biblioteca da favorabilidade de grade e da rede" aria-label="Abrir a biblioteca da favorabilidade de grade e da rede"><i class="fas fa-book-atlas" aria-hidden="true"></i></a></p>
+  </section>
   <section class="card-camadas-operacionais secao-camadas-operacionais card ahp-step-section"><div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">1</span><span>Geoprocessamento — SLT</span></div><div class="ahp-section-body">
     <div id="fase2-controles-origem" hidden>
       <label id="ctrl-hier" class="fase1-ctrl">Hierarquização cadastrada <select id="fase-hierarquizacao"><option value="">Selecionar uma hierarquização</option></select></label>

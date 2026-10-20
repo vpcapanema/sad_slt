@@ -5,7 +5,7 @@
 
 {% block titulo %}Priorização por atributos{% endblock %}
 {% set fase_ativa = 3 %}
-{% block classes_body %}ahp-module-page feedback-proprio escala-revisada{% endblock %}
+{% block classes_body %}ahp-module-page feedback-proprio escala-revisada fases-padrao-agrupamento{% endblock %}
 {% block base_url %}<base href="/restrict/hierarquizacao/">{% endblock %}
 
 {% block estilos_pagina %}
@@ -17,6 +17,7 @@
   <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
   <link rel="stylesheet" href="/assets/css/page-title-standard.css">
   <link rel="stylesheet" href="/assets/css/escala-tipografica.css">
+  <link rel="stylesheet" href="/assets/css/paginas/hierarquizacao-fases-visual.css?v=20261020-cabecalhos-linha-unica">
 {% endblock %}
 
 {% block conteudo %}
@@ -24,7 +25,9 @@
 <main class="conteudo-principal app-main ahp-main fase-execucao-page">
   {% include "componentes/navegacao_fases_hierarquizacao.html" %}
   <section class="card-fase-3-ajuste-fino-de-prioridade secao-fase-3-ajuste-fino-de-prioridade card ahp-step-intro standard-page-hero">
-    <h1 class="standard-page-hero__title"><i class="fas fa-sliders"></i> Priorização por atributos<span class="fase-info" tabindex="0" role="button" aria-label="Sobre esta fase"><i class="fas fa-circle-info"></i><span class="fase-info-pop">O ajuste fino refina a prioridade de cada projeto ao combinar seus atributos próprios com o risco herdado da Elegibilidade territorial, produzindo o score de ajuste e a síntese final da rodada. Os critérios são normalizados e ponderados por pesos, as ausências são tratadas conforme a política escolhida e a completude mínima exigida, e a síntese final combina os scores da Favorabilidade de grade e da rede e da Priorização por atributos segundo os pesos definidos. Para operar, selecione a rodada, confira os critérios e atributos dos objetos, defina as regras de cálculo e execute a fase, gerando ao final a síntese e o ranking.</span></span></h1><p class="standard-page-hero__eyebrow">Hierarquização · Fase 3</p><p class="standard-page-hero__description">Refina a prioridade de cada projeto combinando seus atributos próprios com o risco herdado da Elegibilidade territorial.</p>
+    <h1 class="ahp-page-title standard-page-hero__title"><i class="fas fa-sliders" aria-hidden="true"></i><span>Priorização por atributos</span></h1>
+    <p class="standard-page-hero__eyebrow">Hierarquização · Fase 3<span class="fase-info" tabindex="0" role="button" aria-label="Sobre esta fase"><i class="fas fa-circle-info" aria-hidden="true"></i><span class="fase-info-pop">O ajuste fino refina a prioridade de cada projeto ao combinar seus atributos próprios com o risco herdado da Elegibilidade territorial, produzindo o score de ajuste e a síntese final da rodada. Os critérios são normalizados e ponderados por pesos, as ausências são tratadas conforme a política escolhida e a completude mínima exigida, e a síntese final combina os scores da Favorabilidade de grade e da rede e da Priorização por atributos segundo os pesos definidos. Para operar, selecione a rodada, confira os critérios e atributos dos objetos, defina as regras de cálculo e execute a fase, gerando ao final a síntese e o ranking.</span></span></p>
+    <p class="standard-page-hero__description">Refina a prioridade de cada projeto combinando seus atributos próprios com o risco herdado da Elegibilidade territorial.</p>
   <p class="step-intro"><i class="fas fa-circle-info" aria-hidden="true"></i> Nos julgamentos, os colaboradores indicam a intensidade de importância entre os critérios. A consolidação calcula seus pesos. Quando há uma análise homologada nesta hierarquização, esta fase aplica os pesos homologados aos valores de cada demanda nos critérios correspondentes para calcular sua prioridade.</p>
   </section>
   <section class="secao-selecao-da-rodada card ahp-step-section card-selecao-da-rodada"><div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">1</span><span>Selecionar a rodada</span></div><div class="ahp-section-body"><div class="ahp-subcard info-card"><div class="ahp-subsection-title"><span class="cadastro-subsec-num">1.1</span><i class="fas fa-folder-open" aria-hidden="true"></i><span>Rodada a calcular</span></div><label>Hierarquização cadastrada <select id="fase-hierarquizacao"><option value="">Selecionar uma hierarquização</option></select></label></div><div class="ahp-subcard info-card"><div class="ahp-subsection-title"><span class="cadastro-subsec-num">1.2</span><i class="fas fa-circle-info" aria-hidden="true"></i><span>Resumo da rodada</span></div><div id="fase-resumo" class="fase-summary hidden"></div></div></div></section>

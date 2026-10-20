@@ -144,6 +144,54 @@ def test_saida_alterada_impede_resultados_e_exportacao(analise):
         service.montar(['job-1', 'job-2'], nomes, 'autor', True)
 
 
+def test_reabrir_geopackage_reutiliza_saida_e_revisao_sem_recalcular(analise, monkeypatch):
+    resultados, dados, nomes = analise
+    arquivo = resultados['job-1']['arquivo']
+    def localizar(caminho, dono):
+        assert caminho == arquivo and dono == 'autor'
+        return 'job-1'
+    monkeypatch.setattr(service.jobs, 'localizar_saida', localizar)
+    reabertura = service.abrir(arquivo, 'autor')
+    assert reabertura['execucoes'] == ['job-1']
+    assert reabertura['revisados'] is False
+    assert reabertura['concluidas'] == 1 and reabertura['previstas'] == 2
+    nomes_unicos = {ident: nome for ident, nome in nomes.items() if ident != 'entrada-2'}
+    modelo, _ = service.montar(reabertura['execucoes'], nomes_unicos, 'autor', True)
+    service.salvar_nomes(reabertura['execucoes'], modelo, 'autor')
+    reabertura = service.abrir(arquivo, 'autor')
+    assert reabertura['revisados'] is True
+    assert {f['id']: f['nome'] for f in reabertura['fontes']} == nomes_unicos
+    assert dados[arquivo].startswith(b'SQLite format 3')
+    dados[arquivo] += b'alterado'
+    with pytest.raises(ValueError, match='mudou'):
+        service.abrir(arquivo, 'autor')
+
+
+def test_rota_reabrir_geopackage_preserva_autorizacao_e_erros(analise, monkeypatch):
+    from api.deps.auth import require_geospatial_access
+    from api.routers.extracao_atributos import router
+    app = FastAPI()
+    app.include_router(router)
+    app.dependency_overrides[require_geospatial_access] = lambda: SimpleNamespace(id='autor')
+    arquivo = analise[0]['job-1']['arquivo']
+    def localizar(caminho, dono):
+        if caminho != arquivo or dono != 'autor':
+            raise FileNotFoundError('Saída concluída não encontrada para este usuário.')
+        return 'job-1'
+    monkeypatch.setattr(service.jobs, 'localizar_saida', localizar)
+    rota = '/extracao-atributos/elegibilidade/resultados/abrir'
+    with TestClient(app) as client:
+        resposta = client.post(rota, json={'arquivo': arquivo})
+        assert resposta.status_code == 200
+        assert resposta.json()['execucoes'] == ['job-1']
+        assert client.post(rota, json={'arquivo': ''}).status_code == 422
+        app.dependency_overrides[require_geospatial_access] = lambda: SimpleNamespace(id='outro')
+        assert client.post(rota, json={'arquivo': arquivo}).status_code == 404
+        app.dependency_overrides[require_geospatial_access] = lambda: SimpleNamespace(id='autor')
+        analise[1][arquivo] += b'alterado'
+        assert client.post(rota, json={'arquivo': arquivo}).status_code == 422
+
+
 def test_nome_cadastral_nao_e_validado_como_alias_de_arquivo(analise, monkeypatch):
     _, _, nomes = analise
     ler = service._ler

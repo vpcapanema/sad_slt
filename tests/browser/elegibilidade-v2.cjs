@@ -847,9 +847,6 @@ const assert = require('node:assert/strict');
       return {
         source:frame.getAttribute('src'),
         section:style(document.getElementById('ea-workbench')),
-        header:style(document.querySelector('#ea-workbench > header')),
-        title:style(document.querySelector('#ea-workbench > header h2')),
-        number:style(document.querySelector('#ea-workbench .ea-number')),
         frame:style(frame),
         frameHeight:frame.getBoundingClientRect().height,
         inset:frame.getBoundingClientRect().left - document.getElementById('ea-workbench').getBoundingClientRect().left,
@@ -869,7 +866,7 @@ const assert = require('node:assert/strict');
     const conferenciaStyle = await checkupStyle();
     await page.goto(`${base}/restrict/geoespacial/extracao-atributos/`, {waitUntil:'networkidle'});
     await page.waitForFunction(() => document.querySelector('#ea-workbench-frame').contentDocument.body.classList.contains('ea-embedded-workbench'));
-    assert.deepEqual(await workbenchStyle(), workbench, 'Bancada usa o mesmo visual, documento e dimensões verticais do extrator');
+    assert.deepEqual(await workbenchStyle(), workbench, 'Bancada preserva visual interno, documento e dimensões do extrator; cabeçalhos seguem Agrupamento de Demandas');
     assert.deepEqual(await checkupStyle(),conferenciaStyle,'Conferir e executar preserva o visual da página de extração');
     assert.deepEqual(buttonSkin(await buttonStyle('#ea-input-browse')), buttonSkin(normal), 'Botão menor preserva cores e tipografia da referência');
     assert.deepEqual(buttonSkin(await buttonStyle('#ea-identificacao-confirmar')), buttonSkin(primary), 'Botão primário menor preserva a referência');

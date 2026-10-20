@@ -9,6 +9,7 @@ from hashlib import sha256
 from pathlib import Path
 from threading import Lock
 from api.services.progresso_eventos import CanalProgresso
+from api.services.feedback_hierarquia import Hierarquia, FINAIS
 from typing import Any, Callable
 from uuid import uuid4
 
@@ -56,6 +57,7 @@ class GeoprocessamentoJobs:
         self._jobs: dict[str, dict[str, Any]] = {}
         self._lock = Lock()
         self._eventos = {}
+        self._hierarquias = {}
         self._executor = ThreadPoolExecutor(max_workers=3, thread_name_prefix="gp-job")
 
     def _new(self, kind: str, tasks: list[str]) -> str:
@@ -70,6 +72,10 @@ class GeoprocessamentoJobs:
         }
         with self._lock:
             self._jobs[job_id] = job
+            tree = Hierarquia(f"{kind.replace('_', ' ').capitalize()}", job_id)
+            tree.task("execucao", "Executar " + kind.replace("_", " "))
+            self._hierarquias[job_id] = tree
+            job["workflow"] = tree.snapshot()
             self._eventos[job_id] = CanalProgresso()
             self._eventos[job_id].publicar(job)
         return job_id
@@ -84,6 +90,7 @@ class GeoprocessamentoJobs:
             return self._eventos.get(job_id)
 
     def _publicar(self, job_id):
+        self._jobs[job_id]["workflow"] = self._hierarquias[job_id].snapshot()
         canal = self._eventos.get(job_id)
         if canal:
             self._jobs[job_id]['revisao'] += 1
@@ -116,18 +123,29 @@ class GeoprocessamentoJobs:
         """Mensagem ativa é emitida antes do trabalho; logs registram conclusões."""
         with self._lock:
             job = self._jobs[job_id]
+            if job["status"] in FINAIS:
+                return
             job.update(etapa_atual=label, progresso_tarefa=None, tarefa_estado="running", status="executando",
                        tarefa_id=job["tarefa_id"] + 1)
+            self._hierarquias[job_id].iniciar("execucao", label, job["tarefa_id"])
             self._publicar(job_id)
 
     def _advance(self, job_id: str, label: str, details: dict[str, Any] | None = None, *, concluir_tarefa: bool = True) -> None:
         with self._lock:
             job = self._jobs[job_id]
+            if job["status"] in FINAIS:
+                return
             if job.get('cancelamento_solicitado') and job.get('cancelavel'):
                 raise OperacaoCancelada('Execução cancelada antes de iniciar o algoritmo.')
-            job["concluidas"] = min(job["total"], job["concluidas"] + 1)
-            job["percentual"] = round(job["concluidas"] * 100 / job["total"])
             if concluir_tarefa:
+                job["concluidas"] = min(job["total"], job["concluidas"] + 1)
+                job["percentual"] = round(job["concluidas"] * 100 / job["total"]) if job["total"] else None
+                tree = self._hierarquias[job_id]
+                op = tree.operations.get(str(job["tarefa_id"]))
+                if not op or op["estado"] in FINAIS:
+                    job["tarefa_id"] += 1
+                    tree.iniciar("execucao", label, job["tarefa_id"])
+                tree.terminar(job["tarefa_id"])
                 job["etapa_atual"] = None
                 job["progresso_tarefa"] = 100
                 job["tarefa_estado"] = "concluido"
@@ -149,6 +167,12 @@ class GeoprocessamentoJobs:
             job["percentual"] = 100
             job["progresso_tarefa"] = 100
             job["resultado"] = result
+            tree = self._hierarquias[job_id]
+            # Retorno normal confirma o bloco externo; operações internas sem
+            # término continuam explicitamente interrompidas, nunca inferidas.
+            tree.terminar_task("execucao")
+            tree.encerrar("concluido")
+            job["cancelavel"] = False
             self._publicar(job_id)
             snapshot = deepcopy(job)
         job["relatorio"] = geoprocessamento_relatorio.salvar(snapshot)
@@ -161,6 +185,8 @@ class GeoprocessamentoJobs:
             job["status"] = "cancelado" if isinstance(exc, OperacaoCancelada) else "erro"
             job["erro"] = str(exc)
             job["tarefa_estado"] = job["status"]
+            self._hierarquias[job_id].encerrar(job["status"])
+            job["cancelavel"] = False
             job["etapa_atual"] = "Processo interrompido"
             job["logs"].append({
                 "sequencia": len(job["logs"]) + 1,
@@ -303,12 +329,7 @@ class GeoprocessamentoJobs:
             ciclo.execucao_atual.reset(token)
 
     def _append_dynamic(self, job_id: str, label: str) -> None:
-        """Acrescenta uma nanotarefa descoberta pelo serviço durante a execução."""
-        with self._lock:
-            job = self._jobs[job_id]
-            insert_at = max(job["concluidas"] + 1, job["total"] - 5)
-            job["microtarefas"].insert(insert_at, label)
-            job["total"] += 1
+        """Callback textual não prova descoberta nem conclusão de trabalho."""
         self._advance(job_id, label, concluir_tarefa=False)
 
     def create_model(self, definition: dict[str, Any], kind: str, inputs: dict[str, Any], responsavel: str) -> dict[str, Any]:
