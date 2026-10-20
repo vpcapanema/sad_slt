@@ -27,7 +27,8 @@ const assert = require('node:assert/strict');
     });
     await reference.close();
     const errors = [], saves = [];
-    let criteria = ['Custo', 'Prazo', 'Benefício'], starts = 0, failSend = false;
+    let criteria = ['Custo', 'Prazo', 'Benefício'], starts = 0, failSend = false, holdSaves = false;
+    const heldSaves = [];
     let deadline = '2026-10-27T02:59:59+00:00';
     page.on('pageerror', error => errors.push(error.message));
     await page.addInitScript(() => localStorage.setItem('ahp_criteria', '["Critério de outro julgamento","Outro"]'));
@@ -39,7 +40,10 @@ const assert = require('node:assert/strict');
         criterios: criteria, status: 'ativa', valido_ate: deadline, email_autorizado: true};
       if (req.method() === 'GET' || path.endsWith('/acesso')) return route.fulfill({json: meta});
       if (path.endsWith('/respostas/iniciar')) starts++;
-      if (path.endsWith('/respostas/progresso')) saves.push(req.postDataJSON());
+      if (path.endsWith('/respostas/progresso')) {
+        saves.push(req.postDataJSON());
+        if (holdSaves) await new Promise(resolve => heldSaves.push(resolve));
+      }
       if (path.endsWith('/respostas') && failSend) return route.fulfill({status: 503, json: {detail: 'Falha de teste'}});
       return route.fulfill({json: {status: path.endsWith('/respostas') ? 'enviada' : 'em_preenchimento',
         matriz_comparacao: [[1, 1, 1], [1, 1, 1], [1, 1, 1]],
@@ -122,25 +126,69 @@ const assert = require('node:assert/strict');
     await page.waitForResponse(r => r.url().endsWith('/respostas/progresso'));
     assert.equal(saves[0].estatisticas.revisoes_por_par['0_1'], 7);
     assert.ok(saves[0].estatisticas.duracao_ms >= 40000);
+    const calculationBenchmarks = await page.evaluate(() => [10, 30, 60].map(size => {
+      const matrix = SLTAhp.matrixFromUpper(size, (i, j) => [1 / 9, 1 / 3, 1, 3, 9][(i + j) % 5]);
+      let maxMs = 0;
+      for (let run = 0; run < 10; run++) {
+        const start = performance.now(), result = SLTAhp.analyzeMatrix(matrix);
+        maxMs = Math.max(maxMs, performance.now() - start);
+        if (![result.lambdaMax, result.CI, result.CR].every(Number.isFinite)) throw new Error('Métrica inválida');
+      }
+      return {size, maxMs};
+    }));
+    for (const {size, maxMs} of calculationBenchmarks) {
+      assert.ok(maxMs < 100, `Matriz ${size}x${size}: cálculo deve levar menos de 100 ms, medido ${maxMs.toFixed(2)} ms`);
+    }
+    await page.evaluate(() => {
+      const analyze = SLTAhp.analyzeMatrix, now = performance.now.bind(performance);
+      window.metricRuns = [];
+      SLTAhp.analyzeMatrix = matrix => {
+        const start = now(), result = analyze(matrix);
+        metricRuns.push(now() - start);
+        return result;
+      };
+      window.expectedMetrics = matrix => {
+        const result = analyze(matrix);
+        return [result.lambdaMax, result.CI, result.CR].map(value => value.toFixed(4));
+      };
+    });
     await page.clock.install();
     await page.clock.pauseAt(new Date());
     const pair = page.locator('.saaty-pair').first(), scale = pair.locator('.saaty-scale');
     const rc = page.locator('#metricRCValue').locator('..');
     assert.equal(await rc.evaluate(el => el.classList.contains('is-success') || el.classList.contains('is-failure')), false);
     const inverseColor = await pair.locator('.saaty-reciprocal').evaluate(el => getComputedStyle(el).borderColor);
+    holdSaves = true;
     await scale.press('ArrowRight');
     assert.match(await scale.getAttribute('aria-valuetext'), /\(3\)/);
     assert.match(await page.locator('#collab-save-feedback').innerText(), /aguardando/);
     assert.equal(await pair.evaluate(el => el.classList.contains('is-auto-validated')), false);
-    await page.clock.runFor(2999);
+    assert.equal(await page.locator('#btn-enviar-resposta').isDisabled(), true);
+    await page.clock.runFor(999);
+    assert.equal(await page.evaluate(() => metricRuns.length), 0, 'Não recalcular durante o movimento');
+    assert.equal(await page.locator('#liveMetrics').getAttribute('aria-busy'), 'true');
+    await page.clock.runFor(1);
+    assert.equal(await page.evaluate(() => metricRuns.length), 1, 'Atualizar as métricas após exatamente 1 segundo');
+    assert.deepEqual(await page.locator('#liveMetrics .ahp-metric-card__value').allTextContents(),
+      await page.evaluate(() => expectedMetrics(buildLiveMatrix())));
+    assert.equal(await page.locator('#liveMetrics').getAttribute('aria-busy'), 'false');
+    assert.equal(await page.locator('#btn-enviar-resposta').isDisabled(), true, 'RC inconsistente mantém o envio bloqueado');
+    await page.clock.runFor(1999);
     assert.equal(await pair.evaluate(el => el.classList.contains('is-auto-validated')), false);
     await page.clock.runFor(1);
     assert.equal(await pair.evaluate(el => el.classList.contains('is-auto-validated')), true);
+    assert.equal(await page.evaluate(() => metricRuns.length), 1, 'Confirmar o par não repete o cálculo');
+    assert.equal(heldSaves.length, 1, 'Simular salvamento ainda pendente na rede');
     assert.notEqual(await pair.locator('.saaty-reciprocal').evaluate(el => getComputedStyle(el).borderColor), inverseColor);
     await scale.press('ArrowLeft');
-    await page.clock.runFor(2000);
+    await page.clock.runFor(999);
+    assert.equal(await page.evaluate(() => metricRuns.length), 1);
     await scale.press('ArrowRight');
-    await page.clock.runFor(2999);
+    await page.clock.runFor(999);
+    assert.equal(await page.evaluate(() => metricRuns.length), 1, 'Novo ajuste reinicia o intervalo das métricas');
+    await page.clock.runFor(1);
+    assert.equal(await page.evaluate(() => metricRuns.length), 2);
+    await page.clock.runFor(1999);
     assert.equal(await pair.evaluate(el => el.classList.contains('is-auto-validated')), false);
     await page.clock.runFor(1);
     assert.equal(await pair.evaluate(el => el.classList.contains('is-auto-validated')), true);
@@ -152,16 +200,25 @@ const assert = require('node:assert/strict');
       for (let i = 0; i < steps; i++) await slider.press('ArrowRight');
     }
     await setScale(0, 5); await setScale(1, 6); await setScale(2, 5);
+    const beforeBurst = await page.evaluate(() => metricRuns.length);
+    await page.clock.runFor(999);
+    assert.equal(await page.evaluate(() => metricRuns.length), beforeBurst);
+    await page.clock.runFor(1);
+    assert.equal(await page.evaluate(() => metricRuns.length), beforeBurst + 1, 'Agrupar ajustes rápidos em um único cálculo');
     assert.equal(await rc.evaluate(el => el.classList.contains('is-success')), true);
+    assert.equal(await page.locator('#btn-enviar-resposta').isEnabled(), true, 'Métricas e envio não aguardam a rede');
     const okColor = await rc.evaluate(el => getComputedStyle(el).color);
     await setScale(0, 8); await setScale(1, 0); await setScale(2, 8);
+    await page.clock.runFor(1000);
     assert.equal(await rc.evaluate(el => el.classList.contains('is-failure')), true);
     assert.notEqual(await rc.evaluate(el => getComputedStyle(el).color), okColor);
     assert.equal(await page.locator('#btn-enviar-resposta').isDisabled(), true);
     // Exact boundary and zero are checked separately from the real engine cases above.
     await page.evaluate(() => {window.originalAnalyze = SLTAhp.analyzeMatrix; SLTAhp.analyzeMatrix = m => ({...originalAnalyze(m), CR: 0.1}); updateLiveMetrics();});
+    await page.clock.runFor(1000);
     assert.equal(await rc.evaluate(el => el.classList.contains('is-failure')), true);
     await page.evaluate(() => {SLTAhp.analyzeMatrix = m => ({...originalAnalyze(m), CR: 0}); updateLiveMetrics();});
+    await page.clock.runFor(1000);
     assert.equal(await rc.evaluate(el => el.classList.contains('is-success') || el.classList.contains('is-failure')), false);
     await page.evaluate(() => {SLTAhp.analyzeMatrix = originalAnalyze;});
     await setScale(0, 4); await setScale(1, 4); await setScale(2, 4);
@@ -181,6 +238,8 @@ const assert = require('node:assert/strict');
       await checkIdentificationGrid(width);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `Overflow em ${width}px`);
     }
+    holdSaves = false;
+    heldSaves.forEach(resolve => resolve());
     failSend = true;
     await page.locator('#btn-enviar-resposta').click();
     await page.getByText('Falha de teste', {exact: true}).waitFor();
@@ -189,6 +248,8 @@ const assert = require('node:assert/strict');
     await page.locator('#btn-enviar-resposta').click();
     await page.getByText('Resposta enviada com sucesso. Obrigado!', {exact: true}).waitFor();
     assert.equal(await page.locator('#comparisonContent').evaluate(el => el.inert), true);
+    const maxCalculationMs = await page.evaluate(() => Math.max(...metricRuns));
+    assert.ok(maxCalculationMs < 100, `Cálculo AHP deve ser rápido: ${maxCalculationMs.toFixed(2)} ms`);
     assert.deepEqual(errors, []);
     // Empty authorized criteria must not resurrect another local judgment.
     criteria = [];
@@ -206,7 +267,9 @@ const assert = require('node:assert/strict');
       await page.reload();
       await page.getByText(`Prazo: ${expected}`, {exact: true}).waitFor();
     }
-    console.log('PASS: contexto visível, escala/espaçamento iguais à Fase 3, layout responsivo, 2999/3000ms, RC, retomada e envio.');
+    console.log(`PASS: métricas em 999/1000ms, ajustes agrupados, cálculo máximo ${maxCalculationMs.toFixed(2)}ms; contexto, layout, confirmação em 2999/3000ms, RC, retomada e envio.`);
+    console.log('Desempenho AHP: ' + calculationBenchmarks.map(({size, maxMs}) =>
+      `${size}x${size}: ${maxMs.toFixed(2)}ms`).join('; '));
     await page.close();
   } finally { await browser.close(); }
 })().catch(error => {console.error(error); process.exitCode = 1;});

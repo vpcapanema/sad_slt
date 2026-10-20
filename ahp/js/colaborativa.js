@@ -9,6 +9,8 @@
   var stats = { inicio_ms: null, duracao_anterior_ms: 0, pares: {} };
   var draftActive = false;
   var saveTimer = null;
+  var metricsTimer = null;
+  var latestCR = null;
   var acesso = null;
   var verificando = false;
   var pairTimers = new Map();
@@ -93,7 +95,7 @@
           pair.classList.remove("is-auto-editing");
           pair.classList.add("is-auto-validated");
           status.textContent = "Par e valor inverso confirmados. Você pode ajustar novamente.";
-          updateProgressHint(SLTAhp.analyzeMatrix(buildLiveMatrix()).CR);
+          updateProgressHint(latestCR);
         }, 3000));
       });
     });
@@ -115,13 +117,17 @@
   }
 
   function updateCollabMetrics() {
+    clearTimeout(metricsTimer);
+    metricsTimer = null;
     if (typeof buildLiveMatrix !== "function" || typeof SLTAhp === "undefined") return;
     var matrix = buildLiveMatrix();
     if (!matrix) return;
     var res = SLTAhp.analyzeMatrix(matrix);
+    latestCR = res.CR;
     el("metricRCValue").textContent = res.CR.toFixed(4);
     el("metricICValue").textContent = res.CI.toFixed(4);
     el("metricLambdaValue").textContent = res.lambdaMax.toFixed(4);
+    el("liveMetrics").setAttribute("aria-busy", "false");
     var rcCard = el("metricRCValue").closest(".ahp-metric-card");
     rcCard.classList.toggle("is-success", res.CR > 0 && res.CR < 0.1);
     rcCard.classList.toggle("is-failure", res.CR >= 0.1);
@@ -136,11 +142,25 @@
     );
     updateProgressHint(res.CR);
     if (draftActive) {
-      var version = ++editVersion;
+      var version = editVersion;
       el("collab-save-feedback").textContent = "Alterações aguardando salvamento…";
       clearTimeout(saveTimer);
       saveTimer = setTimeout(function () { queueProgress(matrix, version); }, 600);
     }
+  }
+
+  function scheduleCollabMetrics() {
+    if (!draftActive) return;
+    clearTimeout(metricsTimer);
+    clearTimeout(saveTimer);
+    editVersion++;
+    latestCR = null;
+    el("liveMetrics").setAttribute("aria-busy", "true");
+    el("collab-rc-status").textContent = "Atualizando…";
+    el("btn-enviar-resposta").disabled = true;
+    el("collab-save-feedback").textContent = "Alterações aguardando salvamento…";
+    submitFeedback("Atualizando os indicadores de consistência…", "info");
+    metricsTimer = setTimeout(updateCollabMetrics, 1000);
   }
 
   function updateProgressHint(cr) {
@@ -152,11 +172,12 @@
       '<i class="fas fa-circle-check" aria-hidden="true"></i> ' +
       "Pares confirmados: <strong>" + touched + "/" + total + "</strong>. " +
       "Cada ajuste preenche automaticamente o valor inverso da comparação. " +
-      (cr < 0.1 ? "A consistência está adequada para envio." : "Acompanhe o RC acima antes de enviar.");
-    hint.className = "ahp-collab-reciprocal-hint " + (cr < 0.1 ? "is-ok" : "is-warn");
+      (cr == null ? "Atualizando os indicadores de consistência…" :
+        cr < 0.1 ? "A consistência está adequada para envio." : "Acompanhe o RC acima antes de enviar.");
+    hint.className = "ahp-collab-reciprocal-hint " + (cr == null ? "" : cr < 0.1 ? "is-ok" : "is-warn");
   }
 
-  global.updateLiveMetrics = updateCollabMetrics;
+  global.updateLiveMetrics = scheduleCollabMetrics;
 
   function liberarFormulario() {
     if (verificando || draftActive) return;
@@ -246,6 +267,7 @@
     var duracao_ms = duracaoTotal();
     submitFeedback("Enviando…", "info");
     clearTimeout(saveTimer);
+    clearTimeout(metricsTimer);
     draftActive = false;
     el("btn-enviar-resposta").disabled = true;
     el("comparisonContent").inert = true;

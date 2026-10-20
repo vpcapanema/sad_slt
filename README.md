@@ -140,7 +140,11 @@ dados de contexto em 12 px, instruções e ajuda em 11,5 px, rótulos em 12,7 px
 e títulos de seção em 13,3 px. O espaçamento entre blocos é de 1,25 rem e
 entre campos de 1 rem, sem acumular margens com o `gap` dos contêineres.
 
-No formulário colaborativo, o card de RC permanece neutro em zero, fica verde
+No formulário colaborativo, λmax, IC e RC são recalculados localmente após um
+segundo sem novos ajustes da barra, agrupando movimentos consecutivos em um
+único cálculo, sem depender da rede ou do salvamento automático. Durante essa
+espera, o envio fica bloqueado para não utilizar indicadores desatualizados.
+O card de RC permanece neutro em zero, fica verde
 quando `0 < RC < 0,10` e vermelho quando `RC >= 0,10`. Cada ajuste da escala
 reinicia uma espera de três segundos; sem novos ajustes, o par e seu bloco de
 valor inverso recebem confirmação visual verde. Movimentos posteriores
