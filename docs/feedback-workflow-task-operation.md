@@ -28,6 +28,13 @@ Sucesso, parcial e erro recebem apenas centralização do título e mensagem pri
 `documentacao/feedback-hierarquia.html` utiliza diretamente o componente da
 aplicação, sem renderizador ou estilos próprios para os modais.
 
+Validação desta apresentação: 50 testes Python de feedback aprovados; suítes
+Playwright `feedback-hierarquia.cjs`, `feedback-sigma.cjs` e
+`progresso-eventos.cjs` aprovadas. Foram verificados alinhamento e largura das
+barras, detalhes sem repetição, troca de job, confirmação/cancelamento, entrada
+obrigatória e SSE real com reconexão. Capturas locais em
+`outputs/feedback-hierarquia-mobile.png` e `outputs/feedback-confirmacao-mobile.png`.
+
 ## Contrato
 
 Snapshots de polling e SSE incluem `workflow`, com `id`, `nome`, `estado`,
