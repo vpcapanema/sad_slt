@@ -630,3 +630,76 @@
 @media (prefers-reduced-motion: reduce) {
     .pfs-progress-indeterminate .pfs-progress-fill { animation: none !important; }
 }
+
+/* Apresentação aprovada: título no corpo e três mensagens sem cartões aninhados. */
+#pfsComponente #pfsProgressBox { width: min(960px, 100%); }
+#pfsComponente #pfsProgressBox .pfs-body { padding: 30px 28px; gap: 0; }
+#pfsComponente .pfs-flow-title {
+    margin: 0 0 22px; text-align: center; color: #17334b;
+    font-size: clamp(20px, 3vw, 28px); font-weight: 650; line-height: 1.3;
+}
+.pfs-flow-title > i { display: block; margin-bottom: 12px; color: #27739d; font-size: 36px; }
+.pfs-flow-title > span { display: block; }
+#pfsComponente #pfsProgressBox .pfs-current-stage,
+#pfsComponente #pfsProgressBox .pfs-run-info > div:first-child,
+#pfsComponente #pfsProgressBox .pfs-messages,
+#pfsComponente #pfsProgressBox .pfs-last-completed,
+#pfsComponente #pfsProgressBox #pfsProgressWarning { display: none; }
+#pfsComponente #pfsProgressBox .pfs-run-info {
+    grid-template-columns: minmax(0, 260px); justify-content: center; text-align: center;
+}
+#pfsComponente #pfsProgressBox .pfs-progress-guidance {
+    display: flex; align-items: flex-start; gap: 9px; margin: 0;
+    font-size: 12px; line-height: 1.6; color: #52667a;
+}
+.pfs-progress-guidance > i { flex: none; margin-top: 3px; color: #27739d; }
+#pfsComponente #pfsHierarchy {
+    display: grid; gap: 24px; width: 100%; margin: 22px 0;
+    max-height: none; overflow: visible; padding: 0;
+}
+#pfsComponente #pfsHierarchy[hidden] { display: none; }
+.pfs-level { min-width: 0; margin: 0; padding: 0; border: 0; background: none; }
+.pfs-level-line { display: flex; align-items: baseline; gap: 12px; min-width: 0; margin-bottom: 9px; white-space: nowrap; }
+.pfs-level-message { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: #17334b; font-size: 14px; font-weight: 550; }
+.pfs-level-percent { flex: 0 0 42px; text-align: right; font-size: 13px; font-weight: 700; color: #235f84; font-variant-numeric: tabular-nums; }
+#pfsComponente .pfs-level .pfs-progress-bar { width: 100%; height: 8px; background: #e1e8ee; border-radius: 4px; }
+#pfsComponente .pfs-level .pfs-progress-fill { border-radius: inherit; background: #27739d; }
+#pfsComponente .pfs-level[data-state="concluido"] .pfs-progress-fill { background: #21825b; }
+#pfsComponente .pfs-level[data-state="erro"] .pfs-progress-fill { background: #bb4138; }
+#pfsComponente .pfs-level[data-state="parcial"] .pfs-progress-fill,
+#pfsComponente .pfs-level[data-state="cancelado"] .pfs-progress-fill { background: #aa701b; }
+#pfsComponente #pfsDiagnostics { margin-top: 18px; }
+#pfsComponente #pfsDiagnostics [data-pfs="technical-detail"] { white-space: pre-line; font-size: 13px; color: #52667a; }
+#pfsComponente .pfs-legacy-history[hidden] { display: none; }
+
+#pfsComponente #pfsConfirmBox { width: min(560px, 100%); height: auto; max-height: calc(100dvh - 32px); }
+#pfsComponente #pfsConfirmBox .pfs-confirm-body {
+    padding: 32px 28px; text-align: center; justify-content: flex-start;
+    flex: 0 1 auto; min-height: 0; overflow-y: auto; gap: 20px;
+}
+#pfsComponente #pfsConfirmBox .pfs-header,
+#pfsComponente #pfsConfirmBox .pfs-footer { flex-shrink: 0; }
+#pfsComponente #pfsConfirmBox .pfs-confirm-body > * { flex-shrink: 0; margin: 0; }
+#pfsComponente #pfsConfirmBox #pfsConfirmIcon {
+    display: flex; justify-content: center; align-items: center; width: auto; height: auto;
+    margin: 0 0 12px; padding: 0; background: none; color: #27739d; font-size: 36px;
+}
+#pfsComponente #pfsConfirmBox:has(.pfs-header--error) #pfsConfirmIcon { color: #bb4138; }
+#pfsComponente #pfsConfirmTitle { margin: 0; color: #17334b; font-size: clamp(20px, 3vw, 28px); line-height: 1.3; }
+#pfsComponente #pfsConfirmBox .pfs-confirm-message { font-size: 14px; line-height: 1.7; }
+#pfsComponente #pfsConfirmBox .pfs-footer { justify-content: center; gap: 12px; flex-wrap: wrap; padding: 18px 24px; }
+#pfsComponente #pfsConfirmBox .pfs-confirm-input-wrap:not(.pfs-active),
+#pfsComponente #pfsConfirmBox .pfs-confirm-body > p:empty { display: none; }
+#pfsComponente #pfsSuccessBox .pfs-result-title,
+#pfsComponente #pfsSuccessBox .pfs-result-message,
+#pfsComponente #pfsPartialBox .pfs-result-title,
+#pfsComponente #pfsPartialBox .pfs-result-message,
+#pfsComponente #pfsErrorBox .pfs-error-title,
+#pfsComponente #pfsErrorBox .pfs-error-message { text-align: center; }
+@media (max-width: 600px) {
+    #pfsComponente #pfsProgressBox .pfs-body { padding: 24px 16px; }
+    .pfs-level-line { gap: 7px; }
+    .pfs-level-message { font-size: 12px; }
+    .pfs-level-percent { flex-basis: 33px; font-size: 12px; }
+    #pfsComponente #pfsConfirmBox .pfs-confirm-body { padding: 24px 16px; }
+}

@@ -6,17 +6,17 @@ const {chromium}=require('playwright'),{spawn}=require('node:child_process'),pat
   const port=await new Promise((resolve,reject)=>{server.stdout.once('data',d=>resolve(String(d).trim()));server.once('exit',code=>reject(new Error(`Fixture encerrou: ${code}`)));server.stderr.on('data',d=>process.stderr.write(d));});
   browser=await chromium.launch({headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});const page=await browser.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto(`http://127.0.0.1:${port}`);
-  const tarefa=async()=>(await page.locator('.pfs-entity--operation strong').last().innerText()).replace('Operation: ','');
-  const tarefaE=texto=>page.waitForFunction(t=>[...document.querySelectorAll('.pfs-entity--operation strong')].at(-1)?.textContent===`Operation: ${t}`,texto,{timeout:10000});
-  await page.waitForSelector('.pfs-entity--workflow');
+  const tarefa=()=>page.evaluate(()=>ProcessFeedback.atual._workflow.tasks.flatMap(t=>t.operations).findLast(o=>o.estado==='executando')?.nome);
+  const tarefaE=texto=>page.waitForFunction(t=>document.querySelector('[data-level="operation"] .pfs-level-message')?.textContent.includes(t),texto,{timeout:10000});
+  await page.waitForSelector('[data-level="workflow"]');
   const post=body=>page.request.post(`http://127.0.0.1:${port}/tarefa`,{data:body});
   await post({mensagem:'Lendo base de risco',feitas:3,total:4});
   await tarefaE('Lendo base de risco');
-  await page.waitForFunction(()=>document.querySelector('.pfs-entity--operation [role="progressbar"]').getAttribute('aria-valuenow')==='75');
+  await page.waitForFunction(()=>document.querySelector('[data-level="operation"] [role="progressbar"]').getAttribute('aria-valuenow')==='75');
   await post({mensagem:'Calculando interseções'});
   await tarefaE('Calculando interseções');
-  assert.equal(await page.locator('.pfs-entity--operation [role="progressbar"]').last().getAttribute('aria-valuenow'),null,'Nova operação permanece indeterminada até receber medição');
-  assert.equal(await page.locator('.pfs-entity--operation[data-state="executando"]').count(),2,'Começar outra operação não conclui a anterior');
+  assert.equal(await page.locator('[data-level="operation"] [role="progressbar"]').getAttribute('aria-valuenow'),null,'Nova operação permanece indeterminada até receber medição');
+  assert.equal(await page.evaluate(()=>ProcessFeedback.atual._workflow.tasks.flatMap(t=>t.operations).filter(o=>o.estado==='executando').length),2,'Começar outra operação não conclui a anterior');
   // Poll atrasado não pode substituir uma mensagem já recebida pelo canal vivo.
   await page.evaluate(()=>ProcessFeedback.acompanhar({id:'teste',status:'executando',etapa:'Estado antigo',tarefa_id:1,progresso_tarefa:75,eventos_url:'/eventos'}));
   assert.equal(await tarefa(),'Calculando interseções');

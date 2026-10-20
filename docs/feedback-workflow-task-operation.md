@@ -3,6 +3,31 @@
 Implementação local no modal `ProcessFeedbackSystem` existente. Não há outro
 modal de progresso nem outro canal de acompanhamento.
 
+## Apresentação aprovada
+
+O corpo do acompanhamento mostra o ícone do fluxo e seu nome centralizados,
+seguido da orientação com ícone de informação. Três linhas independentes exibem
+a atividade atual, a etapa e o processo, nessa ordem. Cada linha tem uma frase
+informativa e uma barra com a mesma largura das demais, sem rótulos técnicos ou
+cartões aninhados. A operação em execução mais recente é apresentada; as demais
+continuam preservadas no snapshot, sem conclusão implícita.
+
+O tempo decorrido fica centralizado. Os blocos de situação, etapa atual e aviso
+de ausência de atualização não são apresentados. “Detalhes da execução” começa
+recolhido e recebe apenas `diagnostico_tecnico` ou `erro` do snapshot; logs,
+contagens e nomes da hierarquia não são copiados para esse espaço. Sem diagnóstico
+adicional, aparece uma mensagem neutra. Textos são inseridos com `textContent`.
+
+Chamadores legados continuam aceitos e usam as medidas disponíveis na mesma
+estrutura visual, sem inventar medidas para níveis não informados. As confirmações
+de início e cancelamento compartilham título e ícone centralizados no corpo,
+altura adaptada ao conteúdo e rolagem em telas pequenas. Promessas, teclado,
+campos obrigatórios e confirmação explícita mantêm o comportamento anterior.
+Sucesso, parcial e erro recebem apenas centralização do título e mensagem principal.
+
+`documentacao/feedback-hierarquia.html` utiliza diretamente o componente da
+aplicação, sem renderizador ou estilos próprios para os modais.
+
 ## Contrato
 
 Snapshots de polling e SSE incluem `workflow`, com `id`, `nome`, `estado`,
@@ -57,7 +82,8 @@ parcial e o controlador de resultado respeita esse estado.
 Abrir uma execução inicializa o DOM e limpa histórico, medidas e canais anteriores.
 Ocultar/fechar acompanhamento ativo mantém o job e o canal; o botão “Ver
 acompanhamento” reabre a mesma estrutura. Expansão, rolagem e elementos da
-hierarquia são preservados por ID durante atualizações.
+área de detalhes são preservados durante atualizações. As três linhas de progresso
+reutilizam os mesmos elementos do DOM.
 
 O botão Cancelar pede confirmação; uma requisição aceita permanece pendente até
 o backend confirmar o estado. Falha da requisição permite tentar novamente.

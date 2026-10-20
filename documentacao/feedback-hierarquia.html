@@ -25,84 +25,6 @@
     .note p { margin: 5px 0; }
     footer { margin-top: 24px; color: #52667a; font-size: 13px; }
     #demoStatus { min-height: 24px; }
-    /* Proposta visual restrita a este HTML. O componente da aplicação não é alterado. */
-    #pfsComponente #pfsSuccessBox .pfs-result-title,
-    #pfsComponente #pfsSuccessBox .pfs-result-message,
-    #pfsComponente #pfsPartialBox .pfs-result-title,
-    #pfsComponente #pfsPartialBox .pfs-result-message,
-    #pfsComponente #pfsErrorBox .pfs-error-title,
-    #pfsComponente #pfsErrorBox .pfs-error-message { text-align: center; }
-    #pfsComponente #pfsProgressBox { width: min(960px, 100%); }
-    #previewFlowTitle {
-      margin: 0 0 22px; text-align: center; color: #17334b;
-      font-size: clamp(20px, 3vw, 28px); font-weight: 650; line-height: 1.3;
-    }
-    #previewFlowTitle .preview-flow-icon {
-      display: block; margin-bottom: 12px; color: #27739d; font-size: 36px;
-    }
-    #previewFlowTitle .preview-flow-name { display: block; }
-    #pfsComponente #pfsProgressBox .pfs-run-info > div:first-child { display: none; }
-    #pfsComponente #pfsProgressBox .pfs-run-info {
-      grid-template-columns: minmax(0, 260px); justify-content: center; text-align: center;
-    }
-    #pfsComponente #pfsProgressBox [data-pfs="progress-current-task"] { display: none; }
-    #pfsComponente #pfsProgressBox .pfs-body { padding: 30px 28px; }
-    #pfsComponente #pfsProgressBox .pfs-current-stage,
-    #pfsComponente #pfsProgressBox #pfsHierarchy,
-    #pfsComponente #pfsProgressBox [data-pfs="contact-status"] { display: none !important; }
-    #pfsComponente #pfsProgressBox .pfs-progress-guidance {
-      display: flex; align-items: flex-start; gap: 9px; margin: 0;
-      font-size: 12px; line-height: 1.6; color: #52667a;
-    }
-    .preview-info-icon { flex: none; margin-top: 3px; color: #27739d; }
-    #pfsComponente #pfsProgressBox #pfsDiagnostics { margin-top: 18px; }
-    #pfsComponente #pfsProgressBox #pfsDiagnostics #pfsLog,
-    #pfsComponente #pfsProgressBox #pfsDiagnostics #pfsCompletedList,
-    #pfsComponente #pfsProgressBox #pfsDiagnostics .pfs-messages { display: none !important; }
-    #previewTechnicalDetail { white-space: pre-line; font-size: 13px; color: #52667a; }
-    #pfsComponente #pfsConfirmBox {
-      width: min(560px, 100%); height: auto; max-height: calc(100dvh - 32px);
-    }
-    #pfsComponente #pfsConfirmBox .pfs-confirm-body {
-      padding: 32px 28px; text-align: center; justify-content: flex-start;
-      flex: 0 1 auto; min-height: 0; overflow-y: auto; gap: 20px;
-    }
-    #pfsComponente #pfsConfirmBox .pfs-header,
-    #pfsComponente #pfsConfirmBox .pfs-footer { flex-shrink: 0; }
-    #pfsComponente #pfsConfirmBox .pfs-confirm-body > * { flex-shrink: 0; margin: 0; }
-    #previewConfirmHeading { margin-bottom: 20px; text-align: center; }
-    #pfsComponente #pfsConfirmBox #pfsConfirmIcon {
-      display: flex; justify-content: center; align-items: center;
-      width: auto; height: auto; margin: 0 0 12px; padding: 0;
-      background: none; color: #bb4138; font-size: 36px;
-    }
-    #pfsComponente #pfsConfirmBox #pfsConfirmTitle {
-      margin: 0; color: #17334b; font-size: clamp(20px, 3vw, 28px); line-height: 1.3;
-    }
-    #pfsComponente #pfsConfirmBox #pfsConfirmIcon:has(.fa-layer-group) { color: #27739d; }
-    #pfsComponente #pfsConfirmBox .pfs-confirm-message { font-size: 14px; line-height: 1.7; }
-    #pfsComponente #pfsConfirmBox .pfs-confirm-prompt { display: none; }
-    #pfsComponente #pfsConfirmBox .pfs-footer { justify-content: center; gap: 12px; flex-wrap: wrap; padding: 18px 24px; }
-    #previewFlat { display: grid; gap: 24px; width: 100%; margin: 22px 0; }
-    .preview-level { min-width: 0; margin: 0; padding: 0; border: 0; background: none; }
-    .preview-line { display: flex; align-items: baseline; gap: 12px; min-width: 0; margin-bottom: 9px; white-space: nowrap; }
-    .preview-message { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: #17334b; font-size: 14px; font-weight: 550; }
-    .preview-percent { flex: 0 0 42px; text-align: right; font-size: 13px; font-weight: 700; color: #235f84; font-variant-numeric: tabular-nums; }
-    .preview-bar { width: 100%; height: 8px; overflow: hidden; background: #e1e8ee; border-radius: 4px; }
-    .preview-fill { height: 100%; width: 0; border-radius: inherit; background: #27739d; transition: width .25s ease; }
-    .preview-level[data-state="concluido"] .preview-fill { background: #21825b; }
-    .preview-level[data-state="erro"] .preview-fill { background: #bb4138; }
-    .preview-level[data-state="parcial"] .preview-fill,
-    .preview-level[data-state="cancelado"] .preview-fill { background: #aa701b; }
-    .preview-bar.is-indeterminate .preview-fill { width: 25% !important; animation: previewSlide 1.6s ease-in-out infinite; }
-    @keyframes previewSlide { from { transform: translateX(-100%); } to { transform: translateX(400%); } }
-    @media (max-width: 600px) {
-      #pfsComponente #pfsProgressBox .pfs-body { padding: 24px 16px; }
-      .preview-line { gap: 7px; }
-      .preview-message { font-size: 12px; }
-      .preview-percent { flex-basis: 33px; font-size: 12px; }
-    }
-    @media (prefers-reduced-motion: reduce) { .preview-bar.is-indeterminate .preview-fill { animation: none; } }
   </style>
 </head>
 <body>
@@ -132,7 +54,7 @@
         As demais informações e controles do modal permanecem disponíveis. “Ver acompanhamento” retorna ao painel ocultado.</p>
     </div>
     <p id="demoStatus" role="status">Preparando a demonstração…</p>
-    <footer>Esta alteração visual existe apenas nesta prévia. A aplicação será ajustada depois da aprovação.</footer>
+    <footer>Esta demonstração utiliza o componente da aplicação, com dados fictícios e sem chamadas ao servidor.</footer>
   </main>
   <script src="../assets/js/process_feedback_unified.js"></script>
   <script>
@@ -146,128 +68,6 @@
         ['Analisar relações espaciais', ['Cruzar feições com a base territorial', 'Consolidar os atributos']],
         ['Preparar as saídas', ['Gerar o GeoPackage', 'Montar o pacote de resultados']]
       ];
-      function styleConfirmation() {
-        const box = document.querySelector('#pfsConfirmBox');
-        if (box.querySelector('#previewConfirmHeading')) return;
-        const heading = document.createElement('div');
-        heading.id = 'previewConfirmHeading';
-        heading.append(box.querySelector('#pfsConfirmIcon'), box.querySelector('#pfsConfirmTitle'));
-        box.querySelector('.pfs-confirm-body').prepend(heading);
-        const headerLabel = document.createElement('span');
-        headerLabel.textContent = 'Confirmação';
-        box.querySelector('.pfs-header-text').append(headerLabel);
-      }
-      function renderFlat(workflow) {
-        // Substitui apenas a apresentação nesta instância de demonstração.
-        // Os elementos originais permanecem ocultos para preservar as APIs do componente.
-        const body = this.box.querySelector('.pfs-body');
-        this.box.classList.add('pfs-has-hierarchy');
-        let flowTitle = body.querySelector('#previewFlowTitle');
-        if (!flowTitle) {
-          flowTitle = document.createElement('h2');
-          flowTitle.id = 'previewFlowTitle';
-          const icon = document.createElement('i');
-          icon.className = 'fas fa-layer-group preview-flow-icon';
-          icon.setAttribute('aria-hidden', 'true');
-          const name = document.createElement('span');
-          name.className = 'preview-flow-name';
-          flowTitle.append(icon, name);
-          body.querySelector('#pfsHierarchy').before(flowTitle);
-        }
-        flowTitle.querySelector('.preview-flow-name').textContent = workflow.nome;
-        this.box.setAttribute('aria-labelledby', 'previewFlowTitle');
-        const guidance = body.querySelector('.pfs-progress-guidance');
-        if (!guidance.querySelector('i')) {
-          const icon = document.createElement('i');
-          icon.className = 'fas fa-info-circle preview-info-icon';
-          icon.setAttribute('aria-hidden', 'true');
-          guidance.prepend(icon);
-        }
-        flowTitle.after(guidance);
-        const diagnostics = body.querySelector('#pfsDiagnostics');
-        diagnostics.querySelector('summary').textContent = 'Detalhes da execução';
-        const activity = body.querySelector('.pfs-messages');
-        if (activity.parentElement !== diagnostics) diagnostics.append(activity);
-        let technicalDetail = diagnostics.querySelector('#previewTechnicalDetail');
-        if (!technicalDetail) {
-          technicalDetail = document.createElement('p');
-          technicalDetail.id = 'previewTechnicalDetail';
-          diagnostics.append(technicalDetail);
-        }
-        let flat = body.querySelector('#previewFlat');
-        if (!flat) {
-          flat = document.createElement('div');
-          flat.id = 'previewFlat';
-          flat.setAttribute('aria-label', 'Andamento do processamento');
-          for (const label of ['Operation', 'Task', 'Workflow']) {
-            const row = document.createElement('section');
-            row.className = 'preview-level';
-            row.dataset.level = label.toLowerCase();
-            row.innerHTML = `<div class="preview-line"><span class="preview-message"></span><span class="preview-percent"></span></div><div class="preview-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100"><div class="preview-fill"></div></div>`;
-            flat.appendChild(row);
-          }
-          body.querySelector('#pfsHierarchy').before(flat);
-        }
-        const tasks = workflow.tasks;
-        const active = items => items.find(item => ['executando','erro','parcial','cancelado','interrompido'].includes(item.estado)) ||
-          items.find(item => item.estado === 'pendente') || items.at(-1);
-        const task = active(tasks);
-        const op = active(task.operations);
-        // Este espaço recebe somente diagnóstico adicional explícito.
-        // Nomes, progresso, mensagens e histórico dos três níveis não são reutilizados.
-        technicalDetail.textContent = job.diagnostico_tecnico ||
-          'Nenhum detalhe técnico adicional disponível.';
-        const countOps = task.operations.filter(item => item.estado === 'concluido').length;
-        const countTasks = tasks.filter(item => item.estado === 'concluido').length;
-        const units = op.total ? `${op.feitas}/${op.total} ${op.unidade}` : 'registros sem total informado';
-        const actions = [
-          ['Ler camada de entrada', `Lendo ${units} da camada de entrada`],
-          ['Validar as geometrias', `Validando as geometrias de ${units}`],
-          ['Cruzar feições com a base territorial', `Cruzando ${units} com a base territorial`],
-          ['Consolidar os atributos', `Consolidando os atributos de ${units}`],
-          ['Gerar o GeoPackage', `Gerando o GeoPackage com ${units}`],
-          ['Montar o pacote de resultados', `Montando o pacote de resultados com ${units}`]
-        ];
-        const operationPhrase = actions.find(([name]) => op.nome.startsWith(name))?.[1] || `Processando ${units}`;
-        const batch = op.nome.match(/lote (\d+)/);
-        const taskPhrases = [
-          `Preparando os dados com ${countOps}/${task.operations.length} operações concluídas`,
-          `Analisando relações espaciais com ${countOps}/${task.operations.length} operações concluídas`,
-          `Preparando as saídas com ${countOps}/${task.operations.length} operações concluídas`
-        ];
-        const describe = (entity, phrase, subject, count) => {
-          const endings = {
-            concluido: 'concluído', erro: 'encerrado com erro', parcial: 'encerrado parcialmente',
-            cancelado: 'cancelado', interrompido: 'interrompido',
-            pendente: 'aguardando início', nao_executado: 'não executado'
-          };
-          return endings[entity.estado]
-            ? `${subject} ${endings[entity.estado]} com ${count}.`
-            : `${phrase}.`;
-        };
-        const rows = [
-          [op, describe(op, `${operationPhrase}${batch ? ` no lote ${batch[1]}` : ''}`, 'Processamento dos registros', units)],
-          [task, describe(task, taskPhrases[tasks.indexOf(task)], 'Processamento da etapa', `${countOps}/${task.operations.length} operações concluídas`)],
-          [workflow, job.cancelamento_solicitado && workflow.estado === 'executando' ?
-            'Aguardando a confirmação do cancelamento da extração de atributos territoriais.' :
-            describe(workflow, `Extraindo ${countTasks}/${tasks.length} de atributos territoriais`, 'Processamento dos atributos territoriais', `${countTasks}/${tasks.length} etapas concluídas`)]
-        ];
-        rows.forEach(([entity, text], index) => {
-          const row = flat.children[index];
-          row.dataset.state = entity.estado;
-          const message = row.querySelector('.preview-message');
-          message.textContent = text;
-          message.title = text;
-          const pct = Number.isFinite(entity.percentual) ? entity.percentual : null;
-          row.querySelector('.preview-percent').textContent = pct === null ? '—' : `${Math.round(pct)}%`;
-          const bar = row.querySelector('.preview-bar');
-          bar.setAttribute('aria-label', text);
-          bar.classList.toggle('is-indeterminate', pct === null && entity.estado === 'executando');
-          if (pct === null) bar.removeAttribute('aria-valuenow');
-          else bar.setAttribute('aria-valuenow', String(pct));
-          bar.firstElementChild.style.width = `${pct || 0}%`;
-        });
-      }
       function build(many = false) {
         const id = `demonstracao-${++sequence}`;
         return {id, revisao: 0, status: 'executando', cancelavel: true,
@@ -321,7 +121,6 @@
             prompt: '', icon: 'fas fa-layer-group',
             cancelLabel: 'Voltar', confirmLabel: 'Iniciar processamento'
           });
-          styleConfirmation();
           if (await confirmation) open('live');
           else status('Início não confirmado. Nenhum processamento foi iniciado.');
           return;
@@ -348,8 +147,6 @@
             status('Cancelamento confirmado pela resposta sintética. Nenhuma operação real foi executada.');
           }, 1000);
         }});
-        process.renderWorkflow = renderFlat;
-        styleConfirmation();
         process.box.querySelector('#pfsDiagnostics').open = false;
         publish();
         if (kind === 'confirm') process.box.querySelector('#pfsCancelBtn').click();
