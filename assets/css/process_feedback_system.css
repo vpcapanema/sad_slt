@@ -604,3 +604,23 @@
   #pfsComponente #pfsProgressBox .pfs-body { gap: 7px; }
   #pfsComponente .pfs-confirm-message, #pfsComponente .pfs-credential-message { margin-bottom: 7px; }
 }
+
+
+/* Feedback hierárquico: workflow > task > operation */
+.pfs-execution-hierarchy { display:flex; flex-direction:column; gap:12px; margin:14px 0; }
+.pfs-execution-hierarchy[hidden] { display:none; }
+.pfs-hierarchy-node { padding:12px; border:1px solid var(--pfs-gray-200); border-radius:10px; min-width:0; }
+.pfs-hierarchy-node--workflow { background:#f4f8fb; }
+.pfs-hierarchy-node--task { background:#fff; }
+.pfs-hierarchy-node--operation { background:#fafbfd; }
+.pfs-hierarchy-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:13px; color:var(--pfs-navy); }
+.pfs-hierarchy-heading strong { overflow-wrap:anywhere; }
+.pfs-hierarchy-heading span { white-space:nowrap; font-variant-numeric:tabular-nums; }
+.pfs-hierarchy-node small { display:block; margin-top:6px; color:var(--pfs-gray-500); overflow-wrap:anywhere; }
+.pfs-hierarchy-children { display:flex; flex-direction:column; gap:8px; margin-top:12px; padding-left:12px; border-left:2px solid var(--pfs-gray-200); }
+.pfs-hierarchy-bar { height:8px; margin-top:9px; border-radius:99px; background:var(--pfs-gray-200); overflow:hidden; }
+.pfs-hierarchy-fill { height:100%; background:var(--pfs-blue); transition:width .25s ease; }
+.pfs-hierarchy-node--task > .pfs-hierarchy-bar > .pfs-hierarchy-fill { background:var(--pfs-green-dark); }
+.pfs-hierarchy-node--operation > .pfs-hierarchy-bar > .pfs-hierarchy-fill { background:var(--pfs-green); }
+.pfs-hierarchy-indeterminate .pfs-hierarchy-fill { width:35%; animation:pfs-hierarchy-wait 1.5s ease-in-out infinite alternate; }
+@keyframes pfs-hierarchy-wait { from {transform:translateX(-100%)} to {transform:translateX(300%)} }
