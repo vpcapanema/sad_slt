@@ -18,7 +18,7 @@
 <link rel="stylesheet" href="/assets/css/extracao-atributos.css">
 <link rel="stylesheet" href="/assets/css/fase1-elegibilidade-v2.css?v=20261021-rosca-integral">
 <link rel="stylesheet" href="/assets/css/fase23-execucao.css">
-<link rel="stylesheet" href="/assets/css/fase2-favorabilidade-v2.css">
+<link rel="stylesheet" href="/assets/css/fase2-favorabilidade-v2.css?v=20261021-resultados">
 <link rel="stylesheet" href="/assets/css/paginas/hierarquizacao-fases-visual.css?v=20261020-cabecalhos-linha-unica">
 {% endblock %}
 {% block conteudo %}
@@ -148,32 +148,100 @@
       </section>
     </div>
   </section>
-  <section class="secao-favorabilidade-sobreposicoes ea-section ev-resultados" aria-labelledby="fv-sobreposicoes-title">
-    <header class="ea-section-head"><span class="ea-number">5</span><h2 id="fv-sobreposicoes-title">Sobreposições de Todas as Demandas</h2></header>
+  <section class="secao-favorabilidade-resultados ea-section ev-resultados" id="ev-resultados" aria-labelledby="ev-resultados-title">
+    <header class="ea-section-head"><span class="ea-number">5</span><h2 id="ev-resultados-title">Resultados da Favorabilidade Territorial</h2></header>
     <div class="ea-section-body">
-      <p class="ea-hint">A rosca reúne todas as entradas, demandas e superfícies da última execução calculada nesta página. Cada fatia representa uma combinação demanda × feição da superfície, proporcional à sua área na soma de todas as sobreposições, sem agrupamento por camada, nome ou classe. Áreas coincidentes são contadas separadamente; contatos sem área permanecem na legenda. Não se agregam classes ou índices.</p>
-      <p id="fv-sobreposicoes-status" class="ea-hint" role="status" aria-live="polite">Calcule a favorabilidade territorial para consultar todas as sobreposições das saídas gravadas.</p>
-      <button id="fv-sobreposicoes-tentar" class="ea-btn" type="button" hidden>Tentar Carregar Sobreposições</button>
-      <div id="fv-sobreposicoes-conteudo" class="evr-detalhes-rosca" hidden>
-        <figure class="evr-rosca-bloco">
-          <h3>Todas as Sobreposições da Análise</h3>
-          <svg id="fv-sobreposicoes-rosca" class="evr-rosca" viewBox="0 0 240 240" role="group" aria-label="Distribuição de todas as sobreposições de todas as demandas e superfícies"></svg>
-        </figure>
-        <div class="evr-detalhes">
-          <p id="fv-sobreposicoes-detalhe" class="ea-hint" aria-live="polite">Selecione uma fatia ou um item da legenda para conferir a demanda, a superfície e a feição de origem.</p>
-          <div id="fv-sobreposicoes-legenda" class="evr-legenda-classes"></div>
+      <p class="ea-hint">Consulte onde as demandas se sobrepõem às superfícies poligonais de favorabilidade de grade e rede e qual é a área dessas sobreposições. Classes e índices são preservados por fragmento no GeoPackage, sem agregação.</p>
+      <p id="ev-resultados-vazio" class="ea-hint">Execute a favorabilidade territorial ou <a id="ev-resultados-abrir" href="#ev-resultados">selecione uma análise já realizada</a> para apresentar os resultados.</p>
+      <p id="ev-resultados-status" class="ea-hint" role="status" aria-live="polite"></p>
+      <button id="ev-resultados-tentar" class="ea-btn" type="button" hidden>Tentar Carregar Resultados</button>
+      <form id="ev-resultados-aliases" hidden>
+        <h3>Revisão dos Nomes de Apresentação</h3>
+        <p class="ea-hint">Confira os nomes das superfícies e das feições, incluindo significado, ortografia e acentuação. As alterações serão salvas no Storage e utilizadas no mapa, na tabela, no gráfico e no PDF. A revisão não modifica as fontes nem os índices registrados.</p>
+        <div id="ev-resultados-nomes" class="ev-resultados-nomes"></div>
+        <label class="ev-resultados-confirmacao"><input id="ev-resultados-revisados" name="nomes_revisados" type="checkbox" required> Revisei os nomes e confirmo que identificam corretamente as camadas desta análise.</label>
+        <button class="ea-btn ea-btn-primary" id="ev-resultados-mostrar" type="submit">Confirmar Nomes e Apresentar Resultados</button>
+      </form>
+      <div id="ev-resultados-conteudo" hidden>
+        <div class="evr-identificacao">
+          <div class="ea-field"><label for="ev-resultados-entrada">Camada das Demandas</label><select id="ev-resultados-entrada" name="entrada_resultados"></select></div>
+          <button class="ea-btn" id="ev-resultados-editar" type="button">Revisar Nomes</button>
         </div>
+        <p id="ev-resultados-resumo" class="ea-hint"></p>
+        <h3>Composição da Análise</h3>
+        <p id="ev-resultados-composicao" class="ea-hint"></p>
+        <div class="evr-fontes">
+          <div class="evr-fonte grade"><h4>Favorabilidade de Grade</h4><div id="ev-resultados-fontes-grade" class="evr-chips"></div></div>
+          <div class="evr-fonte rede"><h4>Favorabilidade de Rede</h4><div id="ev-resultados-fontes-rede" class="evr-chips"></div></div>
+        </div>
+        <div class="evr-analise">
+          <section class="secao-favorabilidade-mapa evr-painel evr-mapa-painel">
+            <header class="evr-titulo"><h3>Onde as Demandas se Sobrepõem</h3><button class="ea-btn" id="ev-resultados-enquadrar" type="button">Ver Todas</button></header>
+            <div id="ev-resultados-mapa" aria-label="Mapa interativo de demandas e interseções de favorabilidade"></div>
+            <div class="evr-legenda-mapa"><span>Azul: Demanda</span><span class="grade">Verde-azulado: Grade</span><span class="rede">Roxo: Rede</span></div>
+            <p class="ea-hint evr-instrucoes">Selecione uma demanda ou uma área sobreposta para atualizar os detalhes, destacar a tabela e ampliar o mapa. As cores identificam os papéis, não os valores dos índices.</p>
+            <p class="ea-hint evr-instrucoes" id="ev-resultados-nota-mapa" role="status"></p>
+          </section>
+          <section class="secao-favorabilidade-sobreposicoes evr-painel">
+            <header class="evr-titulo"><h3>Sobreposições de Todas as Demandas</h3><span id="ev-resultados-id-ativo" class="ea-hint"></span></header>
+            <div class="evr-grafico-conteudo">
+              <div class="ea-field"><label for="ev-resultados-base">Superfície em Análise</label><select id="ev-resultados-base" name="base_resultados"></select></div>
+              <p id="ev-resultados-frase" class="evr-frase" aria-live="polite"></p>
+              <div class="evr-detalhes-rosca">
+                <div class="evr-detalhes" aria-live="polite">
+                  <div><small>Demanda Selecionada</small><h4 id="ev-resultados-nome-ativo"></h4></div>
+                  <dl id="ev-resultados-detalhes-base" hidden>
+                    <div><dt>Categoria</dt><dd id="ev-resultados-categoria"></dd></div>
+                    <div><dt>Superfície</dt><dd id="ev-resultados-nome-base"></dd></div>
+                    <div id="ev-resultados-detalhes-classe" hidden><dt>Classe — Feição Sobreposta</dt><dd id="ev-resultados-nome-classe"></dd></div>
+                  </dl>
+                  <div class="evr-metrica evr-total"><small>Área Total da Demanda</small><strong id="ev-resultados-total-km"></strong><span id="ev-resultados-total-ha"></span></div>
+                  <div id="ev-resultados-metricas" class="evr-metricas" hidden>
+                    <div class="evr-metrica"><small id="ev-resultados-rotulo-area">Área Sobreposta</small><strong id="ev-resultados-area-km"></strong><span id="ev-resultados-area-ha"></span></div>
+                    <div class="evr-metrica"><small>Percentual da Área da Demanda</small><strong id="ev-resultados-percentual"></strong><span>Área sobreposta ÷ área total da demanda</span></div>
+                  </div>
+                  <p id="ev-resultados-aviso" class="ea-hint"></p>
+                </div>
+                <figure class="evr-rosca-bloco">
+                  <h4>Todas as Sobreposições da Análise</h4>
+                  <svg id="ev-resultados-rosca" class="evr-rosca" viewBox="0 0 240 240" role="group" aria-label="Distribuição de todas as sobreposições de todas as demandas e superfícies"></svg>
+                  <div id="ev-resultados-legenda" class="evr-legenda-classes"></div>
+                </figure>
+              </div>
+              <p class="ea-hint">A rosca reúne todas as entradas, demandas e superfícies da análise, independentemente da seleção no mapa, da paginação e das linhas ocultas na tabela. Cada fatia representa uma combinação demanda × feição da superfície, proporcional à sua área na soma de todas as sobreposições, sem agrupamento por camada, nome ou classe. Áreas coincidentes são contadas separadamente. Contatos sem área permanecem na legenda. Selecionar uma fatia atualiza os detalhes, a tabela e o mapa, sem retirar as demais fatias.</p>
+            </div>
+          </section>
+        </div>
+        <section class="secao-favorabilidade-tabela evr-painel">
+          <header class="evr-titulo"><h3>Quanto Cada Demanda Sobrepõe</h3><span class="ea-hint">Área sobreposta por superfície · km² e hectares</span></header>
+          <div class="ea-table-wrap"><table id="ev-resultados-tabela" data-table-sort="off" aria-label="Áreas de Sobreposição por Demanda"></table></div>
+          <div class="evr-controles" role="toolbar" aria-label="Controles da tabela de sobreposições">
+            <button id="ev-resultados-vazias" class="ea-btn ea-icon-button" type="button" title="Ocultar linhas e colunas vazias" aria-label="Ocultar linhas e colunas vazias" aria-pressed="false" aria-controls="ev-resultados-tabela"><i class="fas fa-eye-slash" aria-hidden="true"></i></button>
+            <span id="ev-resultados-visibilidade" class="ea-hint" role="status">Todas as linhas e colunas visíveis.</span>
+          </div>
+          <nav class="ev-resultados-paginacao" aria-label="Paginação dos Resultados">
+            <button id="ev-resultados-anterior" class="ea-btn" type="button">Anterior</button>
+            <span id="ev-resultados-pagina" class="ea-hint"></span>
+            <button id="ev-resultados-proxima" class="ea-btn" type="button">Próxima</button>
+          </nav>
+          <p class="ea-hint evr-instrucoes">Cada valor soma exclusivamente as áreas sobrepostas às feições da superfície. O travessão indica ausência de interseção; zero indica contato sem área e é um valor válido. Ocultar vazias considera todas as páginas. Selecione um nome ou um valor para atualizar os detalhes e ampliar o mapa.</p>
+        </section>
+        <details><summary>Metodologia da Análise</summary><p id="ev-resultados-metodologia" class="ea-hint"></p></details>
       </div>
-    </div>
-  </section>
-  <section class="secao-favorabilidade-resultados card card-favorabilidade-resultados ahp-step-section" aria-labelledby="fv-resultados-title">
-    <header class="ahp-section-label"><span class="ahp-subsection-num">6</span><h2 id="fv-resultados-title">Resultados registrados na hierarquização</h2></header>
-    <div class="ahp-section-body">
-      <p class="ea-hint">Consulta dos índices já registrados na rodada selecionada. A preparação e o envio à bancada não executam o cálculo nem substituem esses resultados.</p>
+      <footer class="ev-resultados-download">
+        <p class="ea-hint"><strong>Relatório e Camadas da Análise</strong><br>O pacote inclui o PDF, todas as demandas processadas, suas interseções e os metadados, independentemente da seleção em tela. Classes e índices originais permanecem nos fragmentos do GeoPackage, sem agregação. Não é necessário repetir o processamento.</p>
+        <button class="ea-btn ea-btn-primary" id="ev-resultados-download" type="button" disabled>Baixar Relatório e Camadas (.zip)</button>
+      </footer>
+      <section class="secao-favorabilidade-registrados evr-painel" aria-labelledby="fv-resultados-title">
+      <header class="evr-titulo"><h3 id="fv-resultados-title">Resultados registrados na hierarquização</h3></header>
+      <div class="ahp-section-body">
+      <p class="ea-hint">Consulta dos índices já registrados na rodada selecionada. Preparação, envio à bancada e cálculo de sobreposições não substituem esses índices.</p>
       <p id="fv-resultados-vazio" class="ea-hint">Selecione uma hierarquização para consultar os resultados registrados.</p>
       <div id="fv-indicadores" class="fase-summary-grid"></div>
       <div class="fase-table-wrap"><table class="fase-table" aria-label="Índices registrados nas demandas"><thead><tr><th>Demanda</th><th>Índice de grade</th><th>Índice de rede</th></tr></thead><tbody id="fv-resultados"></tbody></table></div>
       <details id="fv-auditoria" hidden><summary>Auditoria da execução registrada</summary><pre id="fv-auditoria-dados"></pre></details>
+      </div>
+      </section>
     </div>
   </section>
   <template id="fv-tpl-run-row"><tr><td data-name></td><td data-source></td></tr></template>
@@ -186,5 +254,5 @@
 <script src="/assets/vendor/maplibre-gl/maplibre-gl.js"></script>
 <script src="/assets/vendor/maplibre-gl/leaflet-maplibre-gl.js"></script>
 <script src="/restrict/hierarquizacao/js/hier-api.js"></script>
-<script type="module" src="/restrict/hierarquizacao/js/fase2-favorabilidade-v2.js?v=20261021-revisao-fonte"></script>
+<script type="module" src="/restrict/hierarquizacao/js/fase2-favorabilidade-v2.js?v=20261021-resultados"></script>
 {% endblock %}

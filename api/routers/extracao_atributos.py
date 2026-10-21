@@ -407,11 +407,13 @@ class ArquivoResultadosElegibilidade(BaseModel):
 
 
 @router.post('/elegibilidade/resultados/abrir')
-def abrir_resultados_elegibilidade(payload: ArquivoResultadosElegibilidade,
+@router.post('/favorabilidade/resultados/abrir')
+def abrir_resultados_elegibilidade(request: Request, payload: ArquivoResultadosElegibilidade,
                                   user: SessionUser = Depends(require_geospatial_access)):
     from api.services import elegibilidade_relatorio
     try:
-        return elegibilidade_relatorio.abrir(payload.arquivo, user.id)
+        opcoes = {'analise': 'favorabilidade'} if '/favorabilidade/' in request.url.path else {}
+        return elegibilidade_relatorio.abrir(payload.arquivo, user.id, **opcoes)
     except FileNotFoundError as exc:
         raise HTTPException(404, str(exc)) from exc
     except ValueError as exc:
@@ -421,11 +423,13 @@ def abrir_resultados_elegibilidade(payload: ArquivoResultadosElegibilidade,
 
 
 @router.post('/elegibilidade/resultados/preparar')
-def preparar_resultados_elegibilidade(payload: ReferenciasResultadosElegibilidade,
+@router.post('/favorabilidade/resultados/preparar')
+def preparar_resultados_elegibilidade(request: Request, payload: ReferenciasResultadosElegibilidade,
                                       user: SessionUser = Depends(require_geospatial_access)):
     from api.services import elegibilidade_relatorio
     try:
-        return elegibilidade_relatorio.preparar(payload.execucoes, user.id)
+        opcoes = {'analise': 'favorabilidade'} if '/favorabilidade/' in request.url.path else {}
+        return elegibilidade_relatorio.preparar(payload.execucoes, user.id, **opcoes)
     except FileNotFoundError as exc:
         raise HTTPException(404, str(exc)) from exc
     except ValueError as exc:
@@ -435,13 +439,16 @@ def preparar_resultados_elegibilidade(payload: ReferenciasResultadosElegibilidad
 
 
 @router.post('/elegibilidade/resultados/visualizar')
-def visualizar_resultados_elegibilidade(payload: ApresentacaoElegibilidade,
+@router.post('/favorabilidade/resultados/visualizar')
+def visualizar_resultados_elegibilidade(request: Request, payload: ApresentacaoElegibilidade,
                                        user: SessionUser = Depends(require_geospatial_access)):
     from api.services import elegibilidade_relatorio
     try:
-        modelo, _ = elegibilidade_relatorio.montar(payload.execucoes, payload.nomes, user.id, payload.revisados)
-        elegibilidade_relatorio.salvar_nomes(payload.execucoes, modelo, user.id)
-        elegibilidade_relatorio.registrar_relatorios(payload.execucoes, modelo, user.id)
+        opcoes = {'analise': 'favorabilidade'} if '/favorabilidade/' in request.url.path else {}
+        modelo, _ = elegibilidade_relatorio.montar(payload.execucoes, payload.nomes, user.id, payload.revisados, **opcoes)
+        elegibilidade_relatorio.salvar_nomes(payload.execucoes, modelo, user.id, **opcoes)
+        if not opcoes:
+            elegibilidade_relatorio.registrar_relatorios(payload.execucoes, modelo, user.id)
         return modelo
     except FileNotFoundError as exc:
         raise HTTPException(404, str(exc)) from exc
@@ -452,13 +459,16 @@ def visualizar_resultados_elegibilidade(payload: ApresentacaoElegibilidade,
 
 
 @router.post('/elegibilidade/resultados/pacote')
-def pacote_resultados_elegibilidade(payload: ApresentacaoElegibilidade,
+@router.post('/favorabilidade/resultados/pacote')
+def pacote_resultados_elegibilidade(request: Request, payload: ApresentacaoElegibilidade,
                                    user: SessionUser = Depends(require_geospatial_access)):
     from urllib.parse import quote
     from api.services import elegibilidade_relatorio
     try:
-        modelo, arquivos = elegibilidade_relatorio.montar(payload.execucoes, payload.nomes, user.id, payload.revisados)
-        elegibilidade_relatorio.registrar_relatorios(payload.execucoes, modelo, user.id)
+        opcoes = {'analise': 'favorabilidade'} if '/favorabilidade/' in request.url.path else {}
+        modelo, arquivos = elegibilidade_relatorio.montar(payload.execucoes, payload.nomes, user.id, payload.revisados, **opcoes)
+        if not opcoes:
+            elegibilidade_relatorio.registrar_relatorios(payload.execucoes, modelo, user.id)
         dados, caminho = elegibilidade_relatorio.pacote(modelo, arquivos)
         return Response(dados, media_type='application/zip', headers={
             'Content-Disposition': "attachment; filename=\"Relatorio e Camadas.zip\"; filename*=UTF-8''" + quote('Relatório e Camadas.zip'),

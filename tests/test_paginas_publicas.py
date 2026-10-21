@@ -100,6 +100,23 @@ def test_catalogo_tem_titulo_e_feedback(client, slug):
     assert 'id="conteudo" aria-live="polite"' in html
 
 
+def test_inicio_icones_acima_e_numeros_junto_aos_titulos(client):
+    html = client.get("/public/").text
+    for numero, icone, titulo in (
+        (1, "fa-regular fa-square-plus", "Cadastro de Demandas"),
+        (2, "fa-solid fa-ranking-star", "Hierarquização de Demandas"),
+        (3, "fa-solid fa-chart-line", "Transparência e Acompanhamento"),
+    ):
+        assert (
+            '<span class="module-card-icon module-card-step-number" aria-hidden="true">'
+            f'<i class="{icone}"></i></span>'
+        ) in html
+        assert (
+            f'<h3><span class="module-card-title-number" aria-hidden="true">{numero}</span>'
+            f'<span>{titulo}</span></h3>'
+        ) in html
+
+
 def test_texto_publico_nao_promete_publicacao_por_aprovacao(client):
     for path in ["/public/", "/public/transparencia/", "/public/cadastro/", "/public/documentacao/"]:
         html = client.get(path).text

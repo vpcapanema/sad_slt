@@ -77,6 +77,31 @@ sem retirar as demais. Os dados sao lidos dos GeoPackages assinados, com
 conferencia das somas e acesso restrito ao usuario das execucoes; carregar ou
 recarregar a rosca nao repete o geoprocessamento nem agrega classes ou indices.
 
+A secao 5, **Resultados da Favorabilidade Territorial**, reutiliza o painel
+completo da Elegibilidade, adaptado aos papeis de grade e rede. A apresentacao
+exige revisao e confirmacao dos nomes de camadas e feicoes; os nomes sao
+persistidos por usuario e assinatura da saida. O painel conecta o mapa de
+demandas e intersecoes, a selecao de entrada e superficie, os detalhes de area
+e percentual, a rosca integral e a tabela paginada. A ocultacao de linhas e
+colunas sem valores nao considera zero como vazio e nao limita a rosca.
+As cores do mapa identificam os papeis, nao representam classes ou indices.
+Nao se simplificam as geometrias para esta apresentacao.
+
+Pode-se reabrir um GeoPackage de favorabilidade ja gravado no Storage, com
+conferencia de metadados, geometrias, vinculos e somas antes da apresentacao.
+O acesso as execucoes e as revisoes de nomes permanecem segregados por usuario
+e modalidade, sem utilizar o namespace da Fase 1. O pacote de download inclui
+PDF de Favorabilidade Territorial, todos os GeoPackages integrais e manifesto,
+com identificacao explicita de lotes parciais e conferencia de integridade no
+Storage. A geracao do pacote nao executa novamente as intersecoes e nao
+registra relatorio de Elegibilidade ou altera indices da hierarquizacao.
+
+A antiga secao 6, **Resultados registrados na hierarquizacao**, passa a ser a
+ultima subsecao da secao de resultados, depois do download. Continua conectada
+a hierarquizacao selecionada na entrada e apresenta os indices ja registrados
+de grade e rede e sua auditoria; estes dados sao independentes das areas
+calculadas e nao sao substituidos pela revisao de nomes ou pelo painel.
+
 ## Produto final do modulo
 
 O modulo deve produzir um pacote homologado de Fase 2 contendo:

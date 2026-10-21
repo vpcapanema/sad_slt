@@ -13,6 +13,7 @@ const assert = require('node:assert/strict');
     let failLayer = '', missingGeometry = false;
     let modoExecucao = 'sucesso';
     let falharGrafico = false;
+    let revisados = false;
     const execucoes = [], normalizacoes = [], jobs = new Map();
     page.on('pageerror', error => errors.push(error.message));
     await page.addLocatorHandler(page.locator('#pfsStatusOverlay.pfs-active'), async () => {
@@ -47,6 +48,43 @@ const assert = require('node:assert/strict');
     const raw = ref => ref.tipo === 'raster' ? ref : {
       id:`storage:${ref.arquivo}`,nome:ref.nome,arquivo:ref.arquivo,inventariar:true,
     };
+    const gradePoligonal = 'storage:superficies-indices/grade.gpkg::grade';
+    const poligono = {type:'Polygon',coordinates:[[[-47,-23],[-46.99,-23],[-46.99,-22.99],[-47,-22.99],[-47,-23]]]};
+    const fontesResultados = ids => [
+      ...ids.map(id => ({id:`entrada:${id}`,nome:`Entrada ${id}`,papel:'entrada',tipo:'camada'})),
+      {id:rede.id,nome:'Rede',papel:'rede',tipo:'camada'},
+      ...['Mesma classe','Mesma classe','Contato'].map((nome,i) =>
+        ({id:`f${i}`,base_id:rede.id,nome,papel:'rede',tipo:'feicao'})),
+      ...(ids.includes('reaberta') ? [
+        {id:gradePoligonal,nome:'Grade Territorial',papel:'grade',tipo:'camada'},
+        {id:'g0',base_id:gradePoligonal,nome:'Município Alfa',papel:'grade',tipo:'feicao'},
+      ]:[]),
+    ];
+    const modeloResultados = (ids, nomes) => {
+      const fontes = fontesResultados(ids).map(f => ({...f,nome:nomes[f.id] || f.nome}));
+      return {fontes,concluidas:ids.length,previstas:ids.length,metodologia:'Áreas por superfície, sem agregar classes ou índices.',
+        entradas:ids.map(id => {
+          const grade = ids.includes('reaberta');
+          const campos = [
+            ...(grade ? [{id:gradePoligonal,nome:nomes[gradePoligonal] || 'Grade Territorial',papel:'grade'}]:[]),
+            {id:rede.id,nome:nomes[rede.id] || 'Rede',papel:'rede'},
+          ];
+          const linhas = Array.from({length:53},(_,i) => ({
+            chave:String(i),id:i===0?'A':i===1?'B':`V${i}`,nome:i===0?'Demanda A':i===1?'Demanda B':`Demanda vazia ${i}`,
+            area_total_m2:100,areas:[...(grade?[i===0?25:null]:[]),i===0?15:i===1?20:null],
+            sobreposicoes:i<2?[
+              ...(grade && i===0 ? [{id:'g0',base_id:gradePoligonal,nome:nomes.g0 || 'Município Alfa',identificador:1,area_m2:25,percentual:25}]:[]),
+              {id:'f0',base_id:rede.id,nome:nomes.f0 || 'Mesma classe',identificador:1,area_m2:i===0?10:20,percentual:i===0?10:20},
+              {id:i===0?'f1':'f2',base_id:rede.id,nome:i===0?(nomes.f1 || 'Mesma classe'):(nomes.f2 || 'Contato'),identificador:i===0?2:3,area_m2:i===0?5:0,percentual:i===0?5:0},
+            ]:[],
+          }));
+          const features = properties => ({type:'Feature',geometry:poligono,properties});
+          return {id,nome:nomes[`entrada:${id}`] || `Entrada ${id}`,campos,linhas,feicoes:53,com_intersecao:2,sem_intersecao:51,
+            geometrias:{type:'FeatureCollection',features:linhas.map(l=>features({chave:l.chave}))},
+            intersecoes:{type:'FeatureCollection',features:linhas.flatMap(l=>l.sobreposicoes.map(s=>features({chave:l.chave,base_id:s.base_id,feicao_id:s.id})))}};
+        })};
+    };
+    await page.route('https://server.arcgisonline.com/**', route => route.abort());
     await page.route('**/api/**', async route => {
       const req = route.request(), url = new URL(req.url()), path = url.pathname;
       const send = data => route.fulfill({json:data});
@@ -56,19 +94,22 @@ const assert = require('node:assert/strict');
       if (path.endsWith('/ahp/hierarquizacoes')) return send([hier,
         {...hier,codigo:'HIER-F1',dados_hierarquizacao:{cabecalho_grupo:{fases_a_executar:[1]}}}]);
       if (path.endsWith('/ahp/hierarquizacoes/HIER-F2')) return send(hier);
-      if (path.endsWith('/favorabilidade/resultados/sobreposicoes')) {
+      if (path.endsWith('/favorabilidade/resultados/preparar')) {
         if (falharGrafico) return route.fulfill({status:422,json:{detail:'Saída alterada; gráfico recusado.'}});
         const ids = req.postDataJSON().execucoes;
-        return send({concluidas:ids.length,previstas:ids.length,entradas:ids.map(id => ({
-          id,nome:`Entrada ${id}`,campos:[{id:rede.id,nome:'Rede',papel:'rede'}],
-          linhas:[{id:'A',chave:'0',nome:'Demanda A',sobreposicoes:[
-            {id:'f0',base_id:rede.id,nome:'Mesma classe',identificador:1,area_m2:10,percentual:10},
-            {id:'f1',base_id:rede.id,nome:'Mesma classe',identificador:2,area_m2:5,percentual:5},
-          ]},{id:'B',chave:'1',nome:'Demanda B',sobreposicoes:[
-            {id:'f0',base_id:rede.id,nome:'Mesma classe',identificador:1,area_m2:20,percentual:20},
-            {id:'f2',base_id:rede.id,nome:'Contato',identificador:3,area_m2:0,percentual:0},
-          ]}],
-        }))});
+        return send({fontes:fontesResultados(ids),revisados,concluidas:ids.length,previstas:ids.length});
+      }
+      if (path.endsWith('/favorabilidade/resultados/visualizar')) {
+        const payload = req.postDataJSON();
+        assert.equal(payload.revisados,true);
+        revisados = true;
+        return send(modeloResultados(payload.execucoes,payload.nomes));
+      }
+      if (path.endsWith('/favorabilidade/resultados/pacote')) {
+        return route.fulfill({contentType:'application/zip',body:Buffer.from('PK-fixture')});
+      }
+      if (path.endsWith('/favorabilidade/resultados/abrir')) {
+        return send({execucoes:['reaberta'],fontes:fontesResultados(['reaberta']),revisados:true,concluidas:1,previstas:1});
       }
       if (/\/favorabilidade\/preparar-(demanda|hierarquizacao)$/.test(path)) {
         normalizacoes.push({path,body:req.postDataJSON()});
@@ -104,7 +145,8 @@ const assert = require('node:assert/strict');
       ]});
       if (path.endsWith('/storage/navegar')) {
         const caminho = url.searchParams.get('caminho');
-        return send({caminho,pai:null,pastas:[],arquivos:caminho === pasta ? [raw(rede),grade] : [raw(entrada)]});
+        return send({caminho,pai:null,pastas:[],arquivos:caminho === pasta ? [raw(rede),grade]
+          : caminho === 'saidas-geoespaciais' ? [{id:'storage:saidas-geoespaciais/analise.gpkg',arquivo:'saidas-geoespaciais/analise.gpkg',nome:'Análise salva',inventariar:true}] : [raw(entrada)]});
       }
       if (path.endsWith('/storage/camadas-arquivo')) {
         const arquivo = url.searchParams.get('arquivo');
@@ -325,17 +367,22 @@ const assert = require('node:assert/strict');
     assert.equal(execucoes[0].rede[0].revisao,'987-654','Cálculo recebe a revisão do original, não o token da prévia');
     assert((await panel()).includes(jobs.get('execucao-1').resultado.id),'Saída persistida incluída na bancada');
     assert.match(await page.locator('#fv-status').textContent(),/Nenhum índice ou classe foi agregado/);
-    assert.equal(await page.locator('#fv-sobreposicoes-rosca path').count(),3,'Rosca inclui sobreposições de ambas as demandas');
-    assert.equal(await page.locator('#fv-sobreposicoes-legenda button').count(),4,'Nomes iguais e contatos sem área não são agrupados ou omitidos');
-    assert.equal(await page.locator('#fv-sobreposicoes-rosca').getAttribute('data-total-m2'),'35');
-    const arcos = await page.locator('#fv-sobreposicoes-rosca path').evaluateAll(paths => paths.map(path => {
+    assert(await page.locator('#ev-resultados-aliases').isVisible());
+    assert(await page.locator('#ev-resultados-download').isDisabled());
+    await page.locator('#ev-resultados-revisados').check();
+    await page.locator('#ev-resultados-mostrar').click();
+    await page.locator('#ev-resultados-conteudo').waitFor({state:'visible'});
+    assert.equal(await page.locator('#ev-resultados-rosca path').count(),3,'Rosca inclui sobreposições de ambas as demandas');
+    assert.equal(await page.locator('#ev-resultados-legenda button').count(),4,'Nomes iguais e contatos sem área não são agrupados ou omitidos');
+    assert.equal(await page.locator('#ev-resultados-rosca').getAttribute('data-total-m2'),'35');
+    const arcos = await page.locator('#ev-resultados-rosca path').evaluateAll(paths => paths.map(path => {
       const numeros = path.getAttribute('d').match(/[-+]?\d*\.?\d+(?:e[-+]?\d+)?/gi).map(Number);
       let angulo = Math.atan2(numeros[8]-120,numeros[7]-120)-Math.atan2(numeros[1]-120,numeros[0]-120);
       if (angulo <= 0) angulo += 2*Math.PI;
       return {angulo,area:Number(path.dataset.areaM2)};
     }));
     for (const arco of arcos) assert(Math.abs(arco.angulo-arco.area/35*2*Math.PI)<1e-10,'Ângulo da fatia proporcional à soma global');
-    assert.equal(await page.locator('#fv-sobreposicoes-rosca path').evaluateAll(paths=>new Set(paths.map(p=>p.dataset.sobreposicao)).size),3);
+    assert.equal(await page.locator('#ev-resultados-rosca path').evaluateAll(paths=>new Set(paths.map(p=>p.dataset.sobreposicao)).size),3);
     const extremos = await page.evaluate(async () => {
       const {renderizarRosca,numeroSobreposicao} = await import('/restrict/hierarquizacao/js/sobreposicoes-rosca.js');
       const svg = document.createElementNS('http://www.w3.org/2000/svg','svg'), legenda = document.createElement('div');
@@ -353,9 +400,45 @@ const assert = require('node:assert/strict');
     assert.equal(extremos.vazio.fatias,0); assert.equal(extremos.vazio.itens,0);
     assert.match(extremos.vazio.texto,/Sem Interseção/);
     assert.equal(extremos.unica,1); assert.equal(extremos.pequeno,'0,000000001');
-    await page.locator('#fv-sobreposicoes-legenda button').last().click();
-    assert.match(await page.locator('#fv-sobreposicoes-detalhe').textContent(),/Demanda B.*Contato.*0,00 m²/);
-    assert.equal(await page.locator('#fv-sobreposicoes-rosca path').count(),3,'Seleção não filtra outras sobreposições');
+    await page.locator('#ev-resultados-legenda button').last().click();
+    assert.equal(await page.locator('#ev-resultados-nome-ativo').textContent(),'Demanda B');
+    assert.equal(await page.locator('#ev-resultados-nome-classe').textContent(),'Contato');
+    assert.equal(await page.locator('#ev-resultados-area-km').textContent(),'0,00 km²');
+    assert.equal(await page.locator('#ev-resultados-rosca path').count(),3,'Seleção não filtra outras sobreposições');
+    assert.equal(await page.locator('#ev-resultados-tabela tbody tr.ativo').getAttribute('data-chave'),'1');
+    await page.locator('#ev-resultados-base').selectOption(rede.id);
+    assert.equal(await page.locator('#ev-resultados-categoria').textContent(),'Favorabilidade de Rede');
+    await page.locator('#ev-resultados-tabela tbody tr').first().click();
+    assert.equal(await page.locator('#ev-resultados-nome-ativo').textContent(),'Demanda A');
+    await page.locator('#ev-resultados-mapa .leaflet-overlay-pane path').last().click({force:true});
+    assert.equal(await page.locator('#ev-resultados-nome-ativo').textContent(),'Demanda B','Seleção no mapa atualiza os detalhes');
+    assert.equal(await page.locator('#ev-resultados-nome-classe').textContent(),'Contato');
+    await page.locator('#ev-resultados-proxima').click();
+    assert.match(await page.locator('#ev-resultados-pagina').textContent(),/Página 2 de 2/);
+    assert.equal(await page.locator('#ev-resultados-rosca path').count(),3);
+    await page.locator('#ev-resultados-vazias').click();
+    assert.equal(await page.locator('#ev-resultados-tabela tbody tr').count(),2);
+    assert.equal(await page.locator('#ev-resultados-rosca path').count(),3);
+    await page.locator('#ev-resultados-vazias').click();
+    await page.locator('#ev-resultados-enquadrar').click();
+    const bounds = await page.locator('#ev-resultados-mapa').evaluate(div => ({width:div.clientWidth,height:div.clientHeight}));
+    assert(bounds.width>100 && bounds.height>=350);
+    assert.equal(await page.locator('#ev-resultados-mapa .leaflet-overlay-pane path').count(),57);
+    const calculosAntesRevisao = execucoes.length;
+    await page.locator('#ev-resultados-editar').click();
+    await page.locator('#ev-resultados-nomes input').first().fill('Demandas com Nomes Revisados');
+    assert(await page.locator('#ev-resultados-conteudo').isHidden());
+    assert(await page.locator('#ev-resultados-download').isDisabled());
+    await page.locator('#ev-resultados-revisados').check();
+    await page.locator('#ev-resultados-mostrar').click();
+    await page.locator('#ev-resultados-conteudo').waitFor({state:'visible'});
+    assert.match(await page.locator('#ev-resultados-resumo').textContent(),/Demandas com Nomes Revisados/);
+    assert.equal(execucoes.length,calculosAntesRevisao,'Revisar nomes não repete interseções');
+    const downloadPromise = page.waitForEvent('download');
+    await page.locator('#ev-resultados-download').click();
+    const download = await downloadPromise;
+    assert.equal(download.suggestedFilename(),'Relatório e Camadas.zip');
+    await download.delete();
     await dismiss();
     modoExecucao = 'cancelar';
     await calcular();
@@ -389,7 +472,7 @@ const assert = require('node:assert/strict');
     await dismiss();
     await visivel(rede.id,false);
     await page.waitForFunction(() => document.querySelector('#fv-calcular').disabled);
-    assert.equal(await page.locator('#fv-sobreposicoes-rosca path').count(),3,'Visibilidade da bancada não altera o conjunto já calculado da rosca');
+    assert.equal(await page.locator('#ev-resultados-rosca path').count(),3,'Visibilidade da bancada não altera o conjunto já calculado da rosca');
     assert.match(await page.locator('#fv-resultados').textContent(),/0\.8000.*0\.6000/s,'Cálculo não substitui índices registrados');
     await page.locator('#fv-hier-limpar').click();
     await choose('entrada',entrada);
@@ -408,16 +491,38 @@ const assert = require('node:assert/strict');
     falharGrafico = true;
     await calcular();
     await idle();
-    assert.match(await page.locator('#fv-sobreposicoes-status').textContent(),/saídas foram mantidas.*Saída alterada/);
-    assert(await page.locator('#fv-sobreposicoes-conteudo').isHidden(),'Falha não exibe gráfico desatualizado como resultado atual');
+    assert.match(await page.locator('#ev-resultados-status').textContent(),/camadas foram produzidas.*Saída alterada/);
+    assert(await page.locator('#ev-resultados-conteudo').isHidden(),'Falha não exibe gráfico desatualizado como resultado atual');
     falharGrafico = false;
     await dismiss();
     const calculosAntes = execucoes.length;
-    await page.locator('#fv-sobreposicoes-tentar').click();
+    await page.locator('#ev-resultados-tentar').click();
     await idle();
     assert.equal(execucoes.length,calculosAntes,'Recarregar gráfico não repete geoprocessamento');
-    assert.equal(await page.locator('#fv-sobreposicoes-rosca path').count(),3);
-    assert(await page.locator('#fv-sobreposicoes-conteudo').isVisible());
+    assert.equal(await page.locator('#ev-resultados-rosca path').count(),3);
+    assert(await page.locator('#ev-resultados-conteudo').isVisible());
+    await page.locator('#ev-resultados-abrir').click();
+    const dialog = page.locator('dialog.ea-storage-dialog');
+    await dialog.locator('[data-file]').click();
+    await dialog.locator('.ea-storage-confirm-button').click();
+    await dialog.waitFor({state:'detached'});
+    await idle();
+    assert.match(await page.locator('#ev-resultados-resumo').textContent(),/Entrada reaberta/);
+    assert.equal(execucoes.length,calculosAntes,'Reabrir análise não repete o cálculo');
+    assert(await page.locator('#fv-resultados').evaluate(t => t.closest('#ev-resultados') !== null));
+    assert.match(await page.locator('#ev-resultados-fontes-grade').textContent(),/Grade Territorial/);
+    assert.match(await page.locator('#ev-resultados-fontes-rede').textContent(),/Rede/);
+    await page.locator('#ev-resultados-base').selectOption(gradePoligonal);
+    assert.equal(await page.locator('#ev-resultados-categoria').textContent(),'Favorabilidade de Grade');
+    assert.equal(await page.locator('#ev-resultados-rosca').getAttribute('data-total-m2'),'60');
+    assert.equal(await page.locator('#ev-resultados-legenda button').count(),5);
+    await page.locator('#ev-resultados-base').selectOption(rede.id);
+    assert.equal(await page.locator('#ev-resultados-categoria').textContent(),'Favorabilidade de Rede');
+    assert.equal(await page.locator('#ev-resultados-tabela th.grade').count(),2);
+    assert.equal(await page.locator('#ev-resultados-tabela th.rede').count(),2);
+    assert(await page.locator('#ev-resultados > .ea-section-body > section').last().evaluate(
+      section => section.classList.contains('secao-favorabilidade-registrados')));
+    assert.equal(await page.locator('#favorabilidade-app > section > header .ea-number').allTextContents().then(n=>n.includes('6')),false);
     await dismiss();
     await page.setViewportSize({width:390,height:844});
     await page.waitForTimeout(250);

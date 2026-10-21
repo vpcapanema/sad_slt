@@ -31,7 +31,9 @@ from api.services.storage_geoespacial import RAIZES_LEITURA
 CONECTIVOS = {'a', 'as', 'o', 'os', 'de', 'da', 'das', 'do', 'dos', 'e', 'em', 'na', 'nas',
               'no', 'nos', 'por', 'para', 'com', 'sem', 'à', 'às', 'ao', 'aos'}
 SIGLAS = {'APP', 'APA', 'UC', 'TI', 'IBGE', 'DER', 'DNIT', 'SP', 'SICARD', 'GIS', 'AHP'}
-PAPEIS = {'entrada': 'Entrada', 'restricao': 'Restrição', 'risco': 'Risco'}
+PAPEIS = {'entrada': 'Entrada', 'restricao': 'Restrição', 'risco': 'Risco',
+          'grade': 'Favorabilidade de Grade', 'rede': 'Favorabilidade de Rede'}
+CORES = {'restricao': '#852c38', 'risco': '#997400', 'grade': '#176878', 'rede': '#69438a'}
 METODOLOGIA = (
     'Cada base de restrição e risco foi intersectada separadamente com a entrada integral, '
     'utilizando GDAL/OGR. As áreas dos fragmentos foram somadas por identificador da feição, '
@@ -48,6 +50,28 @@ METODOLOGIA = (
 NOTA_MAPA = ('O mapa do relatório representa as demandas inteiras e suas interseções: vermelho para restrição '
              'e amarelo para risco. Não constitui classificação de elegibilidade. '
              'Coordenadas em EPSG:5880, com escala e norte; sem mapa-base no PDF.')
+METODOLOGIA_FAVORABILIDADE = (
+    'Cada superfície poligonal de grade e rede foi intersectada separadamente com a entrada integral '
+    'preparada pelas regras cadastrais da Elegibilidade, utilizando GDAL/OGR em EPSG:5880. '
+    'Somam-se exclusivamente as áreas dos fragmentos por demanda e superfície, sem união ou dissolução. '
+    'Os campos fg_* e fr_* registram áreas em m². O travessão indica ausência de interseção; zero indica contato sem área. '
+    'As áreas são apresentadas em km², hectares e percentual da área da demanda. '
+    'A rosca reúne todas as entradas e demandas da análise; cada fatia corresponde a uma combinação '
+    'demanda × feição da superfície, proporcional à soma das áreas sobrepostas. Áreas coincidentes são contadas '
+    'separadamente; contatos sem área permanecem na legenda. Seleção, paginação e ocultação de vazias não filtram a rosca. '
+    'Os GeoPackages preservam a entrada preparada, as interseções e todos os atributos das superfícies, '
+    'inclusive classe nominal e índices com e sem _dim, sem agregá-los. '
+    'Esta apresentação não atualiza índices registrados, ranking, pesos AHP ou homologação.'
+)
+NOTA_MAPA_FAVORABILIDADE = (
+    'O mapa representa as demandas inteiras e suas interseções: verde-azulado para grade e roxo para rede. '
+    'As cores identificam o papel das superfícies, não classificam nem agregam índices de favorabilidade. '
+    'Coordenadas em EPSG:5880, com escala e norte; sem mapa-base no PDF.'
+)
+
+
+def _titulo_analise(analise: str) -> str:
+    return 'Favorabilidade Territorial' if analise == 'favorabilidade' else 'Elegibilidade Territorial'
 
 
 def titulo(valor: str) -> str:
@@ -87,10 +111,10 @@ def _selecionar(identificadores: list[str], dono, *, analise: str = 'elegibilida
     return resultados
 
 
-def _fontes(resultados: list[dict]) -> list[dict]:
+def _fontes(resultados: list[dict], *, analise: str = 'elegibilidade') -> list[dict]:
     fontes = {}
     for resultado in resultados:
-        auditoria = resultado['elegibilidade']
+        auditoria = resultado[analise]
         for item in [{**auditoria['entrada'], 'papel': 'entrada'}, *auditoria['campos'],
                      *auditoria.get('feicoes_base', [])]:
             ident = item['id']
@@ -110,11 +134,11 @@ def _fontes(resultados: list[dict]) -> list[dict]:
     return list(fontes.values())
 
 
-def _pasta_resultados(resultados: list[dict]) -> str:
+def _pasta_resultados(resultados: list[dict], *, analise: str = 'elegibilidade') -> str:
     pastas = set()
     codigos = set()
     for resultado in resultados:
-        auditoria = resultado['elegibilidade']
+        auditoria = resultado[analise]
         pasta = auditoria.get('pasta_analise')
         caminho = PurePosixPath(resultado['arquivo'])
         if len(caminho.parts) > 1 and caminho.parts[1] in {
@@ -137,29 +161,30 @@ def _pasta_resultados(resultados: list[dict]) -> str:
         return pasta
     codigo = next(iter(codigos)) if len(codigos) == 1 else None
     referencia = (resultados[0].get('lote_id') if len(resultados) > 1 else None) or resultados[0]['arquivo']
-    return pasta_saida(referencia, codigo)
+    return pasta_saida(referencia, codigo, analise=analise)
 
 
-def _caminho_revisao_legada(resultado: dict, dono) -> str:
+def _caminho_revisao_legada(resultado: dict, dono, *, analise: str = 'elegibilidade') -> str:
     if resultado.get('origem') != 'arquivo':
         return resultado['arquivo'] + '.nomes.json'
     usuario = sha256(str(dono).encode()).hexdigest()
     arquivo = sha256(resultado['arquivo'].encode()).hexdigest()
-    return f'saidas-geoespaciais/elegibilidade-revisoes/{usuario}/{arquivo}.json'
+    return f'saidas-geoespaciais/{analise}-revisoes/{usuario}/{arquivo}.json'
 
 
-def _caminho_revisao(resultado: dict, dono) -> str:
+def _caminho_revisao(resultado: dict, dono, *, analise: str = 'elegibilidade') -> str:
     usuario = sha256(str(dono).encode()).hexdigest()
     arquivo = sha256(resultado['arquivo'].encode()).hexdigest()
-    return f'{_pasta_resultados([resultado])}/revisoes/{usuario}/{arquivo}.json'
+    return f'{_pasta_resultados([resultado], analise=analise)}/revisoes/{usuario}/{arquivo}.json'
 
 
-def preparar(identificadores: list[str], dono) -> dict:
-    resultados = _selecionar(identificadores, dono)
-    fontes = _fontes(resultados)
+def preparar(identificadores: list[str], dono, *, analise: str = 'elegibilidade') -> dict:
+    resultados = _selecionar(identificadores, dono, analise=analise)
+    fontes = _fontes(resultados, analise=analise)
     salvos = {}
     for resultado in resultados:
-        caminhos = [_caminho_revisao(resultado, dono), _caminho_revisao_legada(resultado, dono)]
+        caminhos = [_caminho_revisao(resultado, dono, analise=analise),
+                    _caminho_revisao_legada(resultado, dono, analise=analise)]
         if resultado.get('origem') == 'arquivo':
             caminhos.append(resultado['arquivo'] + '.nomes.json')
         for caminho in caminhos:
@@ -185,12 +210,12 @@ def preparar(identificadores: list[str], dono) -> dict:
             'previstas': resultados[0].get('total_entradas', len(resultados))}
 
 
-def salvar_nomes(identificadores: list[str], modelo: dict, dono) -> None:
+def salvar_nomes(identificadores: list[str], modelo: dict, dono, *, analise: str = 'elegibilidade') -> None:
     nomes = {f['id']: f['nome'] for f in modelo['fontes']}
-    for resultado in _selecionar(identificadores, dono):
+    for resultado in _selecionar(identificadores, dono, analise=analise):
         dados = json.dumps({'dono': str(dono), 'sha256': resultado['sha256'], 'nomes': nomes},
                            ensure_ascii=False).encode('utf-8')
-        caminho = _caminho_revisao(resultado, dono)
+        caminho = _caminho_revisao(resultado, dono, analise=analise)
         storage_remoto.enviar_bytes(caminho, dados)
         if storage_remoto.baixar(caminho) != dados:
             raise ValueError('A revisão de nomes não foi preservada no storage. Confirme novamente.')
@@ -229,7 +254,7 @@ def registrar_relatorios(identificadores: list[str], modelo: dict, dono) -> None
 
 
 def _mapa(frame: gpd.GeoDataFrame, ocorrencias: list[bool], recortes=None,
-          papeis: dict[str, str] | None = None) -> dict:
+          papeis: dict[str, str] | None = None, *, analise: str = 'elegibilidade') -> dict:
     projetada = reproject(frame, 5880)
     xmin, ymin, xmax, ymax = map(float, projetada.total_bounds)
     if not all(math.isfinite(v) for v in (xmin, ymin, xmax, ymax)):
@@ -268,9 +293,10 @@ def _mapa(frame: gpd.GeoDataFrame, ocorrencias: list[bool], recortes=None,
             base_id = r['base_id']
             if not isinstance(base_id, str) or base_id not in papeis:
                 raise ValueError('Interseção sem categoria de origem no mapa.')
-            adicionar(geom, '#852c38' if papeis[base_id] == 'restricao' else '#997400')
+            adicionar(geom, CORES[papeis[base_id]])
     return {'largura': 720, 'altura': 400, 'formas': formas, 'metros_escala': 100 / escala,
-            'cor_intersecao': '#1769aa', 'cor_ausencia': '#eef3f7', 'nota': NOTA_MAPA}
+            'cor_intersecao': '#1769aa', 'cor_ausencia': '#eef3f7',
+            'nota': NOTA_MAPA_FAVORABILIDADE if analise == 'favorabilidade' else NOTA_MAPA}
 
 
 def _conferir_estrutura(frame: gpd.GeoDataFrame, auditoria: dict) -> None:
@@ -290,15 +316,16 @@ def _ler(resultado: dict, *, analise: str = 'elegibilidade') -> tuple[gpd.GeoDat
     return frame, dados
 
 
-def _auditoria(dados: bytes) -> dict:
-    info = read_info(BytesIO(dados), layer='elegibilidade_territorial')
+def _auditoria(dados: bytes, *, analise: str = 'elegibilidade') -> dict:
+    config = ANALISES[analise]
+    info = read_info(BytesIO(dados), layer=config['camada'])
     metadados = info.get('layer_metadata') or {}
-    if info.get('driver') != 'GPKG' or 'SICARD_ELEGIBILIDADE' not in metadados:
-        raise ValueError('O GeoPackage não contém os metadados de uma análise de elegibilidade territorial.')
+    if info.get('driver') != 'GPKG' or config['metadados'] not in metadados:
+        raise ValueError(f'O GeoPackage não contém os metadados de uma análise de {analise} territorial.')
     try:
-        auditoria = json.loads(metadados['SICARD_ELEGIBILIDADE'])
+        auditoria = json.loads(metadados[config['metadados']])
     except json.JSONDecodeError as exc:
-        raise ValueError('Os metadados de elegibilidade do GeoPackage são inválidos.') from exc
+        raise ValueError(f'Os metadados de {analise} do GeoPackage são inválidos.') from exc
     if not isinstance(auditoria, dict) or auditoria.get('versao_saida') != 2:
         raise ValueError('Esta saída não contém o painel interativo. Execute novamente para gravar áreas totais e interseções.')
     if 'hierarquizacao' in auditoria and (not isinstance(auditoria['hierarquizacao'], str) or not auditoria['hierarquizacao']):
@@ -310,12 +337,12 @@ def _auditoria(dados: bytes) -> dict:
             or not all(isinstance(auditoria['entrada'].get(c), str) and auditoria['entrada'][c] for c in ('id', 'nome'))
             or not isinstance(auditoria.get('campos'), list)
             or not isinstance(auditoria.get('feicoes_base'), list)):
-        raise ValueError('Os metadados de elegibilidade não identificam a entrada, os campos e as interseções.')
+        raise ValueError(f'Os metadados de {analise} não identificam a entrada, os campos e as interseções.')
     for campo in auditoria['campos']:
         if (not isinstance(campo, dict)
                 or not all(isinstance(campo.get(c), str) and campo[c] for c in ('id', 'nome', 'campo'))
-                or campo.get('papel') not in ('restricao', 'risco')):
-            raise ValueError('Os metadados contêm uma base de elegibilidade inválida.')
+                or campo.get('papel') not in config['papeis']):
+            raise ValueError(f'Os metadados contêm uma base de {analise} inválida.')
     bases = {c['id']: c['papel'] for c in auditoria['campos']}
     fontes = [auditoria['entrada']['id'], *(c['id'] for c in auditoria['campos'])]
     for feicao in auditoria['feicoes_base']:
@@ -327,11 +354,11 @@ def _auditoria(dados: bytes) -> dict:
             raise ValueError('Os metadados contêm uma feição de origem inválida.')
         fontes.append(feicao['id'])
     if len(fontes) != len(set(fontes)) or len({c['campo'] for c in auditoria['campos']}) != len(auditoria['campos']):
-        raise ValueError('Os metadados contêm identificadores ou campos de elegibilidade repetidos.')
+        raise ValueError(f'Os metadados contêm identificadores ou campos de {analise} repetidos.')
     return auditoria
 
 
-def abrir(arquivo: str, dono) -> dict:
+def abrir(arquivo: str, dono, *, analise: str = 'elegibilidade') -> dict:
     caminho = PurePosixPath(arquivo)
     if (not caminho.parts or caminho.parts[0] not in RAIZES_LEITURA
             or caminho.is_absolute() or '..' in caminho.parts or '\\' in arquivo
@@ -339,16 +366,17 @@ def abrir(arquivo: str, dono) -> dict:
         raise ValueError('Selecione um GeoPackage em uma pasta acessível do Storage.')
     dados = storage_remoto.baixar(arquivo)
     try:
-        auditoria = _auditoria(dados)
-        frame = gpd.read_file(BytesIO(dados), engine='pyogrio', layer='elegibilidade_territorial')
+        auditoria = _auditoria(dados, analise=analise)
+        frame = gpd.read_file(BytesIO(dados), engine='pyogrio', layer=ANALISES[analise]['camada'])
         _conferir_estrutura(frame, auditoria)
-        nomes = {f['id']: f['nome'] for f in _fontes([{'elegibilidade': auditoria}])}
+        nomes = {f['id']: f['nome'] for f in _fontes([{analise: auditoria}], analise=analise)}
         _painel(frame, dados, auditoria, nomes, _linhas(frame, auditoria))
     except (DataSourceError, DataLayerError) as exc:
-        raise ValueError('O arquivo não é um GeoPackage de elegibilidade válido com as camadas de resultados e interseções.') from exc
-    ident = jobs.registrar_saida({'arquivo': arquivo, 'sha256': sha256(dados).hexdigest(),
-                                 'elegibilidade': auditoria}, dono)
-    return {'execucoes': [ident], **preparar([ident], dono)}
+        raise ValueError(f'O arquivo não é um GeoPackage de {analise} válido com as camadas de resultados e interseções.') from exc
+    resultado = {'arquivo': arquivo, 'sha256': sha256(dados).hexdigest(), analise: auditoria}
+    ident = (jobs.registrar_saida(resultado, dono) if analise == 'elegibilidade'
+             else jobs.registrar_saida(resultado, dono, analise=analise))
+    return {'execucoes': [ident], **preparar([ident], dono, analise=analise)}
 
 
 def _linhas(frame: gpd.GeoDataFrame, auditoria: dict) -> list[dict]:
@@ -437,26 +465,28 @@ def sobreposicoes_favorabilidade(identificadores: list[str], dono) -> dict:
             'previstas': resultados[0].get('total_entradas', len(resultados))}
 
 
-def montar(identificadores: list[str], nomes: dict[str, str], dono, revisados: bool) -> tuple[dict, list[tuple[str, bytes]]]:
+def montar(identificadores: list[str], nomes: dict[str, str], dono, revisados: bool, *,
+           analise: str = 'elegibilidade') -> tuple[dict, list[tuple[str, bytes]]]:
     if not revisados:
         raise ValueError('Revise e confirme a ortografia, a gramática e o significado dos nomes amigáveis.')
-    resultados = _selecionar(identificadores, dono)
-    fontes = _fontes(resultados)
+    resultados = _selecionar(identificadores, dono, analise=analise)
+    fontes = _fontes(resultados, analise=analise)
     if set(nomes) != {f['id'] for f in fontes}:
         raise ValueError('Os nomes revisados devem corresponder exatamente às fontes desta execução.')
     nomes = {ident: titulo(nome) for ident, nome in nomes.items()}
     nomes_camadas = [nomes[f['id']] for f in fontes if f['tipo'] == 'camada']
     if len({nome.casefold() for nome in nomes_camadas}) != len(nomes_camadas):
         raise ValueError('Use nomes amigáveis distintos para identificar cada camada sem ambiguidade.')
-    modelo = {'gerado_em': datetime.now(timezone.utc).isoformat(),
+    modelo = {'gerado_em': datetime.now(timezone.utc).isoformat(), 'analise': analise,
               'fontes': [{**f, 'nome': nomes[f['id']]} for f in fontes],
               'concluidas': len(resultados), 'previstas': resultados[0].get('total_entradas', len(resultados)),
-              'metodologia': METODOLOGIA, 'nomes_revisados': True, 'entradas': [],
-              'pasta_analise': _pasta_resultados(resultados)}
+              'metodologia': METODOLOGIA_FAVORABILIDADE if analise == 'favorabilidade' else METODOLOGIA,
+              'nomes_revisados': True, 'entradas': [],
+              'pasta_analise': _pasta_resultados(resultados, analise=analise)}
     arquivos = []
     for indice, resultado in enumerate(resultados, 1):
-        frame, conteudo = _ler(resultado)
-        audit = resultado['elegibilidade']
+        frame, conteudo = _ler(resultado, analise=analise)
+        audit = resultado[analise]
         campos = [{**c, 'nome': nomes[c['id']]} for c in audit['campos']]
         linhas = _linhas(frame, audit)
         ocorrencias = [any(v is not None for v in linha['areas']) for linha in linhas]
@@ -465,7 +495,8 @@ def montar(identificadores: list[str], nomes: dict[str, str], dono, revisados: b
                    'concluido_em': resultado.get('concluido_em'), 'feicoes': len(frame),
                    'com_intersecao': sum(ocorrencias), 'sem_intersecao': len(frame) - sum(ocorrencias),
                    'campos': campos, 'linhas': linhas,
-                   'mapa': _mapa(frame, ocorrencias, painel['intersecoes'], {c['id']: c['papel'] for c in campos}),
+                   'mapa': _mapa(frame, ocorrencias, painel['intersecoes'], {c['id']: c['papel'] for c in campos},
+                                 analise=analise),
                    **painel}
         modelo['entradas'].append(entrada)
         # Pastas numeradas conservam os nomes originais mesmo quando duas entradas têm o mesmo nome de arquivo.
@@ -528,7 +559,9 @@ def _area_pdf(e, valor):
 
 def pdf(modelo: dict) -> bytes:
     e = estilo._estilos()
-    historia = [estilo._faixa_titulo(e, 'Relatório de Elegibilidade Territorial', 'Resultados da Análise de Sobreposição',
+    analise = modelo.get('analise', 'elegibilidade')
+    nome_analise = _titulo_analise(analise)
+    historia = [estilo._faixa_titulo(e, f'Relatório de {nome_analise}', 'Resultados da Análise de Sobreposição',
                                     f'Emitido em {estilo.hora(modelo["gerado_em"])}'),
                 Spacer(1, 12), estilo._p(e, 'Identificação da Análise', 'h1'),
                 estilo._p(e, f'Entradas concluídas: {modelo["concluidas"]} de {modelo["previstas"]}.')]
@@ -544,9 +577,11 @@ def pdf(modelo: dict) -> bytes:
                                   f'Total: {entrada["feicoes"]} feições; com interseção: {entrada["com_intersecao"]}; '
                                   f'sem interseção: {entrada["sem_intersecao"]}.'),
                      estilo._p(e, 'Mapa-Síntese', 'h2'), MapaPDF(entrada['mapa']),
-                     estilo._p(e, 'Demandas: Azul ou Cinza-Claro. Interseções: Vermelho (Restrição) e Amarelo (Risco).', 'nota'),
-                     estilo._p(e, NOTA_MAPA, 'nota')]
-        for papel in ('restricao', 'risco'):
+                     estilo._p(e, 'Demandas: Azul ou Cinza-Claro. Interseções: Verde-Azulado (Grade) e Roxo (Rede).'
+                               if analise == 'favorabilidade'
+                               else 'Demandas: Azul ou Cinza-Claro. Interseções: Vermelho (Restrição) e Amarelo (Risco).', 'nota'),
+                     estilo._p(e, entrada['mapa']['nota'], 'nota')]
+        for papel in ANALISES[analise]['papeis']:
             indices = [i for i, campo in enumerate(entrada['campos']) if campo['papel'] == papel]
             for inicio in range(0, len(indices), 4):
                 bloco = indices[inicio:inicio + 4]
@@ -578,7 +613,7 @@ def pdf(modelo: dict) -> bytes:
             tabela.splitInRow = 1
             historia.append(tabela)
     buffer = BytesIO()
-    estilo._construir(buffer, 'Elegibilidade Territorial', historia)
+    estilo._construir(buffer, nome_analise, historia)
     return buffer.getvalue()
 
 
@@ -586,7 +621,7 @@ def pacote(modelo: dict, arquivos: list[tuple[str, bytes]]) -> tuple[bytes, str]
     relatorio = pdf(modelo)
     memoria = BytesIO()
     with ZipFile(memoria, 'w', ZIP_DEFLATED) as zipado:
-        zipado.writestr('Relatório de Elegibilidade Territorial.pdf', relatorio)
+        zipado.writestr(f'Relatório de {_titulo_analise(modelo.get("analise", "elegibilidade"))}.pdf', relatorio)
         for nome, dados in arquivos:
             zipado.writestr(nome, dados)
         manifesto = {**{k: v for k, v in modelo.items() if k != 'entradas'},

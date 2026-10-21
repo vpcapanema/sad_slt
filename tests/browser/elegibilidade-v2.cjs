@@ -236,6 +236,7 @@ const assert = require('node:assert/strict');
     async function send(papel, cancel=false) {
       if (papel) await preview(papel);
       await page.locator('#ea-staging-confirmar').click();
+      await page.locator('#pfsConfirmTitle').filter({hasText:'Enviar prévia para a bancada'}).waitFor({state:'visible'});
       const antes=normalizations.length;
       if(await page.getByRole('checkbox',{name:'Visibilidade no mapa: entrada',exact:true}).count()){
         assert.match(await page.locator('#pfsConfirmOverlay').textContent(),/50 m.*25 m.*EPSG:5880.*32 segmentos.*EPSG:4674/s,'Confirmação explicita parâmetros oficiais');

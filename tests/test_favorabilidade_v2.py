@@ -39,6 +39,18 @@ def test_mesma_rota_serve_v2_sem_bancada_ou_executor_legados(cliente):
     assert "data-requer-autenticacao=\"true\"" in html
     assert "Superfícies de favorabilidade" in html
     assert "Resultados registrados na hierarquização" in html
+    assert "Resultados da Favorabilidade Territorial" in html
+    assert 'id="fv-sobreposicoes-title"' not in html
+    assert 'class="ahp-subsection-num">6<' not in html
+    resultados = html.split('id="ev-resultados"', 1)[1]
+    ids = re.findall(r'\bid="([^"]+)"', html)
+    assert len(ids) == len(set(ids)), 'Os controles não podem ter identificadores duplicados.'
+    assert resultados.index('id="ev-resultados-download"') < resultados.index('id="fv-resultados-title"')
+    for id_ in ('ev-resultados-aliases', 'ev-resultados-entrada', 'ev-resultados-base',
+                'ev-resultados-mapa', 'ev-resultados-tabela', 'ev-resultados-rosca',
+                'ev-resultados-vazias', 'ev-resultados-anterior', 'ev-resultados-proxima',
+                'ev-resultados-abrir', 'ev-resultados-tentar', 'ev-resultados-download'):
+        assert f'id="{id_}"' in resultados
 
 
 def test_v1_permanece_preservada_com_seu_executor():

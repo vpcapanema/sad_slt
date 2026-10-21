@@ -5,7 +5,7 @@ import {validarCamada} from '../../geoespacial/extracao-atributos/camada-validad
 import {escolherConfiguracao} from '../../geoespacial/extracao-atributos/lista-camadas.js';
 import {criarPrevia} from '../../geoespacial/extracao-atributos/previa.js?v=20261020-favorabilidade';
 import {criarMapa} from '../../geoespacial/extracao-atributos/mapa.js?v=20261020-favorabilidade';
-import {sobreposicoesDaAnalise, renderizarRosca, numeroSobreposicao as numero} from './sobreposicoes-rosca.js';
+import {criarResultados} from './elegibilidade-resultados.js?v=20261021-favorabilidade-resultados';
 
 const PASTA_SUPERFICIES = 'superficies-indices/hierarquizacao/favorabilidade';
 const papeis = {entrada:'Entrada', grade:'Favorabilidade territorial de grade', rede:'Favorabilidade territorial de rede'};
@@ -17,7 +17,8 @@ const node = id => $(`#fv-${id}`);
 const chave = (papel, camada) => `${papel}:${camada.id}`;
 let hierarquizacao = null;
 let painelObservado = null;
-let execucoesGrafico = [], fatiasGrafico = [], fatiaAtiva = '';
+const resultados = criarResultados({analise:'favorabilidade', avisar,
+  aoOcupar:busy => { state.busy = busy; controles(); }});
 const mapa = criarMapa(atualizarBancada);
 const observadorPainel = new MutationObserver(atualizarBancada);
 const previa = criarPrevia(state, render, {
@@ -91,6 +92,7 @@ function controles() {
   }
   $('#favorabilidade-app').setAttribute('aria-busy', String(state.busy));
   conferirExecucao();
+  resultados.atualizar(state.busy);
 }
 function conjuntoExecucao() {
   const visiveis = new Set((mapa.camadas() || []).filter(c => c.visivel).map(c => c.id));
@@ -304,7 +306,6 @@ async function calcularFavorabilidade() {
   controles();
   let processo, job, resultado, cancelado = false;
   const concluidas = [];
-  const produzidas = [];
   const rota = '/extracao-atributos/favorabilidade/execucoes';
   try {
     const conjunto = conjuntoExecucao();
@@ -327,6 +328,7 @@ async function calcularFavorabilidade() {
       warning:'A entrada será preparada segundo as regras poligonais cadastrais da Elegibilidade, sem alterar as fontes. Cada superfície será intersectada separadamente com a entrada integral e suas áreas somadas em m². Os fragmentos preservarão todos os atributos das superfícies, sem agregar classes ou índices. Cada saída será gravada no Storage e adicionada à bancada. Os índices registrados não serão alterados.',
       confirmLabel:'Calcular Favorabilidade Territorial',
     })) return;
+    resultados.iniciar();
     const lote = crypto.randomUUID();
     const referencia = c => ({id:c.id, nome:c.nome, revisao:c.revisao_fonte ?? c.revisao});
     const entradas = grupo ? [conjunto.entrada[0]] : conjunto.entrada;
@@ -356,7 +358,7 @@ async function calcularFavorabilidade() {
         entrada:referencia(entrada), grade:conjunto.grade.map(referencia), rede:conjunto.rede.map(referencia)});
       if (cancelado) await post(`${rota}/${job.id}/cancelar`, {});
       resultado = await esperar(job, id => `${rota}/${id}`);
-      produzidas.push(job.id);
+      resultados.adicionar(job.id);
       const win = $('#ea-workbench-frame').contentWindow;
       win.gpArquivos.adicionar({...resultado, categoria:'Favorabilidade territorial'}, {estiloPreparado:true});
       mapa.assertReady([resultado.id]);
@@ -380,40 +382,9 @@ async function calcularFavorabilidade() {
       avisar(mensagem, 'error');
     }
   } finally {
-    if (produzidas.length) {
-      execucoesGrafico = produzidas;
-      await carregarSobreposicoes();
-    }
+    await resultados.finalizar();
     state.busy = false;
     controles();
-  }
-}
-function renderizarSobreposicoes() {
-  renderizarRosca({svg:node('sobreposicoes-rosca'), legenda:node('sobreposicoes-legenda'), itens:fatiasGrafico,
-    selecionada:item => item.chave === fatiaAtiva,
-    aoSelecionar:item => {
-      fatiaAtiva = item.chave;
-      const soma = fatiasGrafico.reduce((s, f) => s + f.area_m2, 0);
-      node('sobreposicoes-detalhe').textContent = `${item.entradaNome} · ${item.demandaNome} [${item.demandaId}] · ${item.baseNome} · ${item.nome} [${item.identificador}]: ${numero(item.area_m2)} m²; ${numero(soma ? item.area_m2/soma*100 : 0)}% da soma das sobreposições e ${numero(item.percentual)}% da área desta demanda.`;
-      renderizarSobreposicoes();
-    }});
-}
-async function carregarSobreposicoes() {
-  node('sobreposicoes-status').textContent = 'Conferindo todas as sobreposições nas saídas gravadas…';
-  node('sobreposicoes-tentar').hidden = true;
-  node('sobreposicoes-conteudo').hidden = true;
-  try {
-    const modelo = await post('/extracao-atributos/favorabilidade/resultados/sobreposicoes', {execucoes:execucoesGrafico});
-    fatiasGrafico = sobreposicoesDaAnalise(modelo.entradas); fatiaAtiva = '';
-    node('sobreposicoes-detalhe').textContent = 'Selecione uma fatia ou um item da legenda para conferir a demanda, a superfície e a feição de origem.';
-    renderizarSobreposicoes();
-    node('sobreposicoes-conteudo').hidden = false;
-    node('sobreposicoes-status').textContent = `${fatiasGrafico.length} sobreposição(ões) de ${modelo.entradas.reduce((s, e) => s+e.linhas.length, 0)} demanda(s), em ${modelo.concluidas} de ${modelo.previstas} entrada(s) concluída(s). Todas as sobreposições dessas saídas estão no gráfico e na legenda, incluindo contatos sem área.`;
-  } catch (erro) {
-    const mensagem = `As saídas foram mantidas, mas o gráfico não pôde ser carregado: ${erro.message}`;
-    node('sobreposicoes-status').textContent = mensagem;
-    node('sobreposicoes-tentar').hidden = false;
-    avisar(mensagem, 'error');
   }
 }
 async function enviarBancada() {
@@ -523,7 +494,6 @@ node('hier-enviar').onclick = () => enviarPrevia('entrada');
 node('hierarquizacao').onchange = event => selecionarHierarquizacao(event.target.value);
 $('#ea-staging-confirmar').onclick = enviarBancada;
 node('calcular').onclick = calcularFavorabilidade;
-node('sobreposicoes-tentar').onclick = () => ocupar('Carregando sobreposições.', carregarSobreposicoes);
 window.SLTAdminAuth.requireAuth();
 render();
 await ocupar('Carregando hierarquizações.', async () => {

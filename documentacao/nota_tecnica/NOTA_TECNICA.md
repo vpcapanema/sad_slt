@@ -18,7 +18,7 @@
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Título**                 | Metodologia do Sistema de Hierarquização de Demandas — SICARD                                                                                                         |
 | **Número**                 | NT-SICARD-001/2026                                                                                                                                                       |
-| **Versão**                 | 1.27                                                                                                                                                                      |
+| **Versão**                 | 1.28                                                                                                                                                                      |
 | **Data de emissão**        | 21/10/2026                                                                                                                                                               |
 | **Classificação**         | Documento técnico-metodológico de entrega ao cliente                                                                                                                   |
 | **Sistema**                 | SICARD — Sistema de Apoio à Tomada de Decisão                                                                                                                         |
@@ -61,6 +61,7 @@
 | 1.25    | 21/10/2026 | `[preencher]` | Operacionalização do bloco de conferência e execução da Favorabilidade V2, com preparação cadastral da entrada, interseções independentes, soma de áreas e preservação dos atributos das superfícies por fragmento, sem agregação de classes ou índices nem alteração dos resultados registrados. |
 | 1.26    | 21/10/2026 | `[preencher]` | Apresentação conjunta de todas as sobreposições em rosca única por análise nas páginas de Elegibilidade e Favorabilidade, com uma fatia por combinação demanda e feição de origem, sem agrupamento por nome, camada, classe ou índice. |
 | 1.27    | 21/10/2026 | `[preencher]` | Distinção entre a revisão física das fontes do Storage e o token temporário de visualização na preparação e execução da Favorabilidade, preservando o bloqueio de alterações reais sem acusar mudança pela simples geração da prévia. |
+| 1.28    | 21/10/2026 | `[preencher]` | Integração dos resultados da Favorabilidade ao painel de mapa, tabela, detalhes e rosca da Elegibilidade, com revisão persistida de nomes, reabertura de GeoPackages e pacote PDF/camadas segregados da Fase 1; preservação dos índices registrados como última subseção, sem agregação ou alteração de seus valores. |
 
 ---
 
@@ -715,6 +716,23 @@ apresentado distintamente nos detalhes. Contatos sem área constam da legenda.
 As saídas parciais são identificadas e os dados são lidos dos GeoPackages
 assinados, com conferência dos vínculos e das somas, sem repetir interseções ou
 alterar os valores dos produtos.
+
+A seção de resultados incorpora mapa interativo, seleção de entrada e superfície,
+detalhamento das áreas e percentuais e tabela paginada, sincronizados com a rosca.
+A ocultação de linhas e colunas sem valores não considera zero como vazio e não
+filtra as sobreposições do gráfico. As cores identificam os papéis de grade e
+rede, sem classificar índices. As geometrias são apresentadas sem simplificação.
+A revisão dos nomes das camadas e feições exige confirmação e é persistida por
+usuário e assinatura da saída, sem modificar as fontes.
+
+Permite-se reabrir um GeoPackage de Favorabilidade previamente gravado, após
+conferência dos metadados, vínculos, áreas e geometrias. A exportação reúne PDF
+de Favorabilidade Territorial, GeoPackages integrais e manifesto em pacote
+conferido no Storage, com identificação de resultados parciais. Não há repetição
+das interseções para consulta ou exportação, nem registro de relatório da Fase 1.
+Os índices já registrados na hierarquização e sua auditoria permanecem como
+última subseção dos resultados, vinculada à rodada selecionada e independente
+das sobreposições apresentadas.
 
 ### 8.3 Fase 3 — Ajuste por atributos do objeto de demanda
 

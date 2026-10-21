@@ -382,8 +382,8 @@ def test_nome_cadastral_nao_e_validado_como_alias_de_arquivo(analise, monkeypatc
     cadastral = 'PROPOSTA FEPASA - CAMELÓDROMO COMPLEXO DO EIXO FERROVIÁRIO - ASSIS/SP'
     longo = 'Demanda / setor _ especial ' * 10
 
-    def com_nomes(resultado):
-        frame, dados = ler(resultado)
+    def com_nomes(resultado, *, analise='elegibilidade'):
+        frame, dados = ler(resultado, analise=analise)
         frame.loc[0, 'nome'] = cadastral
         frame.loc[1, 'nome'] = longo
         return frame, dados

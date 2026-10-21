@@ -108,10 +108,10 @@ def consultar(ident, dono, *, analise='elegibilidade'):
     return {k: v for k, v in registro.items() if k != 'dono'}
 
 
-def registrar_saida(resultado: dict, dono) -> str:
+def registrar_saida(resultado: dict, dono, *, analise: str = 'elegibilidade') -> str:
     """Referencia uma saída já validada, sem exigir o histórico de quem a produziu."""
     ident = sha256(f'arquivo:{resultado["arquivo"]}:{resultado["sha256"]}'.encode()).hexdigest()[:32]
-    registro = {'id': ident, 'dono': str(dono),
+    registro = {'id': ident, 'dono': str(dono), 'analise': analise,
                 'resultado': {**resultado, 'origem': 'arquivo', 'lote_id': ident, 'total_entradas': 1,
                               'registrado_em': datetime.now(timezone.utc).isoformat()}}
     _publicar(registro, {'status': 'concluido', 'cancelavel': False}, forcar=True)

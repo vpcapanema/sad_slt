@@ -15,3 +15,24 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+.favorabilidade-v2 .ev-resultados { --fv-grade: #176878; --fv-rede: #69438a; }
+.favorabilidade-v2 .ev-resultados .grade { color: var(--fv-grade); }
+.favorabilidade-v2 .ev-resultados .rede { color: var(--fv-rede); }
+.favorabilidade-v2 .evr-fonte.grade { border-color: #bddde1; border-left-color: var(--fv-grade); background: #edf7f8; }
+.favorabilidade-v2 .evr-fonte.rede { border-color: #d9c9e5; border-left-color: var(--fv-rede); background: #f5eff9; }
+.favorabilidade-v2 #ev-resultados-tabela th.grade { background: var(--fv-grade); }
+.favorabilidade-v2 #ev-resultados-tabela th.rede { background: var(--fv-rede); }
+.favorabilidade-v2 #ev-resultados-tabela td.ativa.grade { background: #edf7f8; box-shadow: inset 0 0 0 2px var(--fv-grade); }
+.favorabilidade-v2 #ev-resultados-tabela td.ativa.rede { background: #f5eff9; box-shadow: inset 0 0 0 2px var(--fv-rede); }
+.favorabilidade-v2 .secao-favorabilidade-tabela { font-size: 10.5px; }
+.favorabilidade-v2 .secao-favorabilidade-tabela .evr-titulo h3 { font-size: 12px; }
+.favorabilidade-v2 .secao-favorabilidade-tabela .ea-hint { font-size: 10px; }
+.favorabilidade-v2 .secao-favorabilidade-tabela #ev-resultados-tabela { font-size: inherit; min-width: 0; }
+.favorabilidade-v2 .secao-favorabilidade-tabela #ev-resultados-tabela :is(th,td) { font-size: inherit; padding: 7px 8px; }
+.favorabilidade-v2 .secao-favorabilidade-tabela #ev-resultados-tabela td[data-base] { padding: 0; }
+.favorabilidade-v2 .secao-favorabilidade-tabela #ev-resultados-tabela td button { font-size: inherit; padding: 7px 8px; }
+.favorabilidade-v2 .secao-favorabilidade-tabela :is(.evr-secundario,.evr-foco) { font-size: 9.5px; }
+.favorabilidade-v2 .evr-controles { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; padding: 8px 12px; }
+.favorabilidade-v2 .evr-controles .ea-icon-button { width: 32px; min-width: 32px; height: 32px; min-height: 32px; padding: 0; font-size: 11px; }
+.favorabilidade-v2 .evr-controles [aria-pressed="true"] { background: #eef4f8; border-color: var(--pli-deep); color: var(--pli-deep); }

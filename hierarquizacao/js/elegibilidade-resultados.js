@@ -3,15 +3,18 @@ import {el} from '../../geoespacial/extracao-atributos/ui.js';
 import {escolherArquivo} from '../../geoespacial/extracao-atributos/explorador.js?v=20261020-saidas';
 import {sobreposicoesDaAnalise, renderizarRosca} from './sobreposicoes-rosca.js';
 
-const rota = '/extracao-atributos/elegibilidade/resultados';
-const papeis = {entrada:'Entrada', restricao:'Restrição', risco:'Risco'};
 const numero = valor => valor.toLocaleString('pt-BR', {
   minimumFractionDigits:2, maximumFractionDigits:valor !== 0 && Math.abs(valor) < .01 ? 20 : 2,
 });
 const area = (valor, divisor=1e6) => valor === null ? '—' : numero(valor / divisor);
 const nomeDemanda = linha => linha.nome || `Demanda ${linha.id}`;
 
-export function criarResultados({avisar, aoOcupar}) {
+export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
+  const favorabilidade = analise === 'favorabilidade';
+  const rota = `/extracao-atributos/${analise}/resultados`;
+  const categorias = favorabilidade ? ['grade','rede'] : ['restricao','risco'];
+  const papeis = favorabilidade ? {entrada:'Entrada', grade:'Favorabilidade de Grade', rede:'Favorabilidade de Rede'}
+    : {entrada:'Entrada', restricao:'Restrição', risco:'Risco'};
   const node = id => document.getElementById(`ev-resultados-${id}`);
   const formulario = node('aliases'), campos = new Map(), cores = new Map();
   let pendentes = [], execucoes = [], fontes = [], modelo = null, pagina = 0, indice = 0;
@@ -23,7 +26,8 @@ export function criarResultados({avisar, aoOcupar}) {
   const linhaAtual = () => linhasPorChave.get(chave);
   const payload = () => ({execucoes, nomes:Object.fromEntries([...campos].map(([id,campo]) => [id,campo.value])),
     revisados:node('revisados').checked});
-  const corCategoria = papel => papel === 'restricao' ? '#852c38' : '#856100';
+  const corCategoria = papel => favorabilidade ? papel === 'grade' ? '#176878' : '#69438a'
+    : papel === 'restricao' ? '#852c38' : '#856100';
   const corClasse = id => cores.get(id);
   const vazio = valor => valor == null || (typeof valor === 'string' && !valor.trim());
 
@@ -150,7 +154,7 @@ export function criarResultados({avisar, aoOcupar}) {
     if (zoom) {
       const alvos = recortes.filter(r => r.chave === chave && (classeAtiva ? r.feicao === classeAtiva : baseAtiva ? r.base === baseAtiva : false));
       if (!mapa.hasLayer(demandas)) demandas.addTo(mapa);
-      if (b) { const grupo = b.papel === 'restricao' ? restricoes : riscos; if (!mapa.hasLayer(grupo)) grupo.addTo(mapa); }
+      if (b) {       const grupo = b.papel === categorias[0] ? restricoes : riscos; if (!mapa.hasLayer(grupo)) grupo.addTo(mapa); }
       alvos.forEach(r => r.layer.bringToFront());
       const bounds = alvos.length ? window.L.featureGroup(alvos.map(r => r.layer)).getBounds() : camadas.get(chave).getBounds();
       mapa.fitBounds(bounds, {padding:[24,24], maxZoom:17, animate:false});
@@ -160,7 +164,7 @@ export function criarResultados({avisar, aoOcupar}) {
   function tabela() {
     const e = entrada(), head = el('thead'), grupos = el('tr'), nomes = el('tr');
     for (const [nome,papel,n] of [['Camada de Entrada','',2],
-      ...['restricao','risco'].map(p => [papeis[p],p,camposTabela.filter(({campo}) => campo.papel === p).length])]) {
+      ...categorias.map(p => [papeis[p],p,camposTabela.filter(({campo}) => campo.papel === p).length])]) {
       if (!n) continue;
       const th = el('th',nome,papel); th.colSpan = n; th.scope = 'colgroup'; grupos.append(th);
     }
@@ -226,7 +230,7 @@ export function criarResultados({avisar, aoOcupar}) {
     pagina = 0; baseAtiva = ''; classeAtiva = ''; chave = e.linhas[0].chave;
     node('resumo').textContent = `${e.nome} · ${e.feicoes} demandas · ${e.com_intersecao} com interseção · ${e.sem_intersecao} sem interseção.`;
     node('composicao').textContent = `As demandas foram comparadas com ${e.campos.length} camadas, organizadas abaixo por categoria. O painel apresenta somente os dados da saída gravada.`;
-    for (const papel of ['restricao','risco']) {
+    for (const papel of categorias) {
       const itens = e.campos.filter(c => c.papel === papel).map(c => el('span',c.nome,'evr-chip'));
       node(`fontes-${papel}`).replaceChildren(...(itens.length ? itens : [el('span','Nenhuma camada nesta categoria.','ea-hint')]));
     }
@@ -241,21 +245,21 @@ export function criarResultados({avisar, aoOcupar}) {
     demandas = L.featureGroup().addTo(mapa); restricoes = L.featureGroup().addTo(mapa); riscos = L.featureGroup().addTo(mapa);
     for (const feature of e.geometrias.features) {
       const id = feature.properties.chave, linha = linhasPorChave.get(id);
-      const layer = L.geoJSON(feature,{style:{color:'#003b5a',weight:2,fillOpacity:.09}}).addTo(demandas);
+      const layer = L.geoJSON(feature,{smoothFactor:0,style:{color:'#003b5a',weight:2,fillOpacity:.09}}).addTo(demandas);
       layer.bindTooltip(el('span',nomeDemanda(linha))); layer.on('click',() => selecionar(id)); camadas.set(id,layer);
     }
     for (const feature of e.intersecoes.features) {
       const p = feature.properties, b = basesPorId.get(p.base_id);
       const linha = linhasPorChave.get(p.chave), classe = linha.sobreposicoes.find(c => c.id === p.feicao_id);
       const cor = corCategoria(b.papel);
-      const layer = L.geoJSON(feature,{style:{color:cor,fillColor:cor,fillOpacity:.3,weight:1.5},
+      const layer = L.geoJSON(feature,{smoothFactor:0,style:{color:cor,fillColor:cor,fillOpacity:.3,weight:1.5},
         pointToLayer:(_,latlng) => L.circleMarker(latlng,{radius:5,color:cor,fillColor:cor})});
-      layer.addTo(b.papel === 'restricao' ? restricoes : riscos);
+      layer.addTo(b.papel === categorias[0] ? restricoes : riscos);
       layer.bindTooltip(el('span',`${nomeDemanda(linha)} apresenta interseção com ${classe.nome} · ${b.nome}`));
       layer.on('click',() => selecionar(p.chave,p.base_id,p.feicao_id));
       recortes.push({chave:p.chave,base:p.base_id,feicao:p.feicao_id,layer});
     }
-    L.control.layers({}, {'Demandas':demandas,'Restrição':restricoes,'Risco':riscos},{collapsed:true}).addTo(mapa);
+    L.control.layers({}, {'Demandas':demandas,[papeis[categorias[0]]]:restricoes,[papeis[categorias[1]]]:riscos},{collapsed:true}).addTo(mapa);
     atualizarSelecao(chave);
     mapa.fitBounds(demandas.getBounds(),{padding:[30,30],animate:false});
   }
@@ -277,7 +281,7 @@ export function criarResultados({avisar, aoOcupar}) {
     event.preventDefault();
     operar(async () => {
       const arquivo = await escolherArquivo({
-        title:'Selecionar análise de elegibilidade já realizada',
+        title:`Selecionar análise de ${analise} já realizada`,
         raiz:'saidas-geoespaciais', extensoes:['gpkg'], validar:false, somenteReferencias:true,
       });
       if (!arquivo) return;
