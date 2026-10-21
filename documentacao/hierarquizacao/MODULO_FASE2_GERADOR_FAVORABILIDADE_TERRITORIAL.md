@@ -58,6 +58,18 @@ Falhas posteriores a persistencia informam o caminho recuperavel, sem descartar
 produtos anteriores. Esta execucao nao atualiza indices, escores, ranking ou
 homologacao da hierarquizacao e nao registra produtos como resultados de Fase 1.
 
+O painel de sobreposicoes apresenta uma unica rosca com todas as entradas,
+demandas e superficies das saidas concluidas no lote, inclusive em execucao
+parcial identificada. Cada fatia corresponde a uma combinacao demanda × feicao
+da superficie, proporcional a sua area na soma das areas sobrepostas. Nomes,
+classes ou camadas iguais nao agrupam fatias; areas espacialmente coincidentes
+continuam contadas separadamente. A legenda identifica entrada, demanda,
+superficie e feicao, com area e participacao na soma. Contatos de area zero
+permanecem na legenda, sem fatia proporcional. A selecao destaca a combinacao,
+sem retirar as demais. Os dados sao lidos dos GeoPackages assinados, com
+conferencia das somas e acesso restrito ao usuario das execucoes; carregar ou
+recarregar a rosca nao repete o geoprocessamento nem agrega classes ou indices.
+
 ## Produto final do modulo
 
 O modulo deve produzir um pacote homologado de Fase 2 contendo:

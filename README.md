@@ -512,11 +512,21 @@ recolhida após confirmação e pode ser reaberta. Os nomes são usados na tela 
 PDF, em title case do português brasileiro; sugestões automáticas não substituem
 a revisão de significado, ortografia e gramática. O painel integra mapa Leaflet,
 gráfico de rosca e tabela paginada, com seleção bidirecional e zoom nas geometrias
-selecionadas. As fontes são separadas em Restrição e Risco. Cada fatia corresponde
-a uma feição da base, não a uma classificação de elegibilidade; nomes iguais não
-unem feições distintas. Áreas aparecem em km², com hectares abaixo, e os detalhes
+selecionadas. As fontes são separadas em Restrição e Risco. Uma única rosca reúne
+todas as entradas e demandas da análise: cada fatia corresponde a uma combinação
+demanda × feição da base, não a uma classificação de elegibilidade. Nomes iguais
+não unem combinações distintas. A legenda identifica a entrada, demanda, camada,
+feição, área e participação na soma. Seleção, paginação e filtros da tabela não
+retiram fatias; selecionar uma fatia de outra entrada atualiza o mapa, a tabela e
+os detalhes correspondentes. A legenda explicita áreas em m²; na tabela e nos
+detalhes, as áreas aparecem em km², com hectares abaixo, e os detalhes
 informam o percentual da demanda. A proporção da rosca usa a soma das áreas
 sobrepostas, que podem ocupar o mesmo local, não uma cobertura exclusiva.
+A Favorabilidade V2 utiliza o mesmo componente de rosca integral em seu painel
+de sobreposições. Os dados são conferidos nos GeoPackages das execuções do usuário,
+sem repetir interseções ou agregar classes e índices. Execuções parciais são
+identificadas, contatos sem área permanecem na legenda e falhas na leitura
+oferecem recarregamento sem recalcular os produtos.
 A tabela utiliza tipografia compacta em todos os seus componentes. Entre a
 tabela e o paginador, a barra de controles inclui o botão de ocultar/mostrar
 linhas e colunas vazias: a verificação considera os valores de sobreposição de

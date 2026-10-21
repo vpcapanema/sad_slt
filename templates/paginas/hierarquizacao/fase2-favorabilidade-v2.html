@@ -16,7 +16,7 @@
 <link rel="stylesheet" href="/assets/css/ahp-module.css">
 <link rel="stylesheet" href="/assets/css/page-title-standard.css">
 <link rel="stylesheet" href="/assets/css/extracao-atributos.css">
-<link rel="stylesheet" href="/assets/css/fase1-elegibilidade-v2.css?v=20261020-controles-tabela">
+<link rel="stylesheet" href="/assets/css/fase1-elegibilidade-v2.css?v=20261021-rosca-integral">
 <link rel="stylesheet" href="/assets/css/fase23-execucao.css">
 <link rel="stylesheet" href="/assets/css/fase2-favorabilidade-v2.css">
 <link rel="stylesheet" href="/assets/css/paginas/hierarquizacao-fases-visual.css?v=20261020-cabecalhos-linha-unica">
@@ -148,8 +148,26 @@
       </section>
     </div>
   </section>
+  <section class="secao-favorabilidade-sobreposicoes ea-section ev-resultados" aria-labelledby="fv-sobreposicoes-title">
+    <header class="ea-section-head"><span class="ea-number">5</span><h2 id="fv-sobreposicoes-title">Sobreposições de Todas as Demandas</h2></header>
+    <div class="ea-section-body">
+      <p class="ea-hint">A rosca reúne todas as entradas, demandas e superfícies da última execução calculada nesta página. Cada fatia representa uma combinação demanda × feição da superfície, proporcional à sua área na soma de todas as sobreposições, sem agrupamento por camada, nome ou classe. Áreas coincidentes são contadas separadamente; contatos sem área permanecem na legenda. Não se agregam classes ou índices.</p>
+      <p id="fv-sobreposicoes-status" class="ea-hint" role="status" aria-live="polite">Calcule a favorabilidade territorial para consultar todas as sobreposições das saídas gravadas.</p>
+      <button id="fv-sobreposicoes-tentar" class="ea-btn" type="button" hidden>Tentar Carregar Sobreposições</button>
+      <div id="fv-sobreposicoes-conteudo" class="evr-detalhes-rosca" hidden>
+        <figure class="evr-rosca-bloco">
+          <h3>Todas as Sobreposições da Análise</h3>
+          <svg id="fv-sobreposicoes-rosca" class="evr-rosca" viewBox="0 0 240 240" role="group" aria-label="Distribuição de todas as sobreposições de todas as demandas e superfícies"></svg>
+        </figure>
+        <div class="evr-detalhes">
+          <p id="fv-sobreposicoes-detalhe" class="ea-hint" aria-live="polite">Selecione uma fatia ou um item da legenda para conferir a demanda, a superfície e a feição de origem.</p>
+          <div id="fv-sobreposicoes-legenda" class="evr-legenda-classes"></div>
+        </div>
+      </div>
+    </div>
+  </section>
   <section class="secao-favorabilidade-resultados card card-favorabilidade-resultados ahp-step-section" aria-labelledby="fv-resultados-title">
-    <header class="ahp-section-label"><span class="ahp-subsection-num">5</span><h2 id="fv-resultados-title">Resultados registrados na hierarquização</h2></header>
+    <header class="ahp-section-label"><span class="ahp-subsection-num">6</span><h2 id="fv-resultados-title">Resultados registrados na hierarquização</h2></header>
     <div class="ahp-section-body">
       <p class="ea-hint">Consulta dos índices já registrados na rodada selecionada. A preparação e o envio à bancada não executam o cálculo nem substituem esses resultados.</p>
       <p id="fv-resultados-vazio" class="ea-hint">Selecione uma hierarquização para consultar os resultados registrados.</p>
@@ -168,5 +186,5 @@
 <script src="/assets/vendor/maplibre-gl/maplibre-gl.js"></script>
 <script src="/assets/vendor/maplibre-gl/leaflet-maplibre-gl.js"></script>
 <script src="/restrict/hierarquizacao/js/hier-api.js"></script>
-<script type="module" src="/restrict/hierarquizacao/js/fase2-favorabilidade-v2.js?v=20261021-execucao"></script>
+<script type="module" src="/restrict/hierarquizacao/js/fase2-favorabilidade-v2.js?v=20261021-rosca-integral"></script>
 {% endblock %}

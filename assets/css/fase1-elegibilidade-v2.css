@@ -76,9 +76,10 @@
 .ev-resultados .evr-metrica strong { display: block; font-size: 22px; line-height: 1.4; color: #003b5a; }
 .ev-resultados .evr-metrica span, .ev-resultados .evr-secundario { display: block; color: var(--ev-muted); font-size: 11px; font-weight: normal; margin-top: 3px; }
 .ev-resultados .evr-rosca-bloco { margin: 0; min-width: 0; }.ev-resultados .evr-rosca-bloco h4 { text-align: center; font-size: 12px; }
-#ev-resultados-rosca { display: block; width: 100%; max-width: 240px; margin: 8px auto; }
-#ev-resultados-rosca path { cursor: pointer; stroke: white; stroke-width: 2; outline: none; }
-#ev-resultados-rosca path:focus-visible { stroke: #003b5a; stroke-width: 4; outline: none; }
+.ev-resultados .evr-rosca { display: block; width: 100%; max-width: 320px; margin: 8px auto; }
+.ev-resultados .evr-rosca path { cursor: pointer; stroke: none; outline: none; }
+.ev-resultados .evr-rosca path[aria-pressed="true"] { stroke: #003b5a; stroke-width: 1; }
+.ev-resultados .evr-rosca path:focus-visible { stroke: #003b5a; stroke-width: 2; outline: none; }
 .ev-resultados .evr-legenda-classes { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 4px 6px; max-height: 220px; overflow: auto; }
 .ev-resultados .evr-classe { display: flex; align-items: center; gap: 6px; padding: 5px 4px; border: 1px solid transparent; border-radius: 5px; background: white; color: inherit; text-align: left; font: inherit; font-size: 10.5px; line-height: 1.4; min-width: 0; cursor: pointer; overflow-wrap: anywhere; }
 .ev-resultados .evr-classe.ativa { background: #eef4f8; border-color: var(--ev-line); font-weight: bold; }

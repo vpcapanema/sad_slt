@@ -16,7 +16,7 @@
 <link rel="stylesheet" href="/assets/css/ahp-module.css">
 <link rel="stylesheet" href="/assets/css/page-title-standard.css">
 <link rel="stylesheet" href="/assets/css/extracao-atributos.css">
-<link rel="stylesheet" href="/assets/css/fase1-elegibilidade-v2.css?v=20261020-controles-tabela">
+<link rel="stylesheet" href="/assets/css/fase1-elegibilidade-v2.css?v=20261021-rosca-integral">
 <link rel="stylesheet" href="/assets/css/paginas/hierarquizacao-fases-visual.css?v=20261020-cabecalhos-linha-unica">
 {% endblock %}
 {% block conteudo %}
@@ -181,7 +181,7 @@
             <p class="ea-hint evr-instrucoes" id="ev-resultados-nota-mapa" role="status"></p>
           </section>
           <section class="secao-elegibilidade-sobreposicoes evr-painel">
-            <header class="evr-titulo"><h3>Sobreposições da Demanda Selecionada</h3><span id="ev-resultados-id-ativo" class="ea-hint"></span></header>
+            <header class="evr-titulo"><h3>Sobreposições de Todas as Demandas</h3><span id="ev-resultados-id-ativo" class="ea-hint"></span></header>
             <div class="evr-grafico-conteudo">
               <div class="ea-field"><label for="ev-resultados-base">Camada de Base em Análise</label><select id="ev-resultados-base" name="base_resultados"></select></div>
               <p id="ev-resultados-frase" class="evr-frase" aria-live="polite"></p>
@@ -201,12 +201,12 @@
                   <p id="ev-resultados-aviso" class="ea-hint"></p>
                 </div>
                 <figure class="evr-rosca-bloco">
-                  <h4>Feições Sobrepostas</h4>
-                  <svg id="ev-resultados-rosca" viewBox="0 0 240 240" role="group" aria-label="Distribuição das áreas sobrepostas por feição"></svg>
+                  <h4>Todas as Sobreposições da Análise</h4>
+                  <svg id="ev-resultados-rosca" class="evr-rosca" viewBox="0 0 240 240" role="group" aria-label="Distribuição de todas as sobreposições de todas as demandas e camadas"></svg>
                   <div id="ev-resultados-legenda" class="evr-legenda-classes"></div>
                 </figure>
               </div>
-              <p class="ea-hint">Cada fatia representa uma feição sobreposta à demanda. Seu tamanho indica a participação na soma das áreas sobrepostas, não o percentual da demanda. Uma mesma área pode se sobrepor a mais de uma feição. Contatos sem área aparecem na legenda, sem fatia proporcional. Selecionar uma camada não oculta as demais.</p>
+              <p class="ea-hint">A rosca reúne todas as entradas, demandas e camadas da análise, independentemente da seleção no mapa, da paginação e das linhas ocultas na tabela. Cada fatia representa uma combinação demanda × feição da camada, proporcional à sua área na soma de todas as sobreposições, sem agrupamento por camada ou nome. Áreas coincidentes são contadas separadamente. Contatos sem área permanecem na legenda, sem fatia proporcional. Selecionar uma fatia atualiza os detalhes, a tabela e o mapa, sem retirar as demais fatias.</p>
             </div>
           </section>
         </div>
@@ -242,5 +242,5 @@
 <script src="/assets/vendor/maplibre-gl/maplibre-gl.js"></script>
 <script src="/assets/vendor/maplibre-gl/leaflet-maplibre-gl.js"></script>
 <script src="/restrict/hierarquizacao/js/hier-api.js"></script>
-<script type="module" src="/restrict/hierarquizacao/js/fase1-elegibilidade-v2.js?v=20261020-vinculo-hierarquizacao"></script>
+<script type="module" src="/restrict/hierarquizacao/js/fase1-elegibilidade-v2.js?v=20261021-rosca-integral"></script>
 {% endblock %}

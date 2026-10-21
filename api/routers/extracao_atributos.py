@@ -383,6 +383,20 @@ class ReferenciasResultadosElegibilidade(BaseModel):
     execucoes: list[str] = Field(min_length=1)
 
 
+@router.post('/favorabilidade/resultados/sobreposicoes')
+def sobreposicoes_favorabilidade(payload: ReferenciasResultadosElegibilidade,
+                                 user: SessionUser = Depends(require_geospatial_access)):
+    from api.services import elegibilidade_relatorio
+    try:
+        return elegibilidade_relatorio.sobreposicoes_favorabilidade(payload.execucoes, user.id)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc)) from exc
+
+
 class ApresentacaoElegibilidade(ReferenciasResultadosElegibilidade):
     nomes: dict[str, str]
     revisados: bool

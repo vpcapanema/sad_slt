@@ -18,7 +18,7 @@
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Título**                 | Metodologia do Sistema de Hierarquização de Demandas — SICARD                                                                                                         |
 | **Número**                 | NT-SICARD-001/2026                                                                                                                                                       |
-| **Versão**                 | 1.25                                                                                                                                                                      |
+| **Versão**                 | 1.26                                                                                                                                                                      |
 | **Data de emissão**        | 21/10/2026                                                                                                                                                               |
 | **Classificação**         | Documento técnico-metodológico de entrega ao cliente                                                                                                                   |
 | **Sistema**                 | SICARD — Sistema de Apoio à Tomada de Decisão                                                                                                                         |
@@ -59,6 +59,7 @@
 | 1.23    | 19/10/2026 | `[preencher]` | Persistência do acompanhamento das execuções entre processos e reinícios, preservação dos nomes cadastrais na apresentação e limitação da complexidade dos tiles por fragmentação visual, sem alteração dos arquivos, áreas ou geometrias de cálculo. |
 | 1.24    | 20/10/2026 | `[preencher]` | Explicitação dos limites da documentação pública: distinção entre especificação metodológica, disponibilidade operacional e homologação, sem alteração dos critérios, operadores ou cálculos. |
 | 1.25    | 21/10/2026 | `[preencher]` | Operacionalização do bloco de conferência e execução da Favorabilidade V2, com preparação cadastral da entrada, interseções independentes, soma de áreas e preservação dos atributos das superfícies por fragmento, sem agregação de classes ou índices nem alteração dos resultados registrados. |
+| 1.26    | 21/10/2026 | `[preencher]` | Apresentação conjunta de todas as sobreposições em rosca única por análise nas páginas de Elegibilidade e Favorabilidade, com uma fatia por combinação demanda e feição de origem, sem agrupamento por nome, camada, classe ou índice. |
 
 ---
 
@@ -486,16 +487,23 @@ conferida contra os campos por base antes da apresentação. Mantém-se a soma
 independente, sem união ou dissolução.
 
 Para cada entrada apresentam-se resumo, fontes em colunas de Restrição e Risco,
-mapa Leaflet, gráfico de rosca e tabela paginada, com seleção sincronizada e
+mapa Leaflet e tabela paginada, com seleção sincronizada e
 enquadramento das geometrias selecionadas. Categoria designa Restrição ou Risco;
 classe designa a própria feição da base, identificada por sua origem, sem reunir
-feições distintas apenas por possuírem nomes iguais. As fatias representam a
-distribuição da soma das áreas sobrepostas, e não uma cobertura exclusiva da
+feições distintas apenas por possuírem nomes iguais. Uma única rosca reúne todas
+as entradas, demandas e camadas da análise, sem limitação pela entrada selecionada,
+paginação ou filtros de vazias da tabela. Cada fatia corresponde a uma combinação
+demanda e feição da base, com identidade de origem própria. A legenda explicita
+entrada, demanda, camada, feição, área e participação na soma. A seleção de uma
+fatia atualiza os detalhes e o enquadramento, inclusive em outra entrada, sem
+retirar as demais fatias. As fatias representam a
+distribuição da soma de todas as áreas sobrepostas, e não uma cobertura exclusiva da
 demanda. Nos detalhes, o percentual corresponde à área sobreposta dividida pela
 área total da demanda. A soma das áreas de diferentes feições pode superar a
 área da demanda, conforme o operador de agregação adotado.
 
-As áreas são apresentadas em km², com equivalência em hectares; os cálculos e os
+Nos detalhes e na tabela, as áreas são apresentadas em km², com equivalência em
+hectares; na legenda da rosca, as áreas são explicitadas em m². Os cálculos e os
 campos do GeoPackage permanecem em metros quadrados. O travessão representa nulo,
 distinguindo-se do contato de área zero, apresentado na legenda sem fatia
 proporcional. O PDF inclui todas as demandas, bases e feições sobrepostas, suas
@@ -688,6 +696,17 @@ final no Storage. Os produtos são incluídos na bancada, com armazenamento
 segregado de análises avulsas ou na pasta `fase-2` da hierarquização. Não são
 registrados como resultados de Fase 1 nem substituem índices, escores, ranking ou
 homologação existentes.
+
+O painel de sobreposições da Favorabilidade utiliza o mesmo componente de rosca
+integral da Elegibilidade: todas as entradas, demandas e superfícies das saídas
+concluídas no lote compõem o gráfico, com uma fatia por combinação demanda e
+feição de origem. Nomes, classes e camadas iguais não agrupam combinações. A
+participação de cada fatia utiliza a soma das áreas sobrepostas, mantendo a
+contagem separada de áreas coincidentes; o percentual da área da demanda é
+apresentado distintamente nos detalhes. Contatos sem área constam da legenda.
+As saídas parciais são identificadas e os dados são lidos dos GeoPackages
+assinados, com conferência dos vínculos e das somas, sem repetir interseções ou
+alterar os valores dos produtos.
 
 ### 8.3 Fase 3 — Ajuste por atributos do objeto de demanda
 

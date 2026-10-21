@@ -12,6 +12,7 @@ const assert = require('node:assert/strict');
     const errors = [], requests = [], saved = new Map();
     let failLayer = '', missingGeometry = false;
     let modoExecucao = 'sucesso';
+    let falharGrafico = false;
     const execucoes = [], normalizacoes = [], jobs = new Map();
     page.on('pageerror', error => errors.push(error.message));
     await page.addLocatorHandler(page.locator('#pfsStatusOverlay.pfs-active'), async () => {
@@ -55,6 +56,20 @@ const assert = require('node:assert/strict');
       if (path.endsWith('/ahp/hierarquizacoes')) return send([hier,
         {...hier,codigo:'HIER-F1',dados_hierarquizacao:{cabecalho_grupo:{fases_a_executar:[1]}}}]);
       if (path.endsWith('/ahp/hierarquizacoes/HIER-F2')) return send(hier);
+      if (path.endsWith('/favorabilidade/resultados/sobreposicoes')) {
+        if (falharGrafico) return route.fulfill({status:422,json:{detail:'Saída alterada; gráfico recusado.'}});
+        const ids = req.postDataJSON().execucoes;
+        return send({concluidas:ids.length,previstas:ids.length,entradas:ids.map(id => ({
+          id,nome:`Entrada ${id}`,campos:[{id:rede.id,nome:'Rede',papel:'rede'}],
+          linhas:[{id:'A',chave:'0',nome:'Demanda A',sobreposicoes:[
+            {id:'f0',base_id:rede.id,nome:'Mesma classe',identificador:1,area_m2:10,percentual:10},
+            {id:'f1',base_id:rede.id,nome:'Mesma classe',identificador:2,area_m2:5,percentual:5},
+          ]},{id:'B',chave:'1',nome:'Demanda B',sobreposicoes:[
+            {id:'f0',base_id:rede.id,nome:'Mesma classe',identificador:1,area_m2:20,percentual:20},
+            {id:'f2',base_id:rede.id,nome:'Contato',identificador:3,area_m2:0,percentual:0},
+          ]}],
+        }))});
+      }
       if (/\/favorabilidade\/preparar-(demanda|hierarquizacao)$/.test(path)) {
         normalizacoes.push({path,body:req.postDataJSON()});
         const arquivo = `saidas-geoespaciais/preparacao-f2-${normalizacoes.length}.gpkg`;
@@ -309,6 +324,37 @@ const assert = require('node:assert/strict');
     assert.equal(execucoes[0].rede[0].id,rede.id);
     assert((await panel()).includes(jobs.get('execucao-1').resultado.id),'Saída persistida incluída na bancada');
     assert.match(await page.locator('#fv-status').textContent(),/Nenhum índice ou classe foi agregado/);
+    assert.equal(await page.locator('#fv-sobreposicoes-rosca path').count(),3,'Rosca inclui sobreposições de ambas as demandas');
+    assert.equal(await page.locator('#fv-sobreposicoes-legenda button').count(),4,'Nomes iguais e contatos sem área não são agrupados ou omitidos');
+    assert.equal(await page.locator('#fv-sobreposicoes-rosca').getAttribute('data-total-m2'),'35');
+    const arcos = await page.locator('#fv-sobreposicoes-rosca path').evaluateAll(paths => paths.map(path => {
+      const numeros = path.getAttribute('d').match(/[-+]?\d*\.?\d+(?:e[-+]?\d+)?/gi).map(Number);
+      let angulo = Math.atan2(numeros[8]-120,numeros[7]-120)-Math.atan2(numeros[1]-120,numeros[0]-120);
+      if (angulo <= 0) angulo += 2*Math.PI;
+      return {angulo,area:Number(path.dataset.areaM2)};
+    }));
+    for (const arco of arcos) assert(Math.abs(arco.angulo-arco.area/35*2*Math.PI)<1e-10,'Ângulo da fatia proporcional à soma global');
+    assert.equal(await page.locator('#fv-sobreposicoes-rosca path').evaluateAll(paths=>new Set(paths.map(p=>p.dataset.sobreposicao)).size),3);
+    const extremos = await page.evaluate(async () => {
+      const {renderizarRosca,numeroSobreposicao} = await import('/restrict/hierarquizacao/js/sobreposicoes-rosca.js');
+      const svg = document.createElementNS('http://www.w3.org/2000/svg','svg'), legenda = document.createElement('div');
+      const item = {id:'a',chave:'a',entradaNome:'Entrada',demandaNome:'Demanda',demandaId:'A',baseNome:'Base',nome:'Feição',identificador:1,area_m2:0};
+      const render = itens => renderizarRosca({svg,legenda,itens,aoSelecionar:() => {}});
+      render([item]);
+      const zero = {fatias:svg.querySelectorAll('path').length,itens:legenda.children.length,texto:legenda.textContent};
+      render([]);
+      const vazio = {fatias:svg.querySelectorAll('path').length,itens:legenda.children.length,texto:svg.textContent};
+      render([{...item,area_m2:1}]);
+      return {zero,vazio,unica:svg.querySelectorAll('path').length,pequeno:numeroSobreposicao(.000000001)};
+    });
+    assert.equal(extremos.zero.fatias,0); assert.equal(extremos.zero.itens,1);
+    assert.match(extremos.zero.texto,/Contato sem área/);
+    assert.equal(extremos.vazio.fatias,0); assert.equal(extremos.vazio.itens,0);
+    assert.match(extremos.vazio.texto,/Sem Interseção/);
+    assert.equal(extremos.unica,1); assert.equal(extremos.pequeno,'0,000000001');
+    await page.locator('#fv-sobreposicoes-legenda button').last().click();
+    assert.match(await page.locator('#fv-sobreposicoes-detalhe').textContent(),/Demanda B.*Contato.*0,00 m²/);
+    assert.equal(await page.locator('#fv-sobreposicoes-rosca path').count(),3,'Seleção não filtra outras sobreposições');
     await dismiss();
     modoExecucao = 'cancelar';
     await calcular();
@@ -342,6 +388,7 @@ const assert = require('node:assert/strict');
     await dismiss();
     await visivel(rede.id,false);
     await page.waitForFunction(() => document.querySelector('#fv-calcular').disabled);
+    assert.equal(await page.locator('#fv-sobreposicoes-rosca path').count(),3,'Visibilidade da bancada não altera o conjunto já calculado da rosca');
     assert.match(await page.locator('#fv-resultados').textContent(),/0\.8000.*0\.6000/s,'Cálculo não substitui índices registrados');
     await page.locator('#fv-hier-limpar').click();
     await choose('entrada',entrada);
@@ -357,6 +404,19 @@ const assert = require('node:assert/strict');
     assert.equal(execucoes.at(-1).hierarquizacao,undefined,'Análise avulsa não recebe vínculo com uma rodada');
     assert.match(await page.locator('#fv-status').textContent(),/Nenhum índice ou classe foi agregado/);
     assert(!requests.some(r => /\/elegibilidade\/|\/fases\/2\/executar/.test(r.path)),'Execução usa somente as rotas adaptadas da Favorabilidade');
+    falharGrafico = true;
+    await calcular();
+    await idle();
+    assert.match(await page.locator('#fv-sobreposicoes-status').textContent(),/saídas foram mantidas.*Saída alterada/);
+    assert(await page.locator('#fv-sobreposicoes-conteudo').isHidden(),'Falha não exibe gráfico desatualizado como resultado atual');
+    falharGrafico = false;
+    await dismiss();
+    const calculosAntes = execucoes.length;
+    await page.locator('#fv-sobreposicoes-tentar').click();
+    await idle();
+    assert.equal(execucoes.length,calculosAntes,'Recarregar gráfico não repete geoprocessamento');
+    assert.equal(await page.locator('#fv-sobreposicoes-rosca path').count(),3);
+    assert(await page.locator('#fv-sobreposicoes-conteudo').isVisible());
     await dismiss();
     await page.setViewportSize({width:390,height:844});
     await page.waitForTimeout(250);

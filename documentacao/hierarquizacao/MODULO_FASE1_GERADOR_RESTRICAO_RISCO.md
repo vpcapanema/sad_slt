@@ -190,10 +190,11 @@ inalterada, inclusive quando diferentes feicoes da mesma base se sobrepoem.
    Os nomes sao persistidos em arquivo de apresentacao no storage, vinculado ao
    usuario e a assinatura da saida, sem modificar o GeoPackage processado.
 2. Cada entrada possui resumo, fontes em duas colunas (Restricao e Risco),
-   mapa Leaflet, grafico de rosca e tabela de areas por feicao, com uma coluna
+   mapa Leaflet e tabela de areas por feicao, com uma coluna
    por base. A tela pagina 50 feicoes; o PDF apresenta todas as demandas,
    bases e feicoes sobrepostas, inclusive suas areas totais e percentuais.
-   A apresentacao utiliza km² e hectares; o processamento e o GeoPackage mantem m².
+   Os detalhes e a tabela utilizam km² e hectares; a legenda da rosca explicita
+   as areas em m². O processamento e o GeoPackage mantem m².
    Nulos sao apresentados como travessao e nao se confundem com zero. A formatacao
    decimal preserva os valores, inclusive areas positivas inferiores a 0,01 m².
 3. O mapa da tela apresenta demandas integrais e recortes do mesmo arquivo de
@@ -204,7 +205,14 @@ inalterada, inclusive quando diferentes feicoes da mesma base se sobrepoem.
    e amarelos para risco. Nenhum desses mapas classifica elegibilidade.
    Categoria significa Restricao ou Risco; classe significa a propria feicao
    da base, identificada por origem, mesmo quando houver nomes iguais.
-   Cada fatia representa sua participacao na soma das areas sobrepostas; nao
+   Uma unica rosca reune todas as sobreposicoes de todas as entradas e demandas
+   da analise. Cada fatia identifica uma combinacao demanda × feicao da base,
+   sem agrupamento por camada ou nome. Selecao de entrada, demanda ou camada,
+   paginacao e ocultacao de vazias na tabela nao limitam o conjunto do grafico.
+   A legenda identifica entrada, demanda, camada, feicao, area e participacao na
+   soma; selecionar uma fatia de outra entrada atualiza a entrada ativa e os
+   detalhes, a tabela e o mapa. Cada fatia representa sua participacao na soma
+   de todas as areas sobrepostas; nao
    representa cobertura exclusiva da demanda. O percentual dos detalhes e a
    area sobreposta dividida pela area total da demanda, podendo superar 100%
    na soma de feicoes. Contatos de area zero aparecem na legenda, sem fatia

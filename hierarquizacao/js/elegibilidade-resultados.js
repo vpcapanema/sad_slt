@@ -1,21 +1,15 @@
 import {post, base} from '../../geoespacial/extracao-atributos/api.js';
 import {el} from '../../geoespacial/extracao-atributos/ui.js';
 import {escolherArquivo} from '../../geoespacial/extracao-atributos/explorador.js?v=20261020-saidas';
+import {sobreposicoesDaAnalise, renderizarRosca} from './sobreposicoes-rosca.js';
 
 const rota = '/extracao-atributos/elegibilidade/resultados';
 const papeis = {entrada:'Entrada', restricao:'Restrição', risco:'Risco'};
-const ns = 'http://www.w3.org/2000/svg';
 const numero = valor => valor.toLocaleString('pt-BR', {
   minimumFractionDigits:2, maximumFractionDigits:valor !== 0 && Math.abs(valor) < .01 ? 20 : 2,
 });
 const area = (valor, divisor=1e6) => valor === null ? '—' : numero(valor / divisor);
 const nomeDemanda = linha => linha.nome || `Demanda ${linha.id}`;
-const svgNode = (tag, atributos, texto) => {
-  const node = document.createElementNS(ns, tag);
-  for (const [chave, valor] of Object.entries(atributos)) node.setAttribute(chave, String(valor));
-  if (texto !== undefined) node.textContent = texto;
-  return node;
-};
 
 export function criarResultados({avisar, aoOcupar}) {
   const node = id => document.getElementById(`ev-resultados-${id}`);
@@ -152,7 +146,7 @@ export function criarResultados({avisar, aoOcupar}) {
       const ativo = r.chave === chave && (classeAtiva ? r.feicao === classeAtiva : baseAtiva ? r.base === baseAtiva : true);
       r.layer.setStyle({fillOpacity:ativo ? .55 : .12, weight:ativo ? 3 : 1, opacity:ativo ? 1 : .4});
     }
-    tabela(); grafico(linha); mapa.invalidateSize({pan:false});
+    tabela(); grafico(); mapa.invalidateSize({pan:false});
     if (zoom) {
       const alvos = recortes.filter(r => r.chave === chave && (classeAtiva ? r.feicao === classeAtiva : baseAtiva ? r.base === baseAtiva : false));
       if (!mapa.hasLayer(demandas)) demandas.addTo(mapa);
@@ -212,36 +206,17 @@ export function criarResultados({avisar, aoOcupar}) {
       ? `Ocultas: ${linhasOcultas} ${linhasOcultas === 1 ? 'linha' : 'linhas'} e ${colunasOcultas} ${colunasOcultas === 1 ? 'coluna' : 'colunas'}. Zero é um valor válido.`
       : 'Todas as linhas e colunas visíveis.';
   }
-  function grafico(linha) {
-    const svg = node('rosca'), legenda = node('legenda'), classes = linha.sobreposicoes;
-    svg.replaceChildren(); legenda.replaceChildren();
-    const total = classes.reduce((s,c) => s+c.area_m2,0), ponto = (r,a) => `${120+r*Math.cos(a)},${120+r*Math.sin(a)}`;
-    svg.append(svgNode('circle',{cx:120,cy:120,r:84,fill:'none',stroke:'#edf1f4','stroke-width':38}));
-    let inicio = -Math.PI/2;
-    for (const c of classes) {
-      const b = basesPorId.get(c.base_id), cor = corClasse(c.id);
-      const destacada = classeAtiva ? c.id === classeAtiva : c.base_id === baseAtiva;
-      const rotulo = `${c.nome} · ${b.nome} · ${area(c.area_m2)} km²`;
-      const escolher = () => selecionar(chave,c.base_id,c.id);
-      if (c.area_m2 > 0) {
-        const fim = inicio+Math.min(c.area_m2/total*2*Math.PI,2*Math.PI-.000001), grande = fim-inicio > Math.PI ? 1 : 0;
-        const d = `M ${ponto(103,inicio)} A 103 103 0 ${grande} 1 ${ponto(103,fim)} L ${ponto(65,fim)} A 65 65 0 ${grande} 0 ${ponto(65,inicio)} Z`;
-        const path = svgNode('path',{d,fill:cor,opacity:baseAtiva && !destacada ? .25 : 1,tabindex:0,role:'button','aria-label':rotulo,'aria-pressed':String(destacada),'data-classe':c.id});
-        path.append(svgNode('title',{},rotulo)); path.onclick = escolher;
-        path.onkeydown = event => { if (['Enter',' '].includes(event.key)) { event.preventDefault(); escolher(); } };
-        svg.append(path); inicio = fim;
-      }
-      const botao = el('button',undefined,`evr-classe${destacada ? ' ativa' : ''}`);
-      botao.type = 'button'; botao.dataset.classe = c.id; botao.setAttribute('aria-pressed',String(destacada)); botao.setAttribute('aria-label',rotulo);
-      botao.title = `${papeis[c.papel]} · ${b.nome}`;
-      const pontoCor = el('span',undefined,'evr-ponto'); pontoCor.style.background = cor;
-      const texto = el('span',c.nome);
-      if (classes.some(outro => outro.id !== c.id && outro.nome === c.nome)) texto.append(el('small',`${b.nome} · ${c.identificador}`));
-      if (c.area_m2 === 0) texto.append(el('small','Contato sem Área'));
-      botao.append(pontoCor,texto); botao.onclick = escolher; legenda.append(botao);
-    }
-    svg.append(svgNode('text',{x:120,y:117,'text-anchor':'middle',fill:'#003b5a','font-size':30,'font-weight':'bold'},classes.length));
-    svg.append(svgNode('text',{x:120,y:139,'text-anchor':'middle',fill:'#637b8d','font-size':12},classes.length ? 'Feições' : 'Sem Interseção'));
+  function grafico() {
+    renderizarRosca({svg:node('rosca'), legenda:node('legenda'), itens:sobreposicoesDaAnalise(modelo.entradas),
+      cor:item => corClasse(item.id),
+      selecionada:item => item.entradaIndice === indice && item.demandaChave === chave &&
+        (classeAtiva ? item.id === classeAtiva : item.base_id === baseAtiva),
+      aoSelecionar:item => {
+        if (indice !== item.entradaIndice) {
+          indice = item.entradaIndice; node('entrada').value = String(indice); entradaAtual();
+        }
+        selecionar(item.demandaChave, item.base_id, item.id);
+      }});
   }
   function entradaAtual() {
     const e = entrada();

@@ -21,7 +21,7 @@ from reportlab.platypus import Flowable, PageBreak, Spacer, Paragraph
 from shapely.geometry import Polygon, MultiPolygon, mapping
 
 from api.services import elegibilidade_jobs as jobs, storage_remoto, saidas_storage
-from api.services.elegibilidade_processamento import pasta_saida
+from api.services.elegibilidade_processamento import pasta_saida, ANALISES
 from api.services import extracao_atributos_aliases as aliases
 from api.services import extracao_atributos_relatorios as estilo
 from api.services.extracao_atributos_exportacao import registros, texto
@@ -40,7 +40,8 @@ METODOLOGIA = (
     'O travessão indica ausência de interseção (valor nulo); zero indica interseção sem área. '
     'Não se somam bases diferentes para formar um indicador de elegibilidade. '
     'As áreas são apresentadas em km², com equivalência em hectares e percentual da área da demanda. '
-    'Cada classe do gráfico corresponde a uma feição da base, identificada por sua origem, não pelo nome. '
+    'A rosca reúne todas as entradas e demandas da análise, sem ser limitada pela seleção ou paginação. '
+    'Cada fatia corresponde a uma combinação demanda e feição da base, identificada por sua origem, não pelo nome. '
     'As fatias repartem a soma das áreas sobrepostas; não representam cobertura exclusiva da demanda. '
     'Os atributos originais, a área total e os recortes vinculados acompanham as geometrias no mesmo GeoPackage.'
 )
@@ -69,12 +70,12 @@ def titulo(valor: str) -> str:
     return ' '.join(partes)
 
 
-def _selecionar(identificadores: list[str], dono) -> list[dict]:
+def _selecionar(identificadores: list[str], dono, *, analise: str = 'elegibilidade') -> list[dict]:
     if not identificadores or len(identificadores) != len(set(identificadores)):
         raise ValueError('Informe as execuções concluídas, sem repetições.')
     resultados = []
     for ident in identificadores:
-        job = jobs.consultar(ident, dono)
+        job = jobs.consultar(ident, dono) if analise == 'elegibilidade' else jobs.consultar(ident, dono, analise=analise)
         if job['status'] != 'concluido' or not job['resultado']:
             raise ValueError('Aguarde a conclusão do processamento antes de preparar o relatório.')
         resultados.append({**job['resultado'], 'execucao_id': ident})
@@ -280,12 +281,12 @@ def _conferir_estrutura(frame: gpd.GeoDataFrame, auditoria: dict) -> None:
         raise ValueError('A saída contém geometrias inválidas ou não informa o CRS.')
 
 
-def _ler(resultado: dict) -> tuple[gpd.GeoDataFrame, bytes]:
+def _ler(resultado: dict, *, analise: str = 'elegibilidade') -> tuple[gpd.GeoDataFrame, bytes]:
     dados = storage_remoto.baixar(resultado['arquivo'])
     if not resultado.get('sha256') or sha256(dados).hexdigest() != resultado['sha256']:
         raise ValueError('A camada de saída mudou ou não possui assinatura verificável. Não será emitido um relatório divergente.')
-    frame = gpd.read_file(BytesIO(dados), engine='pyogrio', layer='elegibilidade_territorial')
-    _conferir_estrutura(frame, resultado['elegibilidade'])
+    frame = gpd.read_file(BytesIO(dados), engine='pyogrio', layer=ANALISES[analise]['camada'])
+    _conferir_estrutura(frame, resultado[analise])
     return frame, dados
 
 
@@ -364,7 +365,8 @@ def _linhas(frame: gpd.GeoDataFrame, auditoria: dict) -> list[dict]:
     return linhas
 
 
-def _painel(frame: gpd.GeoDataFrame, dados: bytes, auditoria: dict, nomes: dict[str, str], linhas: list[dict]) -> dict:
+def _painel(frame: gpd.GeoDataFrame, dados: bytes, auditoria: dict, nomes: dict[str, str], linhas: list[dict], *,
+            somente_atributos: bool = False) -> dict:
     if auditoria.get('versao_saida') != 2:
         raise ValueError('Esta saída é anterior ao painel interativo. Execute novamente para gravar áreas totais e interseções.')
     campo_area = auditoria['campo_area_total']
@@ -406,6 +408,8 @@ def _painel(frame: gpd.GeoDataFrame, dados: bytes, auditoria: dict, nomes: dict[
         for grupo in sobreposicoes:
             grupo['percentual'] = grupo['area_m2'] / total * 100
         linha.update(chave=str(pos), area_total_m2=total, sobreposicoes=sobreposicoes)
+    if somente_atributos:
+        return {}
     geometrias = reproject(frame[[frame.geometry.name]], 4326)
     geometrias_recortes = reproject(recortes, 4326) if len(recortes) else recortes
     return {
@@ -416,6 +420,21 @@ def _painel(frame: gpd.GeoDataFrame, dados: bytes, auditoria: dict, nomes: dict[
             {'type': 'Feature', 'geometry': mapping(geom), 'properties': propriedades}
             for propriedades, geom in zip(vinculos, geometrias_recortes.geometry)]},
     }
+
+
+def sobreposicoes_favorabilidade(identificadores: list[str], dono) -> dict:
+    resultados = _selecionar(identificadores, dono, analise='favorabilidade')
+    entradas = []
+    for resultado in resultados:
+        frame, dados = _ler(resultado, analise='favorabilidade')
+        auditoria = resultado['favorabilidade']
+        nomes = {f['id']: f['nome'] for f in [auditoria['entrada'], *auditoria['campos'], *auditoria['feicoes_base']]}
+        linhas = _linhas(frame, auditoria)
+        _painel(frame, dados, auditoria, nomes, linhas, somente_atributos=True)
+        entradas.append({'id': resultado['execucao_id'], 'nome': auditoria['entrada']['nome'],
+                         'campos': auditoria['campos'], 'linhas': linhas})
+    return {'entradas': entradas, 'concluidas': len(resultados),
+            'previstas': resultados[0].get('total_entradas', len(resultados))}
 
 
 def montar(identificadores: list[str], nomes: dict[str, str], dono, revisados: bool) -> tuple[dict, list[tuple[str, bytes]]]:
