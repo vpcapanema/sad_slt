@@ -470,3 +470,121 @@ body.page-admin-demanda {
     width: 100%;
   }
 }
+
+@media (max-width: 900px) {
+  body.page-admin-demanda.escala-revisada {
+    --escala: 1;
+    zoom: 1;
+  }
+
+  .page-admin-demanda .layout-with-sidebar-grid {
+    grid-template-rows: auto auto auto auto;
+  }
+
+  .page-admin-demanda .layout-sidebar-body {
+    max-height: min(38dvh, 20rem);
+  }
+
+  .page-admin-demanda .layout-main-header.app-header {
+    padding: 0.65rem 0.75rem;
+  }
+
+  .page-admin-demanda .layout-main-header .app-nav {
+    min-width: 0;
+    flex-shrink: 1;
+    gap: 0.4rem;
+  }
+
+  .page-admin-demanda .admin-session-bar-inner,
+  .page-admin-demanda .admin-session-info {
+    flex-wrap: wrap;
+  }
+
+  .page-admin-demanda .admin-session-username {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+
+  .page-admin-demanda .layout-main-scroll {
+    flex: none;
+    overflow: visible;
+  }
+
+  .page-admin-demanda #sec-info .admin-info-map #admin-preview-map-wrap,
+  .page-admin-demanda #sec-info .admin-info-map-canvas {
+    min-height: 14rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .page-admin-demanda .admin-dashboard-content {
+    padding: 0.6rem 0.5rem 1.5rem;
+  }
+
+  .page-admin-demanda .admin-demand-head,
+  .page-admin-demanda .admin-dashboard-section.card {
+    padding: 0.65rem;
+  }
+
+  .page-admin-demanda .admin-demand-head-title {
+    overflow-wrap: anywhere;
+  }
+
+  .page-admin-demanda .admin-demand-body {
+    margin-left: 0;
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .page-admin-demanda .admin-form-grid,
+  .page-admin-demanda .form-field,
+  .page-admin-demanda .admin-analise-stack,
+  .page-admin-demanda .admin-analise-subcard {
+    min-width: 0;
+  }
+
+  .page-admin-demanda .admin-form-grid .form-field :is(input, select, textarea) {
+    min-width: 0;
+    max-width: 100%;
+    font-size: 16px;
+  }
+
+  .page-admin-demanda .admin-form-grid .form-field :is(input:not([type="radio"]):not([type="checkbox"]), select) {
+    min-height: 2.75rem;
+  }
+
+  .page-admin-demanda .admin-form-grid .form-field label,
+  .page-admin-demanda .admin-form-grid .form-field > .analise-criterio-rotulo,
+  .page-admin-demanda .field-help {
+    font-size: 0.8125rem;
+    overflow-wrap: anywhere;
+  }
+
+  .page-admin-demanda .analise-criterio {
+    padding-left: 2rem;
+  }
+
+  .page-admin-demanda .analise-criterio::before {
+    left: 0.4rem;
+  }
+
+  .page-admin-demanda .analise-criterio-opcoes,
+  .page-admin-demanda .geometria-respostas {
+    flex-wrap: wrap;
+    max-width: 100%;
+    gap: 0.35rem;
+  }
+
+  .page-admin-demanda .analise-opcao,
+  .page-admin-demanda .geometria-respostas label,
+  .page-admin-demanda .admin-dashboard-section .btn {
+    min-height: 2.75rem;
+  }
+
+  .page-admin-demanda .analise-opcao {
+    min-width: 0;
+    padding-inline: 0.65rem;
+    font-size: 0.8125rem;
+  }
+}

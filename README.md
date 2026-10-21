@@ -773,6 +773,17 @@ Na tabela da página Demandas, o seletor à esquerda do rodapé permite exibir
 primeira página, limpa a seleção e atualiza o contador e a paginação, preservando
 o filtro e a ordenação. O seletor fica desabilitado durante a edição de registros.
 
+A análise em `/restrict/demanda/` adapta os três tipos de demanda ao celular.
+Até 900 px, a página usa escala integral, rolagem vertical pelo documento e lista
+de demandas com altura limitada e rolagem própria. Até 600 px, os campos usam
+fonte de 16 px para evitar ampliação automática durante o foco, os controles de
+resposta e ações oferecem altura mínima de 44 px e as margens internas são
+reduzidas. Informações e mapa ficam empilhados nas telas estreitas; as colunas
+e a escala do desktop são preservadas. A regressão
+`node tests\browser\demanda-responsividade.cjs` cobre Projeto, Plano e Programa
+em oito larguras, de 320 a 1440 px, com o template e as folhas de estilo reais
+e dados sintéticos, sem consultas ao banco.
+
 Famílias: `/api/demandas`, `/api/planos`, `/api/programas`, `/api/dominios` e
 `/api/painel`.
 
