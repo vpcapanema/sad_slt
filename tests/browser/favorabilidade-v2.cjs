@@ -11,6 +11,8 @@ const assert = require('node:assert/strict');
     page.setDefaultTimeout(20000);
     const errors = [], requests = [], saved = new Map();
     let failLayer = '', missingGeometry = false;
+    let modoExecucao = 'sucesso';
+    const execucoes = [], normalizacoes = [], jobs = new Map();
     page.on('pageerror', error => errors.push(error.message));
     await page.addLocatorHandler(page.locator('#pfsStatusOverlay.pfs-active'), async () => {
       await page.evaluate(() => window.StatusFeedback.fechar());
@@ -53,6 +55,29 @@ const assert = require('node:assert/strict');
       if (path.endsWith('/ahp/hierarquizacoes')) return send([hier,
         {...hier,codigo:'HIER-F1',dados_hierarquizacao:{cabecalho_grupo:{fases_a_executar:[1]}}}]);
       if (path.endsWith('/ahp/hierarquizacoes/HIER-F2')) return send(hier);
+      if (/\/favorabilidade\/preparar-(demanda|hierarquizacao)$/.test(path)) {
+        normalizacoes.push({path,body:req.postDataJSON()});
+        const arquivo = `saidas-geoespaciais/preparacao-f2-${normalizacoes.length}.gpkg`;
+        return send({...prepared(entrada),id:`storage:${arquivo}::demandas`,arquivo,
+          metadados_local:{tipos_geometria:['MultiPolygon'],feicoes:2},revisao:'123-456'});
+      }
+      if (path.endsWith('/favorabilidade/execucoes') && req.method() === 'POST') {
+        const payload = req.postDataJSON(), id = `execucao-${execucoes.length + 1}`;
+        execucoes.push(payload);
+        const arquivo = `saidas-geoespaciais/favorabilidade/${id}.gpkg`;
+        const resultado = {...prepared(rede),id:`storage:${arquivo}::favorabilidade_territorial`,
+          arquivo,nome:`Favorabilidade ${id}`,camada:'favorabilidade_territorial',
+          favorabilidade:{indices_agregados:false}};
+        jobs.set(id,{id,status:modoExecucao === 'cancelar' ? 'executando' : modoExecucao === 'erro' ? 'erro' : 'concluido',
+          cancelavel:modoExecucao === 'cancelar',erro:modoExecucao === 'erro' ? 'Falha OGR simulada.' : null,
+          resultado:modoExecucao === 'erro' ? null : resultado});
+        return send({id,status:'executando',cancelavel:true,etapa:'Intersectar entrada integral'});
+      }
+      if (path.includes('/favorabilidade/execucoes/')) {
+        const id = path.split('/').at(path.endsWith('/cancelar') ? -2 : -1);
+        if (path.endsWith('/cancelar')) jobs.set(id,{id,status:'cancelado',cancelavel:false,resultado:null});
+        return send(jobs.get(id));
+      }
       if (path.includes('/cadastro-geometrias/')) {
         const codigo = url.searchParams.get('codigo'), i = Number(codigo.slice(2));
         return send({itens:missingGeometry ? [] : [{codigo,id:`cadastro:projeto:${codigo}`,nome:`Demanda ${i}`,bounds:limites,
@@ -149,6 +174,8 @@ const assert = require('node:assert/strict');
 
     assert.equal(await page.locator('iframe').count(),1);
     assert.equal(await page.locator('slt-geoprocessamento').count(),0);
+    assert(await page.getByRole('heading',{name:'Conferir e executar'}).isVisible());
+    assert(await page.getByRole('button',{name:'Calcular Favorabilidade Territorial',exact:true}).isDisabled());
     assert(await page.locator('#fv-rede-browse').isEnabled(),'Rede independe de selecionar grade primeiro');
     await choose('rede',rede);
     await preview('rede');
@@ -236,10 +263,105 @@ const assert = require('node:assert/strict');
     assert.equal(await page.locator('#fv-status').getAttribute('data-error'),'false','Lista raster pode ser revalidada');
     const naoPermitidas = requests.filter(r => /\/elegibilidade\/|\/fases\/2\/executar|\/bancada-arquivos\/executar/.test(r.path));
     assert.deepEqual(naoPermitidas,[],'Preparação não executa normalização ou cálculos');
+    assert.equal(normalizacoes.length,0,'Preparar/enviar não normaliza a entrada nem executa interseções');
+    await send();
+    await visivel(rede.id,true);
+    await page.locator('#fv-calcular').click();
+    await idle();
+    assert.match(await page.locator('#fv-status').textContent(),/somente superfícies poligonais/);
+    assert.equal(execucoes.length,0,'Raster é rejeitado sem iniciar cálculo');
+    await dismiss();
+    await page.locator('iframe').evaluate((f,id) => f.contentWindow.gpApp.removeLayerFromMap(id,false),grade.id);
+    await page.waitForFunction(() => document.querySelector('#fv-run-grade').textContent.includes('Nenhuma camada'));
+    await page.locator('#fv-calcular').click();
+    await page.locator('#pfsConfirmCancel').click();
+    await idle();
+    assert.equal(normalizacoes.length,0,'Cancelar confirmação não prepara ou grava entradas');
+    async function visivel(id, valor) {
+      await page.locator('iframe').evaluate((f,{id,valor}) => {
+        const app = f.contentWindow.gpApp;
+        for (const suffix of ['','-line','-point']) if (app.state.map.getLayer(id+suffix))
+          app.state.map.setLayoutProperty(id+suffix,'visibility',valor ? 'visible' : 'none');
+        app.renderLayers();
+      },{id,valor});
+    }
+    await visivel('cadastro:projeto:D-0',false);
+    await page.waitForFunction(() => document.querySelector('#fv-run-count').textContent.startsWith('1 entrada'));
+    await page.locator('#fv-calcular').click();
+    await idle();
+    assert.match(await page.locator('#fv-status').textContent(),/todas as demandas/);
+    await dismiss();
+    await visivel('cadastro:projeto:D-0',true);
+    await page.waitForFunction(() => document.querySelector('#fv-run-count').textContent.startsWith('2 entrada'));
+    async function calcular() {
+      await dismiss();
+      await page.locator('#fv-calcular').click();
+      await page.locator('#pfsConfirmOk').click();
+    }
+    await calcular();
+    await idle();
+    assert.equal(normalizacoes[0].body.codigo,hier.codigo);
+    assert.deepEqual(normalizacoes[0].body.demandas,['cadastro:projeto:D-0','cadastro:projeto:D-1']);
+    assert.equal(execucoes.length,1,'Hierarquização é processada como uma entrada integral');
+    assert.equal(execucoes[0].hierarquizacao,hier.codigo);
+    assert.equal(execucoes[0].entrada.revisao,'123-456');
+    assert.deepEqual(execucoes[0].grade,[]);
+    assert.equal(execucoes[0].rede[0].id,rede.id);
+    assert((await panel()).includes(jobs.get('execucao-1').resultado.id),'Saída persistida incluída na bancada');
+    assert.match(await page.locator('#fv-status').textContent(),/Nenhum índice ou classe foi agregado/);
+    await dismiss();
+    modoExecucao = 'cancelar';
+    await calcular();
+    await page.waitForFunction(() => !document.querySelector('#pfsCancelBtn').hidden);
+    await page.locator('#pfsCancelBtn').click();
+    await page.locator('#pfsConfirmOk').click();
+    await idle();
+    assert(requests.some(r => r.path.endsWith('/favorabilidade/execucoes/execucao-2/cancelar')));
+    assert.match(await page.locator('#fv-status').textContent(),/cancelado/i);
+    assert((await panel()).includes(jobs.get('execucao-1').resultado.id),'Cancelamento mantém a saída anterior');
+    modoExecucao = 'erro';
+    await calcular();
+    await idle();
+    assert.match(await page.locator('#fv-status').textContent(),/Falha OGR simulada/);
+    assert.equal(await page.locator('#fv-status').getAttribute('data-error'),'true');
+    await dismiss();
+    modoExecucao = 'sucesso';
+    await page.locator('iframe').evaluate(f => {
+      const win = f.contentWindow;
+      win.adicionarOriginalTeste = win.gpArquivos.adicionar;
+      win.gpArquivos.adicionar = () => { throw new Error('Falha de inclusão simulada.'); };
+    });
+    await calcular();
+    await idle();
+    assert.match(await page.locator('#fv-status').textContent(),/saída já está gravada.*sem repetir o cálculo/);
+    await page.locator('iframe').evaluate(f => {
+      const win = f.contentWindow;
+      win.gpArquivos.adicionar = win.adicionarOriginalTeste;
+      delete win.adicionarOriginalTeste;
+    });
+    await dismiss();
+    await visivel(rede.id,false);
+    await page.waitForFunction(() => document.querySelector('#fv-calcular').disabled);
+    assert.match(await page.locator('#fv-resultados').textContent(),/0\.8000.*0\.6000/s,'Cálculo não substitui índices registrados');
+    await page.locator('#fv-hier-limpar').click();
+    await choose('entrada',entrada);
+    await preview('entrada');
+    await checkbox('grade').uncheck();
+    await send();
+    await visivel(rede.id,true);
+    await calcular();
+    await idle();
+    assert.match(normalizacoes.at(-1).path,/\/favorabilidade\/preparar-demanda$/);
+    assert.equal(normalizacoes.at(-1).body.id,entrada.id);
+    assert.equal(normalizacoes.at(-1).body.revisao,entrada.nome);
+    assert.equal(execucoes.at(-1).hierarquizacao,undefined,'Análise avulsa não recebe vínculo com uma rodada');
+    assert.match(await page.locator('#fv-status').textContent(),/Nenhum índice ou classe foi agregado/);
+    assert(!requests.some(r => /\/elegibilidade\/|\/fases\/2\/executar/.test(r.path)),'Execução usa somente as rotas adaptadas da Favorabilidade');
+    await dismiss();
     await page.setViewportSize({width:390,height:844});
     await page.waitForTimeout(250);
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth+1),'Layout mobile sem overflow horizontal');
     assert.deepEqual(errors,[]);
-    console.log('Favorabilidade V2: entrada exclusiva, geometrias originais, pasta de superfícies, grade/rede independentes, prévia, raster e vetor na bancada, cancelamento, falhas, listas e responsividade OK.');
+    console.log('Favorabilidade V2: preparação original, conferência, composição visível, entrada integral, execução, polling, cancelamento real, saída na bancada, falhas recuperáveis, índices inalterados e responsividade OK.');
   } finally { await browser.close(); }
 })().catch(error => {console.error(error);process.exitCode = 1;});

@@ -55,6 +55,37 @@ def test_status_e_resultado_persistem_sem_memoria_do_worker(ambiente, monkeypatc
         jobs.cancelar(inicial['id'], 'autor')
 
 
+@pytest.mark.parametrize('cancelar', [False, True])
+def test_favorabilidade_isola_namespace_preserva_cancelamento_e_nao_registra_fase1(ambiente, monkeypatch, cancelar):
+    from api.services import hierarquizacao_service
+    chamadas = []
+    def executar(payload, controle, *, analise):
+        assert analise == 'favorabilidade'
+        controle.verificar()
+        return {'arquivo': 'f2.gpkg', 'favorabilidade': {'hierarquizacao': 'H'},
+                'elegibilidade': {'hierarquizacao': 'NAO-REGISTRAR'}}
+    monkeypatch.setattr(jobs, 'executar', executar)
+    monkeypatch.setattr(hierarquizacao_service, 'registrar_saida_geoespacial_fase1', lambda *args: chamadas.append(args))
+    inicial = jobs.iniciar({'entrada': {'id': 'e', 'nome': 'Entrada'}}, 'autor', analise='favorabilidade')
+    ident = inicial['id']
+    assert any('/execucoes-favorabilidade/' in caminho for caminho in ambiente[0])
+    with pytest.raises(FileNotFoundError):
+        jobs.consultar(ident, 'autor')
+    with pytest.raises(FileNotFoundError):
+        jobs.cancelar(ident, 'autor')
+    monkeypatch.setattr(jobs, '_jobs', {})
+    with pytest.raises(FileNotFoundError):
+        jobs.consultar(ident, 'autor')
+    with pytest.raises(FileNotFoundError):
+        jobs.consultar(ident, 'outro', analise='favorabilidade')
+    if cancelar:
+        jobs.cancelar(ident, 'autor', analise='favorabilidade')
+    ambiente[1].pop()()
+    estado = jobs.consultar(ident, 'autor', analise='favorabilidade')
+    assert estado['status'] == ('cancelado' if cancelar else 'concluido')
+    assert not chamadas
+
+
 def test_cancelamento_recebido_por_outro_worker(ambiente, monkeypatch):
     inicial = iniciar()
     controle = jobs._jobs[inicial['id']]['controle']

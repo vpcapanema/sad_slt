@@ -62,8 +62,10 @@ def test_preparacao_v2_nao_executa_fase1_ou_fase2():
     js = Path("hierarquizacao/js/fase2-favorabilidade-v2.js").read_text(encoding="utf-8")
     assert "superficies-indices/hierarquizacao/favorabilidade" in js
     assert "pastaInicial:PASTA_SUPERFICIES, incluirRasters:true" in js
-    for legado in ("executarFase2", "/elegibilidade/", "preparar-demanda", "preparar-hierarquizacao", "buffer_ponto_m"):
+    for legado in ("executarFase2", "/elegibilidade/", "buffer_ponto_m"):
         assert legado not in js
+    envio = js[js.index('async function enviarBancada()'):js.index('async function salvarLista(')]
+    assert '/favorabilidade/' not in envio
     assert "/cadastro-geometrias/" in js
     assert "objeto_hierarquizacao:objeto" in js
     assert "mapa.sync(itens(candidato))" in js

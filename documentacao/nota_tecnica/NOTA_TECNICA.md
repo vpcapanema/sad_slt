@@ -18,8 +18,8 @@
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Título**                 | Metodologia do Sistema de Hierarquização de Demandas — SICARD                                                                                                         |
 | **Número**                 | NT-SICARD-001/2026                                                                                                                                                       |
-| **Versão**                 | 1.24                                                                                                                                                                      |
-| **Data de emissão**        | 20/10/2026                                                                                                                                                               |
+| **Versão**                 | 1.25                                                                                                                                                                      |
+| **Data de emissão**        | 21/10/2026                                                                                                                                                               |
 | **Classificação**         | Documento técnico-metodológico de entrega ao cliente                                                                                                                   |
 | **Sistema**                 | SICARD — Sistema de Apoio à Tomada de Decisão                                                                                                                         |
 | **Domínio de aplicação** | Logística e transportes. Concebido no âmbito do Plano de Logística Integrada do Estado de São Paulo (PLI-SP), aplica-se a qualquer objeto de demanda desse domínio. |
@@ -58,6 +58,7 @@
 | 1.22    | 19/10/2026 | `[preencher]` | Consolidação integral das demandas de uma hierarquização em um único GeoPackage e uma única camada no envio confirmado da prévia à bancada, preservando registros, atributos e rastreabilidade das fontes, sem dissolução entre demandas. |
 | 1.23    | 19/10/2026 | `[preencher]` | Persistência do acompanhamento das execuções entre processos e reinícios, preservação dos nomes cadastrais na apresentação e limitação da complexidade dos tiles por fragmentação visual, sem alteração dos arquivos, áreas ou geometrias de cálculo. |
 | 1.24    | 20/10/2026 | `[preencher]` | Explicitação dos limites da documentação pública: distinção entre especificação metodológica, disponibilidade operacional e homologação, sem alteração dos critérios, operadores ou cálculos. |
+| 1.25    | 21/10/2026 | `[preencher]` | Operacionalização do bloco de conferência e execução da Favorabilidade V2, com preparação cadastral da entrada, interseções independentes, soma de áreas e preservação dos atributos das superfícies por fragmento, sem agregação de classes ou índices nem alteração dos resultados registrados. |
 
 ---
 
@@ -656,6 +657,37 @@ e o consolidado final, permitindo explicar a contribuição de cada dimensão.
 
 **Saídas mínimas:** `score_fase2` (0–1), `ranking_fase2`, `valor_por_dimensao`,
 `valor_por_criterio`, `metodo_extracao`, `geometria_usada_na_extracao`.
+
+**Etapa operacional da bancada V2.** O bloco “Conferir e executar”, acionado pelo
+comando “Calcular Favorabilidade Territorial”, reutiliza o motor de interseções
+independentes da Elegibilidade. Consideram-se somente as entradas e superfícies
+confirmadas pela página e visíveis na bancada. As fontes permanecem inalteradas na
+seleção, na prévia e no envio; após a confirmação do cálculo, produz-se a entrada
+derivada pelas regras cadastrais poligonais da Elegibilidade, com auditoria. Para
+uma hierarquização, exige-se o conjunto completo de demandas, consolidado sem
+dissolução entre demandas.
+
+Cada superfície poligonal de grade ou rede é intersectada separadamente com a
+entrada integral em EPSG:5880. Somam-se apenas as áreas dos fragmentos por feição,
+em m², sem união ou dissolução, nos campos `fg_*` e `fr_*`, respectivamente. A
+ausência de interseção permanece `NULL`; o contato sem área é registrado como
+zero. Sobreposições internas podem produzir somas superiores à área da demanda.
+Rasters e bases lineares podem ser visualizados, mas não integram este cálculo.
+
+O GeoPackage conserva a entrada preparada na camada `favorabilidade_territorial`
+e os fragmentos na camada `intersecoes`, com vínculos às demandas e às feições de
+origem. Todos os atributos não geométricos das superfícies, inclusive a classe
+nominal e os campos normalizados, são preservados individualmente nos fragmentos.
+Os metadados registram a correspondência dos campos para evitar colisões. Não se
+calculam médias, modas, reescalonamentos ou agregações de classes ou índices nesta
+etapa, que não produz as saídas de ranking especificadas acima.
+
+Há acompanhamento persistente por usuário, cancelamento em ponto seguro e
+conferência das geometrias e dos atributos por reabertura antes da persistência
+final no Storage. Os produtos são incluídos na bancada, com armazenamento
+segregado de análises avulsas ou na pasta `fase-2` da hierarquização. Não são
+registrados como resultados de Fase 1 nem substituem índices, escores, ranking ou
+homologação existentes.
 
 ### 8.3 Fase 3 — Ajuste por atributos do objeto de demanda
 

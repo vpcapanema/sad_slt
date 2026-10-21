@@ -184,7 +184,8 @@ def test_referencia_cadastral_invalida_nao_consulta_banco(ident, monkeypatch):
         service.preparar_demanda(ident, 'autor')
 
 
-def test_arquivo_integral_derivado_e_lido_pelos_calculos(isolado):
+@pytest.mark.parametrize('analise', ['elegibilidade', 'favorabilidade'])
+def test_arquivo_integral_derivado_e_lido_pelos_calculos(isolado, analise):
     root, gravados = isolado
     original = root / 'base-geoespacial' / 'demandas.gpkg'
     original.parent.mkdir()
@@ -192,7 +193,8 @@ def test_arquivo_integral_derivado_e_lido_pelos_calculos(isolado):
     fonte.to_file(original, layer='entrada', driver='GPKG', engine='pyogrio')
     antes = sha256(original.read_bytes()).hexdigest()
     ident = 'storage:base-geoespacial/demandas.gpkg::entrada'
-    resposta = service.preparar_demanda(ident, 'autor')
+    resposta = service.preparar_demanda(ident, 'autor', analise=analise)
+    assert f'/analises-avulsas/{analise}-territorial/' in resposta['arquivo']
     assert len(gravados) == 1 and gravados[0]['origem'] == ident
     assert resposta['id'] == f"storage:{resposta['arquivo']}::demandas"
     assert resposta['representacao'] == 'tiles' and 'geojson' not in resposta
@@ -269,10 +271,12 @@ def hierarquizacao_oficial(monkeypatch):
     return dados, geometrias, chamadas
 
 
-def test_hierarquizacao_gera_um_geopackage_uma_camada_todas_as_feicoes(isolado, hierarquizacao_oficial):
+@pytest.mark.parametrize('analise, fase', [('elegibilidade', 'fase-1'), ('favorabilidade', 'fase-2')])
+def test_hierarquizacao_gera_um_geopackage_uma_camada_todas_as_feicoes(isolado, hierarquizacao_oficial, analise, fase):
     dados, originais, chamadas = hierarquizacao_oficial
     antes = {codigo: frame.copy() for codigo, frame in originais.items()}
-    resposta = service.preparar_hierarquizacao('H-1', ['cadastro:projeto:D-2', 'cadastro:projeto:D-1'], 'autor')
+    resposta = service.preparar_hierarquizacao('H-1', ['cadastro:projeto:D-2', 'cadastro:projeto:D-1'], 'autor', analise=analise)
+    assert f'/hierarquizacoes/H-1/{fase}/' in resposta['arquivo']
     assert chamadas == [('projeto', 'D-1'), ('projeto', 'D-2')]
     assert len(isolado[1]) == 1 and isolado[1][0]['origem'] == 'hierarquizacao:H-1'
     arquivo = isolado[1][0]['arquivo']

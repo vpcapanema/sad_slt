@@ -125,6 +125,11 @@
     <div class="ea-section-body">
       <p class="ea-hint">Componente atualizado de geoprocessamento do SICARD. A composição abaixo acompanha as camadas confirmadas nesta página e marcadas como visíveis na bancada.</p>
       <p id="fv-bancada-status" class="ea-hint" role="status">Nenhuma camada confirmada nesta página.</p>
+      <section class="secao-favorabilidade-conferencia ea-checkup" aria-labelledby="fv-checkup-title">
+      <h4 class="ea-checkup-title" id="fv-checkup-title">Conferir e executar</h4>
+      <p class="ea-hint">Confira as demandas e as superfícies poligonais de grade e rede. Somente camadas confirmadas por esta página e marcadas como visíveis na bancada integram esta composição; a seleção e a prévia não alteram este conjunto.</p>
+      <div class="ea-execucao-selecao" id="fv-run-selection" aria-live="polite">
+      <div class="ea-execucao-linha"><strong>Análise:</strong> <span>Favorabilidade territorial de grade e da rede · Fase 2</span></div>
       <div class="ea-checkup-tables">
         {% for papel, rotulo in [("entrada", "Entrada"), ("grade", "Favorabilidade territorial de grade"), ("rede", "Favorabilidade territorial de rede")] %}
         <div class="ea-table-wrap"><table aria-label="Camadas de {{ rotulo|lower }} confirmadas">
@@ -133,7 +138,14 @@
         </table></div>
         {% endfor %}
       </div>
+      <p id="fv-run-count" class="ea-hint">Marque uma entrada e ao menos uma superfície poligonal na bancada.</p>
       <p id="fv-run-warning" class="ea-hint" role="status"></p>
+      </div>
+      <div class="ea-execute">
+        <p id="fv-run-pending" class="ea-hint">A execução prepara a entrada poligonal segundo as regras cadastrais da Elegibilidade e intersecta cada superfície separadamente com a entrada integral. Produz áreas em m² (fg_* para grade e fr_* para rede) e fragmentos com todos os atributos das superfícies, inclusive a classe nominal e os campos normalizados, sem agregá-los. O GeoPackage é gravado no Storage e incluído na bancada. Rasters e bases lineares são apenas referências de visualização nesta etapa. Não altera os índices registrados nem homologa superfícies.</p>
+        <button id="fv-calcular" class="ea-btn ea-btn-primary" type="button" aria-describedby="fv-run-pending" disabled>Calcular Favorabilidade Territorial</button>
+      </div>
+      </section>
     </div>
   </section>
   <section class="secao-favorabilidade-resultados card card-favorabilidade-resultados ahp-step-section" aria-labelledby="fv-resultados-title">
@@ -156,5 +168,5 @@
 <script src="/assets/vendor/maplibre-gl/maplibre-gl.js"></script>
 <script src="/assets/vendor/maplibre-gl/leaflet-maplibre-gl.js"></script>
 <script src="/restrict/hierarquizacao/js/hier-api.js"></script>
-<script type="module" src="/restrict/hierarquizacao/js/fase2-favorabilidade-v2.js"></script>
+<script type="module" src="/restrict/hierarquizacao/js/fase2-favorabilidade-v2.js?v=20261021-execucao"></script>
 {% endblock %}

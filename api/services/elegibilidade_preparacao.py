@@ -73,7 +73,8 @@ def normalizar_frame(frame: gpd.GeoDataFrame) -> tuple[gpd.GeoDataFrame, dict]:
     }
 
 
-def _carregar_demanda(ident: str, atributos: dict | None = None) -> tuple[gpd.GeoDataFrame, str, dict]:
+def _carregar_demanda(ident: str, atributos: dict | None = None, *,
+                      revisao: str | None = None) -> tuple[gpd.GeoDataFrame, str, dict]:
     origem: dict = {'id': ident}
     if ident.startswith('cadastro:'):
         from api.repositories.cadastro_geometria_repository import exportar_original, TipoCadastro
@@ -92,6 +93,11 @@ def _carregar_demanda(ident: str, atributos: dict | None = None) -> tuple[gpd.Ge
         if atributos:
             raise ValueError('Atributos adicionais só são aceitos para demandas de hierarquizações.')
         if ident.startswith('storage:'):
+            if revisao is not None:
+                caminho, _ = storage.separar_id(ident)
+                estado = storage.resolver(caminho).stat()
+                if revisao != f'{estado.st_mtime_ns}-{estado.st_size}':
+                    raise ValueError('O arquivo de entrada mudou após o envio à bancada. Atualize a prévia e tente novamente.')
             origem.update(storage.impressao_digital(ident))
         frame, nome, arquivo = previa.carregar(ident)
         origem['arquivo'] = arquivo
@@ -102,8 +108,10 @@ def _carregar_demanda(ident: str, atributos: dict | None = None) -> tuple[gpd.Ge
     return frame, nome, origem
 
 
-def preparar_demanda(ident: str, dono: str, atributos: dict | None = None) -> dict:
-    frame, nome, origem = _carregar_demanda(ident, atributos)
+def preparar_demanda(ident: str, dono: str, atributos: dict | None = None, *,
+                     analise: str = 'elegibilidade', revisao: str | None = None) -> dict:
+    frame, nome, origem = (_carregar_demanda(ident, atributos, revisao=revisao) if revisao is not None
+                          else _carregar_demanda(ident, atributos))
     campo_fid = 'slt_fid_origem'
     while campo_fid in frame.columns:
         campo_fid += '_'
@@ -112,10 +120,11 @@ def preparar_demanda(ident: str, dono: str, atributos: dict | None = None) -> di
     normalizada, auditoria = normalizar_frame(frame)
     auditoria['origem'] = origem
     auditoria['campo_fid_origem'] = campo_fid
-    return _gravar_demanda(normalizada, auditoria, ident, nome, dono)
+    return _gravar_demanda(normalizada, auditoria, ident, nome, dono, analise=analise)
 
 
-def preparar_hierarquizacao(codigo: str, demandas: list[str], dono: str) -> dict:
+def preparar_hierarquizacao(codigo: str, demandas: list[str], dono: str, *,
+                            analise: str = 'elegibilidade') -> dict:
     from api.services.hierarquizacao_service import obter_hierarquizacao
 
     dados = obter_hierarquizacao(codigo).model_dump(mode='json')
@@ -175,10 +184,11 @@ def preparar_hierarquizacao(codigo: str, demandas: list[str], dono: str) -> dict
         for origem in origens:
             contagens.update(origem['normalizacao'][campo])
         auditoria[campo] = dict(contagens)
-    return _gravar_demanda(normalizada, auditoria, ident, f"{codigo} — {dados['nome']}", dono)
+    return _gravar_demanda(normalizada, auditoria, ident, f"{codigo} — {dados['nome']}", dono, analise=analise)
 
 
-def _gravar_demanda(normalizada: gpd.GeoDataFrame, auditoria: dict, ident: str, nome: str, dono: str) -> dict:
+def _gravar_demanda(normalizada: gpd.GeoDataFrame, auditoria: dict, ident: str, nome: str, dono: str, *,
+                    analise: str = 'elegibilidade') -> dict:
     for campo in normalizada.columns:
         if campo != normalizada.geometry.name and normalizada[campo].dtype == 'object':
             normalizada[campo] = normalizada[campo].map(
@@ -208,9 +218,10 @@ def _gravar_demanda(normalizada: gpd.GeoDataFrame, auditoria: dict, ident: str, 
     representacao = previa.representar(reaberta, meta, dono)
     from api.services import saidas_storage
     codigo = auditoria['origem'].get('hierarquizacao')
+    fase = {'elegibilidade': 'fase-1', 'favorabilidade': 'fase-2'}[analise]
     pasta = saidas_storage.pasta_analise(
-        'elegibilidade-territorial', 'preparacao-demandas', str(uuid4()),
-        quando=datetime.now(timezone.utc), hierarquizacao=codigo, fase='fase-1' if codigo else None)
+        f'{analise}-territorial', 'preparacao-demandas', str(uuid4()),
+        quando=datetime.now(timezone.utc), hierarquizacao=codigo, fase=fase if codigo else None)
     saidas_storage.garantir_pasta(pasta)
     exportacao = ciclo.registrar_exportacao_memoria(nome_arquivo, conteudos, ident, 'vetor', pasta_saida=pasta)
     caminho = exportacao['caminho']

@@ -13,6 +13,51 @@ projeto, um indice espacial normalizado.
 O papel deste modulo e produzir essa superficie de favorabilidade a partir de camadas
 geoespaciais, operadores espaciais, reescalonamento, pesos AHP e algebra de mapas.
 
+## Etapa operacional da bancada de favorabilidade V2
+
+A pagina `/restrict/hierarquizacao/fase-2/` disponibiliza o bloco **Conferir e
+executar**, com o comando **Calcular Favorabilidade Territorial**. Esta etapa
+reutiliza o motor de intersecoes independentes da Elegibilidade, mas nao corresponde
+a geracao, extracao agregada ou homologacao do indice final descrito neste documento.
+
+O conjunto de calculo inclui somente as camadas confirmadas pela pagina e visiveis
+na bancada, nos papeis Entrada, Favorabilidade territorial de grade e Favorabilidade
+territorial de rede. Camadas inseridas diretamente na bancada sao sinalizadas e nao
+recebem papel automaticamente. Exige-se uma entrada e ao menos uma superficie
+poligonal; bases lineares e rasters permanecem disponiveis para visualizacao, mas
+nao sao convertidos em superficies de area nem amostrados por este comando.
+
+A selecao, a previa e o envio a bancada preservam as fontes originais. Somente apos
+a confirmacao do calculo, a entrada e preparada em arquivo derivado pelas mesmas
+regras cadastrais poligonais da Elegibilidade, com auditoria dos parametros e das
+origens. As demandas de uma hierarquizacao devem estar integralmente visiveis e
+sao consolidadas em uma unica camada, sem dissolucao entre demandas.
+
+Cada superficie e intersectada separadamente com a entrada integral, em EPSG:5880.
+Somam-se exclusivamente as areas dos fragmentos por feicao de entrada, em m2, sem
+uniao ou dissolucao. Os campos `fg_*` identificam grade e `fr_*` identificam rede.
+Ausencia de intersecao resulta em `NULL`; contato sem area resulta em zero.
+Sobreposicoes internas a uma base podem produzir soma superior a area da demanda.
+
+O GeoPackage possui a camada principal `favorabilidade_territorial`, com a copia
+integral da entrada preparada, identificador por feicao, area total e areas por
+base; e a camada `intersecoes`, com geometria, posicao da demanda, identificadores
+da base e da feicao de origem, area e todos os atributos nao geometricos de cada
+superficie. A classe nominal, os campos normalizados e os indices com e sem o
+sufixo `_dim` permanecem separados por fragmento, sem media, moda, reescalonamento
+ou qualquer agregacao desses valores. Prefixos evitam colisoes e os metadados
+`SICARD_FAVORABILIDADE` registram o mapa entre os campos originais e os de saida.
+As geometrias e os atributos gravados sao conferidos por reabertura do produto.
+
+O fluxo oferece progresso por etapas e cancelamento em ponto seguro antes da
+gravacao final. O acompanhamento e persistido em namespace proprio de
+favorabilidade, restrito ao usuario. As saidas sao gravadas em
+`saidas-geoespaciais/analises-avulsas/favorabilidade-territorial/` ou, para grupos,
+em `saidas-geoespaciais/hierarquizacoes/{codigo}/fase-2/`, e incluidas na bancada.
+Falhas posteriores a persistencia informam o caminho recuperavel, sem descartar
+produtos anteriores. Esta execucao nao atualiza indices, escores, ranking ou
+homologacao da hierarquizacao e nao registra produtos como resultados de Fase 1.
+
 ## Produto final do modulo
 
 O modulo deve produzir um pacote homologado de Fase 2 contendo:

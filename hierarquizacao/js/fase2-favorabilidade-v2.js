@@ -1,5 +1,5 @@
 import {$, el, feedback} from '../../geoespacial/extracao-atributos/ui.js';
-import {json, post} from '../../geoespacial/extracao-atributos/api.js';
+import {json, post, esperar} from '../../geoespacial/extracao-atributos/api.js';
 import {escolherArquivo, identificarCamadas} from '../../geoespacial/extracao-atributos/explorador.js?v=20261020-favorabilidade';
 import {validarCamada} from '../../geoespacial/extracao-atributos/camada-validada.js';
 import {escolherConfiguracao} from '../../geoespacial/extracao-atributos/lista-camadas.js';
@@ -88,6 +88,16 @@ function controles() {
     if (state.busy) checkbox.disabled = true;
   }
   $('#favorabilidade-app').setAttribute('aria-busy', String(state.busy));
+  conferirExecucao();
+}
+function conjuntoExecucao() {
+  const visiveis = new Set((mapa.camadas() || []).filter(c => c.visivel).map(c => c.id));
+  return Object.fromEntries(Object.keys(papeis).map(p => [p, enviados[p].filter(c => visiveis.has(c.id))]));
+}
+function conferirExecucao() {
+  const conjunto = conjuntoExecucao();
+  node('calcular').disabled = state.busy || !conjunto.entrada.length || !conjunto.grade.length && !conjunto.rede.length;
+  node('run-count').textContent = `${conjunto.entrada.length} entrada(s), ${conjunto.grade.length} superfície(s) de grade e ${conjunto.rede.length} de rede marcadas para a execução.`;
 }
 function render() {
   node('entrada-lista').replaceChildren();
@@ -261,7 +271,7 @@ async function selecionarHierarquizacao(codigo) {
 }
 function atualizarBancada() {
   const atuais = mapa.camadas();
-  if (!atuais) return;
+  if (!atuais) { conferirExecucao(); return; }
   const painel = $('#ea-workbench-frame').contentDocument.querySelector('#gp-layer-list');
   if (painel && painel !== painelObservado) {
     observadorPainel.disconnect();
@@ -283,7 +293,92 @@ function atualizarBancada() {
   const adicionais = atuais.filter(c => c.visivel && !conhecidos.has(c.id)).length;
   node('run-warning').textContent = adicionais ? `${adicionais} camada(s) adicionada(s) diretamente na bancada não integra(m) os papéis confirmados por esta página.` : '';
   node('bancada-status').textContent = Object.entries(papeis).map(([papel,nome]) => `${nome}: ${enviados[papel].length}`).join(' · ');
+  conferirExecucao();
   previa.render();
+}
+async function calcularFavorabilidade() {
+  if (state.busy) return;
+  state.busy = true;
+  controles();
+  let processo, job, resultado, cancelado = false;
+  const concluidas = [];
+  const rota = '/extracao-atributos/favorabilidade/execucoes';
+  try {
+    const conjunto = conjuntoExecucao();
+    const ids = Object.values(conjunto).flat().map(c => c.id);
+    mapa.assertReady(ids);
+    if (!conjunto.entrada.length || !conjunto.grade.length && !conjunto.rede.length)
+      throw new Error('Marque uma entrada e ao menos uma superfície poligonal de grade ou rede na bancada.');
+    for (const camada of [...conjunto.grade, ...conjunto.rede]) {
+      const tipos = camada.metadados_local?.tipos_geometria || camada.geojson?.features?.map(f => f.geometry?.type) || [];
+      if (camada.tipo === 'raster' || tipos.some(tipo => !['Polygon','MultiPolygon'].includes(tipo)))
+        throw new Error(`${camada.nome}: esta etapa aceita somente superfícies poligonais. Linhas e rasters podem ser visualizados, mas não participam do cálculo de áreas.`);
+    }
+    const grupo = conjunto.entrada[0]?.grupoHierarquizacao;
+    if (grupo && (conjunto.entrada.length !== grupo.demandas ||
+        conjunto.entrada.some(c => c.grupoHierarquizacao?.codigo !== grupo.codigo)))
+      throw new Error('Mantenha todas as demandas da hierarquização visíveis na bancada para processar o grupo completo.');
+    if (!await window.ProcessFeedback.confirmar({
+      title:'Executar favorabilidade territorial',
+      message:`Processar ${conjunto.entrada.length} demanda(s), ${conjunto.grade.length} superfície(s) de grade e ${conjunto.rede.length} de rede?`,
+      warning:'A entrada será preparada segundo as regras poligonais cadastrais da Elegibilidade, sem alterar as fontes. Cada superfície será intersectada separadamente com a entrada integral e suas áreas somadas em m². Os fragmentos preservarão todos os atributos das superfícies, sem agregar classes ou índices. Cada saída será gravada no Storage e adicionada à bancada. Os índices registrados não serão alterados.',
+      confirmLabel:'Calcular Favorabilidade Territorial',
+    })) return;
+    const lote = crypto.randomUUID();
+    const referencia = c => ({id:c.id, nome:c.nome, revisao:c.revisao});
+    const entradas = grupo ? [conjunto.entrada[0]] : conjunto.entrada;
+    for (const original of entradas) {
+      if (cancelado) throw new DOMException('Execução cancelada.', 'AbortError');
+      resultado = null;
+      job = null;
+      mapa.assertReady(ids);
+      processo = window.ProcessFeedback.iniciarCadastro({
+        title:`Favorabilidade territorial — ${grupo?.codigo || original.nome}`,
+        tasks:['Preparar entrada integral','Intersectar bases e somar áreas','Gravar e conferir saída'],
+        onCancel:async () => {
+          if (job) await post(`${rota}/${job.id}/cancelar`, {});
+          cancelado = true;
+        },
+      });
+      processo.tarefaAtual('Preparar entrada integral');
+      const entrada = grupo
+        ? await post('/extracao-atributos/favorabilidade/preparar-hierarquizacao', {
+          codigo:grupo.codigo, demandas:conjunto.entrada.map(c => c.id),
+        })
+        : await post('/extracao-atributos/favorabilidade/preparar-demanda', {id:original.id, revisao:original.revisao});
+      if (cancelado) throw new DOMException('Execução cancelada após preparar a entrada; nenhuma interseção foi iniciada.', 'AbortError');
+      mapa.assertReady(ids);
+      job = await post(rota, {lote_id:lote, total_entradas:entradas.length,
+        ...(grupo ? {hierarquizacao:grupo.codigo} : {}),
+        entrada:referencia(entrada), grade:conjunto.grade.map(referencia), rede:conjunto.rede.map(referencia)});
+      if (cancelado) await post(`${rota}/${job.id}/cancelar`, {});
+      resultado = await esperar(job, id => `${rota}/${id}`);
+      const win = $('#ea-workbench-frame').contentWindow;
+      win.gpArquivos.adicionar({...resultado, categoria:'Favorabilidade territorial'}, {estiloPreparado:true});
+      mapa.assertReady([resultado.id]);
+      concluidas.push(resultado.nome);
+      await mapa.enquadrar([resultado.id], resultado.bounds);
+      processo.sucesso({title:'Camada de saída produzida',
+        message:`${resultado.nome} gravada no Storage e adicionada à bancada.`,
+        detail:resultado.arquivo});
+      if (cancelado) throw new DOMException('Execução cancelada. A saída já concluída foi mantida.', 'AbortError');
+    }
+    avisar(`${concluidas.length} camada(s) de saída produzida(s) e adicionada(s) à bancada: ${concluidas.join(', ')}. Nenhum índice ou classe foi agregado.`, 'success');
+  } catch (erro) {
+    const persistida = resultado?.arquivo ? ` A saída já está gravada em ${resultado.arquivo}; abra esse arquivo na bancada, sem repetir o cálculo.` : '';
+    const anteriores = concluidas.length ? ` Saídas anteriores mantidas: ${concluidas.join(', ')}.` : '';
+    if (erro.name === 'AbortError') {
+      processo?.confirmarCancelamento(erro.message);
+      avisar(erro.message + anteriores);
+    } else {
+      const mensagem = erro.message + persistida + anteriores + (job && !resultado ? ` Execução: ${job.id}.` : '');
+      processo?.erro({title:'Favorabilidade não concluída', message:mensagem});
+      avisar(mensagem, 'error');
+    }
+  } finally {
+    state.busy = false;
+    controles();
+  }
 }
 async function enviarBancada() {
   await ocupar('Enviando camadas à bancada.', async iniciar => {
@@ -391,6 +486,7 @@ node('hier-limpar').onclick = node('entrada-limpar').onclick;
 node('hier-enviar').onclick = () => enviarPrevia('entrada');
 node('hierarquizacao').onchange = event => selecionarHierarquizacao(event.target.value);
 $('#ea-staging-confirmar').onclick = enviarBancada;
+node('calcular').onclick = calcularFavorabilidade;
 window.SLTAdminAuth.requireAuth();
 render();
 await ocupar('Carregando hierarquizações.', async () => {

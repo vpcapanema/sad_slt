@@ -297,6 +297,88 @@ def cancelar_elegibilidade(ident: str, user: SessionUser = Depends(require_geosp
         raise HTTPException(503, str(exc)) from exc
 
 
+class ExecucaoFavorabilidade(BaseModel):
+    entrada: CamadaElegibilidade
+    grade: list[CamadaElegibilidade] = Field(default_factory=list)
+    rede: list[CamadaElegibilidade] = Field(default_factory=list)
+    lote_id: UUID | None = None
+    total_entradas: int = Field(default=1, ge=1)
+    hierarquizacao: str | None = Field(default=None, min_length=1, max_length=200)
+
+    @model_validator(mode='after')
+    def conferir_papeis(self):
+        bases = self.grade + self.rede
+        if not bases:
+            raise ValueError('Selecione ao menos uma superfície poligonal de grade ou rede.')
+        ids = [self.entrada.id, *(base.id for base in bases)]
+        if len(ids) != len(set(ids)):
+            raise ValueError('Uma camada não pode participar mais de uma vez ou ocupar papéis diferentes.')
+        return self
+
+
+class DemandaFavorabilidade(DemandaBancada):
+    revisao: str | None = Field(default=None, min_length=1, max_length=200)
+
+
+@router.post('/favorabilidade/preparar-demanda')
+def preparar_demanda_favorabilidade(payload: DemandaFavorabilidade, user: SessionUser = Depends(require_geospatial_access)):
+    from api.services.elegibilidade_preparacao import preparar_demanda
+    try:
+        return preparar_demanda(payload.id, user.id, payload.atributos, analise='favorabilidade', revisao=payload.revisao)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except (ValueError, RuntimeError) as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@router.post('/favorabilidade/preparar-hierarquizacao')
+def preparar_hierarquizacao_favorabilidade(payload: HierarquizacaoBancada, user: SessionUser = Depends(require_geospatial_access)):
+    from api.services.elegibilidade_preparacao import preparar_hierarquizacao
+    try:
+        return preparar_hierarquizacao(payload.codigo, payload.demandas, user.id, analise='favorabilidade')
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except (ValueError, RuntimeError) as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@router.post('/favorabilidade/execucoes', status_code=202)
+def executar_favorabilidade(payload: ExecucaoFavorabilidade, user: SessionUser = Depends(require_geospatial_access)):
+    from api.services import elegibilidade_jobs
+    try:
+        return elegibilidade_jobs.iniciar(payload.model_dump(), user.id, analise='favorabilidade')
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc)) from exc
+
+
+@router.get('/favorabilidade/execucoes/{ident}')
+def consultar_favorabilidade(ident: str, user: SessionUser = Depends(require_geospatial_access)):
+    from api.services import elegibilidade_jobs
+    try:
+        return elegibilidade_jobs.consultar(ident, user.id, analise='favorabilidade')
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc)) from exc
+
+
+@router.post('/favorabilidade/execucoes/{ident}/cancelar')
+def cancelar_favorabilidade(ident: str, user: SessionUser = Depends(require_geospatial_access)):
+    from api.services import elegibilidade_jobs
+    try:
+        return elegibilidade_jobs.cancelar(ident, user.id, analise='favorabilidade')
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc)) from exc
+
+
 class ReferenciasResultadosElegibilidade(BaseModel):
     execucoes: list[str] = Field(min_length=1)
 

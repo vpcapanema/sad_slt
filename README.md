@@ -436,9 +436,25 @@ tiles; rasters usam imagem reduzida vinculada ao arquivo original. A preparaçã
 não comprova homologação ou normalização dos índices. Apenas as camadas marcadas
 na prévia são confirmadas na bancada, nos papéis de entrada, grade e rede;
 camadas adicionadas diretamente à bancada não recebem esses papéis.
-Esta atualização cobre a preparação até a bancada, sem executar extração de
-índices ou alterar a metodologia. Os resultados anteriormente registrados na
-hierarquização continuam consultáveis e não são substituídos por esse envio.
+O bloco **Conferir e executar**, anexo à bancada, acompanha a visibilidade e as
+remoções das entradas e superfícies confirmadas. O botão **Calcular Favorabilidade
+Territorial** exige entrada e ao menos uma superfície poligonal. Após confirmação,
+prepara a entrada pelas regras cadastrais poligonais da Elegibilidade e reutiliza
+seu motor de interseções GDAL/OGR independentes, somando somente áreas em m² nos
+campos `fg_*` (grade) e `fr_*` (rede), sem união ou dissolução. As demandas de uma
+hierarquização são processadas integralmente em uma camada, sem dissolvê-las.
+Rasters e bases lineares continuam disponíveis para visualização, mas não
+participam desta execução de áreas.
+O GeoPackage contém `favorabilidade_territorial` e `intersecoes`; os fragmentos
+preservam todos os atributos das superfícies, incluindo classe nominal e valores
+normalizados, sem agregá-los. O mapa de campos e a procedência ficam em
+`SICARD_FAVORABILIDADE`. A execução possui progresso, cancelamento seguro, saída
+conferida no Storage e inclusão na bancada, com namespace próprio e pasta
+`fase-2` para hierarquizações. Não executa o extrator pontual legado, não atualiza
+índices ou ranking e não registra saídas como Fase 1.
+Os resultados anteriormente registrados continuam consultáveis e não são
+substituídos por esse cálculo. Validação sintética:
+`tests/test_favorabilidade_processamento.py` e `tests/browser/favorabilidade-v2.cjs`.
 
 Anexo à bancada da elegibilidade v2, o bloco **Conferir e executar** resume
 separadamente Entrada, Restrição e Risco, com os arquivos ou referências integrais.
