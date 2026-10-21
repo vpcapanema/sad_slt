@@ -121,7 +121,26 @@ def test_zip_de_geopackages_identicos_usa_vinculo_do_job(tmp_path, monkeypatch):
     monkeypatch.setattr(migracao, 'metadados_gpkg', lambda *a: {})
     conn = Mock()
     conn.execute.return_value = []
-    mapa, _ = migracao.destinos(root, conn)
+    mapa, _, _ = migracao.destinos(root, conn)
     destino_pacote = mapa[pacote.relative_to(root).as_posix()]
     assert str(Path(destino_pacote).parent) == str(Path(mapa[caminhos[1]]).parent)
     assert str(Path(mapa[caminhos[0]]).parent) != str(Path(mapa[caminhos[1]]).parent)
+
+
+def test_historico_reaberto_preserva_registro_mais_recente_e_remapeia_saida():
+    def registro(quando):
+        return json.dumps({'id': 'job', 'status': 'concluido', 'resultado': {
+            'arquivo': ANTIGO, 'registrado_em': quando}}).encode()
+    antigo = registro('2026-10-19T10:00:00+00:00')
+    vigente = registro('2026-10-21T10:00:00+00:00')
+    assert migracao.escolher_historico(antigo, vigente) == vigente
+    originais = {'antigo.json': antigo, 'novo.json': vigente}
+    arquivos, _ = migracao.transformar_jsons(originais, {'antigo.json': 'novo.json', ANTIGO: NOVO},
+                                             {'antigo.json': vigente})
+    assert arquivos['antigo.json'] == arquivos['novo.json']
+    resultado = json.loads(arquivos['novo.json'])['resultado']
+    assert resultado == {'arquivo': NOVO, 'registrado_em': '2026-10-21T10:00:00+00:00'}
+    divergente = json.loads(vigente)
+    divergente['resultado']['arquivo'] = 'outra-saida.gpkg'
+    with pytest.raises(ValueError, match='conflitantes'):
+        migracao.escolher_historico(antigo, json.dumps(divergente).encode())

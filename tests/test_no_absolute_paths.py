@@ -47,6 +47,8 @@ INTENTIONAL_FIXTURES = {
     # politica de caminhos o recusa. E o caso de teste, nao um vazamento.
     Path("tests/test_catalogo_arquivos.py"),
     Path("tests/test_visualizacao_arquivo.py"),
+    Path("tests/test_explorador_camadas.py"),  # Caminhos adversariais rejeitados pelo explorador.
+    Path("tests/test_paginas_publicas.py"),  # Confere que caminhos internos não são publicados.
     Path("tests/test_elegibilidade_relatorio.py"),  # Prova que aliases rejeitam caminhos.
     Path("tests/test_no_absolute_paths.py"),  # Casos positivos e negativos do detector.
     # Metadados baixados do IPEA; o link em UNC esta no conteudo de origem.

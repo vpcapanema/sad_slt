@@ -67,7 +67,7 @@
         <div class="pfs-task-spinner"><i class="fas fa-circle-notch fa-spin" aria-hidden="true"></i></div>
       </div>
       <section class="pfs-messages" aria-label="Atividade em andamento">
-        <div class="pfs-activity-panel"><h4>O Que Está Sendo Feito</h4><div class="pfs-active-details" data-pfs="active-detail"></div></div>
+        <div class="pfs-activity-panel"><h4>O Que Está Sendo Feito</h4><div class="pfs-active-details" role="status" aria-live="polite" data-pfs="active-detail"></div></div>
         <p class="pfs-contact" data-pfs="contact-status" role="status"></p>
       </section>
       <section class="pfs-warning-panel" id="pfsProgressWarning" hidden role="alert">

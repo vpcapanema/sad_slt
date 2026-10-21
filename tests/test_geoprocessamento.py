@@ -421,7 +421,9 @@ class GeoprocessamentoApiTest(unittest.TestCase):
             imported = status.json()
             self.assertEqual(imported["status"], "concluido", status.text)
             self.assertEqual(imported["concluidas"], imported["total"])
-            self.assertEqual(len(imported["logs"]), imported["total"])
+            conclusoes = [item for item in imported["logs"] if item.get("tipo") == "concluido"]
+            self.assertEqual(len(conclusoes), imported["total"])
+            self.assertTrue(all(item.get("tipo") in {"concluido", "detalhe"} for item in imported["logs"]))
             messages = [item["mensagem"] for item in imported["logs"]]
             self.assertTrue(any("driver geoespacial" in message for message in messages))
             self.assertTrue(any("PostGIS" in message for message in messages))
@@ -444,7 +446,9 @@ class GeoprocessamentoApiTest(unittest.TestCase):
             loaded = load_status.json()
             self.assertEqual(loaded["status"], "concluido", load_status.text)
             self.assertGreater(loaded["total"], 4)
-            self.assertEqual(len(loaded["logs"]), loaded["total"])
+            conclusoes = [item for item in loaded["logs"] if item.get("tipo") == "concluido"]
+            self.assertEqual(len(conclusoes), loaded["total"])
+            self.assertTrue(all(item.get("tipo") in {"concluido", "detalhe"} for item in loaded["logs"]))
 
         finally:
             upload_path.unlink(missing_ok=True)
@@ -654,7 +658,7 @@ class GeoprocessamentoUiTest(unittest.TestCase):
                         template.index("/restrict/geoespacial/geoprocessamento.js"))
         self.assertIn("const pf=window.gpFeedback?.ProcessFeedback", script)
         self.assertIn("pf.iniciarCadastro({title,tasks:[],onCancel})", script)
-        self.assertIn("sync:job=>pf.acompanhar(job)", script)
+        self.assertIn("sync:job=>{if(pf.atual===proc)pf.acompanhar(job);}", script)
         self.assertIn("progress.configure(job.total,job.etapa_atual);progress.sync(job)", script)
         self.assertIn("progress?.sync(job)", script)
         self.assertIn('id="pfsProgressBox"', feedback)
@@ -671,7 +675,7 @@ class GeoprocessamentoUiTest(unittest.TestCase):
         self.assertIn("this._aplicarLogs(p, st, job)", feedback)
         self.assertIn("job.logs || job.etapas || []", feedback)
         self.assertIn("p.log(detalhes ?", feedback)
-        self.assertIn('id="pfsDiagnostics" hidden aria-hidden="true"', feedback)
+        self.assertIn('<details id="pfsDiagnostics"><summary>Detalhes da execução</summary>', feedback)
         self.assertIn('id="pfsLog"', feedback)
         self.assertIn('role="status" aria-live="polite" data-pfs="active-detail"', feedback)
         self.assertIn("#gp-right-pane .editor-head h2", styles)

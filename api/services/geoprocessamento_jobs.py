@@ -537,8 +537,7 @@ class GeoprocessamentoJobs:
             self._fail(job_id, exc)
 
     def create_load(self, resource_id: str) -> dict[str, Any]:
-        tasks = ["Solicitação registrada", "Catálogo físico consultado", "Metadados localizados",
-                 "Conteúdo geoespacial lido", "Cache da sessão atualizado", "Tipo conferido",
+        tasks = ["Solicitação registrada", "Tipo conferido",
                  "Resposta preparada", "Catálogo sincronizado", "Processo finalizado"]
         job_id = self._new("carregamento", tasks)
         self._advance(job_id, "Solicitação de carregamento registrada", {"id": resource_id})

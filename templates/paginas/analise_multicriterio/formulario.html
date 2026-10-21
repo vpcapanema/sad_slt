@@ -19,15 +19,15 @@
 			<div class="ahp-section-label"><i class="fas fa-compass"></i><span>Contextualização</span></div>
 			<div class="ahp-section-body">
 				<div id="collab-context" aria-live="polite"><p>Carregando os dados desta rodada de julgamento…</p></div>
-				<section class="collab-scope" aria-labelledby="collab-scope-title">
+				<section class="secao-collab-scope collab-scope" aria-labelledby="collab-scope-title">
 					<h2 id="collab-scope-title">Escopo do formulário</h2>
 					<p>Este formulário reúne o julgamento dos colaboradores convidados sobre a importância relativa dos critérios da hierarquização identificada acima. Sua contribuição ajudará a definir quanto cada critério deve influenciar a análise de favorabilidade à implantação ou execução das demandas. O objetivo aqui não é escolher diretamente uma demanda vencedora, atribuir notas aos projetos nem aprovar sua execução: é construir os pesos dos critérios que apoiarão a priorização.</p>
-					<section aria-labelledby="collab-scope-method">
+					<section class="secao-collab-scope-method" aria-labelledby="collab-scope-method">
 						<h3 id="collab-scope-method">Método utilizado: comparação pareada pelo AHP</h3>
 						<p>O Método de Análise Hierárquica, conhecido pela sigla AHP, organiza o julgamento em comparações entre dois critérios por vez. Em cada par, considere o objetivo desta hierarquização e responda: qual dos dois critérios deve ter maior importância para a análise e com que intensidade? Baseie suas escolhas no seu conhecimento técnico e na pertinência de cada critério para esse objetivo, mantendo a mesma referência ao longo de todo o preenchimento.</p>
 						<p>A barra utiliza os níveis apresentados da escala de Saaty: <strong>1</strong> indica igual importância; <strong>3</strong>, importância moderada; <strong>5</strong>, forte; <strong>7</strong>, muito forte; e <strong>9</strong>, extrema. Os valores inversos representam a preferência pelo outro critério. Confira a descrição exibida ao movimentar a barra. Se o critério A receber importância 3 em relação a B, a comparação de B com A será preenchida automaticamente como 1/3; não é necessário julgar esse par novamente no sentido inverso.</p>
 					</section>
-					<section aria-labelledby="collab-scope-steps">
+					<section class="secao-collab-scope-steps" aria-labelledby="collab-scope-steps">
 						<h3 id="collab-scope-steps">Passo a passo da sua participação</h3>
 						<ol>
 							<li><strong>Confira a rodada.</strong> Leia o objetivo, verifique o prazo e o status apresentados acima e confirme que está participando da hierarquização para a qual recebeu o convite.</li>
@@ -38,11 +38,11 @@
 							<li><strong>Envie sua contribuição.</strong> Com a RC inferior a 0,10, clique em “Enviar resposta”, dentro do prazo da rodada, e aguarde a confirmação de sucesso. É essa confirmação que indica a conclusão da sua participação.</li>
 						</ol>
 					</section>
-					<section aria-labelledby="collab-scope-consistency">
+					<section class="secao-collab-scope-consistency" aria-labelledby="collab-scope-consistency">
 						<h3 id="collab-scope-consistency">Como interpretar os indicadores</h3>
 						<p>A <strong>RC</strong> avalia a coerência interna das comparações, não se a sua opinião está “certa” ou “errada”. O sistema aceita o envio quando <strong>RC &lt; 0,10</strong>. Em zero, o cartão permanece neutro; acima de zero e abaixo de 0,10, fica verde; a partir de 0,10, fica vermelho e o envio permanece bloqueado até a revisão. O Índice de Consistência (IC) e o valor λmax são indicadores auxiliares do cálculo AHP, atualizados automaticamente. Você não precisa calculá-los nem preenchê-los.</p>
 					</section>
-					<section aria-labelledby="collab-scope-results">
+					<section class="secao-collab-scope-results" aria-labelledby="collab-scope-results">
 						<h3 id="collab-scope-results">O que acontece depois do envio</h3>
 						<p>As respostas enviadas ficam disponíveis ao responsável para análise e consolidação. Na consolidação padrão, utiliza-se a agregação de julgamentos individuais (AIJ): a média geométrica reúne os valores correspondentes das matrizes individuais em uma matriz do grupo. A partir dela, são calculados os pesos dos critérios, normalizados para somar 1, e os indicadores de consistência do resultado coletivo.</p>
 						<p>A consolidação não equivale à homologação. Após a análise e a homologação pelo responsável, os pesos poderão ser utilizados na etapa de <strong>Priorização por atributos</strong>, que os aplica aos valores de cada demanda nos critérios correspondentes. Assim, sua participação contribui para a definição de prioridades, sem substituir as verificações territoriais de restrição e risco, a análise de favorabilidade nem a decisão de homologação da hierarquização.</p>
@@ -68,7 +68,7 @@
 			<div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">3</span><span>Comparação pareada</span></div>
 			<div class="ahp-section-body">
 				<p class="step-intro"><i class="fas fa-circle-info" aria-hidden="true"></i> Para cada par, indique qual critério é mais importante para o objetivo desta análise e com que intensidade. Se ambos tiverem a mesma importância, escolha 1 (igual importância). Os indicadores de consistência são atualizados após 1 segundo sem novos ajustes. Após 3 segundos sem novos ajustes, o par e seu valor inverso ficam verdes. Para alterar a resposta, mova a barra novamente. Essa confirmação visual não substitui o envio final.</p>
-				<section class="ahp-subcard info-card collab-comparison-subcard" aria-labelledby="collab-metrics-title">
+				<section class="secao-collab-metrics ahp-subcard info-card collab-comparison-subcard" aria-labelledby="collab-metrics-title">
 					<h2 class="ahp-subsection-title" id="collab-metrics-title"><span class="ahp-subsection-num" aria-hidden="true">3.1</span><span>Indicadores instantâneos de consistência AHP</span></h2>
 					<div class="info-card-content">
 						<div id="liveMetrics" class="ahp-live-metrics">
@@ -78,7 +78,7 @@
 						</div>
 					</div>
 				</section>
-				<section class="ahp-subcard info-card collab-comparison-subcard" aria-labelledby="collab-pairwise-title">
+				<section class="secao-collab-pairwise ahp-subcard info-card collab-comparison-subcard" aria-labelledby="collab-pairwise-title">
 					<h2 class="ahp-subsection-title" id="collab-pairwise-title"><span class="ahp-subsection-num" aria-hidden="true">3.2</span><span>Formulário de comparação pareada</span></h2>
 					<div class="info-card-content"><div id="comparisonContent" class="ahp-comparison-content"></div></div>
 				</section>

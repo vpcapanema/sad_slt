@@ -117,7 +117,19 @@ def codigo_normalizacao(auditoria: dict, codigos: set[str]) -> str | None:
     return None
 
 
-def destinos(root: Path, conn) -> tuple[dict[str, str], dict[str, bytes]]:
+def escolher_historico(antigo: bytes, vigente: bytes) -> bytes:
+    anterior, atual = json.loads(antigo), json.loads(vigente)
+    antes, depois = anterior.get('resultado', {}), atual.get('resultado', {})
+    registro_anterior = antes.pop('registrado_em', None)
+    registro_atual = depois.pop('registrado_em', None)
+    if (anterior != atual or anterior.get('status') != 'concluido'
+            or not registro_anterior or not registro_atual
+            or datetime.fromisoformat(registro_atual) < datetime.fromisoformat(registro_anterior)):
+        raise ValueError('Históricos conflitantes; nenhuma versão será sobrescrita.')
+    return vigente
+
+
+def destinos(root: Path, conn) -> tuple[dict[str, str], dict[str, bytes], dict[str, bytes]]:
     saidas = root / 'saidas-geoespaciais'
     arquivos = sorted(p for p in saidas.rglob('*') if p.is_file())
     if any(p.is_symlink() for p in saidas.rglob('*')):
@@ -241,17 +253,25 @@ def destinos(root: Path, conn) -> tuple[dict[str, str], dict[str, bytes]]:
             raise ValueError('Arquivo não classificado: ' + relativo)
     if len(set(mapa.values())) != len(mapa):
         raise ValueError('Dois arquivos receberiam o mesmo destino; nada foi alterado.')
+    preferidas = {}
     for origem, destino in mapa.items():
-        if caminho_fisico(root, destino).exists():
-            raise FileExistsError('Destino já existe: ' + destino)
-    return mapa, originais
+        alvo = caminho_fisico(root, destino)
+        if alvo.exists():
+            if origem.startswith('saidas-geoespaciais/elegibilidade-execucoes/'):
+                preferidas[origem] = escolher_historico(originais[origem], alvo.read_bytes())
+                originais[destino] = preferidas[origem]
+            else:
+                raise FileExistsError('Destino já existe: ' + destino)
+    return mapa, originais, preferidas
 
 
-def transformar_jsons(originais: dict[str, bytes], mapa: dict[str, str]):
+def transformar_jsons(originais: dict[str, bytes], mapa: dict[str, str],
+                      preferidas: dict[str, bytes] | None = None):
+    preferidas = preferidas or {}
     documentos = {}
     for p, data in originais.items():
         if p.endswith('.json'):
-            documentos[p] = json.loads(data)
+            documentos[p] = json.loads(preferidas.get(p, data))
     resultado = dict(originais)
     for _ in range(len(documentos) + 2):
         hashes = defaultdict(set)
@@ -268,7 +288,7 @@ def transformar_jsons(originais: dict[str, bytes], mapa: dict[str, str]):
             revisao = isinstance(documento, dict) and {'nomes', 'dono', 'sha256'} <= documento.keys()
             atualizado = remapear.valor(documento, revisao=revisao)
             novos[p] = (json.dumps(atualizado, ensure_ascii=False, indent=2, allow_nan=False).encode()
-                         if atualizado != documento else originais[p])
+                         if atualizado != documento else preferidas.get(p, originais[p]))
         if novos == resultado:
             return resultado, remapear
         resultado = novos
@@ -387,7 +407,7 @@ def executar(aplicar=False):
     with psycopg.connect(cfg.slt_database_url, row_factory=dict_row, connect_timeout=5,
                          options='-c statement_timeout=30000 -c lock_timeout=5000') as conn:
         conn.execute("SELECT pg_advisory_xact_lock(hashtext('sicard:migrar-destinos-storage'))")
-        mapa, originais = destinos(root, conn)
+        mapa, originais, preferidas = destinos(root, conn)
         if not mapa:
             print('Nenhuma origem legada pendente.')
             return
@@ -395,7 +415,10 @@ def executar(aplicar=False):
             relativo = p.relative_to(root).as_posix()
             if '/migracoes-storage/' not in relativo:
                 originais[relativo] = p.read_bytes()
-        arquivos, remapear = transformar_jsons(originais, mapa)
+        arquivos, remapear = transformar_jsons(originais, mapa, preferidas)
+        existentes = {mapa[p] for p in preferidas}
+        if any(arquivos[p] != arquivos[mapa[p]] for p in preferidas):
+            raise ValueError('O histórico vigente e o legado não convergiram para o mesmo resultado.')
         alteracoes = alteracoes_banco(conn, remapear, arquivos, mapa)
         configuracoes = {p: data for p, data in arquivos.items() if p not in mapa and data != originais[p]}
         print(json.dumps({'arquivos_a_mover': len(mapa), 'configuracoes_a_atualizar': len(configuracoes),
@@ -410,7 +433,7 @@ def executar(aplicar=False):
         pasta = CONFIG + '/migracoes-storage/' + ident
         manifesto = {'id': ident, 'estado': 'preparando', 'mapa': mapa, 'banco': alteracoes,
                       'arquivos': {p: {'sha256_antes': assinatura(originais[p]), 'sha256_depois': assinatura(data)}
-                                   for p, data in arquivos.items() if p in mapa or p in configuracoes}}
+                                   for p, data in arquivos.items() if p in mapa or p in configuracoes or p in existentes}}
         def registrar(estado):
             manifesto['estado'] = estado
             gravar(root, pasta + '/manifesto.json',
@@ -428,8 +451,9 @@ def executar(aplicar=False):
             fonte = caminho_fisico(root, origem)
             if assinatura(fonte.read_bytes()) != assinatura(originais[origem]):
                 raise ValueError('A origem mudou durante o planejamento: ' + origem)
-            gravar(root, destino, arquivos[origem], mtime_ns=fonte.stat().st_mtime_ns)
-        conferidos = {destino: arquivos[origem] for origem, destino in mapa.items()}
+            if destino not in existentes:
+                gravar(root, destino, arquivos[origem], mtime_ns=fonte.stat().st_mtime_ns)
+        conferidos = {destino: arquivos[origem] for origem, destino in mapa.items() if destino not in existentes}
         conferir_api(conferidos)
         registrar('copias_conferidas_pela_api')
         aplicadas = []

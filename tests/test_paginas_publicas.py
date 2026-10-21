@@ -194,6 +194,7 @@ def test_tutoriais_publicos_conectados_ao_manifesto(client, monkeypatch, prefix)
     assert parser.h1 == 1
     dados = tutoriais_publicos.manifesto()
     assert parser.links == [
+        prefix + "/assets/css/tutoriais.css",
         prefix + "/public/documentacao/",
         *[
             prefix + tutoriais_publicos.BASE_URL + tutorial[campo]
@@ -201,6 +202,10 @@ def test_tutoriais_publicos_conectados_ao_manifesto(client, monkeypatch, prefix)
         ],
         prefix + "/assets/js/tutoriais.js",
     ]
+    stylesheet = client.get("/assets/css/tutoriais.css", headers=headers)
+    assert stylesheet.status_code == 200
+    assert "text/css" in stylesheet.headers["content-type"]
+    assert "grid-template-columns:repeat(2,minmax(0,1fr))" in stylesheet.text
     assert html.count("<article>") == 16
     assert html.count("Revisão pendente") == 5
     assert "Tributando camadas territoriais" in html
