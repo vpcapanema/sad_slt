@@ -164,6 +164,12 @@ def carregar(ident):
 def preparar(ident, dono):
     from api.services.extracao_entrada_local import validar
     from api.services.metadados_previa import descrever_vetor
+    from api.services import storage_geoespacial as storage
+    caminho_fonte = storage.separar_id(ident)[0] if ident.startswith('storage:') else None
+    revisao_fonte = None
+    if caminho_fonte is not None:
+        estado = storage.resolver(caminho_fonte).stat()
+        revisao_fonte = f'{estado.st_mtime_ns}-{estado.st_size}'
     frame, nome, arquivo = carregar(ident)
     _, avisos = validar(frame, max_feicoes=None)
     fonte = frame.attrs.get('sicard_fonte_previa', {})
@@ -175,8 +181,14 @@ def preparar(ident, dono):
     else:
         meta = descrever_vetor(frame, **fonte)
     meta['avisos'].extend(avisos)
+    representacao = representar(frame, meta, dono)
+    if caminho_fonte is not None:
+        estado = storage.resolver(caminho_fonte).stat()
+        if revisao_fonte != f'{estado.st_mtime_ns}-{estado.st_size}':
+            raise ValueError('O arquivo de origem mudou durante a preparação da prévia. Prepare-o novamente.')
+        representacao['revisao_fonte'] = revisao_fonte
     return dict(id=ident, nome=nome, arquivo=arquivo, tipo='vetor',
-                **representar(frame, meta, dono))
+                **representacao)
 
 
 def tile(token, dono, z, x, y):

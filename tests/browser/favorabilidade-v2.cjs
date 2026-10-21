@@ -41,7 +41,7 @@ const assert = require('node:assert/strict');
       arquivo:'base-geoespacial/entrada.gpkg',camada:'demandas',tipo:'vetor'};
     const rede = {id:`storage:${pasta}/rede.gpkg::rede`,nome:'rede',arquivo:`${pasta}/rede.gpkg`,camada:'rede',tipo:'vetor'};
     const grade = {id:`storage:${pasta}/grade.tif`,nome:'grade',arquivo:`${pasta}/grade.tif`,tipo:'raster'};
-    const prepared = ref => ({...ref,status_validacao:'valida',representacao:'tiles',revisao:ref.nome,
+    const prepared = ref => ({...ref,status_validacao:'valida',representacao:'tiles',revisao:ref.nome,revisao_fonte:'987-654',
       tiles_token:'a'.repeat(32),feicoes:2,bounds:limites,campos:[{nome:'codigo'},{nome:'indice'}],
       metadados_local:{crs:'EPSG:4674',tipos_geometria:ref === entrada ? ['Point','LineString'] : ['Polygon'],feicoes:2}});
     const raw = ref => ref.tipo === 'raster' ? ref : {
@@ -74,7 +74,7 @@ const assert = require('node:assert/strict');
         normalizacoes.push({path,body:req.postDataJSON()});
         const arquivo = `saidas-geoespaciais/preparacao-f2-${normalizacoes.length}.gpkg`;
         return send({...prepared(entrada),id:`storage:${arquivo}::demandas`,arquivo,
-          metadados_local:{tipos_geometria:['MultiPolygon'],feicoes:2},revisao:'123-456'});
+          metadados_local:{tipos_geometria:['MultiPolygon'],feicoes:2},revisao:'123-456',revisao_fonte:undefined});
       }
       if (path.endsWith('/favorabilidade/execucoes') && req.method() === 'POST') {
         const payload = req.postDataJSON(), id = `execucao-${execucoes.length + 1}`;
@@ -322,6 +322,7 @@ const assert = require('node:assert/strict');
     assert.equal(execucoes[0].entrada.revisao,'123-456');
     assert.deepEqual(execucoes[0].grade,[]);
     assert.equal(execucoes[0].rede[0].id,rede.id);
+    assert.equal(execucoes[0].rede[0].revisao,'987-654','Cálculo recebe a revisão do original, não o token da prévia');
     assert((await panel()).includes(jobs.get('execucao-1').resultado.id),'Saída persistida incluída na bancada');
     assert.match(await page.locator('#fv-status').textContent(),/Nenhum índice ou classe foi agregado/);
     assert.equal(await page.locator('#fv-sobreposicoes-rosca path').count(),3,'Rosca inclui sobreposições de ambas as demandas');
@@ -400,7 +401,7 @@ const assert = require('node:assert/strict');
     await idle();
     assert.match(normalizacoes.at(-1).path,/\/favorabilidade\/preparar-demanda$/);
     assert.equal(normalizacoes.at(-1).body.id,entrada.id);
-    assert.equal(normalizacoes.at(-1).body.revisao,entrada.nome);
+    assert.equal(normalizacoes.at(-1).body.revisao,'987-654','Entrada avulsa também confere a revisão do arquivo original');
     assert.equal(execucoes.at(-1).hierarquizacao,undefined,'Análise avulsa não recebe vínculo com uma rodada');
     assert.match(await page.locator('#fv-status').textContent(),/Nenhum índice ou classe foi agregado/);
     assert(!requests.some(r => /\/elegibilidade\/|\/fases\/2\/executar/.test(r.path)),'Execução usa somente as rotas adaptadas da Favorabilidade');

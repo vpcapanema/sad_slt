@@ -33,6 +33,13 @@ regras cadastrais poligonais da Elegibilidade, com auditoria dos parametros e da
 origens. As demandas de uma hierarquizacao devem estar integralmente visiveis e
 sao consolidadas em uma unica camada, sem dissolucao entre demandas.
 
+Para arquivos do Storage, o descritor da previa distingue o token temporario
+dos tiles (`revisao`) da revisao fisica do original (`revisao_fonte`, data de
+modificacao em nanossegundos e tamanho). Esta ultima e conferida antes e depois
+da preparacao e enviada ao calculo para entradas avulsas e superficies. O token
+de visualizacao nao e utilizado como evidencia de alteracao do arquivo original;
+mudancas reais continuam interrompendo a execucao.
+
 Cada superficie e intersectada separadamente com a entrada integral, em EPSG:5880.
 Somam-se exclusivamente as areas dos fragmentos por feicao de entrada, em m2, sem
 uniao ou dissolucao. Os campos `fg_*` identificam grade e `fr_*` identificam rede.

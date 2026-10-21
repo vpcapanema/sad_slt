@@ -198,6 +198,11 @@ def pagina_glossario_publico(request: Request) -> Response:
     return render_page(request, "paginas/documentacao/glossario.html")
 
 
+@app.get("/public/documentacao/tutoriais/", include_in_schema=False)
+def pagina_tutoriais_publicos(request: Request) -> Response:
+    return render_page(request, "paginas/documentacao/tutoriais.html")
+
+
 @app.get("/public/documentacao/risco-restricao/", include_in_schema=False)
 def pagina_documentacao_risco_restricao(request: Request) -> Response:
     """Arcabouço teórico-conceitual de risco e restrição da Fase 1."""
@@ -555,6 +560,7 @@ def pagina_geoespacial(request: Request, pagina: str) -> Response:
 
 
 @app.get("/documentos/hierarquizacao/{documento}", include_in_schema=False)
+@app.get("/public/documentacao/hierarquizacao/{documento}", include_in_schema=False)
 def documento_hierarquizacao(documento: str) -> FileResponse:
     """Expõe apenas as especificações metodológicas explicitamente autorizadas."""
     if documento not in HIERARQUIZACAO_DOCUMENTS:

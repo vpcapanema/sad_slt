@@ -22,6 +22,7 @@ PAGES = (
     "/public/login/",
     "/public/documentacao/",
     "/public/documentacao/glossario/",
+    "/public/documentacao/tutoriais/",
     "/public/documentacao/risco-restricao/",
     "/public/documentacao/favorabilidade/",
     "/public/documentacao/limite-maritimo/",
@@ -148,3 +149,78 @@ def test_alias_preserva_query_e_prefixo(client, source, destination):
     )
     assert response.status_code == 308
     assert response.headers["location"] == "/sicard" + destination + "?diretoria=teste"
+
+
+@pytest.mark.parametrize("prefix", ["", "/sicard"])
+def test_hierarquizacao_tem_destinos_unicos_e_prefixados(client, prefix):
+    headers = {"X-Forwarded-Prefix": prefix} if prefix else {}
+    response = client.get("/public/documentacao/", headers=headers)
+    assert response.status_code == 200
+    section = response.text.split('class="secao-metodologia-hierarquizacao', 1)[1].split("</section>", 1)[0]
+    parser = Links()
+    parser.feed(section)
+    destinations = (
+        "/public/documentacao/risco-restricao/",
+        "/public/documentacao_favorabilidade_v2/",
+        "/public/documentacao/limite-maritimo/",
+        "/public/documentacao/saidas_modelos/index.html",
+        "/public/documentacao/hierarquizacao/ESPINHA_DORSAL_SISTEMA_HIERARQUIZACAO.md",
+        "/public/documentacao/hierarquizacao/MODELO_HIERARQUIZACAO_ESPACIAL.md",
+        "/public/documentacao/hierarquizacao/MODULO_FASE3_ATRIBUTOS_PROJETO_AJUSTE.md",
+        "/public/documentacao/tutoriais/",
+    )
+    assert parser.links == [prefix + destination for destination in destinations]
+    assert len(parser.links) == len(set(parser.links))
+    assert "referência provisória, não homologada" in section
+    for destination in destinations:
+        # O proxy retira o prefixo antes de encaminhar a requisicao ao backend.
+        assert client.get(destination, headers=headers).status_code == 200, destination
+
+
+@pytest.mark.parametrize("prefix", ["", "/sicard"])
+def test_tutoriais_publicos_catalogo_sem_midias_nao_publicadas(client, monkeypatch, prefix):
+    def storage_proibido(*args, **kwargs):
+        pytest.fail("O catálogo não deve consultar Storage ou publicar mídias.")
+
+    monkeypatch.setattr(storage_remoto, "baixar", storage_proibido)
+    headers = {"X-Forwarded-Prefix": prefix} if prefix else {}
+    response = client.get("/public/documentacao/tutoriais/", headers=headers)
+    assert response.status_code == 200
+    html = response.text
+    parser = Links()
+    parser.feed(html)
+    assert parser.h1 == 1
+    assert parser.links == [prefix + "/public/documentacao/"]
+    assert html.count("<article>") == 16
+    assert html.count("Revisão pendente") == 5
+    assert "Tributando camadas territoriais" in html
+    assert "Complementando um cadastro — Atributos de demanda" in html
+    assert "Cadastrando um usuário" in html
+    assert "39.73 s · Full HD · 30 fps" in html
+    assert "Vídeos ainda não disponíveis" in html
+    assert "aguardam definição de hospedagem" in html
+    for forbidden in ("<video", "<img", "<script", " src=", "poster=", " download>", " download=", "file:///", "W:\\", "127.0.0.1"):
+        assert forbidden not in html
+
+
+@pytest.mark.parametrize("document", [
+    "ESPINHA_DORSAL_SISTEMA_HIERARQUIZACAO.md",
+    "MODELO_HIERARQUIZACAO_ESPACIAL.md",
+    "MODULO_FASE1_GERADOR_RESTRICAO_RISCO.md",
+    "MODULO_FASE2_GERADOR_FAVORABILIDADE_TERRITORIAL.md",
+    "MODULO_FASE3_ATRIBUTOS_PROJETO_AJUSTE.md",
+])
+def test_documentos_publicos_preservam_conteudo_e_lista_autorizada(client, document):
+    legacy = client.get("/documentos/hierarquizacao/" + document)
+    public = client.get("/public/documentacao/hierarquizacao/" + document)
+    assert legacy.status_code == public.status_code == 200
+    assert public.content == legacy.content
+    assert public.headers["content-type"].startswith("text/markdown")
+
+
+@pytest.mark.parametrize("document", ["inexistente.md", "privado.html", ".env"])
+def test_documentacao_hierarquizacao_nao_publica_documentos_arbitrarios(client, document):
+    for root in ("/documentos/hierarquizacao/", "/public/documentacao/hierarquizacao/"):
+        response = client.get(root + document)
+        assert response.status_code == 404
+        assert response.json()["detail"] == "Documento não encontrado"

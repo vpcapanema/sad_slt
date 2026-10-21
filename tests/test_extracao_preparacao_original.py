@@ -4,7 +4,7 @@ from pathlib import Path
 
 import geopandas as gpd
 import pytest
-from shapely.geometry import Point
+from shapely.geometry import Point, box
 from osgeo import ogr
 
 from api.services import extracao_preparacao as preparo, extracao_entrada_local as local
@@ -104,6 +104,87 @@ def test_preparacao_storage_preenche_tamanho_componente_e_formato(monkeypatch, i
     assert meta['componente'] == 'demandas_reais'
     assert meta['formato'] == 'GPKG'
     assert meta['vertices'] == 1
+
+
+def test_revisao_fonte_storage_independe_do_token_da_previa(monkeypatch, isolado):
+    from api.services import storage_geoespacial, elegibilidade_processamento
+    path = isolado / 'municipios.gpkg'
+    frame().to_file(path, layer='municipios', driver='GPKG', engine='pyogrio')
+    monkeypatch.setattr(storage_geoespacial, 'resolver', lambda _: path)
+    ident = 'storage:base-geoespacial/municipios.gpkg::municipios'
+    descritor = preparo.preparar(ident, 'autor')
+    estado = path.stat()
+    assert descritor['revisao'] == descritor['tiles_token']
+    with pytest.raises(ValueError, match='mudou após o envio'):
+        elegibilidade_processamento._carregar({'id': ident, 'nome': 'municipios', 'revisao': descritor['revisao']})
+    assert descritor['revisao_fonte'] == f'{estado.st_mtime_ns}-{estado.st_size}'
+    carregada = elegibilidade_processamento._carregar({
+        'id': ident, 'nome': 'municipios', 'revisao': descritor['revisao_fonte'],
+    })
+    assert carregada.codigo.tolist() == ['001']
+    assert carregada.geometry.iloc[0].wkb == frame().geometry.iloc[0].wkb
+
+
+def test_modificacao_real_apos_previa_continua_bloqueando_calculo(monkeypatch, isolado):
+    import os
+    from api.services import storage_geoespacial, elegibilidade_processamento
+    path = isolado / 'municipios.gpkg'
+    frame().to_file(path, layer='municipios', driver='GPKG', engine='pyogrio')
+    monkeypatch.setattr(storage_geoespacial, 'resolver', lambda _: path)
+    ident = 'storage:base-geoespacial/municipios.gpkg::municipios'
+    descritor = preparo.preparar(ident, 'autor')
+    estado = path.stat()
+    os.utime(path, ns=(estado.st_atime_ns, estado.st_mtime_ns + 2_000_000_000))
+    with pytest.raises(ValueError, match='mudou após o envio'):
+        elegibilidade_processamento._carregar({'id': ident, 'nome': 'municipios', 'revisao': descritor['revisao_fonte']})
+
+
+def test_mudanca_durante_preparacao_nao_retorna_descritor_valido(monkeypatch, isolado):
+    import os
+    from api.services import storage_geoespacial
+    path = isolado / 'municipios.gpkg'
+    frame().to_file(path, layer='municipios', driver='GPKG', engine='pyogrio')
+    monkeypatch.setattr(storage_geoespacial, 'resolver', lambda _: path)
+    representar_original = preparo.representar
+    def representar(*args, **kwargs):
+        descritor = representar_original(*args, **kwargs)
+        estado = path.stat()
+        os.utime(path, ns=(estado.st_atime_ns, estado.st_mtime_ns + 2_000_000_000))
+        return descritor
+    monkeypatch.setattr(preparo, 'representar', representar)
+    with pytest.raises(ValueError, match='mudou durante a preparação'):
+        preparo.preparar('storage:base-geoespacial/municipios.gpkg::municipios', 'autor')
+
+
+def test_previa_real_alimenta_execucao_favorabilidade_sem_falso_arquivo_alterado(monkeypatch, isolado, storage_sintetico):
+    from api.services import storage_geoespacial as storage, elegibilidade_processamento as processamento
+    from api.services.controle_processamento import ControleProcessamento
+    root = storage_sintetico
+    (root / 'base-geoespacial').mkdir()
+    monkeypatch.setattr(storage, 'diretorio_storage', lambda: root)
+    entrada = gpd.GeoDataFrame({'codigo': ['D1']}, geometry=[box(5000000, 7000000, 5000010, 7000010)], crs=5880)
+    municipios = gpd.GeoDataFrame({'classe': ['Alta'], 'indice_normalizado': [.8]},
+                                geometry=[box(5000000, 7000000, 5000005, 7000010)], crs=5880)
+    for nome, original in [('entrada', entrada), ('municipios', municipios)]:
+        original.to_file(root / 'base-geoespacial' / f'{nome}.gpkg', layer=nome, driver='GPKG', engine='pyogrio')
+    descritores = [preparo.preparar(f'storage:base-geoespacial/{nome}.gpkg::{nome}', 'autor')
+                   for nome in ('entrada', 'municipios')]
+    monkeypatch.setattr(processamento.saidas_storage, 'garantir_pasta',
+                        lambda pasta: (root / pasta).mkdir(parents=True, exist_ok=True))
+    def registrar(nome, conteudos, recurso, tipo, *, pasta_saida):
+        (root / pasta_saida / nome).write_bytes(conteudos[nome])
+        return {'caminho': f'{pasta_saida}/{nome}'}
+    monkeypatch.setattr(processamento.ciclo, 'registrar_exportacao_memoria', registrar)
+    refs = [{'id': c['id'], 'nome': c['nome'], 'revisao': c['revisao_fonte']} for c in descritores]
+    resultado = processamento.executar({'entrada': refs[0], 'grade': [refs[1]], 'rede': []},
+                                      ControleProcessamento(), analise='favorabilidade')
+    saida = gpd.read_file(root / resultado['arquivo'], layer='favorabilidade_territorial')
+    assert resultado['feicoes'] == 1
+    assert saida.fg_municipios.iloc[0] == 50
+    recortes = gpd.read_file(root / resultado['arquivo'], layer='intersecoes')
+    campos = resultado['favorabilidade']['atributos_superficies'][0]['campos']
+    assert recortes[campos['classe']].tolist() == ['Alta']
+    assert recortes[campos['indice_normalizado']].tolist() == [.8]
 
 
 def test_pacote_preserva_bytes_reais_e_consulta_localizacao(monkeypatch, isolado):

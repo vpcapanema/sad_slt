@@ -138,5 +138,8 @@ def test_preparar_pacote_storage_pelo_endpoint_sem_montagem(remoto, monkeypatch)
     assert data["id"] == ident and data["arquivo"] == path
     assert data["status_validacao"] == "valida" and data["feicoes"] == 1
     assert data["representacao"] == "tiles" and len(data["tiles_token"]) == 32
+    estado = source.stat()
+    assert data["revisao_fonte"] == f"{estado.st_mtime_ns}-{estado.st_size}"
+    assert data["revisao"] == data["tiles_token"] and data["revisao"] != data["revisao_fonte"]
     assert data["metadados_local"]["campos"][0]["nome"] == "codigo"
     assert files[path] == original

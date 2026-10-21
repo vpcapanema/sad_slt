@@ -18,7 +18,7 @@
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Título**                 | Metodologia do Sistema de Hierarquização de Demandas — SICARD                                                                                                         |
 | **Número**                 | NT-SICARD-001/2026                                                                                                                                                       |
-| **Versão**                 | 1.26                                                                                                                                                                      |
+| **Versão**                 | 1.27                                                                                                                                                                      |
 | **Data de emissão**        | 21/10/2026                                                                                                                                                               |
 | **Classificação**         | Documento técnico-metodológico de entrega ao cliente                                                                                                                   |
 | **Sistema**                 | SICARD — Sistema de Apoio à Tomada de Decisão                                                                                                                         |
@@ -60,6 +60,7 @@
 | 1.24    | 20/10/2026 | `[preencher]` | Explicitação dos limites da documentação pública: distinção entre especificação metodológica, disponibilidade operacional e homologação, sem alteração dos critérios, operadores ou cálculos. |
 | 1.25    | 21/10/2026 | `[preencher]` | Operacionalização do bloco de conferência e execução da Favorabilidade V2, com preparação cadastral da entrada, interseções independentes, soma de áreas e preservação dos atributos das superfícies por fragmento, sem agregação de classes ou índices nem alteração dos resultados registrados. |
 | 1.26    | 21/10/2026 | `[preencher]` | Apresentação conjunta de todas as sobreposições em rosca única por análise nas páginas de Elegibilidade e Favorabilidade, com uma fatia por combinação demanda e feição de origem, sem agrupamento por nome, camada, classe ou índice. |
+| 1.27    | 21/10/2026 | `[preencher]` | Distinção entre a revisão física das fontes do Storage e o token temporário de visualização na preparação e execução da Favorabilidade, preservando o bloqueio de alterações reais sem acusar mudança pela simples geração da prévia. |
 
 ---
 
@@ -681,6 +682,13 @@ em m², sem união ou dissolução, nos campos `fg_*` e `fr_*`, respectivamente.
 ausência de interseção permanece `NULL`; o contato sem área é registrado como
 zero. Sobreposições internas podem produzir somas superiores à área da demanda.
 Rasters e bases lineares podem ser visualizados, mas não integram este cálculo.
+
+A conferência de versão distingue o token temporário de visualização da revisão
+física do arquivo original do Storage, identificada pela data de modificação em
+nanossegundos e pelo tamanho. A preparação da prévia confere essa revisão antes e
+depois da leitura e da representação; entradas avulsas e superfícies utilizam a
+revisão física no cálculo. A criação de tiles não constitui alteração da fonte.
+Mudanças reais dos arquivos permanecem impeditivas para a execução.
 
 O GeoPackage conserva a entrada preparada na camada `favorabilidade_territorial`
 e os fragmentos na camada `intersecoes`, com vínculos às demandas e às feições de

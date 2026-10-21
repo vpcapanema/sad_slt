@@ -1,0 +1,424 @@
+{
+  "versao": 1,
+  "conteudo_publico": true,
+  "origem": "TUTORIAIS_MAD_FULLHD/index.html",
+  "origem_html_sha256": "5f48ed05ed53cf47756a2b2e3f8a2aa8c485bcea4e4355c21d01acfdbc826e73",
+  "origem_html_bytes": 11246,
+  "tutoriais": [
+    {
+      "titulo": "Cadastrando uma demanda por contribuição SEI",
+      "revisao": "Atualizado em 21/10",
+      "duracao": "31.57 s · Full HD · 30 fps",
+      "video": "01_cadastrando_demanda_sei.mp4",
+      "capa": "01_cadastrando_demanda_sei_capa.jpg",
+      "srt": "01_cadastrando_demanda_sei.srt",
+      "vtt": "01_cadastrando_demanda_sei.vtt"
+    },
+    {
+      "titulo": "Cadastrando uma demanda pelo formulário",
+      "revisao": "",
+      "duracao": "30.63 s · Full HD · 30 fps",
+      "video": "02_cadastrando_demanda_formulario.mp4",
+      "capa": "02_cadastrando_demanda_formulario_capa.jpg",
+      "srt": "02_cadastrando_demanda_formulario.srt",
+      "vtt": "02_cadastrando_demanda_formulario.vtt"
+    },
+    {
+      "titulo": "Tributando camadas territoriais",
+      "revisao": "Atualizado em 21/10",
+      "duracao": "35.73 s · Full HD · 30 fps",
+      "video": "03_tributando_camadas.mp4",
+      "capa": "03_tributando_camadas_capa.jpg",
+      "srt": "03_tributando_camadas.srt",
+      "vtt": "03_tributando_camadas.vtt"
+    },
+    {
+      "titulo": "Agrupando demandas para hierarquização",
+      "revisao": "Atualizado em 21/10",
+      "duracao": "26.53 s · Full HD · 30 fps",
+      "video": "04_agrupando_demandas.mp4",
+      "capa": "04_agrupando_demandas_capa.jpg",
+      "srt": "04_agrupando_demandas.srt",
+      "vtt": "04_agrupando_demandas.vtt"
+    },
+    {
+      "titulo": "Cadastrando uma hierarquização",
+      "revisao": "Atualizado em 21/10",
+      "duracao": "28.93 s · Full HD · 30 fps",
+      "video": "05_cadastrando_hierarquizacao.mp4",
+      "capa": "05_cadastrando_hierarquizacao_capa.jpg",
+      "srt": "05_cadastrando_hierarquizacao.srt",
+      "vtt": "05_cadastrando_hierarquizacao.vtt"
+    },
+    {
+      "titulo": "Cadastrando um julgamento",
+      "revisao": "Atualizado em 21/10",
+      "duracao": "29.07 s · Full HD · 30 fps",
+      "video": "06_cadastrando_julgamento.mp4",
+      "capa": "06_cadastrando_julgamento_capa.jpg",
+      "srt": "06_cadastrando_julgamento.srt",
+      "vtt": "06_cadastrando_julgamento.vtt"
+    },
+    {
+      "titulo": "Consolidando as respostas dos julgadores",
+      "revisao": "Atualizado em 21/10",
+      "duracao": "32.33 s · Full HD · 30 fps",
+      "video": "07_consolidando_respostas.mp4",
+      "capa": "07_consolidando_respostas_capa.jpg",
+      "srt": "07_consolidando_respostas.srt",
+      "vtt": "07_consolidando_respostas.vtt"
+    },
+    {
+      "titulo": "Analisando a elegibilidade territorial",
+      "revisao": "Revisão pendente",
+      "duracao": "39.73 s · Full HD · 30 fps",
+      "video": "08_analisando_elegibilidade.mp4",
+      "capa": "08_analisando_elegibilidade_capa.jpg",
+      "srt": "08_analisando_elegibilidade.srt",
+      "vtt": "08_analisando_elegibilidade.vtt"
+    },
+    {
+      "titulo": "Preparando a análise de favorabilidade",
+      "revisao": "Revisão pendente",
+      "duracao": "30.87 s · Full HD · 30 fps",
+      "video": "09_preparando_favorabilidade.mp4",
+      "capa": "09_preparando_favorabilidade_capa.jpg",
+      "srt": "09_preparando_favorabilidade.srt",
+      "vtt": "09_preparando_favorabilidade.vtt"
+    },
+    {
+      "titulo": "Calculando o índice de priorização",
+      "revisao": "Revisão pendente",
+      "duracao": "25.1 s · Full HD · 30 fps",
+      "video": "10_calculando_priorizacao.mp4",
+      "capa": "10_calculando_priorizacao_capa.jpg",
+      "srt": "10_calculando_priorizacao.srt",
+      "vtt": "10_calculando_priorizacao.vtt"
+    },
+    {
+      "titulo": "Consultando e exportando uma extração de atributos",
+      "revisao": "Revisão pendente",
+      "duracao": "22.97 s · Full HD · 30 fps",
+      "video": "11_consultando_extracoes.mp4",
+      "capa": "11_consultando_extracoes_capa.jpg",
+      "srt": "11_consultando_extracoes.srt",
+      "vtt": "11_consultando_extracoes.vtt"
+    },
+    {
+      "titulo": "Preparando uma extração de atributos",
+      "revisao": "Revisão pendente",
+      "duracao": "33.33 s · Full HD · 30 fps",
+      "video": "12_preparando_extracao.mp4",
+      "capa": "12_preparando_extracao_capa.jpg",
+      "srt": "12_preparando_extracao.srt",
+      "vtt": "12_preparando_extracao.vtt"
+    },
+    {
+      "titulo": "Complementando um cadastro — Dados cadastrais",
+      "revisao": "Novo em 21/10",
+      "duracao": "27.73 s · Full HD · 30 fps",
+      "video": "13_complementando_dados_cadastrais.mp4",
+      "capa": "13_complementando_dados_cadastrais_capa.jpg",
+      "srt": "13_complementando_dados_cadastrais.srt",
+      "vtt": "13_complementando_dados_cadastrais.vtt"
+    },
+    {
+      "titulo": "Complementando um cadastro — Geometria",
+      "revisao": "Novo em 21/10",
+      "duracao": "24.43 s · Full HD · 30 fps",
+      "video": "14_complementando_geometria.mp4",
+      "capa": "14_complementando_geometria_capa.jpg",
+      "srt": "14_complementando_geometria.srt",
+      "vtt": "14_complementando_geometria.vtt"
+    },
+    {
+      "titulo": "Complementando um cadastro — Atributos de demanda",
+      "revisao": "Novo em 21/10",
+      "duracao": "21.73 s · Full HD · 30 fps",
+      "video": "15_complementando_atributos.mp4",
+      "capa": "15_complementando_atributos_capa.jpg",
+      "srt": "15_complementando_atributos.srt",
+      "vtt": "15_complementando_atributos.vtt"
+    },
+    {
+      "titulo": "Cadastrando um usuário",
+      "revisao": "Novo em 21/10",
+      "duracao": "28.77 s · Full HD · 30 fps",
+      "video": "16_cadastrando_usuario.mp4",
+      "capa": "16_cadastrando_usuario_capa.jpg",
+      "srt": "16_cadastrando_usuario.srt",
+      "vtt": "16_cadastrando_usuario.vtt"
+    }
+  ],
+  "ressalvas": [
+    "Os fluxos de cadastro, julgamento e análise utilizam dados fictícios de treinamento, sem envio de convites. A camada municipal de densidade demográfica foi efetivamente gerada conforme autorização. A consulta de extrações usa uma execução de teste já existente. Os três tutoriais de complementação usam o perfil Operador simulado em ambiente isolado. O cadastro de usuário utiliza uma cópia local do formulário SIGMA, sem criar conta nem enviar emails. Os vídeos são silenciosos e possuem legendas incorporadas; os arquivos SRT acompanham cada MP4.",
+    "Nova extração: o tutorial de preparação termina com a composição pronta na bancada. A consulta e a exportação de uma extração concluída estão em vídeo separado. Favorabilidade: a página prepara as camadas; ela não executa o cálculo dos índices."
+  ],
+  "arquivos": {
+    "01_cadastrando_demanda_sei.mp4": {
+      "bytes": 2723721,
+      "sha256": "79fa3c0e61e9fb7bcdac62408d3a4e0b59f73a63c714c61931e1f203596a6dfe"
+    },
+    "01_cadastrando_demanda_sei.srt": {
+      "bytes": 1141,
+      "sha256": "9502b5475bd6aedcbd2535997d4c407ca5bac899d4ae601db0a0cf3c7a5e347b"
+    },
+    "01_cadastrando_demanda_sei.vtt": {
+      "bytes": 1098,
+      "sha256": "6b7560f636084dc94b464156afe21cc1b25ac13d28b28a00bbe3f0d052f86ac9"
+    },
+    "01_cadastrando_demanda_sei_capa.jpg": {
+      "bytes": 97672,
+      "sha256": "5a48ab591458dc4f841c67988a786077a2c7ac48387f2decd00a8e67495199a5"
+    },
+    "02_cadastrando_demanda_formulario.mp4": {
+      "bytes": 5330466,
+      "sha256": "d40933aa7a9da9f5a74a41ea0866f7f6adda74a6819dbacd807ae5a859e56176"
+    },
+    "02_cadastrando_demanda_formulario.srt": {
+      "bytes": 799,
+      "sha256": "0b4c33346220c1b2c8315934f27330a546fe81052f24beb9878334f120c1d337"
+    },
+    "02_cadastrando_demanda_formulario.vtt": {
+      "bytes": 772,
+      "sha256": "aebde6dce50824a7f99f78a6ff48282b05799ce0055b7970ee8bf4c647a08ceb"
+    },
+    "02_cadastrando_demanda_formulario_capa.jpg": {
+      "bytes": 99917,
+      "sha256": "101bb663474c1738513c175b40bd16150bf08e61eaa4f6707b66431e4b828374"
+    },
+    "03_tributando_camadas.mp4": {
+      "bytes": 2389223,
+      "sha256": "a5822b27c6fdd080c279064a9820db1c7819e84a44806cb5338e837f6025f35d"
+    },
+    "03_tributando_camadas.srt": {
+      "bytes": 1218,
+      "sha256": "5d9a3d5cf1d59dc4c67cbd502b8181cffe2d883a2e844e551fa1766099a08278"
+    },
+    "03_tributando_camadas.vtt": {
+      "bytes": 1171,
+      "sha256": "c748376678c0d4fbd8e2cd8ecda5bcb918f2d60329c051aa2c25ab6fa7da71f2"
+    },
+    "03_tributando_camadas_capa.jpg": {
+      "bytes": 93606,
+      "sha256": "74741d7bc89b3118b038c088118c32e42545800b1c2f118ab3580a2ce9d22b57"
+    },
+    "04_agrupando_demandas.mp4": {
+      "bytes": 1791422,
+      "sha256": "6cd6f056a947de3cc5e4e9e3429bcb5992a99ebe18eb45e202e4f63f581bf99f"
+    },
+    "04_agrupando_demandas.srt": {
+      "bytes": 739,
+      "sha256": "c70f03057032d80eced63dc11a073e8e2b6597d0c25966e942f9b9cf79492838"
+    },
+    "04_agrupando_demandas.vtt": {
+      "bytes": 712,
+      "sha256": "19e4138bbad0f967d1edcdd3938404f518966ec59e18983b724ab0b81fa632e4"
+    },
+    "04_agrupando_demandas_capa.jpg": {
+      "bytes": 97046,
+      "sha256": "8e36f7310e22a95ae7f965f74ea53983cd0102eff4501d48bd8eaefac7906963"
+    },
+    "05_cadastrando_hierarquizacao.mp4": {
+      "bytes": 1755264,
+      "sha256": "1ffabf4fe46fe133f520f1366177af6694cd5f53cc3992f18e8da5941d707d6c"
+    },
+    "05_cadastrando_hierarquizacao.srt": {
+      "bytes": 840,
+      "sha256": "1bf0d5e282e987564503d16bd512c1fa038887bea098d1dd81629fe0007a2d16"
+    },
+    "05_cadastrando_hierarquizacao.vtt": {
+      "bytes": 809,
+      "sha256": "7c98b074fa2c3777a7e26753c5d1292159849fc8d899b5d3ed99f237b41c65be"
+    },
+    "05_cadastrando_hierarquizacao_capa.jpg": {
+      "bytes": 94073,
+      "sha256": "a248bac8d905be8d9302eb2bbc6a689620615b2f86ac9326bfff8a5ad3e54e8a"
+    },
+    "06_cadastrando_julgamento.mp4": {
+      "bytes": 1726344,
+      "sha256": "559fdfbf9e7aec23acf77b850fd05f68aeb177136ee4c942c8a2e6bd09209b42"
+    },
+    "06_cadastrando_julgamento.srt": {
+      "bytes": 731,
+      "sha256": "beca987d8e7cba07c9b000e5b7e869cc2b3ea8eb256633bee16ad4eb09280716"
+    },
+    "06_cadastrando_julgamento.vtt": {
+      "bytes": 704,
+      "sha256": "2cbe8c80d1ba6cfdaedafba34c336d2380bcaebefbabe292bb164ed9a8c376f7"
+    },
+    "06_cadastrando_julgamento_capa.jpg": {
+      "bytes": 92508,
+      "sha256": "80d7928e52d51db676425523280e2ca5bf94b18c258e3bc86dee5f30ec1a416f"
+    },
+    "07_consolidando_respostas.mp4": {
+      "bytes": 3194806,
+      "sha256": "c36f1018ad7c910484d7874ed10a17df12a9a05de7d780c11bb74709b4068acb"
+    },
+    "07_consolidando_respostas.srt": {
+      "bytes": 1042,
+      "sha256": "86d8fb18b518875033f57e5ccc81ce9da86a5a1fb24094154be0e6ea44e5a6df"
+    },
+    "07_consolidando_respostas.vtt": {
+      "bytes": 1003,
+      "sha256": "27372fc030d9477fceeee12dd5bd717738ee37d37d28e322c69e06d18632e4b2"
+    },
+    "07_consolidando_respostas_capa.jpg": {
+      "bytes": 96766,
+      "sha256": "f084618b15ae5b6ddd86f21466b4536d9f980118bd9c9e3af73f22f98e76a447"
+    },
+    "08_analisando_elegibilidade.mp4": {
+      "bytes": 7213639,
+      "sha256": "b58343f956be21b6196987354eb9a5d0789aa0b81fe5a463289b1391ba83aca5"
+    },
+    "08_analisando_elegibilidade.srt": {
+      "bytes": 1145,
+      "sha256": "d7058eea1e692d734cea644c82f0eb2d09e177e89b5671888bbc8737939944b8"
+    },
+    "08_analisando_elegibilidade.vtt": {
+      "bytes": 1102,
+      "sha256": "f77f7550e222ab1573095fdbf091aecb802f433b50b0ccd46e983faad085966d"
+    },
+    "08_analisando_elegibilidade_capa.jpg": {
+      "bytes": 95500,
+      "sha256": "ebc47d835078566919fd7639865ad75db0a85825c133d8ed8d13063a4933ee3c"
+    },
+    "09_preparando_favorabilidade.mp4": {
+      "bytes": 5207747,
+      "sha256": "5afabfef9e4bb9dbeaee5587f45254f63657aa4186148829a3d8ce1bc020920f"
+    },
+    "09_preparando_favorabilidade.srt": {
+      "bytes": 934,
+      "sha256": "a20968547022e979b37f5bfeecdb2a7c45a24999723a3e6591b231bbae0473ee"
+    },
+    "09_preparando_favorabilidade.vtt": {
+      "bytes": 899,
+      "sha256": "20c4c1bf2db0c2b66142044d0665c80a9e43aa4b20d4c892b060d7e265da332b"
+    },
+    "09_preparando_favorabilidade_capa.jpg": {
+      "bytes": 95973,
+      "sha256": "252a89ebe9151444794049ed1332177b53674c4c88af9fe21e5161207e93d707"
+    },
+    "10_calculando_priorizacao.mp4": {
+      "bytes": 1675152,
+      "sha256": "c32e35d24538a46bb8d392bbf50cabb9025f175fca8a33702450b5e408612d50"
+    },
+    "10_calculando_priorizacao.srt": {
+      "bytes": 768,
+      "sha256": "102324186bfde85beeddf72ff46d1573e9244e64d862ce495d2883ee78ce2f16"
+    },
+    "10_calculando_priorizacao.vtt": {
+      "bytes": 741,
+      "sha256": "6020002e63245f514367f75becb477778e1700471a32785aaefcbcb4c41456df"
+    },
+    "10_calculando_priorizacao_capa.jpg": {
+      "bytes": 94392,
+      "sha256": "7d3d708599eba2df0f359540fdbb86ba1166e66ccf00bc24b94223eb7cb04b22"
+    },
+    "11_consultando_extracoes.mp4": {
+      "bytes": 4491747,
+      "sha256": "59647ff9011b0f60610fec426c75b7fbceaf578b3787c5c175f546deebd67393"
+    },
+    "11_consultando_extracoes.srt": {
+      "bytes": 769,
+      "sha256": "e80a6a53e4f845b8d946dda46627187d39d9e5278e0d520103e3ae5a89bea168"
+    },
+    "11_consultando_extracoes.vtt": {
+      "bytes": 742,
+      "sha256": "8e89d07c6ccfe25bfe47a6125ba499affe8bd2eb47dfb2ea0f13fbc8973969c9"
+    },
+    "11_consultando_extracoes_capa.jpg": {
+      "bytes": 98964,
+      "sha256": "7e33419a7e150f92bd2c56e40b99516ad7cdfd2d3a39df96a0190755c7b29663"
+    },
+    "12_preparando_extracao.mp4": {
+      "bytes": 4947683,
+      "sha256": "b428daa7c19066c7fe52d5d0a622027ac869463c280bf8d1628d463f923df0e1"
+    },
+    "12_preparando_extracao.srt": {
+      "bytes": 903,
+      "sha256": "940985ae887c1d844b5faff81accb902d480113cdba3f62822d76b3adc9c0ad9"
+    },
+    "12_preparando_extracao.vtt": {
+      "bytes": 868,
+      "sha256": "5d7b4ef43c93b8403ef12ba577a83de592fde68381ed50a1a6cf74b12ab9c971"
+    },
+    "12_preparando_extracao_capa.jpg": {
+      "bytes": 95431,
+      "sha256": "9b8a8644e548e352e2ec819435468ebaa81b18efdc8076360784e095286007bb"
+    },
+    "13_complementando_dados_cadastrais.mp4": {
+      "bytes": 1581871,
+      "sha256": "3f2aa8af8f1dd9cf06f4b2005b327a6b580e0a2d163f9e770305a69205fc2d23"
+    },
+    "13_complementando_dados_cadastrais.srt": {
+      "bytes": 851,
+      "sha256": "faf2e7071bbcf2ff8975761bba6119a1fbec20e8d3b9c869d0a1d656b583fed8"
+    },
+    "13_complementando_dados_cadastrais.vtt": {
+      "bytes": 824,
+      "sha256": "28293eb9c13818383b2e33fe3b7ec400c87d8d170a22d98ae9173abe486d4cc0"
+    },
+    "13_complementando_dados_cadastrais_capa.jpg": {
+      "bytes": 89493,
+      "sha256": "a1742ada4847d55630702f9dd195e0c1d80ecf6ea384a1f82ee3661bf83fe43b"
+    },
+    "14_complementando_geometria.mp4": {
+      "bytes": 1275007,
+      "sha256": "23ec7c9a004bb00401ebb988002882ee0939125a463e88cc74e42e4eb63a8cdc"
+    },
+    "14_complementando_geometria.srt": {
+      "bytes": 840,
+      "sha256": "658da024dedf13dac6e77b6585b59a69c754f21cf81c09e547e10900e1d1639c"
+    },
+    "14_complementando_geometria.vtt": {
+      "bytes": 813,
+      "sha256": "1eba7a1e6cb6652a3364442d3a06ea101bc6135ab778af8c5c682abbff9f1e4b"
+    },
+    "14_complementando_geometria_capa.jpg": {
+      "bytes": 87358,
+      "sha256": "ac08761245c5ce7c8c04d3dfc4b6fce2276ac6a03cee1dbebbe5c4d55082e2e8"
+    },
+    "15_complementando_atributos.mp4": {
+      "bytes": 1033266,
+      "sha256": "e464c9b7b3f4204152af1de9b1ad337715920b263eb429de1057fbae14e08b80"
+    },
+    "15_complementando_atributos.srt": {
+      "bytes": 819,
+      "sha256": "1ba0658500317415eb2221620a74de9df40259daaea29b6ecd4fc672d5bb3a55"
+    },
+    "15_complementando_atributos.vtt": {
+      "bytes": 792,
+      "sha256": "9640b55e92e87e996be4d99bef048c9bd6795dc7df052e346dc67d85f72aa1aa"
+    },
+    "15_complementando_atributos_capa.jpg": {
+      "bytes": 86180,
+      "sha256": "440685b53f96a9cfc3551db9fc30d8b199357acfe3145445bdece25ef53c74a4"
+    },
+    "16_cadastrando_usuario.mp4": {
+      "bytes": 1660179,
+      "sha256": "50fb2b17d8163082a2a561f53e4f68067ff0f38d3e25499d74fac1f70f41f6f0"
+    },
+    "16_cadastrando_usuario.srt": {
+      "bytes": 907,
+      "sha256": "3f7b7acb442a9a4b3b39d6ec30b72cd4b360ae327e1feca3bbd1d7ecdaac06a8"
+    },
+    "16_cadastrando_usuario.vtt": {
+      "bytes": 876,
+      "sha256": "fbc77a31380c2a31804ff183dda86870c5d1731205db57f8073b478c41a64bd6"
+    },
+    "16_cadastrando_usuario_capa.jpg": {
+      "bytes": 60467,
+      "sha256": "78f42a1414839541c9fe8e425c6e1730cd3da26d633bcc4ac63d364a7faac934"
+    },
+    "CONFERENCIA_STATUS.txt": {
+      "bytes": 1227,
+      "sha256": "929c4540b2899fe2cf2bf5bb1b6e051a61f625083c0d4c655a6c0af08062f0ba"
+    },
+    "REVISOES_PENDENTES.txt": {
+      "bytes": 1849,
+      "sha256": "c3b26a368dbb8c8f20b1959c5ee584dc4f1f5b09e7421f3f7a642ecd27f06c3e"
+    }
+  },
+  "diretorio_storage": "aplicacao/documentacao/tutoriais/20261021-ddd37ae4467172e9"
+}

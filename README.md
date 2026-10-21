@@ -452,6 +452,11 @@ normalizados, sem agregá-los. O mapa de campos e a procedência ficam em
 conferida no Storage e inclusão na bancada, com namespace próprio e pasta
 `fase-2` para hierarquizações. Não executa o extrator pontual legado, não atualiza
 índices ou ranking e não registra saídas como Fase 1.
+As referências do Storage distinguem `revisao_fonte` (data/tamanho do arquivo
+original) do token de revisão da prévia. Entradas avulsas e superfícies enviam
+a revisão do original ao cálculo; alterações reais são bloqueadas, sem confundir
+a criação de novos tiles com mudança do arquivo. Descritores anteriores a essa
+distinção devem ser preparados novamente na prévia e confirmados na bancada.
 Os resultados anteriormente registrados continuam consultáveis e não são
 substituídos por esse cálculo. Validação sintética:
 `tests/test_favorabilidade_processamento.py` e `tests/browser/favorabilidade-v2.cjs`.

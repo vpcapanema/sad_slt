@@ -328,7 +328,7 @@ async function calcularFavorabilidade() {
       confirmLabel:'Calcular Favorabilidade Territorial',
     })) return;
     const lote = crypto.randomUUID();
-    const referencia = c => ({id:c.id, nome:c.nome, revisao:c.revisao});
+    const referencia = c => ({id:c.id, nome:c.nome, revisao:c.revisao_fonte ?? c.revisao});
     const entradas = grupo ? [conjunto.entrada[0]] : conjunto.entrada;
     for (const original of entradas) {
       if (cancelado) throw new DOMException('Execução cancelada.', 'AbortError');
@@ -348,7 +348,7 @@ async function calcularFavorabilidade() {
         ? await post('/extracao-atributos/favorabilidade/preparar-hierarquizacao', {
           codigo:grupo.codigo, demandas:conjunto.entrada.map(c => c.id),
         })
-        : await post('/extracao-atributos/favorabilidade/preparar-demanda', {id:original.id, revisao:original.revisao});
+        : await post('/extracao-atributos/favorabilidade/preparar-demanda', {id:original.id, revisao:referencia(original).revisao});
       if (cancelado) throw new DOMException('Execução cancelada após preparar a entrada; nenhuma interseção foi iniciada.', 'AbortError');
       mapa.assertReady(ids);
       job = await post(rota, {lote_id:lote, total_entradas:entradas.length,

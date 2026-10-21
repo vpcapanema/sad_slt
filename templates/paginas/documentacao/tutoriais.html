@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Tutoriais SICARD</title>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;background:#f1f5f7;color:#12374a;font:16px/1.5 "Segoe UI",sans-serif}
+    header{background:#083c52;color:white;padding:48px max(5vw,24px)}
+    header p{max-width:900px;color:#d5e7ee}
+    header a{color:white}
+    h1{font-size:36px;margin:0 0 12px}
+    main{max-width:1440px;margin:32px auto;padding:0 24px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}
+    article{background:white;border:1px solid #d5e3e9;border-radius:12px;overflow:hidden}
+    h2{font-size:19px;padding:20px;margin:0;min-height:96px}
+    small{display:block;font-size:13px;color:#677e8a}
+    .pendencia{padding:0 20px}
+    .meta{display:flex;gap:16px;flex-wrap:wrap;padding:18px;font-size:14px}
+    .aviso{max-width:1392px;margin:24px auto;padding:24px;background:white;border:1px solid #c4d5de}
+    a{color:#00668b;font-weight:600}
+    footer{max-width:1392px;margin:30px auto;padding:24px;border-top:1px solid #c4d5de;font-size:14px}
+    @media(max-width:850px){main{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<header>
+  <h1>Tutoriais operacionais do SICARD</h1>
+  <p>16 vídeos para computador, com navegação gravada, legendas descritivas e títulos em gerúndio. Os fluxos operacionais começam na página inicial da área restrita; o cadastro de usuário começa no login do SICARD.</p>
+  <p>1920 × 1080 · 30 quadros por segundo · máximo de 45 segundos por vídeo</p>
+  <p><a href="/public/documentacao/">Voltar à documentação do SICARD</a></p>
+</header>
+<aside class="aviso" aria-labelledby="disponibilidade">
+  <h2 id="disponibilidade">Vídeos ainda não disponíveis neste acervo público</h2>
+  <p>Este catálogo reproduz os títulos, durações e indicações de revisão do material fornecido. A reprodução, as capas e os downloads aguardam definição de hospedagem e conferência das mídias para divulgação pública. Não há players ativos nem arquivos de vídeo publicados nesta página.</p>
+  <p>As revisões de conteúdo indicadas abaixo permanecem pendentes; a existência do tutorial não representa homologação do fluxo demonstrado.</p>
+</aside>
+{% set tutoriais = [
+  ("Cadastrando uma demanda por contribuição SEI", "31.57", "Atualizado em 21/10"),
+  ("Cadastrando uma demanda pelo formulário", "30.63", ""),
+  ("Tributando camadas territoriais", "35.73", "Atualizado em 21/10"),
+  ("Agrupando demandas para hierarquização", "26.53", ""),
+  ("Cadastrando uma hierarquização", "28.93", ""),
+  ("Cadastrando um julgamento", "29.07", ""),
+  ("Consolidando as respostas dos julgadores", "32.33", ""),
+  ("Analisando a elegibilidade territorial", "39.73", "Revisão pendente"),
+  ("Preparando a análise de favorabilidade", "30.87", "Revisão pendente"),
+  ("Calculando o índice de priorização", "25.1", "Revisão pendente"),
+  ("Consultando e exportando uma extração de atributos", "22.97", "Revisão pendente"),
+  ("Preparando uma extração de atributos", "33.33", "Revisão pendente"),
+  ("Complementando um cadastro — Dados cadastrais", "27.73", "Novo em 21/10"),
+  ("Complementando um cadastro — Geometria", "24.43", "Novo em 21/10"),
+  ("Complementando um cadastro — Atributos de demanda", "21.73", "Novo em 21/10"),
+  ("Cadastrando um usuário", "28.77", "Novo em 21/10")
+] %}
+<main>
+{% for titulo, duracao, revisao in tutoriais %}
+  <article>
+    <h2>{{ titulo }}{% if revisao %}<small> · {{ revisao }}</small>{% endif %}</h2>
+    <p class="pendencia">Vídeo e arquivos complementares aguardando publicação.</p>
+    <div class="meta"><span>{{ duracao }} s · Full HD · 30 fps</span></div>
+  </article>
+{% endfor %}
+</main>
+<footer>
+  <p>Os fluxos de cadastro, julgamento e análise utilizam dados fictícios de treinamento, sem envio de convites. A camada municipal de densidade demográfica foi efetivamente gerada conforme autorização. A consulta de extrações usa uma execução de teste já existente. Os três tutoriais de complementação usam o perfil Operador simulado em ambiente isolado. O cadastro de usuário utiliza uma cópia local do formulário SIGMA, sem criar conta nem enviar emails. Os vídeos são silenciosos e possuem legendas incorporadas; os arquivos SRT acompanham cada MP4.</p>
+  <p>Nova extração: o tutorial de preparação termina com a composição pronta na bancada. A consulta e a exportação de uma extração concluída estão em vídeo separado. Favorabilidade: a página prepara as camadas; ela não executa o cálculo dos índices.</p>
+</footer>
+</body>
+</html>
