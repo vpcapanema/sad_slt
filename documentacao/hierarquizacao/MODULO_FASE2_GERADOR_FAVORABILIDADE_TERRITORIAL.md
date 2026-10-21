@@ -65,33 +65,51 @@ Falhas posteriores a persistencia informam o caminho recuperavel, sem descartar
 produtos anteriores. Esta execucao nao atualiza indices, escores, ranking ou
 homologacao da hierarquizacao e nao registra produtos como resultados de Fase 1.
 
-O painel de sobreposicoes apresenta uma unica rosca com todas as entradas,
-demandas e superficies das saidas concluidas no lote, inclusive em execucao
-parcial identificada. Cada fatia corresponde a uma combinacao demanda × feicao
-da superficie, proporcional a sua area na soma das areas sobrepostas. Nomes,
-classes ou camadas iguais nao agrupam fatias; areas espacialmente coincidentes
-continuam contadas separadamente. A legenda identifica entrada, demanda,
-superficie e feicao, com area e participacao na soma. Contatos de area zero
-permanecem na legenda, sem fatia proporcional. A selecao destaca a combinacao,
-sem retirar as demais. Os dados sao lidos dos GeoPackages assinados, com
-conferencia das somas e acesso restrito ao usuario das execucoes; carregar ou
-recarregar a rosca nao repete o geoprocessamento nem agrega classes ou indices.
+O painel apresenta os atributos originais `fav_territorial_dim` e
+`fav_territorial_classe` para grade, e `fav_rede_dim` e `fav_rede_classe` para
+rede, utilizando o mapa de campos preservados nos metadados. Nao utiliza como
+substitutos area, indice sem sufixo `_dim`, media ou classe inferida. Cada
+combinacao demanda × feicao permanece individualizada, mesmo com nomes ou
+valores iguais. Fragmentos da mesma combinacao devem concordar nos atributos;
+divergencias e colunas declaradas mas inexistentes impedem a apresentacao.
+
+Um grafico de pontos horizontal reune todas as combinacoes das saidas
+concluidas, inclusive em lote parcial identificado, na escala fixa de 0 a 1.
+Cada linha identifica entrada, demanda, superficie, feicao, indice e classe.
+Indices nulos, ausentes, nao numericos ou fora de [0,1] sao sinalizados sem
+ponto, sem conversao em zero; zero numerico valido permanece na origem da escala.
+Contatos sem area sao identificados sem eliminar seus atributos. A selecao
+sincroniza mapa, tabela e detalhes, sem filtrar o grafico. A representacao nao
+pressupoe que indices sejam parcelas aditivas de um total.
+
+Como referencias de visualizacao, a documentacao de
+[graficos do ArcGIS Pro](https://doc.esri.com/en/arcgis-pro/latest/help/analysis/geoprocessing/charts/bar-chart.html)
+descreve a apresentacao de observacoes com identificacao individual, sem
+agregacao; o guia de
+[graficos de pontos do Datawrapper](https://www.datawrapper.de/academy/how-to-create-a-dot-plot)
+orienta a comparacao de valores em escala comum. Estas referencias fundamentam
+a apresentacao, nao alteram o metodo de calculo dos indices.
 
 A secao 5, **Resultados da Favorabilidade Territorial**, reutiliza o painel
 completo da Elegibilidade, adaptado aos papeis de grade e rede. A apresentacao
 exige revisao e confirmacao dos nomes de camadas e feicoes; os nomes sao
 persistidos por usuario e assinatura da saida. O painel conecta o mapa de
-demandas e intersecoes, a selecao de entrada e superficie, os detalhes de area
-e percentual, a rosca integral e a tabela paginada. A ocultacao de linhas e
-colunas sem valores nao considera zero como vazio e nao limita a rosca.
-As cores do mapa identificam os papeis, nao representam classes ou indices.
-Nao se simplificam as geometrias para esta apresentacao.
+demandas e intersecoes, a selecao de entrada e superficie, os detalhes de indice
+e classe, o grafico integral e a tabela paginada por combinacao. Area e percentual
+da intersecao permanecem apenas como informacao tecnica complementar nos
+detalhes. A ocultacao de registros sem indice e classe nao remove zero valido
+nem indices invalidos sinalizados e nao limita o grafico.
+O mapa utiliza rampa Viridis continua e linear de 0 a 1 para o indice `_dim`,
+com cinza para ausencia de indice valido. Os poligonos sao opacos e sem bordas;
+contatos lineares ou pontuais continuam representados. Nao se simplificam as
+geometrias para esta apresentacao.
 
 Pode-se reabrir um GeoPackage de favorabilidade ja gravado no Storage, com
 conferencia de metadados, geometrias, vinculos e somas antes da apresentacao.
 O acesso as execucoes e as revisoes de nomes permanecem segregados por usuario
 e modalidade, sem utilizar o namespace da Fase 1. O pacote de download inclui
-PDF de Favorabilidade Territorial, todos os GeoPackages integrais e manifesto,
+PDF de Favorabilidade Territorial com indices e classes por combinacao,
+todos os GeoPackages integrais e manifesto,
 com identificacao explicita de lotes parciais e conferencia de integridade no
 Storage. A geracao do pacote nao executa novamente as intersecoes e nao
 registra relatorio de Elegibilidade ou altera indices da hierarquizacao.

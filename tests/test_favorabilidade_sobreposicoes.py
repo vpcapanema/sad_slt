@@ -21,10 +21,11 @@ from api.services.controle_processamento import ControleProcessamento
 def analise(monkeypatch):
     entrada = gpd.GeoDataFrame({'nome': ['A', 'B', 'Sem interseção']},
                               geometry=[box(0, 0, 10, 10), box(20, 0, 30, 10), box(40, 0, 50, 10)], crs=5880)
-    grade = gpd.GeoDataFrame({'nome': ['Mesmo nome', 'Mesmo nome'], 'classe': ['Alta', 'Baixa'],
-                             'indice': [.8, .2], 'indice_dim': [.7, .3]},
+    grade = gpd.GeoDataFrame({'nome': ['Mesmo nome', 'Mesmo nome'], 'fav_territorial_classe': ['Alta', 'Baixa'],
+                             'fav_territorial': [.8, .2], 'fav_territorial_dim': [.7, .3]},
                             geometry=[box(0, 0, 5, 10), box(20, 0, 24, 10)], crs=5880)
-    rede = gpd.GeoDataFrame({'nome': ['Contato']}, geometry=[box(10, 0, 11, 10)], crs=5880)
+    rede = gpd.GeoDataFrame({'nome': ['Contato'], 'fav_rede_dim': [0.0], 'fav_rede_classe': ['Muito baixa'],
+                            'fav_rede': [.9]}, geometry=[box(10, 0, 11, 10)], crs=5880)
     for frame in (entrada, grade, rede):
         frame.geometry = frame.geometry.translate(xoff=5000000, yoff=7000000)
     resultados, arquivos = {}, {}
@@ -60,7 +61,7 @@ def analise(monkeypatch):
 
 def test_todas_entradas_demandas_e_feicoes_sem_agrupar_nomes(analise, monkeypatch):
     def sem_geometrias(*args, **kwargs):
-        pytest.fail('A rosca não precisa reprojetar ou transmitir geometrias.')
+        pytest.fail('A consulta de atributos não precisa reprojetar ou transmitir geometrias.')
     monkeypatch.setattr(service, 'reproject', sem_geometrias)
     resposta = service.sobreposicoes_favorabilidade(['job-1', 'job-2'], 'autor')
     assert resposta['concluidas'] == resposta['previstas'] == 2
@@ -75,6 +76,10 @@ def test_todas_entradas_demandas_e_feicoes_sem_agrupar_nomes(analise, monkeypatc
         assert a['sobreposicoes'][0]['nome'] == b['sobreposicoes'][0]['nome']
         assert a['sobreposicoes'][0]['id'] != b['sobreposicoes'][0]['id']
         assert a['sobreposicoes'][1]['percentual'] == 0
+        assert a['sobreposicoes'][0]['favorabilidade']['indice'] == .7
+        assert b['sobreposicoes'][0]['favorabilidade']['indice'] == .3
+        assert a['sobreposicoes'][0]['favorabilidade']['classe'] == 'Alta'
+        assert a['sobreposicoes'][1]['favorabilidade']['indice'] == 0
     assert sum(c['area_m2'] for e in resposta['entradas'] for l in e['linhas'] for c in l['sobreposicoes']) == 180
 
 
@@ -134,6 +139,12 @@ def test_painel_completo_nomes_pdf_e_pacote_preservam_fragmentos(analise):
     assert entrada['feicoes'] == 3 and entrada['com_intersecao'] == 2 and entrada['sem_intersecao'] == 1
     assert len(entrada['geometrias']['features']) == 3
     assert len(entrada['intersecoes']['features']) == 3
+    assert sorted(f['properties']['indice_favorabilidade'] for f in entrada['intersecoes']['features']) == [0, .3, .7]
+    superficies = [f for f in entrada['mapa']['formas'] if 'cor' in f]
+    assert {f['cor'] for f in superficies} == {
+        service.cor_favorabilidade(.7), service.cor_favorabilidade(0), service.cor_favorabilidade(.3)}
+    assert all(f['sem_borda'] for f in superficies if f['tipo'] == 'Polygon')
+    assert any(f['tipo'] == 'LineString' and not f.get('sem_borda') for f in superficies)
     assert entrada['linhas'][0]['areas'] == [50, 0]
     assert entrada['linhas'][2]['areas'] == [None, None]
     assert {c['papel'] for c in entrada['campos']} == {'grade', 'rede'}
@@ -145,6 +156,9 @@ def test_painel_completo_nomes_pdf_e_pacote_preservam_fragmentos(analise):
     assert 'Favorabilidade de Grade' in texto and 'Favorabilidade de Rede' in texto
     assert 'Demandas Sul' in texto and 'Demanda' in texto
     assert 'Relatório de Elegibilidade' not in texto and 'Restrição' not in texto and 'Risco' not in texto
+    assert 'fav_territorial_dim' in texto and 'fav_rede_dim' in texto
+    assert 'Alta' in texto and 'Muito baixa' in texto and '0,7' in texto
+    assert 'Área Sobreposta' not in texto and 'km²' not in texto
     pacote, caminho = service.pacote(modelo, arquivos)
     assert arquivos_storage[caminho] == pacote
     with ZipFile(BytesIO(pacote)) as zipado:
@@ -155,7 +169,7 @@ def test_painel_completo_nomes_pdf_e_pacote_preservam_fragmentos(analise):
             assert zipado.read(nome) == arquivos_storage[resultados[f'job-{indice}']['arquivo']]
             recortes = gpd.read_file(BytesIO(dados), layer='intersecoes')
             assert 'classe' in ' '.join(recortes.columns)
-            assert 'indice_dim' in ' '.join(recortes.columns)
+            assert 'fav_territorial_dim' in ' '.join(recortes.columns)
 
 
 def test_reabrir_saida_e_namespace_separado_da_elegibilidade(analise):
@@ -218,3 +232,71 @@ def test_reabertura_recusa_geopackage_de_outra_modalidade(analise):
     arquivo = resultados['job-1']['arquivo']
     with pytest.raises(ValueError, match='elegibilidade'):
         service.abrir(arquivo, 'autor')
+
+
+@pytest.mark.parametrize('valor,estado,esperado', [
+    (0, 'valido', 0), (1, 'valido', 1), (.71345678, 'valido', .71345678),
+    (None, 'nulo', None), (-.1, 'invalido', None), (1.01, 'invalido', None),
+    (True, 'invalido', None), ('0.8', 'invalido', None), (float('inf'), 'invalido', None),
+    (float('nan'), 'invalido', None),
+])
+def test_indice_original_sem_area_como_fallback(valor, estado, esperado):
+    resultado = service._favorabilidade(
+        {'indice': valor, 'classe': 'Classe não padronizada', 'area_m2': 9999},
+        'grade', {'fav_territorial_dim': 'indice', 'fav_territorial_classe': 'classe'})
+    assert resultado['indice'] == esperado
+    assert resultado['estado_indice'] == estado
+    assert resultado['classe'] == 'Classe não padronizada'
+    assert resultado['campo_indice'] == 'fav_territorial_dim'
+    assert resultado['campo_classe'] == 'fav_territorial_classe'
+
+
+def test_campos_ausentes_nao_usam_media_simples_ou_classe_inferida():
+    resultado = service._favorabilidade(
+        {'fav_rede': .9, 'area_m2': 100, 'classe': 'Alta'}, 'rede',
+        {'fav_rede': 'fav_rede', 'classe': 'classe'})
+    assert resultado['indice'] is None and resultado['estado_indice'] == 'ausente'
+    assert resultado['classe'] is None and resultado['estado_classe'] == 'ausente'
+    assert service.cor_favorabilidade(None) == '#808080'
+    assert service.cor_favorabilidade(0) == '#440154'
+    assert service.cor_favorabilidade(1) == '#fde725'
+    assert service.cor_favorabilidade(.3125) == '#35628b'
+
+
+def test_classe_vazia_nao_e_reclassificada():
+    resultado = service._favorabilidade(
+        {'i': 1, 'c': '  '}, 'rede', {'fav_rede_dim': 'i', 'fav_rede_classe': 'c'})
+    assert resultado['indice'] == 1
+    assert resultado['estado_classe'] == 'nulo' and resultado['classe'] == '  '
+
+
+def test_coluna_declarada_inexistente_impede_apresentacao(analise):
+    resultados, arquivos = analise
+    resultado = resultados['job-1']
+    dados = arquivos[resultado['arquivo']]
+    frame = gpd.read_file(BytesIO(dados), layer='favorabilidade_territorial')
+    auditoria = resultado['favorabilidade']
+    nomes = {f['id']: f['nome'] for f in service.preparar(['job-1'], 'autor', analise='favorabilidade')['fontes']}
+    auditoria['atributos_superficies'][0]['campos']['fav_territorial_dim'] = 'coluna_ausente'
+    with pytest.raises(ValueError, match='atributo preservado fav_territorial_dim'):
+        service._painel(frame, dados, auditoria, nomes, service._linhas(frame, auditoria),
+                        analise='favorabilidade')
+
+
+def test_fragmentos_divergentes_da_mesma_feicao_nao_sao_agregados(analise):
+    resultados, arquivos = analise
+    resultado = resultados['job-1']
+    original = arquivos[resultado['arquivo']]
+    frame = gpd.read_file(BytesIO(original), layer='favorabilidade_territorial')
+    recortes = gpd.read_file(BytesIO(original), layer='intersecoes').to_dict('records')
+    campo = resultado['favorabilidade']['atributos_superficies'][0]['campos']['fav_territorial_dim']
+    primeiro = next(r for r in recortes if r['base_id'] == 'g')
+    primeiro['area_m2'] /= 2
+    recortes.append({**primeiro, campo: .99})
+    alterado = processamento.serializar(frame, resultado['favorabilidade'], recortes, 'teste.gpkg',
+                                        analise='favorabilidade')['teste.gpkg']
+    resultado['sha256'] = sha256(alterado).hexdigest()
+    arquivos[resultado['arquivo']] = alterado
+    nomes = {f['id']: f['nome'] for f in service.preparar(['job-1'], 'autor', analise='favorabilidade')['fontes']}
+    with pytest.raises(ValueError, match='divergentes'):
+        service.montar(['job-1'], nomes, 'autor', True, analise='favorabilidade')

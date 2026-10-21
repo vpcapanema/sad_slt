@@ -36,3 +36,18 @@
 .favorabilidade-v2 .evr-controles { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; padding: 8px 12px; }
 .favorabilidade-v2 .evr-controles .ea-icon-button { width: 32px; min-width: 32px; height: 32px; min-height: 32px; padding: 0; font-size: 11px; }
 .favorabilidade-v2 .evr-controles [aria-pressed="true"] { background: #eef4f8; border-color: var(--pli-deep); color: var(--pli-deep); }
+.favorabilidade-v2 .fv-rampa-legenda { display: inline-flex; align-items: center; gap: 8px; }
+.favorabilidade-v2 .fv-rampa { display: inline-block; width: 120px; height: 12px; background: linear-gradient(to right,#440154,#3b528b,#21918c,#5ec962,#fde725); }
+.favorabilidade-v2 .fv-detalhes-indices { display: grid; gap: 16px; min-width: 0; }
+.favorabilidade-v2 .fv-dot-bloco { margin: 0; min-width: 0; }
+.favorabilidade-v2 .fv-dot-plot { max-height: 460px; overflow: auto; padding: 6px; }
+.favorabilidade-v2 .fv-dot-eixo { display: grid; grid-template-columns: minmax(0,1fr) minmax(60px,1fr) minmax(70px,.7fr); gap: 12px; padding: 8px; position: sticky; top: 0; background: white; z-index: 1; font-size: 11px; }
+.favorabilidade-v2 .fv-dot-marcas { display: flex; justify-content: space-between; margin: 0 7px; }
+.favorabilidade-v2 .fv-dot-linha { display: grid; grid-template-columns: minmax(0,1fr) minmax(60px,1fr) minmax(70px,.7fr); align-items: center; gap: 12px; width: 100%; padding: 12px 8px; margin: 4px 0; border: 1px solid #d6e1e9; border-radius: 5px; background: white; color: #243e50; font: inherit; font-size: 11px; text-align: left; cursor: pointer; }
+.favorabilidade-v2 .fv-dot-linha.ativa { border-color: #087fb7; box-shadow: inset 3px 0 #087fb7; background: #eef4f8; }
+.favorabilidade-v2 .fv-dot-linha:focus-visible { outline: 2px solid #087fb7; outline-offset: 1px; }
+.favorabilidade-v2 .fv-dot-linha small { display: block; font-size: 10px; color: #526b7c; overflow-wrap: anywhere; }
+.favorabilidade-v2 .fv-dot-nome, .favorabilidade-v2 .fv-dot-valor { min-width: 0; overflow-wrap: anywhere; }
+.favorabilidade-v2 .fv-dot-faixa { height: 2px; background: #bacbd5; position: relative; margin: 0 7px; }
+.favorabilidade-v2 .fv-dot-ponto { position: absolute; top: 50%; transform: translate(-50%,-50%); width: 12px; height: 12px; border-radius: 50%; box-shadow: 0 0 0 1px #466171; }
+.favorabilidade-v2 .fv-dot-sem-valor { display: block; text-align: center; background: white; transform: translateY(-50%); }

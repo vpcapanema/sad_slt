@@ -18,7 +18,7 @@
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Título**                 | Metodologia do Sistema de Hierarquização de Demandas — SICARD                                                                                                         |
 | **Número**                 | NT-SICARD-001/2026                                                                                                                                                       |
-| **Versão**                 | 1.28                                                                                                                                                                      |
+| **Versão**                 | 1.29                                                                                                                                                                      |
 | **Data de emissão**        | 21/10/2026                                                                                                                                                               |
 | **Classificação**         | Documento técnico-metodológico de entrega ao cliente                                                                                                                   |
 | **Sistema**                 | SICARD — Sistema de Apoio à Tomada de Decisão                                                                                                                         |
@@ -62,6 +62,7 @@
 | 1.26    | 21/10/2026 | `[preencher]` | Apresentação conjunta de todas as sobreposições em rosca única por análise nas páginas de Elegibilidade e Favorabilidade, com uma fatia por combinação demanda e feição de origem, sem agrupamento por nome, camada, classe ou índice. |
 | 1.27    | 21/10/2026 | `[preencher]` | Distinção entre a revisão física das fontes do Storage e o token temporário de visualização na preparação e execução da Favorabilidade, preservando o bloqueio de alterações reais sem acusar mudança pela simples geração da prévia. |
 | 1.28    | 21/10/2026 | `[preencher]` | Integração dos resultados da Favorabilidade ao painel de mapa, tabela, detalhes e rosca da Elegibilidade, com revisão persistida de nomes, reabertura de GeoPackages e pacote PDF/camadas segregados da Fase 1; preservação dos índices registrados como última subseção, sem agregação ou alteração de seus valores. |
+| 1.29    | 21/10/2026 | `[preencher]` | Apresentação dos atributos originais de índice por dimensões e classe de grade e rede nos resultados da Favorabilidade; substituição da rosca por gráfico de pontos por demanda e feição, rampa contínua de 0 a 1 no mapa e relatório por índices e classes, com sinalização de dados ausentes ou inválidos e área restrita à informação técnica complementar. |
 
 ---
 
@@ -706,28 +707,42 @@ segregado de análises avulsas ou na pasta `fase-2` da hierarquização. Não s�
 registrados como resultados de Fase 1 nem substituem índices, escores, ranking ou
 homologação existentes.
 
-O painel de sobreposições da Favorabilidade utiliza o mesmo componente de rosca
-integral da Elegibilidade: todas as entradas, demandas e superfícies das saídas
-concluídas no lote compõem o gráfico, com uma fatia por combinação demanda e
-feição de origem. Nomes, classes e camadas iguais não agrupam combinações. A
-participação de cada fatia utiliza a soma das áreas sobrepostas, mantendo a
-contagem separada de áreas coincidentes; o percentual da área da demanda é
-apresentado distintamente nos detalhes. Contatos sem área constam da legenda.
-As saídas parciais são identificadas e os dados são lidos dos GeoPackages
-assinados, com conferência dos vínculos e das somas, sem repetir interseções ou
-alterar os valores dos produtos.
+O painel da Favorabilidade apresenta os atributos originais
+`fav_territorial_dim` e `fav_territorial_classe` para superfícies de grade, e
+`fav_rede_dim` e `fav_rede_classe` para superfícies de rede. A leitura utiliza o
+mapa de atributos preservados nos metadados do GeoPackage. Área, índice sem
+sufixo `_dim` e classe inferida não substituem esses campos. Não se calculam
+médias, somas ou ponderações por área dos índices ou classes. Fragmentos da mesma
+combinação demanda e feição devem concordar nos atributos; divergências ou
+colunas declaradas mas inexistentes impedem a apresentação.
+
+Todas as entradas, demandas e superfícies das saídas concluídas no lote compõem
+um gráfico de pontos, com uma linha por combinação demanda e feição de origem.
+Nomes, classes e valores iguais não agrupam combinações. A posição representa o
+índice original na escala fixa de 0 a 1, acompanhado de valor e classe textuais,
+sem pressupor participação em um total aditivo. Índices ausentes, nulos, não
+numéricos ou fora do intervalo são sinalizados sem ponto e sem conversão em zero;
+zero válido é apresentado na origem da escala. Contatos sem área permanecem
+identificados. As saídas parciais são indicadas e os dados são lidos dos
+GeoPackages assinados, com conferência dos vínculos e das somas geométricas, sem
+repetir interseções ou alterar os valores dos produtos.
 
 A seção de resultados incorpora mapa interativo, seleção de entrada e superfície,
-detalhamento das áreas e percentuais e tabela paginada, sincronizados com a rosca.
-A ocultação de linhas e colunas sem valores não considera zero como vazio e não
-filtra as sobreposições do gráfico. As cores identificam os papéis de grade e
-rede, sem classificar índices. As geometrias são apresentadas sem simplificação.
+detalhamento dos índices e classes e tabela paginada por combinação, sincronizados
+com o gráfico. Área e percentual da interseção são informação técnica complementar
+nos detalhes, não medidas de favorabilidade. A ocultação de registros sem índice
+e classe mantém zero válido e índices inválidos sinalizados, sem filtrar o gráfico.
+O mapa utiliza rampa Viridis contínua e linear de 0 a 1 para o índice `_dim` e
+cinza quando não há índice válido, sem reclassificação. Os polígonos são opacos e
+sem bordas; contatos lineares e pontuais permanecem representados. As geometrias
+são apresentadas sem simplificação.
 A revisão dos nomes das camadas e feições exige confirmação e é persistida por
 usuário e assinatura da saída, sem modificar as fontes.
 
 Permite-se reabrir um GeoPackage de Favorabilidade previamente gravado, após
 conferência dos metadados, vínculos, áreas e geometrias. A exportação reúne PDF
-de Favorabilidade Territorial, GeoPackages integrais e manifesto em pacote
+de Favorabilidade Territorial com os índices e classes originais por combinação,
+GeoPackages integrais e manifesto em pacote
 conferido no Storage, com identificação de resultados parciais. Não há repetição
 das interseções para consulta ou exportação, nem registro de relatório da Fase 1.
 Os índices já registrados na hierarquização e sua auditoria permanecem como

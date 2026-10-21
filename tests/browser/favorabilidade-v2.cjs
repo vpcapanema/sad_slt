@@ -13,6 +13,7 @@ const assert = require('node:assert/strict');
     let failLayer = '', missingGeometry = false;
     let modoExecucao = 'sucesso';
     let falharGrafico = false;
+    let indicesIncompletos = false;
     let revisados = false;
     const execucoes = [], normalizacoes = [], jobs = new Map();
     page.on('pageerror', error => errors.push(error.message));
@@ -62,7 +63,7 @@ const assert = require('node:assert/strict');
     ];
     const modeloResultados = (ids, nomes) => {
       const fontes = fontesResultados(ids).map(f => ({...f,nome:nomes[f.id] || f.nome}));
-      return {fontes,concluidas:ids.length,previstas:ids.length,metodologia:'Áreas por superfície, sem agregar classes ou índices.',
+      return {fontes,concluidas:ids.length,previstas:ids.length,metodologia:'Índices _dim e classes originais por demanda e feição, sem agregação.',
         entradas:ids.map(id => {
           const grade = ids.includes('reaberta');
           const campos = [
@@ -78,10 +79,30 @@ const assert = require('node:assert/strict');
               {id:i===0?'f1':'f2',base_id:rede.id,nome:i===0?(nomes.f1 || 'Mesma classe'):(nomes.f2 || 'Contato'),identificador:i===0?2:3,area_m2:i===0?5:0,percentual:i===0?5:0},
             ]:[],
           }));
-          const features = properties => ({type:'Feature',geometry:poligono,properties});
+          for (const linha of linhas) for (const item of linha.sobreposicoes) {
+            const grade = item.base_id === gradePoligonal;
+            item.favorabilidade = {
+              indice:{f0:.7,f1:.3,f2:0,g0:.4}[item.id],
+              classe:{f0:'Alta',f1:'Baixa',f2:'Muito baixa',g0:'Moderada'}[item.id],
+              estado_indice:'valido',estado_classe:'valido',
+              campo_indice:grade?'fav_territorial_dim':'fav_rede_dim',
+              campo_classe:grade?'fav_territorial_classe':'fav_rede_classe',
+            };
+            if (indicesIncompletos && item.id !== 'f2') {
+              item.favorabilidade.indice = null;
+              item.favorabilidade.estado_indice = item.id === 'f0' ? 'invalido' : item.id === 'f1' ? 'nulo' : 'ausente';
+              if (item.id !== 'f0') {
+                item.favorabilidade.classe = null;
+                item.favorabilidade.estado_classe = item.id === 'g0' ? 'ausente' : 'nulo';
+              }
+            }
+          }
+          const features = (properties,geometry=poligono) => ({type:'Feature',geometry,properties});
           return {id,nome:nomes[`entrada:${id}`] || `Entrada ${id}`,campos,linhas,feicoes:53,com_intersecao:2,sem_intersecao:51,
             geometrias:{type:'FeatureCollection',features:linhas.map(l=>features({chave:l.chave}))},
-            intersecoes:{type:'FeatureCollection',features:linhas.flatMap(l=>l.sobreposicoes.map(s=>features({chave:l.chave,base_id:s.base_id,feicao_id:s.id})))}};
+            intersecoes:{type:'FeatureCollection',features:linhas.flatMap(l=>l.sobreposicoes.map(s=>features(
+              {chave:l.chave,base_id:s.base_id,feicao_id:s.id},
+              s.area_m2 === 0 ? {type:'LineString',coordinates:[[-47,-23],[-46.99,-23]]} : poligono)))}};
         })};
     };
     await page.route('https://server.arcgisonline.com/**', route => route.abort());
@@ -372,17 +393,11 @@ const assert = require('node:assert/strict');
     await page.locator('#ev-resultados-revisados').check();
     await page.locator('#ev-resultados-mostrar').click();
     await page.locator('#ev-resultados-conteudo').waitFor({state:'visible'});
-    assert.equal(await page.locator('#ev-resultados-rosca path').count(),3,'Rosca inclui sobreposições de ambas as demandas');
-    assert.equal(await page.locator('#ev-resultados-legenda button').count(),4,'Nomes iguais e contatos sem área não são agrupados ou omitidos');
-    assert.equal(await page.locator('#ev-resultados-rosca').getAttribute('data-total-m2'),'35');
-    const arcos = await page.locator('#ev-resultados-rosca path').evaluateAll(paths => paths.map(path => {
-      const numeros = path.getAttribute('d').match(/[-+]?\d*\.?\d+(?:e[-+]?\d+)?/gi).map(Number);
-      let angulo = Math.atan2(numeros[8]-120,numeros[7]-120)-Math.atan2(numeros[1]-120,numeros[0]-120);
-      if (angulo <= 0) angulo += 2*Math.PI;
-      return {angulo,area:Number(path.dataset.areaM2)};
-    }));
-    for (const arco of arcos) assert(Math.abs(arco.angulo-arco.area/35*2*Math.PI)<1e-10,'Ângulo da fatia proporcional à soma global');
-    assert.equal(await page.locator('#ev-resultados-rosca path').evaluateAll(paths=>new Set(paths.map(p=>p.dataset.sobreposicao)).size),3);
+    assert.equal(await page.locator('#ev-resultados-rosca').count(),0,'A Favorabilidade não usa rosca ou fatias de área');
+    assert.equal(await page.locator('#ev-resultados-indices-grafico .fv-dot-linha').count(),4,'Nomes iguais e contatos sem área mantêm combinações distintas');
+    assert.equal(await page.locator('#ev-resultados-indices-grafico .fv-dot-ponto').count(),4,'Zero válido permanece no gráfico');
+    assert.deepEqual(await page.locator('.fv-dot-ponto').evaluateAll(p=>p.map(n=>n.style.left)),['70%','30%','70%','0%'],'Posição usa o índice original, nunca área, porcentagem da área ou valor sem _dim');
+    assert.equal(await page.locator('#ev-resultados-indices-grafico').getAttribute('data-escala-max'),'1');
     const extremos = await page.evaluate(async () => {
       const {renderizarRosca,numeroSobreposicao} = await import('/restrict/hierarquizacao/js/sobreposicoes-rosca.js');
       const svg = document.createElementNS('http://www.w3.org/2000/svg','svg'), legenda = document.createElement('div');
@@ -400,25 +415,28 @@ const assert = require('node:assert/strict');
     assert.equal(extremos.vazio.fatias,0); assert.equal(extremos.vazio.itens,0);
     assert.match(extremos.vazio.texto,/Sem Interseção/);
     assert.equal(extremos.unica,1); assert.equal(extremos.pequeno,'0,000000001');
-    await page.locator('#ev-resultados-legenda button').last().click();
+    await page.locator('#ev-resultados-indices-grafico .fv-dot-linha').last().click();
     assert.equal(await page.locator('#ev-resultados-nome-ativo').textContent(),'Demanda B');
-    assert.equal(await page.locator('#ev-resultados-nome-classe').textContent(),'Contato');
-    assert.equal(await page.locator('#ev-resultados-area-km').textContent(),'0,00 km²');
-    assert.equal(await page.locator('#ev-resultados-rosca path').count(),3,'Seleção não filtra outras sobreposições');
+    assert.equal(await page.locator('#ev-resultados-nome-classe').textContent(),'Contato [3]');
+    assert.equal(await page.locator('#ev-resultados-indice').textContent(),'0,0000');
+    assert.equal(await page.locator('#ev-resultados-classe-original').textContent(),'Muito baixa');
+    assert.equal(await page.locator('#ev-resultados-campo-indice').textContent(),'fav_rede_dim');
+    assert.equal(await page.locator('.fv-dot-linha').count(),4,'Seleção não filtra outras combinações');
     assert.equal(await page.locator('#ev-resultados-tabela tbody tr.ativo').getAttribute('data-chave'),'1');
     await page.locator('#ev-resultados-base').selectOption(rede.id);
     assert.equal(await page.locator('#ev-resultados-categoria').textContent(),'Favorabilidade de Rede');
     await page.locator('#ev-resultados-tabela tbody tr').first().click();
     assert.equal(await page.locator('#ev-resultados-nome-ativo').textContent(),'Demanda A');
-    await page.locator('#ev-resultados-mapa .leaflet-overlay-pane path').last().click({force:true});
+    await page.locator('#ev-resultados-mapa .leaflet-overlay-pane path[stroke="#440154"]').dispatchEvent('click');
+    assert.equal(await page.locator('#ev-resultados-mapa path[stroke="#440154"]').getAttribute('stroke-width'),'3','Contato linear permanece visível, sem impor bordas aos polígonos');
     assert.equal(await page.locator('#ev-resultados-nome-ativo').textContent(),'Demanda B','Seleção no mapa atualiza os detalhes');
-    assert.equal(await page.locator('#ev-resultados-nome-classe').textContent(),'Contato');
+    assert.equal(await page.locator('#ev-resultados-nome-classe').textContent(),'Contato [3]');
     await page.locator('#ev-resultados-proxima').click();
     assert.match(await page.locator('#ev-resultados-pagina').textContent(),/Página 2 de 2/);
-    assert.equal(await page.locator('#ev-resultados-rosca path').count(),3);
+    assert.equal(await page.locator('.fv-dot-linha').count(),4);
     await page.locator('#ev-resultados-vazias').click();
-    assert.equal(await page.locator('#ev-resultados-tabela tbody tr').count(),2);
-    assert.equal(await page.locator('#ev-resultados-rosca path').count(),3);
+    assert.equal(await page.locator('#ev-resultados-tabela tbody tr').count(),4);
+    assert.equal(await page.locator('.fv-dot-linha').count(),4);
     await page.locator('#ev-resultados-vazias').click();
     await page.locator('#ev-resultados-enquadrar').click();
     const bounds = await page.locator('#ev-resultados-mapa').evaluate(div => ({width:div.clientWidth,height:div.clientHeight}));
@@ -472,7 +490,7 @@ const assert = require('node:assert/strict');
     await dismiss();
     await visivel(rede.id,false);
     await page.waitForFunction(() => document.querySelector('#fv-calcular').disabled);
-    assert.equal(await page.locator('#ev-resultados-rosca path').count(),3,'Visibilidade da bancada não altera o conjunto já calculado da rosca');
+    assert.equal(await page.locator('.fv-dot-linha').count(),4,'Visibilidade da bancada não altera os índices já calculados');
     assert.match(await page.locator('#fv-resultados').textContent(),/0\.8000.*0\.6000/s,'Cálculo não substitui índices registrados');
     await page.locator('#fv-hier-limpar').click();
     await choose('entrada',entrada);
@@ -499,7 +517,7 @@ const assert = require('node:assert/strict');
     await page.locator('#ev-resultados-tentar').click();
     await idle();
     assert.equal(execucoes.length,calculosAntes,'Recarregar gráfico não repete geoprocessamento');
-    assert.equal(await page.locator('#ev-resultados-rosca path').count(),3);
+    assert.equal(await page.locator('.fv-dot-linha').count(),4);
     assert(await page.locator('#ev-resultados-conteudo').isVisible());
     await page.locator('#ev-resultados-abrir').click();
     const dialog = page.locator('dialog.ea-storage-dialog');
@@ -514,12 +532,35 @@ const assert = require('node:assert/strict');
     assert.match(await page.locator('#ev-resultados-fontes-rede').textContent(),/Rede/);
     await page.locator('#ev-resultados-base').selectOption(gradePoligonal);
     assert.equal(await page.locator('#ev-resultados-categoria').textContent(),'Favorabilidade de Grade');
-    assert.equal(await page.locator('#ev-resultados-rosca').getAttribute('data-total-m2'),'60');
-    assert.equal(await page.locator('#ev-resultados-legenda button').count(),5);
+    assert.equal(await page.locator('.fv-dot-linha').count(),5);
+    assert.deepEqual(await page.locator('.fv-dot-ponto').evaluateAll(p=>p.map(n=>n.style.left)),['40%','70%','30%','70%','0%']);
     await page.locator('#ev-resultados-base').selectOption(rede.id);
     assert.equal(await page.locator('#ev-resultados-categoria').textContent(),'Favorabilidade de Rede');
-    assert.equal(await page.locator('#ev-resultados-tabela th.grade').count(),2);
-    assert.equal(await page.locator('#ev-resultados-tabela th.rede').count(),2);
+    await page.locator('.fv-dot-linha').first().click();
+    assert.equal(await page.locator('#ev-resultados-indice').textContent(),'0,4000');
+    assert.equal(await page.locator('#ev-resultados-campo-classe').textContent(),'fav_territorial_classe');
+    assert.equal(await page.locator('#ev-resultados-classe-original').textContent(),'Moderada');
+    assert(!/km²|hectares|Área Sobreposta/.test(await page.locator('#ev-resultados-tabela').textContent()));
+    const superficies = page.locator('#ev-resultados-mapa path[fill-opacity="1"]:not([fill="none"])');
+    assert(await superficies.count() >= 4);
+    assert((await superficies.evaluateAll(paths=>paths.map(p=>p.getAttribute('stroke-width')))).every(p=>p==='0'),'Polígonos opacos e sem borda');
+    indicesIncompletos = true;
+    await page.locator('#ev-resultados-editar').click();
+    await page.locator('#ev-resultados-mostrar').click();
+    await idle();
+    assert.equal(await page.locator('.fv-dot-linha').count(),5);
+    assert.deepEqual(await page.locator('.fv-dot-ponto').evaluateAll(p=>p.map(n=>n.style.left)),['0%'],'Somente zero válido recebe ponto; nenhum nulo ou inválido é convertido em zero');
+    assert.match(await page.locator('#ev-resultados-qualidade').textContent(),/4/);
+    assert.match(await page.locator('.fv-dot-linha').nth(0).textContent(),/Campo ausente/);
+    assert.match(await page.locator('.fv-dot-linha').nth(1).textContent(),/inválido/i);
+    await page.locator('.fv-dot-linha').nth(1).focus();
+    await page.keyboard.press('Enter');
+    assert.match(await page.locator('#ev-resultados-indice').textContent(),/inválido/i);
+    assert.equal(await page.locator('#ev-resultados-classe-original').textContent(),'Alta','Classe original continua disponível mesmo com índice inválido');
+    await page.locator('#ev-resultados-vazias').click();
+    assert.equal(await page.locator('#ev-resultados-tabela tbody tr').count(),3,'Filtro preserva zero e índices inválidos sinalizados');
+    assert.equal(await page.locator('.fv-dot-linha').count(),5,'Filtro não reduz o gráfico');
+    await page.locator('#ev-resultados-vazias').click();
     assert(await page.locator('#ev-resultados > .ea-section-body > section').last().evaluate(
       section => section.classList.contains('secao-favorabilidade-registrados')));
     assert.equal(await page.locator('#favorabilidade-app > section > header .ea-number').allTextContents().then(n=>n.includes('6')),false);

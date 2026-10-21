@@ -47,10 +47,12 @@ def test_mesma_rota_serve_v2_sem_bancada_ou_executor_legados(cliente):
     assert len(ids) == len(set(ids)), 'Os controles não podem ter identificadores duplicados.'
     assert resultados.index('id="ev-resultados-download"') < resultados.index('id="fv-resultados-title"')
     for id_ in ('ev-resultados-aliases', 'ev-resultados-entrada', 'ev-resultados-base',
-                'ev-resultados-mapa', 'ev-resultados-tabela', 'ev-resultados-rosca',
+                'ev-resultados-mapa', 'ev-resultados-tabela', 'ev-resultados-indices-grafico',
                 'ev-resultados-vazias', 'ev-resultados-anterior', 'ev-resultados-proxima',
                 'ev-resultados-abrir', 'ev-resultados-tentar', 'ev-resultados-download'):
         assert f'id="{id_}"' in resultados
+    assert 'id="ev-resultados-rosca"' not in html
+    assert 'fav_territorial_dim' in html and 'fav_rede_classe' in html
 
 
 def test_v1_permanece_preservada_com_seu_executor():

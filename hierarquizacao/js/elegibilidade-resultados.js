@@ -2,6 +2,7 @@ import {post, base} from '../../geoespacial/extracao-atributos/api.js';
 import {el} from '../../geoespacial/extracao-atributos/ui.js';
 import {escolherArquivo} from '../../geoespacial/extracao-atributos/explorador.js?v=20261020-saidas';
 import {sobreposicoesDaAnalise, renderizarRosca} from './sobreposicoes-rosca.js';
+import {indiceTexto, classeTexto, corIndice, renderizarIndices} from './favorabilidade-indices.js';
 
 const numero = valor => valor.toLocaleString('pt-BR', {
   minimumFractionDigits:2, maximumFractionDigits:valor !== 0 && Math.abs(valor) < .01 ? 20 : 2,
@@ -33,6 +34,14 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
 
   function atualizarVisaoTabela() {
     const e = entrada();
+    if (favorabilidade) {
+      linhasTabela = e.linhas.flatMap(linha => linha.sobreposicoes.length
+        ? linha.sobreposicoes.map(item => ({linha,item}))
+        : [{linha,item:null}]).filter(({item}) => !ocultarVazias || item &&
+          (item.favorabilidade.estado_indice === 'valido' || item.favorabilidade.estado_indice === 'invalido'
+            || item.favorabilidade.estado_classe === 'valido'));
+      return;
+    }
     camposTabela = e.campos.map((campo, posicao) => ({campo, posicao}))
       .filter(({posicao}) => !ocultarVazias || e.linhas.some(l => !vazio(l.areas[posicao])));
     linhasTabela = ocultarVazias ? e.linhas.filter(l => l.areas.some(valor => !vazio(valor))) : e.linhas;
@@ -53,6 +62,7 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
     node('conteudo').hidden = true;
     node('download').disabled = true;
     node('status').textContent = 'Confirme os nomes revisados para atualizar a apresentação e a exportação.';
+    if (favorabilidade) node('qualidade').textContent = '';
   }
   async function operar(acao) {
     if (ocupado || externo) return;
@@ -79,6 +89,14 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
       : `Resultados parciais: ${modelo.concluidas} de ${modelo.previstas} entradas. O PDF identificará essa condição.`;
     if (modelo.relatorios_hierarquizacao?.length) {
       node('status').textContent += ' PDF gravado no Storage e associado ao Relatório da Fase 1 em Gestão das hierarquizações.';
+    }
+    if (favorabilidade) {
+      const itens = sobreposicoesDaAnalise(modelo.entradas);
+      const incompletos = itens.filter(item => item.favorabilidade.estado_indice !== 'valido'
+        || item.favorabilidade.estado_classe !== 'valido').length;
+      node('qualidade').textContent = incompletos
+        ? `Atenção: ${incompletos} combinação(ões) com índice ou classe ausente, nulo ou inválido. Confira a situação na tabela. Não foi atribuída área ou zero no lugar desses valores.`
+        : 'Índices _dim e classes originais conferidos em todas as combinações. Nenhum valor agregado.';
     }
   }
   async function carregar(dados) {
@@ -119,11 +137,14 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
     const classe = linha.sobreposicoes.find(c => c.id === classeAtiva);
     const daBase = linha.sobreposicoes.filter(c => c.base_id === baseAtiva), nome = nomeDemanda(linha);
     if (!classe) classeAtiva = '';
-    const posicao = linhasTabela.indexOf(linha);
+    const posicao = favorabilidade ? linhasTabela.findIndex(r => r.linha === linha &&
+      (!classeAtiva || r.item?.id === classeAtiva)) : linhasTabela.indexOf(linha);
     if (posicao >= 0) pagina = Math.floor(posicao / 50);
     node('id-ativo').textContent = linha.id; node('nome-ativo').textContent = nome;
-    node('total-km').textContent = `${area(linha.area_total_m2)} km²`;
-    node('total-ha').textContent = `${area(linha.area_total_m2,1e4)} ha`;
+    if (!favorabilidade) {
+      node('total-km').textContent = `${area(linha.area_total_m2)} km²`;
+      node('total-ha').textContent = `${area(linha.area_total_m2,1e4)} ha`;
+    }
     node('base').value = baseAtiva;
     node('detalhes-base').hidden = !b; node('detalhes-classe').hidden = !classe; node('metricas').hidden = !b;
     node('frase').textContent = classe ? `A demanda “${nome}” apresenta ${classe.area_m2 === 0 ? 'contato sem área' : 'sobreposição'} com “${classe.nome}”.`
@@ -131,7 +152,23 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
         : `Não foi identificada interseção entre “${nome}” e as feições da camada “${b.nome}”.`
       : linha.sobreposicoes.length ? `A demanda “${nome}” apresenta interseção com ${linha.sobreposicoes.length} ${linha.sobreposicoes.length === 1 ? 'feição' : 'feições'} das camadas analisadas.`
         : `Não foi identificada interseção entre “${nome}” e as camadas analisadas.`;
-    if (b) {
+    if (favorabilidade) {
+      const valor = classe?.favorabilidade;
+      if (b) {
+        node('categoria').textContent = papeis[b.papel];
+        node('nome-base').textContent = b.nome;
+      }
+      node('nome-classe').textContent = classe ? `${classe.nome} [${classe.identificador}]` : '';
+      node('metricas').hidden = !classe;
+      node('indice').textContent = valor ? indiceTexto(valor) : 'Selecione uma feição';
+      node('classe-original').textContent = valor ? classeTexto(valor) : 'Nenhuma classe agregada';
+      node('campo-indice').textContent = valor?.campo_indice || '';
+      node('campo-classe').textContent = valor?.campo_classe || '';
+      node('aviso').textContent = classe
+        ? `Valor original de ${classe.nome}; sem média, soma ou ponderação por área.${classe.area_m2 === 0 ? ' Contato sem área.' : ''}`
+        : 'Selecione uma feição no gráfico, no mapa ou na tabela para consultar o índice e a classe originais.';
+      node('area-complementar').textContent = classe ? `${numero(classe.area_m2)} m² · ${numero(classe.percentual)}% da área da demanda. Informação técnica da interseção, não é índice de favorabilidade.` : '';
+    } else if (b) {
       const valor = classe ? classe.area_m2 : linha.areas[e.campos.indexOf(b)];
       node('categoria').textContent = papeis[b.papel]; node('categoria').style.color = corCategoria(b.papel);
       node('nome-base').textContent = b.nome; node('nome-classe').textContent = classe?.nome || '';
@@ -141,14 +178,15 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
       node('percentual').textContent = valor === null ? '—' : `${numero(valor / linha.area_total_m2 * 100)}%`;
       node('area-km').style.color = node('percentual').style.color = classe ? corClasse(classe.id) : corCategoria(b.papel);
     }
-    node('aviso').textContent = classe ? `${numero(classe.percentual)}% da área de “${nome}” se sobrepõe a “${classe.nome}”.`
+    if (!favorabilidade) node('aviso').textContent = classe ? `${numero(classe.percentual)}% da área de “${nome}” se sobrepõe a “${classe.nome}”.`
       : b ? daBase.length ? 'Selecione uma feição no gráfico para consultar sua área sobreposta.'
         : 'O mapa mostra a demanda, pois não há interseção com esta camada.'
       : 'Selecione uma camada ou uma feição no gráfico para consultar os detalhes.';
     for (const [id, layer] of camadas) layer.setStyle({color:id === chave ? '#087fb7' : '#466171', weight:id === chave ? 4 : 2, fillOpacity:id === chave ? .12 : .04});
     for (const r of recortes) {
       const ativo = r.chave === chave && (classeAtiva ? r.feicao === classeAtiva : baseAtiva ? r.base === baseAtiva : true);
-      r.layer.setStyle({fillOpacity:ativo ? .55 : .12, weight:ativo ? 3 : 1, opacity:ativo ? 1 : .4});
+      r.layer.setStyle(favorabilidade ? {fillOpacity:1,weight:r.poligono ? 0 : 3,opacity:1}
+        : {fillOpacity:ativo ? .55 : .12, weight:ativo ? 3 : 1, opacity:ativo ? 1 : .4});
     }
     tabela(); grafico(); mapa.invalidateSize({pan:false});
     if (zoom) {
@@ -161,7 +199,52 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
     }
     controles();
   }
+  function tabelaIndices() {
+    const e = entrada(), head = el('thead'), trHead = el('tr'), body = el('tbody');
+    for (const titulo of ['Demanda','Superfície','Feição de Origem','Índice _dim (0–1)','Classe Original','Situação']) {
+      const th = el('th',titulo); th.scope = 'col'; trHead.append(th);
+    }
+    head.append(trHead);
+    for (const {linha,item} of linhasTabela.slice(pagina*50,(pagina+1)*50)) {
+      const ativa = linha.chave === chave && (item ? item.id === classeAtiva : !classeAtiva);
+      const tr = el('tr',undefined,ativa ? 'ativo' : '');
+      tr.dataset.chave = linha.chave; tr.dataset.feicao = item?.id || '';
+      tr.tabIndex = 0; tr.setAttribute('aria-selected',String(ativa));
+      const demanda = el('td',`${nomeDemanda(linha)} [${linha.id}]`);
+      tr.append(demanda);
+      if (item) {
+        const base = basesPorId.get(item.base_id), valor = item.favorabilidade;
+        const indice = el('td',indiceTexto(valor)), classe = el('td',classeTexto(valor));
+        indice.append(el('small',valor.campo_indice,'evr-secundario'));
+        classe.append(el('small',valor.campo_classe,'evr-secundario'));
+        tr.append(el('td',`${papeis[base.papel]} · ${base.nome}`),
+          el('td',`${item.nome} [${item.identificador}]`),indice,classe,
+          el('td',`${item.area_m2 === 0 ? 'Contato sem área' : 'Interseção'}${valor.estado_indice !== 'valido' || valor.estado_classe !== 'valido' ? ' · Dados incompletos ou inválidos' : ''}`));
+      } else {
+        const semIntersecao = el('td','Sem interseção; nenhum índice ou classe atribuído.');
+        semIntersecao.colSpan = 5; tr.append(semIntersecao);
+      }
+      tr.onclick = () => selecionar(linha.chave,item?.base_id || '',item?.id || '');
+      tr.onkeydown = event => {
+        if (event.target === tr && ['Enter',' '].includes(event.key)) { event.preventDefault(); tr.click(); }
+      };
+      body.append(tr);
+    }
+    if (!linhasTabela.length) {
+      const tr = el('tr'), td = el('td','Nenhum índice ou classe disponível. Use Mostrar para restaurar os registros sem valores.');
+      td.colSpan = 6; tr.append(td); body.append(tr);
+    }
+    node('tabela').replaceChildren(head,body);
+    node('pagina').textContent = `Página ${pagina+1} de ${Math.max(1,Math.ceil(linhasTabela.length/50))} · ${linhasTabela.length} registros · ${e.feicoes} demandas`;
+    const botao = node('vazias'), rotulo = `${ocultarVazias ? 'Mostrar' : 'Ocultar'} registros sem índice e classe`;
+    botao.title = rotulo; botao.setAttribute('aria-label',rotulo); botao.setAttribute('aria-pressed',String(ocultarVazias));
+    botao.querySelector('i').className = `fas fa-eye${ocultarVazias ? '' : '-slash'}`;
+    node('visibilidade').textContent = ocultarVazias
+      ? 'Registros sem valores ocultos. Índice zero e índices inválidos sinalizados permanecem visíveis.'
+      : 'Todas as combinações e demandas sem interseção visíveis. Sem agregação de índices ou classes.';
+  }
   function tabela() {
+    if (favorabilidade) { tabelaIndices(); return; }
     const e = entrada(), head = el('thead'), grupos = el('tr'), nomes = el('tr');
     for (const [nome,papel,n] of [['Camada de Entrada','',2],
       ...categorias.map(p => [papeis[p],p,camposTabela.filter(({campo}) => campo.papel === p).length])]) {
@@ -211,6 +294,17 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
       : 'Todas as linhas e colunas visíveis.';
   }
   function grafico() {
+    if (favorabilidade) {
+      renderizarIndices({container:node('indices-grafico'),itens:sobreposicoesDaAnalise(modelo.entradas),
+        selecionada:item => item.entradaIndice === indice && item.demandaChave === chave && item.id === classeAtiva,
+        aoSelecionar:item => {
+          if (indice !== item.entradaIndice) {
+            indice = item.entradaIndice; node('entrada').value = String(indice); entradaAtual();
+          }
+          selecionar(item.demandaChave,item.base_id,item.id);
+        }});
+      return;
+    }
     renderizarRosca({svg:node('rosca'), legenda:node('legenda'), itens:sobreposicoesDaAnalise(modelo.entradas),
       cor:item => corClasse(item.id),
       selecionada:item => item.entradaIndice === indice && item.demandaChave === chave &&
@@ -251,13 +345,15 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
     for (const feature of e.intersecoes.features) {
       const p = feature.properties, b = basesPorId.get(p.base_id);
       const linha = linhasPorChave.get(p.chave), classe = linha.sobreposicoes.find(c => c.id === p.feicao_id);
-      const cor = corCategoria(b.papel);
-      const layer = L.geoJSON(feature,{smoothFactor:0,style:{color:cor,fillColor:cor,fillOpacity:.3,weight:1.5},
+      const cor = favorabilidade ? corIndice(classe.favorabilidade.indice) : corCategoria(b.papel);
+      const poligono = ['Polygon','MultiPolygon'].includes(feature.geometry.type);
+      const layer = L.geoJSON(feature,{smoothFactor:0,style:{color:cor,fillColor:cor,fillOpacity:favorabilidade ? 1 : .3,weight:favorabilidade ? (poligono ? 0 : 3) : 1.5},
         pointToLayer:(_,latlng) => L.circleMarker(latlng,{radius:5,color:cor,fillColor:cor})});
       layer.addTo(b.papel === categorias[0] ? restricoes : riscos);
-      layer.bindTooltip(el('span',`${nomeDemanda(linha)} apresenta interseção com ${classe.nome} · ${b.nome}`));
+      layer.bindTooltip(el('span',`${nomeDemanda(linha)} · ${classe.nome} · ${b.nome}${favorabilidade
+        ? ` · ${classe.favorabilidade.campo_indice}: ${indiceTexto(classe.favorabilidade)} · ${classeTexto(classe.favorabilidade)}` : ''}`));
       layer.on('click',() => selecionar(p.chave,p.base_id,p.feicao_id));
-      recortes.push({chave:p.chave,base:p.base_id,feicao:p.feicao_id,layer});
+      recortes.push({chave:p.chave,base:p.base_id,feicao:p.feicao_id,poligono,layer});
     }
     L.control.layers({}, {'Demandas':demandas,[papeis[categorias[0]]]:restricoes,[papeis[categorias[1]]]:riscos},{collapsed:true}).addTo(mapa);
     atualizarSelecao(chave);

@@ -34,6 +34,10 @@ SIGLAS = {'APP', 'APA', 'UC', 'TI', 'IBGE', 'DER', 'DNIT', 'SP', 'SICARD', 'GIS'
 PAPEIS = {'entrada': 'Entrada', 'restricao': 'Restrição', 'risco': 'Risco',
           'grade': 'Favorabilidade de Grade', 'rede': 'Favorabilidade de Rede'}
 CORES = {'restricao': '#852c38', 'risco': '#997400', 'grade': '#176878', 'rede': '#69438a'}
+CAMPOS_FAVORABILIDADE = {
+    'grade': ('fav_territorial_dim', 'fav_territorial_classe'),
+    'rede': ('fav_rede_dim', 'fav_rede_classe'),
+}
 METODOLOGIA = (
     'Cada base de restrição e risco foi intersectada separadamente com a entrada integral, '
     'utilizando GDAL/OGR. As áreas dos fragmentos foram somadas por identificador da feição, '
@@ -55,17 +59,21 @@ METODOLOGIA_FAVORABILIDADE = (
     'preparada pelas regras cadastrais da Elegibilidade, utilizando GDAL/OGR em EPSG:5880. '
     'Somam-se exclusivamente as áreas dos fragmentos por demanda e superfície, sem união ou dissolução. '
     'Os campos fg_* e fr_* registram áreas em m². O travessão indica ausência de interseção; zero indica contato sem área. '
-    'As áreas são apresentadas em km², hectares e percentual da área da demanda. '
-    'A rosca reúne todas as entradas e demandas da análise; cada fatia corresponde a uma combinação '
-    'demanda × feição da superfície, proporcional à soma das áreas sobrepostas. Áreas coincidentes são contadas '
-    'separadamente; contatos sem área permanecem na legenda. Seleção, paginação e ocultação de vazias não filtram a rosca. '
+    'Os resultados apresentam fav_territorial_dim e fav_territorial_classe para grade e '
+    'fav_rede_dim e fav_rede_classe para rede, lidos dos atributos preservados nos fragmentos. '
+    'Cada combinação demanda × feição mantém seu índice e sua classe originais, sem soma, média ou ponderação por área. '
+    'O gráfico de pontos utiliza escala fixa de 0 a 1 e reúne todas as combinações das entradas concluídas, '
+    'independentemente da seleção, paginação ou ocultação de vazias. Zero é um índice válido. '
+    'Campos ausentes, valores nulos e índices inválidos são sinalizados e não substituídos por área ou zero. '
+    'As áreas permanecem apenas como informação técnica complementar da interseção. '
     'Os GeoPackages preservam a entrada preparada, as interseções e todos os atributos das superfícies, '
     'inclusive classe nominal e índices com e sem _dim, sem agregá-los. '
     'Esta apresentação não atualiza índices registrados, ranking, pesos AHP ou homologação.'
 )
 NOTA_MAPA_FAVORABILIDADE = (
-    'O mapa representa as demandas inteiras e suas interseções: verde-azulado para grade e roxo para rede. '
-    'As cores identificam o papel das superfícies, não classificam nem agregam índices de favorabilidade. '
+    'O mapa representa as demandas inteiras e suas interseções, coloridas pelo índice _dim em '
+    'rampa contínua Viridis de 0 a 1. Cinza identifica ausência de índice válido. '
+    'A classe nominal é a original da superfície; não há reclassificação ou agregação. '
     'Coordenadas em EPSG:5880, com escala e norte; sem mapa-base no PDF.'
 )
 
@@ -282,9 +290,12 @@ def _mapa(frame: gpd.GeoDataFrame, ocorrencias: list[bool], recortes=None,
                 adicionar(parte, cor)
             return
         aneis = [geom.exterior, *geom.interiors] if isinstance(geom, Polygon) else [geom]
-        formas.append({'aneis': [[[round(dx + (p[0] - xmin)*escala, 3),
-                                  round(400-dy-(p[1]-ymin)*escala, 3)] for p in anel.coords] for anel in aneis],
-                       'intersecao': True, 'cor': cor, 'tipo': geom.geom_type})
+        forma = {'aneis': [[[round(dx + (p[0] - xmin)*escala, 3),
+                            round(400-dy-(p[1]-ymin)*escala, 3)] for p in anel.coords] for anel in aneis],
+                 'intersecao': True, 'cor': cor, 'tipo': geom.geom_type}
+        if analise == 'favorabilidade' and isinstance(geom, Polygon):
+            forma['sem_borda'] = True
+        formas.append(forma)
     if recortes and recortes['features']:
         if papeis is None:
             raise ValueError('As categorias das interseções são necessárias para o mapa.')
@@ -293,7 +304,8 @@ def _mapa(frame: gpd.GeoDataFrame, ocorrencias: list[bool], recortes=None,
             base_id = r['base_id']
             if not isinstance(base_id, str) or base_id not in papeis:
                 raise ValueError('Interseção sem categoria de origem no mapa.')
-            adicionar(geom, CORES[papeis[base_id]])
+            adicionar(geom, cor_favorabilidade(r['indice_favorabilidade'])
+                      if analise == 'favorabilidade' else CORES[papeis[base_id]])
     return {'largura': 720, 'altura': 400, 'formas': formas, 'metros_escala': 100 / escala,
             'cor_intersecao': '#1769aa', 'cor_ausencia': '#eef3f7',
             'nota': NOTA_MAPA_FAVORABILIDADE if analise == 'favorabilidade' else NOTA_MAPA}
@@ -370,7 +382,7 @@ def abrir(arquivo: str, dono, *, analise: str = 'elegibilidade') -> dict:
         frame = gpd.read_file(BytesIO(dados), engine='pyogrio', layer=ANALISES[analise]['camada'])
         _conferir_estrutura(frame, auditoria)
         nomes = {f['id']: f['nome'] for f in _fontes([{analise: auditoria}], analise=analise)}
-        _painel(frame, dados, auditoria, nomes, _linhas(frame, auditoria))
+        _painel(frame, dados, auditoria, nomes, _linhas(frame, auditoria), analise=analise)
     except (DataSourceError, DataLayerError) as exc:
         raise ValueError(f'O arquivo não é um GeoPackage de {analise} válido com as camadas de resultados e interseções.') from exc
     resultado = {'arquivo': arquivo, 'sha256': sha256(dados).hexdigest(), analise: auditoria}
@@ -393,8 +405,42 @@ def _linhas(frame: gpd.GeoDataFrame, auditoria: dict) -> list[dict]:
     return linhas
 
 
+def _favorabilidade(registro: dict, papel: str, mapa: dict[str, str]) -> dict:
+    campo_indice, campo_classe = CAMPOS_FAVORABILIDADE[papel]
+    valor = registro.get(mapa.get(campo_indice))
+    indice = None
+    if campo_indice not in mapa:
+        estado = 'ausente'
+    elif valor is None:
+        estado = 'nulo'
+    elif isinstance(valor, bool) or not isinstance(valor, (Real, Decimal)):
+        estado = 'invalido'
+    else:
+        numero = float(valor)
+        estado = 'valido' if math.isfinite(numero) and 0 <= numero <= 1 else 'invalido'
+        if estado == 'valido':
+            indice = numero
+    classe = registro.get(mapa.get(campo_classe))
+    return {'campo_indice': campo_indice, 'campo_classe': campo_classe,
+            'indice': indice, 'estado_indice': estado,
+            'classe': classe, 'estado_classe': 'ausente' if campo_classe not in mapa
+            else 'nulo' if classe is None or not str(classe).strip() else 'valido'}
+
+
+def cor_favorabilidade(valor: float | None) -> str:
+    if valor is None:
+        return '#808080'
+    cores = ('440154', '3b528b', '21918c', '5ec962', 'fde725')
+    posicao = valor * (len(cores) - 1)
+    inicio = min(int(posicao), len(cores) - 2)
+    fracao = posicao - inicio
+    canais = [math.floor(int(cores[inicio][i:i+2], 16) * (1-fracao) +
+                         int(cores[inicio+1][i:i+2], 16) * fracao + .5) for i in (0, 2, 4)]
+    return '#' + ''.join(f'{canal:02x}' for canal in canais)
+
+
 def _painel(frame: gpd.GeoDataFrame, dados: bytes, auditoria: dict, nomes: dict[str, str], linhas: list[dict], *,
-            somente_atributos: bool = False) -> dict:
+            somente_atributos: bool = False, analise: str = 'elegibilidade') -> dict:
     if auditoria.get('versao_saida') != 2:
         raise ValueError('Esta saída é anterior ao painel interativo. Execute novamente para gravar áreas totais e interseções.')
     campo_area = auditoria['campo_area_total']
@@ -405,6 +451,14 @@ def _painel(frame: gpd.GeoDataFrame, dados: bytes, auditoria: dict, nomes: dict[
         raise ValueError('A camada de interseções não contém os vínculos, as áreas e o CRS da análise.')
     campos = {c['id']: c for c in auditoria['campos']}
     feicoes = {f['id']: f for f in auditoria['feicoes_base']}
+    atributos = {}
+    if analise == 'favorabilidade':
+        for base in auditoria.get('atributos_superficies', []):
+            mapa = {nome.casefold(): destino for nome, destino in base['campos'].items()}
+            for original in CAMPOS_FAVORABILIDADE[base['papel']]:
+                if original in mapa and mapa[original] not in recortes:
+                    raise ValueError(f'O atributo preservado {original} não existe na camada de interseções.')
+            atributos[base['id']] = mapa
     grupos = {}
     vinculos = []
     for r in registros(recortes):
@@ -420,6 +474,12 @@ def _painel(frame: gpd.GeoDataFrame, dados: bytes, auditoria: dict, nomes: dict[
                                                       'papel': campos[base]['papel'], 'area_m2': 0.,
                                                       'identificador': feicoes[ident]['posicao'] + 1})
         grupo['area_m2'] += r['area_m2']
+        if analise == 'favorabilidade':
+            valor = _favorabilidade(r, campos[base]['papel'], atributos.get(base, {}))
+            if 'favorabilidade' in grupo and grupo['favorabilidade'] != valor:
+                raise ValueError('Fragmentos da mesma feição possuem índices ou classes divergentes; não serão agregados.')
+            grupo['favorabilidade'] = valor
+            vinculos[-1]['indice_favorabilidade'] = valor['indice']
     por_demanda = {}
     for (pos, _), grupo in grupos.items():
         por_demanda.setdefault(pos, []).append(grupo)
@@ -458,7 +518,7 @@ def sobreposicoes_favorabilidade(identificadores: list[str], dono) -> dict:
         auditoria = resultado['favorabilidade']
         nomes = {f['id']: f['nome'] for f in [auditoria['entrada'], *auditoria['campos'], *auditoria['feicoes_base']]}
         linhas = _linhas(frame, auditoria)
-        _painel(frame, dados, auditoria, nomes, linhas, somente_atributos=True)
+        _painel(frame, dados, auditoria, nomes, linhas, somente_atributos=True, analise='favorabilidade')
         entradas.append({'id': resultado['execucao_id'], 'nome': auditoria['entrada']['nome'],
                          'campos': auditoria['campos'], 'linhas': linhas})
     return {'entradas': entradas, 'concluidas': len(resultados),
@@ -490,7 +550,7 @@ def montar(identificadores: list[str], nomes: dict[str, str], dono, revisados: b
         campos = [{**c, 'nome': nomes[c['id']]} for c in audit['campos']]
         linhas = _linhas(frame, audit)
         ocorrencias = [any(v is not None for v in linha['areas']) for linha in linhas]
-        painel = _painel(frame, conteudo, audit, nomes, linhas)
+        painel = _painel(frame, conteudo, audit, nomes, linhas, analise=analise)
         entrada = {'id': resultado['execucao_id'], 'nome': nomes[audit['entrada']['id']],
                    'concluido_em': resultado.get('concluido_em'), 'feicoes': len(frame),
                    'com_intersecao': sum(ocorrencias), 'sem_intersecao': len(frame) - sum(ocorrencias),
@@ -534,7 +594,8 @@ class MapaPDF(Flowable):
                         path.lineTo(x, 400 - y)
                 if forma.get('tipo', 'Polygon') == 'Polygon':
                     path.close()
-            canvas.drawPath(path, fill=int(forma.get('tipo', 'Polygon') == 'Polygon'), stroke=1, fillMode=0)
+            canvas.drawPath(path, fill=int(forma.get('tipo', 'Polygon') == 'Polygon'),
+                            stroke=int(not forma.get('sem_borda', False)), fillMode=0)
         canvas.setFillColor(estilo.AZUL)
         canvas.setFont('Helvetica', 12)
         canvas.drawString(685, 370, 'N')
@@ -557,6 +618,17 @@ def _area_pdf(e, valor):
     return Paragraph(f'{_numero(valor, 1e6)} km²<br/><font size="7">{_numero(valor, 1e4)} ha</font>', e['cel'])
 
 
+def _indice_pdf(valor: dict) -> str:
+    if valor['estado_indice'] == 'valido':
+        return format(Decimal(str(valor['indice'])), 'f').replace('.', ',')
+    return {'ausente': 'Campo ausente', 'nulo': 'Sem valor', 'invalido': 'Índice inválido (exige número de 0 a 1)'}[valor['estado_indice']]
+
+
+def _classe_pdf(valor: dict) -> str:
+    return str(valor['classe']) if valor['estado_classe'] == 'valido' else (
+        'Campo ausente' if valor['estado_classe'] == 'ausente' else 'Sem classe informada')
+
+
 def pdf(modelo: dict) -> bytes:
     e = estilo._estilos()
     analise = modelo.get('analise', 'elegibilidade')
@@ -577,10 +649,33 @@ def pdf(modelo: dict) -> bytes:
                                   f'Total: {entrada["feicoes"]} feições; com interseção: {entrada["com_intersecao"]}; '
                                   f'sem interseção: {entrada["sem_intersecao"]}.'),
                      estilo._p(e, 'Mapa-Síntese', 'h2'), MapaPDF(entrada['mapa']),
-                     estilo._p(e, 'Demandas: Azul ou Cinza-Claro. Interseções: Verde-Azulado (Grade) e Roxo (Rede).'
+                     estilo._p(e, 'Demandas: Azul ou Cinza-Claro. Interseções: rampa contínua Viridis do índice _dim (0 a 1); cinza sem índice válido.'
                                if analise == 'favorabilidade'
                                else 'Demandas: Azul ou Cinza-Claro. Interseções: Vermelho (Restrição) e Amarelo (Risco).', 'nota'),
                      estilo._p(e, entrada['mapa']['nota'], 'nota')]
+        if analise == 'favorabilidade':
+            campos = {c['id']: c for c in entrada['campos']}
+            historia += [PageBreak(), estilo._p(e, 'Índices e Classes por Demanda e Feição', 'h1'),
+                         estilo._p(e, 'Valores originais, sem soma, média ou ponderação por área. Contatos sem área são identificados.')]
+            for linha in entrada['linhas']:
+                historia.append(estilo._p(e, f'{linha["nome"] or "Demanda"} · {linha["id"]}', 'h2'))
+                if not linha['sobreposicoes']:
+                    historia.append(estilo._p(e, 'Sem interseção; nenhum índice ou classe atribuído.'))
+                    continue
+                detalhes = [['Superfície / Feição', 'Campo do Índice', 'Índice (0–1)', 'Classe Original']]
+                for item in linha['sobreposicoes']:
+                    valor = item['favorabilidade']
+                    detalhes.append([
+                        f'{PAPEIS[item["papel"]]} · {campos[item["base_id"]]["nome"]} · {item["nome"]} '
+                        f'[{item["identificador"]}]' + (' · Contato sem área' if item['area_m2'] == 0 else ''),
+                        valor['campo_indice'], _indice_pdf(valor),
+                        f'{_classe_pdf(valor)} ({valor["campo_classe"]})',
+                    ])
+                tabela = estilo._tabela(e, detalhes, [estilo.LARGURA*.36, estilo.LARGURA*.23,
+                                                    estilo.LARGURA*.16, estilo.LARGURA*.25])
+                tabela.splitInRow = 1
+                historia.append(tabela)
+            continue
         for papel in ANALISES[analise]['papeis']:
             indices = [i for i, campo in enumerate(entrada['campos']) if campo['papel'] == papel]
             for inicio in range(0, len(indices), 4):
