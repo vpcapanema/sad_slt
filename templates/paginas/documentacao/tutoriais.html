@@ -15,7 +15,8 @@
     article{background:white;border:1px solid #d5e3e9;border-radius:12px;overflow:hidden}
     h2{font-size:19px;padding:20px;margin:0;min-height:96px}
     small{display:block;font-size:13px;color:#677e8a}
-    .pendencia{padding:0 20px}
+    video{display:block;width:100%;aspect-ratio:16/9;background:#071b25}
+    .erro-midia{margin:16px 20px;color:#9c2020}
     .meta{display:flex;gap:16px;flex-wrap:wrap;padding:18px;font-size:14px}
     .aviso{max-width:1392px;margin:24px auto;padding:24px;background:white;border:1px solid #c4d5de}
     a{color:#00668b;font-weight:600}
@@ -31,40 +32,35 @@
   <p><a href="/public/documentacao/">Voltar à documentação do SICARD</a></p>
 </header>
 <aside class="aviso" aria-labelledby="disponibilidade">
-  <h2 id="disponibilidade">Vídeos ainda não disponíveis neste acervo público</h2>
-  <p>Este catálogo reproduz os títulos, durações e indicações de revisão do material fornecido. A reprodução, as capas e os downloads aguardam definição de hospedagem e conferência das mídias para divulgação pública. Não há players ativos nem arquivos de vídeo publicados nesta página.</p>
+  <h2 id="disponibilidade">Vídeos e legendas dos tutoriais</h2>
+  <p>Reproduza os vídeos nesta página ou baixe os arquivos para consulta. As mídias são lidas do SICARD Storage. Os vídeos são silenciosos e já possuem legendas incorporadas; a faixa de legendas selecionável é opcional.</p>
   <p>As revisões de conteúdo indicadas abaixo permanecem pendentes; a existência do tutorial não representa homologação do fluxo demonstrado.</p>
 </aside>
-{% set tutoriais = [
-  ("Cadastrando uma demanda por contribuição SEI", "31.57", "Atualizado em 21/10"),
-  ("Cadastrando uma demanda pelo formulário", "30.63", ""),
-  ("Tributando camadas territoriais", "35.73", "Atualizado em 21/10"),
-  ("Agrupando demandas para hierarquização", "26.53", ""),
-  ("Cadastrando uma hierarquização", "28.93", ""),
-  ("Cadastrando um julgamento", "29.07", ""),
-  ("Consolidando as respostas dos julgadores", "32.33", ""),
-  ("Analisando a elegibilidade territorial", "39.73", "Revisão pendente"),
-  ("Preparando a análise de favorabilidade", "30.87", "Revisão pendente"),
-  ("Calculando o índice de priorização", "25.1", "Revisão pendente"),
-  ("Consultando e exportando uma extração de atributos", "22.97", "Revisão pendente"),
-  ("Preparando uma extração de atributos", "33.33", "Revisão pendente"),
-  ("Complementando um cadastro — Dados cadastrais", "27.73", "Novo em 21/10"),
-  ("Complementando um cadastro — Geometria", "24.43", "Novo em 21/10"),
-  ("Complementando um cadastro — Atributos de demanda", "21.73", "Novo em 21/10"),
-  ("Cadastrando um usuário", "28.77", "Novo em 21/10")
-] %}
 <main>
-{% for titulo, duracao, revisao in tutoriais %}
+{% for tutorial in tutoriais %}
   <article>
-    <h2>{{ titulo }}{% if revisao %}<small> · {{ revisao }}</small>{% endif %}</h2>
-    <p class="pendencia">Vídeo e arquivos complementares aguardando publicação.</p>
-    <div class="meta"><span>{{ duracao }} s · Full HD · 30 fps</span></div>
+    <h2 id="tutorial-{{ loop.index }}">{{ tutorial.titulo }}{% if tutorial.revisao %}<small> · {{ tutorial.revisao }}</small>{% endif %}</h2>
+    <video controls playsinline preload="none" aria-labelledby="tutorial-{{ loop.index }}"
+           poster="/public/documentacao/tutoriais/midias/{{ tutorial.capa }}"
+           src="/public/documentacao/tutoriais/midias/{{ tutorial.video }}">
+      <track kind="subtitles" srclang="pt-BR" label="Português"
+             src="/public/documentacao/tutoriais/midias/{{ tutorial.vtt }}">
+      Seu navegador não oferece reprodução de vídeo. Use o link para baixar o MP4.
+    </video>
+    <p class="erro-midia" role="status" hidden></p>
+    <div class="meta">
+      <span>{{ tutorial.duracao }}</span>
+      <a href="/public/documentacao/tutoriais/midias/{{ tutorial.video }}" download>Baixar vídeo MP4</a>
+      <a href="/public/documentacao/tutoriais/midias/{{ tutorial.srt }}" download>Baixar legendas SRT</a>
+    </div>
   </article>
 {% endfor %}
 </main>
 <footer>
-  <p>Os fluxos de cadastro, julgamento e análise utilizam dados fictícios de treinamento, sem envio de convites. A camada municipal de densidade demográfica foi efetivamente gerada conforme autorização. A consulta de extrações usa uma execução de teste já existente. Os três tutoriais de complementação usam o perfil Operador simulado em ambiente isolado. O cadastro de usuário utiliza uma cópia local do formulário SIGMA, sem criar conta nem enviar emails. Os vídeos são silenciosos e possuem legendas incorporadas; os arquivos SRT acompanham cada MP4.</p>
-  <p>Nova extração: o tutorial de preparação termina com a composição pronta na bancada. A consulta e a exportação de uma extração concluída estão em vídeo separado. Favorabilidade: a página prepara as camadas; ela não executa o cálculo dos índices.</p>
+{% for ressalva in ressalvas %}
+  <p>{{ ressalva }}</p>
+{% endfor %}
 </footer>
+<script src="/assets/js/tutoriais.js" defer></script>
 </body>
 </html>

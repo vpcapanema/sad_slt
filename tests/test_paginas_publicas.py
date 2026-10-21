@@ -4,9 +4,10 @@ from urllib.parse import urljoin, urlsplit
 
 import pytest
 from fastapi.testclient import TestClient
+from fastapi.responses import Response
 
 from api.server import app
-from api.services import documentacao_favorabilidade, documentacao_limite_maritimo, storage_remoto
+from api.services import documentacao_favorabilidade, documentacao_limite_maritimo, storage_remoto, tutoriais_publicos
 from api.services.session_service import SessionUser, cookie_name, create_token
 
 
@@ -62,6 +63,7 @@ def client(monkeypatch):
     monkeypatch.setattr(documentacao_favorabilidade, "montar_contexto", lambda: {})
     monkeypatch.setattr(documentacao_limite_maritimo, "montar_contexto", lambda: {})
     monkeypatch.setattr(storage_remoto, "baixar", lambda path: b"imagem-de-teste")
+    monkeypatch.setattr(tutoriais_publicos, "midia", lambda request, nome: Response(b"midia-de-teste"))
     return TestClient(app)
 
 
@@ -178,9 +180,9 @@ def test_hierarquizacao_tem_destinos_unicos_e_prefixados(client, prefix):
 
 
 @pytest.mark.parametrize("prefix", ["", "/sicard"])
-def test_tutoriais_publicos_catalogo_sem_midias_nao_publicadas(client, monkeypatch, prefix):
+def test_tutoriais_publicos_conectados_ao_manifesto(client, monkeypatch, prefix):
     def storage_proibido(*args, **kwargs):
-        pytest.fail("O catálogo não deve consultar Storage ou publicar mídias.")
+        pytest.fail("O HTML do catálogo deve usar o manifesto local, sem ler as mídias.")
 
     monkeypatch.setattr(storage_remoto, "baixar", storage_proibido)
     headers = {"X-Forwarded-Prefix": prefix} if prefix else {}
@@ -190,16 +192,30 @@ def test_tutoriais_publicos_catalogo_sem_midias_nao_publicadas(client, monkeypat
     parser = Links()
     parser.feed(html)
     assert parser.h1 == 1
-    assert parser.links == [prefix + "/public/documentacao/"]
+    dados = tutoriais_publicos.manifesto()
+    assert parser.links == [
+        prefix + "/public/documentacao/",
+        *[
+            prefix + tutoriais_publicos.BASE_URL + tutorial[campo]
+            for tutorial in dados["tutoriais"] for campo in ("video", "srt")
+        ],
+        prefix + "/assets/js/tutoriais.js",
+    ]
     assert html.count("<article>") == 16
     assert html.count("Revisão pendente") == 5
     assert "Tributando camadas territoriais" in html
     assert "Complementando um cadastro — Atributos de demanda" in html
     assert "Cadastrando um usuário" in html
     assert "39.73 s · Full HD · 30 fps" in html
-    assert "Vídeos ainda não disponíveis" in html
-    assert "aguardam definição de hospedagem" in html
-    for forbidden in ("<video", "<img", "<script", " src=", "poster=", " download>", " download=", "file:///", "W:\\", "127.0.0.1"):
+    assert html.count("<video ") == 16
+    assert html.count("<track ") == 16
+    assert html.count('preload="none"') == 16
+    assert html.count('role="status" hidden') == 16
+    for tutorial in dados["tutoriais"]:
+        for campo in ("video", "capa", "vtt", "srt"):
+            assert prefix + tutoriais_publicos.BASE_URL + tutorial[campo] in html
+        assert tutorial["revisao"] in html
+    for forbidden in ("aguardam definição de hospedagem", "file:///", "W:\\", "127.0.0.1", "aplicacao/documentacao", "CONFERENCIA_STATUS.txt"):
         assert forbidden not in html
 
 

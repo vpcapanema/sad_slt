@@ -200,7 +200,16 @@ def pagina_glossario_publico(request: Request) -> Response:
 
 @app.get("/public/documentacao/tutoriais/", include_in_schema=False)
 def pagina_tutoriais_publicos(request: Request) -> Response:
-    return render_page(request, "paginas/documentacao/tutoriais.html")
+    from api.services.tutoriais_publicos import catalogo
+
+    return render_page(request, "paginas/documentacao/tutoriais.html", **catalogo())
+
+
+@app.api_route("/public/documentacao/tutoriais/midias/{nome}", methods=["GET", "HEAD"], include_in_schema=False)
+def midia_tutorial_publico(request: Request, nome: str) -> Response:
+    from api.services.tutoriais_publicos import midia
+
+    return midia(request, nome)
 
 
 @app.get("/public/documentacao/risco-restricao/", include_in_schema=False)

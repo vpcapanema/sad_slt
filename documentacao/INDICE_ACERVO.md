@@ -39,11 +39,13 @@ nao devem fixar esse prefixo. A pagina de artefatos
 `/public/documentacao/favorabilidade/` continua disponivel, mas nao duplica a
 entrada da Fase 2 no indice.
 
-### Tutoriais SICARD — midias publicadas no Storage
+### Tutoriais SICARD — catalogo conectado as midias do Storage
 
 O catalogo publico `/public/documentacao/tutoriais/` (ou
 `/sicard/public/documentacao/tutoriais/` no proxy) e servido por controller
-e template, sem autenticacao e sem consultar bancos ou Storage.
+e template, sem autenticacao e sem consultar bancos ou Storage para montar
+o HTML. Titulos, duracoes, revisoes, ressalvas e nomes dos arquivos vem de
+`config/tutoriais-sicard.json`.
 O botao da secao Hierarquizacao territorial aponta para esse catalogo.
 
 Fonte fornecida: `TUTORIAIS_MAD_FULLHD\index.html`, lida sem modificar
@@ -65,7 +67,9 @@ Dependencias efetivamente referenciadas pelo HTML:
 | Notas TXT de revisao e conferencia | 2 | 3.076 |
 | Total das dependencias locais | 50 | 49.490.405 |
 
-Nao ha scripts, fontes remotas ou folhas CSS externas: o estilo e inline.
+Na fonte original nao ha scripts, fontes remotas ou folhas CSS externas:
+o estilo e inline. O catalogo adaptado usa `assets/js/tutoriais.js` para
+exibir falhas de reproducao ou de carregamento da faixa opcional de legendas.
 O link `../../index.html` leva ao hub de origem, nao e dependencia de
 reproducao. A pasta completa soma 52.811.066 bytes: alem das dependencias,
 contem imagens de cliques/revisao, JSONs e manifesto, que nao sao carregados
@@ -75,10 +79,12 @@ O manifesto original e os arquivos adicionais nao referenciados pelo HTML
 nao foram copiados. As duas notas TXT referenciadas integram o upload
 autorizado, mas ainda nao possuem rota publica de leitura.
 
-**Limite desta entrega:** as midias foram enviadas ao Storage, mas apenas
-o texto editorial do catalogo possui rota publica implementada.
+**Escopo da conexao:** o catalogo possui 16 players HTML5 com controles,
+capas, reproducao inline no celular, faixa WebVTT opcional e links para
+baixar MP4 e SRT. Os videos usam `preload="none"` para nao antecipar o
+download de todas as gravacoes.
 Nao foram copiados videos, capas, legendas ou documentos auxiliares ao Git,
-nem realizado commit, push ou deploy. Embora a fonte declare dados
+nem realizado commit, push ou deploy nesta tarefa de conexao. Embora a fonte declare dados
 ficticios e simulacoes, isso nao substitui a conferencia visual integral das
 gravacoes e capas antes de liberar divulgacao publica. Os arquivos SRT e as
 imagens tambem precisam dessa conferencia. As cinco marcacoes de revisao
@@ -88,7 +94,7 @@ pendente do HTML continuam visiveis no catalogo.
 o envio ao SICARD Storage oficial e confirmou `conteudo_publico=true`.
 Foi preparado o utilitario `scripts/publicar_tutoriais_storage.py`, que
 extrai apenas as dependencias referenciadas pelo HTML, deriva 16 legendas
-WebVTT dos SRT para futura reproducao HTML5 e calcula tamanho e SHA-256
+WebVTT dos SRT para reproducao HTML5 e calcula tamanho e SHA-256
 de cada arquivo. Sao 66 assets preparados em memoria, totalizando
 49.504.331 bytes (50 originais e 16 VTT), sem incluir o manifesto.
 O HTML original nao integra o upload: a pagina permanece servida pelo app.
@@ -107,30 +113,44 @@ Foram enviados e relidos **67 arquivos, totalizando 49.521.243 bytes**
 SHA-256 de todos os arquivos remotos foram conferidos.
 O manifesto local foi gravado em `config/tutoriais-sicard.json`, com SHA-256
 `caacd51973ae5c52150c47d0a3cdbf826ca9c1eaff1ec40b7e7ac71199f0fb83`.
-A origem permanece intacta. Nao houve commit, push ou deploy.
+A origem permanece intacta.
 
 O utilitario recusa destinos existentes e so grava o manifesto local apos
 comparar a listagem completa e reler cada asset remoto para conferir tamanho
 e SHA-256. Os testes simulados verificam essas guardas, a conversao das
 legendas e a preservacao do catalogo; nao comprovam publicacao real.
-Validacao focal: 59 testes aprovados com
-`.venv\Scripts\python.exe -m pytest tests\test_publicar_tutoriais_storage.py tests\test_paginas_publicas.py -q --basetemp=.pytest-tutoriais-hospedagem`.
+Validacao focal da conexao: 99 testes aprovados com
+`.venv\Scripts\python.exe -m pytest tests\test_tutoriais_publicos.py tests\test_paginas_publicas.py tests\test_publicar_tutoriais_storage.py -q -p no:cacheprovider`.
 A integracao `runTests` informou testes nao encontrados; por isso foi
-utilizado o fallback da `.venv`, sem bancos. A execucao registrou avisos
-de depreciacao do TestClient e de permissao no cache do pytest, sem falhas
-nos testes. A publicacao real posterior comprovou a integridade dos arquivos
-no Storage. Reproducao, seek, Range/206/416 e legendas no navegador ainda
-nao foram validados.
+utilizado o fallback da `.venv`, com a descoberta configurada para `tests`
+e sem bancos. A execucao registrou somente o aviso de depreciacao do
+TestClient. `node --check assets/js/tutoriais.js` tambem passou.
 
-**Pendencia operacional:** ligar as midias publicadas ao catalogo.
-A API SFTPGo usada pelo projeto exige credenciais; sua URL nao equivale a
-um endereco publico de video. Nao foi encontrada referencia publica
-verificavel para essas midias. Definir uma rota publica de leitura com
-lista explicita de arquivos aprovados, MIME correto e suporte a requisicoes
-Range/206 e HEAD, ou uma publicacao estatica equivalente no Nginx da VM.
-Conferir reproducao, busca temporal e downloads antes de ativar players.
-Nao basta acrescentar URLs presumidas ao HTML. Enquanto essa ligacao nao for implementada, o catalogo
-exibe aviso de indisponibilidade, sem players nem downloads quebrados.
+A rota `GET|HEAD /public/documentacao/tutoriais/midias/{nome}` publica
+somente MP4, capas JPG, SRT e VTT explicitamente associados aos tutoriais
+no manifesto local. Notas TXT, manifestos, outros arquivos e caminhos
+arbitrarios nao sao publicados. A leitura usa a montagem nativa quando
+disponivel; sem montagem, usa a API autenticada do SFTPGo pelo servidor,
+sem expor credenciais ao navegador ou copiar midias para disco local.
+Os arquivos possuem MIME explicito, `nosniff`, ETag e suporte a HEAD,
+Range/206 e intervalos insatisfativeis/416. Midias ausentes ou com tamanho
+divergente do manifesto retornam 503, sem resposta de sucesso ficticia.
+
+A leitura HTTP real dos 64 arquivos oferecidos ao publico (16 conjuntos
+de MP4, JPG, SRT e VTT), totalizando 49.501.255 bytes, conferiu tamanho e
+SHA-256 de cada resposta contra o manifesto. HEAD, trecho de 100 bytes
+com status 206 e intervalo insatisfativel com status 416 foram verificados
+com o Storage oficial. No navegador local foram confirmados os 16 players,
+a reproducao do primeiro MP4 em 1920 x 1080, avanco temporal para 70% do
+video e carregamento efetivo da faixa WebVTT. Em viewport de 390 pixels,
+o catalogo apresentou uma coluna sem overflow horizontal; as mensagens
+de erro de midia e sua limpeza tambem foram exercitadas.
+
+**Pendencia de implantacao:** estas alteracoes de conexao ainda precisam de
+novo deploy para aparecer na VM. A validacao descrita ocorreu no servidor
+local lendo as midias oficiais; nao representa verificacao do player em
+producao apos essa nova implantacao. Os testes de pagina cobrem a reescrita
+dos links com e sem o prefixo `/sicard`.
 
 ## Risco e restricao territorial
 
