@@ -1,48 +1,71 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Tutoriais SICARD</title>
-  <link rel="stylesheet" href="/assets/css/tutoriais.css">
-</head>
-<body>
-<header>
-  <h1>Tutoriais operacionais do SICARD</h1>
-  <p>16 vídeos para computador, com navegação gravada, legendas descritivas e títulos em gerúndio. Os fluxos operacionais começam na página inicial da área restrita; o cadastro de usuário começa no login do SICARD.</p>
-  <p>1920 × 1080 · 30 quadros por segundo · máximo de 45 segundos por vídeo</p>
-  <p><a href="/public/documentacao/">Voltar à documentação do SICARD</a></p>
-</header>
-<aside class="aviso" aria-labelledby="disponibilidade">
-  <h2 id="disponibilidade">Vídeos e legendas dos tutoriais</h2>
-  <p>Reproduza os vídeos nesta página ou baixe os arquivos para consulta. As mídias são lidas do SICARD Storage. Os vídeos são silenciosos e já possuem legendas incorporadas; a faixa de legendas selecionável é opcional.</p>
-  <p>As revisões de conteúdo indicadas abaixo permanecem pendentes; a existência do tutorial não representa homologação do fluxo demonstrado.</p>
-</aside>
-<main class="conteudo-principal">
-{% for tutorial in tutoriais %}
-  <article>
-    <h2 id="tutorial-{{ loop.index }}">{{ tutorial.titulo }}{% if tutorial.revisao %}<small> · {{ tutorial.revisao }}</small>{% endif %}</h2>
-    <video controls playsinline preload="none" aria-labelledby="tutorial-{{ loop.index }}"
-           poster="/public/documentacao/tutoriais/midias/{{ tutorial.capa }}"
-           src="/public/documentacao/tutoriais/midias/{{ tutorial.video }}">
-      <track kind="subtitles" srclang="pt-BR" label="Português"
-             src="/public/documentacao/tutoriais/midias/{{ tutorial.vtt }}">
-      Seu navegador não oferece reprodução de vídeo. Use o link para baixar o MP4.
-    </video>
-    <p class="erro-midia" role="status" hidden></p>
-    <div class="meta">
-      <span>{{ tutorial.duracao }}</span>
-      <a href="/public/documentacao/tutoriais/midias/{{ tutorial.video }}" download>Baixar vídeo MP4</a>
-      <a href="/public/documentacao/tutoriais/midias/{{ tutorial.srt }}" download>Baixar legendas SRT</a>
+{% extends "bases/base_conteudo.html" %}
+{% set subtitulo = "Tutoriais do sistema" %}
+{% set navegacao = "publica" %}
+{% set requer_autenticacao = false %}
+
+{% block titulo %}Tutoriais SICARD{% endblock %}
+{% block classes_body %}module-index-page documentation-home tutoriais-page{% endblock %}
+
+{% block estilos_pagina %}
+  <link rel="stylesheet" href="/public/cadastro/index.css?v=20261022-cards-hover-pressionado">
+  <link rel="stylesheet" href="/assets/css/tutoriais.css?v=20261022-video-borda">
+{% endblock %}
+
+{% block conteudo %}
+<main class="conteudo-principal app-main module-index">
+  <section class="module-hero secao-tutoriais-introducao" aria-labelledby="tutoriais-title">
+    <p class="module-eyebrow">Documentação · Tutoriais</p>
+    <h1 id="tutoriais-title">Tutoriais operacionais do SICARD</h1>
+    <p>{{ tutoriais|length }} vídeos para computador, com navegação gravada, legendas descritivas e títulos em gerúndio. Os fluxos operacionais começam na página inicial da área restrita; o cadastro de usuário começa no login do SICARD.</p>
+  </section>
+
+  <div class="module-link-list tutoriais-navigation">
+    <a href="/public/documentacao/"><span>Voltar à documentação do SICARD</span><i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a>
+  </div>
+
+  <section class="module-info-section secao-tutoriais-disponibilidade" aria-labelledby="disponibilidade">
+    <div class="module-section-heading">
+      <div>
+        <p class="module-eyebrow">Como assistir</p>
+        <h2 id="disponibilidade">Vídeos e legendas dos tutoriais</h2>
+      </div>
     </div>
-  </article>
-{% endfor %}
+    <div class="tutoriais-info">
+      <p>Reproduza os vídeos nesta página ou baixe os arquivos para consulta. As mídias são lidas do SICARD Storage. Os vídeos são silenciosos e já possuem legendas incorporadas; a faixa de legendas selecionável é opcional.</p>
+      <p>1920 × 1080 · 30 quadros por segundo · máximo de 45 segundos por vídeo</p>
+      <p>As revisões de conteúdo indicadas abaixo permanecem pendentes; a existência do tutorial não representa homologação do fluxo demonstrado.</p>
+    </div>
+  </section>
+
+  <div class="tutoriais-grid">
+  {% for tutorial in tutoriais %}
+    <article class="module-info-section tutorial-card" aria-labelledby="tutorial-{{ loop.index }}">
+      <h2 id="tutorial-{{ loop.index }}" class="sr-only">{{ tutorial.titulo }}</h2>
+      <video controls playsinline preload="none" aria-labelledby="tutorial-{{ loop.index }}"
+             poster="/public/documentacao/tutoriais/midias/{{ tutorial.capa }}"
+             src="/public/documentacao/tutoriais/midias/{{ tutorial.video }}">
+        <track kind="subtitles" srclang="pt-BR" label="Português"
+               src="/public/documentacao/tutoriais/midias/{{ tutorial.vtt }}">
+        Seu navegador não oferece reprodução de vídeo. Use o link para baixar o MP4.
+      </video>
+      <div class="tutorial-details">
+        <p class="erro-midia" role="status" hidden></p>
+        <div class="tutorial-meta">
+          <p class="tutorial-duracao">Duração: {{ tutorial.duracao }}</p>
+          {% if tutorial.revisao %}<p class="tutorial-revisao">{{ tutorial.revisao }}</p>{% endif %}
+        </div>
+        <div class="tutorial-downloads">
+          <a href="/public/documentacao/tutoriais/midias/{{ tutorial.video }}" download><i class="fa-solid fa-download" aria-hidden="true"></i><span>Baixar vídeo MP4</span></a>
+          <a href="/public/documentacao/tutoriais/midias/{{ tutorial.srt }}" download><i class="fa-solid fa-closed-captioning" aria-hidden="true"></i><span>Baixar legendas SRT</span></a>
+        </div>
+      </div>
+    </article>
+  {% endfor %}
+  </div>
+
 </main>
-<footer>
-{% for ressalva in ressalvas %}
-  <p>{{ ressalva }}</p>
-{% endfor %}
-</footer>
-<script src="/assets/js/tutoriais.js" defer></script>
-</body>
-</html>
+{% endblock %}
+
+{% block scripts_pagina %}
+  <script src="/assets/js/tutoriais.js" defer></script>
+{% endblock %}

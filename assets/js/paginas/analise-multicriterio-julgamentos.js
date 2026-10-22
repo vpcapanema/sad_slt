@@ -607,7 +607,7 @@
   var FASES_HIERARQUIZACAO = [
     { href: "/restrict/hierarquizacao/fase-1/", numero: "1", nome: "Elegibilidade territorial", resumo: "cruza cada demanda com as áreas homologadas de restrição e risco" },
     { href: "/restrict/hierarquizacao/fase-2/", numero: "2", nome: "Favorabilidade territorial", resumo: "extrai o índice da superfície homologada no ponto de cada demanda" },
-    { href: "/restrict/hierarquizacao/fase-3/", numero: "3", nome: "Ajuste fino de prioridades", resumo: "combina os atributos do projeto com o risco herdado e fecha a síntese" }
+    { href: "/restrict/hierarquizacao/fase-3/", numero: "3", nome: "Priorização de demandas por atributos", resumo: "combina os atributos do objeto de demanda com o risco herdado e fecha a síntese" }
   ];
   function analiseHomologadaAviso() {
     return '<div class="ami-homologada"><p class="ami-homologada__titulo"><i class="fa-solid fa-circle-check" aria-hidden="true"></i> <strong>Análise homologada</strong></p>' +

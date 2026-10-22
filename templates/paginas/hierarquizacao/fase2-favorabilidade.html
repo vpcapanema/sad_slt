@@ -3,7 +3,7 @@
 {% set navegacao = "restrita" %}
 {% set requer_autenticacao = true %}
 
-{% block titulo %}Favorabilidade de grade e da rede{% endblock %}
+{% block titulo %}Favorabilidade territorial — município e rede rodoviária{% endblock %}
 {% set fase_ativa = 2 %}
 {% block classes_body %}ahp-module-page feedback-proprio fases-padrao-agrupamento{% endblock %}
 {% block base_url %}<base href="/restrict/hierarquizacao/">{% endblock %}
@@ -23,7 +23,7 @@
 <main class="conteudo-principal app-main ahp-main fase-execucao-page">
   {% include "componentes/navegacao_fases_hierarquizacao.html" %}
   <section class="secao-fase-2-favorabilidade-territorial card-fase-2-favorabilidade-territorial card ahp-step-intro standard-page-hero">
-    <h1 class="ahp-page-title standard-page-hero__title"><i class="fas fa-map-location-dot" aria-hidden="true"></i><span>Favorabilidade de grade e da rede</span></h1>
+    <h1 class="ahp-page-title standard-page-hero__title"><i class="fas fa-map-location-dot" aria-hidden="true"></i><span>Favorabilidade territorial — município e rede rodoviária</span></h1>
     <p class="standard-page-hero__eyebrow">Hierarquização · Fase 2<span class="fase-info" tabindex="0" role="button" aria-label="Sobre esta fase"><i class="fas fa-circle-info" aria-hidden="true"></i><span class="fase-info-pop">A favorabilidade territorial mede o quanto o território onde cada demanda se encontra é propício à sua implantação, tomando como base uma superfície contínua homologada cujos valores variam de zero a um. O cálculo extrai o valor dessa superfície no ponto de cada demanda, sem transformar em zero as ausências de cobertura ou os dados NoData, e, com os índices válidos, ordena as demandas em um ranking auditável. Para operar, selecione a rodada, escolha o pacote de favorabilidade e o método de extração, execute a extração e acompanhe os indicadores e o ranking no card de resultados.</span></span></p>
     <p class="standard-page-hero__description">Mede o quanto o território de cada demanda é propício à implantação, a partir das superfícies homologadas de favorabilidade de grade e da rede. Selecione a rodada e as camadas abaixo e execute a extração. <a class="fase-descricao-add" href="/public/documentacao/favorabilidade/" title="Abrir a biblioteca da favorabilidade de grade e da rede" aria-label="Abrir a biblioteca da favorabilidade de grade e da rede"><i class="fas fa-book-atlas" aria-hidden="true"></i></a></p>
   </section>
@@ -34,7 +34,7 @@
       <label id="ctrl-camada-rede" class="fase1-ctrl">Favorabilidade territorial de rede <select id="camada-rede-fase2"><option value="">Selecione a camada de rede</option></select></label>
       <input id="metodo-fase2" type="hidden" value="ponto">
     </div>
-    <slt-geoprocessamento fase="fase2" titulo-saida="Camadas de superfícies de favorabilidade de grade e da rede" saida-id="gp-favorabilidade" demandas-id="gp-demandas-fase2" frame-id="gp-frame-fase2" modelo-id="modelo-fase2" executar-id="executar-fase2" modelo="fluxo_fase2_favorabilidade" modelo-label="Favorabilidade de grade e da rede" botao-label="Calcular favorabilidade territorial"></slt-geoprocessamento>
+    <slt-geoprocessamento fase="fase2" titulo-saida="Camadas de superfícies de favorabilidade de grade e da rede" saida-id="gp-favorabilidade" demandas-id="gp-demandas-fase2" frame-id="gp-frame-fase2" modelo-id="modelo-fase2" executar-id="executar-fase2" modelo="fluxo_fase2_favorabilidade" modelo-label="Favorabilidade territorial — município e rede rodoviária" botao-label="Calcular favorabilidade territorial"></slt-geoprocessamento>
     <div id="fase2-erro" class="ahp-info-note ahp-info-note--error hidden"></div>
   </div></section>
   <section class="secao-resultados-de-favorabilidade card ahp-step-section card-resultados-de-favorabilidade"><div class="ahp-section-label"><span class="ahp-step-index-icon" aria-hidden="true">2</span><span>Resultados</span></div><div class="ahp-section-body"><p id="fase2-resultado-vazio" class="ahp-help-text">Execute o cálculo para ver os indicadores e o ranking.</p><div class="ahp-subcard info-card"><div class="ahp-subsection-title"><span class="cadastro-subsec-num">2.1</span><i class="fas fa-chart-simple" aria-hidden="true"></i><span>Indicadores da extração</span></div><div id="fase2-indicadores" class="fase-summary-grid"></div></div><div class="ahp-subcard info-card"><div class="ahp-subsection-title"><span class="cadastro-subsec-num">2.2</span><i class="fas fa-list-ol" aria-hidden="true"></i><span>Ranking das demandas</span></div><div class="fase-table-wrap"><table class="fase-table"><thead><tr><th>Situação</th><th>Demanda</th><th>Índice de grade</th><th>Índice de rede</th></tr></thead><tbody id="fase2-resultados"></tbody></table></div><div id="fase2-auditoria" class="fase-audit hidden"></div></div></div></section>

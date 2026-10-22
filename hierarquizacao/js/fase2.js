@@ -61,7 +61,7 @@
       try {
         gpApp.adicionarCamadaGeoJsonEmMemoria(id, nome, geojson, {
           tipo: "vetorial (memória)",
-          origem: "Hierarquização Favorabilidade de grade e da rede",
+          origem: "Hierarquização — Favorabilidade territorial — município e rede rodoviária",
           geometria_tipo: "Point",
           simbologia: "status",
         });
@@ -209,7 +209,7 @@
           renderResultados(updated);
           proc.concluirTarefa("Atualizar indicadores e ranking", "Resultados na página");
           proc.sucesso({
-            title: "Favorabilidade de grade e da rede executada",
+            title: "Favorabilidade territorial — município e rede rodoviária executada",
             message: "Confira os indicadores e o ranking abaixo.",
             summary: [{ label: "Hierarquização", value: updated.codigo, icon: "fa-layer-group" }],
           });

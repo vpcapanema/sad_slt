@@ -1,5 +1,5 @@
 {#
-  Componente: Tabela de Atributos dos Objetos de Demanda (Priorização por atributos)
+  Componente: Tabela de Atributos dos Objetos de Demanda (Priorização de demandas por atributos)
 
   - Estilo: opção 1 (.fase-table).
   - Colunas DINÂMICAS: uma por critério de Etapa 3 (Priorização) da matriz de
@@ -7,7 +7,7 @@
     cada coluna é o ALIAS AMIGÁVEL do valor da coluna "Variável"; a coluna
     "Unidade de medida" define o tipo de dado aceito nas células daquela coluna.
   - Linhas DINÂMICAS: um objeto de demanda por linha. Só são povoadas nas páginas
-    da Priorização por atributos (feito depois). Aqui fica apenas o esqueleto + os templates de render.
+    da Priorização de demandas por atributos (feito depois). Aqui fica apenas o esqueleto + os templates de render.
   - Fonte das colunas: endpoint de atributos-objetos (arquivo de rotas separado).
 
   Hooks para o JS:
@@ -72,7 +72,7 @@
     <div class="fase-actions atributos-pesos-acoes"><button id="salvar-pesos-fase3" class="btn btn--primary" type="button"><i class="fas fa-floppy-disk"></i> Salvar pesos dos atributos</button></div>
   </div>
 
-  {# ---- Templates de renderização (consumidos pelo JS da Priorização por atributos) ---- #}
+  {# ---- Templates de renderização (consumidos pelo JS da Priorização de demandas por atributos) ---- #}
 
   {# Cabeçalho de coluna-atributo: somente o nome; a cor identifica a origem. #}
   <template id="tpl-atributo-coluna">

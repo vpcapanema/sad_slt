@@ -1,11 +1,17 @@
+import pytest
+
 from api.matriz_colunas import extrair_colunas
 
 
-def test_extrai_criterio_de_ajuste_por_atributo_do_objeto() -> None:
+@pytest.mark.parametrize("etapa", [
+    "Ajuste por atributos do objeto de demanda",
+    "Priorização de demandas por atributos",
+])
+def test_extrai_criterio_de_ajuste_por_atributo_do_objeto(etapa) -> None:
     matriz = {
         "linhas": [
             {
-                "Etapa": "Ajuste por atributos do objeto de demanda",
+                "Etapa": etapa,
                 "Critério": "Apoio institucional",
                 "Premissa": "Maior apoio reduz riscos de implantação.",
                 "Métrica (o que é medido)": "Grau de apoio institucional",

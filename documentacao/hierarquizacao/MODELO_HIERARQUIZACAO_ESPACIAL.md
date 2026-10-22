@@ -1,13 +1,18 @@
 # Modelo de Hierarquizacao Espacial
 
+Aplica-se a [terminologia oficial do SICARD](../geral/TERMINOLOGIA.md):
+“objeto de demanda” é o termo geral para plano, programa ou projeto.
+As classes técnicas `grade`, `rede`, `atributo_objeto` e `hibrido` são preservadas;
+o nome da Fase 2 não transforma uma grade em unidade municipal.
+
 ## Objetivo
 
 Este documento reclassifica os 55 fatores da aba Matriz de Criterios e Premissas em quatro tipos de modelagem:
 
 - grade: fator que pode ser representado como superficie continua em uma malha celular cobrindo todo o estado;
 - rede: fator que precisa ser calculado sobre segmentos, nos, corredores ou pares origem-destino;
-- atributo_objeto: fator que existe como atributo intrinseco do projeto e nao deve ser rasterizado;
-- hibrido: fator que depende de combinacao entre localizacao, rede e atributos do projeto.
+- atributo_objeto: fator que existe como atributo intrínseco do objeto de demanda e não deve ser rasterizado;
+- hibrido: fator que depende de combinação entre localização, rede e atributos do objeto de demanda.
 
 Tambem define a variavel derivada recomendada a partir da premissa de cada fator. Nesta leitura, o campo Criterio da planilha e tratado como fator avaliativo, e a premissa e tratada como a regra que orienta a extracao da variavel.
 

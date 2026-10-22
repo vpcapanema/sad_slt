@@ -1,4 +1,11 @@
-# Modulo Fase 2 - Gerador da superficie de favorabilidade territorial
+# Fase 2 — Favorabilidade territorial — município e rede rodoviária
+
+Preparação das superfícies de favorabilidade territorial. Adota-se “objeto de
+demanda” para plano, programa ou projeto, conforme a
+[terminologia oficial](../geral/TERMINOLOGIA.md).
+Município é um recorte administrativo; grade e rede permanecem identificadas
+segundo a representação espacial de cada produto. A nomenclatura não modifica
+as unidades espaciais, os campos ou os métodos descritos a seguir.
 
 ## Objetivo do modulo
 

@@ -172,7 +172,8 @@ def test_indice_organiza_analise_multicriterio_no_mad_e_recursos_no_geoprocessam
     assert "Análise Multicritério (AHP) e obtenção de pesos" in trecho_mad
     assert "Ranqueamento" in trecho_mad
     assert "Elegibilidade territorial" in trecho_mad
-    assert "Priorização por atributos" in trecho_mad
+    assert "Favorabilidade territorial — município e rede rodoviária" in trecho_mad
+    assert "Priorização de demandas por atributos" in trecho_mad
 
 
 def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None:

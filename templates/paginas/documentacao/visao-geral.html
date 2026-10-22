@@ -1,0 +1,224 @@
+{% extends "bases/base_conteudo.html" %}
+{% set subtitulo = "Documentação do sistema" %}
+{% set navegacao = "publica" %}
+{% set requer_autenticacao = false %}
+{% block titulo %}Visão geral do SICARD — conceitos e funcionamento{% endblock %}
+{% block descricao %}Origem, módulos, participantes e fluxos do SICARD: do cadastro de objetos de demanda à análise, hierarquização e acompanhamento.{% endblock %}
+{% block classes_body %}module-index-page documentation-home visao-geral-page{% endblock %}
+{% block estilos_pagina %}
+<link rel="stylesheet" href="/public/cadastro/index.css?v=20261022-cards-hover-pressionado">
+<link rel="stylesheet" href="/assets/css/visao-geral.css?v=20261022-2">
+{% endblock %}
+
+{# Fontes: README.md; documentacao/geral/README_REORGANIZACAO_PLATAFORMA.md
+   e TERMINOLOGIA.md; nota_tecnica/NOTA_TECNICA.md; hierarquizacao/ESPINHA_DORSAL
+   e MODULO_FASE1/2/3; api/server.py e glossario.html. #}
+{% set capitulos = [
+  ("apresentacao", "O SICARD em poucas palavras"),
+  ("origem", "Origem e evolução"),
+  ("objetos", "Objetos de demanda"),
+  ("modulos", "Organização do sistema"),
+  ("participantes", "Participantes e responsabilidades"),
+  ("trajetoria", "Trajetória do objeto de demanda"),
+  ("hierarquizacao", "Como funciona a hierarquização"),
+  ("dados", "Dados e geoprocessamento"),
+  ("resultados", "Leitura dos resultados"),
+  ("integracoes", "Integrações e rastreabilidade"),
+  ("referencias", "Aprofundar e aprender")
+] %}
+
+{% block conteudo %}
+<main class="conteudo-principal app-main module-index" id="visao-geral">
+  <header class="module-hero visao-hero">
+    <a href="/public/documentacao/">← Documentação do sistema</a>
+    <p class="module-eyebrow">Conceitos e funcionamento</p>
+    <h1>Visão geral do SICARD</h1>
+    <p>Um percurso pelo Sistema Inteligente de Cadastro e Ranking de Demandas: por que existe, como organiza a informação e como conecta cadastro, análise, hierarquização e acompanhamento.</p>
+    <p class="visao-revisao">Versão 1.1 · Revisão em <time datetime="2026-10-22">22/10/2026</time></p>
+  </header>
+
+  <div class="visao-layout">
+    <aside class="visao-indice">
+      <nav aria-label="Nesta página">
+        <h2>Nesta página</h2>
+        <a class="visao-pular" href="#visao-conteudo">Ir para o conteúdo</a>
+        <ol>
+          {% for id, titulo in capitulos %}
+          <li><a href="#{{ id }}">{{ titulo }}</a></li>
+          {% endfor %}
+        </ol>
+      </nav>
+    </aside>
+
+    <div class="visao-conteudo" id="visao-conteudo" tabindex="-1">
+      <section class="secao-apresentacao visao-section" id="apresentacao" aria-labelledby="apresentacao-titulo">
+        <p class="module-eyebrow">Finalidade</p>
+        <h2 id="apresentacao-titulo">O SICARD em poucas palavras</h2>
+        <p>O SICARD é uma aplicação de apoio à decisão no domínio de logística e transportes. Reúne o cadastro de planos, programas e projetos, a análise das informações apresentadas, a avaliação multicritério e territorial e o acompanhamento dos objetos de demanda.</p>
+        <p>Para a Subsecretaria de Logística e Transporte (SLT), essa organização conecta a proposta cadastrada à informação utilizada na avaliação. Para operadores, analistas e gestores, oferece um ambiente de trabalho compartilhado; para o público, disponibiliza as informações selecionadas para publicação.</p>
+        <figure class="visao-diagrama" aria-labelledby="contexto-legenda">
+          <div class="visao-centro"><strong>SICARD</strong><span>Cadastro, análise, hierarquização e acompanhamento</span></div>
+          <ul class="visao-mapa">
+            <li><strong>Pessoas e instituições</strong><span>Apresentam e complementam os objetos de demanda.</span></li>
+            <li><strong>Equipe de análise e gestão</strong><span>Analisa informações, configura avaliações e registra decisões.</span></li>
+            <li><strong>SIGMA-PLI</strong><span>Fornece autenticação e referências de pessoas e instituições.</span></li>
+            <li><strong>Fontes territoriais e público</strong><span>As fontes alimentam as análises; o público consulta as informações publicadas.</span></li>
+          </ul>
+          <figcaption id="contexto-legenda">1. Contexto do sistema. O SICARD relaciona os participantes, os cadastros de referência e os dados territoriais; a consulta pública apresenta o conteúdo disponibilizado para acompanhamento.</figcaption>
+        </figure>
+      </section>
+
+      <section class="secao-origem visao-section" id="origem" aria-labelledby="origem-titulo">
+        <p class="module-eyebrow">Da necessidade à organização atual</p>
+        <h2 id="origem-titulo">Origem e evolução</h2>
+        <p>A concepção do SICARD está vinculada ao Plano de Logística Integrada do Estado de São Paulo (PLI-SP). Seu ponto de partida é um problema de planejamento: organizar propostas heterogêneas e compará-las de maneira explícita, considerando condições territoriais, características próprias e diferentes estágios de maturidade.</p>
+        <p>Uma lista de propostas, isoladamente, não explica quais informações sustentam cada avaliação. O desenho do sistema conecta o registro do objeto de demanda, a qualificação de seus dados e a construção dos critérios utilizados para estabelecer prioridades.</p>
+        <p>A evolução conceitual se expressa na organização atual: o cadastro dá identidade e continuidade ao registro; a análise qualifica a informação; o apoio à decisão articula critérios, julgamentos e dados espaciais; a transparência permite acompanhar o conteúdo publicado. O objeto de demanda é o elo entre essas atividades.</p>
+        <p>A metodologia também separa perguntas diferentes: onde existem restrições ou riscos, quais condições territoriais favorecem a avaliação e quais atributos próprios distinguem os objetos de demanda. Essa separação fundamenta as três fases, independentes e combináveis, do motor de hierarquização.</p>
+      </section>
+
+      <section class="secao-objetos visao-section" id="objetos" aria-labelledby="objetos-titulo">
+        <h2 id="objetos-titulo">Objetos de demanda</h2>
+        <p><strong>Objeto de demanda</strong> é o termo geral para um plano, programa ou projeto registrado no SICARD. O tipo identifica sua natureza; a situação informa seu estágio no fluxo de trabalho. Uma aprovação altera a situação do registro, não transforma um tipo em outro.</p>
+        <dl class="visao-definicoes">
+          <div><dt>Plano</dt><dd>Instrumento de planejamento que estabelece diretrizes e objetivos para orientar intervenções.</dd></div>
+          <div><dt>Programa</dt><dd>Conjunto articulado de ações ou projetos voltados a um objetivo comum.</dd></div>
+          <div><dt>Projeto</dt><dd>Proposta de intervenção com objeto e escopo próprios, caracterizada por sua localização e seus atributos.</dd></div>
+        </dl>
+        <p>Identificação, responsáveis, vínculos institucionais, localização e atributos permitem compreender o objeto e acompanhar sua análise. O mesmo registro mantém continuidade ao longo do ciclo de vida; avaliações e resultados são relacionados ao contexto em que foram produzidos.</p>
+        <p>Consulte as definições de <a href="/public/documentacao/glossario/#objeto-demanda">objeto de demanda</a> e <a href="/public/documentacao/glossario/#status">status da demanda</a>.</p>
+      </section>
+
+      <section class="secao-modulos visao-section" id="modulos" aria-labelledby="modulos-titulo">
+        <h2 id="modulos-titulo">Organização do sistema</h2>
+        <p>O sistema se organiza em três blocos funcionais correlacionados: MOCAD, MAD e Transparência e acompanhamento. O geoprocessamento é uma abordagem transversal de apoio, crucial para viabilizar as análises espacialmente explícitas do SICARD. Suas ferramentas atuam de maneira diferenciada em todas as etapas do processo.</p>
+        <figure class="visao-diagrama" aria-labelledby="modulos-legenda">
+          <ul class="visao-mapa visao-mapa--modulos">
+            <li><strong>MOCAD</strong><span>Módulo de Cadastro e Análise de Demandas: registro, consulta, complementação e análise dos objetos de demanda.</span></li>
+            <li><strong>MAD</strong><span>Módulo de Apoio à Decisão: critérios, AHP, julgamentos colaborativos, hierarquizações e resultados.</span></li>
+            <li><strong>Transparência e acompanhamento</strong><span>Consulta das informações publicadas e leitura de sua distribuição e situação.</span></li>
+          </ul>
+          <figcaption id="modulos-legenda">2. Mapa funcional. O MOCAD organiza os objetos de demanda; o MAD os avalia com critérios e insumos espaciais; a transparência apresenta o conteúdo publicado. O geoprocessamento atravessa esses blocos, apoiando suas atividades conforme a finalidade de cada etapa.</figcaption>
+        </figure>
+      </section>
+
+      <section class="secao-participantes visao-section" id="participantes" aria-labelledby="participantes-titulo">
+        <h2 id="participantes-titulo">Participantes e responsabilidades</h2>
+        <p>A consulta pública é aberta. As atividades operacionais utilizam autenticação e permissões associadas aos perfis. O perfil identifica uma responsabilidade; cada operação verifica a autorização correspondente.</p>
+        <div class="visao-tabela">
+          <table>
+            <caption>Papéis no SICARD</caption>
+            <thead><tr><th scope="col">Participante</th><th scope="col">Papel no processo</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Visualizador</th><td>Consulta as informações acessíveis ao seu perfil.</td></tr>
+              <tr><th scope="row">Operador</th><td>Cadastra e complementa objetos de demanda. É o perfil mínimo para cadastro.</td></tr>
+              <tr><th scope="row">Analista</th><td>Analisa informações e participa das decisões técnicas conforme as permissões do fluxo.</td></tr>
+              <tr><th scope="row">Gestor</th><td>Supervisiona o processo e atua nas validações e homologações correspondentes.</td></tr>
+              <tr><th scope="row">Administrador</th><td>Administra recursos técnicos e configurações. Decisões de análise e gestão seguem suas permissões específicas.</td></tr>
+              <tr><th scope="row">Colaborador de julgamento</th><td>Participa de comparações AHP no ambiente para o qual foi convidado, com identificação, prazo e credenciais próprios do convite.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="secao-trajetoria visao-section" id="trajetoria" aria-labelledby="trajetoria-titulo">
+        <h2 id="trajetoria-titulo">Trajetória do objeto de demanda</h2>
+        <p>O ciclo de vida organiza o acompanhamento do registro. Cadastro e análise, hierarquização e execução são etapas desse ciclo, distintas das fases metodológicas utilizadas dentro de uma avaliação.</p>
+        <figure class="visao-diagrama" aria-labelledby="trajetoria-legenda">
+          <ol class="visao-fluxo">
+            <li><strong>Registrar</strong><span>O operador identifica o objeto de demanda e informa seus dados e vínculos.</span></li>
+            <li><strong>Analisar e complementar</strong><span>A equipe confere as informações; quando necessário, solicita complementação e retoma a análise.</span></li>
+            <li><strong>Avaliar e hierarquizar</strong><span>Os objetos aptos ao universo selecionado são avaliados segundo a configuração da rodada.</span></li>
+            <li><strong>Acompanhar</strong><span>As situações e decisões registradas dão continuidade ao acompanhamento do objeto de demanda.</span></li>
+          </ol>
+          <figcaption id="trajetoria-legenda">3. Percurso de referência. A análise pode retornar à complementação. A composição do universo, as transições de situação e a publicação são decisões próprias de seus fluxos, não consequências automáticas da sequência ilustrada.</figcaption>
+        </figure>
+        <h3>Um exemplo de leitura</h3>
+        <p>Considere um projeto fictício de intervenção rodoviária. O operador registra a proposta e sua localização. Durante a análise, a equipe solicita uma informação de prazo; o operador a complementa e a análise prossegue. Quando selecionado para uma hierarquização, o projeto é avaliado com os demais objetos daquele universo, usando os critérios e dados da rodada. Seu resultado permanece associado a esse contexto, enquanto seu cadastro continua disponível para acompanhamento.</p>
+        <p>A publicação é uma decisão expressa de gestão: aprovação cadastral e homologação de resultados não publicam automaticamente o objeto de demanda. O painel público apresenta os registros selecionados para divulgação e omite dados pessoais.</p>
+      </section>
+
+      <section class="secao-hierarquizacao visao-section" id="hierarquizacao" aria-labelledby="hierarquizacao-titulo">
+        <h2 id="hierarquizacao-titulo">Como funciona a hierarquização</h2>
+        <p>Hierarquizar é avaliar e ordenar um conjunto definido de objetos de demanda. A <strong>rodada de hierarquização</strong> relaciona o universo, as configurações, as fases selecionadas e os resultados. Assim, uma posição pode ser interpretada junto das condições que a produziram.</p>
+        <h3>Critérios e julgamentos AHP</h3>
+        <p>O critério explicita o aspecto avaliado; a premissa fundamenta seu sentido; a variável e a métrica permitem observá-lo. No AHP — Método de Análise Hierárquica — comparações pareadas expressam a importância relativa entre critérios. As matrizes produzem pesos e indicadores de consistência.</p>
+        <p>Nos julgamentos colaborativos, participantes convidados registram suas comparações. A consolidação reúne os julgamentos para análise; a homologação formaliza a configuração que poderá ser utilizada na avaliação. Os pesos representam importância, enquanto os atributos e indicadores descrevem o desempenho de cada objeto de demanda.</p>
+        <h3>Três perguntas, três fases</h3>
+        <dl class="visao-definicoes">
+          <div><dt>Fase 1 — Elegibilidade territorial</dt><dd>Quais restrições e riscos se sobrepõem à localização do objeto de demanda? A preparação e as interseções fornecem evidências para a leitura da elegibilidade.</dd></div>
+          <div><dt>Fase 2 — Favorabilidade territorial — município e rede rodoviária</dt><dd>Quais condições territoriais e da rede caracterizam a localização? Os produtos espaciais preservam a unidade de análise e os atributos das camadas utilizadas.</dd></div>
+          <div><dt>Fase 3 — Priorização de demandas por atributos</dt><dd>Como as características próprias do objeto de demanda, como prazo e maturidade, influenciam a prioridade? A avaliação considera pesos, regras de normalização e completude.</dd></div>
+        </dl>
+        <figure class="visao-diagrama" aria-labelledby="rodada-legenda">
+          <ol class="visao-fluxo">
+            <li><strong>Delimitar o universo</strong><span>Selecionar os objetos de demanda e o escopo da avaliação.</span></li>
+            <li><strong>Configurar a rodada</strong><span>Definir critérios, pesos, insumos e fases aplicáveis.</span></li>
+            <li><strong>Executar as fases selecionadas</strong><span>Examinar os produtos territoriais e os atributos, preservando os resultados de cada fase.</span></li>
+            <li><strong>Conferir e formalizar</strong><span>Analisar a síntese e o ranking e registrar a decisão de homologação.</span></li>
+          </ol>
+          <figcaption id="rodada-legenda">4. Fluxo de uma hierarquização. As fases são independentes e combináveis: não é obrigatório executar a Fase 1, depois a 2 e depois a 3. A síntese considera as fases e regras selecionadas na rodada.</figcaption>
+        </figure>
+        <p>Na bancada atual, as Fases 1 e 2 produzem interseções e consultas aos atributos das camadas. Na Fase 2, os índices e classes são preservados por fragmento; as estatísticas exploratórias apoiam sua leitura. A síntese e a homologação dos resultados registrados possuem comandos e decisões próprios.</p>
+      </section>
+
+      <section class="secao-dados visao-section" id="dados" aria-labelledby="dados-titulo">
+        <h2 id="dados-titulo">Dados e geoprocessamento</h2>
+        <p>O SICARD trabalha com dados e análises espacialmente explícitas: a localização, a distribuição e as relações territoriais integram a interpretação dos objetos de demanda. O geoprocessamento viabiliza essa abordagem ao conectar as informações cadastradas aos fenômenos representados nas camadas.</p>
+        <p>Suas ferramentas apoiam a localização e a qualificação dos dados no cadastro, a verificação e a integração das informações na análise, as operações espaciais e a leitura dos indicadores na hierarquização e a visualização territorial no acompanhamento. A bancada reúne recursos de importação, consulta, operações vetoriais e raster, cálculo de campos e preparação de produtos utilizados nessas atividades.</p>
+        <dl class="visao-definicoes">
+          <div><dt>Município</dt><dd>Unidade administrativa utilizada quando o indicador ou o recorte é municipal.</dd></div>
+          <div><dt>Grade</dt><dd>Representação territorial em células. Seu tamanho e sua cobertura são propriedades do produto utilizado.</dd></div>
+          <div><dt>Rede rodoviária</dt><dd>Representação das conexões e dos trechos de rodovias, adequada a indicadores vinculados à circulação e à infraestrutura da rede.</dd></div>
+        </dl>
+        <p>Município e grade não são sinônimos: um produto pode representar células, setores ou outras unidades espaciais. A identificação da camada e de seus campos informa qual recorte foi efetivamente utilizado. O nome da Fase 2 não transforma a representação dos dados.</p>
+        <p>Camadas importadas, processadas e homologadas identificam momentos diferentes do tratamento dos dados. A procedência e a versão do produto permitem reconhecer o insumo utilizado. Valores ausentes permanecem distintos de zero; atributos próprios do objeto de demanda permanecem associados ao registro, sem necessidade de convertê-los em superfície territorial.</p>
+      </section>
+
+      <section class="secao-resultados visao-section" id="resultados" aria-labelledby="resultados-titulo">
+        <h2 id="resultados-titulo">Leitura dos resultados</h2>
+        <p>Um resultado é interpretado junto de seu universo, seus critérios e sua configuração. Para entender a posição de um objeto de demanda, acompanhe as evidências territoriais, os atributos utilizados, os pesos e a contribuição das fases selecionadas.</p>
+        <div class="visao-tabela">
+          <table>
+            <caption>Conceitos que respondem a perguntas diferentes</caption>
+            <thead><tr><th scope="col">Conceito</th><th scope="col">O que informa</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Situação cadastral</th><td>Em que etapa do fluxo de trabalho está o objeto de demanda.</td></tr>
+              <tr><th scope="row">Elegibilidade</th><td>Como as condições de restrição e risco qualificam a avaliação territorial.</td></tr>
+              <tr><th scope="row">Favorabilidade</th><td>Quais condições territoriais estão associadas à localização e à rede.</td></tr>
+              <tr><th scope="row">Peso</th><td>Qual importância relativa é atribuída ao critério.</td></tr>
+              <tr><th scope="row">Escore</th><td>Qual desempenho numérico resulta de uma regra de avaliação.</td></tr>
+              <tr><th scope="row">Posição no ranking</th><td>Onde o objeto se situa na ordenação daquele universo.</td></tr>
+              <tr><th scope="row">Homologação</th><td>Qual configuração, produto ou resultado foi formalmente validado no fluxo correspondente.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Alterar o universo, os dados ou os pesos pode alterar a ordenação. O ranking subsidia a decisão de prioridade; a decisão administrativa e o acompanhamento da execução permanecem registrados em seus fluxos próprios.</p>
+      </section>
+
+      <section class="secao-integracoes visao-section" id="integracoes" aria-labelledby="integracoes-titulo">
+        <h2 id="integracoes-titulo">Integrações e rastreabilidade</h2>
+        <p>O SIGMA-PLI é a referência externa para autenticação, pessoas e instituições. O SICARD consulta essas referências em modo de leitura e mantém seus próprios registros de objetos de demanda, avaliações e resultados.</p>
+        <p>A aplicação utiliza uma API em Python/FastAPI, páginas HTML, CSS e JavaScript e persistência PostgreSQL com PostGIS para os dados espaciais. Os arquivos e produtos geoespaciais complementam esse acervo. A documentação de contratos da API está disponível em <a href="/docs">Referência da API</a>.</p>
+        <p>A rastreabilidade relaciona as operações registradas, as configurações e as versões dos dados ao contexto de avaliação. Nas hierarquizações, o universo, as fases e seus resultados permitem reconstruir a leitura da rodada. As decisões de homologação e de publicação são identificadas separadamente.</p>
+      </section>
+
+      <section class="secao-referencias visao-section" id="referencias" aria-labelledby="referencias-titulo">
+        <h2 id="referencias-titulo">Aprofundar e aprender</h2>
+        <p>Esta visão geral conecta o sistema. Os fundamentos detalham a metodologia; o glossário define os termos; os tutoriais mostram a operação.</p>
+        <div class="module-link-list">
+          <a href="/public/documentacao/glossario/"><span>Glossário técnico-conceitual</span><i class="fa-solid fa-book-open" aria-hidden="true"></i></a>
+          <a href="/public/documentacao/tutoriais/"><span>Tutoriais do SICARD</span><i class="fa-solid fa-circle-play" aria-hidden="true"></i></a>
+          <a href="/public/documentacao/hierarquizacao/ESPINHA_DORSAL_SISTEMA_HIERARQUIZACAO.md"><span>Espinha dorsal do motor de hierarquização</span><i class="fa-solid fa-file-lines" aria-hidden="true"></i></a>
+          <a href="/public/documentacao/hierarquizacao/MODELO_HIERARQUIZACAO_ESPACIAL.md"><span>Modelos de hierarquização espacial</span><i class="fa-solid fa-file-lines" aria-hidden="true"></i></a>
+          <a href="/public/documentacao/risco-restricao/"><span>Fundamentos da elegibilidade territorial</span><i class="fa-solid fa-map" aria-hidden="true"></i></a>
+          <a href="/public/documentacao_favorabilidade_v2/"><span>Fundamentos da favorabilidade territorial — município e rede rodoviária</span><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i></a>
+          <a href="/public/documentacao/hierarquizacao/MODULO_FASE3_ATRIBUTOS_PROJETO_AJUSTE.md"><span>Fundamentos da priorização de demandas por atributos</span><i class="fa-solid fa-sliders" aria-hidden="true"></i></a>
+          <a href="/public/documentacao/limite-maritimo/"><span>Fundamentos da definição do limite marítimo paulista</span><i class="fa-solid fa-water" aria-hidden="true"></i></a>
+        </div>
+        <a class="visao-topo" href="#visao-geral">Voltar ao início da página ↑</a>
+      </section>
+    </div>
+  </div>
+</main>
+{% endblock %}

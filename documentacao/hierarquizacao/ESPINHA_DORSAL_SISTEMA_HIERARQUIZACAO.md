@@ -1,9 +1,16 @@
-# Espinha dorsal do sistema de hierarquizacao e ranqueamento PLI
+# Espinha dorsal do motor de hierarquização do SICARD
 
 ## Objetivo do documento
 
-Este documento define a arquitetura conceitual da espinha dorsal do sistema de apoio
-a tomada de decisao para hierarquizar e ranquear projetos propostos no ambito do PLI.
+Este documento define a arquitetura conceitual do motor de hierarquização do
+SICARD — Sistema Inteligente de Cadastro e Ranking de Demandas, no domínio de
+logística e transportes e no contexto de origem do PLI-SP.
+
+Objeto de demanda é o termo geral para plano, programa ou projeto. Os exemplos
+de projetos e os identificadores técnicos deste documento são preservados.
+O vocabulário de referência está em [Terminologia oficial](../geral/TERMINOLOGIA.md).
+Esta especificação do motor é complementar à página pública de
+[Visão geral do SICARD](/public/documentacao/visao-geral/), que apresenta o sistema inteiro.
 
 A ideia central e permitir que um conjunto grande de projetos seja avaliado de forma
 automatizada, configuravel e auditavel, sem depender necessariamente de analise manual
@@ -18,9 +25,12 @@ de triagem, hierarquizacao, ajuste e sintese.
 
 O sistema deve ser articulado em tres fases metodologicas:
 
-1. Fase 1: filtros territoriais de restricao e risco.
-2. Fase 2: hierarquizacao por favorabilidade territorial.
-3. Fase 3: ajuste por atributos do projeto, incluindo riscos identificados na Fase 1.
+1. Fase 1: Elegibilidade territorial.
+2. Fase 2: Favorabilidade territorial — município e rede rodoviária.
+3. Fase 3: Priorização de demandas por atributos, incluindo riscos identificados na Fase 1.
+
+O nome da Fase 2 não altera a representação dos insumos: município, grade e
+rede são identificados conforme a unidade espacial efetivamente utilizada.
 
 As fases devem ser independentes. O usuario pode executar:
 
@@ -37,7 +47,7 @@ em um resultado final unico, com pesos configuraveis e regras explicitas.
 
 ## Papel de cada fase
 
-### Fase 1 - Triagem de restricao e risco
+### Fase 1 — Elegibilidade territorial
 
 A Fase 1 nao deve ranquear projetos. Sua funcao e classificar a elegibilidade
 territorial preliminar.
@@ -86,7 +96,7 @@ Projeto B -> apto_com_ressalva: area suscetivel a inundacao
 Projeto C -> restrito: unidade de conservacao de protecao integral
 ```
 
-### Fase 2 - Hierarquizacao por favorabilidade territorial
+### Fase 2 — Favorabilidade territorial — município e rede rodoviária
 
 A Fase 2 e o nucleo do ranking tecnico-territorial.
 
@@ -114,7 +124,7 @@ Saidas minimas da Fase 2:
 A Fase 2 pode ser usada sozinha para produzir um ranking tecnico-territorial, desde
 que os projetos tenham localizacao suficiente para extracao espacial.
 
-### Fase 3 - Ajuste por atributos do projeto
+### Fase 3 — Priorização de demandas por atributos
 
 A Fase 3 e opcional e deve ser executada somente quando os projetos possuirem
 atributos suficientes para sua aplicacao.
@@ -382,9 +392,9 @@ Para cada projeto, o sistema deve permitir responder:
 
 A arquitetura adotada separa tres naturezas distintas de avaliacao:
 
-- Fase 1: elegibilidade territorial.
-- Fase 2: merito tecnico-territorial.
-- Fase 3: ajuste por atributos do projeto e avaliacao de riscos.
+- Fase 1: Elegibilidade territorial, para avaliar restrições e riscos.
+- Fase 2: Favorabilidade territorial — município e rede rodoviária, para avaliar o mérito técnico-territorial.
+- Fase 3: Priorização de demandas por atributos, para incorporar atributos próprios e avaliar riscos.
 
 Essa separacao evita redundancia metodologica e permite que o sistema funcione com
 diferentes niveis de maturidade dos dados.

@@ -1037,6 +1037,13 @@ textarea {
 .ref-page .ref-card {
   padding: 0;
   overflow: hidden;
+  border: 1px solid var(--pli-border);
+  background: var(--pli-white);
+  box-shadow: none;
+}
+
+.ref-page .ref-card.ref-alert {
+  border-left: 4px solid var(--pli-blue);
 }
 
 .ref-page .ref-card-body {
@@ -1175,11 +1182,6 @@ textarea {
   font-size: 0.875rem;
   color: var(--pli-muted);
   margin-bottom: 0.5rem;
-}
-
-/* ── Páginas de referência institucional (conteúdo denso) ── */
-.ref-main {
-  max-width: 960px;
 }
 
 .ref-page .ref-lead {

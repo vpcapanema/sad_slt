@@ -76,7 +76,7 @@ linhas = [
     ("2.", "As linhas destacadas em amarelo são EXEMPLOS de preenchimento. Apague-as antes de enviar o arquivo."),
     ("3.", "A aba 'Dimensões de Critérios' já vem com as 9 dimensões canônicas do SLT/PLI-SP pré-preenchidas. Ajuste apenas se a rodada exigir dimensões distintas; caso contrário, mantenha-as."),
     ("4.", "Preencha a aba 'Critérios' com todos os critérios utilizados e a aba 'Matriz Crit Premissas v2' com a matriz completa (uma linha por premissa)."),
-    ("5.", "Coluna 'Etapa' (Matriz Crit Premissas v2): use apenas 'Elegibilidade', 'Favorabilidade' ou 'Ajuste de Prioridade'."),
+    ("5.", "Coluna 'Etapa' (Matriz Crit Premissas v2): use 'Elegibilidade territorial', 'Favorabilidade territorial — município e rede rodoviária' ou 'Priorização de demandas por atributos'."),
     ("6.", "Coluna 'Relação': use '↓ Negativa' quando valores maiores pioram a avaliação e '↑ Positiva' quando valores maiores melhoram."),
     ("7.", "Coluna 'Mandatório': use apenas 'Sim' ou 'Não'."),
     ("8.", "Coluna 'Classificação': use 'risco' ou 'restrição' para critérios de elegibilidade territorial."),
@@ -147,7 +147,7 @@ ws_mat = add_sheet(
         "Ambiental",
         "EXEMPLO — Sobreposição com Unidade de Conservação de Proteção Integral (estadual)",
         "As unidades estaduais do grupo de Proteção Integral restringem a implantação de empreendimentos.",
-        "Elegibilidade",
+        "Elegibilidade territorial",
         "restrição",
         "Polígonos oficiais das Unidades de Conservação estaduais",
         "Interseção da demanda com cada feição de UC de Proteção Integral",
@@ -163,7 +163,7 @@ ws_mat = add_sheet(
 # F=Dado, G=Variável, H=Unidade de medida, I=Operador, J=Relação, K=Métricas, L=Fonte, M=Mandatório.
 dv_etapa = DataValidation(
     type="list",
-    formula1='"Elegibilidade,Favorabilidade,Ajuste de Prioridade"',
+    formula1='"Elegibilidade territorial,Favorabilidade territorial — município e rede rodoviária,Priorização de demandas por atributos"',
     allow_blank=True,
 )
 dv_rel = DataValidation(type="list", formula1='"↓ Negativa,↑ Positiva"', allow_blank=True)

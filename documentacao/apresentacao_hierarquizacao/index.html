@@ -16,7 +16,7 @@
 <section>
   <h1>Hierarquização e ranqueamento de projetos do PLI-SP</h1>
   <h3 class="subtitulo">Construção conceitual dos critérios e espacialização metodológica</h3>
-  <p class="ficha">Sistema de Apoio à Tomada de Decisão — SICARD<br>Nota técnica de metodologia · 2026</p>
+  <p class="ficha">SICARD — Sistema Inteligente de Cadastro e Ranking de Demandas<br>Nota técnica de metodologia · 2026</p>
   <p class="nota">Apresentação conceitual: equações, operadores e combinações a seguir descrevem a proposta metodológica, não a certificação de funcionalidades executáveis ou de resultados homologados. Consulte a <a href="/public/documentacao/">documentação funcional atual</a> e o <a href="/public/documentacao_favorabilidade_v2/">relatório da favorabilidade V2</a>. As superfícies de referência e os pesos iguais entre dimensões são provisórios; consolidação AHP não equivale a homologação.</p>
   <p class="nota">Os mapas históricos dependem dos arquivos disponíveis no Storage da implantação. As imagens da Fase 1 requerem acesso nativo ao Storage na VM; sua ausência não significa inexistência de risco ou restrição territorial.</p>
 </section>
@@ -33,8 +33,8 @@
   </section>
   <section>
     <h2>O que é o SICARD</h2>
-    <p>Sistema de Apoio à Tomada de Decisão do Plano Logístico e de Investimentos do
-    Estado de São Paulo (PLI-SP).</p>
+    <p>Sistema Inteligente de Cadastro e Ranking de Demandas, concebido no âmbito
+    do Plano de Logística Integrada do Estado de São Paulo (PLI-SP).</p>
     <p>O modelo busca apoiar a avaliação configurável e auditável de projetos. A execução depende das ferramentas implementadas, dos dados disponíveis e da validação técnica; esta apresentação não substitui essas verificações.</p>
   </section>
 </section>
@@ -46,8 +46,8 @@
     <p>Três fases metodológicas independentes, mas combináveis:</p>
     <div class="fases-grid">
       <div class="fase-card fase1"><h3>Fase 1</h3><p>Elegibilidade territorial<br><small>restrição e risco</small></p></div>
-      <div class="fase-card fase2"><h3>Fase 2</h3><p>Mérito técnico-territorial<br><small>favorabilidade</small></p></div>
-      <div class="fase-card fase3"><h3>Fase 3</h3><p>Ajuste por atributos<br><small>do projeto</small></p></div>
+      <div class="fase-card fase2"><h3>Fase 2</h3><p>Favorabilidade territorial<br><small>município e rede rodoviária</small></p></div>
+      <div class="fase-card fase3"><h3>Fase 3</h3><p>Priorização de demandas por atributos</p></div>
     </div>
     <p class="nota">O modelo prevê combinações independentes das fases. A disponibilidade operacional de cada combinação deve ser conferida nas ferramentas e na documentação funcional.</p>
   </section>
@@ -445,7 +445,7 @@ peso_fase2 + peso_fase3 = 1</code></pre>
 <!-- ===================== BLOCO 4 — FASE 2 ===================== -->
 <section>
   <section>
-    <h2>Fase 2 — Favorabilidade territorial</h2>
+    <h2>Fase 2 — Favorabilidade territorial — município e rede rodoviária</h2>
     <p>Núcleo do ranking tecnico-territorial. Superfície contínua 0–1, combinando
     <strong>grade</strong> (malha territorial) e <strong>rede</strong> (malha
     rodoviária) por álgebra de mapas.</p>
@@ -733,7 +733,7 @@ crit_g01 = (g_pib_setor - min) / (max - min)</code></pre>
 <!-- ===================== BLOCO 5 — FASE 3 ===================== -->
 <section>
   <section>
-    <h2>Fase 3 — Ajuste por atributos do projeto</h2>
+    <h2>Fase 3 — Priorização de demandas por atributos</h2>
     <p>Opcional e conceitual — <strong>não é espacializada</strong>. Atributos
     pertencem ao projeto, não ao território.</p>
     <pre><code>score_fase3 = Σ(atributo_normalizado_i × peso_i) / Σ(pesos_ativos)</code></pre>
@@ -836,7 +836,7 @@ score_final = peso_fase2 × score_fase2 + peso_fase3 × score_fase3</code></pre>
   </section>
   <section>
     <h1>Obrigado</h1>
-    <p class="ficha">SICARD — Sistema de Apoio à Tomada de Decisão · PLI-SP</p>
+    <p class="ficha">SICARD — Sistema Inteligente de Cadastro e Ranking de Demandas · PLI-SP</p>
   </section>
 </section>
 

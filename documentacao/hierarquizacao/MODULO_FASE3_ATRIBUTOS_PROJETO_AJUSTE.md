@@ -1,13 +1,19 @@
-# Modulo Fase 3 - Atributos de projeto e ajuste por pesos
+# Fase 3 — Priorização de demandas por atributos
+
+Adota-se “objeto de demanda” para plano, programa ou projeto, conforme a
+[terminologia oficial](../geral/TERMINOLOGIA.md).
+As referências genéricas a atributos e resultados abrangem os objetos de demanda
+selecionados. Exemplos de projetos, nomes de arquivos e identificadores de
+contrato são preservados.
 
 ## Objetivo do modulo
 
 Este documento define o modulo responsavel por receber, validar, normalizar e ponderar
-atributos de projetos utilizados na Fase 3 da espinha dorsal do sistema de
-hierarquizacao e ranqueamento de projetos do PLI.
+atributos de objetos de demanda utilizados na Fase 3 do motor de
+hierarquização do SICARD.
 
-A Fase 3 e opcional. Ela so deve ser executada quando os projetos em julgamento
-possuirem atributos suficientes para gerar um indice de ajuste por projeto.
+A Fase 3 é opcional. Ela só deve ser executada quando os objetos de demanda em
+julgamento possuírem atributos suficientes para gerar um índice de priorização.
 
 Enquanto a Fase 1 trata restricoes e riscos territoriais e a Fase 2 trata
 favorabilidade territorial, a Fase 3 trata atributos proprios do projeto, da carteira

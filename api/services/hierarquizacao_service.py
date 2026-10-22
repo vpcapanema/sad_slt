@@ -270,8 +270,8 @@ def _criterios(
                     "2) Na coluna Etapa, escolha um dos três valores aceitos:\n"
                     "   • Elegibilidade territorial — critérios da Fase 1"
                     " (avaliados pelo motor geoespacial).\n"
-                    "   • Favorabilidade territorial em grade e da rede — critérios da Fase 2.\n"
-                    "   • Priorização — critérios da Fase 3.\n"
+                    "   • Favorabilidade territorial — município e rede rodoviária — critérios da Fase 2.\n"
+                    "   • Priorização de demandas por atributos — critérios da Fase 3.\n"
                     "3) Salve o arquivo e reenvie a matriz.\n\n"
                     "Dica: você pode baixar novamente o modelo oficial em"
                     " “Baixar modelo” — a coluna Etapa já vem com validação por"
@@ -299,8 +299,8 @@ def _criterios(
                 f"• Arquivo: {localizacao}\n\n"
                 "Como corrigir:\n"
                 "1) Abra a matriz e verifique a coluna Etapa.\n"
-                "2) Marque como “Favorabilidade territorial em grade e da rede” (Fase 2) e/ou "
-                "“Priorização” (Fase 3) os critérios que devem entrar"
+                "2) Marque como “Favorabilidade territorial — município e rede rodoviária” (Fase 2) e/ou "
+                "“Priorização de demandas por atributos” (Fase 3) os critérios que devem entrar"
                 " no cálculo AHP.\n"
                 "3) Salve e reenvie a matriz."
             ),
@@ -310,11 +310,11 @@ def _criterios(
         raise DemandaValidationError(
             (
                 "Você selecionou a Fase 2, mas a matriz não tem nenhum critério"
-                " marcado como “Favorabilidade territorial em grade e da rede”.\n"
+                " marcado como “Favorabilidade territorial — município e rede rodoviária”.\n"
                 f"• Arquivo: {localizacao}\n\n"
                 "Como corrigir:\n"
                 "• Na planilha, marque na coluna Etapa o valor "
-                "“Favorabilidade territorial em grade e da rede” para os critérios de Fase 2,"
+                "“Favorabilidade territorial — município e rede rodoviária” para os critérios de Fase 2,"
                 " ou desmarque a Fase 2 no cadastro desta rodada."
             ),
             field="matriz.fase",
@@ -323,11 +323,11 @@ def _criterios(
         raise DemandaValidationError(
             (
                 "Você selecionou a Fase 3, mas a matriz não tem nenhum critério"
-                " marcado como “Priorização”.\n"
+                " marcado como “Priorização de demandas por atributos”.\n"
                 f"• Arquivo: {localizacao}\n\n"
                 "Como corrigir:\n"
                 "• Na planilha, marque na coluna Etapa o valor "
-                "“Priorização” para os critérios de Fase 3, ou"
+                "“Priorização de demandas por atributos” para os critérios de Fase 3, ou"
                 " desmarque a Fase 3 no cadastro desta rodada."
             ),
             field="matriz.fase",

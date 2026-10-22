@@ -14,9 +14,9 @@
   const PROPOSTA = {
     cadastro_analise: {
       id: "cadastro_analise",
-      titulo: "Elegibilidade territorial — Cadastro e análise",
+      titulo: "Cadastro e análise",
       descricao:
-        "Enquanto a entidade ainda é demanda: cadastro, análise e parecer de factibilidade. Após aprovação, deixa de ser demanda e passa a plano, programa ou projeto.",
+        "Cadastro, análise e parecer de factibilidade do objeto de demanda, classificado desde o registro como plano, programa ou projeto.",
       prefixo: "Demanda",
       css: "status-camada-chip--1",
       status: [
@@ -55,9 +55,9 @@
     },
     hierarquizacao: {
       id: "hierarquizacao",
-      titulo: "Favorabilidade de grade e da rede — Hierarquização e ranqueamento",
+      titulo: "Hierarquização e ranqueamento",
       descricao:
-        "Demanda aprovada vira objeto e segue para hierarquização da favorabilidade. Rótulos variam por tipo (plano/programa/projeto).",
+        "O objeto de demanda aprovado pode integrar o universo de uma hierarquização. Rótulos variam por tipo (plano/programa/projeto).",
       css: "status-camada-chip--2",
       fluxoResumo: [
         "Em hierarquização",
@@ -117,7 +117,7 @@
     },
     execucao: {
       id: "execucao",
-      titulo: "Priorização por atributos — Pós-ranqueamento e execução",
+      titulo: "Pós-ranqueamento e execução",
       descricao:
         "Após o ranqueamento, status globais genéricos de execução do objeto.",
       css: "status-camada-chip--pos",
@@ -169,8 +169,8 @@
     "Três fases: <strong>cadastro_analise</strong> · <strong>hierarquizacao</strong> · <strong>execucao</strong> (coluna <code>fase</code>).",
     "Não há status «transversais»: suspensão/retirada têm código próprio em cada fase (<code>analise_suspensa</code>, <code>hierarq_suspensa</code>, <code>hierarq_retirada</code>, <code>exec_suspensa</code>).",
     "Aprovação dedicada: <code>analise_em_avaliacao</code> → <code>analise_aprovada</code> via POST /aprovar.",
-    "Distinção da Favorabilidade de grade e da rede: <code>hierarq_finalizada</code> = salva no banco (privada); <code>hierarq_ranqueada</code> = publicada no ranking público.",
-    "Elegibilidade territorial: prefixo <strong>Demanda</strong>. Fases 2 e 3: rótulos por tipo <strong>Plano / Programa / Projeto</strong>.",
+    "Distinção na hierarquização: <code>hierarq_finalizada</code> = salva no banco (privada); <code>hierarq_ranqueada</code> = publicada no ranking público.",
+    "Cadastro e análise: prefixo <strong>Demanda</strong>. Hierarquização e execução: rótulos por tipo <strong>Plano / Programa / Projeto</strong>. Essas etapas do ciclo de vida são distintas das três fases metodológicas da hierarquização.",
     "Modelo aplicado pela migração SQL <code>030_status_fases.sql</code> em <code>dom_status_demanda</code>.",
   ];
 

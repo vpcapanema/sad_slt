@@ -16,6 +16,35 @@ from api.schemas.hierarquizacao import (
 from api.services import hierarquizacao_service as service
 
 
+@pytest.mark.parametrize("etapa2, etapa3", [
+    ("Favorabilidade territorial em grade e da rede", "Ajuste por atributos do objeto de demanda"),
+    ("Favorabilidade territorial — município e rede rodoviária", "Priorização de demandas por atributos"),
+])
+def test_nomes_oficiais_e_anteriores_preservam_classificacao_da_matriz(etapa2, etapa3):
+    matriz = {"linhas": [
+        {"Etapa": etapa2, "Critério": "Acessibilidade"},
+        {"Etapa": etapa3, "Critério": "Maturidade"},
+    ]}
+    fase2, fase3 = service._criterios(matriz)
+    assert set(fase2) == {"Acessibilidade"}
+    assert set(fase3) == {"Maturidade"}
+
+
+def test_matriz_v3_preserva_criterios_com_nomes_oficiais():
+    import json
+
+    path = Path(__file__).resolve().parents[1] / "config" / "matriz-criterios-premissas-v3.json"
+    linhas = json.loads(path.read_text(encoding="utf-8"))
+    assert len(linhas) == 50
+    assert {linha["Etapa"] for linha in linhas} == {
+        "Elegibilidade territorial",
+        "Favorabilidade territorial — município e rede rodoviária",
+        "Priorização de demandas por atributos",
+    }
+    fase2, fase3 = service._criterios(linhas)
+    assert fase2 and fase3
+
+
 def _db_row(dados: dict) -> dict:
     now = datetime.now(timezone.utc)
     return {

@@ -1,4 +1,9 @@
-# Modulo Fase 1 - Gerador de camadas de restricao e risco
+# Fase 1 — Elegibilidade territorial
+
+Preparação das camadas de restrição e risco. Adota-se “objeto de demanda” para
+plano, programa ou projeto, conforme a
+[terminologia oficial](../geral/TERMINOLOGIA.md).
+Os exemplos específicos de projetos e os identificadores técnicos são preservados.
 
 ## Objetivo do modulo
 

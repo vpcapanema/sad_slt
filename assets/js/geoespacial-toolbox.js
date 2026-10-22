@@ -62,7 +62,7 @@
           { id: "fase1-homologar", nome: "Homologar", icon: "✅" },
         ],
       },
-      "Favorabilidade de grade e da rede": {
+      "Favorabilidade territorial — município e rede rodoviária": {
         icon: "2️⃣",
         itens: [
           { id: "fase2-cadastrar-criterio", nome: "Cadastrar Critério", icon: "📝" },
@@ -70,7 +70,7 @@
           { id: "fase2-homologar", nome: "Homologar", icon: "✅" },
         ],
       },
-      "Priorização por atributos": {
+      "Priorização de demandas por atributos": {
         icon: "3️⃣",
         itens: [
           { id: "fase3-importar-tabela", nome: "Importar Tabela", icon: "📂" },

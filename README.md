@@ -6,6 +6,9 @@ AHP, processamento geoespacial e trilha de auditoria.
 
 O inventário detalhado do que está implementado está em
 [`documentacao/STATUS_IMPLEMENTACAO.md`](documentacao/STATUS_IMPLEMENTACAO.md).
+Os nomes oficiais de módulos, fases e objetos estão em
+[`documentacao/geral/TERMINOLOGIA.md`](documentacao/geral/TERMINOLOGIA.md).
+A apresentação integrada está em `/public/documentacao/visao-geral/`.
 
 ## Arquitetura
 

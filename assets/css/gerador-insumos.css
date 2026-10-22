@@ -1213,6 +1213,7 @@ html:has(body.gerador-page) {
 
 .biblioteca-risco-page .fase1-concept {
   min-height: 104px;
+  background: #fff;
 }
 
 .biblioteca-risco-page .fase1-component-list article p {

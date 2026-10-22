@@ -1,4 +1,5 @@
 """Inventário HTTP público isolado de banco e Storage oficiais."""
+import re
 from html.parser import HTMLParser
 from urllib.parse import urljoin, urlsplit
 
@@ -22,6 +23,7 @@ PAGES = (
     "/public/transparencia/",
     "/public/login/",
     "/public/documentacao/",
+    "/public/documentacao/visao-geral/",
     "/public/documentacao/glossario/",
     "/public/documentacao/tutoriais/",
     "/public/documentacao/risco-restricao/",
@@ -121,7 +123,11 @@ def test_texto_publico_nao_promete_publicacao_por_aprovacao(client):
     for path in ["/public/", "/public/transparencia/", "/public/cadastro/", "/public/documentacao/"]:
         html = client.get(path).text
         assert "autorizados" not in html
-        assert "homologação" in html or "aprovação" in html
+        if path == "/public/cadastro/":
+            assert "A consulta das demandas publicadas continua aberta ao público." in html
+            assert "Como a demanda é processada" not in html
+        else:
+            assert "homologação" in html or "aprovação" in html
     painel = client.get("/public/painel/").text
     assert 'id="painel-load-status"' in painel
     assert "/assets/js/storage.js" not in painel
@@ -179,21 +185,91 @@ def test_hierarquizacao_tem_destinos_unicos_e_prefixados(client, prefix):
     parser = Links()
     parser.feed(section)
     destinations = (
+        "/public/documentacao/visao-geral/",
+        "/public/documentacao/hierarquizacao/MODELO_HIERARQUIZACAO_ESPACIAL.md",
         "/public/documentacao/risco-restricao/",
         "/public/documentacao_favorabilidade_v2/",
-        "/public/documentacao/limite-maritimo/",
-        "/public/documentacao/saidas_modelos/index.html",
-        "/public/documentacao/hierarquizacao/ESPINHA_DORSAL_SISTEMA_HIERARQUIZACAO.md",
-        "/public/documentacao/hierarquizacao/MODELO_HIERARQUIZACAO_ESPACIAL.md",
         "/public/documentacao/hierarquizacao/MODULO_FASE3_ATRIBUTOS_PROJETO_AJUSTE.md",
+        "/public/documentacao/limite-maritimo/",
         "/public/documentacao/tutoriais/",
     )
     assert parser.links == [prefix + destination for destination in destinations]
     assert len(parser.links) == len(set(parser.links))
-    assert "referência provisória, não homologada" in section
+    assert re.findall(r'<a\b[^>]*><span>([^<]+)</span>', section) == [
+        "Visão geral do SICARD",
+        "Modelos de hierarquização espacial",
+        "Fundamentos da elegibilidade territorial — restrições e riscos",
+        "Fundamentos da favorabilidade territorial — município e rede rodoviária",
+        "Fundamentos da priorização de demandas por atributos",
+        "Fundamentos da definição do limite marítimo paulista",
+        "Tutoriais do SICARD",
+    ]
+    assert 'title="Referência provisória, não homologada"' in section
     for destination in destinations:
         # O proxy retira o prefixo antes de encaminhar a requisicao ao backend.
         assert client.get(destination, headers=headers).status_code == 200, destination
+
+
+@pytest.mark.parametrize("prefix", ["", "/sicard"])
+def test_visao_geral_integra_conceitos_fluxos_e_referencias(client, prefix):
+    headers = {"X-Forwarded-Prefix": prefix} if prefix else {}
+    response = client.get("/public/documentacao/visao-geral/", headers=headers)
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/html")
+    html = response.text
+    parser = Links()
+    parser.feed(html)
+    assert parser.h1 == 1
+    assert "Visão geral do SICARD" in html
+    assert 'data-requer-autenticacao="true"' not in html
+    assert 'class="rodape-institucional"' in html
+    assert prefix + "/assets/css/visao-geral.css?v=" in html
+    assert html.count("<figure ") == html.count("<figcaption ") == 4
+    modulos = html.split('id="modulos"', 1)[1].split("</section>", 1)[0]
+    assert re.findall(r"<li><strong>([^<]+)</strong>", modulos) == [
+        "MOCAD", "MAD", "Transparência e acompanhamento",
+    ]
+    assert "abordagem transversal de apoio" in modulos
+    assert "análises espacialmente explícitas" in modulos
+    assert "em todas as etapas do processo" in modulos
+    ids = re.findall(r'\bid="([^"]+)"', html)
+    assert len(ids) == len(set(ids))
+    indice = html.split('aria-label="Nesta página"', 1)[1].split("</nav>", 1)[0]
+    capitulos = re.findall(r'href="#([^"]+)"', indice)
+    assert len(capitulos) == 12
+    assert set(capitulos) <= set(ids)
+    for fragment in re.findall(r'aria-labelledby="([^"]+)"', html):
+        assert all(value in ids for value in fragment.split())
+    for term in (
+        "Módulo de Cadastro e Análise de Demandas",
+        "Módulo de Apoio à Decisão",
+        "Objeto de demanda",
+        "Favorabilidade territorial — município e rede rodoviária",
+        "Priorização de demandas por atributos",
+        "independentes e combináveis",
+        "Município e grade não são sinônimos",
+        "não publicam automaticamente",
+        "Projeto", "Programa", "Plano", "SIGMA-PLI",
+    ):
+        assert term in html
+    assert prefix + "/public/documentacao/hierarquizacao/ESPINHA_DORSAL_SISTEMA_HIERARQUIZACAO.md" in html
+    for fragment in ("objeto-demanda", "status"):
+        glossary = client.get("/public/documentacao/glossario/", headers=headers).text
+        assert f'id="{fragment}"' in glossary
+        assert prefix + "/public/documentacao/glossario/#" + fragment in html
+
+
+@pytest.mark.parametrize("path, title", [
+    ("/restrict/hierarquizacao/fase-1/", "Elegibilidade territorial"),
+    ("/restrict/hierarquizacao/fase-2/", "Favorabilidade territorial — município e rede rodoviária"),
+    ("/restrict/hierarquizacao/fase-3/", "Priorização de demandas por atributos"),
+])
+def test_fases_exibem_nomenclatura_oficial(client, path, title):
+    html = client.get(path).text
+    assert f"<span>{title}</span></h1>" in html
+    assert title in html.split('<nav class="hier-link-bar"', 1)[1].split("</nav>", 1)[0]
+    assert "Favorabilidade de grade e da rede" not in html
+    assert "Priorização por atributos" not in html
 
 
 @pytest.mark.parametrize("prefix", ["", "/sicard"])
@@ -210,20 +286,24 @@ def test_tutoriais_publicos_conectados_ao_manifesto(client, monkeypatch, prefix)
     parser.feed(html)
     assert parser.h1 == 1
     dados = tutoriais_publicos.manifesto()
-    assert parser.links == [
-        prefix + "/assets/css/tutoriais.css",
+    main_parser = Links()
+    main_parser.feed(html.split("<main", 1)[1].split("</main>", 1)[0])
+    assert main_parser.links == [
         prefix + "/public/documentacao/",
         *[
             prefix + tutoriais_publicos.BASE_URL + tutorial[campo]
             for tutorial in dados["tutoriais"] for campo in ("video", "srt")
         ],
-        prefix + "/assets/js/tutoriais.js",
     ]
+    assert prefix + "/assets/css/tutoriais.css?v=" in html
+    assert prefix + "/public/cadastro/index.css?v=" in html
+    assert prefix + "/assets/js/tutoriais.js" in html
+    assert 'class="rodape-institucional"' in html
     stylesheet = client.get("/assets/css/tutoriais.css", headers=headers)
     assert stylesheet.status_code == 200
     assert "text/css" in stylesheet.headers["content-type"]
-    assert "grid-template-columns:repeat(2,minmax(0,1fr))" in stylesheet.text
-    assert html.count("<article>") == 16
+    assert "grid-template-columns:repeat(2,minmax(0,1fr))" in re.sub(r"\s+", "", stylesheet.text)
+    assert len(re.findall(r"<article\b", html)) == 16
     assert html.count("Revisão pendente") == 5
     assert "Tributando camadas territoriais" in html
     assert "Complementando um cadastro — Atributos de demanda" in html

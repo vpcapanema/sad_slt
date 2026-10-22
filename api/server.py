@@ -198,6 +198,11 @@ def pagina_glossario_publico(request: Request) -> Response:
     return render_page(request, "paginas/documentacao/glossario.html")
 
 
+@app.get("/public/documentacao/visao-geral/", include_in_schema=False)
+def pagina_visao_geral_sicard(request: Request) -> Response:
+    return render_page(request, "paginas/documentacao/visao-geral.html")
+
+
 @app.get("/public/documentacao/tutoriais/", include_in_schema=False)
 def pagina_tutoriais_publicos(request: Request) -> Response:
     from api.services.tutoriais_publicos import catalogo

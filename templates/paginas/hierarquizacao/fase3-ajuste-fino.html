@@ -3,7 +3,7 @@
 {% set navegacao = "restrita" %}
 {% set requer_autenticacao = true %}
 
-{% block titulo %}Priorização por atributos{% endblock %}
+{% block titulo %}Priorização de demandas por atributos{% endblock %}
 {% set fase_ativa = 3 %}
 {% block classes_body %}ahp-module-page feedback-proprio escala-revisada fases-padrao-agrupamento{% endblock %}
 {% block base_url %}<base href="/restrict/hierarquizacao/">{% endblock %}
@@ -25,9 +25,9 @@
 <main class="conteudo-principal app-main ahp-main fase-execucao-page">
   {% include "componentes/navegacao_fases_hierarquizacao.html" %}
   <section class="card-fase-3-ajuste-fino-de-prioridade secao-fase-3-ajuste-fino-de-prioridade card ahp-step-intro standard-page-hero">
-    <h1 class="ahp-page-title standard-page-hero__title"><i class="fas fa-sliders" aria-hidden="true"></i><span>Priorização por atributos</span></h1>
-    <p class="standard-page-hero__eyebrow">Hierarquização · Fase 3<span class="fase-info" tabindex="0" role="button" aria-label="Sobre esta fase"><i class="fas fa-circle-info" aria-hidden="true"></i><span class="fase-info-pop">O ajuste fino refina a prioridade de cada projeto ao combinar seus atributos próprios com o risco herdado da Elegibilidade territorial, produzindo o score de ajuste e a síntese final da rodada. Os critérios são normalizados e ponderados por pesos, as ausências são tratadas conforme a política escolhida e a completude mínima exigida, e a síntese final combina os scores da Favorabilidade de grade e da rede e da Priorização por atributos segundo os pesos definidos. Para operar, selecione a rodada, confira os critérios e atributos dos objetos, defina as regras de cálculo e execute a fase, gerando ao final a síntese e o ranking.</span></span></p>
-    <p class="standard-page-hero__description">Refina a prioridade de cada projeto combinando seus atributos próprios com o risco herdado da Elegibilidade territorial.</p>
+    <h1 class="ahp-page-title standard-page-hero__title"><i class="fas fa-sliders" aria-hidden="true"></i><span>Priorização de demandas por atributos</span></h1>
+    <p class="standard-page-hero__eyebrow">Hierarquização · Fase 3<span class="fase-info" tabindex="0" role="button" aria-label="Sobre esta fase"><i class="fas fa-circle-info" aria-hidden="true"></i><span class="fase-info-pop">A priorização de demandas por atributos avalia cada objeto de demanda ao combinar seus atributos próprios com o risco herdado da Elegibilidade territorial. Os critérios são normalizados e ponderados por pesos, as ausências são tratadas conforme a política escolhida e a completude mínima exigida. A síntese final combina os escores das fases selecionadas segundo os pesos definidos. Para operar, selecione a rodada, confira os critérios e atributos dos objetos de demanda, defina as regras de cálculo e execute a fase; em seguida, confira a síntese e o ranking.</span></span></p>
+    <p class="standard-page-hero__description">Prioriza os objetos de demanda combinando seus atributos próprios com o risco herdado da Elegibilidade territorial.</p>
   <p class="step-intro"><i class="fas fa-circle-info" aria-hidden="true"></i> Nos julgamentos, os colaboradores indicam a intensidade de importância entre os critérios. A consolidação calcula seus pesos. Quando há uma análise homologada nesta hierarquização, esta fase aplica os pesos homologados aos valores de cada demanda nos critérios correspondentes para calcular sua prioridade.</p>
   </section>
   <section class="secao-selecao-da-rodada card ahp-step-section card-selecao-da-rodada"><div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">1</span><span>Selecionar a rodada</span></div><div class="ahp-section-body"><div class="ahp-subcard info-card"><div class="ahp-subsection-title"><span class="cadastro-subsec-num">1.1</span><i class="fas fa-folder-open" aria-hidden="true"></i><span>Rodada a calcular</span></div><label>Hierarquização cadastrada <select id="fase-hierarquizacao"><option value="">Selecionar uma hierarquização</option></select></label></div><div class="ahp-subcard info-card"><div class="ahp-subsection-title"><span class="cadastro-subsec-num">1.2</span><i class="fas fa-circle-info" aria-hidden="true"></i><span>Resumo da rodada</span></div><div id="fase-resumo" class="fase-summary hidden"></div></div></div></section>
@@ -37,7 +37,7 @@
     <div class="ahp-subcard info-card"><div class="ahp-subsection-title"><span class="cadastro-subsec-num">3.2</span><i class="fas fa-sliders" aria-hidden="true"></i><span>Política de tratamento</span></div><div class="fase-grid-2">
       <input id="fase3-modo-pesos" type="hidden" value="normalizados">
       <label>Tratamento de atributos com valores vazios
-        <select id="fase3-ausentes"><option value="renormalizar">Ignorar e renormalizar</option><option value="bloquear">Bloquear projeto</option><option value="imputar_neutro">Imputar neutro</option><option value="imputar_pior">Imputar pior valor</option><option value="imputar_medio">Imputar média</option></select>
+        <select id="fase3-ausentes"><option value="renormalizar">Ignorar e renormalizar</option><option value="bloquear">Bloquear objeto de demanda</option><option value="imputar_neutro">Imputar neutro</option><option value="imputar_pior">Imputar pior valor</option><option value="imputar_medio">Imputar média</option></select>
       </label>
       <label>Completude mínima (% de atributos preenchidos para que o objeto seja considerado no cálculo) <input id="fase3-completude" type="number" min="0" max="100" step="5" value="60"></label>
     </div><p class="ahp-help-text">Critérios obrigatórios ausentes ou inválidos bloqueiam o índice, independentemente da política escolhida.</p></div><div class="fase-actions"><button id="executar-fase3" class="btn btn--primary" type="button"><i class="fas fa-calculator"></i> Calcular índice de priorização</button></div></div></section>

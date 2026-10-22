@@ -6,6 +6,17 @@
    galeria de mapas. Escala tipográfica ambiente (rótulo ~0,7rem, texto de
    apoio ~0,78rem, corpo ~0,82rem) para não destoar do resto da página. */
 
+/* Somente a documentação: não muda os cards das ferramentas restritas
+   que compartilham ahp-module.css e as folhas de execução. */
+.doc-favorabilidade .card,
+.doc-favorabilidade .ahp-subcard {
+  box-shadow: none;
+}
+
+.doc-favorabilidade .card {
+  border: 1px solid var(--pli-border, #d8dee4);
+}
+
 .doc-sumario {
   display: flex;
   flex-wrap: wrap;

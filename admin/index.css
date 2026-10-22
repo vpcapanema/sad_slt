@@ -645,15 +645,23 @@ body.operador-home-page {
 
 .restrict-platform-groups .platform-tile {
   --tile-accent: #2c6fa6;
+  --tile-border-color: color-mix(in srgb, var(--tile-accent) 35%, white);
   flex: 1 1 calc((100% - (var(--itens-por-linha) - 1) * var(--vao)) / var(--itens-por-linha));
   width: auto;
   min-width: 0;
   height: auto;
   min-height: 78px;
   aspect-ratio: auto;
-  border-color: color-mix(in srgb, var(--tile-accent) 35%, white);
+  border-color: var(--tile-border-color);
   background: color-mix(in srgb, var(--tile-accent) 8%, white);
-  box-shadow: 0 2px 5px rgba(18, 48, 77, 0.07);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 90%),
+    3px 3px 6px color-mix(in srgb, var(--tile-border-color) 38%, transparent),
+    8px 8px 14px color-mix(in srgb, var(--tile-border-color) 24%, transparent),
+    16px 16px 28px color-mix(in srgb, var(--tile-border-color) 14%, transparent),
+    28px 28px 44px color-mix(in srgb, var(--tile-border-color) 6%, transparent);
+  transform: none;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
 }
 
 .restrict-platform-groups .platform-tile--blue { --tile-accent: #2c6fa6; }
@@ -669,7 +677,8 @@ body.operador-home-page {
 
 .restrict-platform-groups .platform-tile:hover,
 .restrict-platform-groups .platform-tile:focus-visible {
-  border-color: var(--tile-accent);
+  --tile-border-color: var(--tile-accent);
+  border-color: var(--tile-border-color);
   background: color-mix(in srgb, var(--tile-accent) 15%, white);
 }
 
@@ -732,8 +741,9 @@ body.operador-home-page {
 .restrict-platform-groups .secao-platform-administracao { --subgroup-accent: #7f1d1d; }
 .restrict-platform-groups .platform-subgroup .platform-tile {
   --tile-accent: var(--subgroup-accent, #314e68);
+  --tile-border-color: color-mix(in srgb, var(--tile-accent) 60%, white);
   color: var(--tile-accent);
-  border-color: color-mix(in srgb, var(--tile-accent) 60%, white);
+  border-color: var(--tile-border-color);
   background: color-mix(in srgb, var(--tile-accent) 12%, white);
 }
 .restrict-platform-groups .platform-subgroup .platform-tile__label {
@@ -741,8 +751,9 @@ body.operador-home-page {
 }
 .restrict-platform-groups .platform-subgroup .platform-tile:hover,
 .restrict-platform-groups .platform-subgroup .platform-tile:focus-visible {
+  --tile-border-color: var(--tile-accent);
   background: color-mix(in srgb, var(--tile-accent) 20%, white);
-  border-color: var(--tile-accent);
+  border-color: var(--tile-border-color);
 }
 .restrict-platform-groups .secao-platform-administracao .platform-tile {
   --tile-accent: #7f1d1d;
@@ -750,4 +761,41 @@ body.operador-home-page {
 .restrict-platform-groups .secao-platform-administracao .platform-tile__icon {
   background: #7f1d1d;
   color: #fff;
+}
+
+.restrict-platform-groups .platform-tile:focus-visible {
+  outline: 3px solid var(--tile-accent);
+  outline-offset: 4px;
+}
+
+@media (hover: hover) {
+  .restrict-platform-groups .platform-tile:not(:disabled):hover {
+    box-shadow:
+      inset 0 2px 3px color-mix(in srgb, var(--tile-border-color) 18%, transparent),
+      1px 1px 3px color-mix(in srgb, var(--tile-border-color) 26%, transparent),
+      3px 3px 6px color-mix(in srgb, var(--tile-border-color) 16%, transparent),
+      6px 6px 12px color-mix(in srgb, var(--tile-border-color) 8%, transparent),
+      10px 10px 20px color-mix(in srgb, var(--tile-border-color) 4%, transparent);
+    transform: translateY(3px);
+  }
+}
+
+.restrict-platform-groups .platform-tile:not(:disabled):active {
+  box-shadow:
+    inset 0 3px 5px color-mix(in srgb, var(--tile-border-color) 24%, transparent),
+    1px 1px 2px color-mix(in srgb, var(--tile-border-color) 22%, transparent),
+    2px 2px 4px color-mix(in srgb, var(--tile-border-color) 12%, transparent),
+    4px 4px 8px color-mix(in srgb, var(--tile-border-color) 6%, transparent),
+    6px 6px 12px color-mix(in srgb, var(--tile-border-color) 3%, transparent);
+  transform: translateY(4px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .restrict-platform-groups .platform-tile {
+    transition: none;
+  }
+
+  .restrict-platform-groups .platform-tile:not(:disabled):is(:hover, :active) {
+    transform: none;
+  }
 }

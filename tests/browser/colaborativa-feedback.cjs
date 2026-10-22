@@ -85,7 +85,7 @@ const assert = require('node:assert/strict');
     assert.equal(await scope.locator('ol > li').count(), 6);
     const scopeText = await scope.innerText();
     for (const topic of ['AHP', 'Saaty', '1/3', 'RC < 0,10', 'média geométrica',
-      'somar 1', 'homologação', 'Priorização por atributos']) {
+      'somar 1', 'homologação', 'Priorização de demandas por atributos']) {
       assert.ok(scopeText.includes(topic), `Escopo explica ${topic}`);
     }
     assert.equal(await scope.locator('p').first().evaluate(el =>

@@ -1,8 +1,11 @@
 # Status atual da implementação
 
-Atualizado em 19 de julho de 2026. Este documento descreve o código executável
+Atualizado em 22 de outubro de 2026. Este documento descreve o código executável
 do SICARD. Os documentos de especificação dos módulos continuam válidos como
 referência metodológica, mas podem conter propostas ainda não integradas.
+
+As denominações seguem a [terminologia oficial](geral/TERMINOLOGIA.md).
+Objeto de demanda é o termo geral para plano, programa ou projeto.
 
 ## Arquitetura executada
 
@@ -53,10 +56,13 @@ Implementada como rodada persistida em
 `hierarquizacao_demandas.hierarquizacao_portfolio`. A rodada mantém um documento
 JSONB autocontido com cabeçalho, objetos e resultados das fases.
 
-- Fase 1: configuração de fatiamento, interseções territoriais e relatório de
-  elegibilidade.
-- Fase 2: extração de favorabilidade a partir de pacote homologado.
-- Fase 3: ajuste fino por atributos e completude mínima.
+- Fase 1 — Elegibilidade territorial: preparação da entrada, interseções
+  independentes e relatório das sobreposições com restrições e riscos.
+- Fase 2 — Favorabilidade territorial — município e rede rodoviária:
+  preparação da entrada, interseções e consulta dos atributos de grade e rede,
+  preservados por fragmento.
+- Fase 3 — Priorização de demandas por atributos: normalização, ponderação e
+  tratamento de completude dos atributos dos objetos de demanda.
 - Síntese: combinação dos resultados e geração do ranking.
 - Homologação: fechamento e registro da rodada; o ciclo cadastral das demandas
   permanece sob o serviço próprio de transições de situação.
@@ -66,10 +72,11 @@ as três fases em `/restrict/hierarquizacao/fase-1/`, `/fase-2/` e `/fase-3/`
 e o ranking em `/restrict/hierarquizacao/ranking/`. As cinco telas antigas
 de etapas avulsas do portfólio foram removidas.
 
-As fases da rodada são selecionáveis e independentes. A Fase 1 preserva as
-interseções e usa o máximo dos valores restritivos e a média ponderada dos riscos.
-A Fase 2 rejeita valores não finitos ou fora da escala homologada de 0 a 1. A
-Fase 3 distingue ausência de valor e valor inválido, aplica obrigatoriedade,
+As fases da rodada são selecionáveis e independentes. As interfaces atuais das
+Fases 1 e 2 preservam as interseções em produtos geoespaciais; sua execução não
+substitui os resultados registrados da rodada nem aplica homologação automática.
+Na Fase 2, estatísticas exploratórias não alteram os índices oficiais.
+A Fase 3 distingue ausência de valor e valor inválido, aplica obrigatoriedade,
 completude mínima, imputação ou renormalização local e incorpora riscos sugeridos
 pela Fase 1. A síntese registra as contribuições e a justificativa por objeto.
 
@@ -125,12 +132,16 @@ O contrato detalhado e testável está disponível em `/docs` e
 
 - `/public/`, `/public/cadastro/`, `/public/painel/`,
   `/public/transparencia/`, `/public/documentacao/` e `/public/login/`;
+- `/public/documentacao/visao-geral/`, `/public/documentacao/glossario/`
+  e `/public/documentacao/tutoriais/`;
 - `/restrict/`, `/restrict/painel/` e `/restrict/demandas/`;
 - `/restrict/hierarquizacao/` e `/restrict/hierarquizacao/processos/`;
 - `/restrict/ahp/` e as etapas nomeadas da configuração;
-- `/restrict/geoespacial/` e suas páginas `visualizador-inputs`,
-  `gerador-risco-restricao`, `configuracao-risco-restricao`,
-  `gerador-favorabilidade`, `bancada`, `produtos` e `configurador-ajuste`.
+- `/restrict/geoespacial/` e suas páginas `gerador-camadas-territoriais`,
+  `extracao-atributos`, `extracoes-atributos`, `visualizador-camadas`,
+  `explorador-camadas`, `visualizador-bases-geoespaciais` e `bancada`.
+  `produtos` redireciona para `visualizador-camadas`; os antigos geradores
+  de risco/restrição e favorabilidade e o configurador de ajuste estão arquivados.
 
 ## Persistência atual
 
@@ -149,9 +160,8 @@ esquema único `demandas`.
 
 ## Limites conhecidos
 
-- A extração territorial da Fase 2 está operacional para projetos pontuais. Os
-  métodos zonais previstos na metodologia dependem de geometrias lineares ou
-  poligonais consolidadas no contrato das demandas.
+- A execução atual da Fase 2 preserva índices e classes por fragmento das
+  interseções, sem agregá-los em um novo índice oficial por objeto de demanda.
 - Alguns documentos de especificação descrevem o desenho-alvo e não devem ser
   interpretados como comprovação de endpoint pronto.
 - A cobertura automatizada concentra-se em autenticação, painel, política de

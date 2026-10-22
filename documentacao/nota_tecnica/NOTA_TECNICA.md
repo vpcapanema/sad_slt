@@ -18,10 +18,10 @@
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Título**                 | Metodologia do Sistema de Hierarquização de Demandas — SICARD                                                                                                         |
 | **Número**                 | NT-SICARD-001/2026                                                                                                                                                       |
-| **Versão**                 | 1.30                                                                                                                                                                      |
-| **Data de emissão**        | 21/10/2026                                                                                                                                                               |
+| **Versão**                 | 1.31                                                                                                                                                                      |
+| **Data de emissão**        | 22/10/2026                                                                                                                                                               |
 | **Classificação**         | Documento técnico-metodológico de entrega ao cliente                                                                                                                   |
-| **Sistema**                 | SICARD — Sistema de Apoio à Tomada de Decisão                                                                                                                         |
+| **Sistema**                 | SICARD — Sistema Inteligente de Cadastro e Ranking de Demandas                                                                                                        |
 | **Domínio de aplicação** | Logística e transportes. Concebido no âmbito do Plano de Logística Integrada do Estado de São Paulo (PLI-SP), aplica-se a qualquer objeto de demanda desse domínio. |
 | **Unidade responsável**    | `[preencher]`                                                                                                                                                          |
 | **Autoria técnica**        | `[preencher]`                                                                                                                                                          |
@@ -64,6 +64,7 @@
 | 1.28    | 21/10/2026 | `[preencher]` | Integração dos resultados da Favorabilidade ao painel de mapa, tabela, detalhes e rosca da Elegibilidade, com revisão persistida de nomes, reabertura de GeoPackages e pacote PDF/camadas segregados da Fase 1; preservação dos índices registrados como última subseção, sem agregação ou alteração de seus valores. |
 | 1.29    | 21/10/2026 | `[preencher]` | Apresentação dos atributos originais de índice por dimensões e classe de grade e rede nos resultados da Favorabilidade; substituição da rosca por gráfico de pontos por demanda e feição, rampa contínua de 0 a 1 no mapa e relatório por índices e classes, com sinalização de dados ausentes ou inválidos e área restrita à informação técnica complementar. |
 | 1.30    | 21/10/2026 | `[preencher]` | Simplificação e ordenação decrescente das listas de Favorabilidade; substituição da consulta de índices registrados por conjuntos de índices e classes das interseções por demanda, separando grade e rede, com seleção exclusiva de medidas exploratórias de tendência central, dispersão e posição, sem persistência ou alteração dos índices oficiais. |
+| 1.31    | 22/10/2026 | `[preencher]` | Padronização editorial da denominação do SICARD, do termo objeto de demanda e dos nomes das três fases; distinção entre ciclo de vida, fases metodológicas e representações espaciais; preservação dos cálculos, contratos e regras de homologação. |
 
 ---
 
@@ -75,7 +76,7 @@
 4. [Fundamentação teórica](#4-fundamentação-teórica)
 5. [Fundamentação legal, normativa e metodológica](#5-fundamentação-legal-normativa-e-metodológica)
 6. [Definições e siglas](#6-definições-e-siglas)
-7. [Visão geral do sistema (espinha dorsal)](#7-visão-geral-do-sistema-espinha-dorsal)
+7. [Visão geral do motor de hierarquização (espinha dorsal)](#7-visão-geral-do-motor-de-hierarquização-espinha-dorsal)
 8. [Arquitetura metodológica em fases](#8-arquitetura-metodológica-em-fases)
 9. [Método multicritério AHP](#9-método-multicritério-ahp)
 10. [Matriz de critérios e premissas](#10-matriz-de-critérios-e-premissas)
@@ -106,12 +107,19 @@ auditável**, sem depender de análise manual objeto a objeto.
 
 A avaliação é organizada em **três fases metodológicas independentes e combináveis**:
 
-- **Fase 1 — Triagem de restrição e risco:** classifica a elegibilidade territorial
+- **Fase 1 — Elegibilidade territorial:** classifica a elegibilidade territorial
   preliminar de cada objeto de demanda (apto, apto com ressalva ou restrito).
-- **Fase 2 — Hierarquização por favorabilidade territorial:** produz o ranking
+- **Fase 2 — Favorabilidade territorial — município e rede rodoviária:** produz o ranking
   técnico-territorial a partir de superfícies contínuas de favorabilidade.
-- **Fase 3 — Ajuste por atributos do objeto de demanda:** incorpora informações de
+- **Fase 3 — Priorização de demandas por atributos:** incorpora informações de
   maturidade, custo, governança e viabilidade, além dos riscos herdados da Fase 1.
+
+As denominações seguem a [terminologia oficial do SICARD](../geral/TERMINOLOGIA.md).
+Objeto de demanda designa plano, programa ou projeto. As três fases metodológicas
+não se confundem com as etapas do ciclo de vida cadastral. Na Fase 2, município
+designa um recorte administrativo; grade e rede conservam suas representações e
+unidades espaciais próprias. A padronização dos nomes não altera operadores,
+pesos, regras de síntese ou contratos de dados.
 
 Os pesos dos critérios são definidos pelo **Método de Análise Hierárquica (AHP)** e
 aplicados sobre critérios organizados segundo um **protocolo epistemológico** — a
@@ -298,7 +306,7 @@ legais brasileiros e estaduais aplicáveis:
 
 | Termo / sigla                                     | Definição                                                                                                                                                                                                                                                                                                                                              |
 | ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **SICARD**                                  | Sistema de Apoio à Tomada de Decisão.                                                                                                                                                                                                                                                                                                                  |
+| **SICARD**                                  | Sistema Inteligente de Cadastro e Ranking de Demandas. |
 | **PLI-SP**                                  | Plano de Logística Integrada do Estado de São Paulo.                                                                                                                                                                                                                                                                                                   |
 | **Objeto de demanda** (ou **objeto**) | Item submetido à hierarquização. Suas categorias são**plano**, **programa** e **projeto**. Ao longo deste documento, "objeto de demanda" designa qualquer uma dessas categorias; a palavra "projeto" isolada só denota a categoria específica quando contrastada com plano e programa.                                           |
 | **Espinha dorsal**                          | Motor que consome produtos preparados pelos módulos de apoio e aplica as regras de triagem, hierarquização, ajuste e síntese. Não cria camadas nem indicadores.                                                                                                                                                                                     |
@@ -335,7 +343,7 @@ legais brasileiros e estaduais aplicáveis:
 
 ---
 
-## 7. Visão geral do sistema (espinha dorsal)
+## 7. Visão geral do motor de hierarquização (espinha dorsal)
 
 A **espinha dorsal** é a arquitetura conceitual que permite avaliar um conjunto grande
 de objetos de demanda de forma automatizada, configurável e auditável. Ela **não cria** as
@@ -352,7 +360,7 @@ pesos configuráveis e regras explícitas, sem apagar a leitura individual de ca
 
 ## 8. Arquitetura metodológica em fases
 
-### 8.1 Fase 1 — Triagem de restrição e risco
+### 8.1 Fase 1 — Elegibilidade territorial
 
 **Preparação operacional na interface v2.** A página de elegibilidade passa a
 receber camadas vetoriais do storage ou as demandas de uma hierarquização
@@ -594,7 +602,7 @@ a classificação da Fase 1 segue as regras de elegibilidade descritas acima.
 O contrato operacional é detalhado em
 `documentacao/geoespacial/FLUXO_CRUZAMENTO_ESPACIAL_CONFIGURAVEL.md`.
 
-### 8.2 Fase 2 — Hierarquização por favorabilidade territorial
+### 8.2 Fase 2 — Favorabilidade territorial — município e rede rodoviária
 
 **Função.** Núcleo do **ranking técnico-territorial**. Consome uma ou mais superfícies
 de favorabilidade e cruza-as com a geometria dos objetos de demanda, extraindo um valor
@@ -779,7 +787,7 @@ Essas estatísticas são exclusivamente exploratórias no navegador: não gravam
 valores, não repetem interseções e não alteram classes, índices oficiais,
 homologação, PDF ou GeoPackages.
 
-### 8.3 Fase 3 — Ajuste por atributos do objeto de demanda
+### 8.3 Fase 3 — Priorização de demandas por atributos
 
 **Função.** **Opcional.** Incorpora informações que pertencem ao **próprio objeto de
 demanda, à carteira, à governança ou à viabilidade de execução**, sem duplicar critérios
@@ -1087,17 +1095,17 @@ matriz operacional, dos operadores ou da síntese vigente do sistema.
 ```text
 ENTRADA: Objeto de demanda (geometria + atributos)
 │
-├─ FASE 1 — Triagem de restrição e risco
+├─ FASE 1 — Elegibilidade territorial
 │   entrada: camadas consolidadas de restrição e risco
 │   processo: interseção objeto de demanda × camadas
 │   saída: status_fase1 (apto | apto_com_ressalva | restrito)
 │
-├─ FASE 2 — Hierarquização por favorabilidade
+├─ FASE 2 — Favorabilidade territorial — município e rede rodoviária
 │   entrada: raster final de favorabilidade territorial
 │   processo: extração espacial (ponto, média zonal, corredor, ...)
 │   saída: score_fase2, ranking_fase2, decomposição por dimensão
 │
-├─ FASE 3 — Ajuste por atributos
+├─ FASE 3 — Priorização de demandas por atributos
 │   entrada: tabela de atributos do objeto de demanda
 │   processo: normalização e ponderação de atributos
 │   saída: score_fase3, ranking_fase3, contribuição por critério
