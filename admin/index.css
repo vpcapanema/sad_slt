@@ -454,7 +454,7 @@ body.operador-home-page {
 .secao-platform-geoprocessamento { grid-column: 1 / -1; }
 .secao-platform-ami { grid-column: 1 / -1; }
 
-/* Público, catálogos e ações do operador dividem a última linha. */
+/* Público, catálogos e ações do operador dividem a segunda linha. */
 .secao-platform-publico { grid-column: span 3; }
 .secao-platform-catalogos { grid-column: span 3; }
 
@@ -624,14 +624,6 @@ body.operador-home-page {
   }
 }
 
-.secao-platform-mad .subgroup-agrupamento-demandas-extracao-atributos {
-  flex: 1 1 100%;
-}
-
-.secao-platform-mad .subgroup-agrupamento-demandas-extracao-atributos .platform-grid {
-  --itens-por-linha: 3;
-}
-
 .restrict-platform-groups button.platform-tile {
   font: inherit;
 }
@@ -670,10 +662,6 @@ body.operador-home-page {
 .restrict-platform-groups .platform-tile--violet { --tile-accent: #7259a9; }
 .restrict-platform-groups .platform-tile--navy { --tile-accent: #21476c; }
 .restrict-platform-groups .platform-tile--teal { --tile-accent: #197c89; }
-
-.restrict-platform-groups .subgroup-agrupamento-demandas-extracao-atributos .platform-tile {
-  --tile-accent: #3159a7;
-}
 
 .restrict-platform-groups .platform-tile__icon {
   background: var(--tile-accent);
@@ -737,7 +725,6 @@ body.operador-home-page {
 
 
 /* Cores por subgrupo aplicadas exclusivamente aos cards botão. */
-.restrict-platform-groups .subgroup-agrupamento-demandas-extracao-atributos { --subgroup-accent: #164ea3; }
 .restrict-platform-groups .subgroup-analise-multicriterio-ahp-e-obtencao-de-pesos { --subgroup-accent: #984900; }
 .restrict-platform-groups .subgroup-ranqueamento { --subgroup-accent: #6c2892; }
 .restrict-platform-groups .subgroup-geoprocessamento { --subgroup-accent: #006b48; }

@@ -231,7 +231,7 @@ def test_restricted_home_groups_operator_and_territorial_actions() -> None:
         "Central de respostas",
     ]
     assert "?modo=formulario" not in mad
-    assert mad.index("Extração de atributos") < mad.index("Análise Multicritério (AHP)") < mad.index("Ranqueamento")
+    assert mad.index("Análise Multicritério (AHP)") < mad.index("Ranqueamento")
     assert 'class="platform-tile platform-tile--amber" href="/restrict/agrupamento-demandas/"' in ahp
     ranking = mad.split("subgroup-ranqueamento", 1)[1]
     assert set(re.findall(r'href="([^"]+)"', ranking)) == {
@@ -241,11 +241,26 @@ def test_restricted_home_groups_operator_and_territorial_actions() -> None:
     }
     assert "Documentação metodológica" not in ranking
     assert "cadastro-upload-" not in content
-    assert 'href="/restrict/geoespacial/extracoes-atributos/"' in mad
-    assert 'href="/restrict/geoespacial/gerador-camadas-territoriais/"' in mad
-    assert "Extração de atributos" not in group("group-geoprocessamento")
+    assert "Extração de atributos" not in mad
+    assert "/restrict/geoespacial/extracoes-atributos/" not in mad
+    assert "/restrict/geoespacial/gerador-camadas-territoriais/" not in mad
+    assert "subgroup-agrupamento-demandas-extracao-atributos" not in content
     assert 'href="/restrict/agrupamento-demandas/"' in mad
     assert "Agrupamento de demandas" in mad
+
+
+def test_restricted_home_public_catalogs_and_operator_form_second_row() -> None:
+    content = TestClient(app).get("/restrict/").text
+    assert re.findall(r'<section\b[^>]*aria-labelledby="group-([^"]+)"', content) == [
+        "mocad",
+        "mad",
+        "resultados",
+        "publico",
+        "catalogos",
+        "operador",
+        "geoprocessamento",
+        "administracao",
+    ]
 
 
 def test_restricted_demands_table_exposes_audit_names_and_timestamps() -> None:
@@ -300,7 +315,13 @@ def test_restricted_home_geoprocessing_subgroups_and_independent_accesses() -> N
         for name, markup in re.findall(r'class="platform-subgroup subgroup-([\w-]+)">(.*?)</div>\s*</div>', geo, re.S)
     }
     assert groups == {
-        "geoprocessamento": ["Central geoespacial", "Visualizador de camadas", "Bancada de geoprocessamento"],
+        "geoprocessamento": [
+            "Central geoespacial",
+            "Visualizador de camadas",
+            "Bancada de geoprocessamento",
+            "Extração de atributos",
+            "Tributação de camadas territoriais",
+        ],
         "documentacao-tecnica": [
             "Arcabouço teórico-conceitual de risco e restrição",
             "Documentação da favorabilidade",
@@ -313,14 +334,13 @@ def test_restricted_home_geoprocessing_subgroups_and_independent_accesses() -> N
     assert ".secao-platform-geoprocessamento .platform-subgroup .platform-grid {" in index_css
     assert "grid-template-columns: repeat(2, minmax(0, 1fr));" in index_css
     assert "grid-template-columns: 1fr;" in index_css
-    # Os três acessos antigos de "Ferramentas de geoprocessamento" migraram para
-    # o MAD; a documentação técnica deixou de ser módulo próprio.
     for href in (
         "/restrict/geoespacial/gerador-camadas-territoriais/",
-        "/restrict/geoespacial/extracao-atributos/",
         "/restrict/geoespacial/extracoes-atributos/",
     ):
-        assert href not in geo
+        assert content.count(f'href="{href}"') == 1
+        assert f'class="platform-tile platform-tile--green" href="{href}"' in geo
+    assert "/restrict/geoespacial/extracao-atributos/" not in geo
     assert 'aria-labelledby="group-documentacao-ranqueamento"' not in content
     assert "/restrict/hierarquizacao/" not in geo
 
