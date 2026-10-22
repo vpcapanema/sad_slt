@@ -2,7 +2,8 @@ import {post, base} from '../../geoespacial/extracao-atributos/api.js';
 import {el} from '../../geoespacial/extracao-atributos/ui.js';
 import {escolherArquivo} from '../../geoespacial/extracao-atributos/explorador.js?v=20261020-saidas';
 import {sobreposicoesDaAnalise, renderizarRosca} from './sobreposicoes-rosca.js';
-import {indiceTexto, classeTexto, corIndice, renderizarIndices} from './favorabilidade-indices.js';
+import {indiceTexto, classeTexto, corIndice, compararIndices, renderizarIndices} from './favorabilidade-indices.js?v=20261021-formatacao';
+import {renderizarAgregados} from './favorabilidade-estatisticas.js?v=20261021-formatacao';
 
 const numero = valor => valor.toLocaleString('pt-BR', {
   minimumFractionDigits:2, maximumFractionDigits:valor !== 0 && Math.abs(valor) < .01 ? 20 : 2,
@@ -39,7 +40,8 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
         ? linha.sobreposicoes.map(item => ({linha,item}))
         : [{linha,item:null}]).filter(({item}) => !ocultarVazias || item &&
           (item.favorabilidade.estado_indice === 'valido' || item.favorabilidade.estado_indice === 'invalido'
-            || item.favorabilidade.estado_classe === 'valido'));
+            || item.favorabilidade.estado_classe === 'valido'))
+        .sort((a,b) => compararIndices(a.item?.favorabilidade,b.item?.favorabilidade));
       return;
     }
     camposTabela = e.campos.map((campo, posicao) => ({campo, posicao}))
@@ -55,6 +57,7 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
     node('anterior').disabled = bloqueado || !modelo || pagina === 0;
     node('proxima').disabled = bloqueado || !modelo || (pagina+1)*50 >= linhasTabela.length;
     node('vazias').disabled = bloqueado || !modelo;
+    if (favorabilidade) node('percentil').disabled = bloqueado || node('posicao').value !== 'percentil';
   }
   function invalidar() {
     modelo = null;
@@ -95,8 +98,8 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
       const incompletos = itens.filter(item => item.favorabilidade.estado_indice !== 'valido'
         || item.favorabilidade.estado_classe !== 'valido').length;
       node('qualidade').textContent = incompletos
-        ? `Atenção: ${incompletos} combinação(ões) com índice ou classe ausente, nulo ou inválido. Confira a situação na tabela. Não foi atribuída área ou zero no lugar desses valores.`
-        : 'Índices _dim e classes originais conferidos em todas as combinações. Nenhum valor agregado.';
+        ? `Atenção: ${incompletos} combinação(ões) com índice ou classe ausente, nulo ou inválido. Os campos são sinalizados nas tabelas; índices sem valor válido não entram nas estatísticas. Não foi atribuída área ou zero no lugar desses valores.`
+        : 'Índices dimensionados e classes originais conferidos em todas as combinações. As estatísticas opcionais são apenas de consulta.';
     }
   }
   async function carregar(dados) {
@@ -201,8 +204,10 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
   }
   function tabelaIndices() {
     const e = entrada(), head = el('thead'), trHead = el('tr'), body = el('tbody');
-    for (const titulo of ['Demanda','Superfície','Feição de Origem','Índice _dim (0–1)','Classe Original','Situação']) {
+    for (const titulo of ['Demanda','Superfície de Favorabilidade','Município de Origem (Feição)',
+      'Índice de Favorabilidade Dimensionada (0–1) ↓','Classe de Favorabilidade']) {
       const th = el('th',titulo); th.scope = 'col'; trHead.append(th);
+      if (titulo.startsWith('Índice')) th.setAttribute('aria-sort','descending');
     }
     head.append(trHead);
     for (const {linha,item} of linhasTabela.slice(pagina*50,(pagina+1)*50)) {
@@ -215,14 +220,13 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
       if (item) {
         const base = basesPorId.get(item.base_id), valor = item.favorabilidade;
         const indice = el('td',indiceTexto(valor)), classe = el('td',classeTexto(valor));
-        indice.append(el('small',valor.campo_indice,'evr-secundario'));
-        classe.append(el('small',valor.campo_classe,'evr-secundario'));
+        indice.title = valor.campo_indice; classe.title = valor.campo_classe;
+        if (item.area_m2 === 0) indice.append(el('small','Contato sem área','evr-secundario'));
         tr.append(el('td',`${papeis[base.papel]} · ${base.nome}`),
-          el('td',`${item.nome} [${item.identificador}]`),indice,classe,
-          el('td',`${item.area_m2 === 0 ? 'Contato sem área' : 'Interseção'}${valor.estado_indice !== 'valido' || valor.estado_classe !== 'valido' ? ' · Dados incompletos ou inválidos' : ''}`));
+          el('td',item.nome),indice,classe);
       } else {
         const semIntersecao = el('td','Sem interseção; nenhum índice ou classe atribuído.');
-        semIntersecao.colSpan = 5; tr.append(semIntersecao);
+        semIntersecao.colSpan = 4; tr.append(semIntersecao);
       }
       tr.onclick = () => selecionar(linha.chave,item?.base_id || '',item?.id || '');
       tr.onkeydown = event => {
@@ -232,7 +236,7 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
     }
     if (!linhasTabela.length) {
       const tr = el('tr'), td = el('td','Nenhum índice ou classe disponível. Use Mostrar para restaurar os registros sem valores.');
-      td.colSpan = 6; tr.append(td); body.append(tr);
+      td.colSpan = 5; tr.append(td); body.append(tr);
     }
     node('tabela').replaceChildren(head,body);
     node('pagina').textContent = `Página ${pagina+1} de ${Math.max(1,Math.ceil(linhasTabela.length/50))} · ${linhasTabela.length} registros · ${e.feicoes} demandas`;
@@ -329,6 +333,7 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
       node(`fontes-${papel}`).replaceChildren(...(itens.length ? itens : [el('span','Nenhuma camada nesta categoria.','ea-hint')]));
     }
     node('base').replaceChildren(new Option('Todas as Camadas — Sem Destaque',''),...e.campos.map(c => new Option(`${papeis[c.papel]} · ${c.nome}`,c.id)));
+    if (favorabilidade) estatisticas();
     if (mapa) mapa.remove();
     node('mapa').replaceChildren(); node('nota-mapa').textContent = ''; camadas = new Map(); recortes = [];
     const L = window.L;
@@ -358,6 +363,33 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
     L.control.layers({}, {'Demandas':demandas,[papeis[categorias[0]]]:restricoes,[papeis[categorias[1]]]:riscos},{collapsed:true}).addTo(mapa);
     atualizarSelecao(chave);
     mapa.fitBounds(demandas.getBounds(),{padding:[30,30],animate:false});
+  }
+  function estatisticas() {
+    const medida = ['tendencia','dispersao','posicao'].map(id => node(id).value).find(Boolean) || '';
+    node('percentil-campo').hidden = medida !== 'percentil';
+    const percentil = node('percentil').valueAsNumber;
+    if (medida === 'percentil' && (!Number.isFinite(percentil) || percentil < 0 || percentil > 100)) {
+      node('agregados').replaceChildren();
+      node('estatisticas-status').textContent = 'Informe um percentil numérico entre 0 e 100 para apresentar os resultados.';
+      return;
+    }
+    renderizarAgregados({tabela:node('agregados'),entrada:entrada(),medida,
+      percentil});
+    node('estatisticas-status').textContent = medida
+      ? 'Consulta estatística por demanda, separando grade e rede. Somente índices válidos entram no cálculo; classes originais mantidas. Nenhum índice oficial foi alterado. O PDF mantém os valores originais.'
+      : 'Valores originais por demanda, em ordem decrescente. Repetições são mantidas; nenhuma estatística aplicada.';
+  }
+  if (favorabilidade) {
+    for (const id of ['tendencia','dispersao','posicao']) {
+      node(id).onchange = () => {
+        if (ocupado || externo || !modelo) return;
+        if (node(id).value) {
+          for (const outro of ['tendencia','dispersao','posicao']) if (outro !== id) node(outro).value = '';
+        }
+        estatisticas(); controles();
+      };
+    }
+    node('percentil').oninput = () => { if (!ocupado && !externo && modelo) estatisticas(); };
   }
   formulario.onsubmit = event => { event.preventDefault(); if (formulario.reportValidity()) operar(apresentar); };
   node('editar').onclick = () => { formulario.hidden = false; formulario.scrollIntoView({block:'nearest'}); };

@@ -38,18 +38,21 @@ def test_mesma_rota_serve_v2_sem_bancada_ou_executor_legados(cliente):
     assert "executar-fase2" not in html
     assert "data-requer-autenticacao=\"true\"" in html
     assert "Superfícies de favorabilidade" in html
-    assert "Resultados registrados na hierarquização" in html
+    assert "Índices e Classes Agregados por Demanda" in html
+    assert "Resultados registrados na hierarquização" not in html
     assert "Resultados da Favorabilidade Territorial" in html
     assert 'id="fv-sobreposicoes-title"' not in html
     assert 'class="ahp-subsection-num">6<' not in html
     resultados = html.split('id="ev-resultados"', 1)[1]
     ids = re.findall(r'\bid="([^"]+)"', html)
     assert len(ids) == len(set(ids)), 'Os controles não podem ter identificadores duplicados.'
-    assert resultados.index('id="ev-resultados-download"') < resultados.index('id="fv-resultados-title"')
+    assert resultados.index('id="ev-resultados-tabela"') < resultados.index('id="fv-resultados-title"') < resultados.index('id="ev-resultados-download"')
     for id_ in ('ev-resultados-aliases', 'ev-resultados-entrada', 'ev-resultados-base',
                 'ev-resultados-mapa', 'ev-resultados-tabela', 'ev-resultados-indices-grafico',
                 'ev-resultados-vazias', 'ev-resultados-anterior', 'ev-resultados-proxima',
-                'ev-resultados-abrir', 'ev-resultados-tentar', 'ev-resultados-download'):
+                'ev-resultados-abrir', 'ev-resultados-tentar', 'ev-resultados-download',
+                'ev-resultados-tendencia', 'ev-resultados-dispersao', 'ev-resultados-posicao',
+                'ev-resultados-percentil', 'ev-resultados-agregados'):
         assert f'id="{id_}"' in resultados
     assert 'id="ev-resultados-rosca"' not in html
     assert 'fav_territorial_dim' in html and 'fav_rede_classe' in html

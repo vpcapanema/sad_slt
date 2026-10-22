@@ -18,8 +18,8 @@
 <link rel="stylesheet" href="/assets/css/extracao-atributos.css">
 <link rel="stylesheet" href="/assets/css/fase1-elegibilidade-v2.css?v=20261021-rosca-integral">
 <link rel="stylesheet" href="/assets/css/fase23-execucao.css">
-<link rel="stylesheet" href="/assets/css/fase2-favorabilidade-v2.css?v=20261021-indices-dim">
 <link rel="stylesheet" href="/assets/css/paginas/hierarquizacao-fases-visual.css?v=20261020-cabecalhos-linha-unica">
+<link rel="stylesheet" href="/assets/css/fase2-favorabilidade-v2.css?v=20261021-cabecalhos-conferencia">
 {% endblock %}
 {% block conteudo %}
 <div id="admin-session-bar" class="admin-session-bar hidden"></div>
@@ -193,22 +193,22 @@
                   <div><small>Demanda Selecionada</small><h4 id="ev-resultados-nome-ativo"></h4></div>
                   <dl id="ev-resultados-detalhes-base" hidden>
                     <div><dt>Categoria</dt><dd id="ev-resultados-categoria"></dd></div>
-                    <div><dt>Superfície</dt><dd id="ev-resultados-nome-base"></dd></div>
-                    <div id="ev-resultados-detalhes-classe" hidden><dt>Feição de Origem</dt><dd id="ev-resultados-nome-classe"></dd></div>
+                    <div><dt>Superfície de Favorabilidade</dt><dd id="ev-resultados-nome-base"></dd></div>
+                    <div id="ev-resultados-detalhes-classe" hidden><dt>Município de Origem (Feição)</dt><dd id="ev-resultados-nome-classe"></dd></div>
                   </dl>
                   <div id="ev-resultados-metricas" class="evr-metricas" hidden>
-                    <div class="evr-metrica"><small>Índice de Favorabilidade por Dimensões (0–1)</small><strong id="ev-resultados-indice"></strong><span id="ev-resultados-campo-indice"></span></div>
-                    <div class="evr-metrica"><small>Classe Original da Superfície</small><strong id="ev-resultados-classe-original"></strong><span id="ev-resultados-campo-classe"></span></div>
+                    <div class="evr-metrica"><small>Índice de Favorabilidade Dimensionada (0–1)</small><strong id="ev-resultados-indice"></strong><span id="ev-resultados-campo-indice"></span></div>
+                    <div class="evr-metrica"><small>Classe de Favorabilidade</small><strong id="ev-resultados-classe-original"></strong><span id="ev-resultados-campo-classe"></span></div>
                   </div>
                   <p id="ev-resultados-aviso" class="ea-hint"></p>
                   <details><summary>Informação Técnica da Interseção</summary><p id="ev-resultados-area-complementar" class="ea-hint"></p></details>
                 </div>
                 <figure class="fv-dot-bloco">
                   <h4>Índices Originais de Todas as Combinações</h4>
-                  <div id="ev-resultados-indices-grafico" class="fv-dot-plot" role="group" aria-label="Gráfico de pontos dos índices originais, por demanda e feição, na escala de 0 a 1"></div>
+                  <div id="ev-resultados-indices-grafico" class="fv-dot-plot" role="group" aria-label="Demanda, classe e índice de favorabilidade dimensionada, do maior para o menor índice"></div>
                 </figure>
               </div>
-              <p class="ea-hint">Cada linha do gráfico identifica uma combinação demanda × feição, com um ponto na posição do índice _dim e a classe original escrita ao lado. A escala é fixa de 0 a 1, sem normalização adicional ou soma dos índices. Todas as entradas concluídas permanecem no gráfico, independentemente da seleção e paginação da tabela. Valores ausentes ou inválidos ficam identificados, sem ponto numérico; zero válido permanece em 0. Selecionar uma linha atualiza o mapa, a tabela e os detalhes. Contatos sem área são sinalizados.</p>
+              <p class="ea-hint">Uma linha por combinação, em ordem decrescente de índice: demanda, classe e valor dimensionado. Todas as entradas concluídas permanecem nesta lista, independentemente da seleção e paginação da tabela. Valores ausentes ou inválidos ficam ao final; zero válido é mantido. Selecione uma linha para consultar a superfície e o município no mapa e nos detalhes.</p>
             </div>
           </section>
         </div>
@@ -224,7 +224,52 @@
             <span id="ev-resultados-pagina" class="ea-hint"></span>
             <button id="ev-resultados-proxima" class="ea-btn" type="button">Próxima</button>
           </nav>
-          <p class="ea-hint evr-instrucoes">Uma linha por demanda × feição, mesmo quando nomes ou classes se repetem. Índices e classes são os atributos originais da superfície. Demandas sem interseção e valores ausentes ou inválidos são identificados, sem substituição por área ou zero. O filtro considera todas as páginas e mantém índices zero e problemas sinalizados. Selecione uma linha para consultar os detalhes e ampliar o mapa.</p>
+          <p class="ea-hint evr-instrucoes">Uma linha por demanda × feição, do maior para o menor índice, mesmo quando nomes ou classes se repetem. Demandas sem interseção e valores ausentes ou inválidos ficam ao final, sem substituição por área ou zero. O filtro considera todas as páginas e mantém índices zero e problemas sinalizados. Selecione uma linha para consultar os detalhes e ampliar o mapa.</p>
+        </section>
+        <section class="secao-favorabilidade-agregados evr-painel" aria-labelledby="fv-resultados-title">
+          <header class="evr-titulo"><h3 id="fv-resultados-title">Índices e Classes Agregados por Demanda</h3><span class="ea-hint">Consulta exploratória · sem alterar os índices oficiais</span></header>
+          <p class="ea-hint">Cada demanda da camada selecionada reúne os índices das feições interceptadas, separando grade e rede. Escolha uma única medida entre os três seletores para substituir os conjuntos de índices pelos resultados estatísticos. Volte a “Valores originais” no seletor ativo para restaurá-los. As classes originais permanecem listadas, sem reclassificação.</p>
+          <div class="fv-estatisticas-controles" role="group" aria-label="Medidas estatísticas, somente uma ativa por vez">
+            <div class="ea-field">
+              <label for="ev-resultados-tendencia">Tendência Central</label>
+              <select id="ev-resultados-tendencia">
+                <option value="">Valores originais</option>
+                <option value="media">Média aritmética simples</option>
+                <option value="mediana">Mediana</option>
+                <option value="moda">Moda (todas em caso de empate)</option>
+              </select>
+            </div>
+            <div class="ea-field">
+              <label for="ev-resultados-dispersao">Dispersão</label>
+              <select id="ev-resultados-dispersao">
+                <option value="">Valores originais</option>
+                <option value="amplitude">Amplitude (máximo − mínimo)</option>
+                <option value="variancia">Variância populacional</option>
+                <option value="desvio">Desvio-padrão populacional</option>
+                <option value="cv">Coeficiente de variação (%)</option>
+                <option value="iqr">Intervalo interquartil (Q3 − Q1)</option>
+              </select>
+            </div>
+            <div class="ea-field">
+              <label for="ev-resultados-posicao">Posição</label>
+              <select id="ev-resultados-posicao">
+                <option value="">Valores originais</option>
+                <option value="minimo">Mínimo</option>
+                <option value="q1">Primeiro quartil (Q1 / P25)</option>
+                <option value="q2">Segundo quartil (Q2 / P50)</option>
+                <option value="q3">Terceiro quartil (Q3 / P75)</option>
+                <option value="maximo">Máximo</option>
+                <option value="percentil">Percentil personalizado (0–100)</option>
+              </select>
+            </div>
+            <div id="ev-resultados-percentil-campo" class="ea-field" hidden>
+              <label for="ev-resultados-percentil">Percentil (0–100)</label>
+              <input id="ev-resultados-percentil" type="number" min="0" max="100" step="any" value="50" required disabled>
+            </div>
+          </div>
+          <p id="ev-resultados-estatisticas-status" class="ea-hint" role="status" aria-live="polite"></p>
+          <div class="ea-table-wrap fv-agregados-wrap"><table id="ev-resultados-agregados" data-table-sort="off" aria-label="Índices e classes agregados por demanda, separando grade e rede"></table></div>
+          <details><summary>Como as Estatísticas São Calculadas</summary><p class="ea-hint">Cada combinação demanda × feição contribui uma vez, sem ponderação por área. Repetições e zero válido são mantidos. Índices nulos, ausentes ou inválidos não entram nos cálculos; a contagem de valores válidos é informada. Variância e desvio-padrão são populacionais (divisor N); quartis e percentis usam interpolação linear na posição (N − 1) × p. Empates na frequência máxima da moda exibem todos os valores; conjuntos com mais de um valor, todos distintos, são indicados como sem moda. O coeficiente de variação é indefinido quando a média é zero. As medidas são apenas de consulta nesta página: não alteram o cálculo espacial, o PDF, as classes ou os índices oficiais.</p></details>
         </section>
         <details><summary>Metodologia da Análise</summary><p id="ev-resultados-metodologia" class="ea-hint"></p></details>
       </div>
@@ -232,16 +277,6 @@
         <p class="ea-hint"><strong>Relatório e Camadas da Análise</strong><br>O pacote inclui o PDF, todas as demandas processadas, suas interseções e os metadados, independentemente da seleção em tela. Classes e índices originais permanecem nos fragmentos do GeoPackage, sem agregação. Não é necessário repetir o processamento.</p>
         <button class="ea-btn ea-btn-primary" id="ev-resultados-download" type="button" disabled>Baixar Relatório e Camadas (.zip)</button>
       </footer>
-      <section class="secao-favorabilidade-registrados evr-painel" aria-labelledby="fv-resultados-title">
-      <header class="evr-titulo"><h3 id="fv-resultados-title">Resultados registrados na hierarquização</h3></header>
-      <div class="ahp-section-body">
-      <p class="ea-hint">Consulta dos índices já registrados na rodada selecionada. Preparação, envio à bancada e cálculo de sobreposições não substituem esses índices.</p>
-      <p id="fv-resultados-vazio" class="ea-hint">Selecione uma hierarquização para consultar os resultados registrados.</p>
-      <div id="fv-indicadores" class="fase-summary-grid"></div>
-      <div class="fase-table-wrap"><table class="fase-table" aria-label="Índices registrados nas demandas"><thead><tr><th>Demanda</th><th>Índice de grade</th><th>Índice de rede</th></tr></thead><tbody id="fv-resultados"></tbody></table></div>
-      <details id="fv-auditoria" hidden><summary>Auditoria da execução registrada</summary><pre id="fv-auditoria-dados"></pre></details>
-      </div>
-      </section>
     </div>
   </section>
   <template id="fv-tpl-run-row"><tr><td data-name></td><td data-source></td></tr></template>
@@ -254,5 +289,5 @@
 <script src="/assets/vendor/maplibre-gl/maplibre-gl.js"></script>
 <script src="/assets/vendor/maplibre-gl/leaflet-maplibre-gl.js"></script>
 <script src="/restrict/hierarquizacao/js/hier-api.js"></script>
-<script type="module" src="/restrict/hierarquizacao/js/fase2-favorabilidade-v2.js?v=20261021-indices-dim"></script>
+<script type="module" src="/restrict/hierarquizacao/js/fase2-favorabilidade-v2.js?v=20261021-formatacao"></script>
 {% endblock %}

@@ -73,32 +73,44 @@ combinacao demanda × feicao permanece individualizada, mesmo com nomes ou
 valores iguais. Fragmentos da mesma combinacao devem concordar nos atributos;
 divergencias e colunas declaradas mas inexistentes impedem a apresentacao.
 
-Um grafico de pontos horizontal reune todas as combinacoes das saidas
-concluidas, inclusive em lote parcial identificado, na escala fixa de 0 a 1.
-Cada linha identifica entrada, demanda, superficie, feicao, indice e classe.
-Indices nulos, ausentes, nao numericos ou fora de [0,1] sao sinalizados sem
-ponto, sem conversao em zero; zero numerico valido permanece na origem da escala.
-Contatos sem area sao identificados sem eliminar seus atributos. A selecao
-sincroniza mapa, tabela e detalhes, sem filtrar o grafico. A representacao nao
-pressupoe que indices sejam parcelas aditivas de um total.
+Uma lista compacta reune todas as combinacoes das saidas concluidas, inclusive
+em lote parcial identificado, em tres colunas: demanda, classe de favorabilidade
+e indice de favorabilidade dimensionada. A lista e a tabela detalhada sao
+ordenadas pelo indice em ordem decrescente, antes da paginacao. Indices nulos,
+ausentes, nao numericos ou fora de [0,1] ficam sinalizados ao final, sem conversao
+em zero. A identidade completa da combinacao permanece disponivel na selecao,
+na descricao acessivel e no titulo de cada linha. Contatos sem area sao
+identificados nos detalhes e na tabela, sem eliminar seus atributos. A selecao
+sincroniza mapa, tabela e detalhes, sem filtrar a lista compacta.
+
+Na interface, inclusive nos textos produzidos por JavaScript, aplica-se a
+hierarquia tipografica e a paleta de UI da pagina de Priorizacao por atributos.
+A rampa Viridis de dados e mantida. Indices e resultados estatisticos sao
+formatados com duas casas decimais e virgula; as classes nominais sao exibidas
+em Title Case. A mesma formatacao de indices e classes e aplicada no PDF.
+Estas regras sao exclusivamente de apresentacao: ordenacao, calculos e produtos
+geoespaciais conservam os valores e atributos originais, sem arredondamento
+previo ou reclassificacao.
 
 Como referencias de visualizacao, a documentacao de
 [graficos do ArcGIS Pro](https://doc.esri.com/en/arcgis-pro/latest/help/analysis/geoprocessing/charts/bar-chart.html)
 descreve a apresentacao de observacoes com identificacao individual, sem
-agregacao; o guia de
-[graficos de pontos do Datawrapper](https://www.datawrapper.de/academy/how-to-create-a-dot-plot)
-orienta a comparacao de valores em escala comum. Estas referencias fundamentam
-a apresentacao, nao alteram o metodo de calculo dos indices.
+agregacao. A lista compacta prioriza a leitura direta dos valores originais;
+nao representa os indices como parcelas aditivas de um total.
 
 A secao 5, **Resultados da Favorabilidade Territorial**, reutiliza o painel
 completo da Elegibilidade, adaptado aos papeis de grade e rede. A apresentacao
 exige revisao e confirmacao dos nomes de camadas e feicoes; os nomes sao
 persistidos por usuario e assinatura da saida. O painel conecta o mapa de
 demandas e intersecoes, a selecao de entrada e superficie, os detalhes de indice
-e classe, o grafico integral e a tabela paginada por combinacao. Area e percentual
+e classe, a lista integral e a tabela paginada por combinacao. As colunas
+identificam demanda, superficie de favorabilidade, municipio de origem (feicao),
+indice de favorabilidade dimensionada e classe de favorabilidade. O rotulo
+municipal e apenas de apresentacao: nao reidentifica a feicao nem modifica sua
+geometria ou seus atributos. Area e percentual
 da intersecao permanecem apenas como informacao tecnica complementar nos
 detalhes. A ocultacao de registros sem indice e classe nao remove zero valido
-nem indices invalidos sinalizados e nao limita o grafico.
+nem indices invalidos sinalizados e nao limita a lista.
 O mapa utiliza rampa Viridis continua e linear de 0 a 1 para o indice `_dim`,
 com cinza para ausencia de indice valido. Os poligonos sao opacos e sem bordas;
 contatos lineares ou pontuais continuam representados. Nao se simplificam as
@@ -114,11 +126,37 @@ com identificacao explicita de lotes parciais e conferencia de integridade no
 Storage. A geracao do pacote nao executa novamente as intersecoes e nao
 registra relatorio de Elegibilidade ou altera indices da hierarquizacao.
 
-A antiga secao 6, **Resultados registrados na hierarquizacao**, passa a ser a
-ultima subsecao da secao de resultados, depois do download. Continua conectada
-a hierarquizacao selecionada na entrada e apresenta os indices ja registrados
-de grade e rede e sua auditoria; estes dados sao independentes das areas
-calculadas e nao sao substituidos pela revisao de nomes ou pelo painel.
+A tabela **Indices e Classes Agregados por Demanda** fica imediatamente abaixo
+da tabela por feicao, substituindo nesta pagina a consulta de indices oficiais
+registrados. Seus valores provem exclusivamente das intersecoes da camada de
+demandas selecionada. Uma linha por demanda, identificada pela entrada e pelo
+vinculo da feicao, mantem conjuntos separados de grade e rede, inclusive para
+demandas homonimas. Os valores originais sao apresentados em ordem decrescente,
+com repeticoes, e as classes originais permanecem listadas, sem reclassificacao.
+
+Tres seletores, em colunas independentes, oferecem tendencia central (media
+aritmetica simples, mediana e moda), dispersao (amplitude, variancia populacional,
+desvio-padrao populacional, coeficiente de variacao percentual e intervalo
+interquartil) e posicao (minimo, Q1, Q2, Q3, maximo e percentil personalizado).
+Somente uma medida pode ficar ativa no total; selecionar uma reinicia os demais
+seletores. A medida substitui os conjuntos nas colunas numericas de grade e rede;
+voltar ao estado neutro restaura todos os valores originais.
+
+Cada combinacao demanda × feicao contribui uma observacao, sem ponderacao por
+area. Repeticoes e zero valido sao mantidos; valores ausentes, nulos ou invalidos
+sao excluidos, com contagem explicita de indices validos por celula. Conjuntos
+sem indices validos nao recebem zero. Variancia e desvio-padrao usam divisor N.
+Quartis e percentis usam interpolacao linear na posicao (N-1) × p da sequencia
+crescente; o percentil personalizado deve estar entre 0 e 100. A moda preserva
+todos os empates na maior frequencia; conjuntos com mais de uma observacao, todas
+distintas, sao indicados como sem moda. O coeficiente de variacao e indefinido
+para media zero. As linhas sao ordenadas pelo maior indice original valido da
+demanda, mantendo entradas sem valor valido ao final.
+
+Estas estatisticas sao exclusivamente exploratorias no navegador. Nao gravam
+valores, nao repetem intersecoes, nao substituem indices oficiais, nao alteram
+classes, homologacao ou metodo de sintese e nao modificam o PDF ou os GeoPackages,
+que preservam os resultados originais.
 
 ## Produto final do modulo
 

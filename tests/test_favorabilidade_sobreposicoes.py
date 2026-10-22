@@ -157,7 +157,7 @@ def test_painel_completo_nomes_pdf_e_pacote_preservam_fragmentos(analise):
     assert 'Demandas Sul' in texto and 'Demanda' in texto
     assert 'Relatório de Elegibilidade' not in texto and 'Restrição' not in texto and 'Risco' not in texto
     assert 'fav_territorial_dim' in texto and 'fav_rede_dim' in texto
-    assert 'Alta' in texto and 'Muito baixa' in texto and '0,7' in texto
+    assert 'Alta' in texto and 'Muito Baixa' in texto and '0,70' in texto and '0,00' in texto
     assert 'Área Sobreposta' not in texto and 'km²' not in texto
     pacote, caminho = service.pacote(modelo, arquivos)
     assert arquivos_storage[caminho] == pacote
@@ -268,6 +268,23 @@ def test_classe_vazia_nao_e_reclassificada():
         {'i': 1, 'c': '  '}, 'rede', {'fav_rede_dim': 'i', 'fav_rede_classe': 'c'})
     assert resultado['indice'] == 1
     assert resultado['estado_classe'] == 'nulo' and resultado['classe'] == '  '
+
+
+@pytest.mark.parametrize('indice,formatado', [
+    (0, '0,00'), (1, '1,00'), (.7, '0,70'), (.706, '0,71'), (.704, '0,70'),
+    (.005, '0,01'), (.995, '1,00'),
+])
+def test_indice_pdf_duas_casas_sem_alterar_valor(indice, formatado):
+    valor = {'indice': indice, 'estado_indice': 'valido'}
+    assert service._indice_pdf(valor) == formatado
+    assert valor['indice'] == indice
+
+
+@pytest.mark.parametrize('classe', ['MUITO BAIXA', 'muito baixa', 'mUiTo bAiXa'])
+def test_classe_pdf_title_case_sem_reclassificar(classe):
+    valor = {'classe': classe, 'estado_classe': 'valido'}
+    assert service._classe_pdf(valor) == 'Muito Baixa'
+    assert valor['classe'] == classe
 
 
 def test_coluna_declarada_inexistente_impede_apresentacao(analise):

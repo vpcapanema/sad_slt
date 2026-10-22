@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from hashlib import sha256
 from io import BytesIO
 import json
@@ -620,12 +620,12 @@ def _area_pdf(e, valor):
 
 def _indice_pdf(valor: dict) -> str:
     if valor['estado_indice'] == 'valido':
-        return format(Decimal(str(valor['indice'])), 'f').replace('.', ',')
+        return format(Decimal(str(valor['indice'])).quantize(Decimal('.01'), rounding=ROUND_HALF_UP), '.2f').replace('.', ',')
     return {'ausente': 'Campo ausente', 'nulo': 'Sem valor', 'invalido': 'Índice inválido (exige número de 0 a 1)'}[valor['estado_indice']]
 
 
 def _classe_pdf(valor: dict) -> str:
-    return str(valor['classe']) if valor['estado_classe'] == 'valido' else (
+    return str(valor['classe']).title() if valor['estado_classe'] == 'valido' else (
         'Campo ausente' if valor['estado_classe'] == 'ausente' else 'Sem classe informada')
 
 

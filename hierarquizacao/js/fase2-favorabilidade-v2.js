@@ -5,7 +5,7 @@ import {validarCamada} from '../../geoespacial/extracao-atributos/camada-validad
 import {escolherConfiguracao} from '../../geoespacial/extracao-atributos/lista-camadas.js';
 import {criarPrevia} from '../../geoespacial/extracao-atributos/previa.js?v=20261020-favorabilidade';
 import {criarMapa} from '../../geoespacial/extracao-atributos/mapa.js?v=20261020-favorabilidade';
-import {criarResultados} from './elegibilidade-resultados.js?v=20261021-indices-dim';
+import {criarResultados} from './elegibilidade-resultados.js?v=20261021-formatacao';
 
 const PASTA_SUPERFICIES = 'superficies-indices/hierarquizacao/favorabilidade';
 const papeis = {entrada:'Entrada', grade:'Favorabilidade territorial de grade', rede:'Favorabilidade territorial de rede'};
@@ -132,7 +132,6 @@ function render() {
   for (const papel of ['grade','rede']) node(`${papel}-camadas`).value = selecao[papel].map(c => c.nome).join('; ');
   node('hier-detalhes').hidden = !hierarquizacao;
   node('hier-dados').textContent = hierarquizacao ? JSON.stringify(hierarquizacao, null, 2) : '';
-  renderResultados();
   previa.render();
   controles();
 }
@@ -457,28 +456,6 @@ async function carregarLista(papel) {
     selecao[papel] = refs;
     avisar(`Lista "${dados.nome}" carregada. Envie para a prévia para validar as fontes.`);
   });
-}
-function renderResultados() {
-  const objetos = hierarquizacao?.dados_hierarquizacao?.objetos || [];
-  node('resultados-vazio').hidden = objetos.length > 0;
-  node('indicadores').replaceChildren();
-  node('resultados').replaceChildren(...objetos.map(objeto => {
-    const cab = objeto.cabecalho_objeto || objeto, f2 = objeto.hierarquizacao?.fase_2 || {};
-    const linha = el('tr');
-    linha.append(el('td', `${cab.codigo} — ${cab.nome || ''}`),
-      ...['grade','rede'].map(papel => el('td', Number.isFinite(f2[`indice_favorabilidade_${papel}`])
-        ? f2[`indice_favorabilidade_${papel}`].toFixed(4) : '—')));
-    return linha;
-  }));
-  if (objetos.length) {
-    const comIndices = objetos.filter(o => ['grade','rede'].every(p => Number.isFinite(o.hierarquizacao?.fase_2?.[`indice_favorabilidade_${p}`]))).length;
-    for (const [nome, valor] of [['Demandas da rodada',objetos.length],['Com ambos os índices registrados',comIndices]]) {
-      const item = el('div', undefined, 'fase-metric'); item.append(el('small',nome),el('strong',String(valor))); node('indicadores').append(item);
-    }
-  }
-  const relatorio = hierarquizacao?.dados_hierarquizacao?.cabecalho_grupo?.relatorios?.fase_2;
-  node('auditoria').hidden = !relatorio;
-  node('auditoria-dados').textContent = relatorio ? JSON.stringify(relatorio,null,2) : '';
 }
 for (const papel of Object.keys(papeis)) {
   node(`${papel}-browse`).onclick = () => explorar(papel);

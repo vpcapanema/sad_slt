@@ -83,7 +83,7 @@ const assert = require('node:assert/strict');
             const grade = item.base_id === gradePoligonal;
             item.favorabilidade = {
               indice:{f0:.7,f1:.3,f2:0,g0:.4}[item.id],
-              classe:{f0:'Alta',f1:'Baixa',f2:'Muito baixa',g0:'Moderada'}[item.id],
+              classe:{f0:'ALTA',f1:'baixa',f2:'mUITO bAIXA',g0:'moderada'}[item.id],
               estado_indice:'valido',estado_classe:'valido',
               campo_indice:grade?'fav_territorial_dim':'fav_rede_dim',
               campo_classe:grade?'fav_territorial_classe':'fav_rede_classe',
@@ -306,7 +306,7 @@ const assert = require('node:assert/strict');
     await idle();
     await dismiss();
     assert.equal(await page.locator('#fv-hier-lista li').count(),2);
-    assert.match(await page.locator('#fv-resultados').textContent(),/0\.8000.*0\.6000/s);
+    assert.equal(await page.locator('#ev-resultados-agregados tbody tr').count(),0,'A tabela depende das interseções calculadas, não dos índices oficiais');
     await preview('entrada','hier');
     await checkbox('D-0 — Demanda 0').uncheck();
     await page.locator('#ea-staging-confirmar').click();
@@ -395,9 +395,14 @@ const assert = require('node:assert/strict');
     await page.locator('#ev-resultados-conteudo').waitFor({state:'visible'});
     assert.equal(await page.locator('#ev-resultados-rosca').count(),0,'A Favorabilidade não usa rosca ou fatias de área');
     assert.equal(await page.locator('#ev-resultados-indices-grafico .fv-dot-linha').count(),4,'Nomes iguais e contatos sem área mantêm combinações distintas');
-    assert.equal(await page.locator('#ev-resultados-indices-grafico .fv-dot-ponto').count(),4,'Zero válido permanece no gráfico');
-    assert.deepEqual(await page.locator('.fv-dot-ponto').evaluateAll(p=>p.map(n=>n.style.left)),['70%','30%','70%','0%'],'Posição usa o índice original, nunca área, porcentagem da área ou valor sem _dim');
-    assert.equal(await page.locator('#ev-resultados-indices-grafico').getAttribute('data-escala-max'),'1');
+    assert.deepEqual(await page.locator('.fv-dot-linha').evaluateAll(p=>p.map(n=>n.dataset.indice)),['0.7','0.7','0.3','0'],'Lista decrescente por índice, preservando zero e repetições');
+    assert.deepEqual(await page.locator('.fv-dot-linha').first().locator(':scope > span').allTextContents(),
+      ['Demanda A','Alta','0,70'],'Somente nome da demanda, classe e índice, cada um em sua coluna');
+    assert.deepEqual(await page.locator('#ev-resultados-tabela thead th').allTextContents(),
+      ['Demanda','Superfície de Favorabilidade','Município de Origem (Feição)',
+        'Índice de Favorabilidade Dimensionada (0–1) ↓','Classe de Favorabilidade']);
+    assert.deepEqual(await page.locator('#ev-resultados-tabela tbody tr').evaluateAll(rows=>rows.slice(0,4).map(r=>r.dataset.feicao)),
+      ['f0','f0','f1','f2'],'Ordenação global antes da paginação');
     const extremos = await page.evaluate(async () => {
       const {renderizarRosca,numeroSobreposicao} = await import('/restrict/hierarquizacao/js/sobreposicoes-rosca.js');
       const svg = document.createElementNS('http://www.w3.org/2000/svg','svg'), legenda = document.createElement('div');
@@ -418,8 +423,8 @@ const assert = require('node:assert/strict');
     await page.locator('#ev-resultados-indices-grafico .fv-dot-linha').last().click();
     assert.equal(await page.locator('#ev-resultados-nome-ativo').textContent(),'Demanda B');
     assert.equal(await page.locator('#ev-resultados-nome-classe').textContent(),'Contato [3]');
-    assert.equal(await page.locator('#ev-resultados-indice').textContent(),'0,0000');
-    assert.equal(await page.locator('#ev-resultados-classe-original').textContent(),'Muito baixa');
+    assert.equal(await page.locator('#ev-resultados-indice').textContent(),'0,00');
+    assert.equal(await page.locator('#ev-resultados-classe-original').textContent(),'Muito Baixa');
     assert.equal(await page.locator('#ev-resultados-campo-indice').textContent(),'fav_rede_dim');
     assert.equal(await page.locator('.fv-dot-linha').count(),4,'Seleção não filtra outras combinações');
     assert.equal(await page.locator('#ev-resultados-tabela tbody tr.ativo').getAttribute('data-chave'),'1');
@@ -491,7 +496,9 @@ const assert = require('node:assert/strict');
     await visivel(rede.id,false);
     await page.waitForFunction(() => document.querySelector('#fv-calcular').disabled);
     assert.equal(await page.locator('.fv-dot-linha').count(),4,'Visibilidade da bancada não altera os índices já calculados');
-    assert.match(await page.locator('#fv-resultados').textContent(),/0\.8000.*0\.6000/s,'Cálculo não substitui índices registrados');
+    assert.deepEqual(hier.dados_hierarquizacao.objetos.map(o=>o.hierarquizacao.fase_2),
+      [{indice_favorabilidade_grade:.8,indice_favorabilidade_rede:.6},{indice_favorabilidade_grade:.8,indice_favorabilidade_rede:.6}],
+      'Consulta não substitui índices oficiais');
     await page.locator('#fv-hier-limpar').click();
     await choose('entrada',entrada);
     await preview('entrada');
@@ -527,47 +534,107 @@ const assert = require('node:assert/strict');
     await idle();
     assert.match(await page.locator('#ev-resultados-resumo').textContent(),/Entrada reaberta/);
     assert.equal(execucoes.length,calculosAntes,'Reabrir análise não repete o cálculo');
-    assert(await page.locator('#fv-resultados').evaluate(t => t.closest('#ev-resultados') !== null));
+    assert(await page.locator('#ev-resultados-agregados').evaluate(t => t.closest('#ev-resultados-conteudo') !== null));
     assert.match(await page.locator('#ev-resultados-fontes-grade').textContent(),/Grade Territorial/);
     assert.match(await page.locator('#ev-resultados-fontes-rede').textContent(),/Rede/);
     await page.locator('#ev-resultados-base').selectOption(gradePoligonal);
     assert.equal(await page.locator('#ev-resultados-categoria').textContent(),'Favorabilidade de Grade');
     assert.equal(await page.locator('.fv-dot-linha').count(),5);
-    assert.deepEqual(await page.locator('.fv-dot-ponto').evaluateAll(p=>p.map(n=>n.style.left)),['40%','70%','30%','70%','0%']);
+    assert.deepEqual(await page.locator('.fv-dot-linha').evaluateAll(p=>p.map(n=>n.dataset.indice)),['0.7','0.7','0.4','0.3','0']);
     await page.locator('#ev-resultados-base').selectOption(rede.id);
     assert.equal(await page.locator('#ev-resultados-categoria').textContent(),'Favorabilidade de Rede');
-    await page.locator('.fv-dot-linha').first().click();
-    assert.equal(await page.locator('#ev-resultados-indice').textContent(),'0,4000');
+    await page.locator('.fv-dot-linha[data-indice="0.4"]').click();
+    assert.equal(await page.locator('#ev-resultados-indice').textContent(),'0,40');
     assert.equal(await page.locator('#ev-resultados-campo-classe').textContent(),'fav_territorial_classe');
     assert.equal(await page.locator('#ev-resultados-classe-original').textContent(),'Moderada');
     assert(!/km²|hectares|Área Sobreposta/.test(await page.locator('#ev-resultados-tabela').textContent()));
     const superficies = page.locator('#ev-resultados-mapa path[fill-opacity="1"]:not([fill="none"])');
     assert(await superficies.count() >= 4);
     assert((await superficies.evaluateAll(paths=>paths.map(p=>p.getAttribute('stroke-width')))).every(p=>p==='0'),'Polígonos opacos e sem borda');
+    const indicesA = page.locator('#ev-resultados-agregados tr[data-chave="0"] td[data-papel="rede"]');
+    const gradeA = page.locator('#ev-resultados-agregados tr[data-chave="0"] td[data-papel="grade"]');
+    const classesA = page.locator('#ev-resultados-agregados tr[data-chave="0"] td[data-classes="rede"]');
+    const indicesOriginais = await indicesA.locator('span').allTextContents();
+    const classesOriginais = await classesA.textContent();
+    assert.deepEqual(indicesOriginais,['0,70','0,30']);
+    assert.equal(await gradeA.textContent(),'0,40','Grade e rede separadas');
+    const requisicoesAntesEstatisticas = requests.length;
+    await page.selectOption('#ev-resultados-tendencia','media');
+    assert.equal(await indicesA.locator('.fv-estatistica-valor').textContent(),'0,50');
+    assert.equal(await gradeA.locator('.fv-estatistica-valor').textContent(),'0,40');
+    assert.equal(await classesA.textContent(),classesOriginais,'Nenhuma classe inferida');
+    await page.selectOption('#ev-resultados-dispersao','variancia');
+    assert.equal(await page.locator('#ev-resultados-tendencia').inputValue(),'');
+    assert.equal(await indicesA.locator('.fv-estatistica-valor').textContent(),'0,04');
+    await page.selectOption('#ev-resultados-posicao','q1');
+    assert.equal(await page.locator('#ev-resultados-dispersao').inputValue(),'');
+    assert.equal(await indicesA.locator('.fv-estatistica-valor').textContent(),'0,40');
+    await page.selectOption('#ev-resultados-posicao','percentil');
+    await page.locator('#ev-resultados-percentil').fill('75');
+    assert.equal(await indicesA.locator('.fv-estatistica-valor').textContent(),'0,60');
+    await page.locator('#ev-resultados-percentil').fill('101');
+    assert.equal(await page.locator('#ev-resultados-agregados tbody').count(),0,'Entrada inválida não deixa valores anteriores visíveis');
+    assert.match(await page.locator('#ev-resultados-estatisticas-status').textContent(),/entre 0 e 100/);
+    await page.locator('#ev-resultados-percentil').fill('');
+    assert.equal(await page.locator('#ev-resultados-agregados tbody').count(),0);
+    await page.locator('#ev-resultados-percentil').fill('0');
+    assert.equal(await indicesA.locator('.fv-estatistica-valor').textContent(),'0,30');
+    await page.selectOption('#ev-resultados-tendencia','moda');
+    assert.equal(await page.locator('#ev-resultados-posicao').inputValue(),'');
+    assert.match(await indicesA.textContent(),/Sem moda/);
+    assert(await page.locator('#ev-resultados-percentil').isDisabled());
+    await page.selectOption('#ev-resultados-tendencia','');
+    assert.deepEqual(await indicesA.locator('span').allTextContents(),indicesOriginais,'Estado neutro restaura todos os índices originais');
+    assert.equal(requests.length,requisicoesAntesEstatisticas,'Seletores calculam localmente, sem gravar ou recalcular interseções');
+    if (process.env.SICARD_TEST_SCREENSHOT_DIR) {
+      await page.locator('.secao-favorabilidade-agregados').screenshot({
+        path:require('node:path').join(process.env.SICARD_TEST_SCREENSHOT_DIR,'favorabilidade-agregados-desktop.png')});
+      await page.locator('.fv-dot-bloco').screenshot({
+        path:require('node:path').join(process.env.SICARD_TEST_SCREENSHOT_DIR,'favorabilidade-combinacoes-desktop.png')});
+    }
     indicesIncompletos = true;
     await page.locator('#ev-resultados-editar').click();
     await page.locator('#ev-resultados-mostrar').click();
     await idle();
     assert.equal(await page.locator('.fv-dot-linha').count(),5);
-    assert.deepEqual(await page.locator('.fv-dot-ponto').evaluateAll(p=>p.map(n=>n.style.left)),['0%'],'Somente zero válido recebe ponto; nenhum nulo ou inválido é convertido em zero');
+    assert.deepEqual(await page.locator('.fv-dot-linha').evaluateAll(p=>p.map(n=>n.dataset.indice)),['0','','','',''],'Zero válido precede ausentes e inválidos');
     assert.match(await page.locator('#ev-resultados-qualidade').textContent(),/4/);
-    assert.match(await page.locator('.fv-dot-linha').nth(0).textContent(),/Campo ausente/);
-    assert.match(await page.locator('.fv-dot-linha').nth(1).textContent(),/inválido/i);
-    await page.locator('.fv-dot-linha').nth(1).focus();
+    assert.match(await page.locator('.fv-dot-linha').nth(3).textContent(),/Sem valor/);
+    assert.match(await page.locator('.fv-dot-linha').nth(2).textContent(),/inválido/i);
+    await page.locator('.fv-dot-linha').nth(2).focus();
     await page.keyboard.press('Enter');
     assert.match(await page.locator('#ev-resultados-indice').textContent(),/inválido/i);
     assert.equal(await page.locator('#ev-resultados-classe-original').textContent(),'Alta','Classe original continua disponível mesmo com índice inválido');
+    await page.selectOption('#ev-resultados-tendencia','media');
+    assert.match(await indicesA.textContent(),/Sem índices válidos/);
+    assert.match(await gradeA.textContent(),/Sem índices válidos/);
+    assert.match(await page.locator('#ev-resultados-agregados tr[data-chave="1"] td[data-papel="rede"]').textContent(),/^0.*1 de 2 índices válidos/);
+    await page.selectOption('#ev-resultados-tendencia','');
     await page.locator('#ev-resultados-vazias').click();
     assert.equal(await page.locator('#ev-resultados-tabela tbody tr').count(),3,'Filtro preserva zero e índices inválidos sinalizados');
     assert.equal(await page.locator('.fv-dot-linha').count(),5,'Filtro não reduz o gráfico');
     await page.locator('#ev-resultados-vazias').click();
-    assert(await page.locator('#ev-resultados > .ea-section-body > section').last().evaluate(
-      section => section.classList.contains('secao-favorabilidade-registrados')));
+    assert(await page.locator('.secao-favorabilidade-tabela').evaluate(
+      section => section.nextElementSibling.classList.contains('secao-favorabilidade-agregados')));
     assert.equal(await page.locator('#favorabilidade-app > section > header .ea-number').allTextContents().then(n=>n.includes('6')),false);
     await dismiss();
     await page.setViewportSize({width:390,height:844});
     await page.waitForTimeout(250);
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth+1),'Layout mobile sem overflow horizontal');
+    assert(await page.locator('#ev-resultados-tendencia').isVisible());
+    assert(await page.locator('#ev-resultados-posicao').isVisible());
+    const compacta = await page.locator('.fv-dot-linha').first().locator(':scope > span').evaluateAll(
+      spans=>spans.map(s=>({x:s.getBoundingClientRect().x,y:s.getBoundingClientRect().y})));
+    assert(compacta[0].x<compacta[1].x && compacta[1].x<compacta[2].x,'Três colunas preservadas em mobile');
+    const seletores = await page.locator('.fv-estatisticas-controles select').evaluateAll(
+      spans=>spans.map(s=>s.getBoundingClientRect().y));
+    assert(seletores[0]<seletores[1] && seletores[1]<seletores[2],'Seletores empilhados em mobile');
+    if (process.env.SICARD_TEST_SCREENSHOT_DIR) {
+      await page.locator('.secao-favorabilidade-agregados').screenshot({
+        path:require('node:path').join(process.env.SICARD_TEST_SCREENSHOT_DIR,'favorabilidade-agregados-mobile.png')});
+      await page.locator('.fv-dot-bloco').screenshot({
+        path:require('node:path').join(process.env.SICARD_TEST_SCREENSHOT_DIR,'favorabilidade-combinacoes-mobile.png')});
+    }
     assert.deepEqual(errors,[]);
     console.log('Favorabilidade V2: preparação original, conferência, composição visível, entrada integral, execução, polling, cancelamento real, saída na bancada, falhas recuperáveis, índices inalterados e responsividade OK.');
   } finally { await browser.close(); }
