@@ -64,7 +64,7 @@
           <button type="button" class="admin-icon-btn" data-complementacao="cadastro" title="Dados cadastrais" aria-label="Dados cadastrais" disabled><i class="fa-solid fa-address-card" aria-hidden="true"></i><span class="sr-only">Dados cadastrais</span></button>
           <button type="button" class="admin-icon-btn" data-complementacao="geometria" title="Geometria" aria-label="Geometria" disabled><i class="fa-solid fa-draw-polygon" aria-hidden="true"></i><span class="sr-only">Geometria</span></button>
         </div>
-        <p id="complementacao-selecao" class="field-help" aria-live="polite">Selecione uma demanda na tabela para complementar.</p>
+        <p id="complementacao-selecao" class="field-help" aria-live="polite" hidden></p>
         {% else %}
         <div class="admin-bulk-actions standard-table-actions" id="bulk-actions" aria-label="Ações em lote">
           <button type="button" class="admin-icon-btn" id="btn-bulk-edit" title="Editar selecionados" disabled>
@@ -89,7 +89,6 @@
 
         <p id="lista-vazia" class="hint hidden">Nenhuma demanda encontrada.</p>
         <div class="admin-table-footer">
-        {% if not modo_complementacao %}
         <label class="demandas-page-size" for="demandas-page-size">
           <span>Linhas por página</span>
           <select id="demandas-page-size">
@@ -100,7 +99,6 @@
             <option value="100">100</option>
           </select>
         </label>
-        {% endif %}
         <nav id="demandas-pagination" class="admin-pagination" aria-label="Paginação das demandas">
           <button type="button" id="pagination-first" title="Primeira página" aria-label="Primeira página" disabled>&lt;&lt;</button><button type="button" id="pagination-prev" title="Página anterior" aria-label="Página anterior">
             &lt;

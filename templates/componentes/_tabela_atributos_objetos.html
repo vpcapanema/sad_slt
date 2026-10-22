@@ -19,6 +19,11 @@
     <template id="tpl-atributo-celula">  -> célula de input (por tipo)
 #}
 <div class="componente-atributos-objetos" id="atributos-objetos-demanda" data-atributos-objetos>
+  {% if atributos_complementacao %}
+  <div class="atributos-legenda">
+    <span>Consulte os valores salvos. Use Editar atributos para complementar; confirme para gravar ou cancele para descartar as alterações.</span>
+  </div>
+  {% endif %}
   <div class="atributos-table-shell">
     <table class="admin-table admin-table--atributos">
       <thead data-atributos-thead>
@@ -33,14 +38,12 @@
     </table>
   </div>
 
+  {% if not atributos_complementacao %}
   <div class="atributos-legenda" aria-hidden="true">
-    {% if atributos_complementacao %}
-    <span>Valores originais. Use Editar atributos para preencher; confirme para gravar ou cancele para descartar.</span>
-    {% else %}
     <span><strong>1ª linha:</strong> valor normalizado (0–1)</span>
     <span><strong>2ª linha:</strong> valor original</span>
-    {% endif %}
   </div>
+  {% endif %}
   <div class="fase-actions atributos-riscos-acoes" data-atributos-riscos-acoes hidden>
     <button id="salvar-tratamentos-riscos-fase3" class="btn btn--primary" type="button">
       <i class="fas fa-shield-halved"></i> Salvar tratamento dos riscos

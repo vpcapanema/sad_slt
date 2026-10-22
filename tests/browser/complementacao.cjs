@@ -28,6 +28,8 @@ const assert = require('node:assert/strict');
     const salvos = new Map(['H1', 'H2'].map(codigo => [codigo, {codigo, nome: codigo === 'H1' ? 'Matriz vigente' : 'Outra rodada',
       criado_em: '2026-10-20T12:00:00-03:00', pode_editar: true, colunas, dominios,
       dados_hierarquizacao: {objetos: (codigo === 'H1' ? ['PRJ-1', 'PRJ-2'] : ['PRJ-FORA']).map(objeto)}}]));
+    salvos.set('H3', {...salvos.get('H1'), codigo: 'H3', nome: 'Rodada paginada',
+      dados_hierarquizacao: {objetos: Array.from({length: 18}, (_, i) => objeto(`PAG-${i + 1}`))}});
     const campo = (id, codigo = 'PRJ-1') => page.locator(`[data-atributo-objeto="${codigo}"][data-atributo-coluna="${id}"]`);
     let falharGravacao = false, falharCarga = false;
     const mockApi = async route => {
@@ -74,6 +76,11 @@ const assert = require('node:assert/strict');
     const table = page.locator('[data-demandas-table="projeto"]');
     await table.locator('tbody tr').first().waitFor();
     assert.equal(await table.locator('tbody tr').count(), 15);
+    assert.equal(await page.locator('#complementacao-selecao').isVisible(), false);
+    assert.ok(!(await page.locator('main').innerText()).includes('Selecione uma demanda na tabela para complementar.'));
+    await page.locator('#demandas-page-size').selectOption('25');
+    assert.equal(await table.locator('tbody tr').count(), 18);
+    await page.locator('#demandas-page-size').selectOption('15');
     assert.equal(await table.locator('th').count(), 22);
     assert.equal(await page.getByRole('heading', {name: '1. Complementação de Dados Cadastrais e Geometria', exact: true}).isVisible(), true);
     assert.equal(await page.getByRole('heading', {name: '2. Complementação de Atributos de demanda', exact: true}).isVisible(), true);
@@ -84,6 +91,13 @@ const assert = require('node:assert/strict');
     assert.equal(await campo('custo').isDisabled(), true);
     assert.equal(await page.locator('[data-atributos-tbody] tr').count(), 2);
     assert.equal(await page.locator('[data-atributos-thead] th').count(), 10);
+    const legenda = page.locator('#complementacao-campos .atributos-legenda');
+    assert.equal(await legenda.count(), 1);
+    assert.equal(await legenda.innerText(), 'Consulte os valores salvos. Use Editar atributos para complementar; confirme para gravar ou cancele para descartar as alterações.');
+    assert.equal(await legenda.evaluate(el => Boolean(el.compareDocumentPosition(document.querySelector('.atributos-table-shell')) & Node.DOCUMENT_POSITION_FOLLOWING)), true);
+    assert.equal(await page.locator('#complementacao-atributos-status').innerText(), '');
+    assert.equal(await page.locator('#complementacao-atributos-summary').innerText(), '2 na página / 2 no total');
+    assert.equal(await page.locator('#complementacao-atributos-pagination span').innerText(), 'Página 1 de 1');
     assert.equal(await campo('cadastro:capex_estimado').inputValue(), '500,00');
     assert.equal(await campo('percentual').inputValue(), '12,5');
     assert.equal(await campo('distancia').inputValue(), '1.234,56789');
@@ -405,6 +419,53 @@ const assert = require('node:assert/strict');
     assert.equal(await campo('distancia').inputValue(), '');
     assert.equal(await campo('distancia', 'PRJ-2').inputValue(), '12.345,6789');
     assert.equal(await campo('custo', 'PRJ-2').inputValue(), '0,00');
+    await page.locator('#complementacao-hierarquizacao').selectOption('H3');
+    const linhasVisiveis = page.locator('[data-atributos-tbody] tr:visible');
+    const paginador = page.locator('#complementacao-atributos-pagination');
+    const tamanhoAtributos = page.locator('#complementacao-atributos-page-size');
+    const contador = page.locator('#complementacao-atributos-summary');
+    await campo('custo', 'PAG-1').waitFor({state: 'visible'});
+    assert.equal(await linhasVisiveis.count(), 15);
+    assert.equal(await contador.innerText(), '15 na página / 18 no total');
+    assert.equal(await paginador.getByRole('button', {name: 'Primeira página', exact: true}).isDisabled(), true);
+    for (const tamanho of ['25', '35', '50', '100']) {
+      await tamanhoAtributos.selectOption(tamanho);
+      assert.equal(await linhasVisiveis.count(), 18);
+      assert.equal(await contador.innerText(), '18 na página / 18 no total');
+    }
+    await tamanhoAtributos.selectOption('15');
+    await page.getByRole('button', {name: 'Editar atributos', exact: true}).click();
+    await campo('custo', 'PAG-1').fill('10000');
+    await paginador.getByRole('button', {name: 'Última página', exact: true}).click();
+    assert.equal(await linhasVisiveis.count(), 3);
+    assert.equal(await contador.innerText(), '3 na página / 18 no total');
+    assert.equal(await paginador.getByRole('button', {name: 'Próxima página', exact: true}).isDisabled(), true);
+    await campo('custo', 'PAG-18').fill('20000');
+    await campo('distancia', 'PAG-18').fill('abc');
+    await paginador.getByRole('button', {name: 'Primeira página', exact: true}).click();
+    assert.equal(await campo('custo', 'PAG-1').inputValue(), '100,00');
+    await page.getByRole('button', {name: 'Confirmar atributos', exact: true}).click();
+    assert.equal(await campo('distancia', 'PAG-18').isVisible(), true, 'A validação deve revelar a página do campo inválido');
+    assert.equal(requests.filter(req => req.path.endsWith('/H3') && req.method === 'PATCH').length, 0);
+    await campo('distancia', 'PAG-18').fill('1');
+    await page.getByRole('button', {name: 'Confirmar atributos', exact: true}).click();
+    assert.equal(await tamanhoAtributos.isDisabled(), true);
+    await page.waitForFunction(() => document.querySelector('#complementacao-atributos-status').textContent.includes('salva com sucesso'));
+    assert.deepEqual(JSON.parse(requests.find(req => req.path.endsWith('/H3') && req.method === 'PATCH').body).valores, {
+      'PAG-1': {custo: 100}, 'PAG-18': {custo: 200, distancia: 1},
+    });
+    assert.equal(await linhasVisiveis.count(), 15);
+    await paginador.getByRole('button', {name: 'Próxima página', exact: true}).click();
+    assert.equal(await campo('custo', 'PAG-18').inputValue(), '200,00');
+    await page.getByRole('button', {name: 'Editar atributos', exact: true}).click();
+    await campo('custo', 'PAG-18').fill('30000');
+    await paginador.getByRole('button', {name: 'Página anterior', exact: true}).click();
+    await page.getByRole('button', {name: 'Cancelar edição dos atributos', exact: true}).click();
+    await page.getByRole('button', {name: 'Descartar alterações', exact: true}).click();
+    await page.waitForFunction(() => document.querySelector('#complementacao-atributos-status').textContent.includes('Edição cancelada'));
+    await paginador.getByRole('button', {name: 'Última página', exact: true}).click();
+    assert.equal(await campo('custo', 'PAG-18').inputValue(), '200,00');
+    assert.equal(await page.locator('#complementacao-atributos').evaluate(el => el.scrollWidth <= el.clientWidth + 1), true);
     falharCarga = true;
     await page.reload();
     await page.locator('#complementacao-atributos-recarregar').waitFor({state: 'visible'});

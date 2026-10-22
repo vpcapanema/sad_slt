@@ -8,7 +8,7 @@
 {% block estilos_pagina %}
 <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
 <link rel="stylesheet" href="/assets/css/admin-analysis-layout.css">
-<link rel="stylesheet" href="/assets/css/complementacao.css?v=20261020-coluna-fixa-tipografia">
+<link rel="stylesheet" href="/assets/css/complementacao.css?v=20261022-paginacao-atributos">
 <link rel="stylesheet" href="/assets/css/atributos-objetos.css">
 <link rel="stylesheet" href="/assets/css/fase1-execucao.css">
 <link rel="stylesheet" href="/assets/vendor/leaflet/leaflet.css">
@@ -66,6 +66,20 @@
             <button type="submit" class="admin-icon-btn save" id="complementacao-atributos-confirmar" title="Confirmar atributos" aria-label="Confirmar atributos" disabled><i class="fas fa-check" aria-hidden="true"></i></button>
             <button type="button" class="admin-icon-btn" id="complementacao-atributos-cancelar" title="Cancelar edição dos atributos" aria-label="Cancelar edição dos atributos" disabled><i class="fas fa-xmark" aria-hidden="true"></i></button>
           </div>
+          <div class="admin-table-footer">
+            <label class="demandas-page-size" for="complementacao-atributos-page-size">
+              <span>Linhas por página</span>
+              <select id="complementacao-atributos-page-size">
+                <option value="15" selected>15</option>
+                <option value="25">25</option>
+                <option value="35">35</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </select>
+            </label>
+            <nav id="complementacao-atributos-pagination" class="admin-pagination" aria-label="Paginação dos atributos das demandas"></nav>
+            <p id="complementacao-atributos-summary" class="admin-table-summary" aria-live="polite"></p>
+          </div>
         </form>
       </div>
       <p id="complementacao-atributos-status" class="complementacao-status" role="status" aria-live="polite"></p>
@@ -90,6 +104,6 @@
 <script src="/assets/js/resumo-fase.js?v=20261020-data-criacao"></script>
 <script src="/assets/js/input-masks.js?v=20261020-unidades"></script>
 <script src="/restrict/hierarquizacao/js/atributos-objetos.js?v=20261020-mascaras-unidades"></script>
-<script src="/assets/js/complementacao.js?v=20261020-secoes-numeradas"></script>
+<script src="/assets/js/complementacao.js?v=20261022-paginacao-atributos"></script>
 <script src="/restrict/demandas.js?v=20261015-fontes-ordem"></script>
 {% endblock %}

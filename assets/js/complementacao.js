@@ -42,9 +42,11 @@
       tipo = tipoDemanda;
       selecionada = proxima;
       controles.forEach(button => { button.disabled = !selecionada; });
-      document.querySelector('#complementacao-selecao').textContent = selecionada
+      const resumoSelecao = document.querySelector('#complementacao-selecao');
+      resumoSelecao.textContent = selecionada
         ? `${selecionada.id} — ${selecionada.nome}`
-        : registros.length > 1 ? 'Selecione somente uma demanda para complementar.' : 'Selecione uma demanda na tabela para complementar.';
+        : registros.length > 1 ? 'Selecione somente uma demanda para complementar.' : '';
+      resumoSelecao.hidden = !resumoSelecao.textContent;
     },
   };
 
@@ -153,9 +155,53 @@
   const editar = document.querySelector('#complementacao-atributos-editar');
   const cancelar = document.querySelector('#complementacao-atributos-cancelar');
   const recarregar = document.querySelector('#complementacao-atributos-recarregar');
+  const tamanhoPagina = document.querySelector('#complementacao-atributos-page-size');
+  const paginacaoAtributos = document.querySelector('#complementacao-atributos-pagination');
+  const tabelaAtributos = campos.querySelector('table');
+  let linhasAtributos = [], paginaAtributos = 1;
   let atual = null, editando = false, alterado = false, ocupado = false;
   let hierarquiaAtual = '', revisaoAtributos = 0;
   const caminhoAtributos = codigo => `/api/complementacao/hierarquizacoes/${encodeURIComponent(codigo)}`;
+  const ordenarAtributos = SLTTable.sorting(tabelaAtributos,
+    () => [...tabelaAtributos.tHead.rows[0].cells].map((_, indice) => linha => {
+      const celula = linha.cells[indice];
+      return celula.querySelector('input, select')?.value ?? celula.textContent.trim();
+    }),
+    () => { paginaAtributos = 1; paginarAtributos(); },
+    () => !ocupado);
+
+  function paginarAtributos() {
+    const linhas = ordenarAtributos(linhasAtributos);
+    const resultado = SLTTable.paginate(paginacaoAtributos.id, linhas, paginaAtributos, pagina => {
+      paginaAtributos = pagina;
+      paginarAtributos();
+    }, Number(tamanhoPagina.value));
+    paginaAtributos = resultado.page;
+    const visiveis = new Set(resultado.rows);
+    // Mantém os campos de todas as páginas no formulário para validar e salvar o lote inteiro.
+    linhas.forEach(linha => { linha.hidden = !visiveis.has(linha); });
+    tabelaAtributos.tBodies[0].replaceChildren(...linhas);
+    document.querySelector('#complementacao-atributos-summary').textContent =
+      `${resultado.rows.length} na página / ${linhas.length} no total`;
+    tamanhoPagina.disabled = ocupado;
+    paginacaoAtributos.querySelectorAll('button').forEach(button => { button.disabled ||= ocupado; });
+  }
+
+  tamanhoPagina.addEventListener('change', () => {
+    paginaAtributos = 1;
+    paginarAtributos();
+  });
+  let revelandoInvalido = false;
+  form.addEventListener('invalid', event => {
+    if (revelandoInvalido) return;
+    const linha = event.target.closest('[data-objeto-id]');
+    const indice = ordenarAtributos(linhasAtributos).indexOf(linha);
+    if (indice < 0) return;
+    revelandoInvalido = true;
+    paginaAtributos = Math.floor(indice / Number(tamanhoPagina.value)) + 1;
+    paginarAtributos();
+    setTimeout(() => { revelandoInvalido = false; }, 0);
+  }, true);
 
   function mensagemAtributos(texto, erro = false) {
     statusAtributos.textContent = texto;
@@ -170,10 +216,13 @@
     cancelar.disabled = ocupado || !editando;
     AtributosObjetos.definirEdicao(!ocupado && editando && atual?.pode_editar);
     form.setAttribute('aria-busy', String(ocupado));
+    paginarAtributos();
   }
 
   async function render(item) {
     await AtributosObjetos.render(item, {complementacao: true, colunas: item.colunas, dominios: item.dominios});
+    linhasAtributos = [...tabelaAtributos.tBodies[0].rows];
+    paginaAtributos = 1;
     SLTResumoFase.secao1(document.querySelector('#complementacao-resumo-hierarquizacao'), item, {mostrarDataCriacao: true});
     atual = item;
     editando = false;
@@ -181,7 +230,7 @@
     form.classList.remove("hidden");
     document.querySelector('#complementacao-atributos-resumo').textContent = `${item.nome || item.codigo} · ${item.dados_hierarquizacao.objetos.length} demanda(s) autorizada(s)`;
     atualizarAcoes();
-    mensagemAtributos('Valores salvos. Clique em Editar atributos para complementar.');
+    mensagemAtributos('');
   }
 
   async function podeDescartar() {
@@ -257,8 +306,8 @@
     if (!atual?.pode_editar || ocupado) return;
     editando = true;
     atualizarAcoes();
-    mensagemAtributos('Edite os atributos e confirme para gravar ou cancele para descartar as alterações.');
-    campos.querySelector('[data-atributo-coluna]:not([disabled])')?.focus();
+    mensagemAtributos('Edição de atributos habilitada.');
+    campos.querySelector('tr:not([hidden]) [data-atributo-coluna]:not([disabled])')?.focus();
   });
   cancelar.addEventListener('click', async () => {
     if (ocupado || !await podeDescartar()) return;
