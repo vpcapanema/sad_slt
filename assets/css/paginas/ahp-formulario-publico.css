@@ -171,6 +171,12 @@ body.ami-public-page {
   padding: var(--ami-space-sm);
 }
 
+.ami-public-page #collab-form-section .saaty-pair-title {
+  width: 100%;
+  margin: 0;
+  text-align: center;
+}
+
 .ami-public-page #collab-form-section :is(
   .saaty-tick-desc, .saaty-readout, .saaty-reciprocal__label,
   .saaty-reciprocal__text, .saaty-reciprocal__value,

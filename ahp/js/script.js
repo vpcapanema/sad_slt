@@ -807,6 +807,15 @@ function buildSaatyPair(i, j, sourceCriteria) {
   const pid = i + "_" + j;
   const leftName = names[i] || ("Critério " + (i + 1));
   const rightName = names[j] || ("Critério " + (j + 1));
+  const isPublicForm = document.body.classList.contains("ami-public-page");
+  const criteriaHtml =
+    '<div class="saaty-criteria">' +
+    '<span class="saaty-crit saaty-crit--left"><span class="saaty-crit__tag">1</span><span class="saaty-crit__name">' +
+    escAhp(leftName) + "</span></span>" +
+    '<span class="saaty-vs">vs</span>' +
+    '<span class="saaty-crit saaty-crit--right"><span class="saaty-crit__tag">2</span><span class="saaty-crit__name">' +
+    escAhp(rightName) + "</span></span>" +
+    "</div>";
   let ticks = "";
   SAATY_STEPS.forEach((s, idx) => {
     const pct = (idx / (SAATY_STEPS.length - 1)) * 100;
@@ -819,6 +828,7 @@ function buildSaatyPair(i, j, sourceCriteria) {
   });
   return (
     '<div class="saaty-pair" data-i="' + i + '" data-j="' + j + '">' +
+    (isPublicForm ? '<h3 class="saaty-pair-title">Comparação pareada de critérios</h3>' + criteriaHtml : "") +
     '<div class="saaty-widget">' +
     '<div class="saaty-scale" data-pid="' + pid +
     '" tabindex="0" role="slider" aria-valuemin="0" aria-valuemax="8" aria-valuenow="4" aria-label="Comparação entre ' +
@@ -829,13 +839,7 @@ function buildSaatyPair(i, j, sourceCriteria) {
     '<div class="saaty-dir"><span><i class="fas fa-arrow-left"></i> Menos importante</span>' +
     '<span>Mais importante <i class="fas fa-arrow-right"></i></span></div>' +
     "</div>" +
-    '<div class="saaty-criteria">' +
-    '<span class="saaty-crit saaty-crit--left"><span class="saaty-crit__tag">1</span><span class="saaty-crit__name">' +
-    escAhp(leftName) + "</span></span>" +
-    '<span class="saaty-vs">vs</span>' +
-    '<span class="saaty-crit saaty-crit--right"><span class="saaty-crit__tag">2</span><span class="saaty-crit__name">' +
-    escAhp(rightName) + "</span></span>" +
-    "</div>" +
+    (isPublicForm ? "" : criteriaHtml) +
     '<div class="saaty-readout" id="readout_' + pid + '"></div>' +
     '<div class="saaty-reciprocal" id="reciprocal_' + pid + '" aria-live="polite">' +
     '<span class="saaty-reciprocal__label"><i class="fas fa-rotate" aria-hidden="true"></i> Valor oposto aplicado automaticamente</span>' +
