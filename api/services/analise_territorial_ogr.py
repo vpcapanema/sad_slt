@@ -251,10 +251,10 @@ def geometria_preservada(original, persistida):
             and original.ExportToIsoWkb() == persistida.GetGeometryRef(0).ExportToIsoWkb())
 
 
-def gravar_camada(dataset, nome, dados, *, opcoes=None, preservar_fids=False):
+def gravar_camada(dataset, nome, dados, *, opcoes=None, preservar_fids=False, tipo_geometria=ogr.wkbUnknown):
     if len(dados.registros) != len(dados.geometrias):
         raise ValueError('Quantidade de geometrias e atributos divergente.')
-    layer = dataset.CreateLayer(nome, dados.crs, ogr.wkbUnknown, options=opcoes or [])
+    layer = dataset.CreateLayer(nome, dados.crs, tipo_geometria, options=opcoes or [])
     for spec in dados.campos:
         definition = ogr.FieldDefn(spec['nome'], spec['tipo'])
         definition.SetSubType(spec.get('subtipo', ogr.OFSTNone))

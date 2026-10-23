@@ -654,10 +654,17 @@ def _painel(frame: gpd.GeoDataFrame, dados: bytes, auditoria: dict, nomes: dict[
                 or not math.isfinite(r['area_m2']) or r['area_m2'] < 0):
             raise ValueError('Interseção com base ou área inválida na camada de saída.')
         vinculos.append({'chave': str(int(pos)), 'base_id': base, 'feicao_id': ident})
+        if r.get('intersecao_id') is not None:
+            vinculos[-1].update(intersecao_id=r['intersecao_id'], area_m2=r['area_m2'],
+                               area_ha=r['area_ha'], percentual_demanda=r['percentual_demanda'])
         grupo = grupos.setdefault((int(pos), ident), {'id': ident, 'base_id': base, 'nome': nomes[ident],
                                                       'papel': campos[base]['papel'], 'area_m2': 0.,
                                                       'identificador': feicoes[ident]['posicao'] + 1})
         grupo['area_m2'] += r['area_m2']
+        if r.get('intersecao_id') is not None:
+            grupo.setdefault('fragmentos', []).append({
+                'intersecao_id': r['intersecao_id'], 'area_m2': r['area_m2'],
+                'area_ha': r['area_ha'], 'percentual_demanda': r['percentual_demanda']})
         if analise == 'favorabilidade':
             valor = _favorabilidade(r, campos[base]['papel'], atributos.get(base, {}))
             if 'favorabilidade' in grupo and grupo['favorabilidade'] != valor:

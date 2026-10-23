@@ -170,13 +170,45 @@ def _geometria_preservada(original, persistida) -> bool:
     return ogr.geometria_preservada(original, persistida)
 
 
+def _partes_intersecao(geometria):
+    """Individualiza componentes, preservando os anéis internos e contatos sem área."""
+    tipo = ogr_api.GT_Flatten(geometria.GetGeometryType())
+    if tipo in (ogr_api.wkbMultiPolygon, ogr_api.wkbGeometryCollection,
+                ogr_api.wkbMultiLineString, ogr_api.wkbMultiPoint):
+        for i in range(geometria.GetGeometryCount()):
+            yield from _partes_intersecao(geometria.GetGeometryRef(i))
+    elif not geometria.IsEmpty():
+        yield geometria.Clone()
+
+
+def individualizar_intersecoes(intersecoes, areas_totais):
+    registros = []
+    for original in intersecoes:
+        partes = list(_partes_intersecao(original['geometry']))
+        # Uma geometria já simples mantém exatamente a área calculada na execução.
+        areas = [original['area_m2']] if len(partes) == 1 else [ogr.area(parte) for parte in partes]
+        if not math.isclose(math.fsum(areas), original['area_m2'], rel_tol=1e-9, abs_tol=1e-10):
+            raise ValueError('A individualização dos polígonos alterou a área da interseção.')
+        for parte, area in zip(partes, areas):
+            registros.append({**original, 'geometry': parte, 'intersecao_id': len(registros) + 1,
+                              'area_m2': area, 'area_ha': area / 10000,
+                              'percentual_demanda': area / areas_totais[original['demanda_pos']] * 100})
+    return registros
+
+
 def serializar(saida: ogr.Camada, auditoria: dict, intersecoes: list[dict], arquivo: str, *,
                analise: str = 'elegibilidade') -> dict[str, bytes]:
     config = ANALISES[analise]
+    intersecoes = individualizar_intersecoes(
+        intersecoes, [r[auditoria['campo_area_total']] for r in saida.registros])
+    auditoria = {**auditoria, 'intersecoes_individualizadas': True,
+                 'campo_intersecao_id': 'intersecao_id'}
     principal = saida.copiar()
     principal.metadados[config['metadados']] = json.dumps(auditoria, ensure_ascii=False)
     campos = [ogr.campo('demanda_pos', ogr_api.OFTInteger64), ogr.campo('base_id', ogr_api.OFTString),
-              ogr.campo('feicao_id', ogr_api.OFTString), ogr.campo('area_m2', ogr_api.OFTReal)]
+              ogr.campo('feicao_id', ogr_api.OFTString), ogr.campo('area_m2', ogr_api.OFTReal),
+              ogr.campo('intersecao_id', ogr_api.OFTInteger64), ogr.campo('area_ha', ogr_api.OFTReal),
+              ogr.campo('percentual_demanda', ogr_api.OFTReal)]
     recortes = ogr.Camada(campos + saida.campos_intersecoes,
                           [{k: v for k, v in r.items() if k != 'geometry'} for r in intersecoes],
                           [r['geometry'] for r in intersecoes], ogr.referencia(CRS_METRICO))
@@ -193,7 +225,9 @@ def serializar(saida: ogr.Camada, auditoria: dict, intersecoes: list[dict], arqu
         layer = ogr.gravar_camada(dataset, config['camada'], principal,
                                   opcoes=[f'FID={fid}', f'GEOMETRY_NAME={geom}'])
         layer = None
-        layer = ogr.gravar_camada(dataset, 'intersecoes', recortes)
+        tipo = (ogr_api.wkbPolygon if all(ogr_api.GT_Flatten(g.GetGeometryType()) == ogr_api.wkbPolygon
+                                         for g in recortes.geometrias) else ogr_api.wkbUnknown)
+        layer = ogr.gravar_camada(dataset, 'intersecoes', recortes, tipo_geometria=tipo)
         layer = dataset = None
         dados = bytes(gdal.VSIGetMemFileBuffer_unsafe(path))
         ogr.conferir(principal, ogr.ler(dados, config['camada']))

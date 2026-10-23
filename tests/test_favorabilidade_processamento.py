@@ -64,7 +64,7 @@ def test_areas_independentes_preservam_classes_indices_e_inteiros_exatos():
 
 
 @pytest.mark.parametrize('analise,papel', [('favorabilidade', 'rede'), ('elegibilidade', 'risco')])
-def test_serializacao_preserva_poligono_e_multipoligono(analise, papel):
+def test_serializacao_individualiza_multipoligono_preservando_componentes(analise, papel):
     entrada = frame([box(0, 0, 10, 10)])
     base = frame([box(0, 0, 2, 2), MultiPolygon([box(3, 3, 4, 4), box(5, 5, 6, 6)])],
                  nome=['Simples', 'Múltiplo'])
@@ -75,11 +75,13 @@ def test_serializacao_preserva_poligono_e_multipoligono(analise, papel):
     assert [r['geometry'].GetGeometryName() for r in recortes] == ['POLYGON', 'MULTIPOLYGON']
     dados = service.serializar(saida, auditoria, recortes, 'mistos.gpkg', analise=analise)
     persistidos = gpd.read_file(BytesIO(dados['mistos.gpkg']), layer='intersecoes')
-    assert persistidos.geometry.geom_type.tolist() == ['Polygon', 'MultiPolygon']
+    assert persistidos.geometry.geom_type.tolist() == ['Polygon', 'Polygon', 'Polygon']
     assert persistidos.geometry.iloc[0].wkb == bytes(recortes[0]['geometry'].ExportToWkb())
-    assert persistidos.geometry.iloc[1].wkb == bytes(recortes[1]['geometry'].ExportToWkb())
-    assert persistidos.feicao_id.tolist() == [r['feicao_id'] for r in recortes]
-    assert persistidos.area_m2.tolist() == [r['area_m2'] for r in recortes]
+    for i in range(2):
+        assert persistidos.geometry.iloc[i + 1].wkb == bytes(recortes[1]['geometry'].GetGeometryRef(i).ExportToWkb())
+    assert persistidos.feicao_id.tolist() == [recortes[0]['feicao_id'], recortes[1]['feicao_id'], recortes[1]['feicao_id']]
+    assert persistidos.area_m2.tolist() == [4., 1., 1.]
+    assert persistidos.area_m2.sum() == sum(r['area_m2'] for r in recortes)
 
 
 @pytest.mark.parametrize('simples,multiplo', [
