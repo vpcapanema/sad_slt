@@ -285,7 +285,8 @@ def test_base_integral_atual_tem_origem_explicita_e_nao_altera_historico(analise
     chamadas = []
     def carregar(ident):
         chamadas.append(ident)
-        return frame, {}, None
+        from tests.territorial_ogr_helpers import camada
+        return camada(frame), {}, None
     monkeypatch.setattr(service.extracao_preparacao, 'carregar', carregar)
     anteriores = deepcopy(analise)
     dados = service.superficie_favorabilidade('job-1', 'g', 'autor')

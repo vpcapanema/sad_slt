@@ -23,7 +23,8 @@ from shapely.geometry import Polygon, MultiPolygon, mapping, box
 from api.services import elegibilidade_jobs as jobs, storage_remoto, saidas_storage
 from api.services.elegibilidade_processamento import pasta_saida, ANALISES
 from api.services import extracao_atributos_aliases as aliases
-from api.services import extracao_preparacao
+from api.services import extracao_preparacao, analise_territorial_ogr as nativo
+from osgeo import ogr
 from api.services import extracao_atributos_relatorios as estilo
 from api.services.extracao_atributos_exportacao import registros, texto
 from api.services.extracao_ogr import reproject
@@ -542,24 +543,31 @@ def superficie_favorabilidade(identificador: str, base_id: str, dono) -> dict:
     if base is None:
         raise ValueError('A superfície não pertence a esta análise.')
     frame, _, _ = extracao_preparacao.carregar(base_id)
-    if not isinstance(frame, gpd.GeoDataFrame) or frame.crs is None:
+    if not isinstance(frame, nativo.Camada) or frame.crs is None:
         raise ValueError('A fonte atual não contém uma camada vetorial com CRS.')
-    if frame.geometry.isna().any() or frame.geometry.is_empty.any() or not frame.geometry.is_valid.all():
-        raise ValueError('A superfície atual contém geometrias ausentes, vazias ou inválidas.')
-    if not frame.geometry.geom_type.isin(['Polygon', 'MultiPolygon']).all():
-        raise ValueError('A superfície atual deve conter apenas polígonos.')
-    mapa = {str(c).casefold(): c for c in frame.columns if c != frame.geometry.name}
+    for geom in frame.geometrias:
+        if geom is None or geom.IsEmpty():
+            raise ValueError('A superfície atual contém geometrias ausentes ou vazias.')
+        if ogr.GT_Flatten(geom.GetGeometryType()) not in (ogr.wkbPolygon, ogr.wkbMultiPolygon):
+            raise ValueError('A superfície atual deve conter apenas polígonos.')
+    mapa = {c['nome'].casefold(): c['nome'] for c in frame.campos}
     campo_nome = next((mapa[c] for c in ('nome', 'name', 'nm_mun', 'municipio') if c in mapa), None)
-    valores = list(registros(frame))
-    geometrias = reproject(frame[[frame.geometry.name]], 4326)
+    geometrias = nativo.reproject(frame, 4326)
+    features = []
+    for pos, geom in enumerate(geometrias.geometrias):
+        if not geom.IsValid():
+            geom = geom.MakeValid()
+        if geom is None or geom.IsEmpty() or not geom.IsValid():
+            raise ValueError('A superfície atual contém geometria inválida sem reparação utilizável.')
+        valores = frame.registros[pos]
+        features.append({'type': 'Feature', 'geometry': json.loads(geom.ExportToJson()),
+                         'properties': {'base_id': base_id, 'posicao': pos,
+                                        'nome': texto(valores[campo_nome]) if campo_nome else f'Feição {pos + 1}',
+                                        'favorabilidade': _favorabilidade(valores, base['papel'], mapa)}})
     return {'base_id': base_id, 'origem': 'Fonte original atual; não é uma cópia histórica da rodada.',
             'consultado_em': datetime.now(timezone.utc).isoformat(),
-            'geometrias': {'type': 'FeatureCollection', 'features': [
-                {'type': 'Feature', 'geometry': mapping(geom),
-                 'properties': {'base_id': base_id, 'posicao': pos,
-                                'nome': texto(valores[pos][campo_nome]) if campo_nome else f'Feição {pos + 1}',
-                                'favorabilidade': _favorabilidade(valores[pos], base['papel'], mapa)}}
-                for pos, geom in enumerate(geometrias.geometry)]}}
+            'geometrias': {'type': 'FeatureCollection', 'features': features}}
+
 
 
 def cor_favorabilidade(valor: float | None) -> str:
