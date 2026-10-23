@@ -158,6 +158,7 @@ def _bounds(camada: ogr.Layer) -> list[float] | None:
 
 
 def _metadata(fonte: Fonte, revisao: str) -> dict[str, Any]:
+    from api.services.fluxo_camadas_ogr import TIPOS
     signature = _assinatura_local(fonte.caminho) if fonte.local else None
     dataset, camada = _abrir(fonte)
     try:
@@ -202,7 +203,8 @@ def _metadata(fonte: Fonte, revisao: str) -> dict[str, Any]:
             'crs': f'{spatial_ref.GetAuthorityName(None)}:{codigo}' if codigo else result['crs_arquivo'],
             'crs_nome': spatial_ref.GetName(), 'crs_wkt': result['crs_arquivo'],
             'unidade': spatial_ref.GetAngularUnitsName() if spatial_ref.IsGeographic() else spatial_ref.GetLinearUnitsName(),
-            'limites_wgs84': result['bounds'], 'tipos_geometria': [result['geometria_tipo']],
+            'limites_wgs84': result['bounds'],
+            'tipos_geometria': [TIPOS.get(ogr.GT_Flatten(camada.GetGeomType()), result['geometria_tipo'])],
             'bytes': fonte.caminho.stat().st_size,
             'identificacao': {'total': result['feicoes'], 'campos': [], 'completa': False,
                               'fid_nativo': result['coluna_fid'], 'sugestao': '__feicao__'},

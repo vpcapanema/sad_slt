@@ -209,3 +209,26 @@ def test_pacote_preserva_bytes_reais_sem_consulta_espacial_na_abertura(monkeypat
     assert meta['formato'] == 'GeoJSON'
     assert meta['componente']
     assert meta['localizacao']['status'] == 'nao_consultado'
+
+@pytest.mark.parametrize('wkt,tipo', [
+    ('POLYGON ((0 0,1 0,1 1,0 0))', 'Polygon'),
+    ('MULTIPOLYGON (((0 0,1 0,1 1,0 0)))', 'MultiPolygon'),
+    ('MULTIPOLYGON Z (((0 0 2,1 0 2,1 1 2,0 0 2)))', 'MultiPolygon'),
+    ('LINESTRING (0 0,1 1)', 'LineString'),
+])
+def test_storage_tipo_geometria_compativel_com_calculo(monkeypatch, isolado, wkt, tipo):
+    from osgeo import osr
+    from api.services import storage_geoespacial
+    path = isolado / 'tipo.gpkg'
+    geom = ogr.CreateGeometryFromWkt(wkt)
+    ds = ogr.GetDriverByName('GPKG').CreateDataSource(str(path))
+    crs = osr.SpatialReference()
+    crs.ImportFromEPSG(4326)
+    layer = ds.CreateLayer('base', crs, geom.GetGeometryType())
+    feature = ogr.Feature(layer.GetLayerDefn())
+    feature.SetGeometry(geom)
+    layer.CreateFeature(feature)
+    ds = None
+    monkeypatch.setattr(storage_geoespacial, 'resolver', lambda _: path)
+    result = preparo.preparar('storage:base-geoespacial/tipo.gpkg::base', 'autor')
+    assert result['metadados_local']['tipos_geometria'] == [tipo]
