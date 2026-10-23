@@ -1,0 +1,44 @@
+<section id="cinco-resultados_elegibilidade_v2_1" class="card ahp-step-section ev21" aria-labelledby="ev21-title">
+  <header class="ahp-section-label"><span class="ahp-subsection-num">5</span><h2 id="ev21-title">Resultados da elegibilidade por demanda</h2></header>
+  <div class="ahp-section-body">
+    <p>Selecione uma demanda para conhecer seu território e examinar as interseções com restrições e riscos.</p>
+    <button id="ev21-abrir" type="button" class="ea-btn">Abrir análise já realizada</button>
+    <p id="ev21-status" role="status" aria-live="polite"></p>
+    <button id="ev21-tentar" type="button" class="ea-btn" hidden>Tentar carregar resultados</button>
+    <form id="ev21-aliases" hidden>
+      <h3>Confira os nomes da análise</h3>
+      <div id="ev21-nomes" class="ev21-nomes"></div>
+      <label><input id="ev21-revisados" type="checkbox" required> Revisei os nomes das camadas e das feições.</label>
+      <button type="submit" class="ea-btn ea-btn-primary">Confirmar nomes e apresentar resultados</button>
+    </form>
+    <div id="ev21-conteudo" hidden>
+      <div class="ev21-escolha">
+        <div class="ea-field"><label for="ev21-entrada">Camada de entrada</label><select id="ev21-entrada"></select></div>
+        <div class="ea-field"><label for="ev21-demanda">Demanda em análise</label><select id="ev21-demanda"></select></div>
+      </div>
+      <p id="ev21-resumo" class="ea-hint"></p>
+      <article class="ev21-ficha" aria-labelledby="ev21-nome">
+        <h3 id="ev21-nome"></h3>
+        <dl id="ev21-dados" class="ev21-dados"></dl>
+        <p id="ev21-situacao" role="status" aria-live="polite"></p>
+      </article>
+      <section class="ev21-painel" aria-labelledby="ev21-mapa-title">
+        <header><h3 id="ev21-mapa-title">Território da demanda selecionada</h3><button id="ev21-enquadrar" class="ea-btn" type="button">Enquadrar demanda</button></header>
+        <div id="ev21-mapa" aria-label="Mapa da demanda selecionada e de suas interseções"></div>
+        <p class="ev21-legenda"><span>Azul: limite da demanda</span><span>Vermelho: interseção com restrição</span><span>Amarelo: interseção com risco</span></p>
+        <p id="ev21-mapa-status" class="ea-hint" role="status"></p>
+      </section>
+      <section class="ev21-painel" aria-labelledby="ev21-intersecoes-title">
+        <h3 id="ev21-intersecoes-title">O que intersecta esta demanda</h3>
+        <div class="ev21-filtros"><label for="ev21-categoria">Categoria</label><select id="ev21-categoria"><option value="">Restrição e risco</option><option value="restricao">Restrição</option><option value="risco">Risco</option></select><label for="ev21-base">Filtrar por camada de referência</label><select id="ev21-base"></select><button id="ev21-limpar" class="ea-btn" type="button">Mostrar todas as interseções</button></div>
+        <p id="ev21-filtro-status" role="status"></p>
+        <div class="ea-table-wrap"><table id="ev21-intersecoes" class="admin-table" aria-label="Feições que intersectam a demanda selecionada"></table></div>
+        <p class="ea-hint">Cada percentual usa a área total desta demanda como denominador. As interseções podem coincidir; sua soma não representa uma área única afetada. Contatos sem área são identificados separadamente.</p>
+      </section>
+      <details class="ev21-painel"><summary>Conferir todas as bases para esta demanda</summary><div class="ea-table-wrap"><table id="ev21-bases" class="admin-table" aria-label="Resultado por base para a demanda selecionada"></table></div></details>
+      <details class="ev21-painel"><summary>Comparar demandas da camada de entrada</summary><p>Selecione uma demanda na tabela para abrir sua ficha e suas interseções.</p><div class="ea-table-wrap"><table id="ev21-comparacao" class="admin-table" aria-label="Comparação entre demandas"></table></div></details>
+      <details class="ev21-painel"><summary>Metodologia e identificação da análise</summary><p id="ev21-origem"></p><p id="ev21-metodologia"></p><button id="ev21-editar" type="button" class="ea-btn">Revisar nomes</button></details>
+    </div>
+    <footer class="ev21-painel"><h3>Relatório e camadas da análise</h3><p>O pacote inclui todas as demandas, suas interseções e os metadados, independentemente da demanda ou dos filtros selecionados.</p><button id="ev21-download" class="ea-btn ea-btn-primary" type="button" disabled>Baixar relatório e camadas (.zip)</button></footer>
+  </div>
+</section>
