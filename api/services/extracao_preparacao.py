@@ -104,19 +104,20 @@ def carregar(ident):
 
 def preparar(ident, dono):
     from api.services import storage_geoespacial as storage
-    caminho_fonte = storage.separar_id(ident)[0] if ident.startswith('storage:') else None
-    revisao_fonte = None
-    if caminho_fonte is not None:
-        estado = storage.resolver(caminho_fonte).stat()
-        revisao_fonte = f'{estado.st_mtime_ns}-{estado.st_size}'
+    if ident.startswith('storage:'):
+        from api.services.bancada_camada_original import preparar as preparar_original
+        from urllib.parse import urlencode
+        caminho, camada = storage.separar_id(ident)
+        resultado = preparar_original(ident, caminho)
+        if not resultado['feicoes'] or not resultado['bounds']:
+            raise ValueError('A camada está vazia ou sem extensão utilizável para visualização.')
+        consulta = urlencode({'caminho': caminho, 'camada': camada or '', 'v': resultado['revisao']})
+        resultado.update(tipo='vetor', representacao='tiles', revisao_fonte=resultado['revisao'],
+                         tiles_url=f'/api/geoespacial/storage/camada/tiles/{{z}}/{{x}}/{{y}}.pbf?{consulta}')
+        return resultado
     frame, nome, arquivo = carregar(ident)
     meta = fluxo.descrever(frame, arquivo=frame.fonte.get('arquivo'))
     representacao = representar(frame, meta, dono)
-    if caminho_fonte is not None:
-        estado = storage.resolver(caminho_fonte).stat()
-        if revisao_fonte != f'{estado.st_mtime_ns}-{estado.st_size}':
-            raise ValueError('O arquivo de origem mudou durante a preparação da prévia. Prepare-o novamente.')
-        representacao['revisao_fonte'] = revisao_fonte
     return dict(id=ident, nome=nome, arquivo=arquivo, tipo='vetor',
                 **representacao)
 

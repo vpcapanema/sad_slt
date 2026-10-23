@@ -591,12 +591,20 @@ def _tile(arquivo: str, camada: str | None, _versao: tuple[int, int], z: int, x:
         campo_fid = campo_fid_tile(lyr)
         nome_sql = lyr.GetName().replace('"', '""')
         consulta = f'SELECT FID AS "{campo_fid}", * FROM "{nome_sql}"'
-        memoria = gdal.VectorTranslate(
+        validada = gdal.VectorTranslate(
             '', ds, format='Memory', SQLStatement=consulta, SQLDialect='OGRSQL',
             layerName='camada', spatFilter=filtro, dstSRS='EPSG:3857',
-            clipDst=[limites.left - margem, limites.bottom - margem, limites.right + margem, limites.top + margem],
             explodeCollections=True, makeValid=True,
         )
+        if validada is None:
+            raise RuntimeError('Não foi possível preparar as geometrias para o tile.')
+        # MakeValid deve preceder o recorte; com ambos na mesma chamada o GDAL
+        # pode recortar primeiro e perder polígonos com auto-interseção.
+        memoria = gdal.VectorTranslate(
+            '', validada, format='Memory', layerName='camada',
+            clipDst=[limites.left - margem, limites.bottom - margem, limites.right + margem, limites.top + margem],
+        )
+        validada = None
         if memoria is None:
             raise RuntimeError('Não foi possível recortar as feições para o tile.')
         _limitar_vertices_tile(memoria)

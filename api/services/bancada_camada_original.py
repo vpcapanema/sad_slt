@@ -188,12 +188,31 @@ def _metadata(fonte: Fonte, revisao: str) -> dict[str, Any]:
             "coluna_fid": camada.GetFIDColumn(),
             "campo_fid_tile": storage_geoespacial.campo_fid_tile(camada),
         }
-        if count != 0:
-            from api.services.analise_territorial_ogr import ler_camada
-            from api.services.fluxo_camadas_ogr import descrever
-            meta = descrever(ler_camada(camada), formato=dataset.GetDriver().ShortName,
-                             consultar_localizacao=False, permitir_sem_geometria=True)
-            result.update(metadados_local=meta, status_validacao='valida')
+        # Abrir o mapa não deve carregar a camada inteira, calcular áreas ou
+        # consultar municípios. A validação integral pertence à execução.
+        nomes = [c['nome'].casefold() for c in result['campos']]
+        if len(nomes) > 2000 or len(nomes) != len(set(nomes)):
+            raise ValueError('A camada deve ter até 2000 campos, sem nomes repetidos.')
+        if result['bounds'] and not all(math.isfinite(v) for v in result['bounds']):
+            raise ValueError('A extensão da camada não corresponde ao CRS informado.')
+        codigo = spatial_ref.GetAuthorityCode(None)
+        meta = {
+            'feicoes': result['feicoes'], 'campos': result['campos'], 'campos_total': len(nomes),
+            'componente': camada.GetName(), 'formato': result['formato'],
+            'crs': f'{spatial_ref.GetAuthorityName(None)}:{codigo}' if codigo else result['crs_arquivo'],
+            'crs_nome': spatial_ref.GetName(), 'crs_wkt': result['crs_arquivo'],
+            'unidade': spatial_ref.GetAngularUnitsName() if spatial_ref.IsGeographic() else spatial_ref.GetLinearUnitsName(),
+            'limites_wgs84': result['bounds'], 'tipos_geometria': [result['geometria_tipo']],
+            'bytes': fonte.caminho.stat().st_size,
+            'identificacao': {'total': result['feicoes'], 'campos': [], 'completa': False,
+                              'fid_nativo': result['coluna_fid'], 'sugestao': '__feicao__'},
+            'localizacao': {'status': 'nao_consultado'},
+            'avisos': ['Arquivo e CRS conferidos para visualização. A geometria integral será validada antes do cálculo.'],
+        }
+        pacote = json.loads(dataset.GetMetadataItem('SICARD_FONTE_PACOTE') or '{}')
+        meta['bytes_descompactados'] = pacote.get('bytes_descompactados', meta['bytes'])
+        meta['formato'] = pacote.get('formato', meta['formato'])
+        result.update(metadados_local=meta, status_validacao='valida', escopo_validacao='visualizacao')
         if fonte.local and signature != _assinatura_local(fonte.caminho):
             raise ValueError("O arquivo foi alterado durante a leitura. Abra novamente.")
         return result

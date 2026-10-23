@@ -56,9 +56,9 @@ def test_storage_previa_bancada_preservam_fids_e_atributos_sem_dataframes(tmp_pa
     nativo.conferir(dados, carregada)
     assert carregada.fids == [7, 118]
     descritor = previa.preparar(ident, 'autor')
-    snapshot = nativo.ler(destino / f"{descritor['tiles_token']}.gpkg", 'camada')
-    nativo.conferir(dados, snapshot)
-    assert snapshot.fids == [7, 118]
+    assert 'tiles_token' not in descritor
+    assert not list(destino.iterdir())
+    assert '/storage/camada/tiles/' in descritor['tiles_url']
     original = bancada.preparar(ident, arquivo)
     linhas = bancada.ler_tabela(ident, arquivo, original['revisao'], 0, 10)['linhas']
     assert [r['id'] for r in linhas] == ['7', '118']
@@ -67,6 +67,23 @@ def test_storage_previa_bancada_preservam_fids_e_atributos_sem_dataframes(tmp_pa
     assert normalizada.fids == dados.fids
     assert all(g.GetDimension() == 2 for g in normalizada.geometrias)
     assert sha256(path.read_bytes()).digest() == assinatura
+
+
+@pytest.mark.usefixtures('storage_sintetico')
+def test_previa_storage_nao_materializa_dados_nem_calcula_medidas(tmp_path, monkeypatch):
+    path = tmp_path / 'base.gpkg'
+    dados = nativo.Camada([], [{}], [ogr.CreateGeometryFromWkt('POINT(-47 -23)')], nativo.referencia(4674))
+    path.write_bytes(nativo.serializar(dados, 'base'))
+    monkeypatch.setattr(storage, 'resolver', lambda _: path)
+    def proibido(*args, **kwargs):
+        pytest.fail('A abertura da prévia não deve varrer ou copiar a base inteira.')
+    for modulo, nome in [(nativo, 'ler_camada'), (nativo, 'carregar_referencia'),
+                         (fluxo, 'descrever'), (fluxo, 'localizacao'), (previa, 'representar')]:
+        monkeypatch.setattr(modulo, nome, proibido)
+    resultado = previa.preparar('storage:base-geoespacial/base.gpkg::base', 'autor')
+    assert resultado['feicoes'] == 1
+    assert resultado['escopo_validacao'] == 'visualizacao'
+    assert resultado['revisao'] == resultado['revisao_fonte']
 
 
 def test_medidas_geodesicas_incluem_buracos_e_nao_somam_perimetro_como_linha():

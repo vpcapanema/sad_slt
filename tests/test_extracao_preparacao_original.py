@@ -105,7 +105,8 @@ def test_preparacao_storage_preenche_tamanho_componente_e_formato(monkeypatch, i
     assert meta['bytes_descompactados'] == path.stat().st_size
     assert meta['componente'] == 'demandas_reais'
     assert meta['formato'] == 'GPKG'
-    assert meta['vertices'] == 1
+    assert 'vertices' not in meta  # Abrir a prévia não percorre as coordenadas.
+    assert result['escopo_validacao'] == 'visualizacao'
 
 
 def test_revisao_fonte_storage_independe_do_token_da_previa(monkeypatch, isolado):
@@ -116,9 +117,8 @@ def test_revisao_fonte_storage_independe_do_token_da_previa(monkeypatch, isolado
     ident = 'storage:base-geoespacial/municipios.gpkg::municipios'
     descritor = preparo.preparar(ident, 'autor')
     estado = path.stat()
-    assert descritor['revisao'] == descritor['tiles_token']
-    with pytest.raises(ValueError, match='mudou após o envio'):
-        elegibilidade_processamento._carregar({'id': ident, 'nome': 'municipios', 'revisao': descritor['revisao']})
+    assert 'tiles_token' not in descritor
+    assert descritor['revisao'] == descritor['revisao_fonte']
     assert descritor['revisao_fonte'] == f'{estado.st_mtime_ns}-{estado.st_size}'
     carregada = elegibilidade_processamento._carregar({
         'id': ident, 'nome': 'municipios', 'revisao': descritor['revisao_fonte'],
@@ -147,14 +147,15 @@ def test_mudanca_durante_preparacao_nao_retorna_descritor_valido(monkeypatch, is
     path = isolado / 'municipios.gpkg'
     frame().to_file(path, layer='municipios', driver='GPKG', engine='pyogrio')
     monkeypatch.setattr(storage_geoespacial, 'resolver', lambda _: path)
-    representar_original = preparo.representar
-    def representar(*args, **kwargs):
-        descritor = representar_original(*args, **kwargs)
+    from api.services import bancada_camada_original as bancada
+    metadata_original = bancada._metadata
+    def metadata(*args, **kwargs):
+        descritor = metadata_original(*args, **kwargs)
         estado = path.stat()
         os.utime(path, ns=(estado.st_atime_ns, estado.st_mtime_ns + 2_000_000_000))
         return descritor
-    monkeypatch.setattr(preparo, 'representar', representar)
-    with pytest.raises(ValueError, match='mudou durante a preparação'):
+    monkeypatch.setattr(bancada, '_metadata', metadata)
+    with pytest.raises(ValueError, match='alterado durante a leitura'):
         preparo.preparar('storage:base-geoespacial/municipios.gpkg::municipios', 'autor')
 
 
@@ -189,7 +190,7 @@ def test_previa_real_alimenta_execucao_favorabilidade_sem_falso_arquivo_alterado
     assert recortes[campos['indice_normalizado']].tolist() == [.8]
 
 
-def test_pacote_preserva_bytes_reais_e_consulta_localizacao(monkeypatch, isolado):
+def test_pacote_preserva_bytes_reais_sem_consulta_espacial_na_abertura(monkeypatch, isolado):
     import zipfile
     from api.services import storage_geoespacial, storage_pacotes
     content = json.dumps({'type': 'FeatureCollection', 'features': [
@@ -207,4 +208,4 @@ def test_pacote_preserva_bytes_reais_e_consulta_localizacao(monkeypatch, isolado
     assert meta['bytes_descompactados'] == len(content)
     assert meta['formato'] == 'GeoJSON'
     assert meta['componente']
-    assert meta['localizacao']['status'] == 'consultado'
+    assert meta['localizacao']['status'] == 'nao_consultado'

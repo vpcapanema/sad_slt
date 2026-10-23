@@ -3,6 +3,7 @@ import {base,post,json} from './api.js';
 export function descritorOriginal(layer){
  delete layer.geojson;delete layer.geojson_resumido;
  if(layer.tiles_token)layer.tiles_url=`${location.origin}${base}/extracao-atributos/previa-tiles/${encodeURIComponent(layer.tiles_token)}/{z}/{x}/{y}.pbf`;
+ else if(layer.tiles_url?.startsWith('/api/geoespacial/'))layer.tiles_url=`${location.origin}${base}${layer.tiles_url.slice('/api/geoespacial'.length)}`;
  return layer;
 }
 export async function validarCamada(ref){

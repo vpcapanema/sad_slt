@@ -185,7 +185,7 @@ export function criarPrevia(state, changed, {obterCamadas, aoMudarVisibilidade, 
     const limites=meta.limites_wgs84||layer.bounds;
     const representacao=meta.previa||layer.representacao_previa;
     const nivel=mapa?.getZoom()<12&&representacao?.nivel_resumido?representacao.nivel_resumido:representacao;
-    const situacao=({valida:'Validada',invalida:'Não validada',pendente:'Aguardando validação'})[layer.status_validacao]||'Não informada';
+    const situacao=layer.escopo_validacao==='visualizacao'?'Apta à visualização':({valida:'Validada',invalida:'Não validada',pendente:'Aguardando validação'})[layer.status_validacao]||'Não informada';
     const valores={
       nome:layer.nome,papel:layer.grupo==='base'?'Camada de base':'Camada de entrada',
       arquivo:naoSeAplica||(caminho?nomeArquivo(caminho):null),caminho:naoSeAplica||caminho,
