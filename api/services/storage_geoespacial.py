@@ -256,6 +256,14 @@ def _camadas_do_arquivo(arquivo: str, _versao: tuple[int, int]) -> tuple[dict[st
     camadas = []
     for indice in range(ds.GetLayerCount()):
         camada = ds.GetLayer(indice)
+        # QGIS stores default styles as a non-spatial GeoPackage table.
+        # It is metadata, not another selectable map layer.
+        definicao = camada.GetLayerDefn()
+        campos = {definicao.GetFieldDefn(i).GetName().lower() for i in range(definicao.GetFieldCount())}
+        if (camada.GetName().lower() == "layer_styles"
+                and camada.GetGeomType() == ogr.wkbNone
+                and {"f_table_name", "styleqml", "stylesld"}.issubset(campos)):
+            continue
         camadas.append({
             "camada": camada.GetName(),
             "geometria_tipo": tipo_geometria(camada),
@@ -502,7 +510,7 @@ def ler_para_mapa(ident: str) -> dict[str, Any]:
         raise ValueError("A camada não contém geometrias disponíveis para visualização.")
     definicao = lyr.GetLayerDefn()
     result = {
-        "id": ident, "nome": arquivo.stem if ds.GetLayerCount() == 1 else lyr.GetName(),
+        "id": ident, "nome": arquivo.stem if len(_camadas_do_arquivo(str(arquivo), (estado.st_mtime_ns, estado.st_size))) == 1 else lyr.GetName(),
         "vinculos": 1, "codificacao": "declarada pelo arquivo", "arquivo": caminho,
         "origem_geometria": "storage", "revisao": f"{estado.st_mtime_ns}-{estado.st_size}",
         "crs_arquivo": srs.ExportToWkt(),

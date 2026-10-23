@@ -49,6 +49,26 @@ def _linhas_gpkg(caminho, pontos, quantidade=1):
     feicao = camada = ds = None
 
 
+def test_estilo_qgis_nao_aparece_como_camada_do_mapa(tmp_path):
+    arquivo = tmp_path / 'Favorabilidade Rede Trechos pol.gpkg'
+    _gpkg(arquivo, ('subtrechos',))
+    ds = ogr.Open(str(arquivo), update=1)
+    metadata = ds.CreateLayer('layer_styles', geom_type=ogr.wkbNone)
+    for field in ('f_table_name', 'styleQML', 'styleSLD'):
+        metadata.CreateField(ogr.FieldDefn(field, ogr.OFTString))
+    style = ogr.Feature(metadata.GetLayerDefn())
+    style.SetField('f_table_name', 'subtrechos')
+    style.SetField('styleQML', '<qgis/>')
+    metadata.CreateFeature(style)
+    style = metadata = ds = None
+    items = storage_geoespacial._itens_do_arquivo(arquivo, arquivo.name)
+    assert len(items) == 1
+    assert items[0]['camada'] == 'subtrechos'
+    assert items[0]['nome'] == arquivo.stem
+    ds = ogr.Open(str(arquivo))
+    assert ds.GetLayerByName('layer_styles').GetFeatureCount() == 1
+
+
 def _ler_linhas_tile(conteudo, alvo):
     import uuid
     nome = f"/vsimem/sicard-teste-linhas-{uuid.uuid4().hex}.pbf"
