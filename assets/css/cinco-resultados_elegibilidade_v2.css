@@ -227,3 +227,13 @@
   .ev2 .ev2-feicao { grid-template-columns: 1fr; }
   .ev2 .ev2-feicao-valor { text-align: left; }
 }
+.ev2 .ev2-controle-camadas { position: relative; }
+.ev2 .ev2-controle-camadas button.leaflet-control-layers-toggle { border: 0; background-color: white; border-radius: 5px; cursor: pointer; }
+.ev2 .ev2-menu-camadas { position: absolute; top: 0; right: 48px; width: min(340px, 60vw); max-height: 420px; overflow: auto; padding: .75rem; background: white; color: var(--ev2-deep); border-radius: 5px; box-shadow: 0 1px 5px #0006; font-size: .75rem; }
+.ev2 .ev2-menu-camadas[hidden] { display: none; }
+.ev2 .ev2-menu-camadas fieldset { border: 0; padding: 0; margin: 0 0 .75rem; min-width: 0; }
+.ev2 .ev2-menu-camadas legend { font: inherit; font-weight: 700; margin-bottom: .4rem; }
+.ev2 .ev2-menu-camadas label { display: flex; align-items: flex-start; gap: .4rem; margin: .35rem 0; font: inherit; cursor: pointer; }
+.ev2 .ev2-menu-camadas input { flex: 0 0 auto; margin-top: .2rem; }
+.ev2 .ev2-menu-camadas small { display: block; font-size: inherit; line-height: 1.4; }
+.ev2 .ev2-camada-status { color: #536977; }

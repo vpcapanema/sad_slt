@@ -1,12 +1,14 @@
 import {el} from '../../geoespacial/extracao-atributos/ui.js';
-import {CORES, CORES_SITUACAO, SITUACOES, ROTULOS, formatarPercentual} from './cinco-resultados_elegibilidade_v2-dados.js?v=poligonos';
+import {controleCamadas} from './elegibilidade-controle-camadas.js?v=1';
+import {CORES, CORES_SITUACAO, SITUACOES, ROTULOS, formatarPercentual} from './cinco-resultados_elegibilidade_v2-dados.js?v=hectares-camadas';
 
 const TOPO = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}';
 const SATELITE = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
 
 /** Mapa do dashboard: cada demanda leva a cor da sua situação; as áreas atingidas por restrição e risco ficam por cima. */
-export function criarMapa({container, fundoSelect, nota, aoSelecionar}) {
+export function criarMapa({container, nota, aoSelecionar}) {
   let mapa = null, observador = null, ctx = null;
+  let removerControle = null;
   let demandas = new Map(), situacoes = new Map(), recortes = [], marcadores = new Map(), grupoRecortes, localizadores, fundo, satelite;
   const corDe = chave => CORES_SITUACAO[situacoes.get(chave)];
 
@@ -29,6 +31,7 @@ export function criarMapa({container, fundoSelect, nota, aoSelecionar}) {
   }
 
   function destruir() {
+    removerControle?.(); removerControle = null;
     observador?.disconnect(); observador = null;
     popup = null;
     mapa?.remove(); mapa = null; ctx = null;
@@ -42,17 +45,13 @@ export function criarMapa({container, fundoSelect, nota, aoSelecionar}) {
     if (!L) throw new Error('O mapa Leaflet não foi carregado. Recarregue a página.');
     nota.textContent = '';
     mapa = L.map(container, {scrollWheelZoom: false});
-    for (const [nome, z] of [['ev2-demandas', 420], ['ev2-recortes', 440], ['ev2-localizadores', 460]]) mapa.createPane(nome).style.zIndex = z;
+    for (const [nome, z] of [['ev2-superficies', 350], ['ev2-demandas', 420], ['ev2-recortes', 440], ['ev2-localizadores', 460]]) mapa.createPane(nome).style.zIndex = z;
     fundo = L.tileLayer(TOPO, {maxZoom: 19, attribution: 'Tiles © Esri'}).addTo(mapa);
     satelite = L.tileLayer(SATELITE, {maxZoom: 19, attribution: 'Tiles © Esri'});
     fundo.on('tileerror', () => { nota.textContent = 'O mapa de fundo está indisponível. As demandas e as áreas atingidas continuam visíveis.'; });
     satelite.on('tileerror', () => { nota.textContent = 'Imagem de satélite indisponível. Use o fundo cartográfico.'; });
-    fundoSelect.value = 'cartografico';
-    fundoSelect.onchange = () => {
-      const usarSatelite = fundoSelect.value === 'satelite';
-      mapa.removeLayer(usarSatelite ? fundo : satelite);
-      (usarSatelite ? satelite : fundo).addTo(mapa);
-    };
+    const osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 19, attribution: '© OpenStreetMap contributors'});
+    removerControle = controleCamadas(mapa, entrada, [['Cartográfico', fundo], ['Satélite', satelite], ['OpenStreetMap', osm]]);
     L.control.scale({imperial: false}).addTo(mapa);
     const grupoDemandas = L.featureGroup().addTo(mapa);
     grupoRecortes = L.featureGroup().addTo(mapa);

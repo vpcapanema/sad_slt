@@ -4,12 +4,12 @@ import {conclusaoSobreposicao} from './elegibilidade-conclusao.js?v=1';
 import {escolherArquivo} from '../../geoespacial/extracao-atributos/explorador.js?v=20261020-saidas';
 import {
   CATEGORIAS, ROTULOS, FILTROS, ORDENS, SELECAO_VAZIA, caracterizarDemandas, demandasVisiveis, descreverSituacao,
-  registrosDetalhados, registrosVisiveis, alternarSelecao, formatarKm2, formatarHa, formatarPercentual,
-} from './cinco-resultados_elegibilidade_v2-dados.js?v=poligonos';
-import {criarGrafico} from './cinco-resultados_elegibilidade_v2-grafico.js?v=poligonos';
-import {criarRosca} from './cinco-resultados_elegibilidade_v2-rosca.js?v=poligonos';
-import {criarMapa} from './cinco-resultados_elegibilidade_v2-mapa.js?v=poligonos';
-import {criarTabela} from './cinco-resultados_elegibilidade_v2-tabela.js?v=poligonos';
+  registrosDetalhados, registrosVisiveis, alternarSelecao, formatarHa, formatarPercentual,
+} from './cinco-resultados_elegibilidade_v2-dados.js?v=hectares-camadas';
+import {criarGrafico} from './cinco-resultados_elegibilidade_v2-grafico.js?v=hectares-camadas';
+import {criarRosca} from './cinco-resultados_elegibilidade_v2-rosca.js?v=hectares-camadas';
+import {criarMapa} from './cinco-resultados_elegibilidade_v2-mapa.js?v=hectares-camadas';
+import {criarTabela} from './cinco-resultados_elegibilidade_v2-tabela.js?v=hectares-camadas';
 
 const ROTA = '/extracao-atributos/elegibilidade/resultados';
 const PAPEIS = {entrada: 'Entrada', restricao: 'Restrição', risco: 'Risco'};
@@ -38,7 +38,7 @@ export function criarResultados({avisar, aoOcupar}) {
     cards: node('cards'), lista: node('grafico'), aoSelecionar: escolher, aoFiltrar: filtrarSituacao,
   });
   const rosca = criarRosca({container: node('rosca'), aoSelecionar: escolher});
-  const mapa = criarMapa({container: node('mapa'), fundoSelect: node('fundo'), nota: node('nota-mapa'), aoSelecionar: escolher});
+  const mapa = criarMapa({container: node('mapa'), nota: node('nota-mapa'), aoSelecionar: escolher});
   const tabela = criarTabela({
     tabela: node('tabela'), anterior: node('anterior'), proxima: node('proxima'), rotulo: node('pagina'),
     contagem: node('contagem'), aoSelecionar: escolher,
@@ -70,7 +70,7 @@ export function criarResultados({avisar, aoOcupar}) {
     const d = ficha(selecao.chave);
     const partes = [el('strong', d.nome),
       ...descreverSituacao(d, 6).map(f => el('span', f.texto, `ev2-sel-${f.categoria}`)),
-      el('span', `Área da demanda: ${formatarKm2(d.total)} km² · ${formatarHa(d.total)} ha`, 'ev2-secundario')];
+      el('span', `Área da demanda: ${formatarHa(d.total)} ha`, 'ev2-secundario')];
     if (selecao.feicao) {
       const item = d.linha.sobreposicoes.find(s => s.id === selecao.feicao);
       const camada = entrada().campos.find(c => c.id === item.base_id);

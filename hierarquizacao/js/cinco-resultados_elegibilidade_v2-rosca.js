@@ -1,5 +1,5 @@
 import {el} from '../../geoespacial/extracao-atributos/ui.js';
-import {ROTULOS, formatarKm2, formatarHa, formatarPercentual} from './cinco-resultados_elegibilidade_v2-dados.js?v=poligonos';
+import {ROTULOS, formatarHa, formatarPercentual} from './cinco-resultados_elegibilidade_v2-dados.js?v=hectares-camadas';
 
 const ns = 'http://www.w3.org/2000/svg';
 const CORES_ARCO = {restricao: '#b42335', risco: '#c18b00'};
@@ -76,8 +76,8 @@ export function criarRosca({container, aoSelecionar}) {
       }
 
       const centro = el('div', undefined, 'ev2-rosca-centro');
-      centro.append(el('strong', ficha.situacao === 'livre' ? 'Livre de restrições e riscos' : `${formatarKm2(ficha.total)} km²`),
-        el('span', ficha.situacao === 'livre' ? `${formatarKm2(ficha.total)} km² · ${formatarHa(ficha.total)} ha` : 'Área total da demanda'));
+      centro.append(el('strong', ficha.situacao === 'livre' ? 'Livre de restrições e riscos' : `${formatarHa(ficha.total)} ha`),
+        el('span', ficha.situacao === 'livre' ? `${formatarHa(ficha.total)} ha` : 'Área total da demanda'));
       const figura = el('div', undefined, 'ev2-rosca-figura');
       figura.append(svg, centro);
 

@@ -1,8 +1,8 @@
 import {el} from '../../geoespacial/extracao-atributos/ui.js';
 import {conclusaoSobreposicao} from './elegibilidade-conclusao.js?v=1';
 import {
-  SITUACOES, ORDEM_SITUACOES, ROTULOS, formatarKm2, formatarHa, formatarPercentual, ordenarDemandas, descreverSituacao, indicadores,
-} from './cinco-resultados_elegibilidade_v2-dados.js?v=poligonos';
+  SITUACOES, ORDEM_SITUACOES, ROTULOS, formatarHa, formatarPercentual, ordenarDemandas, descreverSituacao, indicadores,
+} from './cinco-resultados_elegibilidade_v2-dados.js?v=hectares-camadas';
 
 /** Cards de situação (filtram ao clicar) e lista de demandas com a resposta em palavras. */
 export function criarGrafico({cards, lista, aoSelecionar, aoFiltrar}) {

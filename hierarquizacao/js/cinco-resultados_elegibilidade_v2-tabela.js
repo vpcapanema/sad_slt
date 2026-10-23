@@ -1,5 +1,5 @@
 import {el} from '../../geoespacial/extracao-atributos/ui.js';
-import {ROTULOS, SITUACOES, formatarKm2, formatarHa, formatarPercentual} from './cinco-resultados_elegibilidade_v2-dados.js?v=poligonos';
+import {ROTULOS, SITUACOES, formatarHa, formatarPercentual} from './cinco-resultados_elegibilidade_v2-dados.js?v=hectares-camadas';
 
 const TAMANHO = 50;
 const COLUNAS = ['Demanda', 'Situação', 'Tipo', 'Restrição ou risco encontrado', 'Camada consultada', 'Área de sobreposição', '% da área da demanda'];
@@ -28,8 +28,7 @@ export function criarTabela({tabela, anterior, proxima, rotulo, contagem, aoSele
         td.colSpan = COLUNAS.length - 2; linha.append(td);
       } else {
         const area = el('td', undefined, 'ev2-num');
-        area.append(r.area_m2 === 0 ? el('span', 'Apenas toca o limite') : el('span', `${formatarKm2(r.area_m2)} km²`),
-          el('small', r.area_m2 === 0 ? 'Sem área atingida' : `${formatarHa(r.area_m2)} ha`, 'ev2-secundario'));
+        area.append(r.area_m2 === 0 ? el('span', 'Apenas toca o limite') : el('strong', `${formatarHa(r.area_m2)} ha`));
         linha.append(el('td', ROTULOS[r.categoria], `ev2-cat ${r.categoria}`), el('td', `${r.numero_poligono ? `${r.area_m2 > 0 ? 'Polígono' : 'Contato'} ${r.numero_poligono} · ` : ''}${r.feicao}`), el('td', r.camada), area,
           el('td', r.area_m2 === 0 ? '—' : formatarPercentual(r.percentual), 'ev2-num'));
       }
