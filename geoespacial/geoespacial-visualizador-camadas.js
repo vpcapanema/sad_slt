@@ -59,6 +59,7 @@
     { caminho: "superficies-indices", rotulo: "Superfícies-Índice" },
   ];
   const FAVORABILIDADE = {
+    "superficies-indices/hierarquizacao/favorabilidade/Favorabilidade Rede Trechos pol.gpkg": { camada: "subtrechos", campo: "fav_rede_dim", classe: "fav_rede_classe" },
     "superficies-indices/hierarquizacao/favorabilidade/favorabilidade_rede_trechos.gpkg": { camada: "subtrechos", campo: "fav_rede_dim" },
     "superficies-indices/hierarquizacao/favorabilidade/indicadores_municipais.gpkg": { camada: "municipios", campo: "fav_territorial_dim" },
   };
@@ -93,6 +94,11 @@
   async function carregarClassesFavorabilidade(camada) {
     const config = favorabilidade(camada);
     if (!config) return;
+    if (config.classe) {
+      favorabilidadeClasses.set(camada.id, {categorias: true});
+      renderLegend();
+      return;
+    }
     favorabilidadeClasses.delete(camada.id);
     renderLegend();
     let response = await fetch(`${API}/bancada-arquivos/preparar`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: camada.id, arquivo: camada.arquivo }) });
@@ -115,9 +121,11 @@
     if (!config || !info) return;
     const classificacao = favorabilidadeClasses.get(camada.id);
     if (!classificacao) throw new Error("A classificação da superfície ainda não está disponível.");
-    const paradas = paradasFavorabilidade(classificacao);
+    const paradas = config.classe ? [] : paradasFavorabilidade(classificacao);
     const valor = ["number", ["get", config.campo], -1];
-    const color = ["case",
+    const color = config.classe ? ["match", ["downcase", ["to-string", ["get", config.classe]]],
+      "muito baixa", "#440154", "baixa", "#3b528b", ["média", "media", "moderada"], "#21918c",
+      "alta", "#5ec962", "muito alta", "#fde725", "#808080"] : ["case",
       ["==", ["get", "slt_geometria_valida"], false], "#dc2626",
       ["all", [">=", valor, 0], ["<=", valor, 1]],
       ["interpolate", ["linear"], valor, ...paradas.flat()],
@@ -180,7 +188,9 @@
         form.elements.fillMode.value = "solid"; form.elements.fillMode.disabled = true;
         form.elements.fillOpacity.value = "1"; form.elements.fillOpacity.disabled = true;
       }
-      form.insertAdjacentHTML("afterbegin", `<p class="hint">Rampa contínua Viridis do índice <strong>${thematic.campo}</strong>, por dimensões, com contraste distribuído por Jenks entre o mínimo e o máximo observados, sem classes de cores. Polígonos sem borda e 100% opacos. Valores ausentes ou fora de 0–1 aparecem em cinza.</p>`);
+      form.insertAdjacentHTML("afterbegin", thematic.classe
+        ? `<p class="hint">Cores das classes de favorabilidade em <strong>${thematic.classe}</strong>, iguais ao estilo padrão do GeoPackage. Preenchimento opaco, sem contorno. Feições sem classe reconhecida aparecem em cinza.</p>`
+        : `<p class="hint">Rampa contínua Viridis do índice <strong>${thematic.campo}</strong>, por dimensões, com contraste distribuído por Jenks entre o mínimo e o máximo observados, sem classes de cores. Polígonos sem borda e 100% opacos. Valores ausentes ou fora de 0–1 aparecem em cinza.</p>`);
     }
     form.addEventListener("submit", (event) => { event.preventDefault(); const data = new FormData(form), polygon = thematic && geometryType(camada) === "polygon", props = { alias: String(data.get("alias")).trim(), color: String(data.get("color") ?? style.color), fillColor: String(data.get("fillColor") ?? style.fillColor ?? style.color), lineWidth: Number(data.get("lineWidth")), pointRadius: Number(data.get("pointRadius")), lineStyle: String(data.get("lineStyle")), fillMode: polygon ? "solid" : String(data.get("fillMode")), fillOpacity: polygon ? 1 : Number(data.get("fillOpacity")) }; GeoespacialMap.saveLayerProperties(camada.id, props); aplicarFavorabilidade(camada); row.querySelector(".layer-group-name").textContent = props.alias; row.querySelector(".geo-layer-tree-symbol").outerHTML = layerSymbol(camada); renderLegend(); form.querySelector(".geo-properties-feedback").textContent = "Propriedades salvas e aplicadas."; });
   }
@@ -191,6 +201,11 @@
       legendFrame=null;
     const rows = [...registro.values()].filter((camada) => layerShown(camada)).map((camada) => {
       const thematic = favorabilidade(camada);
+      if (thematic?.classe) {
+        const labels = ["Muito baixa", "Baixa", "Média", "Alta", "Muito alta", "Sem classe"];
+        const colors = [...FAVORABILIDADE_CORES, "#808080"];
+        return `<div class="geo-legend-categories" data-campo="${thematic.classe}"><strong>${escapeHtml(displayName(camada))}</strong><span class="geo-legend-field">Classe de favorabilidade</span>${labels.map((label,i) => `<div class="geo-legend-item"><span class="geo-legend-symbol geo-legend-symbol--polygon" style="--legend-color:${colors[i]};--legend-opacity:100%;--legend-width:0px"></span><span>${label}</span></div>`).join("")}</div>`;
+      }
       if (thematic) {
         const classificacao = favorabilidadeClasses.get(camada.id);
         if (!classificacao) return `<div class="geo-legend-continuous" data-campo="${thematic.campo}"><strong>${escapeHtml(displayName(camada))}</strong><span role="status">Preparando rampa contínua…</span></div>`;

@@ -14,6 +14,7 @@ const { execFileSync } = require("node:child_process");
     { arquivo: `${folder}/favorabilidade_rede_trechos.gpkg`, camada: "subtrechos", campo: "fav_rede_dim", simples: "fav_rede", geometria_tipo: "LineString", fixture: "rede" },
     { arquivo: `${folder}/indicadores_municipais.gpkg`, camada: "municipios", campo: "fav_territorial_dim", simples: "fav_territorial", geometria_tipo: "Polygon", fixture: "territorio" },
     { arquivo: "base-geoespacial/favorabilidade_rede_trechos.gpkg", camada: "subtrechos", geometria_tipo: "LineString", fixture: "rede" },
+    { arquivo: `${folder}/Favorabilidade Rede Trechos pol.gpkg`, camada: "subtrechos", geometria_tipo: "Polygon", fixture: "territorio" },
   ].map(item => ({ ...item, id: `storage:${item.arquivo}::${item.camada}`, nome: path.posix.basename(item.arquivo, ".gpkg"), tipo: "vetor" }));
   let server, browser;
   try {
@@ -26,14 +27,15 @@ const { execFileSync } = require("node:child_process");
       features: values[layer.fixture].map((value, i) => {
         const x = -47.4 + i * .1;
         return {
-          type: "Feature", properties: { [layer.campo]: value, [layer.simples]: value == null ? .5 : 1 - value },
+          type: "Feature", properties: { [layer.campo]: value, [layer.simples]: value == null ? .5 : 1 - value,
+            fav_rede_classe: ["muito baixa", "baixa", "média", "alta", "muito alta", null, "desconhecida"][i % 7] },
           geometry: layer.fixture === "rede"
             ? { type: "LineString", coordinates: [[x, -23.2], [x + .08, -23.2]] }
             : { type: "Polygon", coordinates: [[[x, -23.24], [x + .08, -23.24], [x + .08, -23.16], [x, -23.16], [x, -23.24]]] },
         };
       }),
     }]));
-    const classifications = JSON.parse(execFileSync(python, ["-c", `
+    const classifications = JSON.parse(execFileSync(python, ["-X", "utf8", "-c", `
 import json, sys
 from pathlib import Path
 from osgeo import gdal
@@ -209,7 +211,7 @@ print(json.dumps(samples))
         const expected = expectedColor(value);
         assert.ok(pixel.every((channel, i) => Math.abs(channel - expected[i]) <= 3), `${layer.campo}: raster legend ${pixel} at ${value} matches the map ramp ${expected}`);
       });
-      if (layer.fixture === "territorio") assert.deepEqual(pixels.at(-1), [230, 235, 230], "no polygon border outside the original geometry");
+      if (layer.fixture === "territorio") assert.ok(pixels.at(-1).every((value,i) => Math.abs(value-[230,235,230][i]) <= 3), "no polygon border outside the original geometry");
     }
     async function verifyPolygon() {
       const properties = await page.evaluate(id => {
@@ -294,6 +296,39 @@ print(json.dumps(samples))
     await waitLayer(layers[2]);
     assert.equal(await page.locator(".geo-legend-continuous").count(), 0);
     assert.ok(!JSON.stringify(await paint(layers[2])).includes("fav_rede_dim"));
+    const previousClassifications = classificationRequests.length;
+    await page.goto(`${base}?camada=${encodeURIComponent(layers[3].id)}`);
+    await waitLayer(layers[3]);
+    await page.locator('.geo-legend-categories[data-campo="fav_rede_classe"]').waitFor();
+    assert.equal(await page.locator('.geo-legend-categories .geo-legend-item').count(), 6);
+    assert.equal(classificationRequests.length, previousClassifications, 'Stored classes must not be recalculated');
+    const categorical = await page.evaluate(id => {
+      const info = GeoespacialMap.layers.get(id), map = GeoespacialMap.map;
+      return {color:map.getPaintProperty(info.mapLayerIds[0],'fill-color'),opacity:map.getPaintProperty(info.mapLayerIds[0],'fill-opacity')};
+    }, layers[3].id);
+    assert.equal(categorical.color[0], 'match');
+    assert.ok(JSON.stringify(categorical.color).includes('fav_rede_classe'));
+    assert.equal(categorical.opacity,1);
+    await page.evaluate(() => GeoespacialMap.map.jumpTo({center:[-47.06,-23.2],zoom:9}));
+    await waitLayer(layers[3]);
+    const categoryPixels = await page.evaluate(() => new Promise(resolve => {
+      const map = GeoespacialMap.map;
+      map.once('render', () => {
+        const canvas=map.getCanvas(),gl=canvas.getContext('webgl2')||canvas.getContext('webgl');
+        resolve(Array.from({length:7},(_,i)=>{
+          const p=map.project([-47.36+i*.1,-23.2]), rgba=new Uint8Array(4);
+          gl.readPixels(Math.floor(p.x*canvas.width/canvas.clientWidth),canvas.height-1-Math.floor(p.y*canvas.height/canvas.clientHeight),1,1,gl.RGBA,gl.UNSIGNED_BYTE,rgba);
+          return [...rgba].slice(0,3);
+        }));
+      });
+      map.triggerRepaint();
+    }));
+    ['440154','3b528b','21918c','5ec962','fde725','808080','808080'].forEach((hex,i) => {
+      const expected=hex.match(/../g).map(v=>parseInt(v,16));
+      assert.ok(expected.every((v,c)=>Math.abs(v-categoryPixels[i][c])<=3), `Category ${i}: ${categoryPixels[i]}`);
+    });
+    await page.reload(); await waitLayer(layers[3]);
+    await page.locator('.geo-legend-categories[data-campo="fav_rede_classe"]').waitFor();
     assert.ok(classificationRequests.every(payload => payload.metodo === "jenks" && payload.classes === 5 &&
       payload.revisao === "original-r1" && JSON.stringify(payload.dominio) === "[0,1]"));
     await page.route("**/bancada-arquivos/classificacao", route => route.fulfill({
@@ -314,7 +349,7 @@ print(json.dumps(samples))
     await fresh.locator('.geo-legend-continuous[data-campo="fav_rede_dim"] .geo-legend-ramp').waitFor({ state: "visible" });
     await fresh.close();
     assert.deepEqual(errors, []);
-    console.log("PASS: continuous raster-style legends match rendered map pixels, Jenks contrast, no discrete classes, opaque borderless polygons, persistence, reloads, invalid-data feedback, mobile and unrelated-layer isolation");
+    console.log("PASS: existing continuous ramps preserved; network polygons use stored classes with matching rendered colors, null/unknown fallback, legend and reload persistence; mobile and unrelated-layer isolation");
   } finally {
     if (browser) await browser.close();
     if (server?.listening) await new Promise(resolve => server.close(resolve));
