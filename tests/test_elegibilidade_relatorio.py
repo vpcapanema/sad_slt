@@ -87,7 +87,8 @@ def test_superficie_contexto_vinculo_autoria_e_extensao(analise, monkeypatch):
     carregadas = []
     def carregar(base):
         carregadas.append(base)
-        return fonte, None, None
+        from tests.territorial_ogr_helpers import camada
+        return camada(fonte), None, None
     monkeypatch.setattr(service.extracao_preparacao, 'carregar', carregar)
     bounds = [-47.5,-23.5,-46.5,-22.5]
     dados = service.superficie_elegibilidade('job-1','base-0','autor',bounds,.001)

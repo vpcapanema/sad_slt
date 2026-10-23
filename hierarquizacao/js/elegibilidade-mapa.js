@@ -77,20 +77,27 @@ export function criarMapaElegibilidade({mapa, fundo, entrada, demandas, recortes
     const opacidade = el('input'); opacidade.type = 'range'; opacidade.min = '0'; opacidade.max = '80'; opacidade.value = '25';
     opacidade.setAttribute('aria-label',`Opacidade de ${campo.nome}`);
     const valor = el('output','25%'), status = el('span','Desligada','ea-hint'); status.setAttribute('role','status');
-    const estado = {campo,checkbox,opacidade,status,geracao:0,layer:null}; superficies.set(campo.id,estado);
+    const estado = {campo,checkbox,opacidade,status,geracao:0,layer:null,falhou:false,ultimaVista:null}; superficies.set(campo.id,estado);
     opacidade.oninput = () => { valor.textContent = `${opacidade.value}%`; estado.layer?.setStyle({fillOpacity:Number(opacidade.value)/100,opacity:Number(opacidade.value)/100}); };
-    checkbox.onchange = () => { estado.geracao++; if (estado.layer) mapa.removeLayer(estado.layer); carregar(estado); };
+    checkbox.onchange = () => { estado.geracao++; estado.falhou = false; estado.ultimaVista = null;
+      if (estado.layer) mapa.removeLayer(estado.layer); carregar(estado); };
     item.append(label,opacidade,valor,status); lista.append(item);
   }
   async function carregar(estado) {
     if (!vivo || !estado.checkbox.checked) { estado.status.textContent = 'Desligada'; return; }
-    const geracao = ++estado.geracao, b = mapa.getBounds();
+    if (estado.falhou) return;
+    const b = mapa.getBounds();
+    const bounds = [Math.max(-180,b.getWest()),Math.max(-90,b.getSouth()),Math.min(180,b.getEast()),Math.min(90,b.getNorth())];
+    const tolerancia = Math.min(.1,(b.getEast()-b.getWest())/Math.max(1,mapa.getSize().x)/2);
+    const vista = JSON.stringify([bounds,tolerancia]);
+    if (estado.ultimaVista === vista) return;
+    estado.ultimaVista = vista;
+    const geracao = ++estado.geracao;
     estado.status.textContent = 'Carregando superfície…';
     try {
       const dados = await post('/extracao-atributos/elegibilidade/resultados/superficie', {
         execucao:entrada.id,base_id:estado.campo.id,
-        bounds:[Math.max(-180,b.getWest()),Math.max(-90,b.getSouth()),Math.min(180,b.getEast()),Math.min(90,b.getNorth())],
-        tolerancia:Math.min(.1,(b.getEast()-b.getWest())/Math.max(1,mapa.getSize().x)/2),
+        bounds,tolerancia,
       });
       if (!vivo || geracao !== estado.geracao || !estado.checkbox.checked) return;
       if (estado.layer) mapa.removeLayer(estado.layer);
@@ -102,6 +109,7 @@ export function criarMapaElegibilidade({mapa, fundo, entrada, demandas, recortes
       estado.status.textContent = dados.geometrias.features.length ? 'Visível na extensão atual' : 'Sem feições nesta extensão';
     } catch (erro) {
       if (vivo && geracao === estado.geracao) {
+        estado.falhou = true;
         if (estado.layer) mapa.removeLayer(estado.layer);
         estado.status.textContent = `Não carregada: ${erro.message}. Desmarque e marque para tentar novamente.`;
       }

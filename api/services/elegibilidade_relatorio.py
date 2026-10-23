@@ -512,23 +512,32 @@ def superficie_elegibilidade(identificador: str, base_id: str, dono, bounds: lis
             or not math.isfinite(tolerancia) or not 0 <= tolerancia <= .1):
         raise ValueError('Extensão ou resolução de visualização inválida.')
     frame, _, _ = extracao_preparacao.carregar(base_id)
-    if not isinstance(frame, gpd.GeoDataFrame) or frame.crs is None:
+    if not isinstance(frame, nativo.Camada) or frame.crs is None:
         raise ValueError('A superfície não contém uma camada vetorial com CRS.')
-    frame = reproject(frame, 4326)
-    janela = box(*bounds)
-    frame = frame.loc[frame.geometry.notna() & ~frame.geometry.is_empty]
-    frame = frame.loc[frame.geometry.intersects(janela)]
-    nomes = {str(c).casefold(): c for c in frame.columns if c != frame.geometry.name}
+    frame = nativo.reproject(frame, 4326)
+    oeste, sul, leste, norte = bounds
+    janela = ogr.CreateGeometryFromWkt(
+        f'POLYGON(({oeste} {sul},{leste} {sul},{leste} {norte},{oeste} {norte},{oeste} {sul}))')
+    nomes = {c['nome'].casefold(): c['nome'] for c in frame.campos}
     campo_nome = next((nomes[c] for c in ('nome', 'name', 'nm_mun', 'denominacao') if c in nomes), None)
     features = []
-    for pos, (_, linha) in enumerate(frame.iterrows()):
-        geom = linha[frame.geometry.name]
-        if not geom.is_valid:
-            raise ValueError('A superfície atual contém geometria inválida.')
-        geom = geom.intersection(janela).simplify(tolerancia, preserve_topology=True)
-        if geom.is_empty:
+    for pos, (linha, geom) in enumerate(zip(frame.registros, frame.geometrias)):
+        if geom is None or geom.IsEmpty():
             continue
-        features.append({'type': 'Feature', 'geometry': mapping(geom), 'properties': {
+        if not geom.IsValid():
+            geom = geom.MakeValid()
+        if geom is None or geom.IsEmpty() or not geom.IsValid():
+            raise ValueError('A superfície atual contém geometria inválida.')
+        if not geom.Intersects(janela):
+            continue
+        geom = geom.Intersection(janela)
+        if geom is None:
+            raise ValueError('Não foi possível recortar a superfície atual.')
+        if geom.IsEmpty():
+            continue
+        if tolerancia:
+            geom = geom.SimplifyPreserveTopology(tolerancia)
+        features.append({'type': 'Feature', 'geometry': json.loads(geom.ExportToJson()), 'properties': {
             'base_id': base_id, 'nome': texto(linha[campo_nome]) if campo_nome else f'Feição {pos + 1}'}})
     return {'base_id': base_id, 'papel': base['papel'],
             'origem': 'Fonte original atual; não é uma cópia histórica da rodada. Exibição recortada à vista do mapa.',

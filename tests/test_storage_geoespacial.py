@@ -120,12 +120,12 @@ def test_fragmentacao_da_linha_preserva_ate_vertices_subpixel():
     assert camada.CreateFeature(feicao) == 0
     storage_geoespacial._limitar_vertices_tile(ds)
     fragmentos = list(camada)
-    assert len(fragmentos) == 2
+    assert len(fragmentos) == 4
     reconstruida = []
     for indice, fragmento in enumerate(fragmentos):
         assert fragmento.GetField("codigo") == "MALHA"
         geometria = fragmento.GetGeometryRef()
-        assert geometria.GetPointCount() <= 16000
+        assert geometria.GetPointCount() <= storage_geoespacial._MAX_VERTICES_TILE
         reconstruida.extend(geometria.GetPoint_2D(i)
                            for i in range(1 if indice else 0, geometria.GetPointCount()))
     assert reconstruida == pontos
@@ -142,11 +142,11 @@ def test_tile_fragmenta_linha_complexa_preservando_todos_os_vertices(tmp_path):
     _linhas_gpkg(arquivo, pontos)
     conteudo = storage_geoespacial._tile(str(arquivo), "malha", (0, 0), alvo.z, alvo.x, alvo.y)
     feicoes = _ler_linhas_tile(conteudo, alvo)
-    assert len(feicoes) == 2
+    assert len(feicoes) == 4
     assert {f[0] for f in feicoes} == {1}
     assert len({f[1] for f in feicoes}) == 1
     restaurados = [f[2].GetPoint_2D(i) for f in feicoes for i in range(f[2].GetPointCount())]
-    assert len(restaurados) == len(pontos) + 1
+    assert len(restaurados) == len(pontos) + 3
     quantizar = lambda ponto: (round((ponto[0] - limites.left) / escala),
                               round((ponto[1] - limites.bottom) / escala))
     assert {quantizar(p) for p in restaurados} == {quantizar(p) for p in pontos}
@@ -200,7 +200,7 @@ def test_tile_fragmenta_multipoligono_acima_do_limite_de_vertices(tmp_path, com_
         assert len(feicoes) > 1
         if not com_furos:
             assert len(feicoes) == 17000
-        assert max(pontos(f.GetGeometryRef()) for f in feicoes) < 65535
+        assert 10 * max(pontos(f.GetGeometryRef()) for f in feicoes) < 65535
         assert {f.GetField('slt_fid') for f in feicoes} == {1}
         assert {f.GetField('codigo') for f in feicoes} == {'ORIGINAL'}
         ds = None

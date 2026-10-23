@@ -513,11 +513,16 @@ def tile(caminho: str, camada: str | None, z: int, x: int, y: int) -> bytes:
     return _tile(str(arquivo), camada, (estado.st_mtime_ns, estado.st_size), z, x, y)
 
 
+# MapLibre LineBucket reserves 10 GPU vertices per source vertex, including
+# polygon outlines. Stay below its 65535-index segment limit without simplifying.
+_MAX_VERTICES_TILE = 6000
+
+
 def _limitar_vertices_tile(ds):
     camada = ds.GetLayer(0)
     def vertices(geom):
         return geom.GetPointCount() + sum(vertices(geom.GetGeometryRef(i)) for i in range(geom.GetGeometryCount()))
-    complexas = [feicao.Clone() for feicao in camada if vertices(feicao.GetGeometryRef()) > 16000]
+    complexas = [feicao.Clone() for feicao in camada if vertices(feicao.GetGeometryRef()) > _MAX_VERTICES_TILE]
     for feicao in complexas:
         pendentes = [(feicao.GetGeometryRef().Clone(), 0)]
         fragmentos = []
@@ -527,14 +532,14 @@ def _limitar_vertices_tile(ds):
                 raise RuntimeError('Não foi possível preparar a geometria complexa do tile.')
             if geom.IsEmpty():
                 continue
-            if vertices(geom) <= 16000:
+            if vertices(geom) <= _MAX_VERTICES_TILE:
                 fragmentos.append(geom)
                 continue
             if ogr.GT_Flatten(geom.GetGeometryType()) == ogr.wkbLineString:
                 # Fragmentos contiguos compartilham o vertice da emenda.
-                for inicio in range(0, geom.GetPointCount() - 1, 15999):
+                for inicio in range(0, geom.GetPointCount() - 1, _MAX_VERTICES_TILE - 1):
                     segmento = ogr.Geometry(ogr.wkbLineString)
-                    for indice in range(inicio, min(inicio + 16000, geom.GetPointCount())):
+                    for indice in range(inicio, min(inicio + _MAX_VERTICES_TILE, geom.GetPointCount())):
                         segmento.AddPoint_2D(*geom.GetPoint_2D(indice))
                     fragmentos.append(segmento)
                 continue

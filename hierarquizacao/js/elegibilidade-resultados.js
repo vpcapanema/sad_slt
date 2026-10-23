@@ -1,4 +1,4 @@
-import {criarMapaElegibilidade, areaLegivel} from './elegibilidade-mapa.js?v=20261023-contexto';
+import {criarMapaElegibilidade, areaLegivel} from './elegibilidade-mapa.js?v=20261023-ogr-contexto';
 import {nomeDemanda} from './nome-demanda.js?v=20261023-nomes';
 import {post, base} from '../../geoespacial/extracao-atributos/api.js';
 import {el} from '../../geoespacial/extracao-atributos/ui.js';
