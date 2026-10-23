@@ -87,12 +87,16 @@
   line-height: 1.35;
   overflow-wrap: anywhere;
 }
+.favorabilidade-v2 #fv-run-selection td :is(button, small, strong, span) {
+  font: inherit;
+}
 .favorabilidade-v2 #fv-run-selection th {
   position: sticky;
   top: 0;
   background: #e7eef3;
   color: #33566d;
-  font-family: "Roboto", Arial, sans-serif;
+  font-family: "Montserrat", Verdana, sans-serif;
+  font-size: 13px;
   font-weight: 600;
   text-transform: none;
   letter-spacing: normal;
