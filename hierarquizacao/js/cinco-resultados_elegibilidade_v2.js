@@ -1,14 +1,15 @@
 import {post, base} from '../../geoespacial/extracao-atributos/api.js';
 import {el} from '../../geoespacial/extracao-atributos/ui.js';
+import {conclusaoSobreposicao} from './elegibilidade-conclusao.js?v=1';
 import {escolherArquivo} from '../../geoespacial/extracao-atributos/explorador.js?v=20261020-saidas';
 import {
   CATEGORIAS, ROTULOS, FILTROS, ORDENS, SELECAO_VAZIA, caracterizarDemandas, demandasVisiveis, descreverSituacao,
   registrosDetalhados, registrosVisiveis, alternarSelecao, formatarKm2, formatarHa, formatarPercentual,
 } from './cinco-resultados_elegibilidade_v2-dados.js?v=2';
-import {criarGrafico} from './cinco-resultados_elegibilidade_v2-grafico.js?v=2';
-import {criarRosca} from './cinco-resultados_elegibilidade_v2-rosca.js?v=1';
+import {criarGrafico} from './cinco-resultados_elegibilidade_v2-grafico.js?v=conclusoes';
+import {criarRosca} from './cinco-resultados_elegibilidade_v2-rosca.js?v=conclusoes';
 import {criarMapa} from './cinco-resultados_elegibilidade_v2-mapa.js?v=2';
-import {criarTabela} from './cinco-resultados_elegibilidade_v2-tabela.js?v=2';
+import {criarTabela} from './cinco-resultados_elegibilidade_v2-tabela.js?v=conclusoes';
 
 const ROTA = '/extracao-atributos/elegibilidade/resultados';
 const PAPEIS = {entrada: 'Entrada', restricao: 'Restrição', risco: 'Risco'};
@@ -73,10 +74,8 @@ export function criarResultados({avisar, aoOcupar}) {
     if (selecao.feicao) {
       const item = d.linha.sobreposicoes.find(s => s.id === selecao.feicao);
       const camada = entrada().campos.find(c => c.id === item.base_id);
-      partes.push(el('span', `Em foco — ${ROTULOS[item.papel]}: ${item.nome} (camada consultada: ${camada.nome}). ${item.area_m2 === 0
-        ? 'Apenas toca o limite da demanda, sem área atingida.'
-        : `Atinge ${formatarPercentual(item.percentual)} da demanda (${formatarKm2(item.area_m2)} km² · ${formatarHa(item.area_m2)} ha).`}`,
-      `ev2-sel-${item.papel} ev2-sel-feicao`));
+      const dados = atributosEmCache.get(`${entrada().id}|${item.base_id}|${item.identificador - 1}`);
+      partes.push(conclusaoSobreposicao(d, item, camada, dados));
     }
     alvo.replaceChildren(...partes);
   }
@@ -86,10 +85,7 @@ export function criarResultados({avisar, aoOcupar}) {
   let popupAtual = '', sequenciaPopup = 0;
   function montarPopup(d, item, camada, estado) {
     const caixa = el('div', undefined, 'ev2-popup-conteudo');
-    caixa.append(el('strong', item.nome),
-      el('span', `${ROTULOS[item.papel]} · Camada consultada: ${camada.nome}`, 'ev2-popup-sub'),
-      el('span', item.area_m2 === 0 ? `Apenas toca o limite de ${d.nome}, sem área atingida.`
-        : `Atinge ${formatarPercentual(item.percentual)} de ${d.nome} (${formatarKm2(item.area_m2)} km² · ${formatarHa(item.area_m2)} ha).`, 'ev2-popup-sub'));
+    caixa.append(conclusaoSobreposicao(d, item, camada, estado.dados));
     if (!estado.dados) {
       caixa.append(el('span', estado.erro || 'Carregando atributos…', estado.erro ? 'ev2-popup-erro' : 'ev2-secundario'));
       return caixa;
@@ -119,10 +115,15 @@ export function criarResultados({avisar, aoOcupar}) {
     const chaveCache = `${entrada().id}|${item.base_id}|${posicao}`;
     if (atributosEmCache.has(chaveCache)) { abrir({dados: atributosEmCache.get(chaveCache)}); return; }
     abrir({});
+    const fichasDaConsulta = fichas;
     try {
       const dados = await post(`${ROTA}/feicao/atributos`, {execucao: entrada().id, base_id: item.base_id, posicao});
       atributosEmCache.set(chaveCache, dados);
       abrir({dados});
+      for (const ficha of fichasDaConsulta) for (const cat of Object.values(ficha.cats)) {
+        for (const feicao of cat.feicoes) if (feicao.id === item.id) feicao.atributosConsultados = dados;
+      }
+      if (geracao === sequenciaPopup) desenhar();
     } catch (erro) {
       abrir({erro: `Não foi possível carregar os atributos desta camada: ${erro.message}`});
     }

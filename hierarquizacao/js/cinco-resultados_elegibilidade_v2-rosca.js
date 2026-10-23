@@ -65,10 +65,10 @@ export function criarRosca({container, aoSelecionar}) {
           d: setor(0, angulo), fill: `url(#${padrao(item.papel, ativo)})`, stroke: ativo ? '#003b5a' : CORES_ARCO[item.papel],
           'stroke-width': ativo ? 2 : .8, class: `ev2-arco${selecao.feicao && !ativo ? ' esmaecido' : ''}`,
           role: 'button', tabindex: 0, 'aria-pressed': ativo,
-          'aria-label': `${ROTULOS[item.papel]}: ${item.nome}. Atinge ${formatarPercentual(item.percentual)} da demanda.`,
+          'aria-label': `A demanda ${ficha.nome} sobrepõe-se a ${item.nome} em ${formatarPercentual(item.percentual)} de sua área total.`,
         });
         caminho.dataset.feicao = item.id;
-        caminho.append(svgNode('title', {}, `${ROTULOS[item.papel]}: ${item.nome} · atinge ${formatarPercentual(item.percentual)} da demanda (${formatarKm2(item.area_m2)} km²)`));
+        caminho.append(svgNode('title', {}, `A demanda ${ficha.nome} sobrepõe-se a ${item.nome} em ${formatarPercentual(item.percentual)} de sua área total.`));
         const escolher = () => aoSelecionar({chave: ficha.chave, base: item.base_id, feicao: item.id});
         caminho.onclick = escolher;
         caminho.onkeydown = event => { if (['Enter', ' '].includes(event.key)) { event.preventDefault(); escolher(); } };

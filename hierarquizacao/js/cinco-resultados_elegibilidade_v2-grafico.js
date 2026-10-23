@@ -1,4 +1,5 @@
 import {el} from '../../geoespacial/extracao-atributos/ui.js';
+import {conclusaoSobreposicao} from './elegibilidade-conclusao.js?v=1';
 import {
   SITUACOES, ORDEM_SITUACOES, ROTULOS, formatarKm2, formatarHa, formatarPercentual, ordenarDemandas, descreverSituacao, indicadores,
 } from './cinco-resultados_elegibilidade_v2-dados.js?v=2';
@@ -41,8 +42,7 @@ export function criarGrafico({cards, lista, aoSelecionar, aoFiltrar}) {
       const nome = el('span', undefined, 'ev2-feicao-nome');
       nome.append(el('strong', item.nome), el('small', `${ROTULOS[item.papel]} · Camada consultada: ${item.camada}`));
       const detalhe = el('span', undefined, 'ev2-feicao-valor');
-      detalhe.append(el('b', item.area_m2 === 0 ? 'Apenas toca o limite' : `Atinge ${formatarPercentual(item.percentual)} da demanda`),
-        el('small', item.area_m2 === 0 ? 'Sem área atingida' : `${formatarKm2(item.area_m2)} km² · ${formatarHa(item.area_m2)} ha`));
+      detalhe.append(conclusaoSobreposicao(d, item, {nome:item.camada}, item.atributosConsultados));
       botao.append(nome, detalhe);
       botao.onclick = event => { event.stopPropagation(); aoSelecionar({chave: d.chave, base: item.base_id, feicao: item.id}); };
       bloco.append(botao);

@@ -2,7 +2,7 @@ import {el} from '../../geoespacial/extracao-atributos/ui.js';
 import {ROTULOS, SITUACOES, formatarKm2, formatarHa, formatarPercentual} from './cinco-resultados_elegibilidade_v2-dados.js?v=2';
 
 const TAMANHO = 50;
-const COLUNAS = ['Demanda', 'Situação', 'Tipo', 'Restrição ou risco encontrado', 'Camada consultada', 'Área atingida', '% da demanda'];
+const COLUNAS = ['Demanda', 'Situação', 'Tipo', 'Restrição ou risco encontrado', 'Camada consultada', 'Área de sobreposição', '% da área da demanda'];
 
 /** Tabela de registros demanda × item encontrado; a seleção filtra os registros e destaca as linhas correspondentes. */
 export function criarTabela({tabela, anterior, proxima, rotulo, contagem, aoSelecionar}) {

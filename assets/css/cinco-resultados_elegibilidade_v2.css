@@ -132,7 +132,9 @@
 .ev2 .ev2-feicao[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--ev2-deep); }
 .ev2 .ev2-feicao-nome, .ev2 .ev2-feicao-valor { display: grid; gap: 0.0625rem; min-width: 0; overflow-wrap: anywhere; }
 .ev2 .ev2-feicao-nome strong { font-size: 0.75rem; font-weight: 650; }
-.ev2 .ev2-feicao-valor { text-align: right; }
+.ev2 .ev2-feicao-valor { text-align: left; }
+.ev2 .ev2-conclusao { display: block; font-weight: 400; line-height: 1.5; }
+.ev2 .ev2-conclusao strong { display: inline; font-size: inherit; font-weight: 700; }
 .ev2 .ev2-feicao-valor b { font-size: 0.75rem; }
 .ev2 .ev2-feicao small { font-size: 0.72rem; color: var(--ev2-suave); font-weight: 400; }
 
@@ -155,6 +157,7 @@
 .ev2 .ev2-popup .leaflet-popup-content { margin: 0.625rem 0.75rem; font-size: 0.75rem; line-height: 1.4; }
 .ev2 .ev2-popup-conteudo { display: grid; gap: 0.25rem; }
 .ev2 .ev2-popup-conteudo strong { font-size: 0.8rem; color: var(--ev2-deep); }
+.ev2 .ev2-popup-conteudo .ev2-conclusao strong { font-size: inherit; }
 .ev2 .ev2-popup-sub { color: var(--ev2-suave); }
 .ev2 .ev2-popup-erro { color: var(--ev2-re-texto); font-weight: 650; }
 .ev2 .ev2-popup-rolagem { max-height: 12rem; overflow: auto; border: 1px solid var(--ev2-linha); border-radius: 4px; }
