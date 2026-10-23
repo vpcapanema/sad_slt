@@ -5,11 +5,11 @@ import {escolherArquivo} from '../../geoespacial/extracao-atributos/explorador.j
 import {
   nomeSobreposicao, CATEGORIAS, ROTULOS, FILTROS, ORDENS, SELECAO_VAZIA, caracterizarDemandas, demandasVisiveis, descreverSituacao,
   registrosDetalhados, registrosVisiveis, alternarSelecao, formatarHa, formatarPercentual,
-} from './cinco-resultados_elegibilidade_v2-dados.js?v=trechos-cores';
-import {criarGrafico} from './cinco-resultados_elegibilidade_v2-grafico.js?v=trechos-cores';
-import {criarRosca} from './cinco-resultados_elegibilidade_v2-rosca.js?v=trechos-cores';
-import {criarMapa} from './cinco-resultados_elegibilidade_v2-mapa.js?v=trechos-cores';
-import {criarTabela} from './cinco-resultados_elegibilidade_v2-tabela.js?v=trechos-cores';
+} from './cinco-resultados_elegibilidade_v2-dados.js?v=trechos-origem';
+import {criarGrafico} from './cinco-resultados_elegibilidade_v2-grafico.js?v=trechos-origem';
+import {criarRosca} from './cinco-resultados_elegibilidade_v2-rosca.js?v=trechos-origem';
+import {criarMapa} from './cinco-resultados_elegibilidade_v2-mapa.js?v=trechos-origem';
+import {criarTabela} from './cinco-resultados_elegibilidade_v2-tabela.js?v=trechos-origem';
 
 const ROTA = '/extracao-atributos/elegibilidade/resultados';
 const PAPEIS = {entrada: 'Entrada', restricao: 'Restrição', risco: 'Risco'};

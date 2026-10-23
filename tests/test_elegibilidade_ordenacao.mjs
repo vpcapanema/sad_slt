@@ -13,7 +13,8 @@ test('trechos mantêm cores próprias nas fichas, categorias e tabela, sem alter
   assert.deepEqual(fichas[0].cats.risco.feicoes.map(s => s.cor), cores);
   assert.deepEqual(registrosDetalhados(fichas, entrada).map(s => s.cor), cores);
   assert.equal(entrada.linhas[0].poligonos_sobreposicao[0].cor, undefined);
-  assert.equal(nomeSobreposicao(fichas[0].linha.sobreposicoes[0]), 'Bem tombado · trecho de sobreposição 1');
+  assert.equal(nomeSobreposicao(fichas[0].linha.sobreposicoes[0]), 'Risco · Base · Bem tombado · trecho de sobreposição 1');
+  assert.equal(nomeSobreposicao(registrosDetalhados(fichas, entrada)[0]), 'Risco · Base · Bem tombado · trecho de sobreposição 1');
 });
 
 test('áreas decrescentes, zero antes de valores vazios', () => {

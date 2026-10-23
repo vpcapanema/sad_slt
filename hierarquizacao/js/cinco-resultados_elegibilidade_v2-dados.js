@@ -28,7 +28,10 @@ export const formatarPercentual = p => p == null ? '—' : `${p.toLocaleString('
 export const COR_DEMANDA = '#243746';
 const PALETA = ['#d1495b', '#007f73', '#8556b8', '#da7900', '#2677bd', '#c23888', '#65851b', '#a65b36'];
 export const corSobreposicao = indice => PALETA[indice] ?? `hsl(${(indice * 137.508) % 360} 65% 42%)`;
-export const nomeSobreposicao = item => `${item.nome ?? item.feicao ?? 'Área identificada'}${item.numero_poligono ? ` · ${item.area_m2 > 0 ? 'trecho de sobreposição' : 'contato no limite'} ${item.numero_poligono}` : ''}`;
+export const nomeSobreposicao = item => [ROTULOS[item.papel ?? item.categoria], item.camada,
+  item.nome ?? item.feicao ?? 'Área identificada',
+  item.numero_poligono ? `${item.area_m2 > 0 ? 'trecho de sobreposição' : 'contato no limite'} ${item.numero_poligono}` : '',
+].filter(Boolean).join(' · ');
 
 const normalizar = texto => String(texto ?? '').normalize('NFD').replace(/\p{M}/gu, '').toLocaleLowerCase('pt-BR');
 
@@ -37,7 +40,7 @@ export function caracterizarDemandas(entrada) {
   const camadas = new Map(entrada.campos.map(c => [c.id, c.nome]));
   let indiceCor = 0;
   return entrada.linhas.map(original => {
-    const linha = {...original, sobreposicoes: (original.poligonos_sobreposicao ?? original.sobreposicoes).map(item => ({...item, cor: corSobreposicao(indiceCor++)}))};
+    const linha = {...original, sobreposicoes: (original.poligonos_sobreposicao ?? original.sobreposicoes).map(item => ({...item, camada: camadas.get(item.base_id) ?? 'Camada de base não identificada', cor: corSobreposicao(indiceCor++)}))};
     const cats = {restricao: {feicoes: [], n: 0}, risco: {feicoes: [], n: 0}};
     for (const item of linha.sobreposicoes) {
       const cat = cats[item.papel];

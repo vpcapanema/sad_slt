@@ -1,5 +1,5 @@
 import {el} from '../../geoespacial/extracao-atributos/ui.js';
-import {formatarHa, formatarPercentual} from './cinco-resultados_elegibilidade_v2-dados.js?v=trechos-cores';
+import {formatarHa, formatarPercentual} from './cinco-resultados_elegibilidade_v2-dados.js?v=trechos-origem';
 
 // A qualificação vem dos atributos consultados, nunca do nome da demanda.
 export function conclusaoSobreposicao(demanda, item, camada, dados) {

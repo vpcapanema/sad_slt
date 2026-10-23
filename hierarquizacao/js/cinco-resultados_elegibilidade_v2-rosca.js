@@ -1,5 +1,5 @@
 import {el} from '../../geoespacial/extracao-atributos/ui.js';
-import {nomeSobreposicao, ROTULOS, formatarHa, formatarPercentual} from './cinco-resultados_elegibilidade_v2-dados.js?v=trechos-cores';
+import {nomeSobreposicao, ROTULOS, formatarHa, formatarPercentual} from './cinco-resultados_elegibilidade_v2-dados.js?v=trechos-origem';
 
 const ns = 'http://www.w3.org/2000/svg';
 const ANEL = {livre: '#d6f0df', padrao: '#dbe6ee'};

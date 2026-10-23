@@ -1,6 +1,6 @@
 import {el} from '../../geoespacial/extracao-atributos/ui.js';
 import {controleCamadas} from './elegibilidade-controle-camadas.js?v=1';
-import {nomeSobreposicao, COR_DEMANDA, SITUACOES, ROTULOS, formatarPercentual} from './cinco-resultados_elegibilidade_v2-dados.js?v=trechos-cores';
+import {nomeSobreposicao, COR_DEMANDA, SITUACOES, ROTULOS, formatarPercentual} from './cinco-resultados_elegibilidade_v2-dados.js?v=trechos-origem';
 
 const TOPO = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}';
 const SATELITE = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
@@ -85,7 +85,7 @@ export function criarMapa({container, nota, aoSelecionar}) {
         smoothFactor: 0, pane: 'ev2-recortes', style: {color: cor, fillColor: cor, weight: 1, fillOpacity: .4},
         pointToLayer: (_, latlng) => L.circleMarker(latlng, {pane: 'ev2-recortes', radius: 5, color: cor, fillColor: cor}),
       });
-      camada.bindTooltip(el('span', `${ficha.nome} · ${ROTULOS[base.papel]}: ${nomeSobreposicao(item)} (camada ${base.nome}) · sobreposição de ${formatarPercentual(item.percentual)} da área da demanda`), {sticky: true});
+      camada.bindTooltip(el('span', `${ficha.nome} · ${nomeSobreposicao(item)} · sobreposição de ${formatarPercentual(item.percentual)} da área da demanda`), {sticky: true});
       camada.on('click', event => {
         window.L.DomEvent.stopPropagation(event);
         aoSelecionar({chave: p.chave, base: p.base_id, feicao: id});
