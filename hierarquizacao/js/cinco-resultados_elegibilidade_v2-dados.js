@@ -28,7 +28,8 @@ const normalizar = texto => String(texto ?? '').normalize('NFD').replace(/\p{M}/
 /** Uma ficha por demanda, com o que foi encontrado em cada categoria. */
 export function caracterizarDemandas(entrada) {
   const camadas = new Map(entrada.campos.map(c => [c.id, c.nome]));
-  return entrada.linhas.map(linha => {
+  return entrada.linhas.map(original => {
+    const linha = {...original, sobreposicoes: original.poligonos_sobreposicao ?? original.sobreposicoes};
     const cats = {restricao: {feicoes: [], n: 0}, risco: {feicoes: [], n: 0}};
     for (const item of linha.sobreposicoes) {
       const cat = cats[item.papel];
@@ -60,7 +61,7 @@ export function descreverSituacao(ficha, limite = 3) {
   }
   const rotulo = {restricao: ['restrição', 'restrições'], risco: ['risco', 'riscos']};
   return CATEGORIAS.filter(c => ficha.cats[c].n).map(c => {
-    const n = ficha.cats[c].n;
+    const n = new Set(ficha.cats[c].feicoes.map(f => f.feicao_origem_id ?? f.id)).size;
     return {categoria: c, texto: n === 1 ? `Tem ${rotulo[c][0]}: ${listarNomes(ficha.cats[c].feicoes, limite)}.`
       : `Tem ${n} ${rotulo[c][1]}: ${listarNomes(ficha.cats[c].feicoes, limite)}.`};
   });
@@ -85,6 +86,7 @@ export function registrosDetalhados(demandas, entrada) {
     ? [...d.linha.sobreposicoes].sort((a, b) => b.area_m2 - a.area_m2).map(s => ({
       chave: d.chave, demanda: d.nome, situacao: d.situacao, categoria: s.papel, base_id: s.base_id,
       camada: bases.get(s.base_id)?.nome ?? '', feicao_id: s.id, feicao: s.nome, identificador: s.identificador,
+      numero_poligono: s.numero_poligono,
       area_m2: s.area_m2, percentual: s.percentual, sem: false,
     }))
     : [{chave: d.chave, demanda: d.nome, situacao: d.situacao, sem: true}]);

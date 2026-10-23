@@ -21,7 +21,7 @@ from reportlab.platypus import Flowable, PageBreak, Spacer, Paragraph
 from shapely.geometry import Polygon, MultiPolygon, mapping, box
 
 from api.services import elegibilidade_jobs as jobs, storage_remoto, saidas_storage
-from api.services.elegibilidade_processamento import pasta_saida, ANALISES
+from api.services.elegibilidade_processamento import pasta_saida, ANALISES, individualizar_intersecoes
 from api.services import extracao_atributos_aliases as aliases
 from api.services import extracao_preparacao, analise_territorial_ogr as nativo
 from osgeo import ogr
@@ -622,6 +622,36 @@ def cor_favorabilidade(valor: float | None) -> str:
     return '#' + ''.join(f'{canal:02x}' for canal in canais)
 
 
+def _poligonos_painel(dados, auditoria, nomes, linhas):
+    """Normaliza saídas novas e legadas apenas para apresentação, com GDAL/OGR."""
+    camada = nativo.reproject(nativo.ler(dados, auditoria['camada_intersecoes']), 5880)
+    partes = individualizar_intersecoes(
+        [{**r, 'geometry': g} for r, g in zip(camada.registros, camada.geometrias)],
+        [l['area_total_m2'] for l in linhas])
+    bases = {c['id']: c for c in auditoria['campos']}
+    fontes = {f['id']: f for f in auditoria['feicoes_base']}
+    for linha in linhas:
+        linha['poligonos_sobreposicao'] = []
+    features = []
+    destino = nativo.referencia(4326)
+    for parte in partes:
+        pos, origem = parte['demanda_pos'], parte['feicao_id']
+        itens = linhas[pos]['poligonos_sobreposicao']
+        ident = f"intersecao:{parte['intersecao_id']}"
+        item = {'id': ident, 'feicao_origem_id': origem, 'base_id': parte['base_id'],
+                'nome': nomes[origem], 'papel': bases[parte['base_id']]['papel'],
+                'identificador': fontes[origem]['posicao'] + 1, 'numero_poligono': len(itens) + 1,
+                'area_m2': parte['area_m2'], 'percentual': parte['percentual_demanda']}
+        itens.append(item)
+        geometria = parte['geometry'].Clone()
+        geometria.AssignSpatialReference(camada.crs)
+        geometria.TransformTo(destino)
+        features.append({'type': 'Feature', 'geometry': json.loads(geometria.ExportToJson()),
+                         'properties': {'chave': str(pos), 'base_id': parte['base_id'],
+                                        'feicao_id': origem, 'poligono_id': ident}})
+    return {'type': 'FeatureCollection', 'features': features}
+
+
 def _painel(frame: gpd.GeoDataFrame, dados: bytes, auditoria: dict, nomes: dict[str, str], linhas: list[dict], *,
             somente_atributos: bool = False, analise: str = 'elegibilidade') -> dict:
     if auditoria.get('versao_saida') != 2:
@@ -698,6 +728,8 @@ def _painel(frame: gpd.GeoDataFrame, dados: bytes, auditoria: dict, nomes: dict[
     geometrias = reproject(frame[[frame.geometry.name]], 4326)
     geometrias_recortes = reproject(recortes, 4326) if len(recortes) else recortes
     return {
+        **({'poligonos_intersecoes': _poligonos_painel(dados, auditoria, nomes, linhas)}
+           if analise == 'elegibilidade' else {}),
         'hierarquizacao': auditoria.get('hierarquizacao'),
         'geometrias': {'type': 'FeatureCollection', 'features': [
             {'type': 'Feature', 'geometry': mapping(geom), 'properties': {'chave': str(i)}}

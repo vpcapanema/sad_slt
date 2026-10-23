@@ -1,7 +1,7 @@
 import math
 
 import pytest
-from osgeo import ogr
+from osgeo import ogr, gdal
 
 from api.services import analise_territorial_ogr as nativo
 from api.services import elegibilidade_processamento as service
@@ -43,3 +43,39 @@ def test_colecao_preserva_contato_sem_area_e_rejeita_area_divergente():
     assert [r['area_m2'] for r in partes] == [1., 0., 0.]
     with pytest.raises(ValueError, match='alterou a área'):
         service.individualizar_intersecoes([{**registro, 'area_m2': 2.}], [10.])
+
+
+@pytest.mark.parametrize('legado', [True, False])
+def test_painel_individualiza_arquivo_legado_e_novo_sem_perder_total(legado):
+    from api.services import elegibilidade_relatorio as relatorio
+    from tests.territorial_ogr_helpers import tabela
+    geom = ogr.CreateGeometryFromWkt('MULTIPOLYGON (((5000000 7000000,5000002 7000000,5000002 7000002,5000000 7000002,5000000 7000000)), ((5000004 7000000,5000005 7000000,5000005 7000001,5000004 7000001,5000004 7000000)))')
+    principal = nativo.Camada([nativo.campo('total', ogr.OFTReal)], [{'total': 5.}],
+                             [geom.Clone()], nativo.referencia(5880))
+    audit = {'versao_saida': 2, 'campo_area_total': 'total', 'camada_intersecoes': 'intersecoes',
+             'campos': [{'id': 'base', 'papel': 'risco'}],
+             'feicoes_base': [{'id': 'origem', 'base_id': 'base', 'posicao': 7}]}
+    r = {'demanda_pos': 0, 'base_id': 'base', 'feicao_id': 'origem', 'area_m2': 5.}
+    if legado:
+        path = '/vsimem/teste-painel-legado.gpkg'
+        ds = ogr.GetDriverByName('GPKG').CreateDataSource(path)
+        camada = nativo.Camada([nativo.campo('demanda_pos', ogr.OFTInteger64),
+                               nativo.campo('base_id', ogr.OFTString), nativo.campo('feicao_id', ogr.OFTString),
+                               nativo.campo('area_m2', ogr.OFTReal)], [r], [geom], nativo.referencia(5880))
+        layer = nativo.gravar_camada(ds, 'intersecoes', camada)
+        layer = ds = None
+        dados = bytes(gdal.VSIGetMemFileBuffer_unsafe(path))
+        gdal.Unlink(path)
+    else:
+        dados = service.serializar(principal, audit, [{**r, 'geometry': geom}], 'teste.gpkg')['teste.gpkg']
+    linhas = [{'areas': [5.]}]
+    painel = relatorio._painel(tabela(principal), dados, audit, {'origem': 'Base original'}, linhas)
+    partes = linhas[0]['poligonos_sobreposicao']
+    assert [p['area_m2'] for p in partes] == [4., 1.]
+    assert [p['percentual'] for p in partes] == [80., 20.]
+    assert len({p['id'] for p in partes}) == 2
+    assert all(p['feicao_origem_id'] == 'origem' and p['identificador'] == 8 for p in partes)
+    features = painel['poligonos_intersecoes']['features']
+    assert [f['geometry']['type'] for f in features] == ['Polygon', 'Polygon']
+    assert [f['properties']['poligono_id'] for f in features] == [p['id'] for p in partes]
+    assert linhas[0]['sobreposicoes'][0]['area_m2'] == 5.

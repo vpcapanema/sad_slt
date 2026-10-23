@@ -1,5 +1,5 @@
 import {el} from '../../geoespacial/extracao-atributos/ui.js';
-import {CORES, CORES_SITUACAO, SITUACOES, ROTULOS, formatarPercentual} from './cinco-resultados_elegibilidade_v2-dados.js?v=2';
+import {CORES, CORES_SITUACAO, SITUACOES, ROTULOS, formatarPercentual} from './cinco-resultados_elegibilidade_v2-dados.js?v=poligonos';
 
 const TOPO = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}';
 const SATELITE = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
@@ -77,20 +77,21 @@ export function criarMapa({container, fundoSelect, nota, aoSelecionar}) {
       }).bindTooltip(el('span', `${ficha.nome} · ${SITUACOES[ficha.situacao]} (amplie o mapa para ver o limite da demanda)`))
         .on('click', () => aoSelecionar({chave})));
     }
-    for (const feature of entrada.intersecoes.features) {
+    for (const feature of (entrada.poligonos_intersecoes ?? entrada.intersecoes).features) {
       const p = feature.properties, base = bases.get(p.base_id);
-      const ficha = fichaPorChave.get(p.chave), item = ficha.linha.sobreposicoes.find(s => s.id === p.feicao_id);
+      const id = p.poligono_id ?? p.feicao_id;
+      const ficha = fichaPorChave.get(p.chave), item = ficha.linha.sobreposicoes.find(s => s.id === id);
       const cor = CORES[base.papel];
       const camada = L.geoJSON(feature, {
         smoothFactor: 0, pane: 'ev2-recortes', style: {color: cor, fillColor: cor, weight: 1, fillOpacity: .4},
         pointToLayer: (_, latlng) => L.circleMarker(latlng, {pane: 'ev2-recortes', radius: 5, color: cor, fillColor: cor}),
       });
-      camada.bindTooltip(el('span', `${ficha.nome} · ${ROTULOS[base.papel]}: ${item.nome} (camada ${base.nome}) · atinge ${formatarPercentual(item.percentual)} da demanda`), {sticky: true});
+      camada.bindTooltip(el('span', `${ficha.nome} · ${item.numero_poligono ? `${item.area_m2 > 0 ? 'Polígono' : 'Contato'} ${item.numero_poligono} · ` : ''}${ROTULOS[base.papel]}: ${item.nome} (camada ${base.nome}) · sobreposição de ${formatarPercentual(item.percentual)} da área da demanda`), {sticky: true});
       camada.on('click', event => {
         window.L.DomEvent.stopPropagation(event);
-        aoSelecionar({chave: p.chave, base: p.base_id, feicao: p.feicao_id});
+        aoSelecionar({chave: p.chave, base: p.base_id, feicao: id});
       });
-      recortes.push({chave: p.chave, base: p.base_id, feicao: p.feicao_id, papel: base.papel, camada});
+      recortes.push({chave: p.chave, base: p.base_id, feicao: id, papel: base.papel, camada});
     }
     mapa.on('moveend', posicionarLocalizadores);
     observador = new ResizeObserver(() => mapa?.invalidateSize({pan: false}));

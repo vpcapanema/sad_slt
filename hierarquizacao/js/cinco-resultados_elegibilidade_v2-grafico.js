@@ -2,7 +2,7 @@ import {el} from '../../geoespacial/extracao-atributos/ui.js';
 import {conclusaoSobreposicao} from './elegibilidade-conclusao.js?v=1';
 import {
   SITUACOES, ORDEM_SITUACOES, ROTULOS, formatarKm2, formatarHa, formatarPercentual, ordenarDemandas, descreverSituacao, indicadores,
-} from './cinco-resultados_elegibilidade_v2-dados.js?v=2';
+} from './cinco-resultados_elegibilidade_v2-dados.js?v=poligonos';
 
 /** Cards de situação (filtram ao clicar) e lista de demandas com a resposta em palavras. */
 export function criarGrafico({cards, lista, aoSelecionar, aoFiltrar}) {
@@ -40,7 +40,7 @@ export function criarGrafico({cards, lista, aoSelecionar, aoFiltrar}) {
       botao.type = 'button'; botao.dataset.feicao = item.id;
       botao.setAttribute('aria-pressed', String(selecao.feicao === item.id));
       const nome = el('span', undefined, 'ev2-feicao-nome');
-      nome.append(el('strong', item.nome), el('small', `${ROTULOS[item.papel]} · Camada consultada: ${item.camada}`));
+      nome.append(el('strong', `${item.numero_poligono ? `${item.area_m2 > 0 ? 'Polígono' : 'Contato'} ${item.numero_poligono} · ` : ''}${item.nome}`), el('small', `${ROTULOS[item.papel]} · Camada consultada: ${item.camada}`));
       const detalhe = el('span', undefined, 'ev2-feicao-valor');
       detalhe.append(conclusaoSobreposicao(d, item, {nome:item.camada}, item.atributosConsultados));
       botao.append(nome, detalhe);

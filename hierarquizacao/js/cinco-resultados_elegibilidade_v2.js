@@ -5,11 +5,11 @@ import {escolherArquivo} from '../../geoespacial/extracao-atributos/explorador.j
 import {
   CATEGORIAS, ROTULOS, FILTROS, ORDENS, SELECAO_VAZIA, caracterizarDemandas, demandasVisiveis, descreverSituacao,
   registrosDetalhados, registrosVisiveis, alternarSelecao, formatarKm2, formatarHa, formatarPercentual,
-} from './cinco-resultados_elegibilidade_v2-dados.js?v=2';
-import {criarGrafico} from './cinco-resultados_elegibilidade_v2-grafico.js?v=conclusoes';
-import {criarRosca} from './cinco-resultados_elegibilidade_v2-rosca.js?v=conclusoes';
-import {criarMapa} from './cinco-resultados_elegibilidade_v2-mapa.js?v=2';
-import {criarTabela} from './cinco-resultados_elegibilidade_v2-tabela.js?v=conclusoes';
+} from './cinco-resultados_elegibilidade_v2-dados.js?v=poligonos';
+import {criarGrafico} from './cinco-resultados_elegibilidade_v2-grafico.js?v=poligonos';
+import {criarRosca} from './cinco-resultados_elegibilidade_v2-rosca.js?v=poligonos';
+import {criarMapa} from './cinco-resultados_elegibilidade_v2-mapa.js?v=poligonos';
+import {criarTabela} from './cinco-resultados_elegibilidade_v2-tabela.js?v=poligonos';
 
 const ROTA = '/extracao-atributos/elegibilidade/resultados';
 const PAPEIS = {entrada: 'Entrada', restricao: 'Restrição', risco: 'Risco'};
@@ -85,6 +85,7 @@ export function criarResultados({avisar, aoOcupar}) {
   let popupAtual = '', sequenciaPopup = 0;
   function montarPopup(d, item, camada, estado) {
     const caixa = el('div', undefined, 'ev2-popup-conteudo');
+    if (item.numero_poligono) caixa.append(el('strong', `${item.area_m2 > 0 ? 'Polígono' : 'Contato'} ${item.numero_poligono}`));
     caixa.append(conclusaoSobreposicao(d, item, camada, estado.dados));
     if (!estado.dados) {
       caixa.append(el('span', estado.erro || 'Carregando atributos…', estado.erro ? 'ev2-popup-erro' : 'ev2-secundario'));
@@ -131,6 +132,9 @@ export function criarResultados({avisar, aoOcupar}) {
 
   function desenhar({zoom = false, rolar = false} = {}) {
     if (!modelo) return;
+    for (const d of fichas) for (const cat of Object.values(d.cats)) for (const item of cat.feicoes) {
+      item.atributosConsultados = atributosEmCache.get(`${entrada().id}|${item.base_id}|${item.identificador - 1}`);
+    }
     const visiveis = demandasVisiveis(fichas, filtros()), categorias = categoriasAtivas();
     if (selecao.chave && !visiveis.has(selecao.chave)) selecao = SELECAO_VAZIA;
     grafico.renderizar({fichas, entrada: entrada(), demandas: fichas, visiveis, categorias, selecao,

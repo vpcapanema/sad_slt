@@ -1,5 +1,5 @@
 import {el} from '../../geoespacial/extracao-atributos/ui.js';
-import {ROTULOS, formatarKm2, formatarHa, formatarPercentual} from './cinco-resultados_elegibilidade_v2-dados.js?v=2';
+import {ROTULOS, formatarKm2, formatarHa, formatarPercentual} from './cinco-resultados_elegibilidade_v2-dados.js?v=poligonos';
 
 const ns = 'http://www.w3.org/2000/svg';
 const CORES_ARCO = {restricao: '#b42335', risco: '#c18b00'};
@@ -65,10 +65,10 @@ export function criarRosca({container, aoSelecionar}) {
           d: setor(0, angulo), fill: `url(#${padrao(item.papel, ativo)})`, stroke: ativo ? '#003b5a' : CORES_ARCO[item.papel],
           'stroke-width': ativo ? 2 : .8, class: `ev2-arco${selecao.feicao && !ativo ? ' esmaecido' : ''}`,
           role: 'button', tabindex: 0, 'aria-pressed': ativo,
-          'aria-label': `A demanda ${ficha.nome} sobrepõe-se a ${item.nome} em ${formatarPercentual(item.percentual)} de sua área total.`,
+          'aria-label': `${item.numero_poligono ? `Polígono ${item.numero_poligono}. ` : ''}A demanda ${ficha.nome} sobrepõe-se a ${item.nome} em ${formatarPercentual(item.percentual)} de sua área total.`,
         });
         caminho.dataset.feicao = item.id;
-        caminho.append(svgNode('title', {}, `A demanda ${ficha.nome} sobrepõe-se a ${item.nome} em ${formatarPercentual(item.percentual)} de sua área total.`));
+        caminho.append(svgNode('title', {}, `${item.numero_poligono ? `Polígono ${item.numero_poligono}. ` : ''}A demanda ${ficha.nome} sobrepõe-se a ${item.nome} em ${formatarPercentual(item.percentual)} de sua área total.`));
         const escolher = () => aoSelecionar({chave: ficha.chave, base: item.base_id, feicao: item.id});
         caminho.onclick = escolher;
         caminho.onkeydown = event => { if (['Enter', ' '].includes(event.key)) { event.preventDefault(); escolher(); } };
