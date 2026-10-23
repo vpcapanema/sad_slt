@@ -297,3 +297,14 @@
 .favorabilidade-v2 :is(#ev-resultados-tabela,#ev-resultados-agregados) :is(th,td):first-child,
 .favorabilidade-v2 #ev-resultados-agregados td:first-child button { text-align: left; }
 .favorabilidade-v2 .fv-grupo-contagem { text-shadow: 0 1px 2px #000, 0 -1px 2px #000; }
+.favorabilidade-v2 .ev-preparacao-grid .ev-lista:not(:empty) {
+  border: 1px solid #8b9eaf;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.favorabilidade-v2 .ev-preparacao-grid .ev-lista > li {
+  padding: .5rem .65rem;
+}
+.favorabilidade-v2 .ev-preparacao-grid .ev-lista > li + li {
+  border-top: 1px solid #8b9eaf;
+}

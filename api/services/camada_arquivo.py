@@ -12,8 +12,12 @@ def alias_camada(value: str) -> str:
 
 
 def resolver_camada(caminho, registro: dict) -> str:
-    import fiona
-    names = list(fiona.listlayers(caminho))
+    from osgeo import gdal
+    ds = gdal.OpenEx(str(caminho), gdal.OF_VECTOR | gdal.OF_READONLY)
+    if ds is None:
+        raise ValueError('GDAL não conseguiu abrir o arquivo registrado.')
+    names = [ds.GetLayer(i).GetName() for i in range(ds.GetLayerCount())]
+    ds = None
     metadata = registro.get('metadados') or {}
     nested = metadata.get('metadados') or {}
     explicit = (registro.get('camada_arquivo') or metadata.get('camada_arquivo')

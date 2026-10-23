@@ -2,15 +2,15 @@ from types import SimpleNamespace
 import os
 import time
 
-import geopandas as gpd
 import pytest
-from shapely.geometry import Point
+from osgeo import ogr
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from api.deps.auth import require_geospatial_access
 from api.routers.bancada_arquivos import router
 from api.services import extracao_preparacao, bancada_temporaria
+from api.services import analise_territorial_ogr as nativo
 
 
 @pytest.fixture
@@ -22,9 +22,14 @@ def local(tmp_path, monkeypatch):
     monkeypatch.setattr(extracao_preparacao, '_pasta', pasta)
     monkeypatch.setattr(extracao_preparacao, 'sem_montagem', lambda: False)
     monkeypatch.setattr(bancada_temporaria, '_pasta', pasta)
-    frame = gpd.GeoDataFrame({'nome': ['Árvore', 'Sem geometria', 'Terceira'], 'valor': [7, None, 9]}, geometry=[Point(1, 2), None, Point(3, 4)], crs=4326)
-    frame['fid'] = ['original-a', 'original-b', 'original-c']
-    frame['geom'] = ['atributo', 'preservado', 'texto']
+    frame = nativo.Camada(
+        [nativo.campo('nome', ogr.OFTString), nativo.campo('valor', ogr.OFTReal),
+         nativo.campo('fid', ogr.OFTString), nativo.campo('geom', ogr.OFTString)],
+        [{'nome': 'Árvore', 'valor': 7., 'fid': 'original-a', 'geom': 'atributo'},
+         {'nome': 'Sem geometria', 'valor': None, 'fid': 'original-b', 'geom': 'preservado'},
+         {'nome': 'Terceira', 'valor': 9., 'fid': 'original-c', 'geom': 'texto'}],
+        [ogr.CreateGeometryFromWkt('POINT(1 2)'), None, ogr.CreateGeometryFromWkt('POINT(3 4)')],
+        nativo.referencia(4326), fids=[1, 2, 3])
     meta = {'limites_wgs84': [1, 2, 3, 4], 'tipos_geometria': ['Point'], 'campos': [{'nome': 'nome', 'tipo': 'String'}, {'nome': 'valor', 'tipo': 'Real'}]}
     descriptor = extracao_preparacao.representar(frame, meta, 'dono', atributos=True)
     payload = {'id': 'local:' + 'a' * 32, 'tiles_token': descriptor['tiles_token'], 'revisao': descriptor['revisao']}

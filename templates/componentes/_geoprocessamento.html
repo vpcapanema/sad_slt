@@ -7,7 +7,7 @@
   <title>Geoprocessamento | SLT</title>
   <link rel="icon" href="/assets/img/brand/sicard-simbolo.png" type="image/png">
   <link rel="stylesheet" href="/assets/vendor/maplibre-gl/maplibre-gl.css">
-  <link rel="stylesheet" href="/assets/css/geoprocessamento.css?v=20261017-atualizar-camadas">
+  <link rel="stylesheet" href="/assets/css/geoprocessamento.css?v=20261023-projetos">
   <link rel="stylesheet" href="/assets/css/extracao-atributos.css?v=20260929-inline-explorer">
   <link rel="stylesheet" href="/assets/vendor/leaflet/leaflet.css">
   <link rel="stylesheet" href="/assets/vendor/leaflet-draw/leaflet.draw.css">
@@ -24,12 +24,22 @@
         <img src="/assets/img/brand/sicard-simbolo.png" alt="">
         <strong>SLT</strong>
       </a>
-      <span class="gp-document">Geoprocessamento</span>
+      <span id="gp-project-name" class="gp-document">Geoprocessamento</span>
       <span id="gp-save-state" class="gp-save-state">Ambiente local</span>
     </header>
 
     <section class="barra-ferramentas-geoprocessamento gp-ribbon" aria-label="Faixa de ferramentas">
       <nav class="gp-ribbon-tabs" aria-label="Guias">
+        <div class="gp-file-menu">
+          <button id="gp-file-menu-button" type="button" aria-haspopup="menu" aria-controls="gp-file-menu" aria-expanded="false">Arquivo</button>
+          <div id="gp-file-menu" class="gp-file-menu-popup" role="menu" aria-labelledby="gp-file-menu-button" hidden>
+            <button type="button" role="menuitem" data-project-action="new"><i data-lucide="file-plus" aria-hidden="true"></i><span>Novo projeto</span></button>
+            <button type="button" role="menuitem" data-project-action="open"><i data-lucide="folder-open" aria-hidden="true"></i><span>Abrir projeto…</span></button>
+            <div class="gp-file-menu-separator" role="separator"></div>
+            <button type="button" role="menuitem" data-project-action="save"><i data-lucide="save" aria-hidden="true"></i><span>Salvar</span><kbd>Ctrl+S</kbd></button>
+            <button type="button" role="menuitem" data-project-action="save-as"><i data-lucide="save-all" aria-hidden="true"></i><span>Salvar como…</span><kbd>Ctrl+Shift+S</kbd></button>
+          </div>
+        </div>
         <button class="active" data-ribbon="mapa">Mapa</button>
         <button data-ribbon="analise">Análise</button>
         <button data-ribbon="modelo">Modelo</button>
@@ -143,6 +153,7 @@
     <footer><button type="button" class="btn" id="gp-operation-result-download">Baixar JSON</button><button type="button" class="btn primary" id="gp-operation-result-close">Fechar</button></footer>
   </dialog>
   <input id="gp-file-input" type="file" accept=".geojson,.json,.kml,.tif,.tiff,.zip,.gpkg" multiple hidden>
+  <input id="gp-project-file-input" type="file" accept=".sicard.json,.json" hidden>
   <template id="gp-attribute-template">
     <section class="attribute-workspace attribute-grid-workspace" aria-label="Tabela de atributos">
       <header class="attribute-heading"><div><small>TABELA DE ATRIBUTOS</small><h2 data-at-title></h2></div><button type="button" data-at-action="maximize" data-at-maximize aria-expanded="false" class="attribute-icon-button" title="Maximizar tabela" aria-label="Maximizar tabela"><i data-lucide="maximize" aria-hidden="true"></i></button></header>
@@ -166,9 +177,9 @@
   <script src="/restrict/geoespacial/bancada-feedback-local.js?v=20261016-feedback-unico"></script>
   <script src="/assets/js/status-colors.js"></script>
   <script src="/assets/vendor/tabulator/tabulator.min.js"></script>
-  <script src="/restrict/geoespacial/geoprocessamento-atributos.js?v=20261019-fid-visivel"></script>
-  <script src="/restrict/geoespacial/geoprocessamento.js?v=20261020-favorabilidade-previa"></script>
-  <script src="/restrict/geoespacial/geoprocessamento-modeler.js?v=20261015-destino-saidas"></script>
+  <script src="/restrict/geoespacial/geoprocessamento-atributos.js?v=20261023-projetos"></script>
+  <script src="/restrict/geoespacial/geoprocessamento.js?v=20261023-simbologia-valores"></script>
+  <script src="/restrict/geoespacial/geoprocessamento-modeler.js?v=20261023-projetos"></script>
   <script src="/restrict/geoespacial/geoprocessamento-docks.js?v=20260810-simbologia"></script>
   <script src="/restrict/geoespacial/geoprocessamento-actions.js?v=20261017-atualizar-camadas"></script>
   <script src="/restrict/geoespacial/geoprocessamento-portal.js?v=20261015-auditoria-bancada"></script>
@@ -178,6 +189,8 @@
   <script src="/assets/vendor/leaflet/leaflet.js"></script>
   <script src="/assets/vendor/leaflet-draw/leaflet.draw.js"></script>
   <script src="/restrict/geoespacial/geoespacial-storage-pastas.js?v=20261015-destino-saidas"></script>
-  <script type="module" src="/restrict/geoespacial/bancada-arquivos.js?v=20261018-selecao-bidirecional"></script>
+  <script type="module" src="/restrict/geoespacial/bancada-arquivos.js?v=20261023-fluxo-ogr"></script>
+  <script src="/restrict/geoespacial/geoprocessamento-project.js?v=20261023-projetos"></script>
+  <script src="/restrict/geoespacial/geoprocessamento-project-menu.js?v=20261023-projetos"></script>
 </body>
 </html>

@@ -76,12 +76,8 @@ def _registrar_exportacao(path: Path, recurso: str, tipo: str, *, pasta_saida: s
         json.loads(conteudos[path.name].decode('utf-8') if conteudos is not None else path.read_text(encoding='utf-8'))
         validation = {'tipo': 'relatorio', 'reaberto_json': True}
     elif tipo == 'vetor':
-        if conteudos is not None:
-            from api.services.arquivos_geoespaciais_memoria import ler_vetor
-            frame = ler_vetor(conteudos, path.name)
-        else:
-            frame = gpd.read_file(path, engine='pyogrio')
-        validation = {'feicoes':len(frame), 'crs':str(frame.crs), 'reaberto_gdal':True}
+        from api.services.analise_territorial_ogr import resumo_vetor
+        validation = resumo_vetor(path, conteudos)
     else:
         with rasterio.open(BytesIO(conteudos[path.name]) if conteudos is not None else path) as raster:
             for _, window in raster.block_windows(1):

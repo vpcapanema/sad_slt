@@ -1,4 +1,4 @@
-import { escolherArquivo } from './extracao-atributos/explorador.js?v=20261016-confirmar-camadas';
+import { escolherArquivo } from './extracao-atributos/explorador.js?v=20261023-fluxo-ogr';
 import { json, post } from './extracao-atributos/api.js';
 import { el } from './extracao-atributos/ui.js';
 
@@ -34,25 +34,6 @@ async function prepararOriginal(ref){
   if(ref.categoria&&!file.categoria)file.categoria=ref.categoria;
   return file;
 }
-// Pacotes compactados do storage: /preparar e os tiles do original só abrem
-// arquivos que o GDAL lê diretamente. Mantém a leitura legada em memória
-// (arquivo-mapa, limite de 16 MB), explicitamente sinalizada como tal.
-const COMPACTADOS=['.zip','.kmz','.rar','.7z','.tar','.tgz','.tbz2','.txz','.gz','.bz2','.xz'];
-function ehPacoteStorage(ref){
-  if(!ehStorage(ref))return false;
-  const caminho=String(ref.arquivo||separarIdStorage(ref.id).caminho||'').toLowerCase();
-  return COMPACTADOS.some(ext=>caminho.endsWith(ext));
-}
-async function abrirPacoteLegado(ref){
-  const file=await post('/extracao-atributos/arquivo-mapa',{arquivo:ref.arquivo||undefined,id:ref.id});
-  if(!Array.isArray(file?.geojson?.features))throw new Error(`${ref.nome||ref.id}: o servidor não devolveu a geometria do pacote.`);
-  file.representacao='pacote_legado';
-  const metodo=file.metadados_local?.previa?.metodo;
-  file.geometria_aproximada=Boolean(metodo&&metodo!=='original');
-  if(ref.categoria&&!file.categoria)file.categoria=ref.categoria;
-  app().log(`${file.nome||ref.nome||ref.id}: pacote compactado sem visualização em tiles; aberto pela leitura integral em memória (até 16 MB)${file.geometria_aproximada?', com prévia aproximada da geometria':''}.`,'info');
-  return file;
-}
 const prepararStorage=prepararOriginal;
 async function prepararTabela(id){
   const file=sessions.get(id);
@@ -71,7 +52,7 @@ async function prepararTabela(id){
   app().renderLayers();
   return sessions.get(id);
 }
-const abrirStorage=ref=>ehPacoteStorage(ref)?abrirPacoteLegado(ref):prepararOriginal(ref);
+const abrirStorage=prepararOriginal;
 const releitura=file=>temporario(file)?post(requestPath(file,'tabela'),requestPayload(file,{offset:0,limite:1})).then(()=>file):file.representacao==='tiles'?prepararOriginal(file):post('/extracao-atributos/arquivo-mapa',{arquivo:file.arquivo||undefined,id:file.id});
 function validarAtualizacao(id){
   if(busy)throw new Error('Aguarde a operação em andamento terminar antes de atualizar as camadas.');

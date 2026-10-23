@@ -1,3 +1,4 @@
+from tests.territorial_ogr_helpers import camada, tabela, calcular_ogr
 import json
 from io import BytesIO
 from types import SimpleNamespace
@@ -34,40 +35,40 @@ def test_intersecoes_independentes_soma_sem_uniao_null_e_preservacao():
         ('restricao', 'Terra Indígena', 'ti', frame([box(20, 0, 25, 10)])),
         ('risco', 'Inundação', 'inund', frame([box(5, 0, 10, 10)])),
     ]
-    saida, auditoria = service.calcular(entrada, bases, ControleProcessamento())
-    assert saida.loc[118, 're_app'] == 160  # Soma de dois fragmentos de 80, não união de 100.
-    assert saida.loc[300, 're_ti'] == 50  # Não depende da interseção anterior.
-    assert saida.loc[118, 'ri_inund'] == 50
-    assert saida.loc[901, ['re_app', 're_ti', 'ri_inund']].isna().all()
-    assert pd.isna(saida.loc[300, 're_app'])
-    assert saida[entrada.columns].equals(antes)
+    saida, auditoria = calcular_ogr(entrada, bases, ControleProcessamento())
+    assert tabela(saida).loc[0, 're_app'] == 160  # Soma de dois fragmentos de 80, não união de 100.
+    assert tabela(saida).loc[1, 're_ti'] == 50  # Não depende da interseção anterior.
+    assert tabela(saida).loc[0, 'ri_inund'] == 50
+    assert tabela(saida).loc[2, ['re_app', 're_ti', 'ri_inund']].isna().all()
+    assert pd.isna(tabela(saida).loc[1, 're_app'])
+    assert tabela(saida)[entrada.columns].equals(antes.reset_index(drop=True))
     assert entrada.equals(antes)
     assert auditoria['unidade'] == 'm²'
 
 
 def test_contato_sem_area_zero_e_ausencia_null():
     entrada = fonte()
-    saida, _ = service.calcular(entrada, [
+    saida, _ = calcular_ogr(entrada, [
         ('restricao', 'APP', 'app', frame([box(10, 0, 11, 10)])),
     ], ControleProcessamento())
-    assert saida.loc[0, 're_app'] == 0
-    assert pd.isna(saida.loc[1, 're_app'])
+    assert tabela(saida).loc[0, 're_app'] == 0
+    assert pd.isna(tabela(saida).loc[1, 're_app'])
 
 
 def test_intersecoes_persistidas_por_feicao_sem_agrupar_nomes_iguais():
     entrada = fonte()
     entrada['area_total_m2'] = 'atributo original'
     recortes = []
-    saida, auditoria = service.calcular(entrada, [
+    saida, auditoria = calcular_ogr(entrada, [
         ('restricao', 'APP', 'base-a', frame([box(0,0,8,10), box(2,0,10,10)], nome=['Mesmo Nome','Mesmo Nome'])),
         ('risco', 'Contato', 'base-b', frame([box(10,0,11,10)], nome=['Limite']))],
         ControleProcessamento(), intersecoes=recortes)
-    assert saida.area_total_m2.tolist() == ['atributo original']*3
-    assert saida[auditoria['campo_area_total']].tolist() == [100.]*3
-    assert saida.re_app.iloc[0] == 160.
+    assert tabela(saida).area_total_m2.tolist() == ['atributo original']*3
+    assert tabela(saida)[auditoria['campo_area_total']].tolist() == [100.]*3
+    assert tabela(saida).re_app.iloc[0] == 160.
     assert len({r['feicao_id'] for r in recortes}) == 3
     assert [r['area_m2'] for r in recortes] == [80.,80.,0.]
-    assert recortes[2]['geometry'].geom_type in {'LineString','MultiLineString'}
+    assert recortes[2]['geometry'].GetGeometryName() in {'LINESTRING','MULTILINESTRING'}
     assert [f['nome'] for f in auditoria['feicoes_base']] == ['Mesmo Nome','Mesmo Nome','Limite']
     dados = service.serializar(saida, auditoria, recortes, 'teste.gpkg')
     persistidos = gpd.read_file(BytesIO(dados['teste.gpkg']), engine='pyogrio', layer='intersecoes')
@@ -77,7 +78,7 @@ def test_intersecoes_persistidas_por_feicao_sem_agrupar_nomes_iguais():
 
 def test_saida_sem_intersecoes_possui_camada_vazia_e_entrada_completa():
     recortes = []
-    saida, auditoria = service.calcular(fonte(), [
+    saida, auditoria = calcular_ogr(fonte(), [
         ('risco', 'Distante', 'base', frame([box(1000,1000,1010,1010)]))],
         ControleProcessamento(), intersecoes=recortes)
     dados = service.serializar(saida, auditoria, recortes, 'vazia.gpkg')
@@ -88,13 +89,13 @@ def test_saida_sem_intersecoes_possui_camada_vazia_e_entrada_completa():
 def test_identificador_tecnico_e_colisoes_nao_sobrescrevem_atributos():
     entrada = fonte().drop(columns='ID_FEICAO')
     entrada['re_app'] = 'original'
-    saida, _ = service.calcular(entrada, [
+    saida, _ = calcular_ogr(entrada, [
         ('restricao', 'APP', 'a', frame([box(0, 0, 5, 10)])),
         ('restricao', 'APP', 'b', frame([box(5, 0, 10, 10)])),
     ], ControleProcessamento())
-    assert saida.ID_FEICAO.tolist() == [1, 2, 3]
-    assert saida.re_app.tolist() == ['original'] * 3
-    assert saida.re_app_2.iloc[0] == saida.re_app_3.iloc[0] == 50
+    assert tabela(saida).ID_FEICAO.tolist() == [1, 2, 3]
+    assert tabela(saida).re_app.tolist() == ['original'] * 3
+    assert tabela(saida).re_app_2.iloc[0] == tabela(saida).re_app_3.iloc[0] == 50
 
 
 @pytest.mark.parametrize('ids', [['A', 'A', 'B'], ['A', None, 'B']])
@@ -102,28 +103,28 @@ def test_id_existente_invalido_interrompe(ids):
     entrada = fonte()
     entrada.ID_FEICAO = ids
     with pytest.raises(ValueError, match='único e não nulo'):
-        service.calcular(entrada, [], ControleProcessamento())
+        calcular_ogr(entrada, [], ControleProcessamento())
 
 
 def test_base_vazia_preserva_todas_as_feicoes_com_null():
-    saida, _ = service.calcular(fonte(), [('risco', 'Erosão', 'eros', frame([]))], ControleProcessamento())
-    assert len(saida) == 3 and saida.ri_eros.isna().all()
+    saida, _ = calcular_ogr(fonte(), [('risco', 'Erosão', 'eros', frame([]))], ControleProcessamento())
+    assert len(saida) == 3 and tabela(saida).ri_eros.isna().all()
 
 
 def test_calculo_metrico_preserva_geometria_e_crs_geografico():
     entrada = frame([box(5000000, 7000000, 5000010, 7000010)], codigo=['A'])
-    geografica = service.ogr.reproject(entrada, 4674)
-    saida, _ = service.calcular(geografica, [('risco', 'Incêndio', 'inc', entrada)], ControleProcessamento())
-    assert saida.ri_inc.iloc[0] == pytest.approx(100, abs=.001)
-    assert saida.geometry.to_wkb().equals(geografica.geometry.to_wkb())
-    assert saida.crs == geografica.crs
+    geografica = tabela(service.ogr.reproject(camada(entrada), 4674))
+    saida, _ = calcular_ogr(geografica, [('risco', 'Incêndio', 'inc', entrada)], ControleProcessamento())
+    assert tabela(saida).ri_inc.iloc[0] == pytest.approx(100, abs=.001)
+    assert tabela(saida).geometry.to_wkb().equals(geografica.geometry.to_wkb())
+    assert tabela(saida).crs == geografica.crs
 
 
 def test_cancelamento_antes_das_intersecoes():
     controle = ControleProcessamento()
     controle.cancelar()
     with pytest.raises(ProcessamentoCancelado):
-        service.calcular(fonte(), [], controle)
+        calcular_ogr(fonte(), [], controle)
 
 
 def test_erro_ogr_nao_vira_null_e_libera_temporarios(monkeypatch):
@@ -137,7 +138,7 @@ def test_erro_ogr_nao_vira_null_e_libera_temporarios(monkeypatch):
             fechado.append(True)
     monkeypatch.setattr(service.ogr, 'LayerOverlay', Overlay)
     with pytest.raises(ValueError, match='Erro OGR'):
-        service.calcular(fonte(), [('risco', 'APP', 'a', fonte())], ControleProcessamento())
+        calcular_ogr(fonte(), [('risco', 'APP', 'a', fonte())], ControleProcessamento())
     assert fechado == [True]
 
 
@@ -147,7 +148,7 @@ def test_saida_real_gpkg_nome_exato_null_geometrias_e_metadados(monkeypatch, cod
     base = frame([box(0, 0, 5, 10)])
     gravados = []
     entrada_id = 'storage:saidas-geoespaciais/demandas.gpkg::demandas' if codigo else 'entrada'
-    monkeypatch.setattr(service, '_carregar', lambda ref: entrada if ref['id'] == entrada_id else base)
+    monkeypatch.setattr(service, '_carregar', lambda ref: camada(entrada if ref['id'] == entrada_id else base))
     if codigo:
         dados = vetor(entrada, 'demandas.gpkg', 'GPKG', layer='demandas',
                       layer_metadata={'SICARD_NORMALIZACAO': json.dumps({'origem': {'hierarquizacao': codigo}})})
@@ -179,7 +180,7 @@ def test_saida_real_gpkg_nome_exato_null_geometrias_e_metadados(monkeypatch, cod
     assert controle.cancelavel is False
     auditoria = resultado['elegibilidade']
     assert auditoria.get('hierarquizacao') == codigo
-    persistida = json.loads(service.read_info(BytesIO(conteudos[nome]), layer='elegibilidade_territorial')
+    persistida = json.loads(__import__('pyogrio').read_info(BytesIO(conteudos[nome]), layer='elegibilidade_territorial')
                             ['layer_metadata']['SICARD_ELEGIBILIDADE'])
     assert persistida.get('hierarquizacao') == codigo
     assert persistida['pasta_analise'] == pasta
@@ -199,10 +200,10 @@ def test_lote_reune_entradas_sem_misturar_hierarquizacoes():
     {'origem': {'id': 'camada-avulsa'}}, {'origem': {'hierarquizacao': 'OUTRA'}}, [], None,
 ])
 def test_entrada_avulsa_nao_pode_declarar_outra_hierarquizacao(monkeypatch, normalizacao):
-    monkeypatch.setattr(service, '_carregar', lambda ref: fonte())
+    monkeypatch.setattr(service, '_carregar', lambda ref: camada(fonte()))
     monkeypatch.setattr(service.storage_remoto, 'baixar', lambda caminho: b'')
-    monkeypatch.setattr(service, 'read_info', lambda *args, **kwargs: {
-        'layer_metadata': {'SICARD_NORMALIZACAO': json.dumps(normalizacao)}})
+    monkeypatch.setattr(service.ogr, 'ler', lambda *args, **kwargs: SimpleNamespace(
+        metadados={'SICARD_NORMALIZACAO': json.dumps(normalizacao)}))
     with pytest.raises(ValueError, match='não foi preparada'):
         service.executar({'entrada': {'id': 'storage:saidas-geoespaciais/a.gpkg::demandas', 'nome': 'A'},
                           'hierarquizacao': 'HIER-TESTE', 'restricao': [], 'risco': []}, ControleProcessamento())
@@ -220,7 +221,7 @@ def test_arquivo_persistido_reabre_com_descritor_real_da_bancada(storage_sinteti
     (root / 'saidas-geoespaciais').mkdir()
     monkeypatch.setattr(service.storage, 'diretorio_storage', lambda: root)
     entrada = frame([box(5000000, 7000000, 5000010, 7000010)], nome=['A'])
-    monkeypatch.setattr(service, '_carregar', lambda ref: entrada.copy())
+    monkeypatch.setattr(service, '_carregar', lambda ref: camada(entrada))
     monkeypatch.setattr(service.storage_remoto, 'listar', lambda *a, **k: [])
     monkeypatch.setattr(service.storage_remoto, 'criar_pasta', lambda pasta: (root / pasta).mkdir())
     monkeypatch.setattr(service.saidas_storage, 'garantir_pasta',

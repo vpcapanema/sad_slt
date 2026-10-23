@@ -1,3 +1,5 @@
+from tests.territorial_ogr_helpers import camada as nativa
+from api.services import fluxo_camadas_ogr as fluxo
 import json
 import math
 from pathlib import Path
@@ -16,7 +18,7 @@ def isolado(monkeypatch, tmp_path_factory):
     tmp_path = tmp_path_factory.mktemp('prep')
     monkeypatch.setattr(path_policy, 'project_path', lambda caminho: tmp_path / caminho)
     monkeypatch.setattr(preparo, 'sem_montagem', lambda: False)
-    monkeypatch.setattr(local, 'localizacao', lambda frame: {'status': 'consultado'})
+    monkeypatch.setattr(fluxo, 'localizacao', lambda frame: {'status': 'consultado'})
 
     def negar(*args, **kwargs):
         pytest.fail('O fluxo original não deve converter geometrias para GeoJSON')
@@ -36,7 +38,7 @@ def test_catalogo_valida_sem_geojson_e_preserva_original(monkeypatch, isolado):
     geom = original.geometry.iloc[0]
     assert isinstance(geom, Point)
     antes = geom.wkb
-    monkeypatch.setattr(repo, 'carregar_vetor_bruto', lambda ident: (original, {'nome': 'Original'}))
+    monkeypatch.setattr(preparo.nativo, 'carregar_referencia', lambda ident: nativa(original))
     result = preparo.preparar('base', 'autor')
     assert result['status_validacao'] == 'valida'
     assert result['representacao'] == 'tiles' and 'geojson' not in result
@@ -75,8 +77,8 @@ def test_crs_ausente_impede_previa(monkeypatch, isolado):
     from api.repositories import camada_geoespacial_repository as repo
     invalid = frame()
     invalid.crs = None  # type: ignore[assignment]
-    monkeypatch.setattr(repo, 'carregar_vetor_bruto', lambda ident: (invalid, {'nome': 'Inválida'}))
-    with pytest.raises(ValueError, match='coordenadas'):
+    monkeypatch.setattr(preparo.nativo, 'carregar_referencia', lambda ident: nativa(invalid))
+    with pytest.raises(ValueError, match='CRS'):
         preparo.preparar('base', 'autor')
     assert not list(isolado.rglob('*.gpkg'))
 
@@ -86,7 +88,7 @@ def test_limite_de_upload_nao_restringe_base_cadastrada(monkeypatch, isolado):
     original = frame()
     validar = local.validar
     monkeypatch.setattr(local, 'validar', lambda frame, max_feicoes=0: validar(frame, max_feicoes=max_feicoes))
-    monkeypatch.setattr(repo, 'carregar_vetor_bruto', lambda ident: (original, {'nome': 'Base'}))
+    monkeypatch.setattr(preparo.nativo, 'carregar_referencia', lambda ident: nativa(original))
     assert preparo.preparar('base', 'autor')['feicoes'] == 1
     with pytest.raises(ValueError, match='entre 1'):
         validar(original, max_feicoes=0)
@@ -121,8 +123,8 @@ def test_revisao_fonte_storage_independe_do_token_da_previa(monkeypatch, isolado
     carregada = elegibilidade_processamento._carregar({
         'id': ident, 'nome': 'municipios', 'revisao': descritor['revisao_fonte'],
     })
-    assert carregada.codigo.tolist() == ['001']
-    assert carregada.geometry.iloc[0].wkb == frame().geometry.iloc[0].wkb
+    assert [r['codigo'] for r in carregada.registros] == ['001']
+    assert bytes(carregada.geometrias[0].ExportToWkb()) == frame().geometry.iloc[0].wkb
 
 
 def test_modificacao_real_apos_previa_continua_bloqueando_calculo(monkeypatch, isolado):

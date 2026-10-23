@@ -276,7 +276,7 @@ export function escolherArquivo({catalog=[],carregarCatalogo,excluded=[],title,a
           ativas.set(file.id,`${rotulo(file)}\n${loaded.has(file.id)?'Recuperando camada já carregada.':'Lendo a camada e preparando os dados de visualização.'}`);acompanhar();
           try{
             if(!loaded.has(file.id)){
-              const result=original?await validarCamada(file):await json('/extracao-atributos/arquivo-mapa',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({arquivo:file.arquivo||undefined,id:file.id})});
+              const result=await validarCamada(file);
               let layer=catalog.find(item=>item.id===result.id);
               if(!layer){layer={...file,...result};catalog.push(layer);}
               if(excluded.includes(layer.id))throw new Error('Camada já selecionada como base ou entrada.');

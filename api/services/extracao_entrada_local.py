@@ -325,7 +325,14 @@ def _lote(conteudo, nome, com_previa=True, selecionadas=None, progresso=None, do
                     if dono_tiles is not None:
                         from api.services.extracao_preparacao import representar
                         meta['localizacao'] = localizacao(frame)
-                        item.update(representar(frame, meta, dono_tiles, atributos=True))
+                        from api.services.analise_territorial_ogr import ler_camada
+                        original_ogr = ler_camada(escolha['layer'])
+                        from osgeo import ogr
+                        fid_campo = 'slt_fid_origem'
+                        while fid_campo in {c['nome'] for c in original_ogr.campos}:
+                            fid_campo += '_'
+                        original_ogr.adicionar(fid_campo, ogr.OFTInteger64, original_ogr.fids)
+                        item.update(representar(original_ogr, meta, dono_tiles, atributos=True))
                         item.update(id=f'local:{uuid4().hex}', nome=meta['nome_camada'], origem='local', tipo='vetor')
                     elif com_previa:
                         item.update(_camada_previa(frame, meta, limite_previa))

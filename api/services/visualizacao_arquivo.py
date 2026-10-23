@@ -102,8 +102,9 @@ def _ler(path, relative, revision, vinculo, vinculos, encoding):
                 'arquivo': relative, 'origem_geometria': 'storage', 'revisao': revision,
                 'crs_arquivo': source_wkt, 'campos': fields, 'coluna_fid': layer.GetFIDColumn(),
                 'geojson': {'type': 'FeatureCollection', 'features': features}}
-        from api.services.metadados_previa import descrever_geojson
-        result['metadados_local'] = descrever_geojson(result, arquivo=path, formato=dataset.GetDriver().ShortName, componente=layer.GetName(), camada_ogr=layer)
+        from api.services.fluxo_camadas_ogr import descrever
+        from api.services.analise_territorial_ogr import ler_camada
+        result['metadados_local'] = descrever(ler_camada(layer), arquivo=path, formato=dataset.GetDriver().ShortName)
         return result
     finally:
         dataset = None

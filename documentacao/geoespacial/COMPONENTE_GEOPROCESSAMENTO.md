@@ -272,3 +272,52 @@ O cadastro e a receita são persistidos no schema PostgreSQL/PostGIS
 `geoprocessamento`, criado pela migration `037_schema_geoprocessamento.sql`. A página
 hospedeira escuta os eventos DOM da bancada no documento incorporado e os apresenta
 no contêiner de detalhes sem transferir regras metodológicas ao componente genérico.
+
+### Menu Arquivo e projetos da bancada
+
+O HTML original inclui **Arquivo** como primeiro menu, antes de **Mapa**.
+Os comandos de projeto são **Novo projeto**, **Abrir projeto…**, **Salvar**
+e **Salvar como…**. A interface usa `geoprocessamento-project-menu.js`, enquanto
+a leitura e a persistência são fornecidas por `window.gpProject` em
+`geoprocessamento-project.js`. Os projetos usam a extensão `.sicard.json`.
+
+A referência funcional é o menu Project do ArcGIS Pro. **Salvar** atualiza o
+projeto corrente; quando ainda não existe destino gravável, solicita o primeiro
+destino. **Salvar como** grava uma cópia em outro nome/destino e torna essa cópia
+o projeto corrente. O arquivo representa o estado da bancada: camadas e suas
+configurações, visualização do mapa e organização dos painéis. Referências a
+serviços externos continuam dependendo do acesso às fontes. Salvar um projeto
+não implica sobrescrever os arquivos geoespaciais originais.
+
+O menu aceita navegação por setas, Home/End e Escape. Os atalhos **Ctrl+S** e
+**Ctrl+Shift+S** correspondem a Salvar e Salvar como, respectivamente.
+Comandos específicos da aplicação ArcGIS Pro (licenciamento, gerenciadores
+de pacotes e suplementos) não são reproduzidos na bancada.
+
+O formato é JSON versionado (`format: sicard-geoprocessamento`, `version: 1`).
+Inclui estado e ordem das camadas, fontes do mapa, simbologia e imagens,
+visibilidade, filtros, seleção, câmera, ambientes, painéis, parâmetros da ferramenta,
+modelos abertos e configuração da tabela de atributos. GeoJSON em memória e
+recursos `blob:` são incorporados. Camadas permanentes do storage/serviços são
+referenciadas; o projeto não congela nem reverte alterações posteriores nas fontes.
+Arquivos vetoriais locais temporários são lidos em páginas autenticadas e
+incorporados como GeoJSON em EPSG:4326, preservando atributos e FIDs. Assim, a
+reabertura não depende do token temporário; essa leitura pode aumentar o tempo
+de salvamento e o tamanho do projeto para arquivos grandes.
+
+Em navegadores com File System Access API, Salvar reutiliza o arquivo escolhido
+e Salvar como solicita outro destino. Sem essa API, o navegador baixa uma cópia;
+não há promessa de sobrescrever um arquivo local. Abrir também aceita o seletor
+de arquivos convencional. Cancelar a escolha ou falhar na gravação preserva o
+arquivo ativo; projetos inválidos são rejeitados e falhas de restauração tentam
+restabelecer o estado anterior. Edições pendentes nos dados precisam ser salvas
+ou descartadas separadamente, assim como em um SIG.
+
+Verificação: `node tests/browser/bancada-projeto.cjs`, com HTML/CSS/MapLibre reais
+e fontes isoladas. Cobre salvar, salvar como, cancelamento, abertura por arquivo,
+restauração de mapa/estado/modelos/tabela e rejeição de identificadores inválidos.
+
+Referências oficiais consultadas em 23/10/2026:
+
+- [ArcGIS Pro — Save a project](https://doc.esri.com/en/arcgis-pro/latest/help/projects/save-a-project.html): atualização do projeto e cópia com novo destino, mantendo as referências externas.
+- [ArcGIS Pro — Introduction, Settings](https://doc.esri.com/en/arcgis-pro/latest/get-started/get-started.html): inventário dos comandos do menu Project.

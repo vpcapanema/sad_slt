@@ -1,4 +1,5 @@
 """Interseções da Fase 2 sem agregação dos atributos das superfícies."""
+from tests.territorial_ogr_helpers import camada, tabela, calcular_ogr, geometrias_preservadas
 import json
 from io import BytesIO
 from types import SimpleNamespace
@@ -20,7 +21,7 @@ def frame(geometrias, **atributos):
 
 def calcular(entrada, bases):
     recortes = []
-    saida, auditoria = service.calcular(entrada, bases, ControleProcessamento(),
+    saida, auditoria = calcular_ogr(entrada, bases, ControleProcessamento(),
                                        intersecoes=recortes, analise='favorabilidade')
     return saida, auditoria, recortes
 
@@ -34,9 +35,9 @@ def test_areas_independentes_preservam_classes_indices_e_inteiros_exatos():
     originais = [f.copy() for f in (entrada, grade, rede)]
     saida, auditoria, recortes = calcular(entrada, [
         ('grade', 'Superfície', 'grade', grade), ('rede', 'Superfície', 'rede', rede)])
-    assert saida.fg_superficie.iloc[0] == 160  # Soma sem união das sobreposições.
-    assert saida.fr_superficie.iloc[1] == 50  # Não intersecta o resultado da grade.
-    assert pd.isna(saida.fg_superficie.iloc[1]) and pd.isna(saida.fr_superficie.iloc[0])
+    assert tabela(saida).fg_superficie.iloc[0] == 160  # Soma sem união das sobreposições.
+    assert tabela(saida).fr_superficie.iloc[1] == 50  # Não intersecta o resultado da grade.
+    assert pd.isna(tabela(saida).fg_superficie.iloc[1]) and pd.isna(tabela(saida).fr_superficie.iloc[0])
     assert auditoria['indices_agregados'] is False
     assert all(f.equals(original) for f, original in zip((entrada, grade, rede), originais))
     dados = service.serializar(saida, auditoria, recortes, 'f2.gpkg', analise='favorabilidade')['f2.gpkg']
@@ -63,20 +64,20 @@ def test_areas_independentes_preservam_classes_indices_e_inteiros_exatos():
 
 
 @pytest.mark.parametrize('analise,papel', [('favorabilidade', 'rede'), ('elegibilidade', 'risco')])
-def test_serializacao_aceita_promocao_de_poligono_para_multipoligono(analise, papel):
+def test_serializacao_preserva_poligono_e_multipoligono(analise, papel):
     entrada = frame([box(0, 0, 10, 10)])
     base = frame([box(0, 0, 2, 2), MultiPolygon([box(3, 3, 4, 4), box(5, 5, 6, 6)])],
                  nome=['Simples', 'Múltiplo'])
     recortes = []
-    saida, auditoria = service.calcular(
+    saida, auditoria = calcular_ogr(
         entrada, [(papel, 'Superfície', 'base', base)], ControleProcessamento(),
         intersecoes=recortes, analise=analise)
-    assert [r['geometry'].geom_type for r in recortes] == ['Polygon', 'MultiPolygon']
+    assert [r['geometry'].GetGeometryName() for r in recortes] == ['POLYGON', 'MULTIPOLYGON']
     dados = service.serializar(saida, auditoria, recortes, 'mistos.gpkg', analise=analise)
     persistidos = gpd.read_file(BytesIO(dados['mistos.gpkg']), layer='intersecoes')
-    assert persistidos.geometry.geom_type.tolist() == ['MultiPolygon', 'MultiPolygon']
-    assert persistidos.geometry.iloc[0].geoms[0].wkb == recortes[0]['geometry'].wkb
-    assert persistidos.geometry.iloc[1].wkb == recortes[1]['geometry'].wkb
+    assert persistidos.geometry.geom_type.tolist() == ['Polygon', 'MultiPolygon']
+    assert persistidos.geometry.iloc[0].wkb == bytes(recortes[0]['geometry'].ExportToWkb())
+    assert persistidos.geometry.iloc[1].wkb == bytes(recortes[1]['geometry'].ExportToWkb())
     assert persistidos.feicao_id.tolist() == [r['feicao_id'] for r in recortes]
     assert persistidos.area_m2.tolist() == [r['area_m2'] for r in recortes]
 
@@ -87,24 +88,59 @@ def test_serializacao_aceita_promocao_de_poligono_para_multipoligono(analise, pa
     (box(0, 0, 2, 2), MultiPolygon),
 ])
 def test_validacao_permite_apenas_promocao_sem_alterar_componentes(simples, multiplo):
-    assert service._geometria_preservada(simples, simples)
-    assert service._geometria_preservada(simples, multiplo([simples]))
-    assert not service._geometria_preservada(simples, multiplo([simples, simples]))
-    assert not service._geometria_preservada(multiplo([simples, simples]), multiplo([simples]))
+    assert geometrias_preservadas(simples, simples)
+    assert geometrias_preservadas(simples, multiplo([simples]))
+    assert not geometrias_preservadas(simples, multiplo([simples, simples]))
+    assert not geometrias_preservadas(multiplo([simples, simples]), multiplo([simples]))
 
 
 def test_validacao_rejeita_alteracao_de_coordenadas_e_perda_de_z():
-    assert not service._geometria_preservada(Point(1, 2, 3), MultiPoint([Point(1, 2, 4)]))
-    assert not service._geometria_preservada(Point(1, 2, 3), MultiPoint([Point(1, 2)]))
-    assert not service._geometria_preservada(box(0, 0, 2, 2), MultiPolygon([box(1, 0, 3, 2)]))
+    assert not geometrias_preservadas(Point(1, 2, 3), MultiPoint([Point(1, 2, 4)]))
+    assert not geometrias_preservadas(Point(1, 2, 3), MultiPoint([Point(1, 2)]))
+    assert not geometrias_preservadas(box(0, 0, 2, 2), MultiPolygon([box(1, 0, 3, 2)]))
+
+
+@pytest.mark.parametrize('alteracao', [None, 'texto', 'nulo', 'area', 'vinculo', 'inteiro'])
+def test_conferencia_de_nulos_nao_oculta_perda_de_atributos(monkeypatch, alteracao):
+    entrada = frame([box(0, 0, 10, 10)])
+    grade = frame([box(0, 0, 5.123456, 10)], cd_mun=['3504008'], identificador=[2**60 + 1])
+    rede = frame([box(5.123456, 0, 10, 10)], classe=['Alta'])
+    saida, auditoria, recortes = calcular(entrada, [
+        ('grade', 'Municipios', 'g', grade), ('rede', 'Rede', 'r', rede)])
+    ler = gpd.read_file
+
+    gravar = service.ogr.gravar_camada
+
+    def adulterar(dataset, nome, frame, **kwargs):
+        if nome == 'intersecoes' and alteracao:
+            frame = frame.copiar()
+            coluna, valor = {
+                'texto': ('fg_municipios__cd_mun', 'outro'),
+                'nulo': ('fg_municipios__cd_mun', None),
+                'area': ('area_m2', 50.001),
+                'vinculo': ('feicao_id', 'outro'),
+                'inteiro': ('fg_municipios__identificador', 2**60 + 2),
+            }[alteracao]
+            frame.registros[0][coluna] = valor
+        return gravar(dataset, nome, frame, **kwargs)
+
+    monkeypatch.setattr(service.ogr, 'gravar_camada', adulterar)
+    if alteracao:
+        with pytest.raises(ValueError, match='vínculos ou as áreas'):
+            service.serializar(saida, auditoria, recortes, 'nulos.gpkg', analise='favorabilidade')
+    else:
+        dados = service.serializar(saida, auditoria, recortes, 'nulos.gpkg', analise='favorabilidade')
+        resultado = ler(BytesIO(dados['nulos.gpkg']), layer='intersecoes')
+        assert resultado.loc[0, 'fg_municipios__cd_mun'] == '3504008'
+        assert pd.isna(resultado.loc[1, 'fg_municipios__cd_mun'])
 
 
 def test_colisoes_entre_bases_e_campos_tecnicos_nao_perdem_atributos():
     entrada = frame([box(0, 0, 10, 10)], fg_app=['original'])
     base = frame([box(0, 0, 5, 10)], demanda_pos=[77], base_id=['original'], area_m2=[999])
     saida, auditoria, recortes = calcular(entrada, [('grade', 'APP', 'a', base), ('grade', 'APP', 'b', base)])
-    assert saida.fg_app.iloc[0] == 'original'
-    assert saida.fg_app_2.iloc[0] == saida.fg_app_3.iloc[0] == 50
+    assert tabela(saida).fg_app.iloc[0] == 'original'
+    assert tabela(saida).fg_app_2.iloc[0] == tabela(saida).fg_app_3.iloc[0] == 50
     destinos = [campo for b in auditoria['atributos_superficies'] for campo in b['campos'].values()]
     assert len(destinos) == len(set(destinos)) == 6
     assert recortes[0]['demanda_pos'] == 0 and recortes[0]['area_m2'] == 50
@@ -115,7 +151,7 @@ def test_colisoes_entre_bases_e_campos_tecnicos_nao_perdem_atributos():
 def test_sem_intersecoes_preserva_entrada_e_esquema_vazio(base):
     entrada = frame([box(0, 0, 10, 10)], codigo=['A'])
     saida, auditoria, recortes = calcular(entrada, [('grade', 'Grade', 'g', base)])
-    assert saida.fg_grade.isna().all()
+    assert tabela(saida).fg_grade.isna().all()
     dados = service.serializar(saida, auditoria, recortes, 'vazio.gpkg', analise='favorabilidade')['vazio.gpkg']
     reabertos = gpd.read_file(BytesIO(dados), layer='intersecoes')
     assert reabertos.empty
@@ -126,11 +162,11 @@ def test_sem_intersecoes_preserva_entrada_e_esquema_vazio(base):
 def test_contato_sem_area_e_cancelamento():
     entrada = frame([box(0, 0, 10, 10)])
     saida, _, recortes = calcular(entrada, [('rede', 'Rede', 'r', frame([box(10, 0, 11, 10)], classe=['Contato']))])
-    assert saida.fr_rede.iloc[0] == recortes[0]['area_m2'] == 0
+    assert tabela(saida).fr_rede.iloc[0] == recortes[0]['area_m2'] == 0
     controle = ControleProcessamento()
     controle.cancelar()
     with pytest.raises(ProcessamentoCancelado):
-        service.calcular(entrada, [], controle, analise='favorabilidade')
+        calcular_ogr(entrada, [], controle, analise='favorabilidade')
 
 
 def test_base_linear_rejeitada_explicitamente():
@@ -144,7 +180,7 @@ def test_execucao_persiste_em_fase2_com_descritor_real(storage_sintetico, monkey
     entrada = frame([box(5000000, 7000000, 5000010, 7000010)], codigo=['A'])
     base = entrada.assign(classe='Alta', indice_normalizado=.75)
     monkeypatch.setattr(service.storage, 'diretorio_storage', lambda: root)
-    monkeypatch.setattr(service, '_carregar', lambda ref: entrada if ref['id'] == 'entrada' else base)
+    monkeypatch.setattr(service, '_carregar', lambda ref: camada(entrada if ref['id'] == 'entrada' else base))
     monkeypatch.setattr(service.saidas_storage, 'garantir_pasta',
                         lambda pasta: (root / pasta).mkdir(parents=True, exist_ok=True))
     def registrar(nome, conteudos, recurso, tipo, *, pasta_saida):

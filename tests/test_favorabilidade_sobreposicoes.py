@@ -1,4 +1,5 @@
 """Dados completos da rosca, lidos das saídas persistidas e restritos ao usuário."""
+from tests.territorial_ogr_helpers import calcular_ogr, serializar_fixture
 from copy import deepcopy
 from hashlib import sha256
 from io import BytesIO
@@ -31,10 +32,10 @@ def analise(monkeypatch):
     resultados, arquivos = {}, {}
     for numero in (1, 2):
         recortes = []
-        saida, auditoria = processamento.calcular(entrada, [('grade', 'Grade', 'g', grade), ('rede', 'Rede', 'r', rede)],
+        saida, auditoria = calcular_ogr(entrada, [('grade', 'Grade', 'g', grade), ('rede', 'Rede', 'r', rede)],
             ControleProcessamento(), intersecoes=recortes, analise='favorabilidade')
         auditoria['entrada'] = {'id': f'entrada-{numero}', 'nome': f'Entrada {numero}'}
-        conteudo = processamento.serializar(saida, auditoria, recortes, 'f2.gpkg', analise='favorabilidade')['f2.gpkg']
+        conteudo = serializar_fixture(saida, auditoria, recortes, 'f2.gpkg', analise='favorabilidade')['f2.gpkg']
         arquivo = f'saidas-geoespaciais/f2-{numero}.gpkg'
         resultados[f'job-{numero}'] = {'arquivo': arquivo, 'sha256': sha256(conteudo).hexdigest(),
                                      'lote_id': 'lote', 'total_entradas': 2, 'favorabilidade': auditoria}
@@ -369,7 +370,7 @@ def test_fragmentos_divergentes_da_mesma_feicao_nao_sao_agregados(analise):
     primeiro = next(r for r in recortes if r['base_id'] == 'g')
     primeiro['area_m2'] /= 2
     recortes.append({**primeiro, campo: .99})
-    alterado = processamento.serializar(frame, resultado['favorabilidade'], recortes, 'teste.gpkg',
+    alterado = serializar_fixture(frame, resultado['favorabilidade'], recortes, 'teste.gpkg',
                                         analise='favorabilidade')['teste.gpkg']
     resultado['sha256'] = sha256(alterado).hexdigest()
     arquivos[resultado['arquivo']] = alterado

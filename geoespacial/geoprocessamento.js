@@ -330,7 +330,7 @@
       return expr;
     }
     if(r.tipo==="graduado"){
-      const fatias=(r.fatias||[]).filter(f=>f&&f.cor);
+      const fatias=(r.fatias||[]).filter(f=>f&&f.cor).slice().sort((a,b)=>Number(a.de)-Number(b.de));
       if(!fatias.length)return null;
       const val=["to-number",["get",r.campo]];
       if(r.modo==="continuo"){
@@ -386,9 +386,10 @@
       return expr;
     }
     if(r&&r.tipo==="graduado"&&r.campo&&(r.fatias||[]).length){
+      const fatias=r.fatias.slice().sort((a,b)=>Number(a.de)-Number(b.de));
       const val=["to-number",["get",r.campo]];
-      const expr=["step",val,["image",marker(r.fatias[0].cor)]];
-      for(let i=1;i<r.fatias.length;i++)expr.push(Number(r.fatias[i].de),["image",marker(r.fatias[i].cor)]);
+      const expr=["step",val,["image",marker(fatias[0].cor)]];
+      for(let i=1;i<fatias.length;i++)expr.push(Number(fatias[i].de),["image",marker(fatias[i].cor)]);
       return expr;
     }
     return marker(fill);
@@ -485,7 +486,7 @@
       const cats=renderer.categorias.slice(0,8),extra=renderer.categorias.length-cats.length;
       const items=cats.map(c=>`<div class="layer-legend-item">${layerSymbol(layer,c.cor)}<span class="legend-label">${escapeHtml(c.rotulo??c.valor)}</span></div>`).join("");
       const more=extra>0?`<div class="layer-legend-item legend-more">+${extra} categoria(s)</div>`:"";
-      const outros=renderer.corOutros?`<div class="layer-legend-item">${layerSymbol(layer,renderer.corOutros)}<span class="legend-label">Demais valores</span></div>`:"";
+      const outros=renderer.corOutros&&renderer.mostrarOutros!==false?`<div class="layer-legend-item">${layerSymbol(layer,renderer.corOutros)}<span class="legend-label">Demais valores</span></div>`:"";
       return `<div class="layer-legend" title="Editar simbologia">${legendField(renderer)}${items}${more}${outros}</div>`;
     }
     if(renderer?.tipo==="graduado"&&(renderer.fatias||[]).length){
@@ -1281,8 +1282,15 @@
     return cores.map((cor,i)=>({cor,de:bounds[i],ate:bounds[i+1],rotulo:`${fmtNum(bounds[i])} – ${fmtNum(bounds[i+1])}`}));
   }
   function recomputeFatias(r){
-    const cores=(r.fatias||[]).map(f=>f.cor);
+    const descending=r.fatias?.length>1&&Number(r.fatias[0].de)>Number(r.fatias[1].de);
+    const cores=(r.fatias||[]).slice().sort((a,b)=>Number(a.de)-Number(b.de)).map(f=>f.cor);
     r.fatias=buildFatias(r.min,r.max,r.quebras||[],cores.length?cores:coresDaRampa(r.rampa,(r.quebras||[]).length+1));
+    if(descending)r.fatias.reverse();
+  }
+  function invertRendererValues(renderer){
+    const key=renderer.tipo==="categorizado"?"categorias":"fatias",items=renderer[key]||[];
+    const reversed=items.slice().reverse();
+    renderer[key]=reversed.map((item,index)=>({...item,cor:items[index].cor}));
   }
   const renderLayersDebounced=debounce(renderLayers,120);
   function previewSymbology(layerId){replaceLayerStyle(layerId,state.symDraft.draft,false);renderLayersDebounced();markSymbologyDirty()}
@@ -1331,7 +1339,7 @@
     const cats=renderer.tipo==="categorizado"?(renderer.categorias||[]):[];
     const list=cats.map((c,i)=>`<div class="sym-class-row sym-class-row--cat" data-sym-index="${i}"><input type="color" data-sym-cor value="${c.cor}" title="Cor da categoria"><input type="text" class="sym-class-label" data-sym-rotulo value="${escapeHtml(c.rotulo??c.valor)}" title="Rótulo exibido na legenda"><span class="sym-class-count" title="Quantidade de feições com este valor">${c.contagem!=null?fmtNum(c.contagem):""}</span><button type="button" class="icon-btn" data-sym-remove title="Remover categoria"><i data-lucide="x"></i></button></div>`).join("");
     const header=cats.length?`<div class="sym-class-row sym-class-row--cat sym-class-header" aria-hidden="true"><span>Cor</span><span>Rótulo <em>— texto da legenda; edite livremente</em></span><span>Feições</span><span></span></div>`:"";
-    return `<div class="sym-body sym-attr"><section class="sym-group"><div class="sym-attr-controls"><div class="sym-field-block"><span>Campo</span>${campoSelect(fields,renderer.campo,true)}</div><div class="sym-field-block"><span>Paleta</span>${rampSelect(renderer.rampa,"qualitativa")}</div><button type="button" class="btn" data-sym-classify><i data-lucide="wand-2"></i>Classificar</button></div></section><section class="sym-group"><h4 class="sym-group-title">Categorias</h4>${header}<div class="sym-classes" data-sym-classes>${list||'<p class="sym-hint">Escolha um campo e clique em Classificar para gerar as categorias.</p>'}</div>${cats.length?`<label class="sym-field-block sym-outros"><span>Cor dos demais valores</span><input type="color" data-sym-outros value="${renderer.corOutros||"#cccccc"}"></label>`:""}</section></div>`;
+    return `<div class="sym-body sym-attr"><section class="sym-group"><div class="sym-attr-controls"><div class="sym-field-block"><span>Campo</span>${campoSelect(fields,renderer.campo,true)}</div><div class="sym-field-block"><span>Paleta</span>${rampSelect(renderer.rampa,"qualitativa")}</div><button type="button" class="btn" data-sym-classify><i data-lucide="wand-2"></i>Classificar</button></div></section><section class="sym-group"><h4 class="sym-group-title">Categorias</h4>${cats.length?`<button type="button" class="btn" data-sym-invert-values title="Inverter valores mantendo as cores">Inverter valores</button>`:""}${header}<div class="sym-classes" data-sym-classes>${list||'<p class="sym-hint">Escolha um campo e clique em Classificar para gerar as categorias.</p>'}</div>${cats.length?`${renderer.mostrarOutros===false?`<button type="button" class="btn" data-sym-toggle-outros>Adicionar demais valores à legenda</button>`:`<div class="sym-class-row sym-class-row--cat"><input type="color" data-sym-outros value="${renderer.corOutros||"#cccccc"}" aria-label="Cor dos demais valores"><span class="sym-class-label">Demais valores</span><span></span><button type="button" class="icon-btn" data-sym-toggle-outros title="Remover demais valores da legenda" aria-label="Remover demais valores da legenda"><i data-lucide="x"></i></button></div>`}`:""}</section></div>`;
   }
   function renderGraduatedBody(layerId){
     const fields=(state.symbologyFieldsCache?.[layerId]||[]).filter(field=>field.numerico),renderer=state.symDraft.draft.renderer||{};
@@ -1339,10 +1347,10 @@
     const metodoOpts=metodos.map(([value,rotulo])=>`<option value="${value}" ${value===(renderer.metodo||"intervalos_iguais")?"selected":""}>${rotulo}</option>`).join("");
     const modo=renderer.modo||"discreto",classes=renderer.classes||5;
     const fatias=renderer.tipo==="graduado"?(renderer.fatias||[]):[],quebras=renderer.quebras||[];
-    const last=fatias.length-1;
-    const list=fatias.map((f,i)=>`<div class="sym-class-row sym-class-row--grad" data-sym-index="${i}"><input type="color" data-sym-cor value="${f.cor}" title="Cor da classe"><div class="sym-class-range"><span title="Limite inferior — é o limite superior da classe anterior">${fmtNum(f.de)}</span><span class="sym-range-sep">–</span>${i<last?`<input type="number" step="any" data-sym-break value="${f.ate}" title="Limite superior — edite para ajustar o corte desta classe">`:`<span title="Limite superior: o maior valor do campo">${fmtNum(f.ate)}</span>`}</div><input type="text" class="sym-class-label" data-sym-rotulo value="${escapeHtml(f.rotulo)}" title="Rótulo exibido na legenda — texto livre, não recalcula o intervalo"></div>`).join("");
+    const ordered=fatias.slice().sort((a,b)=>Number(a.de)-Number(b.de));
+    const list=fatias.map((f,i)=>`<div class="sym-class-row sym-class-row--grad" data-sym-index="${i}"><input type="color" data-sym-cor value="${f.cor}" title="Cor da classe"><div class="sym-class-range"><span title="Limite inferior — é o limite superior da classe anterior">${fmtNum(f.de)}</span><span class="sym-range-sep">–</span>${ordered.indexOf(f)<ordered.length-1?`<input type="number" step="any" data-sym-break value="${f.ate}" title="Limite superior — edite para ajustar o corte desta classe">`:`<span title="Limite superior: o maior valor do campo">${fmtNum(f.ate)}</span>`}</div><input type="text" class="sym-class-label" data-sym-rotulo value="${escapeHtml(f.rotulo)}" title="Rótulo exibido na legenda — texto livre, não recalcula o intervalo"></div>`).join("");
     const header=fatias.length?`<div class="sym-class-row sym-class-row--grad sym-class-header" aria-hidden="true"><span>Cor</span><span class="sym-class-range"><span>De</span><span class="sym-range-sep">–</span><span>Até <em>(editável)</em></span></span><span>Rótulo <em>— texto da legenda; edite livremente</em></span></div>`:"";
-    return `<div class="sym-body sym-attr"><section class="sym-group"><div class="sym-attr-controls"><div class="sym-field-block"><span>Campo numérico</span>${campoSelect(fields,renderer.campo,false)}</div><div class="sym-field-block"><span>Paleta</span>${rampSelect(renderer.rampa,"viridis")}</div></div><div class="sym-attr-controls"><label class="sym-field-block"><span>Método</span><select data-sym-metodo>${metodoOpts}</select></label><label class="sym-field-block"><span>Classes</span><input type="number" min="2" max="12" step="1" data-sym-classes-count value="${classes}"></label></div><div class="sym-attr-controls"><fieldset class="sym-modo"><legend>Representação</legend><label><input type="radio" name="sym-modo" value="discreto" ${modo==="discreto"?"checked":""}> Discreto</label><label><input type="radio" name="sym-modo" value="continuo" ${modo==="continuo"?"checked":""}> Contínuo</label></fieldset><button type="button" class="btn" data-sym-classify><i data-lucide="wand-2"></i>Classificar</button></div></section><section class="sym-group"><h4 class="sym-group-title">Classes${quebras.length?` · ${fatias.length}`:""}</h4>${header}<div class="sym-classes" data-sym-classes>${list||'<p class="sym-hint">Selecione um campo numérico, o método e o número de classes; então clique em Classificar.</p>'}</div></section></div>`;
+    return `<div class="sym-body sym-attr"><section class="sym-group"><div class="sym-attr-controls"><div class="sym-field-block"><span>Campo numérico</span>${campoSelect(fields,renderer.campo,false)}</div><div class="sym-field-block"><span>Paleta</span>${rampSelect(renderer.rampa,"viridis")}</div></div><div class="sym-attr-controls"><label class="sym-field-block"><span>Método</span><select data-sym-metodo>${metodoOpts}</select></label><label class="sym-field-block"><span>Classes</span><input type="number" min="2" max="12" step="1" data-sym-classes-count value="${classes}"></label></div><div class="sym-attr-controls"><fieldset class="sym-modo"><legend>Representação</legend><label><input type="radio" name="sym-modo" value="discreto" ${modo==="discreto"?"checked":""}> Discreto</label><label><input type="radio" name="sym-modo" value="continuo" ${modo==="continuo"?"checked":""}> Contínuo</label></fieldset><button type="button" class="btn" data-sym-classify><i data-lucide="wand-2"></i>Classificar</button></div></section><section class="sym-group"><h4 class="sym-group-title">Classes${quebras.length?` · ${fatias.length}`:""}</h4>${fatias.length?`<button type="button" class="btn" data-sym-invert-values title="Inverter intervalos mantendo as cores">Inverter valores</button>`:""}${header}<div class="sym-classes" data-sym-classes>${list||'<p class="sym-hint">Selecione um campo numérico, o método e o número de classes; então clique em Classificar.</p>'}</div></section></div>`;
   }
   function wireSymbologyPanel(layerId){
     const scope=$("#gp-editor-view"),draft=state.symDraft.draft;
@@ -1366,7 +1374,9 @@
     $$("[data-sym-cor]",scope).forEach(input=>input.oninput=()=>{const row=input.closest("[data-sym-index]"),i=Number(row.dataset.symIndex),r=draft.renderer;const arr=r.tipo==="categorizado"?r.categorias:r.fatias;if(arr&&arr[i]){arr[i].cor=input.value;previewSymbology(layerId)}});
     $$("[data-sym-rotulo]",scope).forEach(input=>input.oninput=()=>{const row=input.closest("[data-sym-index]"),i=Number(row.dataset.symIndex),r=draft.renderer;const arr=r.tipo==="categorizado"?r.categorias:r.fatias;if(arr&&arr[i]){arr[i].rotulo=input.value;renderLayersDebounced();markSymbologyDirty()}});
     $$("[data-sym-remove]",scope).forEach(button=>button.onclick=()=>{const row=button.closest("[data-sym-index]"),i=Number(row.dataset.symIndex),r=draft.renderer;if(r?.categorias){r.categorias.splice(i,1);previewSymbology(layerId);renderSymbologyPanel(layerId)}});
-    $$("[data-sym-break]",scope).forEach(input=>input.onchange=()=>{const row=input.closest("[data-sym-index]"),i=Number(row.dataset.symIndex),r=draft.renderer;if(!r?.quebras)return;const valor=Number(input.value);if(!Number.isFinite(valor))return;r.quebras[i]=valor;r.quebras=[...r.quebras].sort((a,b)=>a-b);r.metodo="manual";recomputeFatias(r);previewSymbology(layerId);renderSymbologyPanel(layerId)});
+    $$("[data-sym-break]",scope).forEach(input=>input.onchange=()=>{const row=input.closest("[data-sym-index]"),i=Number(row.dataset.symIndex),r=draft.renderer;if(!r?.quebras)return;const valor=Number(input.value);if(!Number.isFinite(valor))return;const ordered=r.fatias.slice().sort((a,b)=>Number(a.de)-Number(b.de)),breakIndex=ordered.indexOf(r.fatias[i]);if(valor<=Number(ordered[breakIndex].de)||valor>=Number(ordered[breakIndex+1]?.ate))return;r.quebras[breakIndex]=valor;r.quebras=[...r.quebras].sort((a,b)=>a-b);r.metodo="manual";recomputeFatias(r);previewSymbology(layerId);renderSymbologyPanel(layerId)});
+    const invert=$("[data-sym-invert-values]",scope);if(invert)invert.onclick=()=>{invertRendererValues(draft.renderer);previewSymbology(layerId);renderSymbologyPanel(layerId)};
+    const toggleOutros=$("[data-sym-toggle-outros]",scope);if(toggleOutros)toggleOutros.onclick=()=>{draft.renderer.mostrarOutros=draft.renderer.mostrarOutros===false;previewSymbology(layerId);renderSymbologyPanel(layerId)};
     const outros=$("[data-sym-outros]",scope);if(outros)outros.oninput=()=>{const r=draft.renderer;if(r){r.corOutros=outros.value;previewSymbology(layerId)}};
   }
   function wireCampoSelect(root,layerId){

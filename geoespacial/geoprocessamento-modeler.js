@@ -102,6 +102,22 @@
     if(command==="model-duplicate")return duplicateSelection(editor);
     if(command==="model-delete")return deleteSelection(editor);
   }
+  function projectSnapshot(){
+    if([...editors.values()].some(editor=>editor.busy))throw new Error('Aguarde a execução do modelo terminar antes de salvar o projeto.');
+    return {active:activeId,editors:structuredClone([...editors.values()])};
+  }
+  function restoreProject(snapshot){
+    editors.clear();
+    $$('[data-close-model]').forEach(button=>button.closest('[data-document-tab]').remove());
+    $('#gp-modeler-host').replaceChildren();activeId='mapa';
+    for(const saved of snapshot?.editors||[]){
+      const editor=structuredClone(saved);editor.busy=false;
+      editors.set(editor.id,editor);
+      $('#gp-document-tabs').insertAdjacentHTML('beforeend',`<button data-document-tab="${esc(editor.id)}"><i data-lucide="${editor.type==='function'?'blocks':'workflow'}"></i><span>${esc(editor.title)}</span><i data-close-model="${esc(editor.id)}" data-lucide="x"></i></button>`);
+      $('#gp-modeler-host').insertAdjacentHTML('beforeend',documentShell(editor));bindEditor(editor);render(editor);
+    }
+    activate(editors.has(snapshot?.active)?snapshot.active:'mapa');icons();
+  }
   function titleFor(type){ counter[type]++; return `${type==="function"?"Função":"Fluxo"} ${counter[type]}`; }
   function open(type, existing=null, seed=null, draft=null){
     const id=uid(type), title=existing?.nome||draft?.nome||titleFor(type);
@@ -672,4 +688,5 @@
     $("#gp-document-tabs").addEventListener("click",event=>{const closeButton=event.target.closest("[data-close-model]");if(closeButton){event.stopPropagation();close(closeButton.dataset.closeModel);return}const tab=event.target.closest("[data-document-tab]");if(tab)activate(tab.dataset.documentTab)});
     window.gpApp.newFunction=seed=>showCreateForm("function",seed);window.gpApp.newFlow=()=>showCreateForm("flow");window.gpApp.openVisualDefinition=(kind,item)=>open(kind==="functions"?"function":"flow",item);window.gpModelTips=modelTips;window.gpModeler={open,executeDefinition,create:showCreateForm,edit:(kind,item)=>open(kind,item),hasActiveEditor,showPanel:showModelPanel,updateRibbon:updateModelRibbon,_debug:{editors,activeEditor,addNode,render,deleteSelection,duplicateSelection,autoLayout,fitCanvas,selectEdge,handleModelCommand}};icons();
   });
+  document.addEventListener('DOMContentLoaded',()=>Object.assign(window.gpModeler,{projectSnapshot,restoreProject}));
 })();

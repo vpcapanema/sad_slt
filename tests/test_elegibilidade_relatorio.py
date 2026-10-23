@@ -1,3 +1,4 @@
+from tests.territorial_ogr_helpers import calcular_ogr
 from copy import deepcopy
 from hashlib import sha256
 from io import BytesIO
@@ -14,7 +15,7 @@ from fastapi.testclient import TestClient
 
 from api.services import elegibilidade_relatorio as service
 from api.services.arquivos_geoespaciais_memoria import vetor
-from api.services.elegibilidade_processamento import serializar
+from tests.territorial_ogr_helpers import serializar_fixture as serializar
 
 
 @pytest.fixture
@@ -594,7 +595,7 @@ def test_processamento_real_alimenta_painel_e_pdf_sem_recalcular(monkeypatch):
     base = gpd.GeoDataFrame({'nome': ['Margens do Rio Claro', 'Reserva do Vale Verde']},
         geometry=[box(5000000,7000000,5000008,7000010), box(5000002,7000000,5000010,7000010)], crs=5880)
     recortes = []
-    saida, audit = processamento.calcular(entrada, [('restricao','Proteção','base',base)],
+    saida, audit = calcular_ogr(entrada, [('restricao','Proteção','base',base)],
                                           ControleProcessamento(), intersecoes=recortes)
     audit['entrada'] = {'id':'entrada','nome':'Demandas'}
     dados = processamento.serializar(saida, audit, recortes, 'saida.gpkg')['saida.gpkg']

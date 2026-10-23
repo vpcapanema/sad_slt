@@ -6,18 +6,17 @@ from collections import Counter
 from datetime import datetime, timezone
 from uuid import uuid4
 
-import geopandas as gpd
-import pandas as pd
+from osgeo import ogr
+from api.services import analise_territorial_ogr as nativo
+from api.services import fluxo_camadas_ogr as fluxo
 from fastapi import HTTPException
-from shapely.geometry import GeometryCollection, mapping, shape
 
 from api.services import extracao_preparacao as previa
 from api.services import normalizacao_demanda as regra
 from api.services import ciclo_vida_arquivos as ciclo
 from api.services import storage_geoespacial as storage
-from api.services.arquivos_geoespaciais_memoria import vetor, ler_vetor
-from api.services.extracao_entrada_local import validar
-from api.services.metadados_previa import descrever_vetor
+from api.services.fluxo_camadas_ogr import validar
+from api.services.fluxo_camadas_ogr import descrever as descrever_vetor
 
 TIPOS = {'Point', 'MultiPoint', 'LineString', 'MultiLineString', 'Polygon', 'MultiPolygon', 'GeometryCollection'}
 
@@ -34,34 +33,35 @@ def parametros() -> dict:
     }
 
 
-def normalizar_frame(frame: gpd.GeoDataFrame) -> tuple[gpd.GeoDataFrame, dict]:
+def normalizar_frame(frame: nativo.Camada) -> tuple[nativo.Camada, dict]:
     validar(frame, max_feicoes=None)
     crs = frame.crs
     if crs is None:
         raise ValueError('A camada de demandas não informa seu CRS.')
     geometrias = []
-    tipos = Counter(frame.geometry.geom_type)
+    tipos = Counter(fluxo.tipo(g) for g in frame.geometrias)
     componentes_colecoes = Counter()
-    for pos, (fid, geometria) in enumerate(frame.geometry.items(), 1):
-        if geometria.geom_type not in TIPOS:
-            raise ValueError(f'Feição {pos} (FID/índice {fid}): tipo {geometria.geom_type} não aceito como demanda. Nenhum registro foi descartado.')
+    for pos, (fid, geometria) in enumerate(zip(frame.fids or range(len(frame)), frame.geometrias), 1):
+        if fluxo.tipo(geometria) not in TIPOS:
+            raise ValueError(f'Feição {pos} (FID/índice {fid}): tipo {fluxo.tipo(geometria)} não aceito como demanda. Nenhum registro foi descartado.')
         try:
-            resultado = shape(regra.normalizar(mapping(geometria), crs_origem=crs.to_wkt()))
+            resultado = regra.normalizar_ogr(geometria, crs_origem=crs.ExportToWkt())
         except HTTPException as exc:
             raise ValueError(f'Feição {pos} (FID/índice {fid}): {exc.detail}') from exc
-        if resultado.geom_type not in {'Polygon', 'MultiPolygon'} or resultado.is_empty or not resultado.is_valid:
+        if fluxo.tipo(resultado) not in {'Polygon', 'MultiPolygon'} or resultado.IsEmpty() or not resultado.IsValid():
             raise ValueError(f'Feição {pos} (FID/índice {fid}): a normalização não produziu um polígono válido.')
         geometrias.append(resultado)
-        if isinstance(geometria, GeometryCollection):
-            pendentes = list(geometria.geoms)
+        if fluxo.tipo(geometria) == 'GeometryCollection':
+            pendentes = [geometria.GetGeometryRef(i) for i in range(geometria.GetGeometryCount())]
             while pendentes:
                 componente = pendentes.pop()
-                if isinstance(componente, GeometryCollection):
-                    pendentes.extend(componente.geoms)
+                if fluxo.tipo(componente) == 'GeometryCollection':
+                    pendentes.extend(componente.GetGeometryRef(i) for i in range(componente.GetGeometryCount()))
                 else:
-                    componentes_colecoes[componente.geom_type] += 1
-    resultado = frame.copy()
-    resultado = resultado.set_geometry(gpd.GeoSeries(geometrias, index=frame.index, crs=regra.CRS_CADASTRAL))
+                    componentes_colecoes[fluxo.tipo(componente)] += 1
+    resultado = frame.copiar()
+    resultado.geometrias = geometrias
+    resultado.crs = nativo.referencia(regra.CRS_CADASTRAL)
     validar(resultado, max_feicoes=None)
     return resultado, {
         **parametros(), 'feicoes': len(frame), 'tipos_origem': dict(tipos),
@@ -74,7 +74,7 @@ def normalizar_frame(frame: gpd.GeoDataFrame) -> tuple[gpd.GeoDataFrame, dict]:
 
 
 def _carregar_demanda(ident: str, atributos: dict | None = None, *,
-                      revisao: str | None = None) -> tuple[gpd.GeoDataFrame, str, dict]:
+                      revisao: str | None = None) -> tuple[nativo.Camada, str, dict]:
     origem: dict = {'id': ident}
     if ident.startswith('cadastro:'):
         from api.repositories.cadastro_geometria_repository import exportar_original, TipoCadastro
@@ -84,11 +84,15 @@ def _carregar_demanda(ident: str, atributos: dict | None = None, *,
             raise ValueError('Referência de demanda cadastrada inválida.')
         original = exportar_original(cast(TipoCadastro, partes[1]), partes[2])
         crs = original['crs']['properties']['name']
-        frame = gpd.GeoDataFrame.from_features(original['features'], crs=crs)
+        frame = nativo.de_geojson(original, crs=crs)
         nome = partes[2]
         for campo, valor in (atributos or {}).items():
-            if campo not in frame.columns:
-                frame[campo] = [json.dumps(valor, ensure_ascii=False, allow_nan=False) if isinstance(valor, (dict, list)) else valor] * len(frame)
+            if campo not in {c['nome'] for c in frame.campos}:
+                registros = [{campo: valor} for _ in frame.registros]
+                spec = nativo.campos_registros(registros)[0]
+                frame.campos.append(spec)
+                for registro, novo in zip(frame.registros, registros):
+                    registro.update(novo)
     else:
         if atributos:
             raise ValueError('Atributos adicionais só são aceitos para demandas de hierarquizações.')
@@ -103,7 +107,7 @@ def _carregar_demanda(ident: str, atributos: dict | None = None, *,
         origem['arquivo'] = arquivo
         if ident.startswith('storage:') and storage.impressao_digital(ident) != {k: v for k, v in origem.items() if k != 'id'}:
             raise ValueError('O arquivo de origem mudou durante a leitura. Atualize a prévia e tente novamente.')
-    if not isinstance(frame, gpd.GeoDataFrame):
+    if not isinstance(frame, nativo.Camada):
         raise ValueError('A fonte não contém uma camada vetorial de demandas.')
     return frame, nome, origem
 
@@ -113,10 +117,10 @@ def preparar_demanda(ident: str, dono: str, atributos: dict | None = None, *,
     frame, nome, origem = (_carregar_demanda(ident, atributos, revisao=revisao) if revisao is not None
                           else _carregar_demanda(ident, atributos))
     campo_fid = 'slt_fid_origem'
-    while campo_fid in frame.columns:
+    while campo_fid in {c['nome'] for c in frame.campos}:
         campo_fid += '_'
-    frame = frame.copy()
-    frame[campo_fid] = frame.index
+    frame = frame.copiar()
+    frame.adicionar(campo_fid, ogr.OFTInteger64, frame.fids or range(len(frame)))
     normalizada, auditoria = normalizar_frame(frame)
     auditoria['origem'] = origem
     auditoria['campo_fid_origem'] = campo_fid
@@ -149,7 +153,7 @@ def preparar_hierarquizacao(codigo: str, demandas: list[str], dono: str, *,
         })
         validar(frame, max_feicoes=None)
         fontes.append((frame, origem, cab['codigo']))
-    campos = {campo.lower() for frame, _, _ in fontes for campo in frame.columns}
+    campos = {campo['nome'].lower() for frame, _, _ in fontes for campo in frame.campos}
     rastreio = {}
     for campo in ('slt_fid_origem', 'slt_camada_origem', 'slt_codigo_demanda'):
         livre = campo
@@ -160,14 +164,14 @@ def preparar_hierarquizacao(codigo: str, demandas: list[str], dono: str, *,
     frames = []
     origens = []
     for frame, origem, codigo_demanda in fontes:
-        frame = frame.copy()
-        frame[rastreio['slt_fid_origem']] = frame.index
-        frame[rastreio['slt_camada_origem']] = origem['id']
-        frame[rastreio['slt_codigo_demanda']] = codigo_demanda
+        frame = frame.copiar()
+        frame.adicionar(rastreio['slt_fid_origem'], ogr.OFTInteger64, frame.fids or range(len(frame)))
+        frame.adicionar(rastreio['slt_camada_origem'], ogr.OFTString, [origem['id']]*len(frame))
+        frame.adicionar(rastreio['slt_codigo_demanda'], ogr.OFTString, [codigo_demanda]*len(frame))
         normalizada, auditoria = normalizar_frame(frame)
         frames.append(normalizada)
         origens.append({**origem, 'normalizacao': auditoria})
-    normalizada = gpd.GeoDataFrame(pd.concat(frames, ignore_index=True), geometry='geometry', crs=regra.CRS_CADASTRAL)
+    normalizada = nativo.juntar(frames)
     ident = f'hierarquizacao:{codigo}'
     auditoria = {
         **parametros(), 'feicoes': len(normalizada),
@@ -187,29 +191,14 @@ def preparar_hierarquizacao(codigo: str, demandas: list[str], dono: str, *,
     return _gravar_demanda(normalizada, auditoria, ident, f"{codigo} — {dados['nome']}", dono, analise=analise)
 
 
-def _gravar_demanda(normalizada: gpd.GeoDataFrame, auditoria: dict, ident: str, nome: str, dono: str, *,
+def _gravar_demanda(normalizada: nativo.Camada, auditoria: dict, ident: str, nome: str, dono: str, *,
                     analise: str = 'elegibilidade') -> dict:
-    for campo in normalizada.columns:
-        if campo != normalizada.geometry.name and normalizada[campo].dtype == 'object':
-            normalizada[campo] = normalizada[campo].map(
-                lambda valor: json.dumps(valor, ensure_ascii=False, allow_nan=False) if isinstance(valor, (dict, list)) else valor)
     nome_arquivo = 'demandas_normalizadas.gpkg'
-    conteudos = vetor(normalizada, nome_arquivo, 'GPKG', layer='demandas',
-                      layer_metadata={'SICARD_NORMALIZACAO': json.dumps(auditoria, ensure_ascii=False, allow_nan=False)})
-    reaberta = ler_vetor(conteudos, nome_arquivo)
+    normalizada.metadados['SICARD_NORMALIZACAO'] = json.dumps(auditoria, ensure_ascii=False, allow_nan=False)
+    conteudos = {nome_arquivo: nativo.serializar(normalizada, 'demandas')}
+    reaberta = nativo.ler(conteudos[nome_arquivo], 'demandas')
     validar(reaberta, max_feicoes=None)
-    if (len(reaberta) != len(normalizada) or reaberta.crs is None or reaberta.crs.to_epsg() != regra.CRS_CADASTRAL
-            or set(reaberta.columns) != set(normalizada.columns)
-            or not reaberta.geometry.geom_type.isin(['Polygon', 'MultiPolygon']).all()
-            or not all(original.equals(gravada) for original, gravada in zip(normalizada.geometry, reaberta.geometry))):
-        raise ValueError('O arquivo derivado não preservou todas as demandas poligonais.')
-    try:
-        pd.testing.assert_frame_equal(
-            reaberta.drop(columns=reaberta.geometry.name).reset_index(drop=True),
-            normalizada.drop(columns=normalizada.geometry.name).reset_index(drop=True),
-            check_dtype=False, check_exact=True)
-    except AssertionError as exc:
-        raise ValueError('O arquivo derivado não preservou os atributos das demandas. Nenhuma camada foi enviada à bancada.') from exc
+    nativo.conferir(normalizada, reaberta)
     meta = descrever_vetor(reaberta, formato='GPKG', componente='demandas')
     meta['normalizacao_demanda'] = auditoria
     meta['avisos'].append('Demanda normalizada segundo a regra cadastral. O arquivo de origem não foi alterado; os cálculos devem usar este arquivo derivado integral.')

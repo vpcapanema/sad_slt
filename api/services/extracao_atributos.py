@@ -35,33 +35,13 @@ def caminho_arquivo(row):
 
 
 def camada_para_mapa(ident):
-    """A visualização usa a mesma camada integral do banco que a execução."""
-    item = repo.carregar_vetor(ident)
-    if item is None:
-        raise FileNotFoundError('Camada vetorial não encontrada no banco.')
-    frame, metadata = item
-    if (metadata.get('metadados') or {}).get('origem') == 'municipal-layer':
-        from api.services.municipal_layer import carregar_para_extracao
-        frame = carregar_para_extracao(ident)
-    if frame.crs is None:
-        raise ValueError('A camada não informa seu CRS.')
-    if frame.empty:
-        raise ValueError('A camada não contém feições disponíveis para visualização.')
-    from api.services.extracao_entrada_local import _representacao_mapa, MAX_VERTICES_PREVIA
-    geojson, detalhe = _representacao_mapa(frame, MAX_VERTICES_PREVIA)
-    extra = {}
-    if detalhe['metodo'] != 'original':
-        extra['geojson_resumido'], _ = _representacao_mapa(frame, MAX_VERTICES_PREVIA // 10)
-    from api.services.metadados_previa import descrever_vetor
-    tabela = repo.STORAGES.get(metadata.get('categoria'), (None, None))[1]
-    ficha = descrever_vetor(frame, formato='PostGIS', componente=f'geoprocessamento.{tabela}' if tabela else None)
-    ficha['previa'] = detalhe
-    return {'id':ident,'nome':metadata['nome'],'metadados_local':ficha,'representacao_previa':detalhe,**extra,
-            'origem_geometria':'arquivo' if (metadata.get('metadados') or {}).get('origem') == 'municipal-layer' else 'banco',
-            'crs_arquivo':str(frame.crs),
-            'campos':[{'nome':name,'tipo':str(frame[name].dtype)} for name in frame.columns
-                      if name != frame.geometry.name],
-            'geojson':geojson}
+    from api.services import extracao_preparacao as previa, fluxo_camadas_ogr as fluxo
+    dados, nome, arquivo = previa.carregar(ident)
+    meta = fluxo.descrever(dados)
+    return {'id': ident, 'nome': nome, 'arquivo': arquivo, 'tipo': 'vetor',
+            'origem_geometria': 'arquivo' if arquivo else 'banco',
+            'crs_arquivo': dados.crs.ExportToWkt(), 'campos': meta['campos'],
+            'metadados_local': meta, 'geojson': fluxo.geojson(dados)}
 
 
 def catalogo():
@@ -383,11 +363,10 @@ def _executar_enriquecimento(ident, params, source, categories, progress, inicio
                                                                      linhagem=params,gravar_arquivo=False,
                                                                      preservar_geometrias=True),
                          'registros':len(frame),'campos':len(frame.columns)-1}
-        from api.services.extracao_preparacao import representar
-        from api.services.metadados_previa import descrever_vetor
+        from api.services.extracao_preparacao import preparar
         camadas[nome]['bancada'] = {
             'id':camadas[nome]['camada_resultado_id'], 'nome':nome_camada, 'tipo':'vetor',
-            **representar(frame, descrever_vetor(frame, formato='PostGIS'), params['responsavel'])}
+            **preparar(camadas[nome]['camada_resultado_id'], params['responsavel'])}
         if hasattr(progress,'tarefa'): progress.tarefa(len(frame),len(frame),'registros')
         if hasattr(progress,'concluir'): progress.concluir()
         if hasattr(progress,'progresso_fase'): progress.progresso_fase(indice_saida+1,len(saida['camadas'])+2)

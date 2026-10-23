@@ -30,6 +30,15 @@ def reprojetar(geom, origem, destino):
 def normalizar(geometry, *, crs_origem: int | str = 4326, crs_saida: int | str = CRS_CADASTRAL):
     try:
         geom = ogr.CreateGeometryFromJson(json.dumps(geometry, allow_nan=False))
+    except (RuntimeError, ValueError, TypeError) as exc:
+        raise HTTPException(422, 'Geometria ou CRS inválido para processamento GDAL/OGR.') from exc
+    resultado = normalizar_ogr(geom, crs_origem=crs_origem, crs_saida=crs_saida)
+    return json.loads(resultado.ExportToJson())
+
+
+def normalizar_ogr(geometry, *, crs_origem=4326, crs_saida=CRS_CADASTRAL):
+    try:
+        geom = geometry.Clone() if geometry is not None else None
         if geom is None or geom.IsEmpty():
             raise HTTPException(422, 'A geometria da demanda está vazia.')
         geom.FlattenTo2D()
@@ -71,7 +80,7 @@ def normalizar(geometry, *, crs_origem: int | str = 4326, crs_saida: int | str =
         result = polygons.UnionCascaded()
         if result is None or result.IsEmpty():
             raise HTTPException(422, 'GDAL/OGR não conseguiu consolidar os polígonos.')
-        return json.loads(reprojetar(result, CRS_METRICO, crs_saida).ExportToJson())
+        return reprojetar(result, CRS_METRICO, crs_saida)
     except HTTPException:
         raise
     except (RuntimeError, ValueError, TypeError) as exc:

@@ -8,7 +8,9 @@ from time import time
 from uuid import uuid4
 import re
 
-from osgeo import ogr, osr
+from osgeo import ogr
+from api.services import analise_territorial_ogr as nativo
+from api.services import fluxo_camadas_ogr as fluxo
 from api.storage_policy import sem_montagem
 
 TTL = 24 * 60 * 60
@@ -36,22 +38,12 @@ def representar(frame, meta, dono, *, atributos=False):
     path = pasta / f'{token}.gpkg'
     ds = None
     try:
-        if atributos:
-            # Cópia privada de leitura: todos os atributos e geometrias originais.
-            fid = '__sicard_fid__'
-            while fid in frame.columns:
-                fid += '_'
-            geometria = '__sicard_geom__'
-            while geometria in frame.columns:
-                geometria += '_'
-            frame.to_file(path, layer='camada', driver='GPKG', engine='pyogrio', index=False,
-                          FID=fid, GEOMETRY_NAME=geometria)
-            ds = ogr.Open(str(path))
-            from api.services.storage_geoespacial import campo_fid_tile
-            campo_fid = campo_fid_tile(ds.GetLayer(0))
-            ds = None
-        else:
-            _gravar_geometrias(frame, path)
+        conteudo = nativo.serializar(frame, 'camada', preservar_fids=True)
+        path.write_bytes(conteudo)
+        ds = ogr.Open(str(path))
+        from api.services.storage_geoespacial import campo_fid_tile
+        campo_fid = campo_fid_tile(ds.GetLayer(0))
+        ds = None
     except Exception:
         ds = None
         path.unlink(missing_ok=True)
@@ -67,7 +59,7 @@ def _descritor(frame, meta, token):
                 bounds=meta['limites_wgs84'], feicoes=len(frame),
                 geometria_tipo=' '.join(meta['tipos_geometria']),
                 status_validacao='valida', metadados_local=meta,
-                crs_arquivo=str(frame.crs), campos=meta['campos'])
+                crs_arquivo=frame.crs.ExportToWkt(), campos=meta['campos'])
 
 
 def _pasta_remota(dono):
@@ -76,7 +68,6 @@ def _pasta_remota(dono):
 
 def _gravar_remoto(frame, dono):
     from api.services import storage_remoto
-    from api.services.arquivos_geoespaciais_memoria import vetor
     storage_remoto.listar('temporarios-sicard', estrito=True)
     pasta = _pasta_remota(dono)
     for item in storage_remoto.listar(pasta):
@@ -85,9 +76,7 @@ def _gravar_remoto(frame, dono):
             storage_remoto.apagar_arquivo(f'{pasta}/{nome}')
     token = uuid4().hex
     nome = f'{token}.gpkg'
-    geometria = frame.geometry
-    geometrias = frame.loc[geometria.notna() & ~geometria.is_empty, [geometria.name]]
-    conteudo = vetor(geometrias, nome, 'GPKG', layer='camada')[nome]
+    conteudo = nativo.serializar(frame, 'camada', preservar_fids=True)
     caminho = f'{pasta}/{nome}'
     try:
         storage_remoto.enviar_bytes(caminho, conteudo)
@@ -99,71 +88,21 @@ def _gravar_remoto(frame, dono):
     return token
 
 
-def _gravar_geometrias(frame, path):
-    ds = None
-    try:
-        ds = ogr.GetDriverByName('GPKG').CreateDataSource(str(path))
-        srs = osr.SpatialReference()
-        srs.ImportFromWkt(frame.crs.to_wkt())
-        layer = ds.CreateLayer('camada', srs, ogr.wkbUnknown)
-        layer.StartTransaction()
-        for geometry in frame.geometry:
-            if geometry is None or geometry.is_empty:
-                continue
-            feature = ogr.Feature(layer.GetLayerDefn())
-            feature.SetGeometry(ogr.CreateGeometryFromWkb(geometry.wkb))
-            if layer.CreateFeature(feature) != ogr.OGRERR_NONE:
-                raise ValueError('Não foi possível preparar a representação da camada.')
-        layer.CommitTransaction()
-        ds = None
-    except Exception:
-        ds = None
-        path.unlink(missing_ok=True)
-        raise
-
-
 def carregar(ident):
-    import pyogrio
-    from api.services.municipal_layer import carregar_para_extracao
     from api.services import storage_geoespacial as storage
+    frame = nativo.carregar_referencia(ident)
     if ident.startswith('storage:'):
-        import geopandas as gpd
-        from api.services import storage_pacotes
         arquivo, camada = storage.separar_id(ident)
         path = storage.resolver(arquivo)
-        if path.suffix.lower() in storage_pacotes.COMPACTADOS:
-            frame, meta = storage_pacotes.carregar(path, camada)
-            fonte = {'metadados': meta}
-        else:
-            info = pyogrio.read_info(path, layer=camada)
-            frame = gpd.read_file(path, layer=camada, engine='pyogrio', fid_as_index=True)
-            fonte = {'arquivo': path, 'formato': info['driver'], 'componente': info['layer_name']}
+        frame.fonte['arquivo'] = path
         nome = camada or path.stem
     else:
-        from api.repositories import camada_geoespacial_repository as repo
-        item = repo.carregar_vetor_bruto(ident)
-        if item is None:
-            raise FileNotFoundError('Camada não encontrada no catálogo.')
-        frame, registro = item
-        tabela = repo.STORAGES.get(registro.get('categoria') or '', (None, None))[1]
-        fonte = {'formato': 'PostGIS', 'componente': f'geoprocessamento.{tabela}' if tabela else None}
-        nome = registro['nome']
-        from api.services.extracao_atributos import caminho_arquivo
-        arquivo = caminho_arquivo(registro)
-        if arquivo:
-            frame = carregar_para_extracao(ident)
-            from api.path_policy import project_path
-            from api.services.camada_arquivo import resolver_camada
-            path = project_path(arquivo)
-            info = pyogrio.read_info(path, layer=resolver_camada(path, registro))
-            fonte = {'arquivo': path, 'formato': info['driver'], 'componente': info['layer_name']}
-    frame.attrs['sicard_fonte_previa'] = fonte
+        nome = frame.fonte.get('nome', ident)
+        arquivo = frame.fonte.get('arquivo')
     return frame, nome, arquivo
 
 
 def preparar(ident, dono):
-    from api.services.extracao_entrada_local import validar
-    from api.services.metadados_previa import descrever_vetor
     from api.services import storage_geoespacial as storage
     caminho_fonte = storage.separar_id(ident)[0] if ident.startswith('storage:') else None
     revisao_fonte = None
@@ -171,16 +110,7 @@ def preparar(ident, dono):
         estado = storage.resolver(caminho_fonte).stat()
         revisao_fonte = f'{estado.st_mtime_ns}-{estado.st_size}'
     frame, nome, arquivo = carregar(ident)
-    _, avisos = validar(frame, max_feicoes=None)
-    fonte = frame.attrs.get('sicard_fonte_previa', {})
-    if 'metadados' in fonte:
-        pacote = fonte['metadados']
-        meta = descrever_vetor(frame, formato=pacote.get('formato'), componente=pacote.get('componente'))
-        meta.update({key: pacote[key] for key in ('arquivo', 'bytes', 'bytes_descompactados', 'sha256') if key in pacote})
-        meta['avisos'].extend(pacote.get('avisos', []))
-    else:
-        meta = descrever_vetor(frame, **fonte)
-    meta['avisos'].extend(avisos)
+    meta = fluxo.descrever(frame, arquivo=frame.fonte.get('arquivo'))
     representacao = representar(frame, meta, dono)
     if caminho_fonte is not None:
         estado = storage.resolver(caminho_fonte).stat()

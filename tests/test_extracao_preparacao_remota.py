@@ -1,3 +1,5 @@
+from tests.territorial_ogr_helpers import camada as nativa
+from api.services import fluxo_camadas_ogr as fluxo
 """Previas do acervo sem montagem e sem arquivos temporarios locais."""
 from hashlib import sha256
 from io import BytesIO
@@ -41,7 +43,7 @@ def remoto(monkeypatch):
 def representar():
     from api.services.metadados_previa import descrever_vetor
     frame = gpd.GeoDataFrame({"codigo": ["001"]}, geometry=[Point(-46.1, -23.1)], crs=4674)
-    return frame, preparo.representar(frame, descrever_vetor(frame), "autor")
+    return frame, preparo.representar(nativa(frame), descrever_vetor(frame), "autor")
 
 
 def test_previa_sem_montagem_preserva_geometria_e_gera_tile(remoto, monkeypatch):
@@ -55,7 +57,7 @@ def test_previa_sem_montagem_preserva_geometria_e_gera_tile(remoto, monkeypatch)
     restored = gpd.read_file(BytesIO(content), engine="pyogrio")
     assert restored.geometry.iloc[0].wkb == frame.geometry.iloc[0].wkb
     assert restored.crs == frame.crs
-    assert "codigo" not in restored.columns
+    assert restored.codigo.tolist() == ['001']
     assert frame["codigo"].tolist() == ["001"]
 
     memory = "/vsimem/teste-previa-remota.gpkg"
@@ -126,7 +128,7 @@ def test_preparar_pacote_storage_pelo_endpoint_sem_montagem(remoto, monkeypatch)
     files[path], dates[path] = original, now
     source = storage_geoespacial.ArquivoStorage(path, len(original), now)
     monkeypatch.setattr(storage_geoespacial, "resolver", lambda ref: source if ref == path else pytest.fail(ref))
-    monkeypatch.setattr(extracao_entrada_local, "localizacao", lambda frame: {"status": "consultado"})
+    monkeypatch.setattr(fluxo, "localizacao", lambda frame: {"status": "consultado"})
     ident = storage_pacotes.inventario(source, path)[0]["id"]
     app = FastAPI()
     app.include_router(router)

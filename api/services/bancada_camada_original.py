@@ -44,7 +44,7 @@ def _fonte(ident: str, arquivo: str) -> Fonte:
         if ident != canonical_id or arquivo != caminho:
             raise ValueError("O arquivo não corresponde à camada informada.")
         resolvido = storage_geoespacial.resolver(caminho)
-        if Path(resolvido.name).suffix.lower() not in storage_geoespacial.EXTENSOES_VETOR:
+        if Path(resolvido.name).suffix.lower() not in storage_geoespacial.EXTENSOES_VETOR | storage_geoespacial.storage_pacotes.COMPACTADOS:
             raise ValueError("A camada não é vetorial.")
         return Fonte(
             ident, resolvido, caminho, camada, Path(resolvido.name).stem,
@@ -119,28 +119,8 @@ def _revisao(fonte: Fonte) -> str:
 
 
 def _abrir(fonte: Fonte) -> tuple[gdal.Dataset, ogr.Layer]:
-    try:
-        dataset = gdal.OpenEx(
-            str(fonte.caminho),
-            gdal.OF_VECTOR | gdal.OF_READONLY,
-            allowed_drivers=_DRIVERS,
-        )
-    except RuntimeError as exc:
-        raise ValueError("GDAL não conseguiu abrir o arquivo vetorial.") from exc
-    if dataset is None:
-        raise ValueError("GDAL não conseguiu abrir o arquivo vetorial.")
-    if fonte.camada:
-        camada = dataset.GetLayerByName(fonte.camada)
-    elif dataset.GetLayerCount() == 1:
-        camada = dataset.GetLayer(0)
-    else:
-        camada = None
-    if camada is None:
-        dataset = None
-        if fonte.camada:
-            raise FileNotFoundError("Camada não encontrada no arquivo.")
-        raise ValueError("Informe uma camada para arquivos com múltiplas camadas.")
-    return dataset, camada
+    from api.services.fluxo_camadas_ogr import abrir_arquivo
+    return abrir_arquivo(fonte.caminho, fonte.camada)
 
 
 def _campos(camada: ogr.Layer) -> list[dict[str, str]]:
@@ -208,6 +188,12 @@ def _metadata(fonte: Fonte, revisao: str) -> dict[str, Any]:
             "coluna_fid": camada.GetFIDColumn(),
             "campo_fid_tile": storage_geoespacial.campo_fid_tile(camada),
         }
+        if count != 0:
+            from api.services.analise_territorial_ogr import ler_camada
+            from api.services.fluxo_camadas_ogr import descrever
+            meta = descrever(ler_camada(camada), formato=dataset.GetDriver().ShortName,
+                             consultar_localizacao=False, permitir_sem_geometria=True)
+            result.update(metadados_local=meta, status_validacao='valida')
         if fonte.local and signature != _assinatura_local(fonte.caminho):
             raise ValueError("O arquivo foi alterado durante a leitura. Abra novamente.")
         return result

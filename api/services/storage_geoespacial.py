@@ -478,62 +478,20 @@ def carregar_gdf(ident: str):
 
 
 def ler_para_mapa(ident: str) -> dict[str, Any]:
-    """Camada do storage no formato que a bancada da extração usa para o mapa."""
+    from api.services import bancada_camada_original as original
+    from api.services import analise_territorial_ogr as nativo, fluxo_camadas_ogr as fluxo
     caminho, camada = separar_id(ident)
-    arquivo = resolver(caminho)
-    if arquivo.suffix.lower() in storage_pacotes.COMPACTADOS:
-        return storage_pacotes.previa(arquivo, camada, ident, caminho)
-    if arquivo.suffix.lower() not in EXTENSOES_VETOR:
-        raise ValueError("A camada não é vetorial")
-    estado = arquivo.stat()
-    ds = gdal.OpenEx(str(arquivo), gdal.OF_VECTOR | gdal.OF_READONLY)
-    lyr = ds.GetLayerByName(camada) if camada else ds.GetLayer(0)
-    if lyr is None:
-        raise FileNotFoundError("Camada não encontrada no arquivo")
-    srs = lyr.GetSpatialRef()
-    if srs is None:
-        raise ValueError("O arquivo não informa seu CRS. Defina o CRS antes de visualizar.")
-    memoria = f"/vsimem/sicard_storage_mapa_{uuid.uuid4().hex}.geojson"
-    try:
-        saida = gdal.VectorTranslate(
-            memoria, ds, format="GeoJSON", layers=[lyr.GetName()], dstSRS="EPSG:4326", preserveFID=True,
-            layerCreationOptions=["RFC7946=YES", "COORDINATE_PRECISION=7"],
-        )
-        saida = None
-        features = json.loads(bytes(gdal.VSIGetMemFileBuffer_unsafe(memoria)))["features"]
-    finally:
-        gdal.Unlink(memoria)
-    features = [feature for feature in features if feature.get("geometry")]
-    for feature in features:
-        feature["id"] = str(feature.get("id"))
-    if not features:
-        raise ValueError("A camada não contém geometrias disponíveis para visualização.")
-    definicao = lyr.GetLayerDefn()
-    result = {
-        "id": ident, "nome": arquivo.stem if len(_camadas_do_arquivo(str(arquivo), (estado.st_mtime_ns, estado.st_size))) == 1 else lyr.GetName(),
-        "vinculos": 1, "codificacao": "declarada pelo arquivo", "arquivo": caminho,
-        "origem_geometria": "storage", "revisao": f"{estado.st_mtime_ns}-{estado.st_size}",
-        "crs_arquivo": srs.ExportToWkt(),
-        "campos": [{"nome": definicao.GetFieldDefn(i).GetName(), "tipo": definicao.GetFieldDefn(i).GetTypeName(),
-                    "subtipo": ogr.GetFieldSubTypeName(definicao.GetFieldDefn(i).GetSubType())}
-                   for i in range(definicao.GetFieldCount())],
-        "geojson": {"type": "FeatureCollection", "features": features},
-    }
+    info = original.preparar(ident, caminho)
+    dados = nativo.carregar_referencia(ident)
+    return {**info, 'origem_geometria': 'storage', 'geojson': fluxo.geojson(dados), 'vinculos': 1}
 
-
-    from api.services.metadados_previa import descrever_geojson
-    result["metadados_local"] = descrever_geojson(result, arquivo=arquivo, formato=ds.GetDriver().ShortName, componente=lyr.GetName(), camada_ogr=lyr)
-    return result
 
 def _abrir_camada(caminho: str, camada: str | None) -> tuple[gdal.Dataset, ogr.Layer]:
+    from api.services.fluxo_camadas_ogr import abrir_arquivo
     arquivo = resolver(caminho)
-    if arquivo.suffix.lower() not in EXTENSOES_VETOR:
-        raise ValueError("A camada não é vetorial")
-    ds = gdal.OpenEx(str(arquivo), gdal.OF_VECTOR)
-    lyr = ds.GetLayerByName(camada) if camada else ds.GetLayer(0)
-    if lyr is None:
-        raise FileNotFoundError("Camada não encontrada no arquivo")
-    return ds, lyr
+    if arquivo.suffix.lower() not in EXTENSOES_VETOR | storage_pacotes.COMPACTADOS:
+        raise ValueError('A camada não é vetorial')
+    return abrir_arquivo(arquivo, camada)
 
 
 def bounds(caminho: str, camada: str | None) -> list[float] | None:
@@ -622,10 +580,8 @@ def _tile(arquivo: str, camada: str | None, _versao: tuple[int, int], z: int, x:
     """
     limites = mercantile.xy_bounds(x, y, z)
     margem = (limites.right - limites.left) * _MARGEM_TILE / _EXTENSAO_TILE
-    ds = gdal.OpenEx(arquivo, gdal.OF_VECTOR)
-    lyr = ds.GetLayerByName(camada) if camada else ds.GetLayer(0)
-    if lyr is None:
-        raise FileNotFoundError("Camada não encontrada no arquivo")
+    from api.services.fluxo_camadas_ogr import abrir_arquivo
+    ds, lyr = abrir_arquivo(arquivo, camada)
     filtro = [limites.left - margem, limites.bottom - margem, limites.right + margem, limites.top + margem]
     origem = _srs(lyr)
     if origem is not None:

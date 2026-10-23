@@ -32,6 +32,8 @@ const root=path.resolve(__dirname,'../..');
  });
  await p.goto(`http://127.0.0.1:${server.address().port}/`,{waitUntil:'domcontentloaded'});
  await p.waitForFunction(()=>window.gpApp?.state.map?.isStyleLoaded()&&window.gpArquivos);
+ // Inventário de todas as subcamadas é coberto por bancada-gpkg-todas-camadas.
+ await p.evaluate(()=>{const abrir=gpArquivos.abrirReferencias;gpArquivos.abrirReferencias=refs=>abrir(refs,{expandir:false});});
 
  // 1. Abertura leve: só metadados via /preparar e fonte vetorial de tiles do storage.
  await p.evaluate(([id,arquivo])=>gpArquivos.abrirReferencias([{id,arquivo,nome:'rios'}]),[ID,ARQ]);
@@ -52,7 +54,7 @@ const root=path.resolve(__dirname,'../..');
  assert(await p.evaluate(id=>gpApp.state.layers.some(l=>l.id===id)&&!!gpApp.state.map.getSource(id),ID));
 
  // 2. Fluxo fora do storage continua com GeoJSON em memória.
- await p.evaluate(()=>gpArquivos.abrirReferencias([{id:'local-ext',arquivo:'externo/x.geojson',nome:'Externo'}]));
+ await p.evaluate(()=>gpArquivos.abrirReferencias([{id:'local-ext',arquivo:'externo/x.zip',nome:'Externo'}]));
  assert.equal(completos.length,1);assert.equal(preparar.length,1);
  assert.equal(await p.evaluate(()=>gpApp.state.map.getStyle().sources['local-ext'].type),'geojson');
  assert.equal(await p.evaluate(()=>Array.isArray(gpArquivos.sessions.get('local-ext').geojson.features)),true);
@@ -90,24 +92,22 @@ const root=path.resolve(__dirname,'../..');
  assert.deepEqual(trocado,{rev:'b'.repeat(64),geo:true,v:'b'.repeat(64)});
  revisaoCompleta=REV;
 
- // 5b. Pacote compactado do storage: sem /preparar nem tiles; leitura legada explícita.
+ // 5b. Pacote compactado segue o mesmo leitor original e os mesmos tiles.
  const IDZ='storage:uploads/pacote.zip::trechos',ARQZ='uploads/pacote.zip',prepAntes=preparar.length,compAntes=completos.length;
  await p.evaluate(([id,arquivo])=>gpArquivos.abrirReferencias([{id,arquivo,nome:'trechos'}]),[IDZ,ARQZ]);
- assert.equal(preparar.length,prepAntes,'pacote compactado não passa por /preparar');
- assert.equal(completos.length,compAntes+1);assert.deepEqual(completos.at(-1),{arquivo:ARQZ,id:IDZ});
- const pacote=await p.evaluate(id=>{const f=gpArquivos.sessions.get(id);return{rep:f.representacao,aprox:f.geometria_aproximada,src:gpApp.state.map.getStyle().sources[id].type};},IDZ);
- assert.deepEqual(pacote,{rep:'pacote_legado',aprox:true,src:'geojson'});
- await p.evaluate(id=>{gpApp.state.activeLayerId=id;},IDZ);
- const bloqueio=await p.evaluate(()=>gpArquivos.editar().then(()=>'',e=>e.message));
- assert.match(bloqueio,/prévia aproximada/);
- // 6. Edição de sessão em tiles carrega a geometria completa antes de abrir o editor.
+ assert.equal(preparar.length,prepAntes+1);
+ assert.deepEqual(preparar.at(-1),{id:IDZ,arquivo:ARQZ});
+ assert.equal(completos.length,compAntes);
+ const pacote=await p.evaluate(id=>{const f=gpArquivos.sessions.get(id);return{rep:f.representacao,geo:!!f.geojson,src:gpApp.state.map.getStyle().sources[id].type};},IDZ);
+ assert.deepEqual(pacote,{rep:'tiles',geo:false,src:'vector'});
+ // 6. Editor nativo sem seleção não baixa a camada inteira.
  const ID3='storage:base-geoespacial/rios.gpkg::pontes';
  await p.evaluate(([id,arquivo])=>gpArquivos.abrirReferencias([{id,arquivo,nome:'pontes'}]),[ID3,ARQ]);
  await p.waitForFunction(id=>!!gpApp.state.map.getSource(id),ID3);
  const antes=completos.length;
  await p.evaluate(()=>gpArquivos.editar());
- assert.equal(completos.length,antes+1);assert.deepEqual(completos.at(-1),{arquivo:ARQ,id:ID3});
- assert.equal(await p.evaluate(id=>!!gpArquivos.sessions.get(id).geojson,ID3),true);
+ assert.equal(completos.length,antes);
+ assert.equal(await p.evaluate(id=>!!gpArquivos.sessions.get(id).geojson,ID3),false);
  assert.deepEqual(errors,[]);
  console.log('OK: storage em tiles via /preparar, source-layer MVT, fluxo local preservado, carga completa sob demanda.');
  }finally{await browser.close();await new Promise(r=>server.close(r));}

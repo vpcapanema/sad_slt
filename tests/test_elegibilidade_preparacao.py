@@ -1,3 +1,5 @@
+from tests.territorial_ogr_helpers import camada as nativa, normalizar_fixture
+from api.services import fluxo_camadas_ogr as fluxo
 import json
 from hashlib import sha256
 from types import SimpleNamespace
@@ -23,7 +25,7 @@ def isolado(storage_sintetico, monkeypatch, tmp_path):
     monkeypatch.setattr(previa, 'sem_montagem', lambda: False)
     from api import path_policy
     monkeypatch.setattr(path_policy, 'project_path', lambda caminho: tmp_path / caminho)
-    monkeypatch.setattr(local, 'localizacao', lambda frame: {'status': 'consultado'})
+    monkeypatch.setattr(fluxo, 'localizacao', lambda frame: {'status': 'consultado'})
     gravados = []
 
     from api.services import saidas_storage
@@ -56,7 +58,7 @@ def tipos():
 def test_conversoes_reais_preservam_registros_campos_e_parametros():
     original = camada(tipos(), crs=4674)
     antes = original.copy()
-    resultado, auditoria = service.normalizar_frame(original)
+    resultado, auditoria = normalizar_fixture(original)
     assert resultado.crs.to_epsg() == 4674
     assert resultado.geometry.is_valid.all()
     assert resultado.geometry.geom_type.isin(['Polygon', 'MultiPolygon']).all()
@@ -80,8 +82,8 @@ def test_conversoes_reais_preservam_registros_campos_e_parametros():
 
 def test_crs_projetado_e_poligonos_nao_recebem_novo_buffer():
     original = camada([Point(-46.6, -23.5)]).to_crs(31983)
-    primeira, _ = service.normalizar_frame(original)
-    segunda, auditoria = service.normalizar_frame(primeira)
+    primeira, _ = normalizar_fixture(original)
+    segunda, auditoria = normalizar_fixture(primeira)
     assert segunda.geometry.iloc[0].equals_exact(primeira.geometry.iloc[0], 1e-10)
     assert auditoria['pontos_convertidos'] == 0
     assert auditoria['poligonos_sem_buffer'] == 1
@@ -90,28 +92,28 @@ def test_crs_projetado_e_poligonos_nao_recebem_novo_buffer():
 @pytest.mark.parametrize('geometria', [None, Point(), GeometryCollection()])
 def test_sem_descartes_silenciosos(geometria):
     with pytest.raises(ValueError, match='feição|Feição'):
-        service.normalizar_frame(camada([Point(-46.6, -23.5), geometria]))
+        normalizar_fixture(camada([Point(-46.6, -23.5), geometria]))
 
 
 def test_sem_crs_e_coordenadas_incompativeis():
     original = camada([Point(-46.6, -23.5)])
     original.crs = None
-    with pytest.raises(ValueError, match='coordenadas'):
-        service.normalizar_frame(original)
+    with pytest.raises(ValueError, match='CRS|coordenadas|Coordenadas'):
+        normalizar_fixture(original)
     with pytest.raises(ValueError, match='CRS'):
-        service.normalizar_frame(camada([Point(300000, 7400000)]))
+        normalizar_fixture(camada([Point(300000, 7400000)]))
 
 
 def test_reparo_de_poligono_invalido():
     cruzado = Polygon([(-46.6, -23.5), (-46.59, -23.49), (-46.6, -23.49), (-46.59, -23.5), (-46.6, -23.5)])
-    resultado, auditoria = service.normalizar_frame(camada([cruzado]))
+    resultado, auditoria = normalizar_fixture(camada([cruzado]))
     assert resultado.geometry.is_valid.all()
     assert resultado.geometry.iloc[0].geom_type in {'Polygon', 'MultiPolygon'}
     assert auditoria['poligonos_sem_buffer'] == 1
 
 
 def test_entrada_3d_e_normalizada_em_2d():
-    resultado, _ = service.normalizar_frame(camada([Point(-46.6, -23.5, 100)]))
+    resultado, _ = normalizar_fixture(camada([Point(-46.6, -23.5, 100)]))
     assert not resultado.geometry.iloc[0].has_z
     assert resultado.geometry.iloc[0].is_valid
 
@@ -127,7 +129,7 @@ def test_colecao_na_feicao_115_preserva_fid_atributos_e_componentes():
     original = camada([Point(-46.7, -23.5)] * 114 + [colecao])
     original.index = list(range(114)) + [118]
     antes = original.copy()
-    resultado, auditoria = service.normalizar_frame(original)
+    resultado, auditoria = normalizar_fixture(original)
     assert len(resultado) == 115 and resultado.index[-1] == 118
     assert resultado.iloc[-1]['codigo'] == 'D-114'
     assert resultado[['codigo', 'valor']].equals(original[['codigo', 'valor']])
@@ -146,7 +148,7 @@ def test_componente_vazio_identifica_feicao_fid_e_caminho():
     original = camada([geometria])
     original.index = [118]
     with pytest.raises(ValueError, match=r'Feição 1 \(FID/índice 118\).*componente 2 > componente 2.*vazia'):
-        service.normalizar_frame(original)
+        normalizar_fixture(original)
 
 
 def test_colecao_gera_arquivo_poligonal_integral_para_calculos(isolado):
@@ -161,7 +163,7 @@ def test_colecao_gera_arquivo_poligonal_integral_para_calculos(isolado):
     frame = carregar_para_execucao(resposta['arquivo'], resposta['revisao'], resposta['id'])['frame']
     assert len(frame) == 1 and frame.iloc[0]['codigo'] == 'D-0'
     assert frame.geometry.iloc[0].geom_type in {'Polygon', 'MultiPolygon'} and frame.geometry.iloc[0].is_valid
-    esperado, _ = service.normalizar_frame(original)
+    esperado, _ = normalizar_fixture(original)
     assert frame.geometry.iloc[0].equals(esperado.geometry.iloc[0])
     assert frame[resposta['normalizacao_demanda']['campo_fid_origem']].tolist() == [1]
     assert resposta['normalizacao_demanda']['colecoes_convertidas'] == 1
@@ -239,7 +241,7 @@ def test_hierarquizacao_usa_geometria_oficial_e_preserva_atributos(isolado, monk
 
 
 def test_falha_na_validacao_nao_grava_arquivo(isolado, monkeypatch):
-    monkeypatch.setattr(previa, 'carregar', lambda ident: (camada([None]), 'Inválida', None))
+    monkeypatch.setattr(previa, 'carregar', lambda ident: (nativa(camada([None])), 'Inválida', None))
     with pytest.raises(ValueError):
         service.preparar_demanda('catalogo', 'autor')
     assert not isolado[1]
@@ -306,7 +308,7 @@ def test_hierarquizacao_gera_um_geopackage_uma_camada_todas_as_feicoes(isolado, 
     assert frame.iloc[2]['prioridade'] == 2
     for codigo, original in originais.items():
         assert original.equals(antes[codigo])
-        esperado, _ = service.normalizar_frame(original)
+        esperado, _ = normalizar_fixture(original)
         selecionadas = frame[frame[auditoria['campo_codigo_demanda']] == codigo]
         assert all(a.equals(b) for a, b in zip(selecionadas.geometry, esperado.geometry))
 
@@ -357,9 +359,13 @@ def test_hierarquizacao_nao_sobrescreve_campos_de_rastreio_existentes(isolado, h
 
 
 def test_hierarquizacao_recusa_perda_de_registros_antes_de_gravar(isolado, hierarquizacao_oficial, monkeypatch):
-    ler = service.ler_vetor
-    monkeypatch.setattr(service, 'ler_vetor', lambda *args: ler(*args).iloc[:1])
-    with pytest.raises(ValueError, match='todas as demandas'):
+    ler = service.nativo.ler
+    def reduzir(*args):
+        dados = ler(*args)
+        dados.registros, dados.geometrias = dados.registros[:1], dados.geometrias[:1]
+        return dados
+    monkeypatch.setattr(service.nativo, 'ler', reduzir)
+    with pytest.raises(ValueError, match='quantidade de feições'):
         service.preparar_hierarquizacao('H-1', ['cadastro:projeto:D-1', 'cadastro:projeto:D-2'], 'autor')
     assert not isolado[1]
 
@@ -368,7 +374,7 @@ def test_sem_montagem_gera_previa_remota_sem_disco_local(isolado, monkeypatch):
     from api.services import storage_remoto
     arquivos = {}
     monkeypatch.setattr(previa, 'sem_montagem', lambda: True)
-    monkeypatch.setattr(previa, 'carregar', lambda ident: (camada([Point(-46.6, -23.5)]), 'Ponto', None))
+    monkeypatch.setattr(previa, 'carregar', lambda ident: (nativa(camada([Point(-46.6, -23.5)])), 'Ponto', None))
 
     def negar_pasta(*args):
         pytest.fail('A preparação sem montagem não pode criar prévia no disco local.')
@@ -389,22 +395,23 @@ def test_arquivo_alterado_e_recusado_sem_gravar_derivado(isolado, monkeypatch):
     revisoes = iter([{'arquivo': 'base-geoespacial/fonte.gpkg', 'sha256': 'antes'},
                      {'arquivo': 'base-geoespacial/fonte.gpkg', 'sha256': 'depois'}])
     monkeypatch.setattr(storage, 'impressao_digital', lambda ident: next(revisoes))
-    monkeypatch.setattr(previa, 'carregar', lambda ident: (camada([Point(-46.6, -23.5)]), 'Ponto', 'base-geoespacial/fonte.gpkg'))
+    monkeypatch.setattr(previa, 'carregar', lambda ident: (nativa(camada([Point(-46.6, -23.5)])), 'Ponto', 'base-geoespacial/fonte.gpkg'))
     with pytest.raises(ValueError, match='mudou durante'):
         service.preparar_demanda('storage:base-geoespacial/fonte.gpkg', 'autor')
     assert not isolado[1]
 
 
 def test_perda_de_atributo_no_arquivo_e_recusada(isolado, monkeypatch):
-    monkeypatch.setattr(previa, 'carregar', lambda ident: (camada([Point(-46.6, -23.5)]), 'Ponto', None))
-    ler = service.ler_vetor
+    entrada = nativa(camada([Point(-46.6, -23.5)]))
+    monkeypatch.setattr(previa, 'carregar', lambda ident: (entrada, 'Ponto', None))
+    ler = service.nativo.ler
 
     def adulterar(*args):
         frame = ler(*args)
-        frame['codigo'] = 'adulterado'
+        frame.registros[0]['codigo'] = 'adulterado'
         return frame
 
-    monkeypatch.setattr(service, 'ler_vetor', adulterar)
+    monkeypatch.setattr(service.nativo, 'ler', adulterar)
     with pytest.raises(ValueError, match='atributos'):
         service.preparar_demanda('catalogo', 'autor')
     assert not isolado[1]

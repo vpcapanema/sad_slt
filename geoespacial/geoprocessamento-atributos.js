@@ -287,6 +287,27 @@
     $('[data-at-query]').onsubmit=event=>{event.preventDefault();try{query();}catch(e){status(e.message,true);}};
     controls();status(d.readonly?(d.readonlyReason||'Camada somente leitura.'):d.remote?'Tabela paginada no servidor. Consulta, “selecionar todos”, inversão e CSV abrangem somente a página carregada; a seleção é enviada ao mapa por FID e a de outras páginas é mantida.':'Clique para selecionar · duplo clique para editar quando a edição estiver ativa.');
   }
+  function projectSnapshot(){
+    if(!ready||!root?.isConnected)return null;
+    return {id:current.id,page:grid.getPage(),pageSize:grid.getPageSize(),
+      sorters:grid.getSorters().map(({field,dir})=>({column:field,dir})),columns:grid.getColumnLayout(),
+      headerFilters:grid.getHeaderFilters(),only:$('[data-at-only]').getAttribute('aria-pressed')==='true',
+      maximized:root.classList.contains('attribute-maximized'),position:dragOffset()};
+  }
+  async function restoreProject(saved){
+    if(!saved)return;
+    await app().showAttributes(saved.id);
+    if(!ready)await new Promise(resolve=>grid.on('tableBuilt',resolve));
+    if(saved.columns)grid.setColumnLayout(saved.columns);
+    if(saved.pageSize)await grid.setPageSize(saved.pageSize);
+    if(saved.sorters?.length)grid.setSort(saved.sorters);
+    for(const filter of saved.headerFilters||[])grid.setHeaderFilterValue(filter.field,filter.value);
+    $('[data-at-only]').setAttribute('aria-pressed',String(Boolean(saved.only)));applyView();
+    if(saved.page>1)await grid.setPage(saved.page);
+    if(saved.maximized&&!root.classList.contains('attribute-maximized'))maximize();
+    if(saved.maximized&&saved.position)placeAttributeTable(saved.position.x,saved.position.y);
+  }
+  document.addEventListener('DOMContentLoaded',()=>Object.assign(window.gpAttributeTable,{projectSnapshot,restoreProject}));
   let nativeTableRequest=0;
   async function showNativeFileAttributes(layerId){
     let file=window.gpArquivos.sessions.get(layerId);const state=app().state,requestId=++nativeTableRequest;
