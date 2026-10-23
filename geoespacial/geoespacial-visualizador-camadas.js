@@ -204,7 +204,7 @@
       if (thematic?.classe) {
         const labels = ["Muito baixa", "Baixa", "Média", "Alta", "Muito alta", "Sem classe"];
         const colors = [...FAVORABILIDADE_CORES, "#808080"];
-        return `<div class="geo-legend-categories" data-campo="${thematic.classe}"><strong>${escapeHtml(displayName(camada))}</strong><span class="geo-legend-field">Classe de favorabilidade</span>${labels.map((label,i) => `<div class="geo-legend-item"><span class="geo-legend-symbol geo-legend-symbol--polygon" style="--legend-color:${colors[i]};--legend-opacity:100%;--legend-width:0px"></span><span>${label}</span></div>`).join("")}</div>`;
+        return `<div class="geo-legend-categories" style="display:grid;gap:.4rem" data-campo="${thematic.classe}"><strong>${escapeHtml(displayName(camada))}</strong><span class="geo-legend-field">Classe de favorabilidade</span>${labels.map((label,i) => `<div class="geo-legend-item"><span class="geo-legend-symbol geo-legend-symbol--polygon" style="--legend-color:${colors[i]};--legend-opacity:100%;--legend-width:0px"></span><span>${label}</span></div>`).join("")}</div>`;
       }
       if (thematic) {
         const classificacao = favorabilidadeClasses.get(camada.id);
