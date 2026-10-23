@@ -1,0 +1,86 @@
+<section class="secao-elegibilidade-resultados ea-section ev2" id="cinco-resultados_elegibilidade_v2" aria-labelledby="ev2-title">
+  <header class="ea-section-head"><span class="ea-number">5</span><h2 id="ev2-title">Resultados da Elegibilidade Territorial</h2></header>
+  <div class="ea-section-body">
+    <p class="ea-hint">A demanda é o objeto da análise; as camadas de restrição e de risco servem para caracterizá-la. Cada demanda aparece como tendo restrição, tendo risco, tendo ambos ou livre de restrições e riscos, conforme as camadas consultadas. Selecione uma demanda no gráfico, no mapa ou na tabela: os três painéis respondem juntos.</p>
+    <p id="ev2-vazio" class="ea-hint">Execute a elegibilidade territorial ou <a id="ev2-abrir" href="#cinco-resultados_elegibilidade_v2">abra uma análise já realizada</a> para ver a situação de cada demanda.</p>
+    <p id="ev2-status" class="ea-hint" role="status" aria-live="polite"></p>
+    <button id="ev2-tentar" class="ea-btn" type="button" hidden>Tentar carregar resultados</button>
+    <form id="ev2-aliases" class="ev2-aliases" hidden>
+      <h3>Revisão dos nomes de apresentação</h3>
+      <p class="ea-hint">Confira os nomes das camadas consultadas e dos itens encontrados, incluindo significado, ortografia e acentuação. As alterações são salvas no storage e usadas no gráfico, no mapa, na tabela e no relatório. Siglas desconhecidas não são expandidas automaticamente.</p>
+      <div id="ev2-nomes" class="ev2-nomes"></div>
+      <label class="ev2-confirmacao"><input id="ev2-revisados" name="nomes_revisados" type="checkbox" required> Revisei os nomes e confirmo que identificam corretamente as camadas desta análise.</label>
+      <button class="ea-btn ea-btn-primary" id="ev2-mostrar" type="submit">Confirmar nomes e apresentar resultados</button>
+    </form>
+    <div id="ev2-conteudo" hidden>
+      <div class="ev2-identificacao">
+        <div class="ea-field"><label for="ev2-entrada">Conjunto de demandas</label><select id="ev2-entrada" name="entrada_resultados"></select></div>
+        <button class="ea-btn" id="ev2-editar" type="button">Revisar nomes</button>
+      </div>
+      <p id="ev2-resumo" class="ea-hint"></p>
+      <div id="ev2-cards" class="ev2-cards" role="group" aria-label="Situação das demandas; selecione um card para filtrar"></div>
+      <div class="ev2-filtros" role="group" aria-label="Filtros do painel">
+        <div class="ea-field"><label for="ev2-busca">Buscar demanda</label><input id="ev2-busca" type="search" autocomplete="off" placeholder="Nome ou identificador"></div>
+        <div class="ea-field"><label for="ev2-situacao">Situação</label><select id="ev2-situacao"></select></div>
+        <div class="ea-field"><label for="ev2-ordem">Ordenar por</label><select id="ev2-ordem"></select></div>
+        <fieldset class="ev2-categorias"><legend>Mostrar no mapa e na tabela</legend>
+          <label class="restricao"><input type="checkbox" id="ev2-cat-restricao" checked> Restrição</label>
+          <label class="risco"><input type="checkbox" id="ev2-cat-risco" checked> Risco</label>
+        </fieldset>
+      </div>
+      <p id="ev2-filtro-status" class="ea-hint" role="status"></p>
+      <div class="ev2-selecao" role="status" aria-live="polite">
+        <div id="ev2-selecao-texto" class="ev2-selecao-texto"></div>
+        <div class="ev2-selecao-acoes">
+          <button class="ea-btn" id="ev2-enquadrar" type="button" disabled>Enquadrar no mapa</button>
+          <button class="ea-btn" id="ev2-limpar" type="button" disabled>Limpar seleção</button>
+        </div>
+      </div>
+      <div class="ev2-grade">
+        <section class="secao-elegibilidade-situacao ev2-painel ev2-painel-grafico" aria-labelledby="ev2-grafico-title">
+          <header class="ev2-titulo"><h3 id="ev2-grafico-title">Detalhamento da análise</h3></header>
+          <p class="ea-hint ev2-nota">Selecione uma demanda para ver a rosca com a área da demanda e a área atingida por cada polígono de restrição e de risco.</p>
+          <div id="ev2-rosca" class="ev2-rosca-area" hidden></div>
+          <div id="ev2-grafico" class="ev2-grafico" role="group" aria-label="Demandas e sua situação quanto a restrições e riscos"></div>
+        </section>
+        <section class="secao-elegibilidade-localizacao ev2-painel ev2-painel-mapa" aria-labelledby="ev2-mapa-title">
+          <header class="ev2-titulo">
+            <h3 id="ev2-mapa-title">Onde estão as demandas</h3>
+            <div class="ev2-mapa-acoes">
+              <label>Mapa de fundo <select id="ev2-fundo"><option value="cartografico">Cartográfico</option><option value="satelite">Satélite</option></select></label>
+              <button class="ea-btn" id="ev2-todas" type="button">Ver todas</button>
+            </div>
+          </header>
+          <div id="ev2-mapa" class="ev2-mapa" aria-label="Mapa das demandas, coloridas conforme sua situação, e das áreas atingidas por restrição e risco"></div>
+          <div class="ev2-legenda">
+            <span class="sit-livre"><i></i>Demanda livre de restrições e riscos</span>
+            <span class="sit-restricao"><i></i>Demanda com restrição</span>
+            <span class="sit-risco"><i></i>Demanda com risco</span>
+            <span class="sit-ambas"><i></i>Demanda com restrição e risco</span>
+            <span class="area-restricao"><i></i>Área atingida por restrição</span>
+            <span class="area-risco"><i></i>Área atingida por risco</span>
+          </div>
+          <p id="ev2-nota-mapa" class="ea-hint ev2-nota" role="status"></p>
+        </section>
+      </div>
+      <section class="secao-elegibilidade-registros ev2-painel ev2-painel-tabela" aria-labelledby="ev2-tabela-title">
+        <header class="ev2-titulo"><h3 id="ev2-tabela-title">Restrições e riscos encontrados por demanda</h3><span class="ea-hint">Área atingida em km² e hectares</span></header>
+        <div class="ea-table-wrap admin-table-wrap"><table id="ev2-tabela" class="admin-table ev2-tabela" data-table-sort="off" aria-label="Restrições e riscos encontrados em cada demanda"></table></div>
+        <div class="admin-table-footer">
+          <nav class="admin-pagination" aria-label="Paginação da tabela">
+            <button id="ev2-anterior" type="button" aria-label="Página anterior">&lt;</button>
+            <span id="ev2-pagina" aria-live="polite"></span>
+            <button id="ev2-proxima" type="button" aria-label="Próxima página">&gt;</button>
+          </nav>
+          <p id="ev2-contagem" class="admin-table-summary" aria-live="polite"></p>
+        </div>
+        <p class="ea-hint ev2-nota">O percentual usa a área total da demanda como base. Áreas atingidas por camadas diferentes podem coincidir; por isso não são somadas. “Apenas toca o limite” indica que a restrição ou o risco encosta na demanda sem atingir área.</p>
+      </section>
+      <details class="ev2-metodologia"><summary>Como a análise foi feita</summary><p id="ev2-metodologia" class="ea-hint"></p></details>
+    </div>
+    <footer class="ev2-download">
+      <p class="ea-hint"><strong>Relatório e camadas da análise</strong><br>O pacote reúne o relatório em PDF, as tabelas em Excel e CSV, os arquivos geoespaciais (GeoPackage), os metadados e um guia de leitura, com todas as demandas, independentemente da seleção e dos filtros em tela.</p>
+      <button class="ea-btn ea-btn-primary" id="ev2-download" type="button" disabled>Baixar relatório e camadas (.zip)</button>
+    </footer>
+  </div>
+</section>

@@ -1,0 +1,89 @@
+/* Hierarquia visual de agrupamentos-demandas.css. Escopo restrito aos resultados.
+   Os seletores abrangem também fichas, gráficos e tabelas criados por JavaScript. */
+:is(#cinco-resultados_elegibilidade_v2, #cinco-resultados_elegibilidade_v2_1) {
+  --ev2-azul: var(--pli-blue, #1683c4);
+  --ev2-linha: var(--pli-border, #d8dee4);
+  --ev2-suave: #64748b;
+  --ev2-fundo: #eef5fb;
+  font-family: "Roboto", Arial, sans-serif;
+  font-size: .8rem;
+  line-height: 1.55;
+  color: #212529;
+}
+:is(#cinco-resultados_elegibilidade_v2, #cinco-resultados_elegibilidade_v2_1) :is(.ea-section-head, .ahp-section-label) {
+  font-family: "Montserrat", Verdana, sans-serif;
+  font-size: .8125rem;
+  font-weight: 700;
+  line-height: 1.5;
+  background: var(--pli-deep, #003b5a);
+  color: #fff;
+}
+:is(#cinco-resultados_elegibilidade_v2, #cinco-resultados_elegibilidade_v2_1) :is(.ea-section-head, .ahp-section-label) h2 { font: inherit; color: inherit; }
+:is(#cinco-resultados_elegibilidade_v2, #cinco-resultados_elegibilidade_v2_1) :is(.ev2-titulo, .ev21-painel > header) {
+  background: #00527d;
+  color: #fff;
+  border-bottom: 1px solid #003b5a;
+  min-height: 3rem;
+  padding: .72rem 1rem;
+}
+:is(#cinco-resultados_elegibilidade_v2, #cinco-resultados_elegibilidade_v2_1) :is(h3, summary) {
+  font-family: "Montserrat", Verdana, sans-serif;
+  font-size: .75rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--pli-deep, #003b5a);
+}
+:is(#cinco-resultados_elegibilidade_v2, #cinco-resultados_elegibilidade_v2_1) :is(.ev2-titulo, .ev21-painel > header) :is(h3, label, .ea-hint) { color: #fff; }
+:is(#cinco-resultados_elegibilidade_v2, #cinco-resultados_elegibilidade_v2_1) :is(p, .ea-hint, .ev2-nota, .ev2-selecao, .ev21-legenda, .ev2-legenda, .ev2-confirmacao) {
+  font-family: "Roboto", Arial, sans-serif;
+  font-size: .8rem;
+  line-height: 1.55;
+}
+:is(#cinco-resultados_elegibilidade_v2, #cinco-resultados_elegibilidade_v2_1) :is(.ea-field > label, .ev21-filtros > label) { font-size: .78rem; line-height: 1.5; font-weight: 650; color: #1c3d59; }
+:is(#cinco-resultados_elegibilidade_v2, #cinco-resultados_elegibilidade_v2_1) :is(select, input:not([type=checkbox])) {
+  font-family: "Roboto", Arial, sans-serif;
+  font-size: .85rem;
+  font-weight: 400;
+  color: #212529;
+  background: #fff;
+  border: 1px solid var(--pli-border, #d8dee4);
+  border-radius: 6px;
+  min-height: 34px;
+  padding: 4px 8px;
+}
+:is(#cinco-resultados_elegibilidade_v2, #cinco-resultados_elegibilidade_v2_1) .ea-btn {
+  font-family: "Montserrat", Verdana, sans-serif;
+  font-size: .875rem;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--pli-deep, #003b5a);
+  background: #fff;
+  border: 1px solid currentColor;
+}
+:is(#cinco-resultados_elegibilidade_v2, #cinco-resultados_elegibilidade_v2_1) .ea-btn-primary { background: var(--pli-deep, #003b5a); color: #fff; }
+:is(#cinco-resultados_elegibilidade_v2, #cinco-resultados_elegibilidade_v2_1) :is(.ev2-titulo, .ev21-painel > header) .ea-btn { background: transparent; color: #fff; }
+:is(#cinco-resultados_elegibilidade_v2, #cinco-resultados_elegibilidade_v2_1) :is(.ev2-painel, .ev21-painel) { border-color: #00527d; background: #fff; }
+#cinco-resultados_elegibilidade_v2_1 .ev21-painel > header { margin: -20px -20px 16px; border-radius: 5px 5px 0 0; }
+:is(#cinco-resultados_elegibilidade_v2, #cinco-resultados_elegibilidade_v2_1) :is(.ev2-selecao, .ev21-ficha) { background: #eef5fb; border-color: var(--pli-border, #d8dee4); border-left-color: var(--pli-blue, #1683c4); }
+:is(#cinco-resultados_elegibilidade_v2, #cinco-resultados_elegibilidade_v2_1) :is(.ev2-selecao-texto strong, .ev21-dados dd) { font-size: .85rem; line-height: 1.5; color: var(--pli-deep, #003b5a); font-weight: 600; }
+#cinco-resultados_elegibilidade_v2_1 .ev21-dados dt { font-size: .8rem; color: #64748b; }
+#cinco-resultados_elegibilidade_v2 .ev2-kpi strong { font-size: .9375rem; line-height: 1.5; color: var(--pli-deep, #003b5a); }
+#cinco-resultados_elegibilidade_v2 :is(.ev2-kpi span, .ev2-linha-nome, .ev2-categorias label) { font-size: .8rem; line-height: 1.55; }
+#cinco-resultados_elegibilidade_v2 :is(.ev2-kpi small, .ev2-categorias legend, .ev2-feicao small, .ev2-secundario) { font-size: .72rem; line-height: 1.5; color: #64748b; }
+#cinco-resultados_elegibilidade_v2 :is(.ev2-feicao-nome strong, .ev2-feicao-valor b, .ev2-barra-linha b) { font-size: .74rem; line-height: 1.5; }
+:is(#cinco-resultados_elegibilidade_v2, #cinco-resultados_elegibilidade_v2_1) table { font-family: "Roboto", Arial, sans-serif; font-size: .74rem; }
+:is(#cinco-resultados_elegibilidade_v2, #cinco-resultados_elegibilidade_v2_1) table th {
+  font-family: "Montserrat", Verdana, sans-serif;
+  font-size: .72rem;
+  font-weight: 700;
+  line-height: 1.1;
+  padding: .5rem .6rem;
+  color: #fff;
+  background: var(--pli-deep, #003b5a);
+}
+:is(#cinco-resultados_elegibilidade_v2, #cinco-resultados_elegibilidade_v2_1) table td { font-size: .74rem; line-height: 1.1; padding: .18rem .55rem; height: 1.7rem; color: #212529; vertical-align: middle; }
+:is(#cinco-resultados_elegibilidade_v2, #cinco-resultados_elegibilidade_v2_1) table :is(button, code, strong, span) { font-size: inherit; line-height: inherit; }
+:is(#cinco-resultados_elegibilidade_v2, #cinco-resultados_elegibilidade_v2_1) table button { font-family: inherit; color: var(--admin-link, #1769aa); }
+:is(#cinco-resultados_elegibilidade_v2, #cinco-resultados_elegibilidade_v2_1) table th button { color: inherit; }
+:is(#cinco-resultados_elegibilidade_v2, #cinco-resultados_elegibilidade_v2_1) .leaflet-tooltip { font-family: "Roboto", Arial, sans-serif; font-size: .74rem; line-height: 1.5; color: #212529; }
+@media(max-width:700px) { #cinco-resultados_elegibilidade_v2_1 .ev21-painel > header { margin: -12px -12px 12px; } }

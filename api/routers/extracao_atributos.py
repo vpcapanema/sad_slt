@@ -430,6 +430,26 @@ def superficie_resultados_elegibilidade(payload: SuperficieResultadosElegibilida
         raise HTTPException(503, str(exc)) from exc
 
 
+class AtributosFeicaoElegibilidade(BaseModel):
+    execucao: str = Field(min_length=1)
+    base_id: str = Field(min_length=1)
+    posicao: int = Field(ge=0)
+
+
+@router.post('/elegibilidade/resultados/feicao/atributos')
+def atributos_feicao_elegibilidade(payload: AtributosFeicaoElegibilidade,
+                                   user: SessionUser = Depends(require_geospatial_access)):
+    from api.services import elegibilidade_relatorio
+    try:
+        return elegibilidade_relatorio.atributos_feicao(payload.execucao, payload.base_id, payload.posicao, user.id)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc)) from exc
+
+
 @router.post('/favorabilidade/resultados/superficie')
 def superficie_resultados_favorabilidade(payload: SuperficieResultadosFavorabilidade,
                                          user: SessionUser = Depends(require_geospatial_access)):

@@ -45,7 +45,7 @@ const assert = require('node:assert/strict');
         if (path === 'hierarquizacao/fase-1') {
           for (const [section, description] of [
             ['#ea-workbench', 'Confira aqui as camadas de entrada'],
-            ['#ev-resultados', 'Consulte onde as demandas se sobrepõem'],
+            ['#cinco-resultados_elegibilidade_v2', 'A demanda é o objeto da análise'],
           ]) {
             assert.match(await page.locator(`${section} > .ea-section-body`).innerText(),
               new RegExp(description), 'Texto de orientação preservado no corpo');

@@ -108,6 +108,31 @@ def test_superficie_contexto_vinculo_autoria_e_extensao(analise, monkeypatch):
     assert carregadas == ['base-0']
 
 
+def test_atributos_da_feicao_usam_alias_amigavel_e_recusam_vinculo_ou_fonte_divergente(analise, monkeypatch):
+    fonte = gpd.GeoDataFrame({'nome': [f'trecho_do_setor_{i}' for i in range(7)], 'cd_uc': list(range(7)),
+                              'area_ha': [1.5] * 7},
+                             geometry=[box(-48, -24, -46, -22)] * 7, crs=4326)
+    chamadas = []
+    def carregar(base):
+        chamadas.append(base)
+        from tests.territorial_ogr_helpers import camada
+        return camada(fonte), None, None
+    monkeypatch.setattr(service.extracao_preparacao, 'carregar', carregar)
+    dados = service.atributos_feicao('job-1', 'base-2', 2, 'autor')
+    assert {c['campo']: c['alias'] for c in dados['campos']} == {'nome': 'Nome', 'cd_uc': 'Cd uc', 'area_ha': 'Area ha'}
+    assert {c['campo']: c['valor'] for c in dados['campos']}['nome'] == 'trecho_do_setor_2'
+    assert 'Fonte original atual' in dados['origem'] and chamadas == ['base-2']
+    with pytest.raises(FileNotFoundError):
+        service.atributos_feicao('job-1', 'base-2', 2, 'outro')
+    with pytest.raises(ValueError, match='não pertence'):
+        service.atributos_feicao('job-1', 'base-2', 5, 'autor')
+    with pytest.raises(ValueError, match='não pertence'):
+        service.atributos_feicao('job-1', 'base-nao-vinculada', 2, 'autor')
+    fonte.loc[2, 'nome'] = 'Outro nome'
+    with pytest.raises(ValueError, match='diverge'):
+        service.atributos_feicao('job-1', 'base-2', 2, 'autor')
+
+
 @pytest.mark.parametrize('hierarquizacao', [None, 'HIER-TESTE'])
 def test_vinculo_cadastral_usa_codigo_original_e_nao_id_da_feicao(hierarquizacao):
     frame = gpd.GeoDataFrame({'ID_FEICAO':['feicao-1'], 'codigo':['D-001'], 'nome':['Nome da análise']},
@@ -181,6 +206,57 @@ def test_pacote_persistido_preserva_geometrias_e_aliases(analise):
         assert manifesto['nomes_revisados'] is True
         assert {f['nome'] for f in manifesto['fontes']} == set(nomes.values())
         assert manifesto['arquivos'][0]['sha256'] == sha256(arquivos[0][1]).hexdigest()
+
+
+def test_pdf_e_pacote_informam_restricao_risco_ou_livre_por_demanda(analise):
+    import csv as csv_lib
+    from io import StringIO
+    from openpyxl import load_workbook
+    _, _, nomes = analise
+    modelo, arquivos = service.montar(['job-1', 'job-2'], nomes, 'autor', True)
+    texto = '\n'.join(p.extract_text() for p in PdfReader(BytesIO(service.pdf(modelo))).pages)
+    for trecho in ('Situação das Demandas quanto a Restrições e Riscos', 'A demanda é o objeto da análise',
+                   'Distribuição das Demandas por Situação', 'Resumo por Demanda', 'Livre de restrições e riscos',
+                   'Com restrição e risco', 'Tem 4 restrições', 'Anexo: Matrizes de Área por Camada'):
+        assert trecho in texto, trecho
+    assert 'Cobertura' not in texto
+    assert texto.index('Resumo por Demanda') < texto.index('Detalhes por Demanda') < texto.index('Anexo: Matrizes')
+    zip_bytes, _ = service.pacote(modelo, arquivos)
+    with ZipFile(BytesIO(zip_bytes)) as pacote:
+        conteudo = {'LEIA-ME.txt', 'Tabelas/Situação das Demandas.xlsx', 'Tabelas/Situação das Demandas.csv'}
+        assert conteudo <= set(pacote.namelist())
+        leia = pacote.read('LEIA-ME.txt').decode('utf-8-sig')
+        assert 'A demanda é o objeto da análise' in leia and 'Livres de restrições e riscos: 2' in leia
+        linhas = list(csv_lib.reader(StringIO(pacote.read('Tabelas/Situação das Demandas.csv').decode('utf-8-sig')),
+                                     delimiter=';'))
+        assert len(linhas) == 1 + 2 * (1 + 62 * 7)
+        assert {l[3] for l in linhas[1:]} == {'Com restrição e risco', 'Livre de restrições e riscos'}
+        livro = load_workbook(BytesIO(pacote.read('Tabelas/Situação das Demandas.xlsx')))
+        assert livro.sheetnames == ['Situação das Demandas', 'Restrições e Riscos', 'Camadas Consultadas', 'Como Ler']
+        assert livro['Situação das Demandas'].max_row == 1 + 2 * 63
+        assert livro['Restrições e Riscos'].max_row == 1 + 2 * (1 + 62 * 7)
+        manifesto = json.loads(pacote.read('Metadados da Análise.json'))
+        assert {d['nome'] for d in manifesto['documentos']} == conteudo
+
+
+def test_situacao_da_demanda_e_linguagem_corrente_e_csv_neutraliza_formulas():
+    from api.services import elegibilidade_sintese as sintese
+    item = lambda ident, base, papel, area: {'id': ident, 'base_id': base, 'papel': papel, 'area_m2': area,
+                                              'nome': f'Item {ident}', 'percentual': area / 10, 'identificador': 1}
+    entrada = {'campos': [{'id': b, 'nome': f'Camada {b}'} for b in ('b1', 'b2', 'b3')], 'linhas': [
+        {'id': 'D1', 'nome': 'Com ambos', 'area_total_m2': 1000., 'sobreposicoes': [
+            item('a', 'b1', 'restricao', 100.), item('c', 'b2', 'restricao', 400.), item('d', 'b3', 'risco', 0.)]},
+        {'id': 'D2', 'nome': 'Só risco', 'area_total_m2': 1000., 'sobreposicoes': [item('e', 'b3', 'risco', 5.)]},
+        {'id': 'D3', 'nome': 'Só restrição', 'area_total_m2': 1000., 'sobreposicoes': [item('f', 'b1', 'restricao', 5.)]},
+        {'id': 'D4', 'nome': 'Livre', 'area_total_m2': 1000., 'sobreposicoes': []}]}
+    fichas = sintese.caracterizar(entrada)
+    assert [f['situacao'] for f in fichas] == ['ambas', 'risco', 'restricao', 'livre']
+    assert [f['nome'] for f in sintese.ordenar_por_situacao(fichas)] == ['Com ambos', 'Só restrição', 'Só risco', 'Livre']
+    assert sintese.indicadores(fichas) == {'total': 4, 'ambas': 1, 'restricao': 1, 'risco': 1, 'livre': 1}
+    assert sintese.descrever(fichas[0]) == 'Tem 2 restrições: Item a; Item c. Tem risco: Item d.'
+    assert sintese.descrever(fichas[3]) == 'Livre de restrições e riscos nas camadas consultadas.'
+    assert sintese._celula_csv('=1+1') == "'=1+1" and sintese._celula_csv('Normal') == 'Normal'
+    assert sintese._celula_csv(0.5) == '0,5' and sintese._celula_csv(None) == ''
 
 
 def test_nova_analise_reune_camadas_pdf_zip_e_revisoes_sem_sobrescrever(analise, monkeypatch):

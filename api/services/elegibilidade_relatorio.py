@@ -26,6 +26,7 @@ from api.services import extracao_atributos_aliases as aliases
 from api.services import extracao_preparacao, analise_territorial_ogr as nativo
 from osgeo import ogr
 from api.services import extracao_atributos_relatorios as estilo
+from api.services import elegibilidade_sintese as sintese
 from api.services.extracao_atributos_exportacao import registros, texto
 from api.services.extracao_ogr import reproject
 from api.services.storage_geoespacial import RAIZES_LEITURA
@@ -57,8 +58,8 @@ METODOLOGIA = (
     'As cores correspondem às categorias do mapa; contatos sem área são consultados na lista da demanda, sem área gráfica fictícia. '
     'Os atributos originais, a área total e os recortes vinculados acompanham as geometrias no mesmo GeoPackage.'
 )
-NOTA_MAPA = ('O mapa do relatório representa as demandas inteiras e suas interseções: vermelho para restrição '
-             'e amarelo para risco. Não constitui classificação de elegibilidade. '
+NOTA_MAPA = ('O mapa do relatório representa as demandas inteiras e as áreas atingidas por restrição (vermelho) '
+             'e por risco (amarelo). Não constitui classificação de elegibilidade. '
              'Coordenadas em EPSG:5880, com escala e norte; sem mapa-base no PDF.')
 METODOLOGIA_FAVORABILIDADE = (
     'Cada superfície poligonal de grade e rede foi intersectada separadamente com a entrada integral '
@@ -545,6 +546,36 @@ def superficie_elegibilidade(identificador: str, base_id: str, dono, bounds: lis
             'geometrias': {'type': 'FeatureCollection', 'features': features}}
 
 
+def atributos_feicao(identificador: str, base_id: str, posicao: int, dono) -> dict:
+    """Atributos da feição de base intersectada, com nomes amigáveis, para o detalhe do mapa."""
+    resultado = _selecionar([identificador], dono)[0]
+    _ler(resultado)
+    auditoria = resultado['elegibilidade']
+    base = next((c for c in auditoria['campos'] if c['id'] == base_id), None)
+    feicao = next((f for f in auditoria['feicoes_base'] if f['base_id'] == base_id and f['posicao'] == posicao), None)
+    if base is None or feicao is None:
+        raise ValueError('A feição não pertence a esta análise.')
+    frame, _, _ = extracao_preparacao.carregar(base_id)
+    if not isinstance(frame, nativo.Camada) or not 0 <= posicao < len(frame.registros):
+        raise ValueError('A fonte atual não contém esta feição. A camada pode ter sido alterada desde a análise.')
+    registro = frame.registros[posicao]
+    campo_nome = feicao.get('campo_nome')
+    if campo_nome and registro.get(campo_nome) is not None and str(registro[campo_nome]).strip() != feicao['nome']:
+        raise ValueError('A fonte atual diverge da usada na análise; os atributos não foram exibidos.')
+    nomes = aliases.camada(base_id, base['nome'])['campos']
+    campos = []
+    for spec in frame.campos:
+        bruto = spec['nome']
+        if bruto.startswith('__sicard'):
+            continue
+        valor = texto(registro.get(bruto))
+        campos.append({'campo': bruto, 'alias': nomes.get(bruto) or aliases.automatico(bruto),
+                       'valor': valor[:400] + ('…' if len(valor) > 400 else '')})
+    return {'base_id': base_id, 'posicao': posicao, 'campos': campos,
+            'origem': 'Fonte original atual da camada; não é uma cópia histórica da rodada.',
+            'consultado_em': datetime.now(timezone.utc).isoformat()}
+
+
 def superficie_favorabilidade(identificador: str, base_id: str, dono) -> dict:
     resultado = _selecionar([identificador], dono, analise='favorabilidade')[0]
     _ler(resultado, analise='favorabilidade')
@@ -798,10 +829,14 @@ def pdf(modelo: dict) -> bytes:
     e = estilo._estilos()
     analise = modelo.get('analise', 'elegibilidade')
     nome_analise = _titulo_analise(analise)
-    historia = [estilo._faixa_titulo(e, f'Relatório de {nome_analise}', 'Resultados da Análise de Sobreposição',
+    historia = [estilo._faixa_titulo(e, f'Relatório de {nome_analise}',
+                                    'Resultados da Análise de Sobreposição' if analise == 'favorabilidade'
+                                    else 'Situação das Demandas quanto a Restrições e Riscos',
                                     f'Emitido em {estilo.hora(modelo["gerado_em"])}'),
                 Spacer(1, 12), estilo._p(e, 'Identificação da Análise', 'h1'),
                 estilo._p(e, f'Entradas concluídas: {modelo["concluidas"]} de {modelo["previstas"]}.')]
+    if analise == 'elegibilidade':
+        historia.append(estilo._p(e, sintese.CONCEITO))
     if modelo['concluidas'] != modelo['previstas']:
         historia.append(estilo._p(e, 'RELATÓRIO PARCIAL: somente as entradas concluídas estão incluídas.', 'h2'))
     historia += [estilo._p(e, 'Fontes Utilizadas', 'h1'),
@@ -809,14 +844,23 @@ def pdf(modelo: dict) -> bytes:
                                 [100, estilo.LARGURA - 100]),
                  estilo._p(e, 'Metodologia', 'h1'), estilo._p(e, modelo['metodologia'])]
     for entrada in modelo['entradas']:
+        fichas = sintese.caracterizar(entrada) if analise == 'elegibilidade' else []
+        caracterizacao = [estilo._p(e, 'Situação das Demandas', 'h2'), sintese.kpis(e, fichas), Spacer(1, 6)] if fichas else []
+        processamento = (f'Processamento concluído em {estilo.hora(entrada["concluido_em"])}. '
+                         f'Demandas analisadas: {entrada["feicoes"]}; com restrição ou risco: {entrada["com_intersecao"]}; '
+                         f'livres de restrições e riscos: {entrada["sem_intersecao"]}.'
+                         if analise == 'elegibilidade' else
+                         f'Processamento concluído em {estilo.hora(entrada["concluido_em"])}. '
+                         f'Total: {entrada["feicoes"]} feições; com interseção: {entrada["com_intersecao"]}; '
+                         f'sem interseção: {entrada["sem_intersecao"]}.')
         historia += [PageBreak(), estilo._p(e, entrada['nome'], 'h1'),
-                     estilo._p(e, f'Processamento concluído em {estilo.hora(entrada["concluido_em"])}. '
-                                  f'Total: {entrada["feicoes"]} feições; com interseção: {entrada["com_intersecao"]}; '
-                                  f'sem interseção: {entrada["sem_intersecao"]}.'),
+                     estilo._p(e, processamento),
+                     *caracterizacao,
                      estilo._p(e, 'Mapa-Síntese', 'h2'), MapaPDF(entrada['mapa']),
                      estilo._p(e, 'Demandas: Azul ou Cinza-Claro. Interseções: rampa contínua Viridis do índice _dim (0 a 1); cinza sem índice válido.'
                                if analise == 'favorabilidade'
-                               else 'Demandas: Azul ou Cinza-Claro. Interseções: Vermelho (Restrição) e Amarelo (Risco).', 'nota'),
+                               else 'Demandas: azul (com restrição ou risco) e cinza-claro (livres de restrições e riscos). '
+                                    'Áreas atingidas: vermelho (restrição) e amarelo (risco).', 'nota'),
                      estilo._p(e, entrada['mapa']['nota'], 'nota')]
         if analise == 'favorabilidade':
             campos = {c['id']: c for c in entrada['campos']}
@@ -841,6 +885,31 @@ def pdf(modelo: dict) -> bytes:
                 tabela.splitInRow = 1
                 historia.append(tabela)
             continue
+        historia += [PageBreak(), estilo._p(e, f'{entrada["nome"]} — Distribuição das Demandas por Situação', 'h1'),
+                     estilo._p(e, sintese.NOTA_LEITURA, 'nota'),
+                     sintese.GraficoSituacoes(fichas),
+                     estilo._p(e, f'{entrada["nome"]} — Resumo por Demanda', 'h1'),
+                     sintese.tabela_resumo(e, fichas, _area_pdf)]
+        campos = {c['id']: c for c in entrada['campos']}
+        historia += [PageBreak(), estilo._p(e, f'{entrada["nome"]} — Detalhes por Demanda', 'h1')]
+        for ficha in sintese.ordenar_por_situacao(fichas):
+            linha, nome = ficha['linha'], ficha['nome']
+            historia += [estilo._p(e, f'{nome} · {linha["id"]} · {sintese.SITUACOES[ficha["situacao"]]}', 'h2'),
+                         estilo._p(e, sintese.descrever(ficha)),
+                         estilo._p(e, 'Área da demanda: ' + _numero(linha['area_total_m2'],1e6)
+                                   + ' km² (' + _numero(linha['area_total_m2'],1e4) + ' ha).', 'nota')]
+            if not linha['sobreposicoes']:
+                continue
+            detalhes: list[list[object]] = [['Tipo / Camada consultada', 'Restrição ou risco encontrado', 'Área atingida', '% da demanda']]
+            for c in linha['sobreposicoes']:
+                camada = campos[c['base_id']]['nome']
+                detalhes.append([f'{PAPEIS[c["papel"]]} · {camada}', c['nome'],
+                               'Apenas toca o limite' if c['area_m2'] == 0 else _area_pdf(e, c['area_m2']),
+                               '—' if c['area_m2'] == 0 else _numero(c['percentual']) + '%'])
+            tabela = estilo._tabela(e, detalhes, [estilo.LARGURA*.28, estilo.LARGURA*.32,
+                                               estilo.LARGURA*.23, estilo.LARGURA*.17])
+            tabela.splitInRow = 1
+            historia.append(tabela)
         for papel in ANALISES[analise]['papeis']:
             indices = [i for i, campo in enumerate(entrada['campos']) if campo['papel'] == papel]
             for inicio in range(0, len(indices), 4):
@@ -850,28 +919,9 @@ def pdf(modelo: dict) -> bytes:
                                        for r in entrada['linhas']]]
                 tabela = estilo._tabela(e, linhas, [65, 95] + [(estilo.LARGURA - 160) / len(bloco)] * len(bloco))
                 tabela.splitInRow = 1
-                historia += [PageBreak(), estilo._p(e, entrada['nome'], 'h1'),
+                historia += [PageBreak(), estilo._p(e, f'{entrada["nome"]} — Anexo: Matrizes de Área por Camada', 'h1'),
                              estilo._p(e, f'Tabela de {PAPEIS[papel]} — Bloco {inicio // 4 + 1}', 'h2'),
                              tabela]
-        campos = {c['id']: c for c in entrada['campos']}
-        historia += [PageBreak(), estilo._p(e, f'{entrada["nome"]} — Detalhes por Demanda', 'h1')]
-        for linha in entrada['linhas']:
-            nome = linha['nome'] or f'Demanda {linha["id"]}'
-            historia += [estilo._p(e, f'{nome} · {linha["id"]}', 'h2'),
-                         estilo._p(e, 'Área Total da Demanda: ' + _numero(linha['area_total_m2'],1e6)
-                                   + ' km² (' + _numero(linha['area_total_m2'],1e4) + ' ha).')]
-            if not linha['sobreposicoes']:
-                historia.append(estilo._p(e, f'Não foi identificada interseção entre “{nome}” e as camadas analisadas.'))
-                continue
-            detalhes: list[list[object]] = [['Categoria / Camada', 'Classe — Feição Sobreposta', 'Área Sobreposta', '% da Demanda']]
-            for c in linha['sobreposicoes']:
-                camada = campos[c['base_id']]['nome']
-                detalhes.append([f'{PAPEIS[c["papel"]]} · {camada}', c['nome'],
-                               _area_pdf(e, c['area_m2']), _numero(c['percentual']) + '%'])
-            tabela = estilo._tabela(e, detalhes, [estilo.LARGURA*.28, estilo.LARGURA*.32,
-                                               estilo.LARGURA*.23, estilo.LARGURA*.17])
-            tabela.splitInRow = 1
-            historia.append(tabela)
     buffer = BytesIO()
     estilo._construir(buffer, nome_analise, historia)
     return buffer.getvalue()
@@ -881,12 +931,23 @@ def pacote(modelo: dict, arquivos: list[tuple[str, bytes]]) -> tuple[bytes, str]
     relatorio = pdf(modelo)
     memoria = BytesIO()
     with ZipFile(memoria, 'w', ZIP_DEFLATED) as zipado:
-        zipado.writestr(f'Relatório de {_titulo_analise(modelo.get("analise", "elegibilidade"))}.pdf', relatorio)
+        analise = modelo.get('analise', 'elegibilidade')
+        nome_relatorio = f'Relatório de {_titulo_analise(analise)}.pdf'
+        zipado.writestr(nome_relatorio, relatorio)
         for nome, dados in arquivos:
             zipado.writestr(nome, dados)
+        documentos = []
+        if analise == 'elegibilidade':
+            documentos = [('Tabelas/Situação das Demandas.xlsx', sintese.xlsx(modelo)),
+                          ('Tabelas/Situação das Demandas.csv', sintese.csv_detalhe(modelo)),
+                          ('LEIA-ME.txt', sintese.leia_me(modelo, nome_relatorio, [n for n, _ in arquivos]))]
+            for nome, dados in documentos:
+                zipado.writestr(nome, dados)
         manifesto = {**{k: v for k, v in modelo.items() if k != 'entradas'},
                      'entradas': [{k: v for k, v in item.items() if k not in {'mapa', 'linhas', 'geometrias', 'intersecoes'}} for item in modelo['entradas']],
                      'arquivos': [{'nome': n, 'sha256': sha256(d).hexdigest()} for n, d in arquivos]}
+        if documentos:
+            manifesto['documentos'] = [{'nome': n, 'sha256': sha256(d).hexdigest()} for n, d in documentos]
         zipado.writestr('Metadados da Análise.json', json.dumps(manifesto, ensure_ascii=False, indent=2))
     dados = memoria.getvalue()
     with ZipFile(BytesIO(dados)) as zipado:
