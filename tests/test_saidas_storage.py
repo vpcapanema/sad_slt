@@ -4,8 +4,15 @@ from pathlib import PurePosixPath
 from uuid import uuid4
 import geopandas as gpd
 import pytest
+import re
 from shapely.geometry import Point
 from api.services import saidas_storage as saidas, storage_remoto, ciclo_vida_arquivos as ciclo
+
+
+def test_nome_gerado_data_local_uuid_completo_e_extensao():
+    ident = '12345678-1234-5678-1234-567812345678'
+    assert saidas.nome_gerado('.gpkg', quando=datetime(2026, 10, 24, 1, 2, 3, tzinfo=timezone.utc), referencia=ident) == '20261023_220203_12345678123456781234567812345678.gpkg'
+    assert saidas.nome_gerado() != saidas.nome_gerado()
 
 
 @pytest.mark.parametrize(('codigo', 'fase', 'exportacao', 'raiz'), [
@@ -299,7 +306,7 @@ def exportacao_selecionada(remoto, monkeypatch, storage_sintetico):
 @pytest.mark.parametrize('formato,extensao', [
     ('gpkg', 'gpkg'), ('geojson', 'geojson'), ('shapefile', 'shp'), ('geotiff', 'tif'),
 ])
-def test_salvar_no_destino_escolhido_reabre_e_recusa_sobrescrita(exportacao_selecionada, formato, extensao):
+def test_salvar_no_destino_escolhido_reabre_e_recusa_sobrescrita(exportacao_selecionada, formato, extensao, monkeypatch):
     import asyncio
     import numpy as np
     import rasterio
@@ -314,9 +321,10 @@ def test_salvar_no_destino_escolhido_reabre_e_recusa_sobrescrita(exportacao_sele
     geo._metadados['entrada'] = {'tipo': 'raster' if raster else 'vetorial'}
     relative = 'saidas-geoespaciais/Projeto do usuário'
     result = asyncio.run(geo.salvar_camada('entrada', relative, f'Minha saída.{extensao}', 'auto', formato))
-    assert result['caminho'] == f'{relative}/Minha saída.{extensao}'
+    nome = PurePosixPath(result['caminho']).name
+    assert re.fullmatch(r'\d{8}_\d{6}_[0-9a-f]{32}\.' + extensao, nome)
     assert inserts[0][3] == result['caminho']
-    path = folder / f'Minha saída.{extensao}'
+    path = folder / nome
     before = {p.name: p.read_bytes() for p in folder.iterdir()}
     if raster:
         with rasterio.open(path) as source:
@@ -327,6 +335,7 @@ def test_salvar_no_destino_escolhido_reabre_e_recusa_sobrescrita(exportacao_sele
         assert frame.valor.tolist() == [7]
         assert frame.crs.to_epsg() == 4326
         assert frame.geometry.iloc[0].equals_exact(geo._camadas['entrada'].geometry.iloc[0], 0)
+    monkeypatch.setattr(saidas, 'nome_gerado', lambda *args, **kwargs: PurePosixPath(nome).stem)
     with pytest.raises(FileExistsError, match='outro nome'):
         asyncio.run(geo.salvar_camada('entrada', relative, f'Minha saída.{extensao}', 'auto', formato))
     assert {p.name: p.read_bytes() for p in folder.iterdir()} == before
@@ -353,8 +362,9 @@ def test_relatorio_json_segue_destino_nome_e_catalogo(exportacao_selecionada):
     result = ciclo.exportar_relatorio({'valido': True, 'erros': []},
                                      'saidas-geoespaciais/Projeto do usuário', 'Diagnóstico', 'entrada')
     import json
-    assert result['caminho'] == 'saidas-geoespaciais/Projeto do usuário/Diagnóstico.json'
-    assert json.loads((folder / 'Diagnóstico.json').read_text(encoding='utf-8')) == {'valido': True, 'erros': []}
+    nome = PurePosixPath(result['caminho']).name
+    assert re.fullmatch(r'\d{8}_\d{6}_[0-9a-f]{32}\.json', nome)
+    assert json.loads((folder / nome).read_text(encoding='utf-8')) == {'valido': True, 'erros': []}
     assert inserts[0][5].obj['reaberto_json'] is True
 
 
@@ -385,7 +395,8 @@ def test_op03_completa_grava_reabre_e_reprocessa_pasta_selecionada(exportacao_se
                                  {source['id']: {'arquivo': source['arquivo'], 'revisao': source['revisao']}},
                                  SimpleNamespace(id='teste'))
         source = result['camada']
-        assert source['arquivo'] == f"saidas-geoespaciais/Projeto do usuário/Reprojeção.v{index}.{extensao}"
+        assert str(PurePosixPath(source['arquivo']).parent) == 'saidas-geoespaciais/Projeto do usuário'
+        assert re.fullmatch(r'\d{8}_\d{6}_[0-9a-f]{32}\.' + extensao, PurePosixPath(source['arquivo']).name)
         assert source['geojson']['features'][0]['properties']['valor'] == 7
         assert source['geojson']['features'][0]['geometry']['coordinates'] == pytest.approx([-46, -23])
         reread = bancada.carregar_para_execucao(source['arquivo'], source['revisao'])

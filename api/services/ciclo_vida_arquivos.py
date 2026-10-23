@@ -7,7 +7,7 @@ import re
 import unicodedata
 from hashlib import sha256
 from io import BytesIO
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from uuid import uuid4
 from api.storage_policy import mkdtemp, TemporaryDirectory, sem_montagem
 
@@ -91,28 +91,29 @@ def _registrar_exportacao(path: Path, recurso: str, tipo: str, *, pasta_saida: s
     ident = str(uuid4())
     created = []
     # Um único prefixo mantém .shp, .shx, .dbf e .prj associados.
-    stem = path.stem if pasta_saida else f'{apelido(path.stem, 60) or "saida"}_{uuid4().hex[:12]}'
+    stem = saidas_storage.nome_gerado(referencia=ident)
     try:
         pasta_automatica = saidas_storage.pasta_execucao(execution) if not pasta_saida else None
         files = ([Path(name) for name in sorted(conteudos)] if conteudos is not None else
                  [component for component in sorted(path.parent.iterdir()) if component.is_file()])
         if pasta_saida:
             existing = {item['nome'].casefold() for item in storage_remoto.listar(pasta_saida, estrito=True)}
-            if any(component.name.casefold() in existing for component in files):
+            if any((stem + component.name[len(path.stem):]).casefold() in existing for component in files):
                 raise FileExistsError('Já existe uma saída com esse nome na pasta escolhida. Escolha outro nome.')
         for component in files:
             if conteudos is not None or component.is_file():
                 if pasta_saida:
-                    target = f'{pasta_saida}/{component.name}'
+                    target = f'{pasta_saida}/{stem}{component.name[len(path.stem):]}'
                     item = (saidas_storage.enviar_conteudo(target, conteudos[component.name]) if conteudos is not None
                             else saidas_storage.enviar_exportacao(target, component))
                 else:
                     target = f'{pasta_automatica}/{stem}{component.name[len(path.stem):]}'
                     item = (saidas_storage.enviar_bytes(execution, 'camadas', component.name, conteudos[component.name], caminho=target)
                             if conteudos is not None else saidas_storage.enviar_arquivo(execution, 'camadas', component, caminho=target))
-                item['nome'] = component.name
+                item['nome'] = PurePosixPath(target).name
+                if component.name == path.name:
+                    relative = item['caminho']
                 created.append(item)
-        relative = next(x['caminho'] for x in created if x['nome']==path.name)
         components = created
     except Exception as exc:
         for item in created:

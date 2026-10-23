@@ -98,8 +98,9 @@ def test_op03_grava_canonico_exporta_e_reabre_sem_montagem(remoto, monkeypatch, 
         pasta_saida="saidas-geoespaciais/Teste", nome_saida="Resultado",
         formato_saida=formato, crs_saida="entrada",
     )))
-    path = f"saidas-geoespaciais/Teste/Resultado.{ext}"
-    assert result["arquivo_saida"]["caminho"] == path
+    import re
+    path = result["arquivo_saida"]["caminho"]
+    assert re.fullmatch(r'saidas-geoespaciais/Teste/\d{8}_\d{6}_[0-9a-f]{32}\.' + ext, path)
     from api.services.arquivos_geoespaciais_memoria import ler_vetor
     components = {PurePosixPath(p).name: content for p, content in files.items()
                   if p.startswith("saidas-geoespaciais/Teste/")}

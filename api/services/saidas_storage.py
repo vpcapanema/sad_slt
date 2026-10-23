@@ -9,11 +9,20 @@ from pathlib import Path, PurePosixPath
 import re
 from api.storage_policy import TemporaryDirectory
 from uuid import UUID, uuid4
+from zoneinfo import ZoneInfo
 
 from api.services import storage_remoto
 
 RAIZ = 'saidas-geoespaciais'
 GRUPOS = {'camadas', 'relatorios', 'pacotes'}
+
+
+def nome_gerado(extensao: str = '', *, quando: datetime | None = None, referencia=None) -> str:
+    """Nome físico da nova saída, independente do título descritivo da camada."""
+    instante = quando or datetime.now(timezone.utc)
+    data = instante.astimezone(ZoneInfo('America/Sao_Paulo')).strftime('%Y%m%d_%H%M%S')
+    ident = UUID(str(referencia)).hex if referencia is not None else uuid4().hex
+    return f'{data}_{ident}{extensao}'
 
 
 def pasta_analise(ferramenta: str, nome: str, referencia: str, *,
@@ -136,11 +145,9 @@ def validar(caminho: str) -> str:
 def destino(execucao: str, grupo: str, nome: str, *, pasta: str | None = None) -> str:
     if grupo not in GRUPOS:
         raise ValueError('Grupo de saída inválido.')
-    from api.services.ciclo_vida_arquivos import apelido
     suffix = Path(nome).suffix.lower()
-    safe = apelido(Path(nome).stem, 60) or 'saida'
     parent = pasta if pasta is not None else pasta_execucao(execucao)
-    path = validar(f'{parent}/{safe}_{uuid4().hex[:12]}{suffix}')
+    path = validar(f'{parent}/{nome_gerado(suffix)}')
     _conferir_execucao(path, execucao, grupo)
     return path
 
