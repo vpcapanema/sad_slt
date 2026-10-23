@@ -21,7 +21,7 @@
 <link rel="stylesheet" href="/assets/css/fase1-elegibilidade-v2.css?v=20261023-rosca-demandas">
 <link rel="stylesheet" href="/assets/css/fase23-execucao.css">
 <link rel="stylesheet" href="/assets/css/paginas/hierarquizacao-fases-visual.css?v=20261020-cabecalhos-linha-unica">
-<link rel="stylesheet" href="/assets/css/fase2-favorabilidade-v2.css?v=20261023-conferencia-fase1">
+<link rel="stylesheet" href="/assets/css/fase2-favorabilidade-v2.css?v=20261023-resultados-lado-a-lado">
 {% endblock %}
 {% block conteudo %}
 <div id="admin-session-bar" class="admin-session-bar hidden"></div>
@@ -187,6 +187,17 @@
           <div class="evr-fonte rede"><h4>Favorabilidade Territorial <small>Rede rodoviária</small></h4><div id="ev-resultados-fontes-rede" class="evr-chips"></div></div>
         </div>
         <div class="evr-analise">
+          <section class="secao-favorabilidade-sobreposicoes evr-painel">
+            <header class="evr-titulo"><h3>Índices por Demanda e Feição</h3></header>
+            <div class="evr-grafico-conteudo">
+              <div class="ea-field"><label for="ev-resultados-base">Superfície em Análise</label><select id="ev-resultados-base" name="base_resultados"></select></div>
+              <div class="fv-detalhes-indices">
+                <figure class="fv-dot-bloco">
+                  <div id="ev-resultados-indices-grafico" class="fv-dot-plot" role="group" aria-label="Gráficos de intervalos e pontos por superfície: uma linha por demanda e índices dimensionados de 0 a 1 por feição"></div>
+                </figure>
+              </div>
+            </div>
+          </section>
           <section class="secao-favorabilidade-mapa evr-painel evr-mapa-painel">
             <header class="evr-titulo"><h3>Onde as Demandas se Sobrepõem</h3><button class="ea-btn" id="ev-resultados-enquadrar" type="button">Ver Todas</button></header>
             <div class="fv-mapa-controles">
@@ -199,17 +210,6 @@
             <button id="ev-resultados-mapa-recarregar" class="ea-btn" type="button" hidden>Tentar carregar camada oficial</button>
             <p class="ea-hint evr-instrucoes">As cores representam as classes de favorabilidade e são as mesmas no gráfico, nos pontos e nos polígonos do mapa. Classes ausentes usam cinza. A seleção destaca a interseção registrada na execução.</p>
             <p class="ea-hint evr-instrucoes" id="ev-resultados-nota-mapa" role="status"></p>
-          </section>
-          <section class="secao-favorabilidade-sobreposicoes evr-painel">
-            <header class="evr-titulo"><h3>Índices por Demanda e Feição</h3></header>
-            <div class="evr-grafico-conteudo">
-              <div class="ea-field"><label for="ev-resultados-base">Superfície em Análise</label><select id="ev-resultados-base" name="base_resultados"></select></div>
-              <div class="fv-detalhes-indices">
-                <figure class="fv-dot-bloco">
-                  <div id="ev-resultados-indices-grafico" class="fv-dot-plot" role="group" aria-label="Gráficos de intervalos e pontos por superfície: uma linha por demanda e índices dimensionados de 0 a 1 por feição"></div>
-                </figure>
-              </div>
-            </div>
           </section>
         </div>
         <section class="secao-favorabilidade-tabela secao-elegibilidade-tabela evr-painel standard-table-section">

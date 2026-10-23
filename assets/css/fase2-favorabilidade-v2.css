@@ -356,3 +356,39 @@
 .favorabilidade-v2 .ev-preparacao-grid .ev-lista > li + li {
   border-top: 1px solid #8b9eaf;
 }
+
+/* Seção 5: “Índices por Demanda e Feição” (esquerda) e “Onde as Demandas se Sobrepõem” (direita), lado a lado.
+   As duas colunas têm a mesma altura; o gráfico de índices rola dentro do painel e o mapa ocupa o espaço restante. */
+.favorabilidade-v2 .ev-resultados .evr-analise {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+  align-items: stretch;
+}
+.favorabilidade-v2 .ev-resultados .evr-analise > .evr-painel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: clamp(34rem, 78vh, 50rem);
+}
+.favorabilidade-v2 .ev-resultados .evr-analise .evr-titulo { flex-wrap: wrap; flex: none; }
+.favorabilidade-v2 .ev-resultados .evr-analise .evr-grafico-conteudo {
+  flex: 1;
+  min-height: 0;
+  padding: 10px;
+  overflow: auto;
+}
+.favorabilidade-v2 .ev-resultados .evr-analise .fv-intervalos-rolagem { max-height: none; }
+.favorabilidade-v2 .ev-resultados .evr-analise .fv-intervalos-quadro { min-width: 26rem; }
+.favorabilidade-v2 .ev-resultados .evr-analise .fv-mapa-controles {
+  flex: none;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+}
+.favorabilidade-v2 #ev-resultados-mapa { flex: 1; min-height: 16rem; height: auto; }
+.favorabilidade-v2 .ev-resultados .evr-analise .evr-legenda-mapa,
+.favorabilidade-v2 .ev-resultados .evr-analise .evr-instrucoes { flex: none; }
+@media (max-width: 1100px) {
+  .favorabilidade-v2 .ev-resultados .evr-analise { grid-template-columns: minmax(0, 1fr); }
+  .favorabilidade-v2 .ev-resultados .evr-analise > .evr-painel { height: auto; }
+  .favorabilidade-v2 .ev-resultados .evr-analise .evr-grafico-conteudo { max-height: 34rem; }
+  .favorabilidade-v2 #ev-resultados-mapa { flex: none; height: clamp(22rem, 60vh, 38rem); }
+}
