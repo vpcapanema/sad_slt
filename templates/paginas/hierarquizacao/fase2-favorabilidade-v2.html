@@ -14,12 +14,14 @@
 <link rel="stylesheet" href="/assets/vendor/leaflet/leaflet.css">
 <link rel="stylesheet" href="/assets/vendor/maplibre-gl/maplibre-gl.css">
 <link rel="stylesheet" href="/assets/css/ahp-module.css">
+<link rel="stylesheet" href="/restrict/hierarquizacao/processos.css?v=20261004-shared-modal">
 <link rel="stylesheet" href="/assets/css/page-title-standard.css">
 <link rel="stylesheet" href="/assets/css/extracao-atributos.css">
-<link rel="stylesheet" href="/assets/css/fase1-elegibilidade-v2.css?v=20261021-rosca-integral">
+<link rel="stylesheet" href="/assets/css/admin-table-controls.css?v=20261015-botoes-quadrados">
+<link rel="stylesheet" href="/assets/css/fase1-elegibilidade-v2.css?v=20261023-rosca-demandas">
 <link rel="stylesheet" href="/assets/css/fase23-execucao.css">
 <link rel="stylesheet" href="/assets/css/paginas/hierarquizacao-fases-visual.css?v=20261020-cabecalhos-linha-unica">
-<link rel="stylesheet" href="/assets/css/fase2-favorabilidade-v2.css?v=20261021-cabecalhos-conferencia">
+<link rel="stylesheet" href="/assets/css/fase2-favorabilidade-v2.css?v=20261023-classes-ordem">
 {% endblock %}
 {% block conteudo %}
 <div id="admin-session-bar" class="admin-session-bar hidden"></div>
@@ -132,10 +134,22 @@
       <div class="ea-execucao-linha"><strong>Análise:</strong> <span>Favorabilidade territorial de grade e da rede · Fase 2</span></div>
       <div class="ea-checkup-tables">
         {% for papel, rotulo in [("entrada", "Entrada"), ("grade", "Favorabilidade territorial de grade"), ("rede", "Favorabilidade territorial de rede")] %}
-        <div class="ea-table-wrap"><table aria-label="Camadas de {{ rotulo|lower }} confirmadas">
+        <section class="fv-tabela-conferencia secao-elegibilidade-tabela standard-table-section" aria-label="Conferência de {{ rotulo|lower }}">
+        {% set filtro_prefixo = "fv-conferencia-" ~ papel ~ "-filtro" %}
+        {% set filtro_rotulo = "Filtrar camadas de " ~ rotulo|lower %}
+        {% include "componentes/filtro_tabela.html" %}
+        <div class="ea-table-wrap admin-table-wrap"><table class="admin-table" data-table-sort="off" aria-label="Camadas de {{ rotulo|lower }} confirmadas">
           <thead><tr><th scope="col">{{ rotulo }}</th><th scope="col">Arquivo ou referência integral</th></tr></thead>
           <tbody id="fv-run-{{ papel }}"><tr><td colspan="2">Nenhuma camada deste grupo marcada na bancada.</td></tr></tbody>
         </table></div>
+        <div class="admin-actions" role="toolbar" aria-label="Controles das camadas de {{ rotulo|lower }}">
+          <button id="fv-conferencia-{{ papel }}-visualizar" class="admin-icon-btn" type="button" title="Visualizar camada selecionada" aria-label="Visualizar camada selecionada" disabled><i class="fas fa-eye" aria-hidden="true"></i></button>
+        </div>
+        <div class="admin-table-footer">
+          <nav id="fv-conferencia-{{ papel }}-paginacao" class="admin-pagination" aria-label="Paginação das camadas de {{ rotulo|lower }}"></nav>
+          <p id="fv-conferencia-{{ papel }}-contagem" class="admin-table-summary" aria-live="polite"></p>
+        </div>
+        </section>
         {% endfor %}
       </div>
       <p id="fv-run-count" class="ea-hint">Marque uma entrada e ao menos uma superfície poligonal na bancada.</p>
@@ -151,10 +165,7 @@
   <section class="secao-favorabilidade-resultados ea-section ev-resultados" id="ev-resultados" aria-labelledby="ev-resultados-title">
     <header class="ea-section-head"><span class="ea-number">5</span><h2 id="ev-resultados-title">Resultados da Favorabilidade Territorial</h2></header>
     <div class="ea-section-body">
-      <p class="ea-hint">Consulte os valores originais de <strong>fav_territorial_dim</strong> e <strong>fav_territorial_classe</strong> (grade) e de <strong>fav_rede_dim</strong> e <strong>fav_rede_classe</strong> (rede) nas feições interceptadas pelas demandas. Cada combinação demanda × feição mantém seu índice e sua classe, sem média, soma ou ponderação por área.</p>
       <p id="ev-resultados-vazio" class="ea-hint">Execute a favorabilidade territorial ou <a id="ev-resultados-abrir" href="#ev-resultados">selecione uma análise já realizada</a> para apresentar os resultados.</p>
-      <p id="ev-resultados-status" class="ea-hint" role="status" aria-live="polite"></p>
-      <p id="ev-resultados-qualidade" class="ea-hint" role="status" aria-live="polite"></p>
       <button id="ev-resultados-tentar" class="ea-btn" type="button" hidden>Tentar Carregar Resultados</button>
       <form id="ev-resultados-aliases" hidden>
         <h3>Revisão dos Nomes de Apresentação</h3>
@@ -172,61 +183,56 @@
         <h3>Composição da Análise</h3>
         <p id="ev-resultados-composicao" class="ea-hint"></p>
         <div class="evr-fontes">
-          <div class="evr-fonte grade"><h4>Favorabilidade de Grade</h4><div id="ev-resultados-fontes-grade" class="evr-chips"></div></div>
-          <div class="evr-fonte rede"><h4>Favorabilidade de Rede</h4><div id="ev-resultados-fontes-rede" class="evr-chips"></div></div>
+          <div class="evr-fonte grade"><h4>Favorabilidade Territorial <small>Municípios</small></h4><div id="ev-resultados-fontes-grade" class="evr-chips"></div></div>
+          <div class="evr-fonte rede"><h4>Favorabilidade Territorial <small>Rede rodoviária</small></h4><div id="ev-resultados-fontes-rede" class="evr-chips"></div></div>
         </div>
         <div class="evr-analise">
           <section class="secao-favorabilidade-mapa evr-painel evr-mapa-painel">
             <header class="evr-titulo"><h3>Onde as Demandas se Sobrepõem</h3><button class="ea-btn" id="ev-resultados-enquadrar" type="button">Ver Todas</button></header>
+            <div class="fv-mapa-controles">
+              <div class="ea-field"><label for="ev-resultados-mapa-superficie">Superfície de favorabilidade</label><select id="ev-resultados-mapa-superficie"></select></div>
+              <div class="ea-field"><label for="ev-resultados-mapa-representacao">Simbologia</label><select id="ev-resultados-mapa-representacao"><option value="classe">Classes de favorabilidade</option></select></div>
+            </div>
             <div id="ev-resultados-mapa" aria-label="Mapa interativo de demandas e interseções de favorabilidade"></div>
-            <div class="evr-legenda-mapa"><span>Contorno azul: Demanda</span><span class="fv-rampa-legenda"><span class="fv-rampa" role="img" aria-label="Rampa contínua Viridis do índice _dim, de 0 a 1"></span>Índice _dim: 0 → 1</span><span>Cinza: sem índice válido</span></div>
-            <p class="ea-hint evr-instrucoes">Selecione uma feição para consultar seu índice e sua classe originais. A rampa é contínua de 0 a 1, com a mesma escala para grade e rede, sem reclassificar valores. Superfícies opacas, sem bordas nem simplificação de geometrias.</p>
+            <div id="ev-resultados-mapa-legenda" class="evr-legenda-mapa"></div>
+            <p id="ev-resultados-mapa-camada-nota" class="ea-hint evr-instrucoes" role="status"></p>
+            <button id="ev-resultados-mapa-recarregar" class="ea-btn" type="button" hidden>Tentar carregar camada oficial</button>
+            <p class="ea-hint evr-instrucoes">As cores representam as classes de favorabilidade e são as mesmas no gráfico, nos pontos e nos polígonos do mapa. Classes ausentes usam cinza. A seleção destaca a interseção registrada na execução.</p>
             <p class="ea-hint evr-instrucoes" id="ev-resultados-nota-mapa" role="status"></p>
           </section>
           <section class="secao-favorabilidade-sobreposicoes evr-painel">
-            <header class="evr-titulo"><h3>Índices por Demanda e Feição</h3><span id="ev-resultados-id-ativo" class="ea-hint"></span></header>
+            <header class="evr-titulo"><h3>Índices por Demanda e Feição</h3></header>
             <div class="evr-grafico-conteudo">
               <div class="ea-field"><label for="ev-resultados-base">Superfície em Análise</label><select id="ev-resultados-base" name="base_resultados"></select></div>
-              <p id="ev-resultados-frase" class="evr-frase" aria-live="polite"></p>
               <div class="fv-detalhes-indices">
-                <div class="evr-detalhes" aria-live="polite">
-                  <div><small>Demanda Selecionada</small><h4 id="ev-resultados-nome-ativo"></h4></div>
-                  <dl id="ev-resultados-detalhes-base" hidden>
-                    <div><dt>Categoria</dt><dd id="ev-resultados-categoria"></dd></div>
-                    <div><dt>Superfície de Favorabilidade</dt><dd id="ev-resultados-nome-base"></dd></div>
-                    <div id="ev-resultados-detalhes-classe" hidden><dt>Município de Origem (Feição)</dt><dd id="ev-resultados-nome-classe"></dd></div>
-                  </dl>
-                  <div id="ev-resultados-metricas" class="evr-metricas" hidden>
-                    <div class="evr-metrica"><small>Índice de Favorabilidade Dimensionada (0–1)</small><strong id="ev-resultados-indice"></strong><span id="ev-resultados-campo-indice"></span></div>
-                    <div class="evr-metrica"><small>Classe de Favorabilidade</small><strong id="ev-resultados-classe-original"></strong><span id="ev-resultados-campo-classe"></span></div>
-                  </div>
-                  <p id="ev-resultados-aviso" class="ea-hint"></p>
-                  <details><summary>Informação Técnica da Interseção</summary><p id="ev-resultados-area-complementar" class="ea-hint"></p></details>
-                </div>
                 <figure class="fv-dot-bloco">
-                  <h4>Índices Originais de Todas as Combinações</h4>
-                  <div id="ev-resultados-indices-grafico" class="fv-dot-plot" role="group" aria-label="Demanda, classe e índice de favorabilidade dimensionada, do maior para o menor índice"></div>
+                  <div id="ev-resultados-indices-grafico" class="fv-dot-plot" role="group" aria-label="Gráficos de intervalos e pontos por superfície: uma linha por demanda e índices dimensionados de 0 a 1 por feição"></div>
                 </figure>
               </div>
-              <p class="ea-hint">Uma linha por combinação, em ordem decrescente de índice: demanda, classe e valor dimensionado. Todas as entradas concluídas permanecem nesta lista, independentemente da seleção e paginação da tabela. Valores ausentes ou inválidos ficam ao final; zero válido é mantido. Selecione uma linha para consultar a superfície e o município no mapa e nos detalhes.</p>
             </div>
           </section>
         </div>
-        <section class="secao-favorabilidade-tabela evr-painel">
+        <section class="secao-favorabilidade-tabela secao-elegibilidade-tabela evr-painel standard-table-section">
           <header class="evr-titulo"><h3>Índices e Classes por Demanda e Feição</h3><span class="ea-hint">Valores originais · sem agregação</span></header>
-          <div class="ea-table-wrap"><table id="ev-resultados-tabela" data-table-sort="off" aria-label="Índices e Classes de Favorabilidade por Demanda e Feição"></table></div>
-          <div class="evr-controles" role="toolbar" aria-label="Controles da tabela de índices e classes">
-            <button id="ev-resultados-vazias" class="ea-btn ea-icon-button" type="button" title="Ocultar registros sem índice e classe" aria-label="Ocultar registros sem índice e classe" aria-pressed="false" aria-controls="ev-resultados-tabela"><i class="fas fa-eye-slash" aria-hidden="true"></i></button>
-            <span id="ev-resultados-visibilidade" class="ea-hint" role="status">Todos os registros visíveis.</span>
+          {% set filtro_prefixo = "ev-sobreposicoes-filtro" %}
+          {% set filtro_rotulo = "Filtrar índices e classes por demanda e feição" %}
+          {% include "componentes/filtro_tabela.html" %}
+          <div class="ea-table-wrap admin-table-wrap"><table id="ev-resultados-tabela" class="admin-table" data-table-sort="off" aria-label="Índices e Classes de Favorabilidade por Demanda e Feição"></table></div>
+          <div class="evr-controles admin-actions" role="toolbar" aria-label="Controles da tabela de índices e classes">
+            <button id="ev-resultados-vazias" class="admin-icon-btn" type="button" title="Ocultar registros sem índice e classe" aria-label="Ocultar registros sem índice e classe" aria-pressed="false" aria-controls="ev-resultados-tabela"><i class="fas fa-eye-slash" aria-hidden="true"></i></button>
           </div>
-          <nav class="ev-resultados-paginacao" aria-label="Paginação dos Resultados">
-            <button id="ev-resultados-anterior" class="ea-btn" type="button">Anterior</button>
-            <span id="ev-resultados-pagina" class="ea-hint"></span>
-            <button id="ev-resultados-proxima" class="ea-btn" type="button">Próxima</button>
-          </nav>
-          <p class="ea-hint evr-instrucoes">Uma linha por demanda × feição, do maior para o menor índice, mesmo quando nomes ou classes se repetem. Demandas sem interseção e valores ausentes ou inválidos ficam ao final, sem substituição por área ou zero. O filtro considera todas as páginas e mantém índices zero e problemas sinalizados. Selecione uma linha para consultar os detalhes e ampliar o mapa.</p>
+          <div class="admin-table-footer">
+            <nav id="ev-resultados-paginacao" class="ev-resultados-paginacao admin-pagination" aria-label="Paginação dos Resultados">
+              <button id="ev-resultados-anterior" type="button" aria-label="Página anterior">&lt;</button>
+              <span id="ev-resultados-pagina" aria-live="polite"></span>
+              <button id="ev-resultados-proxima" type="button" aria-label="Próxima página">&gt;</button>
+            </nav>
+            <p id="ev-resultados-contagem" class="admin-table-summary" aria-live="polite"></p>
+          </div>
+          <p id="ev-resultados-visibilidade" class="ea-hint evr-instrucoes" role="status">Todas as combinações visíveis.</p>
+          <p class="ea-hint evr-instrucoes">Demandas ordenadas pelo maior índice válido, do maior para o menor. As feições de cada demanda permanecem juntas, também em ordem decrescente de índice. Demandas sem interseção e valores ausentes ou inválidos ficam ao final, sem substituição por área ou zero. O filtro considera todas as páginas e mantém índices zero e problemas sinalizados. Selecione uma linha para consultar os detalhes e ampliar o mapa.</p>
         </section>
-        <section class="secao-favorabilidade-agregados evr-painel" aria-labelledby="fv-resultados-title">
+        <section class="secao-favorabilidade-agregados secao-elegibilidade-tabela evr-painel standard-table-section" aria-labelledby="fv-resultados-title">
           <header class="evr-titulo"><h3 id="fv-resultados-title">Índices e Classes Agregados por Demanda</h3><span class="ea-hint">Consulta exploratória · sem alterar os índices oficiais</span></header>
           <p class="ea-hint">Cada demanda da camada selecionada reúne os índices das feições interceptadas, separando grade e rede. Escolha uma única medida entre os três seletores para substituir os conjuntos de índices pelos resultados estatísticos. Volte a “Valores originais” no seletor ativo para restaurá-los. As classes originais permanecem listadas, sem reclassificação.</p>
           <div class="fv-estatisticas-controles" role="group" aria-label="Medidas estatísticas, somente uma ativa por vez">
@@ -268,7 +274,21 @@
             </div>
           </div>
           <p id="ev-resultados-estatisticas-status" class="ea-hint" role="status" aria-live="polite"></p>
-          <div class="ea-table-wrap fv-agregados-wrap"><table id="ev-resultados-agregados" data-table-sort="off" aria-label="Índices e classes agregados por demanda, separando grade e rede"></table></div>
+          {% set filtro_prefixo = "ev-resumo-filtro" %}
+          {% set filtro_rotulo = "Filtrar resumo por demanda" %}
+          {% include "componentes/filtro_tabela.html" %}
+          <div class="ea-table-wrap admin-table-wrap fv-agregados-wrap"><table id="ev-resultados-agregados" class="admin-table" data-table-sort="off" aria-label="Índices e classes agregados por demanda, separando grade e rede"></table></div>
+          <div class="admin-actions" role="toolbar" aria-label="Controles da tabela agregada por demanda">
+            <button class="admin-icon-btn" id="ev-resumo-visualizar" type="button" title="Visualizar demanda" aria-label="Visualizar demanda" disabled><i class="fas fa-eye" aria-hidden="true"></i></button>
+            <button class="admin-icon-btn edit" id="ev-resumo-editar" type="button" title="Editar nome da demanda" aria-label="Editar nome da demanda" disabled><i class="fas fa-pen" aria-hidden="true"></i></button>
+            <button class="admin-icon-btn cancel" id="ev-resumo-cancelar" type="button" title="Cancelar edição" aria-label="Cancelar edição" disabled><i class="fas fa-xmark" aria-hidden="true"></i></button>
+            <button class="admin-icon-btn save" id="ev-resumo-salvar" type="button" title="Salvar nome da demanda" aria-label="Salvar nome da demanda" disabled><i class="fas fa-check" aria-hidden="true"></i></button>
+          </div>
+          <div class="admin-table-footer">
+            <nav id="ev-resumo-paginacao" class="admin-pagination" aria-label="Paginação da tabela agregada por demanda"></nav>
+            <p id="ev-resumo-contagem" class="admin-table-summary" aria-live="polite"></p>
+          </div>
+          <p id="ev-resumo-status" class="ea-hint evr-instrucoes" role="status" aria-live="polite"></p>
           <details><summary>Como as Estatísticas São Calculadas</summary><p class="ea-hint">Cada combinação demanda × feição contribui uma vez, sem ponderação por área. Repetições e zero válido são mantidos. Índices nulos, ausentes ou inválidos não entram nos cálculos; a contagem de valores válidos é informada. Variância e desvio-padrão são populacionais (divisor N); quartis e percentis usam interpolação linear na posição (N − 1) × p. Empates na frequência máxima da moda exibem todos os valores; conjuntos com mais de um valor, todos distintos, são indicados como sem moda. O coeficiente de variação é indefinido quando a média é zero. As medidas são apenas de consulta nesta página: não alteram o cálculo espacial, o PDF, as classes ou os índices oficiais.</p></details>
         </section>
         <details><summary>Metodologia da Análise</summary><p id="ev-resultados-metodologia" class="ea-hint"></p></details>
@@ -279,15 +299,19 @@
       </footer>
     </div>
   </section>
-  <template id="fv-tpl-run-row"><tr><td data-name></td><td data-source></td></tr></template>
-  <template id="fv-tpl-run-empty"><tr><td colspan="2">Nenhuma camada deste grupo marcada na bancada.</td></tr></template>
 </main>
+{% include "componentes/modal/_modal_demandas_do_grupo_hierarquizacoes_realizadas_gestao_das_hierarquizacoes.html" %}
 {% endblock %}
 {% block scripts_pagina %}
 <script src="/assets/js/admin-auth.js"></script>
+<script src="/assets/js/admin-api.js"></script>
+<script src="/assets/js/status-colors.js"></script>
+<script src="/assets/js/objeto-detalhe.js"></script>
+<script src="/restrict/hierarquizacao/js/demandas-grupo.js?v=20261004-1"></script>
+<script src="/assets/js/table-standard.js?v=20261015-fontes-ordem"></script>
 <script src="/assets/vendor/leaflet/leaflet.js"></script>
 <script src="/assets/vendor/maplibre-gl/maplibre-gl.js"></script>
 <script src="/assets/vendor/maplibre-gl/leaflet-maplibre-gl.js"></script>
 <script src="/restrict/hierarquizacao/js/hier-api.js"></script>
-<script type="module" src="/restrict/hierarquizacao/js/fase2-favorabilidade-v2.js?v=20261021-formatacao"></script>
+<script type="module" src="/restrict/hierarquizacao/js/fase2-favorabilidade-v2.js?v=20261023-classes-ordem"></script>
 {% endblock %}

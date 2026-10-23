@@ -1,5 +1,6 @@
+import {nomeDemanda} from './nome-demanda.js?v=20261023-nomes';
 import {el} from '../../geoespacial/extracao-atributos/ui.js';
-import {indiceTexto, classeTexto, compararIndices, formatarIndice} from './favorabilidade-indices.js?v=20261021-formatacao';
+import {indiceTexto, classeTexto, compararIndices, compararDemandas, formatarIndice} from './favorabilidade-indices.js?v=20261023-classes-ordem';
 
 const numero = valor => valor.toLocaleString('pt-BR', {maximumFractionDigits:15});
 const rotulos = {
@@ -57,19 +58,17 @@ export function renderizarAgregados({tabela, entrada, medida, percentil}) {
   const head = el('thead'), titulo = el('tr'), body = el('tbody');
   const rotulo = medida === 'percentil' ? `Percentil ${numero(percentil)}` : rotulos[medida];
   for (const nome of ['Demanda',
-    `${medida ? rotulo : 'Índices de Favorabilidade Dimensionada'} · Grade`,
-    'Classes de Favorabilidade · Grade',
-    `${medida ? rotulo : 'Índices de Favorabilidade Dimensionada'} · Rede`,
-    'Classes de Favorabilidade · Rede']) {
+    `${medida ? rotulo : 'Índices de Favorabilidade Dimensionada'} · Municípios`,
+    'Classes de Favorabilidade · Municípios',
+    `${medida ? rotulo : 'Índices de Favorabilidade Dimensionada'} · Rede Rodoviária`,
+    'Classes de Favorabilidade · Rede Rodoviária']) {
     const th = el('th',nome); th.scope = 'col'; titulo.append(th);
   }
   head.append(titulo);
   const bases = new Map(entrada.campos.map(c => [c.id,c.papel]));
-  const ordenadas = entrada.linhas.map(linha => ({linha,melhor:linha.sobreposicoes
-    .map(s => s.favorabilidade).reduce((a,b) => compararIndices(a,b) <= 0 ? a : b,undefined)}));
-  for (const {linha} of ordenadas.sort((a,b) => compararIndices(a.melhor,b.melhor))) {
+  for (const linha of [...entrada.linhas].sort(compararDemandas)) {
     const tr = el('tr'); tr.dataset.chave = linha.chave;
-    tr.append(el('td',linha.nome || `Demanda ${linha.id}`));
+    tr.append(el('td',nomeDemanda(linha)));
     for (const papel of ['grade','rede']) {
       const itens = linha.sobreposicoes.filter(s => bases.get(s.base_id) === papel)
         .sort((a,b) => compararIndices(a.favorabilidade,b.favorabilidade));
@@ -85,13 +84,15 @@ export function renderizarAgregados({tabela, entrada, medida, percentil}) {
             (medida === 'cv' ? '%' : ''),'fv-estatistica-valor'));
           indice.append(el('small',`${validos.length} de ${itens.length} índices válidos`,'evr-secundario'));
         } else {
-          for (const item of itens) {
+          for (const [posicao,item] of itens.entries()) {
+            if (posicao) indice.append(document.createTextNode(posicao === itens.length-1 ? ' e ' : ', '));
             const valor = el('span',indiceTexto(item.favorabilidade),'fv-valor-original');
             valor.title = `${item.nome} [${item.identificador}]`;
             indice.append(valor);
           }
         }
-        for (const item of itens) {
+        for (const [posicao,item] of itens.entries()) {
+          if (posicao) classe.append(document.createTextNode(posicao === itens.length-1 ? ' e ' : ', '));
           const valor = el('span',classeTexto(item.favorabilidade),'fv-valor-original');
           valor.title = `${item.nome} [${item.identificador}]`;
           classe.append(valor);

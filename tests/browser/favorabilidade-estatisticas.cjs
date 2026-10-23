@@ -40,7 +40,14 @@ const assert = require('node:assert/strict');
       const classesRenderizadas = [...tabela.querySelectorAll('td[data-classes="grade"] .fv-valor-original')]
         .map(n=>n.textContent);
       const semMutacao = origem === JSON.stringify(entrada) && entradaAntes !== origem;
+      const repeticoes = {campos:[{id:'g',papel:'grade'}],linhas:[{chave:'0',id:'R',nome:'Repetições',
+        sobreposicoes:[.39,.37,.37,.389].map((v,i) => item(String(i),'g',v))}]};
+      repeticoes.linhas[0].sobreposicoes.forEach((s,i) => { s.favorabilidade.classe = i < 2 ? 'Média' : 'Baixa'; });
+      renderizarAgregados({tabela,entrada:repeticoes,medida:''});
+      const separados = {indices:tabela.querySelector('td[data-papel="grade"]').textContent,
+        classes:tabela.querySelector('td[data-classes="grade"]').textContent};
       return {medidas,erros,porDemanda,contagens,formatos,classes,classesRenderizadas,semMutacao,
+        separados,
         precisos:precisos.map(v=>({original:v.indice,texto:indiceTexto(v)})),
         intactos:valores,
         multimodal:calcularMedida([.2,.8,.2,.8,.4],'moda'),
@@ -73,6 +80,8 @@ const assert = require('node:assert/strict');
     assert.deepEqual(resultado.classes,['Muito Baixa','Muito Baixa','Muito Baixa','Área Não Classificada']);
     assert.deepEqual(resultado.classesRenderizadas,['Muito Baixa','Muito Baixa']);
     assert(resultado.semMutacao,'Title Case não modifica os atributos originais');
+    assert.equal(resultado.separados.indices,'0,39, 0,39, 0,37 e 0,37','Vírgulas, conjunção e repetições preservadas');
+    assert.equal(resultado.separados.classes,'Média, Baixa, Média e Baixa','Classes acompanham a mesma ordem dos índices');
     assert.deepEqual(resultado.precisos,[{original:.7049,texto:'0,70'},{original:.7041,texto:'0,70'}],'Ordenação usa precisão original mesmo com valores exibidos iguais');
     console.log('PASS: medidas estatísticas, percentis, empates, zeros, vazios, exclusão de inválidos e isolamento por demanda/papel.');
   } finally { await browser.close(); }

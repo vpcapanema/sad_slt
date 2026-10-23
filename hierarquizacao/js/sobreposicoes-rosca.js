@@ -1,6 +1,7 @@
 import {el} from '../../geoespacial/extracao-atributos/ui.js';
 
 const ns = 'http://www.w3.org/2000/svg';
+let sequenciaRosca = 0;
 export const numeroSobreposicao = valor => valor.toLocaleString('pt-BR', {
   minimumFractionDigits:2, maximumFractionDigits:valor !== 0 && Math.abs(valor) < .01 ? 20 : 2,
 });
@@ -10,6 +11,20 @@ const svgNode = (tag, atributos, texto) => {
   if (texto !== undefined) node.textContent = texto;
   return node;
 };
+const tituloDemanda = nome => nome.toLocaleLowerCase('pt-BR')
+  .replace(/(^|[^\p{L}\p{N}])(\p{L})/gu, (_, separador, letra) => separador + letra.toLocaleUpperCase('pt-BR'));
+const areaDemanda = valor => `${(valor / 1e6).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:valor > 0 && valor/1e6 < .005 ? 12 : 2})} km² · ${
+  (valor / 1e4).toLocaleString('pt-BR', {minimumFractionDigits:4, maximumFractionDigits:4})} ha`;
+
+function setor(inicio, fim) {
+  const ponto = (r, a) => `${120+r*Math.cos(a)},${120+r*Math.sin(a)}`;
+  if (fim - inicio >= 2*Math.PI - 1e-10) {
+    const meio = (inicio + fim)/2;
+    return `M ${ponto(103,inicio)} A 103 103 0 1 1 ${ponto(103,meio)} A 103 103 0 1 1 ${ponto(103,fim)} L ${ponto(65,fim)} A 65 65 0 1 0 ${ponto(65,meio)} A 65 65 0 1 0 ${ponto(65,inicio)} Z`;
+  }
+  const grande = fim-inicio > Math.PI ? 1 : 0;
+  return `M ${ponto(103,inicio)} A 103 103 0 ${grande} 1 ${ponto(103,fim)} L ${ponto(65,fim)} A 65 65 0 ${grande} 0 ${ponto(65,inicio)} Z`;
+}
 
 export function sobreposicoesDaAnalise(entradas) {
   return entradas.flatMap((entrada, entradaIndice) => {
@@ -17,13 +32,102 @@ export function sobreposicoesDaAnalise(entradas) {
     return entrada.linhas.flatMap(linha => linha.sobreposicoes.map(c => ({
       ...c, entradaIndice, entradaId:entrada.id, entradaNome:entrada.nome,
       demandaChave:linha.chave, demandaId:linha.id, demandaNome:linha.nome || `Demanda ${linha.id}`,
-      baseNome:bases.get(c.base_id).nome,
+      baseNome:bases.get(c.base_id).nome, papel:bases.get(c.base_id).papel,
       chave:JSON.stringify([entrada.id, linha.chave, c.base_id, c.id]),
     })));
   });
 }
 
-export function renderizarRosca({svg, legenda, itens, cor, selecionada=() => false, aoSelecionar}) {
+export function demandasDaAnalise(entradas) {
+  const grupos = new Map();
+  for (const item of sobreposicoesDaAnalise(entradas)) {
+    const chave = JSON.stringify([item.entradaId, item.demandaChave]);
+    if (!grupos.has(chave)) grupos.set(chave, []);
+    grupos.get(chave).push({...item, tipo:'intersecao'});
+  }
+  return entradas.flatMap((entrada, entradaIndice) => entrada.linhas.map(linha => {
+    const chave = JSON.stringify([entrada.id, linha.chave]);
+    return {tipo:'demanda', chave, entradaIndice, entradaId:entrada.id, entradaNome:entrada.nome,
+      demandaChave:linha.chave, demandaId:linha.id, demandaNome:linha.nome || `Demanda ${linha.id}`,
+      area_m2:linha.area_total_m2, sobreposicoes:grupos.get(chave) || []};
+  }));
+}
+
+export function renderizarRoscaDemandas({svg, legenda, itens, cor, selecionada=() => false, aoSelecionar}) {
+  for (const demanda of itens) {
+    if (!Number.isFinite(demanda.area_m2) || demanda.area_m2 <= 0)
+      throw new Error(`Área total inválida para a demanda “${demanda.demandaNome}”.`);
+    for (const item of demanda.sobreposicoes) {
+      if (!Number.isFinite(item.area_m2) || item.area_m2 < 0 || item.area_m2 > demanda.area_m2 * (1 + 1e-9))
+        throw new Error(`A área da interseção com “${item.nome}” é incompatível com a demanda “${demanda.demandaNome}”.`);
+    }
+  }
+  const total = itens.reduce((s, item) => s + item.area_m2, 0);
+  if (!Number.isFinite(total)) throw new Error('A soma das áreas das demandas é inválida.');
+  svg.replaceChildren(); legenda.replaceChildren();
+  svg.dataset.totalM2 = String(total); svg.dataset.demandas = String(itens.length);
+  svg.dataset.sobreposicoes = String(itens.reduce((s, item) => s + item.sobreposicoes.length, 0));
+  const defs = svgNode('defs', {}), padroes = new Map(), prefixo = `rosca-demandas-${++sequenciaRosca}`;
+  svg.append(defs);
+  const preenchimento = item => {
+    const corItem = cor(item), ativa = selecionada(item), chave = JSON.stringify([corItem,ativa,item.papel]);
+    if (!padroes.has(chave)) {
+      const id = `${prefixo}-${padroes.size}`;
+      const pattern = svgNode('pattern', {id, width:6, height:6, patternUnits:'userSpaceOnUse',
+        patternTransform:`rotate(${item.papel === 'restricao' ? 45 : -45})`});
+      pattern.append(svgNode('rect', {width:6, height:6, fill:corItem, 'fill-opacity':ativa ? .28 : .16}),
+        svgNode('line', {x1:0, y1:0, x2:0, y2:6, stroke:corItem, 'stroke-width':1.2, 'stroke-opacity':.95}));
+      defs.append(pattern); padroes.set(chave, id);
+    }
+    return `url(#${padroes.get(chave)})`;
+  };
+  svg.append(svgNode('circle', {cx:120, cy:120, r:84, fill:'none', stroke:'#edf1f4', 'stroke-width':38}));
+  const desenhar = (item, inicio, fim, corItem, rotulo, demanda) => {
+    const path = svgNode('path', {d:setor(inicio,fim), fill:corItem, tabindex:0, role:'button',
+      'aria-label':rotulo, 'aria-pressed':String(selecionada(item)), 'data-tipo':item.tipo,
+      'data-demanda':demanda.chave, 'data-area-m2':item.area_m2,
+      'data-inicio':inicio, 'data-fim':fim});
+    if (item.tipo === 'intersecao') {
+      path.dataset.classe = item.id; path.dataset.sobreposicao = item.chave;
+      path.dataset.proporcaoDemanda = String(item.area_m2 / demanda.area_m2);
+      path.dataset.cor = cor(item);
+    }
+    path.append(svgNode('title', {}, rotulo)); path.onclick = () => aoSelecionar(item);
+    path.onkeydown = event => { if (['Enter',' '].includes(event.key)) { event.preventDefault(); aoSelecionar(item); } };
+    return path;
+  };
+  let inicio = -Math.PI/2;
+  for (const demanda of itens) {
+    const proporcao = demanda.area_m2 / total, fim = inicio + proporcao*2*Math.PI;
+    const identificacao = `${demanda.entradaNome} · ${demanda.demandaNome} [${demanda.demandaId}]`;
+    const rotulo = `${identificacao} · Área total: ${areaDemanda(demanda.area_m2)} · ${numeroSobreposicao(proporcao*100)}% da soma das áreas das demandas. ${
+      demanda.sobreposicoes.length ? `${demanda.sobreposicoes.length} feições intersectadas.` : 'Sem interseção.'}`;
+    const grupo = svgNode('g', {'data-demanda':demanda.chave});
+    grupo.append(desenhar(demanda, inicio, fim, '#1769aa', rotulo, demanda));
+    const sobreposicoes = demanda.sobreposicoes.filter(item => item.area_m2 > 0)
+      .sort((a,b) => Number(selecionada(a))-Number(selecionada(b)) || b.area_m2-a.area_m2);
+    for (const item of sobreposicoes) {
+      const fracao = item.area_m2 / demanda.area_m2;
+      const descricao = `${identificacao} · ${item.baseNome} · ${item.nome} [${item.identificador}] · ${
+        areaDemanda(item.area_m2)} · ${numeroSobreposicao(fracao*100)}% da área da demanda. As interseções podem coincidir.`;
+      grupo.append(desenhar(item, inicio, inicio + (fim-inicio)*Math.min(fracao,1),
+        preenchimento(item), descricao, demanda));
+    }
+    svg.append(grupo);
+    const botao = el('button', undefined, `evr-classe${selecionada(demanda) ? ' ativa' : ''}`);
+    botao.type = 'button'; botao.dataset.demanda = demanda.chave;
+    botao.setAttribute('aria-pressed', String(selecionada(demanda)));
+    botao.setAttribute('aria-label', rotulo); botao.title = rotulo;
+    const pontoCor = el('span', undefined, 'evr-ponto'); pontoCor.style.background = '#1769aa';
+    botao.append(pontoCor, el('span', tituloDemanda(demanda.demandaNome)));
+    botao.onclick = () => aoSelecionar(demanda); legenda.append(botao);
+    inicio = fim;
+  }
+  svg.append(svgNode('text', {x:120, y:117, 'text-anchor':'middle', fill:'#003b5a', 'font-size':30, 'font-weight':'bold'}, itens.length));
+  svg.append(svgNode('text', {x:120, y:139, 'text-anchor':'middle', fill:'#637b8d', 'font-size':12}, itens.length ? 'Demandas' : 'Sem Demandas'));
+}
+
+export function renderizarRosca({svg, legenda, itens, cor, selecionada=() => false, aoSelecionar, legendaDemanda=false}) {
   svg.replaceChildren(); legenda.replaceChildren();
   const total = itens.reduce((s, item) => s + item.area_m2, 0);
   svg.dataset.totalM2 = String(total);
@@ -53,8 +157,9 @@ export function renderizarRosca({svg, legenda, itens, cor, selecionada=() => fal
     botao.setAttribute('aria-pressed', String(destacada)); botao.setAttribute('aria-label', rotulo);
     botao.title = rotulo;
     const pontoCor = el('span', undefined, 'evr-ponto'); pontoCor.style.background = corItem;
-    const texto = el('span', `${item.demandaNome} [${item.demandaId}] · ${item.nome}`);
-    texto.append(el('small', `${item.entradaNome} · ${item.baseNome} · Feição ${item.identificador}`), el('small', valor));
+    const texto = el('span', legendaDemanda ? tituloDemanda(item.demandaNome)
+      : `${item.demandaNome} [${item.demandaId}] · ${item.nome}`);
+    if (!legendaDemanda) texto.append(el('small', `${item.entradaNome} · ${item.baseNome} · Feição ${item.identificador}`), el('small', valor));
     botao.append(pontoCor, texto); botao.onclick = escolher; legenda.append(botao);
   }
   svg.append(svgNode('text', {x:120, y:117, 'text-anchor':'middle', fill:'#003b5a', 'font-size':30, 'font-weight':'bold'}, itens.length));

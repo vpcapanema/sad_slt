@@ -79,6 +79,45 @@ def test_title_case_portugues_e_siglas(original, esperado):
     assert service.titulo(original) == esperado
 
 
+def test_superficie_contexto_vinculo_autoria_e_extensao(analise, monkeypatch):
+    fonte = gpd.GeoDataFrame({'nome':['Entorno','Distante']},
+        geometry=[box(-48,-24,-46,-22),box(-40,-10,-39,-9)], crs=4326)
+    original = fonte.copy()
+    carregadas = []
+    def carregar(base):
+        carregadas.append(base)
+        return fonte, None, None
+    monkeypatch.setattr(service.extracao_preparacao, 'carregar', carregar)
+    bounds = [-47.5,-23.5,-46.5,-22.5]
+    dados = service.superficie_elegibilidade('job-1','base-0','autor',bounds,.001)
+    assert dados['papel'] == 'restricao'
+    assert len(dados['geometrias']['features']) == 1
+    assert dados['geometrias']['features'][0]['properties']['nome'] == 'Entorno'
+    from shapely.geometry import shape
+    assert shape(dados['geometrias']['features'][0]['geometry']).bounds == tuple(bounds)
+    assert fonte.equals(original)
+    assert 'Fonte original atual' in dados['origem']
+    with pytest.raises(FileNotFoundError):
+        service.superficie_elegibilidade('job-1','base-0','outro',bounds)
+    with pytest.raises(ValueError, match='não pertence'):
+        service.superficie_elegibilidade('job-1','base-nao-vinculada','autor',bounds)
+    with pytest.raises(ValueError, match='inválida'):
+        service.superficie_elegibilidade('job-1','base-0','autor',[0,0,float('nan'),1])
+    assert carregadas == ['base-0']
+
+
+@pytest.mark.parametrize('hierarquizacao', [None, 'HIER-TESTE'])
+def test_vinculo_cadastral_usa_codigo_original_e_nao_id_da_feicao(hierarquizacao):
+    frame = gpd.GeoDataFrame({'ID_FEICAO':['feicao-1'], 'codigo':['D-001'], 'nome':['Nome da análise']},
+                             geometry=[box(0, 0, 1, 1)], crs=5880)
+    auditoria = {'campo_id':'ID_FEICAO', 'campos':[], 'hierarquizacao':hierarquizacao}
+    linha = service._linhas(frame, auditoria)[0]
+    assert linha['id'] == 'feicao-1'
+    assert linha['codigo_demanda'] == ('D-001' if hierarquizacao else None)
+    sem_codigo = service._linhas(frame.drop(columns='codigo'), auditoria)[0]
+    assert sem_codigo['codigo_demanda'] is None
+
+
 @pytest.mark.parametrize('nome', ['', 'risco_inundacao', '<script>', 'C:\\arquivo', 'Camada.gpkg'])
 def test_alias_bruto_ou_invalido_e_recusado(nome):
     with pytest.raises(ValueError):
@@ -421,10 +460,96 @@ def test_painel_usa_geometrias_areas_e_feicoes_do_mesmo_arquivo(analise):
     assert contato['area_m2'] == contato['percentual'] == 0
     linha = entrada['linhas'][3]
     assert linha['area_total_m2'] == 100
+    assert linha['perimetro_m'] == pytest.approx(40)
     assert linha['sobreposicoes'][-1]['nome'] == 'Trecho do Setor 6'
     assert linha['sobreposicoes'][-1]['area_m2'] == linha['areas'][-1] == 7.
     assert linha['sobreposicoes'][-1]['percentual'] == pytest.approx(7.)
     assert entrada['geometrias']['features'][3]['properties']['chave'] == linha['chave']
+
+
+def test_perimetro_metrico_inclui_aneis_internos_e_reprojeta_crs(analise, monkeypatch):
+    _, _, nomes = analise
+    ler = service._ler
+    def com_anel(resultado, *, analise='elegibilidade'):
+        frame, dados = ler(resultado, analise=analise)
+        frame.loc[0, frame.geometry.name] = Polygon(
+            [(5000000,7000000),(5000010,7000000),(5000010,7000010),(5000000,7000010)],
+            [[(5000002,7000002),(5000002,7000004),(5000004,7000004),(5000004,7000002)]])
+        return frame.to_crs(4326), dados
+    monkeypatch.setattr(service, '_ler', com_anel)
+    modelo, _ = service.montar(['job-1','job-2'], nomes, 'autor', True)
+    assert modelo['entradas'][0]['linhas'][0]['perimetro_m'] == pytest.approx(48, abs=1e-5)
+    assert modelo['entradas'][0]['linhas'][1]['perimetro_m'] == pytest.approx(40, abs=1e-5)
+
+
+def test_nome_sem_cadastro_persiste_na_revisao_e_no_pdf_regenerado(analise):
+    resultados, dados, nomes = analise
+    arquivo = resultados['job-1']['arquivo']
+    original = dados[arquivo]
+    resposta = service.renomear_demanda('job-1', '0', '  Demanda avulsa revisada  ', 'autor')
+    assert resposta == {'execucao':'job-1', 'chave':'0', 'nome':'Demanda avulsa revisada'}
+    service.renomear_demanda('job-1', '1', 'Outro nome / setor_especial', 'autor')
+    modelo, arquivos = service.montar(['job-1','job-2'], nomes, 'autor', True)
+    service.salvar_nomes(['job-1','job-2'], modelo, 'autor')
+    reaberta = service.abrir(arquivo, 'autor')
+    service.jobs._jobs.clear()
+    regenerado, _ = service.montar(reaberta['execucoes'], {f['id']:f['nome'] for f in reaberta['fontes']}, 'autor', True)
+    assert [l['nome'] for l in regenerado['entradas'][0]['linhas'][:2]] == [
+        'Demanda avulsa revisada', 'Outro nome / setor_especial']
+    assert modelo['entradas'][1]['linhas'][0]['nome'] == 'Demanda 0'
+    assert dados[arquivo] == original == arquivos[0][1]
+    pacote, _ = service.pacote(modelo, arquivos)
+    with ZipFile(BytesIO(pacote)) as zipado:
+        metadados = json.loads(zipado.read('Metadados da Análise.json'))
+    assert metadados['entradas'][0]['nomes_demandas_revisados'] == {
+        '0':'Demanda avulsa revisada', '1':'Outro nome / setor_especial'}
+    texto = ' '.join(p.extract_text() for p in PdfReader(BytesIO(service.pdf(regenerado))).pages)
+    assert 'Demanda avulsa revisada' in texto and 'Outro nome / setor_especial' in texto
+    with pytest.raises(FileNotFoundError):
+        service.renomear_demanda('job-1', '0', 'Não autorizado', 'outro')
+
+
+@pytest.mark.parametrize(('chave','nome'), [('63','Nome'), ('-1','Nome'), ('01','Nome'), ('x','Nome'),
+                                            ('0',' '), ('0','x'*201), ('0','Nome\ninválido')])
+def test_revisao_demanda_recusa_chave_ou_nome_invalidos_sem_gravar(analise, chave, nome):
+    _, dados, _ = analise
+    anteriores = dict(dados)
+    with pytest.raises(ValueError):
+        service.renomear_demanda('job-1', chave, nome, 'autor')
+    assert dados == anteriores
+
+
+@pytest.mark.parametrize('campo', ['sha256', 'dono', 'nomes'])
+def test_revisao_demanda_adulterada_e_explicita(analise, campo):
+    resultados, dados, nomes = analise
+    service.renomear_demanda('job-1', '0', 'Nome revisado', 'autor')
+    caminho = service._caminho_nomes_demandas(resultados['job-1'], 'autor')
+    revisao = json.loads(dados[caminho])
+    revisao[campo] = {'999':'Inválido'} if campo == 'nomes' else 'inválido'
+    dados[caminho] = json.dumps(revisao).encode()
+    with pytest.raises(ValueError, match='revisão'):
+        service.montar(['job-1','job-2'], nomes, 'autor', True)
+
+
+def test_revisao_demanda_nao_oculta_falha_de_gravacao(analise, monkeypatch):
+    monkeypatch.setattr(service.storage_remoto, 'enviar_bytes', lambda caminho, dados: None)
+    with pytest.raises(RuntimeError, match='confirmar a gravação'):
+        service.renomear_demanda('job-1', '0', 'Nome não salvo', 'autor')
+
+
+def test_rota_revisao_de_demanda_exige_permissao_de_operacao(analise):
+    from api.deps.auth import require_authenticated
+    from api.routers.extracao_atributos import router
+    app = FastAPI()
+    app.include_router(router)
+    app.dependency_overrides[require_authenticated] = lambda: SimpleNamespace(id='autor', tipo_usuario='VISUALIZADOR')
+    dados = analise[1]
+    anteriores = dict(dados)
+    with TestClient(app) as client:
+        resposta = client.post('/extracao-atributos/elegibilidade/resultados/demanda/nome',
+                               json={'execucao':'job-1', 'chave':'0', 'nome':'Sem permissão'})
+    assert resposta.status_code == 403
+    assert dados == anteriores
 
 
 def test_nomes_confirmados_persistem_vinculados_ao_usuario_e_assinatura(analise):
@@ -475,7 +600,11 @@ def test_processamento_real_alimenta_painel_e_pdf_sem_recalcular(monkeypatch):
     dados = processamento.serializar(saida, audit, recortes, 'saida.gpkg')['saida.gpkg']
     resultado = {'arquivo':'saidas-geoespaciais/saida.gpkg','sha256':sha256(dados).hexdigest(),'elegibilidade':audit}
     monkeypatch.setattr(service.jobs,'consultar',lambda ident,dono: {'status':'concluido','resultado':resultado})
-    monkeypatch.setattr(service.storage_remoto,'baixar',lambda caminho: dados)
+    def baixar(caminho):
+        if caminho != resultado['arquivo']:
+            raise FileNotFoundError(caminho)
+        return dados
+    monkeypatch.setattr(service.storage_remoto,'baixar',baixar)
     nomes = {f['id']:f['nome'] for f in service._fontes([resultado])}
     modelo, arquivos = service.montar(['job'],nomes,'autor',True)
     linha = modelo['entradas'][0]['linhas'][0]
@@ -490,7 +619,7 @@ def test_processamento_real_alimenta_painel_e_pdf_sem_recalcular(monkeypatch):
     recortes[0]['area_m2'] = 99.
     adulterado = processamento.serializar(saida,audit,recortes,'saida.gpkg')['saida.gpkg']
     resultado['sha256'] = sha256(adulterado).hexdigest()
-    monkeypatch.setattr(service.storage_remoto,'baixar',lambda caminho: adulterado)
+    dados = adulterado
     with pytest.raises(ValueError, match='soma das interseções diverge'):
         service.montar(['job'],nomes,'autor',True)
 
@@ -512,5 +641,8 @@ def test_rotas_exportacao_autenticadas_e_revisadas(analise):
         assert resposta.status_code == 200 and resposta.headers['content-type'] == 'application/zip'
         assert 'filename*=' in resposta.headers['content-disposition']
         assert 'X-SICARD-Package' in resposta.headers
+        assert client.post(rota+'/demanda/nome', json={'execucao':'job-1','chave':'0','nome':'Revisão pela API'}).json()['nome'] == 'Revisão pela API'
+        assert client.post(rota+'/demanda/nome', json={'execucao':'job-1','chave':'0','nome':' '}).status_code == 422
         app.dependency_overrides[require_geospatial_access] = lambda: SimpleNamespace(id='outro')
         assert client.post(rota+'/pacote', json=payload).status_code == 404
+        assert client.post(rota+'/demanda/nome', json={'execucao':'job-1','chave':'0','nome':'Sem acesso'}).status_code == 404

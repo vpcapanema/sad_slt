@@ -80,19 +80,42 @@ combinacao demanda × feicao permanece individualizada, mesmo com nomes ou
 valores iguais. Fragmentos da mesma combinacao devem concordar nos atributos;
 divergencias e colunas declaradas mas inexistentes impedem a apresentacao.
 
-Uma lista compacta reune todas as combinacoes das saidas concluidas, inclusive
-em lote parcial identificado, em tres colunas: demanda, classe de favorabilidade
-e indice de favorabilidade dimensionada. A lista e a tabela detalhada sao
-ordenadas pelo indice em ordem decrescente, antes da paginacao. Indices nulos,
-ausentes, nao numericos ou fora de [0,1] ficam sinalizados ao final, sem conversao
-em zero. A identidade completa da combinacao permanece disponivel na selecao,
-na descricao acessivel e no titulo de cada linha. Contatos sem area sao
-identificados nos detalhes e na tabela, sem eliminar seus atributos. A selecao
-sincroniza mapa, tabela e detalhes, sem filtrar a lista compacta.
+Um grafico de intervalos com pontos por superficie reune todas as combinacoes
+das saidas concluidas, inclusive em lote parcial identificado. Cada demanda
+ocupa uma linha, identificada somente pelo nome, sem codigo, identificador ou
+nome da entrada anexado ao rotulo. A identidade composta por entrada e chave
+da demanda impede a fusao de demandas homonimas. As linhas seguem a ordem
+das entradas e demandas; os pontos validos mantem o indice dimensionado na
+escala horizontal fixa de 0 a 1. Cada feicao intersectada corresponde a um
+ponto individual, inclusive em contatos sem area e valores repetidos.
+O traco liga exclusivamente o menor ao maior indice valido da demanda, sem
+media, soma, ponderacao ou substituicao dos valores originais. Um unico indice
+nao recebe intervalo ficticio. Pontos proximos recebem separacao vertical para
+evitar sobreposicao, sem alterar sua posicao horizontal; deslocamentos verticais
+sao ligados ao traco por guias e nao representam uma segunda variavel.
+
+As cores categoricas identificam as feicoes de origem, compartilhando a mesma
+cor quando a feicao aparece em demandas distintas. A legenda contem uma
+entrada por identidade de feicao e superficie, com seu nome, em grade de celulas
+uniformes e quebra de nomes longos. Feicoes homonimas permanecem distintas;
+as cores nao representam indice ou classe e permanecem estaveis na selecao.
+Os valores numericos aparecem junto aos pontos; a identidade completa, classe
+e entrada continuam no titulo de consulta, na descricao acessivel e nos detalhes.
+A legenda seleciona uma combinacao da feicao, preferindo a demanda ativa quando
+houver correspondencia. Pontos e nomes das demandas tambem permitem selecionar,
+sincronizando mapa, tabela e detalhes, sem filtrar os graficos.
+
+Zero valido permanece no inicio do eixo. Indices nulos, ausentes, nao numericos
+ou fora de [0,1] sao sinalizados na propria linha e nao recebem pontos ficticios
+nem conversao em zero. Demandas sem intersecao permanecem como linhas com
+indicacao explicita, sem ponto. A rolagem interna permite consultar todas as
+demandas e o eixo em telas estreitas, preservando nomes e cabecalho de referencia.
+A tabela detalhada continua ordenada pelo indice em ordem decrescente antes
+da paginacao. Contatos sem area mantem seus atributos e identificacao tecnica.
 
 Na interface, inclusive nos textos produzidos por JavaScript, aplica-se a
 hierarquia tipografica e a paleta de UI da pagina de Priorizacao por atributos.
-A rampa Viridis de dados e mantida. Indices e resultados estatisticos sao
+A rampa Viridis dos indices nos mapas e mantida. Indices e resultados estatisticos sao
 formatados com duas casas decimais e virgula; as classes nominais sao exibidas
 em Title Case. A mesma formatacao de indices e classes e aplicada no PDF.
 Estas regras sao exclusivamente de apresentacao: ordenacao, calculos e produtos
@@ -102,7 +125,7 @@ previo ou reclassificacao.
 Como referencias de visualizacao, a documentacao de
 [graficos do ArcGIS Pro](https://doc.esri.com/en/arcgis-pro/latest/help/analysis/geoprocessing/charts/bar-chart.html)
 descreve a apresentacao de observacoes com identificacao individual, sem
-agregacao. A lista compacta prioriza a leitura direta dos valores originais;
+agregacao. Os graficos priorizam a leitura direta dos valores originais;
 nao representa os indices como parcelas aditivas de um total.
 
 A secao 5, **Resultados da Favorabilidade Territorial**, reutiliza o painel
@@ -110,18 +133,71 @@ completo da Elegibilidade, adaptado aos papeis de grade e rede. A apresentacao
 exige revisao e confirmacao dos nomes de camadas e feicoes; os nomes sao
 persistidos por usuario e assinatura da saida. O painel conecta o mapa de
 demandas e intersecoes, a selecao de entrada e superficie, os detalhes de indice
-e classe, a lista integral e a tabela paginada por combinacao. As colunas
-identificam demanda, superficie de favorabilidade, municipio de origem (feicao),
-indice de favorabilidade dimensionada e classe de favorabilidade. O rotulo
+e classe, os graficos integrais e a tabela paginada por combinacao. As colunas
+identificam demanda e municipio de origem (feicao), com pares separados de
+indice dimensionado e classe para municipios e rede rodoviaria. Mantem-se
+uma linha por feicao, com travessao nas colunas da outra superficie; nao se
+associam feicoes municipais e de rede por posicao ou nome. A superficie de
+origem permanece no titulo de consulta da linha e nos detalhes. O rotulo
 municipal e apenas de apresentacao: nao reidentifica a feicao nem modifica sua
 geometria ou seus atributos. Area e percentual
 da intersecao permanecem apenas como informacao tecnica complementar nos
 detalhes. A ocultacao de registros sem indice e classe nao remove zero valido
 nem indices invalidos sinalizados e nao limita a lista.
-O mapa utiliza rampa Viridis continua e linear de 0 a 1 para o indice `_dim`,
-com cinza para ausencia de indice valido. Os poligonos sao opacos e sem bordas;
+O mapa dispoe de dois seletores na mesma linha: superficie e simbologia.
+Nao existe seletor de origem das geometrias. A simbologia permite consultar:
+indice original (`fav_territorial` ou `fav_rede`), dimensionado (`_dim`) e
+classes nominais originais. O indice dimensionado utiliza rampa Viridis
+continua e linear de 0 a 1; o original utiliza os extremos dos valores validos
+da superficie consultada e de seus recortes historicos, somente para a cor,
+sem modificar ou substituir atributos. Classes recebem cores categoricas,
+sem inferencia por limiares. Cinza identifica valores ausentes ou invalidos.
+As bases integrais sao carregadas automaticamente a partir da camada oficial
+referenciada no processamento, mediante execucao autorizada e vinculo com a
+superficie da analise. Nao se oferece escolha entre fontes alternativas.
+A referencia identifica a camada utilizada, mas nao constitui copia historica
+do conteudo integral da fonte. Os recortes preservados na saida destacam a
+combinacao selecionada sobre essa base, sem substituir seus valores.
+Falhas de acesso a fonte sao comunicadas no feedback oficial, com tentativa
+de recarga e preservacao dos resultados da execucao.
+Os poligonos sao opacos e sem bordas;
 contatos lineares ou pontuais continuam representados. Nao se simplificam as
 geometrias para esta apresentacao.
+
+O carregamento, a revisao e a exportacao da secao de resultados utilizam
+ProcessFeedback e Notify, sem emitir um historico de mensagens dentro da secao.
+Avisos de qualidade permanecem explicitos no feedback e nos valores das tabelas.
+
+As tres tabelas de conferencia das camadas confirmadas e as duas tabelas de
+resultados possuem conteineres independentes, com o componente de filtros de
+Agrupamento de Demandas, barra de controles e rodape com paginacao de 50 registros
+e contador. Os filtros permitem escolher coluna e valor, inverter e limpar;
+a limpeza fica restrita a barra de filtros. Filtrar ou paginar a conferencia
+nao muda a composicao do calculo nem a visibilidade das camadas na bancada.
+O botao de visualizar da conferencia consulta os dados da camada selecionada,
+sem editar suas referencias.
+
+Na tabela por combinacao, os filtros operam sobre todas as linhas, mantendo
+a ordenacao global antes da paginacao e distinguindo zero valido, ausencia e
+valores invalidos. Na tabela agregada, filtros e paginacao sao independentes;
+as barras de filtros e de controles das duas tabelas de resultados utilizam
+escala compacta proporcional, preservando os componentes e a organizacao do padrao;
+as medidas estatisticas continuam considerando todas as intersecoes de cada
+demanda, e nao apenas as linhas visiveis. Alterar a medida reinicia o filtro e a
+paginacao da tabela agregada para evitar a reutilizacao de valores de outra
+medida. Percentil invalido limpa os resultados apresentados, sem manter valores
+anteriores como se fossem validos.
+
+A tabela agregada oferece visualizar demanda no modal de objetos, editar
+somente o nome inline, cancelar e salvar. Nas analises vinculadas a uma
+hierarquizacao, o codigo cadastral original e conferido contra os membros do
+grupo antes de consultar o cadastro correspondente. A gravacao exige permissao
+de operacao e altera somente o nome no cadastro original, pelas rotas existentes
+de plano, programa ou projeto. Demandas sem vinculo confirmado permanecem
+somente para consulta. O resumo consulta os nomes cadastrais atuais ao reabrir;
+o GeoPackage e o PDF preservam o registro da analise. Durante a edicao, a troca
+de entrada, os filtros da tabela agregada e as medidas estatisticas ficam bloqueados para preservar
+o rascunho. Nenhum desses controles altera indices, classes ou intersecoes.
 
 Pode-se reabrir um GeoPackage de favorabilidade ja gravado no Storage, com
 conferencia de metadados, geometrias, vinculos e somas antes da apresentacao.
@@ -139,7 +215,8 @@ registrados. Seus valores provem exclusivamente das intersecoes da camada de
 demandas selecionada. Uma linha por demanda, identificada pela entrada e pelo
 vinculo da feicao, mantem conjuntos separados de grade e rede, inclusive para
 demandas homonimas. Os valores originais sao apresentados em ordem decrescente,
-com repeticoes, e as classes originais permanecem listadas, sem reclassificacao.
+com repeticoes, separados por virgulas e pela conjuncao “e” antes do ultimo
+valor. As classes seguem a mesma separacao, sem reclassificacao.
 
 Tres seletores, em colunas independentes, oferecem tendencia central (media
 aritmetica simples, mediana e moda), dispersao (amplitude, variancia populacional,

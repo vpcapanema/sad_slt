@@ -21,6 +21,42 @@
 .complementacao-page #complementacao-atributos .demandas-page-size select { width: 76px; }
 .complementacao-page #complementacao-atributos .admin-table-footer :is(.demandas-page-size, .admin-pagination, .admin-pagination button) { font-size: 12px; }
 .complementacao-page #complementacao-atributos .admin-table-summary { font-size: 11.5px; }
+.complementacao-page #complementacao-atributos .atributo-input {
+  box-sizing: border-box;
+  border: 2px solid var(--pli-blue);
+  background: #fff;
+  color: var(--pli-deep);
+  opacity: 1;
+}
+.complementacao-page #complementacao-atributos .atributo-input:disabled {
+  border-color: #64748b;
+  border-style: dashed;
+  background: #e2e8f0;
+  color: #475569;
+  -webkit-text-fill-color: #475569;
+  cursor: not-allowed;
+}
+.complementacao-page #complementacao-atributos td:has(.atributo-input:enabled) {
+  background: #eaf3ff;
+}
+.complementacao-page #complementacao-atributos .atributo-input:enabled:focus-visible {
+  outline: 3px solid var(--pli-deep);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px #fff;
+}
+.complementacao-page #complementacao-atributos .atributos-legenda span {
+  border: 1px dashed #64748b;
+  border-radius: 6px;
+  background: #e2e8f0;
+  color: #334155;
+  font-weight: 600;
+}
+.complementacao-page #complementacao-form:has(.atributo-input:enabled) .atributos-legenda span {
+  border-style: solid;
+  border-color: var(--pli-deep);
+  background: var(--pli-deep);
+  color: #fff;
+}
 .complementacao-page #complementacao-atributos .admin-table--atributos { --coluna-objeto: clamp(128px, 24vw, 240px); }
 .complementacao-page #complementacao-atributos .admin-table--atributos .col-objeto {
   position: sticky; left: 0; z-index: 1; box-sizing: border-box;

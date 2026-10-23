@@ -62,6 +62,32 @@
 .elegibilidade-v2 .ev-resultados .evr-titulo h3 { font-size: 14px; }
 .ev-resultados .evr-mapa-painel { display: flex; flex-direction: column; }
 #ev-resultados-mapa { min-height: 350px; height: 390px; flex: 1; background: #eef2f4; z-index: 0; }
+.elegibilidade-v2 .evr-analise { grid-template-columns: minmax(0,1fr); }
+.elegibilidade-v2 #ev-resultados-mapa { flex: none; height: clamp(380px,65vh,680px); }
+.elegibilidade-v2 .ev-mapa-acoes, .elegibilidade-v2 .ev-mapa-controles { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.elegibilidade-v2 .ev-mapa-controles { padding: 12px 15px; border-bottom: 1px solid #d7e1e7; }
+.elegibilidade-v2 .ev-mapa-controles label { display: inline-flex; align-items: center; gap: 7px; }
+.elegibilidade-v2 .ev-mapa-controles select { max-width: 100%; padding: 6px; border: 1px solid #bccbd5; border-radius: 4px; }
+.elegibilidade-v2 .ev-mapa-resumo { display: grid; gap: 5px; padding: 12px 15px; background: #edf5fa; font-size: 13px; overflow-wrap: anywhere; }
+.elegibilidade-v2 .ev-mapa-simbolos { display: flex; flex-wrap: wrap; gap: 14px; }
+.elegibilidade-v2 .ev-mapa-simbolos span { display: inline-flex; align-items: center; gap: 6px; }
+.elegibilidade-v2 .ev-mapa-simbolos i { display: inline-block; width: 22px; height: 14px; box-sizing: border-box; }
+.elegibilidade-v2 .ev-simbolo-demanda { border: 2px solid #087fb7; }
+.elegibilidade-v2 .ev-simbolo-restricao { border: 1px solid #b42335; background: repeating-linear-gradient(135deg,transparent 0 4px,#b42335 4px 6px); }
+.elegibilidade-v2 .ev-simbolo-risco { border: 1px solid #c18b00; background: repeating-linear-gradient(45deg,transparent 0 4px,#c18b00 4px 6px); }
+.elegibilidade-v2 .ev-mapa-simbolos .ev-simbolo-localizador { width: 14px; border-radius: 50%; background: #087fb7; border: 2px solid white; box-shadow: 0 0 0 1px #087fb7; }
+.elegibilidade-v2 .ev-mapa-contexto { margin: 0 15px 12px; border: 1px solid #d7e1e7; padding: 10px; border-radius: 5px; }
+.elegibilidade-v2 .ev-mapa-contexto summary { cursor: pointer; font-weight: 600; }
+.elegibilidade-v2 #ev-resultados-mapa-superficies { max-height: 280px; overflow: auto; }
+.elegibilidade-v2 .ev-contexto-item { display: grid; grid-template-columns: minmax(150px,1fr) 100px 40px; gap: 8px; padding: 10px 0; border-top: 1px solid #e1e8ed; align-items: center; }
+.elegibilidade-v2 .ev-contexto-item label { display: flex; align-items: start; gap: 6px; overflow-wrap: anywhere; }
+.elegibilidade-v2 .ev-contexto-item input[type="range"] { width: 100%; }
+.elegibilidade-v2 .ev-contexto-item > .ea-hint { grid-column: 1 / -1; }
+@media(max-width:640px) {
+  .elegibilidade-v2 .secao-elegibilidade-mapa > .evr-titulo { flex-wrap: wrap; gap: 8px; }
+  .elegibilidade-v2 .ev-contexto-item { grid-template-columns: minmax(0,1fr) 40px; }
+  .elegibilidade-v2 .ev-contexto-item label { grid-column: 1 / -1; }
+}
 .ev-resultados .evr-legenda-mapa { display: flex; flex-wrap: wrap; gap: 14px; padding: 10px 15px; font-size: 11px; color: #003b5a; }
 .ev-resultados .evr-instrucoes { padding: 0 15px 10px; margin: 0; }
 .ev-resultados .evr-grafico-conteudo { padding: 15px; display: grid; gap: 14px; }
@@ -78,6 +104,8 @@
 .ev-resultados .evr-rosca-bloco { margin: 0; min-width: 0; }.ev-resultados .evr-rosca-bloco h4 { text-align: center; font-size: 12px; }
 .ev-resultados .evr-rosca { display: block; width: 100%; max-width: 320px; margin: 8px auto; }
 .ev-resultados .evr-rosca path { cursor: pointer; stroke: none; outline: none; }
+.ev-resultados .evr-rosca path[data-tipo="demanda"] { stroke: #fff; stroke-width: 0.8; }
+.ev-resultados .evr-rosca path[data-tipo="intersecao"] { stroke: #fff; stroke-width: 0.35; }
 .ev-resultados .evr-rosca path[aria-pressed="true"] { stroke: #003b5a; stroke-width: 1; }
 .ev-resultados .evr-rosca path:focus-visible { stroke: #003b5a; stroke-width: 2; outline: none; }
 .ev-resultados .evr-legenda-classes { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 4px 6px; max-height: 220px; overflow: auto; }
@@ -85,6 +113,15 @@
 .ev-resultados .evr-classe.ativa { background: #eef4f8; border-color: var(--ev-line); font-weight: bold; }
 .ev-resultados .evr-classe small { display: block; font-size: 10px; color: var(--ev-muted); }
 .ev-resultados .evr-ponto { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.ev-resultados .evr-feicoes-demanda { margin-top: 12px; }
+.ev-resultados .evr-lista-feicoes { display: grid; gap: 5px; margin-top: 6px; max-height: 220px; overflow: auto; }
+.ev-resultados .evr-feicao {
+  display: grid; gap: 2px; width: 100%; padding: 7px 8px; border: 1px solid var(--ev-line);
+  border-radius: 5px; background: #fff; text-align: left; font: inherit; font-size: 10.5px; cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.ev-resultados .evr-feicao[aria-pressed="true"] { border-color: currentColor; background: #eef4f8; }
+.ev-resultados .evr-feicao:focus-visible { outline: 2px solid var(--pli-blue); outline-offset: -2px; }
 .ev-resultados #ev-resultados-tabela { font-size: 12px; border-collapse: separate; border-spacing: 0; width: 100%; }
 .ev-resultados #ev-resultados-tabela th { color: white; background: #003b5a; white-space: normal; padding: 10px 12px; border-right: 1px solid #ffffff30; }
 .ev-resultados #ev-resultados-tabela th.restricao { background: var(--ev-re); }
@@ -118,6 +155,51 @@
 }
 .elegibilidade-v2 .secao-elegibilidade-tabela .evr-controles [aria-pressed="true"] {
   background: #eef4f8; border-color: var(--pli-deep); color: var(--pli-deep);
+}
+.elegibilidade-v2 .secao-elegibilidade-tabela {
+  --admin-border: var(--pli-border, #cbd5e1);
+  --admin-accent: #1683c4;
+}
+.elegibilidade-v2 .secao-elegibilidade-tabela .admin-filter-bar {
+  margin: 0; font-size: 0.82rem;
+}
+.elegibilidade-v2 .secao-elegibilidade-tabela .admin-filter-bar select {
+  width: 100%; height: 34px; min-height: 0; min-width: 170px;
+  padding: 4px 8px; font-size: 0.85rem;
+}
+.elegibilidade-v2 .secao-elegibilidade-tabela .admin-filter-bar .admin-icon-btn {
+  border: 1px solid currentColor;
+}
+.elegibilidade-v2 .secao-elegibilidade-tabela .admin-actions {
+  margin: 0; padding: 10px 12px; border-top: 1px solid var(--ev-line);
+}
+.elegibilidade-v2 .secao-elegibilidade-tabela .admin-actions .admin-icon-btn {
+  width: 2.35rem; height: 2.35rem; min-width: 2.35rem; padding: 0; border-radius: 6px;
+}
+.elegibilidade-v2 .secao-elegibilidade-tabela .admin-table-footer {
+  margin: 0 12px 10px; padding-top: 6px;
+}
+.elegibilidade-v2 .secao-elegibilidade-tabela .admin-table-summary { font-size: 0.72rem; }
+.elegibilidade-v2 #ev-resultados-tabela-resumo { width: 100%; border-collapse: collapse; font-size: 10.5px; }
+.elegibilidade-v2 #ev-resultados-tabela-resumo th { background: #003b5a; color: #fff; }
+.elegibilidade-v2 #ev-resultados-tabela-resumo :is(th, td) {
+  padding: 7px 8px; text-align: center; border-bottom: 1px solid var(--ev-line); overflow-wrap: anywhere;
+}
+.elegibilidade-v2 #ev-resultados-tabela-resumo tbody tr:nth-child(even) { background: #f6f9fb; }
+.elegibilidade-v2 #ev-resultados-tabela-resumo tr.ativo { background: #e8f2f9; }
+.elegibilidade-v2 #ev-resultados-tabela-resumo .evr-medida { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.elegibilidade-v2 #ev-resultados-tabela-resumo .evr-col-selecao { width: 34px; }
+.elegibilidade-v2 #ev-resultados-tabela-resumo .row-select {
+  width: 15px; height: 15px; margin: 0; accent-color: var(--pli-blue); cursor: pointer;
+}
+.elegibilidade-v2 #ev-resultados-tabela-resumo td.restricao { color: var(--ev-re); }
+.elegibilidade-v2 #ev-resultados-tabela-resumo td.risco { color: var(--ev-ri); }
+.elegibilidade-v2 #ev-resultados-tabela-resumo td button {
+  border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer;
+}
+.elegibilidade-v2 #ev-resumo-nome {
+  width: 100%; min-width: 0; box-sizing: border-box; padding: 4px 6px;
+  border: 1px solid var(--admin-accent); border-radius: 5px; font: inherit;
 }
 @media(max-width:1100px) { .ev-resultados .evr-analise { grid-template-columns: 1fr; } }
 @media(max-width:620px) { .ev-resultados .evr-fontes { grid-template-columns: 1fr; }.ev-resultados .evr-titulo { flex-wrap: wrap; } }

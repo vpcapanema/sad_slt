@@ -1,15 +1,20 @@
+import {criarMapaElegibilidade, areaLegivel} from './elegibilidade-mapa.js?v=20261023-contexto';
+import {nomeDemanda} from './nome-demanda.js?v=20261023-nomes';
 import {post, base} from '../../geoespacial/extracao-atributos/api.js';
 import {el} from '../../geoespacial/extracao-atributos/ui.js';
 import {escolherArquivo} from '../../geoespacial/extracao-atributos/explorador.js?v=20261020-saidas';
-import {sobreposicoesDaAnalise, renderizarRosca} from './sobreposicoes-rosca.js';
-import {indiceTexto, classeTexto, corIndice, compararIndices, renderizarIndices} from './favorabilidade-indices.js?v=20261021-formatacao';
-import {renderizarAgregados} from './favorabilidade-estatisticas.js?v=20261021-formatacao';
+import {sobreposicoesDaAnalise, demandasDaAnalise, renderizarRoscaDemandas} from './sobreposicoes-rosca.js?v=20261023-contexto';
+import {indiceTexto, classeTexto, corClasse, compararIndices, compararDemandas, renderizarIndices} from './favorabilidade-indices.js?v=20261023-classes-ordem';
+import {renderizarAgregados} from './favorabilidade-estatisticas.js?v=20261023-classes-ordem';
+import {criarMapaFavorabilidade} from './favorabilidade-mapa.js?v=20261023-classes-ordem';
+import {criarFiltroResultados, criarResumoResultados, paginarResultados} from './elegibilidade-tabelas.js?v=20261023-contexto';
 
 const numero = valor => valor.toLocaleString('pt-BR', {
   minimumFractionDigits:2, maximumFractionDigits:valor !== 0 && Math.abs(valor) < .01 ? 20 : 2,
 });
-const area = (valor, divisor=1e6) => valor === null ? '—' : numero(valor / divisor);
-const nomeDemanda = linha => linha.nome || `Demanda ${linha.id}`;
+const area = (valor, divisor=1e6) => valor === null ? '—' : (valor / divisor).toLocaleString('pt-BR', {
+  minimumFractionDigits:divisor === 1e4 ? 4 : 2, maximumFractionDigits:valor > 0 && valor/divisor < .005 ? 12 : divisor === 1e4 ? 4 : 2,
+});
 
 export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
   const favorabilidade = analise === 'favorabilidade';
@@ -18,45 +23,101 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
   const papeis = favorabilidade ? {entrada:'Entrada', grade:'Favorabilidade de Grade', rede:'Favorabilidade de Rede'}
     : {entrada:'Entrada', restricao:'Restrição', risco:'Risco'};
   const node = id => document.getElementById(`ev-resultados-${id}`);
-  const formulario = node('aliases'), campos = new Map(), cores = new Map();
+  const formulario = node('aliases'), campos = new Map();
   let pendentes = [], execucoes = [], fontes = [], modelo = null, pagina = 0, indice = 0;
   let ocupado = false, externo = false, chave = '0', baseAtiva = '', classeAtiva = '';
   let mapa = null, demandas = null, restricoes = null, riscos = null, camadas = new Map(), recortes = [];
   let linhasPorChave = new Map(), basesPorId = new Map();
   let ocultarVazias = false, linhasTabela = [], camposTabela = [];
+  let mapaElegibilidade = null, gerandoPacote = false, mapaFavorabilidade = null, processoResultados = null, emOperacao = false, ultimaMensagem = '';
+  function informar(mensagem) {
+    ultimaMensagem = mensagem;
+    if (!favorabilidade) { node('status').textContent = mensagem; return; }
+    if (emOperacao && !processoResultados) {
+      processoResultados = window.ProcessFeedback.iniciarCadastro({title:'Resultados da Favorabilidade Territorial', tasks:[]});
+    }
+    if (processoResultados) processoResultados.detalhe(mensagem);
+    else avisar(mensagem);
+  }
   const entrada = () => modelo.entradas[indice];
   const linhaAtual = () => linhasPorChave.get(chave);
   const payload = () => ({execucoes, nomes:Object.fromEntries([...campos].map(([id,campo]) => [id,campo.value])),
     revisados:node('revisados').checked});
   const corCategoria = papel => favorabilidade ? papel === 'grade' ? '#176878' : '#69438a'
-    : papel === 'restricao' ? '#852c38' : '#856100';
-  const corClasse = id => cores.get(id);
+    : papel === 'restricao' ? '#b42335' : '#c18b00';
   const vazio = valor => valor == null || (typeof valor === 'string' && !valor.trim());
+  const filtroTabela = criarFiltroResultados('ev-sobreposicoes-filtro', () => {
+    pagina = 0; atualizarVisaoTabela(); tabela(); controles();
+  });
+  const resumoTabela = criarResumoResultados({
+    node:node(favorabilidade ? 'agregados' : 'tabela-resumo'), selecionar, controles, avisar, tabelaAgregada:favorabilidade,
+    salvarNomeAnalise:favorabilidade ? undefined : (chave, nome) => post(`${rota}/demanda/nome`, {execucao:entrada().id, chave, nome}),
+    aoSalvar(codigo, nome, {chave:chaveEditada, local}) {
+      for (const e of modelo.entradas) for (const linha of e.linhas) {
+        if (local ? e === entrada() && linha.chave === chaveEditada
+          : linha.codigo_demanda === codigo && e.hierarquizacao === entrada().hierarquizacao) linha.nome = nome;
+      }
+      configurarFiltroTabela();
+      atualizarVisaoTabela();
+      for (const [id, layer] of camadas) layer.setTooltipContent(el('span', nomeDemanda(linhasPorChave.get(id))));
+      if (favorabilidade) estatisticas();
+      atualizarSelecao(chave, baseAtiva, classeAtiva);
+    },
+  });
 
+  function registrosIndices() {
+    return entrada().linhas.flatMap(linha => linha.sobreposicoes.length
+      ? linha.sobreposicoes.map(item => ({linha,item})) : [{linha,item:null}]);
+  }
+  function configurarFiltroTabela() {
+    const e = entrada();
+    filtroTabela.atualizar(favorabilidade ? [
+      {id:'demanda', nome:'Demanda', valor:r => nomeDemanda(r.linha)},
+      {id:'municipio', nome:'Município de Origem (Feição)', valor:r => r.item?.nome || ''},
+      ...['grade','rede'].flatMap(papel => {
+        const rotulo = papel === 'grade' ? 'Municípios' : 'Rede rodoviária';
+        const valor = r => r.item && e.campos.find(c => c.id === r.item.base_id).papel === papel ? r.item.favorabilidade : null;
+        return [
+          {id:`indice-${papel}`, nome:`Índice de Favorabilidade Dimensionada - ${rotulo} (0–1)`, valor:r => valor(r) ? indiceTexto(valor(r)) : ''},
+          {id:`classe-${papel}`, nome:`Classe de Favorabilidade - ${rotulo}`, valor:r => valor(r) ? classeTexto(valor(r)) : ''},
+        ];
+      }),
+    ] : [
+      {id:'id', nome:'Identificador', valor:l => String(l.id)},
+      {id:'nome', nome:'Nome', valor:nomeDemanda},
+      ...e.campos.map((c, i) => ({id:c.id, nome:c.nome,
+        valor:l => l.areas[i] === null ? '' : `${area(l.areas[i])} km² · ${area(l.areas[i],1e4)} ha`})),
+    ], favorabilidade ? registrosIndices() : e.linhas);
+  }
   function atualizarVisaoTabela() {
     const e = entrada();
     if (favorabilidade) {
-      linhasTabela = e.linhas.flatMap(linha => linha.sobreposicoes.length
-        ? linha.sobreposicoes.map(item => ({linha,item}))
-        : [{linha,item:null}]).filter(({item}) => !ocultarVazias || item &&
+      const ordem = new Map([...e.linhas].sort(compararDemandas).map((l,i) => [l.chave,i]));
+      linhasTabela = filtroTabela.filtrar(registrosIndices()).filter(({item}) => !ocultarVazias || item &&
           (item.favorabilidade.estado_indice === 'valido' || item.favorabilidade.estado_indice === 'invalido'
             || item.favorabilidade.estado_classe === 'valido'))
-        .sort((a,b) => compararIndices(a.item?.favorabilidade,b.item?.favorabilidade));
+        .sort((a,b) => ordem.get(a.linha.chave)-ordem.get(b.linha.chave) ||
+          compararIndices(a.item?.favorabilidade,b.item?.favorabilidade));
       return;
     }
     camposTabela = e.campos.map((campo, posicao) => ({campo, posicao}))
       .filter(({posicao}) => !ocultarVazias || e.linhas.some(l => !vazio(l.areas[posicao])));
     linhasTabela = ocultarVazias ? e.linhas.filter(l => l.areas.some(valor => !vazio(valor))) : e.linhas;
+    linhasTabela = filtroTabela.filtrar(linhasTabela);
   }
 
   function controles() {
     const bloqueado = ocupado || externo;
     node('abrir').setAttribute('aria-disabled', String(bloqueado));
     document.getElementById('ev-resultados').querySelectorAll('input,button,select').forEach(c => { c.disabled = bloqueado; });
-    node('download').disabled = bloqueado || !modelo;
+    node('download').disabled = bloqueado || !modelo || gerandoPacote;
     node('anterior').disabled = bloqueado || !modelo || pagina === 0;
     node('proxima').disabled = bloqueado || !modelo || (pagina+1)*50 >= linhasTabela.length;
     node('vazias').disabled = bloqueado || !modelo;
+    filtroTabela?.controles(bloqueado);
+    document.querySelectorAll('#ev-resultados-paginacao button, #ev-resumo-paginacao button')
+      .forEach(botao => { botao.disabled = bloqueado || !modelo || botao.dataset.limite === 'true'; });
+    resumoTabela?.controles(bloqueado);
     if (favorabilidade) node('percentil').disabled = bloqueado || node('posicao').value !== 'percentil';
   }
   function invalidar() {
@@ -64,45 +125,50 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
     node('revisados').checked = false;
     node('conteudo').hidden = true;
     node('download').disabled = true;
-    node('status').textContent = 'Confirme os nomes revisados para atualizar a apresentação e a exportação.';
-    if (favorabilidade) node('qualidade').textContent = '';
+    if (!favorabilidade) informar('Confirme os nomes revisados para atualizar a apresentação e a exportação.');
   }
   async function operar(acao) {
     if (ocupado || externo) return;
     ocupado = true; aoOcupar(true); controles();
-    try { await acao(); }
-    catch (erro) { node('status').textContent = erro.message; avisar(erro.message, 'error'); }
-    finally { ocupado = false; aoOcupar(false); controles(); }
+    emOperacao = true; ultimaMensagem = '';
+    try {
+      await acao();
+      processoResultados?.sucesso({title:'Resultados da Favorabilidade Territorial', message:ultimaMensagem});
+    }
+    catch (erro) {
+      processoResultados?.erro({title:'Resultados não carregados', message:erro.message});
+      if (!favorabilidade) node('status').textContent = erro.message;
+      avisar(erro.message, 'error');
+    }
+    finally { processoResultados = null; emOperacao = false; ocupado = false; aoOcupar(false); controles(); }
   }
   async function apresentar() {
-    node('status').textContent = 'Conferindo a saída gravada, suas interseções e os nomes de apresentação…';
+    informar('Conferindo a saída gravada, suas interseções e os nomes de apresentação…');
     const resposta = await post(`${rota}/visualizar`, payload());
     modelo = resposta;
     for (const fonte of modelo.fontes) campos.get(fonte.id).value = fonte.nome;
-    cores.clear();
-    modelo.fontes.filter(f => f.tipo === 'feicao').forEach((f,i) => cores.set(f.id, `hsl(${(i*137.508)%360} 47% 42%)`));
     node('entrada').replaceChildren(...modelo.entradas.map((e,i) => new Option(e.nome, String(i))));
     indice = 0;
     node('metodologia').textContent = modelo.metodologia;
     node('conteudo').hidden = false;
     formulario.hidden = true;
     entradaAtual();
-    node('status').textContent = modelo.concluidas === modelo.previstas
+    const mensagem = modelo.concluidas === modelo.previstas
       ? 'Resultados conferidos. Os nomes foram salvos; o pacote inclui todas as demandas, independentemente da seleção em tela.'
       : `Resultados parciais: ${modelo.concluidas} de ${modelo.previstas} entradas. O PDF identificará essa condição.`;
+    informar(mensagem);
     if (modelo.relatorios_hierarquizacao?.length) {
-      node('status').textContent += ' PDF gravado no Storage e associado ao Relatório da Fase 1 em Gestão das hierarquizações.';
+      informar(mensagem + ' PDF gravado no Storage e associado ao Relatório da Fase 1 em Gestão das hierarquizações.');
     }
     if (favorabilidade) {
       const itens = sobreposicoesDaAnalise(modelo.entradas);
       const incompletos = itens.filter(item => item.favorabilidade.estado_indice !== 'valido'
         || item.favorabilidade.estado_classe !== 'valido').length;
-      node('qualidade').textContent = incompletos
-        ? `Atenção: ${incompletos} combinação(ões) com índice ou classe ausente, nulo ou inválido. Os campos são sinalizados nas tabelas; índices sem valor válido não entram nas estatísticas. Não foi atribuída área ou zero no lugar desses valores.`
-        : 'Índices dimensionados e classes originais conferidos em todas as combinações. As estatísticas opcionais são apenas de consulta.';
+      if (incompletos) avisar(`Atenção: ${incompletos} combinação(ões) com índice ou classe ausente, nulo ou inválido. Os campos são sinalizados nas tabelas; índices sem valor válido não entram nas estatísticas. Não foi atribuída área ou zero no lugar desses valores.`, 'warning');
     }
   }
   async function carregar(dados) {
+    if (favorabilidade) informar('Preparando os nomes e conferindo as saídas persistidas da análise…');
     if (!dados) dados = await post(`${rota}/preparar`, {execucoes});
     fontes = dados.fontes;
     campos.clear(); node('nomes').replaceChildren();
@@ -121,7 +187,7 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
     node('revisados').checked = Boolean(dados.revisados);
     if (dados.revisados) await apresentar();
     else {
-      node('status').textContent = `${dados.concluidas} de ${dados.previstas} entradas concluídas. Confira os nomes das camadas e das feições.`;
+      informar(`${dados.concluidas} de ${dados.previstas} entradas concluídas. Confira os nomes das camadas e das feições.`);
       formulario.hidden = false;
     }
   }
@@ -143,55 +209,57 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
     const posicao = favorabilidade ? linhasTabela.findIndex(r => r.linha === linha &&
       (!classeAtiva || r.item?.id === classeAtiva)) : linhasTabela.indexOf(linha);
     if (posicao >= 0) pagina = Math.floor(posicao / 50);
-    node('id-ativo').textContent = linha.id; node('nome-ativo').textContent = nome;
+    if (!favorabilidade) node('id-ativo').textContent = linha.id;
+    if (!favorabilidade) node('nome-ativo').textContent = nome;
     if (!favorabilidade) {
-      node('total-km').textContent = `${area(linha.area_total_m2)} km²`;
+      node('total-km').textContent = areaLegivel(linha.area_total_m2);
       node('total-ha').textContent = `${area(linha.area_total_m2,1e4)} ha`;
     }
     node('base').value = baseAtiva;
-    node('detalhes-base').hidden = !b; node('detalhes-classe').hidden = !classe; node('metricas').hidden = !b;
-    node('frase').textContent = classe ? `A demanda “${nome}” apresenta ${classe.area_m2 === 0 ? 'contato sem área' : 'sobreposição'} com “${classe.nome}”.`
-      : b ? daBase.length ? `A demanda “${nome}” apresenta interseção com ${daBase.length} ${daBase.length === 1 ? 'feição' : 'feições'} da camada “${b.nome}”.`
-        : `Não foi identificada interseção entre “${nome}” e as feições da camada “${b.nome}”.`
-      : linha.sobreposicoes.length ? `A demanda “${nome}” apresenta interseção com ${linha.sobreposicoes.length} ${linha.sobreposicoes.length === 1 ? 'feição' : 'feições'} das camadas analisadas.`
-        : `Não foi identificada interseção entre “${nome}” e as camadas analisadas.`;
-    if (favorabilidade) {
-      const valor = classe?.favorabilidade;
-      if (b) {
-        node('categoria').textContent = papeis[b.papel];
-        node('nome-base').textContent = b.nome;
-      }
-      node('nome-classe').textContent = classe ? `${classe.nome} [${classe.identificador}]` : '';
-      node('metricas').hidden = !classe;
-      node('indice').textContent = valor ? indiceTexto(valor) : 'Selecione uma feição';
-      node('classe-original').textContent = valor ? classeTexto(valor) : 'Nenhuma classe agregada';
-      node('campo-indice').textContent = valor?.campo_indice || '';
-      node('campo-classe').textContent = valor?.campo_classe || '';
-      node('aviso').textContent = classe
-        ? `Valor original de ${classe.nome}; sem média, soma ou ponderação por área.${classe.area_m2 === 0 ? ' Contato sem área.' : ''}`
-        : 'Selecione uma feição no gráfico, no mapa ou na tabela para consultar o índice e a classe originais.';
-      node('area-complementar').textContent = classe ? `${numero(classe.area_m2)} m² · ${numero(classe.percentual)}% da área da demanda. Informação técnica da interseção, não é índice de favorabilidade.` : '';
-    } else if (b) {
+    if (!favorabilidade) {
+      node('detalhes-base').hidden = !b; node('detalhes-classe').hidden = !classe; node('metricas').hidden = !b;
+      node('frase').textContent = classe ? `A demanda “${nome}” apresenta ${classe.area_m2 === 0 ? 'contato sem área' : 'sobreposição'} com “${classe.nome}”.`
+        : b ? daBase.length ? `A demanda “${nome}” apresenta interseção com ${daBase.length} ${daBase.length === 1 ? 'feição' : 'feições'} da camada “${b.nome}”.`
+          : `Não foi identificada interseção entre “${nome}” e as feições da camada “${b.nome}”.`
+        : linha.sobreposicoes.length ? `A demanda “${nome}” apresenta interseção com ${linha.sobreposicoes.length} ${linha.sobreposicoes.length === 1 ? 'feição' : 'feições'} das camadas analisadas.`
+          : `Não foi identificada interseção entre “${nome}” e as camadas analisadas.`;
+    }
+    if (!favorabilidade && b) {
       const valor = classe ? classe.area_m2 : linha.areas[e.campos.indexOf(b)];
       node('categoria').textContent = papeis[b.papel]; node('categoria').style.color = corCategoria(b.papel);
       node('nome-base').textContent = b.nome; node('nome-classe').textContent = classe?.nome || '';
       node('rotulo-area').textContent = classe ? 'Área Sobreposta à Feição' : 'Área Sobreposta à Camada';
-      node('area-km').textContent = valor === null ? '—' : `${area(valor)} km²`;
+      node('area-km').textContent = areaLegivel(valor);
       node('area-ha').textContent = valor === null ? 'Sem interseção' : `${area(valor,1e4)} ha`;
       node('percentual').textContent = valor === null ? '—' : `${numero(valor / linha.area_total_m2 * 100)}%`;
-      node('area-km').style.color = node('percentual').style.color = classe ? corClasse(classe.id) : corCategoria(b.papel);
+      node('area-km').style.color = node('percentual').style.color = corCategoria(b.papel);
     }
     if (!favorabilidade) node('aviso').textContent = classe ? `${numero(classe.percentual)}% da área de “${nome}” se sobrepõe a “${classe.nome}”.`
       : b ? daBase.length ? 'Selecione uma feição no gráfico para consultar sua área sobreposta.'
         : 'O mapa mostra a demanda, pois não há interseção com esta camada.'
       : 'Selecione uma camada ou uma feição no gráfico para consultar os detalhes.';
+    if (!favorabilidade) {
+      const itens = linha.sobreposicoes.map(item => {
+        const botao = el('button', undefined, 'evr-feicao');
+        botao.type = 'button'; botao.dataset.classe = item.id; botao.style.color = corCategoria(item.papel);
+        botao.setAttribute('aria-pressed', String(classeAtiva ? item.id === classeAtiva : Boolean(baseAtiva) && item.base_id === baseAtiva));
+        botao.append(el('strong', `${item.nome} [${item.identificador}]`),
+          el('span', `${papeis[item.papel]} · ${basesPorId.get(item.base_id).nome}`),
+          el('span', `${area(item.area_m2)} km² · ${area(item.area_m2,1e4)} ha · ${numero(item.percentual)}% da demanda${item.area_m2 === 0 ? ' · Contato sem área' : ''}`));
+        botao.onclick = () => selecionar(chave, item.base_id, item.id);
+        return botao;
+      });
+      node('feicoes-demanda').replaceChildren(...(itens.length ? itens : [el('p', 'Nenhuma feição intersectada.', 'ea-hint')]));
+    }
     for (const [id, layer] of camadas) layer.setStyle({color:id === chave ? '#087fb7' : '#466171', weight:id === chave ? 4 : 2, fillOpacity:id === chave ? .12 : .04});
     for (const r of recortes) {
       const ativo = r.chave === chave && (classeAtiva ? r.feicao === classeAtiva : baseAtiva ? r.base === baseAtiva : true);
       r.layer.setStyle(favorabilidade ? {fillOpacity:1,weight:r.poligono ? 0 : 3,opacity:1}
         : {fillOpacity:ativo ? .55 : .12, weight:ativo ? 3 : 1, opacity:ativo ? 1 : .4});
     }
-    tabela(); grafico(); mapa.invalidateSize({pan:false});
+    mapaFavorabilidade?.selecionar(baseAtiva, classeAtiva, chave);
+    mapaElegibilidade?.selecionar(chave, baseAtiva, classeAtiva);
+    tabela(); resumoTabela?.selecionar(chave); grafico(); mapa.invalidateSize({pan:false});
     if (zoom) {
       const alvos = recortes.filter(r => r.chave === chave && (classeAtiva ? r.feicao === classeAtiva : baseAtiva ? r.base === baseAtiva : false));
       if (!mapa.hasLayer(demandas)) demandas.addTo(mapa);
@@ -204,10 +272,10 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
   }
   function tabelaIndices() {
     const e = entrada(), head = el('thead'), trHead = el('tr'), body = el('tbody');
-    for (const titulo of ['Demanda','Superfície de Favorabilidade','Município de Origem (Feição)',
-      'Índice de Favorabilidade Dimensionada (0–1) ↓','Classe de Favorabilidade']) {
+    for (const titulo of ['Demanda','Município de Origem (Feição)',
+      'Índice de Favorabilidade Dimensionada - Municípios (0–1)','Classe de Favorabilidade - Municípios',
+      'Índice de Favorabilidade Dimensionada - Rede Rodoviária (0–1)','Classe de Favorabilidade - Rede Rodoviária']) {
       const th = el('th',titulo); th.scope = 'col'; trHead.append(th);
-      if (titulo.startsWith('Índice')) th.setAttribute('aria-sort','descending');
     }
     head.append(trHead);
     for (const {linha,item} of linhasTabela.slice(pagina*50,(pagina+1)*50)) {
@@ -215,18 +283,23 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
       const tr = el('tr',undefined,ativa ? 'ativo' : '');
       tr.dataset.chave = linha.chave; tr.dataset.feicao = item?.id || '';
       tr.tabIndex = 0; tr.setAttribute('aria-selected',String(ativa));
-      const demanda = el('td',`${nomeDemanda(linha)} [${linha.id}]`);
+      const demanda = el('td',nomeDemanda(linha));
       tr.append(demanda);
       if (item) {
         const base = basesPorId.get(item.base_id), valor = item.favorabilidade;
+        tr.append(el('td',item.nome));
+        for (const papel of ['grade','rede']) {
+          if (base.papel !== papel) { tr.append(el('td','—'),el('td','—')); continue; }
         const indice = el('td',indiceTexto(valor)), classe = el('td',classeTexto(valor));
+        indice.dataset.papel = papel; classe.dataset.classes = papel;
         indice.title = valor.campo_indice; classe.title = valor.campo_classe;
         if (item.area_m2 === 0) indice.append(el('small','Contato sem área','evr-secundario'));
-        tr.append(el('td',`${papeis[base.papel]} · ${base.nome}`),
-          el('td',item.nome),indice,classe);
+        tr.append(indice,classe);
+        }
+        tr.title = `${base.nome} · ${item.nome} [${item.identificador}]`;
       } else {
         const semIntersecao = el('td','Sem interseção; nenhum índice ou classe atribuído.');
-        semIntersecao.colSpan = 4; tr.append(semIntersecao);
+        semIntersecao.colSpan = 5; tr.append(semIntersecao);
       }
       tr.onclick = () => selecionar(linha.chave,item?.base_id || '',item?.id || '');
       tr.onkeydown = event => {
@@ -235,11 +308,11 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
       body.append(tr);
     }
     if (!linhasTabela.length) {
-      const tr = el('tr'), td = el('td','Nenhum índice ou classe disponível. Use Mostrar para restaurar os registros sem valores.');
-      td.colSpan = 5; tr.append(td); body.append(tr);
+      const tr = el('tr'), td = el('td','Nenhum registro encontrado com os filtros e a visibilidade atuais. Limpe os filtros ou mostre os registros sem índice e classe.');
+      td.colSpan = 6; tr.append(td); body.append(tr);
     }
     node('tabela').replaceChildren(head,body);
-    node('pagina').textContent = `Página ${pagina+1} de ${Math.max(1,Math.ceil(linhasTabela.length/50))} · ${linhasTabela.length} registros · ${e.feicoes} demandas`;
+    rodapeTabela(registrosIndices().length, r => r.linha.chave === chave && (r.item ? r.item.id === classeAtiva : !classeAtiva));
     const botao = node('vazias'), rotulo = `${ocultarVazias ? 'Mostrar' : 'Ocultar'} registros sem índice e classe`;
     botao.title = rotulo; botao.setAttribute('aria-label',rotulo); botao.setAttribute('aria-pressed',String(ocultarVazias));
     botao.querySelector('i').className = `fas fa-eye${ocultarVazias ? '' : '-slash'}`;
@@ -287,20 +360,28 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
       tr.append(td); body.append(tr);
     }
     node('tabela').replaceChildren(head,body);
-    node('pagina').textContent = `Página ${pagina+1} de ${Math.max(1,Math.ceil(linhasTabela.length/50))} · ` +
-      (ocultarVazias ? `${linhasTabela.length} de ${e.feicoes} demandas · ${camposTabela.length} de ${e.campos.length} camadas` : `${e.feicoes} demandas`);
+    rodapeTabela(e.feicoes, l => l.chave === chave);
     const botao = node('vazias'), rotulo = `${ocultarVazias ? 'Mostrar' : 'Ocultar'} linhas e colunas vazias`;
     botao.title = rotulo; botao.setAttribute('aria-label', rotulo); botao.setAttribute('aria-pressed', String(ocultarVazias));
     botao.querySelector('i').className = `fas fa-eye${ocultarVazias ? '' : '-slash'}`;
-    const linhasOcultas = e.linhas.length-linhasTabela.length, colunasOcultas = e.campos.length-camposTabela.length;
+    const linhasOcultas = e.linhas.filter(l => l.areas.every(vazio)).length, colunasOcultas = e.campos.length-camposTabela.length;
     node('visibilidade').textContent = ocultarVazias
       ? `Ocultas: ${linhasOcultas} ${linhasOcultas === 1 ? 'linha' : 'linhas'} e ${colunasOcultas} ${colunasOcultas === 1 ? 'coluna' : 'colunas'}. Zero é um valor válido.`
       : 'Todas as linhas e colunas visíveis.';
   }
+  function rodapeTabela(total, selecionada) {
+    paginarResultados({prefixo:'ev-resultados', linhas:linhasTabela, pagina,
+      mudar:p => { pagina = p; tabela(); controles(); }, selecionada, total});
+    const navegacao = node('paginacao');
+    navegacao.querySelectorAll('button')[1].id = 'ev-resultados-anterior';
+    navegacao.querySelectorAll('button')[2].id = 'ev-resultados-proxima';
+    navegacao.querySelector('span').id = 'ev-resultados-pagina';
+  }
   function grafico() {
     if (favorabilidade) {
-      renderizarIndices({container:node('indices-grafico'),itens:sobreposicoesDaAnalise(modelo.entradas),
-        selecionada:item => item.entradaIndice === indice && item.demandaChave === chave && item.id === classeAtiva,
+      renderizarIndices({container:node('indices-grafico'),itens:sobreposicoesDaAnalise(modelo.entradas),entradas:modelo.entradas,
+        selecionada:item => item.entradaIndice === indice && item.demandaChave === chave &&
+          (item.tipo === 'demanda' || item.base_id === baseAtiva && item.id === classeAtiva),
         aoSelecionar:item => {
           if (indice !== item.entradaIndice) {
             indice = item.entradaIndice; node('entrada').value = String(indice); entradaAtual();
@@ -309,19 +390,21 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
         }});
       return;
     }
-    renderizarRosca({svg:node('rosca'), legenda:node('legenda'), itens:sobreposicoesDaAnalise(modelo.entradas),
-      cor:item => corClasse(item.id),
+    renderizarRoscaDemandas({svg:node('rosca'), legenda:node('legenda'), itens:demandasDaAnalise(modelo.entradas),
+      cor:item => corCategoria(item.papel),
       selecionada:item => item.entradaIndice === indice && item.demandaChave === chave &&
-        (classeAtiva ? item.id === classeAtiva : item.base_id === baseAtiva),
+        (item.tipo === 'demanda' || (classeAtiva ? item.id === classeAtiva : baseAtiva ? item.base_id === baseAtiva : true)),
       aoSelecionar:item => {
         if (indice !== item.entradaIndice) {
           indice = item.entradaIndice; node('entrada').value = String(indice); entradaAtual();
         }
-        selecionar(item.demandaChave, item.base_id, item.id);
+        selecionar(item.demandaChave, item.tipo === 'demanda' ? '' : item.base_id, item.tipo === 'demanda' ? '' : item.id);
       }});
   }
   function entradaAtual() {
     const e = entrada();
+    configurarFiltroTabela();
+    resumoTabela?.atualizar(e);
     atualizarVisaoTabela();
     linhasPorChave = new Map(e.linhas.map(l => [l.chave,l]));
     basesPorId = new Map(e.campos.map(c => [c.id,c]));
@@ -334,6 +417,8 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
     }
     node('base').replaceChildren(new Option('Todas as Camadas — Sem Destaque',''),...e.campos.map(c => new Option(`${papeis[c.papel]} · ${c.nome}`,c.id)));
     if (favorabilidade) estatisticas();
+    mapaElegibilidade?.destruir(); mapaElegibilidade = null;
+    mapaFavorabilidade?.destruir(); mapaFavorabilidade = null;
     if (mapa) mapa.remove();
     node('mapa').replaceChildren(); node('nota-mapa').textContent = ''; camadas = new Map(); recortes = [];
     const L = window.L;
@@ -341,26 +426,33 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
     mapa = L.map(node('mapa'),{scrollWheelZoom:false});
     const fundo = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles © Esri'}).addTo(mapa);
     fundo.on('tileerror',() => { node('nota-mapa').textContent = 'O mapa-base está indisponível. As geometrias da análise continuam disponíveis.'; });
+    if (!favorabilidade) for (const [nome,z] of [['ev-superficies',350],['ev-recortes',410],['ev-demandas',430],['ev-localizadores',450]]) mapa.createPane(nome).style.zIndex = z;
     demandas = L.featureGroup().addTo(mapa); restricoes = L.featureGroup().addTo(mapa); riscos = L.featureGroup().addTo(mapa);
     for (const feature of e.geometrias.features) {
       const id = feature.properties.chave, linha = linhasPorChave.get(id);
-      const layer = L.geoJSON(feature,{smoothFactor:0,style:{color:'#003b5a',weight:2,fillOpacity:.09}}).addTo(demandas);
+      const layer = L.geoJSON(feature,{smoothFactor:0,pane:favorabilidade ? 'overlayPane' : 'ev-demandas',style:{color:'#003b5a',weight:2,fill:false,fillOpacity:0},
+        ...(favorabilidade ? {pointToLayer:(_,latlng) => L.circleMarker(latlng,{radius:6,fill:true,fillOpacity:1})} : {})}).addTo(demandas);
       layer.bindTooltip(el('span',nomeDemanda(linha))); layer.on('click',() => selecionar(id)); camadas.set(id,layer);
     }
     for (const feature of e.intersecoes.features) {
       const p = feature.properties, b = basesPorId.get(p.base_id);
       const linha = linhasPorChave.get(p.chave), classe = linha.sobreposicoes.find(c => c.id === p.feicao_id);
-      const cor = favorabilidade ? corIndice(classe.favorabilidade.indice) : corCategoria(b.papel);
+      const cor = favorabilidade ? corClasse(classe.favorabilidade) : corCategoria(b.papel);
       const poligono = ['Polygon','MultiPolygon'].includes(feature.geometry.type);
-      const layer = L.geoJSON(feature,{smoothFactor:0,style:{color:cor,fillColor:cor,fillOpacity:favorabilidade ? 1 : .3,weight:favorabilidade ? (poligono ? 0 : 3) : 1.5},
-        pointToLayer:(_,latlng) => L.circleMarker(latlng,{radius:5,color:cor,fillColor:cor})});
+      const layer = L.geoJSON(feature,{smoothFactor:0,pane:favorabilidade ? 'overlayPane' : 'ev-recortes',style:{color:cor,fillColor:cor,fillOpacity:favorabilidade ? 1 : .3,weight:favorabilidade ? (poligono ? 0 : 3) : 1.5},
+        pointToLayer:(_,latlng) => L.circleMarker(latlng,{pane:favorabilidade ? 'overlayPane' : 'ev-recortes',radius:5,color:cor,fillColor:cor})});
       layer.addTo(b.papel === categorias[0] ? restricoes : riscos);
       layer.bindTooltip(el('span',`${nomeDemanda(linha)} · ${classe.nome} · ${b.nome}${favorabilidade
         ? ` · ${classe.favorabilidade.campo_indice}: ${indiceTexto(classe.favorabilidade)} · ${classeTexto(classe.favorabilidade)}` : ''}`));
       layer.on('click',() => selecionar(p.chave,p.base_id,p.feicao_id));
       recortes.push({chave:p.chave,base:p.base_id,feicao:p.feicao_id,poligono,layer});
     }
-    L.control.layers({}, {'Demandas':demandas,[papeis[categorias[0]]]:restricoes,[papeis[categorias[1]]]:riscos},{collapsed:true}).addTo(mapa);
+    if (favorabilidade) L.control.layers({}, {'Demandas':demandas},{collapsed:true}).addTo(mapa);
+    mapa.fitBounds(demandas.getBounds(),{padding:[30,30],animate:false});
+    if (favorabilidade) {
+      mapaFavorabilidade = criarMapaFavorabilidade({mapa,entrada:e,recortes,demandas,node,avisar});
+    }
+    if (!favorabilidade) mapaElegibilidade = criarMapaElegibilidade({mapa,fundo,entrada:e,demandas,recortes,camadas,node,selecionar});
     atualizarSelecao(chave);
     mapa.fitBounds(demandas.getBounds(),{padding:[30,30],animate:false});
   }
@@ -369,12 +461,14 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
     node('percentil-campo').hidden = medida !== 'percentil';
     const percentil = node('percentil').valueAsNumber;
     if (medida === 'percentil' && (!Number.isFinite(percentil) || percentil < 0 || percentil > 100)) {
-      node('agregados').replaceChildren();
+      resumoTabela.atualizarTabela(el('table'));
       node('estatisticas-status').textContent = 'Informe um percentil numérico entre 0 e 100 para apresentar os resultados.';
       return;
     }
-    renderizarAgregados({tabela:node('agregados'),entrada:entrada(),medida,
+    const tabela = el('table');
+    renderizarAgregados({tabela,entrada:entrada(),medida,
       percentil});
+    resumoTabela.atualizarTabela(tabela);
     node('estatisticas-status').textContent = medida
       ? 'Consulta estatística por demanda, separando grade e rede. Somente índices válidos entram no cálculo; classes originais mantidas. Nenhum índice oficial foi alterado. O PDF mantém os valores originais.'
       : 'Valores originais por demanda, em ordem decrescente. Repetições são mantidas; nenhuma estatística aplicada.';
@@ -413,13 +507,13 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
         raiz:'saidas-geoespaciais', extensoes:['gpkg'], validar:false, somenteReferencias:true,
       });
       if (!arquivo) return;
-      node('status').textContent = 'Lendo e conferindo o GeoPackage da análise selecionada no storage…';
+      informar('Lendo e conferindo o GeoPackage da análise selecionada no storage…');
       const dados = await post(`${rota}/abrir`, {arquivo:arquivo.arquivo});
       await selecionarExecucoes(dados.execucoes, dados);
     });
   };
-  node('download').onclick = () => operar(async () => {
-    node('status').textContent = 'Gerando o PDF completo e gravando o pacote com todas as demandas e interseções no storage…';
+  const exportarPacote = async () => {
+    informar('Gerando o PDF completo e gravando o pacote com todas as demandas e interseções no storage…');
     const response = await fetch(`${base}${rota}/pacote`,{method:'POST',credentials:'same-origin',
       headers:{'Content-Type':'application/json'},body:JSON.stringify(payload())});
     if (!response.ok) {
@@ -433,9 +527,16 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
     const url = URL.createObjectURL(await response.blob()), link = el('a');
     link.href = url; link.download = 'Relatório e Camadas.zip'; document.body.append(link); link.click(); link.remove();
     setTimeout(() => URL.revokeObjectURL(url),30000);
-    node('status').textContent = 'Pacote gravado no storage. Download do relatório e das camadas iniciado.';
+    informar('Pacote gravado no storage. Download do relatório e das camadas iniciado.');
     avisar('Relatório completo e camadas disponíveis no pacote.','success');
-  });
+  };
+  node('download').onclick = favorabilidade ? () => operar(exportarPacote) : async () => {
+    if (gerandoPacote || ocupado || externo || !modelo) return;
+    gerandoPacote = true; controles();
+    try { await exportarPacote(); }
+    catch (erro) { informar(erro.message); avisar(erro.message,'error'); }
+    finally { gerandoPacote = false; controles(); }
+  };
   return {
     atualizar(busy) { externo = busy; controles(); },
     iniciar() { pendentes = []; },
@@ -445,8 +546,9 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
       const identificadores = [...pendentes]; pendentes = [];
       try { await selecionarExecucoes(identificadores); }
       catch (erro) {
-        node('status').textContent = `As camadas foram produzidas, mas os resultados não puderam ser preparados: ${erro.message}`;
-        node('tentar').hidden = false; avisar(node('status').textContent,'error');
+        const mensagem = `As camadas foram produzidas, mas os resultados não puderam ser preparados: ${erro.message}`;
+        if (!favorabilidade) node('status').textContent = mensagem;
+        node('tentar').hidden = false; avisar(mensagem,'error');
       }
     },
   };

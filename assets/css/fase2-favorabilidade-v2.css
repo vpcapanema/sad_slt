@@ -35,16 +35,12 @@
 .favorabilidade-v2 .fv-rampa { display: inline-block; width: 120px; height: 12px; background: linear-gradient(to right,#440154,#3b528b,#21918c,#5ec962,#fde725); }
 .favorabilidade-v2 .fv-detalhes-indices { display: grid; gap: 16px; min-width: 0; }
 .favorabilidade-v2 .fv-dot-bloco { margin: 0; min-width: 0; }
-.favorabilidade-v2 .fv-dot-plot { max-height: 460px; overflow: auto; padding: 6px; }
-.favorabilidade-v2 :is(.fv-dot-eixo,.fv-dot-linha) { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(0,1.2fr); align-items: center; gap: 10px; padding: 12px 8px; overflow-wrap: anywhere; }
-.favorabilidade-v2 .fv-dot-eixo { position: sticky; top: 0; background: var(--pli-deep); z-index: 1; color: #fff; font-size: 12px; font-weight: 700; }
-.favorabilidade-v2 .fv-dot-linha { width: 100%; margin: 4px 0; border: 1px solid var(--pli-border); border-radius: 5px; background: white; color: var(--pli-text); font: inherit; font-size: 12px; text-align: left; cursor: pointer; }
-.favorabilidade-v2 .fv-dot-linha.ativa { border-color: var(--pli-blue); box-shadow: inset 3px 0 var(--pli-blue); background: #f2f6f3; }
-.favorabilidade-v2 .fv-dot-linha:hover { background: #f2f6f3; }
+.favorabilidade-v2 .fv-dot-plot { padding: 6px; }
+.favorabilidade-v2 .fv-dot-linha { color: var(--pli-text); font: inherit; font-size: 12px; cursor: pointer; }
 .favorabilidade-v2 .fv-dot-linha:focus-visible { outline: 2px solid var(--pli-blue); outline-offset: 1px; }
 .favorabilidade-v2 .fv-dot-valor { font-weight: 700; font-variant-numeric: tabular-nums; }
-.favorabilidade-v2 .secao-favorabilidade-agregados { padding: 0 14px 14px; }
-.favorabilidade-v2 .secao-favorabilidade-agregados > .evr-titulo { padding-left: 0; padding-right: 0; }
+.favorabilidade-v2 .secao-favorabilidade-agregados { padding: 0; }
+.favorabilidade-v2 .secao-favorabilidade-agregados > :is(p, details, .fv-estatisticas-controles) { margin: 12px 15px; }
 .favorabilidade-v2 .fv-estatisticas-controles { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; margin: 16px 0; }
 .favorabilidade-v2 .fv-estatisticas-controles .ea-field { min-width: 0; }
 .favorabilidade-v2 .fv-estatisticas-controles :is(select,input) { width: 100%; min-width: 0; }
@@ -52,12 +48,21 @@
 .favorabilidade-v2 #ev-resultados-agregados { min-width: 600px; width: 100%; font-size: 12px; }
 .favorabilidade-v2 #ev-resultados-agregados :is(th,td) { padding: 10px; vertical-align: top; }
 .favorabilidade-v2 #ev-resultados-agregados th { position: sticky; top: 0; background: var(--pli-deep); color: #fff; z-index: 1; }
-.favorabilidade-v2 .fv-valor-original { display: block; padding: 2px 0; }
+.favorabilidade-v2 .fv-valor-original { display: inline; }
 .favorabilidade-v2 :is(.fv-valor-original,.fv-estatistica-valor) { font-variant-numeric: tabular-nums; }
 .favorabilidade-v2 .fv-estatistica-valor { font-weight: 700; }
+.favorabilidade-v2 .fv-tabela-conferencia {
+  min-width: 0; border: 1px solid var(--pli-border); border-radius: 8px;
+  overflow: hidden; background: #fff; --ev-line: var(--pli-border);
+}
+.favorabilidade-v2 .fv-tabela-conferencia .ea-table-wrap { margin: 0; }
+.favorabilidade-v2 .fv-tabela-conferencia :is(th, td) { overflow-wrap: anywhere; }
+.favorabilidade-v2 :is(.fv-tabela-conferencia, .secao-favorabilidade-agregados) td button {
+  width: 100%; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer;
+}
+.favorabilidade-v2 :is(.fv-tabela-conferencia, .secao-favorabilidade-agregados) tr.ativo { background: #e8f2f9; }
 @media (max-width: 640px) {
   .favorabilidade-v2 .fv-estatisticas-controles { grid-template-columns: minmax(0,1fr); }
-  .favorabilidade-v2 :is(.fv-dot-eixo,.fv-dot-linha) { gap: 6px; padding: 10px 6px; }
 }
 
 /* Fase 3: escala-tipografica.css + hierarquizacao-fases-visual.css.
@@ -166,15 +171,14 @@
 .favorabilidade-v2 td :is(small, strong, button, .evr-secundario, .evr-foco) {
   font-size: 12px;
 }
-.favorabilidade-v2 :is(th, .fv-dot-eixo) {
+.favorabilidade-v2 th {
   font-family: "Roboto", Arial, sans-serif;
   font-weight: 700;
   text-transform: uppercase;
 }
 .favorabilidade-v2 .ea-checkup th,
 .favorabilidade-v2 #ev-resultados-tabela th,
-.favorabilidade-v2 #ev-resultados-agregados th,
-.favorabilidade-v2 .fv-dot-eixo {
+.favorabilidade-v2 #ev-resultados-agregados th {
   background-color: #f2f6f3;
   color: #345243;
   font-family: "Roboto", Arial, sans-serif;
@@ -200,3 +204,96 @@
   color: ButtonText;
   border-color: ButtonText;
 }
+.favorabilidade-v2 #ev-resultados-entrada { font-size: 12px; min-height: 32px; height: 32px; }
+.favorabilidade-v2 .evr-fonte.grade { background: #e4f1ed; }
+.favorabilidade-v2 .evr-fonte.rede { background: #eee8f5; }
+.favorabilidade-v2 .evr-fonte h4 small { display: block; margin-top: 4px; font-size: 12px; font-weight: 500; }
+.favorabilidade-v2 .fv-mapa-controles { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); align-items: end; gap: 8px; padding: 10px; }
+.favorabilidade-v2 .fv-mapa-controles .ea-field { min-width: 0; }
+.favorabilidade-v2 .fv-mapa-controles select { width: 100%; min-width: 0; font-size: 12px; height: 32px; }
+.favorabilidade-v2 .fv-legenda-classe { display: inline-flex; gap: 5px; align-items: center; }
+.favorabilidade-v2 .fv-legenda-classe i { width: 14px; height: 14px; border: 1px solid #243746; }
+.favorabilidade-v2 .fv-grafico-superficie { margin-bottom: 16px; border: 1px solid var(--pli-border); border-radius: 6px; overflow: hidden; }
+.favorabilidade-v2 .fv-grafico-superficie h4 { margin: 0; padding: 10px; background: #e8f0f5; font-size: 12px; text-align: center; }
+.favorabilidade-v2 .fv-grafico-observacoes { min-width: 0; padding: 6px; }
+.favorabilidade-v2 .fv-intervalos-rolagem { min-width: 0; max-height: 480px; overflow: auto; }
+.favorabilidade-v2 .fv-intervalos-quadro { min-width: 480px; }
+.favorabilidade-v2 :is(.fv-intervalo-eixo,.fv-intervalo-linha) { display: grid; grid-template-columns: 140px minmax(0,1fr); }
+.favorabilidade-v2 .fv-intervalo-eixo { position: sticky; top: 0; z-index: 3; background: #e8f0f5; font-size: 11px; }
+.favorabilidade-v2 .fv-intervalo-cabecalho { position: sticky; left: 0; padding: 12px 8px; background: #e8f0f5; z-index: 1; }
+.favorabilidade-v2 .fv-intervalo-escala { position: relative; height: 38px; margin: 0 28px; }
+.favorabilidade-v2 .fv-intervalo-escala span { position: absolute; top: 12px; transform: translateX(-50%); }
+.favorabilidade-v2 .fv-intervalo-linha { min-height: 64px; border-bottom: 1px solid var(--pli-border); }
+.favorabilidade-v2 .fv-demanda-nome {
+  position: sticky; left: 0; z-index: 2; min-width: 0; width: 100%; margin: 0; padding: 10px 8px;
+  border: 0; border-right: 1px solid var(--pli-border); background: #fff; color: var(--pli-text);
+  font: inherit; font-size: 12px; line-height: 1.4; text-align: left; overflow-wrap: anywhere; cursor: pointer;
+}
+.favorabilidade-v2 .fv-demanda-nome[aria-pressed="true"] { background: #e8f2f9; box-shadow: inset 3px 0 var(--pli-blue); }
+.favorabilidade-v2 .fv-demanda-nome:hover { background: #f2f6f3; }
+.favorabilidade-v2 .fv-demanda-nome:focus-visible { outline: 2px solid var(--pli-blue); outline-offset: -3px; }
+.favorabilidade-v2 .fv-intervalo-conteudo { min-width: 0; align-self: center; }
+.favorabilidade-v2 .fv-intervalo-trilha {
+  position: relative; margin: 0 28px;
+
+}
+.favorabilidade-v2 .fv-intervalo-faixa { position: absolute; top: 50%; height: 6px; transform: translateY(-50%); border-radius: 3px; background: #b6c8d4; }
+.favorabilidade-v2 .fv-intervalo-guia { position: absolute; left: 0; right: 0; height: 2px; transform: translateY(-50%); background: #dce5eb; pointer-events: none; }
+.favorabilidade-v2 .fv-demanda-ativa .fv-intervalo-conteudo { background: #f5f9fc; }
+.favorabilidade-v2 .fv-indices-legenda-titulo { margin: 0; padding: 8px 12px; font-size: 12px; font-weight: 600; }
+.favorabilidade-v2 .fv-intervalo-ponto {
+  position: absolute; transform: translate(-50%,-50%); display: grid; place-items: center;
+  width: 24px; height: 24px; margin: 0; padding: 0; border: 0; border-radius: 50%; background: transparent;
+}
+.favorabilidade-v2 .fv-intervalo-marca { display: inline-block; width: 14px; height: 14px; flex: 0 0 14px; border: 1px solid #435461; border-radius: 50%; }
+.favorabilidade-v2 .fv-intervalo-ponto .fv-dot-valor { position: absolute; top: -15px; left: 50%; transform: translateX(-50%); font-size: 11px; white-space: nowrap; }
+.favorabilidade-v2 .fv-intervalo-ponto:is(:hover,[aria-pressed="true"]) .fv-intervalo-marca { outline: 2px solid var(--pli-blue); outline-offset: 2px; }
+.favorabilidade-v2 .fv-grupo-contagem { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: #334e68; color: white; font-size: 12px; font-weight: 700; }
+.favorabilidade-v2 .fv-intervalo-grupo[aria-pressed="true"] { outline: 2px solid var(--pli-blue); outline-offset: 3px; }
+.favorabilidade-v2 .fv-grupo-escolhas { max-width: min(480px, calc(100vw - 32px)); max-height: 60vh; overflow: auto; padding: 16px; border: 1px solid #9baebb; border-radius: 8px; background: white; color: #16324a; box-shadow: 0 8px 32px #0003; }
+.favorabilidade-v2 .fv-grupo-escolhas::backdrop { background: #0002; }
+.favorabilidade-v2 .fv-grupo-opcao { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px; margin-top: 6px; border: 1px solid #dce5eb; border-radius: 4px; background: white; text-align: left; cursor: pointer; }
+.favorabilidade-v2 .fv-grupo-opcao:is(:hover,[aria-pressed="true"]) { background: #e8f2f9; }
+.favorabilidade-v2 .fv-intervalo-problemas { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; }
+.favorabilidade-v2 .fv-indice-invalido { display: inline-flex; align-items: center; gap: 6px; padding: 6px; border: 1px solid #a78061; border-radius: 4px; background: #fff8f0; text-align: left; }
+.favorabilidade-v2 .fv-indice-invalido[aria-pressed="true"] { outline: 2px solid var(--pli-blue); }
+.favorabilidade-v2 .fv-intervalo-sem-intersecao { display: block; padding: 12px 28px; color: #657987; font-size: 11px; }
+.favorabilidade-v2 .fv-indices-legenda {
+  display: flex; flex-wrap: wrap; align-items: stretch;
+  gap: 8px; padding: 12px; border-top: 1px solid var(--pli-border);
+}
+.favorabilidade-v2 .fv-indices-legenda-item {
+  display: grid; grid-template-columns: 14px minmax(0,1fr); align-items: center;
+  gap: 8px; flex: 0 1 auto; width: auto; max-width: 100%; min-width: 0; min-height: 40px; margin: 0; padding: 8px; box-sizing: border-box;
+  border: 1px solid var(--pli-border); border-radius: 4px; background: #fff;
+  color: var(--pli-text); font: inherit; font-size: 12px; line-height: 1.4; text-align: left; cursor: pointer;
+}
+.favorabilidade-v2 .fv-indices-legenda-cor { width: 14px; height: 14px; border: 1px solid #435461; border-radius: 50%; }
+.favorabilidade-v2 .fv-indices-legenda-nome { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+.favorabilidade-v2 .fv-indices-legenda-item[aria-pressed="true"] { background: #e8f2f9; border-color: var(--pli-blue); }
+.favorabilidade-v2 .fv-indices-legenda-item:hover { background: #f2f6f3; }
+.favorabilidade-v2 .fv-indices-legenda-item:focus-visible { outline: 2px solid var(--pli-blue); outline-offset: -3px; }
+@media (max-width: 640px) {
+  .favorabilidade-v2 .fv-intervalos-quadro { min-width: 420px; }
+  .favorabilidade-v2 :is(.fv-intervalo-eixo,.fv-intervalo-linha) { grid-template-columns: 104px minmax(0,1fr); }
+}
+.favorabilidade-v2 :is(.secao-favorabilidade-tabela,.secao-favorabilidade-agregados) .admin-filter-bar {
+  gap: 6px; padding: 7px 9px; margin: 0; border-radius: 0;
+}
+.favorabilidade-v2 :is(.secao-favorabilidade-tabela,.secao-favorabilidade-agregados) .admin-filter-bar :is(select,.admin-icon-btn) {
+  height: 28px; min-height: 28px; font-size: 11px;
+}
+.favorabilidade-v2 :is(.secao-favorabilidade-tabela,.secao-favorabilidade-agregados) .admin-filter-bar select {
+  min-width: 120px; max-width: 260px; padding: 3px 6px;
+}
+.favorabilidade-v2 :is(.secao-favorabilidade-tabela,.secao-favorabilidade-agregados) .admin-filter-label { font-size: 11px; }
+.favorabilidade-v2 :is(.secao-favorabilidade-tabela,.secao-favorabilidade-agregados) .admin-actions { gap: 6px; padding: 7px 9px; }
+.favorabilidade-v2 :is(.secao-favorabilidade-tabela,.secao-favorabilidade-agregados) :is(.admin-filter-bar,.admin-actions) .admin-icon-btn {
+  width: 28px; min-width: 28px; height: 28px; min-height: 28px; flex: 0 0 28px; font-size: 11px;
+}
+.favorabilidade-v2 :is(#ev-resultados-tabela,#ev-resultados-agregados) th { white-space: normal; min-width: 140px; }
+.favorabilidade-v2 :is(#ev-resultados-tabela,#ev-resultados-agregados) th:first-child { min-width: 160px; }
+.favorabilidade-v2 :is(#ev-resultados-tabela,#ev-resultados-agregados) :is(th,td) { text-align: center; }
+.favorabilidade-v2 :is(#ev-resultados-tabela,#ev-resultados-agregados) :is(th,td):first-child,
+.favorabilidade-v2 #ev-resultados-agregados td:first-child button { text-align: left; }
+.favorabilidade-v2 .fv-grupo-contagem { text-shadow: 0 1px 2px #000, 0 -1px 2px #000; }

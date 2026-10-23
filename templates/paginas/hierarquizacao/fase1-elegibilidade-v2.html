@@ -14,9 +14,11 @@
 <link rel="stylesheet" href="/assets/vendor/leaflet/leaflet.css">
 <link rel="stylesheet" href="/assets/vendor/maplibre-gl/maplibre-gl.css">
 <link rel="stylesheet" href="/assets/css/ahp-module.css">
+<link rel="stylesheet" href="/restrict/hierarquizacao/processos.css?v=20261004-shared-modal">
 <link rel="stylesheet" href="/assets/css/page-title-standard.css">
 <link rel="stylesheet" href="/assets/css/extracao-atributos.css">
-<link rel="stylesheet" href="/assets/css/fase1-elegibilidade-v2.css?v=20261021-rosca-integral">
+<link rel="stylesheet" href="/assets/css/admin-table-controls.css?v=20261015-botoes-quadrados">
+<link rel="stylesheet" href="/assets/css/fase1-elegibilidade-v2.css?v=20261023-contexto">
 <link rel="stylesheet" href="/assets/css/paginas/hierarquizacao-fases-visual.css?v=20261020-cabecalhos-linha-unica">
 {% endblock %}
 {% block conteudo %}
@@ -174,9 +176,20 @@
         </div>
         <div class="evr-analise">
           <section class="secao-elegibilidade-mapa evr-painel evr-mapa-painel">
-            <header class="evr-titulo"><h3>Onde as Demandas se Sobrepõem</h3><button class="ea-btn" id="ev-resultados-enquadrar" type="button">Ver Todas</button></header>
+            <header class="evr-titulo"><h3>Onde as Demandas se Sobrepõem</h3><div class="ev-mapa-acoes"><button class="ea-btn" id="ev-resultados-mapa-focar" type="button">Enquadrar Selecionada</button><button class="ea-btn" id="ev-resultados-enquadrar" type="button">Ver Todas</button></div></header>
+            <div class="ev-mapa-controles">
+              <label>Mapa de fundo <select id="ev-resultados-mapa-fundo"><option value="cartografico">Cartográfico</option><option value="satelite">Satélite</option></select></label>
+              <span>Interseções:</span>
+              <label><input type="checkbox" id="ev-resultados-mapa-restricao" checked> Restrição</label>
+              <label><input type="checkbox" id="ev-resultados-mapa-risco" checked> Risco</label>
+            </div>
+            <div id="ev-resultados-mapa-resumo" class="ev-mapa-resumo" aria-live="polite"></div>
             <div id="ev-resultados-mapa" aria-label="Mapa interativo de demandas e interseções"></div>
-            <div class="evr-legenda-mapa"><span>Azul: Demanda</span><span class="restricao">Vermelho: Restrição</span><span class="risco">Amarelo: Risco</span></div>
+            <div class="evr-legenda-mapa ev-mapa-simbolos"><span><i class="ev-simbolo-demanda"></i>Limite da demanda</span><span><i class="ev-simbolo-restricao"></i>Interseção com restrição</span><span><i class="ev-simbolo-risco"></i>Interseção com risco</span><span><i class="ev-simbolo-localizador"></i>Localizador: amplie para ver o limite real</span></div>
+            <details class="ev-mapa-contexto"><summary>Superfícies originais de restrição e risco</summary>
+              <p class="ea-hint">Ative as superfícies para conhecer o entorno da demanda. A transparência é independente dos resultados destacados. As fontes atuais podem ter mudado desde a análise; as interseções continuam sendo as gravadas na execução. A visualização das superfícies é recortada à extensão do mapa e simplificada para a escala, sem alterar os arquivos.</p>
+              <div id="ev-resultados-mapa-superficies"></div>
+            </details>
             <p class="ea-hint evr-instrucoes">Selecione uma demanda ou uma área sobreposta para atualizar os detalhes, destacar a tabela e ampliar o mapa.</p>
             <p class="ea-hint evr-instrucoes" id="ev-resultados-nota-mapa" role="status"></p>
           </section>
@@ -199,30 +212,60 @@
                     <div class="evr-metrica"><small>Percentual da Área da Demanda</small><strong id="ev-resultados-percentual"></strong><span>Área sobreposta ÷ área total da demanda</span></div>
                   </div>
                   <p id="ev-resultados-aviso" class="ea-hint"></p>
+                  <div class="evr-feicoes-demanda">
+                    <h4>Feições Intersectadas da Demanda</h4>
+                    <div id="ev-resultados-feicoes-demanda" class="evr-lista-feicoes" aria-label="Feições intersectadas da demanda selecionada"></div>
+                  </div>
                 </div>
                 <figure class="evr-rosca-bloco">
-                  <h4>Todas as Sobreposições da Análise</h4>
-                  <svg id="ev-resultados-rosca" class="evr-rosca" viewBox="0 0 240 240" role="group" aria-label="Distribuição de todas as sobreposições de todas as demandas e camadas"></svg>
+                  <h4>Área de Todas as Demandas e suas Interseções</h4>
+                  <svg id="ev-resultados-rosca" class="evr-rosca" viewBox="0 0 240 240" role="group" aria-label="Todas as demandas pela área total, com interseções sobrepostas à própria fatia" aria-describedby="ev-resultados-nota-rosca"></svg>
+                  <div class="evr-legenda-mapa"><span>Azul: Demanda</span><span class="restricao">Vermelho: Restrição</span><span class="risco">Amarelo: Risco</span></div>
                   <div id="ev-resultados-legenda" class="evr-legenda-classes"></div>
                 </figure>
               </div>
-              <p class="ea-hint">A rosca reúne todas as entradas, demandas e camadas da análise, independentemente da seleção no mapa, da paginação e das linhas ocultas na tabela. Cada fatia representa uma combinação demanda × feição da camada, proporcional à sua área na soma de todas as sobreposições, sem agrupamento por camada ou nome. Áreas coincidentes são contadas separadamente. Contatos sem área permanecem na legenda, sem fatia proporcional. Selecionar uma fatia atualiza os detalhes, a tabela e o mapa, sem retirar as demais fatias.</p>
+              <p class="ea-hint" id="ev-resultados-nota-rosca">Cada fatia azul representa uma demanda pela sua área total, inclusive sem interseção. Sobre essa mesma fatia, cada feição intersectada é desenhada com transparência e hachuras, proporcional à área intersectada dividida pela área da demanda. As interseções partem do mesmo início da fatia e podem coincidir; não são subdivisões exclusivas, não representam sua posição geográfica e não são normalizadas pela soma das sobreposições. Vermelho indica Restrição e amarelo, Risco, como no mapa; as hachuras têm direções distintas para facilitar a leitura das coincidências. Todas as feições e suas áreas, inclusive contatos sem área, podem ser consultadas na lista da demanda selecionada. O gráfico reúne todas as entradas, independentemente dos filtros, da paginação e das linhas ocultas. Selecionar uma demanda ou interseção atualiza o mapa e as tabelas, sem retirar as demais fatias.</p>
             </div>
           </section>
         </div>
-        <section class="secao-elegibilidade-tabela evr-painel">
+        <section class="secao-elegibilidade-tabela evr-painel standard-table-section">
           <header class="evr-titulo"><h3>Quanto Cada Demanda Sobrepõe</h3><span class="ea-hint">Área sobreposta por camada · km² e hectares</span></header>
-          <div class="ea-table-wrap"><table id="ev-resultados-tabela" data-table-sort="off" aria-label="Áreas de Sobreposição por Demanda"></table></div>
-          <div class="evr-controles" role="toolbar" aria-label="Controles da tabela de sobreposições">
-            <button id="ev-resultados-vazias" class="ea-btn ea-icon-button" type="button" title="Ocultar linhas e colunas vazias" aria-label="Ocultar linhas e colunas vazias" aria-pressed="false" aria-controls="ev-resultados-tabela"><i class="fas fa-eye-slash" aria-hidden="true"></i></button>
-            <span id="ev-resultados-visibilidade" class="ea-hint" role="status">Todas as linhas e colunas visíveis.</span>
+          {% set filtro_prefixo = "ev-sobreposicoes-filtro" %}
+          {% set filtro_rotulo = "Filtrar sobreposições por demanda" %}
+          {% include "componentes/filtro_tabela.html" %}
+          <div class="ea-table-wrap admin-table-wrap"><table id="ev-resultados-tabela" class="admin-table" data-table-sort="off" aria-label="Áreas de Sobreposição por Demanda"></table></div>
+          <div class="evr-controles admin-actions" role="toolbar" aria-label="Controles da tabela de sobreposições">
+            <button id="ev-resultados-vazias" class="admin-icon-btn" type="button" title="Ocultar linhas e colunas vazias" aria-label="Ocultar linhas e colunas vazias" aria-pressed="false" aria-controls="ev-resultados-tabela"><i class="fas fa-eye-slash" aria-hidden="true"></i></button>
           </div>
-          <nav class="ev-resultados-paginacao" aria-label="Paginação dos Resultados">
-            <button id="ev-resultados-anterior" class="ea-btn" type="button">Anterior</button>
-            <span id="ev-resultados-pagina" class="ea-hint"></span>
-            <button id="ev-resultados-proxima" class="ea-btn" type="button">Próxima</button>
-          </nav>
+          <div class="admin-table-footer">
+            <nav id="ev-resultados-paginacao" class="ev-resultados-paginacao admin-pagination" aria-label="Paginação dos Resultados">
+              <button id="ev-resultados-anterior" type="button" aria-label="Página anterior">&lt;</button>
+              <span id="ev-resultados-pagina" aria-live="polite"></span>
+              <button id="ev-resultados-proxima" type="button" aria-label="Próxima página">&gt;</button>
+            </nav>
+            <p id="ev-resultados-contagem" class="admin-table-summary" aria-live="polite"></p>
+          </div>
+          <p id="ev-resultados-visibilidade" class="ea-hint evr-instrucoes" role="status">Todas as linhas e colunas visíveis.</p>
           <p class="ea-hint evr-instrucoes">Cada valor soma as áreas sobrepostas às feições da camada. O travessão indica ausência de interseção; zero indica contato sem área. O botão de ocultar vazias considera os valores de sobreposição de todas as páginas, sem contar identificador e nome. Selecione um nome ou um valor para atualizar os detalhes e ampliar o mapa.</p>
+        </section>
+        <section class="secao-elegibilidade-tabela evr-painel standard-table-section" aria-labelledby="ev-resumo-title">
+          <header class="evr-titulo"><h3 id="ev-resumo-title">Resumo por Demanda</h3></header>
+          {% set filtro_prefixo = "ev-resumo-filtro" %}
+          {% set filtro_rotulo = "Filtrar resumo por demanda" %}
+          {% include "componentes/filtro_tabela.html" %}
+          <div class="ea-table-wrap admin-table-wrap"><table id="ev-resultados-tabela-resumo" class="admin-table" data-table-sort="off" aria-label="Resumo das Áreas Intersectadas por Demanda"></table></div>
+          <div class="admin-actions" role="toolbar" aria-label="Controles da tabela resumo">
+            <button class="admin-icon-btn" id="ev-resumo-visualizar" type="button" title="Visualizar demanda" aria-label="Visualizar demanda" disabled><i class="fas fa-eye" aria-hidden="true"></i></button>
+            <button class="admin-icon-btn edit" id="ev-resumo-editar" type="button" title="Editar nome da demanda" aria-label="Editar nome da demanda" disabled><i class="fas fa-pen" aria-hidden="true"></i></button>
+            <button class="admin-icon-btn cancel" id="ev-resumo-cancelar" type="button" title="Cancelar edição" aria-label="Cancelar edição" disabled><i class="fas fa-xmark" aria-hidden="true"></i></button>
+            <button class="admin-icon-btn save" id="ev-resumo-salvar" type="button" title="Salvar nome da demanda" aria-label="Salvar nome da demanda" disabled><i class="fas fa-check" aria-hidden="true"></i></button>
+          </div>
+          <p id="ev-resumo-status" class="ea-hint evr-instrucoes" role="status" aria-live="polite"></p>
+          <div class="admin-table-footer">
+            <nav id="ev-resumo-paginacao" class="admin-pagination" aria-label="Paginação do resumo"></nav>
+            <p id="ev-resumo-contagem" class="admin-table-summary" aria-live="polite"></p>
+          </div>
+          <p class="ea-hint evr-instrucoes">São apresentados os nomes das feições intersectadas de cada categoria, sem repetição. Contatos sem área também são incluídos. A ausência de interseção é indicada explicitamente. Os filtros desta tabela são independentes dos filtros de sobreposição e não alteram o relatório.</p>
         </section>
         <details><summary>Metodologia da Análise</summary><p id="ev-resultados-metodologia" class="ea-hint"></p></details>
       </div>
@@ -235,12 +278,18 @@
   <template id="ev-tpl-run-row"><tr><td data-name></td><td data-source></td></tr></template>
   <template id="ev-tpl-run-empty"><tr><td colspan="2">Nenhuma camada deste grupo marcada na bancada.</td></tr></template>
 </main>
+{% include "componentes/modal/_modal_demandas_do_grupo_hierarquizacoes_realizadas_gestao_das_hierarquizacoes.html" %}
 {% endblock %}
 {% block scripts_pagina %}
 <script src="/assets/js/admin-auth.js"></script>
+<script src="/assets/js/admin-api.js"></script>
+<script src="/assets/js/status-colors.js"></script>
+<script src="/assets/js/objeto-detalhe.js"></script>
+<script src="/restrict/hierarquizacao/js/demandas-grupo.js?v=20261004-1"></script>
 <script src="/assets/vendor/leaflet/leaflet.js"></script>
 <script src="/assets/vendor/maplibre-gl/maplibre-gl.js"></script>
 <script src="/assets/vendor/maplibre-gl/leaflet-maplibre-gl.js"></script>
 <script src="/restrict/hierarquizacao/js/hier-api.js"></script>
-<script type="module" src="/restrict/hierarquizacao/js/fase1-elegibilidade-v2.js?v=20261021-rosca-integral"></script>
+<script src="/assets/js/table-standard.js?v=20261015-fontes-ordem"></script>
+<script type="module" src="/restrict/hierarquizacao/js/fase1-elegibilidade-v2.js?v=20261023-contexto"></script>
 {% endblock %}

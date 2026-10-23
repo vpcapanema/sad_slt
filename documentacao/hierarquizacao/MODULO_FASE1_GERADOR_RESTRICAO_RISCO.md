@@ -198,10 +198,41 @@ inalterada, inclusive quando diferentes feicoes da mesma base se sobrepoem.
    mapa Leaflet e tabela de areas por feicao, com uma coluna
    por base. A tela pagina 50 feicoes; o PDF apresenta todas as demandas,
    bases e feicoes sobrepostas, inclusive suas areas totais e percentuais.
-   Os detalhes e a tabela utilizam km² e hectares; a legenda da rosca explicita
-   as areas em m². O processamento e o GeoPackage mantem m².
-   Nulos sao apresentados como travessao e nao se confundem com zero. A formatacao
-   decimal preserva os valores, inclusive areas positivas inferiores a 0,01 m².
+   Na tela, os detalhes e a tabela utilizam km² com duas casas decimais e
+   hectares com quatro casas decimais. O arredondamento e apenas visual;
+   o processamento e o GeoPackage mantem m², sem alterar o PDF.
+   Nulos sao apresentados como travessao e nao se confundem com zero.
+   Cada tabela de resultados possui conteiner proprio, filtro por coluna e
+   valor, inversao, limpeza, barra de controles e rodape com paginacao e contador.
+   O resumo por demanda apresenta selecao individual, Demanda, Perimetro (m),
+   Area (km²), Area (ha), Restricao e Risco. O perimetro considera todos os
+   contornos da geometria da demanda, inclusive aneis internos e componentes,
+   em copia reprojetada para EPSG:5880, sem uniao nem dissolucao.
+   Perimetro e km² exibem duas casas decimais; hectares, quatro. A area total
+   provem do campo persistido da analise, sem recalculo ou arredondamento na origem.
+   As duas categorias listam os nomes das feicoes intersectadas, sem repetir
+   nomes na mesma celula, incluindo contatos sem area. A ausencia de intersecao
+   e explicitada. Os nomes intersectados aparecem em vermelho escuro para
+   Restricao e amarelo escuro para Risco; ausencias nao recebem essas cores.
+   Os filtros das tabelas sao independentes e nao alteram o
+   mapa, o conjunto da rosca ou o pacote exportado.
+   A barra de filtros conserva o componente e a apresentacao da pagina de
+   Agrupamento de Demandas; a limpeza permanece exclusivamente nessa barra.
+   A barra de controles do resumo oferece visualizar a demanda no modal de
+   objetos, editar o nome inline, cancelar e salvar. Restricao e Risco nao sao
+   editaveis. Para analises vinculadas a uma hierarquizacao, o codigo original
+   da demanda e conferido contra os membros do grupo antes de consultar o
+   cadastro do tipo correspondente (plano, programa ou projeto). A edicao exige
+   permissao de operacao e salva somente o nome no cadastro original pelas
+   rotas cadastrais existentes. O resumo consulta os nomes cadastrais atuais
+   ao reabrir. Feicoes sem vinculo confirmado tambem permitem edicao do nome,
+   identificadas como dados da analise no modal. Nesse caso, grava-se uma revisao
+   por posicao da feicao, vinculada ao usuario, caminho e SHA-256 da saida,
+   na pasta de revisoes da analise. A revisao e reaplicada ao reabrir pelo
+   mesmo usuario e ao regenerar o PDF, constando tambem dos metadados exportados.
+   Nao se deduz vinculo pelo nome nem pelo identificador da feicao. Nenhuma
+   das edicoes modifica as intersecoes ou o GeoPackage original. PDFs ja
+   emitidos nao sao reescritos; cancelar nao grava dados.
 3. O mapa da tela apresenta demandas integrais e recortes do mesmo arquivo de
    saida, sobre mapa-base Leaflet. Selecao no grafico ou na tabela atualiza os
    detalhes, destaca os elementos relacionados e enquadra as geometrias;
@@ -210,18 +241,32 @@ inalterada, inclusive quando diferentes feicoes da mesma base se sobrepoem.
    e amarelos para risco. Nenhum desses mapas classifica elegibilidade.
    Categoria significa Restricao ou Risco; classe significa a propria feicao
    da base, identificada por origem, mesmo quando houver nomes iguais.
-   Uma unica rosca reune todas as sobreposicoes de todas as entradas e demandas
-   da analise. Cada fatia identifica uma combinacao demanda × feicao da base,
-   sem agrupamento por camada ou nome. Selecao de entrada, demanda ou camada,
+   Uma unica rosca reune todas as demandas de todas as entradas da analise,
+   inclusive aquelas sem intersecao. Cada fatia azul representa a area total
+   de uma demanda dividida pela soma das areas totais das demandas, sem agrupar
+   nomes iguais nem eliminar identidades de entradas distintas.
+   Cada feicao intersectada e desenhada sobre a propria fatia da demanda,
+   nos mesmos raios da rosca, com transparencia, hachuras e proporcao igual a
+   area_intersecao / area_total_demanda. As representacoes partem do mesmo
+   inicio do setor, podem coincidir e nao reproduzem sua posicao geografica.
+   Nao se usa segundo anel, empilhamento de parcelas exclusivas nem
+   normalizacao pela soma das intersecoes. Vermelho representa Restricao
+   e amarelo representa Risco, em correspondencia com as cores do mapa;
+   hachuras em direcoes distintas facilitam a leitura das coincidencias.
+   Selecao de entrada, demanda ou camada,
    paginacao e ocultacao de vazias na tabela nao limitam o conjunto do grafico.
-   A legenda identifica entrada, demanda, camada, feicao, area e participacao na
-   soma; selecionar uma fatia de outra entrada atualiza a entrada ativa e os
-   detalhes, a tabela e o mapa. Cada fatia representa sua participacao na soma
-   de todas as areas sobrepostas; nao
-   representa cobertura exclusiva da demanda. O percentual dos detalhes e a
+   O texto visivel da legenda contem apenas o nome da demanda em titlecase.
+   Os detalhes completos de origem e areas permanecem no titulo e no rotulo
+   acessivel de cada item. Uma lista independente apresenta todas as feicoes
+   intersectadas da demanda selecionada, suas camadas, categorias, areas em
+   km² e hectares e percentuais, permitindo selecionar inclusive representacoes
+   coincidentes. Selecionar uma demanda ou intersecao de outra entrada
+   atualiza a entrada ativa, os detalhes, as tabelas e o mapa.
+   O percentual dos detalhes e a
    area sobreposta dividida pela area total da demanda, podendo superar 100%
-   na soma de feicoes. Contatos de area zero aparecem na legenda, sem fatia
-   proporcional. Selecionar uma base destaca suas fatias sem ocultar as demais.
+   na soma de feicoes. Contatos de area zero aparecem na lista da demanda,
+   sem area grafica ficticia. Selecionar uma base destaca suas intersecoes
+   sem ocultar as demais.
 4. O botao final gera um ZIP com relatorio PDF, uma copia binaria de cada
    GeoPackage processado e metadados da analise com os aliases e assinaturas.
    Pastas numeradas evitam colisoes entre arquivos de mesmo nome. O PDF inclui

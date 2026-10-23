@@ -215,6 +215,11 @@
     salvar.disabled = ocupado || !editando;
     cancelar.disabled = ocupado || !editando;
     AtributosObjetos.definirEdicao(!ocupado && editando && atual?.pode_editar);
+    campos.querySelector('.atributos-legenda span').textContent = ocupado
+      ? 'Aguarde — campos temporariamente bloqueados durante a operação.'
+      : editando
+        ? 'Modo de edição — campos com borda azul contínua liberados. Confirme para gravar ou cancele para descartar as alterações.'
+        : 'Modo de consulta — campos cinza com borda tracejada bloqueados. Use Editar atributos para complementar os valores.';
     form.setAttribute('aria-busy', String(ocupado));
     paginarAtributos();
   }

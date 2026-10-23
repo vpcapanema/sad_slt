@@ -405,6 +405,64 @@ class ApresentacaoElegibilidade(ReferenciasResultadosElegibilidade):
 class ArquivoResultadosElegibilidade(BaseModel):
     arquivo: str = Field(min_length=1)
 
+class SuperficieResultadosFavorabilidade(BaseModel):
+    execucao: str = Field(min_length=1)
+    base_id: str = Field(min_length=1)
+
+
+class SuperficieResultadosElegibilidade(SuperficieResultadosFavorabilidade):
+    bounds: list[float] = Field(min_length=4, max_length=4)
+    tolerancia: float = Field(default=0, ge=0, le=.1)
+
+
+@router.post('/elegibilidade/resultados/superficie')
+def superficie_resultados_elegibilidade(payload: SuperficieResultadosElegibilidade,
+                                        user: SessionUser = Depends(require_geospatial_access)):
+    from api.services import elegibilidade_relatorio
+    try:
+        return elegibilidade_relatorio.superficie_elegibilidade(
+            payload.execucao, payload.base_id, user.id, payload.bounds, payload.tolerancia)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc)) from exc
+
+
+@router.post('/favorabilidade/resultados/superficie')
+def superficie_resultados_favorabilidade(payload: SuperficieResultadosFavorabilidade,
+                                         user: SessionUser = Depends(require_geospatial_access)):
+    from api.services import elegibilidade_relatorio
+    try:
+        return elegibilidade_relatorio.superficie_favorabilidade(payload.execucao, payload.base_id, user.id)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc)) from exc
+
+
+class NomeDemandaElegibilidade(BaseModel):
+    execucao: str = Field(min_length=1)
+    chave: str = Field(min_length=1, max_length=20)
+    nome: str = Field(min_length=1, max_length=200)
+
+
+@router.post('/elegibilidade/resultados/demanda/nome')
+def renomear_demanda_elegibilidade(payload: NomeDemandaElegibilidade,
+                                  user: SessionUser = Depends(require_geospatial_access)):
+    from api.services import elegibilidade_relatorio
+    try:
+        return elegibilidade_relatorio.renomear_demanda(payload.execucao, payload.chave, payload.nome, user.id)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc)) from exc
+
 
 @router.post('/elegibilidade/resultados/abrir')
 @router.post('/favorabilidade/resultados/abrir')

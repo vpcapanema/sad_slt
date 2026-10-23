@@ -93,7 +93,43 @@ const assert = require('node:assert/strict');
     assert.equal(await page.locator('[data-atributos-thead] th').count(), 10);
     const legenda = page.locator('#complementacao-campos .atributos-legenda');
     assert.equal(await legenda.count(), 1);
-    assert.equal(await legenda.innerText(), 'Consulte os valores salvos. Use Editar atributos para complementar; confirme para gravar ou cancele para descartar as alterações.');
+    assert.match(await legenda.innerText(), /^Modo de consulta — campos cinza com borda tracejada bloqueados/);
+    assert.equal(await legenda.getAttribute('role'), 'status');
+    const conferirEstadoVisual = async editando => {
+      const estados = await page.locator('[data-atributo-coluna]').evaluateAll(inputs => inputs.filter(input => input.checkVisibility()).map(input => {
+        const estilo = getComputedStyle(input);
+        const rgb = cor => cor.match(/\d+/g).slice(0, 3).map(Number);
+        const luminancia = cor => rgb(cor).map(v => {
+          const c = v / 255;
+          return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+        }).reduce((soma, c, i) => soma + c * [0.2126, 0.7152, 0.0722][i], 0);
+        const contraste = (a, b) => {
+          const valores = [luminancia(a), luminancia(b)].sort((a, b) => b - a);
+          return (valores[0] + 0.05) / (valores[1] + 0.05);
+        };
+        return {
+          disabled: input.disabled, borda: estilo.borderTopStyle, largura: estilo.borderTopWidth,
+          escala: input.currentCSSZoom * devicePixelRatio,
+          fundo: estilo.backgroundColor, opacidade: estilo.opacity,
+          contrasteTexto: contraste(estilo.color, estilo.backgroundColor),
+          contrasteBorda: contraste(estilo.borderTopColor, estilo.backgroundColor),
+        };
+      }));
+      assert.ok(estados.length > 0);
+      for (const estado of estados) {
+        assert.equal(estado.disabled, !editando);
+        assert.equal(estado.borda, editando ? 'solid' : 'dashed');
+        const larguraEsperada = Math.max(1, Math.floor(2 * estado.escala)) / estado.escala;
+        assert.ok(Math.abs(parseFloat(estado.largura) - larguraEsperada) < 0.01, JSON.stringify(estado));
+        assert.equal(estado.fundo, editando ? 'rgb(255, 255, 255)' : 'rgb(226, 232, 240)');
+        assert.equal(estado.opacidade, '1');
+        assert.ok(estado.contrasteTexto >= 4.5, `Contraste do texto: ${estado.contrasteTexto}`);
+        assert.ok(estado.contrasteBorda >= 3, `Contraste da borda: ${estado.contrasteBorda}`);
+      }
+      assert.match(await legenda.innerText(), editando ? /^Modo de edição/ : /^Modo de consulta/);
+    };
+    await conferirEstadoVisual(false);
+    await page.locator('#complementacao-form').screenshot({path: 'outputs/complementacao-atributos-consulta-desktop.png'});
     assert.equal(await legenda.evaluate(el => Boolean(el.compareDocumentPosition(document.querySelector('.atributos-table-shell')) & Node.DOCUMENT_POSITION_FOLLOWING)), true);
     assert.equal(await page.locator('#complementacao-atributos-status').innerText(), '');
     assert.equal(await page.locator('#complementacao-atributos-summary').innerText(), '2 na página / 2 no total');
@@ -147,8 +183,11 @@ const assert = require('node:assert/strict');
         if (!elemento) throw new Error(`Elemento ausente: ${papel}`);
         return [papel, getComputedStyle(elemento).fontSize];
       })), {papeis, indice});
-    const tamanhosReferencia = await tipografia(referencia, 1);
-    assert.deepEqual(await tipografia(page, 0), tamanhosReferencia, 'Hierarquia tipográfica deve coincidir com a Fase 3');
+    const tamanhosReferencia = {
+      ...await tipografia(referencia, 1), secao: '13.3px', secaoCadastral: '13.3px', resumo: '12.7px', criterios: '12.7px',
+    };
+    assert.deepEqual(await tipografia(page, 0), tamanhosReferencia,
+      'Textos compartilhados seguem a Fase 3; títulos mantêm a escala própria da Complementação');
     const zoomCorpo = alvo => alvo.evaluate(() => getComputedStyle(document.body).zoom);
     assert.equal(await zoomCorpo(page), await zoomCorpo(referencia));
     assert.equal(await page.locator('#complementacao-atributos').evaluate(el => getComputedStyle(el).zoom), '1');
@@ -292,6 +331,14 @@ const assert = require('node:assert/strict');
     assert.equal(await campo('custo').isVisible(), true);
     await page.getByRole('button', {name: 'Editar atributos', exact: true}).click();
     assert.equal(await campo('cadastro:capex_estimado').isEnabled(), true);
+    await conferirEstadoVisual(true);
+    await campo('custo').focus();
+    assert.equal(await campo('custo').evaluate(el => {
+      const estilo = getComputedStyle(el), escala = el.currentCSSZoom * devicePixelRatio;
+      return estilo.outlineStyle === 'solid'
+        && Math.abs(parseFloat(estilo.outlineWidth) - Math.max(1, Math.floor(3 * escala)) / escala) < 0.01;
+    }), true);
+    await page.locator('#complementacao-form').screenshot({path: 'outputs/complementacao-atributos-edicao-desktop.png'});
     assert.equal(await campo('custo').getAttribute('inputmode'), 'numeric');
     assert.equal(await campo('distancia').getAttribute('inputmode'), 'decimal');
     assert.equal(await campo('contagem').getAttribute('data-mascara'), 'inteiro');
@@ -332,6 +379,7 @@ const assert = require('node:assert/strict');
     await page.getByRole('button', {name: 'Cancelar edição dos atributos', exact: true}).click();
     await page.getByRole('button', {name: 'Descartar alterações', exact: true}).click();
     await page.waitForFunction(() => document.querySelector('#complementacao-atributos-status').textContent.includes('Edição cancelada'));
+    await conferirEstadoVisual(false);
     assert.equal(await campo('custo').inputValue(), '');
     assert.equal(requests.filter(req => req.method === 'PATCH' && !req.path.endsWith('/cadastro')).length, patchesAntes);
     await page.getByRole('button', {name: 'Editar atributos', exact: true}).click();
@@ -354,6 +402,7 @@ const assert = require('node:assert/strict');
     assert.equal(await page.locator('#complementacao-hierarquizacao').isDisabled(), true);
     await page.waitForFunction(() => document.querySelector('#complementacao-atributos-status').textContent.includes('salva com sucesso'));
     assert.equal(await campo('custo').isDisabled(), true);
+    await conferirEstadoVisual(false);
     const atributos = JSON.parse(requests.find(req => req.path === '/api/complementacao/hierarquizacoes/H1' && req.method === 'PATCH').body).valores;
     assert.deepEqual(atributos, {
       'PRJ-1': {custo: 100, aprovado: true, observacao: 'true', 'cadastro:capex_estimado': 750, 'cadastro:maturidade_objeto': 'Nível 2 — Estudo', percentual: 25.5, contagem: 4567, distancia: null},
@@ -370,6 +419,7 @@ const assert = require('node:assert/strict');
     falharGravacao = true;
     await page.getByRole('button', {name: 'Confirmar atributos', exact: true}).click();
     await page.waitForFunction(() => document.querySelector('#complementacao-atributos-status').textContent.includes('Não foi possível salvar'));
+    await conferirEstadoVisual(true);
     assert.equal(await campo('custo').inputValue(), '200,00');
     assert.equal(await page.getByRole('button', {name: 'Confirmar atributos', exact: true}).isEnabled(), true);
     falharGravacao = false;
@@ -425,6 +475,7 @@ const assert = require('node:assert/strict');
     const tamanhoAtributos = page.locator('#complementacao-atributos-page-size');
     const contador = page.locator('#complementacao-atributos-summary');
     await campo('custo', 'PAG-1').waitFor({state: 'visible'});
+    await conferirEstadoVisual(false);
     assert.equal(await linhasVisiveis.count(), 15);
     assert.equal(await contador.innerText(), '15 na página / 18 no total');
     assert.equal(await paginador.getByRole('button', {name: 'Primeira página', exact: true}).isDisabled(), true);
@@ -435,6 +486,7 @@ const assert = require('node:assert/strict');
     }
     await tamanhoAtributos.selectOption('15');
     await page.getByRole('button', {name: 'Editar atributos', exact: true}).click();
+    await conferirEstadoVisual(true);
     await campo('custo', 'PAG-1').fill('10000');
     await paginador.getByRole('button', {name: 'Última página', exact: true}).click();
     assert.equal(await linhasVisiveis.count(), 3);

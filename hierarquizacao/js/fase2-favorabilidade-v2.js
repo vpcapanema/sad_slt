@@ -5,7 +5,8 @@ import {validarCamada} from '../../geoespacial/extracao-atributos/camada-validad
 import {escolherConfiguracao} from '../../geoespacial/extracao-atributos/lista-camadas.js';
 import {criarPrevia} from '../../geoespacial/extracao-atributos/previa.js?v=20261020-favorabilidade';
 import {criarMapa} from '../../geoespacial/extracao-atributos/mapa.js?v=20261020-favorabilidade';
-import {criarResultados} from './elegibilidade-resultados.js?v=20261021-formatacao';
+import {criarResultados} from './elegibilidade-resultados.js?v=20261023-classes-ordem';
+import {criarConferencia} from './favorabilidade-conferencia.js?v=20261022-tabelas';
 
 const PASTA_SUPERFICIES = 'superficies-indices/hierarquizacao/favorabilidade';
 const papeis = {entrada:'Entrada', grade:'Favorabilidade territorial de grade', rede:'Favorabilidade territorial de rede'};
@@ -17,7 +18,8 @@ const node = id => $(`#fv-${id}`);
 const chave = (papel, camada) => `${papel}:${camada.id}`;
 let hierarquizacao = null;
 let painelObservado = null;
-const resultados = criarResultados({analise:'favorabilidade', avisar,
+const conferencias = Object.fromEntries(Object.keys(papeis).map(papel => [papel, criarConferencia(papel)]));
+const resultados = criarResultados({analise:'favorabilidade', avisar:feedback,
   aoOcupar:busy => { state.busy = busy; controles(); }});
 const mapa = criarMapa(atualizarBancada);
 const observadorPainel = new MutationObserver(atualizarBancada);
@@ -93,6 +95,7 @@ function controles() {
   $('#favorabilidade-app').setAttribute('aria-busy', String(state.busy));
   conferirExecucao();
   resultados.atualizar(state.busy);
+  Object.values(conferencias).forEach(t => t.controles(state.busy));
 }
 function conjuntoExecucao() {
   const visiveis = new Set((mapa.camadas() || []).filter(c => c.visivel).map(c => c.id));
@@ -284,13 +287,8 @@ function atualizarBancada() {
   const presentes = new Map(atuais.map(c => [c.id,c]));
   for (const papel of Object.keys(papeis)) {
     enviados[papel] = enviados[papel].filter(c => presentes.has(c.id));
-    const linhas = enviados[papel].filter(c => presentes.get(c.id).visivel).map(camada => {
-      const linha = node('tpl-run-row').content.cloneNode(true);
-      linha.querySelector('[data-name]').textContent = presentes.get(camada.id).nome;
-      linha.querySelector('[data-source]').textContent = camada.arquivo || camada.id;
-      return linha;
-    });
-    node(`run-${papel}`).replaceChildren(...(linhas.length ? linhas : [node('tpl-run-empty').content.cloneNode(true)]));
+    conferencias[papel].atualizar(enviados[papel].filter(c => presentes.get(c.id).visivel)
+      .map(camada => ({...camada, nome:presentes.get(camada.id).nome})));
   }
   const conhecidos = new Set(Object.values(enviados).flat().map(c => c.id));
   const adicionais = atuais.filter(c => c.visivel && !conhecidos.has(c.id)).length;

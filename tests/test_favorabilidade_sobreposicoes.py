@@ -77,6 +77,8 @@ def test_todas_entradas_demandas_e_feicoes_sem_agrupar_nomes(analise, monkeypatc
         assert a['sobreposicoes'][0]['id'] != b['sobreposicoes'][0]['id']
         assert a['sobreposicoes'][1]['percentual'] == 0
         assert a['sobreposicoes'][0]['favorabilidade']['indice'] == .7
+        assert a['sobreposicoes'][0]['favorabilidade']['indice_original'] == .8
+        assert a['sobreposicoes'][1]['favorabilidade']['indice_original'] == .9
         assert b['sobreposicoes'][0]['favorabilidade']['indice'] == .3
         assert a['sobreposicoes'][0]['favorabilidade']['classe'] == 'Alta'
         assert a['sobreposicoes'][1]['favorabilidade']['indice'] == 0
@@ -256,11 +258,68 @@ def test_campos_ausentes_nao_usam_media_simples_ou_classe_inferida():
         {'fav_rede': .9, 'area_m2': 100, 'classe': 'Alta'}, 'rede',
         {'fav_rede': 'fav_rede', 'classe': 'classe'})
     assert resultado['indice'] is None and resultado['estado_indice'] == 'ausente'
+    assert resultado['indice_original'] == .9 and resultado['estado_original'] == 'valido'
     assert resultado['classe'] is None and resultado['estado_classe'] == 'ausente'
     assert service.cor_favorabilidade(None) == '#808080'
     assert service.cor_favorabilidade(0) == '#440154'
     assert service.cor_favorabilidade(1) == '#fde725'
     assert service.cor_favorabilidade(.3125) == '#35628b'
+
+@pytest.mark.parametrize('valor,estado', [(2.5, 'valido'), (0, 'valido'), (-3, 'valido'),
+                                        (None, 'nulo'), (True, 'invalido'), ('0.4', 'invalido'),
+                                        (float('inf'), 'invalido'), (float('nan'), 'invalido')])
+def test_indice_nao_dimensionado_preserva_escala_original(valor, estado):
+    resultado = service._favorabilidade({'v': valor}, 'grade', {'fav_territorial': 'v'})
+    assert resultado['estado_original'] == estado
+    assert resultado['indice_original'] == (valor if estado == 'valido' else None)
+    assert resultado['indice'] is None
+
+
+def test_base_integral_atual_tem_origem_explicita_e_nao_altera_historico(analise, monkeypatch):
+    frame = gpd.GeoDataFrame({'nome': ['Fora das demandas', 'Outra feição'],
+                             'fav_territorial': [20., 40.], 'fav_territorial_dim': [.1, .9],
+                             'fav_territorial_classe': ['Baixa', 'Alta']},
+                            geometry=[box(5000000, 7000000, 5000100, 7000100),
+                                      box(5000200, 7000200, 5000300, 7000300)], crs=5880)
+    chamadas = []
+    def carregar(ident):
+        chamadas.append(ident)
+        return frame, {}, None
+    monkeypatch.setattr(service.extracao_preparacao, 'carregar', carregar)
+    anteriores = deepcopy(analise)
+    dados = service.superficie_favorabilidade('job-1', 'g', 'autor')
+    assert chamadas == ['g']
+    assert 'atual' in dados['origem'] and dados['consultado_em']
+    feicoes = dados['geometrias']['features']
+    assert len(feicoes) == 2
+    assert feicoes[0]['properties']['favorabilidade']['indice_original'] == 20
+    assert feicoes[0]['properties']['favorabilidade']['indice'] == .1
+    assert feicoes[0]['properties']['nome'] == 'Fora das demandas'
+    assert feicoes[0]['geometry']['coordinates'][0][0][0] != 5000000
+    assert analise == anteriores
+    with pytest.raises(FileNotFoundError):
+        service.superficie_favorabilidade('job-1', 'g', 'outro')
+    with pytest.raises(ValueError, match='não pertence'):
+        service.superficie_favorabilidade('job-1', 'arbitraria', 'autor')
+    assert chamadas == ['g'], 'Fontes não vinculadas jamais são consultadas.'
+
+
+def test_rota_base_integral_restrita_e_falhas_explicitas(analise, monkeypatch):
+    from api.deps.auth import require_geospatial_access
+    from api.routers.extracao_atributos import router
+    app = FastAPI()
+    app.include_router(router)
+    app.dependency_overrides[require_geospatial_access] = lambda: SimpleNamespace(id='autor')
+    def indisponivel(ident):
+        raise FileNotFoundError('Fonte original indisponível.')
+    monkeypatch.setattr(service.extracao_preparacao, 'carregar', indisponivel)
+    with TestClient(app) as client:
+        rota = '/extracao-atributos/favorabilidade/resultados/superficie'
+        assert client.post(rota, json={'execucao':'job-1', 'base_id':'g'}).status_code == 404
+        assert client.post(rota, json={'execucao':'job-1', 'base_id':'outra'}).status_code == 422
+        assert client.post(rota, json={'execucao':'job-1'}).status_code == 422
+        app.dependency_overrides.clear()
+        assert client.post(rota, json={'execucao':'job-1', 'base_id':'g'}).status_code in {401, 403}
 
 
 def test_classe_vazia_nao_e_reclassificada():

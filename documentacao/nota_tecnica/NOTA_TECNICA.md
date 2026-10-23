@@ -18,8 +18,8 @@
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Título**                 | Metodologia do Sistema de Hierarquização de Demandas — SICARD                                                                                                         |
 | **Número**                 | NT-SICARD-001/2026                                                                                                                                                       |
-| **Versão**                 | 1.31                                                                                                                                                                      |
-| **Data de emissão**        | 22/10/2026                                                                                                                                                               |
+| **Versão**                 | 1.40                                                                                                                                                                      |
+| **Data de emissão**        | 23/10/2026                                                                                                                                                               |
 | **Classificação**         | Documento técnico-metodológico de entrega ao cliente                                                                                                                   |
 | **Sistema**                 | SICARD — Sistema Inteligente de Cadastro e Ranking de Demandas                                                                                                        |
 | **Domínio de aplicação** | Logística e transportes. Concebido no âmbito do Plano de Logística Integrada do Estado de São Paulo (PLI-SP), aplica-se a qualquer objeto de demanda desse domínio. |
@@ -65,6 +65,15 @@
 | 1.29    | 21/10/2026 | `[preencher]` | Apresentação dos atributos originais de índice por dimensões e classe de grade e rede nos resultados da Favorabilidade; substituição da rosca por gráfico de pontos por demanda e feição, rampa contínua de 0 a 1 no mapa e relatório por índices e classes, com sinalização de dados ausentes ou inválidos e área restrita à informação técnica complementar. |
 | 1.30    | 21/10/2026 | `[preencher]` | Simplificação e ordenação decrescente das listas de Favorabilidade; substituição da consulta de índices registrados por conjuntos de índices e classes das interseções por demanda, separando grade e rede, com seleção exclusiva de medidas exploratórias de tendência central, dispersão e posição, sem persistência ou alteração dos índices oficiais. |
 | 1.31    | 22/10/2026 | `[preencher]` | Padronização editorial da denominação do SICARD, do termo objeto de demanda e dos nomes das três fases; distinção entre ciclo de vida, fases metodológicas e representações espaciais; preservação dos cálculos, contratos e regras de homologação. |
+| 1.32    | 22/10/2026 | `[preencher]` | Padronização das tabelas de resultados da Elegibilidade, inclusão de resumo nominal das feições de Restrição e Risco por demanda, apresentação de km² com duas casas e hectares com quatro casas decimais e simplificação da legenda visível da rosca, sem alteração dos cálculos ou produtos exportados. |
+| 1.33    | 22/10/2026 | `[preencher]` | Correção da aderência visual das barras de filtros à referência de Agrupamento de Demandas; inclusão de consulta pelo modal de objetos e edição inline exclusiva do nome no cadastro original, mediante vínculo confirmado e permissão de operação, preservando interseções e produtos da análise. |
+| 1.34    | 22/10/2026 | `[preencher]` | Extensão do padrão de tabelas à Favorabilidade: conferência das camadas, índices por feição e conjuntos por demanda com filtros independentes, paginação e contadores; consulta pelo modal de objetos e edição exclusiva do nome cadastral, sem alterar a composição da execução, estatísticas, índices, classes ou produtos geoespaciais. |
+| 1.35    | 23/10/2026 | `[preencher]` | Ampliação do resumo da Elegibilidade com seleção individual, perímetro em metros, áreas totais em km² e hectares e cores nominais de Restrição e Risco; persistência da revisão do nome de demandas sem vínculo cadastral, vinculada ao usuário e à assinatura da saída, com reaplicação na reabertura e nos relatórios regenerados, preservando o GeoPackage original. |
+| 1.36    | 23/10/2026 | `[preencher]` | Alteração da rosca da Elegibilidade para representar todas as demandas pela área total, inclusive sem interseção, com cada feição intersectada sobreposta à própria fatia por transparência e proporção da área da demanda, sem segundo anel, normalização pela soma das interseções ou atribuição de cobertura exclusiva; preservação das áreas e da seleção sincronizada com mapa e tabelas. |
+| 1.37    | 23/10/2026 | `[preencher]` | Apresentação da Favorabilidade com gráficos de barras verticais por superfície, colunas separadas de municípios e rede, conjuntos de valores separados por vírgulas e controles de simbologia para índice original, dimensionado e classes; distinção explícita entre bases integrais atuais e recortes históricos, preservando índices, classes e cálculos da rodada. |
+| 1.38    | 23/10/2026 | `[preencher]` | Individualização das cores das barras de Favorabilidade e inclusão de legendas interativas em grade uniforme, exibindo somente o nome da demanda; alinhamento dos seletores de superfície e simbologia e carregamento automático da camada oficial referenciada pela execução, sem escolha de origem, preservando a identidade das combinações e a escala dos índices. |
+| 1.39    | 23/10/2026 | `[preencher]` | Remoção dos nomes e classes sob as barras de Favorabilidade, mantendo os nomes exclusivamente na legenda, os valores numéricos sobre as barras e a identificação completa nos detalhes e descrições acessíveis, sem alteração dos índices. |
+| 1.40    | 23/10/2026 | `[preencher]` | Substituição das barras de Favorabilidade por intervalos com pontos, com uma linha por demanda identificada somente pelo nome, um ponto por feição e traço entre extremos válidos; cores e legenda por feição, separação visual de pontos próximos e preservação dos índices, das identidades, das ausências e da seleção sincronizada. |
 
 ---
 
@@ -503,28 +512,76 @@ mapa Leaflet e tabela paginada, com seleção sincronizada e
 enquadramento das geometrias selecionadas. Categoria designa Restrição ou Risco;
 classe designa a própria feição da base, identificada por sua origem, sem reunir
 feições distintas apenas por possuírem nomes iguais. Uma única rosca reúne todas
-as entradas, demandas e camadas da análise, sem limitação pela entrada selecionada,
-paginação ou filtros de vazias da tabela. Cada fatia corresponde a uma combinação
-demanda e feição da base, com identidade de origem própria. A legenda explicita
-entrada, demanda, camada, feição, área e participação na soma. A seleção de uma
-fatia atualiza os detalhes e o enquadramento, inclusive em outra entrada, sem
-retirar as demais fatias. As fatias representam a
-distribuição da soma de todas as áreas sobrepostas, e não uma cobertura exclusiva da
-demanda. Nos detalhes, o percentual corresponde à área sobreposta dividida pela
+as entradas e demandas da análise, inclusive sem interseção, sem limitação pela
+entrada selecionada, paginação ou filtros da tabela. Cada fatia azul corresponde
+à área total de uma demanda dividida pela soma das áreas totais de todas as
+demandas, mantendo identidades distintas mesmo quando os nomes são iguais.
+Cada feição intersectada é representada sobre a própria fatia da demanda,
+com os mesmos raios da rosca, transparência e hachuras, proporcionalmente à área da
+interseção dividida pela área total da demanda. As representações partem do mesmo
+início do setor e podem coincidir; não reproduzem a posição geográfica das
+feições, não formam um segundo anel nem parcelas exclusivas e não são normalizadas
+pela soma das interseções. Vermelho indica Restrição e amarelo, Risco,
+em correspondência com o mapa; hachuras em direções distintas facilitam a
+leitura das coincidências. A legenda visível
+apresenta somente o nome da demanda com iniciais maiúsculas; entrada, demanda,
+área total e participação na soma das áreas das demandas permanecem disponíveis
+no título e no rótulo acessível da fatia. As interseções conservam sua origem
+e área nos respectivos títulos e rótulos. A lista da demanda selecionada
+relaciona todas as feições intersectadas, camadas, categorias, áreas e percentuais,
+permitindo consultar inclusive representações coincidentes. A seleção de uma
+demanda ou interseção atualiza os detalhes, as tabelas e o enquadramento,
+inclusive em outra entrada, sem retirar as demais fatias.
+Nos detalhes, o percentual corresponde à área sobreposta dividida pela
 área total da demanda. A soma das áreas de diferentes feições pode superar a
 área da demanda, conforme o operador de agregação adotado.
 
-Nos detalhes e na tabela, as áreas são apresentadas em km², com equivalência em
-hectares; na legenda da rosca, as áreas são explicitadas em m². Os cálculos e os
+Nos detalhes e na tabela da tela, as áreas são apresentadas em km² com duas
+casas decimais, com equivalência em hectares com quatro casas decimais.
+O arredondamento é exclusivamente visual. No título e no rótulo acessível
+dos itens da rosca, as áreas são apresentadas nas mesmas unidades da tela. Os cálculos e os
 campos do GeoPackage permanecem em metros quadrados. O travessão representa nulo,
-distinguindo-se do contato de área zero, apresentado na legenda sem fatia
-proporcional. O PDF inclui todas as demandas, bases e feições sobrepostas, suas
+distinguindo-se do contato de área zero, apresentado na lista da demanda sem
+área gráfica fictícia. O PDF inclui todas as demandas, bases e feições sobrepostas, suas
 áreas e percentuais, além de mapas das demandas e recortes em EPSG:5880, com
 escala e norte, sem mapa-base. Não se atribui classificação de elegibilidade.
 A revisão dos nomes das camadas e feições é recolhida após confirmação e
 persistida no storage, vinculada ao usuário e à assinatura da saída, sem alterar
 o arquivo geoespacial processado. Saídas anteriores sem interseções persistidas
 exigem nova execução para utilização do painel.
+
+Apresenta-se também uma tabela de resumo com seleção individual e as colunas
+Demanda, Perímetro (m), Área (km²), Área (ha), Restrição e Risco.
+O perímetro é calculado sobre uma cópia da geometria em EPSG:5880, considerando
+todos os contornos, inclusive anéis internos e componentes, sem união ou dissolução.
+As áreas totais são lidas do campo persistido da análise. Perímetro e km²
+apresentam duas casas decimais; hectares, quatro, sem arredondamento na origem.
+Cada categoria relaciona os nomes das feições intersectadas, incluindo
+contatos sem área e sem repetir nomes na mesma célula; a ausência de interseção
+é indicada explicitamente. Os nomes são apresentados em vermelho escuro para
+Restrição e amarelo escuro para Risco; ausências não recebem essas cores.
+A deduplicação nominal aplica-se somente a esse
+resumo, sem agregar feições, áreas ou fatias do gráfico. As duas tabelas
+possuem contêineres próprios com filtros independentes, barra de controles,
+paginação e contador. Esses filtros não alteram o mapa, o conjunto da rosca
+ou os produtos exportados, cuja precisão permanece inalterada.
+
+A barra de filtros mantém o padrão de Agrupamento de Demandas, com a limpeza
+restrita a essa barra. No resumo, os controles permitem visualizar a demanda
+no modal de objetos e editar, cancelar ou salvar exclusivamente seu nome.
+Para análises vinculadas à hierarquização, o código cadastral original é
+conferido contra os membros do grupo, sem inferência por nome ou identificador
+da feição. A edição exige permissão de operação e utiliza a rota cadastral
+do tipo correspondente: plano, programa ou projeto. O resumo consulta os nomes
+atuais do cadastro ao reabrir. Feições sem vínculo cadastral confirmado também
+permitem editar o nome e são identificadas como dados da análise no modal.
+Nesse caso, a gravação produz uma revisão por posição da feição, vinculada ao
+usuário, caminho e SHA-256 da saída, na pasta de revisões da análise. O mesmo
+usuário recupera a revisão ao reabrir; os relatórios regenerados utilizam os nomes
+revisados, que também integram os metadados exportados. Não se infere vínculo
+cadastral por coincidência nominal ou de identificador. As categorias de Restrição
+e Risco, as interseções e o GeoPackage original são preservados; PDFs já emitidos
+não são reescritos. O cancelamento não grava alterações.
 
 O controle de download ao final da seção entrega um ZIP com o PDF completo,
 os GeoPackages processados e metadados com aliases e assinaturas de integridade.
@@ -727,27 +784,65 @@ combinação demanda e feição devem concordar nos atributos; divergências ou
 colunas declaradas mas inexistentes impedem a apresentação.
 
 Todas as entradas, demandas e superfícies das saídas concluídas no lote compõem
-uma lista compacta com três colunas: nome da demanda, classe de favorabilidade
-e índice de favorabilidade dimensionada. Cada combinação demanda e feição de
-origem permanece individualizada, inclusive com nomes, classes ou valores iguais;
-a identificação completa é acessível na seleção e descrição de cada linha.
-A lista e a tabela detalhada são ordenadas pelo índice em ordem decrescente,
-antes da paginação. Índices ausentes, nulos, não numéricos ou fora do intervalo
-são sinalizados ao final, sem conversão em zero. Zero válido e contatos sem área
-permanecem identificados. As saídas parciais são indicadas e os dados são lidos dos
+gráficos de intervalos com pontos separados por superfície. Cada demanda ocupa
+uma linha, identificada somente pelo nome, sem anexar códigos ou o nome da entrada.
+A identidade interna considera a entrada e a chave da demanda, preservando
+linhas distintas para demandas homônimas. Cada ponto representa o índice
+dimensionado original de uma feição intersectada na escala horizontal fixa de
+0 a 1. O traço liga o menor ao maior índice válido da demanda, sem calcular média,
+somar, ponderar ou substituir valores. Um único valor não recebe intervalo
+fictício. Pontos próximos são separados verticalmente e ligados ao traço por
+guias, mantendo inalterada sua posição horizontal; essa separação não representa
+outra variável.
+
+As cores categóricas identificam as feições de origem, sem significado de índice
+ou classe. Feições compartilhadas por demandas mantêm a mesma cor e uma única
+entrada de legenda por identidade de feição e superfície; feições homônimas não
+são fundidas. A legenda interativa utiliza células uniformes, quebra de nomes
+longos e adaptação a telas estreitas. Os valores numéricos aparecem junto aos
+pontos; classes e identificação completa permanecem nos detalhes, nos títulos
+de consulta e nas descrições acessíveis. A seleção por ponto, nome da demanda
+ou legenda preserva a correspondência com mapa, detalhes e tabelas. Na legenda,
+prefere-se a combinação da demanda ativa quando a feição estiver presente nela.
+As cores permanecem estáveis durante a seleção.
+
+Zero válido permanece no início do eixo. Ausências e índices inválidos são
+sinalizados na própria linha, sem pontos fictícios nem conversão em zero.
+Demandas sem interseção mantêm uma linha com indicação explícita, sem ponto.
+A rolagem interna permite consultar todas as demandas e o eixo em telas
+estreitas, mantendo nomes e cabeçalho de referência. As linhas seguem a ordem
+das entradas e demandas; a tabela detalhada permanece ordenada pelo índice em
+ordem decrescente antes da paginação. Cada combinação demanda e feição permanece
+individualizada, inclusive com nomes, classes ou valores iguais. Zero válido e
+contatos sem área permanecem identificados. As saídas parciais são indicadas e os dados são lidos dos
 GeoPackages assinados, com conferência dos vínculos e das somas geométricas, sem
 repetir interseções ou alterar os valores dos produtos.
 
 A seção de resultados incorpora mapa interativo, seleção de entrada e superfície,
 detalhamento dos índices e classes e tabela paginada por combinação, sincronizados
-com a lista compacta. A tabela identifica a superfície de favorabilidade, o
-município de origem (feição), o índice dimensionado e a classe de favorabilidade;
+com os gráficos. A tabela identifica a demanda e o município de origem (feição),
+com pares de colunas de índice dimensionado e classe para municípios e rede
+rodoviária. Mantém-se uma linha por feição, com travessão nas colunas da outra
+superfície; não se associam feições municipais e de rede por posição ou nome.
+A superfície permanece identificada nos detalhes e no título de consulta da linha;
 a nomenclatura municipal não reidentifica nem modifica as feições originais.
 Área e percentual da interseção são informação técnica complementar
 nos detalhes, não medidas de favorabilidade. A ocultação de registros sem índice
-e classe mantém zero válido e índices inválidos sinalizados, sem filtrar a lista.
-O mapa utiliza rampa Viridis contínua e linear de 0 a 1 para o índice `_dim` e
-cinza quando não há índice válido, sem reclassificação. Os polígonos são opacos e
+e classe mantém zero válido e índices inválidos sinalizados, sem filtrar os gráficos.
+O mapa permite alternar a superfície e a simbologia entre índice original
+(`fav_territorial` ou `fav_rede`), dimensionado e classes nominais. O dimensionado
+utiliza rampa Viridis contínua de 0 a 1. O original utiliza os extremos válidos
+da superfície consultada e dos recortes históricos apenas para atribuir cores,
+sem alterar os valores. As classes são categóricas, sem inferência por limiares;
+cinza indica valor ausente ou inválido. Os seletores de superfície e simbologia
+permanecem na mesma linha, sem seletor de origem das geometrias.
+As bases integrais são carregadas automaticamente da camada oficial referenciada
+no processamento, mediante análise autorizada, sem escolha de fontes alternativas.
+A referência identifica a camada utilizada, mas não constitui cópia histórica
+do conteúdo integral da fonte. Os recortes preservados na saída destacam a
+combinação selecionada sobre a base, sem modificar os produtos. Falhas de acesso à fonte são explícitas,
+com tentativa de recarga e preservação dos resultados históricos.
+Os polígonos são opacos e
 sem bordas; contatos lineares e pontuais permanecem representados. As geometrias
 são apresentadas sem simplificação.
 A revisão dos nomes das camadas e feições exige confirmação e é persistida por
@@ -764,8 +859,28 @@ Imediatamente abaixo da tabela por feição, a tabela **Índices e Classes Agreg
 por Demanda** substitui nesta página a consulta dos índices oficiais registrados.
 Apresenta conjuntos de índices e classes das interseções da camada de demandas
 selecionada, separando grade e rede. Demandas homônimas não são agrupadas. Os
-valores originais permanecem em ordem decrescente, com repetições; as linhas são
+valores originais permanecem em ordem decrescente, com repetições, separados por
+vírgulas e pela conjunção “e” antes do último valor, inclusive nas classes; as linhas são
 ordenadas pelo maior índice original válido da demanda, com ausências ao final.
+
+As três tabelas de conferência das camadas e as duas tabelas de resultados
+possuem contêineres independentes, com filtros por coluna e valor, inversão e
+limpeza na própria barra de filtros, barra de controles e rodapé com paginação
+de 50 registros e contador, segundo o padrão de Agrupamento de Demandas.
+Os filtros da conferência não alteram as camadas consideradas no cálculo.
+Os filtros das tabelas de resultados são independentes, não limitam o mapa ou a
+lista integral e não mudam o conjunto de interseções utilizado nas estatísticas.
+A alteração da medida estatística reinicia os filtros e a paginação da tabela
+agregada, evitando seleção baseada em valores de uma medida anterior.
+
+Na tabela agregada, os controles permitem visualizar a demanda no modal de
+objetos e editar, cancelar ou salvar exclusivamente seu nome no cadastro
+original. Nas análises vinculadas à hierarquização, o código original é conferido
+contra os membros do grupo e a edição exige permissão de operação. Demandas sem
+vínculo confirmado permanecem somente para consulta. Os nomes cadastrais atuais
+são consultados ao reabrir o resumo, sem modificar o registro da análise no
+GeoPackage ou no PDF. A troca de entrada, os filtros da tabela agregada e os seletores estatísticos
+permanecem bloqueados durante a edição para preservar o rascunho.
 
 Três seletores independentes permitem escolher uma única medida ativa no total:
 tendência central (média aritmética simples, mediana ou moda), dispersão

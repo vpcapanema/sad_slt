@@ -18,11 +18,12 @@ from pyogrio import read_info
 from pyogrio.errors import DataLayerError, DataSourceError
 from reportlab.lib import colors
 from reportlab.platypus import Flowable, PageBreak, Spacer, Paragraph
-from shapely.geometry import Polygon, MultiPolygon, mapping
+from shapely.geometry import Polygon, MultiPolygon, mapping, box
 
 from api.services import elegibilidade_jobs as jobs, storage_remoto, saidas_storage
 from api.services.elegibilidade_processamento import pasta_saida, ANALISES
 from api.services import extracao_atributos_aliases as aliases
+from api.services import extracao_preparacao
 from api.services import extracao_atributos_relatorios as estilo
 from api.services.extracao_atributos_exportacao import registros, texto
 from api.services.extracao_ogr import reproject
@@ -47,8 +48,12 @@ METODOLOGIA = (
     'Não se somam bases diferentes para formar um indicador de elegibilidade. '
     'As áreas são apresentadas em km², com equivalência em hectares e percentual da área da demanda. '
     'A rosca reúne todas as entradas e demandas da análise, sem ser limitada pela seleção ou paginação. '
-    'Cada fatia corresponde a uma combinação demanda e feição da base, identificada por sua origem, não pelo nome. '
-    'As fatias repartem a soma das áreas sobrepostas; não representam cobertura exclusiva da demanda. '
+    'Cada fatia representa a área total de uma demanda na soma das áreas de todas as demandas, inclusive sem interseção. '
+    'Sobre a mesma fatia são desenhadas camadas semitransparentes com hachuras para cada feição intersectada, '
+    'na proporção entre a área da interseção e a área total da demanda, preservando sua identidade de origem. '
+    'As representações partem do mesmo início do setor, não indicam a posição geográfica das feições, '
+    'não constituem parcelas exclusivas nem são normalizadas pela soma das interseções. '
+    'As cores correspondem às categorias do mapa; contatos sem área são consultados na lista da demanda, sem área gráfica fictícia. '
     'Os atributos originais, a área total e os recortes vinculados acompanham as geometrias no mesmo GeoPackage.'
 )
 NOTA_MAPA = ('O mapa do relatório representa as demandas inteiras e suas interseções: vermelho para restrição '
@@ -62,7 +67,9 @@ METODOLOGIA_FAVORABILIDADE = (
     'Os resultados apresentam fav_territorial_dim e fav_territorial_classe para grade e '
     'fav_rede_dim e fav_rede_classe para rede, lidos dos atributos preservados nos fragmentos. '
     'Cada combinação demanda × feição mantém seu índice e sua classe originais, sem soma, média ou ponderação por área. '
-    'O gráfico de pontos utiliza escala fixa de 0 a 1 e reúne todas as combinações das entradas concluídas, '
+    'Os gráficos de intervalos com pontos, separados por superfície, utilizam escala fixa de 0 a 1, com uma linha por demanda, '
+    'identificada somente pelo nome, e um ponto para cada feição intersectada. O traço liga o menor ao maior índice válido, '
+    'sem agregar os valores. As cores identificam as feições de origem na legenda. Reúnem todas as combinações das entradas concluídas, '
     'independentemente da seleção, paginação ou ocultação de vazias. Zero é um índice válido. '
     'Campos ausentes, valores nulos e índices inválidos são sinalizados e não substituídos por área ou zero. '
     'As áreas permanecem apenas como informação técnica complementar da interseção. '
@@ -229,6 +236,57 @@ def salvar_nomes(identificadores: list[str], modelo: dict, dono, *, analise: str
             raise ValueError('A revisão de nomes não foi preservada no storage. Confirme novamente.')
 
 
+def _caminho_nomes_demandas(resultado: dict, dono) -> str:
+    return _caminho_revisao(resultado, dono).removesuffix('.json') + '.demandas.json'
+
+
+def _nome_demanda(nome: str) -> str:
+    nome = nome.strip()
+    if not nome or len(nome) > 200 or re.search(r'[\x00-\x1f\x7f]', nome):
+        raise ValueError('Informe um nome de demanda de até 200 caracteres, sem caracteres de controle.')
+    return nome
+
+
+def _nomes_demandas(resultado: dict, dono) -> dict[str, str]:
+    try:
+        revisao = json.loads(storage_remoto.baixar(_caminho_nomes_demandas(resultado, dono)))
+    except FileNotFoundError:
+        return {}
+    if (not isinstance(revisao, dict) or revisao.get('dono') != str(dono)
+            or revisao.get('sha256') != resultado['sha256'] or not isinstance(revisao.get('nomes'), dict)):
+        raise ValueError('A revisão dos nomes das demandas não corresponde ao proprietário ou à saída atual.')
+    nomes = revisao['nomes']
+    for chave, nome in nomes.items():
+        if (not isinstance(chave, str) or not chave.isascii() or not chave.isdecimal()
+                or str(int(chave)) != chave or not 0 <= int(chave) < resultado['elegibilidade']['feicoes']
+                or not isinstance(nome, str) or _nome_demanda(nome) != nome):
+            raise ValueError('A revisão dos nomes das demandas contém valores inválidos.')
+    return nomes
+
+
+def renomear_demanda(execucao: str, chave: str, nome: str, dono) -> dict:
+    resultado = _selecionar([execucao], dono)[0]
+    frame, _ = _ler(resultado)
+    nome = _nome_demanda(nome)
+    if (not chave.isascii() or not chave.isdecimal() or str(int(chave)) != chave
+            or not 0 <= int(chave) < len(frame)):
+        raise ValueError('Selecione uma demanda existente nesta saída da análise.')
+    nomes = _nomes_demandas(resultado, dono)
+    nomes[chave] = nome
+    dados = json.dumps({'dono': str(dono), 'sha256': resultado['sha256'], 'nomes': nomes,
+                        'atualizado_em': datetime.now(timezone.utc).isoformat()},
+                       ensure_ascii=False).encode('utf-8')
+    caminho = _caminho_nomes_demandas(resultado, dono)
+    storage_remoto.enviar_bytes(caminho, dados)
+    try:
+        confirmacao = storage_remoto.baixar(caminho)
+    except FileNotFoundError as exc:
+        raise RuntimeError('Não foi possível confirmar a gravação do nome da demanda no Storage.') from exc
+    if confirmacao != dados:
+        raise ValueError('O nome da demanda não foi confirmado no Storage. Tente salvar novamente.')
+    return {'execucao': execucao, 'chave': chave, 'nome': nome}
+
+
 def registrar_relatorios(identificadores: list[str], modelo: dict, dono) -> None:
     from api.services.hierarquizacao_service import registrar_saida_geoespacial_fase1
 
@@ -393,6 +451,7 @@ def abrir(arquivo: str, dono, *, analise: str = 'elegibilidade') -> dict:
 
 def _linhas(frame: gpd.GeoDataFrame, auditoria: dict) -> list[dict]:
     nome_coluna = next((c for c in frame.columns if c.lower() in {'nome', 'name', 'denominacao', 'denominação'}), None)
+    codigo_coluna = next((c for c in frame.columns if c.lower() == 'codigo'), None)
     linhas = []
     for registro in registros(frame):
         areas = [registro[c['campo']] for c in auditoria['campos']]
@@ -401,6 +460,7 @@ def _linhas(frame: gpd.GeoDataFrame, auditoria: dict) -> list[dict]:
             raise ValueError('A saída contém um valor de área de sobreposição inválido.')
         linhas.append({'id': texto(registro[auditoria['campo_id']]),
                        'nome': texto(registro[nome_coluna]) if nome_coluna and registro[nome_coluna] else '',
+                       'codigo_demanda': texto(registro[codigo_coluna]) if auditoria.get('hierarquizacao') and codigo_coluna and registro[codigo_coluna] else None,
                        'areas': areas, 'areas_texto': ['—' if v is None else texto(v) for v in areas]})
     return linhas
 
@@ -421,10 +481,85 @@ def _favorabilidade(registro: dict, papel: str, mapa: dict[str, str]) -> dict:
         if estado == 'valido':
             indice = numero
     classe = registro.get(mapa.get(campo_classe))
+    campo_original = campo_indice.removesuffix('_dim')
+    original = registro.get(mapa.get(campo_original))
+    indice_original = None
+    if campo_original not in mapa:
+        estado_original = 'ausente'
+    elif original is None:
+        estado_original = 'nulo'
+    elif isinstance(original, (Real, Decimal)) and not isinstance(original, bool) and math.isfinite(original):
+        estado_original = 'valido'
+        indice_original = float(original)
+    else:
+        estado_original = 'invalido'
     return {'campo_indice': campo_indice, 'campo_classe': campo_classe,
             'indice': indice, 'estado_indice': estado,
+            'campo_original': campo_original, 'indice_original': indice_original,
+            'estado_original': estado_original,
             'classe': classe, 'estado_classe': 'ausente' if campo_classe not in mapa
             else 'nulo' if classe is None or not str(classe).strip() else 'valido'}
+
+def superficie_elegibilidade(identificador: str, base_id: str, dono, bounds: list[float], tolerancia: float = 0) -> dict:
+    resultado = _selecionar([identificador], dono)[0]
+    _ler(resultado)
+    base = next((c for c in resultado['elegibilidade']['campos'] if c['id'] == base_id), None)
+    if base is None:
+        raise ValueError('A superfície não pertence a esta análise.')
+    if (len(bounds) != 4 or not all(math.isfinite(v) for v in bounds)
+            or not -180 <= bounds[0] < bounds[2] <= 180 or not -90 <= bounds[1] < bounds[3] <= 90
+            or not math.isfinite(tolerancia) or not 0 <= tolerancia <= .1):
+        raise ValueError('Extensão ou resolução de visualização inválida.')
+    frame, _, _ = extracao_preparacao.carregar(base_id)
+    if not isinstance(frame, gpd.GeoDataFrame) or frame.crs is None:
+        raise ValueError('A superfície não contém uma camada vetorial com CRS.')
+    frame = reproject(frame, 4326)
+    janela = box(*bounds)
+    frame = frame.loc[frame.geometry.notna() & ~frame.geometry.is_empty]
+    frame = frame.loc[frame.geometry.intersects(janela)]
+    nomes = {str(c).casefold(): c for c in frame.columns if c != frame.geometry.name}
+    campo_nome = next((nomes[c] for c in ('nome', 'name', 'nm_mun', 'denominacao') if c in nomes), None)
+    features = []
+    for pos, (_, linha) in enumerate(frame.iterrows()):
+        geom = linha[frame.geometry.name]
+        if not geom.is_valid:
+            raise ValueError('A superfície atual contém geometria inválida.')
+        geom = geom.intersection(janela).simplify(tolerancia, preserve_topology=True)
+        if geom.is_empty:
+            continue
+        features.append({'type': 'Feature', 'geometry': mapping(geom), 'properties': {
+            'base_id': base_id, 'nome': texto(linha[campo_nome]) if campo_nome else f'Feição {pos + 1}'}})
+    return {'base_id': base_id, 'papel': base['papel'],
+            'origem': 'Fonte original atual; não é uma cópia histórica da rodada. Exibição recortada à vista do mapa.',
+            'consultado_em': datetime.now(timezone.utc).isoformat(),
+            'geometrias': {'type': 'FeatureCollection', 'features': features}}
+
+
+def superficie_favorabilidade(identificador: str, base_id: str, dono) -> dict:
+    resultado = _selecionar([identificador], dono, analise='favorabilidade')[0]
+    _ler(resultado, analise='favorabilidade')
+    base = next((c for c in resultado['favorabilidade']['campos'] if c['id'] == base_id), None)
+    if base is None:
+        raise ValueError('A superfície não pertence a esta análise.')
+    frame, _, _ = extracao_preparacao.carregar(base_id)
+    if not isinstance(frame, gpd.GeoDataFrame) or frame.crs is None:
+        raise ValueError('A fonte atual não contém uma camada vetorial com CRS.')
+    if frame.geometry.isna().any() or frame.geometry.is_empty.any() or not frame.geometry.is_valid.all():
+        raise ValueError('A superfície atual contém geometrias ausentes, vazias ou inválidas.')
+    if not frame.geometry.geom_type.isin(['Polygon', 'MultiPolygon']).all():
+        raise ValueError('A superfície atual deve conter apenas polígonos.')
+    mapa = {str(c).casefold(): c for c in frame.columns if c != frame.geometry.name}
+    campo_nome = next((mapa[c] for c in ('nome', 'name', 'nm_mun', 'municipio') if c in mapa), None)
+    valores = list(registros(frame))
+    geometrias = reproject(frame[[frame.geometry.name]], 4326)
+    return {'base_id': base_id, 'origem': 'Fonte original atual; não é uma cópia histórica da rodada.',
+            'consultado_em': datetime.now(timezone.utc).isoformat(),
+            'geometrias': {'type': 'FeatureCollection', 'features': [
+                {'type': 'Feature', 'geometry': mapping(geom),
+                 'properties': {'base_id': base_id, 'posicao': pos,
+                                'nome': texto(valores[pos][campo_nome]) if campo_nome else f'Feição {pos + 1}',
+                                'favorabilidade': _favorabilidade(valores[pos], base['papel'], mapa)}}
+                for pos, geom in enumerate(geometrias.geometry)]}}
 
 
 def cor_favorabilidade(valor: float | None) -> str:
@@ -455,7 +590,8 @@ def _painel(frame: gpd.GeoDataFrame, dados: bytes, auditoria: dict, nomes: dict[
     if analise == 'favorabilidade':
         for base in auditoria.get('atributos_superficies', []):
             mapa = {nome.casefold(): destino for nome, destino in base['campos'].items()}
-            for original in CAMPOS_FAVORABILIDADE[base['papel']]:
+            for original in (*CAMPOS_FAVORABILIDADE[base['papel']],
+                             CAMPOS_FAVORABILIDADE[base['papel']][0].removesuffix('_dim')):
                 if original in mapa and mapa[original] not in recortes:
                     raise ValueError(f'O atributo preservado {original} não existe na camada de interseções.')
             atributos[base['id']] = mapa
@@ -483,6 +619,7 @@ def _painel(frame: gpd.GeoDataFrame, dados: bytes, auditoria: dict, nomes: dict[
     por_demanda = {}
     for (pos, _), grupo in grupos.items():
         por_demanda.setdefault(pos, []).append(grupo)
+    perimetros = reproject(frame[[frame.geometry.name]], 5880).length if analise == 'elegibilidade' else None
     for pos, linha in enumerate(linhas):
         total = frame.iloc[pos][campo_area]
         if not isinstance(total, (Real, Decimal)) or not math.isfinite(total) or total <= 0:
@@ -496,11 +633,17 @@ def _painel(frame: gpd.GeoDataFrame, dados: bytes, auditoria: dict, nomes: dict[
         for grupo in sobreposicoes:
             grupo['percentual'] = grupo['area_m2'] / total * 100
         linha.update(chave=str(pos), area_total_m2=total, sobreposicoes=sobreposicoes)
+        if perimetros is not None:
+            perimetro = float(perimetros.iloc[pos])
+            if not math.isfinite(perimetro) or perimetro <= 0:
+                raise ValueError('Perímetro da demanda inválido na saída.')
+            linha['perimetro_m'] = perimetro
     if somente_atributos:
         return {}
     geometrias = reproject(frame[[frame.geometry.name]], 4326)
     geometrias_recortes = reproject(recortes, 4326) if len(recortes) else recortes
     return {
+        'hierarquizacao': auditoria.get('hierarquizacao'),
         'geometrias': {'type': 'FeatureCollection', 'features': [
             {'type': 'Feature', 'geometry': mapping(geom), 'properties': {'chave': str(i)}}
             for i, geom in enumerate(geometrias.geometry)]},
@@ -549,6 +692,9 @@ def montar(identificadores: list[str], nomes: dict[str, str], dono, revisados: b
         audit = resultado[analise]
         campos = [{**c, 'nome': nomes[c['id']]} for c in audit['campos']]
         linhas = _linhas(frame, audit)
+        nomes_demandas = _nomes_demandas(resultado, dono) if analise == 'elegibilidade' else {}
+        for chave, nome in nomes_demandas.items():
+            linhas[int(chave)]['nome'] = nome
         ocorrencias = [any(v is not None for v in linha['areas']) for linha in linhas]
         painel = _painel(frame, conteudo, audit, nomes, linhas, analise=analise)
         entrada = {'id': resultado['execucao_id'], 'nome': nomes[audit['entrada']['id']],
@@ -558,6 +704,8 @@ def montar(identificadores: list[str], nomes: dict[str, str], dono, revisados: b
                    'mapa': _mapa(frame, ocorrencias, painel['intersecoes'], {c['id']: c['papel'] for c in campos},
                                  analise=analise),
                    **painel}
+        if nomes_demandas:
+            entrada['nomes_demandas_revisados'] = nomes_demandas
         modelo['entradas'].append(entrada)
         # Pastas numeradas conservam os nomes originais mesmo quando duas entradas têm o mesmo nome de arquivo.
         arquivos.append((f'Camadas/{indice:02d}/{PurePosixPath(resultado["arquivo"]).name}', conteudo))
