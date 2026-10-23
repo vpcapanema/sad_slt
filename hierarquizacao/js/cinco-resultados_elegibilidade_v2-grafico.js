@@ -1,8 +1,8 @@
 import {el} from '../../geoespacial/extracao-atributos/ui.js';
 import {conclusaoSobreposicao} from './elegibilidade-conclusao.js?v=1';
 import {
-  SITUACOES, ORDEM_SITUACOES, ROTULOS, formatarHa, formatarPercentual, ordenarDemandas, descreverSituacao, indicadores, porAreaDecrescente,
-} from './cinco-resultados_elegibilidade_v2-dados.js?v=zoom-ordem';
+  nomeSobreposicao, SITUACOES, ORDEM_SITUACOES, ROTULOS, formatarHa, formatarPercentual, ordenarDemandas, descreverSituacao, indicadores, porAreaDecrescente,
+} from './cinco-resultados_elegibilidade_v2-dados.js?v=trechos-cores';
 
 /** Cards de situação (filtram ao clicar) e lista de demandas com a resposta em palavras. */
 export function criarGrafico({cards, lista, aoSelecionar, aoFiltrar}) {
@@ -38,9 +38,10 @@ export function criarGrafico({cards, lista, aoSelecionar, aoFiltrar}) {
     for (const item of encontrados) {
       const botao = el('button', undefined, `ev2-feicao ${item.papel}`);
       botao.type = 'button'; botao.dataset.feicao = item.id;
+      botao.style.borderLeft = `4px solid ${item.cor}`;
       botao.setAttribute('aria-pressed', String(selecao.feicao === item.id));
       const nome = el('span', undefined, 'ev2-feicao-nome');
-      nome.append(el('strong', `${item.numero_poligono ? `${item.area_m2 > 0 ? 'Polígono' : 'Contato'} ${item.numero_poligono} · ` : ''}${item.nome}`), el('small', `${ROTULOS[item.papel]} · Camada consultada: ${item.camada}`));
+      nome.append(el('strong', nomeSobreposicao(item)), el('small', `${ROTULOS[item.papel]} · Camada consultada: ${item.camada}`));
       const detalhe = el('span', undefined, 'ev2-feicao-valor');
       detalhe.append(conclusaoSobreposicao(d, item, {nome:item.camada}, item.atributosConsultados));
       botao.append(nome, detalhe);

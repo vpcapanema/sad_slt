@@ -1,8 +1,7 @@
 import {el} from '../../geoespacial/extracao-atributos/ui.js';
-import {ROTULOS, formatarHa, formatarPercentual} from './cinco-resultados_elegibilidade_v2-dados.js?v=zoom-ordem';
+import {nomeSobreposicao, ROTULOS, formatarHa, formatarPercentual} from './cinco-resultados_elegibilidade_v2-dados.js?v=trechos-cores';
 
 const ns = 'http://www.w3.org/2000/svg';
-const CORES_ARCO = {restricao: '#b42335', risco: '#c18b00'};
 const ANEL = {livre: '#d6f0df', padrao: '#dbe6ee'};
 let sequencia = 0;
 
@@ -46,10 +45,11 @@ export function criarRosca({container, aoSelecionar}) {
         'aria-label': `Área da demanda ${ficha.nome} e das áreas atingidas por restrição e risco`});
       const defs = svgNode('defs'), padroes = new Map();
       svg.append(defs);
-      const padrao = (papel, ativo) => {
-        const chave = `${papel}-${ativo}`;
+      const padrao = (item, ativo) => {
+        const papel = item.papel;
+        const chave = `${item.id}-${ativo}`;
         if (!padroes.has(chave)) {
-          const id = `${prefixo}-${padroes.size}`, cor = CORES_ARCO[papel];
+          const id = `${prefixo}-${padroes.size}`, cor = item.cor;
           const pattern = svgNode('pattern', {id, width: 6, height: 6, patternUnits: 'userSpaceOnUse',
             patternTransform: `rotate(${papel === 'restricao' ? 45 : -45})`});
           pattern.append(svgNode('rect', {width: 6, height: 6, fill: cor, 'fill-opacity': ativo ? .45 : .22}),
@@ -64,13 +64,13 @@ export function criarRosca({container, aoSelecionar}) {
         const ativo = selecao.feicao === item.id;
         const angulo = Math.min(2 * Math.PI, item.area_m2 / ficha.total * 2 * Math.PI);
         const caminho = svgNode('path', {
-          d: setor(0, angulo), fill: `url(#${padrao(item.papel, ativo)})`, stroke: ativo ? '#003b5a' : CORES_ARCO[item.papel],
+          d: setor(0, angulo), fill: `url(#${padrao(item, ativo)})`, stroke: ativo ? '#003b5a' : item.cor,
           'stroke-width': ativo ? 2 : .8, class: `ev2-arco${selecao.feicao && !ativo ? ' esmaecido' : ''}`,
           role: 'button', tabindex: 0, 'aria-pressed': ativo,
-          'aria-label': `${item.numero_poligono ? `Polígono ${item.numero_poligono}. ` : ''}A demanda ${ficha.nome} sobrepõe-se a ${item.nome} em ${formatarPercentual(item.percentual)} de sua área total.`,
+          'aria-label': `${nomeSobreposicao(item)}. A demanda ${ficha.nome} sobrepõe-se a ${item.nome} em ${formatarPercentual(item.percentual)} de sua área total.`,
         });
         caminho.dataset.feicao = item.id;
-        caminho.append(svgNode('title', {}, `${item.numero_poligono ? `Polígono ${item.numero_poligono}. ` : ''}A demanda ${ficha.nome} sobrepõe-se a ${item.nome} em ${formatarPercentual(item.percentual)} de sua área total.`));
+        caminho.append(svgNode('title', {}, `${nomeSobreposicao(item)}. A demanda ${ficha.nome} sobrepõe-se a ${item.nome} em ${formatarPercentual(item.percentual)} de sua área total.`));
         const escolher = () => aoSelecionar({chave: ficha.chave, base: item.base_id, feicao: item.id});
         caminho.onclick = escolher;
         caminho.onkeydown = event => { if (['Enter', ' '].includes(event.key)) { event.preventDefault(); escolher(); } };
@@ -84,13 +84,14 @@ export function criarRosca({container, aoSelecionar}) {
       figura.append(svg, centro);
 
       const legenda = el('div', undefined, 'ev2-rosca-legenda');
-      const contagem = papel => ficha.cats[papel].n;
       legenda.append(el('strong', ficha.nome),
         el('span', 'Anel inteiro: área total da demanda.', 'ev2-leg-demanda'),
-        ...['restricao', 'risco'].sort((a, b) =>
-          Math.max(0, ...ficha.cats[b].feicoes.map(i => i.area_m2 || 0)) - Math.max(0, ...ficha.cats[a].feicoes.map(i => i.area_m2 || 0)))
-          .map(p => el('span', `Arco ${p === 'restricao' ? 'vermelho' : 'amarelo'} hachurado: polígono de ${p === 'restricao' ? 'restrição' : 'risco'} (${contagem(p)}).`, `ev2-leg-${p}`)),
-        el('small', 'Cada arco é a área atingida por um polígono, em relação à área da demanda. Os arcos partem do mesmo ponto e podem coincidir. Selecione um arco para vê-lo no mapa com seus atributos.', 'ev2-secundario'));
+        el('small', 'Cada cor identifica um trecho de sobreposição, com a mesma cor no mapa e na lista. Os arcos partem do mesmo ponto e podem coincidir.', 'ev2-secundario'));
+      for (const item of desenhaveis) {
+        const rotulo = el('span', `${nomeSobreposicao(item)} · ${ROTULOS[item.papel]} · ${formatarHa(item.area_m2)} ha`);
+        rotulo.style.borderLeft = `4px solid ${item.cor}`; rotulo.style.paddingLeft = '8px';
+        legenda.append(rotulo);
+      }
       if (itens.some(i => i.area_m2 === 0)) {
         legenda.append(el('small', 'Polígonos que apenas tocam o limite da demanda não têm área e aparecem só na lista.', 'ev2-secundario'));
       }
@@ -100,7 +101,7 @@ export function criarRosca({container, aoSelecionar}) {
         botao.type = 'button'; botao.setAttribute('aria-expanded', String(ampliado));
         botao.onclick = () => { ampliado = !ampliado; api.renderizar(ultimo); };
         legenda.append(botao);
-        if (desenhaveis.some(i => i.percentual < 2)) legenda.append(el('small', 'Há fatias pequenas. Amplie para comparar e selecionar cada polígono.', 'ev2-secundario'));
+        if (desenhaveis.some(i => i.percentual < 2)) legenda.append(el('small', 'Há fatias pequenas. Amplie para comparar e selecionar cada trecho de sobreposição.', 'ev2-secundario'));
         if (ampliado) {
           const detalhe = el('div', undefined, 'ev2-ampliacao');
           const maximo = desenhaveis[0].area_m2;
@@ -110,10 +111,10 @@ export function criarRosca({container, aoSelecionar}) {
             const linha = el('button', undefined, `ev2-ampliacao-item ${item.papel}`);
             linha.type = 'button'; linha.dataset.feicao = item.id;
             linha.setAttribute('aria-pressed', String(selecao.feicao === item.id));
-            const nome = `${item.numero_poligono ? `Polígono ${item.numero_poligono} · ` : ''}${item.nome}`;
+            const nome = nomeSobreposicao(item);
             linha.append(el('strong', nome), el('strong', `${formatarHa(item.area_m2)} ha · ${formatarPercentual(item.percentual)}`));
             const trilho = el('span', undefined, 'ev2-ampliacao-trilho'), barra = el('i');
-            barra.style.width = `${item.area_m2 / maximo * 100}%`; barra.style.backgroundColor = CORES_ARCO[item.papel];
+            barra.style.width = `${item.area_m2 / maximo * 100}%`; barra.style.backgroundColor = item.cor;
             trilho.append(barra); linha.append(trilho);
             linha.onclick = () => aoSelecionar({chave: ficha.chave, base: item.base_id, feicao: item.id});
             detalhe.append(linha);

@@ -1,6 +1,20 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {porAreaDecrescente, ordenarDemandas, registrosDetalhados} from '../hierarquizacao/js/cinco-resultados_elegibilidade_v2-dados.js';
+import {porAreaDecrescente, ordenarDemandas, registrosDetalhados, caracterizarDemandas, COR_DEMANDA, nomeSobreposicao} from '../hierarquizacao/js/cinco-resultados_elegibilidade_v2-dados.js';
+
+test('trechos mantêm cores próprias nas fichas, categorias e tabela, sem alterar a fonte', () => {
+  const entrada = {campos: [{id: 'base', nome: 'Base'}], linhas: [{chave: 'a', nome: 'Demanda',
+    poligonos_sobreposicao: Array.from({length: 20}, (_, i) => ({id: String(i), papel: 'risco',
+      base_id: 'base', nome: 'Bem tombado', numero_poligono: i + 1, area_m2: 20 - i}))}]};
+  const fichas = caracterizarDemandas(entrada);
+  const cores = fichas[0].linha.sobreposicoes.map(s => s.cor);
+  assert.equal(new Set(cores).size, 20);
+  assert(!cores.includes(COR_DEMANDA));
+  assert.deepEqual(fichas[0].cats.risco.feicoes.map(s => s.cor), cores);
+  assert.deepEqual(registrosDetalhados(fichas, entrada).map(s => s.cor), cores);
+  assert.equal(entrada.linhas[0].poligonos_sobreposicao[0].cor, undefined);
+  assert.equal(nomeSobreposicao(fichas[0].linha.sobreposicoes[0]), 'Bem tombado · trecho de sobreposição 1');
+});
 
 test('áreas decrescentes, zero antes de valores vazios', () => {
   const valores = [null, 0, 8, undefined, 2, NaN];

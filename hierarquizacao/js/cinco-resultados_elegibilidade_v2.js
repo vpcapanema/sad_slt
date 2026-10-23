@@ -3,13 +3,13 @@ import {el} from '../../geoespacial/extracao-atributos/ui.js';
 import {conclusaoSobreposicao} from './elegibilidade-conclusao.js?v=1';
 import {escolherArquivo} from '../../geoespacial/extracao-atributos/explorador.js?v=20261020-saidas';
 import {
-  CATEGORIAS, ROTULOS, FILTROS, ORDENS, SELECAO_VAZIA, caracterizarDemandas, demandasVisiveis, descreverSituacao,
+  nomeSobreposicao, CATEGORIAS, ROTULOS, FILTROS, ORDENS, SELECAO_VAZIA, caracterizarDemandas, demandasVisiveis, descreverSituacao,
   registrosDetalhados, registrosVisiveis, alternarSelecao, formatarHa, formatarPercentual,
-} from './cinco-resultados_elegibilidade_v2-dados.js?v=zoom-ordem';
-import {criarGrafico} from './cinco-resultados_elegibilidade_v2-grafico.js?v=zoom-ordem';
-import {criarRosca} from './cinco-resultados_elegibilidade_v2-rosca.js?v=zoom-ordem';
-import {criarMapa} from './cinco-resultados_elegibilidade_v2-mapa.js?v=zoom-ordem';
-import {criarTabela} from './cinco-resultados_elegibilidade_v2-tabela.js?v=zoom-ordem';
+} from './cinco-resultados_elegibilidade_v2-dados.js?v=trechos-cores';
+import {criarGrafico} from './cinco-resultados_elegibilidade_v2-grafico.js?v=trechos-cores';
+import {criarRosca} from './cinco-resultados_elegibilidade_v2-rosca.js?v=trechos-cores';
+import {criarMapa} from './cinco-resultados_elegibilidade_v2-mapa.js?v=trechos-cores';
+import {criarTabela} from './cinco-resultados_elegibilidade_v2-tabela.js?v=trechos-cores';
 
 const ROTA = '/extracao-atributos/elegibilidade/resultados';
 const PAPEIS = {entrada: 'Entrada', restricao: 'Restrição', risco: 'Risco'};
@@ -85,7 +85,7 @@ export function criarResultados({avisar, aoOcupar}) {
   let popupAtual = '', sequenciaPopup = 0;
   function montarPopup(d, item, camada, estado) {
     const caixa = el('div', undefined, 'ev2-popup-conteudo');
-    if (item.numero_poligono) caixa.append(el('strong', `${item.area_m2 > 0 ? 'Polígono' : 'Contato'} ${item.numero_poligono}`));
+    if (item.numero_poligono) caixa.append(el('strong', nomeSobreposicao(item)));
     caixa.append(conclusaoSobreposicao(d, item, camada, estado.dados));
     if (!estado.dados) {
       caixa.append(el('span', estado.erro || 'Carregando atributos…', estado.erro ? 'ev2-popup-erro' : 'ev2-secundario'));

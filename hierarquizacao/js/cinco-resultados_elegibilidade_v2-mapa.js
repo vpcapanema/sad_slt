@@ -1,6 +1,6 @@
 import {el} from '../../geoespacial/extracao-atributos/ui.js';
 import {controleCamadas} from './elegibilidade-controle-camadas.js?v=1';
-import {CORES, CORES_SITUACAO, SITUACOES, ROTULOS, formatarPercentual} from './cinco-resultados_elegibilidade_v2-dados.js?v=zoom-ordem';
+import {nomeSobreposicao, COR_DEMANDA, SITUACOES, ROTULOS, formatarPercentual} from './cinco-resultados_elegibilidade_v2-dados.js?v=trechos-cores';
 
 const TOPO = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}';
 const SATELITE = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
@@ -10,7 +10,7 @@ export function criarMapa({container, nota, aoSelecionar}) {
   let mapa = null, observador = null, ctx = null;
   let removerControle = null;
   let demandas = new Map(), situacoes = new Map(), recortes = [], marcadores = new Map(), grupoRecortes, localizadores, fundo, satelite;
-  const corDe = chave => CORES_SITUACAO[situacoes.get(chave)];
+  const corDe = () => COR_DEMANDA;
 
   const limitesDe = camadas => {
     const grupo = window.L.featureGroup(camadas);
@@ -43,7 +43,7 @@ export function criarMapa({container, nota, aoSelecionar}) {
     destruir();
     const L = window.L;
     if (!L) throw new Error('O mapa Leaflet não foi carregado. Recarregue a página.');
-    nota.textContent = '';
+    nota.textContent = 'Contorno azul-escuro tracejado: demanda. Cada cor identifica um trecho de sobreposição e se repete no gráfico e na lista.';
     mapa = L.map(container, {scrollWheelZoom: false});
     for (const [nome, z] of [['ev2-superficies', 350], ['ev2-demandas', 420], ['ev2-recortes', 440], ['ev2-localizadores', 460]]) mapa.createPane(nome).style.zIndex = z;
     fundo = L.tileLayer(TOPO, {maxZoom: 19, attribution: 'Tiles © Esri'}).addTo(mapa);
@@ -65,7 +65,7 @@ export function criarMapa({container, nota, aoSelecionar}) {
       const cor = corDe(chave);
       const camada = L.geoJSON(feature, {
         smoothFactor: 0, pane: 'ev2-demandas',
-        style: {color: cor, weight: 2, fillColor: cor, fillOpacity: .08},
+        style: {color: cor, weight: 2, dashArray: '8 5', fillColor: cor, fillOpacity: .04},
         pointToLayer: (_, latlng) => L.circleMarker(latlng, {pane: 'ev2-demandas', radius: 6, color: cor, fillColor: cor, fillOpacity: .5}),
       }).addTo(grupoDemandas);
       camada.bindTooltip(el('span', `${ficha.nome} · ${SITUACOES[ficha.situacao]}`), {sticky: true});
@@ -80,17 +80,17 @@ export function criarMapa({container, nota, aoSelecionar}) {
       const p = feature.properties, base = bases.get(p.base_id);
       const id = p.poligono_id ?? p.feicao_id;
       const ficha = fichaPorChave.get(p.chave), item = ficha.linha.sobreposicoes.find(s => s.id === id);
-      const cor = CORES[base.papel];
+      const cor = item.cor;
       const camada = L.geoJSON(feature, {
         smoothFactor: 0, pane: 'ev2-recortes', style: {color: cor, fillColor: cor, weight: 1, fillOpacity: .4},
         pointToLayer: (_, latlng) => L.circleMarker(latlng, {pane: 'ev2-recortes', radius: 5, color: cor, fillColor: cor}),
       });
-      camada.bindTooltip(el('span', `${ficha.nome} · ${item.numero_poligono ? `${item.area_m2 > 0 ? 'Polígono' : 'Contato'} ${item.numero_poligono} · ` : ''}${ROTULOS[base.papel]}: ${item.nome} (camada ${base.nome}) · sobreposição de ${formatarPercentual(item.percentual)} da área da demanda`), {sticky: true});
+      camada.bindTooltip(el('span', `${ficha.nome} · ${ROTULOS[base.papel]}: ${nomeSobreposicao(item)} (camada ${base.nome}) · sobreposição de ${formatarPercentual(item.percentual)} da área da demanda`), {sticky: true});
       camada.on('click', event => {
         window.L.DomEvent.stopPropagation(event);
         aoSelecionar({chave: p.chave, base: p.base_id, feicao: id});
       });
-      recortes.push({chave: p.chave, base: p.base_id, feicao: id, papel: base.papel, camada});
+      recortes.push({chave: p.chave, base: p.base_id, feicao: id, papel: base.papel, cor, camada});
     }
     mapa.on('moveend', posicionarLocalizadores);
     observador = new ResizeObserver(() => mapa?.invalidateSize({pan: false}));
@@ -105,7 +105,7 @@ export function criarMapa({container, nota, aoSelecionar}) {
     const {selecao, visiveis, categorias} = ctx, temSelecao = Boolean(selecao.chave);
     for (const [chave, camada] of demandas) {
       const ativa = chave === selecao.chave, cor = corDe(chave);
-      camada.setStyle(ativa ? {color: cor, weight: 5, opacity: 1, fillOpacity: .22}
+      camada.setStyle(ativa ? {color: cor, weight: 4, dashArray: '8 5', opacity: 1, fillOpacity: .04}
         : visiveis.has(chave) ? {color: cor, weight: 2, opacity: temSelecao ? .5 : 1, fillOpacity: temSelecao ? .04 : .08}
           : {color: '#a7b4bd', weight: 1, opacity: .35, fillOpacity: 0});
     }
@@ -115,7 +115,7 @@ export function criarMapa({container, nota, aoSelecionar}) {
       if (!grupoRecortes.hasLayer(r.camada)) grupoRecortes.addLayer(r.camada);
       const destaque = r.chave === selecao.chave && (!selecao.feicao || r.feicao === selecao.feicao);
       r.camada.setStyle({
-        color: CORES[r.papel], fillColor: CORES[r.papel], weight: destaque ? 3 : 1,
+        color: r.cor, fillColor: r.cor, weight: destaque ? 3 : 1,
         opacity: destaque ? 1 : temSelecao ? .35 : .85, fillOpacity: destaque ? .75 : temSelecao ? .12 : .4,
       });
       if (destaque && temSelecao) r.camada.bringToFront();
