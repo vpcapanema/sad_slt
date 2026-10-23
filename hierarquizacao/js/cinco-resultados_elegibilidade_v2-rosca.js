@@ -1,10 +1,9 @@
 import {el} from '../../geoespacial/extracao-atributos/ui.js';
-import {ROTULOS, formatarHa, formatarPercentual} from './cinco-resultados_elegibilidade_v2-dados.js?v=hectares-camadas';
+import {ROTULOS, formatarHa, formatarPercentual} from './cinco-resultados_elegibilidade_v2-dados.js?v=zoom-ordem';
 
 const ns = 'http://www.w3.org/2000/svg';
 const CORES_ARCO = {restricao: '#b42335', risco: '#c18b00'};
 const ANEL = {livre: '#d6f0df', padrao: '#dbe6ee'};
-const MINIMO = .02;
 let sequencia = 0;
 
 const svgNode = (tag, atributos = {}, texto) => {
@@ -33,8 +32,11 @@ function setor(inicio, fim, externo = 103, interno = 65) {
  * e podem coincidir; os menores ficam por cima para continuarem selecionáveis.
  */
 export function criarRosca({container, aoSelecionar}) {
-  return {
+  let ampliado = false, demandaAtual = '', ultimo;
+  const api = {
     renderizar({ficha, selecao, categorias}) {
+      ultimo = {ficha, selecao, categorias};
+      if (ficha?.chave !== demandaAtual) { ampliado = false; demandaAtual = ficha?.chave; }
       if (!ficha) { container.hidden = true; container.replaceChildren(); return; }
       container.hidden = false;
       const prefixo = `ev2-rosca-${++sequencia}`;
@@ -60,7 +62,7 @@ export function criarRosca({container, aoSelecionar}) {
         class: 'ev2-rosca-anel'}, undefined));
       for (const item of desenhaveis) {
         const ativo = selecao.feicao === item.id;
-        const angulo = Math.min(2 * Math.PI, Math.max(MINIMO, item.area_m2 / ficha.total * 2 * Math.PI));
+        const angulo = Math.min(2 * Math.PI, item.area_m2 / ficha.total * 2 * Math.PI);
         const caminho = svgNode('path', {
           d: setor(0, angulo), fill: `url(#${padrao(item.papel, ativo)})`, stroke: ativo ? '#003b5a' : CORES_ARCO[item.papel],
           'stroke-width': ativo ? 2 : .8, class: `ev2-arco${selecao.feicao && !ativo ? ' esmaecido' : ''}`,
@@ -85,13 +87,41 @@ export function criarRosca({container, aoSelecionar}) {
       const contagem = papel => ficha.cats[papel].n;
       legenda.append(el('strong', ficha.nome),
         el('span', 'Anel inteiro: área total da demanda.', 'ev2-leg-demanda'),
-        el('span', `Arco vermelho hachurado: polígono de restrição (${contagem('restricao')}).`, 'ev2-leg-restricao'),
-        el('span', `Arco amarelo hachurado: polígono de risco (${contagem('risco')}).`, 'ev2-leg-risco'),
+        ...['restricao', 'risco'].sort((a, b) =>
+          Math.max(0, ...ficha.cats[b].feicoes.map(i => i.area_m2 || 0)) - Math.max(0, ...ficha.cats[a].feicoes.map(i => i.area_m2 || 0)))
+          .map(p => el('span', `Arco ${p === 'restricao' ? 'vermelho' : 'amarelo'} hachurado: polígono de ${p === 'restricao' ? 'restrição' : 'risco'} (${contagem(p)}).`, `ev2-leg-${p}`)),
         el('small', 'Cada arco é a área atingida por um polígono, em relação à área da demanda. Os arcos partem do mesmo ponto e podem coincidir. Selecione um arco para vê-lo no mapa com seus atributos.', 'ev2-secundario'));
       if (itens.some(i => i.area_m2 === 0)) {
         legenda.append(el('small', 'Polígonos que apenas tocam o limite da demanda não têm área e aparecem só na lista.', 'ev2-secundario'));
       }
       container.replaceChildren(figura, legenda);
+      if (desenhaveis.length) {
+        const botao = el('button', ampliado ? 'Fechar ampliação' : 'Ampliar sobreposições', 'ea-btn ev2-ampliar');
+        botao.type = 'button'; botao.setAttribute('aria-expanded', String(ampliado));
+        botao.onclick = () => { ampliado = !ampliado; api.renderizar(ultimo); };
+        legenda.append(botao);
+        if (desenhaveis.some(i => i.percentual < 2)) legenda.append(el('small', 'Há fatias pequenas. Amplie para comparar e selecionar cada polígono.', 'ev2-secundario'));
+        if (ampliado) {
+          const detalhe = el('div', undefined, 'ev2-ampliacao');
+          const maximo = desenhaveis[0].area_m2;
+          detalhe.append(el('strong', 'Sobreposições ampliadas — maior para menor'),
+            el('small', `Escala das barras: 0 a ${formatarHa(maximo)} ha (${formatarPercentual(desenhaveis[0].percentual)} da demanda). Os percentuais continuam relativos à área total da demanda.`, 'ev2-secundario'));
+          for (const item of desenhaveis) {
+            const linha = el('button', undefined, `ev2-ampliacao-item ${item.papel}`);
+            linha.type = 'button'; linha.dataset.feicao = item.id;
+            linha.setAttribute('aria-pressed', String(selecao.feicao === item.id));
+            const nome = `${item.numero_poligono ? `Polígono ${item.numero_poligono} · ` : ''}${item.nome}`;
+            linha.append(el('strong', nome), el('strong', `${formatarHa(item.area_m2)} ha · ${formatarPercentual(item.percentual)}`));
+            const trilho = el('span', undefined, 'ev2-ampliacao-trilho'), barra = el('i');
+            barra.style.width = `${item.area_m2 / maximo * 100}%`; barra.style.backgroundColor = CORES_ARCO[item.papel];
+            trilho.append(barra); linha.append(trilho);
+            linha.onclick = () => aoSelecionar({chave: ficha.chave, base: item.base_id, feicao: item.id});
+            detalhe.append(linha);
+          }
+          container.append(detalhe);
+        }
+      }
     },
   };
+  return api;
 }

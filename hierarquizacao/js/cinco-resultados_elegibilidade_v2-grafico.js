@@ -1,15 +1,15 @@
 import {el} from '../../geoespacial/extracao-atributos/ui.js';
 import {conclusaoSobreposicao} from './elegibilidade-conclusao.js?v=1';
 import {
-  SITUACOES, ORDEM_SITUACOES, ROTULOS, formatarHa, formatarPercentual, ordenarDemandas, descreverSituacao, indicadores,
-} from './cinco-resultados_elegibilidade_v2-dados.js?v=hectares-camadas';
+  SITUACOES, ORDEM_SITUACOES, ROTULOS, formatarHa, formatarPercentual, ordenarDemandas, descreverSituacao, indicadores, porAreaDecrescente,
+} from './cinco-resultados_elegibilidade_v2-dados.js?v=zoom-ordem';
 
 /** Cards de situação (filtram ao clicar) e lista de demandas com a resposta em palavras. */
 export function criarGrafico({cards, lista, aoSelecionar, aoFiltrar}) {
   function desenharCards({fichas, entrada, situacao}) {
     const contagem = indicadores(fichas, entrada);
     const itens = [['todas', contagem.total, 'Demandas analisadas', `${contagem.camadas} camadas de restrição e de risco consultadas`],
-      ...ORDEM_SITUACOES.map(s => [s, contagem[s], SITUACOES[s],
+      ...[...ORDEM_SITUACOES].sort((a, b) => contagem[b] - contagem[a]).map(s => [s, contagem[s], SITUACOES[s],
         `${formatarPercentual(contagem.total ? contagem[s] / contagem.total * 100 : 0)} das demandas`])];
     cards.replaceChildren(...itens.map(([chave, valor, rotulo, apoio]) => {
       const botao = el('button', undefined, `ev2-card sit-${chave}`);
@@ -33,7 +33,7 @@ export function criarGrafico({cards, lista, aoSelecionar, aoFiltrar}) {
       return bloco;
     }
     const encontrados = ['restricao', 'risco'].filter(c => categorias.has(c)).flatMap(c => d.cats[c].feicoes)
-      .sort((a, b) => b.area_m2 - a.area_m2);
+      .sort(porAreaDecrescente);
     if (!encontrados.length) bloco.append(el('p', 'Nada a mostrar nas categorias selecionadas.', 'ea-hint'));
     for (const item of encontrados) {
       const botao = el('button', undefined, `ev2-feicao ${item.papel}`);

@@ -237,3 +237,10 @@
 .ev2 .ev2-menu-camadas input { flex: 0 0 auto; margin-top: .2rem; }
 .ev2 .ev2-menu-camadas small { display: block; font-size: inherit; line-height: 1.4; }
 .ev2 .ev2-camada-status { color: #536977; }
+.ev2 .ev2-ampliar { justify-self: start; margin-top: .4rem; }
+.ev2 .ev2-ampliacao { flex: 1 1 100%; display: grid; gap: .5rem; font-size: .75rem; }
+.ev2 .ev2-ampliacao > strong { font-size: inherit; }
+.ev2 .ev2-ampliacao-item { display: grid; gap: .3rem; text-align: left; padding: .5rem; border: 1px solid var(--ev2-linha); border-radius: 4px; background: #fff; color: var(--ev2-deep); font: inherit; cursor: pointer; }
+.ev2 .ev2-ampliacao-item[aria-pressed="true"] { border: 2px solid var(--ev2-deep); background: #eef6fb; }
+.ev2 .ev2-ampliacao-trilho { display: block; height: 12px; background: #e8eef3; }
+.ev2 .ev2-ampliacao-trilho i { display: block; height: 100%; }

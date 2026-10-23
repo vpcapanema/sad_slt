@@ -1,5 +1,5 @@
 import {el} from '../../geoespacial/extracao-atributos/ui.js';
-import {ROTULOS, SITUACOES, formatarHa, formatarPercentual} from './cinco-resultados_elegibilidade_v2-dados.js?v=hectares-camadas';
+import {ROTULOS, SITUACOES, formatarHa, formatarPercentual} from './cinco-resultados_elegibilidade_v2-dados.js?v=zoom-ordem';
 
 const TAMANHO = 50;
 const COLUNAS = ['Demanda', 'Situação', 'Tipo', 'Restrição ou risco encontrado', 'Camada consultada', 'Área de sobreposição', '% da área da demanda'];

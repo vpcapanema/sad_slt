@@ -11,7 +11,9 @@ export const SITUACOES = {
 export const ORDEM_SITUACOES = ['ambas', 'restricao', 'risco', 'livre'];
 export const CORES_SITUACAO = {ambas: '#7a4a1d', restricao: '#b42335', risco: '#c18b00', livre: '#2aa358'};
 export const FILTROS = {todas: 'Todas as situações', ...SITUACOES};
-export const ORDENS = {situacao: 'Situação (restrições e riscos primeiro)', nome: 'Nome da demanda'};
+export const ORDENS = {area: 'Maior sobreposição → menor (ha)'};
+const valorArea = item => Number.isFinite(item.area_m2) ? item.area_m2 : -Infinity;
+export const porAreaDecrescente = (a, b) => valorArea(a) === valorArea(b) ? 0 : valorArea(a) > valorArea(b) ? -1 : 1;
 
 export const formatarKm2 = m2 => m2 == null ? '—' : (m2 / 1e6).toLocaleString('pt-BR', {
   minimumFractionDigits: 2, maximumFractionDigits: m2 > 0 && m2 / 1e6 < .005 ? 12 : 2,
@@ -50,7 +52,7 @@ export function indicadores(demandas, entrada) {
 }
 
 function listarNomes(feicoes, limite = 3) {
-  const nomes = [...new Set(feicoes.map(f => f.nome))];
+  const nomes = [...new Set([...feicoes].sort(porAreaDecrescente).map(f => f.nome))];
   return nomes.length <= limite ? nomes.join('; ') : `${nomes.slice(0, limite).join('; ')} e mais ${nomes.length - limite}`;
 }
 
@@ -60,17 +62,18 @@ export function descreverSituacao(ficha, limite = 3) {
     return [{categoria: 'livre', texto: 'Livre de restrições e riscos nas camadas consultadas.'}];
   }
   const rotulo = {restricao: ['restrição', 'restrições'], risco: ['risco', 'riscos']};
-  return CATEGORIAS.filter(c => ficha.cats[c].n).map(c => {
+  return CATEGORIAS.filter(c => ficha.cats[c].n).sort((a, b) =>
+    Math.max(...ficha.cats[b].feicoes.map(valorArea)) - Math.max(...ficha.cats[a].feicoes.map(valorArea))).map(c => {
     const n = new Set(ficha.cats[c].feicoes.map(f => f.feicao_origem_id ?? f.id)).size;
     return {categoria: c, texto: n === 1 ? `Tem ${rotulo[c][0]}: ${listarNomes(ficha.cats[c].feicoes, limite)}.`
       : `Tem ${n} ${rotulo[c][1]}: ${listarNomes(ficha.cats[c].feicoes, limite)}.`};
   });
 }
 
-export function ordenarDemandas(demandas, criterio = 'situacao') {
+export function ordenarDemandas(demandas) {
   const porNome = (a, b) => a.nome.localeCompare(b.nome, 'pt-BR', {numeric: true});
-  return [...demandas].sort((a, b) => criterio === 'nome' ? porNome(a, b)
-    : ORDEM_SITUACOES.indexOf(a.situacao) - ORDEM_SITUACOES.indexOf(b.situacao) || porNome(a, b));
+  const maior = d => Math.max(-Infinity, ...d.linha.sobreposicoes.map(valorArea));
+  return [...demandas].sort((a, b) => porAreaDecrescente({area_m2: maior(a)}, {area_m2: maior(b)}) || porNome(a, b));
 }
 
 export function demandasVisiveis(demandas, {texto = '', situacao = 'todas'} = {}) {
@@ -83,13 +86,13 @@ export function demandasVisiveis(demandas, {texto = '', situacao = 'todas'} = {}
 export function registrosDetalhados(demandas, entrada) {
   const bases = new Map(entrada.campos.map(c => [c.id, c]));
   return demandas.flatMap(d => d.linha.sobreposicoes.length
-    ? [...d.linha.sobreposicoes].sort((a, b) => b.area_m2 - a.area_m2).map(s => ({
+    ? [...d.linha.sobreposicoes].sort(porAreaDecrescente).map(s => ({
       chave: d.chave, demanda: d.nome, situacao: d.situacao, categoria: s.papel, base_id: s.base_id,
       camada: bases.get(s.base_id)?.nome ?? '', feicao_id: s.id, feicao: s.nome, identificador: s.identificador,
       numero_poligono: s.numero_poligono,
       area_m2: s.area_m2, percentual: s.percentual, sem: false,
     }))
-    : [{chave: d.chave, demanda: d.nome, situacao: d.situacao, sem: true}]);
+    : [{chave: d.chave, demanda: d.nome, situacao: d.situacao, sem: true}]).sort(porAreaDecrescente);
 }
 
 const vazia = {chave: '', base: '', feicao: ''};

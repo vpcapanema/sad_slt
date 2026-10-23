@@ -1,6 +1,6 @@
 import {el} from '../../geoespacial/extracao-atributos/ui.js';
 import {post} from '../../geoespacial/extracao-atributos/api.js';
-import {CORES} from './cinco-resultados_elegibilidade_v2-dados.js?v=hectares-camadas';
+import {CORES} from './cinco-resultados_elegibilidade_v2-dados.js?v=zoom-ordem';
 
 export function controleCamadas(mapa, entrada, fundos) {
   const L = window.L, estados = [];

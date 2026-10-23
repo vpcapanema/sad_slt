@@ -5,11 +5,11 @@ import {escolherArquivo} from '../../geoespacial/extracao-atributos/explorador.j
 import {
   CATEGORIAS, ROTULOS, FILTROS, ORDENS, SELECAO_VAZIA, caracterizarDemandas, demandasVisiveis, descreverSituacao,
   registrosDetalhados, registrosVisiveis, alternarSelecao, formatarHa, formatarPercentual,
-} from './cinco-resultados_elegibilidade_v2-dados.js?v=hectares-camadas';
-import {criarGrafico} from './cinco-resultados_elegibilidade_v2-grafico.js?v=hectares-camadas';
-import {criarRosca} from './cinco-resultados_elegibilidade_v2-rosca.js?v=hectares-camadas';
-import {criarMapa} from './cinco-resultados_elegibilidade_v2-mapa.js?v=hectares-camadas';
-import {criarTabela} from './cinco-resultados_elegibilidade_v2-tabela.js?v=hectares-camadas';
+} from './cinco-resultados_elegibilidade_v2-dados.js?v=zoom-ordem';
+import {criarGrafico} from './cinco-resultados_elegibilidade_v2-grafico.js?v=zoom-ordem';
+import {criarRosca} from './cinco-resultados_elegibilidade_v2-rosca.js?v=zoom-ordem';
+import {criarMapa} from './cinco-resultados_elegibilidade_v2-mapa.js?v=zoom-ordem';
+import {criarTabela} from './cinco-resultados_elegibilidade_v2-tabela.js?v=zoom-ordem';
 
 const ROTA = '/extracao-atributos/elegibilidade/resultados';
 const PAPEIS = {entrada: 'Entrada', restricao: 'Restrição', risco: 'Risco'};

@@ -1,6 +1,6 @@
 import {el} from '../../geoespacial/extracao-atributos/ui.js';
 import {controleCamadas} from './elegibilidade-controle-camadas.js?v=1';
-import {CORES, CORES_SITUACAO, SITUACOES, ROTULOS, formatarPercentual} from './cinco-resultados_elegibilidade_v2-dados.js?v=hectares-camadas';
+import {CORES, CORES_SITUACAO, SITUACOES, ROTULOS, formatarPercentual} from './cinco-resultados_elegibilidade_v2-dados.js?v=zoom-ordem';
 
 const TOPO = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}';
 const SATELITE = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
