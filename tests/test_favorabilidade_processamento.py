@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from shapely.geometry import box, LineString
+from shapely.geometry import box, LineString, MultiPolygon, Point, MultiPoint, MultiLineString
 
 from api.services import elegibilidade_processamento as service
 from api.services.controle_processamento import ControleProcessamento, ProcessamentoCancelado
@@ -60,6 +60,43 @@ def test_areas_independentes_preservam_classes_indices_e_inteiros_exatos():
     meta = read_info(BytesIO(dados), layer='favorabilidade_territorial')['layer_metadata']
     assert json.loads(meta['SICARD_FAVORABILIDADE'])['atributos_superficies'] == auditoria['atributos_superficies']
     assert 'SICARD_ELEGIBILIDADE' not in meta
+
+
+@pytest.mark.parametrize('analise,papel', [('favorabilidade', 'rede'), ('elegibilidade', 'risco')])
+def test_serializacao_aceita_promocao_de_poligono_para_multipoligono(analise, papel):
+    entrada = frame([box(0, 0, 10, 10)])
+    base = frame([box(0, 0, 2, 2), MultiPolygon([box(3, 3, 4, 4), box(5, 5, 6, 6)])],
+                 nome=['Simples', 'Múltiplo'])
+    recortes = []
+    saida, auditoria = service.calcular(
+        entrada, [(papel, 'Superfície', 'base', base)], ControleProcessamento(),
+        intersecoes=recortes, analise=analise)
+    assert [r['geometry'].geom_type for r in recortes] == ['Polygon', 'MultiPolygon']
+    dados = service.serializar(saida, auditoria, recortes, 'mistos.gpkg', analise=analise)
+    persistidos = gpd.read_file(BytesIO(dados['mistos.gpkg']), layer='intersecoes')
+    assert persistidos.geometry.geom_type.tolist() == ['MultiPolygon', 'MultiPolygon']
+    assert persistidos.geometry.iloc[0].geoms[0].wkb == recortes[0]['geometry'].wkb
+    assert persistidos.geometry.iloc[1].wkb == recortes[1]['geometry'].wkb
+    assert persistidos.feicao_id.tolist() == [r['feicao_id'] for r in recortes]
+    assert persistidos.area_m2.tolist() == [r['area_m2'] for r in recortes]
+
+
+@pytest.mark.parametrize('simples,multiplo', [
+    (Point(1, 2, 3), MultiPoint),
+    (LineString([(0, 0, 1), (1, 1, 2)]), MultiLineString),
+    (box(0, 0, 2, 2), MultiPolygon),
+])
+def test_validacao_permite_apenas_promocao_sem_alterar_componentes(simples, multiplo):
+    assert service._geometria_preservada(simples, simples)
+    assert service._geometria_preservada(simples, multiplo([simples]))
+    assert not service._geometria_preservada(simples, multiplo([simples, simples]))
+    assert not service._geometria_preservada(multiplo([simples, simples]), multiplo([simples]))
+
+
+def test_validacao_rejeita_alteracao_de_coordenadas_e_perda_de_z():
+    assert not service._geometria_preservada(Point(1, 2, 3), MultiPoint([Point(1, 2, 4)]))
+    assert not service._geometria_preservada(Point(1, 2, 3), MultiPoint([Point(1, 2)]))
+    assert not service._geometria_preservada(box(0, 0, 2, 2), MultiPolygon([box(1, 0, 3, 2)]))
 
 
 def test_colisoes_entre_bases_e_campos_tecnicos_nao_perdem_atributos():

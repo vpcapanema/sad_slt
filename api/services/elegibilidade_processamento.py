@@ -168,6 +168,19 @@ def calcular(entrada: gpd.GeoDataFrame, bases, controle: ControleProcessamento, 
                    'agregacao': 'Soma das áreas dos fragmentos por ID_FEICAO, sem união ou dissolução'}
 
 
+def _geometria_preservada(original, persistida) -> bool:
+    if original is None or persistida is None:
+        return False
+    if bytes(original.wkb) == bytes(persistida.wkb):
+        return True
+    # A gravação pode promover uma geometria simples para Multi* de uma parte.
+    # O componente deve permanecer idêntico, incluindo coordenadas Z/M.
+    multiplo = {'Point': 'MultiPoint', 'LineString': 'MultiLineString', 'Polygon': 'MultiPolygon'}
+    return (multiplo.get(original.geom_type) == persistida.geom_type
+            and len(persistida.geoms) == 1
+            and bytes(original.wkb) == bytes(persistida.geoms[0].wkb))
+
+
 def serializar(saida: gpd.GeoDataFrame, auditoria: dict, intersecoes: list[dict], arquivo: str, *,
                analise: str = 'elegibilidade') -> dict[str, bytes]:
     fid, geom = '__sicard_fid__', '__sicard_geom__'
@@ -215,7 +228,7 @@ def serializar(saida: gpd.GeoDataFrame, auditoria: dict, intersecoes: list[dict]
     # A leitura padrão converte inteiros com NULL em float e pode perder precisão.
     for coluna, valores in inteiros.items():
         reabertos[coluna] = pd.array(valores, dtype=recortes[coluna].dtype)
-    if len(reabertos) != len(recortes) or any(bytes(a.wkb) != bytes(b.wkb)
+    if len(reabertos) != len(recortes) or any(not _geometria_preservada(a, b)
                                              for a, b in zip(recortes.geometry, reabertos.geometry)):
         raise ValueError('As geometrias das interseções não foram preservadas na saída.')
     try:
