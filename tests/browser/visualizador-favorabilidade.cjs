@@ -279,6 +279,7 @@ print(json.dumps(samples))
       await page.reload(); await waitLayer(layer);
       assert.deepEqual(await paint(layer), expression);
       assert.match(await row(layer).locator(".layer-group-name").textContent(), /Índice/);
+      assert.equal(await row(layer).locator('.layer-group-name').getAttribute('title'), `Índice ${layer.fixture}`);
       await page.locator("#viewer-refresh").click();
       await page.waitForFunction(() => document.getElementById("viewer-refresh-status").textContent === "Camadas atualizadas.");
       await waitLayer(layer);
@@ -300,7 +301,9 @@ print(json.dumps(samples))
     await page.goto(`${base}?camada=${encodeURIComponent(layers[3].id)}`);
     await waitLayer(layers[3]);
     await page.locator('.geo-legend-categories[data-campo="fav_rede_classe"]').waitFor();
-    assert.equal(await page.locator('.geo-legend-categories .geo-legend-item').count(), 6);
+    assert.deepEqual(await page.locator('.geo-legend-categories .geo-legend-item').allTextContents(), ['Muito alta','Alta','Média','Baixa','Muito baixa']);
+    assert.equal(await page.locator('.geo-legend-missing').count(), 0);
+    assert.equal(await row(layers[3]).locator('.layer-group-name').getAttribute('title'), await row(layers[3]).locator('.layer-group-name').textContent());
     assert.equal(classificationRequests.length, previousClassifications, 'Stored classes must not be recalculated');
     const categorical = await page.evaluate(id => {
       const info = GeoespacialMap.layers.get(id), map = GeoespacialMap.map;
