@@ -56,6 +56,50 @@
   overflow: hidden; background: #fff; --ev-line: var(--pli-border);
 }
 .favorabilidade-v2 .fv-tabela-conferencia .ea-table-wrap { margin: 0; }
+/* Conferência: mesma grade e apresentação das tabelas da Fase 1. */
+.favorabilidade-v2 #fv-run-selection .ea-checkup-tables {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .65rem;
+  align-items: start;
+}
+.favorabilidade-v2 #fv-run-selection .fv-tabela-conferencia {
+  border: 1px solid #d8dee4;
+  border-radius: 4px;
+  margin: .2rem 0;
+  background: #fff;
+}
+.favorabilidade-v2 #fv-run-selection .ea-table-wrap {
+  min-width: 0;
+  max-height: 180px;
+  overflow: auto;
+  border: 0;
+  border-radius: 0;
+}
+.favorabilidade-v2 #fv-run-selection table {
+  min-width: 0;
+  width: 100%;
+  font-size: .72rem;
+  border-collapse: collapse;
+}
+.favorabilidade-v2 #fv-run-selection :is(th, td) {
+  padding: .3rem .4rem;
+  font-size: .72rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.favorabilidade-v2 #fv-run-selection th {
+  position: sticky;
+  top: 0;
+  background: #e7eef3;
+  color: #33566d;
+  font-family: "Roboto", Arial, sans-serif;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
+}
+@media (max-width: 1024px) {
+  .favorabilidade-v2 #fv-run-selection .ea-checkup-tables { grid-template-columns: minmax(0, 1fr); }
+}
 .favorabilidade-v2 .fv-tabela-conferencia :is(th, td) { overflow-wrap: anywhere; }
 .favorabilidade-v2 :is(.fv-tabela-conferencia, .secao-favorabilidade-agregados) td button {
   width: 100%; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer;
