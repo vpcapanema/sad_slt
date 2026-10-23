@@ -168,10 +168,15 @@ def iniciar(payload, dono, *, analise='elegibilidade'):
             resultado['total_entradas'] = payload.get('total_entradas', 1)
             with _lock:
                 job['resultado'] = resultado
-            codigo = resultado.get('elegibilidade', {}).get('hierarquizacao') if analise == 'elegibilidade' else None
+            codigo = resultado.get(analise, {}).get('hierarquizacao')
             if codigo:
-                from api.services.hierarquizacao_service import registrar_saida_geoespacial_fase1
-                registrar_saida_geoespacial_fase1(codigo, resultado, dono)
+                from api.services import hierarquizacao_service
+                fase = 1 if analise == 'elegibilidade' else 2
+                if fase == 1:
+                    hierarquizacao_service.registrar_saida_geoespacial_fase1(codigo, resultado, dono)
+                else:
+                    hierarquizacao_service.registrar_saida_geoespacial(codigo, fase, resultado, dono)
+                resultado['registro_por_demanda'] = hierarquizacao_service.registrar_resultado_por_demanda(codigo, fase, resultado, dono)
             with _lock:
                 controle.encerrar('concluido')
         except ProcessamentoCancelado:

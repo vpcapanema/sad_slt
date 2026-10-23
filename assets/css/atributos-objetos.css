@@ -193,6 +193,10 @@
   background: #f8faf9;
 }
 .atributos-pesos-grupo[hidden] { display: none; }
+/* Com critérios de risco, os grupos presentes ficam lado a lado, sem ultrapassar o contêiner (colunas definidas pelo JS). */
+.atributos-pesos.atributos-pesos--tres { grid-template-columns: var(--pesos-colunas, minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1.4fr)); }
+.atributos-pesos-grupo { min-width: 0; box-sizing: border-box; }
+.atributo-peso > span { min-width: 0; overflow-wrap: break-word; }
 .atributos-pesos-grupo > header {
   display: flex;
   flex-direction: column;
@@ -271,7 +275,8 @@
 .fase3-sintese-table td:first-child small { margin-top: 0.18rem; color: #87958e; }
 .atributo-peso output { color: var(--pli-deep); font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
 @media (max-width: 900px) {
-  .atributos-pesos { grid-template-columns: 1fr; }
+  .atributos-pesos,
+  .atributos-pesos.atributos-pesos--tres { grid-template-columns: 1fr; }
   .atributos-pesos-grupo.secao-pesos-dinamicos [data-controles-pesos],
   .fase3-pesos-sintese { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
@@ -306,17 +311,4 @@
 .admin-table--atributos .col-risco {
   background: #fff7ed;
   border-left: 2px solid #ea580c;
-}
-
-.risco-tratamento-select {
-  display: block;
-  width: 100%;
-  min-width: 11rem;
-  margin-top: 0.45rem;
-  font-size: 0.78rem;
-}
-
-.atributos-riscos-acoes {
-  align-items: center;
-  margin-top: 1rem;
 }

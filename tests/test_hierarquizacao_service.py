@@ -225,6 +225,37 @@ def test_criacao_usa_o_universo_do_agrupamento_salvo(monkeypatch: pytest.MonkeyP
     assert result.dados_hierarquizacao["objetos"][0]["cabecalho_objeto"]["codigo"] == "PROG-001"
 
 
+def test_fase_3_pondera_criterio_de_risco_herdado_da_fase_1(monkeypatch: pytest.MonkeyPatch) -> None:
+    row = _db_row(_dados([3], [{}, {}, {}]))
+    areas = [0.0, 4.0, 2.0]
+    for obj, area in zip(row["dados_hierarquizacao"]["objetos"], areas):
+        obj["hierarquizacao"]["fase_1"] = {"executada": True, "sobreposicoes_risco": {"b": {"area_ha": area}}}
+    row["dados_hierarquizacao"]["objetos"][0]["hierarquizacao"]["fase_1"]["riscos_intersectados"] = []
+    _mock_persistencia(monkeypatch, row)
+    risco = service._atributo_risco("b", "Áreas de Risco")
+    result = service.executar_fase_3("HIER-TESTE", HierarquizacaoFase3ExecutarSchema(
+        criterios=[{**risco, "peso": 1}], completude_minima=0, regra_ausentes="renormalizar"))
+    scores = [o["hierarquizacao"]["fase_3"]["score_fase3"] for o in result.dados_hierarquizacao["objetos"]]
+    assert scores == [1.0, 0.0, 0.5]
+    slot = result.dados_hierarquizacao["objetos"][1]["cabecalho_objeto"]["atributos_fase3"]["risco_area:b"]
+    assert slot["origem"] == "fase1"
+
+
+def test_fase_3_usa_riscos_do_payload_e_mantem_pesos_salvos_dos_demais(monkeypatch: pytest.MonkeyPatch) -> None:
+    row = _db_row(_dados([3], [{"maturidade": 10}, {"maturidade": 20}]))
+    row["dados_hierarquizacao"]["cabecalho_grupo"]["configuracoes"] = {"fase_3": {"criterios": [
+        {"criterio": "Maturidade", "nome_coluna": "maturidade", "peso": 1},
+        {**service._atributo_risco("antiga", "Camada antiga"), "peso": 1}]}}
+    for obj in row["dados_hierarquizacao"]["objetos"]:
+        obj["hierarquizacao"]["fase_1"] = {"executada": True, "sobreposicoes_risco": {"nova": {"area_ha": 0.0}}}
+    _mock_persistencia(monkeypatch, row)
+    result = service.executar_fase_3("HIER-TESTE", HierarquizacaoFase3ExecutarSchema(
+        criterios=[{"criterio": "Maturidade", "nome_coluna": "maturidade", "peso": 1},
+                   {**service._atributo_risco("nova", "Camada nova"), "peso": 1}], completude_minima=0))
+    pesos = result.dados_hierarquizacao["objetos"][0]["hierarquizacao"]["fase_3"]["pesos_fase3"]
+    assert set(pesos) == {"Maturidade", "Sobreposição com Camada nova"}
+
+
 def test_fase_3_renormaliza_pesos_quando_atributo_opcional_ausente(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

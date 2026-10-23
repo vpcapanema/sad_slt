@@ -42,7 +42,10 @@ def baixar_arquivo_relatorio(codigo: str, tipo: str, arquivo: str,
 
     try:
         dados, nome = service.arquivo_relatorio(codigo, tipo, arquivo)
-        media = 'application/pdf' if nome.lower().endswith('.pdf') else 'application/geopackage+sqlite3'
+        nome_baixado = nome.lower()
+        media = ('application/pdf' if nome_baixado.endswith('.pdf')
+                 else 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' if nome_baixado.endswith('.xlsx')
+                 else 'application/geopackage+sqlite3')
         return Response(dados, media_type=media, headers={
             'Content-Disposition': "attachment; filename*=UTF-8''" + quote(nome), 'Cache-Control': 'no-store',
         })

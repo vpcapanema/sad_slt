@@ -213,29 +213,6 @@
         hierarquizacoes = hierarquizacoes.map((item) => item.codigo === resposta.resultado.codigo ? resposta.resultado : item);
         await render(resposta.resultado);
       };
-      const salvarRiscos = $("salvar-tratamentos-riscos-fase3");
-      if (salvarRiscos) salvarRiscos.onclick = async () => {
-        const hierarquizacao = atual();
-        if (!hierarquizacao) { exigirHierarquizacao(); return; }
-        const payload = window.AtributosObjetos?.tratamentosRiscosPayload() || { tratamentos: {} };
-        const quantos = Object.keys(payload.tratamentos || {}).length;
-        const resposta = await executarAcao({
-          confirmacao: {
-            title: "Registrar tratamento dos riscos",
-            message: `${quantos} tratamento(s) de risco serão registrados na hierarquização ${hierarquizacao.codigo}.`,
-            warning: "Esta é uma decisão gerencial: ela fica registrada em nome do gestor autenticado e altera o índice de priorização dos objetos afetados.",
-            confirmLabel: "Registrar decisão",
-            danger: true,
-          },
-          titulo: "Registrar tratamento dos riscos",
-          mensagemInicial: "Gravando a decisão gerencial no servidor…",
-          executar: () => HierApi.salvarRiscosFase3(hierarquizacao.codigo, payload),
-          sucesso: "Tratamento dos riscos salvo.",
-        });
-        if (!resposta.ok) { if (resposta.erro) erro(resposta.erro); return; }
-        hierarquizacoes = hierarquizacoes.map((item) => item.codigo === resposta.resultado.codigo ? resposta.resultado : item);
-        await render(resposta.resultado);
-      };
       document.querySelectorAll('input[name="operador-sintese"]').forEach((input) => input.addEventListener("change", () => {
         $("pesos-sintese").hidden = operadorSintese() !== "media_ponderada";
       }));

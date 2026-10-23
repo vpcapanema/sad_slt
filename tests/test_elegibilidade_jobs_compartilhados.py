@@ -56,16 +56,19 @@ def test_status_e_resultado_persistem_sem_memoria_do_worker(ambiente, monkeypatc
 
 
 @pytest.mark.parametrize('cancelar', [False, True])
-def test_favorabilidade_isola_namespace_preserva_cancelamento_e_nao_registra_fase1(ambiente, monkeypatch, cancelar):
+def test_favorabilidade_isola_namespace_preserva_cancelamento_e_registra_somente_a_fase2(ambiente, monkeypatch, cancelar):
     from api.services import hierarquizacao_service
-    chamadas = []
+    fase1, fase2, por_demanda = [], [], []
     def executar(payload, controle, *, analise):
         assert analise == 'favorabilidade'
         controle.verificar()
         return {'arquivo': 'f2.gpkg', 'favorabilidade': {'hierarquizacao': 'H'},
                 'elegibilidade': {'hierarquizacao': 'NAO-REGISTRAR'}}
     monkeypatch.setattr(jobs, 'executar', executar)
-    monkeypatch.setattr(hierarquizacao_service, 'registrar_saida_geoespacial_fase1', lambda *args: chamadas.append(args))
+    monkeypatch.setattr(hierarquizacao_service, 'registrar_saida_geoespacial_fase1', lambda *args: fase1.append(args))
+    monkeypatch.setattr(hierarquizacao_service, 'registrar_saida_geoespacial', lambda *args: fase2.append(args))
+    monkeypatch.setattr(hierarquizacao_service, 'registrar_resultado_por_demanda',
+                        lambda *args: por_demanda.append(args) or {'registrado': True})
     inicial = jobs.iniciar({'entrada': {'id': 'e', 'nome': 'Entrada'}}, 'autor', analise='favorabilidade')
     ident = inicial['id']
     assert any('/execucoes-favorabilidade/' in caminho for caminho in ambiente[0])
@@ -83,7 +86,10 @@ def test_favorabilidade_isola_namespace_preserva_cancelamento_e_nao_registra_fas
     ambiente[1].pop()()
     estado = jobs.consultar(ident, 'autor', analise='favorabilidade')
     assert estado['status'] == ('cancelado' if cancelar else 'concluido')
-    assert not chamadas
+    assert not fase1
+    assert len(fase2) == len(por_demanda) == (0 if cancelar else 1)
+    if not cancelar:
+        assert fase2[0][:2] == ('H', 2) and por_demanda[0][:2] == ('H', 2)
 
 
 def test_cancelamento_recebido_por_outro_worker(ambiente, monkeypatch):
@@ -190,12 +196,16 @@ def test_conclusao_vincula_somente_entradas_de_hierarquizacao(ambiente, monkeypa
     monkeypatch.setattr(jobs, 'executar', lambda *args: resultado)
     monkeypatch.setattr(hierarquizacao_service, 'registrar_saida_geoespacial_fase1',
                         lambda *args: chamadas.append(args))
+    por_demanda = []
+    monkeypatch.setattr(hierarquizacao_service, 'registrar_resultado_por_demanda',
+                        lambda *args: por_demanda.append(args) or {'registrado': True})
     inicial = iniciar()
     ambiente[1].pop()()
     assert jobs.consultar(inicial['id'], 'autor')['status'] == 'concluido'
-    assert len(chamadas) == (1 if codigo else 0)
+    assert len(chamadas) == (1 if codigo else 0) and len(por_demanda) == (1 if codigo else 0)
     if codigo:
         assert chamadas[0] == (codigo, resultado, 'autor')
+        assert por_demanda[0] == (codigo, 1, resultado, 'autor')
 
 
 def test_falha_ao_vincular_nao_oculta_saida_ja_gravada(ambiente, monkeypatch):

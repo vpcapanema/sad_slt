@@ -41,13 +41,12 @@ const item = (id, base_id, papel, area_m2, total, identificador = 1) =>
 
   // Linguagem corrente: o que a demanda tem, ou que está livre.
   assert.deepEqual(d.descreverSituacao(fichas[0]).map(f => f.texto),
-    ['Tem 3 restrições: Item f1; Item f2; Item f3.', 'Tem risco: Item f4.']);
+    ['Tem 3 restrições: Item f3; Item f1; Item f2.', 'Tem risco: Item f4.']);
   assert.deepEqual(d.descreverSituacao(fichas[2]), [{categoria: 'livre', texto: 'Livre de restrições e riscos nas camadas consultadas.'}]);
   assert.match(d.descreverSituacao(fichas[0], 2)[0].texto, /e mais 1\.$/);
 
-  // Ordem padrão: situações com restrição/risco primeiro; livres por último.
-  assert.deepEqual(d.ordenarDemandas(fichas).map(f => f.chave), ['0', '3', '1', '2']);
-  assert.deepEqual(d.ordenarDemandas(fichas, 'nome').map(f => f.chave), ['2', '1', '0', '3']);
+  // Ordem padrão: maior sobreposição primeiro; sem sobreposição por último.
+  assert.deepEqual(d.ordenarDemandas(fichas).map(f => f.chave), ['0', '1', '3', '2']);
 
   // Filtros por situação são exclusivos e somam o total.
   assert.deepEqual([...d.demandasVisiveis(fichas, {situacao: 'livre'})], ['2']);
@@ -72,6 +71,18 @@ const item = (id, base_id, papel, area_m2, total, identificador = 1) =>
   selecao = d.alternarSelecao(selecao, {chave: '0'});
   assert.deepEqual(selecao, d.SELECAO_VAZIA);
   assert.equal(d.registrosVisiveis(registros, {visiveis: todas, categorias: new Set(['risco']), selecao}).filter(r => r.categoria === 'restricao').length, 0);
+
+  // Resumo da Elegibilidade: só demandas sem restrição; índice = 1 − área sobreposta ÷ área da demanda, entre 0 e 1.
+  const resumo = d.resumoElegibilidade(fichas);
+  assert.deepEqual(resumo.map(r => r.chave), ['1', '2'], 'Demandas com restrição ficam fora');
+  assert.deepEqual([resumo[0].camadas, resumo[0].area_m2, resumo[0].percentual, resumo[0].indice], [['Inundação'], 250, 50, 0.5]);
+  assert.deepEqual([resumo[1].camadas, resumo[1].area_m2, resumo[1].indice], [[], 0, 1]);
+  const uniao = d.resumoElegibilidade(d.caracterizarDemandas({campos: entrada.campos, linhas: [
+    {chave: '9', id: 'D9', nome: 'Duas camadas coincidentes', area_total_m2: 1000, risco_area_m2: 400, areas: [],
+      sobreposicoes: [item('g1', 'b3', 'risco', 300, 1000), item('g2', 'b3', 'risco', 250, 1000, 2)]}]}));
+  assert.deepEqual([uniao[0].area_m2, uniao[0].indice], [400, 0.6], 'Usa a área da união enviada pelo servidor, sem somar o que coincide');
+  assert.equal(d.indiceRiscoAmbiental(2000, 1000), 0);
+  assert.equal(d.formatarIndice(0.76), '0,7600');
 
   assert.equal(d.formatarPercentual(12.345), '12,35%');
   assert.equal(d.formatarPercentual(0), '0,00%');

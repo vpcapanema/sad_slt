@@ -20,7 +20,8 @@ function modeloFixture() {
     const x = -47 + (i % 6) * .05, y = -23 + Math.floor(i / 6) * .05, sobreposicoes = [];
     geometrias.push({type: 'Feature', properties: {chave: String(i)}, geometry: quadrado(x, y, .02)});
     bases.forEach((b, j) => {
-      if ((i + j) % 3 === 0 || i === 29) return;
+      const soRisco = i === 28;
+      if (soRisco ? b.papel === 'restricao' : ((i + j) % 3 === 0 || i === 29)) return;
       const area = i === 4 && j === 2 ? 0 : total * (.02 + ((i * 7 + j * 13) % 40) / 100);
       const ident = `${b.id}-f${i}`;
       sobreposicoes.push({id: ident, base_id: b.id, nome: `Zona ${j + 1} de ${b.nome}`, papel: b.papel, area_m2: area,
@@ -97,8 +98,14 @@ function modeloFixture() {
 
     // Estado inicial: três painéis, 5 indicadores, todas as demandas e todos os registros.
     assert.equal(await secao.locator('.ev2-card').count(), 5, 'Cards: total e as quatro situações');
-    assert.deepEqual(await secao.locator('.ev2-card > span:not(.ev2-card-trilho)').allTextContents(),
-      ['Demandas analisadas', 'Com restrição e risco', 'Com restrição', 'Com risco', 'Livre de restrições e riscos']);
+    // Os cards de situação são ordenados pela quantidade de demandas (decrescente), após o total.
+    const rotulos = await secao.locator('.ev2-card > span:not(.ev2-card-trilho)').allTextContents();
+    const quantidades = (await secao.locator('.ev2-card > strong').allTextContents()).map(t => Number(t.replace(/\./g, '')));
+    assert.equal(rotulos[0], 'Demandas analisadas');
+    assert.deepEqual([...rotulos.slice(1)].sort(),
+      ['Com restrição e risco', 'Com restrição', 'Com risco', 'Livre de restrições e riscos'].sort());
+    const situacoes = quantidades.slice(1);
+    assert.deepEqual(situacoes, [...situacoes].sort((a, b) => b - a), 'Situações em ordem decrescente de quantidade');
     assert.equal(await secao.locator('.ev2-linha').count(), 30);
     const registros = await secao.locator('#ev2-tabela tbody tr').count();
     assert.ok(registros > 0 && registros <= 50);
@@ -115,7 +122,8 @@ function modeloFixture() {
     assert.ok(linhasTabela.length >= 1 && linhasTabela.every(l => l.d.startsWith('Demanda 03') && l.ativa), 'Tabela filtrada e destacada');
     assert.match(await secao.locator('#ev2-selecao-texto').innerText(), /Demanda 03/);
     assert.match(await secao.locator('#ev2-selecao-texto').innerText(), /Tem (\d+ )?restri/);
-    const textoSecao = await secao.innerText(), jargao = textoSecao.match(/.{0,40}(interse[cç]|feiç|cobertura|geometri|refer[eê]ncia).{0,40}/is);
+    const textoSecao = await secao.evaluate(el => { const copia = el.cloneNode(true); copia.querySelectorAll('.ev2-conclusao, details').forEach(n => n.remove()); return copia.textContent; });
+    const jargao = textoSecao.match(/.{0,40}(interse[cç]|feiç|cobertura|geometri|refer[eê]ncia).{0,40}/is);
     assert.equal(jargao?.[0], undefined, 'Linguagem voltada ao usuário, sem jargão de geoprocessamento');
     assert.equal(await secao.locator('#ev2-limpar').isDisabled(), false);
 
@@ -125,7 +133,7 @@ function modeloFixture() {
     await feicao.click();
     assert.equal(await secao.locator('#ev2-tabela tbody tr').count(), 1);
     assert.equal(await secao.locator('#ev2-tabela tbody tr').first().getAttribute('data-feicao'), idFeicao);
-    assert.match(await secao.locator('#ev2-selecao-texto').innerText(), /Em foco/);
+    assert.match(await secao.locator('#ev2-selecao-texto').innerText(), /sobrepõe-se, em aproximadamente/);
     await secao.locator(`.ev2-linha.ativa .ev2-feicao[data-feicao="${idFeicao}"]`).click();
     assert.ok(await secao.locator('#ev2-tabela tbody tr').count() >= 1);
     assert.doesNotMatch(await secao.locator('#ev2-selecao-texto').innerText(), /Em foco/);
@@ -171,7 +179,7 @@ function modeloFixture() {
     await secao.locator('.ev2-card.sit-livre').click();
     assert.equal(await secao.locator('.ev2-linha').count(), 30);
     await secao.locator('.ev2-card.sit-restricao').click();
-    assert.equal(await secao.locator('.ev2-linha').count(), 10);
+    assert.equal(await secao.locator('.ev2-linha').count(), 9);
     await secao.locator('.ev2-card.sit-todas').click();
     assert.equal(await secao.locator('.ev2-linha').count(), 30);
     await secao.locator('#ev2-busca').fill('demanda 1');
@@ -184,6 +192,26 @@ function modeloFixture() {
     assert.equal(await secao.locator('#ev2-cat-risco').isChecked(), true, 'Ao menos uma categoria permanece');
     await secao.locator('#ev2-cat-restricao').check();
 
+    // 5) Resumo da Elegibilidade: uma linha por demanda sem restrição (risco ou livre), com índice de 0 a 1.
+    const resumo = secao.locator('#ev2-resumo-tabela');
+    assert.deepEqual(await resumo.locator('thead th').allTextContents(),
+      ['Objeto de demanda', 'Camadas de risco', 'Área de sobreposição', 'Porcentagem sobreposta', 'Índice de risco ambiental e territorial']);
+    const linhasResumo = await resumo.locator('tbody tr').evaluateAll(trs => trs.map(tr => [...tr.children].map(td => td.textContent.trim())));
+    assert.equal(linhasResumo.length, 2, 'Somente a demanda com risco e a livre; demandas com restrição não entram');
+    assert.deepEqual(linhasResumo.map(l => l[0].slice(0, 10)), ['Demanda 28', 'Demanda 29'], 'Ordenadas da mais à menos exposta ao risco');
+    assert.ok(linhasResumo[0][1].includes('Suscetibilidade à Inundação') && !linhasResumo[0][1].includes('Preservação'));
+    const [, , areaRisco, pctRisco, indiceRisco] = linhasResumo[0];
+    const pct = Number(pctRisco.replace('%', '').replace(/\./g, '').replace(',', '.')), idx = Number(indiceRisco.replace(',', '.'));
+    assert.ok(Math.abs(idx - (1 - pct / 100)) < 1e-3 && idx > 0 && idx < 1, `${pctRisco} → ${indiceRisco}`);
+    assert.match(areaRisco, /ha$/);
+    assert.deepEqual(linhasResumo[1].slice(1), ['Nenhuma camada de risco atingida', '0,0000 ha', '0,00%', '1,0000']);
+    assert.match(await secao.locator('#ev2-resumo-contagem').innerText(), /2 de 30 demanda/);
+    await resumo.locator('tbody tr').first().click();
+    assert.equal(await secao.locator('.ev2-linha.ativa').count(), 1, 'Clicar no resumo seleciona a demanda nos demais painéis');
+    assert.equal(await resumo.locator('tbody tr.ativo').count(), 1);
+    assert.match(await secao.locator('#ev2-selecao-texto').innerText(), /Demanda 28/);
+    await secao.locator('#ev2-limpar').click();
+    assert.equal(await resumo.locator('tbody tr.ativo').count(), 0);
     // Tipografia: todo texto visível em rem inteiro da escala da página, sem tamanhos em px fora da escala.
     const folhas = await page.evaluate(() => [...document.styleSheets].map(s => `${s.href?.split('/').slice(-1)[0]}:${(() => { try { return s.cssRules.length; } catch { return 'x'; } })()}`));
     console.log('Folhas:', JSON.stringify(folhas));
@@ -217,6 +245,7 @@ function modeloFixture() {
       await secao.locator('.leaflet-popup .ev2-popup-tabela').last().waitFor();
       await page.waitForTimeout(400);
       await secao.screenshot({path: path.join(SAIDA, 'secao5-dashboard.png')});
+      await secao.locator('.ev2-painel-resumo').screenshot({path: path.join(SAIDA, 'secao5-resumo.png')});
     }
     assert.deepEqual(erros, [], 'Sem erros de JavaScript');
     console.log('PASS: dashboard da seção 5 — gráfico, mapa e tabela interligados pela mesma seleção; filtros e tipografia conferidos.');

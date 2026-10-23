@@ -55,6 +55,20 @@ export function caracterizarDemandas(entrada) {
   });
 }
 
+/** 1 sem sobreposição com camadas de risco; 0 com a demanda inteira sobreposta. Espelha elegibilidade_sintese.indice_risco_ambiental. */
+export const indiceRiscoAmbiental = (areaM2, totalM2) => totalM2 > 0 ? Math.max(0, Math.min(1, 1 - areaM2 / totalM2)) : 1;
+export const formatarIndice = valor => valor.toLocaleString('pt-BR', {minimumFractionDigits: 4, maximumFractionDigits: 4});
+
+/** Resumo da Elegibilidade: uma linha por demanda sem restrição (com risco ou livre), da mais à menos exposta ao risco. */
+export function resumoElegibilidade(demandas) {
+  return demandas.filter(d => !d.cats.restricao.n).map(d => {
+    const riscos = [...d.cats.risco.feicoes].sort(porAreaDecrescente);
+    const area = Math.min(d.total, d.linha.risco_area_m2 ?? riscos.reduce((soma, f) => soma + (f.area_m2 || 0), 0));
+    return {chave: d.chave, demanda: d.nome, camadas: [...new Set(riscos.map(f => f.camada))], area_m2: area,
+      percentual: d.total > 0 ? area / d.total * 100 : 0, indice: indiceRiscoAmbiental(area, d.total)};
+  }).sort((a, b) => a.indice - b.indice || a.demanda.localeCompare(b.demanda, 'pt-BR', {numeric: true}));
+}
+
 export function indicadores(demandas, entrada) {
   const por = Object.fromEntries(ORDEM_SITUACOES.map(s => [s, demandas.filter(d => d.situacao === s).length]));
   return {total: demandas.length, ...por, camadas: entrada.campos.length};

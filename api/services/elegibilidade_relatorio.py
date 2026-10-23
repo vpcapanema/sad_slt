@@ -19,6 +19,8 @@ from pyogrio.errors import DataLayerError, DataSourceError
 from reportlab.lib import colors
 from reportlab.platypus import Flowable, PageBreak, Spacer, Paragraph
 from shapely.geometry import Polygon, MultiPolygon, mapping, box
+from shapely.ops import unary_union
+from shapely.validation import make_valid
 
 from api.services import elegibilidade_jobs as jobs, storage_remoto, saidas_storage
 from api.services.elegibilidade_processamento import pasta_saida, ANALISES, individualizar_intersecoes
@@ -289,33 +291,54 @@ def renomear_demanda(execucao: str, chave: str, nome: str, dono) -> dict:
     return {'execucao': execucao, 'chave': chave, 'nome': nome}
 
 
-def registrar_relatorios(identificadores: list[str], modelo: dict, dono) -> None:
+def registrar_relatorios(identificadores: list[str], modelo: dict, dono, *, analise: str = 'elegibilidade') -> None:
+    from api.services import hierarquizacao_service
     from api.services.hierarquizacao_service import registrar_saida_geoespacial_fase1
 
+    fase = 1 if analise == 'elegibilidade' else 2
     grupos = {}
-    for resultado in _selecionar(identificadores, dono):
-        codigo = resultado['elegibilidade'].get('hierarquizacao')
+    for resultado in _selecionar(identificadores, dono, analise=analise):
+        codigo = resultado[analise].get('hierarquizacao')
         if codigo:
             grupos.setdefault(codigo, []).append(resultado)
     documentos = []
     for codigo, resultados in grupos.items():
         ids = {r['execucao_id'] for r in resultados}
-        fontes = {f['id'] for f in _fontes(resultados)}
+        fontes = {f['id'] for f in _fontes(resultados, analise=analise)}
         recorte = {**modelo,
                    'entradas': [e for e in modelo['entradas'] if e['id'] in ids],
                    'fontes': [f for f in modelo['fontes'] if f['id'] in fontes],
                    'concluidas': len(resultados),
                    'previstas': resultados[0].get('total_entradas', len(resultados))}
         dados = pdf(recorte)
-        caminho = f'{_pasta_resultados(resultados)}/Relatório de Elegibilidade Territorial_{uuid4().hex[:12]}.pdf'
+        caminho = f'{_pasta_resultados(resultados, analise=analise)}/Relatório de {_titulo_analise(analise)}_{uuid4().hex[:12]}.pdf'
         assinatura = sha256(dados).hexdigest()
         storage_remoto.enviar_bytes(caminho, dados)
         if sha256(storage_remoto.baixar(caminho)).hexdigest() != assinatura:
             raise ValueError('O PDF no Storage diverge do relatório conferido. O vínculo não foi registrado.')
         documento = {'arquivo': caminho, 'sha256': assinatura, 'gerado_em': modelo['gerado_em'],
                      'nomes_revisados': True, 'registrado_por': str(dono)}
+        registro = documento
+        if fase == 1:
+            # O Resumo da Elegibilidade acompanha o PDF e a camada no relatório da Fase 1 da hierarquização.
+            planilha = sintese.xlsx_resumo(recorte)
+            caminho_planilha = f'{_pasta_resultados(resultados, analise=analise)}/Resumo da Elegibilidade_{uuid4().hex[:12]}.xlsx'
+            assinatura_planilha = sha256(planilha).hexdigest()
+            storage_remoto.enviar_bytes(caminho_planilha, planilha)
+            if sha256(storage_remoto.baixar(caminho_planilha)).hexdigest() != assinatura_planilha:
+                raise ValueError('A planilha do resumo no Storage diverge da conferida. O vínculo não foi registrado.')
+            registro = {**documento,
+                        'tabela_resumo': {'arquivo': caminho_planilha, 'sha256': assinatura_planilha,
+                                          'gerado_em': modelo['gerado_em']},
+                        'resumo_elegibilidade': sintese.resumo_para_registro(recorte)}
         for resultado in resultados:
-            registrar_saida_geoespacial_fase1(codigo, resultado, dono, documento)
+            if fase == 1:
+                registrar_saida_geoespacial_fase1(codigo, resultado, dono, registro)
+            else:
+                hierarquizacao_service.registrar_saida_geoespacial(codigo, fase, resultado, dono, registro)
+            # Idempotente: completa o registro de análises reabertas, que não passaram pelo fim do cálculo.
+            hierarquizacao_service.registrar_resultado_por_demanda(codigo, fase, resultado, dono)
+        hierarquizacao_service.atualizar_nomes_resultado(codigo, fase, {f['id']: f['nome'] for f in recorte['fontes']})
         documentos.append({'hierarquizacao': codigo, **documento})
     if documentos:
         modelo['relatorios_hierarquizacao'] = documentos
@@ -652,6 +675,22 @@ def _poligonos_painel(dados, auditoria, nomes, linhas):
     return {'type': 'FeatureCollection', 'features': features}
 
 
+def _area_uniao_risco(recortes: gpd.GeoDataFrame, campos: dict[str, dict]) -> dict[int, float]:
+    """Área de cada demanda atingida por alguma camada de risco, sem contar duas vezes o que coincide (EPSG:5880)."""
+    if not len(recortes):
+        return {}
+    riscos = recortes[recortes['base_id'].map(lambda base: campos[base]['papel'] == 'risco')]
+    if not len(riscos):
+        return {}
+    projetados = reproject(riscos, 5880)
+    areas: dict[int, list] = {}
+    for pos, geometria in zip(projetados['demanda_pos'], projetados.geometry):
+        if geometria is None or geometria.is_empty:
+            continue
+        areas.setdefault(int(pos), []).append(geometria if geometria.is_valid else make_valid(geometria))
+    return {pos: float(unary_union(partes).area) for pos, partes in areas.items()}
+
+
 def _painel(frame: gpd.GeoDataFrame, dados: bytes, auditoria: dict, nomes: dict[str, str], linhas: list[dict], *,
             somente_atributos: bool = False, analise: str = 'elegibilidade') -> dict:
     if auditoria.get('versao_saida') != 2:
@@ -705,6 +744,7 @@ def _painel(frame: gpd.GeoDataFrame, dados: bytes, auditoria: dict, nomes: dict[
     for (pos, _), grupo in grupos.items():
         por_demanda.setdefault(pos, []).append(grupo)
     perimetros = reproject(frame[[frame.geometry.name]], 5880).length if analise == 'elegibilidade' else None
+    uniao_risco = _area_uniao_risco(recortes, campos) if analise == 'elegibilidade' else {}
     for pos, linha in enumerate(linhas):
         total = frame.iloc[pos][campo_area]
         if not isinstance(total, (Real, Decimal)) or not math.isfinite(total) or total <= 0:
@@ -718,6 +758,8 @@ def _painel(frame: gpd.GeoDataFrame, dados: bytes, auditoria: dict, nomes: dict[
         for grupo in sobreposicoes:
             grupo['percentual'] = grupo['area_m2'] / total * 100
         linha.update(chave=str(pos), area_total_m2=total, sobreposicoes=sobreposicoes)
+        if analise == 'elegibilidade':
+            linha['risco_area_m2'] = min(total, uniao_risco.get(pos, 0.0))
         if perimetros is not None:
             perimetro = float(perimetros.iloc[pos])
             if not math.isfinite(perimetro) or perimetro <= 0:
@@ -738,6 +780,16 @@ def _painel(frame: gpd.GeoDataFrame, dados: bytes, auditoria: dict, nomes: dict[
             {'type': 'Feature', 'geometry': mapping(geom), 'properties': propriedades}
             for propriedades, geom in zip(vinculos, geometrias_recortes.geometry)]},
     }
+
+
+def resumo_por_demanda(resultado: dict, dono, *, analise: str = 'elegibilidade') -> list[dict]:
+    """Resultado de cada demanda lido da saída gravada (nomes técnicos; os amigáveis são aplicados depois)."""
+    frame, dados = _ler(resultado, analise=analise)
+    auditoria = resultado[analise]
+    nomes = {f['id']: f['nome'] for f in [auditoria['entrada'], *auditoria['campos'], *auditoria['feicoes_base']]}
+    linhas = _linhas(frame, auditoria)
+    _painel(frame, dados, auditoria, nomes, linhas, somente_atributos=True, analise=analise)
+    return linhas
 
 
 def sobreposicoes_favorabilidade(identificadores: list[str], dono) -> dict:
@@ -928,7 +980,10 @@ def pdf(modelo: dict) -> bytes:
                      estilo._p(e, sintese.NOTA_LEITURA, 'nota'),
                      sintese.GraficoSituacoes(fichas),
                      estilo._p(e, f'{entrada["nome"]} — Resumo por Demanda', 'h1'),
-                     sintese.tabela_resumo(e, fichas, _area_pdf)]
+                     sintese.tabela_resumo(e, fichas, _area_pdf),
+                     estilo._p(e, f'{entrada["nome"]} — Resumo da Elegibilidade', 'h1'),
+                     estilo._p(e, sintese.NOTA_INDICE, 'nota'),
+                     sintese.tabela_resumo_elegibilidade(e, entrada)]
         campos = {c['id']: c for c in entrada['campos']}
         historia += [PageBreak(), estilo._p(e, f'{entrada["nome"]} — Detalhes por Demanda', 'h1')]
         for ficha in sintese.ordenar_por_situacao(fichas):
@@ -979,6 +1034,8 @@ def pacote(modelo: dict, arquivos: list[tuple[str, bytes]]) -> tuple[bytes, str]
         if analise == 'elegibilidade':
             documentos = [('Tabelas/Situação das Demandas.xlsx', sintese.xlsx(modelo)),
                           ('Tabelas/Situação das Demandas.csv', sintese.csv_detalhe(modelo)),
+                          ('Tabelas/Resumo da Elegibilidade.xlsx', sintese.xlsx_resumo(modelo)),
+                          ('Tabelas/Resumo da Elegibilidade.csv', sintese.csv_resumo(modelo)),
                           ('LEIA-ME.txt', sintese.leia_me(modelo, nome_relatorio, [n for n, _ in arquivos]))]
             for nome, dados in documentos:
                 zipado.writestr(nome, dados)

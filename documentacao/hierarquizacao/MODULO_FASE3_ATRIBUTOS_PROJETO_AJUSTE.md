@@ -458,17 +458,27 @@ cadastrar atributo/criterio
 
 ## Riscos herdados da Fase 1
 
-Quando a Fase 1 identificar riscos, esses riscos podem entrar na Fase 3 como
+Quando a Fase 1 identificar riscos, esses riscos entram na Fase 3 como
 atributos/criterios.
 
-Exemplo:
+Cada camada de risco sobreposta a ao menos um objeto da rodada gera um criterio
+`risco_area:<id_da_camada>`, nomeado "Sobreposicao com [nome da camada]":
 
 ```text
-risco_inundacao = 1 se houve intersecao com camada de inundacao
-risco_fundiario = 1 se houve intersecao com assentamento, quilombola ou area sensivel
+valor_bruto = fase_1.sobreposicoes_risco[<id_da_camada>].area_ha   # hectares sobrepostos
+valor_minimo = 0, escala_absoluta = true, direcao = menor_melhor
+0 ha  -> normalizado 1,0   |   maior area observada -> normalizado 0,0
 ```
 
-Esses atributos devem seguir as mesmas regras da Fase 3:
+Esses criterios formam o grupo `risco_ambiental_territorial` ("Criterios de Risco
+Ambiental e Territorial"): peso atribuido pelo usuario na secao de criterios atributo
+de projeto, soma 1 no grupo, participacao equivalente a dos grupos de atributos do
+cadastro e dinamicos, e isencao do vinculo com os pesos da matriz homologada. Se a
+Fase 1 nao foi executada para o objeto, o valor e ausente. O tratamento gerencial
+anterior (penalizar, ignorar ou barrar) nao e mais oferecido na interface; decisoes ja
+gravadas continuam sendo respeitadas pelo calculo.
+
+Esses atributos seguem as mesmas regras da Fase 3:
 
 - validacao;
 - normalizacao;

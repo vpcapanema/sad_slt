@@ -28,6 +28,7 @@ from api.exceptions import (
 )
 from api.matriz_colunas import extrair_colunas
 from api.services.pesos_homologados import aplicar_pesos, mapa_pesos
+from api.services.elegibilidade_sintese import indice_risco_ambiental
 from api.repositories import camada_geoespacial_repository as camada_repo
 from api.repositories import agrupamento_demanda_repository
 from api.repositories import config_multicriterio_repository as config_repo
@@ -134,14 +135,22 @@ def _carregar(codigo: str) -> dict[str, Any]:
     return row
 
 
-def registrar_saida_geoespacial_fase1(codigo: str, resultado: dict, dono, relatorio: dict | None = None) -> None:
+_ANALISE_DA_FASE = {1: ('elegibilidade', 'elegibilidade_territorial'), 2: ('favorabilidade', 'favorabilidade_territorial')}
+GRUPO_RISCO = 'risco_ambiental_territorial'
+STATUS_SEM_ALTERACAO = {'homologada', 'arquivada'}
+
+
+def registrar_saida_geoespacial(codigo: str, fase: int, resultado: dict, dono, relatorio: dict | None = None) -> None:
+    """Registra, em relatorio_fase{N}, a execução geoespacial (e o PDF, quando houver). Acumula o histórico."""
     from api.db.connection import atomic_connection
 
+    chave, camada = _ANALISE_DA_FASE[fase]
+    coluna = f'relatorio_fase{fase}'
     with atomic_connection():
         row = repo.get_by_codigo(codigo, for_update=True)
         if not row:
             raise ValueError(f'A hierarquização {codigo} não foi encontrada para registrar a saída {resultado["arquivo"]}.')
-        registro = deepcopy(row.get('relatorio_fase1') or {})
+        registro = deepcopy(row.get(coluna) or {})
         analises = registro.setdefault('analises_geoespaciais', [])
         if not isinstance(analises, list) or any(not isinstance(a, dict) or 'arquivo' not in a or 'sha256' not in a for a in analises):
             raise ValueError('O registro de análises geoespaciais desta hierarquização possui estrutura inválida.')
@@ -150,16 +159,212 @@ def registrar_saida_geoespacial_fase1(codigo: str, resultado: dict, dono, relato
         if analise is None:
             analise = {
                 'arquivo': resultado['arquivo'], 'sha256': resultado['sha256'],
-                'camada': 'elegibilidade_territorial', 'lote_id': resultado.get('lote_id'),
+                'camada': camada, 'lote_id': resultado.get('lote_id'),
                 'concluido_em': resultado.get('concluido_em'),
                 'registrado_em': datetime.now(timezone.utc).isoformat(), 'registrado_por': str(dono),
-                'entrada': resultado['elegibilidade']['entrada'],
-                'bases': resultado['elegibilidade']['campos'],
+                'entrada': resultado[chave]['entrada'],
+                'bases': resultado[chave]['campos'],
             }
             analises.append(analise)
         if relatorio is not None:
             analise['relatorio'] = relatorio
-        repo.update(codigo, {'relatorio_fase1': registro})
+        repo.update(codigo, {coluna: registro})
+
+
+def registrar_saida_geoespacial_fase1(codigo: str, resultado: dict, dono, relatorio: dict | None = None) -> None:
+    registrar_saida_geoespacial(codigo, 1, resultado, dono, relatorio)
+
+
+def _atributo_risco(base_id: str, camada: str) -> dict[str, Any]:
+    """Critério da Fase 3 gerado por uma camada de risco sobreposta na Fase 1: área sobreposta, em hectares."""
+    ident = f'risco_area:{base_id}'
+    return {
+        'atributo_id': ident, 'nome_coluna': ident, 'criterio': f'Sobreposição com {camada}',
+        'tipo_dado': 'numerico', 'unidade': 'ha', 'direcao': 'menor_melhor', 'origem': 'fase1_risco_area',
+        'grupo_atributo': GRUPO_RISCO, 'valor_minimo': 0, 'escala_absoluta': True,
+    }
+
+
+def _por_camada(itens: list[dict[str, Any]], bases: list[dict[str, Any]], total: float, camadas: dict[str, str]) -> dict[str, Any]:
+    resumo = {base['id']: {'camada': camadas[base['id']], 'area_m2': 0.0, 'area_ha': 0.0, 'percentual': 0.0, 'feicoes': 0}
+              for base in bases}
+    for item in itens:
+        r = resumo[item['criterio_id']]
+        r['area_m2'] += item['area_m2']
+        r['feicoes'] += 1
+    for r in resumo.values():
+        r['area_ha'] = r['area_m2'] / 1e4
+        r['percentual'] = r['area_m2'] / total * 100 if total else 0.0
+    return resumo
+
+
+def _fase1_da_demanda(linha: dict[str, Any], bases: list[dict[str, Any]], camadas: dict[str, str],
+                      execucao: dict[str, Any], anterior: dict[str, Any]) -> dict[str, Any]:
+    papel = {base['id']: base['papel'] for base in bases}
+    itens = {'restricao': [], 'risco': []}
+    for s in linha['sobreposicoes']:
+        itens[s['papel']].append({
+            'criterio_id': s['base_id'], 'criterio_nome': camadas[s['base_id']], 'camada_origem': camadas[s['base_id']],
+            'nome': s['nome'], 'feicao_id': s['id'], 'identificador': s['identificador'], 'tipo': s['papel'],
+            'area_m2': s['area_m2'], 'area_ha': s['area_m2'] / 1e4, 'percentual': s['percentual'],
+        })
+    restricoes, riscos = itens['restricao'], itens['risco']
+    f1 = _fase1_vazia()
+    f1.update({
+        'executada': True,
+        'status_fase1': 'restrito' if restricoes else 'apto_com_ressalva' if riscos else 'apto',
+        'alertas_fase1': ([f'{len(restricoes)} restrição(ões) territorial(is) identificada(s). Objeto segregado do ranking ordinário.']
+                          if restricoes else []) + ([f'{len(riscos)} risco(s) territorial(is) identificado(s).'] if riscos else []),
+        'restricao': {'encontrada': bool(restricoes), 'resultado': 'Com restrição' if restricoes else 'Sem restrição',
+                      'intersecoes': restricoes},
+        'risco': {'avaliado': True, 'encontrado': bool(riscos), 'resultado': 'Com risco' if riscos else 'Sem risco',
+                  'intersecoes': riscos},
+        'restricoes_intersectadas': restricoes, 'riscos_intersectados': riscos,
+        'geometria_ou_area_afetada': {'tipo': 'Polygon', 'area_total_m2': linha['area_total_m2'],
+                                      'quantidade_intersecoes': len(restricoes) + len(riscos)},
+        'sobreposicoes_restricao': _por_camada(restricoes, [b for b in bases if papel[b['id']] == 'restricao'],
+                                               linha['area_total_m2'], camadas),
+        'sobreposicoes_risco': _por_camada(riscos, [b for b in bases if papel[b['id']] == 'risco'],
+                                           linha['area_total_m2'], camadas),
+        'execucao': execucao,
+    })
+    f1['criterios_fase3_sugeridos'] = [_atributo_risco(b, r['camada']) for b, r in f1['sobreposicoes_risco'].items()
+                                       if r['area_m2'] > 0]
+    # Demandas com restrição não entram no Resumo da Elegibilidade (índice de risco ambiental e territorial).
+    risco_m2 = min(linha['area_total_m2'], linha.get('risco_area_m2', sum(i['area_m2'] for i in riscos)))
+    f1['resumo_elegibilidade'] = None if restricoes else {
+        'camadas_de_risco': [r['camada'] for r in f1['sobreposicoes_risco'].values() if r['feicoes']],
+        'area_de_sobreposicao_ha': risco_m2 / 1e4,
+        'porcentagem_sobreposta': risco_m2 / linha['area_total_m2'] * 100 if linha['area_total_m2'] else 0.0,
+        'indice_de_risco_ambiental_e_territorial': indice_risco_ambiental(risco_m2, linha['area_total_m2']),
+    }
+    if anterior.get('tratamentos_riscos_fase3'):
+        f1['tratamentos_riscos_fase3'] = anterior['tratamentos_riscos_fase3']
+    return f1
+
+
+def _estatisticas(valores: list[tuple[float, float]]) -> dict[str, Any]:
+    """Estatísticas descritivas dos índices válidos (índice, área). Consulta; não substitui o índice registrado."""
+    if not valores:
+        return {'validos': 0}
+    indices = sorted(v for v, _ in valores)
+    meio = len(indices) // 2
+    peso = sum(a for _, a in valores)
+    return {'validos': len(indices), 'minimo': indices[0], 'maximo': indices[-1],
+            'media': sum(indices) / len(indices),
+            'mediana': indices[meio] if len(indices) % 2 else (indices[meio - 1] + indices[meio]) / 2,
+            'media_ponderada_area': sum(v * a for v, a in valores) / peso if peso > 0 else None}
+
+
+def _fase2_da_demanda(linha: dict[str, Any], camadas: dict[str, str], execucao: dict[str, Any],
+                      anterior: dict[str, Any]) -> dict[str, Any]:
+    extracao: dict[str, list] = {'grade': [], 'rede': []}
+    for s in linha['sobreposicoes']:
+        fav = s['favorabilidade']
+        extracao[s['papel']].append({
+            'base_id': s['base_id'], 'camada': camadas[s['base_id']], 'feicao_id': s['id'], 'feicao': s['nome'],
+            'identificador': s['identificador'], 'area_m2': s['area_m2'], 'percentual': s['percentual'],
+            'campo_indice': fav['campo_indice'], 'indice': fav['indice'], 'estado_indice': fav['estado_indice'],
+            'indice_original': fav['indice_original'], 'campo_classe': fav['campo_classe'],
+            'classe': fav['classe'], 'estado_classe': fav['estado_classe'],
+        })
+    estatisticas = {dim: _estatisticas([(e['indice'], e['area_m2']) for e in itens if e['estado_indice'] == 'valido'])
+                    for dim, itens in extracao.items()}
+    f2 = {**anterior, 'executada': True, 'metodo_extracao': 'interseção poligonal por área (GDAL/OGR, EPSG:5880)',
+          'extracao_por_feicao': extracao, 'estatisticas_por_dimensao': estatisticas, 'execucao': execucao}
+    # O índice por dimensão só é registrado quando há um único valor válido; não se agrega sem regra metodológica.
+    unicos = {dim: next((e['indice'] for e in itens if e['estado_indice'] == 'valido'), None)
+              if sum(e['estado_indice'] == 'valido' for e in itens) == 1 else None for dim, itens in extracao.items()}
+    f2['valor_por_dimensao'] = dict(unicos)
+    f2['indice_favorabilidade_grade'], f2['indice_favorabilidade_rede'] = unicos['grade'], unicos['rede']
+    f2['score_fase2'] = ((unicos['grade'] + unicos['rede']) / 2
+                         if unicos['grade'] is not None and unicos['rede'] is not None else None)
+    return f2
+
+
+def registrar_resultado_por_demanda(codigo: str, fase: int, resultado: dict, dono) -> dict[str, Any]:
+    """Grava o resultado de cada demanda (Fases 1 e 2) em dados_hierarquizacao, no contrato lido pela Fase 3 e pela síntese."""
+    from api.services import elegibilidade_relatorio, extracao_atributos_aliases as aliases
+    from api.db.connection import atomic_connection
+
+    chave, _ = _ANALISE_DA_FASE[fase]
+    auditoria = resultado[chave]
+    linhas = elegibilidade_relatorio.resumo_por_demanda(resultado, dono, analise=chave)
+    camadas = {c['id']: aliases.camada(c['id'], c['nome'])['nome'] for c in auditoria['campos']}
+    execucao = {'arquivo': resultado['arquivo'], 'sha256': resultado['sha256'], 'lote_id': resultado.get('lote_id'),
+                'concluido_em': resultado.get('concluido_em'), 'registrado_em': datetime.now(timezone.utc).isoformat()}
+    with atomic_connection():
+        row = repo.get_by_codigo(codigo, for_update=True)
+        if not row:
+            raise ValueError(f'A hierarquização {codigo} não foi encontrada para registrar o resultado por demanda.')
+        if row.get('status') in STATUS_SEM_ALTERACAO:
+            return {'registrado': False, 'motivo': f'Hierarquização {row["status"]}: o resultado por demanda não foi alterado.'}
+        dados = deepcopy(row.get('dados_hierarquizacao') or {})
+        if fase not in _fases_configuradas(dados):
+            return {'registrado': False, 'motivo': f'A Fase {fase} não faz parte desta rodada.'}
+        objetos = {str((o.get('cabecalho_objeto') or {}).get('codigo')): o for o in dados.get('objetos', [])}
+        sem_vinculo = [str(l.get('codigo_demanda')) for l in linhas if l.get('codigo_demanda') not in objetos]
+        if sem_vinculo:
+            raise ValueError('Demandas da saída sem correspondência na hierarquização: ' + ', '.join(sem_vinculo) + '.')
+        sugeridos: dict[str, dict] = {}
+        for linha in linhas:
+            h = objetos[linha['codigo_demanda']].setdefault('hierarquizacao', {})
+            if fase == 1:
+                h['fase_1'] = _fase1_da_demanda(linha, auditoria['campos'], camadas, execucao, h.get('fase_1') or {})
+                for sugestao in h['fase_1']['criterios_fase3_sugeridos']:
+                    sugeridos[sugestao['atributo_id']] = sugestao
+            else:
+                h['fase_2'] = _fase2_da_demanda(linha, camadas, execucao, h.get('fase_2') or {})
+        if fase == 1:
+            dados.setdefault('cabecalho_grupo', {})['criterios_fase3_sugeridos'] = list(sugeridos.values())
+        alteracoes: dict[str, Any] = {'dados_hierarquizacao': dados}
+        agora = datetime.now(timezone.utc).isoformat()
+        for coluna in ('relatorio_fase3', 'relatorio_consolidado'):
+            if row.get(coluna):
+                alteracoes[coluna] = {**row[coluna], 'desatualizado': {'por': f'fase_{fase}', 'em': agora}}
+        repo.update(codigo, alteracoes)
+    return {'registrado': True, 'demandas': len(linhas)}
+
+
+def atualizar_nomes_resultado(codigo: str, fase: int, nomes: dict[str, str]) -> None:
+    """Aplica os nomes amigáveis confirmados (camadas e feições) ao resultado por demanda já gravado."""
+    from api.db.connection import atomic_connection
+
+    chave_fase = f'fase_{fase}'
+    with atomic_connection():
+        row = repo.get_by_codigo(codigo, for_update=True)
+        if not row or row.get('status') in STATUS_SEM_ALTERACAO:
+            return
+        dados = deepcopy(row.get('dados_hierarquizacao') or {})
+        for obj in dados.get('objetos', []):
+            f = (obj.get('hierarquizacao') or {}).get(chave_fase) or {}
+            if not f.get('executada'):
+                continue
+            if fase == 1:
+                for item in [*f.get('restricoes_intersectadas', []), *f.get('riscos_intersectados', [])]:
+                    item['criterio_nome'] = item['camada_origem'] = nomes.get(item['criterio_id'], item['criterio_nome'])
+                    item['nome'] = nomes.get(item['feicao_id'], item['nome'])
+                for grupo in ('sobreposicoes_restricao', 'sobreposicoes_risco'):
+                    for base_id, r in (f.get(grupo) or {}).items():
+                        r['camada'] = nomes.get(base_id, r['camada'])
+                if f.get('resumo_elegibilidade'):
+                    f['resumo_elegibilidade']['camadas_de_risco'] = [
+                        r['camada'] for r in f['sobreposicoes_risco'].values() if r['feicoes']]
+                f['criterios_fase3_sugeridos'] = [
+                    _atributo_risco(s['atributo_id'].split(':', 1)[1], f['sobreposicoes_risco'][s['atributo_id'].split(':', 1)[1]]['camada'])
+                    for s in f.get('criterios_fase3_sugeridos', [])]
+            else:
+                for itens in (f.get('extracao_por_feicao') or {}).values():
+                    for e in itens:
+                        e['camada'] = nomes.get(e['base_id'], e['camada'])
+                        e['feicao'] = nomes.get(e['feicao_id'], e['feicao'])
+        if fase == 1:
+            sugeridos: dict[str, dict] = {}
+            for obj in dados.get('objetos', []):
+                for s in ((obj.get('hierarquizacao') or {}).get('fase_1') or {}).get('criterios_fase3_sugeridos', []):
+                    sugeridos[s['atributo_id']] = s
+            dados.setdefault('cabecalho_grupo', {})['criterios_fase3_sugeridos'] = list(sugeridos.values())
+        repo.update(codigo, {'dados_hierarquizacao': dados})
 
 
 def arquivo_relatorio(codigo: str, tipo: str, arquivo: str) -> tuple[bytes, str]:
@@ -171,7 +376,8 @@ def arquivo_relatorio(codigo: str, tipo: str, arquivo: str) -> tuple[bytes, str]
         raise ValueError('Tipo de relatório inválido.')
     registro = _carregar(codigo).get(f'relatorio_{tipo}') or {}
     for analise in registro.get('analises_geoespaciais', []):
-        for item in (analise, analise.get('relatorio') or {}):
+        relatorio = analise.get('relatorio') or {}
+        for item in (analise, relatorio, relatorio.get('tabela_resumo') or {}):
             if item.get('arquivo') != arquivo:
                 continue
             dados = storage_remoto.baixar(arquivo)
@@ -1369,7 +1575,11 @@ def _normalizar(
         if x is None:
             n = None
         elif tipo in {"numerico", "ordinal", "categorico"}:
-            n = (x - lo) / (hi - lo) if hi > lo else 1.0
+            if hi > lo:
+                n = (x - lo) / (hi - lo)
+            else:
+                # Escala absoluta (ex.: hectares sobrepostos): sem variação e sem sobreposição é o melhor caso.
+                n = 0.0 if criterio.get("escala_absoluta") and x == lo else 1.0
         else:
             n = x
         if n is not None and direcao in {"menor_melhor", "negativa"}:
@@ -1384,6 +1594,13 @@ def _normalizar(
 def _valor_atributo_objeto(obj: dict[str, Any], chave: Any) -> Any:
     """Valor do atributo de Fase 3 do objeto: prioriza os slots ``atributos_fase3``."""
     cab = obj.get("cabecalho_objeto") or {}
+    if str(chave).startswith("risco_area:"):
+        # Critério de risco herdado da Fase 1: área sobreposta à camada, em hectares (ausente se a Fase 1 não rodou).
+        fase1 = (obj.get("hierarquizacao") or {}).get("fase_1") or {}
+        if not fase1.get("executada"):
+            return None
+        sobreposicao = (fase1.get("sobreposicoes_risco") or {}).get(str(chave).split(":", 1)[1]) or {}
+        return sobreposicao.get("area_ha", 0.0)
     if str(chave).startswith("cadastro:"):
         atributo = str(chave).split(":", 1)[1]
         cadastro = cab.get("atributos") or {}
@@ -1445,7 +1662,12 @@ def executar_fase_3(
         dados.get("cabecalho_grupo", {}).get("configuracoes", {}).get("fase_3", {}).get("criterios")
         or []
     )
-    criterios = aplicar_pesos(dados, criterios_salvos or payload.criterios)
+    criterios_base = criterios_salvos or payload.criterios
+    if criterios_salvos and payload.criterios:
+        # Os critérios de risco acompanham as camadas da Fase 1 da rodada atual, não os pesos salvos em rodada anterior.
+        criterios_base = [c for c in criterios_salvos if c.get("grupo_atributo") != GRUPO_RISCO] + [
+            c for c in payload.criterios if c.get("grupo_atributo") == GRUPO_RISCO]
+    criterios = aplicar_pesos(dados, criterios_base)
     if not criterios:
         raise DemandaValidationError(
             "Informe ao menos um critério da Fase 3.", field="criterios"
@@ -1506,7 +1728,8 @@ def executar_fase_3(
             if not isinstance(slot_atributo, dict):
                 slot_atributo = slots_objeto[chave] = {
                     "valor_bruto": _valor_atributo_objeto(obj, chave),
-                    "origem": "cadastro" if str(chave).startswith("cadastro:") else "complementacao",
+                    "origem": "cadastro" if str(chave).startswith("cadastro:")
+                    else "fase1" if str(chave).startswith("risco_area:") else "complementacao",
                 }
             if n is None:
                 falha_obrigatoria = falha_obrigatoria or c.get("obrigatorio") is True
@@ -1652,7 +1875,8 @@ def salvar_pesos_fase3(codigo: str, payload: Any) -> HierarquizacaoResponseSchem
             slot = slots.setdefault(chave, {
                 "valor_bruto": _valor_atributo_objeto(obj, chave),
                 "valor_rescalonado": None,
-                "origem": "cadastro" if chave.startswith("cadastro:") else "complementacao",
+                "origem": "cadastro" if chave.startswith("cadastro:")
+                else "fase1" if chave.startswith("risco_area:") else "complementacao",
             })
             slot["peso"] = peso
     config = dados["cabecalho_grupo"].setdefault("configuracoes", {}).setdefault("fase_3", {})

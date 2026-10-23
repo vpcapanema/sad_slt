@@ -52,12 +52,16 @@ def aplicar_pesos(dados, criterios):
     if not (dados.get("comparacao_colaborativa") or {}).get("analise_homologada_id"):
         return criterios
     weights = mapa_pesos(dados)
-    missing = [str(c.get("criterio") or c.get("nome_coluna") or c.get("atributo_id")) for c in criterios
+    # Critérios de risco herdados da Fase 1 não constam da matriz julgada: seus pesos são atribuídos nesta fase.
+    julgados = [c for c in criterios if c.get("grupo_atributo") != "risco_ambiental_territorial"]
+    missing = [str(c.get("criterio") or c.get("nome_coluna") or c.get("atributo_id")) for c in julgados
                if str(c.get("nome_coluna") or c.get("atributo_id")) not in weights]
     if missing:
         raise DemandaValidationError("A execução exige vínculo com os critérios homologados. Atributos sem correspondência: " + "; ".join(missing), field="criterios")
     result = deepcopy(criterios)
     for c in result:
+        if c.get("grupo_atributo") == "risco_ambiental_territorial":
+            continue
         c["peso"] = weights[str(c.get("nome_coluna") or c.get("atributo_id"))]
         c["analise_homologada_id"] = dados["comparacao_colaborativa"]["analise_homologada_id"]
     return result

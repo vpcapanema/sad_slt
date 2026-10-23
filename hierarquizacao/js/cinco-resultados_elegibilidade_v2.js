@@ -5,11 +5,12 @@ import {escolherArquivo} from '../../geoespacial/extracao-atributos/explorador.j
 import {
   nomeSobreposicao, CATEGORIAS, ROTULOS, FILTROS, ORDENS, SELECAO_VAZIA, caracterizarDemandas, demandasVisiveis, descreverSituacao,
   registrosDetalhados, registrosVisiveis, alternarSelecao, formatarHa, formatarPercentual,
-} from './cinco-resultados_elegibilidade_v2-dados.js?v=trechos-origem';
+} from './cinco-resultados_elegibilidade_v2-dados.js?v=resumo';
 import {criarGrafico} from './cinco-resultados_elegibilidade_v2-grafico.js?v=trechos-origem';
 import {criarRosca} from './cinco-resultados_elegibilidade_v2-rosca.js?v=trechos-origem';
 import {criarMapa} from './cinco-resultados_elegibilidade_v2-mapa.js?v=trechos-origem';
 import {criarTabela} from './cinco-resultados_elegibilidade_v2-tabela.js?v=trechos-origem';
+import {criarResumo} from './cinco-resultados_elegibilidade_v2-resumo.js?v=resumo';
 
 const ROTA = '/extracao-atributos/elegibilidade/resultados';
 const PAPEIS = {entrada: 'Entrada', restricao: 'Restrição', risco: 'Risco'};
@@ -43,6 +44,7 @@ export function criarResultados({avisar, aoOcupar}) {
     tabela: node('tabela'), anterior: node('anterior'), proxima: node('proxima'), rotulo: node('pagina'),
     contagem: node('contagem'), aoSelecionar: escolher,
   });
+  const resumo = criarResumo({tabela: node('resumo-tabela'), contagem: node('resumo-contagem'), aoSelecionar: escolher});
 
   node('situacao').replaceChildren(...Object.entries(FILTROS).map(([valor, texto]) => new Option(texto, valor)));
   node('ordem').replaceChildren(...Object.entries(ORDENS).map(([valor, texto]) => new Option(texto, valor)));
@@ -144,6 +146,7 @@ export function criarResultados({avisar, aoOcupar}) {
     atualizarPopup();
     tabela.renderizar({registros: registrosVisiveis(registros, {visiveis, categorias, selecao}), selecao, total: registros.length},
       {reiniciar: true});
+    resumo.renderizar({demandas: fichas, selecao});
     resumirSelecao(visiveis); controles();
   }
 

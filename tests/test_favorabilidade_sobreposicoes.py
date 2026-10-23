@@ -196,7 +196,8 @@ def test_reabrir_saida_e_namespace_separado_da_elegibilidade(analise):
 def test_rotas_completas_e_revisao_obrigatoria_sem_registrar_fase1(analise, monkeypatch):
     from api.deps.auth import require_geospatial_access
     from api.routers.extracao_atributos import router
-    monkeypatch.setattr(service, 'registrar_relatorios', lambda *args: pytest.fail('Não deve registrar relatório de Fase 1.'))
+    chamadas = []
+    monkeypatch.setattr(service, 'registrar_relatorios', lambda *args, **opcoes: chamadas.append(opcoes))
     app = FastAPI()
     app.include_router(router)
     app.dependency_overrides[require_geospatial_access] = lambda: SimpleNamespace(id='autor')
@@ -213,6 +214,7 @@ def test_rotas_completas_e_revisao_obrigatoria_sem_registrar_fase1(analise, monk
         assert resultado.json()['concluidas'] == 1 and resultado.json()['previstas'] == 2
         assert 'relatorios_hierarquizacao' not in resultado.json()
         assert client.post(rota + '/pacote', json=payload).headers['content-type'] == 'application/zip'
+        assert chamadas and all(o.get('analise') == 'favorabilidade' for o in chamadas)
         assert client.post(rota + '/abrir', json={'arquivo': analise[0]['job-1']['arquivo']}).status_code == 200
         app.dependency_overrides.clear()
         for acao in ('preparar', 'visualizar', 'pacote', 'abrir'):

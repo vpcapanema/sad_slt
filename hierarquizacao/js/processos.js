@@ -366,7 +366,7 @@
     const wrapper = document.createElement("div");
     for (const analise of h[key]?.analises_geoespaciais || []) {
       const lista = document.createElement("ul");
-      for (const [item, rotulo] of [[analise, "Baixar camada GeoPackage"], [analise.relatorio, "Baixar relatório PDF"]]) {
+      for (const [item, rotulo] of [[analise, "Baixar camada GeoPackage"], [analise.relatorio, "Baixar relatório PDF"], [analise.relatorio?.tabela_resumo, "Baixar Resumo da Elegibilidade (Excel)"]]) {
         if (!item?.arquivo) continue;
         const linha = document.createElement("li"), link = document.createElement("a");
         const prefix = location.pathname.includes("/sicard/") ? "/sicard" : "";

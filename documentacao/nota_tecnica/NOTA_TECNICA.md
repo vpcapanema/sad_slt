@@ -18,7 +18,7 @@
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Título**                 | Metodologia do Sistema de Hierarquização de Demandas — SICARD                                                                                                         |
 | **Número**                 | NT-SICARD-001/2026                                                                                                                                                       |
-| **Versão**                 | 1.40                                                                                                                                                                      |
+| **Versão**                 | 1.42                                                                                                                                                                      |
 | **Data de emissão**        | 23/10/2026                                                                                                                                                               |
 | **Classificação**         | Documento técnico-metodológico de entrega ao cliente                                                                                                                   |
 | **Sistema**                 | SICARD — Sistema Inteligente de Cadastro e Ranking de Demandas                                                                                                        |
@@ -74,6 +74,8 @@
 | 1.38    | 23/10/2026 | `[preencher]` | Individualização das cores das barras de Favorabilidade e inclusão de legendas interativas em grade uniforme, exibindo somente o nome da demanda; alinhamento dos seletores de superfície e simbologia e carregamento automático da camada oficial referenciada pela execução, sem escolha de origem, preservando a identidade das combinações e a escala dos índices. |
 | 1.39    | 23/10/2026 | `[preencher]` | Remoção dos nomes e classes sob as barras de Favorabilidade, mantendo os nomes exclusivamente na legenda, os valores numéricos sobre as barras e a identificação completa nos detalhes e descrições acessíveis, sem alteração dos índices. |
 | 1.40    | 23/10/2026 | `[preencher]` | Substituição das barras de Favorabilidade por intervalos com pontos, com uma linha por demanda identificada somente pelo nome, um ponto por feição e traço entre extremos válidos; cores e legenda por feição, separação visual de pontos próximos e preservação dos índices, das identidades, das ausências e da seleção sincronizada. |
+| 1.41    | 23/10/2026 | `[preencher]` | Registro, por objeto de demanda, dos resultados das Fases 1 e 2 em `dados_hierarquizacao` ao fim do cálculo, com histórico acumulado das execuções; conversão de cada camada de risco sobreposta na Fase 1 em critério da Fase 3 (área sobreposta, em hectares, menor é melhor, escala absoluta), em grupo próprio de pesos, com participação equivalente à dos demais grupos; substituição do tratamento gerencial de risco (penalizar, ignorar ou barrar) por esses critérios ponderados; proteção das hierarquizações homologadas e arquivadas contra regravação e sinalização de síntese desatualizada. |
+| 1.42    | 23/10/2026 | `[preencher]` | Inclusão do Resumo da Elegibilidade nos resultados da Fase 1: uma linha por objeto de demanda sem restrição, com camadas de risco, área de sobreposição (união, em hectares), porcentagem sobreposta e índice de risco ambiental e territorial (1 − área sobreposta ÷ área da demanda, de 0 a 1); inclusão da tabela no PDF, no pacote de saída e no relatório da Fase 1 da hierarquização, sem alteração da classificação de elegibilidade. |
 
 ---
 
@@ -614,6 +616,33 @@ senão:
 - Restrição tem função **excludente/segregadora**; risco **não exclui**, apenas gera
   ressalva. A avaliação quantitativa do risco pertence à Fase 3.
 
+**Registro por objeto de demanda.** Ao final do cálculo, o resultado de cada objeto de
+demanda é gravado em `dados_hierarquizacao`, no campo da Fase 1: `status_fase1`,
+`restricoes_intersectadas` e `riscos_intersectados` (com camada, feição, área em m², área
+em ha e percentual da demanda), `sobreposicoes_restricao` e `sobreposicoes_risco` (área
+total sobreposta por camada, incluindo as de área zero) e `criterios_fase3_sugeridos`. A
+correspondência entre a saída geoespacial e o objeto é feita pelo código da demanda. As
+execuções acumulam histórico (arquivo e assinatura) no relatório da fase. Hierarquizações
+homologadas ou arquivadas não são regravadas, e a síntese ou o consolidado já emitidos
+são marcados como desatualizados quando o resultado de uma fase é regravado.
+
+**Resumo da Elegibilidade.** Os resultados da Fase 1 incluem uma tabela final, com uma
+linha por objeto de demanda **sem restrição** (com risco ou livre de restrições e riscos);
+objetos com restrição não constam. As colunas são: objeto de demanda; camadas de risco
+atingidas; área de sobreposição, em hectares; porcentagem sobreposta; e índice de risco
+ambiental e territorial. A área de sobreposição é a **união** das áreas atingidas por todas
+as camadas de risco (EPSG:5880), sem dupla contagem de áreas coincidentes. O índice é
+calculado por:
+
+```text
+indice_risco_ambiental_territorial = 1 − (area_sobreposta_por_camadas_de_risco / area_total_da_demanda)
+0 = demanda inteiramente sobreposta (menor elegibilidade)  |  1 = sem sobreposição (maior elegibilidade)
+```
+
+A tabela integra o relatório em PDF, o pacote de saída (planilha e CSV) e o relatório da
+Fase 1 da hierarquização, em planilha própria vinculada à camada geoespacial e com as
+linhas gravadas no registro, sem alterar a classificação `status_fase1`.
+
 **Produção das camadas consolidadas.** O módulo transforma múltiplas camadas vetoriais
 oficiais/homologadas em **duas camadas consolidadas** (restrição e risco), usando o
 operador **Identity** (ou overlay equivalente), que particiona as geometrias por
@@ -902,12 +931,34 @@ Essas estatísticas são exclusivamente exploratórias no navegador: não gravam
 valores, não repetem interseções e não alteram classes, índices oficiais,
 homologação, PDF ou GeoPackages.
 
+**Registro por objeto de demanda.** Ao final do cálculo, a extração de cada objeto de
+demanda é gravada em `dados_hierarquizacao`, no campo da Fase 2, por dimensão (grade e
+rede): feição intersectada, área e percentual da demanda, campo e valor do índice, estado
+do índice, classe e estado da classe, além de estatísticas descritivas dos índices válidos
+(mínimo, máximo, média, mediana e média ponderada pela área). O índice oficial da dimensão
+só é preenchido quando há um único valor válido; na ausência de regra metodológica de
+agregação, o sistema não agrega valores de várias feições, e a síntese permanece sem
+resultado para o objeto até que o índice seja definido.
 ### 8.3 Fase 3 — Priorização de demandas por atributos
 
 **Função.** **Opcional.** Incorpora informações que pertencem ao **próprio objeto de
 demanda, à carteira, à governança ou à viabilidade de execução**, sem duplicar critérios
-já avaliados na Fase 2. É também onde os **riscos herdados da Fase 1** podem ser
-avaliados quantitativamente.
+já avaliados na Fase 2. É também onde os **riscos herdados da Fase 1** são avaliados
+quantitativamente.
+
+**Critérios de risco ambiental e territorial.** Cada camada de risco sobreposta, na Fase 1,
+a ao menos um objeto de demanda da rodada gera um critério da Fase 3, denominado
+"Sobreposição com [nome da camada]". A métrica é a área sobreposta, em hectares, com
+relação negativa (menor é melhor) e escala absoluta: o valor zero equivale ao melhor
+resultado (normalizado 1,0), e a área máxima observada, ao pior (0,0). Esses critérios
+formam o grupo **Critérios de Risco Ambiental e Territorial**, com peso atribuído pelo
+usuário e soma 1 no grupo, e participação equivalente à dos grupos de atributos do
+cadastro e de atributos dinâmicos. O conjunto de critérios varia a cada rodada, conforme as
+camadas efetivamente sobrepostas. Os pesos desse grupo não decorrem da matriz homologada.
+Objeto de demanda cuja Fase 1 não foi executada tem o valor do critério registrado como
+ausente. A penalização do escore por índice de risco e as decisões gerenciais de ignorar
+ou barrar não compõem mais o procedimento; decisões já gravadas em rodadas anteriores
+permanecem registradas e são respeitadas.
 
 **Entrada:** arquivo tabular (CSV, XLSX, XLS, Parquet ou tabela do banco), uma linha
 por objeto de demanda, uma coluna por atributo.

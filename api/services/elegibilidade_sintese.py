@@ -31,6 +31,19 @@ NOTA_LEITURA = ('Livre de restrições e riscos significa que não foi encontrad
                 'O percentual usa a área total da demanda como base; áreas atingidas por camadas diferentes podem coincidir '
                 'e não são somadas. “Apenas toca o limite” indica contato sem área atingida. '
                 'O relatório informa a situação de cada demanda; não a classifica como elegível ou inelegível.')
+COLUNAS_RESUMO = ['Conjunto de demandas', 'Objeto de demanda', 'Camadas de risco', 'Área de sobreposição (ha)',
+                  'Porcentagem sobreposta', 'Índice de risco ambiental e territorial']
+NOTA_INDICE = ('Índice de risco ambiental e territorial = 1 − (área da demanda sobreposta por camadas de risco ÷ área total da demanda). '
+               'Varia de 0 a 1: quanto mais próximo de 1, maior a elegibilidade da demanda para execução; quanto mais próximo de 0, '
+               'menor. A área sobreposta é a união das áreas atingidas por todas as camadas de risco, sem contar duas vezes o que '
+               'coincide. Demandas com restrição não constam desta tabela.')
+
+
+def indice_risco_ambiental(area_m2: float, total_m2: float) -> float:
+    """Índice de 0 a 1: 1 sem sobreposição com camadas de risco; 0 com a demanda inteira sobreposta."""
+    if not total_m2 or total_m2 <= 0:
+        return 1.0
+    return max(0.0, min(1.0, 1 - area_m2 / total_m2))
 
 
 def caracterizar(entrada: dict) -> list[dict]:
@@ -97,29 +110,83 @@ def registros_detalhados(modelo: dict) -> list[dict]:
     return registros
 
 
+def resumo_elegibilidade(entrada: dict) -> list[dict]:
+    """Uma linha por demanda sem restrição (com risco ou livre), da mais à menos exposta ao risco."""
+    linhas = []
+    for ficha in caracterizar(entrada):
+        if ficha['cats']['restricao']:
+            continue
+        linha, itens = ficha['linha'], sorted(ficha['cats']['risco'], key=lambda i: -i['area_m2'])
+        total = linha['area_total_m2']
+        area = linha.get('risco_area_m2')
+        if area is None:
+            area = sum(i['area_m2'] for i in itens)
+        area = min(area, total)
+        linhas.append({'id': linha['id'], 'demanda': ficha['nome'], 'camadas': list(dict.fromkeys(i['camada'] for i in itens)),
+                       'area_m2': area, 'percentual': area / total * 100 if total else 0.0,
+                       'indice': indice_risco_ambiental(area, total)})
+    return sorted(linhas, key=lambda r: (r['indice'], r['demanda'].casefold()))
+
+
+def linhas_resumo(modelo: dict) -> list[dict]:
+    return [{**r, 'conjunto': entrada['nome']} for entrada in modelo['entradas'] for r in resumo_elegibilidade(entrada)]
+
+
+def resumo_para_registro(modelo: dict) -> dict:
+    """Formato gravado no relatório da Fase 1 da hierarquização (campos com os nomes das colunas da tabela)."""
+    return {'titulo': 'Resumo da Elegibilidade', 'nota': NOTA_INDICE, 'colunas': COLUNAS_RESUMO,
+            'linhas': [{'conjunto_de_demandas': r['conjunto'], 'objeto_de_demanda': r['demanda'],
+                        'camadas_de_risco': r['camadas'], 'area_de_sobreposicao_ha': r['area_m2'] / 1e4,
+                        'porcentagem_sobreposta': r['percentual'],
+                        'indice_de_risco_ambiental_e_territorial': r['indice']} for r in linhas_resumo(modelo)]}
+
+
 # ------------------------------------------------------------------ planilhas
+
+def _folha(ws, titulo, colunas, linhas, larguras):
+    ws.title = titulo
+    ws.append(colunas)
+    for celula in ws[1]:
+        celula.fill, celula.font = PatternFill('solid', start_color='003B5A'), Font(bold=True, color='FFFFFF')
+        celula.alignment = Alignment(wrap_text=True, vertical='center')
+    for linha in linhas:
+        ws.append(linha)
+    for linha in ws.iter_rows(min_row=2):
+        for celula in linha:
+            if isinstance(celula.value, str):
+                celula.data_type = 's'
+    for indice, largura in enumerate(larguras, 1):
+        ws.column_dimensions[get_column_letter(indice)].width = largura
+    ws.freeze_panes = 'A2'
+    ws.auto_filter.ref = ws.dimensions
+
+
+def _folha_resumo_elegibilidade(livro, ws, modelo: dict):
+    linhas = linhas_resumo(modelo)
+    _folha(ws, 'Resumo da Elegibilidade', COLUNAS_RESUMO,
+           [[r['conjunto'], r['demanda'], '; '.join(r['camadas']) or '—', r['area_m2'] / 1e4, r['percentual'] / 100, r['indice']]
+            for r in linhas], [30, 38, 54, 22, 22, 28])
+    for linha in ws.iter_rows(min_row=2):
+        linha[3].number_format = '#,##0.0000'
+        linha[4].number_format = '0.00####%'
+        linha[5].number_format = '0.0000'
+    ws.append([])
+    ws.append([NOTA_INDICE])
+    ws.cell(row=ws.max_row, column=1).alignment = Alignment(wrap_text=False)
+
+
+def xlsx_resumo(modelo: dict) -> bytes:
+    """Planilha só com o Resumo da Elegibilidade, a que fica registrada na hierarquização."""
+    livro = Workbook()
+    _folha_resumo_elegibilidade(livro, livro.active, modelo)
+    memoria = BytesIO()
+    livro.save(memoria)
+    return memoria.getvalue()
+
 
 def xlsx(modelo: dict) -> bytes:
     livro = Workbook()
-    cabecalho_fundo = PatternFill('solid', start_color='003B5A')
-    cabecalho_fonte = Font(bold=True, color='FFFFFF')
-
-    def folha(ws, titulo, colunas, linhas, larguras):
-        ws.title = titulo
-        ws.append(colunas)
-        for celula in ws[1]:
-            celula.fill, celula.font = cabecalho_fundo, cabecalho_fonte
-            celula.alignment = Alignment(wrap_text=True, vertical='center')
-        for linha in linhas:
-            ws.append(linha)
-        for linha in ws.iter_rows(min_row=2):
-            for celula in linha:
-                if isinstance(celula.value, str):
-                    celula.data_type = 's'
-        for indice, largura in enumerate(larguras, 1):
-            ws.column_dimensions[get_column_letter(indice)].width = largura
-        ws.freeze_panes = 'A2'
-        ws.auto_filter.ref = ws.dimensions
+    folha = _folha
 
     resumo = []
     for entrada in modelo['entradas']:
@@ -137,6 +204,8 @@ def xlsx(modelo: dict) -> bytes:
     for linha in ws.iter_rows(min_row=2):
         linha[8].number_format = '#,##0.00####'
         linha[9].number_format = '#,##0.0000'
+
+    _folha_resumo_elegibilidade(livro, livro.create_sheet(), modelo)
 
     detalhe = []
     for r in registros_detalhados(modelo):
@@ -197,6 +266,16 @@ def csv_detalhe(modelo: dict) -> bytes:
     return saida.getvalue().encode('utf-8-sig')
 
 
+def csv_resumo(modelo: dict) -> bytes:
+    saida = StringIO()
+    escritor = csv.writer(saida, delimiter=';', lineterminator='\r\n')
+    escritor.writerow(COLUNAS_RESUMO)
+    for r in linhas_resumo(modelo):
+        escritor.writerow([_celula_csv(v) for v in (r['conjunto'], r['demanda'], '; '.join(r['camadas']) or '—',
+                                                    r['area_m2'] / 1e4, r['percentual'], r['indice'])])
+    return saida.getvalue().encode('utf-8-sig')
+
+
 def leia_me(modelo: dict, relatorio: str, arquivos: list[str]) -> bytes:
     ind = indicadores([f for e in modelo['entradas'] for f in caracterizar(e)])
     linhas = [
@@ -210,9 +289,11 @@ def leia_me(modelo: dict, relatorio: str, arquivos: list[str]) -> bytes:
         'as matrizes de área por camada ficam no anexo.',
         '- Tabelas/Situação das Demandas.xlsx: situação de cada demanda, restrições e riscos encontrados e camadas consultadas, com filtros.',
         '- Tabelas/Situação das Demandas.csv: o mesmo detalhe em texto (UTF-8, separador ponto e vírgula).',
+        '- Tabelas/Resumo da Elegibilidade.xlsx e .csv: uma linha por demanda sem restrição, com camadas de risco, área e porcentagem '
+        'sobrepostas e o índice de risco ambiental e territorial (0 a 1; mais próximo de 1, maior a elegibilidade).',
         '- Camadas/NN/*.gpkg: cópia integral de cada conjunto de demandas, com áreas e sobreposições gravadas na execução (para uso em SIG).',
         '- Metadados da Análise.json: identificação, fontes, nomes revisados e assinatura (SHA-256) dos arquivos.', '',
-        'COMO LER', NOTA_LEITURA, '',
+        'COMO LER', NOTA_LEITURA, NOTA_INDICE, '',
         'ARQUIVOS DE CAMADAS', *[f'- {nome}' for nome in arquivos],
     ]
     return ('\r\n'.join(linhas) + '\r\n').encode('utf-8-sig')
@@ -260,6 +341,16 @@ class GraficoSituacoes(Flowable):
             c.setFont('Helvetica', 7.5)
             c.drawString(x1 + 6, y + 6, f'{valor} · {estilo.percentual(valor / total * 100)}')
         c.restoreState()
+
+
+def tabela_resumo_elegibilidade(e: dict, entrada: dict) -> object:
+    linhas = [['Objeto de demanda', 'Camadas de risco', 'Área de sobreposição', 'Porcentagem sobreposta', 'Índice de risco ambiental e territorial']]
+    for r in resumo_elegibilidade(entrada):
+        linhas.append([r['demanda'], '; '.join(r['camadas']) or '—', f'{estilo.numero(r["area_m2"] / 1e4, 4)} ha',
+                       estilo.percentual(r['percentual']), f'{r["indice"]:.4f}'.replace('.', ',')])
+    tabela = estilo._tabela(e, linhas, [estilo.LARGURA * p for p in (.27, .27, .16, .14, .16)], direita=(2, 3, 4))
+    tabela.splitInRow = 1
+    return tabela
 
 
 def tabela_resumo(e: dict, fichas: list[dict], area_km2) -> object:

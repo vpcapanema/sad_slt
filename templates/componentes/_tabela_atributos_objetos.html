@@ -44,12 +44,6 @@
     <span><strong>2ª linha:</strong> valor original</span>
   </div>
   {% endif %}
-  <div class="fase-actions atributos-riscos-acoes" data-atributos-riscos-acoes hidden>
-    <button id="salvar-tratamentos-riscos-fase3" class="btn btn--primary" type="button">
-      <i class="fas fa-shield-halved"></i> Salvar tratamento dos riscos
-    </button>
-    <p class="ahp-help-text">A penalização reduz o score conforme o índice de risco da Elegibilidade territorial. O gestor também pode ignorar o risco ou barrar a demanda.</p>
-  </div>
 
   <div class="fase-empty" data-atributos-sem-colunas hidden>
     Nenhum critério de Etapa 3 (Priorização) encontrado na matriz desta hierarquização.
@@ -68,7 +62,11 @@
       <header><h3>Atributos dinâmicos</h3><output data-soma-pesos="dinamico">1,000</output></header>
       <div data-controles-pesos="dinamico"></div>
     </section>
-    <p class="ahp-help-text atributos-pesos-ajuda">Cada grupo soma 1. Ao alterar um peso, o saldo é redistribuído automaticamente entre os demais atributos do mesmo grupo. No cálculo final, os dois grupos têm participação equivalente.</p>
+    <section class="atributos-pesos-grupo secao-pesos-risco">
+      <header><h3>Critérios de Risco Ambiental e Territorial</h3><output data-soma-pesos="risco">1,000</output></header>
+      <div data-controles-pesos="risco"></div>
+    </section>
+    <p class="ahp-help-text atributos-pesos-ajuda">Cada grupo soma 1. Ao alterar um peso, o saldo é redistribuído automaticamente entre os demais critérios do mesmo grupo. No cálculo final, os grupos apresentados têm participação equivalente. Os critérios de risco vêm das camadas de risco sobrepostas às demandas na Elegibilidade territorial; quanto maior a área sobreposta, menor a prioridade.</p>
     <div class="fase-actions atributos-pesos-acoes"><button id="salvar-pesos-fase3" class="btn btn--primary" type="button"><i class="fas fa-floppy-disk"></i> Salvar pesos dos atributos</button></div>
   </div>
 

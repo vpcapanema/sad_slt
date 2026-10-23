@@ -525,8 +525,7 @@ def visualizar_resultados_elegibilidade(request: Request, payload: ApresentacaoE
         opcoes = {'analise': 'favorabilidade'} if '/favorabilidade/' in request.url.path else {}
         modelo, _ = elegibilidade_relatorio.montar(payload.execucoes, payload.nomes, user.id, payload.revisados, **opcoes)
         elegibilidade_relatorio.salvar_nomes(payload.execucoes, modelo, user.id, **opcoes)
-        if not opcoes:
-            elegibilidade_relatorio.registrar_relatorios(payload.execucoes, modelo, user.id)
+        elegibilidade_relatorio.registrar_relatorios(payload.execucoes, modelo, user.id, **opcoes)
         return modelo
     except FileNotFoundError as exc:
         raise HTTPException(404, str(exc)) from exc
@@ -545,8 +544,7 @@ def pacote_resultados_elegibilidade(request: Request, payload: ApresentacaoElegi
     try:
         opcoes = {'analise': 'favorabilidade'} if '/favorabilidade/' in request.url.path else {}
         modelo, arquivos = elegibilidade_relatorio.montar(payload.execucoes, payload.nomes, user.id, payload.revisados, **opcoes)
-        if not opcoes:
-            elegibilidade_relatorio.registrar_relatorios(payload.execucoes, modelo, user.id)
+        elegibilidade_relatorio.registrar_relatorios(payload.execucoes, modelo, user.id, **opcoes)
         dados, caminho = elegibilidade_relatorio.pacote(modelo, arquivos)
         return Response(dados, media_type='application/zip', headers={
             'Content-Disposition': "attachment; filename=\"Relatorio e Camadas.zip\"; filename*=UTF-8''" + quote('Relatório e Camadas.zip'),

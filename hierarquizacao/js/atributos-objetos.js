@@ -3,6 +3,7 @@
 
   const API_COLUNAS = (codigo) => `/api/ahp/atributos-objetos/hierarquizacoes/${encodeURIComponent(codigo)}/colunas`;
   const API_DOMINIOS = "/api/dominios/atributos-objeto";
+  const GRUPO_RISCO = "risco_ambiental_territorial";
   let estado = { colunas: [], pesos: {} };
 
   const $ = (seletor, raiz = document) => raiz.querySelector(seletor);
@@ -140,29 +141,47 @@
     return slot?.valor_bruto ?? slot?.valor ?? null;
   }
 
-  function riscosDoObjeto(objeto) {
-    const fase1 = objeto.hierarquizacao?.fase_1 || {};
-    return fase1.riscos_intersectados || fase1.risco?.intersecoes || [];
+  function fase1Executada(objeto) {
+    return Boolean(objeto.hierarquizacao?.fase_1?.executada);
   }
 
-  function chaveRisco(risco) {
-    return String(risco?.criterio_id || risco?.feature_id || risco?.nome || risco?.criterio_nome || "");
-  }
-
+  // Cada camada de risco sobreposta a alguma demanda na Fase 1 vira um critério: área sobreposta, em hectares.
   function colunasRisco(objetos) {
-    if (!objetos.some((objeto) => riscosDoObjeto(objeto).length)) return [];
-    return [{ id: "risco", chave: "risco", grupo: "risco", alias: "Risco", unidade: null }];
+    const camadas = new Map();
+    objetos.forEach((objeto) => {
+      Object.entries(objeto.hierarquizacao?.fase_1?.sobreposicoes_risco || {}).forEach(([baseId, resumo]) => {
+        const atual = camadas.get(baseId) || { nome: resumo.camada || baseId, area: 0 };
+        atual.area += Number(resumo.area_ha) || 0;
+        camadas.set(baseId, atual);
+      });
+    });
+    return [...camadas.entries()].filter(([, camada]) => camada.area > 0)
+      .sort((a, b) => a[1].nome.localeCompare(b[1].nome, "pt-BR"))
+      .map(([baseId, camada]) => ({
+        id: `risco_area:${baseId}`,
+        chave: `risco_area:${baseId}`,
+        grupo: "risco",
+        alias: `Sobreposição com ${camada.nome}`,
+        unidade: "ha",
+        tipo: "numerico",
+        tipo_dado: "numerico",
+        direcao: "menor_melhor",
+        relacao: "menor_melhor",
+        valor_minimo: 0,
+        escala_absoluta: true,
+        obrigatorio: false,
+      }));
   }
 
-  function riscoDoObjeto(objeto, coluna) {
-    const riscos = riscosDoObjeto(objeto);
-    if (coluna.chave !== "risco" || !riscos.length) return null;
-    return {
-      riscos,
-      nivel: riscos.map((risco) => risco.nivel || risco.severidade).filter(Boolean).join(", "),
-      descricao: riscos.map((risco) => risco.nome || risco.criterio_nome || risco.camada_origem || risco.fonte)
-        .filter(Boolean).join("; "),
-    };
+  function valorRisco(objeto, coluna) {
+    if (!fase1Executada(objeto)) return null;
+    const resumo = objeto.hierarquizacao.fase_1.sobreposicoes_risco?.[coluna.chave.split(":")[1]];
+    return numero(resumo?.area_ha) ?? 0;
+  }
+
+  function valorDaColuna(objeto, coluna) {
+    if (coluna.grupo === "cadastro") return valorCadastro(objeto, coluna);
+    return coluna.grupo === "risco" ? valorRisco(objeto, coluna) : valorDinamico(objeto, coluna);
   }
 
   function converter(valor, coluna) {
@@ -173,16 +192,18 @@
   }
 
   function normalizarObjetos(objetos, coluna) {
-    const originais = objetos.map((objeto) => coluna.grupo === "cadastro" ? valorCadastro(objeto, coluna) : valorDinamico(objeto, coluna));
+    const originais = objetos.map((objeto) => valorDaColuna(objeto, coluna));
     const convertidos = originais.map((valor) => converter(valor, coluna));
     const validos = convertidos.filter((valor) => valor !== null);
-    const minimo = validos.length ? Math.min(...validos) : 0;
+    const minimo = coluna.valor_minimo ?? (validos.length ? Math.min(...validos) : 0);
     const maximo = validos.length ? Math.max(...validos) : 0;
     const normalizados = convertidos.map((valor) => {
       if (valor === null) return null;
+      // Escala absoluta (hectares sobrepostos): sem variação, quem não sobrepõe é o melhor caso.
+      const semVariacao = coluna.escala_absoluta && valor === minimo ? 0 : 1;
       let n = coluna.tipo_dado === "booleano"
         ? valor
-        : (maximo > minimo ? (valor - minimo) / (maximo - minimo) : 1);
+        : (maximo > minimo ? (valor - minimo) / (maximo - minimo) : semVariacao);
       if (["menor_melhor", "negativa"].includes(coluna.direcao)) n = 1 - n;
       return Math.max(0, Math.min(1, n));
     });
@@ -194,6 +215,7 @@
     if (coluna.rotulos?.[String(valor)]) return coluna.rotulos[String(valor)];
     if (coluna.tipo_dado === "booleano") return converter(valor, coluna) === 1 ? "Sim" : "Não";
     if (coluna.unidade === "R$" || coluna.chave === "capex_estimado") return Number(valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    if (coluna.grupo === "risco") return `${Number(valor).toLocaleString("pt-BR", { maximumFractionDigits: 4 })} ha`;
     return `${valor}${coluna.unidade ? ` ${coluna.unidade}` : ""}`;
   }
 
@@ -278,9 +300,7 @@
     const tplColuna = $("#tpl-atributo-coluna", raiz);
     const tplLinha = $("#tpl-atributo-linha", raiz);
     const tplCelula = $("#tpl-atributo-celula", raiz);
-    const matrizes = colunas.map((coluna) =>
-      coluna.grupo === "risco" ? null : normalizarObjetos(objetos, coluna)
-    );
+    const matrizes = colunas.map((coluna) => normalizarObjetos(objetos, coluna));
     colunas.forEach((coluna) => {
       const th = tplColuna.content.firstElementChild.cloneNode(true);
       th.classList.add(coluna.grupo === "cadastro" ? "col-estatica" : "col-dinamica");
@@ -301,37 +321,6 @@
       $(".objeto-nome", tr).textContent = cabecalho.codigo || "";
       colunas.forEach((coluna, indiceColuna) => {
         const td = tplCelula.content.firstElementChild.cloneNode(true);
-        if (coluna.grupo === "risco") {
-          const risco = riscoDoObjeto(objeto, coluna);
-          const fase1 = objeto.hierarquizacao?.fase_1 || {};
-          const tratamentos = fase1.tratamentos_riscos_fase3 || {};
-          const decisoesLegadas = risco?.riscos?.map((item) => tratamentos[chaveRisco(item)]).filter(Boolean) || [];
-          const decisao = tratamentos.risco ||
-            (decisoesLegadas.includes("barrar") ? "barrar" :
-              (decisoesLegadas.length && decisoesLegadas.every((item) => item === "ignorar") ? "ignorar" : "aplicar_penalizacao"));
-          $(".atributo-valor-normalizado", td).textContent = risco
-            ? (risco.nivel || risco.severidade || "Sobreposição encontrada")
-            : "—";
-          $(".atributo-valor-original", td).textContent = risco
-            ? (risco.descricao || "Risco da Elegibilidade territorial")
-            : "Sem sobreposição";
-          if (risco) {
-            const select = document.createElement("select");
-            select.className = "risco-tratamento-select";
-            select.dataset.objeto = cabecalho.codigo || "";
-            select.dataset.risco = coluna.chave;
-            select.setAttribute("aria-label", `Tratamento de ${coluna.alias}`);
-            select.innerHTML =
-              '<option value="aplicar_penalizacao">Aplicar penalização no score</option>' +
-              '<option value="ignorar">Tratar como sem risco</option>' +
-              '<option value="barrar">Barrar a demanda</option>';
-            select.value = decisao;
-            td.appendChild(select);
-          }
-          td.classList.toggle("is-vazio", !risco || !decisao);
-          tr.appendChild(td);
-          return;
-        }
         const { originais, normalizados } = matrizes[indiceColuna];
         const normalizado = normalizados[indiceObjeto];
         $(".atributo-valor-normalizado", td).textContent = normalizado === null ? "—" : normalizado.toFixed(4);
@@ -350,10 +339,12 @@
     });
   }
 
+  const GRUPOS_PESO = ["cadastro", "dinamico", "risco"];
+
   function pesosIniciais(colunas, configuracao) {
     const anteriores = Object.fromEntries((configuracao?.criterios || []).map((item) => [item.nome_coluna || item.atributo_id, Number(item.peso)]));
     const pesos = {};
-    for (const grupo of ["cadastro", "dinamico"]) {
+    for (const grupo of GRUPOS_PESO) {
       const itens = colunas.filter((coluna) => coluna.grupo === grupo);
       const valores = itens.map((coluna) => Number.isFinite(anteriores[coluna.id]) ? anteriores[coluna.id] : 1);
       const soma = valores.reduce((a, b) => a + b, 0) || 1;
@@ -374,7 +365,7 @@
   }
 
   function montarPesos(raiz) {
-    for (const grupo of ["cadastro", "dinamico"]) {
+    for (const grupo of GRUPOS_PESO) {
       const host = $(`[data-controles-pesos="${grupo}"]`, raiz);
       const itens = estado.colunas.filter((coluna) => coluna.grupo === grupo);
       host.innerHTML = itens.map((coluna) => `<label class="atributo-peso" data-peso-id="${coluna.id}"><span>${coluna.alias || coluna.criterio}</span><input class="atributo-peso-numero" type="number" min="0" max="1" step="0.001" inputmode="decimal" value="${estado.pesos[coluna.id].toFixed(3)}" aria-label="Peso de ${coluna.alias || coluna.criterio}"><input class="atributo-peso-barra" type="range" min="0" max="1" step="0.001" value="${estado.pesos[coluna.id]}"></label>`).join("");
@@ -385,7 +376,15 @@
       $(`[data-soma-pesos="${grupo}"]`, raiz).closest("section").hidden = !itens.length;
       atualizarPesos(raiz, grupo);
     }
-    $("[data-atributos-pesos]", raiz).hidden = !estado.colunas.length;
+    const pesos = $("[data-atributos-pesos]", raiz);
+    pesos.hidden = !estado.colunas.length;
+    const comRisco = estado.colunas.some((coluna) => coluna.grupo === "risco");
+    pesos.classList.toggle("atributos-pesos--tres", comRisco);
+    // Larguras proporcionais só aos grupos presentes, para que nenhum contêiner de peso fique espremido ou estoure.
+    const fracoes = { cadastro: 1, dinamico: 2, risco: 1.4 };
+    const visiveis = GRUPOS_PESO.filter((grupo) => estado.colunas.some((coluna) => coluna.grupo === grupo));
+    if (comRisco) pesos.style.setProperty("--pesos-colunas", visiveis.map((grupo) => `minmax(0, ${fracoes[grupo]}fr)`).join(" "));
+    else pesos.style.removeProperty("--pesos-colunas");
   }
 
   function atualizarPesos(raiz, grupo) {
@@ -432,7 +431,7 @@
       $("[data-atributos-pesos]", raiz).hidden = true;
       if (!opcoes.complementacao) montarPesos(raiz);
       if (!opcoes.complementacao && homologada?.analise_homologada_id) {
-        raiz.querySelectorAll('.atributo-peso-numero, .atributo-peso-barra').forEach(input => { input.disabled = true; input.title = 'Peso da análise homologada desta hierarquização'; });
+        raiz.querySelectorAll('[data-controles-pesos="cadastro"] input, [data-controles-pesos="dinamico"] input').forEach(input => { input.disabled = true; input.title = 'Peso da análise homologada desta hierarquização'; });
         const faltantes = colunas.filter(c => c.grupo !== 'risco' && !(c.id in (homologada.pesos_por_atributo || {})));
         if (faltantes.length || homologada.erro_vinculo_pesos) {
           const aviso = $('[data-atributos-erro]', raiz);
@@ -440,8 +439,6 @@
           aviso.hidden = false;
         }
       }
-      const acoesRiscos = $("[data-atributos-riscos-acoes]", raiz);
-      if (acoesRiscos) acoesRiscos.hidden = !colunas.some((coluna) => coluna.grupo === "risco");
       $("[data-atributos-sem-colunas]", raiz).hidden = Boolean(colunas.length);
       $("[data-atributos-sem-linhas]", raiz).hidden = Boolean(objetos.length);
     } catch (erro) {
@@ -453,7 +450,7 @@
   }
 
   function criteriosPayload() {
-    return estado.colunas.filter((coluna) => coluna.grupo !== "risco").map((coluna) => ({
+    return estado.colunas.map((coluna) => ({
       atributo_id: coluna.id,
       nome_coluna: coluna.id,
       criterio: coluna.alias || coluna.criterio || coluna.id,
@@ -462,7 +459,8 @@
       peso: estado.pesos[coluna.id] || 0,
       obrigatorio: Boolean(coluna.mandatorio || coluna.obrigatorio),
       mapeamento: coluna.mapeamento || {},
-      grupo_atributo: coluna.grupo,
+      grupo_atributo: coluna.grupo === "risco" ? GRUPO_RISCO : coluna.grupo,
+      ...(coluna.grupo === "risco" ? { unidade: "ha", valor_minimo: 0, escala_absoluta: true } : {}),
     }));
   }
 
@@ -470,10 +468,8 @@
     const objetos = hierarquizacao?.dados_hierarquizacao?.objetos || [];
     return objetos.map((objeto) => {
       const cabecalho = objeto.cabecalho_objeto || {};
-      const atributos = estado.colunas.filter((coluna) => coluna.grupo !== "risco").filter((coluna) => {
-        const valor = coluna.grupo === "cadastro"
-          ? valorCadastro(objeto, coluna)
-          : valorDinamico(objeto, coluna);
+      const atributos = estado.colunas.filter((coluna) => {
+        const valor = valorDaColuna(objeto, coluna);
         return valor === null || valor === undefined || valor === "";
       }).map((coluna) => coluna.alias || coluna.criterio || coluna.id);
       return {
@@ -482,16 +478,6 @@
         atributos,
       };
     });
-  }
-
-  function tratamentosRiscosPayload() {
-    const tratamentos = {};
-    document.querySelectorAll(".risco-tratamento-select").forEach((select) => {
-      if (!select.value || !select.dataset.objeto || !select.dataset.risco) return;
-      tratamentos[select.dataset.objeto] ||= {};
-      tratamentos[select.dataset.objeto][select.dataset.risco] = select.value;
-    });
-    return { tratamentos };
   }
 
   function definirEdicao(editavel) {
@@ -517,5 +503,5 @@
     return {valores};
   }
 
-  global.AtributosObjetos = { render, criteriosPayload, atributosAusentes, tratamentosRiscosPayload, definirEdicao, coletar };
+  global.AtributosObjetos = { render, criteriosPayload, atributosAusentes, definirEdicao, coletar };
 })(window);

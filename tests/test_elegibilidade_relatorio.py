@@ -223,7 +223,8 @@ def test_pdf_e_pacote_informam_restricao_risco_ou_livre_por_demanda(analise):
     assert texto.index('Resumo por Demanda') < texto.index('Detalhes por Demanda') < texto.index('Anexo: Matrizes')
     zip_bytes, _ = service.pacote(modelo, arquivos)
     with ZipFile(BytesIO(zip_bytes)) as pacote:
-        conteudo = {'LEIA-ME.txt', 'Tabelas/Situação das Demandas.xlsx', 'Tabelas/Situação das Demandas.csv'}
+        conteudo = {'LEIA-ME.txt', 'Tabelas/Situação das Demandas.xlsx', 'Tabelas/Situação das Demandas.csv',
+                    'Tabelas/Resumo da Elegibilidade.xlsx', 'Tabelas/Resumo da Elegibilidade.csv'}
         assert conteudo <= set(pacote.namelist())
         leia = pacote.read('LEIA-ME.txt').decode('utf-8-sig')
         assert 'A demanda é o objeto da análise' in leia and 'Livres de restrições e riscos: 2' in leia
@@ -232,11 +233,57 @@ def test_pdf_e_pacote_informam_restricao_risco_ou_livre_por_demanda(analise):
         assert len(linhas) == 1 + 2 * (1 + 62 * 7)
         assert {l[3] for l in linhas[1:]} == {'Com restrição e risco', 'Livre de restrições e riscos'}
         livro = load_workbook(BytesIO(pacote.read('Tabelas/Situação das Demandas.xlsx')))
-        assert livro.sheetnames == ['Situação das Demandas', 'Restrições e Riscos', 'Camadas Consultadas', 'Como Ler']
+        assert livro.sheetnames == ['Situação das Demandas', 'Resumo da Elegibilidade', 'Restrições e Riscos',
+                                    'Camadas Consultadas', 'Como Ler']
+        resumo = list(csv_lib.reader(StringIO(pacote.read('Tabelas/Resumo da Elegibilidade.csv').decode('utf-8-sig')),
+                                     delimiter=';'))
+        assert resumo[0] == ['Conjunto de demandas', 'Objeto de demanda', 'Camadas de risco', 'Área de sobreposição (ha)',
+                             'Porcentagem sobreposta', 'Índice de risco ambiental e territorial']
+        assert len(resumo) == 1 + 2 * 1 and all(l[2] == '—' and l[5] == '1' for l in resumo[1:])
+        assert 'Resumo da Elegibilidade' in texto and 'Índice de risco ambiental e territorial' in texto
         assert livro['Situação das Demandas'].max_row == 1 + 2 * 63
         assert livro['Restrições e Riscos'].max_row == 1 + 2 * (1 + 62 * 7)
         manifesto = json.loads(pacote.read('Metadados da Análise.json'))
         assert {d['nome'] for d in manifesto['documentos']} == conteudo
+
+
+def test_resumo_da_elegibilidade_lista_demandas_sem_restricao_com_indice_de_zero_a_um():
+    from api.services import elegibilidade_sintese as sintese
+    item = lambda ident, base, papel, area: {'id': ident, 'base_id': base, 'papel': papel, 'area_m2': area,
+                                              'nome': f'Item {ident}', 'percentual': area / 10, 'identificador': 1}
+    entrada = {'nome': 'Conjunto', 'campos': [{'id': b, 'nome': f'Camada {b}'} for b in ('r1', 'r2', 'k')], 'linhas': [
+        {'id': 'D1', 'nome': 'Com restrição', 'area_total_m2': 1000., 'sobreposicoes': [
+            item('a', 'k', 'restricao', 100.), item('b', 'r1', 'risco', 50.)]},
+        {'id': 'D2', 'nome': 'Risco em duas camadas', 'area_total_m2': 1000., 'risco_area_m2': 400., 'sobreposicoes': [
+            item('c', 'r1', 'risco', 300.), item('d', 'r2', 'risco', 250.)]},
+        {'id': 'D3', 'nome': 'Livre', 'area_total_m2': 1000., 'sobreposicoes': []},
+        {'id': 'D4', 'nome': 'Toda sobreposta', 'area_total_m2': 1000., 'risco_area_m2': 1000., 'sobreposicoes': [
+            item('e', 'r2', 'risco', 1000.)]},
+        {'id': 'D5', 'nome': 'Só toca o limite', 'area_total_m2': 1000., 'sobreposicoes': [item('f', 'r1', 'risco', 0.)]}]}
+    linhas = sintese.resumo_elegibilidade(entrada)
+    assert [l['demanda'] for l in linhas] == ['Toda sobreposta', 'Risco em duas camadas', 'Livre', 'Só toca o limite']
+    por_nome = {l['demanda']: l for l in linhas}
+    duas = por_nome['Risco em duas camadas']
+    assert duas['camadas'] == ['Camada r1', 'Camada r2'] and duas['area_m2'] == 400.
+    assert duas['percentual'] == pytest.approx(40) and duas['indice'] == pytest.approx(.6)
+    assert por_nome['Toda sobreposta']['indice'] == 0
+    assert por_nome['Livre']['indice'] == 1 and por_nome['Livre']['camadas'] == [] and por_nome['Livre']['area_m2'] == 0
+    assert por_nome['Só toca o limite']['indice'] == 1 and por_nome['Só toca o limite']['camadas'] == ['Camada r1']
+    assert sintese.indice_risco_ambiental(5, 0) == 1 and sintese.indice_risco_ambiental(2000, 1000) == 0
+    registro = sintese.resumo_para_registro({'entradas': [entrada]})
+    assert registro['linhas'][1]['indice_de_risco_ambiental_e_territorial'] == pytest.approx(.6)
+    assert registro['linhas'][1]['area_de_sobreposicao_ha'] == pytest.approx(.04)
+
+
+def test_area_de_risco_une_camadas_sem_contar_duas_vezes_o_que_coincide():
+    campos = {'r1': {'papel': 'risco'}, 'r2': {'papel': 'risco'}, 'k': {'papel': 'restricao'}}
+    recortes = gpd.GeoDataFrame({'demanda_pos': [0, 0, 0, 1], 'base_id': ['r1', 'r2', 'k', 'r1']}, geometry=[
+        box(5000000, 7000000, 5000006, 7000010), box(5000004, 7000000, 5000010, 7000010),
+        box(5000000, 7000000, 5000010, 7000010), box(5000020, 7000000, 5000025, 7000010)], crs=5880)
+    areas = service._area_uniao_risco(recortes, campos)
+    assert areas[0] == pytest.approx(100.) and areas[1] == pytest.approx(50.)
+    assert service._area_uniao_risco(recortes.iloc[0:0], campos) == {}
+    assert service._area_uniao_risco(recortes[recortes['base_id'] == 'k'], campos) == {}
 
 
 def test_situacao_da_demanda_e_linguagem_corrente_e_csv_neutraliza_formulas():
@@ -269,6 +316,8 @@ def test_nova_analise_reune_camadas_pdf_zip_e_revisoes_sem_sobrescrever(analise,
         dados[resultado['arquivo']] = dados.pop(anterior)
         resultado['elegibilidade'].update(hierarquizacao='HIER-001', pasta_analise=pasta)
     monkeypatch.setattr(hierarquizacao_service, 'registrar_saida_geoespacial_fase1', lambda *args: None)
+    monkeypatch.setattr(hierarquizacao_service, 'registrar_resultado_por_demanda', lambda *args: {'registrado': True})
+    monkeypatch.setattr(hierarquizacao_service, 'atualizar_nomes_resultado', lambda *args: None)
     modelo, arquivos = service.montar(['job-1', 'job-2'], nomes, 'autor', True)
     service.salvar_nomes(['job-1', 'job-2'], modelo, 'autor')
     service.registrar_relatorios(['job-1', 'job-2'], modelo, 'autor')
@@ -316,6 +365,8 @@ def test_pdf_automatico_associado_so_a_hierarquizacao_de_origem(analise, monkeyp
     chamadas = []
     monkeypatch.setattr(hierarquizacao_service, 'registrar_saida_geoespacial_fase1',
                         lambda *args: chamadas.append(args))
+    monkeypatch.setattr(hierarquizacao_service, 'registrar_resultado_por_demanda', lambda *args: {'registrado': True})
+    monkeypatch.setattr(hierarquizacao_service, 'atualizar_nomes_resultado', lambda *args: None)
     modelo, _ = service.montar(['job-1', 'job-2'], nomes, 'autor', True)
     service.registrar_relatorios(['job-1', 'job-2'], modelo, 'autor')
     assert len(chamadas) == (2 if segunda_hierarquizacao else 1)
@@ -325,6 +376,9 @@ def test_pdf_automatico_associado_so_a_hierarquizacao_de_origem(analise, monkeyp
         presente, ausente = ('Norte', 'Sul') if codigo == 'HIER-NORTE' else ('Sul', 'Norte')
         assert f'Demandas do Setor {presente}' in texto and f'Demandas do Setor {ausente}' not in texto
         assert modelo['relatorios_hierarquizacao'][i]['arquivo'] == documento['arquivo']
+        planilha = documento['tabela_resumo']
+        assert sha256(dados[planilha['arquivo']]).hexdigest() == planilha['sha256']
+        assert planilha['arquivo'].endswith('.xlsx') and documento['resumo_elegibilidade']['titulo'] == 'Resumo da Elegibilidade'
     chamadas.clear()
     del resultados['job-1']['elegibilidade']['hierarquizacao']
     resultados['job-2']['elegibilidade'].pop('hierarquizacao', None)

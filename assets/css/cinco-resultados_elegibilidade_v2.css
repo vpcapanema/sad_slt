@@ -210,6 +210,10 @@
 .ev2 .ev2-tabela .ev2-num { font-variant-numeric: tabular-nums; }
 .ev2 .ev2-tabela .ev2-secundario { display: block; }
 .ev2 .ev2-painel-tabela .admin-table-footer { margin: 0.5rem 1rem; }
+.ev2 .ev2-painel-resumo .ea-table-wrap { max-height: 26rem; overflow: auto; border: 0; border-radius: 0; }
+.ev2 .ev2-tabela-resumo { min-width: 40rem; }
+.ev2 .ev2-tabela-resumo td:nth-child(2) { text-align: left; }
+.ev2 .ev2-painel-resumo .admin-table-summary { margin: 0.5rem 1rem; }
 .ev2 .admin-pagination { font-size: 0.82rem; }
 .ev2 .admin-pagination button { font: inherit; }
 .ev2 .admin-table-summary { font-size: 0.72rem; color: var(--ev2-suave); }
