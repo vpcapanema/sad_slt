@@ -18,7 +18,7 @@
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Título**                 | Metodologia do Sistema de Hierarquização de Demandas — SICARD                                                                                                         |
 | **Número**                 | NT-SICARD-001/2026                                                                                                                                                       |
-| **Versão**                 | 1.43                                                                                                                                                                      |
+| **Versão**                 | 1.44                                                                                                                                                                      |
 | **Data de emissão**        | 24/10/2026                                                                                                                                                               |
 | **Classificação**         | Documento técnico-metodológico de entrega ao cliente                                                                                                                   |
 | **Sistema**                 | SICARD — Sistema Inteligente de Cadastro e Ranking de Demandas                                                                                                        |
@@ -77,6 +77,7 @@
 | 1.41    | 23/10/2026 | `[preencher]` | Registro, por objeto de demanda, dos resultados das Fases 1 e 2 em `dados_hierarquizacao` ao fim do cálculo, com histórico acumulado das execuções; conversão de cada camada de risco sobreposta na Fase 1 em critério da Fase 3 (área sobreposta, em hectares, menor é melhor, escala absoluta), em grupo próprio de pesos, com participação equivalente à dos demais grupos; substituição do tratamento gerencial de risco (penalizar, ignorar ou barrar) por esses critérios ponderados; proteção das hierarquizações homologadas e arquivadas contra regravação e sinalização de síntese desatualizada. |
 | 1.42    | 23/10/2026 | `[preencher]` | Inclusão do Resumo da Elegibilidade nos resultados da Fase 1: uma linha por objeto de demanda sem restrição, com camadas de risco, área de sobreposição (união, em hectares), porcentagem sobreposta e índice de risco ambiental e territorial (1 − área sobreposta ÷ área da demanda, de 0 a 1); inclusão da tabela no PDF, no pacote de saída e no relatório da Fase 1 da hierarquização, sem alteração da classificação de elegibilidade. |
 | 1.43    | 24/10/2026 | `[preencher]` | Vinculação temática das bases da Fase 1 às famílias e aos tipos de adversidade, com manutenção administrativa e preservação da taxonomia nos metadados dos resultados; independência em relação ao papel de risco ou restrição escolhido pelo usuário, sem alteração do índice ou de seus pesos. |
+| 1.44    | 24/10/2026 | `[preencher]` | Substituição dos critérios de área sobreposta por camada da Fase 3 pelo Índice de risco ambiental e territorial do Resumo da Elegibilidade de cada demanda; preservação da escala de 0 a 1, com relação positiva e peso único no grupo de risco; manutenção de valores ausentes para demandas sem resumo ou com restrição e preservação dos resultados históricos. |
 
 ---
 
@@ -956,17 +957,23 @@ demanda, à carteira, à governança ou à viabilidade de execução**, sem dupl
 já avaliados na Fase 2. É também onde os **riscos herdados da Fase 1** são avaliados
 quantitativamente.
 
-**Critérios de risco ambiental e territorial.** Cada camada de risco sobreposta, na Fase 1,
-a ao menos um objeto de demanda da rodada gera um critério da Fase 3, denominado
-"Sobreposição com [nome da camada]". A métrica é a área sobreposta, em hectares, com
-relação negativa (menor é melhor) e escala absoluta: o valor zero equivale ao melhor
-resultado (normalizado 1,0), e a área máxima observada, ao pior (0,0). Esses critérios
-formam o grupo **Critérios de Risco Ambiental e Territorial**, com peso atribuído pelo
-usuário e soma 1 no grupo, e participação equivalente à dos grupos de atributos do
-cadastro e de atributos dinâmicos. O conjunto de critérios varia a cada rodada, conforme as
-camadas efetivamente sobrepostas. Os pesos desse grupo não decorrem da matriz homologada.
-Objeto de demanda cuja Fase 1 não foi executada tem o valor do critério registrado como
-ausente. A penalização do escore por índice de risco e as decisões gerenciais de ignorar
+**Critério de risco ambiental e territorial.** O **Índice de risco ambiental e
+territorial** do Resumo da Elegibilidade substitui os critérios de área sobreposta
+por camada. Consome-se o valor registrado na Fase 1 do próprio objeto, cuja
+correspondência é estabelecida pelo código da demanda, sem associação por nome.
+Preserva-se a escala de 0 a 1, com relação positiva (maior é melhor), sem novo
+reescalonamento entre objetos: o valor normalizado é igual ao índice registrado,
+inclusive quando existe apenas um objeto ou todos possuem o mesmo valor.
+O índice constitui o grupo **Critérios de Risco Ambiental e Territorial**, com
+peso único igual a 1 no grupo e participação equivalente à dos grupos de atributos
+do cadastro e de atributos dinâmicos, sem vínculo com os pesos da matriz homologada.
+Zero é um valor válido; índices fora da escala são sinalizados como inválidos.
+Objetos sem execução da Fase 1, sem resumo registrado ou com restrição, que não
+constam do resumo, permanecem com valor ausente, sem preenchimento automático por
+zero ou por valor manual. A substituição dos critérios antigos na configuração
+ativa ocorre ao salvar pesos ou executar pela interface; resultados históricos
+não são recalculados automaticamente.
+A penalização do escore por índice de risco e as decisões gerenciais de ignorar
 ou barrar não compõem mais o procedimento; decisões já gravadas em rodadas anteriores
 permanecem registradas e são respeitadas.
 

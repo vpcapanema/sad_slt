@@ -137,6 +137,7 @@ def _carregar(codigo: str) -> dict[str, Any]:
 
 _ANALISE_DA_FASE = {1: ('elegibilidade', 'elegibilidade_territorial'), 2: ('favorabilidade', 'favorabilidade_territorial')}
 GRUPO_RISCO = 'risco_ambiental_territorial'
+INDICE_RISCO = 'indice_de_risco_ambiental_e_territorial'
 STATUS_SEM_ALTERACAO = {'homologada', 'arquivada'}
 
 
@@ -185,6 +186,16 @@ def _atributo_risco(base_id: str, camada: str) -> dict[str, Any]:
     }
 
 
+def _atributo_indice_risco() -> dict[str, Any]:
+    return {
+        'atributo_id': INDICE_RISCO, 'nome_coluna': INDICE_RISCO,
+        'criterio': 'Índice de risco ambiental e territorial',
+        'tipo_dado': 'numerico', 'unidade': '0–1', 'direcao': 'maior_melhor',
+        'origem': 'fase1_resumo_elegibilidade', 'grupo_atributo': GRUPO_RISCO,
+        'valor_minimo': 0, 'valor_maximo': 1,
+    }
+
+
 def _por_camada(itens: list[dict[str, Any]], bases: list[dict[str, Any]], total: float, camadas: dict[str, str]) -> dict[str, Any]:
     resumo = {base['id']: {'camada': camadas[base['id']], 'area_m2': 0.0, 'area_ha': 0.0, 'percentual': 0.0, 'feicoes': 0}
               for base in bases}
@@ -228,8 +239,6 @@ def _fase1_da_demanda(linha: dict[str, Any], bases: list[dict[str, Any]], camada
                                            linha['area_total_m2'], camadas),
         'execucao': execucao,
     })
-    f1['criterios_fase3_sugeridos'] = [_atributo_risco(b, r['camada']) for b, r in f1['sobreposicoes_risco'].items()
-                                       if r['area_m2'] > 0]
     # Demandas com restrição não entram no Resumo da Elegibilidade (índice de risco ambiental e territorial).
     risco_m2 = min(linha['area_total_m2'], linha.get('risco_area_m2', sum(i['area_m2'] for i in riscos)))
     f1['resumo_elegibilidade'] = None if restricoes else {
@@ -238,6 +247,7 @@ def _fase1_da_demanda(linha: dict[str, Any], bases: list[dict[str, Any]], camada
         'porcentagem_sobreposta': risco_m2 / linha['area_total_m2'] * 100 if linha['area_total_m2'] else 0.0,
         'indice_de_risco_ambiental_e_territorial': indice_risco_ambiental(risco_m2, linha['area_total_m2']),
     }
+    f1['criterios_fase3_sugeridos'] = [_atributo_indice_risco()] if not restricoes else []
     if anterior.get('tratamentos_riscos_fase3'):
         f1['tratamentos_riscos_fase3'] = anterior['tratamentos_riscos_fase3']
     return f1
@@ -350,9 +360,7 @@ def atualizar_nomes_resultado(codigo: str, fase: int, nomes: dict[str, str]) -> 
                 if f.get('resumo_elegibilidade'):
                     f['resumo_elegibilidade']['camadas_de_risco'] = [
                         r['camada'] for r in f['sobreposicoes_risco'].values() if r['feicoes']]
-                f['criterios_fase3_sugeridos'] = [
-                    _atributo_risco(s['atributo_id'].split(':', 1)[1], f['sobreposicoes_risco'][s['atributo_id'].split(':', 1)[1]]['camada'])
-                    for s in f.get('criterios_fase3_sugeridos', [])]
+                f['criterios_fase3_sugeridos'] = [_atributo_indice_risco()] if f.get('resumo_elegibilidade') else []
             else:
                 for itens in (f.get('extracao_por_feicao') or {}).values():
                     for e in itens:
@@ -1538,6 +1546,9 @@ def _normalizar(
 ) -> tuple[dict[str, float | None], set[int], set[int]]:
     tipo = criterio.get("tipo_dado", "numerico")
     direcao = criterio.get("direcao", "maior_melhor")
+    indice_risco = (criterio.get("nome_coluna") or criterio.get("atributo_id")) == INDICE_RISCO
+    if indice_risco:
+        tipo, direcao = "numerico", "maior_melhor"
     mapping = criterio.get("mapeamento") or {}
     converted: list[float | None] = []
     ausentes: set[int] = set()
@@ -1568,6 +1579,8 @@ def _normalizar(
     validos = [x for x in converted if x is not None]
     lo = criterio.get("valor_minimo")
     hi = criterio.get("valor_maximo")
+    if indice_risco:
+        lo, hi = 0, 1
     lo = float(lo) if lo is not None else (min(validos) if validos else 0.0)
     hi = float(hi) if hi is not None else (max(validos) if validos else 0.0)
     result = {}
@@ -1594,6 +1607,11 @@ def _normalizar(
 def _valor_atributo_objeto(obj: dict[str, Any], chave: Any) -> Any:
     """Valor do atributo de Fase 3 do objeto: prioriza os slots ``atributos_fase3``."""
     cab = obj.get("cabecalho_objeto") or {}
+    if chave == INDICE_RISCO:
+        fase1 = (obj.get("hierarquizacao") or {}).get("fase_1") or {}
+        if not fase1.get("executada"):
+            return None
+        return (fase1.get("resumo_elegibilidade") or {}).get(INDICE_RISCO)
     if str(chave).startswith("risco_area:"):
         # Critério de risco herdado da Fase 1: área sobreposta à camada, em hectares (ausente se a Fase 1 não rodou).
         fase1 = (obj.get("hierarquizacao") or {}).get("fase_1") or {}
@@ -1664,7 +1682,7 @@ def executar_fase_3(
     )
     criterios_base = criterios_salvos or payload.criterios
     if criterios_salvos and payload.criterios:
-        # Os critérios de risco acompanham as camadas da Fase 1 da rodada atual, não os pesos salvos em rodada anterior.
+        # Os critérios de risco acompanham o resumo da Fase 1 atual, não a configuração anterior por camada.
         criterios_base = [c for c in criterios_salvos if c.get("grupo_atributo") != GRUPO_RISCO] + [
             c for c in payload.criterios if c.get("grupo_atributo") == GRUPO_RISCO]
     criterios = aplicar_pesos(dados, criterios_base)
@@ -1729,8 +1747,10 @@ def executar_fase_3(
                 slot_atributo = slots_objeto[chave] = {
                     "valor_bruto": _valor_atributo_objeto(obj, chave),
                     "origem": "cadastro" if str(chave).startswith("cadastro:")
-                    else "fase1" if str(chave).startswith("risco_area:") else "complementacao",
+                    else "fase1" if chave == INDICE_RISCO or str(chave).startswith("risco_area:") else "complementacao",
                 }
+            if chave == INDICE_RISCO:
+                slot_atributo.update(valor_bruto=_valor_atributo_objeto(obj, chave), origem="fase1")
             if n is None:
                 falha_obrigatoria = falha_obrigatoria or c.get("obrigatorio") is True
                 if i in indices_invalidos:
@@ -1876,8 +1896,10 @@ def salvar_pesos_fase3(codigo: str, payload: Any) -> HierarquizacaoResponseSchem
                 "valor_bruto": _valor_atributo_objeto(obj, chave),
                 "valor_rescalonado": None,
                 "origem": "cadastro" if chave.startswith("cadastro:")
-                else "fase1" if chave.startswith("risco_area:") else "complementacao",
+                else "fase1" if chave == INDICE_RISCO or chave.startswith("risco_area:") else "complementacao",
             })
+            if chave == INDICE_RISCO:
+                slot.update(valor_bruto=_valor_atributo_objeto(obj, chave), origem="fase1")
             slot["peso"] = peso
     config = dados["cabecalho_grupo"].setdefault("configuracoes", {}).setdefault("fase_3", {})
     config["criterios"] = criterios

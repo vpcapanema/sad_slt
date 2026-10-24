@@ -4,6 +4,7 @@
   const API_COLUNAS = (codigo) => `/api/ahp/atributos-objetos/hierarquizacoes/${encodeURIComponent(codigo)}/colunas`;
   const API_DOMINIOS = "/api/dominios/atributos-objeto";
   const GRUPO_RISCO = "risco_ambiental_territorial";
+  const INDICE_RISCO = "indice_de_risco_ambiental_e_territorial";
   let estado = { colunas: [], pesos: {} };
 
   const $ = (seletor, raiz = document) => raiz.querySelector(seletor);
@@ -145,38 +146,28 @@
     return Boolean(objeto.hierarquizacao?.fase_1?.executada);
   }
 
-  // Cada camada de risco sobreposta a alguma demanda na Fase 1 vira um critério: área sobreposta, em hectares.
+  // O resumo já está vinculado ao código da demanda na gravação da Fase 1.
   function colunasRisco(objetos) {
-    const camadas = new Map();
-    objetos.forEach((objeto) => {
-      Object.entries(objeto.hierarquizacao?.fase_1?.sobreposicoes_risco || {}).forEach(([baseId, resumo]) => {
-        const atual = camadas.get(baseId) || { nome: resumo.camada || baseId, area: 0 };
-        atual.area += Number(resumo.area_ha) || 0;
-        camadas.set(baseId, atual);
-      });
-    });
-    return [...camadas.entries()].filter(([, camada]) => camada.area > 0)
-      .sort((a, b) => a[1].nome.localeCompare(b[1].nome, "pt-BR"))
-      .map(([baseId, camada]) => ({
-        id: `risco_area:${baseId}`,
-        chave: `risco_area:${baseId}`,
-        grupo: "risco",
-        alias: `Sobreposição com ${camada.nome}`,
-        unidade: "ha",
-        tipo: "numerico",
-        tipo_dado: "numerico",
-        direcao: "menor_melhor",
-        relacao: "menor_melhor",
-        valor_minimo: 0,
-        escala_absoluta: true,
-        obrigatorio: false,
-      }));
+    if (!objetos.some(fase1Executada)) return [];
+    return [{
+      id: INDICE_RISCO,
+      chave: INDICE_RISCO,
+      grupo: "risco",
+      alias: "Índice de risco ambiental e territorial",
+      unidade: "0–1",
+      tipo: "numerico",
+      tipo_dado: "numerico",
+      direcao: "maior_melhor",
+      relacao: "maior_melhor",
+      valor_minimo: 0,
+      valor_maximo: 1,
+      obrigatorio: false,
+    }];
   }
 
-  function valorRisco(objeto, coluna) {
+  function valorRisco(objeto) {
     if (!fase1Executada(objeto)) return null;
-    const resumo = objeto.hierarquizacao.fase_1.sobreposicoes_risco?.[coluna.chave.split(":")[1]];
-    return numero(resumo?.area_ha) ?? 0;
+    return numero(objeto.hierarquizacao.fase_1.resumo_elegibilidade?.[INDICE_RISCO]);
   }
 
   function valorDaColuna(objeto, coluna) {
@@ -196,7 +187,7 @@
     const convertidos = originais.map((valor) => converter(valor, coluna));
     const validos = convertidos.filter((valor) => valor !== null);
     const minimo = coluna.valor_minimo ?? (validos.length ? Math.min(...validos) : 0);
-    const maximo = validos.length ? Math.max(...validos) : 0;
+    const maximo = coluna.valor_maximo ?? (validos.length ? Math.max(...validos) : 0);
     const normalizados = convertidos.map((valor) => {
       if (valor === null) return null;
       // Escala absoluta (hectares sobrepostos): sem variação, quem não sobrepõe é o melhor caso.
@@ -205,7 +196,7 @@
         ? valor
         : (maximo > minimo ? (valor - minimo) / (maximo - minimo) : semVariacao);
       if (["menor_melhor", "negativa"].includes(coluna.direcao)) n = 1 - n;
-      return Math.max(0, Math.min(1, n));
+      return Number.isFinite(n) && n >= 0 && n <= 1 ? n : null;
     });
     return { originais, normalizados };
   }
@@ -215,7 +206,7 @@
     if (coluna.rotulos?.[String(valor)]) return coluna.rotulos[String(valor)];
     if (coluna.tipo_dado === "booleano") return converter(valor, coluna) === 1 ? "Sim" : "Não";
     if (coluna.unidade === "R$" || coluna.chave === "capex_estimado") return Number(valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-    if (coluna.grupo === "risco") return `${Number(valor).toLocaleString("pt-BR", { maximumFractionDigits: 4 })} ha`;
+    if (coluna.grupo === "risco") return Number(valor).toLocaleString("pt-BR", { minimumFractionDigits: 4, maximumFractionDigits: 4 });
     return `${valor}${coluna.unidade ? ` ${coluna.unidade}` : ""}`;
   }
 
@@ -460,7 +451,7 @@
       obrigatorio: Boolean(coluna.mandatorio || coluna.obrigatorio),
       mapeamento: coluna.mapeamento || {},
       grupo_atributo: coluna.grupo === "risco" ? GRUPO_RISCO : coluna.grupo,
-      ...(coluna.grupo === "risco" ? { unidade: "ha", valor_minimo: 0, escala_absoluta: true } : {}),
+      ...(coluna.grupo === "risco" ? { unidade: coluna.unidade, valor_minimo: 0, valor_maximo: 1 } : {}),
     }));
   }
 

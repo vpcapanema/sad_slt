@@ -83,8 +83,9 @@ def test_fase1_grava_situacao_por_demanda_e_criterios_de_risco(banco, monkeypatc
     assert objetos['D-2']['fase_1']['resumo_elegibilidade']['camadas_de_risco'] == ['Áreas de Risco']
     assert objetos['D-1']['fase_3']['score_fase3'] == 'preservar'
     sugeridos = banco['dados_hierarquizacao']['cabecalho_grupo']['criterios_fase3_sugeridos']
-    assert [s['atributo_id'] for s in sugeridos] == ['risco_area:b-risco']
-    assert sugeridos[0]['grupo_atributo'] == 'risco_ambiental_territorial' and sugeridos[0]['direcao'] == 'menor_melhor'
+    assert [s['atributo_id'] for s in sugeridos] == ['indice_de_risco_ambiental_e_territorial']
+    assert sugeridos[0]['grupo_atributo'] == 'risco_ambiental_territorial' and sugeridos[0]['direcao'] == 'maior_melhor'
+    assert sugeridos[0]['valor_minimo'] == 0 and sugeridos[0]['valor_maximo'] == 1
     assert banco['relatorio_fase3']['desatualizado']['por'] == 'fase_1'
 
 

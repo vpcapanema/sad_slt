@@ -458,23 +458,32 @@ cadastrar atributo/criterio
 
 ## Riscos herdados da Fase 1
 
-Quando a Fase 1 identificar riscos, esses riscos entram na Fase 3 como
-atributos/criterios.
-
-Cada camada de risco sobreposta a ao menos um objeto da rodada gera um criterio
-`risco_area:<id_da_camada>`, nomeado "Sobreposicao com [nome da camada]":
+O criterio unico `indice_de_risco_ambiental_e_territorial`, denominado "Índice de
+risco ambiental e territorial", substitui os criterios de area sobreposta por
+camada. O valor e consumido do Resumo da Elegibilidade registrado para cada objeto
+em `hierarquizacao.fase_1.resumo_elegibilidade`, associado ao codigo da demanda
+na gravacao dos resultados da Fase 1. Nomes iguais nao sao utilizados para
+estabelecer correspondencia, e os valores nao sao recalculados a partir das areas.
 
 ```text
-valor_bruto = fase_1.sobreposicoes_risco[<id_da_camada>].area_ha   # hectares sobrepostos
-valor_minimo = 0, escala_absoluta = true, direcao = menor_melhor
-0 ha  -> normalizado 1,0   |   maior area observada -> normalizado 0,0
+valor_bruto = fase_1.resumo_elegibilidade.indice_de_risco_ambiental_e_territorial
+valor_minimo = 0, valor_maximo = 1, direcao = maior_melhor
+valor_normalizado = valor_bruto
 ```
 
-Esses criterios formam o grupo `risco_ambiental_territorial` ("Criterios de Risco
-Ambiental e Territorial"): peso atribuido pelo usuario na secao de criterios atributo
-de projeto, soma 1 no grupo, participacao equivalente a dos grupos de atributos do
-cadastro e dinamicos, e isencao do vinculo com os pesos da matriz homologada. Se a
-Fase 1 nao foi executada para o objeto, o valor e ausente. O tratamento gerencial
+O indice e preservado na escala absoluta de 0 a 1, inclusive quando todos os
+objetos possuem o mesmo valor ou ha um unico objeto. Quanto maior o indice, maior
+a prioridade. Zero e um valor valido, nao ausencia. Valores fora da escala sao
+sinalizados como invalidos. Se a Fase 1 nao foi executada, se o resumo nao estiver
+registrado ou se o objeto tiver restricao (nao consta do resumo), o valor e
+ausente, sem substituicao automatica por zero ou por um valor manual.
+
+O criterio forma o grupo `risco_ambiental_territorial` ("Criterios de Risco
+Ambiental e Territorial"), com peso 1 no grupo, participacao equivalente a dos
+grupos de atributos do cadastro e dinamicos, e isencao do vinculo com os pesos da
+matriz homologada. Ao salvar pesos ou executar pela interface, o indice substitui
+os criterios antigos por camada na configuracao ativa; resultados anteriores nao
+sao recalculados automaticamente. O tratamento gerencial
 anterior (penalizar, ignorar ou barrar) nao e mais oferecido na interface; decisoes ja
 gravadas continuam sendo respeitadas pelo calculo.
 
@@ -486,7 +495,8 @@ Esses atributos seguem as mesmas regras da Fase 3:
 - peso ajustavel;
 - contribuicao ao score.
 
-Como risco e normalmente penalizador, a direcao tende a ser `menor_melhor`.
+Para este indice, a direcao e `maior_melhor`, pois ele representa a fracao nao
+atingida pela uniao das areas de risco, conforme o Resumo da Elegibilidade.
 
 ## Calculo do score de Fase 3
 

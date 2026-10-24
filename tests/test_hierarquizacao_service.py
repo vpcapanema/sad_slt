@@ -225,6 +225,79 @@ def test_criacao_usa_o_universo_do_agrupamento_salvo(monkeypatch: pytest.MonkeyP
     assert result.dados_hierarquizacao["objetos"][0]["cabecalho_objeto"]["codigo"] == "PROG-001"
 
 
+def test_fase_3_consume_indice_do_resumo_por_demanda_sem_reescalonar(monkeypatch):
+    chave = "indice_de_risco_ambiental_e_territorial"
+    row = _db_row(_dados([3], [{}, {}, {}, {}]))
+    for obj, indice in zip(row["dados_hierarquizacao"]["objetos"], [0.75, 0.9, 0.0, 1.0]):
+        obj["cabecalho_objeto"]["nome"] = "Mesmo nome"
+        obj["cabecalho_objeto"]["atributos_fase3"] = {chave: {"valor_bruto": 0.123, "origem": "complementacao"}}
+        obj["hierarquizacao"]["fase_1"] = {
+            "executada": True, "resumo_elegibilidade": {chave: indice}}
+    _mock_persistencia(monkeypatch, row)
+    criterio = {"nome_coluna": chave, "criterio": "Índice de risco ambiental e territorial",
+                "grupo_atributo": "risco_ambiental_territorial", "peso": 1}
+    for _ in range(2):
+        result = service.executar_fase_3("HIER-TESTE", HierarquizacaoFase3ExecutarSchema(
+            criterios=[criterio], completude_minima=0, regra_ausentes="renormalizar"))
+        objetos = result.dados_hierarquizacao["objetos"]
+        assert [o["hierarquizacao"]["fase_3"]["score_fase3"] for o in objetos] == [0.75, 0.9, 0.0, 1.0]
+        for obj, indice in zip(objetos, [0.75, 0.9, 0.0, 1.0]):
+            slot = obj["cabecalho_objeto"]["atributos_fase3"][chave]
+            assert slot["valor_bruto"] == slot["valor_rescalonado"] == indice
+            assert slot["origem"] == "fase1"
+
+
+@pytest.mark.parametrize("fase1", [
+    {"executada": False, "resumo_elegibilidade": {"indice_de_risco_ambiental_e_territorial": 1}},
+    {"executada": True},
+    {"executada": True, "status_fase1": "restrito", "resumo_elegibilidade": None},
+])
+def test_indice_do_resumo_ausente_nao_usa_slot_manual(monkeypatch, fase1):
+    chave = "indice_de_risco_ambiental_e_territorial"
+    row = _db_row(_dados([3], [{}]))
+    obj = row["dados_hierarquizacao"]["objetos"][0]
+    obj["hierarquizacao"]["fase_1"] = fase1
+    obj["cabecalho_objeto"]["atributos_fase3"] = {chave: {"valor_bruto": 1}}
+    _mock_persistencia(monkeypatch, row)
+    result = service.executar_fase_3("HIER-TESTE", HierarquizacaoFase3ExecutarSchema(
+        criterios=[{"nome_coluna": chave, "criterio": "Índice", "peso": 1}],
+        completude_minima=0, regra_ausentes="renormalizar"))
+    fase3 = result.dados_hierarquizacao["objetos"][0]["hierarquizacao"]["fase_3"]
+    assert fase3["score_fase3"] is None
+    assert fase3["atributos_ausentes"] == ["Índice"]
+
+
+@pytest.mark.parametrize("valor", [-0.1, 1.1, float("nan"), float("inf"), "invalido"])
+def test_indice_do_resumo_fora_da_escala_e_invalido(valor):
+    normalizados, ausentes, invalidos = service._normalizar(
+        [valor], {"nome_coluna": service.INDICE_RISCO})
+    assert normalizados == {"0": None}
+    assert ausentes == set() and invalidos == {0}
+
+
+def test_indice_substitui_camadas_antigas_e_atualiza_slot_ao_salvar_pesos(monkeypatch):
+    row = _db_row(_dados([3], [{"maturidade": 10}, {"maturidade": 20}]))
+    maturidade = {"criterio": "Maturidade", "nome_coluna": "maturidade", "peso": 1}
+    row["dados_hierarquizacao"]["cabecalho_grupo"]["configuracoes"] = {"fase_3": {"criterios": [
+        maturidade, {**service._atributo_risco("antiga", "Camada antiga"), "peso": 1}]}}
+    for obj, indice in zip(row["dados_hierarquizacao"]["objetos"], [0.75, 0.9]):
+        obj["hierarquizacao"]["fase_1"] = {
+            "executada": True, "resumo_elegibilidade": {service.INDICE_RISCO: indice}}
+    _mock_persistencia(monkeypatch, row)
+    payload = HierarquizacaoFase3ExecutarSchema(
+        criterios=[maturidade, {**service._atributo_indice_risco(), "peso": 1}],
+        completude_minima=0)
+    result = service.executar_fase_3("HIER-TESTE", payload)
+    objetos = result.dados_hierarquizacao["objetos"]
+    assert [o["hierarquizacao"]["fase_3"]["score_fase3"] for o in objetos] == [0.375, 0.95]
+    criterios = result.dados_hierarquizacao["cabecalho_grupo"]["configuracoes"]["fase_3"]["criterios"]
+    assert [c["nome_coluna"] for c in criterios] == ["maturidade", service.INDICE_RISCO]
+    row["dados_hierarquizacao"]["objetos"][0]["hierarquizacao"]["fase_1"]["resumo_elegibilidade"][service.INDICE_RISCO] = 0.4
+    result = service.salvar_pesos_fase3("HIER-TESTE", payload)
+    slot = result.dados_hierarquizacao["objetos"][0]["cabecalho_objeto"]["atributos_fase3"][service.INDICE_RISCO]
+    assert slot["valor_bruto"] == 0.4 and slot["origem"] == "fase1"
+
+
 def test_fase_3_pondera_criterio_de_risco_herdado_da_fase_1(monkeypatch: pytest.MonkeyPatch) -> None:
     row = _db_row(_dados([3], [{}, {}, {}]))
     areas = [0.0, 4.0, 2.0]
