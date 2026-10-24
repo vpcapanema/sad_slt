@@ -366,6 +366,24 @@
     const wrapper = document.createElement("div");
     for (const analise of h[key]?.analises_geoespaciais || []) {
       const lista = document.createElement("ul");
+      if (key === "relatorio_fase1") {
+        const resumo = analise.relatorio?.resumo_elegibilidade;
+        const linha = document.createElement("li");
+        if (Array.isArray(resumo?.linhas)) {
+          const link = document.createElement("a");
+          link.href = "#modal-resumo-elegibilidade";
+          link.textContent = "Visualizar tabela-resumo de elegibilidade";
+          link.setAttribute("aria-haspopup", "dialog");
+          link.onclick = (event) => {
+            event.preventDefault();
+            abrirResumoElegibilidade(h, resumo, link);
+          };
+          linha.appendChild(link);
+        } else {
+          linha.textContent = "Tabela-resumo de elegibilidade não registrada nesta análise.";
+        }
+        lista.appendChild(linha);
+      }
       for (const [item, rotulo] of [[analise, "Baixar camada GeoPackage"], [analise.relatorio, "Baixar relatório PDF"], [analise.relatorio?.tabela_resumo, "Baixar Resumo da Elegibilidade (Excel)"]]) {
         if (!item?.arquivo) continue;
         const linha = document.createElement("li"), link = document.createElement("a");
@@ -384,6 +402,60 @@
     }
     wrapper.appendChild(jvViewer(h[key]));
     return wrapper;
+  }
+  function abrirResumoElegibilidade(h, resumo, origem) {
+    const colunas = [
+      ["conjunto_de_demandas", "Conjunto de demandas"],
+      ["objeto_de_demanda", "Objeto de demanda"],
+      ["camadas_de_risco", "Camadas de risco"],
+      ["area_de_sobreposicao_ha", "Área de sobreposição (ha)"],
+      ["porcentagem_sobreposta", "Porcentagem sobreposta"],
+      ["indice_de_risco_ambiental_e_territorial", "Índice de risco ambiental e territorial"],
+    ];
+    const numero = (valor, casas) => typeof valor === "number" && Number.isFinite(valor)
+      ? valor.toLocaleString("pt-BR", { minimumFractionDigits: casas, maximumFractionDigits: casas }) : "—";
+    const celula = (linha, campo) => {
+      const valor = linha[campo];
+      if (campo === "camadas_de_risco") return Array.isArray(valor) && valor.length
+        ? valor.map(nome => `<div>${esc(nome)}</div>`).join("") : "Nenhuma camada de risco atingida";
+      if (campo === "porcentagem_sobreposta") return valor == null ? "—" : `${numero(valor, 2)}%`;
+      if (campo === "area_de_sobreposicao_ha" || campo === "indice_de_risco_ambiental_e_territorial") return numero(valor, 4);
+      return esc(valor ?? "—");
+    };
+    const linhas = resumo.linhas.map(linha => `<tr>${colunas.map(([campo]) => `<td>${celula(linha, campo)}</td>`).join("")}</tr>`).join("");
+    preencherModal("modal-resumo-elegibilidade", `Resumo da Elegibilidade — ${h.codigo}`,
+      `<p>${resumo.linhas.length} demanda(s) sem restrição registrada(s) nesta análise.</p>` +
+      `<div class="matriz-table-wrap"><table class="admin-table"><caption class="sr-only">Resumo da Elegibilidade</caption>` +
+      `<thead><tr>${colunas.map(([, titulo]) => `<th scope="col">${esc(titulo)}</th>`).join("")}</tr></thead>` +
+      `<tbody>${linhas || `<tr><td colspan="${colunas.length}">Nenhuma demanda sem restrição neste conjunto.</td></tr>`}</tbody></table></div>` +
+      (resumo.nota ? `<p>${esc(resumo.nota)}</p>` : ""));
+    const modal = $("modal-resumo-elegibilidade");
+    const fechar = () => {
+      modal.classList.add("hidden");
+      $("modal-relatorios").classList.remove("hidden");
+      origem.focus();
+    };
+    $("modal-relatorios").classList.add("hidden");
+    const botaoFechar = modal.querySelector("[data-modal-close]");
+    botaoFechar.onclick = fechar;
+    modal.onclick = event => { if (event.target === modal) fechar(); };
+    modal.onkeydown = event => {
+      if (event.key === "Escape") {
+        event.stopPropagation();
+        fechar();
+      } else if (event.key === "Tab") {
+        const focaveis = [...modal.querySelectorAll('button, a[href], [tabindex="0"]')];
+        const primeiro = focaveis[0], ultimo = focaveis[focaveis.length - 1];
+        if (event.shiftKey && document.activeElement === primeiro) {
+          event.preventDefault();
+          ultimo.focus();
+        } else if (!event.shiftKey && document.activeElement === ultimo) {
+          event.preventDefault();
+          primeiro.focus();
+        }
+      }
+    };
+    botaoFechar.focus();
   }
   function matrizHtml(m) {
     const linhas = Array.isArray(m) ? m : (m && Array.isArray(m.linhas) ? m.linhas : []);

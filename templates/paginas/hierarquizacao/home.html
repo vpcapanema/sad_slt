@@ -208,6 +208,15 @@
         <div class="json-modal-body" data-modal-body></div>
       </div>
     </div>
+    <div id="modal-resumo-elegibilidade" class="json-modal-backdrop hidden" data-modal role="dialog" aria-modal="true" aria-labelledby="modal-resumo-elegibilidade-title">
+      <div class="json-modal">
+        <header class="json-modal-head">
+          <h2 id="modal-resumo-elegibilidade-title" data-modal-title>Resumo da Elegibilidade</h2>
+          <button class="json-modal-close" data-modal-close aria-label="Fechar resumo e voltar ao relatório"><i class="fas fa-xmark" aria-hidden="true"></i></button>
+        </header>
+        <div class="json-modal-body" data-modal-body></div>
+      </div>
+    </div>
 {% endblock %}
 
 {% block scripts_pagina %}
@@ -223,6 +232,6 @@
   <script src="/restrict/hierarquizacao/js/demandas-grupo.js?v=20261004-1"></script>
   <script src="/assets/vendor/xlsx/xlsx-0.18.5.min.js"></script>
   <script src="/assets/js/matriz-criterios-arquivo.js?v=20261009"></script>
-  <script src="/restrict/hierarquizacao/js/processos.js?v=20261023-resumo-elegibilidade"></script>
+  <script src="/restrict/hierarquizacao/js/processos.js?v=20261024-modal-resumo-elegibilidade"></script>
   <script src="/assets/js/paginas/hierarquizacao-home-inline-1.js"></script>
 {% endblock %}

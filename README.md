@@ -494,8 +494,12 @@ Não é necessário clicar em baixar o ZIP para registrar o PDF. Se houver entra
 de origens diferentes, cada PDF vinculado inclui somente as da respectiva rodada.
 Em **Gestão das hierarquizações**, as colunas **Relatório da Fase 1**,
 **Relatório da Fase 2**, **Relatório da Fase 3** e **Relatório consolidado** exibem
-os registros disponíveis. Na Fase 1, o modal permite baixar o GeoPackage e o PDF
-associados, com autenticação e conferência de SHA-256; os relatórios sem arquivo
+os registros disponíveis. Na Fase 1, o modal permite baixar o GeoPackage, o PDF
+e a planilha de resumo associados, com autenticação e conferência de SHA-256.
+O link **Visualizar tabela-resumo de elegibilidade** abre outro modal com os
+dados salvos de cada análise, sem recalcular os resultados. Ao fechá-lo, retorna-se
+ao relatório. Análises antigas sem resumo registrado exibem essa indisponibilidade;
+os relatórios sem arquivo
 persistido continuam consultáveis como dados estruturados. A ausência de relatório
 é indicada por **Não produzido**, sem ocultar a coluna.
 A seção **Resultados** permite revisar os nomes amigáveis das entradas, bases
