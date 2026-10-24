@@ -17,6 +17,11 @@ from api.services.controle_processamento import ControleProcessamento, Processam
 from api.services.arquivos_geoespaciais_memoria import ler_vetor, vetor
 
 
+@pytest.fixture(autouse=True)
+def dominio_sem_banco(monkeypatch):
+    monkeypatch.setattr(service.adversidades_camadas, 'resolver', lambda ids: {ident: None for ident in ids})
+
+
 def frame(geometrias, **atributos):
     return gpd.GeoDataFrame(atributos, geometry=geometrias, crs=5880)
 
@@ -147,6 +152,9 @@ def test_saida_real_gpkg_nome_exato_null_geometrias_e_metadados(monkeypatch, cod
     entrada = fonte()
     base = frame([box(0, 0, 5, 10)])
     gravados = []
+    taxonomia = {'camada_codigo': 'app', 'tipo_codigo': 'inundacao', 'tipo_nome': 'Inundação',
+                 'familia_codigo': 'perigo_fisico_geotecnico', 'familia_nome': 'Perigos físicos e geotécnicos'}
+    monkeypatch.setattr(service.adversidades_camadas, 'resolver', lambda ids: {ident: taxonomia for ident in ids})
     entrada_id = 'storage:saidas-geoespaciais/demandas.gpkg::demandas' if codigo else 'entrada'
     monkeypatch.setattr(service, '_carregar', lambda ref: camada(entrada if ref['id'] == entrada_id else base))
     if codigo:
@@ -184,6 +192,9 @@ def test_saida_real_gpkg_nome_exato_null_geometrias_e_metadados(monkeypatch, cod
                             ['layer_metadata']['SICARD_ELEGIBILIDADE'])
     assert persistida.get('hierarquizacao') == codigo
     assert persistida['pasta_analise'] == pasta
+    assert persistida['campos'][0]['adversidade'] == taxonomia
+    assert persistida['campos'][0]['papel'] == 'restricao'  # A família não determina o papel.
+    assert persistida['feicoes_base'][0]['adversidade'] == taxonomia
     if not codigo:
         assert 'hierarquizacao' not in auditoria
 
@@ -242,6 +253,7 @@ def test_arquivo_persistido_reabre_com_descritor_real_da_bancada(storage_sinteti
     dataset = None
     assert auditoria['crs_calculo'] == 'EPSG:5880'
     assert auditoria['campos'][0]['campo'] == 'ri_inund'
+    assert auditoria['campos'][0]['adversidade'] is None
     from api.services.bancada_arquivos import carregar_para_execucao
     original = carregar_para_execucao(resultado['arquivo'], resultado['revisao'], resultado['id'])['frame']
     assert original.ri_inund.iloc[0] == 100 and original.nome.iloc[0] == 'A'

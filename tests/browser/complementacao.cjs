@@ -8,6 +8,7 @@ const assert = require('node:assert/strict');
     const errors = [], requests = [];
     page.on('pageerror', error => errors.push(error.message));
     const rows = Array.from({length: 18}, (_, i) => ({id: `PRJ-${i + 1}`, nome: `Projeto teste ${i + 1}`, status: 'analise_aguardando_complementacao', criadoEm: '2026-10-14T12:00:00-03:00', criadoPorNome: 'Responsável', descricao: 'Descrição cadastral', representante: {nome: 'Representante'}, complementos: {}}));
+    rows.forEach(r => { r.solicitacoes = [{id: r.id, categorias: ['dados_cadastrais', 'geometria'], descricao: 'Corrigir cadastro e geometria', solicitado_nome: 'Analista', categorias_salvas: {}}]; });
     const dominios = [
       {codigo: 'capex_estimado', nome: 'Custo de investimento', tipo_dado: 'monetario', unidade: 'R$', tipos_objeto: ['projeto']},
       {codigo: 'prazo_referencia_meses', nome: 'Prazo de implantação', tipo_dado: 'inteiro', unidade: 'meses', tipos_objeto: ['projeto']},
@@ -39,10 +40,11 @@ const assert = require('node:assert/strict');
       if (path === '/api/auth/me') body = {id: 'u1', nome: 'Operador teste', tipo_usuario: 'OPERADOR'};
       else if (path === '/api/auth/session') body = {authenticated: true, user: {id: 'u1', tipo_usuario: 'OPERADOR'}};
       else if (path === '/api/dominios/status-demanda') body = [{codigo: 'analise_aguardando_complementacao', nome: 'Aguardando complementação'}];
+      else if (path.includes('/solicitacoes/') && path.endsWith('/concluir')) { rows.splice(0, 1); body = {status: 'atendida'}; }
       else if (path === '/api/complementacao/demandas/projeto') body = rows;
       else if (path === '/api/complementacao/demandas/plano') body = [{...rows[0], id: 'PLN-1', nome: 'Plano teste'}];
       else if (path === '/api/complementacao/demandas/programa') body = [];
-      else if (path.endsWith('/cadastro')) body = {...rows[0], ...JSON.parse(req.postData())};
+      else if (path.endsWith('/cadastro')) { rows[0].solicitacoes[0].categorias_salvas.dados_cadastrais = {}; body = {...rows[0], ...JSON.parse(req.postData())}; }
       else if (path === '/api/complementacao/demandas/projeto/PRJ-1') body = rows[0];
       else if (path === '/api/complementacao/demandas/plano/PLN-1') body = {...rows[0], id: 'PLN-1', nome: 'Plano teste'};
       else if (path === '/api/complementacao/objetos') {
@@ -400,7 +402,7 @@ const assert = require('node:assert/strict');
     assert.equal(await campo('custo').inputValue(), '100,00');
     await page.getByRole('button', {name: 'Confirmar atributos', exact: true}).click();
     assert.equal(await page.locator('#complementacao-hierarquizacao').isDisabled(), true);
-    await page.waitForFunction(() => document.querySelector('#complementacao-atributos-status').textContent.includes('salva com sucesso'));
+    await page.waitForFunction(() => document.querySelector('#complementacao-atributos-status').textContent.includes('Atributos salvos.'));
     assert.equal(await campo('custo').isDisabled(), true);
     await conferirEstadoVisual(false);
     const atributos = JSON.parse(requests.find(req => req.path === '/api/complementacao/hierarquizacoes/H1' && req.method === 'PATCH').body).valores;
@@ -502,7 +504,7 @@ const assert = require('node:assert/strict');
     await campo('distancia', 'PAG-18').fill('1');
     await page.getByRole('button', {name: 'Confirmar atributos', exact: true}).click();
     assert.equal(await tamanhoAtributos.isDisabled(), true);
-    await page.waitForFunction(() => document.querySelector('#complementacao-atributos-status').textContent.includes('salva com sucesso'));
+    await page.waitForFunction(() => document.querySelector('#complementacao-atributos-status').textContent.includes('Atributos salvos.'));
     assert.deepEqual(JSON.parse(requests.find(req => req.path.endsWith('/H3') && req.method === 'PATCH').body).valores, {
       'PAG-1': {custo: 100}, 'PAG-18': {custo: 200, distancia: 1},
     });
@@ -525,6 +527,18 @@ const assert = require('node:assert/strict');
     falharCarga = false;
     await page.locator('#complementacao-atributos-recarregar').click();
     await page.locator('#complementacao-hierarquizacao option[value="H1"]').waitFor({state: 'attached'});
+    rows[0].solicitacoes[0].categorias = ['dados_cadastrais'];
+    rows[0].solicitacoes[0].categorias_salvas = {dados_cadastrais: {}};
+    await page.reload();
+    await table.locator('tbody tr').first().waitFor();
+    await table.locator('tbody tr').first().locator('input[type="checkbox"]').check();
+    assert.equal(await page.getByRole('button', {name: 'Geometria', exact: true}).isDisabled(), true);
+    const concluirPedido = page.locator('#complementacao-pedidos').getByRole('button', {name: 'Concluir solicitação', exact: true});
+    assert.equal(await concluirPedido.isEnabled(), true);
+    await concluirPedido.click();
+    await page.getByRole('button', {name: 'Concluir', exact: true}).click();
+    await page.waitForFunction(() => !document.querySelector('#complementacao-pedidos button'));
+    assert.ok(requests.some(r => r.path.includes('/solicitacoes/') && r.path.endsWith('/concluir')));
     salvos.clear();
     await page.reload();
     await page.locator('#complementacao-sem-atributos').waitFor({state: 'visible'});

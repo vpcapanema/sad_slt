@@ -80,6 +80,19 @@ def test_title_case_portugues_e_siglas(original, esperado):
     assert service.titulo(original) == esperado
 
 
+def test_fontes_preservam_taxonomia_gravada_sem_reconsultar_dominio():
+    taxonomia = {'tipo_codigo': 'inundacao', 'tipo_nome': 'Inundação',
+                 'familia_codigo': 'perigo_fisico_geotecnico', 'familia_nome': 'Perigos físicos e geotécnicos'}
+    fontes = service._fontes([{'elegibilidade': {
+        'entrada': {'id': 'entrada', 'nome': 'Demandas'},
+        'campos': [{'id': 'base', 'nome': 'Base', 'papel': 'restricao', 'adversidade': taxonomia}],
+        'feicoes_base': [],
+    }}])
+    assert fontes[1]['adversidade'] == taxonomia
+    assert fontes[1]['papel'] == 'restricao'
+    assert 'adversidade' not in fontes[0]
+
+
 def test_superficie_contexto_vinculo_autoria_e_extensao(analise, monkeypatch):
     fonte = gpd.GeoDataFrame({'nome':['Entorno','Distante']},
         geometry=[box(-48,-24,-46,-22),box(-40,-10,-39,-9)], crs=4326)

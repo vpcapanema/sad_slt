@@ -8,13 +8,17 @@ from api.deps.auth import require_authenticated
 from api.exceptions import DatabaseUnavailableError
 from api.repositories import dominio_repository
 from api.schemas.dominio import (
+    CamadaAdversidadeResolvidaSchema,
     AtributoObjetoDominioSchema,
+    FamiliaAdversidadeSchema,
     MatrizTransicaoStatusSchema,
+    ResolverAdversidadesSchema,
     StatusDominioSchema,
     TipoDemandaSchema,
 )
 from api.services.session_service import SessionUser
 from api.services import status_transicoes
+from api.services import adversidades_camadas
 
 router = APIRouter(prefix="/dominios", tags=["dominios"])
 
@@ -24,6 +28,30 @@ def listar_atributos_objeto() -> list[AtributoObjetoDominioSchema]:
     """Lista publica usada pelos formularios de cadastro."""
     try:
         return [AtributoObjetoDominioSchema(**row) for row in dominio_repository.list_atributos_objeto()]
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.get("/adversidades", response_model=list[FamiliaAdversidadeSchema])
+def listar_adversidades() -> list[FamiliaAdversidadeSchema]:
+    """Famílias e tipos ativos, independentes do tratamento dado às camadas."""
+    try:
+        return [
+            FamiliaAdversidadeSchema(**row)
+            for row in dominio_repository.list_adversidades()
+        ]
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.post("/adversidades/camadas/resolver", response_model=list[CamadaAdversidadeResolvidaSchema])
+def resolver_adversidades(payload: ResolverAdversidadesSchema) -> list[dict]:
+    """Resolve a taxonomia das referências sem determinar seu papel na análise."""
+    try:
+        return [
+            {"id": ident, "adversidade": adversidade}
+            for ident, adversidade in adversidades_camadas.resolver(payload.camadas).items()
+        ]
     except DatabaseUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 

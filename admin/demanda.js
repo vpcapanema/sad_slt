@@ -372,6 +372,18 @@
       : "";
     return `
       ${rejectionRecord}
+      ${canAnalyze ? `<fieldset class="form-field span-2"><legend>Solicitação de complementação</legend>
+        <label for="solicitacao-tipo">Tipo</label>
+        <select id="solicitacao-tipo">
+          ${d.status === 'analise_em_avaliacao' ? '<option value="dados_cadastrais">Dados cadastrais</option><option value="geometria">Geometria</option><option value="dados_cadastrais,geometria">Dados cadastrais e geometria</option>' : ''}
+          <option value="atributos_objeto">Atributos de objeto de demanda</option>
+        </select>
+        <label for="solicitacao-hierarquizacao">Código da hierarquização (para atributos de objeto)</label>
+        <input id="solicitacao-hierarquizacao" type="text" maxlength="100">
+        <label for="solicitacao-motivo">O que precisa ser complementado?</label>
+        <textarea id="solicitacao-motivo" rows="3" maxlength="5000"></textarea>
+        ${d.status !== 'analise_em_avaliacao' ? '<button type="button" class="btn btn-secondary" data-situacao="complementar">Solicitar atributos de objeto</button>' : ''}
+      </fieldset>` : ''}
       <div class="form-field span-2" id="analise-parecer-baixar" hidden>
         <span class="field-help">Um parecer em PDF já foi gerado para esta demanda.</span>
         <div class="admin-dashboard-actions">
@@ -453,6 +465,10 @@
     document.querySelector('.analise-geometria').classList.toggle('is-confirmada', confirmada);
     $("#geometria-encaminhamento").hidden = avaliacao.adequada !== false;
     $("#geometria-complementacao-tipo").hidden = avaliacao.encaminhamento !== "complementacao";
+    const tipoPedido = $('#solicitacao-tipo');
+    if (avaliacao.encaminhamento === 'complementacao' && tipoPedido?.value === 'dados_cadastrais') {
+      tipoPedido.value = 'geometria';
+    }
   }
 
   async function salvarGeometriaAntesDaAcao() {
@@ -806,9 +822,20 @@
   async function alterarSituacao(acaoId) {
     const acao = SITUACOES.find((item) => item.id === acaoId);
     if (!acao || !record) return;
+    let pedido = {};
+    if (acaoId === 'complementar') {
+      pedido = {categorias: ($('#solicitacao-tipo')?.value || '').split(','),
+        descricao: $('#solicitacao-motivo')?.value.trim(),
+        hierarquizacao_codigo: $('#solicitacao-tipo')?.value === 'atributos_objeto'
+          ? $('#solicitacao-hierarquizacao')?.value.trim() || null : null};
+      if (!pedido.descricao || (pedido.categorias.includes('atributos_objeto') && !pedido.hierarquizacao_codigo)) {
+        reportarErroAnalise('Informe o motivo e, para atributos de objeto, o código da hierarquização.'); return;
+      }
+    }
+    const somenteAtributos = pedido.categorias?.includes('atributos_objeto');
     const ok = await SLTAdminUi.showConfirm({
       title: acao.label,
-      message: acao.message,
+      message: somenteAtributos ? "Registrar solicitação de atributos nesta hierarquização?" : acao.message,
       confirmLabel: acao.label,
       cancelLabel: "Cancelar",
       danger: false,
@@ -817,7 +844,7 @@
 
     try {
       await salvarGeometriaAntesDaAcao();
-      await SLTAdminApi.alterarSituacaoAnalise(record.id, acao.id);
+      await SLTAdminApi.alterarSituacaoAnalise(record.id, acao.id, pedido);
       try {
         await refreshLists();
         renderPage(await API[tipo].get(record.id));
@@ -825,8 +852,8 @@
         if (window.StatusFeedback) {
           window.StatusFeedback.parcial({
             actionTitle: acao.label,
-            title: "Status alterado, tela desatualizada",
-            message: `A demanda passou para «${acao.statusLabel}», mas a tela não foi atualizada: ${err.message}`,
+            title: somenteAtributos ? "Solicitação registrada, tela desatualizada" : "Status alterado, tela desatualizada",
+            message: somenteAtributos ? `Solicitação registrada, mas a tela não foi atualizada: ${err.message}` : `A demanda passou para «${acao.statusLabel}», mas a tela não foi atualizada: ${err.message}`,
           });
         } else {
           SLTAdminUi.showToast(`Status alterado, mas a tela não foi atualizada: ${err.message}`, true);
@@ -836,11 +863,11 @@
       if (window.StatusFeedback) {
         window.StatusFeedback.sucesso({
           actionTitle: acao.label,
-          title: "Status atualizado",
-          message: `A demanda passou para «${acao.statusLabel}». O mapa passa a usar a cor deste status.`,
+          title: somenteAtributos ? "Solicitação registrada" : "Status atualizado",
+          message: somenteAtributos ? "Solicitação de atributos registrada." : `A demanda passou para «${acao.statusLabel}».`,
         });
       } else {
-        SLTAdminUi.showToast(`Demanda atualizada para «${acao.statusLabel}».`);
+        SLTAdminUi.showToast(somenteAtributos ? "Solicitação de atributos registrada." : `Demanda atualizada para «${acao.statusLabel}».`);
       }
     } catch (err) {
       reportarErroAnalise(err.message, acao.label);

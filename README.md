@@ -1092,3 +1092,29 @@ A fonte única é `assets/js/status-colors.js`. Não duplique cores de status em
 HTML, CSS ou JavaScript de módulo. Novos status exigem atualização do domínio no
 banco, de `STATUS_DEMANDA`, de `LEGEND_ORDER` e, quando aplicável, dos rótulos
 tipados do backend.
+
+
+### Solicitações de complementação de demanda
+
+A página `/restrict/complementacao/` lista pedidos abertos em
+`demandas.solicitacao_complementacao_demanda`, relacionados aos cadastros de
+projetos, programas e planos. O status da demanda não cria uma solicitação.
+
+Na análise, informe o tipo e o motivo antes de solicitar complementação:
+
+- `dados_cadastrais` e `geometria` podem compor o mesmo pedido e interrompem a
+  análise cadastral; cada tipo precisa ser salvo antes da conclusão explícita.
+- `atributos_objeto` usa pedido separado e exige o código de uma hierarquização
+  que contenha o objeto. Não altera o status cadastral da demanda.
+- Salvar mantém o pedido aberto. Concluir registra atendente/data e preserva o
+  histórico. A retomada da análise exige que os pedidos cadastrais/geometria
+  estejam concluídos. Atributos pendentes da matriz vigente impedem sua conclusão.
+
+A migração `140_solicitacoes_complementacao_tipos.sql` amplia a tabela existente,
+controla duplicidade por demanda/contexto e recupera os registros legados em
+`analise_aguardando_complementacao`. Quando há encaminhamento de geometria
+registrado, recupera esse tipo; nos demais casos, classifica como cadastral.
+A autoria e o motivo originais desconhecidos ficam explicitamente indicados;
+não são atribuídos a um usuário presumido. A reaplicação não recria pedidos
+concluídos. Migração aplicada ao `slt_db` em 24/10/2026: seis pedidos recuperados,
+três de geometria e três cadastrais. A publicação do código é uma etapa separada.

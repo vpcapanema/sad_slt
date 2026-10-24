@@ -11,7 +11,9 @@ function modeloFixture() {
   const bases = [
     {id: 'b-app', nome: 'Áreas de Preservação Permanente', papel: 'restricao', campo: 're_app'},
     {id: 'b-uc', nome: 'Unidades de Conservação', papel: 'restricao', campo: 're_uc'},
-    {id: 'b-inund', nome: 'Suscetibilidade à Inundação', papel: 'risco', campo: 'ri_inund'},
+    {id: 'b-inund', nome: 'Suscetibilidade à Inundação', papel: 'risco', campo: 'ri_inund',
+      adversidade:{camada_codigo:'inundacao',tipo_codigo:'inundacao',tipo_nome:'Inundação',
+        familia_codigo:'perigo_fisico_geotecnico',familia_nome:'Perigos físicos e geotécnicos'}},
   ];
   const quadrado = (x, y, l) => ({type: 'Polygon', coordinates: [[[x, y], [x + l, y], [x + l, y + l], [x, y + l], [x, y]]]});
   const linhas = [], geometrias = [], intersecoes = [];
@@ -33,7 +35,7 @@ function modeloFixture() {
       area_total_m2: total, areas: bases.map(() => null), sobreposicoes});
   }
   const fontes = [{id: 'entrada-1', nome: 'Demandas da Rodada', papel: 'entrada', tipo: 'camada'},
-    ...bases.map(b => ({id: b.id, nome: b.nome, papel: b.papel, tipo: 'camada'}))];
+    ...bases.map(b => ({id: b.id, nome: b.nome, papel: b.papel, tipo: 'camada',adversidade:b.adversidade}))];
   const entrada = {id: 'execucao-1', nome: 'Demandas da Rodada', concluido_em: '2026-10-23T15:00:00Z', feicoes: 30,
     com_intersecao: 29, sem_intersecao: 1, campos: bases, linhas, geometrias: {type: 'FeatureCollection', features: geometrias},
     intersecoes: {type: 'FeatureCollection', features: intersecoes}};
@@ -94,6 +96,8 @@ function modeloFixture() {
     });
     const secao = page.locator('#cinco-resultados_elegibilidade_v2');
     await secao.locator('#ev2-conteudo').waitFor({state: 'visible'});
+    assert.match(await secao.locator('#ev2-nomes').textContent(), /Perigos físicos e geotécnicos · Inundação/);
+    assert.match(await secao.locator('#ev2-nomes').textContent(), /Sem vínculo de adversidade registrado nesta saída/);
     assert.equal(await page.locator('#ev-resultados').count(), 0, 'A seção 5 antiga não pode estar no HTML ativo da página');
 
     // Estado inicial: três painéis, 5 indicadores, todas as demandas e todos os registros.

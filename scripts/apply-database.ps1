@@ -265,7 +265,10 @@ $migrations = @(
     "136_corrigir_contrato_exportacao_seed.sql",
     "137_email_convites_colaborativos.sql",
     "138_token_acesso_julgamento.sql",
-    "139_centralizar_destinos_saidas_storage.sql"
+    "139_centralizar_destinos_saidas_storage.sql",
+    "140_solicitacoes_complementacao_tipos.sql",
+    "141_dominio_adversidades.sql",
+    "142_vinculos_camadas_adversidades.sql"
 )
 
 if ($OnlyMigration) {
@@ -390,6 +393,17 @@ if (-not $OnlyMigration) {
         if (-not (Test-SchemaReady "SELECT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid=to_regclass('geoprocessamento.arquivo_resultado') AND conname='ck_arquivo_resultado_destino' AND obj_description(oid, 'pg_constraint')='139: saidas por contexto; destinos legados preservados');")) {
             $migrations += "139_centralizar_destinos_saidas_storage.sql"
             Write-Ok "Migration 139 pendente: destinos de saida agrupados por contexto."
+        }
+        if (-not (Test-SchemaReady "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='demandas' AND table_name='solicitacao_complementacao_demanda' AND column_name='categorias_salvas');")) {
+            $migrations += "140_solicitacoes_complementacao_tipos.sql"
+            Write-Ok "Migration 140 pendente: solicitacoes dos tres tipos de complementacao."
+        }
+        if (-not (Test-SchemaReady "SELECT to_regclass('dominios.tipo_adversidade') IS NOT NULL AND to_regclass('dominios.familia_adversidade') IS NOT NULL;")) {
+            $migrations += "141_dominio_adversidades.sql"
+        }
+        if (-not (Test-SchemaReady "SELECT to_regclass('dominios.camada_adversidade') IS NOT NULL;")) {
+            $migrations += "142_vinculos_camadas_adversidades.sql"
+            Write-Ok "Migration 141 pendente: dominio de familias e tipos de adversidade."
         }
     } elseif (Test-SchemaReady $schema090Query) {
         Write-Ok "Schema ja esta na migration 090; aplicando somente migrations pendentes (>= 091)"

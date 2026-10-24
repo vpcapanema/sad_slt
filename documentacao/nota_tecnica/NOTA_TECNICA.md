@@ -18,8 +18,8 @@
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Título**                 | Metodologia do Sistema de Hierarquização de Demandas — SICARD                                                                                                         |
 | **Número**                 | NT-SICARD-001/2026                                                                                                                                                       |
-| **Versão**                 | 1.42                                                                                                                                                                      |
-| **Data de emissão**        | 23/10/2026                                                                                                                                                               |
+| **Versão**                 | 1.43                                                                                                                                                                      |
+| **Data de emissão**        | 24/10/2026                                                                                                                                                               |
 | **Classificação**         | Documento técnico-metodológico de entrega ao cliente                                                                                                                   |
 | **Sistema**                 | SICARD — Sistema Inteligente de Cadastro e Ranking de Demandas                                                                                                        |
 | **Domínio de aplicação** | Logística e transportes. Concebido no âmbito do Plano de Logística Integrada do Estado de São Paulo (PLI-SP), aplica-se a qualquer objeto de demanda desse domínio. |
@@ -76,6 +76,7 @@
 | 1.40    | 23/10/2026 | `[preencher]` | Substituição das barras de Favorabilidade por intervalos com pontos, com uma linha por demanda identificada somente pelo nome, um ponto por feição e traço entre extremos válidos; cores e legenda por feição, separação visual de pontos próximos e preservação dos índices, das identidades, das ausências e da seleção sincronizada. |
 | 1.41    | 23/10/2026 | `[preencher]` | Registro, por objeto de demanda, dos resultados das Fases 1 e 2 em `dados_hierarquizacao` ao fim do cálculo, com histórico acumulado das execuções; conversão de cada camada de risco sobreposta na Fase 1 em critério da Fase 3 (área sobreposta, em hectares, menor é melhor, escala absoluta), em grupo próprio de pesos, com participação equivalente à dos demais grupos; substituição do tratamento gerencial de risco (penalizar, ignorar ou barrar) por esses critérios ponderados; proteção das hierarquizações homologadas e arquivadas contra regravação e sinalização de síntese desatualizada. |
 | 1.42    | 23/10/2026 | `[preencher]` | Inclusão do Resumo da Elegibilidade nos resultados da Fase 1: uma linha por objeto de demanda sem restrição, com camadas de risco, área de sobreposição (união, em hectares), porcentagem sobreposta e índice de risco ambiental e territorial (1 − área sobreposta ÷ área da demanda, de 0 a 1); inclusão da tabela no PDF, no pacote de saída e no relatório da Fase 1 da hierarquização, sem alteração da classificação de elegibilidade. |
+| 1.43    | 24/10/2026 | `[preencher]` | Vinculação temática das bases da Fase 1 às famílias e aos tipos de adversidade, com manutenção administrativa e preservação da taxonomia nos metadados dos resultados; independência em relação ao papel de risco ou restrição escolhido pelo usuário, sem alteração do índice ou de seus pesos. |
 
 ---
 
@@ -385,6 +386,15 @@ ambos os papéis ou simultaneamente como entrada. As listas de referências pode
 ser salvas no storage e recuperadas em novos acessos, com nova validação geométrica
 no envio à prévia. Ao salvar arquivos com múltiplas camadas, identificam-se seus
 componentes para registrar as referências individualmente.
+As bases possuem vínculo temático com famílias e tipos de adversidade,
+mantido no domínio administrativo. A referência exata da camada tem precedência
+sobre o identificador canônico do componente ou do arquivo. A família e o tipo
+não determinam o papel de risco ou restrição escolhido pelo usuário, nem
+atribuem pesos. A taxonomia consultada na execução acompanha os metadados do
+GeoPackage e as fontes dos resultados, preservando o registro histórico mesmo
+após alterações no domínio. Bases sem vínculo ativo são identificadas
+explicitamente e permanecem disponíveis; indisponibilidade do domínio é
+informada como falha, não como ausência de vínculo.
 O fluxo distingue seleção, prévia e bancada. Os controles das seções de entrada
 e bases enviam cada grupo à prévia; alterações na seleção não se propagam
 automaticamente. O envio de uma seleção vazia retira o respectivo grupo da prévia.

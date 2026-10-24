@@ -5,6 +5,9 @@ from copy import deepcopy
 from decimal import Decimal
 from math import isfinite
 from typing import Any
+from uuid import UUID
+from api.repositories import solicitacao_complementacao_repository as solicitacoes
+from api.services.solicitacao_complementacao_service import bloquear
 
 from fastapi import APIRouter, Body, Depends, HTTPException, File, Form, UploadFile
 from pydantic import ValidationError
@@ -44,13 +47,51 @@ def _visivel(demanda: dict, user: SessionUser, pessoa_id: str | None) -> bool:
     )
 
 
-def _demanda_autorizada(tipo: str, codigo: str, user: SessionUser) -> dict:
+def _demanda_autorizada(tipo: str, codigo: str, user: SessionUser, categoria: str | None = None) -> dict:
     if tipo not in CADASTROS:
         raise HTTPException(422, "Tipo de demanda inválido.")
     demanda = CADASTROS[tipo][0].get_by_codigo(codigo)
     if not demanda or not _visivel(demanda, user, _pessoa_id(user)):
         raise HTTPException(403, "Demanda indisponível para complementação por este usuário.")
+    _exigir_solicitacao(tipo, codigo, categoria)
     return demanda
+
+
+def _exigir_solicitacao(tipo, codigo, categoria=None, hierarquizacao=None):
+    pedidos = [p for p in solicitacoes.listar(tipo=tipo, codigo=codigo)
+               if p.get('hierarquizacao_codigo') == hierarquizacao
+               and (categoria is None or categoria in p['categorias'])]
+    if not pedidos:
+        raise HTTPException(403, 'Não existe solicitação aberta para esta complementação.')
+    return pedidos
+
+
+@router.post('/solicitacoes/{solicitacao_id}/concluir')
+def concluir_solicitacao(solicitacao_id: UUID, user: SessionUser = Depends(require_operator)):
+    pedido = solicitacoes.obter(solicitacao_id)
+    if not pedido:
+        raise HTTPException(404, 'Solicitação não encontrada.')
+    tipo, codigo = pedido['demanda_tipo'], pedido['demanda_codigo']
+    cadastro = CADASTROS[tipo][0].get_by_codigo(codigo)
+    if not cadastro or not (
+        user.tipo_usuario.strip().upper() in {'ADMIN','GESTOR','ANALISTA'} or
+        _pode_editar({}, pessoa_id=_pessoa_id(user), usuario_id=str(user.id), demanda=cadastro)):
+        raise HTTPException(403, 'Solicitação indisponível para este usuário.')
+    with atomic_connection() as conn:
+        bloquear(conn, tipo, codigo)
+        pedido = solicitacoes.obter(solicitacao_id, lock=True)
+        if pedido['status'] != 'solicitada':
+            return pedido
+        faltantes = set(pedido['categorias']) - set(pedido['categorias_salvas'])
+        if faltantes:
+            raise HTTPException(422, 'Salve as alterações solicitadas antes de concluir: ' + ', '.join(sorted(faltantes)))
+        if 'atributos_objeto' in pedido['categorias']:
+            h = hierarquizacao_repository.get_by_codigo(pedido['hierarquizacao_codigo'])
+            obj = next((o for o in ((h or {}).get('dados_hierarquizacao') or {}).get('objetos', [])
+                        if o.get('cabecalho_objeto', {}).get('codigo') == codigo), None)
+            if not obj or _item(h, obj, pode_editar=True)['situacao_complementacao'] != 'complementada':
+                raise HTTPException(422, 'Preencha os atributos pendentes da matriz vigente antes de concluir.')
+        return solicitacoes.atender(solicitacao_id, user.id)
 
 
 def _pessoa_id(user: SessionUser) -> str | None:
@@ -104,7 +145,7 @@ def _matriz(row: dict[str, Any]) -> Any:
 
 def _item(row: dict[str, Any], obj: dict[str, Any], *, pode_editar: bool) -> dict[str, Any]:
     cab = obj.get("cabecalho_objeto") or {}
-    colunas = extrair_colunas(_matriz(row))
+    colunas = colunas_da_hierarquizacao(row, estrito=True)
     slots = cab.get("atributos_fase3") or {}
     preenchidos = sum(
         1 for col in colunas
@@ -134,9 +175,15 @@ def listar_demandas_complementaveis(tipo: str, user: SessionUser = Depends(requi
         raise HTTPException(422, "Tipo de demanda inválido.")
     repo, service, _, _ = CADASTROS[tipo]
     pessoa_id = _pessoa_id(user)
-    rows = [row for row in repo.list_all() if _visivel(row, user, pessoa_id)]
+    pedidos = [p for p in solicitacoes.listar(tipo=tipo) if not p.get('hierarquizacao_codigo')]
+    por_codigo = {}
+    for pedido in pedidos:
+        por_codigo.setdefault(pedido['demanda_codigo'], []).append(pedido)
+    rows = [row for codigo in por_codigo if (row := repo.get_by_codigo(codigo))
+            and _visivel(row, user, pessoa_id)]
     rows = resolver_nomes_registros(rows)
-    return [service._row_to_response(row, incluir_auditoria=True, nomes_resolvidos=True) for row in rows]
+    return [{**service._row_to_response(row, incluir_auditoria=True, nomes_resolvidos=True).model_dump(),
+             'solicitacoes': por_codigo[row['codigo']]} for row in rows]
 
 
 @router.get("/demandas/{tipo}/{codigo}")
@@ -147,13 +194,18 @@ def obter_demanda_complementavel(tipo: str, codigo: str, user: SessionUser = Dep
 
 @router.patch("/demandas/{tipo}/{codigo}/cadastro")
 def salvar_cadastro(tipo: str, codigo: str, body: dict = Body(...), user: SessionUser = Depends(require_operator)):
-    _demanda_autorizada(tipo, codigo, user)
+    _demanda_autorizada(tipo, codigo, user, "dados_cadastrais")
     _, _, schema, atualizar = CADASTROS[tipo]
     permitidos = set(schema.model_fields) - {"status"}
     if set(body) - permitidos:
         raise HTTPException(422, "Campo não permitido na complementação cadastral.")
     try:
-        return atualizar(codigo, schema.model_validate(body), usuario_id=user.id)
+        with atomic_connection() as conn:
+            bloquear(conn, tipo, codigo)
+            _exigir_solicitacao(tipo, codigo, 'dados_cadastrais')
+            resultado = atualizar(codigo, schema.model_validate(body), usuario_id=user.id)
+            solicitacoes.registrar_edicao(tipo, codigo, 'dados_cadastrais', user.id)
+            return resultado
     except (ValidationError, DemandaValidationError) as exc:
         raise HTTPException(422, str(exc)) from exc
 
@@ -161,7 +213,7 @@ def salvar_cadastro(tipo: str, codigo: str, body: dict = Body(...), user: Sessio
 @router.post("/demandas/{tipo}/{codigo}/geometria/conferir")
 async def conferir_geometria_complementacao(tipo: str, codigo: str, file: UploadFile = File(...),
                                            user: SessionUser = Depends(require_operator)):
-    _demanda_autorizada(tipo, codigo, user)
+    _demanda_autorizada(tipo, codigo, user, "geometria")
     from api.routers.geometria import conferir_geometria
     return await conferir_geometria(tipo, codigo, file, user)
 
@@ -169,7 +221,7 @@ async def conferir_geometria_complementacao(tipo: str, codigo: str, file: Upload
 @router.post("/demandas/{tipo}/{codigo}/geometria/substituir")
 async def substituir_geometria_complementacao(tipo: str, codigo: str, confirmacao: str = Form(...),
                                              file: UploadFile = File(...), user: SessionUser = Depends(require_operator)):
-    _demanda_autorizada(tipo, codigo, user)
+    _demanda_autorizada(tipo, codigo, user, "geometria")
     from api.routers.geometria import substituir_geometria
     return await substituir_geometria(tipo, codigo, confirmacao, file, user)
 
@@ -179,12 +231,20 @@ def listar_objetos(user: SessionUser = Depends(require_operator)) -> list[dict[s
     itens: list[dict[str, Any]] = []
     pessoa_id = _pessoa_id(user)
     cadastros = _cadastros()
-    for row in hierarquizacao_repository.list_all():
-        for obj in (row.get("dados_hierarquizacao") or {}).get("objetos", []):
-            cab = obj.get("cabecalho_objeto") or {}
-            if cab.get("codigo"):
+    pedidos = [p for p in solicitacoes.listar() if 'atributos_objeto' in p['categorias']]
+    por_hierarquia = {}
+    for pedido in pedidos:
+        por_hierarquia.setdefault(pedido['hierarquizacao_codigo'], {}).setdefault(pedido['demanda_codigo'], []).append(pedido)
+    for codigo, por_objeto in por_hierarquia.items():
+        row = hierarquizacao_repository.get_by_codigo(codigo)
+        if not row:
+            continue
+        for obj in (row.get('dados_hierarquizacao') or {}).get('objetos', []):
+            cab = obj.get('cabecalho_objeto') or {}
+            if cab.get('codigo') in por_objeto:
                 item = _item(row, obj, pode_editar=_acesso(cab, user, pessoa_id, cadastros))
                 if _pode_listar(item, user):
+                    item['solicitacoes'] = por_objeto[cab['codigo']]
                     itens.append(item)
     return itens
 
@@ -192,9 +252,11 @@ def listar_objetos(user: SessionUser = Depends(require_operator)) -> list[dict[s
 def _tabela(row: dict[str, Any], user: SessionUser, pessoa_id: str | None,
             cadastros: dict[str, dict[str, Any]], dominios: list[dict[str, Any]]) -> dict[str, Any]:
     objetos = []
+    solicitados = {p['demanda_codigo'] for p in solicitacoes.listar(hierarquizacao=row['codigo'])
+                   if 'atributos_objeto' in p['categorias']}
     for original in (row.get("dados_hierarquizacao") or {}).get("objetos", []):
         cab = original.get("cabecalho_objeto") or {}
-        if not _acesso(cab, user, pessoa_id, cadastros):
+        if not _acesso(cab, user, pessoa_id, cadastros) or cab.get("codigo") not in solicitados:
             continue
         objeto = deepcopy(original)
         atributos = objeto["cabecalho_objeto"].get("atributos") or {}
@@ -289,6 +351,7 @@ def salvar_tabela(codigo: str, valores: dict[str, dict[str, Any]] = Body(..., em
             cadastro = CADASTROS[tipo][0].get_by_codigo(objeto_codigo)
             if not cadastro or not _acesso(cab, user, pessoa_id, {objeto_codigo: cadastro}):
                 raise HTTPException(403, "Este objeto não pertence ao usuário conectado.")
+            _exigir_solicitacao(tipo, objeto_codigo, 'atributos_objeto', codigo)
             cadastros[objeto_codigo] = cadastro
             dominios_tipo = {item["codigo"]: item for item in dominios
                              if item["codigo"] in ATRIBUTOS_CADASTRAIS and tipo in item["tipos_objeto"]}
@@ -330,6 +393,8 @@ def salvar_tabela(codigo: str, valores: dict[str, dict[str, Any]] = Body(..., em
                 slot.update({"valor_bruto": valor, "valor": valor, "valor_rescalonado": None,
                              "origem": "complementacao", "preenchido_por": user.id})
         hierarquizacao_repository.update(codigo, {"dados_hierarquizacao": dados})
+        for objeto_codigo, cab, tipo, nativos, dinamicos in alteracoes:
+            solicitacoes.registrar_edicao(tipo, objeto_codigo, 'atributos_objeto', user.id, codigo)
     return obter_tabela(codigo, user)
 
 
@@ -344,6 +409,7 @@ def obter_complementacao(hierarquizacao_codigo: str, objeto_codigo: str,
     for obj in (row.get("dados_hierarquizacao") or {}).get("objetos", []):
         cab = obj.get("cabecalho_objeto") or {}
         if cab.get("codigo") == objeto_codigo:
+            _exigir_solicitacao(cab.get('tipo_demanda'), objeto_codigo, 'atributos_objeto', hierarquizacao_codigo)
             item = _item(row, obj, pode_editar=_acesso(cab, user, pessoa_id, cadastros))
             if not _pode_listar(item, user):
                 raise HTTPException(403, "Você não tem acesso a esta complementação.")
@@ -355,42 +421,5 @@ def obter_complementacao(hierarquizacao_codigo: str, objeto_codigo: str,
 def salvar_complementacao(hierarquizacao_codigo: str, objeto_codigo: str,
                                 valores: dict[str, Any] = Body(..., embed=True),
                                 user: SessionUser = Depends(require_operator)) -> dict[str, Any]:
-    row = hierarquizacao_repository.get_by_codigo(hierarquizacao_codigo)
-    if not row:
-        raise HTTPException(404, "Hierarquizacao nao encontrada.")
-    pessoa_id = _pessoa_id(user)
-    cadastros = _cadastros()
-    dados = deepcopy(row.get("dados_hierarquizacao") or {})
-    colunas = {c["id"]: c for c in extrair_colunas(_matriz(row))}
-    for obj in dados.get("objetos", []):
-        cab = obj.get("cabecalho_objeto") or {}
-        if cab.get("codigo") != objeto_codigo:
-            continue
-        if not _acesso(cab, user, pessoa_id, cadastros):
-            raise HTTPException(403, "Este objeto nao pertence ao usuario conectado.")
-        slots = cab.setdefault("atributos_fase3", {})
-        for codigo, valor in valores.items():
-            if codigo not in colunas:
-                raise HTTPException(422, f"Atributo nao pertence a matriz vigente: {codigo}")
-            slot = slots.setdefault(codigo, {
-                "origem": "complementacao",
-                "valor_bruto": None,
-                "valor_rescalonado": None,
-                "peso": None,
-            })
-            if slot.get("origem") == "cadastro":
-                continue
-            slot.update({
-                "valor_bruto": valor,
-                "valor": valor,
-                "valor_rescalonado": None,
-                "origem": "complementacao",
-                "preenchido_por": user.id,
-            })
-        hierarquizacao_repository.update(hierarquizacao_codigo, {"dados_hierarquizacao": dados})
-        return _item(
-            {**row, "dados_hierarquizacao": dados},
-            obj,
-            pode_editar=True,
-        )
-    raise HTTPException(404, "Objeto nao encontrado nesta hierarquizacao.")
+    salvar_tabela(hierarquizacao_codigo, {objeto_codigo: valores}, user)
+    return obter_complementacao(hierarquizacao_codigo, objeto_codigo, user)

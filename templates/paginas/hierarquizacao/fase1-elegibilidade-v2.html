@@ -18,7 +18,7 @@
 <link rel="stylesheet" href="/assets/css/page-title-standard.css">
 <link rel="stylesheet" href="/assets/css/extracao-atributos.css">
 <link rel="stylesheet" href="/assets/css/admin-table-controls.css?v=20261015-botoes-quadrados">
-<link rel="stylesheet" href="/assets/css/fase1-elegibilidade-v2.css?v=20261023-contexto">
+<link rel="stylesheet" href="/assets/css/fase1-elegibilidade-v2.css?v=20261024-adversidades">
 <link rel="stylesheet" href="/assets/css/paginas/hierarquizacao-fases-visual.css?v=20261020-cabecalhos-linha-unica">
 <link rel="stylesheet" href="/assets/css/cinco-resultados_elegibilidade_v2.css?v=20261023-resumo">
 <link rel="stylesheet" href="/assets/css/paginas/elegibilidade-resultados-padrao.css?v=20261023-1">
@@ -69,6 +69,7 @@
     <header class="ahp-section-label"><span class="ahp-subsection-num">2</span><h2 id="ev-bases-title">Camadas de restrição e de risco</h2></header>
     <div class="ahp-section-body">
       <p class="ea-hint">Comece pela restrição e depois selecione o risco. A mesma camada não pode ocupar os dois papéis, nem ser usada também como entrada. Salvar uma lista não envia camadas à bancada e não homologa os dados.</p>
+      <p class="ea-hint">Família e tipo descrevem a adversidade, sem definir risco, restrição ou peso. Os vínculos são mantidos na <a href="/restrict/admin/?menu=__dominios__&amp;esquema=dominios&amp;tabela=camada_adversidade">administração de adversidades das camadas</a>. Camadas sem vínculo continuam disponíveis e são identificadas como tal.</p>
       <div class="ev-grid">
         {% for papel, rotulo in [("restricao", "Restrição"), ("risco", "Risco")] %}
         <div class="ev-bases-grupo ea-field">
@@ -168,5 +169,5 @@
 <script src="/assets/vendor/maplibre-gl/leaflet-maplibre-gl.js"></script>
 <script src="/restrict/hierarquizacao/js/hier-api.js"></script>
 <script src="/assets/js/table-standard.js?v=20261015-fontes-ordem"></script>
-<script type="module" src="/restrict/hierarquizacao/js/fase1-elegibilidade-v2.js?v=20261023-resumo"></script>
+<script type="module" src="/restrict/hierarquizacao/js/fase1-elegibilidade-v2.js?v=20261024-adversidades"></script>
 {% endblock %}

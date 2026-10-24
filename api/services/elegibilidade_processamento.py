@@ -19,6 +19,7 @@ from api.services.controle_processamento import ControleProcessamento
 from api.services.normalizacao_demanda import CRS_METRICO
 from api.services.pastas_storage import nome_valido
 from api.services import extracao_atributos_aliases as aliases
+from api.services import adversidades_camadas
 
 SUFIXO = '_elegibilidade_territorial'
 ANALISES = {
@@ -265,6 +266,9 @@ def pasta_saida(lote: str, codigo: str | None = None, *, analise: str = 'elegibi
 
 def executar(payload: dict, controle: ControleProcessamento, *, analise: str = 'elegibilidade') -> dict:
     config = ANALISES[analise]
+    taxonomia = (adversidades_camadas.resolver([
+        ref['id'] for papel in config['papeis'] for ref in payload[papel]
+    ]) if analise == 'elegibilidade' else {})
     entrada_ref = payload['entrada']
     arquivo = nome_saida(entrada_ref['nome'], analise=analise)
     entrada = _carregar(entrada_ref)
@@ -287,6 +291,13 @@ def executar(payload: dict, controle: ControleProcessamento, *, analise: str = '
                 yield papel, ref['nome'], ref['id'], _carregar(ref)
     intersecoes = []
     saida, auditoria = calcular(entrada, bases(), controle, intersecoes=intersecoes, analise=analise)
+    if analise == 'elegibilidade':
+        for campo in auditoria['campos']:
+            campo['adversidade'] = taxonomia[campo['id']]
+            if campo['adversidade'] is None:
+                controle.mensagem(f"{campo['nome']}: sem vínculo ativo de adversidade; papel escolhido preservado.")
+        for feicao in auditoria['feicoes_base']:
+            feicao['adversidade'] = taxonomia[feicao['base_id']]
     auditoria['entrada'] = entrada_ref
     if codigo:
         auditoria['hierarquizacao'] = codigo

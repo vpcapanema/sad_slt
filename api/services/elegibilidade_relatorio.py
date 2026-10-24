@@ -149,7 +149,8 @@ def _fontes(resultados: list[dict], *, analise: str = 'elegibilidade') -> list[d
             sugestao = re.sub(r'[<>/\\\x00-\x1f]', ' ', sugestao).strip()[:160]
             fontes[ident] = {'id': ident, 'papel': item['papel'], 'nome': titulo(sugestao),
                              'origem': alias['origem'], 'tipo': item.get('tipo', 'camada'),
-                             'base_id': item.get('base_id')}
+                             'base_id': item.get('base_id'),
+                             **({'adversidade': item['adversidade']} if 'adversidade' in item else {})}
     return list(fontes.values())
 
 
@@ -728,6 +729,8 @@ def _painel(frame: gpd.GeoDataFrame, dados: bytes, auditoria: dict, nomes: dict[
                                area_ha=r['area_ha'], percentual_demanda=r['percentual_demanda'])
         grupo = grupos.setdefault((int(pos), ident), {'id': ident, 'base_id': base, 'nome': nomes[ident],
                                                       'papel': campos[base]['papel'], 'area_m2': 0.,
+                                                      **({'adversidade': campos[base]['adversidade']}
+                                                         if 'adversidade' in campos[base] else {}),
                                                       'identificador': feicoes[ident]['posicao'] + 1})
         grupo['area_m2'] += r['area_m2']
         if r.get('intersecao_id') is not None:

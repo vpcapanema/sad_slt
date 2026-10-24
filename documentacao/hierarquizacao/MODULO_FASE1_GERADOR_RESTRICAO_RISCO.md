@@ -23,6 +23,21 @@ O papel deste modulo e preparar os insumos espaciais para essa triagem.
 
 ## Preparacao operacional na pagina de elegibilidade v2
 
+As famílias e os tipos de adversidade descrevem a temática das bases, sem
+determinar risco, restrição ou peso. O vínculo editável é mantido em
+`dominios.camada_adversidade`, com referência ao tipo e à respectiva família.
+A migration 142 vincula os 24 identificadores da biblioteca canônica aos 15
+tipos do domínio. A resolução prioriza a referência exata da camada; para o
+storage, admite o identificador canônico do componente ou, na ausência deste,
+o nome do arquivo sem extensão. Não se infere o vínculo pelo nome de exibição.
+Um vínculo exato inativo não é substituído pelo vínculo canônico.
+O papel de risco ou restrição continua sendo escolhido pelo usuário nas listas
+da análise. Camadas sem vínculo ativo são sinalizadas e continuam disponíveis.
+A taxonomia consultada na execução é preservada nos metadados do GeoPackage,
+nas fontes e nas sobreposições dos resultados, sem reclassificar saídas antigas
+quando o domínio for posteriormente editado. A indisponibilidade do domínio
+interrompe a consulta e a execução; não é tratada como ausência de vínculo.
+
 A rota `/restrict/hierarquizacao/fase-1/` passa a servir a pagina v2, em
 substituicao a interface de selecao de um par homologado. Nesta entrega, o fluxo
 abrange a preparacao, o envio a bancada e a producao da camada de sobreposicoes, sem executar a classificacao

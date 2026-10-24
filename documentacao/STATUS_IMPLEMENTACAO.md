@@ -1,6 +1,6 @@
 # Status atual da implementação
 
-Atualizado em 22 de outubro de 2026. Este documento descreve o código executável
+Atualizado em 24 de outubro de 2026. Este documento descreve o código executável
 do SICARD. Os documentos de especificação dos módulos continuam válidos como
 referência metodológica, mas podem conter propostas ainda não integradas.
 
@@ -115,7 +115,7 @@ A decisão de publicar não é automática após aprovação ou homologação.
 | `/api/auth` | Login, sessão, usuário atual e logout |
 | `/api/instituicoes`, `/api/pessoas` | Proxy de leitura do SIGMA |
 | `/api/demandas`, `/api/planos`, `/api/programas` | Ciclo de vida das demandas |
-| `/api/dominios` | Status, tipos e transições |
+| `/api/dominios` | Status, tipos, transições e famílias/tipos de adversidade |
 | `/api/painel` | Projeções pública e interna |
 | `/api/geo` | Catálogo territorial e análises espaciais |
 | `/api/geoespacial` | Camadas, algoritmos, operações, jobs e produtos |
@@ -150,9 +150,18 @@ O contrato detalhado e testável está disponível em `/docs` e
 | `demandas` | Planos, programas, projetos, indicadores e domínios |
 | `ahp` | Objetos, configurações e comparação colaborativa |
 | `hierarquizacao_demandas` | Rodadas e resultados autocontidos |
+| `dominios` | Famílias e tipos de adversidade das camadas |
 | `geo` | Tipos de regionalização e unidades espaciais |
 | `geoprocessamento` | Catálogo, conteúdo, execução e homologação de camadas |
 | `auditoria` | Trilha de operações do sistema |
+
+As camadas da Fase 1 são vinculadas aos tipos de adversidade por
+`dominios.camada_adversidade`, editável na área administrativa. A consulta
+`POST /api/dominios/adversidades/camadas/resolver` resolve referências exatas ou
+identificadores canônicos dos componentes/arquivos. Família e tipo são exibidos na
+seleção e na revisão das fontes e preservados no GeoPackage e nos metadados dos
+resultados. Não determinam risco, restrição ou peso; bases sem vínculo são
+identificadas explicitamente, sem alterar o cálculo.
 
 O esquema inicial `cadastro` e o antigo espelho `demandas_aprovadas` são etapas
 históricas das migrations. Após a migration `015`, o modelo vigente usa o

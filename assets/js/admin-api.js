@@ -98,11 +98,11 @@
     });
   }
 
-  async function alterarSituacaoAnalise(codigo, acao) {
+  async function alterarSituacaoAnalise(codigo, acao, pedido = {}) {
     return request(analisePath(codigo, "/situacao"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ acao }),
+      body: JSON.stringify({ acao, ...pedido }),
     });
   }
 

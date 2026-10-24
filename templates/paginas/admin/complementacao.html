@@ -8,7 +8,7 @@
 {% block estilos_pagina %}
 <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
 <link rel="stylesheet" href="/assets/css/admin-analysis-layout.css">
-<link rel="stylesheet" href="/assets/css/complementacao.css?v=20261022-contraste-edicao">
+<link rel="stylesheet" href="/assets/css/complementacao.css?v=20261024-solicitacoes">
 <link rel="stylesheet" href="/assets/css/atributos-objetos.css">
 <link rel="stylesheet" href="/assets/css/fase1-execucao.css">
 <link rel="stylesheet" href="/assets/vendor/leaflet/leaflet.css">
@@ -20,10 +20,11 @@
 <main class="conteudo-principal app-main admin-main">
   <section class="secao-complementacao-introducao card card-complementacao-introducao standard-page-hero" aria-labelledby="complementacao-title">
     <h1 class="standard-page-hero__title" id="complementacao-title">Complementação de cadastro</h1>
-    <p class="standard-page-hero__description">Complemente os dados cadastrais e a geometria ou preencha, de forma independente, os atributos das demandas vinculadas a uma hierarquização.</p>
+    <p class="standard-page-hero__description">Atenda às solicitações de dados cadastrais, geometria e atributos de objeto de demanda.</p>
   </section>
   {% set modo_complementacao = true %}
   {% include "componentes/tabela_demandas.html" %}
+  <div id="complementacao-pedidos" class="card admin-card hidden" aria-live="polite"></div>
   <section id="complementacao-editor" class="secao-complementacao-editor card-complementacao-editor card hidden" aria-labelledby="complementacao-editor-titulo">
     <h3 id="complementacao-editor-titulo"></h3>
     <p id="complementacao-resumo" class="field-help" aria-live="polite"></p>
@@ -42,12 +43,13 @@
   <section id="complementacao-atributos" class="secao-complementacao-atributos card-complementacao-atributos-principal card admin-card standard-table-section" aria-labelledby="complementacao-atributos-titulo">
     <div class="admin-card-body">
       <h2 id="complementacao-atributos-titulo">2. Complementação de Atributos de demanda</h2>
-      <p class="field-help">Selecione a hierarquização para consultar e complementar os atributos das demandas autorizadas, independentemente do status cadastral. Os atributos do cadastro também serão atualizados no cadastro oficial.</p>
+      <p class="field-help">Selecione a hierarquização para atender às solicitações de atributos dos objetos de demanda, independentemente do status cadastral. Os atributos do cadastro também serão atualizados no cadastro oficial.</p>
+      <div id="complementacao-pedidos-atributos" aria-live="polite"></div>
       <div class="form-field">
         <label for="complementacao-hierarquizacao">Hierarquização</label>
         <select id="complementacao-hierarquizacao" disabled><option value="">Carregando hierarquizações…</option></select>
       </div>
-      <p id="complementacao-sem-atributos" class="field-help hidden">Nenhuma hierarquização com demandas autorizadas está disponível para seu usuário.</p>
+      <p id="complementacao-sem-atributos" class="field-help hidden">Nenhuma solicitação de atributos está pendente para seu usuário.</p>
       <button type="button" id="complementacao-atributos-recarregar" class="btn btn-secondary hidden">Tentar novamente</button>
       <div id="complementacao-atributos-container" class="card-complementacao-atributos hidden">
         <section class="secao-complementacao-resumo" aria-labelledby="complementacao-resumo-titulo">
@@ -104,6 +106,6 @@
 <script src="/assets/js/resumo-fase.js?v=20261020-data-criacao"></script>
 <script src="/assets/js/input-masks.js?v=20261020-unidades"></script>
 <script src="/restrict/hierarquizacao/js/atributos-objetos.js?v=20261025-criterios-risco"></script>
-<script src="/assets/js/complementacao.js?v=20261022-contraste-edicao"></script>
+<script src="/assets/js/complementacao.js?v=20261024-solicitacoes"></script>
 <script src="/restrict/demandas.js?v=20261015-fontes-ordem"></script>
 {% endblock %}

@@ -41,7 +41,9 @@
       }
       tipo = tipoDemanda;
       selecionada = proxima;
-      controles.forEach(button => { button.disabled = !selecionada; });
+      controles.forEach(button => { button.disabled = !selecionada || !(selecionada.solicitacoes || []).some(
+        p => p.categorias.includes(button.dataset.complementacao === 'cadastro' ? 'dados_cadastrais' : 'geometria')); });
+      renderPedidos(document.querySelector('#complementacao-pedidos'), selecionada?.solicitacoes || []);
       const resumoSelecao = document.querySelector('#complementacao-selecao');
       resumoSelecao.textContent = selecionada
         ? `${selecionada.id} — ${selecionada.nome}`
@@ -150,6 +152,34 @@
     return corpo;
   }
 
+  const rotulosPedido = {dados_cadastrais: 'Dados cadastrais', geometria: 'Geometria', atributos_objeto: 'Atributos de objeto'};
+  function renderPedidos(host, pedidos) {
+    host.replaceChildren();
+    host.classList.toggle("hidden", !pedidos.length);
+    for (const p of pedidos) {
+      const bloco = document.createElement('div');
+      const texto = document.createElement('p');
+      texto.textContent = `${p.categorias.map(c => rotulosPedido[c]).join(' e ')} — ${p.descricao} — Solicitante: ${p.solicitado_nome}`;
+      const concluir = document.createElement('button');
+      concluir.type = 'button'; concluir.className = 'btn btn-secondary'; concluir.textContent = 'Concluir solicitação';
+      concluir.disabled = !p.categorias.every(c => Object.hasOwn(p.categorias_salvas || {}, c));
+      concluir.title = concluir.disabled ? 'Salve as alterações de todos os tipos solicitados antes de concluir.' : 'Enviar complementação para análise';
+      concluir.addEventListener('click', async () => {
+        if (!await SLTAdminUi.showConfirm({title: 'Concluir complementação', message: 'Confirma que todos os ajustes deste pedido foram realizados?', confirmLabel: 'Concluir', cancelLabel: 'Cancelar'})) return;
+        concluir.disabled = true;
+        try {
+          await api(`/api/complementacao/solicitacoes/${encodeURIComponent(p.id)}/concluir`, {method: 'POST'});
+          bloco.remove();
+          SLTAdminUi.showToast('Solicitação de complementação concluída.');
+          mensagem('Solicitação concluída. A retomada da análise fica disponível quando não houver pedidos cadastrais ou de geometria abertos.');
+          document.dispatchEvent(new Event('complementacao-salva'));
+          if (p.hierarquizacao_codigo) await carregarAtributos();
+        } catch (e) { mensagem(e.message, true); mensagemAtributos(e.message, true); concluir.disabled = false; }
+      });
+      bloco.append(texto, concluir); host.append(bloco);
+    }
+  }
+
   const containerAtributos = document.querySelector('#complementacao-atributos-container');
   const statusAtributos = document.querySelector('#complementacao-atributos-status');
   const editar = document.querySelector('#complementacao-atributos-editar');
@@ -255,7 +285,8 @@
     ocupado = true;
     atualizarAcoes();
     recarregar.classList.add('hidden');
-    mensagemAtributos('Carregando hierarquizações autorizadas…');
+    document.querySelector('#complementacao-pedidos-atributos').replaceChildren();
+    mensagemAtributos('Carregando solicitações de atributos…');
     try {
       itens = await api('/api/complementacao/objetos');
       const hierarquizacoes = [...new Map(itens.map(item => [item.hierarquizacao_codigo, item])).values()];
@@ -278,6 +309,7 @@
     select.value = hierarquiaAtual;
     if (ocupado || !await podeDescartar()) return;
     hierarquiaAtual = select.value = proxima;
+    renderPedidos(document.querySelector('#complementacao-pedidos-atributos'), itens.filter(i => i.hierarquizacao_codigo === proxima).flatMap(i => i.solicitacoes || []));
     atual = null;
     editando = alterado = false;
     form.classList.add('hidden');
@@ -348,7 +380,9 @@
       });
       if (revisaoAtributos !== versao) return;
       await render(salvo);
-      mensagemAtributos("Complementação de atributos salva com sucesso.");
+      itens = await api('/api/complementacao/objetos');
+      renderPedidos(document.querySelector('#complementacao-pedidos-atributos'), itens.filter(i => i.hierarquizacao_codigo === alvo.codigo).flatMap(i => i.solicitacoes || []));
+      mensagemAtributos("Atributos salvos. Conclua a solicitação quando os ajustes estiverem prontos.");
     } catch (erro) {
       if (revisaoAtributos === versao) mensagemAtributos(erro.message, true);
     } finally { ocupado = false; atualizarAcoes(); }

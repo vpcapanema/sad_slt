@@ -76,7 +76,16 @@ def test_solicitar_complementacao_nao_exige_criterios_nem_grava_parecer(monkeypa
     monkeypatch.setattr(service, "_rotulo_status", lambda codigo: "Aguardando complementação")
     user = SimpleNamespace(id="00000000-0000-0000-0000-000000000010", nome="Analista")
 
-    anterior, atual, rotulo = service.alterar_situacao("I-PRJ-1", "complementar", user=user)
+    from api.services import solicitacao_complementacao_service as pedidos
+    from contextlib import nullcontext
+    monkeypatch.setattr(pedidos, 'atomic_connection', lambda: nullcontext(None))
+    monkeypatch.setattr(pedidos, 'bloquear', lambda *args: demanda)
+    monkeypatch.setattr(pedidos.repo, 'listar', lambda **kw: [])
+    gravados = []
+    monkeypatch.setattr(pedidos.repo, 'criar', lambda *args: gravados.append(args))
+    anterior, atual, rotulo = service.alterar_situacao("I-PRJ-1", "complementar", user=user,
+        categorias=['dados_cadastrais'], descricao='Corrigir o nome')
+    assert gravados[0][2:4] == (['dados_cadastrais'], 'Corrigir o nome')
 
     assert anterior == "analise_em_avaliacao"
     assert atual == "analise_aguardando_complementacao"
@@ -85,6 +94,8 @@ def test_solicitar_complementacao_nao_exige_criterios_nem_grava_parecer(monkeypa
 
 
 def test_suspender_e_retomar_usam_os_status_correspondentes(monkeypatch):
+    from api.repositories import solicitacao_complementacao_repository
+    monkeypatch.setattr(solicitacao_complementacao_repository, 'listar', lambda **kw: [])
     estados = {"status": "analise_em_avaliacao"}
 
     def localizar(codigo):

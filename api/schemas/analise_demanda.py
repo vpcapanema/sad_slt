@@ -78,6 +78,9 @@ SituacaoAnalise = Literal["suspender", "complementar", "retomar"]
 
 class SituacaoAnaliseSchema(BaseModel):
     acao: SituacaoAnalise
+    categorias: list[Literal["dados_cadastrais", "geometria", "atributos_objeto"]] = Field(default_factory=list, max_length=3)
+    descricao: str | None = Field(None, max_length=5000)
+    hierarquizacao_codigo: str | None = Field(None, max_length=100)
 
 
 class SituacaoAnaliseResponseSchema(BaseModel):

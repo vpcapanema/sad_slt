@@ -43,6 +43,8 @@
     nome_arquivo: "Nome do arquivo", tipo_mime: "Tipo MIME", tamanho_bytes: "Tamanho (bytes)",
     sha256: "Hash SHA-256", conteudo_binario: "Arquivo original",
     origem: "Origem", regionalidades: "Regionalidades", motivo_substituicao: "Motivo da substituição",
+    familia_codigo: "Família da adversidade", familia: "Família",
+    conceito: "Conceito", criado_em: "Data de criação",
     substituido_em: "Substituído em", substituido_por: "Substituído por",
     uf: "Unidade federativa", data: "Data", inicio: "Início", fim: "Fim", url: "URL",
     ativo_em: "Ativo em", excluido: "Excluído", excluido_em: "Excluído em",
@@ -64,6 +66,17 @@
   const ALIAS_POR_TABELA = {
     categoria_extracao_atributos: {
       nome: "Categoria", conceito: "Conceito", criado_em: "Data de criação",
+    },
+    familia_adversidade: {
+      nome: "Família da adversidade", conceito: "Conceito", criado_em: "Data de criação",
+    },
+    tipo_adversidade: {
+      nome: "Tipo de adversidade", conceito: "Conceito",
+      familia_codigo: "Família da adversidade", criado_em: "Data de criação",
+    },
+    camada_adversidade: {
+      camada_codigo: "Identificador da camada",
+      tipo_codigo: "Tipo de adversidade", criado_em: "Data de criação",
     },
     hierarquizacao_portfolio: {
       codigo: "Código da hierarquização",
@@ -119,6 +132,9 @@
   };
   const TABELA_ALIAS = {
     categoria_extracao_atributos: "Categorias de Extração de Atributos",
+    familia_adversidade: "Famílias de Adversidades",
+    tipo_adversidade: "Tipos de Adversidade",
+    camada_adversidade: "Adversidades das Camadas",
     log_sistema: "Registros do Sistema",
     plano_unidade_espacial: "Unidades Espaciais do Plano",
     programa_unidade_espacial: "Unidades Espaciais do Programa",
@@ -168,7 +184,7 @@
     selecao: new Map(), editando: null,
     ordenar: null, direcao: "asc",
     filtro: { coluna: null, tipo: "valor", valor: null, inverter: false }, valoresCache: {},
-    usuariosNomes: {}, ocupado: false,
+    usuariosNomes: {}, familiasAdversidade: [], ocupado: false,
   };
   let revisaoTabela = 0;
 
@@ -293,7 +309,7 @@
     }
   }
 
-  function selecionarTabela(esquema, tabela, dominio, link) {
+  async function selecionarTabela(esquema, tabela, dominio, link) {
     if (state.ocupado) return;
     document.querySelectorAll(".admin-table-link.active").forEach((n) => n.classList.remove("active"));
     link?.classList.add("active");
@@ -302,9 +318,22 @@
     state.ordenar = null; state.direcao = "asc";
     state.filtro = { coluna: null, tipo: "valor", valor: null, inverter: false };
     state.valoresCache = {};
+    state.familiasAdversidade = [];
     const destino = new URL(window.location.href);
     destino.search = new URLSearchParams({ menu: dominio ? "__dominios__" : esquema, esquema, tabela }).toString();
     history.replaceState(null, "", destino);
+    if (esquema === "dominios" && ["tipo_adversidade", "camada_adversidade"].includes(tabela)) {
+      refs.host.innerHTML = '<p class="admin-placeholder">Carregando famílias de adversidade…</p>';
+      try {
+        const familias = await jsonFetch("/api/dominios/adversidades");
+        if (state.esquema !== esquema || state.tabela !== tabela) return;
+        state.familiasAdversidade = familias;
+      } catch (error) {
+        refs.host.innerHTML = `<p class="admin-placeholder">${escapeHtml(error.message)}</p>`;
+        feedback(error, "error");
+        return;
+      }
+    }
     carregarTabela();
   }
 
@@ -332,7 +361,13 @@
         totalTabela: data.total_tabela ?? data.total,
         usuariosNomes: data.usuarios_nomes || {},
       });
-      refs.sub.textContent = `${state.esquema}.${state.tabela} · ${data.total} registro(s) · chave primária: ${data.chave_primaria.join(", ") || "—"}`;
+      const explicacaoAdversidade = ["familia_adversidade", "tipo_adversidade", "camada_adversidade"].includes(state.tabela)
+        ? "Família e tipo descrevem a adversidade da camada; não definem sua classificação configurável."
+        : "";
+      refs.sub.textContent = [
+        `${state.esquema}.${state.tabela} · ${data.total} registro(s) · chave primária: ${data.chave_primaria.join(", ") || "—"}`,
+        explicacaoAdversidade,
+      ].filter(Boolean).join(" · ");
       renderTabela();
       return true;
     } catch (error) {
@@ -477,6 +512,19 @@
   function celulaValor(valor, coluna) {
     if (valor === null || valor === undefined) return { texto: "—", classe: "cell-null" };
     const udt = String(coluna.udt || "").toLowerCase();
+    if (state.tabela === "camada_adversidade" && coluna.nome === "tipo_codigo") {
+      for (const familia of state.familiasAdversidade) {
+        const tipo = familia.tipos.find((item) => item.codigo === valor);
+        if (tipo) return { duasLinhas: [tipo.nome, familia.nome], classe: "" };
+      }
+      return { texto: String(valor), classe: "" };
+    }
+    if (state.tabela === "tipo_adversidade" && coluna.nome === "familia_codigo") {
+      const familia = state.familiasAdversidade.find((item) => item.codigo === valor);
+      return familia
+        ? { duasLinhas: [familia.nome, String(valor)], classe: "" }
+        : { texto: String(valor), classe: "" };
+    }
     if (coluna.usuario && typeof valor === "string") {
       const nome = state.usuariosNomes[valor];
       return { classe: "cell-usuario", duasLinhas: [nome || "—", valor] };
@@ -585,8 +633,39 @@
   }
 
   function campoEdicao(coluna, valor) {
-    if (state.esquema === "dominios" && state.tabela === "categoria_extracao_atributos" && coluna.nome === "conceito") {
+    if (state.esquema === "dominios" && state.tabela === "camada_adversidade" && coluna.nome === "tipo_codigo") {
+      const tipos = state.familiasAdversidade.flatMap((familia) =>
+        familia.tipos.map((tipo) => ({ codigo: tipo.codigo, nome: `${familia.nome} · ${tipo.nome}` })));
+      if (valor && !tipos.some((tipo) => tipo.codigo === valor)) {
+        tipos.push({ codigo: valor, nome: `${valor} (inativo)` });
+      }
+      const select = el("select", { "data-col": coluna.nome, "aria-label": "Tipo de adversidade" },
+        el("option", { value: "" }, "— Selecione um tipo —"),
+        ...tipos.map((tipo) => el("option", { value: tipo.codigo }, tipo.nome)));
+      select.value = valor || "";
+      return select;
+    }
+    if (
+      state.esquema === "dominios" &&
+      ["categoria_extracao_atributos", "familia_adversidade", "tipo_adversidade"].includes(state.tabela) &&
+      coluna.nome === "conceito"
+    ) {
       return el("textarea", { "data-col": coluna.nome, rows: 5, "aria-label": "Conceito" }, valor ?? "");
+    }
+    if (
+      state.esquema === "dominios" &&
+      state.tabela === "tipo_adversidade" &&
+      coluna.nome === "familia_codigo"
+    ) {
+      const select = el("select", { "data-col": coluna.nome, "aria-label": "Família da adversidade" },
+        el("option", { value: "" }, "— Selecione uma família —"),
+        ...state.familiasAdversidade.map((familia) =>
+          el("option", {
+            value: familia.codigo,
+            ...(familia.codigo === valor ? { selected: "selected" } : {}),
+          }, familia.nome)));
+      select.value = valor || "";
+      return select;
     }
     if (coluna.udt === "bool") {
       const sel = el("select", { "data-col": coluna.nome },
@@ -719,7 +798,15 @@
     const corpo = el("div", { class: "admin-modal-body" });
     editaveis.forEach((c) => {
       let campo;
-      if (state.esquema === "dominios" && state.tabela === "categoria_extracao_atributos" && c.nome === "conceito") {
+      if (
+        state.esquema === "dominios" &&
+        ["categoria_extracao_atributos", "familia_adversidade", "tipo_adversidade"].includes(state.tabela) &&
+        c.nome === "conceito"
+      ) {
+        campo = campoEdicao(c, "");
+      } else if (state.esquema === "dominios" && state.tabela === "tipo_adversidade" && c.nome === "familia_codigo") {
+        campo = campoEdicao(c, "");
+      } else if (state.esquema === "dominios" && state.tabela === "camada_adversidade" && c.nome === "tipo_codigo") {
         campo = campoEdicao(c, "");
       } else if (c.udt === "bool") {
         campo = el("select", { "data-col": c.nome }, el("option", { value: "" }, "—"), el("option", { value: "true" }, "Sim"), el("option", { value: "false" }, "Não"));

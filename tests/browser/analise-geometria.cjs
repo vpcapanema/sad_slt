@@ -29,6 +29,7 @@ const assert = require('node:assert/strict');
       const record = {id: 'COD', status: 'analise_em_avaliacao'};
       const SLTAdminAuth = {can: () => true};
       const canApprove = () => true;
+      const collectCriterios = () => ({criterio_competencia: true, criterio_nao_duplicidade: true});
       ${actions}
       let geometriaSaveTimer, geometriaSaveRevision = 0, geometriaSaveQueue = Promise.resolve();
       window.saved = [];
@@ -42,6 +43,8 @@ const assert = require('node:assert/strict');
       ${geometry}
       document.querySelector('main').innerHTML = analiseSectionHtml(record);
       $('#criterios-grid').innerHTML = criterioRowHtml({campo: 'clareza', rotulo: 'Clareza', pergunta: 'O objeto da demanda está claramente descrito?', resposta: true}, true);
+      document.querySelector(".analise-geometria").hidden = false;
+      document.querySelector(".analise-geometria").style.display = "";
       renderAvaliacaoGeometria({}, true);
     ` });
     const visible = selector => page.locator(selector).isVisible();
@@ -51,6 +54,7 @@ const assert = require('node:assert/strict');
     assert.equal(await visible('#btn-geometria'), true);
     await page.locator('#geometria-encaminhamento').getByRole('button', { name: 'Solicitar complementação', exact: true }).click();
     assert.equal(await visible('#geometria-complementacao-tipo'), true);
+    assert.equal(await page.locator('#solicitacao-tipo').inputValue(), 'geometria');
     assert.equal(await visible('#btn-geometria'), true);
     await page.evaluate(() => salvarGeometriaAntesDaAcao());
     assert.equal(await page.evaluate(() => saved.at(-1).encaminhamento), 'complementacao');

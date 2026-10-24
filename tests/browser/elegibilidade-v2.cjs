@@ -48,6 +48,12 @@ const assert = require('node:assert/strict');
       const req = route.request(), url = new URL(req.url()), path = url.pathname;
       const send = data => route.fulfill({json:data});
       if (req.method() !== 'GET') writes.push(path);
+      if (path.endsWith('/dominios/adversidades/camadas/resolver')) {
+        return send(req.postDataJSON().camadas.map(id => ({id, adversidade:id.includes('restricao-a')
+          ? {camada_codigo:'restricao-a',tipo_codigo:'inundacao',tipo_nome:'Inundação',
+              familia_codigo:'perigo_fisico_geotecnico',familia_nome:'Perigos físicos e geotécnicos'}
+          : null})));
+      }
       if (path.includes('/auth/')) return send({authenticated:true,id:'fixture',nome:'Teste',username:'Teste',tipo_usuario:'ADMIN'});
       if (path.endsWith('/ahp/hierarquizacoes')) return send([hier]);
       if (path.endsWith('/extracao-atributos/catalogo')) return send({categorias:[],camadas:[]});
@@ -388,6 +394,8 @@ const assert = require('node:assert/strict');
     assert.match(entradaDerivada.request.revisao,/^derivada-/);
     assert.equal(await page.getByRole('checkbox',{name:'Visibilidade no mapa: entrada',exact:true}).count(),1,'Prévia preserva referência original');
     await choose('#ev-restricao-browse', ['restricao-a','restricao-b']);
+    assert.match(await page.locator('#ev-restricao-lista').textContent(), /Perigos físicos e geotécnicos · Inundação/);
+    assert.match(await page.locator('#ev-restricao-lista').textContent(), /Sem vínculo ativo de adversidade/);
     await assertConferencia([inputIds[0]]);
     assert.deepEqual(await panel(), [inputIds[0]], 'Selecionar restrição não altera bancada');
     assert.equal(await page.getByRole('checkbox', {name:'Visibilidade no mapa: restricao-b',exact:true}).count(), 0, 'Restrição selecionada ainda não está na prévia');
@@ -560,7 +568,7 @@ const assert = require('node:assert/strict');
     await page.locator('dialog.ea-config-dialog').getByRole('button', {name:/Abrir|Carregar/}).last().click();
     await page.waitForFunction(() => document.querySelector('#ev-status').dataset.error === 'true');
     assert.match(await page.locator('#ev-status').textContent(), /já é restrição/);
-    assert.equal(await page.locator('#ev-risco-lista').textContent(), 'riscoRemover');
+    assert.equal(await page.locator('#ev-risco-lista').textContent(), 'risco · Sem vínculo ativo de adversidadeRemover');
     await page.reload({waitUntil:'domcontentloaded'});
     await page.waitForFunction(() => document.querySelector('#ev-hierarquizacao')?.options.length === 2);
     await page.locator('#ev-restricao-carregar').click();

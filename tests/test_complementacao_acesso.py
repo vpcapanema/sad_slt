@@ -74,6 +74,10 @@ def tabela(monkeypatch):
         cadastros[codigo].update(extrair_atributos_nativos(data))
         return SimpleNamespace(atributos_cadastrais=mesclar_atributos_nativos(cadastros[codigo]))
 
+    monkeypatch.setattr(mod.solicitacoes, 'listar', lambda **kw: [
+        {'demanda_codigo': codigo, 'demanda_tipo': kw.get('tipo'),
+         'categorias': ['atributos_objeto'], 'hierarquizacao_codigo': 'H'} for codigo in ['X','Y','Z'] if not kw.get('codigo') or kw['codigo'] == codigo])
+    monkeypatch.setattr(mod.solicitacoes, 'registrar_edicao', lambda *args: None)
     monkeypatch.setattr(mod, 'atomic_connection', atomic)
     monkeypatch.setattr(mod, '_pessoa_id', lambda usuario: None)
     monkeypatch.setattr(mod, '_cadastros', lambda: cadastros)
@@ -303,7 +307,8 @@ def test_atributos_independem_do_status_cadastral(profile, state, owner, person)
     assert mod._acesso({'codigo': 'X'}, user(profile), 'pessoa', {'X': demanda}) is esperado
 
 
-def test_lista_atributos_inclui_objeto_proprio_sem_pedido_de_complementacao(monkeypatch):
+def test_lista_atributos_exclui_objeto_proprio_sem_pedido_de_complementacao(monkeypatch):
+    monkeypatch.setattr(mod.solicitacoes, "listar", lambda **kw: [])
     matriz = [{'Etapa': 'Priorização', 'Critério': 'Custo', 'Métrica': 'Custo', 'Unidade': 'R$'}]
     row = {'codigo': 'H', 'dados_hierarquizacao': {
         'cabecalho_grupo': {'matriz_premissas_criterios': matriz},
@@ -312,44 +317,22 @@ def test_lista_atributos_inclui_objeto_proprio_sem_pedido_de_complementacao(monk
     monkeypatch.setattr(mod.hierarquizacao_repository, 'list_all', lambda: [row])
     monkeypatch.setattr(mod, '_pessoa_id', lambda usuario: None)
     monkeypatch.setattr(mod, '_cadastros', lambda: {'X': {'criado_por': 'criador', 'status': 'analise_aprovada'}})
-    assert [item['objeto_codigo'] for item in mod.listar_objetos(user())] == ['X']
+    assert mod.listar_objetos(user()) == []
 
 
-def test_atributos_salvos_fora_do_status_cadastral_preservam_campos_de_cadastro(monkeypatch):
-    matriz = [{'Etapa': 'Priorização', 'Critério': 'Custo', 'Métrica': 'Custo', 'Unidade': 'R$'},
-              {'Etapa': 'Priorização', 'Critério': 'Prazo', 'Métrica': 'Prazo', 'Unidade': 'meses'}]
-    row = {'codigo': 'H', 'dados_hierarquizacao': {
-        'cabecalho_grupo': {'matriz_premissas_criterios': matriz},
-        'objetos': [{'cabecalho_objeto': {'codigo': 'X', 'atributos_fase3': {
-            'custo': {'origem': 'cadastro', 'valor_bruto': 500},
-            'prazo': {'origem': 'gestor', 'valor_bruto': None},
-        }}}],
-    }}
-    monkeypatch.setattr(mod.hierarquizacao_repository, 'get_by_codigo', lambda codigo: row)
-    monkeypatch.setattr(mod, '_pessoa_id', lambda usuario: None)
-    monkeypatch.setattr(mod, '_cadastros', lambda: {'X': {'criado_por': 'criador', 'status': 'analise_aprovada'}})
-    saved = []
-    monkeypatch.setattr(mod.hierarquizacao_repository, 'update', lambda codigo, data: saved.append(data))
-    result = mod.salvar_complementacao('H', 'X', {'custo': 999, 'prazo': 12}, user())
-    assert result['valores']['custo']['valor_bruto'] == 500
-    assert result['valores']['prazo']['valor_bruto'] == 12
-    assert saved[0]['dados_hierarquizacao']['objetos'][0]['cabecalho_objeto']['atributos_fase3']['prazo']['preenchido_por'] == 'criador'
-
-
-def test_operador_nao_grava_atributos_de_objeto_alheio(monkeypatch):
-    row = {'codigo': 'H', 'dados_hierarquizacao': {
-        'objetos': [{'cabecalho_objeto': {'codigo': 'X'}}],
-    }}
-    monkeypatch.setattr(mod.hierarquizacao_repository, 'get_by_codigo', lambda codigo: row)
-    monkeypatch.setattr(mod, '_pessoa_id', lambda usuario: None)
-    monkeypatch.setattr(mod, '_cadastros', lambda: {'X': {'criado_por': 'outro', 'status': 'analise_aprovada'}})
-    monkeypatch.setattr(mod, '_matriz', lambda registro: [])
-    saved = []
-    monkeypatch.setattr(mod.hierarquizacao_repository, 'update', lambda *args: saved.append(args))
+def test_rota_individual_reutiliza_validacao_da_tabela(tabela):
     with pytest.raises(HTTPException) as erro:
-        mod.salvar_complementacao('H', 'X', {'custo': 10}, user())
+        mod.salvar_complementacao('H', 'X', {'custo': 'inválido'}, user())
+    assert erro.value.status_code == 422
+    result = mod.salvar_complementacao('H', 'X', {'prazo': 12}, user())
+    assert result['valores']['prazo']['valor_bruto'] == 12
+
+
+def test_operador_nao_grava_atributos_de_objeto_alheio(tabela):
+    with pytest.raises(HTTPException) as erro:
+        mod.salvar_complementacao('H', 'Z', {'custo': 10}, user())
     assert erro.value.status_code == 403
-    assert saved == []
+    assert tabela.gravacoes == []
 
 
 @pytest.mark.parametrize('profile', ['OPERADOR', 'ANALISTA', 'GESTOR', 'ADMIN'])
@@ -369,16 +352,19 @@ def test_listagem_filtra_antes_de_serializar(monkeypatch, tipo):
         {'codigo': 'ALHEIA', 'criado_por': 'outro', 'status': mod.STATUS_COMPLEMENTACAO},
         {'codigo': 'OUTRO_STATUS', 'criado_por': 'criador', 'status': 'analise_aprovada'},
     ]
-    monkeypatch.setattr(repo, 'list_all', lambda: rows)
+    monkeypatch.setattr(repo, 'get_by_codigo', lambda codigo: next((r for r in rows if r['codigo'] == codigo), None))
+    monkeypatch.setattr(mod.solicitacoes, 'listar', lambda **kw: [
+        {'demanda_codigo': r['codigo'], 'hierarquizacao_codigo': None} for r in rows])
     monkeypatch.setattr(mod, '_pessoa_id', lambda usuario: 'pessoa')
     monkeypatch.setattr(mod, 'resolver_nomes_registros', lambda registros: registros)
-    monkeypatch.setattr(service, '_row_to_response', lambda row, **kw: row)
+    monkeypatch.setattr(service, '_row_to_response', lambda row, **kw: SimpleNamespace(model_dump=lambda: row))
     assert [row['codigo'] for row in mod.listar_demandas_complementaveis(tipo, user())] == ['PROPRIA']
     assert [row['codigo'] for row in mod.listar_demandas_complementaveis(tipo, user('ANALISTA'))] == ['PROPRIA', 'ALHEIA']
 
 
 @pytest.mark.parametrize('tipo', ['projeto', 'plano', 'programa'])
 def test_cadastro_revalida_acesso_e_nao_permite_status(monkeypatch, tipo):
+    monkeypatch.setattr(mod.solicitacoes, 'listar', lambda **kw: [{'categorias': ['dados_cadastrais'], 'hierarquizacao_codigo': None}])
     repo = mod.CADASTROS[tipo][0]
     monkeypatch.setattr(mod, '_pessoa_id', lambda usuario: None)
     monkeypatch.setattr(repo, 'get_by_codigo', lambda codigo: {'criado_por': 'outro', 'status': mod.STATUS_COMPLEMENTACAO})

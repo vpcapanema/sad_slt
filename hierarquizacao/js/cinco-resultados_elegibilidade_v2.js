@@ -217,6 +217,10 @@ export function criarResultados({avisar, aoOcupar}) {
       campo.id = `ev2-alias-${i}`; campo.name = `alias-${i}`; campo.value = fonte.nome;
       campo.required = true; campo.maxLength = 160; rotulo.htmlFor = campo.id; campo.oninput = invalidar;
       campos.set(fonte.id, campo); grupo.append(rotulo, campo); node('nomes').append(grupo);
+      if (fonte.tipo !== 'feicao' && fonte.papel !== 'entrada') {
+        const a = fonte.adversidade;
+        grupo.append(el('small', a ? `${a.familia_nome} · ${a.tipo_nome}` : 'Sem vínculo de adversidade registrado nesta saída.'));
+      }
     }
     node('tentar').hidden = true;
     node('revisados').checked = Boolean(dados.revisados);

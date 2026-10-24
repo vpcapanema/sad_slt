@@ -104,7 +104,8 @@ def alterar_situacao(
     """Muda o status intermediário da análise, sem decisão final nem PDF."""
     try:
         anterior, atual, rotulo = analise_demanda_service.alterar_situacao(
-            codigo, body.acao, user=user
+            codigo, body.acao, user=user, categorias=body.categorias,
+            descricao=body.descricao, hierarquizacao_codigo=body.hierarquizacao_codigo
         )
     except (DemandaNotFoundError, DemandaValidationError, DatabaseUnavailableError) as exc:
         raise _erro_http(exc) from exc

@@ -1,11 +1,11 @@
 import {$, el, feedback} from '../../geoespacial/extracao-atributos/ui.js';
-import {json, post, esperar} from '../../geoespacial/extracao-atributos/api.js';
+import {base, json, post, esperar} from '../../geoespacial/extracao-atributos/api.js';
 import {escolherArquivo, identificarCamadas} from '../../geoespacial/extracao-atributos/explorador.js?v=20261020-saidas';
 import {validarCamada, descritorOriginal} from '../../geoespacial/extracao-atributos/camada-validada.js';
 import {escolherConfiguracao} from '../../geoespacial/extracao-atributos/lista-camadas.js';
 import {criarPrevia} from '../../geoespacial/extracao-atributos/previa.js?v=20261019-metadados';
 import {criarMapa} from '../../geoespacial/extracao-atributos/mapa.js';
-import {criarResultados} from './cinco-resultados_elegibilidade_v2.js?v=20261023-resumo';
+import {criarResultados} from './cinco-resultados_elegibilidade_v2.js?v=20261024-adversidades';
 
 const papeis = {entrada:'Entrada', restricao:'Restrição', risco:'Risco'};
 const selecao = {entrada:[], restricao:[], risco:[]};
@@ -28,6 +28,27 @@ const observadorPainel = new MutationObserver(atualizarBancada);
 let painelObservado = null;
 const previa = criarPrevia(state, render, {obterCamadas:camadasPrevia, aoMudarVisibilidade:controles});
 const resultados = criarResultados({avisar, aoOcupar:busy => { state.busy = busy; controles(); }});
+
+async function resolverAdversidades(camadas) {
+  if (!camadas.length) return [];
+  const response = await fetch(`${base.replace(/\/geoespacial$/, '')}/dominios/adversidades/camadas/resolver`, {
+    method:'POST', credentials:'same-origin', signal:AbortSignal.timeout(30000),
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({camadas:camadas.map(c => c.id)}),
+  });
+  const dados = await response.json();
+  if (!response.ok) throw new Error(typeof dados.detail === 'string' ? dados.detail : 'Não foi possível consultar as adversidades das camadas.');
+  if (!Array.isArray(dados)) throw new Error('Resposta inválida ao consultar adversidades.');
+  const porId = new Map(dados.map(item => [item.id, item.adversidade]));
+  return camadas.map(camada => {
+    if (!porId.has(camada.id)) throw new Error(`Adversidade não consultada para ${camada.nome}.`);
+    return {...camada, adversidade:porId.get(camada.id)};
+  });
+}
+function rotuloAdversidade(camada) {
+  const a = camada.adversidade;
+  return a ? `${a.familia_nome} · ${a.tipo_nome}` : 'Sem vínculo ativo de adversidade';
+}
 
 function avisar(mensagem, tipo='info') {
   node('status').textContent = mensagem;
@@ -127,7 +148,12 @@ function render() {
         if (papel === 'entrada' && !selecao.entrada.length) limparEntrada();
         render();
       };
-      linha.append(el('span', camada.nome), remover);
+      const descricao = el('span', camada.nome, 'ev-layer-label');
+      if (papel !== 'entrada') {
+        descricao.append(el('small', ` · ${rotuloAdversidade(camada)}`));
+        descricao.title = `${camada.nome} · ${rotuloAdversidade(camada)}`;
+      }
+      linha.append(descricao, remover);
       lista.append(linha);
     }
   }
@@ -195,7 +221,8 @@ async function explorar(papel) {
     if (!refs) { avisar('Seleção cancelada. A prévia anterior foi mantida.'); return; }
     const candidatas = papel === 'entrada' ? refs : [...new Map([...selecao[papel], ...refs].map(c => [c.id, c])).values()];
     validarPapeis(papel, candidatas);
-    selecao[papel] = papel === 'entrada' ? candidatas.map(camada => ({...camada, origemEntrada:'camadas'})) : candidatas;
+    selecao[papel] = papel === 'entrada' ? candidatas.map(camada => ({...camada, origemEntrada:'camadas'}))
+      : await resolverAdversidades(candidatas);
     if (papel === 'entrada') { state.origemEntrada = 'camadas'; limparHierarquizacao(); }
     avisar(`${candidatas.length} referência(s) de ${papeis[papel].toLowerCase()} selecionada(s). A identificação das camadas e a validação ocorrem ao enviar para a prévia.`);
   });
@@ -378,8 +405,9 @@ async function enviarPrevia(papel) {
     validarPapeis(papel, selecao[papel]);
     processo.concluirTarefa(tarefas[0]);
     processo.tarefaAtual(tarefas[1],'Identificação dos componentes e validação das fontes completas.');
-    const camadas = papel === 'entrada' && state.origemEntrada === 'hierarquizacao'
+    let camadas = papel === 'entrada' && state.origemEntrada === 'hierarquizacao'
       ? selecao[papel] : await preparar(selecao[papel],acompanhamento);
+    if (papel !== 'entrada') camadas = await resolverAdversidades(camadas);
     conferir();
     validarPapeis(papel, camadas);
     processo.concluirTarefa(tarefas[1],`${camadas.length} camada(s) disponível(is).`);
@@ -529,7 +557,7 @@ async function carregarLista(papel) {
     const refs = dados.categorias.flatMap(c => c.camadas);
     if (!refs.length) throw new Error('A lista não contém camadas.');
     validarPapeis(papel, refs);
-    selecao[papel] = refs;
+    selecao[papel] = await resolverAdversidades(refs);
     avisar(`Lista "${dados.nome}" carregada. Envie para a prévia para validar as camadas.`);
   });
 }

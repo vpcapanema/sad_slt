@@ -128,4 +128,10 @@ def substituir(tipo,codigo,geometry,arquivo,usuario):
                     COALESCE(analise_demanda.avaliacao_geometria->'substituicoes', '[]'::jsonb)
                     || (EXCLUDED.avaliacao_geometria->'substituicoes'))
         """, (codigo, tipo, usuario, arquivo.get('nome_arquivo')))
+        # Marca o envio somente na mesma transação que preserva e substitui a geometria.
+        conn.execute("""UPDATE demandas.solicitacao_complementacao_demanda
+            SET categorias_salvas = categorias_salvas || jsonb_build_object('geometria',
+                jsonb_build_object('por',%s::text,'em',now()))
+            WHERE demanda_tipo=%s AND demanda_codigo=%s AND status='solicitada'
+              AND 'geometria'=ANY(categorias)""", (usuario,tipo,codigo))
     return {'codigo':codigo,'tipo':tipo,'mensagem':'Geometria substituída; original preservado no histórico.'}

@@ -557,6 +557,7 @@ def alterar_situacao(
     acao: str,
     *,
     user: SessionUser | None = None,
+    categorias=None, descricao=None, hierarquizacao_codigo=None,
 ) -> tuple[str, str, str]:
     """Suspende, pede complementação ou retoma a análise pela matriz oficial."""
     destino = SITUACAO_STATUS.get(acao)
@@ -565,6 +566,16 @@ def alterar_situacao(
 
     _tipo, demanda = _localizar_demanda(codigo)
     status_anterior = demanda.get("status") or ""
+    from api.services import solicitacao_complementacao_service as solicitacoes
+    from api.repositories import solicitacao_complementacao_repository
+    if acao == "complementar":
+        solicitacoes.solicitar(codigo, categorias=categorias, descricao=descricao,
+                              user=user, hierarquizacao_codigo=hierarquizacao_codigo)
+        atual = status_anterior if hierarquizacao_codigo else destino
+        return status_anterior, atual, _rotulo_status(atual)
+    if acao == "retomar" and any(not s.get('hierarquizacao_codigo') for s in
+            solicitacao_complementacao_repository.listar(tipo=_tipo, codigo=codigo)):
+        raise DemandaValidationError('Conclua as solicitações de cadastro e geometria antes de retomar a análise.', field='status')
     if status_anterior not in SITUACAO_ORIGENS[acao]:
         raise DemandaValidationError(
             f"A ação «{acao}» não se aplica ao status «{status_anterior}».",

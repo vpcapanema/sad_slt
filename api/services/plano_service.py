@@ -243,6 +243,8 @@ def atualizar_plano(
         valid = {r["codigo"] for r in dominio_repository.list_status_demanda()}
         if data["status"] not in valid:
             raise DemandaValidationError(f"Status inválido: {data['status']}.", field="status")
+        from api.services.solicitacao_complementacao_service import validar_mudanca_status
+        validar_mudanca_status('plano', codigo, row["status"], data["status"])
         if not status_livre_gestor:
             validar_transicao_status(de=row["status"], para=data["status"])
 

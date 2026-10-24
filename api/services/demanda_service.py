@@ -331,6 +331,8 @@ def atualizar_demanda(
     if "status" in data:
         from api.services.status_transicoes import validar_transicao_status
 
+        from api.services.solicitacao_complementacao_service import validar_mudanca_status
+        validar_mudanca_status('projeto', codigo, existing["status"], data["status"])
         if not status_livre_gestor:
             validar_transicao_status(de=existing["status"], para=data["status"])
 
