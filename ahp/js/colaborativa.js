@@ -290,7 +290,7 @@
   }
 
   document.addEventListener("DOMContentLoaded", function () {
-    var tokenPath = global.location.pathname.match(/\/public\/analise-multicriterio\/([^/]+)\/?$/);
+    var tokenPath = global.location.pathname.match(/\/public\/analise-multicriterio\/formulario-comparacao-pareada\/([^/]+)\/?$/);
     token = qp("token") || (tokenPath ? decodeURIComponent(tokenPath[1]) : "");
     var preEmail = qp("email") || "";
     if (preEmail && el("colab-email")) el("colab-email").value = preEmail;

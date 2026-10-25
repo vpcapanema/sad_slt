@@ -37,7 +37,7 @@ const assert = require('node:assert/strict');
       return route.fulfill({json: {id: 'resposta', status: path.endsWith('/respostas') ? 'enviada' : 'em_preenchimento',
         matriz_comparacao: [[1, 1], [1, 1]]}});
     });
-    await page.goto('http://127.0.0.1:8083' + prefix + '/public/analise-multicriterio/fixture-token/');
+    await page.goto('http://127.0.0.1:8083' + prefix + '/public/analise-multicriterio/formulario-comparacao-pareada/fixture-token/');
     assert.equal(await page.locator('#collab-form-section').isVisible(), false);
     await page.locator('#colab-nome').fill('Nome livre do participante');
     await page.locator('#colab-inst').fill('Instituição de teste');

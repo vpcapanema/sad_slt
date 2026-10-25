@@ -11,7 +11,7 @@ const assert = require('node:assert/strict');
       if(path==='/api/ahp/comparacao-colaborativa/ambientes') return r.fulfill({json:[{id:'j1',nome:'Julgamento',status:'ativa',criterios:[],convites:[{email:'existente@example.com',nome:'Existente'}]}]});
       return r.fulfill({json:path==='/api/auth/me'?{id:'u',nome:'Analista',tipo_usuario:'ANALISTA'}:path==='/api/auth/session'?{authenticated:true,user:{id:'u',tipo_usuario:'ANALISTA'}}:[]});
     });
-    await page.goto('http://127.0.0.1:8083/restrict/analise-multicriterio/?modo=espaco');
+    await page.goto('http://127.0.0.1:8083/restrict/analise-multicriterio/central-julgamentos');
     const editGroup=page.locator('#ami-environment-edit');
     assert.equal(await editGroup.isDisabled(),true);
     assert.equal(await page.locator('#ami-create-section #ami-environment-edit').count(),0);

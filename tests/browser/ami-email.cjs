@@ -9,7 +9,7 @@ const assert = require('node:assert/strict');
       id:env,status:'ativa',token:'token-email',hierarquizacao_id:'h1',hierarquizacao_nome:'Análise de teste',
       hierarquizacao_codigo:'H1',atualizadoEm:'2026-10-19T12:00:00+00:00',
       valido_ate:'2035-12-31T23:59:59-03:00',criterios:[{nome:'Critério A'},{nome:'Critério B'}],
-      n_criterios:2,url_publica:'https://example.com/sicard/public/analise-multicriterio/token-email/',
+      n_criterios:2,url_publica:'https://example.com/sicard/public/analise-multicriterio/formulario-comparacao-pareada/token-email/',
       convites:[{nome:'Ana',email:'ana@example.com'},{nome:'Bia',email:'bia@example.com'}]
     };
     let rows=[], sends=[], collections=0, pendingRelease, failCollection=false;
@@ -42,7 +42,7 @@ const assert = require('node:assert/strict');
       if(path==='/api/auth/session') return route.fulfill({json:{authenticated:true,user:{id:'u',tipo_usuario:'ANALISTA'}}});
       return route.fulfill({json:[]});
     });
-    await page.goto('http://127.0.0.1:8083/restrict/analise-multicriterio/?modo=espaco');
+    await page.goto('http://127.0.0.1:8083/restrict/analise-multicriterio/central-julgamentos');
     await page.locator(`[data-select-id="${env}"]`).check();
     await page.locator('#ami-judgments-view-action').click();
     await page.waitForFunction(()=>!document.getElementById('ami-open-mail').disabled);

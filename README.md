@@ -764,7 +764,7 @@ Rotas públicas principais:
 | `/public/transparencia/` | Acesso à consulta cartográfica e documentação |
 | `/public/documentacao/` | Documentação funcional |
 | `/public/login/` | Entrada da área restrita |
-| `/public/analise-multicriterio/{token}/` | Formulário do especialista por token |
+| `/public/analise-multicriterio/formulario-comparacao-pareada/{token}/` | Formulário do especialista por token |
 
 O painel consulta planos, programas e projetos de todos os status e omite os
 dados do representante (`painel_service`, `public_only=True`); não há filtro de
@@ -788,9 +788,17 @@ Rotas restritas principais:
 | `/restrict/hierarquizacao/` | Árvore metodológica |
 | `/restrict/hierarquizacao/processos/` | Gestão das rodadas |
 | `/restrict/hierarquizacao/ranking/` | Resultados e ranking das demandas |
-| `/restrict/analise-multicriterio/` | Central de julgamentos e respostas |
+| `/restrict/analise-multicriterio/central-julgamentos` | Central de julgamentos colaborativos |
+| `/restrict/analise-multicriterio/central-respostas` | Central de respostas dos especialistas |
 | `/restrict/ahp/` | Configuração multicritério |
 | `/restrict/geoespacial/` | Ferramentas e produtos espaciais |
+
+Os endereços antigos com `?modo=espaco` e `?modo=julgamentos` redirecionam
+permanentemente para as respectivas centrais. Os links públicos antigos
+`/public/analise-multicriterio/{token}/` redirecionam para
+`/public/analise-multicriterio/formulario-comparacao-pareada/{token}/`,
+preservando o token e os parâmetros. Os espaços de trabalho dos julgamentos
+mantêm seus endereços.
 
 As páginas do `/restrict/` exibem uma navbar por bloco, declarada em
 `templates/componentes/navbar_modulo/`. Os blocos são MOCAD (cadastro e

@@ -13,7 +13,7 @@ const assert = require('node:assert/strict');
       if (path.endsWith('/auth/session')) return route.fulfill({json: {authenticated: true, user: {id: 'u', tipo_usuario: 'ANALISTA'}}});
       return route.fulfill({json: []});
     });
-    await page.goto('http://127.0.0.1:8083/restrict/analise-multicriterio/?modo=julgamentos');
+    await page.goto('http://127.0.0.1:8083/restrict/analise-multicriterio/central-respostas');
     await page.waitForFunction(() => typeof SLTAnalysisTable === 'function');
     // Exercise the same component on each record-table structure in the workspace.
     await page.evaluate(() => {

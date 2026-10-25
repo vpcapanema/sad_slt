@@ -372,7 +372,7 @@ def _canonical_pages() -> list[str]:
         "/public/documentacao/",
         "/public/transparencia/",
         "/public/login/",
-        "/public/analise-multicriterio/token-de-teste/",
+        "/public/analise-multicriterio/formulario-comparacao-pareada/token-de-teste/",
         "/restrict/",
         "/restrict/hierarquizacao/",
         "/restrict/hierarquizacao/processos/",

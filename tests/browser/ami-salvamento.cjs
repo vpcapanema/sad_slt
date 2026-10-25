@@ -22,7 +22,7 @@ const assert=require('node:assert/strict');
    if(path==='/api/ahp/hierarquizacoes/portfolio')json=hs;
    return route.fulfill({json});
   });
-  await page.goto('http://127.0.0.1:8083/restrict/analise-multicriterio/?modo=espaco');
+  await page.goto('http://127.0.0.1:8083/restrict/analise-multicriterio/central-julgamentos');
   await page.locator('[data-select-id="j1"]').check();await page.locator('#ami-environment-edit').click();
   await page.getByLabel('Nome do colaborador 1',{exact:true}).fill('Nome preservado');await page.locator('#ami-confirm-emails').click();
   await page.locator('[data-select-id="j1"]').uncheck();await page.locator('[data-select-id="j2"]').check();

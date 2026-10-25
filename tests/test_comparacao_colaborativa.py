@@ -726,7 +726,7 @@ def test_invitation_uses_active_form_with_production_prefix(monkeypatch) -> None
     )
     assert response.status_code == 201, response.text
     body = response.json()
-    assert body["url_publica"] == f"http://testserver/sicard/public/analise-multicriterio/{body['token']}/"
+    assert body["url_publica"] == f"http://testserver/sicard/public/analise-multicriterio/formulario-comparacao-pareada/{body['token']}/"
 
 
 def test_fluxo_colaborativo_completo(monkeypatch) -> None:
@@ -746,8 +746,8 @@ def test_fluxo_colaborativo_completo(monkeypatch) -> None:
     ambiente = resp.json()
     token = ambiente["token"]
     assert ambiente["status"] == "ativa"
-    assert ambiente["url_publica"].endswith(f"/public/analise-multicriterio/{token}/")
-    assert TestClient(app).get(f"/public/analise-multicriterio/{token}/").status_code == 200
+    assert ambiente["url_publica"].endswith(f"/public/analise-multicriterio/formulario-comparacao-pareada/{token}/")
+    assert TestClient(app).get(f"/public/analise-multicriterio/formulario-comparacao-pareada/{token}/", follow_redirects=False).status_code == 200
 
     # O módulo lista e permite ajustar participantes e prazo do julgamento aberto.
     resp = gestor.get("/api/ahp/comparacao-colaborativa/ambientes")

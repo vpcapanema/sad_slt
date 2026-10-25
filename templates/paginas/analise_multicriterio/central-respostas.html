@@ -3,7 +3,6 @@
 {% set navegacao = "restrita" %}
 {% set bloco_modulo = "mad" %}
 {% set requer_autenticacao = true %}
-{% set modo_pagina = request.query_params.get('modo', 'julgamentos') if request.query_params is defined else 'julgamentos' %}
 {% block titulo %}{% if modo_pagina == 'julgamentos' %}Central de respostas{% elif modo_pagina == 'formulario' %}Formulário dos especialistas{% else %}Central de julgamentos{% endif %} — SICARD{% endblock %}
 {% block classes_body %}ahp-module-page ami-page feedback-proprio{% if modo_pagina == 'espaco' %} ami-espaco-page{% endif %}{% endblock %}
 {% block estilos_pagina %}
@@ -27,7 +26,7 @@
 {% endblock %}
 {% block conteudo %}
 <div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
-<main class="conteudo-principal app-main ahp-main ami-main">
+<main class="conteudo-principal app-main ahp-main ami-main" data-modo="{{ modo_pagina }}">
   <section class="secao-cabecalho-julgamentos card ahp-step-intro ami-hero standard-page-hero card-cabecalho-julgamentos">
     <h1 class="standard-page-hero__title" id="ami-page-title"><i id="ami-page-title-icon" class="{% if modo_pagina == 'julgamentos' %}fa-solid fa-list-check{% elif modo_pagina == 'formulario' %}fa-solid fa-clipboard-question{% else %}fa-solid fa-people-group{% endif %}" aria-hidden="true"></i><span id="ami-page-title-text">{% if modo_pagina == 'julgamentos' %}Central de respostas{% elif modo_pagina == 'formulario' %}Formulário dos especialistas{% else %}Central de julgamentos{% endif %}</span></h1>
     <p class="ami-eyebrow standard-page-hero__eyebrow">Análise Multicritério Interativa</p>
@@ -87,5 +86,5 @@
   <script src="/assets/vendor/xlsx/xlsx-0.18.5.min.js"></script>
   <script src="/assets/js/paginas/analise-multicriterio-tabela.js?v=20260820-multiselect"></script>
   <script src="/assets/js/paginas/ami-email.js?v=20261019-envio-confirmacoes"></script>
-  <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20261019-envio-confirmacoes"></script>
+  <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20261025-rota-formulario"></script>
 {% endblock %}

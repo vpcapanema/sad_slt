@@ -163,7 +163,7 @@ def _consolidacao_from_row(row: dict[str, Any]) -> ConsolidacaoColaborativaSchem
 
 def _ambiente_to_response(row: dict[str, Any], *, base_url: str = "") -> AmbienteColaborativoResponseSchema:
     token = row["token"]
-    url = f"{base_url.rstrip('/')}/public/analise-multicriterio/{quote(str(token), safe='')}/"
+    url = f"{base_url.rstrip('/')}/public/analise-multicriterio/formulario-comparacao-pareada/{quote(str(token), safe='')}/"
     return AmbienteColaborativoResponseSchema(
         id=str(row["id"]),
         hierarquizacao_id=str(row["hierarquizacao_id"]) if row.get("hierarquizacao_id") else None,

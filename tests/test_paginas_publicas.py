@@ -30,7 +30,7 @@ PAGES = (
     "/public/documentacao/favorabilidade/",
     "/public/documentacao/limite-maritimo/",
     "/public/documentacao_favorabilidade_v2/",
-    "/public/analise-multicriterio/convite-teste/",
+    "/public/analise-multicriterio/formulario-comparacao-pareada/convite-teste/",
     "/public/documentacao/saidas_modelos/index.html",
     "/public/documentacao/saidas_modelos/claude_fable5_1/index.html",
     "/public/documentacao/saidas_modelos/gpt_61_sol/index.html",

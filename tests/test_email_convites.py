@@ -68,7 +68,7 @@ def registros(monkeypatch):
 
 def payload(ambiente, **extras):
     return ConviteEmailEnvioSchema.model_validate({
-        "destinatario": DEST, "texto": "Olá!\nhttps://example.com/sicard/public/analise-multicriterio/token-teste/\nEquipe SICARD",
+        "destinatario": DEST, "texto": "Olá!\nhttps://example.com/sicard/public/analise-multicriterio/formulario-comparacao-pareada/token-teste/\nEquipe SICARD",
         "versao": ambiente["atualizado_em"], **extras,
     })
 
@@ -85,6 +85,12 @@ def test_preserva_texto_acrescenta_token_e_nao_repete_apos_recarga(ambiente, smt
     assert smtp.call_args.kwargs["id_mensagem"] == registros[0]["mensagem_id"]
     assert "sicard." in registros[0]["mensagem_id"]
     assert service.enviar(ambiente["id"], dados, "analista")["reutilizado"] is True
+    smtp.assert_called_once()
+
+
+def test_convite_com_link_antigo_continua_valido(ambiente, smtp, registros):
+    dados = payload(ambiente, texto="https://example.com/sicard/public/analise-multicriterio/token-teste/")
+    assert service.enviar(ambiente["id"], dados, "analista")["envio_status"] == "aceito_smtp"
     smtp.assert_called_once()
 
 

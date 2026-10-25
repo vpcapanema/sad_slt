@@ -7,8 +7,8 @@ const assert = require('node:assert/strict');
   const judgments = items.map(x => ({...x,status:'ativa',convites:[],criterios:[],n_criterios:0}));
   const cases = [
     ['hierarquizacao/processos/','#hier-tbody','hier-filter','codigo','#hier-pagination','hier-filter-count','.hier-row-select'],
-    ['analise-multicriterio/?modo=espaco','#ami-judgments','ami-filter','id','#ami-judgments-pagination','ami-count','[data-select-id]'],
-    ['analise-multicriterio/?modo=julgamentos','#ami-judgments','ami-filter','id','#ami-judgments-pagination','ami-count','[data-analysis-round]'],
+    ['analise-multicriterio/central-julgamentos','#ami-judgments','ami-filter','id','#ami-judgments-pagination','ami-count','[data-select-id]'],
+    ['analise-multicriterio/central-respostas','#ami-judgments','ami-filter','id','#ami-judgments-pagination','ami-count','[data-analysis-round]'],
     ['demandas/','[data-demandas-body="projeto"]','filtro','1','#demandas-pagination','demandas-summary','.row-select'],
     ['complementacao/','[data-demandas-body="projeto"]','filtro','1','#demandas-pagination','demandas-summary','.row-select'],
     ['sei-documentos/','#sei-documentos-body','sei-filter','nome_arquivo','#sei-pagination','sei-summary','[data-sei-select]'],

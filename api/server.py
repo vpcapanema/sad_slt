@@ -10,7 +10,7 @@ from api.storage_policy import configurar_temporarios
 
 configurar_temporarios()
 
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 import os
 
 from fastapi import Depends, FastAPI, HTTPException, Request
@@ -407,7 +407,26 @@ def pagina_ahp_colaborativa_publica() -> Response:
 
 @app.get("/restrict/analise-multicriterio/", include_in_schema=False)
 def pagina_julgamentos_multicriterio(request: Request) -> Response:
-    return render_page(request, "paginas/analise_multicriterio/central-respostas.html")
+    modo = request.query_params.get("modo", "julgamentos")
+    if modo == "formulario":
+        return render_page(request, "paginas/analise_multicriterio/central-respostas.html", modo_pagina=modo)
+    central = "central-julgamentos" if modo == "espaco" else "central-respostas"
+    prefix = request.headers.get("x-forwarded-prefix", "").rstrip("/")
+    query = urlencode([
+        (key, value) for key, value in request.query_params.multi_items() if key != "modo"
+    ])
+    destination = f"{prefix}/restrict/analise-multicriterio/{central}"
+    return RedirectResponse(f"{destination}?{query}" if query else destination, status_code=308)
+
+
+@app.get("/restrict/analise-multicriterio/central-julgamentos", include_in_schema=False)
+def pagina_central_julgamentos(request: Request) -> Response:
+    return render_page(request, "paginas/analise_multicriterio/central-respostas.html", modo_pagina="espaco")
+
+
+@app.get("/restrict/analise-multicriterio/central-respostas", include_in_schema=False)
+def pagina_central_respostas(request: Request) -> Response:
+    return render_page(request, "paginas/analise_multicriterio/central-respostas.html", modo_pagina="julgamentos")
 
 
 @app.get(
@@ -425,6 +444,13 @@ def pagina_julgamento_multicriterio(
 
 
 @app.get("/public/analise-multicriterio/{token}/", include_in_schema=False)
+def redirecionar_formulario_multicriterio(request: Request, token: str) -> Response:
+    destination = f"/public/analise-multicriterio/formulario-comparacao-pareada/{quote(token, safe='')}/"
+    query = request.url.query
+    return RedirectResponse(f"{destination}?{query}" if query else destination, status_code=308)
+
+
+@app.get("/public/analise-multicriterio/formulario-comparacao-pareada/{token}/", include_in_schema=False)
 def pagina_formulario_multicriterio(request: Request, token: str) -> Response:
     return render_page(request, "paginas/analise_multicriterio/formulario.html", token=token)
 

@@ -30,12 +30,33 @@ def test_retired_layer_registration_assets_are_not_served() -> None:
 
 def test_active_specialist_form_is_public_and_legacy_html_is_not_served() -> None:
     client = TestClient(app)
-    response = client.get("/public/analise-multicriterio/token-de-teste/", follow_redirects=False)
+    response = client.get("/public/analise-multicriterio/formulario-comparacao-pareada/token-de-teste/", follow_redirects=False)
     assert response.status_code == 200
     assert 'id="colab-email"' in response.text
     assert 'id="btn-enviar-resposta"' in response.text
     assert 'data-requer-autenticacao="true"' not in response.text
     assert client.get("/legados/templates/paginas/ahp/colaborativa.html").status_code == 404
+
+
+def test_legacy_specialist_form_redirect_preserves_token_query_and_prefix() -> None:
+    client = TestClient(app)
+    for prefix in ("", "/sicard"):
+        response = client.get(
+            "/public/analise-multicriterio/token-antigo/?origem=convite",
+            headers={"x-forwarded-prefix": prefix},
+            follow_redirects=False,
+        )
+        destination = f"{prefix}/public/analise-multicriterio/formulario-comparacao-pareada/token-antigo/?origem=convite"
+        assert response.status_code == 308
+        assert response.headers["location"] == destination
+        page = client.get(
+            "/public/analise-multicriterio/formulario-comparacao-pareada/token-antigo/",
+            headers={"x-forwarded-prefix": prefix},
+            follow_redirects=False,
+        )
+        assert page.status_code == 200
+        assert 'id="colab-email"' in page.text
+        assert 'data-requer-autenticacao="true"' not in page.text
 
 
 def test_all_router_modules_are_exposed_by_openapi() -> None:
@@ -68,8 +89,9 @@ def test_canonical_pages_are_available() -> None:
     canonical_pages = (
         "/public/",
         "/public/cadastro/",
-        "/public/analise-multicriterio/token-de-teste/",
-        "/restrict/analise-multicriterio/",
+        "/public/analise-multicriterio/formulario-comparacao-pareada/token-de-teste/",
+        "/restrict/analise-multicriterio/central-julgamentos",
+        "/restrict/analise-multicriterio/central-respostas",
         "/restrict/analise-multicriterio/julgamentos/22222222-2222-2222-2222-222222222222/",
         "/restrict/hierarquizacao/processos/",
         "/restrict/agrupamento-demandas/",
@@ -90,6 +112,55 @@ def test_archived_hierarquizacao_index_redirects_to_processes() -> None:
     assert response.headers["location"] == "/restrict/hierarquizacao/processos/"
 
 
+def test_multicriterio_centrais_preservam_modo_e_navegacao() -> None:
+    client = TestClient(app)
+    for central, modo, titulo, outro_modo in (
+        ("central-julgamentos", "espaco", "Central de julgamentos", "julgamentos"),
+        ("central-respostas", "julgamentos", "Central de respostas", "espaco"),
+    ):
+        path = f"/restrict/analise-multicriterio/{central}"
+        for query in ("", f"?modo={outro_modo}"):
+            response = client.get(path + query, follow_redirects=False)
+            assert response.status_code == 200
+            assert f'data-modo="{modo}"' in response.text
+            assert f"<title>{titulo} — SICARD</title>" in response.text
+            assert f'href="{path}" class="active" aria-current="page"' in response.text
+            assert ('ami-espaco-page' in response.text) == (modo == "espaco")
+        prefixed = client.get(path, headers={"x-forwarded-prefix": "/sicard"})
+        assert prefixed.status_code == 200
+        assert f'data-modo="{modo}"' in prefixed.text
+        assert f'href="/sicard{path}" class="active" aria-current="page"' in prefixed.text
+
+    workspace = client.get("/restrict/analise-multicriterio/julgamentos/id-teste/").text
+    assert 'href="/restrict/analise-multicriterio/central-julgamentos" class="ami-back"' in workspace
+
+
+def test_multicriterio_rotas_antigas_redirecionam_preservando_prefixo_e_parametros() -> None:
+    client = TestClient(app)
+    for prefix in ("", "/sicard"):
+        for query, central in (
+            ("?modo=espaco", "central-julgamentos"),
+            ("?modo=julgamentos", "central-respostas"),
+            ("", "central-respostas"),
+        ):
+            response = client.get(
+                "/restrict/analise-multicriterio/" + query,
+                headers={"x-forwarded-prefix": prefix},
+                follow_redirects=False,
+            )
+            assert response.status_code == 308
+            assert response.headers["location"] == f"{prefix}/restrict/analise-multicriterio/{central}"
+
+    response = client.get(
+        "/restrict/analise-multicriterio/?modo=espaco&item=1&item=2",
+        follow_redirects=False,
+    )
+    assert response.headers["location"] == "/restrict/analise-multicriterio/central-julgamentos?item=1&item=2"
+    formulario = client.get("/restrict/analise-multicriterio/?modo=formulario", follow_redirects=False)
+    assert formulario.status_code == 200
+    assert 'data-modo="formulario"' in formulario.text
+
+
 def test_storage_login_links_redirect_to_configured_host(monkeypatch) -> None:
     monkeypatch.setattr(storage_remoto, "_config", lambda: ("https://storage.example/sicard/storage-api", "", "", True))
     client = TestClient(app)
@@ -108,8 +179,8 @@ def test_indice_organiza_analise_multicriterio_no_mad_e_recursos_no_geoprocessam
     client = TestClient(app)
     html = client.get("/restrict/").text
 
-    assert "/restrict/analise-multicriterio/?modo=julgamentos" in html
-    assert "/restrict/analise-multicriterio/?modo=espaco" in html
+    assert "/restrict/analise-multicriterio/central-respostas" in html
+    assert "/restrict/analise-multicriterio/central-julgamentos" in html
     assert "/restrict/analise-multicriterio/?modo=formulario" not in html
     trecho_mad = html.split('id="group-mad"', 1)[1].split('id="group-resultados"', 1)[0]
     trecho_geo = html.split('id="group-geoprocessamento"', 1)[1].split('id="group-ahp-restrict"', 1)[0]
@@ -120,7 +191,7 @@ def test_indice_organiza_analise_multicriterio_no_mad_e_recursos_no_geoprocessam
     assert "Documentação técnica" in trecho_geo
     assert "/public/documentacao/favorabilidade/" in trecho_geo
     assert "/public/documentacao/risco-restricao/" in trecho_geo
-    assert trecho_mad.index("/restrict/hierarquizacao/processos/") < trecho_mad.index("?modo=espaco") < trecho_mad.index("?modo=julgamentos")
+    assert trecho_mad.index("/restrict/hierarquizacao/processos/") < trecho_mad.index("/central-julgamentos") < trecho_mad.index("/central-respostas")
     assert "Central de julgamentos" in trecho_mad
     assert "Central de respostas" in trecho_mad
     assert "Apoio à decisão e hierarquização" in trecho_mad
@@ -177,8 +248,8 @@ def test_indice_organiza_analise_multicriterio_no_mad_e_recursos_no_geoprocessam
 
 
 def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None:
-    html = TestClient(app).get("/restrict/analise-multicriterio/?modo=espaco").text
-    central_html = TestClient(app).get("/restrict/analise-multicriterio/?modo=julgamentos").text
+    html = TestClient(app).get("/restrict/analise-multicriterio/central-julgamentos").text
+    central_html = TestClient(app).get("/restrict/analise-multicriterio/central-respostas").text
     julgamentos_js = (
         __import__("pathlib").Path("assets/js/paginas/analise-multicriterio-julgamentos.js")
         .read_text(encoding="utf-8")
@@ -646,7 +717,7 @@ def test_paginas_descontinuadas_respondem_410() -> None:
         "/restrict/hierarquizacao/fase-3/",
         "/restrict/hierarquizacao/ranking/",
         "/restrict/analise-multicriterio/",
-        "/public/analise-multicriterio/token-de-teste/",
+        "/public/analise-multicriterio/formulario-comparacao-pareada/token-de-teste/",
     ):
         assert client.get(rota).status_code == 200, rota
 

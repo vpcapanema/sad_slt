@@ -105,7 +105,7 @@ const assert = require('node:assert/strict');
     await page.evaluate(() => StatusFeedback.fechar());
     falharRecarga = false;
 
-    await page.goto(base + '/restrict/analise-multicriterio/?modo=espaco');
+    await page.goto(base + '/restrict/analise-multicriterio/central-julgamentos');
     await page.locator('#ami-judgments [data-select-id]').first().check();
     await page.locator('#ami-judgments-delete-action').click();
     await page.locator('#pfsConfirmCancel').click();
@@ -126,7 +126,7 @@ const assert = require('node:assert/strict');
     await page.evaluate(() => StatusFeedback.fechar());
 
     julgamentos = [ambiente];
-    await page.goto(base + '/restrict/analise-multicriterio/?modo=julgamentos');
+    await page.goto(base + '/restrict/analise-multicriterio/central-respostas');
     await page.locator('#ami-judgments [data-analysis-round]').first().check();
     await page.locator('#ami-judgments-view-action').click();
     await page.locator('#ami-analysis-workspace:visible').waitFor();

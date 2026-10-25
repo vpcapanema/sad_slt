@@ -26,7 +26,11 @@ def enviar(ambiente_id: str, dados: ConviteEmailEnvioSchema, usuario_id: str) ->
     if destinatario not in autorizados:
         raise DemandaValidationError("O destinatário não pertence aos colaboradores salvos.", field="destinatario")
     # O servidor acrescenta o codigo persistido, nunca um codigo fornecido pelo cliente.
-    if f"/public/analise-multicriterio/{ambiente['token']}/" not in dados.texto:
+    caminhos = (
+        f"/public/analise-multicriterio/formulario-comparacao-pareada/{ambiente['token']}/",
+        f"/public/analise-multicriterio/{ambiente['token']}/",
+    )
+    if not any(caminho in dados.texto for caminho in caminhos):
         raise DemandaValidationError("A mensagem não contém o link deste julgamento.", field="texto")
     config = email_service._config()
     codigo = ambiente.get("token_acesso")

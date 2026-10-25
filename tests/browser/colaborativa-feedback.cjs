@@ -56,7 +56,7 @@ const assert = require('node:assert/strict');
       await page.locator('#colab-token').fill('012345');
       await page.locator('#btn-liberar-form').click();
     }
-    await page.goto('http://127.0.0.1:8083/public/analise-multicriterio/feedback/');
+    await page.goto('http://127.0.0.1:8083/public/analise-multicriterio/formulario-comparacao-pareada/feedback/');
     await page.getByText('Prazo: 26/10/2026, 23:59:59', {exact: true}).waitFor();
     assert.equal(await page.getByText('Status da rodada de julgamento: ativa', {exact: true}).count(), 1);
     assert.match(await page.locator('#collab-context').innerText(), /Objetivo: Hierarquizar os projetos quanto à favorabilidade/);

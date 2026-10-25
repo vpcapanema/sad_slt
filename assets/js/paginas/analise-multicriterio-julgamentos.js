@@ -26,7 +26,7 @@
   var analysisRequest = 0;
   var selectedJudgeId = null; // null = todos os julgadores juntos
   var selectedMeasure = "geometrica"; // medida de tendencia central da agregacao
-  var modo = new URLSearchParams(location.search).get("modo") || "julgamentos";
+  var modo = document.querySelector(".ami-main").dataset.modo;
   var ambientesSourceUrl = "/api/ahp/comparacao-colaborativa/ambientes";
   var hierarquizacoesSourceUrl = "/api/ahp/hierarquizacoes/portfolio";
   var $ = function (id) { return document.getElementById(id); };
@@ -75,7 +75,7 @@
     if (field) field.focus();
   }
   function statusLabel(status) { return { ativa: "Aberto", consolidada: "Consolidado", encerrada: "Encerrado" }[status] || status; }
-  function actionLinks(j) { return { workspace: appUrl("restrict", "/analise-multicriterio/julgamentos/" + encodeURIComponent(j.id) + "/"), public: appUrl("public", "/analise-multicriterio/" + encodeURIComponent(j.token) + "/") }; }
+  function actionLinks(j) { return { workspace: appUrl("restrict", "/analise-multicriterio/julgamentos/" + encodeURIComponent(j.id) + "/"), public: appUrl("public", "/analise-multicriterio/formulario-comparacao-pareada/" + encodeURIComponent(j.token) + "/") }; }
   function filterValue(j, column) {
     var h = hierarquizacoes.find(function (item) { return item.id === (j.config_id || j.hierarquizacao_id); });
     return String(Object.assign({}, j, { status: statusLabel(j.status), hierarquizacao_nome: j.hierarquizacao_nome || h && h.nome })[column] ?? '');
