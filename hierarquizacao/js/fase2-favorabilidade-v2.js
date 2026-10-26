@@ -7,6 +7,7 @@ import {criarPrevia} from '../../geoespacial/extracao-atributos/previa.js?v=2026
 import {criarMapa} from '../../geoespacial/extracao-atributos/mapa.js?v=20261020-favorabilidade';
 import {criarResultados} from './elegibilidade-resultados.js?v=20261023-classes-ordem';
 import {criarConferencia} from './favorabilidade-conferencia.js?v=20261022-tabelas';
+import {tituloDemanda} from './nome-demanda.js?v=20261025-title-case';
 
 const PASTA_SUPERFICIES = 'superficies-indices/hierarquizacao/favorabilidade';
 const papeis = {entrada:'Entrada', grade:'Favorabilidade territorial de grade', rede:'Favorabilidade territorial de rede'};
@@ -88,6 +89,7 @@ function controles() {
     node(`${papel}-salvar`).disabled = state.busy || !selecao[papel].length;
     node(`${papel}-enviar`).disabled = state.busy || !selecao[papel].length && !previadas[papel].length;
   }
+  node('superficies-enviar').disabled = state.busy || !['grade','rede'].some(papel => selecao[papel].length || previadas[papel].length);
   $('#ea-staging-confirmar').disabled = state.busy || !Object.keys(papeis).some(papel => marcadas(papel).length);
   for (const checkbox of document.querySelectorAll('#ea-input-preview .ea-preview-visibility')) {
     if (state.busy) checkbox.disabled = true;
@@ -114,12 +116,13 @@ function render() {
     lista.replaceChildren();
     if (!selecao[papel].length && papel !== 'entrada') lista.append(el('li', 'Nenhuma superfície selecionada.'));
     for (const camada of selecao[papel]) {
+      const nome = papel === 'entrada' && state.origemEntrada === 'hierarquizacao' ? camada.nomeDemanda : camada.nome;
       const linha = el('li'), remover = el('button', undefined, 'ea-btn ea-icon-button ev-remove-layer');
       const icone = el('i', undefined, 'fas fa-trash-can');
       icone.setAttribute('aria-hidden', 'true');
       remover.type = 'button';
       remover.append(icone);
-      remover.title = `Remover ${camada.nome} da seleção`;
+      remover.title = `Remover ${nome} da seleção`;
       remover.setAttribute('aria-label', remover.title);
       remover.onclick = () => {
         if (state.busy) return;
@@ -127,14 +130,20 @@ function render() {
         if (papel === 'entrada' && !selecao.entrada.length) limparEntrada();
         render();
       };
-      linha.append(el('span', camada.nome), remover);
+      if (papel === 'entrada' && state.origemEntrada === 'hierarquizacao') {
+        const abrir = el('button', nome, 'fv-demanda-link');
+        abrir.type = 'button';
+        abrir.setAttribute('aria-label', `Visualizar demanda: ${nome}`);
+        abrir.onclick = () => abrirDemanda(camada);
+        linha.append(abrir, remover);
+      } else {
+        linha.append(el('span', nome), remover);
+      }
       lista.append(linha);
     }
   }
   node('entrada-camadas').value = state.origemEntrada === 'camadas' ? selecao.entrada.map(c => c.nome).join('; ') : '';
   for (const papel of ['grade','rede']) node(`${papel}-camadas`).value = selecao[papel].map(c => c.nome).join('; ');
-  node('hier-detalhes').hidden = !hierarquizacao;
-  node('hier-dados').textContent = hierarquizacao ? JSON.stringify(hierarquizacao, null, 2) : '';
   previa.render();
   controles();
 }
@@ -195,34 +204,39 @@ async function prepararRaster(ref) {
     ]}};
 }
 async function enviarPrevia(papel) {
+  const grupos = Array.isArray(papel) ? papel : [papel];
   await ocupar('Preparando a prévia.', async iniciar => {
     const tarefas = ['Identificar camadas','Preparar visualização','Atualizar prévia'];
-    const {processo, conferir} = iniciar(`Preparar ${papeis[papel].toLowerCase()}`, tarefas);
-    processo.tarefaAtual(tarefas[0]);
-    const refs = papel === 'entrada' && state.origemEntrada === 'hierarquizacao'
-      ? selecao.entrada : await identificarCamadas(selecao[papel], {aoIdentificar:conferir, incluirRasters:papel !== 'entrada'});
-    conferir();
-    validarPapeis(papel, refs);
-    processo.concluirTarefa(tarefas[0]);
-    processo.tarefaAtual(tarefas[1], 'As fontes, geometrias e atributos não serão alterados.');
-    const camadas = [];
-    for (const ref of refs) {
-      processo.detalhe(`Preparando ${camadas.length + 1} de ${refs.length}: ${ref.nome}`);
-      if (papel === 'entrada' && ref.tipo === 'raster') throw new Error('A entrada de demandas deve ser vetorial. Use os campos de grade e rede para as superfícies raster.');
-      const camada = papel === 'entrada' && state.origemEntrada === 'hierarquizacao'
-        ? ref : ref.tipo === 'raster' ? await prepararRaster(ref) : {...ref, ...await validarCamada(ref)};
+    const {processo, conferir} = iniciar(`Preparar ${grupos.map(p => papeis[p].toLowerCase()).join(' e ')}`, tarefas);
+    const candidatos = {};
+    for (const papel of grupos) {
+      processo.tarefaAtual(tarefas[0], papeis[papel]);
+      const refs = papel === 'entrada' && state.origemEntrada === 'hierarquizacao'
+        ? selecao.entrada : await identificarCamadas(selecao[papel], {aoIdentificar:conferir, incluirRasters:papel !== 'entrada'});
       conferir();
-      camadas.push(papel === 'entrada' ? {...camada, origemEntrada:state.origemEntrada} : camada);
+      validarPapeis(papel, refs);
+      processo.concluirTarefa(tarefas[0]);
+      processo.tarefaAtual(tarefas[1], 'As fontes, geometrias e atributos não serão alterados.');
+      const camadas = [];
+      for (const ref of refs) {
+        processo.detalhe(`Preparando ${camadas.length + 1} de ${refs.length}: ${ref.nome}`);
+        if (papel === 'entrada' && ref.tipo === 'raster') throw new Error('A entrada de demandas deve ser vetorial. Use os campos de grade e rede para as superfícies raster.');
+        const camada = papel === 'entrada' && state.origemEntrada === 'hierarquizacao'
+          ? ref : ref.tipo === 'raster' ? await prepararRaster(ref) : {...ref, ...await validarCamada(ref)};
+        conferir();
+        camadas.push(papel === 'entrada' ? {...camada, origemEntrada:state.origemEntrada} : camada);
+      }
+      validarPapeis(papel, camadas);
+      candidatos[papel] = camadas;
     }
-    validarPapeis(papel, camadas);
     processo.concluirTarefa(tarefas[1]);
     processo.tarefaAtual(tarefas[2]);
-    const anteriores = previadas[papel];
-    previadas[papel] = camadas;
+    const anteriores = Object.fromEntries(grupos.map(p => [p, previadas[p]]));
+    Object.assign(previadas, candidatos);
     try { previa.render(); }
-    catch (erro) { previadas[papel] = anteriores; throw erro; }
+    catch (erro) { Object.assign(previadas, anteriores); throw erro; }
     processo.concluirTarefa(tarefas[2]);
-    processo.sucesso({title:'Prévia atualizada', message:`${camadas.length} camada(s) disponível(is). Confira e marque as desejadas antes de enviar à bancada.`});
+    processo.sucesso({title:'Prévia atualizada', message:`${Object.values(candidatos).flat().length} camada(s) disponível(is). Confira e marque as desejadas antes de enviar à bancada.`});
     avisar('Prévia atualizada. A bancada e os resultados registrados foram mantidos.');
   });
 }
@@ -254,7 +268,8 @@ async function selecionarHierarquizacao(codigo) {
           throw new Error(`A demanda ${cab.codigo} não possui geometria cadastrada. Nenhum ponto aproximado será criado.`);
         }
         conferir();
-        camadas.push({...camada, nome:`${cab.codigo} — ${cab.nome || camada.nome}`, tipo:'vetor',
+        const nome = tituloDemanda(cab.nome || camada.nome);
+        camadas.push({...camada, nome:`${cab.codigo} — ${nome}`, nomeDemanda:nome, tipo:'vetor',
           origemEntrada:'hierarquizacao', grupoHierarquizacao:{codigo, demandas:objetos.length},
           revisao:crypto.randomUUID(), representacao:'original', status_validacao:'valida',
           geojson:{type:'FeatureCollection', features:camada.geojson.features.map(f => ({
@@ -466,6 +481,21 @@ for (const papel of Object.keys(papeis)) {
 node('entrada-limpar').onclick = () => { limparEntrada(); render(); };
 node('hier-limpar').onclick = node('entrada-limpar').onclick;
 node('hier-enviar').onclick = () => enviarPrevia('entrada');
+function abrirDemanda(camada) {
+  return ocupar('Carregando dados da demanda.', async () => {
+  if (!hierarquizacao) return;
+  const tipo = hierarquizacao.tipo_demanda;
+  const demanda = await (tipo === 'plano' ? window.SLTAdminApi.getPlano(camada.codigo)
+    : tipo === 'programa' ? window.SLTAdminApi.getPrograma(camada.codigo)
+      : window.SLTAdminApi.getDemanda(camada.codigo));
+  const nome = tituloDemanda(demanda.nome || camada.nomeDemanda);
+  const conteudo = window.SLTDemandasGrupo.render([{...demanda, nome}]);
+  window.SLTDemandasGrupo.bindModalClosures();
+  window.SLTDemandasGrupo.showModal('modal-objetos', nome, conteudo);
+  conteudo.querySelector('details').open = true;
+  });
+}
+node('superficies-enviar').onclick = () => enviarPrevia(['grade','rede']);
 node('hierarquizacao').onchange = event => selecionarHierarquizacao(event.target.value);
 $('#ea-staging-confirmar').onclick = enviarBancada;
 node('calcular').onclick = calcularFavorabilidade;

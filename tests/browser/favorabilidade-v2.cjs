@@ -297,10 +297,25 @@ const assert = require('node:assert/strict');
     assert(await page.getByRole('heading',{name:'Conferir e executar'}).isVisible());
     assert(await page.getByRole('button',{name:'Calcular Favorabilidade Territorial',exact:true}).isDisabled());
     assert(await page.locator('#fv-rede-browse').isEnabled(),'Rede independe de selecionar grade primeiro');
+    assert(await page.locator('#fv-superficies-enviar').isDisabled());
     await choose('rede',rede);
     await preview('rede');
     await choose('grade',grade);
-    await preview('grade');
+    failLayer = rede.id;
+    await page.locator('#fv-superficies-enviar').click();
+    await idle();
+    assert.equal(await page.locator('#fv-status').getAttribute('data-error'),'true');
+    assert.equal(await checkbox('grade').count(),0,'Falha no segundo grupo não aplica o primeiro');
+    assert.equal(await checkbox('rede').count(),1,'Falha mantém a prévia anterior');
+    failLayer = '';
+    await dismiss();
+    await page.locator('#fv-superficies-enviar').click();
+    await idle();
+    assert.equal(await page.locator('#fv-status').getAttribute('data-error'),'false');
+    assert.equal(await checkbox('grade').count(),1);
+    assert.equal(await checkbox('rede').count(),1);
+    assert.deepEqual(await panel(),[],'Envio conjunto altera somente a prévia');
+    await dismiss();
     await choose('entrada',entrada);
     await preview('entrada');
     assert.deepEqual(await panel(),[]);
@@ -361,6 +376,39 @@ const assert = require('node:assert/strict');
     await idle();
     await dismiss();
     assert.equal(await page.locator('#fv-hier-lista li').count(),2);
+    assert.deepEqual(await page.locator('#fv-hier-lista .fv-demanda-link').allTextContents(),['Demanda 0','Demanda 1']);
+    assert.equal(await page.locator('#fv-hier-lista .fa-trash-can').count(),2);
+    assert.equal(await page.locator('#fv-hier-dados').count(),0);
+    assert.equal(await page.locator('#fv-hier-detalhes').count(),0);
+    await page.locator('#fv-hier-lista .fv-demanda-link').first().click();
+    await idle();
+    await page.locator('#modal-objetos').waitFor({state:'visible'});
+    assert.equal(await page.locator('#modal-objetos [data-modal-title]').textContent(),'Demanda a');
+    assert.equal(await page.locator('#modal-objetos .jv-root > li').count(),1);
+    assert.match(await page.locator('#modal-objetos .demanda-corpo').textContent(),/Identificação/);
+    await page.locator('#modal-objetos [data-modal-close]').click();
+    await page.locator('#fv-hier-lista .fv-demanda-link').nth(1).click();
+    await idle();
+    await page.locator('#modal-objetos').waitFor({state:'visible'});
+    assert.equal(await page.locator('#modal-objetos [data-modal-title]').textContent(),'Demanda B');
+    assert.equal(await page.locator('#modal-objetos .jv-root > li').count(),1);
+    await page.locator('#modal-objetos [data-modal-close]').click();
+    const hierarchyStyle = await page.locator('#fv-hier-lista').evaluate(list => ({
+      border:getComputedStyle(list).borderTopWidth,
+      rows:[...list.children].map(row => getComputedStyle(row).borderTopWidth),
+      inputFont:getComputedStyle(document.querySelector('#fv-hierarquizacao')).fontSize,
+      layerFont:getComputedStyle(document.querySelector('#fv-grade-camadas')).fontSize,
+      listFont:getComputedStyle(list).fontSize,
+    }));
+    assert.notEqual(hierarchyStyle.border,'0px');
+    assert(hierarchyStyle.rows.every(border => border==='0px'));
+    assert.equal(hierarchyStyle.inputFont,hierarchyStyle.layerFont);
+    assert.equal(hierarchyStyle.inputFont,'13px');
+    if (process.env.SICARD_TEST_SELECTION_ONLY === '1') {
+      assert.deepEqual(errors,[]);
+      console.log('OK: envio conjunto atômico, lista de demandas, fonte e modal compartilhado.');
+      return;
+    }
     assert.equal(await page.locator('#ev-resultados-agregados tbody tr').count(),0,'A tabela depende das interseções calculadas, não dos índices oficiais');
     await preview('entrada','hier');
     await checkbox('D-0 — Demanda 0').uncheck();

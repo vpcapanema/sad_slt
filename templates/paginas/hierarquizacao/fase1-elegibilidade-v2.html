@@ -68,7 +68,7 @@
   <section class="secao-elegibilidade-bases card card-elegibilidade-bases ahp-step-section" aria-labelledby="ev-bases-title">
     <header class="ahp-section-label"><span class="ahp-subsection-num">2</span><h2 id="ev-bases-title">Camadas de restrição e de risco</h2></header>
     <div class="ahp-section-body">
-      <p class="ea-hint">Comece pela restrição e depois selecione o risco. A mesma camada não pode ocupar os dois papéis, nem ser usada também como entrada. Salvar uma lista não envia camadas à bancada e não homologa os dados.</p>
+      <p class="ea-hint">Comece pela restrição e depois selecione o risco. A mesma camada não pode ocupar os dois papéis, nem ser usada também como entrada. Envie cada lista separadamente ou as duas juntas pelo botão abaixo. Salvar uma lista não envia camadas à bancada e não homologa os dados.</p>
       <p class="ea-hint">Família e tipo descrevem a adversidade, sem definir risco, restrição ou peso. Os vínculos são mantidos na <a href="/restrict/admin/?menu=__dominios__&amp;esquema=dominios&amp;tabela=camada_adversidade">administração de adversidades das camadas</a>. Camadas sem vínculo continuam disponíveis e são identificadas como tal.</p>
       <div class="ev-grid">
         {% for papel, rotulo in [("restricao", "Restrição"), ("risco", "Risco")] %}
@@ -86,6 +86,9 @@
             <ul id="ev-{{ papel }}-lista" class="ev-lista" aria-label="Camadas de {{ rotulo|lower }} selecionadas"></ul>
         </div>
         {% endfor %}
+      </div>
+      <div class="ev-actions">
+        <button id="ev-bases-enviar" type="button" class="ea-btn ea-btn-primary" disabled><i class="fas fa-arrow-right-to-bracket" aria-hidden="true"></i> Enviar restrição e risco para a prévia</button>
       </div>
     </div>
   </section>
@@ -169,5 +172,5 @@
 <script src="/assets/vendor/maplibre-gl/leaflet-maplibre-gl.js"></script>
 <script src="/restrict/hierarquizacao/js/hier-api.js"></script>
 <script src="/assets/js/table-standard.js?v=20261015-fontes-ordem"></script>
-<script type="module" src="/restrict/hierarquizacao/js/fase1-elegibilidade-v2.js?v=20261024-adversidades"></script>
+<script type="module" src="/restrict/hierarquizacao/js/fase1-elegibilidade-v2.js?v=20261025-envio-conjunto"></script>
 {% endblock %}

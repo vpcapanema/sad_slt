@@ -38,6 +38,11 @@ def test_mesma_rota_serve_v2_sem_bancada_ou_executor_legados(cliente):
     assert "executar-fase2" not in html
     assert "data-requer-autenticacao=\"true\"" in html
     assert "Superfícies de favorabilidade" in html
+    for papel in ("grade", "rede"):
+        assert f'id="fv-{papel}-gerar"' in html
+    assert html.count('href="/restrict/geoespacial/gerador-superficies-favorabilidade/"') == 2
+    assert 'class="ev-actions fv-superficies-actions"' in html
+    assert 'id="fv-superficies-enviar" type="button" class="ea-btn ea-btn-primary ea-icon-button"' in html
     assert "Índices e Classes Agregados por Demanda" in html
     assert "Resultados registrados na hierarquização" not in html
     assert "Resultados da Favorabilidade Territorial" in html

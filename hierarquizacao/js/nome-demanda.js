@@ -1,4 +1,11 @@
 // Rótulo de apresentação: preserva o cadastro e não acrescenta identificadores.
+export function tituloDemanda(nome) {
+  const conectivos = new Set(['a','as','o','os','e','de','da','das','do','dos','em','na','nas','no','nos','para','por','com']);
+  return String(nome || '').trim().toLocaleLowerCase('pt-BR').replace(/\p{L}[\p{L}\p{M}]*/gu,
+    (palavra, posicao) => posicao > 0 && conectivos.has(palavra)
+      ? palavra : palavra[0].toLocaleUpperCase('pt-BR') + palavra.slice(1));
+}
+
 export function nomeDemanda(linha) {
   const original = String(linha.nome || linha.demandaNome || '').trim();
   if (!original) return 'Demanda sem nome';
@@ -13,8 +20,8 @@ export function nomeDemanda(linha) {
       sufixo = sufixo.replaceAll(municipio, '');
     }
     if (municipios.length && /^[\s,;/]*(?:e[\s,;/]*)?$/.test(sufixo)) {
-      return semColchetes.slice(0, separador.index).trim();
+      return tituloDemanda(semColchetes.slice(0, separador.index).trim());
     }
   }
-  return semColchetes;
+  return tituloDemanda(semColchetes);
 }

@@ -1,4 +1,5 @@
 import {el} from '../../geoespacial/extracao-atributos/ui.js';
+import {tituloDemanda} from './nome-demanda.js?v=20261025-title-case';
 
 const ns = 'http://www.w3.org/2000/svg';
 let sequenciaRosca = 0;
@@ -11,8 +12,6 @@ const svgNode = (tag, atributos, texto) => {
   if (texto !== undefined) node.textContent = texto;
   return node;
 };
-const tituloDemanda = nome => nome.toLocaleLowerCase('pt-BR')
-  .replace(/(^|[^\p{L}\p{N}])(\p{L})/gu, (_, separador, letra) => separador + letra.toLocaleUpperCase('pt-BR'));
 const areaDemanda = valor => `${(valor / 1e6).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:valor > 0 && valor/1e6 < .005 ? 12 : 2})} km² · ${
   (valor / 1e4).toLocaleString('pt-BR', {minimumFractionDigits:4, maximumFractionDigits:4})} ha`;
 

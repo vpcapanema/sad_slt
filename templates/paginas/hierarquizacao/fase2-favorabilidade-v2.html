@@ -21,7 +21,7 @@
 <link rel="stylesheet" href="/assets/css/fase1-elegibilidade-v2.css?v=20261023-rosca-demandas">
 <link rel="stylesheet" href="/assets/css/fase23-execucao.css">
 <link rel="stylesheet" href="/assets/css/paginas/hierarquizacao-fases-visual.css?v=20261020-cabecalhos-linha-unica">
-<link rel="stylesheet" href="/assets/css/fase2-favorabilidade-v2.css?v=20261023-resultados-lado-a-lado">
+<link rel="stylesheet" href="/assets/css/fase2-favorabilidade-v2.css?v=20261025-demanda-modal">
 {% endblock %}
 {% block conteudo %}
 <div id="admin-session-bar" class="admin-session-bar hidden"></div>
@@ -60,7 +60,6 @@
               <button id="fv-hier-limpar" type="button" class="ea-btn ea-icon-button ea-cancel-icon" aria-label="Limpar seleção de hierarquização" title="Limpar seleção de hierarquização" disabled><i class="fas fa-xmark" aria-hidden="true"></i></button>
             </div>
             <ul id="fv-hier-lista" class="ev-lista" aria-label="Demandas da hierarquização selecionadas"></ul>
-            <details id="fv-hier-detalhes" hidden><summary>Informações da hierarquização e das demandas</summary><pre id="fv-hier-dados"></pre></details>
           </div>
         </div>
       </div>
@@ -68,7 +67,7 @@
     <section class="secao-favorabilidade-superficies card card-favorabilidade-superficies ahp-step-section" aria-labelledby="fv-superficies-title">
       <header class="ahp-section-label"><span class="ahp-subsection-num">2</span><h2 id="fv-superficies-title">Camadas de superfícies de favorabilidade de grade e da rede</h2></header>
       <div class="ahp-section-body">
-        <p class="ea-hint">Selecione as superfícies de grade e da rede, em qualquer ordem. Uma camada não pode ocupar os dois papéis nem ser usada também como entrada. As listas guardam referências; não calculam nem homologam índices.</p>
+        <p class="ea-hint">Selecione as superfícies de grade e da rede, em qualquer ordem. Uma camada não pode ocupar os dois papéis nem ser usada também como entrada. Envie cada lista separadamente ou as duas juntas pelo botão abaixo. As listas guardam referências; não calculam nem homologam índices.</p>
         <div class="ev-grid">
           {% for papel, rotulo in [("grade", "Favorabilidade territorial de grade"), ("rede", "Favorabilidade territorial de rede")] %}
           <div class="ev-bases-grupo ea-field">
@@ -80,11 +79,15 @@
             <div class="ev-actions ev-field-actions">
               <button id="fv-{{ papel }}-salvar" type="button" class="ea-btn ea-icon-button" aria-label="Salvar lista de {{ papel }}" title="Salvar lista de {{ papel }}" disabled><i class="fas fa-floppy-disk" aria-hidden="true"></i></button>
               <button id="fv-{{ papel }}-carregar" type="button" class="ea-btn ea-icon-button" aria-label="Carregar lista de {{ papel }}" title="Carregar lista de {{ papel }}"><i class="fas fa-folder-open" aria-hidden="true"></i></button>
+              <a id="fv-{{ papel }}-gerar" class="ea-btn ea-icon-button" href="/restrict/geoespacial/gerador-superficies-favorabilidade/" target="_blank" rel="noopener noreferrer" aria-label="Gerar superfície de territorialidade — {{ papel }} (abre em nova aba)" title="Gerar superfície de territorialidade (abre em nova aba)"><i class="fas fa-layer-group" aria-hidden="true"></i></a>
               <button id="fv-{{ papel }}-enviar" type="button" class="ea-btn ea-btn-primary ea-icon-button" aria-label="Enviar {{ papel }} para a prévia" title="Enviar {{ papel }} para a prévia" disabled><i class="fas fa-arrow-right-to-bracket" aria-hidden="true"></i></button>
             </div>
             <ul id="fv-{{ papel }}-lista" class="ev-lista" aria-label="Superfícies de {{ papel }} selecionadas"></ul>
           </div>
           {% endfor %}
+        </div>
+        <div class="ev-actions fv-superficies-actions">
+          <button id="fv-superficies-enviar" type="button" class="ea-btn ea-btn-primary ea-icon-button" aria-label="Enviar grade e rede para a prévia" title="Enviar grade e rede para a prévia" disabled><i class="fas fa-arrow-right-to-bracket" aria-hidden="true"></i></button>
         </div>
       </div>
     </section>
@@ -313,5 +316,5 @@
 <script src="/assets/vendor/maplibre-gl/maplibre-gl.js"></script>
 <script src="/assets/vendor/maplibre-gl/leaflet-maplibre-gl.js"></script>
 <script src="/restrict/hierarquizacao/js/hier-api.js"></script>
-<script type="module" src="/restrict/hierarquizacao/js/fase2-favorabilidade-v2.js?v=20261023-classes-ordem"></script>
+<script type="module" src="/restrict/hierarquizacao/js/fase2-favorabilidade-v2.js?v=20261025-demanda-modal"></script>
 {% endblock %}

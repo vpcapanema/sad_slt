@@ -5,11 +5,15 @@
 .favorabilidade-v2 > #fv-status {
   margin-bottom: var(--process-space-4);
 }
+.favorabilidade-v2 .fv-superficies-actions {
+  justify-content: flex-end;
+  width: 100%;
+}
 .favorabilidade-v2 #fv-status[data-error="true"] {
   font-weight: 700;
 }
 .favorabilidade-v2 .ev-preparacao-grid :is(select, .ev-input-action input) {
-  font-size: 15px;
+  font-size: 13px;
 }
 .favorabilidade-v2 .ev-resultados { --fv-grade: var(--pli-deep); --fv-rede: var(--pli-deep); --ev-line: var(--pli-border); --ev-muted: var(--pli-muted); color: var(--pli-text); }
 .favorabilidade-v2 .ev-resultados .grade { color: var(--fv-grade); }
@@ -355,6 +359,24 @@
 }
 .favorabilidade-v2 .ev-preparacao-grid .ev-lista > li + li {
   border-top: 1px solid #8b9eaf;
+}
+.favorabilidade-v2 #fv-hier-lista > li {
+  border: 0;
+  background: transparent;
+  border-radius: 0;
+}
+.favorabilidade-v2 #fv-hier-lista > li + li {
+  border-top: 0;
+}
+.favorabilidade-v2 .fv-demanda-link {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--pli-deep);
+  font: inherit;
+  text-align: left;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 /* Seção 5: “Índices por Demanda e Feição” (esquerda) e “Onde as Demandas se Sobrepõem” (direita), lado a lado.

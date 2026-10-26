@@ -114,6 +114,7 @@ function controles() {
     if (papel !== 'entrada') node(`${papel}-salvar`).disabled = state.busy || !selecao[papel].length;
   }
   const semRestricao = !selecao.restricao.length && !previadas.restricao.length && !enviados.restricao.length;
+  node('bases-enviar').disabled = state.busy || semRestricao || !['restricao','risco'].some(papel => selecao[papel].length || previadas[papel].length);
   for (const acao of ['browse','carregar','enviar']) node(`risco-${acao}`).disabled ||= semRestricao;
   const origem = state.origemEntrada || previadas.entrada[0]?.origemEntrada;
   node('hier-enviar').disabled = node('entrada-enviar').disabled || origem !== 'hierarquizacao';
@@ -398,28 +399,33 @@ function atualizarBancada() {
   controles();
 }
 async function enviarPrevia(papel) {
+  const grupos = Array.isArray(papel) ? papel : [papel];
   await ocupar('Enviando seleção para a prévia.', async iniciar => {
     const tarefas=['Conferir seleção','Identificar e validar camadas','Atualizar prévia'];
-    const acompanhamento=iniciar(`Enviar ${papeis[papel].toLowerCase()} para a prévia`,tarefas), {processo, conferir}=acompanhamento;
-    processo.tarefaAtual(tarefas[0],`${selecao[papel].length} referência(s). A bancada não será alterada.`);
-    validarPapeis(papel, selecao[papel]);
-    processo.concluirTarefa(tarefas[0]);
-    processo.tarefaAtual(tarefas[1],'Identificação dos componentes e validação das fontes completas.');
-    let camadas = papel === 'entrada' && state.origemEntrada === 'hierarquizacao'
-      ? selecao[papel] : await preparar(selecao[papel],acompanhamento);
-    if (papel !== 'entrada') camadas = await resolverAdversidades(camadas);
-    conferir();
-    validarPapeis(papel, camadas);
-    processo.concluirTarefa(tarefas[1],`${camadas.length} camada(s) disponível(is).`);
-    processo.tarefaAtual(tarefas[2],'Substituir somente este grupo na prévia, preservando a bancada.');
-    const anteriores=previadas[papel];
-    previadas[papel] = papel === 'entrada'
-      ? camadas.map(c => ({...c, origemEntrada:state.origemEntrada})) : [...camadas];
+    const acompanhamento=iniciar(`Enviar ${grupos.map(p => papeis[p].toLowerCase()).join(' e ')} para a prévia`,tarefas), {processo, conferir}=acompanhamento;
+    const candidatos = {};
+    for (const papel of grupos) {
+      processo.tarefaAtual(tarefas[0],`${papeis[papel]}: ${selecao[papel].length} referência(s). A bancada não será alterada.`);
+      validarPapeis(papel, selecao[papel]);
+      processo.concluirTarefa(tarefas[0]);
+      processo.tarefaAtual(tarefas[1],'Identificação dos componentes e validação das fontes completas.');
+      let camadas = papel === 'entrada' && state.origemEntrada === 'hierarquizacao'
+        ? selecao[papel] : await preparar(selecao[papel],acompanhamento);
+      if (papel !== 'entrada') camadas = await resolverAdversidades(camadas);
+      conferir();
+      validarPapeis(papel, camadas);
+      candidatos[papel] = papel === 'entrada'
+        ? camadas.map(c => ({...c, origemEntrada:state.origemEntrada})) : [...camadas];
+    }
+    processo.concluirTarefa(tarefas[1],`${Object.values(candidatos).flat().length} camada(s) disponível(is).`);
+    processo.tarefaAtual(tarefas[2],'Atualizar os grupos selecionados na prévia, preservando a bancada.');
+    const anteriores = Object.fromEntries(grupos.map(p => [p, previadas[p]]));
+    Object.assign(previadas, candidatos);
     try { previa.render(); }
-    catch (erro) { previadas[papel]=anteriores;throw erro; }
+    catch (erro) { Object.assign(previadas, anteriores);throw erro; }
     processo.concluirTarefa(tarefas[2]);
-    processo.sucesso({title:'Prévia atualizada',message:`${camadas.length} camada(s) de ${papeis[papel].toLowerCase()} na prévia. A bancada foi mantida. Confira as geometrias originais e marque as camadas antes de enviar à bancada.`});
-    avisar(`${papeis[papel]} atualizada na prévia. Confira e marque as camadas na seção 3; o envio à bancada fica no rodapé do painel de camadas.`);
+    processo.sucesso({title:'Prévia atualizada',message:`${Object.values(candidatos).flat().length} camada(s) na prévia. A bancada foi mantida. Confira as geometrias originais e marque as camadas antes de enviar à bancada.`});
+    avisar('Seleção atualizada na prévia. Confira e marque as camadas na seção 3; o envio à bancada fica no rodapé do painel de camadas.');
   });
 }
 async function enviar() {
@@ -572,6 +578,7 @@ for (const papel of Object.keys(papeis)) {
 node('entrada-limpar').onclick = () => { limparEntrada(); render(); };
 node('hier-limpar').onclick = node('entrada-limpar').onclick;
 node('hier-enviar').onclick = () => enviarPrevia('entrada');
+node('bases-enviar').onclick = () => enviarPrevia(['restricao','risco']);
 $('#ea-staging-confirmar').onclick = enviar;
 node('calcular').onclick = calcularElegibilidade;
 node('hierarquizacao').onchange = event => selecionarHierarquizacao(event.target.value);
