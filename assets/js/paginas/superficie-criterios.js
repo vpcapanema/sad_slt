@@ -1,7 +1,6 @@
 const root = document.getElementById("sc-app");
 const $ = id => document.getElementById(`sc-${id}`);
-const prefix = location.pathname.split("/restrict/")[0];
-const endpoint = `${prefix}/api/ahp/superficies-criterios`;
+const endpoint = "/api/ahp/superficies-criterios";
 let catalog = [], dimensions = [], selection = [], saved = null, hierarchies = [], maps = [];
 let busy = false, catalogRequest = 0;
 let viewerObserver = null, resultMap = null;
@@ -203,7 +202,7 @@ function syncCalculation() {
 }
 async function judgments() {
   if (!saved) throw new Error("Salve ou carregue a superfície antes de consultar julgamentos.");
-  const rows = await api(`${prefix}/api/ahp/comparacao-colaborativa/hierarquizacoes/${saved.hierarquizacao_id}/ambientes`);
+  const rows = await api(`/api/ahp/comparacao-colaborativa/hierarquizacoes/${saved.hierarquizacao_id}/ambientes`);
   const matching = rows.filter(r => r.superficie_id === saved.id);
   $("judgment").innerHTML = '<option value="">Selecione um julgamento consolidado</option>' + matching.map(r =>
     `<option value="${r.id}" ${r.status !== "consolidada" ? "disabled" : ""}>${escape(r.id)} · ${escape(r.status)}</option>`).join("");
@@ -287,7 +286,7 @@ async function startJudgment() {
     const link = document.createElement("a");
     link.href = url; link.download = "matriz_fase2.xlsx"; link.click();
     setTimeout(() => URL.revokeObjectURL(url), 30000);
-    location.assign(`${prefix}/restrict/analise-multicriterio/central-julgamentos?novo=1&superficie_id=${saved.id}&hierarquizacao_id=${saved.hierarquizacao_id}`);
+    location.assign(`/restrict/analise-multicriterio/central-julgamentos?novo=1&superficie_id=${saved.id}&hierarquizacao_id=${saved.hierarquizacao_id}`);
   });
 }
 $("judgment-new").onclick = startJudgment;
@@ -320,7 +319,7 @@ $("calculate").onclick = () => operation("Calculando e salvando o índice a part
   await showResult(); status("Índice calculado e salvo. A superfície não é homologada automaticamente.");
 });
 async function init() {
-  hierarchies = await api(`${prefix}/api/ahp/hierarquizacoes/portfolio`);
+  hierarchies = await api("/api/ahp/hierarquizacoes/portfolio");
   $("hier").innerHTML += hierarchies.map(h => `<option value="${h.id}">${escape(h.codigo)} · ${escape(h.nome)}</option>`).join("");
   const query = new URLSearchParams(location.search);
   const hierarchy = hierarchies.find(h => h.codigo === query.get("codigo") || h.id === query.get("hierarquizacao_id"));

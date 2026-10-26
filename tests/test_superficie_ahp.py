@@ -1,11 +1,12 @@
 """Integração de julgamentos com snapshots de superfícies; sem banco externo."""
 from datetime import datetime, timezone
-from pathlib import Path
 import subprocess
 from unittest.mock import MagicMock
 
+from fastapi.testclient import TestClient
 import pytest
 
+from api.server import app
 from api.exceptions import DemandaValidationError
 from api.schemas.comparacao_colaborativa import AmbienteColaborativoCreateSchema, AmbienteColaborativoUpdateSchema
 from api.services import comparacao_colaborativa_service as service
@@ -221,8 +222,12 @@ def test_rc_limite_e_aceito_sem_confiar_em_arredondamento(monkeypatch, superfici
 
 
 def test_javascript_carrega_surface_fixa_matriz_sem_convites_automaticos():
-    source = (Path(__file__).parents[1] / "assets" / "js" / "paginas" /
-              "analise-multicriterio-julgamentos.js").read_text(encoding="utf-8")
+    response = TestClient(app).get(
+        "/assets/js/paginas/analise-multicriterio-julgamentos.js",
+        headers={"X-Forwarded-Prefix": "/sicard"},
+    )
+    assert response.status_code == 200
+    source = response.text
     functions = source[source.index("  function matrixRows("):source.index("  function matrixSummary(")]
     harness = r"""
 const assert = require('node:assert/strict');
@@ -257,7 +262,7 @@ function showCreateSection() { opened++; applySurfaceContext(); }
   assert.deepEqual(criteriaMatrix.linhas,surface.criterios);
   assert.equal(criteriaMatrixFileBase64,null);
   assert.equal(criteriaMatrixFileName,null);
-  assert.deepEqual(calls,[['/api/ahp/superficies-criterios/s1',undefined]]);
+  assert.deepEqual(calls,[['/sicard/api/ahp/superficies-criterios/s1',undefined]]);
   assert.match(summary,/Matriz fixa/);
   location.search='?superficie_id=s1&hierarquizacao_id=outra&novo=1';
   await assert.rejects(loadRequestedSurface(),/não pertence/);

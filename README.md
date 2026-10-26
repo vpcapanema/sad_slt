@@ -842,6 +842,10 @@ O `docker-compose.yml` local permanece apenas como contingência/rollback e não
 - Rotas antigas conhecidas redirecionam com status `308`, preservando a query.
 - Arquivos estáticos são montados sob os mesmos blocos, mas não constituem URLs
   canônicas de navegação.
+- Em produção, `X-Forwarded-Prefix` orienta o middleware a acrescentar `/sicard`
+  aos caminhos absolutos de HTML e JavaScript. O gerador de superfícies e sua
+  integração com julgamentos usam esse mecanismo também para APIs e downloads;
+  não se deve calcular e concatenar outro prefixo com base em `location.pathname`.
 
 Rotas públicas principais:
 

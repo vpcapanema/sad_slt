@@ -1,4 +1,7 @@
-"""Prefixo /sicard nos arquivos de configuração servidos em /config/."""
+"""Rotas de recursos e APIs servidas com e sem prefixo de sub-rota."""
+import json
+import subprocess
+
 from fastapi.testclient import TestClient
 from fastapi import FastAPI
 from fastapi.responses import Response
@@ -8,6 +11,41 @@ from api.middleware.subpath_rewrite import SubpathRewriteMiddleware
 from api.server import app
 
 PREFIXO = {"X-Forwarded-Prefix": "/sicard"}
+
+
+@pytest.mark.parametrize("prefix", ["", "/sicard", "/plataforma/sicard"])
+def test_superficie_carrega_apis_no_prefixo_publicado(prefix):
+    response = TestClient(app).get(
+        "/assets/js/paginas/superficie-criterios.js",
+        headers={"X-Forwarded-Prefix": prefix},
+    )
+    assert response.status_code == 200
+    source = response.text
+    setup = source[:source.index("let catalog")]
+    init = source[source.index("async function init()"):source.rindex('operation("Carregando')]
+    harness = """
+const assert = require('node:assert/strict');
+const document = {getElementById: () => ({innerHTML: ''})};
+const location = {pathname: PREFIX + '/restrict/geoespacial/gerador-superficies-favorabilidade/', search: ''};
+let hierarchies, calls = [];
+async function api(url) { calls.push(url); return []; }
+async function loadCatalog() { await api(`${endpoint}/catalogo?territorialidade=municipios`); }
+async function listSaved() {}
+function escape(value) { return value; }
+"""
+    checks = """
+init().then(() => {
+  assert.deepEqual(calls, [
+    PREFIX + '/api/ahp/hierarquizacoes/portfolio',
+    PREFIX + '/api/ahp/superficies-criterios/catalogo?territorialidade=municipios',
+  ]);
+}).catch(error => { console.error(error); process.exitCode = 1; });
+"""
+    result = subprocess.run(
+        ["node", "-"], input="const PREFIX = " + json.dumps(prefix) + ";\n" + harness + setup + init + checks,
+        text=True, capture_output=True, check=False, timeout=15,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
 
 
 def test_catalogo_recebe_o_prefixo_da_sub_rota():

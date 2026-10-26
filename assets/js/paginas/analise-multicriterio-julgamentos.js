@@ -85,8 +85,7 @@
       returnLink.className = "btn btn-secondary";
       $("ami-hierarchy-summary").after(returnLink);
     }
-    var surfacePrefix = location.pathname.split("/restrict/")[0];
-    returnLink.href = surfacePrefix + "/restrict/geoespacial/gerador-superficies-favorabilidade/?superficie_id=" + encodeURIComponent(surfaceContext.id);
+    returnLink.href = "/restrict/geoespacial/gerador-superficies-favorabilidade/?superficie_id=" + encodeURIComponent(surfaceContext.id);
     returnLink.textContent = "Retomar superfície de critérios";
     matrixSummary("Matriz fixa da superfície: " + surfaceContext.criterios.length + " critérios. O servidor utilizará o snapshot salvo.");
   }
