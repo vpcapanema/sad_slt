@@ -46,7 +46,15 @@ def test_glossario_publico_renderiza_termos_e_links_validos(prefixo):
     parser = GlossarioParser()
     parser.feed(response.text)
     assert parser.termos
-    assert {"criterio", "premissa", "premissa-avaliacao", "fundamento", "variavel", "relacao", "fenomeno-avaliado", "dimensao-criterios"} <= set(parser.termos)
+    assert {"criterio", "indicador-demanda", "premissa", "premissa-avaliacao", "fundamento", "variavel", "relacao", "fenomeno-avaliado", "dimensao-criterios"} <= set(parser.termos)
+    multicriterio = response.text.split('<section class="secao-termos glossario-grupo" id="multicriterio"', 1)[1].split("</section>", 1)[0]
+    assert multicriterio.index('id="criterio"') < multicriterio.index('id="indicador-demanda"') < multicriterio.index('id="premissa"')
+    indicador = multicriterio.split('id="indicador-demanda"', 1)[1].split("</div>", 1)[0]
+    assert "Indicador de demanda" in indicador
+    assert "acompanhar a execução e os resultados de uma demanda, equivalente aos indicadores de monitoramento de projetos" in indicador
+    assert "Distingue-se do critério, que é uma propriedade de avaliação utilizada para comparar e priorizar alternativas na análise multicritério" in indicador
+    assert "Um indicador pode subsidiar um critério quando esse uso estiver explicitamente definido pela metodologia" in indicador
+    assert "indicador de demanda e critério não são sinônimos automáticos" in indicador
     assert len(parser.ids) == len(set(parser.ids))
     for link in parser.links:
         if link.startswith("#"):

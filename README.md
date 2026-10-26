@@ -395,7 +395,7 @@ baixa renda já calculado permanece municipal. Dados divulgados em 2025/2026
 mantêm a referência censitária de 2022 e as janelas específicas da descrição.
 
 A carga completa é reproduzível por
-`scripts/completar_setores_2022.py --insumos DIR --aplicar`. Sem `--aplicar`,
+`scripts/completar_setores_2022.py --insumos DIR --aplicar --relatorio INVENTARIO.json`. Sem `--aplicar`,
 valida todos os arquivos e linhas de SP sem escrita. A aplicação usa transação
 por arquivo, verifica os valores e sinais persistidos contra o CSV e recalcula
 os dez combinados ao final. Os IDs anteriores e a geometria são preservados.
@@ -403,6 +403,17 @@ Os dicionários e arquivos usados são identificados por URL e SHA-256.
 Em caso de interrupção, `--retomar` reutiliza somente os arquivos cuja
 transação foi confirmada com o mesmo SHA-256 e o mesmo conjunto de campos;
 a transação interrompida não é considerada concluída.
+Uma trava consultiva de sessão impede cargas concorrentes durante toda a
+execução, inclusive entre as transações; a conexão que mantém a trava é a
+mesma que aplica cada arquivo. A tentativa concorrente falha antes de escrever.
+
+A certificação somente é emitida após comparar os campos exatos, hashes,
+coberturas e metadados dos 18 conjuntos com o inventário da carga completa:
+`scripts/preparar_catalogo_territorial.py --conferir --inventario INVENTARIO.json --relatorio config/catalogo-territorial-incorporado.json`.
+O relatório certificado incorpora esse inventário, permitindo usá-lo depois
+como entrada de `--inventario`, sem depender de diretório local de trabalho.
+Relatórios anteriores ou parciais não certificam completude; a página não os
+apresenta como carga integral nem interpreta metadados de sigilo ausentes como zero.
 
 Os dados públicos de referência estão versionados, sem dependência de pasta de sessão:
 

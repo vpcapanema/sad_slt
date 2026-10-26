@@ -16,6 +16,15 @@
 {% set originais = atributos | selectattr('origem', 'equalto', 'originais') | list %}
 {% set combinados = atributos | selectattr('origem', 'equalto', 'combinados') | list %}
 {% set conjuntos = catalogo.get('conjuntos_setoriais', []) %}
+{% set completo = catalogo.get('completude', {}).get('completa', false) and originais | length == 3519 and combinados | length == 10 and conjuntos | length == 18 %}
+{% set sigilos = namespace(informados=conjuntos | length > 0, total=0) %}
+{% for item in conjuntos %}
+  {% if item.get('sigilos_x') is none %}
+    {% set sigilos.informados = false %}
+  {% else %}
+    {% set sigilos.total = sigilos.total + item.sigilos_x %}
+  {% endif %}
+{% endfor %}
 <main class="conteudo-principal app-main doc-territorial">
   <nav aria-label="Localização"><a href="/restrict/geoespacial/">Geoprocessamento</a> / Documentação das camadas territoriais</nav>
   <section class="secao-apresentacao card card-apresentacao standard-page-hero">
@@ -44,6 +53,7 @@
       <section id="introducao" class="card doc-territorial-apresentacao" aria-labelledby="introducao-titulo">
         <h2 id="introducao-titulo">Introdução</h2>
         <p>Esta página documenta os valores originais e combinados do gerador territorial SICARD em dois registros distintos: o <strong>catálogo incorporado e conferido após a carga</strong>, com {{ atributos | length }} atributos setoriais, e a <strong>prévia histórica de viabilidade</strong>, com 46 indicadores. Os relatórios versionados não são consultas em tempo real ao banco; a matriz preliminar não representa o estado atual da carga.</p>
+        {% if not completo %}<p role="status"><strong>A completude da carga setorial não está certificada neste relatório.</strong> O retrato é parcial ou anterior à certificação de completude. Consulte o catálogo API para verificar o estado operacional; as informações abaixo não comprovam a incorporação integral dos 18 conjuntos.</p>{% endif %}
         <p><strong>Calculável não significa homologado.</strong> A existência de campos, fórmula e cobertura permite examinar um cálculo; não aprova seu uso como critério, peso AHP, índice social ou superfície de favorabilidade. Nenhuma nova combinação é homologada por esta publicação.</p>
         <p><a href="/restrict/geoespacial/gerador-camadas-territoriais/">Abrir o gerador territorial</a></p>
       </section>
@@ -62,17 +72,17 @@
     <h2>2. Cobertura territorial e temporal</h2>
     <p>O universo municipal existente compreende <strong>645 municípios de São Paulo</strong>. Os períodos variam por indicador: a referência 2022 não se aplica automaticamente a todas as linhas; índices históricos, VAB e séries de emprego conservam os anos indicados na matriz.</p>
     <p>A camada oficial de setores censitários de 2022 contém <strong>103.319 códigos CD_SETOR e 103.620 partes geométricas</strong>, com <strong>8 geometrias oficiais inválidas</strong>. Partes não são setores adicionais. Para indicadores por setor lógico, somam-se as áreas das partes e contam-se as medidas demográficas uma única vez por CD_SETOR. A calculabilidade numérica não certifica a validade geométrica; operações espaciais exigem validação e registro de eventual reparo, sem correção silenciosa da fonte.</p>
-    <p><strong>Nenhum dado municipal é replicado em setor censitário.</strong> A carga aditiva de agregados oficiais de universo do IBGE foi aplicada em <code>base_territorial.setor</code> e auditada. Abrange todos os campos dos dicionários dos agregados gerais, rendimento do responsável e entorno, além dos oito campos numéricos de registro de nascimento. Inclui os nove básicos <code>v0001–v0009</code>, demografia, alfabetização, domicílios Partes 1, 2 e 3, cor ou raça, parentesco, óbitos, pessoas e domicílios indígenas e quilombolas. O entorno mantém separados os universos de domicílios, moradores e faces de via. Não se trata de importar amostra municipal para setores.</p>
-    <p>A cobertura varia conforme o conjunto. Ausência de linha e sigilo não são zero: símbolos publicados, inclusive <code>X</code>, permanecem registrados separadamente, e o valor numérico fica nulo. Foram preservadas <strong>{{ conjuntos | sum(attribute='sigilos_x') }} células com sigilo X</strong> nos conjuntos desta carga. A cobertura individual pode ser menor que a presença de uma linha no CSV; a contagem de setores abaixo não equivale à quantidade de valores numéricos de todos os campos.</p>
+    <p><strong>Nenhum dado municipal é replicado em setor censitário.</strong> {% if completo %}A carga aditiva de agregados oficiais de universo do IBGE foi aplicada em <code>base_territorial.setor</code> e auditada. Abrange todos os campos dos dicionários dos agregados gerais, rendimento do responsável e entorno, além dos oito campos numéricos de registro de nascimento. Inclui os nove básicos <code>v0001–v0009</code>, demografia, alfabetização, domicílios Partes 1, 2 e 3, cor ou raça, parentesco, óbitos, pessoas e domicílios indígenas e quilombolas. O entorno mantém separados os universos de domicílios, moradores e faces de via.{% else %}Os atributos e conjuntos abaixo correspondem somente ao retrato registrado, sem comprovação de completude dos dicionários oficiais.{% endif %} Não se trata de importar amostra municipal para setores.</p>
+    <p>A cobertura varia conforme o conjunto. Ausência de linha e sigilo não são zero: símbolos publicados, inclusive <code>X</code>, permanecem registrados separadamente, e o valor numérico fica nulo. {% if sigilos.informados %}Foram preservadas <strong>{{ sigilos.total }} células com sigilo X</strong> nos conjuntos listados neste relatório.{% else %}<strong>Contagem de células com sigilo X não informada integralmente neste relatório.</strong>{% endif %} A cobertura individual pode ser menor que a presença de uma linha no CSV; a contagem de setores abaixo não equivale à quantidade de valores numéricos de todos os campos.</p>
     <div class="doc-territorial-table" role="region" aria-label="Cobertura por conjunto oficial" tabindex="0">
-      <table><caption>Arquivos oficiais de 2022 integralmente incorporados no escopo desta carga</caption>
+      <table><caption>Arquivos oficiais de 2022 registrados neste relatório</caption>
         <thead><tr><th scope="col">Conjunto</th><th scope="col">Campos</th><th scope="col">Setores com linha</th><th scope="col">Células com sigilo X</th></tr></thead>
-        <tbody>{% for item in conjuntos %}<tr><th scope="row"><a href="{{ item.url }}">{{ item.conjunto }}</a></th><td>{{ item.campos }}</td><td>{{ item.setores }} / 103319</td><td>{{ item.sigilos_x }}</td></tr>{% endfor %}</tbody>
+        <tbody>{% for item in conjuntos %}<tr><th scope="row"><a href="{{ item.url }}">{{ item.conjunto }}</a></th><td>{{ item.campos }}</td><td>{{ item.setores }} / 103319</td><td>{{ item.sigilos_x if item.get('sigilos_x') is not none else 'não informado' }}</td></tr>{% endfor %}</tbody>
       </table>
     </div>
     <p><a href="/api/geoespacial/extracao-atributos/municipal/catalog?territorialidade=setores_2022">Consultar o catálogo API dos setores de 2022</a> (sessão necessária). A resposta permite conferir o estado operacional posterior ao relatório. O prefixo é <code>/api/geoespacial/extracao-atributos/municipal</code>. A carga aplicada não homologa automaticamente combinações.</p>
-    <p>Temas consultáveis nas duas escalas não significam mesmos IDs, campos, universos ou períodos. Os atributos setoriais conservam a referência censitária de 2022, mesmo quando publicados ou revisados em 2025 ou 2026; janelas específicas, como a investigação de óbitos entre janeiro de 2019 e julho de 2022, permanecem na descrição oficial. Rendimento nominal médio e mediano do responsável, suas variâncias e contagens estão incorporados: não equivalem à renda domiciliar per capita nem a uma medida de pobreza. O cálculo de baixa renda abaixo continua exclusivamente municipal.</p>
-    <p>As densidades setoriais têm área positiva nos 103.319 códigos, mas áreas muito pequenas produzem extremos que exigem auditoria. O complemento de ocupação inclui domicílios vagos <em>e de uso ocasional</em>, não somente vacância. A cobertura dos dez combinados recalculados após a ampliação está registrada individualmente no catálogo.</p>
+    <p>Temas consultáveis nas duas escalas não significam mesmos IDs, campos, universos ou períodos. Os atributos setoriais conservam a referência censitária de 2022, mesmo quando publicados ou revisados em 2025 ou 2026; janelas específicas, como a investigação de óbitos entre janeiro de 2019 e julho de 2022, permanecem na descrição oficial. Rendimento nominal médio e mediano do responsável, suas variâncias e contagens não equivalem à renda domiciliar per capita nem a uma medida de pobreza. O cálculo de baixa renda abaixo continua exclusivamente municipal.</p>
+    <p>As densidades setoriais têm área positiva nos 103.319 códigos, mas áreas muito pequenas produzem extremos que exigem auditoria. O complemento de ocupação inclui domicílios vagos <em>e de uso ocasional</em>, não somente vacância. A cobertura dos combinados consta individualmente no catálogo registrado.</p>
     <h3>Conferências da auditoria</h3>
     <ul>
       <li>Faixas etárias disjuntas fecham a população total; força de trabalho versus ocupados e desocupados apresenta resíduo máximo de 1 pessoa.</li>
@@ -91,7 +101,7 @@
     <h2>4. Catálogo efetivamente incorporado — {{ catalogo.get('atributos_setoriais', []) | length }} atributos setoriais</h2>
     <p>Conferido em {{ catalogo.get('conferido_em', 'não informado') }}. {{ catalogo.get('situacao', '') }}</p>
     <p>São <strong>{{ originais | length }} originais e {{ combinados | length }} combinados setoriais</strong>. No catálogo municipal foram persistidos <strong>18 combinados, todos com 645/645 valores</strong>; o total municipal é de <strong>6.393 atributos (6.375 originais)</strong>. Persistência e cobertura conferidas não significam homologação para hierarquização.</p>
-    <p><a href="/config/catalogo-territorial-incorporado.json">Baixar relatório completo da carga conferida (JSON)</a>. Cada linha abaixo conserva ID, campo, descrição oficial, período, fonte, fórmula quando derivada e cobertura numérica, sem preencher lacunas.</p>
+    <p><a href="/config/catalogo-territorial-incorporado.json">Baixar relatório da carga registrada (JSON)</a>. Cada linha abaixo conserva ID, campo, descrição oficial, período, fonte, fórmula quando derivada e cobertura numérica, sem preencher lacunas.</p>
     <div class="doc-territorial-table" role="region" aria-label="Catálogo setorial incorporado" tabindex="0">
       <table class="doc-territorial-catalogo">
         <caption>{{ atributos | length }} atributos setoriais — cobertura sobre 103.319 códigos</caption>
@@ -111,7 +121,7 @@
     <h3>Combinados municipais materializados</h3>
     <ul>{% for item in catalogo.get('combinados_municipais', []) %}<li><code>{{ item.campo }}</code>: {{ item.cobertura }} valores; {{ item.conferida }} conferidos, sobre 645 municípios.</li>{% endfor %}</ul>
     <h3>Proveniência e reprodução</h3>
-    <p>Os hashes SHA-256 identificam os arquivos oficiais efetivamente usados. A conferência reproduzível, sem nova importação, é <code>{{ catalogo.get('reproducao', '') }}</code>, após a preparação e aplicação de <code>database/143_catalogo_territorial.sql</code>. A carga inicial foi realizada pelo script <code>scripts/preparar_catalogo_territorial.py --insumos DIR --aplicar</code>, e a ampliação integral dos 18 conjuntos, por <code>scripts/completar_setores_2022.py --insumos DIR --aplicar</code>. Cada arquivo é aplicado em transação independente, com comparação de todos os valores e sinais persistidos contra o CSV; os combinados são recalculados ao final. Esta página apenas lê o relatório versionado.</p>
+    <p>Os hashes SHA-256 identificam os arquivos oficiais efetivamente usados. A conferência reproduzível, sem nova importação, é <code>{{ catalogo.get('reproducao', '') }}</code>, após a preparação e aplicação de <code>database/143_catalogo_territorial.sql</code>. O script <code>scripts/preparar_catalogo_territorial.py --insumos DIR --aplicar</code> atende à carga inicial; a ampliação dos 18 conjuntos utiliza <code>scripts/completar_setores_2022.py --insumos DIR --aplicar --relatorio INVENTARIO.json</code>. A certificação de completude exige esse inventário. Cada arquivo é aplicado em transação independente, com comparação de todos os valores e sinais persistidos contra o CSV; os combinados são recalculados ao final. Esta página apenas lê o relatório versionado.</p>
     <ul>{% for item in catalogo.get('procedencia', []) %}<li><a href="{{ item.url }}" rel="noopener noreferrer">{{ item.url }}</a><br>SHA-256: <code>{{ item.sha256 }}</code>; {{ item.bytes }} bytes; importado em {{ item.importado_em }}.</li>{% endfor %}</ul>
   </section>
   <section id="matriz" class="secao-matriz card card-matriz">

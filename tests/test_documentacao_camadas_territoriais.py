@@ -187,3 +187,34 @@ def test_incorporated_catalog_is_distinct_and_fully_rendered(client):
         "domicilio3", "pessoas_indigenas", "pessoas_quilombolas",
     }
     assert all(item["sigilos_x"] >= 0 for item in sources)
+    assert catalog["completude"]["completa"] is True
+    assert "completude da carga setorial não está certificada" not in response.text
+
+
+@pytest.mark.parametrize("metadata", ["ausente", "nulo", "zero"])
+def test_relatorio_parcial_nao_afirma_carga_integral_nem_inventa_sigilo(client, monkeypatch, metadata):
+    original = json.load
+
+    def partial(source, *args, **kwargs):
+        report = original(source, *args, **kwargs)
+        if "atributos_setoriais" in report:
+            report["atributos_setoriais"] = report["atributos_setoriais"][:204]
+            report.pop("completude", None)
+            report["conjuntos_setoriais"] = [{
+                "conjunto": "basico", "url": "https://ftp.ibge.gov.br/",
+                "campos": 9, "setores": 103319,
+            }]
+            if metadata != "ausente":
+                report["conjuntos_setoriais"][0]["sigilos_x"] = None if metadata == "nulo" else 0
+        return report
+
+    monkeypatch.setattr("api.server.json.load", partial)
+    response = client.get(PAGE)
+    assert response.status_code == 200
+    assert "completude da carga setorial não está certificada" in response.text
+    assert "Abrange todos os campos dos dicionários" not in response.text
+    if metadata == "zero":
+        assert "0 células com sigilo X" in response.text
+    else:
+        assert "Contagem de células com sigilo X não informada" in response.text
+        assert "0 células com sigilo X" not in response.text

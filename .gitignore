@@ -15,6 +15,7 @@ node_modules/
 .pytest_cache/
 .coverage
 data/geoespacial/local/vegetacao_sp/InventarioFlorestal2020.zip
+data/geoespacial/local/favorabilidade_grade/censo_tabelas/
 
 # Rascunhos e artefatos gerados (não versionar)
 tmp/

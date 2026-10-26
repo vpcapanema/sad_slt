@@ -26,34 +26,11 @@ from psycopg.types.json import Jsonb
 import requests
 
 from api.config import get_settings
+from scripts.fontes_setoriais_2022 import BASE, DICIONARIO, ENTORNO, FONTES, RENDA, url_fonte
 from scripts.preparar_catalogo_territorial import (
-    BASE, DICIONARIO, identificador, materializar_setores, numero, registrar_fonte,
+    identificador, materializar_setores, numero, registrar_fonte,
 )
 
-CENSO = 'https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/'
-RENDA = CENSO + 'Agregados_por_Setores_Censitarios_Rendimento_do_Responsavel/'
-ENTORNO = CENSO + 'Agregados_por_Setores_Censitarios_Caracteristicas_urbanisticas_do_entorno_dos_domicilios/'
-NASCIMENTO = CENSO + 'Agregados_por_Setores_Censitarios_Registro_de_Nascimento/'
-FONTES = [
-    ('basico', 'Agregados_por_setores_basico_BR_20260520.zip', '03_domicilios'),
-    ('demografia', 'Agregados_por_setores_demografia_BR.zip', '01_populacao'),
-    ('alfabetizacao', 'Agregados_por_setores_alfabetizacao_BR.zip', '05_educacao'),
-    ('domicilio1', 'Agregados_por_setores_caracteristicas_domicilio1_BR_20261021.zip', '03_domicilios'),
-    ('domicilio2', 'Agregados_por_setores_caracteristicas_domicilio2_BR_20250417.zip', '04_saneamento'),
-    ('domicilio3', 'Agregados_por_setores_caracteristicas_domicilio3_BR_20250417.zip', '03_domicilios'),
-    ('cor_raca', 'Agregados_por_setores_cor_ou_raca_BR.zip', '02_cor_raca'),
-    ('obitos', 'Agregados_por_setores_obitos_BR.zip', '18_registro_obitos'),
-    ('parentesco', 'Agregados_por_setores_parentesco_BR.zip', '14_familias_fecundidade'),
-    ('domicilios_indigenas', 'Agregados_por_setores_domicilios_indigenas_BR.zip', '10_indigenas'),
-    ('pessoas_indigenas', 'Agregados_por_setores_pessoas_indigenas_BR.zip', '10_indigenas'),
-    ('domicilios_quilombolas', 'Agregados_por_setores_domicilios_quilombolas_BR.zip', '11_quilombolas'),
-    ('pessoas_quilombolas', 'Agregados_por_setores_pessoas_quilombolas_BR.zip', '11_quilombolas'),
-    ('renda', 'Agregados_por_setores_renda_responsavel_BR_20260508_csv.zip', '06_renda'),
-    ('entorno_domicilios', 'Agregados_por_setores_entorno_domicílios_BR.zip', '09_entorno_urbano'),
-    ('entorno_faces', 'Agregados_por_setores_entorno_faces_BR.zip', '09_entorno_urbano'),
-    ('entorno_moradores', 'Agregados_por_setores_entorno_moradores_BR.zip', '09_entorno_urbano'),
-    ('registro_nascimento', 'Registro_de_nascimento_por_setor.csv', 'registro_nascimento'),
-]
 COLUNAS_NASCIMENTO = {
     'Domicílios Particulares Permanentes Ocupados': ('registro_nascimento_dppo', 'Domicilios'),
     'Total de pessoas': ('registro_nascimento_populacao', 'Pessoas'),
@@ -64,16 +41,6 @@ COLUNAS_NASCIMENTO = {
     'Não sabe': ('registro_nascimento_nao_sabe', 'Pessoas'),
     'Ignorado': ('registro_nascimento_ignorado', 'Pessoas'),
 }
-
-
-def url_fonte(name, file):
-    if name == 'renda':
-        return RENDA + file
-    if name.startswith('entorno_'):
-        return ENTORNO + 'Agregados_por_Setor_csv/' + file
-    if name == 'registro_nascimento':
-        return NASCIMENTO + file
-    return BASE + 'Agregados_por_Setor_csv/' + file
 
 
 def baixar(folder, file, url):
@@ -285,6 +252,21 @@ def assinatura_malha(conn):
         FROM base_territorial.setor''').fetchone())
 
 
+@contextmanager
+def conexao_exclusiva(aplicar):
+    with psycopg.connect(get_settings().slt_database_url, connect_timeout=7,
+                         row_factory=dict_row, autocommit=True) as conn:
+        if aplicar:
+            acquired = conn.execute(
+                "SELECT pg_try_advisory_lock(hashtext('sicard-catalogo-territorial')) AS adquirido"
+            ).fetchone()['adquirido']
+            if not acquired:
+                raise RuntimeError('Outra carga territorial esta em andamento; nenhuma escrita iniciada.')
+        else:
+            conn.execute('SET default_transaction_read_only = on')
+        yield conn
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--insumos', type=Path, required=True)
@@ -293,9 +275,14 @@ def main():
     parser.add_argument('--retomar', action='store_true',
                         help='Reutiliza somente conjuntos ja confirmados com o mesmo SHA-256 e campos.')
     args = parser.parse_args()
+    with conexao_exclusiva(args.aplicar) as conn:
+        executar(args, conn)
+
+
+def executar(args, conn):
     args.insumos.mkdir(parents=True, exist_ok=True)
     descriptions, dictionaries = preparar_dicionarios(args.insumos)
-    with psycopg.connect(get_settings().slt_database_url, connect_timeout=7, row_factory=dict_row) as conn:
+    with conn.transaction():
         codes = {row['cd_setor'] for row in conn.execute('SELECT cd_setor FROM base_territorial.setor')}
         geometry = assinatura_malha(conn)
         previous_ids = {row['id'] for row in conn.execute('SELECT id FROM base_territorial.atributo_setorial')}
@@ -318,7 +305,7 @@ def main():
         raise ValueError(f'Campos do dicionario nao encontrados nas fontes: {sorted(missing)}.')
     for name, path, theme, url in prepared:
         if args.aplicar:
-            with psycopg.connect(get_settings().slt_database_url, connect_timeout=7, row_factory=dict_row) as conn:
+            with conn.transaction():
                 if args.retomar:
                     with path.open('rb') as stream:
                         digest = hashlib.file_digest(stream, 'sha256').hexdigest()
@@ -345,7 +332,7 @@ def main():
                 count = sum(1 for _ in linhas_sp(reader, code_key, fields, codes))
             print(f'{name}: {len(fields)} campos, {count} setores validados; sem escrita.', flush=True)
     if args.aplicar:
-        with psycopg.connect(get_settings().slt_database_url, connect_timeout=7, row_factory=dict_row) as conn:
+        with conn.transaction():
             conn.execute("SET LOCAL statement_timeout='600s'")
             conn.execute("SELECT pg_advisory_xact_lock(hashtext('sicard-catalogo-territorial'))")
             materializar_setores(conn)

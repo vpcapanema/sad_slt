@@ -2,7 +2,7 @@
 
 Uso: python scripts/preparar_catalogo_territorial.py --insumos DIRETORIO [--aplicar]
 Sem --aplicar valida o dicionario, sem escrita no banco.
-Auditoria: python scripts/preparar_catalogo_territorial.py --conferir --relatorio ARQUIVO
+Auditoria: python scripts/preparar_catalogo_territorial.py --conferir --inventario INVENTARIO --relatorio ARQUIVO
 Aplicar antes database/143_catalogo_territorial.sql.
 """
 from __future__ import annotations
@@ -31,9 +31,8 @@ import requests
 
 from api.config import get_settings
 from api.services.variaveis_combinadas import calcular
+from scripts.fontes_setoriais_2022 import BASE, DICIONARIO, FONTES as FONTES_COMPLETAS, url_fonte
 
-BASE = 'https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios/'
-DICIONARIO = 'dicionario_de_dados_agregados_por_setores_censitarios_20260520.xlsx'
 LAYER = '0a66703c-59b1-4b6a-9377-00ba020d1963'
 FONTES = {
     'demografia': ('Agregados_por_setores_demografia_BR.zip', list(range(1006, 1042)), '01_populacao'),
@@ -297,7 +296,45 @@ def materializar_setores(conn):
         salvar_atributo(conn, code, label, theme, unit, BASE, 'combinados', detail)
 
 
-def conferir(conn):
+def validar_inventario(attributes, inventory):
+    if (inventory.get('referencia') != 2022 or inventory.get('malha_preservada') is not True
+            or inventory.get('campos_originais') != 3519):
+        raise ValueError('Inventario completo de 2022 e preservacao da malha nao comprovados.')
+    sources = inventory.get('conjuntos', [])
+    expected = {name: url_fonte(name, file) for name, file, _ in FONTES_COMPLETAS}
+    if len(sources) != len(expected) or {item['conjunto'] for item in sources} != set(expected):
+        raise ValueError('Inventario deve conter exatamente os 18 conjuntos oficiais.')
+    originals = [item for item in attributes if item['origem'] == 'originais']
+    combined = [item for item in attributes if item['origem'] == 'combinados']
+    if (len(originals) != 3519 or len(combined) != 10 or len(attributes) != 3529
+            or len({item['chave'] for item in originals}) != 3519):
+        raise ValueError('Catalogo setorial incompleto ou com chaves repetidas.')
+    if {item['detalhe'].get('conjunto') for item in originals} != set(expected):
+        raise ValueError('Conjuntos persistidos divergem do escopo oficial.')
+    for source in sources:
+        name = source['conjunto']
+        entries = [item for item in originals if item['detalhe'].get('conjunto') == name]
+        coverage = source['coberturas']
+        if (source['campos'] != len(coverage) or len(entries) != len(coverage)
+                or {item['chave'] for item in entries} != set(coverage)):
+            raise ValueError(f'Campos persistidos divergem do inventario: {name}.')
+        if (source['url'] != expected[name] or len(source['sha256']) != 64
+                or any(char not in '0123456789abcdef' for char in source['sha256'])
+                or not isinstance(source.get('setores'), int) or not 0 < source['setores'] <= 103319
+                or not isinstance(source.get('sigilos_x'), int) or source['sigilos_x'] < 0):
+            raise ValueError(f'Procedencia ou metadados incompletos no inventario: {name}.')
+        for item in entries:
+            detail = item['detalhe']
+            if (item['cobertura'] != coverage[item['chave']] or item['url'] != source['url']
+                    or detail.get('sha256') != source['sha256']
+                    or detail.get('registros_fonte_sp') != source['setores']
+                    or detail.get('sigilos_x_conjunto') != source['sigilos_x']):
+                raise ValueError(f'Atributo diverge do inventario: {item["campo"]}.')
+    return {'completa': True, 'conjuntos': len(sources), 'originais': len(originals),
+            'combinados': len(combined)}
+
+
+def conferir(conn, inventory):
     from api.services import base_municipal, base_setorial
 
     sectors = dict(conn.execute('''SELECT count(*) AS setores,sum(partes) AS partes,
@@ -306,6 +343,12 @@ def conferir(conn):
     if sectors['setores'] != 103319 or sectors['partes'] != 103620:
         raise ValueError('Contagem setorial diverge da malha oficial conferida.')
     attributes = [dict(row) for row in conn.execute('SELECT * FROM base_territorial.atributo_setorial ORDER BY origem,tema,campo')]
+    completeness = validar_inventario(attributes, inventory)
+    signature = dict(conn.execute('''SELECT count(*) AS setores,sum(partes) AS partes,
+        md5(string_agg(md5(ST_AsEWKB(geom)::text),'' ORDER BY cd_setor)) AS geometria_md5_controle
+        FROM base_territorial.setor''').fetchone())
+    if signature != inventory.get('assinatura_malha'):
+        raise ValueError('Assinatura da malha diverge do inventario da carga.')
     counts = {}
     codes = [row['cd_setor'] for row in conn.execute(
         'SELECT cd_setor FROM base_territorial.setor ORDER BY cd_setor')]
@@ -353,11 +396,13 @@ def conferir(conn):
     return {
         'conferido_em': datetime.now(timezone.utc).isoformat(),
         'situacao': 'Carga aplicada e cobertura conferida; nao implica homologacao para hierarquizacao.',
+        'completude': completeness,
         'geometria': sectors, 'atributos_setoriais': attributes,
         'conjuntos_setoriais': sources,
         'combinados_municipais': municipal, 'procedencia': provenance,
         'baixa_renda': '645 percentuais persistidos conferidos contra as contagens oficiais, sem somar percentuais arredondados.',
-        'reproducao': 'scripts/preparar_catalogo_territorial.py --conferir --relatorio config/catalogo-territorial-incorporado.json',
+        'inventario_carga': inventory,
+        'reproducao': 'scripts/preparar_catalogo_territorial.py --conferir --inventario config/catalogo-territorial-incorporado.json --relatorio config/catalogo-territorial-incorporado.json',
         'politica_nulos': 'Simbolos X mantidos em sinais; nao preencher lacunas nem distribuir observacoes municipais pelos setores.',
     }
 
@@ -367,15 +412,21 @@ def main():
     parser.add_argument('--insumos', type=Path)
     parser.add_argument('--aplicar', action='store_true')
     parser.add_argument('--conferir', action='store_true')
+    parser.add_argument('--inventario', type=Path,
+                        help='Inventario da carga completa ou relatorio certificado que o incorpora.')
     parser.add_argument('--relatorio', type=Path)
     args = parser.parse_args()
     if args.conferir:
         if args.aplicar:
             parser.error('--conferir nao pode ser combinado com --aplicar.')
+        if args.inventario is None:
+            parser.error('--conferir exige --inventario para comprovar o escopo completo.')
+        inventory = json.loads(args.inventario.read_text(encoding='utf-8'))
+        inventory = inventory.get('inventario_carga', inventory)
         with psycopg.connect(get_settings().slt_database_url, connect_timeout=7, row_factory=dict_row) as conn:
-            conn.execute('SET TRANSACTION READ ONLY')
+            conn.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
             conn.execute("SET LOCAL statement_timeout='600s'")
-            report = conferir(conn)
+            report = conferir(conn, inventory)
         if args.relatorio:
             args.relatorio.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
         print(f"Conferencia concluida: {len(report['atributos_setoriais'])} atributos setoriais; "
