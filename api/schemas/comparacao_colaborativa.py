@@ -19,6 +19,7 @@ class AmbienteColaborativoCreateSchema(BaseModel):
     config_tipo: str | None = None
     config_id: UUID | None = None
     hierarquizacao_id: UUID | None = None
+    superficie_id: UUID | None = None
     matriz_premissas_criterios: dict[str, Any] | list[dict[str, Any]] | None = None
     arquivo_matriz_base64: str | None = None
     arquivo_matriz_nome: str | None = Field(None, max_length=255)
@@ -52,6 +53,7 @@ class ConsolidacaoColaborativaSchema(BaseModel):
 class AmbienteColaborativoResponseSchema(BaseModel):
     id: str
     hierarquizacao_id: str | None = None
+    superficie_id: str | None = None
     hierarquizacao_codigo: str
     hierarquizacao_nome: str | None = None
     config_tipo: str | None = None

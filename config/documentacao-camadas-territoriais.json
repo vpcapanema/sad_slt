@@ -1,0 +1,1197 @@
+{
+  "data": "2026-10-25T17:14:26",
+  "modo": "Somente leitura; nenhum objeto criado no banco",
+  "escopo": "Matriz de viabilidade; nao constitui homologacao metodologica",
+  "indicadores": [
+    {
+      "codigo": "densidade_oficial",
+      "indicador": "Densidade demografica oficial",
+      "grupo": "Valores originais",
+      "territorialidade": "municipio",
+      "periodo": "2022",
+      "unidade": "Habitante por quilômetro quadrado",
+      "campos_origem": [
+        "populacao_V01000004_2022 [atributo_id=29593f09ddb4c134efd5]"
+      ],
+      "formula": "populacao_V01000004_2022",
+      "universo": "Densidade demográfica",
+      "fontes": [
+        "https://sidra.ibge.gov.br/tabela/4714"
+      ],
+      "observacoes": "Nao recalcular nem classificar como combinado SICARD.",
+      "situacao": "Indicador original identificado; valores numericos verificados",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": 3.51,
+      "maximo": 13416.81
+    },
+    {
+      "codigo": "envelhecimento_oficial",
+      "indicador": "Indice de envelhecimento oficial",
+      "grupo": "Valores originais",
+      "territorialidade": "municipio",
+      "periodo": "2022",
+      "unidade": "Razão",
+      "campos_origem": [
+        "populacao_V01000283_2022 [atributo_id=d6e2eefc869164f6f510]"
+      ],
+      "formula": "populacao_V01000283_2022",
+      "universo": "Índice de envelhecimento",
+      "fontes": [
+        "https://sidra.ibge.gov.br/tabela/9515"
+      ],
+      "observacoes": "Nao recalcular nem classificar como combinado SICARD.",
+      "situacao": "Indicador original identificado; valores numericos verificados",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": 31.82,
+      "maximo": 205.38
+    },
+    {
+      "codigo": "analfabetismo_oficial",
+      "indicador": "Pessoas nao alfabetizadas, 15 anos ou mais (%)",
+      "grupo": "Valores originais",
+      "territorialidade": "municipio",
+      "periodo": "2022",
+      "unidade": "Percentual",
+      "campos_origem": [
+        "educacao_V05000004_2022 [atributo_id=14840d402d002ce78d24]"
+      ],
+      "formula": "educacao_V05000004_2022",
+      "universo": "Pessoas de 15 anos ou mais de idade - percentual do total geral · Alfabetização: Não alfabetizadas | Sexo: Total | Cor ou raça: Total | Idade: Total",
+      "fontes": [
+        "https://sidra.ibge.gov.br/tabela/9542"
+      ],
+      "observacoes": "Nao recalcular nem classificar como combinado SICARD.",
+      "situacao": "Indicador original identificado; valores numericos verificados",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": 1.16,
+      "maximo": 12.23
+    },
+    {
+      "codigo": "renda_quarto_oficial",
+      "indicador": "Moradores com renda domiciliar per capita ate 1/4 SM (%)",
+      "grupo": "Valores originais",
+      "territorialidade": "municipio",
+      "periodo": "2022",
+      "unidade": "Percentual",
+      "campos_origem": [
+        "renda_V06000291_2022 [atributo_id=17d30405f37bb5759c75]"
+      ],
+      "formula": "renda_V06000291_2022",
+      "universo": "Moradores em domicílios particulares permanentes ocupados, exclusive os cuja condição no domicílio era pensionista, empregado(a) doméstico(a) ou parente do(a) empregado(a) doméstico(a) - percentual do total geral · Sexo: Total | Cor ou raça: Total | Classes de rendimento nominal mensal domiciliar per capita: Até 1/4 de salário mínimo",
+      "fontes": [
+        "https://sidra.ibge.gov.br/tabela/10296"
+      ],
+      "observacoes": "Nao recalcular nem classificar como combinado SICARD.",
+      "situacao": "Indicador original identificado; valores numericos verificados",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": 0.48,
+      "maximo": 18.06
+    },
+    {
+      "codigo": "sem_renda_oficial",
+      "indicador": "Moradores sem rendimento domiciliar per capita (%)",
+      "grupo": "Valores originais",
+      "territorialidade": "municipio",
+      "periodo": "2022",
+      "unidade": "Percentual",
+      "campos_origem": [
+        "renda_V06000301_2022 [atributo_id=67b0dd167106ef41cbfc]"
+      ],
+      "formula": "renda_V06000301_2022",
+      "universo": "Moradores em domicílios particulares permanentes ocupados, exclusive os cuja condição no domicílio era pensionista, empregado(a) doméstico(a) ou parente do(a) empregado(a) doméstico(a) - percentual do total geral · Sexo: Total | Cor ou raça: Total | Classes de rendimento nominal mensal domiciliar per capita: Sem rendimento",
+      "fontes": [
+        "https://sidra.ibge.gov.br/tabela/10296"
+      ],
+      "observacoes": "Nao recalcular nem classificar como combinado SICARD.",
+      "situacao": "Indicador original identificado; valores numericos verificados",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": 0.0,
+      "maximo": 12.97
+    },
+    {
+      "codigo": "sem_rede_agua_oficial",
+      "indicador": "Domicilios sem ligacao a rede geral de agua (%)",
+      "grupo": "Valores originais",
+      "territorialidade": "municipio",
+      "periodo": "2022",
+      "unidade": "Percentual",
+      "campos_origem": [
+        "saneamento_V04000011_2022 [atributo_id=675083dcb31ab6916836]"
+      ],
+      "formula": "saneamento_V04000011_2022",
+      "universo": "Domicílios particulares permanentes ocupados - percentual do total geral · Existência de ligação à rede geral de distribuição de água e principal forma de abastecimento de água: Não possui ligação com a rede geral",
+      "fontes": [
+        "https://sidra.ibge.gov.br/tabela/6803"
+      ],
+      "observacoes": "Nao recalcular nem classificar como combinado SICARD.",
+      "situacao": "Indicador original identificado; valores numericos verificados",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": 0.0,
+      "maximo": 74.25
+    },
+    {
+      "codigo": "fossa_rudimentar_oficial",
+      "indicador": "Domicilios com fossa rudimentar ou buraco (%)",
+      "grupo": "Valores originais",
+      "territorialidade": "municipio",
+      "periodo": "2022",
+      "unidade": "Percentual",
+      "campos_origem": [
+        "saneamento_V04000066_2022 [atributo_id=959b4de463135807e073]"
+      ],
+      "formula": "saneamento_V04000066_2022",
+      "universo": "Domicílios particulares permanentes ocupados - percentual do total geral · Tipo de esgotamento sanitário: Fossa rudimentar ou buraco",
+      "fontes": [
+        "https://sidra.ibge.gov.br/tabela/6805"
+      ],
+      "observacoes": "Nao recalcular nem classificar como combinado SICARD.",
+      "situacao": "Indicador original identificado; valores numericos verificados",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": 0.0,
+      "maximo": 55.77
+    },
+    {
+      "codigo": "sem_sanitario_oficial",
+      "indicador": "Domicilios sem banheiro nem sanitario (%)",
+      "grupo": "Valores originais",
+      "territorialidade": "municipio",
+      "periodo": "2022",
+      "unidade": "Percentual",
+      "campos_origem": [
+        "saneamento_V04000070_2022 [atributo_id=0776c38f6a3a0bd1b02f]"
+      ],
+      "formula": "saneamento_V04000070_2022",
+      "universo": "Domicílios particulares permanentes ocupados - percentual do total geral · Tipo de esgotamento sanitário: Não tinham banheiro nem sanitário",
+      "fontes": [
+        "https://sidra.ibge.gov.br/tabela/6805"
+      ],
+      "observacoes": "Nao recalcular nem classificar como combinado SICARD.",
+      "situacao": "Indicador original identificado; valores numericos verificados",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": 0.0,
+      "maximo": 0.82
+    },
+    {
+      "codigo": "coleta_oficial",
+      "indicador": "Domicilios com lixo coletado (%)",
+      "grupo": "Valores originais",
+      "territorialidade": "municipio",
+      "periodo": "2022",
+      "unidade": "Percentual",
+      "campos_origem": [
+        "saneamento_V04000119_2022 [atributo_id=4271dc29abbe9f5704d7]"
+      ],
+      "formula": "saneamento_V04000119_2022",
+      "universo": "Domicílios particulares permanentes ocupados - percentual do total geral · Destino do lixo: Coletado",
+      "fontes": [
+        "https://sidra.ibge.gov.br/tabela/6892"
+      ],
+      "observacoes": "Nao recalcular nem classificar como combinado SICARD.",
+      "situacao": "Indicador original identificado; valores numericos verificados",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": 54.16,
+      "maximo": 100.0
+    },
+    {
+      "codigo": "sem_internet_oficial",
+      "indicador": "Domicilios sem conexao domiciliar a internet (%)",
+      "grupo": "Valores originais",
+      "territorialidade": "municipio",
+      "periodo": "2022",
+      "unidade": "Percentual",
+      "campos_origem": [
+        "habitacao_internet_V08000249_2022 [atributo_id=165a531eb24bc689a031]"
+      ],
+      "formula": "habitacao_internet_V08000249_2022",
+      "universo": "Domicílios particulares permanentes ocupados - percentual do total geral · Existência de conexão domiciliar à Internet: Não | Condição de ocupação do domicílio: Total | Tipo de domicílio: Total",
+      "fontes": [
+        "https://sidra.ibge.gov.br/tabela/9936"
+      ],
+      "observacoes": "Nao recalcular nem classificar como combinado SICARD.",
+      "situacao": "Indicador original identificado; valores numericos verificados",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": 4.48,
+      "maximo": 38.94
+    },
+    {
+      "codigo": "pendular_oficial",
+      "indicador": "Trabalhadores com local de trabalho em outro municipio (%)",
+      "grupo": "Valores originais",
+      "territorialidade": "municipio",
+      "periodo": "2022",
+      "unidade": "Percentual",
+      "campos_origem": [
+        "deslocamentos_V16000065_2022 [atributo_id=99339ba861e91d9ee54f]"
+      ],
+      "formula": "deslocamentos_V16000065_2022",
+      "universo": "Pessoas de 10 anos ou mais de idade, ocupadas na semana de referência, residentes em domicílios particulares, exclusive as cuja condição no domicílio era pensionista, empregado(a) doméstico(a) ou parente do(a) empregado(a) doméstico(a) - percentual do total geral · Local de exercício do trabalho principal: Outro município | Sexo: Total | Classes de rendimento nominal mensal domiciliar per capita: Total | Retornam do trabalho para casa 3 (três) dias ou mais na semana: Total",
+      "fontes": [
+        "https://sidra.ibge.gov.br/tabela/10329"
+      ],
+      "observacoes": "Nao recalcular nem classificar como combinado SICARD.",
+      "situacao": "Indicador original identificado; valores numericos verificados",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": 1.26,
+      "maximo": 58.15
+    },
+    {
+      "codigo": "pib_pc_oficial",
+      "indicador": "PIB per capita oficial 2022",
+      "grupo": "Valores originais",
+      "territorialidade": "municipio",
+      "periodo": "2022",
+      "unidade": "R$",
+      "campos_origem": [
+        "economia_pib_per_capita_reais_2022 [atributo_id=fb94d8bccf2cb5e681d5]"
+      ],
+      "formula": "economia_pib_per_capita_reais_2022",
+      "universo": "PIB per capita / Série revisada",
+      "fontes": [
+        "https://servicodados.ibge.gov.br/api/v1/pesquisas/38/periodos/2022/indicadores/47001/resultados/350010"
+      ],
+      "observacoes": "Nao recalcular nem classificar como combinado SICARD.",
+      "situacao": "Indicador original identificado; valores numericos verificados",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": 12349.27,
+      "maximo": 713159.14
+    },
+    {
+      "codigo": "gini_oficial",
+      "indicador": "Indice de Gini oficial 2010",
+      "grupo": "Valores originais",
+      "territorialidade": "municipio",
+      "periodo": "2010",
+      "unidade": "-",
+      "campos_origem": [
+        "pobreza_desigualdade_gini_2010 [atributo_id=dfef4847bebfd78363fa]"
+      ],
+      "formula": "pobreza_desigualdade_gini_2010",
+      "universo": "Índice de Gini (Atlas DH - Censo)",
+      "fontes": [
+        "https://www.ipeadata.gov.br/api/odata4/Metadados('ADH_GINI')/Valores"
+      ],
+      "observacoes": "Nao recalcular nem classificar como combinado SICARD.",
+      "situacao": "Indicador original identificado; valores numericos verificados",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": 0.33,
+      "maximo": 0.67
+    },
+    {
+      "codigo": "ipdm_oficial",
+      "indicador": "IPDM oficial 2024",
+      "grupo": "Valores originais",
+      "territorialidade": "municipio",
+      "periodo": "2024",
+      "unidade": "Índice (0 a 1)",
+      "campos_origem": [
+        "seade_ipdm_2024 [atributo_id=d40a3ad6bde318778755]"
+      ],
+      "formula": "seade_ipdm_2024",
+      "universo": "IPDM",
+      "fontes": [
+        "https://repositorio.seade.gov.br/dataset/f714bdee-3f8c-464e-9e45-07a0e444937a/resource/5684399c-2175-4749-8914-babd5c9eaaef/download/arq_ipdm_painel_v2024.csv"
+      ],
+      "observacoes": "Nao recalcular nem classificar como combinado SICARD.",
+      "situacao": "Indicador original identificado; valores numericos verificados",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": 0.413,
+      "maximo": 0.729
+    },
+    {
+      "codigo": "idhm_oficial",
+      "indicador": "IDHM oficial 2010",
+      "grupo": "Valores originais",
+      "territorialidade": "municipio",
+      "periodo": "2010",
+      "unidade": "-",
+      "campos_origem": [
+        "idh_idhm_2010 [atributo_id=06e80b2ccc78858d270a]"
+      ],
+      "formula": "idh_idhm_2010",
+      "universo": "IDHM - Índice de Desenvolvimento Humano Municipal (Censo)",
+      "fontes": [
+        "https://www.ipeadata.gov.br/api/odata4/Metadados('ADH_IDHM')/Valores"
+      ],
+      "observacoes": "Nao recalcular nem classificar como combinado SICARD.",
+      "situacao": "Indicador original identificado; valores numericos verificados",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": 0.639,
+      "maximo": 0.862
+    },
+    {
+      "codigo": "idhm_educacao_oficial",
+      "indicador": "IDHM Educacao oficial 2010",
+      "grupo": "Valores originais",
+      "territorialidade": "municipio",
+      "periodo": "2010",
+      "unidade": "-",
+      "campos_origem": [
+        "idh_idhm_e_2010 [atributo_id=8465e42b080e6032bfec]"
+      ],
+      "formula": "idh_idhm_e_2010",
+      "universo": "IDHM - Índice de Desenvolvimento Humano Municipal - educação (Censo)",
+      "fontes": [
+        "https://www.ipeadata.gov.br/api/odata4/Metadados('ADH_IDHM_E')/Valores"
+      ],
+      "observacoes": "Nao recalcular nem classificar como combinado SICARD.",
+      "situacao": "Indicador original identificado; valores numericos verificados",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": 0.52,
+      "maximo": 0.825
+    },
+    {
+      "codigo": "idhm_longevidade_oficial",
+      "indicador": "IDHM Longevidade oficial 2010",
+      "grupo": "Valores originais",
+      "territorialidade": "municipio",
+      "periodo": "2010",
+      "unidade": "-",
+      "campos_origem": [
+        "idh_idhm_l_2010 [atributo_id=8f48737c2909e1f55313]"
+      ],
+      "formula": "idh_idhm_l_2010",
+      "universo": "IDHM - Índice de Desenvolvimento Humano Municipal - longevidade (Censo)",
+      "fontes": [
+        "https://www.ipeadata.gov.br/api/odata4/Metadados('ADH_IDHM_L')/Valores"
+      ],
+      "observacoes": "Nao recalcular nem classificar como combinado SICARD.",
+      "situacao": "Indicador original identificado; valores numericos verificados",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": 0.775,
+      "maximo": 0.89
+    },
+    {
+      "codigo": "idhm_renda_oficial",
+      "indicador": "IDHM Renda oficial 2010",
+      "grupo": "Valores originais",
+      "territorialidade": "municipio",
+      "periodo": "2010",
+      "unidade": "-",
+      "campos_origem": [
+        "idh_idhm_r_2010 [atributo_id=71f7a42f2dd773e38232]"
+      ],
+      "formula": "idh_idhm_r_2010",
+      "universo": "IDHM - Índice de Desenvolvimento Humano Municipal - renda (Censo)",
+      "fontes": [
+        "https://www.ipeadata.gov.br/api/odata4/Metadados('ADH_IDHM_R')/Valores"
+      ],
+      "observacoes": "Nao recalcular nem classificar como combinado SICARD.",
+      "situacao": "Indicador original identificado; valores numericos verificados",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": 0.592,
+      "maximo": 0.891
+    },
+    {
+      "codigo": "participacao_oficial",
+      "indicador": "Participacao na forca de trabalho (%)",
+      "grupo": "Valores originais",
+      "territorialidade": "municipio",
+      "periodo": "2022",
+      "unidade": "Percentual",
+      "campos_origem": [
+        "trabalho_V07000019_2022 [atributo_id=853af245b5e7532535e5]"
+      ],
+      "formula": "trabalho_V07000019_2022",
+      "universo": "Pessoas de 14 anos ou mais de idade - percentual do total geral · Condição em relação à força de trabalho e condição de ocupação: Força de trabalho | Sexo: Total | Grupo de idade: Total",
+      "fontes": [
+        "https://sidra.ibge.gov.br/tabela/6580"
+      ],
+      "observacoes": "Nao recalcular nem classificar como combinado SICARD.",
+      "situacao": "Indicador original identificado; valores numericos verificados",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": 26.14,
+      "maximo": 71.67
+    },
+    {
+      "codigo": "nivel_ocupacao_oficial",
+      "indicador": "Nivel de ocupacao (%)",
+      "grupo": "Valores originais",
+      "territorialidade": "municipio",
+      "periodo": "2022",
+      "unidade": "Percentual",
+      "campos_origem": [
+        "trabalho_V07000020_2022 [atributo_id=3ad316a322aa8596a92f]"
+      ],
+      "formula": "trabalho_V07000020_2022",
+      "universo": "Pessoas de 14 anos ou mais de idade - percentual do total geral · Condição em relação à força de trabalho e condição de ocupação: Força de trabalho - ocupada | Sexo: Total | Grupo de idade: Total",
+      "fontes": [
+        "https://sidra.ibge.gov.br/tabela/6580"
+      ],
+      "observacoes": "Nao recalcular nem classificar como combinado SICARD.",
+      "situacao": "Indicador original identificado; valores numericos verificados",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": 25.33,
+      "maximo": 69.79
+    },
+    {
+      "codigo": "frequencia_0_3_oficial",
+      "indicador": "Frequencia escolar bruta, 0 a 3 anos (%)",
+      "grupo": "Valores originais",
+      "territorialidade": "municipio",
+      "periodo": "2022",
+      "unidade": "%",
+      "campos_origem": [
+        "educacao_V05000244_2022 [atributo_id=483aeb3e1aabccdbd3a2]"
+      ],
+      "formula": "educacao_V05000244_2022",
+      "universo": "Taxa de frequência escolar bruta · Grupo de idade: 0 a 3 anos | Sexo: Total | Cor ou raça: Total",
+      "fontes": [
+        "https://sidra.ibge.gov.br/tabela/10056"
+      ],
+      "observacoes": "Nao recalcular nem classificar como combinado SICARD.",
+      "situacao": "Indicador original identificado; valores numericos verificados",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": 0.0,
+      "maximo": 92.52
+    },
+    {
+      "codigo": "frequencia_4_5_oficial",
+      "indicador": "Frequencia escolar bruta, 4 a 5 anos (%)",
+      "grupo": "Valores originais",
+      "territorialidade": "municipio",
+      "periodo": "2022",
+      "unidade": "%",
+      "campos_origem": [
+        "educacao_V05000232_2022 [atributo_id=1dd72e77193c07594230]"
+      ],
+      "formula": "educacao_V05000232_2022",
+      "universo": "Taxa de frequência escolar bruta · Grupo de idade: 4 a 5 anos | Sexo: Total | Cor ou raça: Total",
+      "fontes": [
+        "https://sidra.ibge.gov.br/tabela/10056"
+      ],
+      "observacoes": "Nao recalcular nem classificar como combinado SICARD.",
+      "situacao": "Indicador original identificado; valores numericos verificados",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": 66.59,
+      "maximo": 100.0
+    },
+    {
+      "codigo": "frequencia_6_14_oficial",
+      "indicador": "Frequencia escolar bruta, 6 a 14 anos (%)",
+      "grupo": "Valores originais",
+      "territorialidade": "municipio",
+      "periodo": "2022",
+      "unidade": "%",
+      "campos_origem": [
+        "educacao_V05000231_2022 [atributo_id=d700d1c46ec5756cb5cd]"
+      ],
+      "formula": "educacao_V05000231_2022",
+      "universo": "Taxa de frequência escolar bruta · Grupo de idade: 6 a 14 anos | Sexo: Total | Cor ou raça: Total",
+      "fontes": [
+        "https://sidra.ibge.gov.br/tabela/10056"
+      ],
+      "observacoes": "Nao recalcular nem classificar como combinado SICARD.",
+      "situacao": "Indicador original identificado; valores numericos verificados",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": 89.75,
+      "maximo": 100.0
+    },
+    {
+      "codigo": "frequencia_15_17_oficial",
+      "indicador": "Frequencia escolar bruta, 15 a 17 anos (%)",
+      "grupo": "Valores originais",
+      "territorialidade": "municipio",
+      "periodo": "2022",
+      "unidade": "%",
+      "campos_origem": [
+        "educacao_V05000230_2022 [atributo_id=8562a968d623ece151b1]"
+      ],
+      "formula": "educacao_V05000230_2022",
+      "universo": "Taxa de frequência escolar bruta · Grupo de idade: 15 a 17 anos | Sexo: Total | Cor ou raça: Total",
+      "fontes": [
+        "https://sidra.ibge.gov.br/tabela/10056"
+      ],
+      "observacoes": "Nao recalcular nem classificar como combinado SICARD.",
+      "situacao": "Indicador original identificado; valores numericos verificados",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": 60.64,
+      "maximo": 100.0
+    },
+    {
+      "codigo": "dependencia_total",
+      "indicador": "Razao de dependencia demografica",
+      "grupo": "Valores combinados",
+      "territorialidade": "municipio",
+      "periodo": "2022",
+      "unidade": "razao por 100 pessoas",
+      "campos_origem": [
+        "populacao_V01000253_2022 [atributo_id=adce7ae0c0dedc9310cf]",
+        "populacao_V01000266_2022 [atributo_id=32b54308e5756501661b]",
+        "populacao_V01000267_2022 [atributo_id=b9cc89d941cbf7f2cdd8]",
+        "populacao_V01000148_2022 [atributo_id=95eae608c21ad40d2d36]",
+        "populacao_V01000149_2022 [atributo_id=fff57a76a7d4b685ddcf]",
+        "populacao_V01000150_2022 [atributo_id=c36fa4afde3b080acd85]",
+        "populacao_V01000151_2022 [atributo_id=8ef13bcdfd2cb6aa3faa]",
+        "populacao_V01000248_2022 [atributo_id=4111aa51c44000989987]",
+        "populacao_V01000278_2022 [atributo_id=e06837033e1bdeefa46b]",
+        "populacao_V01000279_2022 [atributo_id=2582cb25e5c248c624f4]",
+        "populacao_V01000280_2022 [atributo_id=149e06e93e203a84933d]",
+        "populacao_V01000268_2022 [atributo_id=e2942db1af1f51b89762]",
+        "populacao_V01000269_2022 [atributo_id=06599cab6d1d7c3b95b8]",
+        "populacao_V01000270_2022 [atributo_id=d475962c0f6f194904bc]",
+        "populacao_V01000271_2022 [atributo_id=fffb4ea5ab45af8b1645]",
+        "populacao_V01000272_2022 [atributo_id=f3a445a5e85d34422908]",
+        "populacao_V01000273_2022 [atributo_id=e822f79c202bd3172966]",
+        "populacao_V01000274_2022 [atributo_id=d288aec739534fb871c2]",
+        "populacao_V01000275_2022 [atributo_id=9133682d1e4a49178d92]",
+        "populacao_V01000276_2022 [atributo_id=9d82cb71f7845209d67e]",
+        "populacao_V01000277_2022 [atributo_id=01f4633948cdfe8c6143]"
+      ],
+      "formula": "100 * (populacao_V01000253_2022 + populacao_V01000266_2022 + populacao_V01000267_2022 + populacao_V01000148_2022 + populacao_V01000149_2022 + populacao_V01000150_2022 + populacao_V01000151_2022 + populacao_V01000248_2022 + populacao_V01000278_2022 + populacao_V01000279_2022 + populacao_V01000280_2022) / (populacao_V01000268_2022 + populacao_V01000269_2022 + populacao_V01000270_2022 + populacao_V01000271_2022 + populacao_V01000272_2022 + populacao_V01000273_2022 + populacao_V01000274_2022 + populacao_V01000275_2022 + populacao_V01000276_2022 + populacao_V01000277_2022)",
+      "universo": "Populacao residente; denominador: pessoas de 15 a 64 anos.",
+      "fontes": [
+        "https://sidra.ibge.gov.br/tabela/9514"
+      ],
+      "observacoes": "Dependencia demografica potencial, nao dependencia economica observada.",
+      "situacao": "Campos e calculabilidade verificados; proposta, nao homologada",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": 14.458186101295642,
+      "maximo": 61.44018583042973
+    },
+    {
+      "codigo": "dependencia_jovem",
+      "indicador": "Razao de dependencia jovem",
+      "grupo": "Valores combinados",
+      "territorialidade": "municipio",
+      "periodo": "2022",
+      "unidade": "razao por 100 pessoas",
+      "campos_origem": [
+        "populacao_V01000253_2022 [atributo_id=adce7ae0c0dedc9310cf]",
+        "populacao_V01000266_2022 [atributo_id=32b54308e5756501661b]",
+        "populacao_V01000267_2022 [atributo_id=b9cc89d941cbf7f2cdd8]",
+        "populacao_V01000268_2022 [atributo_id=e2942db1af1f51b89762]",
+        "populacao_V01000269_2022 [atributo_id=06599cab6d1d7c3b95b8]",
+        "populacao_V01000270_2022 [atributo_id=d475962c0f6f194904bc]",
+        "populacao_V01000271_2022 [atributo_id=fffb4ea5ab45af8b1645]",
+        "populacao_V01000272_2022 [atributo_id=f3a445a5e85d34422908]",
+        "populacao_V01000273_2022 [atributo_id=e822f79c202bd3172966]",
+        "populacao_V01000274_2022 [atributo_id=d288aec739534fb871c2]",
+        "populacao_V01000275_2022 [atributo_id=9133682d1e4a49178d92]",
+        "populacao_V01000276_2022 [atributo_id=9d82cb71f7845209d67e]",
+        "populacao_V01000277_2022 [atributo_id=01f4633948cdfe8c6143]"
+      ],
+      "formula": "100 * (populacao_V01000253_2022 + populacao_V01000266_2022 + populacao_V01000267_2022) / (populacao_V01000268_2022 + populacao_V01000269_2022 + populacao_V01000270_2022 + populacao_V01000271_2022 + populacao_V01000272_2022 + populacao_V01000273_2022 + populacao_V01000274_2022 + populacao_V01000275_2022 + populacao_V01000276_2022 + populacao_V01000277_2022)",
+      "universo": "Populacao residente; denominador: pessoas de 15 a 64 anos.",
+      "fontes": [
+        "https://sidra.ibge.gov.br/tabela/9514"
+      ],
+      "observacoes": "Dependencia demografica potencial, nao dependencia economica observada.",
+      "situacao": "Campos e calculabilidade verificados; proposta, nao homologada",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": 7.037691401648999,
+      "maximo": 34.812367240972385
+    },
+    {
+      "codigo": "dependencia_idosa",
+      "indicador": "Razao de dependencia idosa",
+      "grupo": "Valores combinados",
+      "territorialidade": "municipio",
+      "periodo": "2022",
+      "unidade": "razao por 100 pessoas",
+      "campos_origem": [
+        "populacao_V01000148_2022 [atributo_id=95eae608c21ad40d2d36]",
+        "populacao_V01000149_2022 [atributo_id=fff57a76a7d4b685ddcf]",
+        "populacao_V01000150_2022 [atributo_id=c36fa4afde3b080acd85]",
+        "populacao_V01000151_2022 [atributo_id=8ef13bcdfd2cb6aa3faa]",
+        "populacao_V01000248_2022 [atributo_id=4111aa51c44000989987]",
+        "populacao_V01000278_2022 [atributo_id=e06837033e1bdeefa46b]",
+        "populacao_V01000279_2022 [atributo_id=2582cb25e5c248c624f4]",
+        "populacao_V01000280_2022 [atributo_id=149e06e93e203a84933d]",
+        "populacao_V01000268_2022 [atributo_id=e2942db1af1f51b89762]",
+        "populacao_V01000269_2022 [atributo_id=06599cab6d1d7c3b95b8]",
+        "populacao_V01000270_2022 [atributo_id=d475962c0f6f194904bc]",
+        "populacao_V01000271_2022 [atributo_id=fffb4ea5ab45af8b1645]",
+        "populacao_V01000272_2022 [atributo_id=f3a445a5e85d34422908]",
+        "populacao_V01000273_2022 [atributo_id=e822f79c202bd3172966]",
+        "populacao_V01000274_2022 [atributo_id=d288aec739534fb871c2]",
+        "populacao_V01000275_2022 [atributo_id=9133682d1e4a49178d92]",
+        "populacao_V01000276_2022 [atributo_id=9d82cb71f7845209d67e]",
+        "populacao_V01000277_2022 [atributo_id=01f4633948cdfe8c6143]"
+      ],
+      "formula": "100 * (populacao_V01000148_2022 + populacao_V01000149_2022 + populacao_V01000150_2022 + populacao_V01000151_2022 + populacao_V01000248_2022 + populacao_V01000278_2022 + populacao_V01000279_2022 + populacao_V01000280_2022) / (populacao_V01000268_2022 + populacao_V01000269_2022 + populacao_V01000270_2022 + populacao_V01000271_2022 + populacao_V01000272_2022 + populacao_V01000273_2022 + populacao_V01000274_2022 + populacao_V01000275_2022 + populacao_V01000276_2022 + populacao_V01000277_2022)",
+      "universo": "Populacao residente; denominador: pessoas de 15 a 64 anos.",
+      "fontes": [
+        "https://sidra.ibge.gov.br/tabela/9514"
+      ],
+      "observacoes": "Dependencia demografica potencial, nao dependencia economica observada.",
+      "situacao": "Campos e calculabilidade verificados; proposta, nao homologada",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": 7.420494699646643,
+      "maximo": 40.18583042973287
+    },
+    {
+      "codigo": "desocupacao",
+      "indicador": "Taxa de desocupacao",
+      "grupo": "Valores combinados",
+      "territorialidade": "municipio",
+      "periodo": "2022",
+      "unidade": "percentual",
+      "campos_origem": [
+        "trabalho_V07000043_2022 [atributo_id=9c1682de8ff689ac4c0d]",
+        "trabalho_V07000041_2022 [atributo_id=531a9ac2d5c7bb88e778]"
+      ],
+      "formula": "100 * trabalho_V07000043_2022 / trabalho_V07000041_2022",
+      "universo": "Pessoas de 14 anos ou mais; desocupacao usa somente a forca de trabalho no denominador.",
+      "fontes": [
+        "https://sidra.ibge.gov.br/tabela/6580"
+      ],
+      "observacoes": "Resultados preliminares da amostra. Nao desagregar para setor censitario.",
+      "situacao": "Campos e calculabilidade verificados; proposta, nao homologada",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": 0.0,
+      "maximo": 15.655631224658505
+    },
+    {
+      "codigo": "informalidade_categorias",
+      "indicador": "Ocupados nas cinco categorias usuais de informalidade (%)",
+      "grupo": "Valores combinados",
+      "territorialidade": "municipio",
+      "periodo": "2022",
+      "unidade": "percentual",
+      "campos_origem": [
+        "trabalho_V07000079_2022 [atributo_id=231f80c18e3cbbb5b123]",
+        "trabalho_V07000088_2022 [atributo_id=af987cb0b2f869d4fb96]",
+        "trabalho_V07000084_2022 [atributo_id=22ad0a8cf6da81f1c33e]",
+        "trabalho_V07000086_2022 [atributo_id=c182e7bb1dc878b6ac23]",
+        "trabalho_V07000082_2022 [atributo_id=09bf86dbc89c86e7b353]"
+      ],
+      "formula": "trabalho_V07000079_2022 + trabalho_V07000088_2022 + trabalho_V07000084_2022 + trabalho_V07000086_2022 + trabalho_V07000082_2022",
+      "universo": "Ocupados de 14 anos ou mais, tabela 10261, trabalho principal.",
+      "fontes": [
+        "https://sidra.ibge.gov.br/tabela/10261"
+      ],
+      "observacoes": "Privado sem carteira + domestico sem carteira + empregador sem CNPJ + conta propria sem CNPJ + familiar auxiliar. Derivacao SICARD do Censo, nao observacao PNAD.",
+      "situacao": "Campos e calculabilidade verificados; proposta, nao homologada",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": 9.6,
+      "maximo": 67.68
+    },
+    {
+      "codigo": "nao_frequencia_4_5",
+      "indicador": "Nao frequencia escolar, 4 a 5 anos (%)",
+      "grupo": "Valores combinados",
+      "territorialidade": "municipio",
+      "periodo": "2022",
+      "unidade": "percentual",
+      "campos_origem": [
+        "educacao_V05000232_2022 [atributo_id=1dd72e77193c07594230]"
+      ],
+      "formula": "100 - educacao_V05000232_2022",
+      "universo": "Pessoas da faixa etaria indicada; complemento da frequencia escolar bruta da tabela 10056.",
+      "fontes": [
+        "https://sidra.ibge.gov.br/tabela/10056"
+      ],
+      "observacoes": "Nao indica atraso escolar nem escolarizacao liquida. Resultados preliminares da amostra.",
+      "situacao": "Campos e calculabilidade verificados; proposta, nao homologada",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": 0.0,
+      "maximo": 33.41
+    },
+    {
+      "codigo": "nao_frequencia_6_14",
+      "indicador": "Nao frequencia escolar, 6 a 14 anos (%)",
+      "grupo": "Valores combinados",
+      "territorialidade": "municipio",
+      "periodo": "2022",
+      "unidade": "percentual",
+      "campos_origem": [
+        "educacao_V05000231_2022 [atributo_id=d700d1c46ec5756cb5cd]"
+      ],
+      "formula": "100 - educacao_V05000231_2022",
+      "universo": "Pessoas da faixa etaria indicada; complemento da frequencia escolar bruta da tabela 10056.",
+      "fontes": [
+        "https://sidra.ibge.gov.br/tabela/10056"
+      ],
+      "observacoes": "Nao indica atraso escolar nem escolarizacao liquida. Resultados preliminares da amostra.",
+      "situacao": "Campos e calculabilidade verificados; proposta, nao homologada",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": 0.0,
+      "maximo": 10.25
+    },
+    {
+      "codigo": "nao_frequencia_15_17",
+      "indicador": "Nao frequencia escolar, 15 a 17 anos (%)",
+      "grupo": "Valores combinados",
+      "territorialidade": "municipio",
+      "periodo": "2022",
+      "unidade": "percentual",
+      "campos_origem": [
+        "educacao_V05000230_2022 [atributo_id=8562a968d623ece151b1]"
+      ],
+      "formula": "100 - educacao_V05000230_2022",
+      "universo": "Pessoas da faixa etaria indicada; complemento da frequencia escolar bruta da tabela 10056.",
+      "fontes": [
+        "https://sidra.ibge.gov.br/tabela/10056"
+      ],
+      "observacoes": "Nao indica atraso escolar nem escolarizacao liquida. Resultados preliminares da amostra.",
+      "situacao": "Campos e calculabilidade verificados; proposta, nao homologada",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": 0.0,
+      "maximo": 39.36
+    },
+    {
+      "codigo": "deslocamento_maior_1h",
+      "indicador": "Deslocamento habitual para trabalho superior a uma hora (%)",
+      "grupo": "Valores combinados",
+      "territorialidade": "municipio",
+      "periodo": "2022",
+      "unidade": "percentual",
+      "campos_origem": [
+        "deslocamentos_V16000116_2022 [atributo_id=00282d0104d024b2656f]",
+        "deslocamentos_V16000125_2022 [atributo_id=457ed283853149d62bee]",
+        "deslocamentos_V16000126_2022 [atributo_id=acdf6f34d205c9d4afb9]"
+      ],
+      "formula": "deslocamentos_V16000116_2022 + deslocamentos_V16000125_2022 + deslocamentos_V16000126_2022",
+      "universo": "Ocupados de 10 anos ou mais que trabalham fora do domicilio e retornam do trabalho 3 dias ou mais por semana, tabela 10330.",
+      "fontes": [
+        "https://sidra.ibge.gov.br/tabela/10330"
+      ],
+      "observacoes": "Somente trajeto de ida. Nao abrange todos os ocupados nem todos os deslocamentos.",
+      "situacao": "Campos e calculabilidade verificados; proposta, nao homologada",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": 0.0,
+      "maximo": 47.85
+    },
+    {
+      "codigo": "baixa_renda_meio_sm",
+      "indicador": "Moradores com renda domiciliar per capita ate 1/2 SM, incluindo sem rendimento (%)",
+      "grupo": "Valores combinados",
+      "territorialidade": "municipio",
+      "periodo": "2022",
+      "unidade": "percentual",
+      "campos_origem": [
+        "renda_V06000310_2022 [atributo_id=f8b89a52384c6f54faf3]",
+        "renda_V06000311_2022 [atributo_id=4e829f7cad7815b53095]",
+        "renda_V06000320_2022 [atributo_id=815fc40136a8458a97a8]",
+        "renda_V06000309_2022 [atributo_id=dd0b6c823579b98600e0]"
+      ],
+      "formula": "100 * (renda_V06000310_2022 + renda_V06000311_2022 + renda_V06000320_2022) / renda_V06000309_2022",
+      "universo": "Moradores em DPPO, excluidos pensionistas, empregados domesticos e parentes desses empregados.",
+      "fontes": [
+        "https://sidra.ibge.gov.br/tabela/10296"
+      ],
+      "observacoes": "Classes disjuntas da tabela 10296; usar contagens e denominador da mesma tabela, sem renormalizar. Percentuais publicados nao fecham exatamente 100%, confirmado na fonte. Nao equivale a linha oficial de pobreza monetaria.",
+      "situacao": "Calculavel com ressalva: nao aditividade nas estatisticas publicadas; nao homologado",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": 7.481016957376094,
+      "maximo": 46.66861484511981
+    },
+    {
+      "codigo": "sem_coleta",
+      "indicador": "Domicilios sem coleta de lixo (%)",
+      "grupo": "Valores combinados",
+      "territorialidade": "municipio",
+      "periodo": "2022",
+      "unidade": "percentual",
+      "campos_origem": [
+        "saneamento_V04000119_2022 [atributo_id=4271dc29abbe9f5704d7]"
+      ],
+      "formula": "100 - saneamento_V04000119_2022",
+      "universo": "Domicilios particulares permanentes ocupados, tabela 6892.",
+      "fontes": [
+        "https://sidra.ibge.gov.br/tabela/6892"
+      ],
+      "observacoes": "Complemento da categoria oficial Coletado; nao equivale a indice multidimensional de saneamento.",
+      "situacao": "Campos e calculabilidade verificados; proposta, nao homologada",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": 0.0,
+      "maximo": 45.84
+    },
+    {
+      "codigo": "participacao_vab_agropecuaria",
+      "indicador": "Participacao do VAB de agropecuaria (%)",
+      "grupo": "Valores combinados",
+      "territorialidade": "municipio",
+      "periodo": "2021",
+      "unidade": "percentual",
+      "campos_origem": [
+        "economia_vab_agropecuaria_mil_reais_2021 [atributo_id=4a4dbef59bc3aad6b2f5]",
+        "economia_vab_total_mil_reais_2021 [atributo_id=528f10176b6fee70f925]"
+      ],
+      "formula": "100 * economia_vab_agropecuaria_mil_reais_2021 / economia_vab_total_mil_reais_2021",
+      "universo": "Valor adicionado bruto municipal, nao PIB. Servicos exclui administracao publica conforme fonte.",
+      "fontes": [
+        "https://servicodados.ibge.gov.br/api/v1/pesquisas/38/periodos/2021/indicadores/47004/resultados/350010",
+        "https://servicodados.ibge.gov.br/api/v1/pesquisas/38/periodos/2021/indicadores/47006/resultados/350010"
+      ],
+      "observacoes": "Multiplicadores monetarios devem coincidir; nao usar como participacao de 2022/2023.",
+      "situacao": "Campos e calculabilidade verificados; proposta, nao homologada",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": 0.0,
+      "maximo": 75.77466111352662
+    },
+    {
+      "codigo": "participacao_vab_industria",
+      "indicador": "Participacao do VAB de industria (%)",
+      "grupo": "Valores combinados",
+      "territorialidade": "municipio",
+      "periodo": "2021",
+      "unidade": "percentual",
+      "campos_origem": [
+        "economia_vab_industria_mil_reais_2021 [atributo_id=27111a17f58d5f2b8231]",
+        "economia_vab_total_mil_reais_2021 [atributo_id=528f10176b6fee70f925]"
+      ],
+      "formula": "100 * economia_vab_industria_mil_reais_2021 / economia_vab_total_mil_reais_2021",
+      "universo": "Valor adicionado bruto municipal, nao PIB. Servicos exclui administracao publica conforme fonte.",
+      "fontes": [
+        "https://servicodados.ibge.gov.br/api/v1/pesquisas/38/periodos/2021/indicadores/47004/resultados/350010",
+        "https://servicodados.ibge.gov.br/api/v1/pesquisas/38/periodos/2021/indicadores/47007/resultados/350010"
+      ],
+      "observacoes": "Multiplicadores monetarios devem coincidir; nao usar como participacao de 2022/2023.",
+      "situacao": "Campos e calculabilidade verificados; proposta, nao homologada",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": 1.983276281062196,
+      "maximo": 80.31341040680589
+    },
+    {
+      "codigo": "participacao_vab_servicos",
+      "indicador": "Participacao do VAB de servicos (%)",
+      "grupo": "Valores combinados",
+      "territorialidade": "municipio",
+      "periodo": "2021",
+      "unidade": "percentual",
+      "campos_origem": [
+        "economia_vab_servicos_mil_reais_2021 [atributo_id=b81dd87534a41001b775]",
+        "economia_vab_total_mil_reais_2021 [atributo_id=528f10176b6fee70f925]"
+      ],
+      "formula": "100 * economia_vab_servicos_mil_reais_2021 / economia_vab_total_mil_reais_2021",
+      "universo": "Valor adicionado bruto municipal, nao PIB. Servicos exclui administracao publica conforme fonte.",
+      "fontes": [
+        "https://servicodados.ibge.gov.br/api/v1/pesquisas/38/periodos/2021/indicadores/47004/resultados/350010",
+        "https://servicodados.ibge.gov.br/api/v1/pesquisas/38/periodos/2021/indicadores/47008/resultados/350010"
+      ],
+      "observacoes": "Multiplicadores monetarios devem coincidir; nao usar como participacao de 2022/2023.",
+      "situacao": "Campos e calculabilidade verificados; proposta, nao homologada",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": 7.673489593254752,
+      "maximo": 87.6678374101457
+    },
+    {
+      "codigo": "participacao_vab_administracao",
+      "indicador": "Participacao do VAB de administracao (%)",
+      "grupo": "Valores combinados",
+      "territorialidade": "municipio",
+      "periodo": "2021",
+      "unidade": "percentual",
+      "campos_origem": [
+        "economia_vab_administracao_mil_reais_2021 [atributo_id=68b37dd49452e9aa6d2f]",
+        "economia_vab_total_mil_reais_2021 [atributo_id=528f10176b6fee70f925]"
+      ],
+      "formula": "100 * economia_vab_administracao_mil_reais_2021 / economia_vab_total_mil_reais_2021",
+      "universo": "Valor adicionado bruto municipal, nao PIB. Servicos exclui administracao publica conforme fonte.",
+      "fontes": [
+        "https://servicodados.ibge.gov.br/api/v1/pesquisas/38/periodos/2021/indicadores/47004/resultados/350010",
+        "https://servicodados.ibge.gov.br/api/v1/pesquisas/38/periodos/2021/indicadores/47009/resultados/350010"
+      ],
+      "observacoes": "Multiplicadores monetarios devem coincidir; nao usar como participacao de 2022/2023.",
+      "situacao": "Campos e calculabilidade verificados; proposta, nao homologada",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": 2.0741726988019065,
+      "maximo": 53.76338603854593
+    },
+    {
+      "codigo": "mortalidade_transito_pop",
+      "indicador": "Obitos em sinistros de transito por 100 mil habitantes",
+      "grupo": "Valores combinados",
+      "territorialidade": "municipio",
+      "periodo": "2022",
+      "unidade": "obitos por 100 mil habitantes",
+      "campos_origem": [
+        "infosiga_obitos_transito_2022 [atributo_id=5be78ecc3e23c0f570d1]",
+        "populacao_V01000003_2022 [atributo_id=c033c2a8e817b7cbc7e6]"
+      ],
+      "formula": "100000 * infosiga_obitos_transito_2022 / populacao_V01000003_2022",
+      "universo": "Obitos registrados no municipio, segundo cadastro InfoSiga, e populacao residente do Censo 2022.",
+      "fontes": [
+        "https://infosiga.detran.sp.gov.br/",
+        "https://sidra.ibge.gov.br/tabela/4709"
+      ],
+      "observacoes": "Confirmar criterio de localizacao dos obitos antes de interpretar como risco dos residentes; nao mede exposicao ao trafego.",
+      "situacao": "Calculavel; validacao semantica pendente, conforme observacoes",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": 0.0,
+      "maximo": 222.9654403567447
+    },
+    {
+      "codigo": "variacao_emprego_2022_2023",
+      "indicador": "Variacao do emprego medio formal (%)",
+      "grupo": "Valores combinados",
+      "territorialidade": "municipio",
+      "periodo": "2022-2023",
+      "unidade": "percentual",
+      "campos_origem": [
+        "rais_emprego_medio_formal_2022 [atributo_id=5340cc7b9316900de56c]",
+        "rais_emprego_medio_formal_2023 [atributo_id=30fecc52ea007fe2a028]"
+      ],
+      "formula": "100 * (rais_emprego_medio_formal_2023 - rais_emprego_medio_formal_2022) / rais_emprego_medio_formal_2022",
+      "universo": "Vinculos formais localizados no municipio, medias mensais anuais.",
+      "fontes": [
+        "ftp://ftp.mtps.gov.br/pdet/microdados/RAIS/2022/RAIS_VINC_PUB_SP.7z",
+        "ftp://ftp.mtps.gov.br/pdet/microdados/RAIS/2023/RAIS_VINC_PUB_SP.7z"
+      ],
+      "observacoes": "Base inicial zero: indefinido; exige confirmacao de comparabilidade da serie RAIS.",
+      "situacao": "Calculavel; validacao semantica pendente, conforme observacoes",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": -51.457859640407364,
+      "maximo": 250.21141649048627
+    },
+    {
+      "codigo": "variacao_emprego_2023_2024",
+      "indicador": "Variacao do emprego medio formal (%)",
+      "grupo": "Valores combinados",
+      "territorialidade": "municipio",
+      "periodo": "2023-2024",
+      "unidade": "percentual",
+      "campos_origem": [
+        "rais_emprego_medio_formal_2023 [atributo_id=30fecc52ea007fe2a028]",
+        "rais_emprego_medio_formal_2024 [atributo_id=f0b0f20cbea132be1f12]"
+      ],
+      "formula": "100 * (rais_emprego_medio_formal_2024 - rais_emprego_medio_formal_2023) / rais_emprego_medio_formal_2023",
+      "universo": "Vinculos formais localizados no municipio, medias mensais anuais.",
+      "fontes": [
+        "ftp://ftp.mtps.gov.br/pdet/microdados/RAIS/2023/RAIS_VINC_PUB_SP.7z",
+        "ftp://ftp.mtps.gov.br/pdet/microdados/RAIS/2024/RAIS_VINC_PUB_SP.7z"
+      ],
+      "observacoes": "Base inicial zero: indefinido; exige confirmacao de comparabilidade da serie RAIS.",
+      "situacao": "Calculavel; validacao semantica pendente, conforme observacoes",
+      "unidades": 645,
+      "calculaveis": 645,
+      "nao_calculaveis": 0,
+      "minimo": -27.891871597522062,
+      "maximo": 97.04221012632227
+    },
+    {
+      "codigo": "setor_dens_pop",
+      "indicador": "Densidade demografica setorial",
+      "grupo": "Valores combinados",
+      "territorialidade": "setor",
+      "periodo": "2022",
+      "unidade": "habitantes/km2",
+      "campos_origem": [
+        "setor:v0001",
+        "setor:area_km2"
+      ],
+      "formula": "1 * setor:v0001 / setor:area_km2",
+      "universo": "Setor logico por CD_SETOR; somar areas das partes e contar medidas demograficas uma unica vez.",
+      "fontes": [
+        "https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios/malha_com_atributos/setores/gpkg/UF/SP/SP_setores_CD2022.gpkg"
+      ],
+      "observacoes": "habitantes/km2; areas muito pequenas produzem extremos; nao truncar nem normalizar automaticamente.",
+      "situacao": "Calculavel; extremos de densidade exigem auditoria antes de uso em favorabilidade",
+      "unidades": 103319,
+      "calculaveis": 103319,
+      "nao_calculaveis": 0,
+      "minimo": 0.0,
+      "maximo": 1157631.1590564547
+    },
+    {
+      "codigo": "setor_dens_dpo",
+      "indicador": "Densidade de domicilios particulares ocupados",
+      "grupo": "Valores combinados",
+      "territorialidade": "setor",
+      "periodo": "2022",
+      "unidade": "domicilios ocupados/km2",
+      "campos_origem": [
+        "setor:v0007",
+        "setor:area_km2"
+      ],
+      "formula": "1 * setor:v0007 / setor:area_km2",
+      "universo": "Setor logico por CD_SETOR; somar areas das partes e contar medidas demograficas uma unica vez.",
+      "fontes": [
+        "https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios/malha_com_atributos/setores/gpkg/UF/SP/SP_setores_CD2022.gpkg"
+      ],
+      "observacoes": "domicilios ocupados/km2; areas muito pequenas produzem extremos; nao truncar nem normalizar automaticamente.",
+      "situacao": "Calculavel; extremos de densidade exigem auditoria antes de uso em favorabilidade",
+      "unidades": 103319,
+      "calculaveis": 103319,
+      "nao_calculaveis": 0,
+      "minimo": 0.0,
+      "maximo": 416265.898663662
+    },
+    {
+      "codigo": "setor_ocupacao",
+      "indicador": "Domicilios particulares ocupados (%)",
+      "grupo": "Valores combinados",
+      "territorialidade": "setor",
+      "periodo": "2022",
+      "unidade": "percentual",
+      "campos_origem": [
+        "setor:v0007",
+        "setor:v0003"
+      ],
+      "formula": "100 * setor:v0007 / setor:v0003",
+      "universo": "Setor logico por CD_SETOR; somar areas das partes e contar medidas demograficas uma unica vez.",
+      "fontes": [
+        "https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios/malha_com_atributos/setores/gpkg/UF/SP/SP_setores_CD2022.gpkg"
+      ],
+      "observacoes": "Complemento inclui vagos E uso ocasional; nao chamar apenas de vacancia.",
+      "situacao": "Campos e calculabilidade verificados; proposta, nao homologada",
+      "unidades": 103319,
+      "calculaveis": 101009,
+      "nao_calculaveis": 2310,
+      "minimo": 0.0,
+      "maximo": 100.0
+    },
+    {
+      "codigo": "setor_coletivos",
+      "indicador": "Domicilios coletivos no total de domicilios (%)",
+      "grupo": "Valores combinados",
+      "territorialidade": "setor",
+      "periodo": "2022",
+      "unidade": "percentual",
+      "campos_origem": [
+        "setor:v0004",
+        "setor:v0002"
+      ],
+      "formula": "100 * setor:v0004 / setor:v0002",
+      "universo": "Setor logico por CD_SETOR; somar areas das partes e contar medidas demograficas uma unica vez.",
+      "fontes": [
+        "https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios/malha_com_atributos/setores/gpkg/UF/SP/SP_setores_CD2022.gpkg"
+      ],
+      "observacoes": "Caracterizacao territorial, nao medida direta de vulnerabilidade.",
+      "situacao": "Campos e calculabilidade verificados; proposta, nao homologada",
+      "unidades": 103319,
+      "calculaveis": 101273,
+      "nao_calculaveis": 2046,
+      "minimo": 0.0,
+      "maximo": 100.0
+    }
+  ],
+  "checagens": [
+    {
+      "checagem": "Forca de trabalho versus ocupados + desocupados",
+      "residuo_maximo_pessoas": 1.0
+    },
+    {
+      "checagem": "Faixas etarias disjuntas versus populacao total",
+      "residuo_maximo": 0.0
+    },
+    {
+      "checagem": "Fechamento das classes de renda incluindo sem rendimento",
+      "residuo_maximo_pontos_percentuais": 0.1599999999999966,
+      "resultado": "Nao fecha exatamente. Nao corrigir nem renormalizar silenciosamente.",
+      "conferencia_externa": "API SIDRA 10296, municipio 3555901: percentuais originais somam 99.84, identicos ao acervo. Causa da nao aditividade nao estabelecida nesta auditoria."
+    },
+    {
+      "checagem": "Quatro setores do VAB versus total 2021",
+      "residuo_maximo_mil_reais": 0.0020000000076834112
+    },
+    {
+      "checagem": "Denominadores setoriais nao positivos",
+      "domicilios_particulares": 2310,
+      "domicilios_totais": 2046,
+      "area": 0
+    }
+  ],
+  "limitacoes": [
+    "Nao replica dados municipais nos setores.",
+    "Fontes de amostra nao foram aprovadas para desagregacao setorial.",
+    "Formulas verificadas nao estabelecem pesos AHP nem relacao com favorabilidade.",
+    "A normalizacao 0-1 pertence a etapa posterior, nao foi executada.",
+    "Valores nulos e denominadores nao positivos nao foram substituidos por zero."
+  ],
+  "nao_liberados": [
+    {
+      "indicador": "Vulnerabilidade social setorial detalhada",
+      "pendencia": "Importar agregados oficiais setoriais adicionais de idade, alfabetizacao e saneamento; a camada atual tem apenas v0001-v0007."
+    },
+    {
+      "indicador": "IVS oficial ou novo indice social sintetico",
+      "pendencia": "Nao fabricar indice com esse nome; requer fonte oficial ou metodologia propria explicitamente definida e homologada."
+    },
+    {
+      "indicador": "Pobreza monetaria por linha internacional",
+      "pendencia": "Requer linha, paridade de poder de compra, deflator e periodo explicitados; faixas de salario minimo nao sao substituto."
+    },
+    {
+      "indicador": "Acessibilidade a oportunidades",
+      "pendencia": "Requer rede, tempos/custos de viagem e localizacao das oportunidades; nao se obtem apenas das colunas municipais."
+    },
+    {
+      "indicador": "Motorizacao e risco por exposicao ao trafego",
+      "pendencia": "Frota e exposicao nao foram verificadas entre as fontes selecionadas; mortes/populacao nao e risco por veiculo-km."
+    }
+  ]
+}

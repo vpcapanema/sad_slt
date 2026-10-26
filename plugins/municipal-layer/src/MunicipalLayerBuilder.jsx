@@ -77,6 +77,7 @@ export function MunicipalLayerBuilder({apiBaseUrl='/api', client, value, onChang
   const [local,setLocal] = useState({attributes:[],format:'fgb'});
   const config = value ?? local;
   const [source,setSource] = useState('');
+  const [origin,setOrigin] = useState('originais');
   const [year,setYear] = useState('2022');
   const [theme,setTheme] = useState('');
   const [search,setSearch] = useState('');
@@ -88,19 +89,27 @@ export function MunicipalLayerBuilder({apiBaseUrl='/api', client, value, onChang
   const [preview,setPreview] = useState(null);
   const mounted = useRef(true);
   useEffect(() => { mounted.current=true; const ctrl=new AbortController(); setCatalog(null); setError('');
-    api.catalog(ctrl.signal).then(data => {setCatalog(data);setSource(data.attributes.find(a=>a.source==='IBGE · Censo 2022')?.source || data.attributes[0]?.source || '');}).catch(e=> {if(e.name!=='AbortError'){setError(e.message);feedback?.error(e.message,'Catálogo de indicadores');}});
+    api.catalog(ctrl.signal).then(data => {
+      setCatalog(data);
+      const originals=data.attributes.filter(a=>(a.origin||'originais')==='originais');
+      const first=originals.find(a=>a.source==='IBGE · Censo 2022')||originals[0];
+      setSource(first?.source||ALL_SOURCES);setYear('2022');setTheme('');
+    }).catch(e=> {if(e.name!=='AbortError'){setError(e.message);feedback?.error(e.message,'Catálogo de indicadores');}});
     return () => {mounted.current=false;ctrl.abort();};
   }, [api,attempt]);
   function update(next) {if(feedback && next.attributes.length>limits[next.format] && (next.format!==config.format || config.attributes.length<=limits[config.format]))feedback.warning('Seleção excede o limite do formato. Escolha FlatGeobuf ou remova atributos.','Formato da camada');if(value === undefined)setLocal(next);onChange?.(next);setStatus('');}
   const attributes = catalog?.attributes || [];
-  const sources = [...new Set(attributes.map(a=>a.source))];
+  const originAttributes=attributes.filter(a=>(a.origin||'originais')===origin);
+  const countTerritories=catalog?.featureCount||catalog?.municipalities||645;
+  const territoryLabel=catalog?.territoryLabel||'municípios';
+  const sources = [...new Set(originAttributes.map(a=>a.source))];
   // "Todas" junta as fontes; com "Todos os anos", a lista traz o catálogo inteiro
   // e "Adicionar resultados" monta a camada com todos os atributos.
   const allSources = source === ALL_SOURCES;
-  const years = [...new Set(attributes.filter(a=>allSources || a.source===source).map(a=>a.year))].sort((a,b)=>b-a);
-  const allYears = allSources && year === '';
+  const years = [...new Set(originAttributes.filter(a=>allSources || a.source===source).map(a=>a.year))].sort((a,b)=>b-a);
+  const allYears = year === '';
   const activeYear = allYears ? null : years.includes(Number(year)) ? Number(year) : years[0];
-  const available = attributes.filter(a=>(allSources || a.source===source) && (allYears || a.year===activeYear));
+  const available = originAttributes.filter(a=>(allSources || a.source===source) && (allYears || a.year===activeYear));
   const themes = [...new Set(available.map(a=>a.theme))];
   const selected = new Set(config.attributes);
   // Espelha a regra do servidor: categoria, fonte majoritaria da selecao e data.
@@ -132,7 +141,16 @@ export function MunicipalLayerBuilder({apiBaseUrl='/api', client, value, onChang
   })();
   const filtered = scoped.filter(a=>matchesFacets(a,null));
   const visible = filtered.slice(page*40,page*40+40);
-  useEffect(()=>{setPage(0);},[source,year,theme,search,facets]);
+  useEffect(()=>{setPage(0);},[source,year,theme,search,facets,origin]);
+  function changeOrigin(value){
+    setOrigin(value);setSource(ALL_SOURCES);setYear('');setTheme('');setFacets({});
+  }
+  function changeSource(value){
+    setSource(value);setYear('');setTheme('');setFacets({});
+  }
+  function changeYear(value){
+    setYear(value);setTheme('');setFacets({});
+  }
   useEffect(()=>{setFacets({});},[source,year,theme]);
   // So atributos e formato mudam a previa. Depender de config inteiro fazia o
   // nome da camada apagar a previa e refazer a consulta a cada tecla digitada.
@@ -148,7 +166,7 @@ export function MunicipalLayerBuilder({apiBaseUrl='/api', client, value, onChang
   function toggle(id) {update({...config,attributes:selected.has(id)?config.attributes.filter(x=>x!==id):[...config.attributes,id]});}
   async function generate() {
     if(!canGenerate)return;
-    if(feedback && !(await feedback.confirmar({title:'Gerar camada territorial',message:`Gerar uma camada com ${config.attributes.length} atributos dos 645 municípios de São Paulo?`,confirmLabel:'Gerar camada'})))return;
+    if(feedback && !(await feedback.confirmar({title:'Gerar camada territorial',message:`Gerar uma camada com ${config.attributes.length} atributos de ${countTerritories.toLocaleString('pt-BR')} ${territoryLabel} de São Paulo?`,confirmLabel:'Gerar camada'})))return;
     const processo=feedback?.processo('Gerando camada territorial');
     processo?.passo('Gerando a geometria e materializando os atributos selecionados…');
     setBusy(true);setError('');
@@ -159,7 +177,7 @@ export function MunicipalLayerBuilder({apiBaseUrl='/api', client, value, onChang
     const snapshot={...config,attributes:[...config.attributes]};
     try {
       const blob=await api.export(snapshot,processo?.signal,processo);
-      const filename=`municipios_sp_${snapshot.format}.zip`;
+      const filename=`${catalog?.territorialidade==='setores_2022'?'setores_sp_2022':'municipios_sp'}_${snapshot.format}.zip`;
       await onExport?.({blob,filename,configuration:snapshot,attributes:selectedItems});
       if(download){const url=URL.createObjectURL(blob);const anchor=document.createElement('a');anchor.href=url;anchor.download=filename;anchor.click();setTimeout(()=>URL.revokeObjectURL(url),10000);}
       if(mounted.current)setStatus('Camada gerada. O pacote contém a camada, o relatório do join, o glossário, os metadados e a tabela em CSV, XLSX e TXT.');
@@ -170,7 +188,7 @@ export function MunicipalLayerBuilder({apiBaseUrl='/api', client, value, onChang
   useEffect(() => {
     if (!htmlHost) return;
     updatePersistentView(htmlHost, {catalog,error,feedback,busy,config,selected,source,allSources,allYears,activeYear,
-      sources,years,themes,theme,search,facets,dimensions,filtered,visible,page,selectedItems,
+      sources,years,themes,theme,search,facets,dimensions,filtered,visible,page,selectedItems,origin,changeOrigin,changeSource,changeYear,
       sourceLabel,themeLabel,metadata,limits,preview,previewError,resultado,nomePadrao,download,status,canGenerate,
       setAttempt,setSource,setTheme,setYear,setSearch,setFacets,update,toggle,setPage,generate,setPreviewAttempt});
   });
@@ -180,8 +198,9 @@ export function MunicipalLayerBuilder({apiBaseUrl='/api', client, value, onChang
     {error && !feedback && <div className="mlb-error" role="alert">{error}</div>}
     {!catalog ? <p role="status">{error ? <>Não foi possível carregar o catálogo. <button type="button" onClick={()=>setAttempt(n=>n+1)}>Tentar novamente</button></> : 'Carregando catálogo…'}</p> : <div className="mlb-layout">
       <section className="mlb-panel"><h2>1. Escolha os dados</h2><div className="mlb-filters">
-        <label>Fonte<select value={source} onChange={e=>{setSource(e.target.value);setTheme('');if(e.target.value===ALL_SOURCES)setYear('');}}><option value={ALL_SOURCES}>Todas as fontes</option>{sources.map(s=><option key={s} value={s}>{sourceLabel(s)}</option>)}</select></label>
-        <label>Ano de referência<select value={allYears ? '' : activeYear ?? ''} onChange={e=>{setYear(e.target.value);setTheme('');}}>{allSources && <option value="">Todos os anos</option>}{years.map(y=><option key={y}>{y}</option>)}</select></label>
+        <label>Tipo de valor<select value={origin} onChange={e=>changeOrigin(e.target.value)} disabled={busy}><option value="originais">Valores originais</option><option value="combinados">Valores combinados — SICARD</option></select></label>
+        <label>Fonte<select value={source} onChange={e=>changeSource(e.target.value)}><option value={ALL_SOURCES}>Todas as fontes</option>{sources.map(s=><option key={s} value={s}>{sourceLabel(s)}</option>)}</select></label>
+        <label>Ano de referência<select value={allYears ? '' : activeYear ?? ''} onChange={e=>changeYear(e.target.value)}><option value="">Todos</option>{years.map(y=><option key={y}>{y}</option>)}</select></label>
         <label>Tema<select value={theme} onChange={e=>setTheme(e.target.value)}><option value="">Todos os temas</option>{themes.map(t=><option key={t} value={t}>{themeLabel(t)}</option>)}</select></label>
       </div><div className="mlb-search"><label>Buscar atributo<input type="search" value={search} placeholder="Ex.: renda, RAIS, sinistros…" onChange={e=>setSearch(e.target.value)}/></label>
         {dimensions.map(([dimension,values])=><label key={dimension}>{dimension}<select value={facets[dimension] ?? ''} onChange={e=>setFacets({...facets,[dimension]:e.target.value})}><option value="">Todos ({values.length})</option>{values.map(v=><option key={v} value={v}>{v}</option>)}</select></label>)}
@@ -205,7 +224,7 @@ export function MunicipalLayerBuilder({apiBaseUrl='/api', client, value, onChang
       {(resultado || previewError || preview) && <section className="mlb-panel mlb-resultados" aria-label="Resultados"><h2>Resultados</h2>
         {resultado}
         {previewError && <div className={feedback?"mlb-bloco mlb-preview":"mlb-bloco mlb-error mlb-preview"}>{!feedback && <>Prévia indisponível: {previewError} </>}<button type="button" onClick={()=>setPreviewAttempt(n=>n+1)}>Tentar novamente</button></div>}
-        {preview && <section className="mlb-bloco mlb-preview"><h3>Prévia da tabela de atributos</h3><p>5 municípios · até 8 atributos da seleção. A exportação inclui todos os 645 municípios e todos os atributos escolhidos.</p><div className="mlb-table"><table data-table-sort="off"><thead><tr><th>Código IBGE</th><th>Município</th>{preview.fields.map(f=><th key={f}>{f}</th>)}</tr></thead><tbody>{preview.rows.map(r=><tr key={r.CD_MUN}><td>{r.CD_MUN}</td><td>{r.NM_MUN}</td>{preview.fields.map(f=><td key={f}>{r[f] == null ? 'Sem valor' : r[f].toLocaleString('pt-BR',{maximumFractionDigits:8})}</td>)}</tr>)}</tbody></table></div></section>}
+        {preview && <section className="mlb-bloco mlb-preview"><h3>Prévia da tabela de atributos</h3><p>5 municípios · até 8 atributos da seleção. A exportação inclui todos os 645 municípios e todos os atributos escolhidos.</p><div className="mlb-table"><table data-table-sort="off"><thead><tr><th>Código IBGE</th><th>Município</th>{preview.fields.map(f=><th key={f} title={f}>{preview.aliases?.[f]||f}</th>)}</tr></thead><tbody>{preview.rows.map(r=><tr key={r.CD_MUN}><td>{r.CD_MUN}</td><td>{r.NM_MUN}</td>{preview.fields.map(f=><td key={f}>{r[f] == null ? 'Sem valor' : r[f].toLocaleString('pt-BR',{maximumFractionDigits:8})}</td>)}</tr>)}</tbody></table></div></section>}
         {preview?.glossario?.length ? <section className="mlb-bloco mlb-glossario"><h3>Glossário e aliases de atributos</h3><p>Os campos abaixo são exatamente os que sairão na tabela de atributos da camada gerada. O nome do campo começa pelo identificador do tema; o nome por extenso viaja no alias, no dicionário e nos metadados do pacote.{preview.totalAttributes > (preview.glossarioLimite ?? 0) ? ` Exibindo os primeiros ${preview.glossarioLimite} de ${preview.totalAttributes.toLocaleString('pt-BR')} atributos; o dicionário do pacote traz todos.` : ''}</p><div className="mlb-table"><table data-table-sort="off"><thead><tr><th>Campo exportado</th><th>Alias</th><th>Significado</th><th>Fonte</th></tr></thead><tbody>{preview.glossario.map(item=><tr key={item.campo_exportado}><td><code>{item.campo_exportado}</code></td><td>{item.alias}</td><td className="mlb-glossario-significado">{item.significado}</td><td>{item.fonte}</td></tr>)}</tbody></table></div></section> : null}
       </section>}
     </div>}

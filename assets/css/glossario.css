@@ -3,23 +3,8 @@
   margin: 0 auto;
   padding: 2rem 0 3rem;
 }
-.cabecalho-glossario { margin-bottom: 2rem; }
-.glossario-voltar { font-size: .875rem; }
-.glossario-sobretitulo {
-  color: var(--pli-blue);
-  font-size: .75rem;
-  font-weight: 700;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  margin: 1.5rem 0 .5rem;
-}
-.cabecalho-glossario h1 {
-  color: var(--pli-deep);
-  font-size: clamp(1.6rem, 3vw, 2.3rem);
-  line-height: 1.2;
-  margin: 0 0 .75rem;
-}
-.cabecalho-glossario > p:last-child { color: var(--pli-muted); max-width: 760px; }
+.cabecalho-glossario { margin-bottom: 1.25rem; }
+.glossario-voltar { display: inline-block; margin-bottom: 1.25rem; font-size: .875rem; }
 .glossario-layout { display: grid; grid-template-columns: 290px minmax(0, 1fr); gap: 2rem; align-items: start; }
 .barra-lateral-glossario {
   position: sticky;

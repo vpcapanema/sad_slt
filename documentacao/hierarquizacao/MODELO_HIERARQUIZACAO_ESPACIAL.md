@@ -14,7 +14,27 @@ Este documento reclassifica os 55 fatores da aba Matriz de Criterios e Premissas
 - atributo_objeto: fator que existe como atributo intrínseco do objeto de demanda e não deve ser rasterizado;
 - hibrido: fator que depende de combinação entre localização, rede e atributos do objeto de demanda.
 
-Tambem define a variavel derivada recomendada a partir da premissa de cada fator. Nesta leitura, o campo Criterio da planilha e tratado como fator avaliativo, e a premissa e tratada como a regra que orienta a extracao da variavel.
+O criterio identifica a propriedade pela qual as alternativas sao avaliadas;
+a variavel operacionaliza essa propriedade por uma grandeza observavel.
+A premissa de avaliacao declara como essa grandeza e interpretada em relacao
+ao fenomeno estudado: "Quanto maior [grandeza medida pela variavel],
+maior/menor [fenomeno avaliado]". Essa frase nao e o nome do criterio e nao
+substitui a justificativa teorica, empirica ou normativa da premissa.
+
+Este documento conserva os nomes dos 55 fatores do acervo anterior de nove
+dimensoes, sem os homologar ou impor como configuracao da nova pagina.
+A relacao oficial de dimensoes, consultada na aba "Dimensões de Critérios" do
+[modelo publicado](../matrizes/Modelo_Matriz_Criterios_Premissas_SLT.xlsx),
+contem 12 dimensoes: Tecnica, Financeiro, Economica, Social, Seguranca,
+Ambiental, Territorial, Institucional, Risco, Fundiario-patrimonial,
+Infraestrutura e servidoes e Juridico-institucional.
+
+As premissas, metricas e relacoes do acervo anterior permanecem preservadas.
+Eventuais divergencias entre condicao atual, necessidade de intervencao e
+beneficio esperado exigem validacao especifica; nao sao resolvidas por
+renomeacao. Esta correcao conceitual nao altera pesos, formulas, resultados
+salvos ou a matriz espacial v3, nem transforma atributos de projeto em
+variaveis territorializaveis.
 
 ## Tecnica
 

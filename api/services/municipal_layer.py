@@ -62,10 +62,23 @@ def categorias():
             FROM dominios.categoria_extracao_atributos WHERE ativo ORDER BY ordem,nome''').fetchall()]
 
 
-def catalogo(codigo=None):
+def backend(territorialidade='municipios'):
+    if territorialidade == 'municipios':
+        return dados
+    if territorialidade == 'setores_2022':
+        from api.services import base_setorial
+        return base_setorial
+    raise ValueError('Escala territorial invalida.')
+
+
+def catalogo(codigo=None, territorialidade='municipios'):
     category = categoria(codigo) if codigo is not None else None
-    return {'attributes': dados.catalog(), 'municipalities': dados.MUNICIPIOS, 'crs': dados.CRS,
-            'geometryYear': dados.ANO_MALHA, 'categoria': category, 'destino': DESTINO}
+    source = backend(territorialidade)
+    return {'attributes': source.catalog(), 'municipalities': dados.MUNICIPIOS, 'crs': source.CRS,
+            'featureCount': source.MUNICIPIOS, 'territorialidade': territorialidade,
+            'keyField': 'CD_SETOR' if territorialidade == 'setores_2022' else 'CD_MUN',
+            'territoryLabel': 'setores censitários' if territorialidade == 'setores_2022' else 'municípios',
+            'geometryYear': source.ANO_MALHA, 'categoria': category, 'destino': DESTINO}
 
 
 LIMITE_GLOSSARIO = 300
@@ -74,32 +87,41 @@ LIMITE_GLOSSARIO = 300
 def previa(codigo, payload):
     if codigo is not None:
         categoria(codigo)
-    items = dados.selection(payload['attributes'])
-    frame = dados.layer(items[:8]).drop(columns='geometry').head(5)
+    source = backend(payload.get('territorialidade', 'municipios'))
+    items = source.selection(payload['attributes'])
+    frame = (source.layer(items[:8], limit=5) if source is not dados else source.layer(items[:8])).drop(columns='geometry').head(5)
     # O glossario descreve a tabela de atributos da camada que sera gerada.
-    entradas = dados.dicionario(items[:LIMITE_GLOSSARIO], payload.get('format', 'fgb'))
+    todas_entradas = source.dicionario(items, payload.get('format', 'fgb'))
+    entradas = todas_entradas[:LIMITE_GLOSSARIO]
+    por_campo = {entry['campo_bruto']: entry for entry in todas_entradas}
+    nomes = {item['field']: por_campo[item['field']]['campo_exportado'] for item in items[:8]}
+    frame = frame.rename(columns=nomes)
     fixos = [{'campo_exportado': campo, 'alias': rotulo, 'significado': texto,
-              'campo_bruto': campo, 'fonte': dados.ORIGEM_MALHA, 'tema': 'Malha municipal',
-              'ano': dados.ANO_MALHA, 'unidade': None}
-             for campo, (rotulo, texto) in dados.CAMPOS_FIXOS.items()]
+              'campo_bruto': campo, 'fonte': source.ORIGEM_MALHA, 'tema': 'Malha territorial',
+              'ano': source.ANO_MALHA, 'unidade': None}
+             for campo, (rotulo, texto) in source.CAMPOS_FIXOS.items()]
     return {'rows': json.loads(frame.to_json(orient='records')),
-            'fields': [item['field'] for item in items[:8]], 'totalAttributes': len(items),
-            'glossario': fixos + entradas, 'glossarioLimite': LIMITE_GLOSSARIO}
+            'fields': [nomes[item['field']] for item in items[:8]], 'totalAttributes': len(items),
+            'fixedFields': list(source.CAMPOS_FIXOS),
+            'aliases': {entry['campo_exportado']: entry['alias'] for entry in fixos + todas_entradas},
+            'glossario': fixos + entradas, 'glossarioLimite': LIMITE_GLOSSARIO,
+            'keyField': 'CD_SETOR' if source is not dados else 'CD_MUN'}
 
 
-def base_arquivos(nome: str) -> str:
+def base_arquivos(nome: str, territorialidade='municipios') -> str:
     """municipios_sp + identificador curto + o nome que o usuário deu."""
     texto = unicodedata.normalize('NFKD', str(nome)).encode('ascii', 'ignore').decode()
     # 40 caracteres: o nome completo fica no banco; aqui o caminho precisa caber.
     texto = re.sub(r'[^a-zA-Z0-9]+', '_', texto).strip('_').lower()[:40].strip('_')
     curto = uuid4().hex[:8]
-    return '_'.join(parte for parte in (dados.PREFIXO, curto, texto) if parte)
+    return '_'.join(parte for parte in (backend(territorialidade).PREFIXO, curto, texto) if parte)
 
 
 def materializar(payload, folder=None, base=None, controle=None):
     """Reabre pelo GDAL; sem montagem retorna caminho None e mantém tudo em RAM."""
-    base = base or dados.PREFIXO
-    package = dados.export_layer(payload, base, controle) if controle else dados.export_layer(payload, base)
+    source = backend(payload.get('territorialidade', 'municipios'))
+    base = base or source.PREFIXO
+    package = source.export_layer(payload, base, controle) if controle else source.export_layer(payload, base)
     fmt = payload['format']
     components = {}
     with ZipFile(io.BytesIO(package)) as archive:
@@ -122,10 +144,11 @@ def materializar(payload, folder=None, base=None, controle=None):
             raise ValueError('A exportação deve conter uma camada vetorial.')
         dataset = None
         frame = gpd.read_file(path, engine='pyogrio')
-    if len(frame) != 645:
-        raise ValueError('A camada gerada não contém os 645 municípios.')
-    if frame.crs is None or frame.crs.to_epsg() != 4674 or not frame.CD_MUN.is_unique or not frame.CD_MUN.str.fullmatch(r'\d{7}').all():
-        raise ValueError('CRS ou códigos municipais inválidos.')
+    key, pattern = ('CD_MUN', r'\d{7}') if source is dados else ('CD_SETOR', r'\d{15}')
+    if len(frame) != source.MUNICIPIOS:
+        raise ValueError(f'A camada gerada não contém as {source.MUNICIPIOS} unidades territoriais.')
+    if frame.crs is None or frame.crs.to_epsg() != 4674 or not frame[key].is_unique or not frame[key].str.fullmatch(pattern).all():
+        raise ValueError('CRS ou códigos territoriais inválidos.')
     manifest = json.loads(components[f'{base}_metadados.json'])
     if any(item['export_field'] not in frame for item in manifest['attributes']):
         raise ValueError('Um atributo selecionado não foi materializado.')
@@ -138,12 +161,13 @@ def gerar(codigo, payload, nome, user, controle=None):
         raise ValueError('Há uma camada municipal sendo gerada. Aguarde e tente novamente.')
     execution = None
     try:
-        name = nome.strip()[:200] or nome_padrao(category, dados.selection(payload['attributes']))
+        source = backend(payload.get('territorialidade', 'municipios'))
+        name = nome.strip()[:200] or nome_padrao(category, source.selection(payload['attributes']))
         params = {'plugin': 'municipal-layer', 'versao': '1.0.0', 'categoria': category,
                   **payload, 'nome_saida': name}
         execution = ciclo.iniciar('gerar_camada_municipal', params, str(user.id))
         # O nome sai antes da exportação: é ele que batiza a pasta e os arquivos.
-        base = base_arquivos(name)
+        base = base_arquivos(name, payload.get('territorialidade', 'municipios'))
         from api.storage_policy import TemporaryDirectory, sem_montagem
         from api.repositories import camada_geoespacial_repository as camadas, saidas_geoespaciais_repository as catalogo
         from api.services import saidas_storage

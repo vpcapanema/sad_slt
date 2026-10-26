@@ -129,6 +129,12 @@ def test_package_preserves_universe_and_blank_values(inputs, tmp_path, fmt):
     assert len(layer) == len(source)
     assert layer.geometry.geom_equals(source.geometry).all()
     fields = {i['field']: i['export_field'] for i in manifest['attributes']}
+    headers = {i['field']: i['alias'] for i in manifest['attributes']}
+    assert manifest['aliases_nas_tabelas'] is True
+    from xml.etree import ElementTree
+    qml = ElementTree.parse(tmp_path / f'{base}.qml')
+    qml_aliases = {node.attrib['field']: node.attrib['name'] for node in qml.findall('./aliases/alias')}
+    assert all(qml_aliases[i['export_field']] == i['alias'] for i in manifest['attributes'])
     assert layer[fields['vazio']].isna().all()
     assert layer.loc['3500001', fields['parcial']] == 0
     assert layer.loc[['3500002', '3500003'], fields['parcial']].isna().all()
@@ -138,16 +144,16 @@ def test_package_preserves_universe_and_blank_values(inputs, tmp_path, fmt):
             sep=sep,
             dtype={'CD_MUN': str},
         ).set_index('CD_MUN').sort_index()
-        assert list(table.columns) == list(layer.drop(columns='geometry').columns)
-        assert table[fields['vazio']].isna().all()
+        assert list(table.columns) == [manifest['aliases'].get(c, c) for c in layer.drop(columns='geometry').columns]
+        assert table[headers['vazio']].isna().all()
         assert list(table.index) == list(source.index)
-        assert table.loc['3500001', fields['parcial']] == 0
+        assert table.loc['3500001', headers['parcial']] == 0
     wb = load_workbook(tmp_path / f'{base}_atributos.xlsx', read_only=True)
     rows = list(wb.active.iter_rows(max_col=len(layer.columns), values_only=True))
     wb.close()
     assert len(rows) == 4
     assert {r[0] for r in rows[1:]} == set(source.index)
-    index = rows[0].index(fields['vazio'])
+    index = rows[0].index(headers['vazio'])
     assert all(r[index] is None for r in rows[1:])
     with (tmp_path / f'{base}_dicionario.csv').open(encoding='utf-8-sig') as f:
         glossary = list(csv.DictReader(f))

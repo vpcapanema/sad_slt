@@ -87,6 +87,7 @@ def test_pacotes_com_snapshot_real():
                         sep=sep,
                         dtype={'CD_MUN': str},
                     ).set_index('CD_MUN').sort_index()
+                    table = table.rename(columns={i['alias']: i['export_field'] for i in manifest['attributes']})
                     assert list(table.index) == list(actual.index)
                     assert table.NM_MUN.tolist() == actual.NM_MUN.tolist()
                     np.testing.assert_allclose(
@@ -100,6 +101,7 @@ def test_pacotes_com_snapshot_real():
                 rows = list(wb.active.iter_rows(max_col=len(frame.columns) - 1, values_only=True))
                 wb.close()
                 table = pd.DataFrame(rows[1:], columns=rows[0]).set_index('CD_MUN').sort_index()
+                table = table.rename(columns={i['alias']: i['export_field'] for i in manifest['attributes']})
                 assert len(table) == 645 and list(table.index) == list(actual.index)
                 np.testing.assert_allclose(
                     table[numeric].to_numpy(dtype=float),

@@ -20,18 +20,37 @@ export function updatePersistentView(host, s) {
   }
   const {catalog,error,feedback,busy,config,selected,source,allSources,allYears,activeYear,
     sources,years,themes,theme,search,facets,dimensions,filtered,visible,page,selectedItems,
-    sourceLabel,themeLabel,metadata,limits,preview,previewError,resultado}=s;
+    sourceLabel,themeLabel,metadata,limits,preview,previewError,resultado,origin,changeOrigin,changeSource,changeYear}=s;
   const unavailable=!catalog||busy;
+  const count=catalog?.featureCount||catalog?.municipalities||645;
+  const territory=catalog?.territoryLabel||'municípios';
+  host.querySelector('.mlb-geometry strong').textContent=`${count.toLocaleString('pt-BR')} ${territory}`;
+  host.querySelector('.mlb-eyebrow').textContent=`SÃO PAULO — ${territory.toLocaleUpperCase('pt-BR')}`;
+  host.querySelector('.territorial-builder-description').textContent=`Selecione fontes, períodos, temas e atributos para compor uma camada dos ${count.toLocaleString('pt-BR')} ${territory} de São Paulo. Geometria IBGE 2022; valores ausentes permanecem nulos.`;
+  const originControl=get('origin');
+  if(originControl){
+    originControl.value=origin;originControl.disabled=unavailable;originControl.onchange=e=>changeOrigin(e.target.value);
+  }
   show('loading',!catalog);text('loading',error?'Não foi possível carregar o catálogo.':'Carregando catálogo…');
   show('retry',!catalog&&!!error);action('retry',()=>s.setAttempt(n=>n+1));
   show('error',!!error&&!feedback);text('error',error);
   options(get('source'),[['__todas__','Todas as fontes'],...sources.map(x=>[x,sourceLabel(x)])],source);
-  options(get('year'),[...(allSources?[['','Todos os anos']]:[]),...years.map(y=>[y,y])],allYears?'':activeYear??'');
+  options(get('year'),[['','Todos'],...years.map(y=>[y,y])],allYears?'':activeYear??'');
   options(get('theme'),[['','Todos os temas'],...themes.map(t=>[t,themeLabel(t)])],theme);
   for(const key of ['source','year','theme','search','format','name'])get(key).disabled=unavailable;
-  get('source').onchange=e=>{s.setSource(e.target.value);s.setTheme('');if(e.target.value==='__todas__')s.setYear('');};
-  get('year').onchange=e=>{s.setYear(e.target.value);s.setTheme('');};
+  get('source').onchange=e=>changeSource(e.target.value);
+  get('year').onchange=e=>changeYear(e.target.value);
   get('theme').onchange=e=>s.setTheme(e.target.value);
+  const filters=host.querySelector('.mlb-filters');
+  const canvas=document.createElement('canvas'),context=canvas.getContext('2d');
+  if(context){
+    context.font=getComputedStyle(get('source')).font;
+    for(const key of ['origin','theme']){
+      const node=get(key);
+      if(node)filters.style.setProperty(`--filter-${key}-width`,
+        `${Math.ceil(Math.max(...[...node.options].map(option=>context.measureText(option.text).width)))+48}px`);
+    }
+  }
   get('search').value=search;get('search').oninput=e=>s.setSearch(e.target.value);
   list('facets',dimensions,()=>dimensions.map(([dimension,values])=>{
     const n=clone('facet');n.querySelector('span').textContent=dimension;
@@ -46,15 +65,16 @@ export function updatePersistentView(host, s) {
   text('available',`${filtered.length.toLocaleString('pt-BR')} atributos disponíveis`);
   action('add',()=>s.update({...config,attributes:[...new Set([...config.attributes,...filtered.map(a=>a.id)])]}),unavailable||!filtered.length);
   action('clear',()=>s.update({...config,attributes:[]}),unavailable||!selected.size);
-  const description=a=>`${themeLabel(a.theme)} · ${a.unit||'Unidade não informada'} · ${a.coverage}/645 com valor`;
+  const description=a=>`${themeLabel(a.theme)} · ${a.unit||'Unidade não informada'} · ${a.coverage}/${count} com valor`;
   list('attributes',[visible,allSources],()=>visible.map(a=>{
     const n=clone('attribute');n.dataset.id=a.id;n.querySelector('strong').textContent=a.label;
     n.querySelector('summary').setAttribute('aria-label',`Fonte e definição de ${a.label}`);
     n.querySelector('.mlb-detail-meta').textContent=description(a);
     n.querySelector('[data-field]').textContent=`${allSources?`${a.source} · `:''}${a.field} · ${a.year}`;
     const link=n.querySelector('a');try{const url=new URL(a.url);if(['https:','http:'].includes(url.protocol))link.href=url.href;}catch{}
-    n.querySelector('[data-definition]').textContent=metadata(a).definicao||metadata(a).divulgacao||'';
-    n.querySelector('[data-note]').textContent=metadata(a).nota||'';return n;
+    const info=metadata(a);
+    n.querySelector('[data-definition]').textContent=[info.definicao||info.divulgacao,info.formula?`Fórmula: ${info.formula}`:''].filter(Boolean).join(' · ');
+    n.querySelector('[data-note]').textContent=[a.producer?`Cálculo: ${a.producer}.`:'',info.nota,info.homologado_hierarquizacao===false?'Cálculo disponível; não homologado automaticamente para hierarquização.':''].filter(Boolean).join(' ');return n;
   }));
   for(const n of get('attributes').children){
     const input=n.querySelector('input');input.checked=selected.has(n.dataset.id);input.disabled=unavailable;
@@ -86,15 +106,17 @@ export function updatePersistentView(host, s) {
   text('preview-error-text',feedback?'':`Prévia indisponível: ${previewError} `);
   action('preview-retry',()=>s.setPreviewAttempt(n=>n+1));
   show('preview',!!preview);show('glossary',!!preview?.glossario?.length);
-  // Cabeçalhos fixos ficam no HTML; somente colunas do catálogo são acrescentadas.
   const head=get('preview-head');
-  if(head.dataset.fields!==JSON.stringify(preview?.fields)){
-    [...head.children].slice(2).forEach(n=>n.remove());
-    for(const field of preview?.fields||[]){const n=clone('head');n.textContent=field;head.append(n);}
-    head.dataset.fields=JSON.stringify(preview?.fields);
+  if(get('preview-description'))get('preview-description').textContent=`Até 5 ${territory} · todos os campos fixos e até 8 indicadores selecionados. A exportação inclui ${count.toLocaleString('pt-BR')} ${territory} e todos os atributos escolhidos.`;
+  const previewFields=preview?[...(preview.fixedFields||[preview.keyField||'CD_MUN','NM_MUN']),...preview.fields]:[];
+  const headerSignature=JSON.stringify([previewFields,preview?.aliases]);
+  if(head.dataset.fields!==headerSignature){
+    head.replaceChildren();
+    for(const field of previewFields){const n=clone('head');n.textContent=preview.aliases?.[field]||field;n.title=field;head.append(n);}
+    head.dataset.fields=headerSignature;
   }
   list('preview-body',preview,()=> (preview?.rows||[]).map(row=>{
-    const tr=clone('row');for(const field of ['CD_MUN','NM_MUN',...preview.fields]){
+    const tr=clone('row');for(const field of previewFields){
       const td=clone('cell');td.textContent=row[field]==null?'Sem valor':row[field].toLocaleString('pt-BR',{maximumFractionDigits:8});tr.append(td);
     }return tr;
   }));

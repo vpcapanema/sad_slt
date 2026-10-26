@@ -36,9 +36,17 @@ def test_glossario_publico_renderiza_termos_e_links_validos(prefixo):
     )
     assert response.status_code == 200
     assert 'data-requer-autenticacao="true"' not in response.text
+    assert "maior/menor [fenômeno avaliado]" in response.text
+    assert "Propriedade pela qual as alternativas são avaliadas e comparadas" in response.text
+    assert "A frase explicita uma orientação assumida, não comprova causalidade" in response.text
+    assert "A relação oficial contém 12 dimensões" in response.text
+    for dimensao in ("Fundiário-patrimonial", "Infraestrutura e servidões", "Jurídico-institucional"):
+        assert dimensao in response.text
+    assert "maior intensidade não significa necessariamente uma condição desejável" in response.text
     parser = GlossarioParser()
     parser.feed(response.text)
     assert parser.termos
+    assert {"criterio", "premissa", "premissa-avaliacao", "fundamento", "variavel", "relacao", "fenomeno-avaliado", "dimensao-criterios"} <= set(parser.termos)
     assert len(parser.ids) == len(set(parser.ids))
     for link in parser.links:
         if link.startswith("#"):

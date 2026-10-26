@@ -1,0 +1,198 @@
+.superficie-criterios-page .ahp-main,
+#sc-app,
+#sc-app .ahp-step-section {
+  min-width: 0;
+}
+
+.superficie-criterios-page .app-header-inner {
+  flex-wrap: wrap;
+  gap: .75rem;
+  min-width: 0;
+}
+
+.superficie-criterios-page .app-nav {
+  flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
+}
+
+#sc-app {
+  display: grid;
+  gap: 1.25rem;
+}
+
+#sc-app .ahp-step-section {
+  margin: 0;
+  overflow: hidden;
+}
+
+#sc-app .ahp-section-body {
+  padding: 1.25rem;
+  align-items: stretch;
+  gap: 1rem;
+}
+
+#sc-app .ahp-section-label {
+  min-width: 0;
+}
+
+#sc-app .ahp-section-label > span:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+#sc-app .sc-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: end;
+  min-width: 0;
+}
+
+#sc-app .sc-fields--two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+#sc-app .sc-fields--filters {
+  grid-template-columns: minmax(100px, .8fr) minmax(0, 1.4fr) 9rem minmax(0, 1.2fr) minmax(0, 1.2fr);
+}
+
+#sc-app label {
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+  min-width: 0;
+  margin: 0;
+  font-size: .875rem;
+  font-weight: 600;
+  color: var(--pli-deep);
+}
+
+#sc-app select,
+#sc-app input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 40px;
+  padding: .55rem .65rem;
+  border: 1px solid var(--pli-border, #dce3e8);
+  border-radius: .4rem;
+  background: var(--pli-white, #fff);
+  color: var(--pli-deep);
+  font: inherit;
+  font-weight: 400;
+}
+
+#sc-app select:focus-visible,
+#sc-app input:focus-visible {
+  outline: 2px solid var(--pli-green);
+  outline-offset: 2px;
+}
+
+#sc-app select:disabled,
+#sc-app input:disabled {
+  background: var(--pli-light, #f1f5f9);
+}
+
+#sc-app #sc-variable {
+  height: 14rem;
+  margin-top: .25rem;
+}
+
+#sc-app .sc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .65rem;
+  align-items: center;
+}
+
+#sc-app .btn {
+  align-self: flex-start;
+  max-width: 100%;
+  min-height: 38px;
+  white-space: normal;
+  text-align: center;
+}
+
+#sc-app .fase-table-wrap {
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+#sc-app .fase-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .875rem;
+}
+
+#sc-app .fase-table th,
+#sc-app .fase-table td {
+  padding: .75rem;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+#sc-app .sc-criteria-table {
+  min-width: 850px;
+  table-layout: fixed;
+}
+
+#sc-app .sc-criteria-table th:nth-child(1) { width: 24%; }
+#sc-app .sc-criteria-table th:nth-child(2) { width: 22%; }
+#sc-app .sc-criteria-table th:nth-child(3) { width: 14%; }
+#sc-app .sc-criteria-table th:nth-child(4) { width: 29%; }
+#sc-app .sc-criteria-table th:nth-child(5) { width: 11%; }
+
+#sc-app .sc-empty {
+  text-align: center;
+  color: var(--pli-muted);
+}
+
+#sc-app .sc-viewer {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+#sc-app .sc-criterion {
+  min-width: 0;
+  border: 1px solid var(--pli-border, #dce3e8);
+  border-radius: .5rem;
+  padding: .75rem;
+  overflow-wrap: anywhere;
+}
+
+#sc-app .sc-criterion h3 {
+  margin: 0 0 .5rem;
+  font-size: 1rem;
+}
+
+#sc-app .sc-map {
+  height: 280px;
+  width: 100%;
+  margin: .5rem 0 1rem;
+  z-index: 0;
+}
+
+#sc-app .sc-legend { font-size: .85rem; }
+#sc-status { margin: 0; }
+#sc-status:empty { display: none; }
+#sc-app [hidden] { display: none !important; }
+#sc-app .sc-error { border-inline-start: 4px solid currentColor; }
+#sc-app .sc-pair { min-width: 100px; }
+#sc-collaborative { display: grid; gap: 1rem; }
+
+@media (max-width: 1100px) {
+  #sc-app .sc-fields--filters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  #sc-app .sc-viewer { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 700px) {
+  #sc-app .sc-fields,
+  #sc-app .sc-viewer { grid-template-columns: minmax(0, 1fr); }
+  #sc-app .ahp-section-body { padding: 1rem; }
+  #sc-app .sc-actions { align-items: stretch; }
+  #sc-app .sc-actions .btn { flex: 1 1 100%; }
+}

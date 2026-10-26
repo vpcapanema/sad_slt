@@ -354,6 +354,95 @@ o download recupera o ZIP do storage oficial, sem gravá-lo em uma pasta local.
 O XLSX sem montagem permanece em memória e entra no orçamento da exportação;
 seleções que excedem a capacidade são recusadas com orientação para dividi-las.
 
+#### Transparência dos procedimentos territoriais
+
+As novas exportações municipais e setoriais usam campos descritivos, por exemplo
+`pop_taxa_crescimento_geometrico_2022`, preservando o código original no
+dicionário e nos metadados. GeoPackage incorpora aliases; os demais formatos
+recebem QML para os aliases no QGIS. CSV, TXT e XLSX usam os aliases como
+cabeçalhos dos indicadores. Shapefile mantém nomes de até dez caracteres
+com correspondência no dicionário/QML. A exibição de aliases na camada depende
+do suporte e das configurações do SIG; arquivos anteriormente gerados não mudam.
+
+A página autenticada `/restrict/geoespacial/documentacao-camadas-territoriais/`
+documenta originais e combinados, campos, fórmulas, universos, fontes, períodos,
+cobertura e pendências. Distingue o catálogo incorporado, conferido em 25/10/2026,
+da matriz preliminar histórica de 46 indicadores; não é consulta ao banco em
+tempo real nem homologação de novas combinações.
+Não importa dados, materializa indicadores ou modifica o gerador.
+O universo auditado contém 645 municípios; a camada setorial de 2022 contém
+103.319 códigos e 103.620 partes, com 8 geometrias oficiais inválidas.
+Não há replicação municipal nos setores. A ampliação contempla integralmente
+os campos numéricos de 18 conjuntos oficiais de 2022: nove básicos
+(`v0001–v0009`), demografia, alfabetização, domicílios Partes 1, 2 e 3,
+cor ou raça, parentesco, óbitos, pessoas e domicílios indígenas e quilombolas,
+rendimento do responsável, entorno por domicílios, moradores e faces e
+registro de nascimento. São 3.519 originais e 10 combinados setoriais.
+A completude se refere a esses conjuntos e dicionários identificados,
+não a qualquer produto presente ou futuro do IBGE.
+Cada arquivo mantém sua cobertura: ausência de linha e sigilo `X` não são
+substituídos por zero. O relatório registra os setores presentes e os sigilos
+por conjunto, além da cobertura numérica de cada atributo.
+Foram persistidos 18 combinados municipais, todos com 645/645 valores; o catálogo
+municipal totaliza 6.393 atributos, dos quais 6.375 originais.
+A disponibilidade operacional posterior à conferência pode ser
+conferidas em `/api/geoespacial/extracao-atributos/municipal/catalog?territorialidade=setores_2022`;
+essa carga não utiliza amostra municipal nem homologa combinações automaticamente.
+Temas comuns às duas escalas não implicam mesmos IDs, períodos ou universos.
+Rendimento médio e mediano do responsável e suas variâncias foram incorporados;
+não equivalem à renda domiciliar per capita ou à pobreza. O indicador de
+baixa renda já calculado permanece municipal. Dados divulgados em 2025/2026
+mantêm a referência censitária de 2022 e as janelas específicas da descrição.
+
+A carga completa é reproduzível por
+`scripts/completar_setores_2022.py --insumos DIR --aplicar`. Sem `--aplicar`,
+valida todos os arquivos e linhas de SP sem escrita. A aplicação usa transação
+por arquivo, verifica os valores e sinais persistidos contra o CSV e recalcula
+os dez combinados ao final. Os IDs anteriores e a geometria são preservados.
+Os dicionários e arquivos usados são identificados por URL e SHA-256.
+Em caso de interrupção, `--retomar` reutiliza somente os arquivos cuja
+transação foi confirmada com o mesmo SHA-256 e o mesmo conjunto de campos;
+a transação interrompida não é considerada concluída.
+
+Os dados públicos de referência estão versionados, sem dependência de pasta de sessão:
+
+- `config/catalogo-territorial-incorporado.json`: carga efetiva, 3.529 atributos
+  setoriais com descrições, campos, fórmulas, cobertura, dicionário, procedência
+  SHA-256 e conferência dos 18 combinados municipais;
+- `config/documentacao-camadas-territoriais.json`: prévia histórica integral,
+  46 indicadores, preservada sem alterações e usada nas fórmulas da carga;
+- `config/documentacao-camadas-territoriais/matriz-viabilidade-variaveis.csv`: mesma matriz em CSV;
+- `config/documentacao-camadas-territoriais/baixa-renda-2022-percentuais-calculados.csv`:
+  645 municípios, contagens e percentual de moradores até meio salário mínimo,
+  incluindo sem rendimento, calculado com o universo da tabela SIDRA 10296.
+
+O link de download da página usa a rota autenticada
+`/restrict/geoespacial/documentacao-camadas-territoriais/baixa-renda-2022.csv`.
+Os recursos versionados também são públicos pelo mount existente `/config`;
+não contêm microdados pessoais. Campos ausentes e denominadores não positivos
+não são substituídos por zero. A não aditividade dos percentuais publicados de
+renda é explicitada, sem renormalização. A inversão de indicadores de relação
+negativa pertence à futura favorabilidade deste fluxo, não a esta documentação.
+
+Para reproduzir a incorporação do retrato, defina `$origem` como a pasta que
+contém os três arquivos da auditoria e copie-os **sem conversão ou arredondamento**:
+
+```powershell
+Copy-Item "$origem\matriz-viabilidade-variaveis.json" config\documentacao-camadas-territoriais.json
+Copy-Item "$origem\matriz-viabilidade-variaveis.csv" config\documentacao-camadas-territoriais\matriz-viabilidade-variaveis.csv
+Copy-Item "$origem\baixa-renda-2022-percentuais-calculados.csv" config\documentacao-camadas-territoriais\baixa-renda-2022-percentuais-calculados.csv
+```
+
+Os testes `tests/test_documentacao_camadas_territoriais.py` verificam os SHA-256
+do retrato original, a equivalência JSON/CSV e reproduzem os 645 percentuais como
+`100 × (até 1/4 SM + mais de 1/4 até 1/2 SM + sem rendimento) / total do universo`.
+Uma atualização deliberada do retrato exige revisar os dados, as ressalvas e
+os hashes esperados nos testes, sem tratar disponibilidade numérica como homologação.
+O relatório da carga aplicada é reproduzível por
+`scripts\preparar_catalogo_territorial.py --conferir --relatorio config\catalogo-territorial-incorporado.json`.
+A preparação usa `--insumos DIR --aplicar` e a migração
+`database\143_catalogo_territorial.sql`; a página não executa essas operações.
+
 As novas saídas usam uma organização por contexto, não por formato de arquivo:
 
 ```text

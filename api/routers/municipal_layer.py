@@ -17,6 +17,7 @@ class Selecao(BaseModel):
     attributes: list[str] = Field(min_length=1, max_length=6500)
     format: Literal['fgb', 'gpkg', 'shp', 'geojson'] = 'fgb'
     nome: str = Field(default='', max_length=200)
+    territorialidade: Literal['municipios', 'setores_2022'] = 'municipios'
 
 
 def invoke(fn, *args):
@@ -32,8 +33,8 @@ def categorias():
 
 
 @router.get('/catalog')
-def catalog_comum():
-    return invoke(service.catalogo)
+def catalog_comum(territorialidade: Literal['municipios', 'setores_2022'] = 'municipios'):
+    return invoke(service.catalogo, None, territorialidade)
 
 
 @router.post('/preview')
@@ -42,8 +43,8 @@ def preview_comum(body: Selecao):
 
 
 @router.get('/{categoria}/catalog')
-def catalog(categoria: str):
-    return invoke(service.catalogo, categoria)
+def catalog(categoria: str, territorialidade: Literal['municipios', 'setores_2022'] = 'municipios'):
+    return invoke(service.catalogo, categoria, territorialidade)
 
 
 @router.post('/{categoria}/preview')

@@ -1,0 +1,149 @@
+{% extends "bases/base_conteudo.html" %}
+{% set subtitulo = "Documentação das camadas territoriais" %}
+{% set navegacao = "restrita" %}
+{% set bloco_modulo = "geoprocessamento" %}
+{% set requer_autenticacao = true %}
+{% block titulo %}Transparência das camadas territoriais — SICARD{% endblock %}
+{% block descricao %}Fontes, fórmulas, cobertura e limites dos indicadores do gerador territorial SICARD.{% endblock %}
+{% block estilos_pagina %}
+<link rel="stylesheet" href="/assets/css/page-title-standard.css?v=20260820-3">
+<link rel="stylesheet" href="/assets/css/documentacao-camadas-territoriais.css?v=20261025-tabela-catalogo">
+{% endblock %}
+{% block conteudo %}
+{% set matriz = matriz | default({}, true) %}
+{% set catalogo = catalogo | default({}, true) %}
+{% set atributos = catalogo.get('atributos_setoriais', []) %}
+{% set originais = atributos | selectattr('origem', 'equalto', 'originais') | list %}
+{% set combinados = atributos | selectattr('origem', 'equalto', 'combinados') | list %}
+{% set conjuntos = catalogo.get('conjuntos_setoriais', []) %}
+<main class="conteudo-principal app-main doc-territorial">
+  <nav aria-label="Localização"><a href="/restrict/geoespacial/">Geoprocessamento</a> / Documentação das camadas territoriais</nav>
+  <section class="secao-apresentacao card card-apresentacao standard-page-hero">
+    <h1 class="standard-page-hero__title"><i class="fa-solid fa-layer-group" aria-hidden="true"></i><span>Transparência das camadas territoriais</span></h1>
+    <p class="standard-page-hero__eyebrow">Procedimentos e rastreabilidade</p>
+    <p class="standard-page-hero__description">Fontes, fórmulas, cobertura e limites dos indicadores do gerador territorial SICARD.</p>
+  </section>
+  <div class="doc-territorial-layout">
+    <aside class="doc-territorial-sidebar" aria-label="Consulta à documentação territorial">
+      <details class="doc-territorial-indice" open>
+        <summary>Índice da documentação</summary>
+        <nav aria-label="Sumário">
+          <ul>
+            <li><a href="#introducao">Introdução</a></li>
+            <li><a href="#procedimentos">Procedimentos</a></li>
+            <li><a href="#cobertura">Cobertura e limites</a></li>
+            <li><a href="#baixa-renda">Baixa renda</a></li>
+            <li><a href="#catalogo">Catálogo incorporado</a></li>
+            <li><a href="#matriz">Prévia histórica</a></li>
+            <li><a href="#pendencias">Limites e pendências</a></li>
+          </ul>
+        </nav>
+      </details>
+    </aside>
+    <div class="doc-territorial-conteudo">
+      <section id="introducao" class="card doc-territorial-apresentacao" aria-labelledby="introducao-titulo">
+        <h2 id="introducao-titulo">Introdução</h2>
+        <p>Esta página documenta os valores originais e combinados do gerador territorial SICARD em dois registros distintos: o <strong>catálogo incorporado e conferido após a carga</strong>, com {{ atributos | length }} atributos setoriais, e a <strong>prévia histórica de viabilidade</strong>, com 46 indicadores. Os relatórios versionados não são consultas em tempo real ao banco; a matriz preliminar não representa o estado atual da carga.</p>
+        <p><strong>Calculável não significa homologado.</strong> A existência de campos, fórmula e cobertura permite examinar um cálculo; não aprova seu uso como critério, peso AHP, índice social ou superfície de favorabilidade. Nenhuma nova combinação é homologada por esta publicação.</p>
+        <p><a href="/restrict/geoespacial/gerador-camadas-territoriais/">Abrir o gerador territorial</a></p>
+      </section>
+  <section id="procedimentos" class="secao-procedimentos card card-procedimentos">
+    <h2>1. Valores originais e combinados</h2>
+    <ol>
+      <li><strong>Originais:</strong> reproduzem um indicador já publicado pela fonte, inclusive percentuais, densidade demográfica e índice de envelhecimento oficiais. Não são recalculados nem classificados como combinações SICARD.</li>
+      <li><strong>Combinados:</strong> derivam de campos identificados, por soma de classes disjuntas, razão, complemento ou variação entre períodos. A fórmula, a unidade e o universo de cada linha devem ser lidos em conjunto; não se misturam denominadores ou anos sem declaração explícita.</li>
+      <li><strong>Consulta do catálogo:</strong> os filtros seguem a sequência tipo de valor, fonte, ano de referência e tema; cada lista apresenta apenas as opções do recorte anterior. Nas combinações, a fonte identifica as instituições dos insumos, inclusive quando há mais de uma, e o SICARD permanece como produtor do cálculo. Alterar filtros não remove os atributos já selecionados.</li>
+      <li><strong>Ausências:</strong> entradas nulas, não numéricas ou denominadores menores ou iguais a zero tornam o resultado não calculável (<code>null</code>/NoData), nunca zero por substituição. Um zero observado e válido permanece zero. As contagens de cobertura se referem à auditoria, não a uma garantia de atualização contínua.</li>
+      <li><strong>Orientação:</strong> indicadores de relação negativa com a futura favorabilidade conservam aqui seus valores e unidades originais. A inversão, após normalização, pertence à etapa futura de favorabilidade deste fluxo, <strong>não implementada por esta página nem por esta matriz</strong>. Não se inverte um valor bruto apenas por ser numericamente negativo.</li>
+      <li><strong>Rastreabilidade:</strong> preservar campo, identificador do atributo, fonte, período, universo e ressalvas antes de materializar ou interpretar qualquer combinação. A documentação não executa importações, materializações ou alterações do catálogo.</li>
+    </ol>
+  </section>
+  <section id="cobertura" class="secao-cobertura card card-cobertura">
+    <h2>2. Cobertura territorial e temporal</h2>
+    <p>O universo municipal existente compreende <strong>645 municípios de São Paulo</strong>. Os períodos variam por indicador: a referência 2022 não se aplica automaticamente a todas as linhas; índices históricos, VAB e séries de emprego conservam os anos indicados na matriz.</p>
+    <p>A camada oficial de setores censitários de 2022 contém <strong>103.319 códigos CD_SETOR e 103.620 partes geométricas</strong>, com <strong>8 geometrias oficiais inválidas</strong>. Partes não são setores adicionais. Para indicadores por setor lógico, somam-se as áreas das partes e contam-se as medidas demográficas uma única vez por CD_SETOR. A calculabilidade numérica não certifica a validade geométrica; operações espaciais exigem validação e registro de eventual reparo, sem correção silenciosa da fonte.</p>
+    <p><strong>Nenhum dado municipal é replicado em setor censitário.</strong> A carga aditiva de agregados oficiais de universo do IBGE foi aplicada em <code>base_territorial.setor</code> e auditada. Abrange todos os campos dos dicionários dos agregados gerais, rendimento do responsável e entorno, além dos oito campos numéricos de registro de nascimento. Inclui os nove básicos <code>v0001–v0009</code>, demografia, alfabetização, domicílios Partes 1, 2 e 3, cor ou raça, parentesco, óbitos, pessoas e domicílios indígenas e quilombolas. O entorno mantém separados os universos de domicílios, moradores e faces de via. Não se trata de importar amostra municipal para setores.</p>
+    <p>A cobertura varia conforme o conjunto. Ausência de linha e sigilo não são zero: símbolos publicados, inclusive <code>X</code>, permanecem registrados separadamente, e o valor numérico fica nulo. Foram preservadas <strong>{{ conjuntos | sum(attribute='sigilos_x') }} células com sigilo X</strong> nos conjuntos desta carga. A cobertura individual pode ser menor que a presença de uma linha no CSV; a contagem de setores abaixo não equivale à quantidade de valores numéricos de todos os campos.</p>
+    <div class="doc-territorial-table" role="region" aria-label="Cobertura por conjunto oficial" tabindex="0">
+      <table><caption>Arquivos oficiais de 2022 integralmente incorporados no escopo desta carga</caption>
+        <thead><tr><th scope="col">Conjunto</th><th scope="col">Campos</th><th scope="col">Setores com linha</th><th scope="col">Células com sigilo X</th></tr></thead>
+        <tbody>{% for item in conjuntos %}<tr><th scope="row"><a href="{{ item.url }}">{{ item.conjunto }}</a></th><td>{{ item.campos }}</td><td>{{ item.setores }} / 103319</td><td>{{ item.sigilos_x }}</td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
+    <p><a href="/api/geoespacial/extracao-atributos/municipal/catalog?territorialidade=setores_2022">Consultar o catálogo API dos setores de 2022</a> (sessão necessária). A resposta permite conferir o estado operacional posterior ao relatório. O prefixo é <code>/api/geoespacial/extracao-atributos/municipal</code>. A carga aplicada não homologa automaticamente combinações.</p>
+    <p>Temas consultáveis nas duas escalas não significam mesmos IDs, campos, universos ou períodos. Os atributos setoriais conservam a referência censitária de 2022, mesmo quando publicados ou revisados em 2025 ou 2026; janelas específicas, como a investigação de óbitos entre janeiro de 2019 e julho de 2022, permanecem na descrição oficial. Rendimento nominal médio e mediano do responsável, suas variâncias e contagens estão incorporados: não equivalem à renda domiciliar per capita nem a uma medida de pobreza. O cálculo de baixa renda abaixo continua exclusivamente municipal.</p>
+    <p>As densidades setoriais têm área positiva nos 103.319 códigos, mas áreas muito pequenas produzem extremos que exigem auditoria. O complemento de ocupação inclui domicílios vagos <em>e de uso ocasional</em>, não somente vacância. A cobertura dos dez combinados recalculados após a ampliação está registrada individualmente no catálogo.</p>
+    <h3>Conferências da auditoria</h3>
+    <ul>
+      <li>Faixas etárias disjuntas fecham a população total; força de trabalho versus ocupados e desocupados apresenta resíduo máximo de 1 pessoa.</li>
+      <li>Quatro setores do VAB versus total de 2021: resíduo máximo aproximado de 0,002 mil reais; preservar a precisão publicada.</li>
+      <li>Classes de renda incluindo sem rendimento não fecham exatamente 100%: resíduo máximo de 0,16 ponto percentual. A conferência SIDRA do município 3555901 reproduz 99,84%; a causa da não aditividade não foi estabelecida. Não corrigir nem renormalizar silenciosamente.</li>
+    </ul>
+  </section>
+  <section id="baixa-renda" class="secao-baixa-renda card card-baixa-renda">
+    <h2>3. Baixa renda municipal — Censo 2022</h2>
+    <p>Proporção de moradores com rendimento nominal mensal domiciliar per capita até meio salário mínimo, incluindo sem rendimento. Fonte: <a href="https://sidra.ibge.gov.br/tabela/10296" rel="noopener noreferrer">IBGE/SIDRA, tabela 10296</a>. Universo: moradores em domicílios particulares permanentes ocupados, excluídos pensionistas, empregados domésticos e parentes desses empregados.</p>
+    <p><code>percentual = 100 × (moradores_ate_quarto_sm + moradores_mais_quarto_ate_meio_sm + moradores_sem_rendimento) / moradores_total_universo</code></p>
+    <p>O numerador reúne três classes disjuntas; o denominador é o total do mesmo universo e da mesma tabela. Usam-se contagens, não a soma de percentuais arredondados nem renormalização. Esse indicador não equivale a uma linha oficial de pobreza monetária e não é um IVS homologado.</p>
+    <p><a href="/restrict/geoespacial/documentacao-camadas-territoriais/baixa-renda-2022.csv">Baixar CSV dos 645 municípios (2022)</a>. Separador: ponto e vírgula; decimal: ponto. O CSV contém código e nome municipal, ano, três contagens de origem, total do universo, soma do numerador, percentual calculado e URL da fonte. O download exige sessão; o mesmo retrato público está versionado nos recursos documentais do projeto.</p>
+  </section>
+  <section id="catalogo" class="secao-catalogo card card-catalogo">
+    <h2>4. Catálogo efetivamente incorporado — {{ catalogo.get('atributos_setoriais', []) | length }} atributos setoriais</h2>
+    <p>Conferido em {{ catalogo.get('conferido_em', 'não informado') }}. {{ catalogo.get('situacao', '') }}</p>
+    <p>São <strong>{{ originais | length }} originais e {{ combinados | length }} combinados setoriais</strong>. No catálogo municipal foram persistidos <strong>18 combinados, todos com 645/645 valores</strong>; o total municipal é de <strong>6.393 atributos (6.375 originais)</strong>. Persistência e cobertura conferidas não significam homologação para hierarquização.</p>
+    <p><a href="/config/catalogo-territorial-incorporado.json">Baixar relatório completo da carga conferida (JSON)</a>. Cada linha abaixo conserva ID, campo, descrição oficial, período, fonte, fórmula quando derivada e cobertura numérica, sem preencher lacunas.</p>
+    <div class="doc-territorial-table" role="region" aria-label="Catálogo setorial incorporado" tabindex="0">
+      <table class="doc-territorial-catalogo">
+        <caption>{{ atributos | length }} atributos setoriais — cobertura sobre 103.319 códigos</caption>
+        <thead><tr><th scope="col">Descrição e identificação</th><th scope="col">Natureza e referência</th><th scope="col">Definição, fórmula e notas</th><th scope="col">Fonte e cobertura</th></tr></thead>
+        <tbody>
+        {% for item in catalogo.get('atributos_setoriais', []) %}
+          <tr id="atributo-{{ item.id }}">
+            <th scope="row">{{ item.rotulo }}<br><code>{{ item.campo }}</code><br>ID: <code>{{ item.id }}</code><br>Campo original: <code>{{ item.detalhe.get('campo_original', item.chave) }}</code></th>
+            <td>{{ item.origem }}<br>{{ item.ano }}<br>{{ item.tema }}<br>{{ item.unidade }}</td>
+            <td>{{ item.detalhe.get('definicao', '') }}<p><code>{{ item.detalhe.get('formula', 'Valor original da fonte; sem combinação SICARD.') }}</code></p><p>{{ item.detalhe.get('nota', '') }}</p>{% if item.origem == 'combinados' %}<strong>Não homologado para hierarquização.</strong>{% endif %}</td>
+            <td><a href="{{ item.url }}" rel="noopener noreferrer">{{ item.fonte }}</a><br><a href="{{ item.detalhe.dicionario }}" rel="noopener noreferrer">Dicionário IBGE</a><p>{{ item.cobertura }} / {{ catalogo.get('geometria', {}).get('setores', 103319) }} códigos com valor numérico.</p></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <h3>Combinados municipais materializados</h3>
+    <ul>{% for item in catalogo.get('combinados_municipais', []) %}<li><code>{{ item.campo }}</code>: {{ item.cobertura }} valores; {{ item.conferida }} conferidos, sobre 645 municípios.</li>{% endfor %}</ul>
+    <h3>Proveniência e reprodução</h3>
+    <p>Os hashes SHA-256 identificam os arquivos oficiais efetivamente usados. A conferência reproduzível, sem nova importação, é <code>{{ catalogo.get('reproducao', '') }}</code>, após a preparação e aplicação de <code>database/143_catalogo_territorial.sql</code>. A carga inicial foi realizada pelo script <code>scripts/preparar_catalogo_territorial.py --insumos DIR --aplicar</code>, e a ampliação integral dos 18 conjuntos, por <code>scripts/completar_setores_2022.py --insumos DIR --aplicar</code>. Cada arquivo é aplicado em transação independente, com comparação de todos os valores e sinais persistidos contra o CSV; os combinados são recalculados ao final. Esta página apenas lê o relatório versionado.</p>
+    <ul>{% for item in catalogo.get('procedencia', []) %}<li><a href="{{ item.url }}" rel="noopener noreferrer">{{ item.url }}</a><br>SHA-256: <code>{{ item.sha256 }}</code>; {{ item.bytes }} bytes; importado em {{ item.importado_em }}.</li>{% endfor %}</ul>
+  </section>
+  <section id="matriz" class="secao-matriz card card-matriz">
+    <h2>5. Prévia histórica de viabilidade — {{ matriz.get('indicadores', []) | length }} indicadores</h2>
+    <p>Registro preliminar: {{ matriz.get('data', 'não informado') }}. {{ matriz.get('escopo', '') }}. A situação de cada linha descreve a verificação anterior à ampliação, não o catálogo atual de {{ atributos | length }} atributos setoriais. O arquivo original é preservado, inclusive suas pendências históricas, por rastreabilidade e reprodução das fórmulas.</p>
+    <p><a href="/config/documentacao-camadas-territoriais.json">Matriz em JSON</a> · <a href="/config/documentacao-camadas-territoriais/matriz-viabilidade-variaveis.csv">Matriz em CSV</a></p>
+    <div class="doc-territorial-table" role="region" aria-label="Matriz de indicadores territoriais" tabindex="0">
+      <table>
+        <caption>Campos, fórmulas, fontes, universo, período e calculabilidade observada</caption>
+        <thead><tr><th scope="col">Indicador e natureza</th><th scope="col">Território, período e unidade</th><th scope="col">Campos e fórmula</th><th scope="col">Universo e fontes</th><th scope="col">Cobertura e limites</th></tr></thead>
+        <tbody>
+        {% for item in matriz.get('indicadores', []) %}
+          <tr id="indicador-{{ item.codigo }}">
+            <th scope="row">{{ item.indicador }}<br><code>{{ item.codigo }}</code><br>{{ item.grupo }}</th>
+            <td>{{ item.territorialidade }}<br>{{ item.periodo }}<br>{{ item.unidade }}</td>
+            <td><ul>{% for campo in item.campos_origem %}<li><code>{{ campo }}</code></li>{% endfor %}</ul><code>{{ item.formula }}</code></td>
+            <td>{{ item.universo }}<ul>{% for fonte in item.fontes %}<li><a href="{{ fonte }}" rel="noopener noreferrer">{{ fonte }}</a></li>{% endfor %}</ul></td>
+            <td>{{ item.calculaveis }} / {{ item.unidades }} calculáveis; {{ item.nao_calculaveis }} não calculáveis.<br>Mínimo: {{ item.minimo }}; máximo: {{ item.maximo }}.<p>{{ item.situacao }}</p><p>{{ item.observacoes }}</p></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <section id="pendencias" class="secao-pendencias card card-pendencias">
+    <h2>6. Limites atuais e pendências históricas</h2>
+    <p>A pendência preliminar de importação de idade, alfabetização e saneamento foi atendida para os agregados de universo e as variáveis explicitadas no catálogo incorporado. Isso não cria índice social sintético nem elimina as ausências e os sigilos. As demais limitações abaixo continuam pertinentes.</p>
+    <dl>{% for item in matriz.get('nao_liberados', []) %}{% if item.indicador != 'Vulnerabilidade social setorial detalhada' %}<dt>{{ item.indicador }}</dt><dd>{{ item.pendencia }}</dd>{% endif %}{% endfor %}</dl>
+    <p>A materialização dos 18 combinados municipais e dos 10 setoriais foi conferida no relatório. O ingresso na hierarquização continua dependendo de fundamentação do critério, auditoria e homologação conforme a metodologia vigente. Não há normalização 0–1, inversão de relação negativa ou homologação automática decorrente da carga.</p>
+  </section>
+    </div>
+  </div>
+</main>
+{% endblock %}
+{% block scripts_pagina %}<script src="/assets/js/admin-auth.js"></script>{% endblock %}

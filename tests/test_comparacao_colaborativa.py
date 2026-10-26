@@ -681,6 +681,7 @@ class _FakeRepo:
 
 def _instalar_fake_repo(monkeypatch) -> _FakeRepo:
     fake = _FakeRepo()
+    monkeypatch.setattr(service.superficie_ahp, "encerrar_rodadas_hierarquizacao", fake.encerrar_ambientes_anteriores)
     for nome in (
         "insert_ambiente",
         "get_ambiente_by_token",

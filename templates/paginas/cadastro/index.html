@@ -10,17 +10,18 @@
 {% block estilos_pagina %}
   <link rel="stylesheet" href="/public/cadastro/index.css?v=20261022-cards-hover-pressionado">
   <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="/assets/css/public-home-heroes.css?v=20261025-1">
 {% endblock %}
 
 {% block conteudo %}
 <main class="conteudo-principal app-main module-index">
-    <section class="secao-cadastro-de-demandas module-hero" aria-labelledby="module-title">
-      <p class="module-eyebrow">MOCAD · Cadastro de demandas</p>
-      <h1 id="module-title">Cadastre ou consulte uma demanda</h1>
+    <section class="secao-cadastro-de-demandas module-hero standard-page-hero public-home-hero" aria-labelledby="module-title">
+      <h1 class="standard-page-hero__title" id="module-title"><i class="fa-regular fa-square-plus" aria-hidden="true"></i><span>Cadastre ou consulte uma demanda</span></h1>
+      <p class="module-eyebrow standard-page-hero__eyebrow">MOCAD · Cadastro de demandas</p>
+      <p class="standard-page-hero__description">Para cadastrar Plano, Programa ou Projeto, entre com uma conta do SIGMA-PLI com perfil Operador ou superior. A consulta das demandas publicadas continua aberta ao público.</p>
       {% if cadastro_acesso_negado %}
       <p class="error-msg" role="alert">Seu perfil não permite cadastrar demandas. Entre com uma conta de perfil Operador ou superior. Consulte abaixo como criar esse perfil no SIGMA-PLI.</p>
       {% endif %}
-      <p>Para cadastrar Plano, Programa ou Projeto, entre com uma conta do SIGMA-PLI com perfil Operador ou superior. A consulta das demandas publicadas continua aberta ao público.</p>
     </section>
 
     <section aria-labelledby="module-services-title" class="secao-o-que-voce-deseja-fazer action-section">

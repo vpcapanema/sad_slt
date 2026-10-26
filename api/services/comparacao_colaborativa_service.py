@@ -33,7 +33,7 @@ from api.schemas.comparacao_colaborativa import (
     RespostaColaborativaResponseSchema,
     RespostaColaborativaUpdateSchema,
 )
-from api.services import ahp_engine
+from api.services import ahp_engine, superficie_ahp
 
 logger = logging.getLogger(__name__)
 
@@ -166,6 +166,7 @@ def _ambiente_to_response(row: dict[str, Any], *, base_url: str = "") -> Ambient
     url = f"{base_url.rstrip('/')}/public/analise-multicriterio/formulario-comparacao-pareada/{quote(str(token), safe='')}/"
     return AmbienteColaborativoResponseSchema(
         id=str(row["id"]),
+        superficie_id=superficie_ahp.superficie_id(row),
         hierarquizacao_id=str(row["hierarquizacao_id"]) if row.get("hierarquizacao_id") else None,
         hierarquizacao_codigo=row.get("hierarquizacao_codigo") or row.get("config_codigo", ""),
         hierarquizacao_nome=row.get("hierarquizacao_nome"),
@@ -217,7 +218,13 @@ def criar_ambiente(
     payload: AmbienteColaborativoCreateSchema, *, base_url: str = ""
 ) -> AmbienteColaborativoResponseSchema:
     """Cria ambiente colaborativo a partir de uma configuração multicritério."""
-    if payload.config_tipo and payload.config_id:
+    if payload.superficie_id:
+        if not payload.hierarquizacao_id or payload.config_tipo or payload.config_id:
+            raise DemandaValidationError("Informe somente a hierarquização da superfície.", field="hierarquizacao_id")
+        hierarq = _carregar_hierarquizacao(payload.hierarquizacao_id)
+        criterios = superficie_ahp.snapshot(str(payload.superficie_id), str(payload.hierarquizacao_id))
+        config = None
+    elif payload.config_tipo and payload.config_id:
         if payload.config_tipo not in {"avulsa", "portfolio"}:
             raise DemandaValidationError("Origem de configuração inválida.", field="config_tipo")
         config = config_repo.get_by_id(payload.config_tipo, payload.config_id)
@@ -253,12 +260,20 @@ def criar_ambiente(
             "Há e-mails duplicados na lista de convites.", field="convites"
         )
 
-    if config:
-        repo.encerrar_ambientes_anteriores_config(payload.config_tipo, payload.config_id)
-    else:
-        repo.encerrar_ambientes_anteriores(payload.hierarquizacao_id)
+    if not payload.superficie_id:
+        if config:
+            repo.encerrar_ambientes_anteriores_config(payload.config_tipo, payload.config_id)
+        else:
+            superficie_ahp.encerrar_rodadas_hierarquizacao(payload.hierarquizacao_id)
     token = secrets.token_urlsafe(32)
     nomes_criterios = _criterio_nomes(criterios)
+    arquivo_superficie = None
+    if payload.superficie_id:
+        from api.services.superficie_criterios import matriz_excel
+        arquivo_superficie = matriz_excel({
+            'id': str(payload.superficie_id),
+            'hierarquizacao_id': str(payload.hierarquizacao_id), 'criterios': criterios,
+        })
 
     row = repo.insert_ambiente(
         {
@@ -274,8 +289,8 @@ def criar_ambiente(
             "config_nome": config.get("nome") if config else None,
             "criterios": criterios,
             "n_criterios": len(nomes_criterios),
-            "arquivo_excel_matriz_criterios_premissas": None if hierarq else _arquivo_matriz(payload.arquivo_matriz_base64),
-            "arquivo_matriz_nome": _nome_arquivo_hierarquizacao(hierarq) if hierarq else payload.arquivo_matriz_nome,
+            "arquivo_excel_matriz_criterios_premissas": arquivo_superficie if payload.superficie_id else (None if hierarq else _arquivo_matriz(payload.arquivo_matriz_base64)),
+            "arquivo_matriz_nome": "matriz_fase2.xlsx" if payload.superficie_id else (_nome_arquivo_hierarquizacao(hierarq) if hierarq else payload.arquivo_matriz_nome),
             "token": token,
             "token_acesso": gerar_token_acesso(),
             "convites": convites,
@@ -337,6 +352,15 @@ def atualizar_ambiente(
             "Somente julgamentos abertos podem ser editados.", field="status"
         )
     data: dict[str, Any] = {}
+    superficie_vinculada = superficie_ahp.superficie_id(atual)
+    if superficie_vinculada:
+        if (
+            payload.config_tipo is not None or payload.config_id is not None
+            or payload.matriz_premissas_criterios is not None
+            or payload.arquivo_matriz_base64 is not None
+            or (payload.hierarquizacao_id is not None and str(payload.hierarquizacao_id) != str(atual.get("hierarquizacao_id")))
+        ):
+            raise DemandaValidationError("A origem e o snapshot da superfície não podem ser alterados.", field="superficie_id")
     if payload.arquivo_matriz_base64 is not None:
         if atual.get("hierarquizacao_id") or payload.hierarquizacao_id:
             raise DemandaValidationError("O arquivo da matriz pertence ao cadastro da hierarquização.", field="arquivo_matriz_base64")
@@ -357,7 +381,7 @@ def atualizar_ambiente(
         raise DemandaValidationError(
             "Informe o tipo e o identificador da configuração.", field="config_id"
         )
-    if payload.hierarquizacao_id is not None:
+    if payload.hierarquizacao_id is not None and not superficie_vinculada:
         hierarq = _carregar_hierarquizacao(payload.hierarquizacao_id)
         criterios = _criterios_from_hierarquizacao(hierarq)
         if len(criterios) < 2:
@@ -472,7 +496,7 @@ def atualizar_ambiente(
     if not atualizado:
         raise DemandaValidationError("Julgamento não encontrado.", field="julgamento_id")
     atualizado["total_respostas"] = sum(1 for r in repo.list_respostas(ambiente_id) if r.get("status", "enviada") == "enviada")
-    if payload.hierarquizacao_id is not None:
+    if payload.hierarquizacao_id is not None and not superficie_vinculada:
         atualizado["hierarquizacao_nome"] = hierarq.get("nome")
     return _ambiente_to_response(atualizado, base_url=base_url)
 
@@ -877,6 +901,10 @@ def criar_analise(ambiente_id: str, payload: AnaliseColaborativaCreateSchema, us
         respostas = [r for r in respostas if r.get("consistente") and float(r.get("razao_consistencia") or 0) <= payload.rc_maximo]
     if not respostas:
         raise DemandaValidationError("Nenhuma resposta enviada atende aos filtros da análise.", field="respostas")
+    superficie_vinculada = superficie_ahp.superficie_id(ambiente)
+    if superficie_vinculada:
+        for resposta in respostas:
+            _validar_matriz_pareada(resposta["matriz_comparacao"], len(ambiente.get("criterios") or []))
     consolidada = media_geometrica_matrizes([r["matriz_comparacao"] for r in respostas])
     if payload.metodo_agregacao != "geometrica":
         for i in range(len(consolidada)):
@@ -894,7 +922,8 @@ def criar_analise(ambiente_id: str, payload: AnaliseColaborativaCreateSchema, us
         "excluir_inconsistentes": payload.excluir_inconsistentes, "matriz_consolidada": consolidada,
         "pesos_consolidados": resultado["weights"], "lambda_max": resultado["lambdaMax"],
         "indice_consistencia": resultado["CI"], "indice_aleatorio": resultado["RI"],
-        "razao_consistencia": resultado["CR"], "consistente": float(resultado["CR"]) < payload.rc_maximo,
+        "razao_consistencia": resultado["CR"],
+        "consistente": float(resultado["CR"]) <= min(payload.rc_maximo, 0.10) if superficie_vinculada else float(resultado["CR"]) < payload.rc_maximo,
         "estatisticas_analise": estatisticas, "status": "calculada", "criado_por": usuario_id,
     }, [{"resposta_id": str(r["id"]), "considerada_por": usuario_id} for r in respostas])
     row["respostas_incluidas"] = len(respostas)
@@ -932,6 +961,14 @@ def homologar_analise(analise_id: str, usuario_id: str | None = None, *, base_ur
     ambiente = repo.get_ambiente_by_id(str(analise["ambiente_id"]))
     if not ambiente:
         raise DemandaValidationError("Julgamento da análise não encontrado.", field="ambiente_id")
+    if superficie_ahp.superficie_id(ambiente):
+        _validar_matriz_pareada(analise["matriz_consolidada"], len(ambiente["criterios"]))
+        resultado = ahp_engine.analyze_matrix(analise["matriz_consolidada"])
+        if not math.isfinite(float(resultado["CR"])) or resultado["CR"] > 0.10:
+            raise DemandaValidationError("A análise da superfície deve possuir RC menor ou igual a 0,10.", field="razao_consistencia")
+        analise = dict(analise, pesos_consolidados=resultado["weights"], lambda_max=resultado["lambdaMax"],
+                       indice_consistencia=resultado["CI"], indice_aleatorio=resultado["RI"],
+                       razao_consistencia=resultado["CR"], consistente=True)
     if ambiente.get("hierarquizacao_id"):
         _carregar_hierarquizacao(ambiente["hierarquizacao_id"])
     agora = datetime.now(timezone.utc)
@@ -941,7 +978,7 @@ def homologar_analise(analise_id: str, usuario_id: str | None = None, *, base_ur
         "indice_aleatorio": analise["indice_aleatorio"], "razao_consistencia": analise["razao_consistencia"],
         "consistente": analise["consistente"], "respostas_consolidadas": len(analise_repo.list_resposta_ids(analise_id)),
         "consolidado_em": agora, "status": "consolidada",
-    }, {"comparacao_colaborativa": {"analise_homologada_id": analise_id, "ambiente_id": str(ambiente["id"]), "hierarquizacao_id": str(ambiente["hierarquizacao_id"]), "criterios": ambiente.get("criterios") or [], "matriz_comparacao": analise["matriz_consolidada"], "pesos": {"criteria": _criterio_nomes(ambiente.get("criterios") or []), "weights": analise["pesos_consolidados"]}}} if ambiente.get("hierarquizacao_id") else None,
+    }, {"comparacao_colaborativa": {"analise_homologada_id": analise_id, "ambiente_id": str(ambiente["id"]), "hierarquizacao_id": str(ambiente["hierarquizacao_id"]), "criterios": ambiente.get("criterios") or [], "matriz_comparacao": analise["matriz_consolidada"], "pesos": {"criteria": _criterio_nomes(ambiente.get("criterios") or []), "weights": analise["pesos_consolidados"]}}} if ambiente.get("hierarquizacao_id") and not superficie_ahp.superficie_id(ambiente) else None,
         homologacao=(analise_id, usuario_id))
     atualizado = analise_repo.get_by_id(analise_id)
     atualizado["respostas_incluidas"] = len(analise_repo.list_resposta_ids(analise_id))
@@ -967,9 +1004,15 @@ def consolidar_ambiente(
         )
 
     matrizes = [r.get("matriz_comparacao") or [] for r in respostas]
+    superficie_vinculada = superficie_ahp.superficie_id(amb)
+    if superficie_vinculada:
+        for matriz in matrizes:
+            _validar_matriz_pareada(matriz, len(amb.get("criterios") or []))
     consolidada = media_geometrica_matrizes(matrizes)
     resultado = ahp_engine.analyze_matrix(consolidada)
     rc = float(resultado["CR"])
+    if superficie_vinculada and (not math.isfinite(rc) or rc > 0.10):
+        raise DemandaValidationError("A consolidação da superfície deve possuir RC menor ou igual a 0,10.", field="razao_consistencia")
 
     criterios = amb.get("criterios") or []
     nomes = _criterio_nomes(criterios)
@@ -994,7 +1037,7 @@ def consolidar_ambiente(
         "indice_consistencia": resultado["CI"],
         "indice_aleatorio": resultado["RI"],
         "razao_consistencia": rc,
-        "consistente": rc < 0.10,
+        "consistente": rc <= 0.10 if superficie_vinculada else rc < 0.10,
         "respostas_consolidadas": len(respostas),
         "consolidado_em": agora.isoformat(),
     }
@@ -1008,12 +1051,12 @@ def consolidar_ambiente(
             "indice_consistencia": resultado["CI"],
             "indice_aleatorio": resultado["RI"],
             "razao_consistencia": rc,
-            "consistente": rc < 0.10,
+            "consistente": rc <= 0.10 if superficie_vinculada else rc < 0.10,
             "respostas_consolidadas": len(respostas),
             "consolidado_em": agora,
             "status": "consolidada",
         },
-        {"comparacao_colaborativa": colaborativa} if amb.get("hierarquizacao_id") else None,
+        {"comparacao_colaborativa": colaborativa} if amb.get("hierarquizacao_id") and not superficie_ahp.superficie_id(amb) else None,
     )
     if not atualizado:
         raise DemandaValidationError("Falha ao gravar a consolidação.", field="ambiente_id")

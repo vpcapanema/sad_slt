@@ -1,0 +1,113 @@
+/* Exclusivo dos três heroes públicos; referência: entrada de transparência. */
+.module-hero.public-home-hero {
+  --public-hero-title-size: clamp(2rem, 5vw, 3.5rem);
+  /* Computed original da indicação: .70rem; aumento de 10%. */
+  --public-hero-eyebrow-size: .77rem;
+  /* Mesmo tamanho de <small> da frase de referência (computed: 13.3333px). */
+  --public-hero-description-size: smaller;
+  display: grid;
+  container-type: inline-size;
+  grid-template-columns: minmax(0, 1fr);
+  gap: .35rem;
+  width: 100%;
+  padding: 1.35rem 1.5rem;
+  color: #fff;
+  background: linear-gradient(125deg, #0b4b50 0%, #146a5d 62%, #2b876f 100%);
+  box-shadow: 0 18px 45px rgba(11, 79, 74, .2);
+  text-align: center;
+}
+
+.public-home-hero > .standard-page-hero__title {
+  display: flex !important;
+  align-items: center;
+  justify-content: center !important;
+  gap: .55rem !important;
+  width: 100%;
+  min-height: calc(var(--public-hero-title-size) * 1.05);
+  margin: 0 !important;
+  font-size: var(--public-hero-title-size);
+  line-height: 1.05;
+  text-align: center !important;
+}
+
+.public-home-hero > .standard-page-hero__title > i {
+  flex: 0 0 auto;
+  line-height: 1;
+}
+
+.public-home-hero > .standard-page-hero__title > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Texto ampliado: não comprimir uma letra entre o ícone e a borda. */
+@container (max-width: 10rem) {
+  .public-home-hero > .standard-page-hero__title {
+    flex-direction: column;
+  }
+
+  .public-home-hero > .standard-page-hero__title > span {
+    width: 100%;
+  }
+}
+
+.module-hero.public-home-hero > .standard-page-hero__eyebrow {
+  width: 100%;
+  margin: 0 !important;
+  color: #c8f1df;
+  font-size: var(--public-hero-eyebrow-size);
+  font-weight: 800;
+  line-height: 1.5;
+  letter-spacing: .08em;
+  overflow-wrap: anywhere;
+  text-transform: uppercase;
+  text-align: center !important;
+}
+
+.module-hero.public-home-hero > .standard-page-hero__description {
+  width: 100%;
+  max-width: 50rem;
+  min-height: calc(3em + 1px);
+  margin: 0 auto !important;
+  color: rgba(255, 255, 255, .9);
+  font-size: var(--public-hero-description-size);
+  line-height: 1.5;
+  text-align: center !important;
+}
+
+/* Reservas de linhas compartilhadas mantêm as três composições alinhadas,
+   sem altura fixa nem overflow oculto: conteúdo adicional continua expandindo. */
+@media (max-width: 1400px) {
+  .public-home-hero > .standard-page-hero__title {
+    /* Absorve o arredondamento da altura natural de duas linhas. */
+    min-height: calc(var(--public-hero-title-size) * 2.1 + 1px);
+  }
+}
+
+@media (max-width: 700px) {
+  .module-hero.public-home-hero {
+    padding: 1.1rem;
+  }
+
+  .public-home-hero > .standard-page-hero__title {
+    min-height: calc(var(--public-hero-title-size) * 4.2);
+  }
+
+  .module-hero.public-home-hero > .standard-page-hero__description {
+    min-height: calc(9em + 1px);
+  }
+}
+
+@media (max-width: 360px) {
+  .public-home-hero > .standard-page-hero__title {
+    min-height: calc(var(--public-hero-title-size) * 5.25);
+  }
+
+  .module-hero.public-home-hero > .standard-page-hero__eyebrow {
+    min-height: calc(var(--public-hero-eyebrow-size) * 3);
+  }
+
+  .module-hero.public-home-hero > .standard-page-hero__description {
+    min-height: calc(10.5em + 1px);
+  }
+}

@@ -7,6 +7,7 @@
 {% block classes_body %}pagina-glossario{% endblock %}
 {% block estilos_pagina %}
 <link rel="stylesheet" href="/assets/css/glossario.css?v=20260909-1">
+<link rel="stylesheet" href="/assets/css/page-title-standard.css?v=20260820-3">
 {% endblock %}
 
 {# Fontes: README.md (módulos, dados e perfis); documentação/hierarquizacao/
@@ -32,8 +33,14 @@
   {"id": "multicriterio", "titulo": "Análise multicritério", "termos": [
     ("analise-multicriterio", "Análise multicritério", "Avaliação que considera vários critérios simultaneamente. Explicita quais aspectos importam, como são medidos e qual importância relativa recebem na decisão."),
     ("ahp", "AHP — Analytic Hierarchy Process", "Método de análise hierárquica que usa comparações pareadas para obter prioridades relativas e avaliar a consistência dos julgamentos. No SICARD, fundamenta a atribuição de pesos na análise multicritério."),
-    ("criterio", "Critério", "Aspecto utilizado para avaliar ou comparar alternativas, como acessibilidade, segurança ou maturidade. Deve ser interpretado junto de sua premissa e da variável que o representa."),
-    ("premissa", "Premissa", "Regra ou orientação conceitual que explica como um critério deve ser interpretado. Orienta a escolha da variável e o sentido em que seu valor favorece a avaliação."),
+    ("criterio", "Critério", "Propriedade pela qual as alternativas são avaliadas e comparadas, como atendimento à população, acessibilidade ou custo de implantação. É operacionalizado por uma variável e interpretado segundo uma premissa de avaliação. Não se confunde com a frase que declara a direção da relação entre a variável e o fenômeno avaliado."),
+    ("premissa", "Premissa", "Proposição assumida na análise que sustenta a escolha ou a interpretação de um critério. Pode declarar uma orientação de avaliação, mas deve ter seu fundamento e suas referências explicitados; uma frase de orientação não constitui, por si só, justificativa técnica ou científica."),
+    ("premissa-avaliacao", "Premissa de avaliação", "Proposição que estabelece como a grandeza medida pela variável deve ser interpretada em relação ao fenômeno avaliado. Padrão de redação: Quanto maior [grandeza medida pela variável], maior/menor [fenômeno avaliado]. Exemplo: Quanto maior a população beneficiada, maior a favorabilidade territorial. A frase explicita uma orientação assumida, não comprova causalidade nem substitui seu fundamento."),
+    ("fundamento", "Fundamento da premissa", "Justificativa teórica, empírica ou normativa que explica por que a premissa é adotada, com referências e limites de aplicação. Exemplo: atender mais pessoas amplia o alcance social do investimento. Deve ser documentado e verificado; não pode ser presumido a partir do nome da variável ou da relação positiva ou negativa."),
+    ("variavel", "Variável", "Grandeza observável e mensurável utilizada para operacionalizar um critério. Seus valores representam o que se mede, como população beneficiada ou tempo de deslocamento; não são, por si só, a regra avaliativa."),
+    ("relacao", "Relação", "Sentido em que a variação da grandeza medida se relaciona com o fenômeno avaliado. É positiva quando valores maiores correspondem a maior intensidade do fenômeno e negativa quando correspondem a menor intensidade. Deve ser explicitada para a variável efetivamente utilizada; maior intensidade não significa necessariamente uma condição desejável."),
+    ("fenomeno-avaliado", "Fenômeno avaliado", "Condição ou processo cuja intensidade ou comportamento é estudado na avaliação, como favorabilidade territorial, vulnerabilidade socioeconômica ou acessibilidade territorial. É identificado no consequente da premissa de avaliação e não se confunde com a demanda avaliada."),
+    ("dimensao-criterios", "Dimensão de critérios", "Agrupamento de critérios de uma mesma perspectiva de avaliação. A relação oficial contém 12 dimensões: Técnica, Financeiro, Econômica, Social, Segurança, Ambiental, Territorial, Institucional, Risco, Fundiário-patrimonial, Infraestrutura e servidões e Jurídico-institucional. Uma análise pode reunir critérios de diferentes dimensões, mantendo a identificação de cada um. A dimensão temática não determina, por si só, se o critério depende de território, rede ou atributos do projeto."),
     ("alternativa", "Alternativa", "Elemento submetido à avaliação em uma decisão. Na hierarquização de demandas, corresponde ao objeto que será comparado e ordenado no universo selecionado."),
     ("comparacao-pareada", "Comparação pareada", "Julgamento da importância relativa de dois elementos por vez, sob uma mesma referência de decisão. O conjunto dessas comparações forma a matriz utilizada pelo AHP."),
     ("matriz-pareada", "Matriz de comparação pareada", "Tabela quadrada que reúne os julgamentos entre os elementos. Na estrutura recíproca do AHP, a diagonal vale 1 e a comparação inversa corresponde ao recíproco do valor informado."),
@@ -89,11 +96,11 @@
 
 {% block conteudo %}
 <main class="conteudo-principal glossario" id="glossario">
-  <header class="cabecalho-glossario">
-    <a class="glossario-voltar" href="/public/documentacao/">← Documentação do sistema</a>
-    <p class="glossario-sobretitulo">Referência do SICARD</p>
-    <h1>Glossário técnico-conceitual</h1>
-    <p>Termos e siglas para compreender o cadastro de demandas, os julgamentos e a construção das prioridades.</p>
+  <a class="glossario-voltar" href="/public/documentacao/">← Documentação do sistema</a>
+  <header class="cabecalho-glossario standard-page-hero">
+    <h1 class="standard-page-hero__title"><i class="fa-solid fa-book-open" aria-hidden="true"></i><span>Glossário técnico-conceitual</span></h1>
+    <p class="standard-page-hero__eyebrow">Referência do SICARD</p>
+    <p class="standard-page-hero__description">Termos e siglas para compreender o cadastro de demandas, os julgamentos e a construção das prioridades.</p>
   </header>
   <div class="glossario-layout">
     <aside class="barra-lateral-glossario" aria-label="Consulta ao glossário">

@@ -23,7 +23,8 @@
   margin-bottom: 1.25rem;
 }
 
-body.pagina-conteudo[data-navegacao="restrita"] .standard-page-hero {
+body.pagina-conteudo[data-navegacao="restrita"] .standard-page-hero,
+body.pagina-conteudo.pagina-glossario .standard-page-hero {
   display: block;
   width: 100%;
   min-width: 0;
@@ -39,7 +40,8 @@ body.pagina-conteudo[data-navegacao="restrita"] .standard-page-hero {
   text-align: center;
 }
 
-body.pagina-conteudo[data-navegacao="restrita"] .standard-page-hero__title {
+body.pagina-conteudo[data-navegacao="restrita"] .standard-page-hero__title,
+body.pagina-conteudo.pagina-glossario .standard-page-hero__title {
   display: flex;
   width: 100%;
   align-items: center;
@@ -51,7 +53,8 @@ body.pagina-conteudo[data-navegacao="restrita"] .standard-page-hero__title {
   text-align: center;
 }
 
-body.pagina-conteudo[data-navegacao="restrita"] .standard-page-hero__eyebrow {
+body.pagina-conteudo[data-navegacao="restrita"] .standard-page-hero__eyebrow,
+body.pagina-conteudo.pagina-glossario .standard-page-hero__eyebrow {
   width: 100%;
   margin: 0.35rem auto 0 !important;
   color: var(--pli-green) !important;
@@ -62,7 +65,8 @@ body.pagina-conteudo[data-navegacao="restrita"] .standard-page-hero__eyebrow {
   text-transform: uppercase;
 }
 
-body.pagina-conteudo[data-navegacao="restrita"] .standard-page-hero__description {
+body.pagina-conteudo[data-navegacao="restrita"] .standard-page-hero__description,
+body.pagina-conteudo.pagina-glossario .standard-page-hero__description {
   width: 100%;
   max-width: 820px;
   margin: 0.35rem auto 0;
@@ -79,15 +83,18 @@ body.pagina-conteudo[data-navegacao="restrita"] .standard-page-hero__description
 }
 
 @media (max-width: 700px) {
-  body.pagina-conteudo[data-navegacao="restrita"] .standard-page-hero {
+  body.pagina-conteudo[data-navegacao="restrita"] .standard-page-hero,
+  body.pagina-conteudo.pagina-glossario .standard-page-hero {
     padding: 1.1rem;
   }
 
-  body.pagina-conteudo[data-navegacao="restrita"] .standard-page-hero__title {
+  body.pagina-conteudo[data-navegacao="restrita"] .standard-page-hero__title,
+  body.pagina-conteudo.pagina-glossario .standard-page-hero__title {
     flex-wrap: wrap;
   }
 
-  body.pagina-conteudo[data-navegacao="restrita"] .standard-page-hero__title > span:not(.fase-info) {
+  body.pagina-conteudo[data-navegacao="restrita"] .standard-page-hero__title > span:not(.fase-info),
+  body.pagina-conteudo.pagina-glossario .standard-page-hero__title > span:not(.fase-info) {
     min-width: 0;
     overflow-wrap: anywhere;
   }

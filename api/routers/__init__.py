@@ -28,6 +28,7 @@ from api.routers.programas import router as programas_router
 from api.routers.sei_documentos import router as sei_documentos_router
 from api.routers.sigma import router as sigma_router
 from api.routers.universo import router as universo_router
+from api.routers.superficie_criterios import router as superficie_criterios_router
 
 api_router = APIRouter(prefix="/api")
 api_router.include_router(health_router)
@@ -54,3 +55,4 @@ api_router.include_router(hierarquizacoes_router)
 api_router.include_router(atributos_objetos_router)
 api_router.include_router(universo_router)
 api_router.include_router(sei_documentos_router)
+api_router.include_router(superficie_criterios_router)

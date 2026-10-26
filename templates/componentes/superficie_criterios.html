@@ -1,0 +1,91 @@
+<div id="sc-app">
+  <section class="card ahp-step-section">
+    <div class="ahp-section-label"><span class="ahp-section-index-icon">1</span><span>Criar ou carregar superfície de critérios</span></div>
+    <div class="ahp-section-body">
+      <div class="sc-fields sc-fields--two">
+      <label>Hierarquização cadastrada<select id="sc-hier"><option value="">Selecione a hierarquização</option></select></label>
+      <label>Superfície salva<select id="sc-saved"><option value="">Nova superfície</option></select></label>
+      </div>
+      <div class="sc-actions">
+      <button type="button" id="sc-load" class="btn btn-secondary">Carregar superfície</button>
+      <button type="button" id="sc-new" class="btn btn-secondary">Nova superfície</button>
+      </div>
+      <div class="sc-fields sc-fields--two">
+      <label>Nome da superfície<input id="sc-name" maxlength="200" required></label>
+      <label>Escala territorial<select id="sc-scale"><option value="municipios">Municípios</option><option value="setores_2022">Setores censitários de 2022</option></select></label>
+      </div>
+    </div>
+  </section>
+  <section class="card ahp-step-section">
+    <div class="ahp-section-label"><span class="ahp-section-index-icon">2</span><span>Selecionar variáveis</span></div>
+    <div class="ahp-section-body">
+      <p class="ahp-help-text">São oferecidas somente variáveis com levantamento territorial integral comprovado para a escala escolhida. Zero observado é um valor válido; sigilos e valores não informados não são convertidos em zero.</p>
+      <div class="sc-fields sc-fields--filters">
+        <label>Tipo<select id="sc-type"><option value="">Todos</option><option value="originais">Originais</option><option value="combinados">Combinadas</option></select></label>
+        <label>Fonte<select id="sc-source"><option value="">Todas</option></select></label>
+        <label>Ano<select id="sc-year"><option value="">Todos</option></select></label>
+        <label>Tema<select id="sc-theme"><option value="">Todos</option></select></label>
+        <label>Buscar variável<input id="sc-search" type="search"></label>
+      </div>
+      <label>Variáveis disponíveis<select id="sc-variable" size="8" aria-describedby="sc-catalog-count"></select></label>
+      <p id="sc-catalog-count" class="ahp-help-text"></p>
+      <button type="button" id="sc-add" class="btn btn-secondary">Adicionar variável</button>
+    </div>
+  </section>
+  <section class="card ahp-step-section">
+    <div class="ahp-section-label"><span class="ahp-section-index-icon">3</span><span>Configurar critérios</span></div>
+    <div class="ahp-section-body">
+      <p class="ahp-help-text">Associe a dimensão e informe a relação de cada variável. O critério e a premissa de avaliação são gerados pelo sistema; a frase de orientação não substitui seu fundamento técnico.</p>
+      <div class="fase-table-wrap"><table class="fase-table sc-criteria-table"><thead><tr><th>Variável / critério</th><th>Dimensão</th><th>Relação</th><th>Premissa de avaliação</th><th>Ação</th></tr></thead><tbody id="sc-criteria"><tr><td colspan="5" class="sc-empty">Adicione variáveis para configurar os critérios.</td></tr></tbody></table></div>
+    </div>
+  </section>
+  <section class="card ahp-step-section">
+    <div class="ahp-section-label"><span class="ahp-section-index-icon">4</span><span>Preparar e salvar superfície</span></div>
+    <div class="ahp-section-body">
+      <p class="ahp-help-text">A camada preserva os campos cadastrais, premissas, critérios, dimensões e os valores originais e reescalonados. Sair antes de salvar perde a configuração. Alterar critérios exige uma nova superfície, sem reutilização automática dos pesos.</p>
+      <div class="sc-actions">
+      <button type="button" id="sc-save" class="btn btn-primary">Salvar sem calcular a favorabilidade</button>
+      <a id="sc-layer-download" class="btn btn-secondary" hidden>Baixar camada preparada</a>
+      </div>
+    </div>
+  </section>
+  <p id="sc-status" class="ahp-info-note" role="status" aria-live="polite"></p>
+  <section class="card ahp-step-section">
+    <div class="ahp-section-label"><span class="ahp-section-index-icon">5</span><span>Visualizador de critérios</span></div>
+    <div class="ahp-section-body">
+      <p class="ahp-help-text">Valores da própria camada salva ou carregada. Os mapas não recalculam as variáveis. A simplificação geométrica é exclusiva de exibição.</p>
+      <div id="sc-viewer" class="sc-viewer"><p>Salve ou carregue uma superfície para visualizar seus critérios.</p></div>
+    </div>
+  </section>
+  <section class="card ahp-step-section">
+    <div class="ahp-section-label"><span class="ahp-section-index-icon">6</span><span>Calcular o índice de favorabilidade</span></div>
+    <div class="ahp-section-body">
+      <div class="sc-fields sc-fields--calculation">
+        <label>Operador<select id="sc-operator"><option value="media_simples">Média simples</option><option value="ahp">Média ponderada — pesos AHP</option></select></label>
+        <label id="sc-have-wrap" hidden>Já possui os pesos para estes critérios?<select id="sc-have"><option value="">Selecione</option><option value="sim">Sim, informar pesos</option><option value="nao">Não</option></select></label>
+        <label id="sc-mode-wrap" hidden>Como preencher a matriz?<select id="sc-mode"><option value="">Selecione</option><option value="individual">Preenchimento individual</option><option value="colaborativo">Preenchimento colaborativo</option></select></label>
+      </div>
+      <div id="sc-weights" class="sc-fields sc-fields--two" hidden></div>
+      <div id="sc-individual" class="fase-table-wrap" hidden></div>
+      <div id="sc-collaborative" hidden>
+        <p>Crie um julgamento da Fase 2 com os critérios desta superfície. A hierarquização e a matriz serão levadas ao formulário; informe os colaboradores e envie os convites. Depois das respostas, consolide o julgamento e retorne aqui.</p>
+        <div class="sc-actions">
+        <a id="sc-matrix-download" class="btn btn-secondary">Exportar matriz de comparação</a>
+        <button id="sc-judgment-new" class="btn btn-primary" type="button">Novo julgamento colaborativo</button>
+        <button id="sc-judgment-refresh" class="btn btn-secondary" type="button">Consultar julgamentos</button>
+        </div>
+        <label>Julgamento desta superfície<select id="sc-judgment"><option value="">Selecione um julgamento consolidado</option></select></label>
+      </div>
+      <button type="button" id="sc-calculate" class="btn btn-primary" disabled>Calcular e salvar índice</button>
+    </div>
+  </section>
+  <section class="card ahp-step-section">
+    <div class="ahp-section-label"><span class="ahp-section-index-icon">7</span><span>Visualizar e exportar o índice</span></div>
+    <div class="ahp-section-body">
+      <p id="sc-result-info" class="ahp-help-text">O índice ainda não foi calculado.</p>
+      <div id="sc-result-map" class="sc-map" hidden></div>
+      <div id="sc-result-table" class="fase-table-wrap"></div>
+      <a id="sc-index-download" class="btn btn-secondary" hidden>Baixar camada com índice</a>
+    </div>
+  </section>
+</div>

@@ -25,7 +25,7 @@ function MapaCamada({url,htmlHost}){
         smoothFactor:0,
         onEachFeature:(feature,layer)=>{
           const p=feature.properties||{};
-          layer.bindTooltip(p.NM_MUN?`${p.NM_MUN} (${p.CD_MUN})`:String(p.CD_MUN??''),{sticky:true});
+          layer.bindTooltip(p.CD_SETOR?`Setor ${p.CD_SETOR} — ${p.NM_MUN}`:p.NM_MUN?`${p.NM_MUN} (${p.CD_MUN})`:String(p.CD_MUN??''),{sticky:true});
           layer.on('click',()=>{
             const tabela=document.createElement('table');tabela.className='territorial-mapa-popup';
             for(const [campo,valor] of Object.entries(p)){
@@ -37,7 +37,7 @@ function MapaCamada({url,htmlHost}){
         },
       }).addTo(map);
       if(camada.getBounds().isValid())map.fitBounds(camada.getBounds(),{padding:[16,16]});
-      setEstado(`${(data.features||[]).length.toLocaleString('pt-BR')} feições exibidas com a geometria original da camada salva. Clique em um município para ver seus atributos.`);
+      setEstado(`${(data.features||[]).length.toLocaleString('pt-BR')} feições exibidas com a geometria original da camada salva. Clique em uma unidade territorial para ver seus atributos.`);
     }).catch(error=>{if(error.name!=='AbortError')setEstado(error.message);});
     const timer=setTimeout(()=>map.invalidateSize(),0);
     return ()=>{ctrl.abort();clearTimeout(timer);map.remove();};
@@ -129,9 +129,12 @@ export function montarMunicipal(host,{category,apiBase,onGenerated,onBusyChange=
       let generated;
       async function request(path,config,signal){
         let response;
+        const territorialidade=configuration?.territorialidade||'municipios';
+        const query=path==='catalog'?`?territorialidade=${encodeURIComponent(territorialidade)}`:'';
+        const body=config?{...config,territorialidade}:null;
         try{
-          response=await fetch(`${apiBase}/extracao-atributos/municipal/${['catalog','preview'].includes(path)?'':`${encodeURIComponent(categoryRef.current.id)}/`}${path}`,{
-            credentials:'same-origin',...(config?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(config)}:{}),signal});
+          response=await fetch(`${apiBase}/extracao-atributos/municipal/${['catalog','preview'].includes(path)?'':`${encodeURIComponent(categoryRef.current.id)}/`}${path}${query}`,{
+            credentials:'same-origin',...(body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{}),signal});
         }catch(error){
           if(error.name==='AbortError')throw error;
           throw new Error('A conexão com o servidor foi interrompida. Confira sua rede e tente novamente.');

@@ -30,6 +30,21 @@
 #territorial-app .mlb-geometry span { color:var(--pli-white); font-size:.75rem; }
 #territorial-app .territorial-builder-description { margin:0; padding:1rem 1.5rem 0; }
 #territorial-app .mlb-layout { padding:1.5rem; gap:.8rem; }
+#territorial-app .mlb-filters {
+  grid-template-columns:var(--filter-origin-width, 16rem) minmax(0, 1fr) 9rem var(--filter-theme-width, 15rem);
+  align-items:end;
+}
+#territorial-app .mlb-filters label { min-width:0; }
+#territorial-app .mlb-filters label:nth-child(3) { line-height:1.25; }
+#territorial-app .mlb-filters select { width:100%; box-sizing:border-box; }
+@media(max-width:1100px) {
+  #territorial-app .mlb-filters { grid-template-columns:minmax(0,1fr) 9rem; }
+  #territorial-app .mlb-filters label:first-child,
+  #territorial-app .mlb-filters label:nth-child(2) { grid-column:1/-1; }
+}
+@media(max-width:420px) {
+  #territorial-app .mlb-filters { grid-template-columns:minmax(0,1fr); }
+}
 #territorial-app .mlb-panel {
   border:1px solid var(--pli-border); border-radius:.55rem; padding:.8rem;
   box-shadow:none; overflow:hidden;

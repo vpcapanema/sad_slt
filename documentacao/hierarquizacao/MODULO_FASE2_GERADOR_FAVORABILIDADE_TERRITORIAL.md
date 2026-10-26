@@ -20,6 +20,51 @@ projeto, um indice espacial normalizado.
 O papel deste modulo e produzir essa superficie de favorabilidade a partir de camadas
 geoespaciais, operadores espaciais, reescalonamento, pesos AHP e algebra de mapas.
 
+## Gerador autônomo de superfícies por critérios territoriais
+
+A página `/restrict/geoespacial/gerador-superficies-favorabilidade/` prepara
+superfícies vetoriais municipais ou por setores censitários de 2022, vinculadas
+a uma hierarquização já cadastrada. Trata-se de uma página independente da
+bancada da Fase 2, sem alteração automática dos resultados ou da homologação.
+
+O usuário seleciona variáveis do catálogo com levantamento territorial integral
+comprovado, associa uma das 12 dimensões do modelo oficial e declara a relação
+positiva ou negativa com a favorabilidade territorial. O nome do critério
+preserva a propriedade expressa no nome da variável e explicita o fenômeno
+avaliado; a premissa é gerada separadamente como relação direcional. Não se
+infere fundamento causal, normativo ou empírico a partir do nome.
+
+A transformação é linear mínimo–máximo, com inversão nas relações negativas.
+Registram-se os extremos, a direção e os valores ausentes. Variáveis constantes
+ou sem observações numéricas são rejeitadas, sem atribuição artificial de 0,5.
+Zero observado permanece válido; sigilo e ausência desconhecida permanecem
+nulos. A cobertura do levantamento não é inferida da contagem de valores numéricos.
+
+Ao salvar, persistem-se o cadastro da superfície no banco e o GeoPackage no
+Storage oficial, ainda sem índice composto. A camada conserva geometrias e
+campos cadastrais, três colunas de conceitos — premissa, critério e dimensão —
+com mapas JSON por identificador de critério, seguidas pelos pares de variáveis
+originais e reescalonadas. Os metadados documentam a correspondência entre
+critérios, campos, fontes e transformações. O visualizador lê essa camada salva,
+inclusive quando carregada de uma sessão anterior, sem recalcular pelo catálogo.
+
+O índice utiliza média simples ou média ponderada por pesos AHP. Pesos
+informados devem identificar exatamente os critérios salvos e somar um;
+comparações individuais devem ser recíprocas e apresentar razão de consistência
+não superior a 0,10. Na modalidade colaborativa, exporta-se cópia preenchida do
+modelo oficial, acrescida da comparação pareada e dos vínculos, e abre-se o
+cadastro de julgamento com hierarquização e critérios fixados pela superfície.
+O arquivo também é persistido no julgamento; o modelo original não é alterado.
+O envio de convites permanece uma ação explícita, separada da criação.
+
+Somente um julgamento consolidado e consistente, vinculado à mesma superfície
+e ao mesmo conjunto de critérios, pode fornecer pesos para a retomada do
+cálculo. Essa consolidação não sobrescreve critérios ou pesos globais da
+hierarquização. Alterações de critérios exigem uma nova superfície. O índice
+é salvo em camada derivada, com operador, pesos e origem registrados; qualquer
+valor ausente entre os critérios mantém o índice territorial nulo, sem
+redistribuição de pesos. A geração do produto não representa sua homologação.
+
 ## Etapa operacional da bancada de favorabilidade V2
 
 A pagina `/restrict/hierarquizacao/fase-2/` disponibiliza o bloco **Conferir e

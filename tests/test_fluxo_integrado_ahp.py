@@ -19,6 +19,7 @@ def test_convite_preserva_nome_em_criacao_e_edicao_parcial(monkeypatch):
     monkeypatch.setattr(service,'_carregar_hierarquizacao',lambda _id: {'id':HID,'dados_hierarquizacao':{'cabecalho_grupo':{'matriz_premissas_criterios':criteria}}})
     monkeypatch.setattr(service,'_ambiente_to_response',lambda row,**kw: row)
     monkeypatch.setattr(service.repo,'encerrar_ambientes_anteriores',lambda *args: None)
+    monkeypatch.setattr(service.superficie_ahp,'encerrar_rodadas_hierarquizacao',lambda *args: None)
     monkeypatch.setattr(service.repo,'insert_ambiente',lambda data:data)
     monkeypatch.setattr(service.repo,'get_ambiente_by_id',lambda _id:current)
     monkeypatch.setattr(service.repo,'update_ambiente',lambda _id,data:data)

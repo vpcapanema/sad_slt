@@ -18,8 +18,8 @@
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Título**                 | Metodologia do Sistema de Hierarquização de Demandas — SICARD                                                                                                         |
 | **Número**                 | NT-SICARD-001/2026                                                                                                                                                       |
-| **Versão**                 | 1.44                                                                                                                                                                      |
-| **Data de emissão**        | 24/10/2026                                                                                                                                                               |
+| **Versão**                 | 1.51                                                                                                                                                                      |
+| **Data de emissão**        | 26/10/2026                                                                                                                                                               |
 | **Classificação**         | Documento técnico-metodológico de entrega ao cliente                                                                                                                   |
 | **Sistema**                 | SICARD — Sistema Inteligente de Cadastro e Ranking de Demandas                                                                                                        |
 | **Domínio de aplicação** | Logística e transportes. Concebido no âmbito do Plano de Logística Integrada do Estado de São Paulo (PLI-SP), aplica-se a qualquer objeto de demanda desse domínio. |
@@ -78,6 +78,13 @@
 | 1.42    | 23/10/2026 | `[preencher]` | Inclusão do Resumo da Elegibilidade nos resultados da Fase 1: uma linha por objeto de demanda sem restrição, com camadas de risco, área de sobreposição (união, em hectares), porcentagem sobreposta e índice de risco ambiental e territorial (1 − área sobreposta ÷ área da demanda, de 0 a 1); inclusão da tabela no PDF, no pacote de saída e no relatório da Fase 1 da hierarquização, sem alteração da classificação de elegibilidade. |
 | 1.43    | 24/10/2026 | `[preencher]` | Vinculação temática das bases da Fase 1 às famílias e aos tipos de adversidade, com manutenção administrativa e preservação da taxonomia nos metadados dos resultados; independência em relação ao papel de risco ou restrição escolhido pelo usuário, sem alteração do índice ou de seus pesos. |
 | 1.44    | 24/10/2026 | `[preencher]` | Substituição dos critérios de área sobreposta por camada da Fase 3 pelo Índice de risco ambiental e territorial do Resumo da Elegibilidade de cada demanda; preservação da escala de 0 a 1, com relação positiva e peso único no grupo de risco; manutenção de valores ausentes para demandas sem resumo ou com restrição e preservação dos resultados históricos. |
+| 1.45    | 25/10/2026 | `[preencher]` | Inclusão da documentação de transparência das camadas territoriais: distinção entre a prévia histórica de 46 indicadores e o catálogo da carga aplicada e auditada, com 204 atributos setoriais e 18 combinados municipais persistidos; registro de fontes, fórmulas, períodos, cobertura, sigilos, proveniência e percentuais municipais de baixa renda, sem alteração das regras das fases ou homologação automática de combinações. |
+| 1.46    | 25/10/2026 | `[preencher]` | Ampliação do acervo setorial de 2022 para os campos integrais de 18 conjuntos oficiais, incluindo rendimento do responsável, entorno e registro de nascimento, com auditoria de valores e sinais por arquivo, preservação da malha e recálculo dos combinados existentes, sem homologação de novos critérios. |
+| 1.47    | 25/10/2026 | `[preencher]` | Reformulação dos 55 critérios do modelo de nove dimensões como regras avaliativas derivadas das premissas, com sincronização das duas tabelas do modelo e do documento de modelagem espacial; preservação das premissas, relações, métricas, fontes e caráter mandatório, sem alteração de pesos, da matriz espacial v3 ou dos resultados históricos. |
+| 1.48    | 25/10/2026 | `[preencher]` | Adequação da redação dos 55 critérios à relação explícita entre a grandeza medida e a favorabilidade territorial, na forma “Quanto maior [...], maior/menor a favorabilidade territorial”; preservação dos demais campos e das classes de modelagem, sem mudança de cálculo ou homologação automática de indicadores. |
+| 1.49    | 25/10/2026 | `[preencher]` | Generalização da definição de critério pela relação entre a grandeza medida e o fenômeno avaliado; sincronização do glossário público quanto a premissa, critério, variável, relação, fenômeno avaliado e dimensão de critérios, sem alteração das regras ou dos cálculos do modelo. |
+| 1.50    | 25/10/2026 | `[preencher]` | Retificação conceitual das revisões 1.47 a 1.49: critério como propriedade avaliada; frase direcional como premissa de avaliação, distinta de seu fundamento. Restauração dos nomes dos 55 fatores do acervo anterior e correção do glossário para as 12 dimensões oficiais, sem alteração das premissas originais, dos cálculos ou dos resultados históricos. |
+| 1.51    | 26/10/2026 | `[preencher]` | Documentação do gerador autônomo de superfícies vetoriais: critérios e premissas separados, cobertura comprovada, transformação mínimo–máximo, persistência de valores e composição por média simples ou AHP; julgamentos vinculados ao conjunto salvo sem sobrescrita da hierarquização ou homologação automática. |
 
 ---
 
@@ -217,6 +224,26 @@ critério é a derivação**. Um critério sem premissa é arbitrário; uma prem
 critério é inerte. A construção ocorre no sentido premissa → critério; a verificação de
 admissibilidade percorre o caminho inverso — dado um critério, exige-se a premissa que o
 sustente e, na sua ausência, o critério é descartado.
+
+O critério identifica a propriedade pela qual as alternativas são avaliadas,
+como atendimento à população. A variável operacionaliza essa propriedade,
+por exemplo, pelo número de habitantes beneficiados. A frase “Quanto maior
+a população beneficiada, maior a favorabilidade territorial” constitui uma
+**premissa de avaliação**: declara a orientação assumida, mas não é o nome
+do critério nem constitui, por si só, justificativa técnica ou científica.
+O fundamento explica por que essa premissa é adotada e requer referências
+e limites de aplicação. Gerar a frase a partir da variável, da relação e do
+fenômeno avaliado não gera automaticamente seu fundamento.
+
+O arquivo `config/matriz-criterios-premissas.json` conserva os nomes e as
+premissas originais dos 55 fatores do acervo anterior de nove dimensões.
+Esse acervo não deve ser confundido com a relação oficial de 12 dimensões
+da aba “Dimensões de Critérios” do modelo publicado: Técnica, Financeiro,
+Econômica, Social, Segurança, Ambiental, Territorial, Institucional, Risco,
+Fundiário-patrimonial, Infraestrutura e servidões e Jurídico-institucional.
+A correção não altera a matriz espacial v3 nem homologa variáveis. A direção
+de avaliação depende da variável efetiva: necessidade atual e benefício
+esperado não devem ser confundidos ou invertidos automaticamente.
 
 Cada elo da cadeia cumpre uma função distinta e insubstituível, e a literatura de apoio
 à decisão multicritério, a teoria da mensuração e a epistemologia oferecem fundamento
@@ -699,11 +726,98 @@ a classificação da Fase 1 segue as regras de elegibilidade descritas acima.
 O contrato operacional é detalhado em
 `documentacao/geoespacial/FLUXO_CRUZAMENTO_ESPACIAL_CONFIGURAVEL.md`.
 
+**Documentação de transparência das camadas territoriais.** A página
+`/restrict/geoespacial/documentacao-camadas-territoriais/` apresenta a matriz
+de viabilidade auditada em 25/10/2026, preservada em
+`config/documentacao-camadas-territoriais.json`, com versão CSV equivalente.
+O registro explicita campos de origem, fórmulas, fontes, universo, período,
+unidade, cobertura e ressalvas de 46 indicadores originais ou combinados.
+Esse registro preliminar é mantido sem alterações como prévia histórica,
+distinta do relatório da carga aplicada e auditada, versionado em
+`config/catalogo-territorial-incorporado.json`. O relatório registra 3.529 atributos
+setoriais (3.519 originais e 10 combinados), com descrições oficiais, campos,
+fórmulas, cobertura e procedência SHA-256, além de 18 combinados municipais
+persistidos, todos com 645/645 valores. O catálogo municipal totaliza 6.393
+atributos, dos quais 6.375 originais. Persistência e conferência não constituem
+homologação de combinações, pesos AHP ou critérios.
+
+O retrato compreende 645 municípios. A camada oficial setorial de 2022 reúne
+103.319 códigos e 103.620 partes geométricas, com 8 geometrias oficiais inválidas.
+As medidas demográficas são consideradas uma única vez por código de setor;
+as áreas das partes são somadas para os indicadores do setor lógico. A
+calculabilidade numérica não certifica validade geométrica. Não se replicam
+atributos municipais nos setores. A incorporação aditiva em
+`base_territorial.setor` contempla os nove básicos `v0001–v0009`, demografia,
+alfabetização, domicílios Partes 1, 2 e 3, cor ou raça, parentesco, óbitos,
+pessoas e domicílios indígenas e quilombolas, rendimento do responsável,
+entorno por domicílios, moradores e faces de via e registro de nascimento.
+A completude se refere aos campos dos dicionários e arquivos desses
+18 conjuntos, identificados no relatório por URL e SHA-256.
+A cobertura varia por conjunto e permanece registrada separadamente.
+Ausência de linha não produz estimativa; símbolos de sigilo `X` são mantidos
+como sinais, não como zero. A presença de registro no CSV não garante valor
+numérico em todos os atributos. A aplicação compara os valores e sinais
+persistidos com cada arquivo antes da confirmação da respectiva transação.
+Não se trata de desagregação de amostra municipal; temas comuns nas duas
+escalas não significam mesmos identificadores, períodos ou universos.
+O rendimento nominal médio e mediano do responsável, suas variâncias e
+contagens não equivalem à renda domiciliar per capita nem a uma medida de
+pobreza. O indicador de baixa renda anteriormente calculado permanece municipal.
+As datas de divulgação ou revisão em 2025 e 2026 não alteram a referência
+censitária de 2022; períodos específicos permanecem nas descrições oficiais.
+A disponibilidade operacional posterior à conferência pode ser consultada no catálogo API
+`/api/geoespacial/extracao-atributos/municipal/catalog?territorialidade=setores_2022`.
+A incorporação não implica homologação automática das combinações.
+A conferência do relatório é reproduzível pelo comando
+`scripts/preparar_catalogo_territorial.py --conferir --relatorio config/catalogo-territorial-incorporado.json`,
+associado à migração `database/143_catalogo_territorial.sql`. A ampliação
+é reproduzível por `scripts/completar_setores_2022.py --insumos DIR --aplicar`,
+com transação por arquivo, preservação dos IDs e da geometria e recálculo dos
+dez combinados existentes ao final; a página documental
+não executa cargas nem modifica os procedimentos das fases de hierarquização.
+
+O CSV municipal de baixa renda de 2022 conserva as contagens da tabela SIDRA
+10296: soma dos moradores até um quarto de salário mínimo, dos moradores acima
+de um quarto até meio salário mínimo e dos moradores sem rendimento, dividida
+pelo total do mesmo universo e multiplicada por 100. Excluem-se do universo
+pensionistas, empregados domésticos e parentes desses empregados. O indicador
+não equivale a linha oficial de pobreza monetária ou índice social homologado.
+A não aditividade dos percentuais publicados, de até 0,16 ponto percentual na
+auditoria, é registrada sem renormalização. Entradas ausentes e denominadores
+não positivos permanecem não calculáveis, sem substituição por zero.
+A normalização e a inversão dos indicadores de relação negativa são etapas
+posteriores de favorabilidade, não implementadas por esta documentação;
+permanecem aplicáveis as exigências metodológicas da Seção 8.2.
+
 ### 8.2 Fase 2 — Favorabilidade territorial — município e rede rodoviária
 
 **Função.** Núcleo do **ranking técnico-territorial**. Consome uma ou mais superfícies
 de favorabilidade e cruza-as com a geometria dos objetos de demanda, extraindo um valor
 por objeto de demanda.
+
+**Preparação vetorial autônoma.** O gerador de superfícies por critérios
+territoriais constitui uma etapa independente da bancada operacional. Selecionam-se
+variáveis municipais ou setoriais de 2022 com cobertura de levantamento comprovada,
+geram-se separadamente o critério e sua premissa direcional e associa-se uma das
+12 dimensões oficiais. A camada preparada é salva antes do índice, preservando
+geometrias, campos cadastrais, conceitos identificados por critério e valores
+originais e reescalonados. Aplica-se exclusivamente transformação linear
+mínimo–máximo, com inversão dos critérios negativos; variáveis constantes são
+rejeitadas. Zero observado é válido; valores desconhecidos ou protegidos por
+sigilo não são convertidos em zero.
+
+A composição utiliza média simples ou pesos AHP correspondentes exatamente aos
+critérios salvos. Admite-se informação de pesos, comparação pareada individual
+ou julgamento colaborativo vinculado à superfície e à hierarquização já
+cadastrada. Nesta última modalidade, utiliza-se um snapshot dos critérios,
+exporta-se e persiste-se cópia preenchida do modelo oficial e aguarda-se
+consolidação consistente antes da retomada. Não se sobrescrevem os pesos globais
+da hierarquização. Valores ausentes mantêm o índice nulo, sem redistribuição.
+Registram-se operador, pesos e origem no produto derivado; sua produção não
+implica homologação. O detalhamento consta no
+[módulo da Fase 2](../hierarquizacao/MODULO_FASE2_GERADOR_FAVORABILIDADE_TERRITORIAL.md).
+As alternativas de modelagem espacial apresentadas a seguir não se confundem
+com o conjunto de operações atualmente disponível nesse gerador vetorial.
 
 **Métodos de extração espacial:** extração pontual (projeto-ponto); média zonal
 (polígono/linha/buffer); mediana, máximo, mínimo ou percentis quando justificável;
@@ -1088,10 +1202,16 @@ fundamentação apresentada na Seção 4:
   papel lógico: filtro eliminatório (não-compensatório) ou ponderação (compensatória).
 - **Dimensão** — agrupa o critério por natureza temática, delimitando o escopo, evitando
   dupla contagem e sustentando a decomposição dos resultados por eixo de análise.
-- **Premissa** — proposição teórica ou normativa, ancorada em referência, que fundamenta
-  o critério e constitui a origem da cadeia.
-- **Critério** — regra avaliativa derivada da premissa, que define o que será apreciado
-  como mais ou menos favorável.
+- **Premissa** — proposição assumida na análise que sustenta a escolha ou a
+  interpretação de um critério; seu fundamento e suas referências devem ser explicitados.
+- **Premissa de avaliação** — proposição que estabelece como a grandeza medida
+  deve ser interpretada em relação ao fenômeno avaliado. Pode ser redigida como
+  “Quanto maior [grandeza medida pela variável], maior/menor [fenômeno avaliado]”,
+  sem que isso comprove causalidade ou substitua a justificativa.
+- **Fundamento da premissa** — justificativa teórica, empírica ou normativa
+  que sustenta a proposição, com referências e limites de aplicação.
+- **Critério** — propriedade pela qual as alternativas são avaliadas e comparadas,
+  operacionalizada por uma variável e interpretada segundo uma premissa de avaliação.
 - **Variável** — grandeza observável que operacionaliza o critério.
 - **Relação com o escopo** — sentido com que a variável afeta o objetivo: direção
   (positiva ou negativa) e caráter (mandatório ou compensatório).

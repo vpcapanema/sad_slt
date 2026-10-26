@@ -11,6 +11,7 @@ from api.storage_policy import configurar_temporarios
 configurar_temporarios()
 
 from urllib.parse import quote, urlencode
+import json
 import os
 
 from fastapi import Depends, FastAPI, HTTPException, Request
@@ -21,7 +22,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from api.exceptions import DatabaseUnavailableError
-from api.deps.auth import get_optional_session, require_operator
+from api.deps.auth import get_optional_session, require_geospatial_access, require_operator
 from api.middleware.subpath_rewrite import SubpathRewriteMiddleware
 from api.path_policy import project_path, relative_path
 from api.routers import api_router
@@ -557,6 +558,7 @@ async def redirect_legacy_page_routes(request: Request, call_next):
 
 
 GEOSPATIAL_PAGES = {
+    "gerador-superficies-favorabilidade": "gerador-superficies-favorabilidade.html",
     "gerador-camadas-territoriais": "gerador-camadas-territoriais.html",
     "extracao-atributos": "extracao-atributos.html",
     "extracoes-atributos": "extracoes-atributos.html",
@@ -583,6 +585,33 @@ HIERARQUIZACAO_DOCUMENTS = {
 @app.get("/restrict/geoespacial/", include_in_schema=False)
 def pagina_indice_geoespacial(request: Request) -> Response:
     return render_page(request, "paginas/geoespacial/index.html")
+
+
+@app.get("/restrict/geoespacial/documentacao-camadas-territoriais/", include_in_schema=False)
+def pagina_documentacao_camadas_territoriais(
+    request: Request,
+    _user: SessionUser = Depends(require_geospatial_access),
+) -> Response:
+    with project_path("config/documentacao-camadas-territoriais.json").open(encoding="utf-8-sig") as source:
+        matriz = json.load(source)
+    with project_path("config/catalogo-territorial-incorporado.json").open(encoding="utf-8") as source:
+        catalogo = json.load(source)
+    return render_page(
+        request, "paginas/geoespacial/documentacao-camadas-territoriais.html",
+        matriz=matriz, catalogo=catalogo,
+    )
+
+
+@app.get("/restrict/geoespacial/documentacao-camadas-territoriais/baixa-renda-2022.csv", include_in_schema=False)
+def documentacao_baixa_renda_csv(
+    _user: SessionUser = Depends(require_geospatial_access),
+) -> FileResponse:
+    return FileResponse(
+        project_path("config/documentacao-camadas-territoriais/baixa-renda-2022-percentuais-calculados.csv"),
+        media_type="text/csv",
+        filename="baixa-renda-2022-percentuais-calculados.csv",
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 @app.get("/restrict/geoespacial/{pagina}/", include_in_schema=False)

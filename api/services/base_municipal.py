@@ -42,15 +42,23 @@ def catalog() -> list[dict]:
             FROM base_municipal.atributo
             -- Collation binária reproduz a ordem que a interface já apresentava.
             ORDER BY fonte COLLATE "C", ano DESC, tema COLLATE "C", campo COLLATE "C"''').fetchall()
+    sources_by_id = {row['id']: row['source'] for row in rows}
     items = []
     for row in rows:
         item = dict(row)
         detail = item['detail'] or {}
+        if detail.get('origem_valor') == 'combinados':
+            references = detail.get('atributos_origem', [])
+            if not references or any(ident not in sources_by_id for ident in references):
+                raise ValueError(f"Fontes de origem não encontradas para {item['field']}.")
+            item['producer'] = item['source']
+            item['source'] = ' + '.join(sorted({sources_by_id[ident] for ident in references}))
         multiplier = detail.get('multiplicador')
         if multiplier not in (None, '', 1, 1.0):
             item['unit'] = f"{item['unit']} × {float(multiplier):g}"
         # A interface faz JSON.parse deste campo; entregar texto, não objeto.
         item['detail'] = json.dumps(detail, ensure_ascii=False)
+        item['origin'] = detail.get('origem_valor', 'originais')
         items.append(item)
     return items
 
@@ -105,8 +113,8 @@ def layer(items: list[dict], controle=None) -> gpd.GeoDataFrame:
 # ---------------------------------------------------------------------------
 # Dicionário de atributos: nome bruto, alias amigável e significado.
 #
-# O nome exportado sempre começa pelo identificador do tema, para que a tabela
-# de atributos seja legível sem consultar o dicionário. Shapefile aceita apenas
+# O nome municipal exportado combina sigla do tema, descricao e ano.
+# Shapefile aceita apenas
 # 10 caracteres por campo, então lá o nome vira uma sigla do tema mais um
 # sequencial, e o nome por extenso viaja no alias.
 # ---------------------------------------------------------------------------
@@ -176,9 +184,34 @@ def significado_de(item: dict) -> str:
 
 
 def nomes_exportados(items: list[dict], fmt: str) -> dict[str, str]:
-    """Nome de cada campo no arquivo, sempre iniciado pelo identificador do tema."""
+    """Nomes territoriais descritivos, com correspondencia ao campo original."""
     if fmt != 'shp':
-        return {item['field']: item['field'] for item in items}
+        nomes, usados = {}, {name.lower() for name in CAMPOS_FIXOS} | {'geometry', 'cd_setor', 'partes'}
+        for item in sorted(items, key=lambda entry: entry['field']):
+            bruto = item['field']
+            tema = sigla_tema(item.get('theme')).lower()
+            texto = unicodedata.normalize('NFKD', str(item.get('label') or bruto))
+            texto = texto.encode('ascii', 'ignore').decode().lower()
+            texto = re.sub(r'[^a-z0-9]+', '_', texto).strip('_')
+            texto = '_'.join(part for part in texto.split('_')
+                             if part not in {'de', 'da', 'do', 'das', 'dos', 'e', 'em'})
+            ano = str(item.get('year') or '')
+            if ano:
+                texto = re.sub(rf'_{re.escape(ano)}$', '', texto)
+            nome = f'{tema}_{texto}' + (f'_{ano}' if ano else '')
+            base = f'{tema}_{texto}'
+            sufixo = f'_{ano}' if ano else ''
+            nome = base[:63-len(sufixo)].rstrip('_') + sufixo
+            variante = 1
+            while nome.lower() in usados:
+                variante += 1
+                sufixo = f'_variante_{variante}' + (f'_{ano}' if ano else '')
+                nome = base[:63-len(sufixo)].rstrip('_') + sufixo
+            if nome.lower() in usados:
+                raise ValueError(f'Colunas exportadas repetidas: {nome}.')
+            usados.add(nome.lower())
+            nomes[bruto] = nome
+        return nomes
     nomes, usados = {}, set()
     for ordem, item in enumerate(items, 1):
         curto = f'{sigla_tema(item.get("theme"))}{ordem:05d}'[:10]
@@ -213,14 +246,15 @@ def dicionario(items: list[dict], fmt: str) -> list[dict]:
              'fonte': item.get('source'), 'tema': tema_legivel(item.get('theme')),
              'tema_bruto': item.get('theme'), 'ano': item.get('year'),
              'unidade': item.get('unit'), 'url': item.get('url'),
-             'municipios_com_valor': item.get('coverage')} for item in items]
+             'municipios_com_valor': item.get('coverage') if not item['field'].startswith('setor_') else None,
+             'territorios_com_valor': item.get('coverage')} for item in items]
 
 
-def aplicar_aliases(caminho: str | Path, entradas: list[dict]) -> bool:
+def aplicar_aliases(caminho: str | Path, entradas: list[dict], fixos=None) -> bool:
     """Grava o alias no próprio arquivo quando o formato suporta (GeoPackage)."""
     from osgeo import gdal, ogr
     alias = {e['campo_exportado']: e['alias'] for e in entradas}
-    alias.update({campo: rotulo for campo, (rotulo, _) in CAMPOS_FIXOS.items()})
+    alias.update({campo: rotulo for campo, (rotulo, _) in (fixos if fixos is not None else CAMPOS_FIXOS).items()})
     conjunto = gdal.OpenEx(str(caminho), gdal.OF_VECTOR | gdal.OF_UPDATE)
     if conjunto is None:
         return False
@@ -240,12 +274,12 @@ def aplicar_aliases(caminho: str | Path, entradas: list[dict]) -> bool:
         conjunto = None
 
 
-def estilo_qgis(entradas: list[dict]) -> str:
+def estilo_qgis(entradas: list[dict], fixos=None) -> str:
     """QML só com os aliases: Shapefile e FlatGeobuf não guardam alias no arquivo."""
     from xml.sax.saxutils import quoteattr
     linhas = [f'    <alias field={quoteattr(campo)} index="{indice}" name={quoteattr(rotulo)}/>'
               for indice, (campo, rotulo) in enumerate(
-                  [(campo, rotulo) for campo, (rotulo, _) in CAMPOS_FIXOS.items()]
+                  [(campo, rotulo) for campo, (rotulo, _) in (fixos if fixos is not None else CAMPOS_FIXOS).items()]
                   + [(e['campo_exportado'], e['alias']) for e in entradas])]
     return ('<!DOCTYPE qgis>\n<qgis version="3.34">\n  <aliases>\n'
             + '\n'.join(linhas) + '\n  </aliases>\n</qgis>\n')
@@ -308,41 +342,48 @@ def conferir_capacidade(quantos: int) -> None:
         'ou divida a seleção em mais de uma camada.')
 
 
-def export_layer(payload: dict, base: str = PREFIXO, controle=None) -> bytes:
+def export_layer(payload: dict, base: str = PREFIXO, controle=None, *, backend=None) -> bytes:
     """Gera o ZIP completo com camada, glossário, relatório e tabelas de atributos.
 
     ``base`` nomeia todos os arquivos do pacote, para que a pasta no acervo e o
     conteúdo dela compartilhem o mesmo identificador.
     """
-    items = selection(payload.get('attributes'))
+    items = (backend.selection if backend else selection)(payload.get('attributes'))
+    fixos = backend.CAMPOS_FIXOS if backend else CAMPOS_FIXOS
+    origem = backend.ORIGEM_MALHA if backend else ORIGEM_MALHA
     fmt = payload.get('format', 'fgb')
     if fmt not in LIMITES:
         raise ValueError('Formato inválido.')
     if len(items) > LIMITES[fmt]:
         raise ValueError(f'Este formato permite até {LIMITES[fmt]} atributos nesta aplicação. Use FlatGeobuf.')
-    conferir_capacidade(len(items))
-    if controle:controle.fase(1,'Lendo municípios e indicadores selecionados')
-    frame = layer(items,controle) if controle else layer(items)
+    (backend.conferir_capacidade if backend else conferir_capacidade)(len(items))
+    if controle:controle.fase(1,'Lendo territórios e indicadores selecionados')
+    build = backend.layer if backend else layer
+    frame = build(items,controle) if controle else build(items)
     if controle: controle.concluir_fase(1)
     if controle:controle.fase(2,'Gerando geometria, atributos e dicionário')
     entradas = dicionario(items, fmt)
     fields = {e['campo_bruto']: e['campo_exportado'] for e in entradas}
     frame = frame.rename(columns=fields)
     rotulos = {e['campo_bruto']: e['alias'] for e in entradas}
-    manifest = {'join': frame.attrs['join'], 'municipalities': len(frame), 'crs': CRS, 'geometry_year': ANO_MALHA,
-                'geometry_source': ORIGEM_MALHA, 'format': fmt,
+    manifest = {'join': frame.attrs['join'], 'municipalities': MUNICIPIOS if backend else len(frame), 'crs': CRS, 'geometry_year': ANO_MALHA,
+                'geometry_source': origem, 'format': fmt,
+                'territorialidade': 'setores_2022' if backend else 'municipios',
+                'feature_count': len(frame),
                 'attributes': [{**i, 'export_field': fields[i['field']],
                                 'alias': rotulos[i['field']], 'significado': significado_de(i)} for i in items],
                 'campos_fixos': [{'campo': campo, 'alias': rotulo, 'significado': texto}
-                                 for campo, (rotulo, texto) in CAMPOS_FIXOS.items()],
+                                 for campo, (rotulo, texto) in fixos.items()],
                 'aliases': {e['campo_exportado']: e['alias'] for e in entradas},
+                'aliases_nas_tabelas': True,
                 'notes': ['Ausência de valor permanece nula; zero é preservado.',
-                          'O nome de cada campo começa pelo identificador do tema.',
+                          'Campos territoriais usam nomes descritivos; códigos de origem permanecem no dicionário.',
+                          'CSV, TXT e XLSX exibem o alias no cabeçalho; a correspondência está nos metadados.',
                           'Shapefile aceita 10 caracteres por campo: lá o nome é a sigla do tema '
                           'mais um sequencial, e o nome por extenso está no alias.',
                           'Anos dos indicadores não alteram a malha de referência de 2022.']}
     if tempfile.sem_montagem():
-        return _exportar_memoria(frame, fmt, base, entradas, manifest, controle)
+        return _exportar_memoria(frame, fmt, base, entradas, manifest, controle, fixos)
     with tempfile.TemporaryDirectory(prefix='base-municipal-') as temp:
         folder = Path(temp)
         output = folder / f'{base}.{fmt}'
@@ -350,9 +391,9 @@ def export_layer(payload: dict, base: str = PREFIXO, controle=None) -> bytes:
         frame.to_file(output, driver=DRIVERS[fmt], encoding='UTF-8', index=False,
                       **({'COORDINATE_PRECISION': 17, 'SIGNIFICANT_FIGURES': 17} if fmt == 'geojson' else {}))
         if controle:controle.mensagem('Preparando metadados e dicionário de campos')
-        manifest['alias_no_arquivo'] = bool(fmt == 'gpkg' and aplicar_aliases(output, entradas))
-        (folder / f'{base}.qml').write_text(estilo_qgis(entradas), encoding='utf-8')
-        (folder / f'{base}_dicionario.csv').write_bytes(_dicionario_csv(entradas))
+        manifest['alias_no_arquivo'] = bool(fmt == 'gpkg' and aplicar_aliases(output, entradas, fixos))
+        (folder / f'{base}.qml').write_text(estilo_qgis(entradas, fixos), encoding='utf-8')
+        (folder / f'{base}_dicionario.csv').write_bytes(_dicionario_csv(entradas, fixos, origem))
         if controle:controle.mensagem('Reabrindo camada para conferir feições, atributos e geometrias')
         actual = export_support.reopen_and_validate(output, frame)
         export_support.write_tables_and_report(folder, base, actual, manifest, controle)
@@ -368,7 +409,7 @@ def export_layer(payload: dict, base: str = PREFIXO, controle=None) -> bytes:
         return buffer.getvalue()
 
 
-def _exportar_memoria(frame, fmt, base, entradas, manifest, controle):
+def _exportar_memoria(frame, fmt, base, entradas, manifest, controle, fixos=None):
     from osgeo import gdal
     from api.services.arquivos_geoespaciais_memoria import vetor, ler_vetor, diretorio, trabalho
     if controle:
@@ -379,11 +420,11 @@ def _exportar_memoria(frame, fmt, base, entradas, manifest, controle):
     manifest['alias_no_arquivo'] = False
     if fmt == 'gpkg':
         with diretorio(components) as root:
-            manifest['alias_no_arquivo'] = aplicar_aliases(root + '/' + name, entradas)
+            manifest['alias_no_arquivo'] = aplicar_aliases(root + '/' + name, entradas, fixos)
             components[name] = bytes(gdal.VSIGetMemFileBuffer_unsafe(root + '/' + name))
     actual = export_support.validate_layer(ler_vetor(components, name), frame)
-    components[f'{base}.qml'] = estilo_qgis(entradas).encode('utf-8')
-    components[f'{base}_dicionario.csv'] = _dicionario_csv(entradas)
+    components[f'{base}.qml'] = estilo_qgis(entradas, fixos).encode('utf-8')
+    components[f'{base}_dicionario.csv'] = _dicionario_csv(entradas, fixos, manifest['geometry_source'])
     export_support.write_tables_and_report(None, base, actual, manifest, controle, components=components)
     components[f'{base}_metadados.json'] = json.dumps(manifest, ensure_ascii=False, indent=2).encode('utf-8')
     with trabalho(components):
@@ -397,15 +438,16 @@ def _exportar_memoria(frame, fmt, base, entradas, manifest, controle):
         return buffer.getvalue()
 
 
-def _dicionario_csv(entradas):
+def _dicionario_csv(entradas, fixos=None, origem=ORIGEM_MALHA):
     glossary = io.StringIO(newline='')
     writer = csv.DictWriter(glossary, fieldnames=['campo_exportado', 'alias', 'significado',
                                                  'campo_bruto', 'fonte', 'tema', 'ano',
-                                                 'unidade', 'url', 'municipios_com_valor'])
+                                                 'unidade', 'url', 'municipios_com_valor',
+                                                 'territorios_com_valor'])
     writer.writeheader()
-    for campo, (rotulo, texto) in CAMPOS_FIXOS.items():
+    for campo, (rotulo, texto) in (fixos if fixos is not None else CAMPOS_FIXOS).items():
         writer.writerow({'campo_exportado': campo, 'alias': rotulo, 'significado': texto,
-                         'campo_bruto': campo, 'fonte': ORIGEM_MALHA, 'tema': 'Malha municipal',
+                         'campo_bruto': campo, 'fonte': origem, 'tema': 'Malha territorial',
                          'ano': ANO_MALHA})
     for entrada in entradas:
         writer.writerow({chave: entrada[chave] for chave in writer.fieldnames})

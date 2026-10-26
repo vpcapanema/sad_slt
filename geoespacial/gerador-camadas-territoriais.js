@@ -1,10 +1,11 @@
 import {base,json} from './extracao-atributos/api.js';
 import {$,feedback,options} from './extracao-atributos/ui.js';
-import {montarMunicipal} from './extracao-atributos/municipal-plugin/municipal-plugin.js?v=20260926-catalogo';
+import {montarMunicipal} from './extracao-atributos/municipal-plugin/municipal-plugin.js?v=20261025-filtros';
 
 const prefix=location.pathname.includes('/sicard/')?'/sicard':'';
 const select=$('#territorial-category'),host=$('#territorial-builder');
-let categories=[],unmount,busy=false,downloadUrl,configuration={attributes:[],format:"fgb"};
+const scale=$('#territorial-scale'),configurations=new Map();
+let categories=[],unmount,busy=false,downloadUrl,configuration={attributes:[],format:"fgb",territorialidade:'municipios'};
 function changeCategory(){
   if(busy)return;
   const category=categories.find(c=>c.id===select.value);
@@ -15,7 +16,7 @@ function changeCategory(){
 }
 function mount(){
   unmount=montarMunicipal(host,{category:null,apiBase:base,configuration,onChange:value=>{configuration=value;},onBusyChange:value=>{
-    busy=value;select.disabled=value;$('#territorial-scale').disabled=value;
+    busy=value;select.disabled=value;scale.disabled=value;
     $('#territorial-back').setAttribute('aria-disabled',String(value));
   },onGenerated:(result,output)=>{
     const category=categories.find(c=>c.id===select.value);
@@ -24,12 +25,20 @@ function mount(){
     downloadUrl=URL.createObjectURL(output.blob);
     const params=new URLSearchParams({retomar:'municipal',camada_municipal:result.id,categoria:category.id});
     // O adaptador desenha o cartão e o mapa no painel Resultados.
-    return {nome:output.configuration.nome||'Camada municipal',categoria:category.nome,
+    return {nome:output.configuration.nome||'Camada territorial',categoria:category.nome,
       download:{href:downloadUrl,filename:output.filename},
       usar:`${prefix}/restrict/geoespacial/extracao-atributos/?${params}`,
       geojson:`${base}/camadas/${encodeURIComponent(result.id)}/geojson`};
   }});
 }
+scale.addEventListener('change',()=>{
+  if(busy)return;
+  configurations.set(configuration.territorialidade,configuration);
+  configuration=configurations.get(scale.value)||{attributes:[],format:'fgb',territorialidade:scale.value};
+  unmount();
+  mount();
+  changeCategory();
+});
 async function load(){
   select.disabled=true;$('#territorial-retry').hidden=true;
   try{

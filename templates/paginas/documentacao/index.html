@@ -10,14 +10,15 @@
 {% block estilos_pagina %}
   <link rel="stylesheet" href="/public/cadastro/index.css?v=20261022-cards-hover-pressionado">
   <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="/assets/css/public-home-heroes.css?v=20261025-1">
 {% endblock %}
 
 {% block conteudo %}
 <main class="conteudo-principal app-main module-index">
-    <section class="secao-sicard module-hero">
-      <p class="module-eyebrow">Documentação funcional</p>
-      <h1>SICARD</h1>
-      <p>Sistema Inteligente de Cadastro e Ranking de Demandas da Subsecretaria de Logística e Transporte (SLT).</p>
+    <section class="secao-sicard module-hero standard-page-hero public-home-hero" aria-labelledby="documentation-title">
+      <h1 class="standard-page-hero__title" id="documentation-title"><i class="fa-solid fa-book-open" aria-hidden="true"></i><span>SICARD</span></h1>
+      <p class="module-eyebrow standard-page-hero__eyebrow">Documentação funcional</p>
+      <p class="standard-page-hero__description">Sistema Inteligente de Cadastro e Ranking de Demandas da Subsecretaria de Logística e Transporte (SLT).</p>
     </section>
 
     <section class="secao-glossario module-info-section">

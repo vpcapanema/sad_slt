@@ -604,3 +604,54 @@ consultas de catálogo e categorias sem dependência entre elas, mantendo a
 categoria no placeholder. Trocar a categoria atualiza o destino de geração,
 sem remontar o componente, perder filtros ou buscar novamente o catálogo.
 A geração continua exigindo uma categoria ativa validada no servidor.
+
+## Catálogo territorial SICARD (2026-10-25)
+
+O hospedeiro SICARD acrescenta a escala `setores_2022` à escala padrão
+`municipios`. Essa extensão não modifica os insumos SQLite/GeoPackage do
+componente independente. A API SICARD aceita `territorialidade` no catálogo,
+na prévia e na geração; os jobs preservam essa opção.
+
+O filtro **Tipo de valor** distingue valores originais publicados pela fonte
+(inclusive taxas e índices prontos) de combinações calculadas pelo SICARD.
+Trocar esse filtro mantém a seleção; trocar a escala mantém cestas separadas,
+impedindo misturar IDs municipais com setoriais.
+
+Os filtros seguem a cascata tipo de valor → fonte → ano de referência → tema.
+Somente opções presentes no recorte anterior são listadas; trocar fonte limpa
+ano e tema, e trocar ano limpa tema, sem apagar a cesta de atributos. Nos
+combinados, a fonte identifica as instituições dos insumos (ou sua combinação);
+o SICARD permanece identificado separadamente como produtor do cálculo.
+Em telas largas, os quatro filtros ocupam a mesma linha; o ano é compacto,
+e a fonte recebe o espaço restante. Em telas menores, a linha se reorganiza.
+
+Nos setores, a chave é `CD_SETOR` (15 dígitos); `CD_MUN` identifica o município
+de pertencimento e não é único. Partes oficiais são reunidas sem simplificação
+ou reparo implícito, áreas somadas e medidas demográficas contadas uma única
+vez. A ausência de um agregado ou seu sigilo permanece nula, nunca é preenchida
+com estatística municipal. Catálogo e prévia expõem a quantidade de territórios
+e a chave efetiva. O relatório do pacote registra essa chave e o universo.
+
+A carga aditiva é reproduzida por `scripts/preparar_catalogo_territorial.py`,
+após a migração `database/143_catalogo_territorial.sql`, no repositório
+hospedeiro. A ampliação integral dos 18 conjuntos setoriais de 2022 usa
+`scripts/completar_setores_2022.py --insumos DIR --aplicar`: 3.519 originais,
+incluindo rendimento do responsável, entorno nos três universos e registro
+de nascimento, além dos dez combinados existentes. A carga preserva IDs e
+geometria, confere valores e sinais por arquivo e recalcula os combinados.
+Fórmulas, fontes e limitações estão na página autenticada
+`/restrict/geoespacial/documentacao-camadas-territoriais/`.
+
+Na exportação municipal e setorial SICARD, os campos dos indicadores usam nomes
+descritivos ASCII com sigla do tema e ano, por exemplo
+`pop_taxa_crescimento_geometrico_2022`. Nomes longos são limitados a 63
+caracteres; nomes repetidos recebem `variante_2`, `variante_3` e assim por
+diante antes do ano, sem hashes. A prévia mostra o alias no cabeçalho e o
+nome efetivo do campo ao passar o mouse, usando a mesma seleção da exportação.
+O código original permanece no dicionário e nos metadados. Os aliases
+permanecem no GeoPackage e no QML que acompanha os demais formatos; a
+exibição automática depende do SIG e de suas preferências de aliases.
+CSV, TXT e XLSX municipais e setoriais exibem os aliases nos cabeçalhos dos indicadores.
+Shapefile conserva a limitação de dez caracteres e a correspondência no
+dicionário/QML. Essa mudança não renomeia os campos do banco; os códigos
+originais municipais e setoriais permanecem rastreáveis.

@@ -19,8 +19,8 @@ def test_base_municipal_carregada():
 
 def test_catalogo_oferece_rais_e_infosiga_por_municipio():
     catalogo = dados.catalog()
-    rais = [a for a in catalogo if a['source'] == 'MTE / RAIS']
-    infosiga = [a for a in catalogo if a['source'] == 'InfoSiga SP']
+    rais = [a for a in catalogo if a['source'] == 'MTE / RAIS' and a['origin'] == 'originais']
+    infosiga = [a for a in catalogo if a['source'] == 'InfoSiga SP' and a['origin'] == 'originais']
     assert {a['field'] for a in rais} == {
         f'rais_{indicador}_{ano}'
         for ano in range(2022, 2025)
@@ -88,8 +88,9 @@ def test_shapefile_usa_sigla_do_tema_em_dez_caracteres():
     nomes = dados.nomes_exportados(items, 'shp')
     assert all(len(nome) <= 10 and nome.startswith('POP') for nome in nomes.values())
     assert len(set(nomes.values())) == len(items)
-    # Nos demais formatos o nome bruto ja comeca pelo identificador do tema.
-    assert dados.nomes_exportados(items, 'gpkg') == {i['field']: i['field'] for i in items}
+    nomes = dados.nomes_exportados(items, 'gpkg')
+    assert all(nome.startswith('pop_') for nome in nomes.values())
+    assert all(len(nome) <= 63 for nome in nomes.values())
 
 
 def test_pacote_leva_dicionario_e_alias(tmp_path):
@@ -97,7 +98,7 @@ def test_pacote_leva_dicionario_e_alias(tmp_path):
     package, path, manifest, _ = service.materializar(
         {'attributes': [a['id'] for a in items], 'format': 'gpkg'}, tmp_path)
     assert manifest['alias_no_arquivo'] is True
-    assert set(manifest['aliases']) == {i['field'] for i in items}
+    assert set(manifest['aliases']) == {i['export_field'] for i in manifest['attributes']}
     assert (tmp_path/f'{dados.PREFIXO}.qml').exists()
     import csv
     linhas = list(csv.DictReader(
