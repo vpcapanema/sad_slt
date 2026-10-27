@@ -13,8 +13,10 @@
     if (!table.getBoundingClientRect().width || !table.tHead?.rows.length) return;
     const headers = window.SLTTable?.headers ? SLTTable.headers(table) : [...table.tHead.rows[0].cells];
     if (headers.some(h => h.colSpan !== 1)) return;
+    const prioritizeDemand = table.dataset.rankingOrder === 'true' || table.classList.contains('fase3-sintese-table');
     const rows = [...table.tBodies].flatMap(body => [...body.rows]).filter(row => row.cells.length === headers.length && [...row.cells].every(c => c.colSpan === 1));
     const specifications = headers.map((header, index) => {
+      if (header.hidden) return {preferred:0, compact:0, hidden:true};
       const selected = index === 0 && header.querySelector('input[type=checkbox]');
       if (selected) return {preferred:44, compact:44};
       let label = header.querySelector(':scope > .smart-column-title');
@@ -29,31 +31,64 @@
         const words = title.split(/\s+/);
         titleWidth = words.length > 1 ? Math.min(...words.slice(1).map((_, i) => Math.max(measure(words.slice(0, i+1).join(' '), header), measure(words.slice(i+1).join(' '), header)))) : Math.min(full, 180);
       }
-      const content = rows.reduce((max, row) => Math.max(max, measure(row.cells[index].textContent.trim(), row.cells[index])), 0);
-      const dataWidth = Math.min(320, content + 24);
+      const compactAttributes = table.dataset.compactAttributes === 'true';
+      const content = rows.reduce((max, row) => {
+        const cell = row.cells[index];
+        const primary = compactAttributes ? cell.querySelector('.atributo-valor-normalizado, .objeto-codigo') : null;
+        return Math.max(max, measure((primary || cell).textContent.trim(), cell));
+      }, 0);
+      const dataWidth = prioritizeDemand ? content + 24 : Math.min(compactAttributes && index > 1 ? 160 : 320, content + 24);
       return {preferred:Math.ceil(Math.max(76,full+32,dataWidth)), compact:Math.ceil(Math.max(76,titleWidth+32,dataWidth)), title, full, label};
     });
-    const available = table.parentElement.clientWidth;
-    const fits = specifications.reduce((sum,s)=>sum+s.preferred,0)<=available;
+    if (prioritizeDemand) {
+      const host = table.closest('.ami-report-table');
+      if (host) host.style.removeProperty('width');
+    }
+    // Collapsed outer borders still take space beyond the sum of cell widths.
+    // Reserve that space before distributing columns to avoid a 1px overflow.
+    const tableStyle = getComputedStyle(table);
+    const borderAllowance = tableStyle.borderCollapse === 'collapse'
+      ? Math.max(1, parseFloat(tableStyle.borderLeftWidth) || 0, parseFloat(tableStyle.borderRightWidth) || 0) : 0;
+    const available = Math.max(0, table.parentElement.clientWidth - borderAllowance);
+    const compactAttributes = table.dataset.compactAttributes === 'true';
+    const fits = prioritizeDemand || (!compactAttributes && specifications.reduce((sum,s)=>sum+s.preferred,0)<=available);
     const widths = specifications.map(s=>fits?s.preferred:s.compact);
-    const initialTotal = widths.reduce((a,b) => a+b, 0), flexible = widths.filter((_,i) => !(i === 0 && headers[i].querySelector('input[type=checkbox]'))).length;
+    const initialTotal = widths.reduce((a,b) => a+b, 0), flexible = widths.filter((_,i) => !specifications[i].hidden && !(i === 0 && headers[i].querySelector('input[type=checkbox]'))).length;
     const spare = Math.max(0, available-initialTotal) / Math.max(1, flexible);
+    // Distribute spare room in proportion to content width, capping each
+    // weight so a long demand name cannot absorb most of the free space.
+    const weights = specifications.map((spec, i) => spec.label && !spec.hidden ? Math.min(widths[i], 160) : 0);
+    const weightTotal = weights.reduce((sum, weight) => sum + weight, 0);
     widths.forEach((width,i)=>{
       const spec=specifications[i];
       if(!spec.label)return; // Selectors remain exactly 44px.
-      widths[i]=width+spare;
+      widths[i]=width+(prioritizeDemand ? Math.max(0, available-initialTotal) * weights[i] / Math.max(1, weightTotal) : compactAttributes ? (i === 1 ? spare * flexible : 0) : spare);
       const missing=spec.full+32-widths[i];
       const tolerance=Math.max(measure(spec.title.slice(-3),headers[i]),spec.full/Math.max(1,spec.title.length)*3);
       if(missing>0 && missing<=tolerance)widths[i]=Math.ceil(spec.full+32);
     });
     const total=widths.reduce((a,b)=>a+b,0), extra=0;
     headers.forEach((header, i) => {
+      if (specifications[i].hidden) return;
       const selected = i === 0 && header.querySelector('input[type=checkbox]');
       const width = widths[i] + (selected ? 0 : extra);
       if (!selected) {
         const {label,title,full}=specifications[i], room=width-32;
         const lines=[];let line='';
-        if(title.length>10 && full>room){
+        const adaptiveTitle = compactAttributes && header.classList.contains('col-atributo');
+        if (adaptiveTitle) {
+          const words = title.split(/\s+/);
+          let best = full, split = 0;
+          for (let k = 1; k < words.length; k++) {
+            const widest = Math.max(measure(words.slice(0, k).join(' '), header), measure(words.slice(k).join(' '), header));
+            if (widest < best) { best = widest; split = k; }
+          }
+          if (split) lines.push(words.slice(0, split).join(' '), words.slice(split).join(' '));
+          else lines.push(title);
+          const baseSize = parseFloat(getComputedStyle(header).fontSize);
+          set(label, 'font-size', Math.max(1, Math.min(13, baseSize * Math.max(1, room - 2) / Math.max(1, best))) + 'px');
+          set(label, 'line-height', '1.15');
+        } else if(title.length>10 && full>room){
           const words=title.split(/\s+/);
           let split=1,best=Infinity;
           for(let k=1;k<words.length;k++){const a=measure(words.slice(0,k).join(' '),header),b=measure(words.slice(k).join(' '),header);if(Math.max(a,b)<best){best=Math.max(a,b);split=k;}}
@@ -63,6 +98,10 @@
         label.replaceChildren(...lines.map((text,index)=>{const paragraph=document.createElement('span');paragraph.style.display='block';paragraph.textContent=text+(index<lines.length-1?' ':'');return paragraph;}));
         label.style.display='inline-block';label.style.maxWidth='100%';label.style.textAlign=lines.length>1?'justify':'center';
         set(label,'white-space','normal');set(label,'overflow-wrap','anywhere');
+        if (adaptiveTitle) {
+          label.style.textAlign = 'center';
+          [...label.children].forEach(line => { line.style.whiteSpace = 'nowrap'; });
+        }
       }
       for (const cell of [header, ...rows.map(row=>row.cells[i])]) {
         set(cell,'width', width+'px'); set(cell,'min-width','0'); set(cell,'max-width','none');
@@ -80,7 +119,7 @@
     }
     set(table,'table-layout','fixed'); set(table,'width',Math.max(total,available)+'px'); set(table,'min-width','0'); set(table,'max-width','none');
     table.dataset.smartWidths = 'true';
-    table.parentElement.style.overflowX = 'auto';
+    table.parentElement.style.overflowX = table.parentElement.scrollWidth > table.parentElement.clientWidth ? 'auto' : 'hidden';
   }
   let scheduled = false;
   const observer = new MutationObserver(schedule);

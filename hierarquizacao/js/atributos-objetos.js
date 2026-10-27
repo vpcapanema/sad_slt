@@ -33,6 +33,8 @@
       input.checked = input.value === (estado.ponderacao || "estratificada"); input.disabled = !estado.codigo;
     });
     document.querySelectorAll('[data-controles-pesos] input').forEach(input => { input.disabled = ahp; });
+    const resetar = document.getElementById("resetar-pesos-fase3");
+    if (resetar) resetar.disabled = ahp || !estado.codigo || !estado.colunas.length;
     const ajuda = document.querySelector('.atributos-pesos-ajuda');
     if (ajuda) ajuda.textContent = ahp
       ? "Os pesos dos atributos vêm da coluna Pesos consolidados do julgamento selecionado. O índice de risco herdado da Fase 1 mantém peso 1, pois não integra a matriz julgada."
@@ -98,6 +100,15 @@
     estado.julgamentoId = config.julgamento_id || null;
     seletor.replaceChildren(new Option("Selecione um julgamento", ""));
     seletor.onchange = () => { estado.julgamentoId = seletor.value || null; aplicarJulgamento(); };
+    const resetar = document.getElementById("resetar-pesos-fase3");
+    if (resetar) resetar.onclick = () => {
+      if (estado.fonte !== "manual" || !estado.codigo || !estado.colunas.length) return;
+      estado.pesos = pesosIniciais(estado.colunas, { ponderacao: estado.ponderacao });
+      estado.pesosManuais = { ...estado.pesos };
+      GRUPOS_PESO.forEach(grupo => atualizarPesos($('[data-atributos-objetos]'), grupo));
+      avisoPesos("Pesos restaurados à posição neutra, com distribuição igual. Salve os pesos para registrar a alteração.");
+      document.dispatchEvent(new Event("atributos-pesos-alterados"));
+    };
     document.querySelectorAll('[name="fonte-pesos-fase3"]').forEach(input => { input.onchange = () => {
       estado.fonte = input.value;
       avisoPesos("");
@@ -344,6 +355,7 @@
   }
 
   function limpar(raiz) {
+    window.Fase3TableReset?.(raiz.querySelector('table'));
     $("[data-atributos-pesos]", raiz).hidden = true;
     $("[data-atributos-tbody]", raiz).innerHTML = "";
     $("[data-atributos-thead] tr", raiz).querySelectorAll("th.col-atributo").forEach((item) => item.remove());
@@ -532,7 +544,10 @@
     if (!raiz) return;
     limpar(raiz);
     if (!opcoes.complementacao) configurarFonte(null);
-    if (!hierarquizacao?.codigo) return;
+    if (!hierarquizacao?.codigo) {
+      window.Fase3TableStandard?.(raiz.querySelector('table'));
+      return;
+    }
     try {
       const [respostaColunas, dominios] = await Promise.all([
         opcoes.colunas === undefined ? json(API_COLUNAS(hierarquizacao.codigo)) : Promise.resolve({colunas: opcoes.colunas}),
@@ -555,6 +570,7 @@
       const titulo = document.getElementById("fase3-titulo-atributos");
       if (titulo) titulo.textContent = `${opcoes.complementacao ? "2.2 " : ""}Critérios de atributo de demanda`;
       montarTabela(raiz, objetos, colunas, opcoes);
+      window.Fase3TableStandard?.(raiz.querySelector('table'));
       $("[data-atributos-pesos]", raiz).hidden = true;
       if (!opcoes.complementacao) montarPesos(raiz);
       if (!opcoes.complementacao) configurarFonte(hierarquizacao);

@@ -289,6 +289,10 @@
           "rules": 52
         },
         {
+          "url": "http://127.0.0.1:8083/assets/css/paginas/hierarquizacao-processos-padrao.css?v=20261027-1",
+          "rules": 8
+        },
+        {
           "url": "http://127.0.0.1:8083/assets/css/table-scrollbars.css?v=20261027-1",
           "rules": 5
         },
@@ -420,6 +424,10 @@
   "errors": [],
   "assetInventory": [
     {
+      "url": "http://127.0.0.1:8083/assets/css/template-conteudo.css",
+      "chars": 3385
+    },
+    {
       "url": "http://127.0.0.1:8083/assets/css/app.css",
       "chars": 68212
     },
@@ -428,36 +436,20 @@
       "chars": 2731
     },
     {
-      "url": "http://127.0.0.1:8083/assets/css/ahp-module.css",
-      "chars": 114751
-    },
-    {
       "url": "http://127.0.0.1:8083/assets/vendor/fontawesome/css/all.min.css",
       "chars": 103017
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/css/ahp-module.css",
+      "chars": 114751
     },
     {
       "url": "http://127.0.0.1:8083/assets/css/process_feedback_system.css?v=20261027-erro-blocos",
       "chars": 41260
     },
     {
-      "url": "http://127.0.0.1:8083/assets/css/template-conteudo.css",
-      "chars": 3385
-    },
-    {
       "url": "http://127.0.0.1:8083/assets/css/ahp-collab-analytics.css",
       "chars": 3310
-    },
-    {
-      "url": "http://127.0.0.1:8083/assets/css/ahp-collab-explorer.css",
-      "chars": 2049
-    },
-    {
-      "url": "http://127.0.0.1:8083/assets/css/central-respostas-layout.css?v=20260821-table-left-chart-right",
-      "chars": 879
-    },
-    {
-      "url": "http://127.0.0.1:8083/assets/css/analise-multicriterio.css?v=20260831-espaco-analitico",
-      "chars": 41530
     },
     {
       "url": "http://127.0.0.1:8083/assets/css/ahp-collab-rounds.css",
@@ -468,6 +460,18 @@
       "chars": 4561
     },
     {
+      "url": "http://127.0.0.1:8083/assets/css/analise-multicriterio.css?v=20260831-espaco-analitico",
+      "chars": 41530
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/css/ahp-collab-explorer.css",
+      "chars": 2049
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/css/central-respostas-layout.css?v=20260821-table-left-chart-right",
+      "chars": 879
+    },
+    {
       "url": "http://127.0.0.1:8083/assets/css/analise-multicriterio-modal.css?v=20260819-modal5",
       "chars": 5549
     },
@@ -476,12 +480,12 @@
       "chars": 2267
     },
     {
-      "url": "http://127.0.0.1:8083/assets/css/page-title-standard.css?v=20260820-3",
-      "chars": 1497
-    },
-    {
       "url": "http://127.0.0.1:8083/assets/css/paginas/ami-report-tables.css?v=20261020-paginacao",
       "chars": 1041
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/css/page-title-standard.css?v=20260820-3",
+      "chars": 1497
     },
     {
       "url": "http://127.0.0.1:8083/assets/css/table-standard.css?v=20261015-fontes-ordem",
@@ -492,12 +496,12 @@
       "chars": 9121
     },
     {
-      "url": "http://127.0.0.1:8083/assets/css/paginas/ami-espaco-secoes.css?v=20261027-botoes-cinza-claro",
-      "chars": 23793
-    },
-    {
       "url": "http://127.0.0.1:8083/assets/css/paginas/sicard-standard-pages.css?v=20261027-1",
       "chars": 8532
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/css/paginas/ami-espaco-secoes.css?v=20261027-botoes-cinza-claro",
+      "chars": 23793
     },
     {
       "url": "http://127.0.0.1:8083/assets/css/paginas/central-respostas-padrao.css?v=20261027-espaco-cards",
@@ -516,28 +520,28 @@
       "chars": 109684
     },
     {
+      "url": "http://127.0.0.1:8083/assets/js/admin-auth.js",
+      "chars": 4108
+    },
+    {
       "url": "http://127.0.0.1:8083/assets/js/sicard-standard-layout.js?v=20261027-1",
       "chars": 1449
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/js/analysis-table-controls.js?v=20261027-modos-consulta-edicao",
+      "chars": 7783
     },
     {
       "url": "http://127.0.0.1:8083/assets/js/table-standard.js?v=20261027-cabecalho-agrupado",
       "chars": 3330
     },
     {
-      "url": "http://127.0.0.1:8083/assets/js/analysis-table-controls.js?v=20261027-cabecalho-agrupado",
-      "chars": 7783
-    },
-    {
-      "url": "http://127.0.0.1:8083/assets/js/admin-auth.js",
-      "chars": 4108
+      "url": "http://127.0.0.1:8083/assets/js/paginas/analise-multicriterio-tabela.js?v=20261027-disponibilidade",
+      "chars": 15745
     },
     {
       "url": "http://127.0.0.1:8083/assets/js/api-erro.js?v=20261027",
       "chars": 4112
-    },
-    {
-      "url": "http://127.0.0.1:8083/assets/js/paginas/analise-multicriterio-tabela.js?v=20261027-disponibilidade",
-      "chars": 15745
     },
     {
       "url": "http://127.0.0.1:8083/assets/js/table-sort.js?v=20261027-cabecalho-agrupado",
@@ -548,24 +552,28 @@
       "chars": 13257
     },
     {
-      "url": "http://127.0.0.1:8083/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20261027-secao7-direta",
-      "chars": 121215
+      "url": "http://127.0.0.1:8083/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20261027-modos-consulta-edicao",
+      "chars": 121440
     },
     {
       "url": "http://127.0.0.1:8083/assets/js/ahp-process-monitor.js",
       "chars": 2048
     },
     {
-      "url": "http://127.0.0.1:8083/assets/js/table-smart-widths.js?v=20261027-secao7-direta",
-      "chars": 7320
-    },
-    {
       "url": "http://127.0.0.1:8083/assets/js/template-base.js",
       "chars": 3137
     },
     {
+      "url": "http://127.0.0.1:8083/assets/js/table-smart-widths.js?v=20261027-secao7-direta",
+      "chars": 7320
+    },
+    {
       "url": "http://127.0.0.1:8083/assets/vendor/xlsx/xlsx-0.18.5.min.js",
       "chars": 639145
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/css/paginas/hierarquizacao-home-inline-1.css?v=20261015-instrucoes",
+      "chars": 7140
     },
     {
       "url": "http://127.0.0.1:8083/restrict/hierarquizacao/processos.css?v=20261015-fluxo-atual",
@@ -576,8 +584,8 @@
       "chars": 14806
     },
     {
-      "url": "http://127.0.0.1:8083/assets/css/paginas/hierarquizacao-home-inline-1.css?v=20261015-instrucoes",
-      "chars": 7140
+      "url": "http://127.0.0.1:8083/assets/css/paginas/hierarquizacao-processos-padrao.css?v=20261027-1",
+      "chars": 1110
     },
     {
       "url": "http://127.0.0.1:8083/assets/js/table-standard.js?v=20261015-fontes-ordem",
@@ -592,12 +600,12 @@
       "chars": 2376
     },
     {
-      "url": "http://127.0.0.1:8083/assets/js/catalog.js",
-      "chars": 1587
-    },
-    {
       "url": "http://127.0.0.1:8083/assets/js/status-colors.js",
       "chars": 31715
+    },
+    {
+      "url": "http://127.0.0.1:8083/assets/js/catalog.js",
+      "chars": 1587
     },
     {
       "url": "http://127.0.0.1:8083/assets/js/admin-labels.js",
@@ -612,10 +620,6 @@
       "chars": 5425
     },
     {
-      "url": "http://127.0.0.1:8083/restrict/hierarquizacao/js/demandas-grupo.js?v=20261004-1",
-      "chars": 12494
-    },
-    {
       "url": "http://127.0.0.1:8083/assets/js/hierarquizacao-complementacao.js",
       "chars": 1938
     },
@@ -624,12 +628,16 @@
       "chars": 2032
     },
     {
-      "url": "http://127.0.0.1:8083/restrict/hierarquizacao/js/processos.js?v=20261027-padrao-ui",
-      "chars": 38651
+      "url": "http://127.0.0.1:8083/restrict/hierarquizacao/js/demandas-grupo.js?v=20261004-1",
+      "chars": 12494
     },
     {
       "url": "http://127.0.0.1:8083/assets/js/paginas/hierarquizacao-home-inline-1.js",
       "chars": 1298
+    },
+    {
+      "url": "http://127.0.0.1:8083/restrict/hierarquizacao/js/processos.js?v=20261027-padrao-ui",
+      "chars": 38651
     }
   ]
 }

@@ -1,0 +1,137 @@
+{% extends "bases/base_conteudo.html" %}
+{% set subtitulo = "Análise Multicritério Interativa" %}
+{% set navegacao = "restrita" %}
+{% set bloco_modulo = "mad" %}
+{% set requer_autenticacao = true %}
+{% block titulo %}Mesa de consolidação — SICARD{% endblock %}
+{% block classes_body %}ahp-module-page ami-page feedback-proprio ami-espaco-page sicard-standard-page mesa-page{% endblock %}
+{% block estilos_pagina %}
+  <link rel="stylesheet" href="/assets/css/ahp-module.css">
+  <link rel="stylesheet" href="/assets/css/ahp-collab-analytics.css">
+  <link rel="stylesheet" href="/assets/css/ahp-collab-explorer.css">
+  <link rel="stylesheet" href="/assets/css/analise-multicriterio.css?v=20260831-espaco-analitico">
+  <link rel="stylesheet" href="/assets/css/analise-multicriterio-tabela.css?v=20260831-larguras-colunas">
+  <link rel="stylesheet" href="/assets/css/mad-filter-standard.css?v=20260820-1">
+  <link rel="stylesheet" href="/assets/css/page-title-standard.css?v=20260820-3">
+  <link rel="stylesheet" href="/assets/css/table-standard.css?v=20261015-fontes-ordem">
+  <link rel="stylesheet" href="/assets/css/paginas/ami-report-tables.css?v=20261020-paginacao">
+  <link rel="stylesheet" href="/assets/css/admin-table-controls.css?v=20261015-botoes-quadrados">
+  <link rel="stylesheet" href="/assets/css/paginas/ami-espaco-secoes.css?v=20261027-botoes-cinza-claro">
+  <link rel="stylesheet" href="/assets/css/paginas/sicard-standard-pages.css?v=20261027-1">
+  <link rel="stylesheet" href="/assets/css/paginas/mesa-consolidacao.css?v=20261027-1">
+{% endblock %}
+{% block conteudo %}
+<div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
+<main class="conteudo-principal app-main ahp-main ami-main" id="mesa-principal">
+  <section class="secao-cabecalho-julgamentos card ahp-step-intro ami-hero standard-page-hero card-cabecalho-julgamentos">
+    <h1 class="standard-page-hero__title" id="ami-page-title"><i class="fa-solid fa-scale-balanced" aria-hidden="true"></i><span>Mesa de consolidação</span></h1>
+    <p class="ami-eyebrow standard-page-hero__eyebrow">Análise Multicritério Interativa</p>
+    <p class="standard-page-hero__description">Escolha o julgamento, defina quais respostas entram e com qual regra, confira o resultado em tempo real e grave ou homologue a análise, tudo em uma só tela.</p>
+  </section>
+
+  <section class="card ahp-step-section ami-panel standard-table-section" id="mesa-julgamentos">
+    <div class="ahp-section-label"><span><i class="fas fa-table" aria-hidden="true"></i> Julgamentos com respostas colaborativas</span></div>
+    <div class="ahp-section-body">
+      <p class="mesa-aviso" id="mesa-demo-pagina" hidden><i class="fa-solid fa-flask" aria-hidden="true"></i> Modo demonstração: os julgamentos, as respostas e as análises são fictícios, mantidos apenas nesta aba. Nada é lido nem gravado no servidor.</p>
+      <p class="step-intro"><i class="fas fa-circle-info" aria-hidden="true"></i> Selecione um julgamento para abrir a mesa de consolidação logo abaixo.</p>
+      <div id="mesa-tabela-julgamentos"></div>
+      <p class="ami-table-feedback" id="mesa-feedback" role="status" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <section class="card ahp-step-section is-hidden" id="mesa" aria-labelledby="mesa-titulo">
+    <div class="ahp-section-label"><i class="fas fa-scale-balanced" aria-hidden="true"></i><span id="mesa-titulo">Mesa de consolidação · <span id="mesa-titulo-nome"></span></span></div>
+    <div class="ahp-section-body">
+      <p class="mesa-aviso" id="mesa-demo" hidden><i class="fa-solid fa-flask" aria-hidden="true"></i> Dados de demonstração: gravar e homologar atuam apenas na memória desta aba.</p>
+      <p class="step-intro" id="mesa-contexto"></p>
+      <div class="mesa-resumo">
+        <div class="mesa-participacao" id="mesa-participacao" aria-label="Participação no julgamento"></div>
+        <span class="mesa-selo" id="mesa-situacao"></span>
+      </div>
+      <p class="step-intro mesa-origem" id="mesa-origem" role="status" aria-live="polite"></p>
+
+      <div class="mesa-barra" id="mesa-barra" aria-label="Resultado em tempo real" role="region">
+        <div class="mesa-barra__resultado">
+          <div class="mesa-barra__kpis" aria-live="polite">
+            <div class="mesa-kpi"><span>Respostas incluídas</span><strong id="mesa-k-incluidas">—</strong></div>
+            <div class="mesa-kpi"><span>λmax</span><strong id="mesa-k-lambda">—</strong></div>
+            <div class="mesa-kpi"><span>IC</span><strong id="mesa-k-ic">—</strong></div>
+            <div class="mesa-kpi"><span>IA</span><strong id="mesa-k-ia">—</strong></div>
+            <div class="mesa-kpi mesa-kpi--rc"><span>Razão de consistência (RC)</span><strong id="mesa-k-rc">—</strong></div>
+          </div>
+          <p class="mesa-barra__veredito" id="mesa-veredito" role="status"></p>
+        </div>
+        <div class="mesa-barra__acoes">
+          <div class="c-form-group"><label class="c-form-label" for="mesa-nome">Nome da análise a gravar</label><input class="c-form-control" id="mesa-nome" maxlength="200" autocomplete="off"></div>
+          <button type="button" class="btn btn-primary" id="mesa-salvar" disabled><i class="fa-solid fa-floppy-disk c-btn__icon" aria-hidden="true"></i>Gravar análise</button>
+          <button type="button" class="btn btn-secondary" id="mesa-exportar" disabled><i class="fa-solid fa-file-excel c-btn__icon" aria-hidden="true"></i>Exportar planilha</button>
+        </div>
+      </div>
+
+      <section class="ahp-subcard">
+        <div class="ahp-subsection-title"><span class="ahp-subsection-num">1</span><span>Quem entra e com qual regra</span></div>
+        <p class="ami-subsection-hint">Marque as respostas que devem compor a consolidação. A coluna “No cálculo” mostra o efeito real das marcações e das regras; “RC do grupo sem ele” e “Pares destoantes” indicam quem mais pesa na inconsistência.</p>
+        <fieldset class="mesa-regras">
+          <legend>Regras da consolidação</legend>
+          <div class="c-form-group"><label class="c-form-label" for="mesa-metodo">Método de agregação</label>
+            <select class="c-form-control" id="mesa-metodo"><option value="geometrica">Média geométrica</option><option value="aritmetica">Média aritmética</option><option value="mediana">Mediana</option></select></div>
+          <div class="c-form-group"><label class="c-form-label" for="mesa-rc">RC máximo individual</label>
+            <input class="c-form-control" id="mesa-rc" type="number" min="0.001" max="1" step="0.001" value="0.10"></div>
+          <label class="ami-analysis-checkbox mesa-excluir"><input id="mesa-excluir" type="checkbox" checked> Excluir respostas inconsistentes</label>
+          <div class="mesa-selecao-rapida" role="group" aria-label="Seleção rápida de respostas">
+            <button type="button" class="btn btn-secondary" id="mesa-sel-todas">Todas as enviadas</button>
+            <button type="button" class="btn btn-secondary" id="mesa-sel-consistentes">Só as consistentes</button>
+            <button type="button" class="btn btn-secondary" id="mesa-sel-nenhuma">Nenhuma</button>
+          </div>
+        </fieldset>
+        <div id="mesa-tabela-respostas"></div>
+      </section>
+
+      <section class="ahp-subcard">
+        <div class="ahp-subsection-title"><span class="ahp-subsection-num">2</span><span>Resultado da consolidação</span></div>
+        <div class="mesa-abas" role="tablist" aria-label="Visões do resultado">
+          <button type="button" role="tab" id="mesa-aba-pesos" aria-controls="mesa-painel-pesos" aria-selected="true">Pesos dos critérios</button>
+          <button type="button" role="tab" id="mesa-aba-pares" aria-controls="mesa-painel-pares" aria-selected="false" tabindex="-1">Índices por par e discrepâncias</button>
+          <button type="button" role="tab" id="mesa-aba-matriz" aria-controls="mesa-painel-matriz" aria-selected="false" tabindex="-1">Matriz consolidada</button>
+        </div>
+        <div role="tabpanel" id="mesa-painel-pesos" aria-labelledby="mesa-aba-pesos">
+          <p class="ami-subsection-hint" id="mesa-dica-pesos"></p>
+          <div id="mesa-tabela-pesos"></div>
+        </div>
+        <div role="tabpanel" id="mesa-painel-pares" aria-labelledby="mesa-aba-pares" hidden>
+          <p class="ami-subsection-hint">Índice de Saaty atribuído por cada julgador a cada par (1/9 a 9). A marca na base da célula indica o afastamento em relação ao consolidado do par; julgadores fora do cálculo aparecem esmaecidos. “Dispersão (×)” é o fator típico de afastamento (1,00 = unanimidade) e “Mais destoante” aponta o julgador a 3 vezes ou mais do consolidado.</p>
+          <div id="mesa-tabela-pares"></div>
+        </div>
+        <div role="tabpanel" id="mesa-painel-matriz" aria-labelledby="mesa-aba-matriz" hidden>
+          <p class="ami-subsection-hint">Matriz recíproca resultante da agregação dos índices pelo método escolhido; dela saem os pesos e as métricas de consistência.</p>
+          <div id="mesa-tabela-matriz"></div>
+        </div>
+      </section>
+
+      <section class="ahp-subcard">
+        <div class="ahp-subsection-title"><span class="ahp-subsection-num">3</span><span>Análises gravadas e homologação</span></div>
+        <p class="ami-subsection-hint">Selecione uma análise para carregá-la na mesa (restaura respostas e regras para revisão) ou para homologá-la. A coluna “Diferença máx. para a mesa” compara os pesos de cada análise gravada com a prévia atual.</p>
+        <div id="mesa-tabela-analises"></div>
+        <div class="ami-homologada mesa-proximos" id="mesa-proximos" hidden>
+          <p class="ami-homologada__titulo"><i class="fa-solid fa-circle-check" aria-hidden="true"></i> <strong>Há uma análise homologada</strong></p>
+          <p class="ami-homologada__texto">Os pesos homologados pertencem a esta hierarquização e serão aplicados aos critérios correspondentes na fase 3.</p>
+          <ol class="ami-homologada__fases">
+            <li><a href="/restrict/hierarquizacao/fase-1/"><span class="ami-homologada__num">1</span><span><strong>Elegibilidade territorial</strong><small>cruza cada demanda com as áreas homologadas de restrição e risco</small></span><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a></li>
+            <li><a href="/restrict/hierarquizacao/fase-2/"><span class="ami-homologada__num">2</span><span><strong>Favorabilidade territorial</strong><small>extrai o índice da superfície homologada no ponto de cada demanda</small></span><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a></li>
+            <li><a href="/restrict/hierarquizacao/fase-3/"><span class="ami-homologada__num">3</span><span><strong>Priorização de demandas por atributos</strong><small>combina os atributos do objeto de demanda com o risco herdado e fecha a síntese</small></span><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a></li>
+          </ol>
+        </div>
+      </section>
+    </div>
+  </section>
+</main>
+{% endblock %}
+{% block scripts_pagina %}
+  <script src="/assets/js/table-standard.js?v=20261027-cabecalho-agrupado"></script>
+  <script src="/assets/js/admin-auth.js"></script>
+  <script src="/assets/vendor/xlsx/xlsx-0.18.5.min.js"></script>
+  <script src="/assets/js/api-erro.js?v=20261027"></script>
+  <script src="/assets/js/paginas/mesa-consolidacao-motor.js?v=20261027-1"></script>
+  {% if request.query_params.get('demo') is not none %}<script src="/assets/js/paginas/mesa-consolidacao-demo.js?v=20261027-1"></script>{% endif %}
+  <script src="/assets/js/paginas/mesa-consolidacao.js?v=20261027-1"></script>
+{% endblock %}

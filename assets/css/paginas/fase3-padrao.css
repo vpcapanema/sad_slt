@@ -1,0 +1,124 @@
+/* Page-specific integration of the shared Julgamentos table and section styles. */
+.fase3-standard-page .ahp-step-section { background: #fff; }
+.fase3-standard-page #fase3-auditoria { margin-top: 12px; padding: 16px; background: #e7f0f7; border: 1px solid #c5d7e4; border-radius: 8px; font: 400 12px/1.5 Roboto, Arial, sans-serif; }
+.fase3-standard-page .fase3-execucao-resumo { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 20px; margin: 12px 0; }
+.fase3-standard-page .fase3-execucao-resumo dt { font-weight: 700; color: #123b56; }
+.fase3-standard-page .fase3-execucao-resumo dd { margin: 2px 0 0; }
+.fase3-standard-page .fase3-execucao-resumo > div {
+  padding: 10px 12px; border: 1px solid #c5d7e4; border-radius: 6px; background: #fff;
+}
+.fase3-standard-page .fase3-execucao-resumo dd { margin-top: 5px; color: #243e50; }
+.fase3-standard-page #fase3-auditoria h4 { margin: 14px 0 6px; font: 700 12px/1.4 Montserrat, Verdana, sans-serif; color: #123b56; }
+.fase3-standard-page #fase3-auditoria p { margin: 0 0 8px; }
+.fase3-standard-page .fase3-execucao-pesos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; padding: 0; list-style: none; }
+.fase3-standard-page .fase3-execucao-pesos li {
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 5px;
+  padding: 10px 12px; border: 1px solid #c5d7e4; border-radius: 6px; background: #fff;
+  overflow-wrap: anywhere;
+}
+.fase3-standard-page .fase3-execucao-pesos li > span { color: #526775; font-size: 11px; }
+.fase3-standard-page .fase3-execucao-pesos li > strong { color: #123b56; font-size: 13px; font-variant-numeric: tabular-nums; }
+.fase3-standard-page .fase3-detalhes-tecnicos { margin-top: 16px; padding-top: 10px; border-top: 1px solid #c5d7e4; }
+.fase3-standard-page .fase3-detalhes-tecnicos summary { cursor: pointer; color: #123b56; font-weight: 700; }
+.fase3-standard-page .fase3-detalhes-tecnicos pre { max-height: 320px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width: 1000px) {
+  .fase3-standard-page .fase3-execucao-pesos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+  .fase3-standard-page :is(.fase3-execucao-resumo, .fase3-execucao-pesos) { grid-template-columns: 1fr; }
+}
+.fase3-standard-page .ami-main .fase3-calculo-acoes {
+  display: flex; justify-content: flex-end; align-items: center;
+  margin: 12px 0 0; padding: 16px 0 0;
+  border-top: 1px solid #a9bdcb;
+}
+.fase3-standard-page.sicard-standard-page.ami-page.ami-espaco-page .ami-main .fase3-calculo-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 46px; height: auto; padding: 10px 20px; border-radius: 8px;
+  font: 700 13px/1.4 Montserrat, Verdana, sans-serif;
+  box-shadow: 0 3px 6px rgb(18 59 86 / 16%);
+}
+.fase3-standard-page.sicard-standard-page .ami-main .fase3-calculo-btn > i {
+  margin: 0; font-size: 20px; flex-shrink: 0; color: #123b56;
+}
+.fase3-standard-page .ami-main .fase3-calculo-btn:focus-visible {
+  outline: 3px solid #2f789f; outline-offset: 3px;
+}
+@media (max-width: 600px) {
+  .fase3-standard-page .ami-main .fase3-calculo-btn { width: 100%; }
+}
+.fase3-standard-page .fase3-filter-divider { flex: 0 0 1px; width: 1px; height: 18px; margin: 0 4px; background: #a9bdcb; }
+.fase3-standard-page .fase3-label-toggle[aria-pressed="true"] { box-shadow: inset 0 0 0 1px #123b56; }
+.fase3-standard-page.sicard-standard-page.ami-page.ami-espaco-page .ami-main .admin-filter-bar .fase3-group-toggle,
+.fase3-standard-page.sicard-standard-page.ami-page.ami-espaco-page .ami-main .admin-filter-bar .fase3-group-toggle:hover {
+  background: var(--grupo-cor) !important; border-color: var(--grupo-cor) !important;
+  color: #fff !important; font-weight: 700; font-size: 10px;
+  box-shadow: 0 2px 2px rgb(0 0 0 / 18%);
+}
+.fase3-standard-page.sicard-standard-page.ami-page.ami-espaco-page .ami-main .admin-filter-bar .fase3-group-toggle[aria-pressed="true"] {
+  box-shadow: inset 0 3px 5px rgb(0 0 0 / 65%); transform: translateY(1px);
+  opacity: .65;
+}
+.fase3-standard-page.sicard-standard-page .ami-main .admin-table--atributos td.col-objeto {
+  text-align: justify; text-align-last: left;
+}
+.fase3-standard-page.sicard-standard-page .ami-main .admin-table--atributos :is(.atributo-valor-original, .objeto-nome) {
+  display: block; font-size: 9px; line-height: 1.3; margin-top: 3px; color: #526775;
+}
+.fase3-standard-page .admin-table--atributos:not(.labels-visible) :is(.atributo-valor-original, .objeto-nome),
+.fase3-standard-page #atributos-objetos-demanda:has(.admin-table--atributos:not(.labels-visible)) > .atributos-legenda { display: none !important; }
+.fase3-standard-page .secao-pesos-cadastro { --grupo-cor: #2f789f; }
+.fase3-standard-page .secao-pesos-dinamicos { --grupo-cor: #166552; }
+.fase3-standard-page .secao-pesos-risco { --grupo-cor: #92400e; }
+.fase3-standard-page .atributos-pesos-grupo { border-top: 4px solid var(--grupo-cor); }
+.fase3-standard-page .atributos-pesos-grupo header output { background: var(--grupo-cor); }
+.fase3-standard-page #fase-resumo { background: #e7f0f7; }
+.fase3-standard-page .atributos-pesos-grupo { background: #fff; }
+.fase3-standard-page .ami-main [hidden] { display: none !important; }
+.fase3-standard-page.sicard-standard-page .ami-main .atributos-subsecao-caption > .ahp-subsection-title,
+.fase3-standard-page.sicard-standard-page .ami-main .fase3-table-title {
+  margin: 0 !important; border-radius: 0;
+}
+.fase3-standard-page .ami-filtered-table > :is(.atributos-table-shell, .fase-table-wrap) {
+  border: 0; border-radius: 0; margin: 0; overflow: auto;
+}
+.fase3-standard-page .ami-report-table { display: grid; gap: 8px; min-width: 0; margin-bottom: 1rem; }
+.fase3-standard-page.sicard-standard-page .ami-main .admin-table :is(th, td) {
+  min-width: 0; width: auto; overflow-wrap: anywhere;
+}
+.fase3-standard-page.sicard-standard-page .ami-main .admin-table th {
+  white-space: normal; overflow: visible; text-overflow: clip;
+}
+.fase3-standard-page.sicard-standard-page .ami-main .admin-table td {
+  white-space: normal; overflow: visible; text-overflow: clip;
+}
+.fase3-standard-page .admin-table .col-atributo-alias { min-height: 0; overflow: visible; }
+.fase3-standard-page .admin-table .col-atributo-unidade { min-height: 0; white-space: normal; overflow: visible; }
+.fase3-standard-page .admin-table :is(.col-atributo-alias, .col-atributo-unidade) { font-size: inherit; }
+.fase3-standard-page .atributos-pesos-grupo h3 { font: 700 12px/1.4 Montserrat, Verdana, sans-serif; }
+.fase3-standard-page .ahp-help-text { font: 400 .64rem/1.4 Roboto, Arial, sans-serif; margin: 4px 0 8px; }
+.fase3-standard-page .ami-main .fase3-titulo-tabela-simples {
+  margin: 0; padding: 0; border: 0; background: transparent;
+  color: var(--pli-deep); text-align: left;
+  font: 700 13px/1.4 Montserrat, Verdana, sans-serif;
+}
+.fase3-standard-page.sicard-standard-page .ami-main .admin-table td.fase3-indice-valor {
+  text-align: center;
+}
+.fase3-standard-page .ranking-posicao {
+  color: #123b56; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.fase3-standard-page.sicard-standard-page .ami-main .admin-table td.ranking-indice { color: #123b56; font-weight: 700; font-variant-numeric: tabular-nums; }
+.fase3-standard-page.sicard-standard-page .ami-main .admin-table td.ranking-situacao { text-align: center; }
+.fase3-standard-page #fase3-indicadores + .ami-report-table,
+.fase3-standard-page #fase3-indicadores + .fase3-tabela-secao { margin-top: 16px; }
+.fase3-standard-page.sicard-standard-page.ami-page .ami-main .standard-table-section .admin-table--atributos th.col-estatica {
+  background: #2f789f;
+}
+.fase3-standard-page.sicard-standard-page.ami-page .ami-main .standard-table-section .admin-table--atributos th.col-dinamica {
+  background: #166552;
+}
+.fase3-standard-page.sicard-standard-page.ami-page .ami-main .standard-table-section .admin-table--atributos th.col-risco {
+  background: #92400e;
+  border-left-color: #929ca3;
+}

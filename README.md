@@ -898,6 +898,7 @@ Rotas restritas principais:
 | `/restrict/hierarquizacao/ranking/` | Resultados e ranking das demandas |
 | `/restrict/analise-multicriterio/central-julgamentos` | Central de julgamentos colaborativos |
 | `/restrict/analise-multicriterio/central-respostas` | Central de respostas dos especialistas |
+| `/restrict/analise-multicriterio/mesa-consolidacao` | Mesa de consolidação: proposta simplificada que reúne seleção de respostas, regras, resultado em tempo real, gravação e homologação em uma só tela. `?demo=1` abre com dados fictícios em memória; `?julgamento=<id>` abre direto um julgamento |
 | `/restrict/ahp/` | Configuração multicritério |
 | `/restrict/geoespacial/` | Ferramentas e produtos espaciais |
 

@@ -432,6 +432,11 @@ def pagina_central_respostas(request: Request) -> Response:
     return render_page(request, "paginas/analise_multicriterio/central-respostas.html", modo_pagina="julgamentos")
 
 
+@app.get("/restrict/analise-multicriterio/mesa-consolidacao", include_in_schema=False)
+def pagina_mesa_consolidacao(request: Request) -> Response:
+    return render_page(request, "paginas/analise_multicriterio/mesa-consolidacao.html")
+
+
 @app.get(
     "/restrict/analise-multicriterio/julgamentos/{julgamento_id}/",
     include_in_schema=False,

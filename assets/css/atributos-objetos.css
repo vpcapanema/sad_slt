@@ -29,6 +29,19 @@
   border-radius: 10px;
 }
 .admin-table--atributos thead { position: sticky; top: 0; z-index: 2; }
+.atributos-subsecao-caption {
+  caption-side: top;
+  padding: 0;
+  text-align: left;
+}
+.fase3-tabela-secao { margin-bottom: 1rem; border: 1px solid #d8e0e5; border-radius: 10px; overflow: auto; }
+.fases-padrao-agrupamento .atributos-subsecao-caption > .ahp-subsection-title {
+  margin: 0;
+  border-radius: 0;
+}
+#atributos-objetos-demanda > .atributos-table-shell ~ .ahp-subcard {
+  margin-top: 1rem;
+}
 .admin-table--atributos {
   width: max-content;
   min-width: 100%;
@@ -312,9 +325,13 @@
   background: #fff7ed;
   border-left: 2px solid #ea580c;
 }
-.fase3-fonte-pesos { border: 0; padding: 0; margin: .75rem 0 1rem; display: flex; flex-wrap: wrap; gap: .75rem 2rem; }
-.fase3-fonte-pesos legend { font-weight: 700; margin-bottom: .6rem; }
-.fase3-fonte-pesos label { display: inline-flex; align-items: center; gap: .5rem; }
-.fase3-fonte-pesos input[type="radio"] { width: auto; margin: 0; }
 .fase3-fonte-pesos[hidden], #fase3-julgamento-campo[hidden] { display: none; }
+.fase3-opcoes-ponderacao { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin-bottom: 1rem; align-items: stretch; }
+.fase3-opcoes-ponderacao > .fase3-operadores { min-width: 0; margin: 0; }
+.fase3-opcoes-ponderacao > label { min-width: 0; }
+@media (max-width: 760px) {
+  .fase3-opcoes-ponderacao { grid-template-columns: 1fr; }
+}
+#fase3-complementacao > label { display: block; margin: .5rem 0 .35rem; text-align: left; }
+#fase3-complementacao > textarea { display: block; width: 100%; box-sizing: border-box; margin-bottom: .75rem; font: inherit; }
 #atributos-objetos-demanda > .ahp-subcard + .ahp-subcard { margin-top: 1rem; }

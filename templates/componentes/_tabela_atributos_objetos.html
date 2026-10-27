@@ -19,10 +19,6 @@
     <template id="tpl-atributo-celula">  -> célula de input (por tipo)
 #}
 <div class="componente-atributos-objetos" id="atributos-objetos-demanda" data-atributos-objetos>
-  {% if fase3_ponderacao %}
-  <section class="ahp-subcard info-card">
-    <div class="ahp-subsection-title"><span class="cadastro-subsec-num">2.1</span><span id="fase3-titulo-tabela">Tabela de atributos de demanda</span></div>
-  {% endif %}
   {% if atributos_complementacao %}
   <div class="atributos-legenda" role="status" aria-live="polite">
     <span>Modo de consulta — campos cinza com borda tracejada bloqueados. Use Editar atributos para complementar os valores.</span>
@@ -30,6 +26,9 @@
   {% endif %}
   <div class="atributos-table-shell">
     <table class="admin-table admin-table--atributos">
+      {% if fase3_ponderacao %}
+      <caption class="atributos-subsecao-caption"><div class="ahp-subsection-title"><span class="ahp-subsection-num">1</span><span id="fase3-titulo-tabela">Tabela de atributos de demanda</span></div></caption>
+      {% endif %}
       <thead data-atributos-thead>
         <tr>
           <th scope="col" class="col-objeto">Objeto de demanda</th>
@@ -58,10 +57,18 @@
   <div class="ahp-info-note ahp-info-note--error" data-atributos-erro hidden></div>
 
   {% if fase3_ponderacao %}
+  <section id="fase3-complementacao" class="ahp-subcard info-card" hidden aria-labelledby="fase3-complementacao-titulo">
+<div class="ahp-subsection-title"><span class="ahp-subsection-num">2</span><span id="fase3-complementacao-titulo">Solicitação de complementação de atributos de demanda</span></div>
+    <p class="ahp-help-text">Se a solicitação foi adiada no cadastro, solicite agora aos responsáveis pelas demandas com atributos faltantes. A pendência de hierarquização independe do cadastro e de pedido ou e-mail prévio.</p>
+    <label for="fase3-complementacao-descricao">Orientação aos responsáveis</label>
+    <textarea id="fase3-complementacao-descricao" rows="3" maxlength="4000">Complemente os atributos dos grupos Cadastro e Dinâmicos da tabela 2 para prosseguir com a hierarquização. O risco é obtido da Fase 1.</textarea>
+    <button id="fase3-solicitar-complementacao" class="btn btn--secondary" type="button">Solicitar complementação de atributos</button>
+    <div id="fase3-complementacao-resultado" role="status" aria-live="polite"></div>
   </section>
   <section class="ahp-subcard info-card">
-    <div class="ahp-subsection-title"><span class="cadastro-subsec-num">2.2</span><span>Ponderação</span></div>
-    <fieldset class="fase3-fonte-pesos">
+    <div class="ahp-subsection-title"><span class="ahp-subsection-num">3</span><span>Ponderação</span></div>
+    <div class="fase3-opcoes-ponderacao">
+    <fieldset class="fase3-fonte-pesos fase3-operadores">
       <legend>Fonte dos pesos da ponderação:</legend>
       <label><input type="radio" name="fonte-pesos-fase3" value="ahp"> Análise multicritério - AHP colaborativa</label>
       <label><input type="radio" name="fonte-pesos-fase3" value="manual" checked> Preenchimento Manual</label>
@@ -69,11 +76,12 @@
     <label id="fase3-julgamento-campo" hidden>Julgamento associado à hierarquização
       <select id="fase3-julgamento"><option value="">Selecione um julgamento</option></select>
     </label>
-    <fieldset id="fase3-modo-ponderacao" class="fase3-fonte-pesos">
+    <fieldset id="fase3-modo-ponderacao" class="fase3-fonte-pesos fase3-operadores">
       <legend>Modo de ponderação manual:</legend>
       <label><input type="radio" name="ponderacao-fase3" value="abrangente"> Ponderação abrangente</label>
       <label><input type="radio" name="ponderacao-fase3" value="estratificada" checked> Ponderação estratificada</label>
     </fieldset>
+    </div>
     <p id="fase3-pesos-feedback" class="ahp-help-text" role="status" aria-live="polite"></p>
   {% endif %}
   <div class="atributos-pesos" data-atributos-pesos hidden>
@@ -90,7 +98,10 @@
       <div data-controles-pesos="risco"></div>
     </section>
     <p class="ahp-help-text atributos-pesos-ajuda">Cada grupo soma 1. Ao alterar um peso, o saldo é redistribuído automaticamente entre os demais critérios do mesmo grupo. No cálculo final, os grupos apresentados têm participação equivalente. O critério de risco usa o Índice de risco ambiental e territorial do Resumo da Elegibilidade de cada demanda, preservado na escala de 0 a 1: quanto maior, maior a prioridade. Sem resumo registrado, o valor fica não informado; demandas com restrição não constam do resumo.</p>
-    <div class="fase-actions atributos-pesos-acoes"><button id="salvar-pesos-fase3" class="btn btn--primary" type="button"><i class="fas fa-floppy-disk"></i> Salvar pesos dos atributos</button></div>
+    <div class="fase-actions atributos-pesos-acoes">
+      {% if fase3_ponderacao %}<button id="resetar-pesos-fase3" class="btn btn--secondary" type="button" disabled><i class="fas fa-rotate-left" aria-hidden="true"></i> Restaurar pesos neutros</button>{% endif %}
+      <button id="salvar-pesos-fase3" class="btn btn--primary" type="button"><i class="fas fa-floppy-disk"></i> Salvar pesos dos atributos</button>
+    </div>
   </div>
 
   {% if fase3_ponderacao %}</section>{% endif %}

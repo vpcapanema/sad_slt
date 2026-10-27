@@ -7,6 +7,7 @@
   const queryCode = new URLSearchParams(location.search).get("codigo");
   let hierarquizacoes = [];
   let atualizandoAoRetomar = false;
+  let podeSolicitarComplementacao = false;
   const atual = () => hierarquizacoes.find((item) => item.codigo === $("fase-hierarquizacao").value);
   const operadorSintese = () => document.querySelector('input[name="operador-sintese"]:checked')?.value || "media_simples";
 
@@ -34,10 +35,7 @@
     const host = $("fase3-atributos-ausentes");
     if (!host) return;
     const objetos = window.AtributosObjetos?.atributosAusentes(hierarquizacao) || [];
-    if (!objetos.length) {
-      host.innerHTML = '<div class="fase-empty">A rodada não possui objetos.</div>';
-      return;
-    }
+
     const linhas = objetos.map((objeto) => {
       const pendencias = [
         ...objeto.atributos.map(atributo => `${atributo} — não informado; complementar Cadastro/Dinâmicos`),
@@ -49,7 +47,7 @@
         : '<span class="fase-status fase-status--ok">Nenhuma pendência na tabela 2</span>';
       return `<tr><td><strong>${esc(objeto.nome)}</strong><small>${esc(objeto.codigo)}</small></td><td>${ausentes}</td></tr>`;
     }).join("");
-    host.innerHTML = `<h3>Pendências da tabela 2 por demanda</h3><div class="fase-table-wrap"><table class="fase-table fase3-ausentes-table"><thead><tr><th>Demanda</th><th>Atributos ausentes ou inválidos</th></tr></thead><tbody>${linhas}</tbody></table></div>`;
+    host.innerHTML = `<table class="fase-table fase3-ausentes-table"><caption class="atributos-subsecao-caption"><div class="ahp-subsection-title"><span class="ahp-subsection-num">1</span><i class="fas fa-triangle-exclamation" aria-hidden="true"></i><span>Pendências da tabela 2 por demanda</span></div></caption><thead><tr><th>Demanda</th><th>Atributos ausentes ou inválidos</th></tr></thead><tbody>${linhas || '<tr><td colspan="2">A rodada não possui objetos.</td></tr>'}</tbody></table>`;
   }
 
   function indicesObjeto(objeto, incluirPrioridade = true) {
@@ -66,9 +64,9 @@
     const linhas = objetos.map((objeto) => {
       const cabecalho = objeto.cabecalho_objeto || {};
       const indices = indicesObjeto(objeto, incluirPrioridade);
-      return `<tr><td><strong>${esc(cabecalho.nome || "—")}</strong><small>${esc(cabecalho.codigo || "")}</small></td><td>${formatar(indices.rede)}</td><td>${formatar(indices.grade)}</td><td>${formatar(indices.prioridade)}</td></tr>`;
+      return `<tr><td>${esc(cabecalho.nome || "Nome não informado")}</td><td>${formatar(indices.rede)}</td><td>${formatar(indices.grade)}</td><td>${formatar(indices.prioridade)}</td></tr>`;
     }).join("");
-    $("fase3-tabela-sintese").innerHTML = objetos.length ? `<table class="fase-table fase3-sintese-table"><thead><tr><th>Objeto de demanda</th><th>Índice de favorabilidade de rede</th><th>Índice de favorabilidade de grade</th><th>Índice de prioridade</th></tr></thead><tbody>${linhas}</tbody></table>` : '<div class="fase-empty">A rodada não possui objetos.</div>';
+    $("fase3-tabela-sintese").innerHTML = `<table class="fase-table fase3-sintese-table" aria-labelledby="fase3-sintese-titulo"><thead><tr><th>Objeto de demanda</th><th>Índice de favorabilidade de rede</th><th>Índice de favorabilidade de grade</th><th>Índice de prioridade</th></tr></thead><tbody>${linhas || '<tr><td colspan="4">A rodada não possui objetos.</td></tr>'}</tbody></table>`;
   }
 
   function restaurarConfiguracaoSintese(hierarquizacao) {
@@ -90,6 +88,10 @@
   }
 
   async function render(hierarquizacao) {
+    document.querySelectorAll('[data-fase3-progressiva]').forEach(section => { section.hidden = true; });
+    $("fase3-acao-calculo").hidden = true;
+    $("fase3-regras-vazios").hidden = true;
+    $("fase3-complementacao").hidden = true;
     $("fase-resumo").classList.add("hidden");
     $("fase-resumo").innerHTML = "";
     $("fase3-erro").classList.add("hidden");
@@ -103,9 +105,14 @@
   }
 
   function renderResultados(hierarquizacao, restaurar = false) {
+    document.querySelector('.secao-criterios-de-atributos').hidden = false;
     const aviso = $("fase3-resultados-aviso");
     const docs = hierarquizacao?.dados_hierarquizacao?.objetos || [];
     const pendencias = window.AtributosObjetos.atributosAusentes(hierarquizacao);
+    $("fase3-regras-vazios").hidden = !pendencias.some(objeto =>
+      objeto.atributos.length > 0 || objeto.riscos.length > 0);
+    $("fase3-complementacao").hidden = !podeSolicitarComplementacao
+      || !pendencias.some(objeto => objeto.atributos.length > 0);
     const coletaPendente = pendencias.some(objeto => objeto.atributos.length || objeto.invalidos.length)
       || docs.some(objeto => objeto.cabecalho_objeto?.complementacao_atributos?.concluida === false);
     const criteriosAlterados = docs.some(objeto => objeto.hierarquizacao?.fase_3?.executada)
@@ -118,6 +125,17 @@
     const fases = hierarquizacao.dados_hierarquizacao?.cabecalho_grupo?.fases_a_executar || [1, 2, 3];
     const fase3Executada = docs.length > 0 && docs.every(objeto => objeto.hierarquizacao?.fase_3?.executada === true);
     const resultadoAtual = !coletaPendente && !resultadosDesatualizados && (!fases.includes(3) || fase3Executada);
+    document.querySelector('.secao-ranking-do-ajuste-fino').hidden = !resultadoAtual;
+    document.querySelector('.secao-sintese-final').hidden = !resultadoAtual;
+    let pesosProntos = true;
+    try { window.AtributosObjetos.configuracaoPayload(); } catch (_) { pesosProntos = false; }
+    $("fase3-acao-calculo").hidden = !docs.length || !pesosProntos;
+    const destinoCalculo = $("fase3-regras-vazios").hidden
+      ? $("salvar-pesos-fase3").closest('.ahp-subcard')
+      : $("fase3-regras-vazios").querySelector('.ahp-section-body');
+    if (destinoCalculo && $("fase3-acao-calculo").parentElement !== destinoCalculo) {
+      destinoCalculo.append($("fase3-acao-calculo"));
+    }
     aviso.classList.add("hidden");
     aviso.textContent = "";
     $("sintetizar").disabled = !resultadoAtual;
@@ -128,18 +146,52 @@
     window.SLTResumoFase?.secao1($("fase-resumo"), hierarquizacao);
     const pontuados = resultadoAtual ? docs.filter((objeto) => Number.isFinite(objeto.hierarquizacao?.fase_3?.score_fase3)) : [];
     const completos = resultadoAtual ? docs.filter((objeto) => (objeto.hierarquizacao?.fase_3?.grau_completude_fase3 ?? 0) >= Number($("fase3-completude").value) / 100) : [];
-    $("fase3-indicadores").innerHTML = metric("Demandas da rodada", docs.length) + metric("Com score atual", pontuados.length) + metric("Pendentes na tabela 2", pendencias.filter(objeto => objeto.atributos.length || objeto.invalidos.length).length) + metric("Completude atual", completos.length);
+    $("fase3-indicadores").innerHTML = metric("Demandas da rodada", docs.length) + metric("Com índice de prioridade", pontuados.length) + metric("Pendentes na tabela 2", pendencias.filter(objeto => objeto.atributos.length || objeto.invalidos.length).length) + metric("Completude atual", completos.length);
     const rows = docs.map((objeto) => {
       const fase = objeto.hierarquizacao?.fase_3 || {};
       const ausencias = [...(fase.atributos_ausentes || []), ...(fase.atributos_invalidos || [])];
       const valid = resultadoAtual && Number.isFinite(fase.score_fase3);
       const calculoAtual = resultadoAtual && fase.executada === true;
-      return `<tr><td><span class="fase-status ${valid ? "fase-status--ok" : "fase-status--warn"}">${calculoAtual ? valid ? "Calculado" : "Sem score" : "Não calculado"}</span></td><td><strong>${esc(objeto.cabecalho_objeto.codigo)}</strong><br><small>${esc(objeto.cabecalho_objeto.nome || "")}</small></td><td>${valid ? Number(fase.score_fase3).toFixed(4) : "—"}</td><td>${valid ? esc(fase.ranking_fase3 ?? "—") : "—"}</td><td>${calculoAtual && fase.grau_completude_fase3 != null ? `${(Number(fase.grau_completude_fase3) * 100).toFixed(0)}%` : "—"}</td><td>${ausencias.length ? esc(ausencias.join(", ")) : "—"}</td></tr>`;
+      const posicao = valid && Number.isInteger(Number(fase.ranking_fase3)) && Number(fase.ranking_fase3) > 0 ? Number(fase.ranking_fase3) : null;
+      return `<tr data-ranking-posicao="${posicao ?? ''}"><td class="fase3-indice-valor"><span class="ranking-posicao">${posicao ?? '—'}</span></td><td>${esc(objeto.cabecalho_objeto.nome || "Nome não informado")}</td><td class="ranking-indice">${valid ? Number(fase.score_fase3).toFixed(4) : "—"}</td><td>${calculoAtual && fase.grau_completude_fase3 != null ? `${(Number(fase.grau_completude_fase3) * 100).toFixed(0)}%` : "—"}</td><td class="ranking-situacao"><span class="fase-status ${valid ? "fase-status--ok" : "fase-status--warn"}">${calculoAtual ? valid ? "Calculado" : "Sem índice" : "Não calculado"}</span></td><td>${ausencias.length ? esc(ausencias.join(", ")) : "—"}</td></tr>`;
     }).join("");
     $("fase3-resultados").innerHTML = rows || '<tr><td colspan="6" class="fase-empty">A rodada não possui demandas.</td></tr>';
+    ["fase3-atributos-ausentes", "fase3-tabela-sintese"].forEach(id => window.Fase3TableStandard?.($(id).querySelector("table")));
+    window.Fase3TableStandard?.($("fase3-resultados").closest("table"));
     const report = hierarquizacao.dados_hierarquizacao?.cabecalho_grupo?.relatorios?.fase_3;
     const audit = $("fase3-auditoria");
-    if (report && Object.keys(report).length && resultadoAtual) { audit.innerHTML = `<strong>Auditoria da execução</strong><pre>${esc(JSON.stringify(report, null, 2))}</pre>`; audit.classList.remove("hidden"); } else audit.classList.add("hidden");
+    if (resultadoAtual) {
+      const config = hierarquizacao.dados_hierarquizacao?.cabecalho_grupo?.configuracoes?.fase_3 || {};
+      const regras = {renormalizar: 'Ignorar valores ausentes e redistribuir os pesos entre os disponíveis', bloquear: 'Bloquear demandas com atributos ausentes', imputar_neutro: 'Substituir valores ausentes por valor neutro', imputar_pior: 'Substituir valores ausentes pelo pior valor', imputar_medio: 'Substituir valores ausentes pela média'};
+      const data = report?.executada_em ? new Date(report.executada_em) : null;
+      const dataTexto = data && !Number.isNaN(data.getTime()) ? data.toLocaleString('pt-BR', {timeZone: 'America/Sao_Paulo'}) + ' (horário de Brasília)' : 'Não registrada';
+      const regra = report?.regra_ausentes || config.regra_ausentes;
+      const completude = report?.completude_minima ?? config.completude_minima;
+      const fonte = config.fonte_pesos === 'ahp' ? 'AHP colaborativa' : config.fonte_pesos === 'manual' ? 'Preenchimento manual' : 'Não registrada';
+      const pesos = docs.find(objeto => Object.keys(objeto.hierarquizacao?.fase_3?.pesos_fase3 || {}).length)?.hierarquizacao.fase_3.pesos_fase3 || {};
+      const pesosTexto = Object.entries(pesos).map(([nome, peso]) => `<li><span>${esc(nome)}</span><strong>${esc(Number.isFinite(peso) ? peso.toLocaleString('pt-BR', {maximumFractionDigits: 4}) : 'Não registrado')}</strong></li>`).join('');
+      const semIndice = docs.filter(objeto => !Number.isFinite(objeto.hierarquizacao?.fase_3?.score_fase3)).map(objeto => {
+        const fase = objeto.hierarquizacao?.fase_3 || {};
+        const motivos = [];
+        if (fase.bloqueada_por_risco) motivos.push('bloqueada pela análise de risco');
+        if (fase.bloqueada_por_atributo_obrigatorio) motivos.push('atributo obrigatório ausente ou inválido');
+        if (fase.atributos_ausentes?.length) motivos.push('atributos ausentes: ' + fase.atributos_ausentes.join(', '));
+        if (fase.atributos_invalidos?.length) motivos.push('atributos inválidos: ' + fase.atributos_invalidos.join(', '));
+        if (Number.isFinite(completude) && Number.isFinite(fase.grau_completude_fase3) && fase.grau_completude_fase3 < completude) motivos.push('completude abaixo do mínimo exigido');
+        return `<li><strong>${esc(objeto.cabecalho_objeto.nome || objeto.cabecalho_objeto.codigo)}</strong>: ${esc(motivos.join('; ') || 'motivo não registrado')}.</li>`;
+      }).join('');
+      audit.innerHTML = `<h3 class="fase3-titulo-tabela-simples">Resumo da execução</h3>
+        <dl class="fase3-execucao-resumo">
+          <div><dt>Calculado em</dt><dd>${esc(dataTexto)}</dd></div>
+          <div><dt>Fonte dos pesos</dt><dd>${esc(fonte)}</dd></div>
+          <div><dt>Tratamento dos valores ausentes</dt><dd>${esc(regras[regra] || 'Não registrado')}</dd></div>
+          <div><dt>Completude mínima</dt><dd>${Number.isFinite(completude) ? esc((completude * 100).toLocaleString('pt-BR')) + '%' : 'Não registrada'}</dd></div>
+        </dl>
+        <h4>Critérios e pesos utilizados</h4>${pesosTexto ? `<ul class="fase3-execucao-pesos">${pesosTexto}</ul>` : '<p>Pesos não registrados no resultado deste cálculo.</p>'}
+        <h4>Demandas sem índice</h4>${semIndice ? `<ul>${semIndice}</ul>` : '<p>Todas as demandas avaliadas receberam um índice.</p>'}
+        ${report && Object.keys(report).length ? `<details class="fase3-detalhes-tecnicos"><summary>Detalhes técnicos</summary><pre>${esc(JSON.stringify(report, null, 2))}</pre></details>` : ''}`;
+      audit.classList.remove('hidden');
+    } else { audit.replaceChildren(); audit.classList.add('hidden'); }
   }
 
   async function atualizarDadosAoRetomar() {
@@ -168,8 +220,8 @@
   async function init() {
     try {
       const usuario = SLTAdminAuth.currentUser || await SLTAdminAuth.fetchMe();
-      const podeSolicitar = ['ADMIN', 'ANALISTA', 'GESTOR'].includes(usuario?.tipo_usuario);
-      $("fase3-complementacao").hidden = !podeSolicitar;
+      podeSolicitarComplementacao = ['ADMIN', 'ANALISTA', 'GESTOR'].includes(usuario?.tipo_usuario);
+      $("fase3-complementacao").hidden = true;
       $("fase3-solicitar-complementacao").onclick = async () => {
         const hierarquizacao = atual();
         if (!hierarquizacao) { exigirHierarquizacao(); return; }
@@ -234,13 +286,13 @@
         if (!hierarquizacao) { exigirHierarquizacao(); return; }
         const resposta = await executarAcao({
           confirmacao: {
-            title: "Calcular índice de priorização (Fase 3)",
+            title: "Calcular índice de prioridade (Fase 3)",
             message: `Hierarquização ${hierarquizacao.codigo}, pesos por “${$("fase3-modo-pesos").value}”, completude mínima de ${$("fase3-completude").value}%.`,
             warning: "O resultado atual da Fase 3 será substituído e a síntese já gerada, se houver, ficará desatualizada.",
             confirmLabel: "Calcular Fase 3",
           },
           acompanhamento: true,
-          titulo: "Calcular índice de priorização (Fase 3)",
+          titulo: "Calcular índice de prioridade (Fase 3)",
           mensagemInicial: `Enviando os critérios da rodada ${hierarquizacao.codigo}…`,
           executar: () => HierApi.executarFase3(hierarquizacao.codigo, {
             criterios: window.AtributosObjetos?.criteriosPayload() || [],
@@ -249,7 +301,7 @@
             completude_minima: Number($("fase3-completude").value) / 100,
             regra_ausentes: $("fase3-ausentes").value,
           }),
-          sucesso: ["Índice de priorização calculado.", "Confira a tabela de objetos abaixo."],
+          sucesso: ["Índice de prioridade calculado.", "Confira a tabela de objetos abaixo."],
         });
         if (!resposta.ok) { if (resposta.erro) erro(resposta.erro); return; }
         hierarquizacoes = hierarquizacoes.map((item) => item.codigo === resposta.resultado.codigo ? resposta.resultado : item);

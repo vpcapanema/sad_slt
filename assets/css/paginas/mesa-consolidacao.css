@@ -1,0 +1,85 @@
+/* Mesa de consolidação: apenas o que a página tem de próprio.
+ * Tabelas, filtros, cartões, botões e tipografia vêm das folhas compartilhadas (padrão do SICARD). */
+.mesa-page .mesa-aviso {
+  display: flex; align-items: center; gap: 8px; margin: 0 0 8px; padding: .5rem .75rem;
+  border: 1px solid #c58f00; border-radius: 8px; background: rgba(197, 143, 0, .11);
+  font: 400 .7rem/1.4 Roboto, Arial, sans-serif; color: #5f4500; text-align: left;
+}
+.mesa-page .mesa-aviso[hidden] { display: none; }
+.mesa-page .mesa-resumo { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin: 0 0 8px; }
+.mesa-page .mesa-participacao { display: flex; flex-wrap: wrap; gap: 4px 16px; font: 400 .7rem/1.4 Roboto, Arial, sans-serif; color: var(--pli-muted); }
+.mesa-page .mesa-participacao strong { color: var(--pli-deep); font: 700 .78rem/1.4 Montserrat, Verdana, sans-serif; }
+.mesa-page .mesa-selo {
+  display: inline-flex; align-items: center; gap: 6px; padding: .2rem .6rem; border: 1px solid currentColor; border-radius: 999px;
+  font: 600 .68rem/1.4 Roboto, Arial, sans-serif; background: #fff;
+}
+.mesa-page .mesa-selo.is-ok { color: #166534; }
+.mesa-page .mesa-selo.is-pendente { color: #991b1b; }
+.mesa-page .mesa-origem { margin: 0 0 8px; }
+
+/* Barra de resultado: acompanha a rolagem para que regras e resultado fiquem sempre juntos. */
+.mesa-page .mesa-barra {
+  position: sticky; top: 0; z-index: 20; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px 24px;
+  margin: 0 0 12px; padding: .6rem .85rem;
+  border: 1px solid var(--pli-border); border-left: 6px solid #9aa7b2; border-radius: 8px; background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 59, 90, .12); text-align: left;
+}
+.mesa-page .mesa-barra.is-ok { border-left-color: #166534; }
+.mesa-page .mesa-barra.is-nok { border-left-color: #991b1b; }
+.mesa-page .mesa-barra__resultado { display: grid; gap: 4px; min-width: 0; }
+.mesa-page .mesa-barra__kpis { display: flex; flex-wrap: wrap; gap: 4px 24px; }
+.mesa-page .mesa-kpi { display: grid; gap: 2px; min-width: 4.5rem; }
+.mesa-page .mesa-kpi span { font: 600 .64rem/1.2 Roboto, Arial, sans-serif; color: var(--pli-muted); }
+.mesa-page .mesa-kpi strong { font: 700 1rem/1.2 Montserrat, Verdana, sans-serif; color: var(--pli-deep); }
+.mesa-page .mesa-barra.is-ok .mesa-kpi--rc strong { color: #166534; }
+.mesa-page .mesa-barra.is-nok .mesa-kpi--rc strong { color: #991b1b; }
+.mesa-page .mesa-barra__veredito { margin: 0; font: 400 .7rem/1.4 Roboto, Arial, sans-serif; color: var(--pli-deep); }
+.mesa-page .mesa-barra__acoes { display: flex; flex-wrap: nowrap; align-items: flex-end; gap: 8px; justify-content: flex-end; }
+.mesa-page .mesa-barra__acoes .c-form-group { flex: 0 1 13rem; min-width: 9rem; margin: 0; display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.mesa-page .mesa-barra__acoes .btn { white-space: nowrap; }
+.mesa-page .mesa-barra__acoes .c-form-control { width: 100%; }
+@media (max-width: 1100px) { .mesa-page .mesa-barra { grid-template-columns: minmax(0, 1fr); } .mesa-page .mesa-barra__acoes { flex-wrap: wrap; justify-content: flex-start; } }
+
+/* Regras */
+.mesa-page .mesa-regras {
+  display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 16px; min-width: 0; margin: 0 0 8px; padding: .75rem 1rem;
+  border: 1px solid var(--pli-border); border-radius: 8px; background: #fff;
+}
+.mesa-page .mesa-regras legend { padding: 0 .4rem; font: 700 .75rem/1.4 Montserrat, Verdana, sans-serif; color: var(--pli-deep); }
+.mesa-page .mesa-regras .c-form-group { margin: 0; display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.mesa-page .mesa-excluir { display: flex; align-items: center; gap: 8px; font: 400 .7rem/1.4 Roboto, Arial, sans-serif; padding-bottom: .4rem; }
+.mesa-page .mesa-selecao-rapida { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+
+/* Abas do resultado */
+.mesa-page .mesa-abas { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 8px; border-bottom: 2px solid var(--pli-border); }
+.mesa-page .mesa-abas [role="tab"] {
+  margin: 0 0 -2px; padding: .5rem .9rem; border: 0; border-bottom: 3px solid transparent; background: transparent; cursor: pointer;
+  font: 600 .72rem/1.2 Montserrat, Verdana, sans-serif; color: var(--pli-muted);
+}
+.mesa-page .mesa-abas [role="tab"][aria-selected="true"] { color: var(--pli-deep); border-bottom-color: var(--pli-green-dark); }
+.mesa-page .mesa-abas [role="tab"]:focus-visible { outline: 2px solid #123b56; outline-offset: 2px; }
+.mesa-page [role="tabpanel"][hidden] { display: none; }
+
+/* Células das tabelas */
+.mesa-page .mesa-table td.mesa-esq { text-align: left; }
+.mesa-page .mesa-table td.mesa-ok { color: #166534; font-weight: 600; }
+.mesa-page .mesa-table td.mesa-pendente { color: #991b1b; font-weight: 600; }
+.mesa-page .mesa-table td.mesa-estado.is-incluida { color: #166534; font-weight: 600; }
+.mesa-page .mesa-table td.mesa-estado.is-inconsistente { color: #991b1b; font-weight: 600; }
+.mesa-page .mesa-table td.mesa-estado.is-desmarcada { color: #5a6570; }
+.mesa-page .mesa-table td.mesa-destoante { color: #991b1b; font-weight: 600; }
+.mesa-page .mesa-table td.mesa-diagonal { color: #5a6570; }
+.mesa-page .mesa-table tr.is-sem-resposta td { color: #5a6570; }
+.mesa-page .mesa-table td.mesa-indice.is-fora { opacity: .45; }
+.mesa-page .mesa-indice__valor { display: block; padding-bottom: 2px; box-shadow: inset 0 -3px var(--ami-deviation-color, transparent); }
+.mesa-page .mesa-table td.mesa-celula-barra { white-space: nowrap; }
+.mesa-page .mesa-barra-peso { display: inline-block; width: 3.2rem; height: .55rem; margin-right: .35rem; vertical-align: middle; border-radius: 999px; background: #dbe3ea; overflow: hidden; }
+.mesa-page .mesa-barra-peso > span { display: block; height: 100%; border-radius: 999px; background: var(--pli-blue); }
+.mesa-page .mesa-celula-barra em { font-style: normal; }
+.mesa-page .mesa-proximos { margin-top: 12px; }
+
+@media (max-width: 720px) {
+  .mesa-page .mesa-selecao-rapida { margin-left: 0; }
+  .mesa-page .mesa-barra { position: static; }
+}
+@media (max-height: 640px) { .mesa-page .mesa-barra { position: static; } }

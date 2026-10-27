@@ -47,6 +47,8 @@ const objeto = (codigo, indice, executada = true) => ({
     await page.route('**/hierarquizacao/js/fase3.js*', request => request.fulfill({body: '', contentType: 'text/javascript'}));
     await page.route('**/hierarquizacao-fase3-ajuste-fino-inline-1.js*', request => request.fulfill({body: '', contentType: 'text/javascript'}));
     await page.goto(base + ROTA, {waitUntil: 'domcontentloaded'});
+    // This component test stubs the page controller; reveal its host explicitly.
+    await page.locator('.secao-criterios-de-atributos').evaluate(el => { el.hidden = false; });
 
     const dominios = [{codigo: 'maturidade_objeto', nome: 'Maturidade', tipos_objeto: ['projeto'], tipo_dado: 'categoria', dominio_valores: [{rotulo: 'Inicial'}, {rotulo: 'Final'}]}];
     const colunas = [{id: 'beneficio', criterio: 'Benefício', tipo: 'numerico', relacao: 'maior_melhor'}];
@@ -63,6 +65,7 @@ const objeto = (codigo, indice, executada = true) => ({
     assert.equal(await page.locator('#fase3-titulo-tabela').textContent(), 'Tabela de atributos de demanda - Logística paulista');
     assert.equal(await page.locator('#fase3-julgamento-campo').isVisible(), false);
     assert.equal(await page.locator('#atributos-objetos-demanda > section').count(), 2);
+    assert.equal(await page.locator('#atributos-objetos-demanda .ami-report-table .fase3-titulo-tabela-simples #fase3-titulo-tabela').count(), 1);
     const payload = () => page.evaluate(() => ({criterios: AtributosObjetos.criteriosPayload(), ...AtributosObjetos.configuracaoPayload()}));
     let p = await payload();
     assert.deepEqual(p.criterios.map(c => c.peso), [1, 1, 1]);
@@ -74,6 +77,9 @@ const objeto = (codigo, indice, executada = true) => ({
     assert.ok(Math.abs(p.criterios[0].peso - 0.6) < 1e-10);
     assert.ok(p.criterios.slice(1).every(c => Math.abs(c.peso - 0.2) < 1e-10));
     const manual = p;
+    await page.click('#resetar-pesos-fase3');
+    assert.ok((await payload()).criterios.every(c => Math.abs(c.peso - 1 / 3) < 1e-10));
+    assert.equal(await page.locator('[data-controles-pesos] input[type="number"]').first().inputValue(), '0.333');
     await page.check('[name="fonte-pesos-fase3"][value="ahp"]');
     await page.locator(`#fase3-julgamento option[value="${j}"]`).waitFor({state: 'attached'});
     assert.equal(await page.locator('#fase3-modo-ponderacao').isVisible(), false);
@@ -82,6 +88,7 @@ const objeto = (codigo, indice, executada = true) => ({
     assert.deepEqual(p.criterios.map(c => c.peso), [0.3, 0.7, 1]);
     assert.equal(p.julgamento_id, j);
     assert.equal(await page.locator('[data-controles-pesos] input:enabled').count(), 0);
+    assert.equal(await page.locator('#resetar-pesos-fase3').isDisabled(), true);
     // Reabrir a rodada restaura fonte, julgamento e pesos oficiais.
     hierarquizacao.dados_hierarquizacao.cabecalho_grupo.configuracoes = {fase_3: p};
     await page.evaluate(async ([h, colunas, dominios]) => AtributosObjetos.render(h, {colunas, dominios}), [hierarquizacao, colunas, dominios]);
@@ -94,10 +101,80 @@ const objeto = (codigo, indice, executada = true) => ({
     assert.ok(await page.locator('[data-controles-pesos="cadastro"] input').first().isEnabled());
     await page.check('[name="ponderacao-fase3"][value="estratificada"]');
     assert.deepEqual((await payload()).criterios.map(c => c.peso), [1, 1, 1]);
+    await page.click('#resetar-pesos-fase3');
+    assert.deepEqual((await payload()).criterios.map(c => c.peso), [1, 1, 1]);
     hierarquizacao.dados_hierarquizacao.cabecalho_grupo.configuracoes.fase_3 = manual;
     await page.evaluate(async ([h, colunas, dominios]) => AtributosObjetos.render(h, {colunas, dominios}), [hierarquizacao, colunas, dominios]);
     assert.deepEqual((await payload()).criterios.map(c => c.peso), manual.criterios.map(c => c.peso));
+    hierarquizacao.dados_hierarquizacao.objetos = Array.from({length: 20}, (_, i) => objeto('D-' + (i + 1), 0.75));
+    await page.evaluate(async ([h, colunas, dominios]) => AtributosObjetos.render(h, {colunas, dominios}), [hierarquizacao, colunas, dominios]);
+    const report = page.locator('#atributos-objetos-demanda .ami-report-table');
+    assert.equal(await report.count(), 1);
+    assert.equal(await report.locator('tbody tr').count(), 15);
+    await report.getByRole('button', {name: 'Próxima página', exact: true}).click();
+    assert.equal(await report.locator('tbody tr').count(), 5);
+    await report.locator('thead input[type="checkbox"]').check();
+    assert.match(await report.locator('.admin-table-summary').textContent(), /20 selecionados/);
+    await report.getByRole('button', {name: 'Limpar seleção', exact: true}).click();
+    assert.match(await report.locator('.admin-table-summary').textContent(), /0 selecionados/);
+    const measures = await report.evaluate(host => {
+      const rect = selector => host.querySelector(selector).getBoundingClientRect();
+      return {filter: rect('.admin-filter-bar').height, input: rect('.admin-filter-bar select').height,
+        selector: rect('th.col-select').width, title: getComputedStyle(host.querySelector('.fase3-titulo-tabela-simples')).fontSize,
+        gap: getComputedStyle(host).rowGap};
+    });
+    assert.equal(measures.filter, 32);
+    assert.equal(measures.input, 25);
+    assert.equal(measures.selector, 44);
+    assert.equal(measures.title, '13px');
+    assert.equal(measures.gap, '8px');
+    const cadastroToggle = report.getByRole('button', {name: 'Cadastro', exact: true});
+    assert.equal(await report.locator('.fase3-group-toggle').count(), 3);
+    assert.equal(await cadastroToggle.getAttribute('aria-pressed'), 'false');
+    await cadastroToggle.click();
+    assert.equal(await report.locator('th.col-estatica').isVisible(), false);
+    assert.equal(await cadastroToggle.getAttribute('aria-pressed'), 'true');
+    await report.getByRole('button', {name: 'Página anterior', exact: true}).click();
+    assert.equal(await report.locator('tbody tr').first().locator('td').nth(2).isVisible(), false);
+    await cadastroToggle.click();
+    assert.equal(await report.locator('th.col-estatica').isVisible(), true);
+    assert.equal(await report.locator('tbody tr').first().locator('td').nth(2).isVisible(), true);
+    const labels = report.getByRole('button', {name: 'Labels', exact: true});
+    assert.equal(await report.locator('.atributo-valor-original').first().isVisible(), false);
+    await labels.click();
+    assert.equal(await labels.getAttribute('aria-pressed'), 'true');
+    assert.equal(await report.locator('.atributo-valor-original').first().isVisible(), true);
+    assert.equal(await report.locator('.atributo-valor-original').first().evaluate(el => getComputedStyle(el).fontSize), '9px');
+    await labels.click();
+    assert.equal(await report.locator('.atributo-valor-original').first().isVisible(), false);
+    assert.ok(await report.evaluate(host => host.querySelector('.fase3-titulo-tabela-simples').getBoundingClientRect().bottom <= host.querySelector('.admin-filter-bar').getBoundingClientRect().top));
+    await report.locator('.admin-filter-bar select').first().selectOption('0');
+    const option = await report.locator('.admin-filter-bar select').nth(1).locator('option').last().getAttribute('value');
+    await report.locator('.admin-filter-bar select').nth(1).selectOption(option);
+    assert.equal(await report.locator('tbody tr').count(), 1);
+    await report.getByRole('button', {name: 'Limpar filtros', exact: true}).click();
+    assert.equal(await report.locator('tbody tr').count(), 15);
     await page.locator('.secao-criterios-de-atributos').screenshot({path: path.join(root, '.tmp/fase3-ponderacao.png')});
+    await page.setViewportSize({width: 390, height: 844});
+    await page.waitForTimeout(150);
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'mobile: horizontal overflow stays inside tables');
+    await cadastroToggle.click();
+    await page.evaluate(async ([h, colunas, dominios]) => AtributosObjetos.render(h, {colunas, dominios}), [hierarquizacao, colunas, dominios]);
+    assert.equal(await page.locator('th.col-estatica').isVisible(), true);
+    assert.equal(await page.getByRole('button', {name: 'Cadastro', exact: true}).getAttribute('aria-pressed'), 'false');
+    const riscoToggle = page.getByRole('button', {name: 'Risco ambiental e territorial', exact: true});
+    await riscoToggle.click();
+    await riscoToggle.click();
+    await page.waitForTimeout(500);
+    assert.ok(await page.locator('th.col-risco').evaluate(header => {
+      const shell = header.closest('table').parentElement;
+      const cell = header.getBoundingClientRect(), viewport = shell.getBoundingClientRect();
+      return cell.left >= viewport.left - 1 && cell.right <= viewport.right + 1;
+    }), 'showing a group scrolls its first column into view');
+    assert.ok(await page.locator('th.col-atributo').evaluateAll(headers => headers.every(header => {
+      const title = header.querySelector('.smart-column-title');
+      return title.children.length <= 2 && [...title.children].every(line => line.scrollWidth <= header.clientWidth);
+    })), 'criterion titles fit in at most two lines');
     await page.evaluate(() => AtributosObjetos.render(null));
     assert.equal(await page.locator('[data-atributos-pesos]').isVisible(), false);
     assert.equal(await page.locator('#fase3-julgamento option').count(), 1);
