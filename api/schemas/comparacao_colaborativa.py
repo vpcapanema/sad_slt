@@ -68,6 +68,7 @@ class AmbienteColaborativoResponseSchema(BaseModel):
     n_criterios: int = 0
     arquivo_matriz_nome: str | None = None
     token: str
+    token_acesso: str | None = None
     convites: list[dict[str, Any]]
     valido_ate: str
     status: str

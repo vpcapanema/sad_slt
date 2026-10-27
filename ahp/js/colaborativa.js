@@ -110,7 +110,7 @@
     saveQueue = saveQueue.then(function () {
       return global.SLTColaborativaApi.salvarProgresso(token, payload);
     }).then(function () {
-      if (draftActive && version === editVersion) el("collab-save-feedback").textContent = "Progresso salvo automaticamente.";
+      if (draftActive && version === editVersion) el("collab-save-feedback").textContent = global.SLTColaborativaSimulacao ? "Progresso mantido apenas nesta simulação." : "Progresso salvo automaticamente.";
     }).catch(function (err) {
       el("collab-save-feedback").textContent = "Não foi possível salvar o progresso: " + (err.message || err);
     });
@@ -190,7 +190,7 @@
       return;
     }
     if (!/^[0-9]{6}$/.test(codigo)) {
-      feedback("Informe o token de seis números recebido por e-mail.", "error");
+      feedback("Informe o código de acesso de seis números recebido por e-mail.", "error");
       return;
     }
     verificando = true;
@@ -204,7 +204,7 @@
           return;
         }
         if (!m.email_autorizado) {
-          feedback("E-mail ou token inválido. Confira o convite recebido.", "error");
+          feedback("E-mail ou código de acesso inválido. Confira o convite recebido.", "error");
           return;
         }
         meta = m;
@@ -226,7 +226,7 @@
           if (/^\d+_\d+$/.test(entry[0]) && Number.isInteger(entry[1]) && entry[1] >= 0) stats.pares[entry[0]] = entry[1];
         });
         stats.duracao_anterior_ms = Number.isFinite(anteriores.duracao_ms) && anteriores.duracao_ms >= 0 ? anteriores.duracao_ms : 0;
-        feedback("Formulário liberado. O progresso será salvo automaticamente.", "success");
+        feedback(global.SLTColaborativaSimulacao ? "Simulação liberada. O progresso não será gravado." : "Formulário liberado. O progresso será salvo automaticamente.", "success");
         el("collab-form-section").classList.remove("is-hidden");
         stats.inicio_ms = Date.now(); draftActive = false;
         if (typeof generatePairwiseFormStep4 === "function") generatePairwiseFormStep4();
@@ -279,7 +279,7 @@
     }); })
       .then(function () {
         draftActive = false;
-        submitFeedback("Resposta enviada com sucesso. Obrigado!", "success");
+        submitFeedback(global.SLTColaborativaSimulacao ? "Envio simulado com sucesso. Nenhuma resposta foi gravada." : "Resposta enviada com sucesso. Obrigado!", "success");
       })
       .catch(function (err) {
         draftActive = true;

@@ -138,7 +138,7 @@
       j=>j.total_respostas||0, j=>j.respostas_consistentes||0, j=>j.valido_ate, j=>j.atualizadoEm];
     return [null, j=>j.nome, j=>statusLabel(j.status), j=>j.id, j=>j.hierarquizacao_id, j=>j.hierarquizacao_nome||j.hierarquizacao_codigo,
       j=>(j.total_respostas||0)/Math.max(1,(j.convites||[]).length), j=>j.valido_ate, j=>j.criadoEm, j=>j.atualizadoEm,
-      j=>j.n_criterios, j=>j.token, ...['lambda_max','indice_consistencia','indice_aleatorio','razao_consistencia'].map(key=>j=>j.consolidacao?.[key]),
+      j=>j.n_criterios, j=>j.token_acesso || 'Não gerado', ...['lambda_max','indice_consistencia','indice_aleatorio','razao_consistencia'].map(key=>j=>j.consolidacao?.[key]),
       j=>JSON.stringify(j.consolidacao?.matriz_consolidada), j=>JSON.stringify(j.consolidacao?.pesos_consolidados)];
   }, function () { currentPage=1; selectedIds.clear(); render(); }, function () { return !editingId; });
   function filteredRows() {
@@ -1101,7 +1101,23 @@
       });
     } finally { environmentSaving = false; }
   }
-  function openPairwise(mode) { var judgment = julgamentos.find(function (item) { return item.id === selectedId; }); if (!judgment) return; pairwiseMode = mode; [["ami-judgments-matrix-action", "matrix"], ["ami-judgments-form-action", "form"]].forEach(function (entry) { var active = mode === entry[1]; $(entry[0]).classList.toggle("is-active", active); $(entry[0]).setAttribute("aria-pressed", String(active)); }); $("ami-pairwise-panel").classList.remove("is-hidden"); loadSaatyScale().then(function () { renderPairwise(judgment); $("ami-pairwise-panel").scrollIntoView({ behavior: "smooth", block: "start" }); }); }
+  function openPairwise(mode) { var judgment = julgamentos.find(function (item) { return item.id === selectedId; }); if (!judgment) return;
+    var preview = $("ami-public-form-preview");
+    if (mode === "form") {
+      $("ami-pairwise-panel").classList.add("is-hidden");
+      if (!preview) {
+        preview = document.createElement("section"); preview.id = "ami-public-form-preview";
+        preview.className = "card ahp-step-section";
+        preview.innerHTML = '<div class="ahp-section-label"><i class="fas fa-clipboard-list" aria-hidden="true"></i><span>Simulação do formulário do colaborador</span></div><iframe title="Formulário de comparação pareada — simulação" style="display:block;width:100%;height:85vh;border:0;border-radius:0 0 8px 8px"></iframe>';
+        $("ami-pairwise-panel").after(preview);
+      }
+      preview.hidden = false;
+      preview.querySelector('iframe').src = actionLinks(judgment).public + '?simulacao=1';
+      preview.scrollIntoView({behavior: 'smooth', block: 'start'});
+      return;
+    }
+    if (preview) { preview.hidden = true; preview.querySelector('iframe').src = 'about:blank'; }
+ pairwiseMode = mode; [["ami-judgments-matrix-action", "matrix"], ["ami-judgments-form-action", "form"]].forEach(function (entry) { var active = mode === entry[1]; $(entry[0]).classList.toggle("is-active", active); $(entry[0]).setAttribute("aria-pressed", String(active)); }); $("ami-pairwise-panel").classList.remove("is-hidden"); loadSaatyScale().then(function () { renderPairwise(judgment); $("ami-pairwise-panel").scrollIntoView({ behavior: "smooth", block: "start" }); }); }
   function setupMode() {
     if (modo === "espaco") {
       $("ami-page-title-text").textContent = "Central de julgamentos";

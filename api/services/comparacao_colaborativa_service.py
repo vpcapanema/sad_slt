@@ -53,7 +53,7 @@ def _validar_email_token(row: dict[str, Any], email: str, token_acesso: str | No
     if not codigo_valido or email.strip().lower() not in _emails_convites(row.get("convites") or []):
         logger.warning("Acesso colaborativo recusado ambiente=%s", row["id"])
         raise DemandaValidationError(
-            "E-mail ou token inválido. Confira os dados do convite recebido.",
+            "E-mail ou código de acesso inválido. Confira os dados do convite recebido.",
             field="token_acesso",
         )
 
@@ -197,6 +197,7 @@ def _ambiente_to_response(row: dict[str, Any], *, base_url: str = "") -> Ambient
         n_criterios=int(row.get("n_criterios") or 0),
         arquivo_matriz_nome=row.get("arquivo_matriz_nome"),
         token=token,
+        token_acesso=row.get("token_acesso"),
         convites=row.get("convites") or [],
         valido_ate=_iso(row.get("valido_ate")) or "",
         status=row["status"],

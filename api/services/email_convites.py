@@ -37,13 +37,13 @@ def enviar(ambiente_id: str, dados: ConviteEmailEnvioSchema, usuario_id: str) ->
     if not codigo:
         codigo = ambientes.garantir_token_acesso(ambiente_id, dados.versao, gerar_token_acesso())
     texto = (
-        f"{dados.texto}\n\nToken de acesso: {codigo}\n"
-        "Para liberar o formulário, informe seu nome, o e-mail convidado e este token de seis dígitos. "
-        "O token é válido somente para este julgamento, dentro do prazo informado."
+        f"{dados.texto}\n\nCódigo de acesso ao formulário: {codigo}\n"
+        "Para liberar o formulário, informe seu nome, o e-mail convidado e este código de acesso de seis dígitos. "
+        "O código de acesso é válido somente para este julgamento, dentro do prazo informado."
     )
     if len(texto) > 50000:
         raise DemandaValidationError(
-            "Reduza a mensagem para que o texto, incluindo as instruções do token, tenha até 50.000 caracteres.",
+            "Reduza a mensagem para que o texto, incluindo as instruções do código de acesso, tenha até 50.000 caracteres.",
             field="texto",
         )
     mensagem = EmailEnvioSchema(destinatario=dados.destinatario, assunto=ASSUNTO, texto=texto)

@@ -53,7 +53,7 @@
           <p class="form-help" id="ami-email-link-row"><i class="fas fa-link"></i> Link persistente do formulário: <a id="ami-email-form-link" href="#" target="_blank" rel="noopener"></a></p>
           </div>
           <div class="ahp-form-actions" id="ami-email-actions" role="group" aria-label="Controles da mensagem de e-mail"><button type="button" class="btn btn-secondary" id="ami-copy-email-link"><i class="fas fa-copy c-btn__icon" aria-hidden="true"></i>Copiar link</button><button type="button" class="btn btn-secondary" id="ami-open-mail" disabled><i class="fas fa-envelope c-btn__icon" aria-hidden="true"></i>Enviar e-mail</button><button type="button" class="btn btn-secondary" id="ami-email-receipts" disabled><i class="fas fa-arrows-rotate c-btn__icon" aria-hidden="true"></i>Atualizar confirmações</button></div>
-          <p class="form-help">Ao texto acima será acrescentado automaticamente o token de seis números deste julgamento. O mesmo código será enviado a todos os colaboradores e mantido nos reenvios. Para abrir o formulário, o colaborador deverá informar o e-mail convidado e esse token.</p>
+          <p class="form-help">Ao texto acima será acrescentado automaticamente o código de acesso de seis números deste julgamento. O mesmo código será enviado a todos os colaboradores e mantido nos reenvios. Para abrir o formulário, o colaborador deverá informar o e-mail convidado e esse código de acesso.</p>
             </div>
           </section>
           <section class="ahp-subcard ami-monitoring-section standard-table-section">
@@ -97,11 +97,11 @@
 {% block scripts_pagina %}
   {% if modo_pagina == 'julgamentos' %}<script src="/assets/js/sicard-standard-layout.js?v=20261027-1"></script>{% endif %}
   <script src="/assets/js/table-standard.js?v=20261027-cabecalho-agrupado"></script>
-  <script src="/assets/js/analysis-table-controls.js?v=20261027-modos-consulta-edicao"></script>
+  <script src="/assets/js/analysis-table-controls.js?v=20261027-formulario-unificado"></script>
   <script src="/assets/js/admin-auth.js"></script>
   <script src="/assets/vendor/xlsx/xlsx-0.18.5.min.js"></script>
-  <script src="/assets/js/paginas/analise-multicriterio-tabela.js?v=20261027-disponibilidade"></script>
+  <script src="/assets/js/paginas/analise-multicriterio-tabela.js?v=20261027-formulario-unificado"></script>
   <script src="/assets/js/api-erro.js?v=20261027"></script>
   <script src="/assets/js/paginas/ami-email.js?v=20261027-monitoramento-seletores"></script>
-  <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20261027-modos-consulta-edicao"></script>
+  <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20261027-formulario-unificado"></script>
 {% endblock %}

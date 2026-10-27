@@ -43,7 +43,7 @@ const assert = require('node:assert/strict');
     await page.locator('#colab-inst').fill('Instituição de teste');
     await page.locator('#colab-email').fill('ana@example.com');
     await page.locator('#btn-liberar-form').click();
-    await page.getByText('Informe o token de seis números recebido por e-mail.', {exact: true}).waitFor();
+    await page.getByText('Informe o código de acesso de seis números recebido por e-mail.', {exact: true}).waitFor();
     assert.equal(requests.length, 0);
     await page.locator('#colab-token').fill('999999');
     await page.locator('#btn-liberar-form').click();

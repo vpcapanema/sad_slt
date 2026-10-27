@@ -31,7 +31,7 @@
 						<h3 id="collab-scope-steps">Passo a passo da sua participação</h3>
 						<ol>
 							<li><strong>Confira a rodada.</strong> Leia o objetivo, verifique o prazo e o status apresentados acima e confirme que está participando da hierarquização para a qual recebeu o convite.</li>
-							<li><strong>Identifique-se.</strong> Informe nome completo, instituição, e-mail convidado e token de seis números recebido por e-mail. Clique em “Liberar formulário”. O acesso é validado pelo e-mail e pelo token; nome e instituição identificam sua resposta.</li>
+							<li><strong>Identifique-se.</strong> Informe nome completo, instituição, e-mail convidado e código de acesso de seis números recebido por e-mail. Clique em “Liberar formulário”. O acesso é validado pelo e-mail e pelo código de acesso; nome e instituição identificam sua resposta.</li>
 							<li><strong>Compare todos os pares.</strong> Leia os critérios e ajuste cada barra para expressar a importância relativa. Use 1 quando considerar os critérios igualmente importantes. Após três segundos sem novos ajustes, o par e seu valor inverso recebem confirmação visual verde. Essa indicação não significa que a resposta já foi enviada; você pode movimentar a barra novamente para revisar sua escolha.</li>
 							<li><strong>Acompanhe a consistência.</strong> Observe a Razão de Consistência (RC) e revise as comparações quando necessário. Procure coerência entre suas escolhas: se A é mais importante que B e B é mais importante que C, uma preferência muito forte de C sobre A merece reavaliação.</li>
 							<li><strong>Revise o preenchimento.</strong> Confira todos os pares, inclusive os que permaneceram em igual importância. O progresso é salvo automaticamente durante o preenchimento; acompanhe a mensagem de salvamento. Salvar o progresso não substitui o envio definitivo.</li>
@@ -42,23 +42,18 @@
 						<h3 id="collab-scope-consistency">Como interpretar os indicadores</h3>
 						<p>A <strong>RC</strong> avalia a coerência interna das comparações, não se a sua opinião está “certa” ou “errada”. O sistema aceita o envio quando <strong>RC &lt; 0,10</strong>. Em zero, o cartão permanece neutro; acima de zero e abaixo de 0,10, fica verde; a partir de 0,10, fica vermelho e o envio permanece bloqueado até a revisão. O Índice de Consistência (IC) e o valor λmax são indicadores auxiliares do cálculo AHP, atualizados automaticamente. Você não precisa calculá-los nem preenchê-los.</p>
 					</section>
-					<section class="secao-collab-scope-results" aria-labelledby="collab-scope-results">
-						<h3 id="collab-scope-results">O que acontece depois do envio</h3>
-						<p>As respostas enviadas ficam disponíveis ao responsável para análise e consolidação. Na consolidação padrão, utiliza-se a agregação de julgamentos individuais (AIJ): a média geométrica reúne os valores correspondentes das matrizes individuais em uma matriz do grupo. A partir dela, são calculados os pesos dos critérios, normalizados para somar 1, e os indicadores de consistência do resultado coletivo.</p>
-						<p>A consolidação não equivale à homologação. Após a análise e a homologação pelo responsável, os pesos poderão ser utilizados na etapa de <strong>Priorização de demandas por atributos</strong>, que os aplica aos valores de cada objeto de demanda nos critérios correspondentes. Assim, sua participação contribui para a definição de prioridades, sem substituir as verificações territoriais de restrição e risco, a análise de favorabilidade nem a decisão de homologação da hierarquização.</p>
-					</section>
 				</section>
 			</div>
 		</section>
 		<section class="card-colab-nome secao-colab-nome card ahp-step-section">
 			<div class="ahp-section-label"><i class="fas fa-id-card"></i><span>Identificação</span></div>
 			<div class="ahp-section-body">
-				<p class="step-intro">Informe seus dados e o token de seis números recebido no convite. O acesso é validado pelo e-mail convidado e pelo token deste julgamento; o nome é usado para identificar sua resposta.</p>
+				<p class="step-intro">Informe seus dados e o código de acesso de seis números recebido no convite. O acesso é validado pelo e-mail convidado e pelo código de acesso deste julgamento; o nome é usado para identificar sua resposta.</p>
 				<div class="collab-identificacao-grid">
 					<div class="c-form-group"><label for="colab-nome" class="c-form-label">Nome completo</label><input id="colab-nome" class="c-form-control" required></div>
 					<div class="c-form-group"><label for="colab-inst" class="c-form-label">Instituição vinculada</label><input id="colab-inst" class="c-form-control" required></div>
 					<div class="c-form-group"><label for="colab-email" class="c-form-label">E-mail</label><input id="colab-email" type="email" class="c-form-control" required></div>
-					<div class="c-form-group"><label for="colab-token" class="c-form-label">Token de acesso</label><input id="colab-token" name="token_acesso" type="text" class="c-form-control" inputmode="numeric" pattern="[0-9]{6}" minlength="6" maxlength="6" autocomplete="one-time-code" aria-describedby="colab-token-help" required><p id="colab-token-help" class="form-help">Digite os seis números do e-mail, incluindo eventuais zeros no início.</p></div>
+					<div class="c-form-group"><label for="colab-token" class="c-form-label">Código de acesso ao formulário</label><input id="colab-token" name="token_acesso" type="text" class="c-form-control" inputmode="numeric" pattern="[0-9]{6}" minlength="6" maxlength="6" autocomplete="one-time-code" aria-describedby="colab-token-help" required><p id="colab-token-help" class="form-help">Digite os seis números do e-mail, incluindo eventuais zeros no início.</p></div>
 				</div>
 				<button type="button" class="btn btn-primary" id="btn-liberar-form"><i class="fas fa-unlock c-btn__icon"></i>Liberar formulário</button>
 				<p id="colab-id-feedback" class="ahp-matriz-edit-feedback" role="status"></p>
@@ -93,6 +88,7 @@
 {% block scripts_pagina %}
 	<script src="/restrict/ahp/js/ahp-core.js"></script>
 	<script src="/restrict/ahp/js/colaborativa-api.js?v=20261019-subpath-publico"></script>
+	<script src="/restrict/ahp/js/colaborativa-simulacao.js?v=20261027-1"></script>
 	<script src="/restrict/ahp/js/script.js?v=20261023-titulo-comparacao"></script>
-	<script src="/restrict/ahp/js/colaborativa.js?v=20261025-rota-formulario"></script>
+	<script src="/restrict/ahp/js/colaborativa.js?v=20261027-formulario-unificado"></script>
 {% endblock %}

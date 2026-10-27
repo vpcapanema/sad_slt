@@ -79,7 +79,7 @@ def test_preserva_texto_acrescenta_token_e_nao_repete_apos_recarga(ambiente, smt
     assert result["envio_status"] == "aceito_smtp"
     texto = smtp.call_args.args[0].texto
     assert texto.startswith(dados.texto + "\n\n")
-    assert "Token de acesso: 012345" in texto
+    assert "Código de acesso ao formulário: 012345" in texto
     assert registros[0]["conteudo_hash"] == sha256((service.ASSUNTO + "\n" + texto).encode()).hexdigest()
     assert smtp.call_args.kwargs["solicitar_confirmacoes"] is True
     assert smtp.call_args.kwargs["id_mensagem"] == registros[0]["mensagem_id"]
@@ -125,7 +125,7 @@ def test_legado_persiste_token_antes_de_reservar_e_enviar(ambiente, smtp, regist
     service.enviar(ambiente["id"], payload(ambiente), "analista")
     garantir.assert_called_once()
     assert len(garantir.call_args.args[2]) == 6
-    assert "Token de acesso: 000123" in smtp.call_args.args[0].texto
+    assert "Código de acesso ao formulário: 000123" in smtp.call_args.args[0].texto
 
 
 def test_falha_ao_persistir_token_nao_envia(ambiente, smtp, registros, monkeypatch):

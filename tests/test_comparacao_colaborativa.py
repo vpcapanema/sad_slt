@@ -160,6 +160,14 @@ def _ambiente_row(**extra) -> dict:
     return row
 
 
+def test_resposta_administrativa_expoe_codigo_correto_sem_trocar_token_do_link():
+    resposta = service._ambiente_to_response(_ambiente_row())
+    assert resposta.token_acesso == "012345"
+    assert resposta.token == "tok-abc"
+    assert "/tok-abc/" in resposta.url_publica
+    assert "012345" not in resposta.url_publica
+
+
 @pytest.mark.parametrize("status", ["encerrada", "consolidada"])
 def test_reabre_julgamento_com_prazo_futuro_preservando_respostas(monkeypatch, status):
     atual = _ambiente_row(status=status, total_respostas=1)
@@ -810,8 +818,9 @@ def test_fluxo_colaborativo_completo(monkeypatch) -> None:
     assert resp.status_code == 200
     assert resp.json()["email_autorizado"] is False
     assert resp.json()["criterios"] == []
-    assert "token_acesso" not in ambiente
+    assert "token_acesso" not in resp.json()
     codigo = fake.ambientes[ambiente["id"]]["token_acesso"]
+    assert ambiente["token_acesso"] == codigo
     assert len(codigo) == 6 and codigo.isascii() and codigo.isdigit()
     resp = publico.post(f"/api/ahp/comparacao-colaborativa/publico/{token}/acesso",
                         json={"email": "a@x.gov.br", "token_acesso": codigo})
