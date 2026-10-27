@@ -18,7 +18,21 @@ NOTA = (
     'As áreas são informação técnica da interseção, não índices; sobreposições internas podem '
     'produzir percentuais acima de 100%. As tabelas não reproduzem as estatísticas exploratórias '
     'selecionadas na página e não constituem ranking ou homologação.'
+    ' Para raster, o detalhe preserva os valores das células; a tabela Síntese Raster informa '
+    'a média ponderada pela área efetiva de interseção e a cobertura válida de cada demanda. '
+    'Zero entra na média; NoData e áreas externas ficam fora do denominador. Sem cobertura válida, '
+    'o índice é nulo. Não se atribuem classes aos rasters contínuos.'
 )
+COLUNAS_RASTER = ['Execução', 'Conjunto de demandas', 'Chave da demanda', 'Demanda',
+                  'ID da superfície', 'Papel', 'Métrica', 'Índice ponderado',
+                  'Área válida (m²)', 'Cobertura válida (%)', 'Área sem dados (m²)', 'Células válidas']
+
+
+def sintese_raster(modelo: dict) -> list[list]:
+    return [[entrada['id'], entrada['nome'], demanda['chave'], demanda['nome'],
+             r['base_id'], PAPEIS[r['papel']], r['metrica'], r['indice'], r['area_valida_m2'],
+             r['cobertura_percentual'], r['area_sem_dados_m2'], r['celulas_validas']]
+            for entrada in modelo['entradas'] for demanda in entrada['linhas'] for r in demanda.get('rasters', [])]
 COLUNAS_DETALHE = [
     'Execução', 'Conjunto de demandas', 'Chave da demanda', 'Identificador da demanda', 'Demanda',
     'ID da superfície', 'Papel', 'Superfície', 'ID da feição', 'Posição da feição', 'Feição',
@@ -95,6 +109,8 @@ def xlsx(modelo: dict, detalhes: list[list], resumos: list[list]) -> bytes:
             linha[indice].number_format = '0.###############'
     tabelas._folha(livro.create_sheet(), 'Cobertura por Superfície', COLUNAS_RESUMO, resumos,
                   [25, 30, 28, 16, 36] + [24] * 9)
+    if any(c.get('tipo') == 'raster' for e in modelo['entradas'] for c in e['campos']):
+        tabelas._folha(livro.create_sheet(), 'Síntese Raster', COLUNAS_RASTER, sintese_raster(modelo), [28] * len(COLUNAS_RASTER))
     tabelas._folha(livro.create_sheet(), 'Fontes e Nomes',
                   ['ID', 'Tipo', 'Papel', 'Nome revisado'],
                   [[fonte['id'], fonte['tipo'], fonte['papel'], fonte['nome']] for fonte in modelo['fontes']],
@@ -149,9 +165,12 @@ def documentos(modelo: dict, relatorio: str, arquivos: list[str]) -> list[tuple[
         'edições externas. A emissão do pacote não altera ranking, AHP ou homologação.',
         '', 'ARQUIVOS DE CAMADAS', *[f'- {nome}' for nome in arquivos],
     ]
+    arquivos_raster = ([('Tabelas/Síntese Raster.csv', _csv(COLUNAS_RASTER, sintese_raster(modelo)))]
+                       if any(c.get('tipo') == 'raster' for e in modelo['entradas'] for c in e['campos']) else [])
     return [
         ('Tabelas/Favorabilidade Territorial.xlsx', xlsx(modelo, detalhes, resumos)),
         ('Tabelas/Índices e Classes.csv', _csv(COLUNAS_DETALHE, detalhes)),
         ('Tabelas/Cobertura por Superfície.csv', _csv(COLUNAS_RESUMO, resumos)),
         ('LEIA-ME.txt', ('\r\n'.join(guia) + '\r\n').encode('utf-8-sig')),
+        *arquivos_raster,
     ]

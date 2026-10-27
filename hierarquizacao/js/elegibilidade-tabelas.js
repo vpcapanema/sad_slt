@@ -87,7 +87,7 @@ export function criarResumoResultados({node, selecionar, controles, avisar, aoSa
     filtro.controles(travado || Boolean(editando));
     document.getElementById('ev-resultados-entrada').disabled = travado || Boolean(editando);
     if (tabelaAgregada) document.querySelectorAll('.fv-estatisticas-controles select, .fv-estatisticas-controles input')
-      .forEach(c => { c.disabled = bloqueado || ocupado || Boolean(editando) ||
+      .forEach(c => { c.disabled = bloqueado || ocupado || Boolean(editando) || c.dataset.rasterFixo === 'true' ||
         (c.id === 'ev-resultados-percentil' && document.getElementById('ev-resultados-posicao').value !== 'percentil'); });
     node.querySelectorAll('td button, .row-select').forEach(b => { b.disabled = travado || Boolean(editando); });
     const campo = document.getElementById('ev-resumo-nome');

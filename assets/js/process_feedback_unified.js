@@ -668,13 +668,10 @@
                 this.progressoTarefa(100);
             }
             this.log(data && data._status === 'partial' ? 'Processo concluído com ressalvas.' : 'Processo concluído com sucesso!', data && data._status === 'partial' ? 'warning' : 'success');
-            this._resultTimer = setTimeout(() => {
-                if (_progressSystem !== this) return;
-                this._fecharSeCorrente();
-                if (data && data._status === 'partial') _statusSystem.mostrarParcial({ actionTitle: this._actionTitle, ...data, _elapsed: elapsed });
-                else _statusSystem.mostrarSucesso({ actionTitle: this._actionTitle, ...data, _elapsed: elapsed });
-                if (this.config.onSuccess) this.config.onSuccess(data);
-            }, 500);
+            this._fecharSeCorrente();
+            if (data && data._status === 'partial') _statusSystem.mostrarParcial({ actionTitle: this._actionTitle, ...data, _elapsed: elapsed });
+            else _statusSystem.mostrarSucesso({ actionTitle: this._actionTitle, ...data, _elapsed: elapsed });
+            if (this.config.onSuccess) this.config.onSuccess(data);
         }
 
         /* ── Erro → delega ao StatusFeedbackSystem ── */
@@ -691,12 +688,9 @@
                 const seg = this.segmentsEl.children[this.currentTaskIndex];
                 if (seg) { seg.classList.remove('pfs-segment--active'); seg.classList.add('pfs-segment--error'); }
             }
-            this._resultTimer = setTimeout(() => {
-                if (_progressSystem !== this) return;
-                this._fecharSeCorrente();
-                _statusSystem.mostrarErro({ actionTitle: this._actionTitle, ...(typeof data === 'string' ? { message: data } : data), _elapsed: elapsed });
-                if (this.config.onError) this.config.onError(data);
-            }, 800);
+            this._fecharSeCorrente();
+            _statusSystem.mostrarErro({ actionTitle: this._actionTitle, ...(typeof data === 'string' ? { message: data } : data), _elapsed: elapsed });
+            if (this.config.onError) this.config.onError(data);
         }
 
         /* ── Cancelar ── */
@@ -718,12 +712,15 @@
             }
         }
         confirmarCancelamento(message) {
-            if (this._finalizado) return;
+            if (this._finalizado || (_progressSystem && _progressSystem !== this)) return;
             this._finalizado = true; this._cancelPending = false; this._stop();
             this._estadoFinal = 'Cancelado'; this._atualizarAcompanhamento();
             this.log(message || 'Cancelamento confirmado pelo servidor.', 'warning');
             this.resumo(message || 'Processamento cancelado pelo servidor.');
             this.cancelBtn.hidden = true;
+            this._fecharSeCorrente();
+            _statusSystem.mostrarParcial({ actionTitle: this._actionTitle, title: 'Processamento cancelado',
+                message: message || 'Cancelamento confirmado pelo servidor.', _elapsed: this._elapsed() });
         }
 
         /* ── Fechar ── */
@@ -733,7 +730,7 @@
             if (this._finalizado && _progressSystem === this) q('#pfsReopen').hidden = true;
         }
         reabrir() {
-            if (_progressSystem !== this) return;
+            if (_progressSystem !== this || this._finalizado) return;
             _statusSystem.fechar();
             q('#pfsReopen').hidden = true;
             this.overlay.classList.add('pfs-active'); this.box.classList.add('pfs-active');
@@ -852,7 +849,7 @@
             }
         }
         /* Um processo que terminou não fecha o overlay de outro que já começou. */
-        _fecharSeCorrente() { if (!_progressSystem || _progressSystem === this) this.ocultar(); else this._stop(); }
+        _fecharSeCorrente() { if (!_progressSystem || _progressSystem === this) this.fechar(); else this._stop(); }
 
         /* ── Internals ── */
         _touch() {

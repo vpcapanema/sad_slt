@@ -5,7 +5,7 @@ import {validarCamada} from '../../geoespacial/extracao-atributos/camada-validad
 import {escolherConfiguracao} from '../../geoespacial/extracao-atributos/lista-camadas.js';
 import {criarPrevia} from '../../geoespacial/extracao-atributos/previa.js?v=20261027-favorabilidade-simbologia';
 import {criarMapa} from '../../geoespacial/extracao-atributos/mapa.js?v=20261027-favorabilidade-simbologia';
-import {criarResultados} from './elegibilidade-resultados.js?v=20261027-pasta-inicial';
+import {criarResultados} from './elegibilidade-resultados.js?v=20261027-raster-area';
 import {criarConferencia} from './favorabilidade-conferencia.js?v=20261027-listas';
 import {tituloDemanda} from './nome-demanda.js?v=20261025-title-case';
 
@@ -32,7 +32,7 @@ const previa = criarPrevia(state, render, {
   }))),
   aoMudarVisibilidade:controles,
   descreverProcessamento:camada => camada.tipo === 'raster'
-    ? 'Referência ao raster original; a imagem reduzida serve somente para visualização, não para extrair índices'
+    ? 'Cálculo na banda original por média ponderada pela área; a imagem reduzida serve somente para visualização'
     : 'Geometria e atributos originais preservados, sem buffers nem conversão geométrica',
 });
 
@@ -189,14 +189,17 @@ async function explorar(papel) {
 }
 async function prepararRaster(ref) {
   if (!ref.id.startsWith('storage:') || !ref.arquivo) throw new Error('Selecione uma superfície raster do Storage.');
+  const validacao = await post('/extracao-atributos/favorabilidade/preparar-raster', {id:ref.id});
   const preview = await json(`/storage/camada/raster-preview?caminho=${encodeURIComponent(ref.arquivo)}`);
+  await post('/extracao-atributos/favorabilidade/preparar-raster', {id:ref.id, revisao:validacao.revisao_fonte});
   if (!preview.image || !Array.isArray(preview.bounds) || preview.bounds.length !== 4 ||
       !preview.bounds.every(Number.isFinite) || !Array.isArray(preview.coordinates) || preview.coordinates.length !== 4) {
     throw new Error(`"${ref.nome}": a prévia do raster não possui imagem e limites válidos.`);
   }
   const [oeste, sul, leste, norte] = preview.bounds;
   return {...ref, tipo:'raster', preview, bounds:preview.bounds, imagem:preview.image,
-    revisao:crypto.randomUUID(), status_validacao:'valida', representacao:'imagem',
+    revisao:crypto.randomUUID(), revisao_fonte:validacao.revisao_fonte,
+    status_validacao:'valida', representacao:'imagem',
     geojson:{type:'FeatureCollection', features:[{type:'Feature', properties:{},
       geometry:{type:'Polygon', coordinates:[[[oeste,sul],[leste,sul],[leste,norte],[oeste,norte],[oeste,sul]]]}}]},
     metadados_local:{limites_wgs84:preview.bounds, avisos:[
@@ -324,11 +327,15 @@ async function calcularFavorabilidade() {
     const ids = Object.values(conjunto).flat().map(c => c.id);
     mapa.assertReady(ids);
     if (!conjunto.entrada.length || !conjunto.grade.length && !conjunto.rede.length)
-      throw new Error('Marque uma entrada e ao menos uma superfície poligonal de grade ou rede na bancada.');
+      throw new Error('Marque uma entrada e ao menos uma superfície poligonal ou raster de grade ou rede na bancada.');
+    for (const papel of ['grade','rede']) {
+      if (conjunto[papel].some(c => c.tipo === 'raster') && conjunto[papel].length > 1)
+        throw new Error(`${papeis[papel]}: use uma única superfície raster, sem combinar outras bases no mesmo papel.`);
+    }
     for (const camada of [...conjunto.grade, ...conjunto.rede]) {
       const tipos = camada.metadados_local?.tipos_geometria || camada.geojson?.features?.map(f => f.geometry?.type) || [];
-      if (camada.tipo === 'raster' || tipos.some(tipo => !['Polygon','MultiPolygon'].includes(tipo)))
-        throw new Error(`${camada.nome}: esta etapa aceita somente superfícies poligonais. Linhas e rasters podem ser visualizados, mas não participam do cálculo de áreas.`);
+      if (camada.tipo !== 'raster' && tipos.some(tipo => !['Polygon','MultiPolygon'].includes(tipo)))
+        throw new Error(`${camada.nome}: use superfícies poligonais ou raster de índices. Linhas não participam do cálculo de áreas.`);
     }
     const grupo = conjunto.entrada[0]?.grupoHierarquizacao;
     if (grupo && (conjunto.entrada.length !== grupo.demandas ||
@@ -337,7 +344,7 @@ async function calcularFavorabilidade() {
     if (!await window.ProcessFeedback.confirmar({
       title:'Executar favorabilidade territorial',
       message:`Processar ${conjunto.entrada.length} demanda(s), ${conjunto.grade.length} superfície(s) de grade e ${conjunto.rede.length} de rede?`,
-      warning:'A entrada será preparada segundo as regras poligonais cadastrais da Elegibilidade, sem alterar as fontes. Cada superfície será intersectada separadamente com a entrada integral e suas áreas somadas em m². Os fragmentos preservarão todos os atributos das superfícies, sem agregar classes ou índices. Cada saída será gravada no Storage e adicionada à bancada. Os índices registrados não serão alterados.',
+      warning:'A entrada será preparada segundo as regras poligonais cadastrais da Elegibilidade, sem alterar as fontes. Vetores preservam seus atributos por interseção. Para raster, a média do índice será ponderada pela área de cada célula dentro da demanda, usando a banda original; zero é válido, NoData não entra na média e a cobertura válida será informada. Células e recortes serão preservados para auditoria. Cada saída será gravada no Storage e adicionada à bancada. Os índices registrados não serão alterados.',
       confirmLabel:'Calcular Favorabilidade Territorial',
     })) return;
     resultados.iniciar();
@@ -381,7 +388,7 @@ async function calcularFavorabilidade() {
         detail:resultado.arquivo});
       if (cancelado) throw new DOMException('Execução cancelada. A saída já concluída foi mantida.', 'AbortError');
     }
-    avisar(`${concluidas.length} camada(s) de saída produzida(s) e adicionada(s) à bancada: ${concluidas.join(', ')}. Nenhum índice ou classe foi agregado.`, 'success');
+    avisar(`${concluidas.length} camada(s) de saída produzida(s) e adicionada(s) à bancada: ${concluidas.join(', ')}. Raster: média ponderada pela área e cobertura válida. Vetores: atributos originais preservados.`, 'success');
   } catch (erro) {
     const persistida = resultado?.arquivo ? ` A saída já está gravada em ${resultado.arquivo}; abra esse arquivo na bancada, sem repetir o cálculo.` : '';
     const anteriores = concluidas.length ? ` Saídas anteriores mantidas: ${concluidas.join(', ')}.` : '';

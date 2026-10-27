@@ -661,10 +661,83 @@ Sequência oficial, sem nomes de grupos de etapas (aplicável a rede e grade):
 - **Natureza:** cenário não ponderado solicitado para análise. Não substitui a média
   ponderada por pesos AHP nem constitui superfície homologada.
 
+### 6.4 Superfície exploratória de influência da rede em 200 m — 27/10/2026
+
+Esta rodada constitui produto avulso, sem alteração da aplicação ou homologação.
+Sua fonte é a camada linear `favorabilidade_rede_trechos_20261027.gpkg`, gerada
+com observações TomTom exclusivamente de 27/10/2026 e os demais atributos da
+rodada anterior. O TomTom atende aos filtros HTTP 200, FRC0–FRC5 e velocidades
+atual e livre positivas, com cobertura de 4.752 dos 4.782 trechos (99,37%) e
+99,29% da extensão. A síntese exige todos os 11 critérios: 4.471 trechos têm
+índice e 311 permanecem sem índice, sendo 286 sem atributos de capacidade
+associados e 30 sem TomTom válido, com cinco em ambas as condições. Não houve
+imputação, transferência adicional de VDM ou redistribuição de pesos. A
+associação histórica de capacidade por proximidade, sem identidade obrigatória
+de rodovia, permanece uma limitação do insumo, inclusive em acessos próximos
+à rodovia principal.
+
+A superfície utiliza `fav_rede_dim`, não `fav_rede` nem classes nominais.
+As linhas com índice válido são rasterizadas em EPSG:5880, com células de
+200 × 200 m, alinhadas a múltiplos de 200 m e regra `ALL_TOUCHED`. Quando
+linhas distintas ocupam uma célula, conserva-se o maior índice; essa escolha
+resolve a colisão de discretização, não uma combinação de influências de
+todas as linhas. A alocação euclidiana identifica a célula-semente mais
+próxima, conservando seu `sub_id`. Empates são resolvidos pelo operador
+`scipy.ndimage.distance_transform_edt`.
+
+O domínio corresponde ao limite estadual `base-geoespacial/vetor/uf_sp.gpkg`
+do Storage, também rasterizado com `ALL_TOUCHED`, sem aplicação de máscara
+de elegibilidade. A pertinência é calculada por `pyfuzzylite.Ramp`, com
+início na maior distância válida do domínio e término em zero:
+
+```text
+D = maior distância à célula de rede válida dentro da máscara de SP
+mu(x) = max(0, min(1, 1 - d(x) / D))
+F(x) = fav_rede_dim[trecho válido alocado a x] × mu(x)
+```
+
+Nesta grade, `D = 40.526,53 m`. Esse alcance é derivado do domínio, não uma
+distância de influência calibrada; alterar o domínio exige nova versão do
+produto e pode alterar a superfície. A distância é medida entre centros de
+células, e as células tocadas pela linha recebem distância zero. A soma das
+incertezas posicionais de origem e destino tem limite geométrico de
+discretização de aproximadamente 283 m; não se trata de precisão observacional.
+
+O valor original é conservado na célula-semente após a regra de colisão.
+Fora das sementes, o resultado representa influência espacial modelada,
+não observação nem preenchimento dos atributos dos trechos. Os 311 trechos
+sem índice não são sementes; suas células são identificadas em raster
+auxiliar. A superfície tem valor em toda a máscara estadual, inclusive nas
+proximidades desses trechos, por influência da rede válida. O exterior é
+NoData, distinto de zero válido. A alocação pelo vizinho mais próximo pode
+produzir descontinuidades entre regiões de trechos com índices diferentes.
+
+Os produtos estão no Storage, em
+`saidas-geoespaciais/analises-avulsas/processamento/favorabilidade-rede-raster-200m-20261027T215337Z/`:
+
+- `superficie_favorabilidade_rede_indice_final_200m.tif`: superfície derivada em escala de 0 a 1;
+- `superficie_favorabilidade_rede_distancia_metros_200m.tif`: distância em metros à rede com índice válido;
+- `superficie_favorabilidade_rede_pertinencia_fuzzy_200m.tif`: pertinência fuzzy linear;
+- `superficie_favorabilidade_rede_trecho_origem_200m.tif`: `sub_id` do trecho alocado;
+- `superficie_favorabilidade_rede_mascara_sem_indice_200m.tif`: células tocadas pelos trechos sem índice;
+- `metadados_validacao.json`: fontes, hashes, parâmetros e verificações.
+
+Uma cópia com os mesmos nomes está em
+`superficies-indices/hierarquizacao/favorabilidade/`. Os metadados de cada
+pasta identificam os caminhos correspondentes; a padronização dos nomes
+não altera pixels, hashes ou metodologia.
+
+Os GeoTIFFs são COG comprimidos, com grade de 4.595 × 3.137 células.
+Cada raster foi reaberto e comparado pixel a pixel antes do envio; cada
+arquivo no Storage foi conferido por SHA-256. Validaram-se escala, cobertura,
+preservação dos índices nas sementes e extremos da função fuzzy. As fontes
+vetoriais e os índices cadastrais não foram modificados.
+
 ## 7. Histórico de atualização
 
 | Data | Alteração |
 |------|-----------|
+| 2026-10-27 | Registro da rodada TomTom atualizada e da superfície exploratória de influência da rede em células de 200 m, com alocação pelo trecho válido mais próximo, decaimento fuzzy linear, preservação das lacunas de origem e saídas COG auditáveis (§6.4). |
 | 2026-08-06 | Criação do diagnóstico: critérios da rede (Blocos A e B), insumos-base, inventário da malha rodoviária DER-SP e mapa de lacunas. |
 | 2026-08-06 | InfoSiga localizado e validado (seção 4.2); decisão de segmentação por subtrecho; critérios 11/12/13 marcados como disponíveis; próximos passos atualizados. |
 | 2026-08-06 | Gerada a camada `favorabilidade_rede.gpkg` (seção 4.3) com os valores brutos dos critérios 11/12/13 por subtrecho; parâmetros de associação e resultados registrados. |

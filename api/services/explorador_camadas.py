@@ -87,6 +87,13 @@ def _metadados_arquivo(item, entry):
         file=_resolver_storage(relative,entry) if item.get("fonte")=="storage" else storage._resolver_listado(relative,entry)
         if isinstance(file,Path) and not file.resolve().is_relative_to(storage.diretorio_storage().resolve()):
             raise ValueError("Arquivo fora do Storage")
+        if extension==".json":
+            document=json.loads(file.read_bytes())
+            geojson_types={"FeatureCollection","Feature","Point","MultiPoint","LineString",
+                           "MultiLineString","Polygon","MultiPolygon","GeometryCollection"}
+            if not isinstance(document,dict) or document.get("type") not in geojson_types:
+                item.update(geometria_aplicavel=False,camada_aplicavel=False,mapeavel=False)
+                return item
         if extension in storage.EXTENSOES_RASTER:
             dataset=storage.gdal.OpenEx(str(file),storage.gdal.OF_RASTER)
             if dataset is None or not dataset.RasterCount:

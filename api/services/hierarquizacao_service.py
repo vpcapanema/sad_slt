@@ -297,6 +297,14 @@ def _fase2_da_demanda(linha: dict[str, Any], camadas: dict[str, str], execucao: 
         unicos = valores_linha(linha, agregacao)
         f2['agregacao'] = {**agregacao, 'unidade': '%' if agregacao['medida'] == 'cv' else 'índice',
                            'ponderacao': 'sem ponderação por área'}
+        if linha.get('rasters'):
+            f2['extracao_raster'] = linha['rasters']
+            f2['agregacao']['regra_raster'] = 'Média ponderada pela área efetiva de interseção das células válidas; NoData excluído.'
+            f2['agregacao']['ponderacao'] = 'Por área para raster; medida selecionada sem ponderação para vetor.'
+            papeis_raster = {r['papel'] for r in linha['rasters']}
+            f2['agregacao']['unidade_por_dimensao'] = {
+                papel: 'índice' if papel in papeis_raster else f2['agregacao']['unidade'] for papel in ('grade', 'rede')}
+            f2['metodo_extracao'] = 'Recorte de células raster e interseção vetorial (GDAL/OGR, EPSG:5880)'
     else:
         f2.pop('agregacao', None)
     f2['valor_por_dimensao'] = dict(unicos)

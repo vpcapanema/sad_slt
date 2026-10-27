@@ -18,7 +18,7 @@
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Título**                 | Metodologia do Sistema de Hierarquização de Demandas — SICARD                                                                                                         |
 | **Número**                 | NT-SICARD-001/2026                                                                                                                                                       |
-| **Versão**                 | 1.54                                                                                                                                                                      |
+| **Versão**                 | 1.56                                                                                                                                                                      |
 | **Data de emissão**        | 27/10/2026                                                                                                                                                               |
 | **Classificação**         | Documento técnico-metodológico de entrega ao cliente                                                                                                                   |
 | **Sistema**                 | SICARD — Sistema Inteligente de Cadastro e Ranking de Demandas                                                                                                        |
@@ -88,6 +88,8 @@
 | 1.52    | 27/10/2026 | `[preencher]` | Separação da complementação cadastral/geometria e da coleta de atributos da hierarquização; registro das pendências por demanda a partir da matriz enviada, solicitação imediata ou adiada, validação da conclusão e rastreabilidade das notificações, sem reabertura da aprovação cadastral ou alteração das fórmulas de escore. |
 | 1.53    | 27/10/2026 | `[preencher]` | Unificação das colunas da Fase 3 e da complementação nos grupos Cadastro e Dinâmicos, incluindo o Configurador; conclusão automática ao salvar todos os valores válidos, separação do risco derivado da Fase 1, preservação das escalas ordinais declaradas e verificação de compatibilidade dos critérios antes da síntese. |
 | 1.54    | 27/10/2026 | `[preencher]` | Descarte imediato dos resultados calculados da Fase 3 e da síntese quando atributos, critérios, pesos ou fases de origem mudam; limpeza dos respectivos relatórios e ranking e apresentação somente de valores correntes, sem preservar ou exibir cálculos anteriores como atuais. |
+| 1.55    | 27/10/2026 | `[preencher]` | Registro de produto exploratório avulso de influência da rede em células de 200 m, derivado dos índices por trecho da rodada TomTom de 27/10/2026, com alocação euclidiana, pertinência fuzzy linear, identificação das lacunas originais e auditoria dos rasters, sem homologação ou alteração dos resultados cadastrais. |
+| 1.56    | 27/10/2026 | `[preencher]` | Inclusão de superfícies raster na Fase 2, com média ponderada pela área efetivamente intersectada das células, justificativa para o tratamento das bordas, cobertura válida, distinção entre zero e NoData e preservação dos recortes para auditoria e registro explícito. |
 
 ---
 
@@ -906,7 +908,8 @@ entrada integral em EPSG:5880. Somam-se apenas as áreas dos fragmentos por fei�
 em m², sem união ou dissolução, nos campos `fg_*` e `fr_*`, respectivamente. A
 ausência de interseção permanece `NULL`; o contato sem área é registrado como
 zero. Sobreposições internas podem produzir somas superiores à área da demanda.
-Rasters e bases lineares podem ser visualizados, mas não integram este cálculo.
+Bases lineares podem ser visualizadas, mas não integram este cálculo.
+Superfícies raster seguem a extração ponderada por área descrita na seção 10.15.
 
 A conferência de versão distingue o token temporário de visualização da revisão
 física do arquivo original do Storage, identificada pela data de modificação em
@@ -919,7 +922,7 @@ O GeoPackage conserva a entrada preparada na camada `favorabilidade_territorial`
 e os fragmentos na camada `intersecoes`, com vínculos às demandas e às feições de
 origem. Todos os atributos não geométricos das superfícies, inclusive a classe
 nominal e os campos normalizados, são preservados individualmente nos fragmentos.
-Os metadados registram a correspondência dos campos para evitar colisões. Não se
+Os metadados registram a correspondência dos campos para evitar colisões. Para vetores, não se
 calculam médias, modas, reescalonamentos ou agregações de classes ou índices nesta
 etapa, que não produz as saídas de ranking especificadas acima.
 
@@ -935,7 +938,7 @@ O painel da Favorabilidade apresenta os atributos originais
 `fav_rede_dim` e `fav_rede_classe` para superfícies de rede. A leitura utiliza o
 mapa de atributos preservados nos metadados do GeoPackage. Área, índice sem
 sufixo `_dim` e classe inferida não substituem esses campos. O cálculo espacial
-não agrega índices ou classes; as estatísticas opcionais de consulta são
+vetorial não agrega índices ou classes; as estatísticas opcionais de consulta são
 descritas adiante e não modificam os produtos. Fragmentos da mesma
 combinação demanda e feição devem concordar nos atributos; divergências ou
 colunas declaradas mas inexistentes impedem a apresentação.
@@ -1438,6 +1441,81 @@ nem comprovam benefício incremental de intervenções. Não houve substituiçã
 matriz operacional, dos operadores ou da síntese vigente do sistema.
 
 ---
+
+### 10.14 Produto avulso de influência espacial da rede em 200 m
+
+Em 27/10/2026, produziu-se uma superfície exploratória a partir da camada
+linear recalculada com observações TomTom da mesma data, sem mistura com as
+janelas anteriores. A nova rodada obteve dados TomTom válidos em 4.752 dos
+4.782 trechos (99,37%) e em 99,29% da extensão. Mantida a exigência de
+completude dos 11 critérios, 4.471 trechos possuem índice e 311 permanecem
+sem índice. Não se preencheram atributos por estimativa nem se corrigiram
+automaticamente as associações históricas de VDM.
+
+Conforme o [diagnóstico da rede, seção 6.4](../hierarquizacao/DIAGNOSTICO_DADOS_FAVORABILIDADE_REDE.md),
+o campo `fav_rede_dim` é rasterizado em EPSG:5880, com células de 200 × 200 m.
+Cada célula do domínio estadual recebe o índice da célula de rede válida mais
+próxima, multiplicado por pertinência fuzzy linear decrescente: valor um na
+distância zero e zero na maior distância válida do domínio, de 40.526,53 m
+nesta grade. Em colisões de linhas na mesma célula, conserva-se o maior
+índice. A distância é discretizada pela grade; não representa distância
+vetorial exata nem acessibilidade por rede. O alcance automático depende do
+domínio de cálculo e não constitui parâmetro empiricamente calibrado.
+
+A superfície representa influência modelada fora das sementes, não dados
+observados ou imputação dos índices dos trechos. As lacunas de origem
+permanecem no vetor e são identificadas em raster auxiliar. Conservam-se
+rasters de distância, pertinência e trecho de origem, além da superfície,
+com parâmetros, fontes e hashes no Storage. O exterior do limite estadual
+é NoData; zero válido não representa ausência de informação. A operação
+não aplica a triagem de elegibilidade, não atualiza ranking ou índices
+cadastrais e não constitui homologação. O cenário histórico descrito
+anteriormente permanece preservado.
+
+### 10.15 Extração de favorabilidade raster por demanda
+
+A bancada da Fase 2 admite superfícies raster de índices em banda única,
+georreferenciada e com valores físicos em [0,1]. Por dimensão, utiliza-se uma
+única superfície raster, sem combinação com outras bases no mesmo papel.
+Permite-se utilizar raster em uma dimensão e vetor na outra. Para o produto
+de rede descrito na seção 10.14, utiliza-se a superfície de índice final;
+distância, pertinência, identificação de origem e máscara são produtos auxiliares.
+As regras de interseção e agregação vetorial permanecem preservadas.
+
+Conforme o [módulo operacional da Fase 2](../hierarquizacao/MODULO_FASE2_GERADOR_FAVORABILIDADE_TERRITORIAL.md),
+adota-se a média ponderada pela área efetiva de interseção:
+
+\[
+F_d = \frac{\sum_{i \in V_d} f_i A_{di}}{\sum_{i \in V_d} A_{di}},
+\qquad
+C_d = 100\,\frac{\sum_{i \in V_d} A_{di}}{A_d}.
+\]
+
+Nessas expressões, \(f_i\) é o índice original da célula, \(A_{di}\) é sua
+área dentro da demanda, \(A_d\) é a área total da demanda e \(V_d\) contém
+células válidas com interseção de área positiva. \(C_d\) informa a cobertura
+válida em percentual. A ponderação impede que um pixel que intersecta somente
+uma pequena borda tenha o mesmo peso de outro inteiramente contido na demanda.
+Representa-se, assim, a favorabilidade da área coberta da demanda, não o melhor
+ponto de acesso à rede. Não se atribui precisão espacial superior à da fonte.
+
+Utiliza-se a banda original, sem reamostragem ou leitura da imagem reduzida de
+prévia. Os recortes e suas áreas são calculados em EPSG:5880, preservando os
+anéis internos das demandas. Zero válido integra a média; NoData e exterior
+da fonte são excluídos, sem conversão em zero. Sem área válida, o índice é nulo
+e a cobertura é zero. Em cobertura parcial, a média descreve somente a parcela
+com dados e deve ser interpretada junto à cobertura, sem imputação ou limiar
+automático de aceitação.
+
+Os recortes das células, os valores originais, linha e coluna, a média e a
+cobertura são preservados no GeoPackage, com banda, CRS, transformação espacial,
+NoData, dimensões e revisão física da fonte nos metadados. A leitura posterior
+confere a média e a cobertura contra os recortes persistidos. Os resultados de
+tela, PDF, Excel e CSV distinguem a síntese raster do detalhe por célula, sem
+inferir classes nominais. A regra raster não é substituída pela medida
+exploratória escolhida para vetores. A operação não homologa a superfície nem
+altera automaticamente índices cadastrais; o registro continua sujeito à
+conferência e confirmação explícitas.
 
 ## 11. Fluxo de dados ponta a ponta
 

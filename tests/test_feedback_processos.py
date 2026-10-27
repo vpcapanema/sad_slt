@@ -72,6 +72,16 @@ def test_processo_pode_ser_recolhido_sem_cancelar():
     assert "this._cancelPending = true" in cancelar
     assert "this._finalizado = true" not in cancelar
     assert "this.fechar()" not in cancelar
+    assert "_fecharSeCorrente() { if (!_progressSystem || _progressSystem === this) this.fechar();" in FEEDBACK_JS
+    assert "if (_progressSystem !== this || this._finalizado) return;" in FEEDBACK_JS
+    for inicio, fim, status in (
+        ("        sucesso(data) {", "        erro(data) {", "_statusSystem.mostrarSucesso("),
+        ("        erro(data) {", "        async cancelar() {", "_statusSystem.mostrarErro("),
+        ("        confirmarCancelamento(message) {", "        fechar() {", "_statusSystem.mostrarParcial("),
+    ):
+        corpo = FEEDBACK_JS.split(inicio, 1)[1].split(fim, 1)[0]
+        assert "setTimeout(" not in corpo
+        assert corpo.index("this._fecharSeCorrente();") < corpo.index(status)
 
 
 def test_semaforo_tem_as_tres_cores():

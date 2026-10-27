@@ -57,10 +57,12 @@ export function calcularMedida(valores, medida, percentil=50) {
 export function renderizarAgregados({tabela, entrada, medida, percentil}) {
   const head = el('thead'), titulo = el('tr'), body = el('tbody');
   const rotulo = medida === 'percentil' ? `Percentil ${numero(percentil)}` : rotulos[medida];
+  const tituloIndice = papel => entrada.campos.some(c => c.papel === papel && c.tipo === 'raster')
+    ? 'Média ponderada pela área · Raster' : medida ? rotulo : 'Índices de Favorabilidade Dimensionada';
   for (const nome of ['Demanda',
-    `${medida ? rotulo : 'Índices de Favorabilidade Dimensionada'} · Municípios`,
+    `${tituloIndice('grade')} · Municípios`,
     'Classes de Favorabilidade · Municípios',
-    `${medida ? rotulo : 'Índices de Favorabilidade Dimensionada'} · Rede Rodoviária`,
+    `${tituloIndice('rede')} · Rede Rodoviária`,
     'Classes de Favorabilidade · Rede Rodoviária']) {
     const th = el('th',nome); th.scope = 'col'; titulo.append(th);
   }
@@ -74,7 +76,12 @@ export function renderizarAgregados({tabela, entrada, medida, percentil}) {
         .sort((a,b) => compararIndices(a.favorabilidade,b.favorabilidade));
       const indice = el('td'), classe = el('td');
       indice.dataset.papel = papel; classe.dataset.classes = papel;
-      if (!itens.length) {
+      const raster = linha.rasters?.find(r => r.papel === papel);
+      if (raster) {
+        indice.append(el('span',raster.indice === null ? 'Sem dados válidos' : formatarIndice(raster.indice),'fv-estatistica-valor'));
+        indice.append(el('small',`Cobertura válida: ${numero(raster.cobertura_percentual)}% · ${raster.celulas_validas} célula(s)`,'evr-secundario'));
+        classe.textContent = 'Sem classe atribuída (raster contínuo)';
+      } else if (!itens.length) {
         indice.textContent = 'Sem interseção'; classe.textContent = 'Sem classe atribuída';
       } else {
         const validos = itens.filter(s => s.favorabilidade.estado_indice === 'valido');

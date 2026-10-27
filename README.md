@@ -227,6 +227,9 @@ relaciona cada camada ao seu tipo. As colunas e suas opções de filtro são
 ocultadas quando não se aplicam a nenhum item da pasta, independentemente da
 página ou do filtro atual. Demandas usam o tipo geométrico cadastrado no PostGIS
 e não têm camada interna; rasters simples não têm camada interna.
+Arquivos `.json` válidos sem tipo GeoJSON são documentos auxiliares, sem
+geometria ou camada interna e sem aviso de falha geoespacial. JSON inválido
+continua sinalizado como erro; camadas GeoJSON em `.json` mantêm o inventário.
 Falhas de leitura são sinalizadas na tabela e nas notificações padrão, sem
 ocultar a coluna nem apresentar metadados não consultados como valores válidos.
 Os modos Lista e Ícones e a navegação entre grupos permanecem disponíveis.

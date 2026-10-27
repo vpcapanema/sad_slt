@@ -20,6 +20,7 @@ from api.services.normalizacao_demanda import CRS_METRICO
 from api.services.pastas_storage import nome_valido
 from api.services import extracao_atributos_aliases as aliases
 from api.services import adversidades_camadas
+from api.services import favorabilidade_raster
 
 SUFIXO = '_elegibilidade_territorial'
 ANALISES = {
@@ -103,6 +104,7 @@ def calcular(entrada: ogr.Camada, bases, controle: ControleProcessamento, *,
     feicoes_base = {}
     atributos_base = []
     campos_fragmentos = {'demanda_pos', 'base_id', 'feicao_id', 'area_m2', 'geometry'}
+    tipos_por_papel = {}
     for numero, (papel, nome, ident, base) in enumerate(bases, 1):
         controle.verificar()
         if papel not in ANALISES[analise]['papeis']:
@@ -110,9 +112,49 @@ def calcular(entrada: ogr.Camada, bases, controle: ControleProcessamento, *,
         if numero == 1:
             controle.fase(2, f'Analisar as bases de {analise}')
         controle.iniciar_operacao(f'Base {numero}: {nome} — interseção, área e soma por {campo_id}')
+        raster = isinstance(base, favorabilidade_raster.SuperficieRaster)
+        anteriores = tipos_por_papel.setdefault(papel, [])
+        if analise == 'favorabilidade' and anteriores and (raster or any(anteriores)):
+            raise ValueError(f'{papel}: utilize uma única superfície raster por dimensão, sem combinar outras bases no mesmo papel.')
+        anteriores.append(raster)
+        if raster:
+            if analise != 'favorabilidade':
+                raise ValueError('Raster só participa do cálculo de favorabilidade, não da Elegibilidade.')
+            campo = campo_saida(nome, papel, existentes)
+            campo_indice = campo_saida(f'{nome}_indice', papel, existentes)
+            campo_cobertura = campo_saida(f'{nome}_cobertura', papel, existentes)
+            original = 'fav_rede_dim' if papel == 'rede' else 'fav_territorial_dim'
+            atributos = {original: f'{campo}__{original}',
+                         'linha_pixel': f'{campo}__linha_pixel', 'coluna_pixel': f'{campo}__coluna_pixel'}
+            for origem, destino in atributos.items():
+                saida.campos_intersecoes.append(ogr.campo(
+                    destino, ogr_api.OFTReal if origem == original else ogr_api.OFTInteger64))
+            atributos_base.append({'id': ident, 'papel': papel, 'campos': atributos})
+            por_demanda = [[] for _ in ids]
+            for pos, linha, coluna, valor, area, geometria, largura in favorabilidade_raster.celulas(base, metrica, controle):
+                pos_base = linha * largura + coluna
+                feicao_id = f'{ident}::feicao:{pos_base}'
+                feicoes_base[feicao_id] = {
+                    'id': feicao_id, 'base_id': ident, 'nome': f'Célula L{linha + 1} C{coluna + 1}',
+                    'papel': papel, 'tipo': 'feicao', 'posicao': pos_base, 'campo_nome': None}
+                por_demanda[pos].append((valor, area))
+                if intersecoes is not None:
+                    intersecoes.append({atributos[original]: valor,
+                                        atributos['linha_pixel']: linha + 1, atributos['coluna_pixel']: coluna + 1,
+                                        'demanda_pos': pos, 'base_id': ident, 'feicao_id': feicao_id,
+                                        'area_m2': area, 'geometry': geometria})
+            resumos = [favorabilidade_raster.resumir(itens, total) for itens, total in zip(por_demanda, areas)]
+            saida.adicionar(campo, ogr_api.OFTReal, [r['area_valida_m2'] or None for r in resumos])
+            saida.adicionar(campo_indice, ogr_api.OFTReal, [r['indice'] for r in resumos])
+            saida.adicionar(campo_cobertura, ogr_api.OFTReal, [r['cobertura_percentual'] for r in resumos])
+            campos.append({'id': ident, 'nome': nome, 'papel': papel, 'campo': campo, 'unidade': 'm²',
+                           'tipo': 'raster', 'campo_indice': campo_indice, 'campo_cobertura': campo_cobertura,
+                           'raster': favorabilidade_raster.preparar(ident, base.revisao)})
+            controle.concluir(mensagem=f'{nome}: média ponderada por área e cobertura válida gravadas.')
+            continue
         _validar(base, nome)
         if analise == 'favorabilidade' and any(ogr_api.GT_Flatten(g.GetGeometryType()) not in (ogr_api.wkbPolygon, ogr_api.wkbMultiPolygon) for g in base.geometrias):
-            raise ValueError(f'{nome}: esta etapa aceita somente superfícies poligonais. Linhas e rasters podem ser visualizados, mas não participam do cálculo de áreas.')
+            raise ValueError(f'{nome}: use superfícies poligonais ou raster de índices. Linhas não participam do cálculo de áreas.')
         base_metrica = ogr.reproject(base, CRS_METRICO, name=nome, progress=controle.mensagem)
         campo = campo_saida(nome, papel, existentes)
         atributos = {}
@@ -163,7 +205,8 @@ def calcular(entrada: ogr.Camada, bases, controle: ControleProcessamento, *,
                    'unidade': 'm²', 'campos': campos, 'feicoes': len(saida),
                    'campo_area_total': campo_area, 'feicoes_base': list(feicoes_base.values()),
                    'camada_intersecoes': 'intersecoes', 'versao_saida': 2,
-                   **({'atributos_superficies': atributos_base, 'indices_agregados': False} if analise == 'favorabilidade' else {}),
+                   **({'atributos_superficies': atributos_base,
+                       'indices_agregados': any(c.get('tipo') == 'raster' for c in campos)} if analise == 'favorabilidade' else {}),
                    'agregacao': 'Soma das áreas dos fragmentos por ID_FEICAO, sem união ou dissolução'}
 
 
@@ -239,7 +282,7 @@ def serializar(saida: ogr.Camada, auditoria: dict, intersecoes: list[dict], arqu
         gdal.Unlink(path)
 
 
-def _carregar(ref: dict):
+def _carregar(ref: dict, *, aceitar_raster=False):
     ident = ref['id']
     revisao = ref.get('revisao')
     def conferir():
@@ -249,6 +292,12 @@ def _carregar(ref: dict):
             if revisao != f'{estado.st_mtime_ns}-{estado.st_size}':
                 raise ValueError(f"{ref['nome']}: o arquivo mudou após o envio à bancada. Prepare-o novamente.")
     conferir()
+    if aceitar_raster and ident.startswith('storage:'):
+        caminho, camada = storage.separar_id(ident)
+        if camada is None and PurePosixPath(caminho).suffix.lower() in storage.EXTENSOES_RASTER:
+            if not revisao:
+                raise ValueError('Prepare o raster novamente para conferir a revisão física da fonte.')
+            return favorabilidade_raster.SuperficieRaster(ident, revisao)
     frame = ogr.carregar_referencia(ident)
     if not isinstance(frame, ogr.Camada):
         raise ValueError(f"{ref['nome']}: a fonte não retornou uma camada vetorial integral.")
@@ -283,12 +332,16 @@ def executar(payload: dict, controle: ControleProcessamento, *, analise: str = '
         origem = normalizacao.get('origem') if isinstance(normalizacao, dict) else None
         if not isinstance(origem, dict) or origem.get('hierarquizacao') != codigo:
             raise ValueError('A entrada não foi preparada a partir da hierarquização informada.')
+    if not isinstance(entrada, ogr.Camada):
+        raise ValueError('A entrada de demandas deve ser uma camada vetorial poligonal.')
     def bases():
         for papel in config['papeis']:
             for ref in payload[papel]:
                 controle.verificar()
                 controle.mensagem(f"Ler base integral de {papel}: {ref['nome']}")
-                yield papel, ref['nome'], ref['id'], _carregar(ref)
+                raster = (analise == 'favorabilidade' and ref['id'].startswith('storage:') and
+                          PurePosixPath(storage.separar_id(ref['id'])[0]).suffix.lower() in storage.EXTENSOES_RASTER)
+                yield papel, ref['nome'], ref['id'], (_carregar(ref, aceitar_raster=True) if raster else _carregar(ref))
     intersecoes = []
     saida, auditoria = calcular(entrada, bases(), controle, intersecoes=intersecoes, analise=analise)
     if analise == 'elegibilidade':

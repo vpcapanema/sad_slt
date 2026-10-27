@@ -309,7 +309,7 @@ class ExecucaoFavorabilidade(BaseModel):
     def conferir_papeis(self):
         bases = self.grade + self.rede
         if not bases:
-            raise ValueError('Selecione ao menos uma superfície poligonal de grade ou rede.')
+            raise ValueError('Selecione ao menos uma superfície poligonal ou raster de grade ou rede.')
         ids = [self.entrada.id, *(base.id for base in bases)]
         if len(ids) != len(set(ids)):
             raise ValueError('Uma camada não pode participar mais de uma vez ou ocupar papéis diferentes.')
@@ -318,6 +318,18 @@ class ExecucaoFavorabilidade(BaseModel):
 
 class DemandaFavorabilidade(DemandaBancada):
     revisao: str | None = Field(default=None, min_length=1, max_length=200)
+
+
+@router.post('/favorabilidade/preparar-raster')
+def preparar_raster_favorabilidade(payload: DemandaFavorabilidade,
+                                  user: SessionUser = Depends(require_geospatial_access)):
+    from api.services import favorabilidade_raster
+    try:
+        return favorabilidade_raster.preparar(payload.id, payload.revisao)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except (ValueError, RuntimeError) as exc:
+        raise HTTPException(422, str(exc)) from exc
 
 
 @router.post('/favorabilidade/preparar-demanda')

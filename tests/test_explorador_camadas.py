@@ -336,6 +336,28 @@ def test_listing_distinguishes_rasters_auxiliary_files_and_read_errors(client,mo
     assert broken['geometria_aplicavel'] is True and broken['camada_aplicavel'] is True
 
 
+def test_listing_distinguishes_json_metadata_geojson_and_invalid_json(client,mounted):
+    parent=mounted/'base-geoespacial/vetor'
+    (parent/'metadados.json').write_text('{"fonte":"rede","resolucao_m":200}',encoding='utf-8')
+    (parent/'lista.json').write_text('[1,2,3]',encoding='utf-8')
+    (parent/'corrompido.json').write_text('{"incompleto":',encoding='utf-8')
+    (parent/'ponto.json').write_text(
+        '{"type":"FeatureCollection","features":[{"type":"Feature","properties":{},'
+        '"geometry":{"type":"Point","coordinates":[-46,-23]}}]}',encoding='utf-8')
+    response=client.get('/api/geoespacial/explorador/navegar',params={
+        'fonte':'storage','caminho':'base-geoespacial/vetor'})
+    assert response.status_code==200
+    items={item['nome_arquivo']:item for item in response.json()['itens']}
+    for name in ('metadados.json','lista.json'):
+        assert 'metadados_erro' not in items[name]
+        assert items[name]['geometria_aplicavel'] is False
+        assert items[name]['camada_aplicavel'] is False
+        assert items[name]['mapeavel'] is False
+    assert items['corrompido.json']['metadados_erro']
+    assert items['ponto.json']['geometria_tipo']=='Point'
+    assert 'metadados_erro' not in items['ponto.json']
+
+
 def test_output_metadata_comes_from_file_not_stale_catalogue(client,monkeypatch,mounted):
     execution=str(uuid4())
     parent=mounted/f'saidas-geoespaciais/execucoes/{execution}/camadas'

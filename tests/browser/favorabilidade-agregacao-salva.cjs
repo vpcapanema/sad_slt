@@ -158,6 +158,27 @@ const ROTA = '/restrict/hierarquizacao/fase-2/';
     await page.locator('#ev-resultados-relatorios').screenshot({path:path.join(root,'.tmp/favorabilidade-finalizacao.png')});
     await page.locator('.secao-favorabilidade-mapa').screenshot({path:path.join(root,'.tmp/favorabilidade-legenda.png')});
     await page.locator('.secao-favorabilidade-agregados').screenshot({path:path.join(root,'.tmp/favorabilidade-agregacao.png')});
+    campo.tipo = 'raster';
+    linhas.forEach((linha,i) => {
+      linha.rasters = [{base_id:'grade',papel:'grade',indice:i === 0 ? .6 : i === 1 ? 0 : null,
+        cobertura_percentual:i === 0 ? 75 : i === 1 ? 50 : 0,celulas_validas:i === 0 ? 2 : i === 1 ? 1 : 0,
+        metrica:'media_ponderada_area'}];
+    });
+    salva = {medida:'media',percentil:null};
+    await page.evaluate(async () => {
+      window.resultadosTeste.iniciar(); window.resultadosTeste.adicionar('job-teste');
+      await window.resultadosTeste.finalizar();
+    });
+    assert.match(await page.locator('#ev-resultados-agregados tbody tr').first().innerText(), /0,60/);
+    assert.match(await page.locator('#ev-resultados-agregados tbody tr').first().innerText(), /75%/);
+    assert.match(await page.locator('#ev-resultados-estatisticas-status').innerText(), /Regra fixa/);
+    for (const id of ['tendencia','dispersao','posicao','percentil'])
+      assert(await page.locator(`#ev-resultados-${id}`).isDisabled(),`Raster: ${id} não altera a média por área`);
+    await todos.check();
+    assert(await page.locator('#ev-resultados-tendencia').isDisabled(),'Seleção de linha não reativa medidas alternativas para raster');
+    assert(await salvar.isDisabled(),'Não exige salvar medida alternativa para raster');
+    assert(await registrar.isEnabled(),'Regra raster auditada permite registro explícito');
+    assert.deepEqual(erros, []);
     console.log('PASS: conferência sem tabela; resultados progressivos; escolha obrigatória, salvar, registrar, alteração e reabertura da medida.');
   } finally {
     await browser?.close(); server.closeAllConnections?.(); await new Promise(resolve=>server.close(resolve));

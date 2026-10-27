@@ -12,6 +12,27 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   assert.equal(await page.locator('.notification-container').count(),1,'Script repetido mantém um único Notify');
   const ativo=sel=>page.locator(sel).evaluate(n=>n.classList.contains('pfs-active'));
 
+  for(const minimizado of [false,true]){
+   for(const desfecho of ['sucesso','parcial','erro','cancelado']){
+    const estado=await page.evaluate(({minimizado,desfecho})=>{
+     const proc=ProcessFeedback.iniciarCadastro({title:'Transição de status'});
+     if(minimizado)proc.ocultar();
+     if(desfecho==='sucesso')proc.sucesso({message:'Concluído'});
+     if(desfecho==='parcial')proc.sucesso({_status:'partial',message:'Ressalvas'});
+     if(desfecho==='erro')proc.erro({message:'Falha de teste'});
+     if(desfecho==='cancelado')proc.confirmarCancelamento();
+     proc.reabrir();
+     const ativo=id=>document.getElementById(id).classList.contains('pfs-active');
+     return {progresso:ativo('pfsProgressOverlay'),painel:ativo('pfsProgressBox'),
+      reabrir:!document.getElementById('pfsReopen').hidden,status:ativo('pfsStatusOverlay'),
+      resultado:ativo(desfecho==='sucesso'?'pfsSuccessBox':desfecho==='erro'?'pfsErrorBox':'pfsPartialBox')};
+    },{minimizado,desfecho});
+    assert.deepEqual(estado,{progresso:false,painel:false,reabrir:false,status:true,resultado:true},
+     `${desfecho}, minimizado=${minimizado}: status substitui o acompanhamento imediatamente`);
+   }
+  }
+  await page.evaluate(()=>StatusFeedback.fechar());
+
   // Confirmação: Promise<boolean>, Esc cancela, foco volta à origem, ação perigosa começa em Cancelar.
   await page.locator('#origem').focus();
   await page.evaluate(()=>{window.decisao=ProcessFeedback.confirmar({title:'Excluir camada',message:'Excluir “Rodovias”?',warning:'Não pode ser desfeita.',confirmLabel:'Excluir',danger:true});});

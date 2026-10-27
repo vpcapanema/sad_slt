@@ -69,15 +69,16 @@ redistribuição de pesos. A geração do produto não representa sua homologaç
 
 A pagina `/restrict/hierarquizacao/fase-2/` disponibiliza o bloco **Conferir e
 executar**, com o comando **Calcular Favorabilidade Territorial**. Esta etapa
-reutiliza o motor de intersecoes independentes da Elegibilidade, mas nao corresponde
-a geracao, extracao agregada ou homologacao do indice final descrito neste documento.
+reutiliza o motor de intersecoes independentes da Elegibilidade e admite extracao
+raster pela media ponderada por area, conforme a subseção abaixo. Nao corresponde
+a geracao ou homologacao das superficies de origem.
 
 O conjunto de calculo inclui somente as camadas confirmadas pela pagina e visiveis
 na bancada, nos papeis Entrada, Favorabilidade territorial de grade e Favorabilidade
 territorial de rede. Camadas inseridas diretamente na bancada sao sinalizadas e nao
 recebem papel automaticamente. Exige-se uma entrada e ao menos uma superficie
-poligonal; bases lineares e rasters permanecem disponiveis para visualizacao, mas
-nao sao convertidos em superficies de area nem amostrados por este comando.
+poligonal ou raster de indices. Bases lineares permanecem apenas como referencias
+de visualizacao. A entrada de demandas continua obrigatoriamente vetorial.
 
 A selecao, a previa e o envio a bancada preservam as fontes originais. Somente apos
 a confirmacao do calculo, a entrada e preparada em arquivo derivado pelas mesmas
@@ -92,7 +93,7 @@ da preparacao e enviada ao calculo para entradas avulsas e superficies. O token
 de visualizacao nao e utilizado como evidencia de alteracao do arquivo original;
 mudancas reais continuam interrompendo a execucao.
 
-Cada superficie e intersectada separadamente com a entrada integral, em EPSG:5880.
+Cada superficie vetorial e intersectada separadamente com a entrada integral, em EPSG:5880.
 Somam-se exclusivamente as areas dos fragmentos por feicao de entrada, em m2, sem
 uniao ou dissolucao. Os campos `fg_*` identificam grade e `fr_*` identificam rede.
 Ausencia de intersecao resulta em `NULL`; contato sem area resulta em zero.
@@ -102,11 +103,70 @@ O GeoPackage possui a camada principal `favorabilidade_territorial`, com a copia
 integral da entrada preparada, identificador por feicao, area total e areas por
 base; e a camada `intersecoes`, com geometria, posicao da demanda, identificadores
 da base e da feicao de origem, area e todos os atributos nao geometricos de cada
-superficie. A classe nominal, os campos normalizados e os indices com e sem o
+superficie vetorial. A classe nominal, os campos normalizados e os indices com e sem o
 sufixo `_dim` permanecem separados por fragmento, sem media, moda, reescalonamento
 ou qualquer agregacao desses valores. Prefixos evitam colisoes e os metadados
 `SICARD_FAVORABILIDADE` registram o mapa entre os campos originais e os de saida.
 As geometrias e os atributos gravados sao conferidos por reabertura do produto.
+
+### Superfícies raster: média ponderada pela área efetiva
+
+Para cada dimensão (grade ou rede), admite-se uma única superfície raster, sem
+combinação com outras bases no mesmo papel. Pode-se utilizar raster de rede e
+vetor de grade na mesma execução. A banda deve ser única, real, georreferenciada
+e conter índices físicos em [0,1], sem escala ou deslocamento. O domínio é
+conferido nas células que intersectam as demandas; valores inválidos interrompem
+o cálculo, sem truncamento ou substituição. Os rasters auxiliares conhecidos de
+distância, pertinência, origem e máscara da rede são recusados como índice final.
+Para o produto de 200 m, utiliza-se
+`superficie_favorabilidade_rede_indice_final_200m.tif`.
+
+Lê-se a banda original por janelas das demandas, sem utilizar a imagem de prévia,
+overviews ou reamostragem. Cada célula é recortada pela geometria integral da
+demanda, inclusive seus anéis internos. A área efetivamente intersectada é
+calculada em EPSG:5880. Quando o CRS da fonte difere, as bordas das células são
+densificadas com passo igual a 1/16 da maior aresta da célula antes da transformação; não se altera a grade
+nem se interpolam os valores da banda.
+
+Para a demanda \(d\), o índice raster é:
+
+\[
+F_d = \frac{\sum_{i \in V_d} f_i A_{di}}{\sum_{i \in V_d} A_{di}}
+\]
+
+em que \(f_i\) é o índice original da célula, \(A_{di}\) é a área de interseção
+entre célula e demanda e \(V_d\) reúne somente células válidas com área positiva.
+Adota-se esta métrica porque representa a favorabilidade da área da demanda,
+evitando que uma célula que alcança apenas uma pequena faixa de borda receba o
+mesmo peso de outra inteiramente contida. Por exemplo, índices 0,2 e 0,8 que
+intersectam respectivamente 50 e 100 m² resultam em 0,6, não em 0,5.
+Não se interpreta a média como melhor ponto de conexão ou acessibilidade efetiva.
+
+Zero é dado válido e participa do numerador e do denominador. NoData, máscara
+inválida e exterior da extensão raster não recebem zero e não participam da
+média. Informa-se a cobertura válida, definida como a soma das áreas válidas
+dividida pela área total da demanda, em percentual, e a área sem dados. Sem
+área válida, o índice permanece nulo e a cobertura é zero. Em cobertura parcial,
+a média representa somente a parcela coberta; o percentual deve acompanhar sua
+interpretação. Não se aplica limiar automático de cobertura ou preenchimento.
+
+O GeoPackage preserva os recortes das células válidas, os índices de banda,
+linha e coluna (numeração iniciada em um), além da média e cobertura na camada
+principal. Os metadados registram banda, CRS, transformação espacial, NoData,
+dimensões da grade, revisão física da fonte e a métrica. Ao reabrir o produto,
+recalculam-se a média e a cobertura a partir dos recortes para conferir os campos
+persistidos. Não se infere classe nominal nem índice anterior ao dimensionamento.
+
+A tabela agregada mostra a média ponderada e a cobertura por demanda. A regra
+raster é fixa e não é substituída pelos seletores estatísticos das bases vetoriais.
+Quando todas as bases são raster, não se exige salvar uma medida alternativa.
+O registro oficial continua dependendo da conferência e confirmação explícitas
+do usuário, preservando a métrica e a cobertura no resultado cadastral.
+O PDF, a folha **Síntese Raster** do Excel e o CSV correspondente incluem a média
+e a cobertura; as tabelas de detalhe conservam os valores individuais das células.
+O mapa de resultados exibe os recortes históricos de células, não a extensão
+integral atual do raster. As regras vetoriais descritas nas demais subseções
+permanecem inalteradas; a exceção de agregação por área refere-se ao raster.
 
 O fluxo oferece progresso por etapas e cancelamento em ponto seguro antes da
 gravacao final. O acompanhamento e persistido em namespace proprio de

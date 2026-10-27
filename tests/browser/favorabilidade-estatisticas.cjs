@@ -46,8 +46,19 @@ const assert = require('node:assert/strict');
       renderizarAgregados({tabela,entrada:repeticoes,medida:''});
       const separados = {indices:tabela.querySelector('td[data-papel="grade"]').textContent,
         classes:tabela.querySelector('td[data-classes="grade"]').textContent};
+      const entradaRaster = {campos:[{id:'r',papel:'rede',tipo:'raster'}],linhas:[
+        {chave:'0',id:'R',nome:'Raster com bordas',sobreposicoes:[item('1','r',.2),item('2','r',.8)],
+          rasters:[{papel:'rede',indice:.6,cobertura_percentual:75,celulas_validas:2}]},
+        {chave:'1',id:'Z',nome:'Zero válido',sobreposicoes:[item('3','r',0)],
+          rasters:[{papel:'rede',indice:0,cobertura_percentual:50,celulas_validas:1}]},
+        {chave:'2',id:'N',nome:'Sem dados',sobreposicoes:[],
+          rasters:[{papel:'rede',indice:null,cobertura_percentual:0,celulas_validas:0}]}]};
+      renderizarAgregados({tabela,entrada:entradaRaster,medida:'maximo'});
+      const raster = {valores:[...tabela.querySelectorAll('td[data-papel="rede"] .fv-estatistica-valor')].map(n=>n.textContent),
+        coberturas:[...tabela.querySelectorAll('td[data-papel="rede"] small')].map(n=>n.textContent),
+        titulo:tabela.tHead.textContent};
       return {medidas,erros,porDemanda,contagens,formatos,classes,classesRenderizadas,semMutacao,
-        separados,
+        separados,raster,
         precisos:precisos.map(v=>({original:v.indice,texto:indiceTexto(v)})),
         intactos:valores,
         multimodal:calcularMedida([.2,.8,.2,.8,.4],'moda'),
@@ -83,6 +94,10 @@ const assert = require('node:assert/strict');
     assert.equal(resultado.separados.indices,'0,39, 0,39, 0,37 e 0,37','Vírgulas, conjunção e repetições preservadas');
     assert.equal(resultado.separados.classes,'Média, Baixa, Média e Baixa','Classes acompanham a mesma ordem dos índices');
     assert.deepEqual(resultado.precisos,[{original:.7049,texto:'0,70'},{original:.7041,texto:'0,70'}],'Ordenação usa precisão original mesmo com valores exibidos iguais');
+    assert.deepEqual(resultado.raster.valores,['0,60','0,00','Sem dados válidos'],'Raster mantém a média ponderada, mesmo com máximo selecionado');
+    assert.match(resultado.raster.coberturas[0],/75%/);
+    assert.match(resultado.raster.coberturas[1],/50%/);
+    assert.match(resultado.raster.titulo,/Média ponderada pela área/);
     console.log('PASS: medidas estatísticas, percentis, empates, zeros, vazios, exclusão de inválidos e isolamento por demanda/papel.');
   } finally { await browser.close(); }
 })().catch(erro => { console.error(erro); process.exitCode = 1; });

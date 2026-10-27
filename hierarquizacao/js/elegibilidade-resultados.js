@@ -6,9 +6,9 @@ import {el} from '../../geoespacial/extracao-atributos/ui.js';
 import {escolherArquivo} from '../../geoespacial/extracao-atributos/explorador.js?v=20261020-saidas';
 import {sobreposicoesDaAnalise, demandasDaAnalise, renderizarRoscaDemandas} from './sobreposicoes-rosca.js?v=20261023-contexto';
 import {indiceTexto, classeTexto, corClasse, compararIndices, compararDemandas, renderizarIndices} from './favorabilidade-indices.js?v=20261023-classes-ordem';
-import {renderizarAgregados} from './favorabilidade-estatisticas.js?v=20261023-classes-ordem';
-import {criarMapaFavorabilidade} from './favorabilidade-mapa.js?v=20261027-enquadramento';
-import {criarFiltroResultados, criarResumoResultados, paginarResultados} from './elegibilidade-tabelas.js?v=20261027-seletores';
+import {renderizarAgregados} from './favorabilidade-estatisticas.js?v=20261027-raster-area';
+import {criarMapaFavorabilidade} from './favorabilidade-mapa.js?v=20261027-raster-area';
+import {criarFiltroResultados, criarResumoResultados, paginarResultados} from './elegibilidade-tabelas.js?v=20261027-raster-area';
 
 const numero = valor => valor.toLocaleString('pt-BR', {
   minimumFractionDigits:2, maximumFractionDigits:valor !== 0 && Math.abs(valor) < .01 ? 20 : 2,
@@ -27,11 +27,13 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
   const formulario = node('aliases'), campos = new Map();
   let pendentes = [], execucoes = [], fontes = [], modelo = null, pagina = 0, indice = 0;
   let medidaSalva = null;
+  const somenteRasters = () => Boolean(modelo?.entradas.length &&
+    modelo.entradas.every(e => e.campos.length && e.campos.every(c => c.tipo === 'raster')));
   const configuracaoMedida = () => {
     const medida = ['tendencia','dispersao','posicao'].map(id => node(id).value).find(Boolean) || '';
     return {medida, percentil:medida === 'percentil' ? node('percentil').valueAsNumber : null};
   };
-  const medidaConfirmada = () => !favorabilidade || Boolean(medidaSalva &&
+  const medidaConfirmada = () => !favorabilidade || somenteRasters() || Boolean(medidaSalva &&
     JSON.stringify(medidaSalva) === JSON.stringify(configuracaoMedida()));
   let ocupado = false, externo = false, chave = '0', baseAtiva = '', classeAtiva = '';
   let mapa = null, demandas = null, restricoes = null, riscos = null, camadas = new Map(), recortes = [];
@@ -135,6 +137,11 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
     resumoTabela?.controles(bloqueado);
     if (favorabilidade) node('percentil').disabled = bloqueado || node('posicao').value !== 'percentil';
     if (favorabilidade) {
+      for (const id of ['tendencia','dispersao','posicao','percentil'])
+        node(id).dataset.rasterFixo = String(somenteRasters());
+      if (somenteRasters()) {
+        for (const id of ['tendencia','dispersao','posicao','percentil']) node(id).disabled = true;
+      }
       const config = configuracaoMedida();
       node('salvar-medida').disabled = bloqueado || !modelo || !config.medida || medidaConfirmada()
         || (config.medida === 'percentil' && (!Number.isFinite(config.percentil) || config.percentil < 0 || config.percentil > 100));
@@ -508,6 +515,11 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
       ? medidaConfirmada() ? 'Medida salva nesta análise. Use Registrar resultados da fase para gravar os valores no banco.'
         : 'Prévia da medida escolhida. Clique em Salvar para guardar esta escolha antes de registrar a fase. Classes originais mantidas.'
       : 'Escolha uma medida nos seletores acima. É obrigatório salvar a escolha para registrar um valor único por demanda e dimensão.';
+    if (entrada().campos.some(c => c.tipo === 'raster')) {
+      node('estatisticas-status').textContent = 'Raster: média ponderada pela área efetiva das células, com cobertura válida; NoData não é zero. ' +
+        (somenteRasters() ? 'Regra fixa, pronta para conferência e registro explícito da fase.'
+          : 'Os seletores aplicam-se somente às superfícies vetoriais. ' + node('estatisticas-status').textContent);
+    }
   }
   if (favorabilidade) {
     node('salvar-medida').onclick = () => operar(async () => {

@@ -134,7 +134,7 @@
       <p id="fv-bancada-status" class="ea-hint" role="status">Nenhuma camada confirmada nesta página.</p>
       <section class="secao-favorabilidade-conferencia ea-checkup" aria-labelledby="fv-checkup-title">
       <h4 class="ea-checkup-title" id="fv-checkup-title">Conferir e executar</h4>
-      <p class="ea-hint">Confira as demandas e as superfícies poligonais de grade e rede. Somente camadas confirmadas por esta página e marcadas como visíveis na bancada integram esta composição; a seleção e a prévia não alteram este conjunto.</p>
+      <p class="ea-hint">Confira as demandas e as superfícies poligonais ou raster de grade e rede. Somente camadas confirmadas por esta página e marcadas como visíveis na bancada integram esta composição; a seleção e a prévia não alteram este conjunto.</p>
       <div class="ea-execucao-selecao" id="fv-run-selection" aria-live="polite">
       <div class="ea-execucao-linha"><strong>Análise:</strong> <span>Favorabilidade territorial de grade e da rede · Fase 2</span></div>
       <div class="ea-checkup-tables">
@@ -145,11 +145,11 @@
         </div>
         {% endfor %}
       </div>
-      <p id="fv-run-count" class="ea-hint">Marque uma entrada e ao menos uma superfície poligonal na bancada.</p>
+      <p id="fv-run-count" class="ea-hint">Marque uma entrada e ao menos uma superfície poligonal ou raster na bancada.</p>
       <p id="fv-run-warning" class="ea-hint" role="status"></p>
       </div>
       <div class="ea-execute">
-        <p id="fv-run-pending" class="ea-hint">A execução prepara a entrada poligonal segundo as regras cadastrais da Elegibilidade e intersecta cada superfície separadamente com a entrada integral. Produz áreas em m² (fg_* para grade e fr_* para rede) e fragmentos com todos os atributos das superfícies, inclusive a classe nominal e os campos normalizados, sem agregá-los. O GeoPackage é gravado no Storage e incluído na bancada. Rasters e bases lineares são apenas referências de visualização nesta etapa. Não altera os índices registrados nem homologa superfícies.</p>
+        <p id="fv-run-pending" class="ea-hint">A execução prepara a entrada poligonal segundo as regras cadastrais da Elegibilidade. Vetores preservam áreas e atributos por interseção. Rasters usam a média ponderada pela área de cada célula efetivamente dentro da demanda, evitando peso igual para pixels que apenas tocam uma borda. Zero é válido; NoData é excluído e a cobertura válida é informada. Use uma única superfície raster por dimensão, sem outras bases no mesmo papel. O GeoPackage preserva células e recortes para auditoria e é incluído na bancada. Linhas permanecem apenas como referência. Não altera os índices registrados nem homologa superfícies.</p>
         <button id="fv-calcular" class="ea-btn ea-btn-primary" type="button" aria-describedby="fv-run-pending" disabled>Calcular Favorabilidade Territorial</button>
       </div>
       </section>
@@ -158,7 +158,7 @@
   <section class="secao-favorabilidade-resultados ea-section ev-resultados" id="ev-resultados" aria-labelledby="ev-resultados-title">
     <header class="ea-section-head"><span class="ea-number">5</span><h2 id="ev-resultados-title">Resultados da Favorabilidade Territorial</h2></header>
     <div class="ea-section-body">
-      <p class="ea-hint">Confira os resultados por demanda. Escolha e salve a medida de agregação e, após a conferência, registre os resultados da fase.</p>
+      <p class="ea-hint">Confira os resultados por demanda. Para raster, utiliza-se a média ponderada pela área, com cobertura válida. Para vetores, escolha e salve a medida de agregação. Após a conferência, registre os resultados da fase.</p>
       <div id="ev-resultados-vazio" class="fv-resultados-vazio">
         <i class="fas fa-folder-open" aria-hidden="true"></i>
         <div><h3>Consulte os resultados de uma análise</h3><p class="ea-hint">Execute o cálculo na seção 4 ou abra um GeoPackage de saída já salvo no Storage.</p></div>
@@ -318,7 +318,7 @@
             <summary>Sobre os arquivos e os próximos passos</summary>
             <ul>
               <li>O pacote inclui PDF, Excel, CSV, GeoPackages e guia de leitura. Os filtros da tela não limitam o conteúdo exportado.</li>
-              <li>O PDF mostra duas casas decimais; as planilhas preservam a precisão disponível. Os arquivos mantêm os valores por feição, sem aplicar a medida de agregação escolhida.</li>
+              <li>O PDF mostra duas casas decimais; as planilhas preservam a precisão disponível. Os arquivos mantêm os valores por feição ou célula. Para raster, incluem também a média ponderada pela área e a cobertura válida; a medida escolhida para vetores não altera essa regra.</li>
               <li>Editar os arquivos baixados não atualiza a hierarquização. Corrija os dados de origem e execute uma nova análise quando necessário.</li>
               <li>Após registrar os resultados, utilize a navegação superior para continuar à fase seguinte.</li>
             </ul>
@@ -342,5 +342,5 @@
 <script src="/assets/vendor/maplibre-gl/maplibre-gl.js"></script>
 <script src="/assets/vendor/maplibre-gl/leaflet-maplibre-gl.js"></script>
 <script src="/restrict/hierarquizacao/js/hier-api.js"></script>
-<script type="module" src="/restrict/hierarquizacao/js/fase2-favorabilidade-v2.js?v=20261027-enquadramento"></script>
+<script type="module" src="/restrict/hierarquizacao/js/fase2-favorabilidade-v2.js?v=20261027-raster-area"></script>
 {% endblock %}

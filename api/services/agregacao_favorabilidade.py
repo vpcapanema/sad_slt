@@ -53,8 +53,10 @@ def calcular(valores, configuracao):
 
 
 def valores_linha(linha, config):
-    return {papel: calcular([s['favorabilidade']['indice'] for s in linha['sobreposicoes']
-                            if s['papel'] == papel and s['favorabilidade']['estado_indice'] == 'valido'], config)
+    rasters = {r['papel']: r for r in linha.get('rasters', [])}
+    return {papel: rasters[papel]['indice'] if papel in rasters else
+            calcular([s['favorabilidade']['indice'] for s in linha['sobreposicoes']
+                      if s['papel'] == papel and s['favorabilidade']['estado_indice'] == 'valido'], config)
             for papel in ('grade', 'rede')}
 
 
@@ -65,6 +67,9 @@ def _caminho(resultados, dono):
 
 
 def carregar(resultados, dono):
+    bases = [b for r in resultados for b in r.get('favorabilidade', {}).get('campos', [])]
+    if bases and all(b.get('tipo') == 'raster' for b in bases):
+        return configurar('media')
     try:
         salvo = json.loads(storage_remoto.baixar(_caminho(resultados, dono)))
     except FileNotFoundError:

@@ -14,6 +14,7 @@ from uuid import uuid4
 from zipfile import ZipFile, ZIP_DEFLATED
 
 import geopandas as gpd
+import pandas as pd
 from pyogrio import read_info
 from pyogrio.errors import DataLayerError, DataSourceError
 from reportlab.lib import colors
@@ -30,6 +31,7 @@ from osgeo import ogr
 from api.services import extracao_atributos_relatorios as estilo
 from api.services import elegibilidade_sintese as sintese
 from api.services import favorabilidade_exportacao
+from api.services import favorabilidade_raster
 from api.services.extracao_atributos_exportacao import registros, texto
 from api.services.extracao_ogr import reproject
 from api.services.storage_geoespacial import RAIZES_LEITURA
@@ -77,6 +79,12 @@ METODOLOGIA_FAVORABILIDADE = (
     'As áreas permanecem apenas como informação técnica complementar da interseção. '
     'Os GeoPackages preservam a entrada preparada, as interseções e todos os atributos das superfícies, '
     'inclusive classe nominal e índices com e sem _dim, sem agregá-los. '
+    'Para superfícies raster, a banda original é recortada por demanda, sem reamostragem: '
+    'o índice da demanda é a média dos valores das células ponderada pela área efetivamente intersectada. '
+    'Esta regra raster substitui a medida exploratória selecionada na tela, que se aplica apenas às bases vetoriais. '
+    'Zero entra na média; NoData e áreas externas não entram no denominador nem recebem zero. '
+    'A cobertura válida é informada; sem área válida, o índice permanece nulo. Não se inferem classes raster. '
+    'As células, seus valores e recortes ficam preservados para auditoria, juntamente com a média e a cobertura. '
     'Esta apresentação não atualiza índices registrados, ranking, pesos AHP ou homologação.'
 )
 NOTA_MAPA_FAVORABILIDADE = (
@@ -146,7 +154,7 @@ def _fontes(resultados: list[dict], *, analise: str = 'elegibilidade') -> list[d
                                          else alias['nome'])
             sugestao = re.sub(r'[<>/\\\x00-\x1f]', ' ', sugestao).strip()[:160]
             fontes[ident] = {'id': ident, 'papel': item['papel'], 'nome': titulo(sugestao),
-                             'origem': alias['origem'], 'tipo': item.get('tipo', 'camada'),
+                             'origem': alias['origem'], 'tipo': 'camada' if item.get('tipo') == 'raster' else item.get('tipo', 'camada'),
                              'base_id': item.get('base_id'),
                              **({'adversidade': item['adversidade']} if 'adversidade' in item else {})}
     return list(fontes.values())
@@ -427,6 +435,11 @@ def _auditoria(dados: bytes, *, analise: str = 'elegibilidade') -> dict:
                 or not all(isinstance(campo.get(c), str) and campo[c] for c in ('id', 'nome', 'campo'))
                 or campo.get('papel') not in config['papeis']):
             raise ValueError(f'Os metadados contêm uma base de {analise} inválida.')
+        if campo.get('tipo') == 'raster' and (
+                analise != 'favorabilidade' or
+                not all(isinstance(campo.get(c), str) and campo[c] for c in ('campo_indice', 'campo_cobertura')) or
+                not isinstance(campo.get('raster'), dict) or campo['raster'].get('metrica') != 'media_ponderada_area'):
+            raise ValueError('Os metadados raster não identificam a média ponderada e a cobertura válida.')
     bases = {c['id']: c['papel'] for c in auditoria['campos']}
     fontes = [auditoria['entrada']['id'], *(c['id'] for c in auditoria['campos'])]
     for feicao in auditoria['feicoes_base']:
@@ -590,10 +603,23 @@ def atributos_feicao(identificador: str, base_id: str, posicao: int, dono) -> di
 
 def superficie_favorabilidade(identificador: str, base_id: str, dono) -> dict:
     resultado = _selecionar([identificador], dono, analise='favorabilidade')[0]
-    _ler(resultado, analise='favorabilidade')
+    _, dados = _ler(resultado, analise='favorabilidade')
     base = next((c for c in resultado['favorabilidade']['campos'] if c['id'] == base_id), None)
     if base is None:
         raise ValueError('A superfície não pertence a esta análise.')
+    if base.get('tipo') == 'raster':
+        recortes = gpd.read_file(BytesIO(dados), layer='intersecoes', engine='pyogrio')
+        recortes = recortes[recortes.base_id == base_id]
+        mapa = next(b['campos'] for b in resultado['favorabilidade']['atributos_superficies'] if b['id'] == base_id)
+        feicoes = {f['id']: f for f in resultado['favorabilidade']['feicoes_base']}
+        geometrias = reproject(recortes, 4326) if len(recortes) else recortes
+        return {'base_id': base_id, 'tipo': 'raster',
+                'origem': 'Células recortadas preservadas na execução; não representa a extensão integral do raster.',
+                'geometrias': {'type': 'FeatureCollection', 'features': [
+                    {'type': 'Feature', 'geometry': mapping(geom), 'properties': {
+                        'base_id': base_id, 'nome': feicoes[r['feicao_id']]['nome'],
+                        'favorabilidade': _favorabilidade(r, base['papel'], mapa)}}
+                    for r, geom in zip(registros(recortes), geometrias.geometry)]}}
     frame, _, _ = extracao_preparacao.carregar(base_id)
     if not isinstance(frame, nativo.Camada) or frame.crs is None:
         raise ValueError('A fonte atual não contém uma camada vetorial com CRS.')
@@ -720,6 +746,8 @@ def _painel(frame: gpd.GeoDataFrame, dados: bytes, auditoria: dict, nomes: dict[
                                                       **({'adversidade': campos[base]['adversidade']}
                                                          if 'adversidade' in campos[base] else {}),
                                                       'identificador': feicoes[ident]['posicao'] + 1})
+        if campos[base].get('tipo') == 'raster':
+            grupo['tipo'] = 'raster'
         grupo['area_m2'] += r['area_m2']
         if r.get('intersecao_id') is not None:
             grupo.setdefault('fragmentos', []).append({
@@ -749,6 +777,24 @@ def _painel(frame: gpd.GeoDataFrame, dados: bytes, auditoria: dict, nomes: dict[
         for grupo in sobreposicoes:
             grupo['percentual'] = grupo['area_m2'] / total * 100
         linha.update(chave=str(pos), area_total_m2=total, sobreposicoes=sobreposicoes)
+        if analise == 'favorabilidade':
+            rasters = []
+            for base in auditoria['campos']:
+                if base.get('tipo') != 'raster':
+                    continue
+                resumo = favorabilidade_raster.resumir(
+                    [(g['favorabilidade']['indice'], g['area_m2']) for g in sobreposicoes if g['base_id'] == base['id']], total)
+                for coluna, esperado in ((base['campo_indice'], resumo['indice']),
+                                         (base['campo_cobertura'], resumo['cobertura_percentual'])):
+                    if coluna not in frame:
+                        raise ValueError('A saída raster não contém o índice e a cobertura auditados.')
+                    atual = frame.iloc[pos][coluna]
+                    if (esperado is None and not bool(pd.isna(atual))) or (
+                            esperado is not None and (not isinstance(atual, Real) or not math.isclose(atual, esperado, rel_tol=1e-8, abs_tol=1e-10))):
+                        raise ValueError('A média ou a cobertura raster diverge dos recortes preservados.')
+                rasters.append({'base_id': base['id'], 'papel': base['papel'], **resumo})
+            if rasters:
+                linha['rasters'] = rasters
         if analise == 'elegibilidade':
             linha['risco_area_m2'] = min(total, uniao_risco.get(pos, 0.0))
         if perimetros is not None:
@@ -983,6 +1029,13 @@ def pdf(modelo: dict) -> bytes:
                                    'a precisão disponível. Identifique homônimos pelos IDs da superfície e da feição.')]
             for linha in entrada['linhas']:
                 historia.append(estilo._p(e, f'{linha["nome"] or "Demanda"} · {linha["id"]}', 'h2'))
+                for raster in linha.get('rasters', []):
+                    indice = 'Sem dados válidos' if raster['indice'] is None else _numero(raster['indice'])
+                    historia.append(estilo._p(
+                        e, f'{campos[raster["base_id"]]["nome"]} — Média ponderada pela área: {indice}; '
+                        f'cobertura válida: {_numero(raster["cobertura_percentual"])}%; '
+                        f'área sem dados: {_numero(raster["area_sem_dados_m2"])} m². '
+                        'Zero é válido; NoData não integra o denominador. Sem classe inferida.'))
                 if not linha['sobreposicoes']:
                     historia.append(estilo._p(e, 'Sem interseção; nenhum índice ou classe atribuído.'))
                     continue

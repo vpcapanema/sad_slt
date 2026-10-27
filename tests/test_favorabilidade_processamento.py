@@ -172,7 +172,7 @@ def test_contato_sem_area_e_cancelamento():
 
 
 def test_base_linear_rejeitada_explicitamente():
-    with pytest.raises(ValueError, match='somente superfícies poligonais'):
+    with pytest.raises(ValueError, match='Linhas não participam'):
         calcular(frame([box(0, 0, 10, 10)]), [
             ('rede', 'Rede linear', 'r', frame([LineString([(0, 0), (10, 10)])]))])
 

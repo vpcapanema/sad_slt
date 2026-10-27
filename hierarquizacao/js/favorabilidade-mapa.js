@@ -53,7 +53,8 @@ export function criarMapaFavorabilidade({mapa, entrada, recortes, demandas, node
     });
     renderizarLegendaFavorabilidade(node('mapa-legenda'), valores(base));
     node('mapa-camada-nota').textContent = cache.has(base)
-      ? `Camada oficial vinculada à execução: ${entrada.campos.find(c => c.id === base).nome}.`
+      ? cache.get(base).tipo === 'raster' ? cache.get(base).origem
+        : `Camada oficial vinculada à execução: ${entrada.campos.find(c => c.id === base).nome}.`
       : 'A camada oficial ainda não foi carregada. Os resultados da execução permanecem nas tabelas.';
   }
   async function atualizar() {
