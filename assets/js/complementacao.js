@@ -148,7 +148,13 @@
   async function api(url, opcoes) {
     const resposta = await fetch(url, { credentials: "same-origin", ...opcoes });
     const corpo = await resposta.json().catch(() => ({}));
-    if (!resposta.ok) throw new Error(corpo.detail || `HTTP ${resposta.status}`);
+    if (!resposta.ok) {
+      const erro = new Error(typeof corpo.detail === 'string' ? corpo.detail
+        : Array.isArray(corpo.detail) ? corpo.detail.map(item => item.msg || String(item)).join('; ')
+        : corpo.mensagem || corpo.message || `HTTP ${resposta.status}`);
+      erro.status = resposta.status;
+      throw erro;
+    }
     return corpo;
   }
 
@@ -176,7 +182,9 @@
           if (p.hierarquizacao_codigo) await carregarAtributos();
         } catch (e) { mensagem(e.message, true); mensagemAtributos(e.message, true); concluir.disabled = false; }
       });
-      bloco.append(texto, concluir); host.append(bloco);
+      bloco.append(texto);
+      if (host.id !== 'complementacao-pedidos-atributos') bloco.append(concluir);
+      host.append(bloco);
     }
   }
 
@@ -188,6 +196,9 @@
   const tamanhoPagina = document.querySelector('#complementacao-atributos-page-size');
   const paginacaoAtributos = document.querySelector('#complementacao-atributos-pagination');
   const tabelaAtributos = campos.querySelector('table');
+  const filtroDemanda = document.querySelector('#complementacao-demanda');
+  const conclusoes = document.querySelector('#complementacao-concluir-demandas');
+  let administrador = false, demandaAtual = '';
   let linhasAtributos = [], paginaAtributos = 1;
   let atual = null, editando = false, alterado = false, ocupado = false;
   let hierarquiaAtual = '', revisaoAtributos = 0;
@@ -240,6 +251,7 @@
 
   function atualizarAcoes() {
     select.disabled = ocupado || !itens.length;
+    filtroDemanda.disabled = ocupado || !hierarquiaAtual;
     const editavel = atual?.pode_editar && campos.querySelector('[data-atributo-coluna]');
     editar.disabled = ocupado || editando || !editavel;
     salvar.disabled = ocupado || !editando;
@@ -251,6 +263,9 @@
         ? 'Modo de edição — campos com borda azul contínua liberados. Confirme para gravar ou cancele para descartar as alterações.'
         : 'Modo de consulta — campos cinza com borda tracejada bloqueados. Use Editar atributos para complementar os valores.';
     form.setAttribute('aria-busy', String(ocupado));
+    conclusoes.querySelectorAll('button').forEach(button => {
+      button.disabled = ocupado || editando || !atual?.pode_editar || button.dataset.concluida === 'true';
+    });
     paginarAtributos();
   }
 
@@ -264,6 +279,7 @@
     alterado = false;
     form.classList.remove("hidden");
     document.querySelector('#complementacao-atributos-resumo').textContent = `${item.nome || item.codigo} · ${item.dados_hierarquizacao.objetos.length} demanda(s) autorizada(s)`;
+    renderConclusoes();
     atualizarAcoes();
     mensagemAtributos('');
   }
@@ -281,19 +297,49 @@
     } finally { ocupado = false; atualizarAcoes(); }
   }
 
+  function renderConclusoes() {
+    conclusoes.replaceChildren();
+    for (const objeto of atual?.dados_hierarquizacao?.objetos || []) {
+      const cab = objeto.cabecalho_objeto;
+      const texto = document.createElement('p');
+      texto.className = 'field-help';
+      const concluida = cab.complementacao_atributos?.concluida === true;
+      texto.textContent = concluida
+        ? `Atributos completos nesta rodada: ${cab.codigo}. O status foi verificado automaticamente.`
+        : `${cab.codigo}: a demanda permanece aguardando complementação enquanto houver atributos vazios. Salvar o último valor válido atualiza o status automaticamente.`;
+      conclusoes.append(texto);
+    }
+  }
+
+  function pedidosAtributos() {
+    renderPedidos(document.querySelector('#complementacao-pedidos-atributos'), itens
+      .filter(i => i.hierarquizacao_codigo === hierarquiaAtual && (!demandaAtual || i.objeto_codigo === demandaAtual))
+      .flatMap(i => i.solicitacoes || []));
+  }
+
   async function carregarAtributos() {
     ocupado = true;
     atualizarAcoes();
     recarregar.classList.add('hidden');
     document.querySelector('#complementacao-pedidos-atributos').replaceChildren();
-    mensagemAtributos('Carregando solicitações de atributos…');
+    mensagemAtributos('Carregando pendências de atributos da hierarquização…');
     try {
+      const usuario = SLTAdminAuth.currentUser || await SLTAdminAuth.fetchMe();
+      if (!usuario) throw new Error('Sessão indisponível. Entre novamente para consultar suas demandas autorizadas.');
+      administrador = usuario.tipo_usuario === 'ADMIN';
       itens = await api('/api/complementacao/objetos');
       const hierarquizacoes = [...new Map(itens.map(item => [item.hierarquizacao_codigo, item])).values()];
-      select.innerHTML = '<option value="">Selecione uma hierarquização</option>' + hierarquizacoes.map(item =>
-        `<option value="${esc(item.hierarquizacao_codigo)}">${esc(item.hierarquizacao_codigo)} — ${esc(item.hierarquizacao_nome || '')}</option>`).join('');
+      document.querySelector('#complementacao-seletor-label').textContent = administrador ? 'Hierarquização' : 'Demanda autorizada';
+      document.querySelector('#complementacao-demanda-filtro').classList.toggle('hidden', !administrador);
+      select.innerHTML = `<option value="">${administrador ? 'Selecione uma hierarquização' : 'Selecione uma demanda autorizada'}</option>` +
+        (administrador ? hierarquizacoes.map(item =>
+          `<option value="${esc(item.hierarquizacao_codigo)}">${esc(item.hierarquizacao_codigo)} — ${esc(item.hierarquizacao_nome || '')}</option>`)
+          : itens.map(item => `<option value="${esc(JSON.stringify([item.hierarquizacao_codigo, item.objeto_codigo]))}">${esc(item.objeto_codigo)} — ${esc(item.objeto_nome || '')} · ${esc(item.hierarquizacao_codigo)} — ${esc(item.hierarquizacao_nome || '')}</option>`)).join('');
       document.querySelector('#complementacao-sem-atributos').classList.toggle('hidden', itens.length > 0);
-      mensagemAtributos(itens.length ? 'Selecione uma hierarquização para abrir a tabela de atributos.' : '');
+      hierarquiaAtual = demandaAtual = '';
+      containerAtributos.classList.add('hidden');
+      atual = null;
+      mensagemAtributos(itens.length ? 'Selecione uma opção para abrir os atributos autorizados, mesmo sem pedido ou e-mail prévio.' : '');
     } catch (erro) {
       select.innerHTML = '<option value="">Não foi possível carregar as hierarquizações</option>';
       recarregar.classList.remove('hidden');
@@ -304,20 +350,18 @@
     }
   }
 
-  select.addEventListener('change', async () => {
-    const proxima = select.value;
-    select.value = hierarquiaAtual;
-    if (ocupado || !await podeDescartar()) return;
-    hierarquiaAtual = select.value = proxima;
-    renderPedidos(document.querySelector('#complementacao-pedidos-atributos'), itens.filter(i => i.hierarquizacao_codigo === proxima).flatMap(i => i.solicitacoes || []));
+  async function abrirAtributos(codigo, demanda) {
+    hierarquiaAtual = codigo;
+    demandaAtual = demanda;
+    pedidosAtributos();
     atual = null;
     editando = alterado = false;
     form.classList.add('hidden');
     document.querySelector('#complementacao-resumo-hierarquizacao').classList.add('hidden');
-    containerAtributos.classList.toggle('hidden', !proxima);
-    if (!proxima) {
+    containerAtributos.classList.toggle('hidden', !codigo);
+    if (!codigo) {
       atualizarAcoes();
-      mensagemAtributos('Selecione uma hierarquização para abrir a tabela de atributos.');
+      mensagemAtributos('Selecione uma opção para abrir a tabela de atributos.');
       return;
     }
     const versao = ++revisaoAtributos;
@@ -325,18 +369,34 @@
     atualizarAcoes();
     mensagemAtributos('Carregando a tabela de atributos das demandas…');
     try {
-      const item = await api(caminhoAtributos(proxima));
+      const item = await api(caminhoAtributos(codigo) + (demanda ? `?demanda_codigo=${encodeURIComponent(demanda)}` : ''));
       if (versao === revisaoAtributos) await render(item);
     } catch (erro) {
       if (versao === revisaoAtributos) {
-        hierarquiaAtual = select.value = '';
         containerAtributos.classList.add('hidden');
         mensagemAtributos(erro.message, true);
       }
-    } finally {
-      ocupado = false;
-      atualizarAcoes();
+    } finally { ocupado = false; atualizarAcoes(); }
+  }
+
+  select.addEventListener('change', async () => {
+    const proxima = select.value;
+    select.value = administrador ? hierarquiaAtual : hierarquiaAtual ? JSON.stringify([hierarquiaAtual, demandaAtual]) : '';
+    if (ocupado || !await podeDescartar()) return;
+    select.value = proxima;
+    const [codigo, demanda] = administrador ? [proxima, ''] : proxima ? JSON.parse(proxima) : ['', ''];
+    if (administrador) {
+      filtroDemanda.innerHTML = '<option value="">Todas as demandas autorizadas</option>' + itens.filter(item => item.hierarquizacao_codigo === codigo).map(item =>
+        `<option value="${esc(item.objeto_codigo)}">${esc(item.objeto_codigo)} — ${esc(item.objeto_nome || '')}</option>`).join('');
     }
+    await abrirAtributos(codigo, demanda);
+  });
+  filtroDemanda.addEventListener('change', async () => {
+    const demanda = filtroDemanda.value;
+    filtroDemanda.value = demandaAtual;
+    if (ocupado || !await podeDescartar()) return;
+    filtroDemanda.value = demanda;
+    await abrirAtributos(hierarquiaAtual, demanda);
   });
 
   editar.addEventListener('click', () => {
@@ -379,10 +439,15 @@
         body: JSON.stringify({ valores }),
       });
       if (revisaoAtributos !== versao) return;
+      if (demandaAtual) salvo.dados_hierarquizacao.objetos = salvo.dados_hierarquizacao.objetos.filter(objeto => objeto.cabecalho_objeto.codigo === demandaAtual);
       await render(salvo);
-      itens = await api('/api/complementacao/objetos');
-      renderPedidos(document.querySelector('#complementacao-pedidos-atributos'), itens.filter(i => i.hierarquizacao_codigo === alvo.codigo).flatMap(i => i.solicitacoes || []));
-      mensagemAtributos("Atributos salvos. Conclua a solicitação quando os ajustes estiverem prontos.");
+      mensagemAtributos("Atributos salvos e status verificado automaticamente. Demandas com valores vazios continuam aguardando complementação; as completas retornam à hierarquização, salvo pendência em outra rodada. Nenhuma solicitação ou envio de e-mail é exigido.");
+      try {
+        itens = await api('/api/complementacao/objetos');
+        pedidosAtributos();
+      } catch (erro) {
+        mensagemAtributos(`Atributos salvos e status verificado, mas não foi possível atualizar a lista de pendências: ${erro.message}. Recarregue a página para conferir a lista.`, true);
+      }
     } catch (erro) {
       if (revisaoAtributos === versao) mensagemAtributos(erro.message, true);
     } finally { ocupado = false; atualizarAcoes(); }

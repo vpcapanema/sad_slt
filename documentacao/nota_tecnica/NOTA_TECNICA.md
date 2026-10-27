@@ -18,8 +18,8 @@
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Título**                 | Metodologia do Sistema de Hierarquização de Demandas — SICARD                                                                                                         |
 | **Número**                 | NT-SICARD-001/2026                                                                                                                                                       |
-| **Versão**                 | 1.51                                                                                                                                                                      |
-| **Data de emissão**        | 26/10/2026                                                                                                                                                               |
+| **Versão**                 | 1.54                                                                                                                                                                      |
+| **Data de emissão**        | 27/10/2026                                                                                                                                                               |
 | **Classificação**         | Documento técnico-metodológico de entrega ao cliente                                                                                                                   |
 | **Sistema**                 | SICARD — Sistema Inteligente de Cadastro e Ranking de Demandas                                                                                                        |
 | **Domínio de aplicação** | Logística e transportes. Concebido no âmbito do Plano de Logística Integrada do Estado de São Paulo (PLI-SP), aplica-se a qualquer objeto de demanda desse domínio. |
@@ -85,6 +85,9 @@
 | 1.49    | 25/10/2026 | `[preencher]` | Generalização da definição de critério pela relação entre a grandeza medida e o fenômeno avaliado; sincronização do glossário público quanto a premissa, critério, variável, relação, fenômeno avaliado e dimensão de critérios, sem alteração das regras ou dos cálculos do modelo. |
 | 1.50    | 25/10/2026 | `[preencher]` | Retificação conceitual das revisões 1.47 a 1.49: critério como propriedade avaliada; frase direcional como premissa de avaliação, distinta de seu fundamento. Restauração dos nomes dos 55 fatores do acervo anterior e correção do glossário para as 12 dimensões oficiais, sem alteração das premissas originais, dos cálculos ou dos resultados históricos. |
 | 1.51    | 26/10/2026 | `[preencher]` | Documentação do gerador autônomo de superfícies vetoriais: critérios e premissas separados, cobertura comprovada, transformação mínimo–máximo, persistência de valores e composição por média simples ou AHP; julgamentos vinculados ao conjunto salvo sem sobrescrita da hierarquização ou homologação automática. |
+| 1.52    | 27/10/2026 | `[preencher]` | Separação da complementação cadastral/geometria e da coleta de atributos da hierarquização; registro das pendências por demanda a partir da matriz enviada, solicitação imediata ou adiada, validação da conclusão e rastreabilidade das notificações, sem reabertura da aprovação cadastral ou alteração das fórmulas de escore. |
+| 1.53    | 27/10/2026 | `[preencher]` | Unificação das colunas da Fase 3 e da complementação nos grupos Cadastro e Dinâmicos, incluindo o Configurador; conclusão automática ao salvar todos os valores válidos, separação do risco derivado da Fase 1, preservação das escalas ordinais declaradas e verificação de compatibilidade dos critérios antes da síntese. |
+| 1.54    | 27/10/2026 | `[preencher]` | Descarte imediato dos resultados calculados da Fase 3 e da síntese quando atributos, critérios, pesos ou fases de origem mudam; limpeza dos respectivos relatórios e ranking e apresentação somente de valores correntes, sem preservar ou exibir cálculos anteriores como atuais. |
 
 ---
 
@@ -1093,6 +1096,49 @@ permanecem registradas e são respeitadas.
 
 **Entrada:** arquivo tabular (CSV, XLSX, XLS, Parquet ou tabela do banco), uma linha
 por objeto de demanda, uma coluna por atributo.
+
+**Complementação dos atributos.** O cadastro da hierarquização materializa, por
+demanda, os atributos dinâmicos da matriz enviada e preserva os valores nativos
+do cadastro oficial. A coleta reúne maturidade, CAPEX estimado e sua base,
+prazo de referência e sua base, conforme a aplicabilidade por tipo, além das
+métricas dinâmicas da rodada e do Configurador da Fase 3, conforme a tabela
+“Critérios de atributo de demanda”. A matriz prevalece em identificadores
+duplicados. O grupo Risco provém da Fase 1 e não integra a coleta manual.
+Planos não possuem CAPEX e base de CAPEX nesse
+contrato. Atributos já atendidos pelo cadastro não originam coleta duplicada.
+Pendências são registradas ao salvar a hierarquização no status
+`hierarq_aguardando_complementacao`, distinto dos status `analise_*` da avaliação
+cadastral. A solicitação pode ser registrada e notificada imediatamente ou
+adiada para a Fase 3, sem adiar o registro da pendência.
+
+O criador ou representante legal preenche e salva os atributos; o
+administrador pode selecionar a hierarquização e suas demandas. A conclusão
+é automática quando todos os valores cadastrais e dinâmicos estão preenchidos
+e válidos; a gravação parcial mantém o status de espera. A conclusão
+valida os valores coletados e seus domínios, registra autoria e data e devolve
+a demanda a `hierarq_em_andamento`, sem nova aprovação cadastral. Havendo outra
+rodada pendente, mantém-se a espera até sua conclusão. Zero e falso são valores
+válidos; nulos e textos vazios, inclusive os compostos apenas por espaços, não
+são preenchimento. Uma conclusão anteriormente registrada não oculta novas
+ausências nas colunas vigentes. Coletas abertas devem estar completas antes da
+execução da Fase 3. O histórico das
+solicitações e dos resultados das notificações é preservado; aceitação pelo
+servidor SMTP não constitui confirmação de entrega. O procedimento é detalhado
+na fonte interna do módulo da Fase 3 e não modifica a normalização, os pesos ou
+as fórmulas de escore apresentados a seguir.
+Alterações de atributos, critérios ou pesos descartam imediatamente os
+resultados calculados da Fase 3 e da síntese, incluindo relatórios e ranking;
+nenhum cálculo anterior permanece armazenado ou é apresentado como atual. A
+tela mantém os atributos e pendências da tabela vigente e apresenta os índices
+sem resultado até nova execução da Fase 3. Alterações na Fase 1 descartam também
+o cálculo da Fase 3, pois seu grupo Risco depende daquela fase; alterações nas
+Fases 1 e 2 descartam a síntese. A nova execução considera a rodada inteira.
+As escalas ordinais explicitadas na matriz são preservadas ainda que sua
+descrição esteja no campo Dado, em vez do título da métrica. Ausências, valores
+inválidos e resultados de risco ausentes são apresentados separadamente.
+O cálculo utiliza os critérios e pesos da tabela vigente, preservando a
+homologação aplicável. Mudanças no conjunto de critérios ou em suas escalas
+também exigem recálculo antes da síntese, sem alteração das fórmulas de escore.
 
 **Cálculo do escore:**
 

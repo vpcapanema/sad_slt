@@ -309,6 +309,20 @@
 .pfs-error-title { margin: 0 0 8px; font-size: 1.35rem; font-weight: 700; color: var(--pfs-red-dark); }
 .pfs-error-message { margin: 0 0 18px; font-size: 0.9rem; line-height: 1.5; color: var(--pfs-gray-700); white-space: pre-line; overflow-wrap: anywhere; }
 .pfs-error-message:empty { display: none; }
+.pfs-error-technical {
+  margin: -6px 0 18px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: #f1f3f5;
+  color: #52606d;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  text-align: left;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.pfs-error-technical[hidden] { display: none; }
 .pfs-error-details { margin-bottom: 14px; padding: 14px 16px; border-radius: 12px; background: var(--pfs-gray-100); text-align: left; }
 .pfs-error-details:has(.pfs-error-log:empty) { display: none; }
 .pfs-error-details-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 14px; font-weight: 600; color: var(--pfs-red); }

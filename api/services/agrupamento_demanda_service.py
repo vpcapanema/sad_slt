@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID, uuid4
 
-from api.constants import STATUS_EM_HIERARQUIZACAO, STATUS_POS_APROVACAO, TIPO_DEMANDA_COD_TO_ID, TIPO_DEMANDA_ID_TO_COD
+from api.constants import STATUS_EM_HIERARQUIZACAO, STATUS_HIERARQUIZACAO_COMPLEMENTACAO, STATUS_POS_APROVACAO, TIPO_DEMANDA_COD_TO_ID, TIPO_DEMANDA_ID_TO_COD
 from api.exceptions import DemandaNotFoundError, DemandaValidationError
 from api.repositories import agrupamento_demanda_repository as repo
 from api.services import universo_service
@@ -43,7 +43,7 @@ def _objetos_validados(payload: Any) -> list[dict[str, Any]]:
         raise DemandaValidationError("A seleção contém demandas repetidas.", field="demanda_ids")
 
     elegiveis = universo_service.listar_universo(payload.tipo_demanda)
-    status_elegiveis = {STATUS_POS_APROVACAO, STATUS_EM_HIERARQUIZACAO}
+    status_elegiveis = {STATUS_POS_APROVACAO, STATUS_EM_HIERARQUIZACAO, STATUS_HIERARQUIZACAO_COMPLEMENTACAO}
     por_id = {
         item.id: item.model_dump(mode="json")
         for item in elegiveis

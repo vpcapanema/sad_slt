@@ -23,7 +23,11 @@ def api_geometria_parse(file: UploadFile = File(...)):
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(400, f"Erro ao processar arquivo: {exc}") from exc
+        raise HTTPException(
+            400,
+            f"Não foi possível ler a geometria do arquivo '{file.filename or '(sem nome)'}' "
+            f"({len(content)} bytes): {type(exc).__name__}: {exc}",
+        ) from exc
 
 
 from fastapi import Depends, Form

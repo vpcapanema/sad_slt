@@ -37,6 +37,7 @@ STATUS_REPROVACAO = "analise_reprovada"
 # Confirmação do universo da análise (módulo de configuração) move a demanda
 # de "aprovada" para "em hierarquização" — todo o Bloco 2 vive neste status.
 STATUS_EM_HIERARQUIZACAO = "hierarq_em_andamento"
+STATUS_HIERARQUIZACAO_COMPLEMENTACAO = "hierarq_aguardando_complementacao"
 
 # Origens permitidas para POST /aprovar (handoff → aprovada)
 STATUS_PRE_APROVACAO = frozenset({"analise_em_avaliacao"})
@@ -44,7 +45,7 @@ STATUS_PRE_REPROVACAO = frozenset({"analise_em_avaliacao"})
 
 # Universo AHP comparável (aprovada, em hierarquização ou já hierarquizada/salva)
 STATUS_UNIVERSO_AHP = frozenset(
-    {"analise_aprovada", "hierarq_em_andamento", "hierarq_finalizada"}
+    {"analise_aprovada", "hierarq_em_andamento", "hierarq_aguardando_complementacao", "hierarq_finalizada"}
 )
 
 # Rótulos de exibição por tipo (plano / programa / projeto) — Camada 2 e pós-hierarquizado
@@ -56,6 +57,11 @@ def _rotulos_tipo(*, plano: str, programa: str, projeto: str) -> dict[str, str]:
 
 
 STATUS_ROTULOS_POR_TIPO: dict[str, dict[str, str]] = {
+    "hierarq_aguardando_complementacao": _rotulos_tipo(
+        plano="Plano em hierarquização: aguardando complementação de atributos",
+        programa="Programa em hierarquização: aguardando complementação de atributos",
+        projeto="Projeto em hierarquização: aguardando complementação de atributos",
+    ),
     "hierarq_em_andamento": _rotulos_tipo(
         plano="Plano em hierarquização",
         programa="Programa em hierarquização",

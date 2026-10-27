@@ -39,28 +39,33 @@
       return;
     }
     const linhas = objetos.map((objeto) => {
-      const ausentes = objeto.atributos.length
-        ? `<ul class="fase3-ausentes-lista">${objeto.atributos.map((atributo) => `<li>${esc(atributo)}</li>`).join("")}</ul>`
-        : '<span class="fase-status fase-status--ok">Nenhum atributo ausente</span>';
+      const pendencias = [
+        ...objeto.atributos.map(atributo => `${atributo} — não informado; complementar Cadastro/Dinâmicos`),
+        ...(objeto.invalidos || []).map(atributo => `${atributo} — valor inválido ou escala não configurada; conferir a tabela 2`),
+        ...(objeto.riscos || []).map(atributo => `${atributo} — resultado ausente da Fase 1; não é preenchimento manual`),
+      ];
+      const ausentes = pendencias.length
+        ? `<ul class="fase3-ausentes-lista">${pendencias.map((atributo) => `<li>${esc(atributo)}</li>`).join("")}</ul>`
+        : '<span class="fase-status fase-status--ok">Nenhuma pendência na tabela 2</span>';
       return `<tr><td><strong>${esc(objeto.nome)}</strong><small>${esc(objeto.codigo)}</small></td><td>${ausentes}</td></tr>`;
     }).join("");
-    host.innerHTML = `<h3>Atributos vazios por objeto</h3><div class="fase-table-wrap"><table class="fase-table fase3-ausentes-table"><thead><tr><th>Objeto de demanda</th><th>Atributos com valores vazios</th></tr></thead><tbody>${linhas}</tbody></table></div>`;
+    host.innerHTML = `<h3>Pendências da tabela 2 por demanda</h3><div class="fase-table-wrap"><table class="fase-table fase3-ausentes-table"><thead><tr><th>Demanda</th><th>Atributos ausentes ou inválidos</th></tr></thead><tbody>${linhas}</tbody></table></div>`;
   }
 
-  function indicesObjeto(objeto) {
+  function indicesObjeto(objeto, incluirPrioridade = true) {
     const fase2 = objeto.hierarquizacao?.fase_2 || {};
     const dimensoes = fase2.valor_por_dimensao || {};
     let rede = fase2.indice_favorabilidade_rede ?? dimensoes.rede ?? null;
     let grade = fase2.indice_favorabilidade_grade ?? dimensoes.grade ?? null;
     if (rede == null && grade == null) grade = fase2.score_fase2 ?? null;
-    return { rede, grade, prioridade: objeto.hierarquizacao?.fase_3?.score_fase3 ?? null };
+    return { rede, grade, prioridade: incluirPrioridade ? objeto.hierarquizacao?.fase_3?.score_fase3 ?? null : null };
   }
 
-  function renderSintese(objetos) {
+  function renderSintese(objetos, incluirPrioridade) {
     const formatar = (valor) => Number.isFinite(valor) ? Number(valor).toFixed(4) : "—";
     const linhas = objetos.map((objeto) => {
       const cabecalho = objeto.cabecalho_objeto || {};
-      const indices = indicesObjeto(objeto);
+      const indices = indicesObjeto(objeto, incluirPrioridade);
       return `<tr><td><strong>${esc(cabecalho.nome || "—")}</strong><small>${esc(cabecalho.codigo || "")}</small></td><td>${formatar(indices.rede)}</td><td>${formatar(indices.grade)}</td><td>${formatar(indices.prioridade)}</td></tr>`;
     }).join("");
     $("fase3-tabela-sintese").innerHTML = objetos.length ? `<table class="fase-table fase3-sintese-table"><thead><tr><th>Objeto de demanda</th><th>Índice de favorabilidade de rede</th><th>Índice de favorabilidade de grade</th><th>Índice de prioridade</th></tr></thead><tbody>${linhas}</tbody></table>` : '<div class="fase-empty">A rodada não possui objetos.</div>';
@@ -85,27 +90,56 @@
   }
 
   async function render(hierarquizacao) {
+    $("fase-resumo").classList.add("hidden");
+    $("fase-resumo").innerHTML = "";
+    $("fase3-erro").classList.add("hidden");
+    ["executar-fase3", "salvar-pesos-fase3", "sintetizar"].forEach(id => { $(id).disabled = true; });
+    await window.AtributosObjetos.render(hierarquizacao);
+    if (hierarquizacao !== atual()) return;
     if (!hierarquizacao) return;
-    await window.AtributosObjetos?.render(hierarquizacao);
+    renderResultados(hierarquizacao, true);
+    $("executar-fase3").disabled = false;
+    $("salvar-pesos-fase3").disabled = false;
+  }
+
+  function renderResultados(hierarquizacao, restaurar = false) {
+    const aviso = $("fase3-resultados-aviso");
+    const docs = hierarquizacao?.dados_hierarquizacao?.objetos || [];
+    const pendencias = window.AtributosObjetos.atributosAusentes(hierarquizacao);
+    const coletaPendente = pendencias.some(objeto => objeto.atributos.length || objeto.invalidos.length)
+      || docs.some(objeto => objeto.cabecalho_objeto?.complementacao_atributos?.concluida === false);
+    const criteriosAlterados = docs.some(objeto => objeto.hierarquizacao?.fase_3?.executada)
+      && window.AtributosObjetos.configuracaoAlterada(hierarquizacao);
+    const resultadosDesatualizados = criteriosAlterados
+      || docs.some(objeto => objeto.hierarquizacao?.fase_3?.desatualizado)
+      || Boolean(hierarquizacao.relatorio_fase3?.desatualizado || hierarquizacao.relatorio_consolidado?.desatualizado
+        || hierarquizacao.dados_hierarquizacao?.cabecalho_grupo?.relatorios?.fase_3?.desatualizado
+        || hierarquizacao.dados_hierarquizacao?.cabecalho_grupo?.relatorios?.sintese?.desatualizado);
+    const fases = hierarquizacao.dados_hierarquizacao?.cabecalho_grupo?.fases_a_executar || [1, 2, 3];
+    const fase3Executada = docs.length > 0 && docs.every(objeto => objeto.hierarquizacao?.fase_3?.executada === true);
+    const resultadoAtual = !coletaPendente && !resultadosDesatualizados && (!fases.includes(3) || fase3Executada);
+    aviso.classList.add("hidden");
+    aviso.textContent = "";
+    $("sintetizar").disabled = !resultadoAtual;
     renderAtributosAusentes(hierarquizacao);
-    const docs = hierarquizacao.dados_hierarquizacao?.objetos || [];
-    renderSintese(docs);
-    restaurarConfiguracaoSintese(hierarquizacao);
+    renderSintese(docs, resultadoAtual);
+    if (restaurar) restaurarConfiguracaoSintese(hierarquizacao);
     const metric = (label, value) => `<div class="fase-metric"><small>${esc(label)}</small><strong>${esc(value)}</strong></div>`;
     window.SLTResumoFase?.secao1($("fase-resumo"), hierarquizacao);
-    const pontuados = docs.filter((objeto) => Number.isFinite(objeto.hierarquizacao?.fase_3?.score_fase3));
-    const completos = docs.filter((objeto) => (objeto.hierarquizacao?.fase_3?.grau_completude_fase3 ?? 0) >= Number($("fase3-completude").value) / 100);
-    $("fase3-indicadores").innerHTML = metric("Demandas da rodada", docs.length) + metric("Com score válido", pontuados.length) + metric("Completude atendida", completos.length) + metric("Bloqueadas/pendentes", docs.length - pontuados.length);
+    const pontuados = resultadoAtual ? docs.filter((objeto) => Number.isFinite(objeto.hierarquizacao?.fase_3?.score_fase3)) : [];
+    const completos = resultadoAtual ? docs.filter((objeto) => (objeto.hierarquizacao?.fase_3?.grau_completude_fase3 ?? 0) >= Number($("fase3-completude").value) / 100) : [];
+    $("fase3-indicadores").innerHTML = metric("Demandas da rodada", docs.length) + metric("Com score atual", pontuados.length) + metric("Pendentes na tabela 2", pendencias.filter(objeto => objeto.atributos.length || objeto.invalidos.length).length) + metric("Completude atual", completos.length);
     const rows = docs.map((objeto) => {
       const fase = objeto.hierarquizacao?.fase_3 || {};
       const ausencias = [...(fase.atributos_ausentes || []), ...(fase.atributos_invalidos || [])];
-      const valid = Number.isFinite(fase.score_fase3);
-      return `<tr><td><span class="fase-status ${valid ? "fase-status--ok" : "fase-status--warn"}">${valid ? "Calculado" : "Pendente"}</span></td><td><strong>${esc(objeto.cabecalho_objeto.codigo)}</strong><br><small>${esc(objeto.cabecalho_objeto.nome || "")}</small></td><td>${valid ? Number(fase.score_fase3).toFixed(4) : "—"}</td><td>${esc(fase.ranking_fase3 ?? "—")}</td><td>${fase.grau_completude_fase3 == null ? "—" : `${(Number(fase.grau_completude_fase3) * 100).toFixed(0)}%`}</td><td>${ausencias.length ? esc(ausencias.join(", ")) : "—"}</td></tr>`;
+      const valid = resultadoAtual && Number.isFinite(fase.score_fase3);
+      const calculoAtual = resultadoAtual && fase.executada === true;
+      return `<tr><td><span class="fase-status ${valid ? "fase-status--ok" : "fase-status--warn"}">${calculoAtual ? valid ? "Calculado" : "Sem score" : "Não calculado"}</span></td><td><strong>${esc(objeto.cabecalho_objeto.codigo)}</strong><br><small>${esc(objeto.cabecalho_objeto.nome || "")}</small></td><td>${valid ? Number(fase.score_fase3).toFixed(4) : "—"}</td><td>${valid ? esc(fase.ranking_fase3 ?? "—") : "—"}</td><td>${calculoAtual && fase.grau_completude_fase3 != null ? `${(Number(fase.grau_completude_fase3) * 100).toFixed(0)}%` : "—"}</td><td>${ausencias.length ? esc(ausencias.join(", ")) : "—"}</td></tr>`;
     }).join("");
     $("fase3-resultados").innerHTML = rows || '<tr><td colspan="6" class="fase-empty">A rodada não possui demandas.</td></tr>';
     const report = hierarquizacao.dados_hierarquizacao?.cabecalho_grupo?.relatorios?.fase_3;
     const audit = $("fase3-auditoria");
-    if (report) { audit.innerHTML = `<strong>Auditoria da execução</strong><pre>${esc(JSON.stringify(report, null, 2))}</pre>`; audit.classList.remove("hidden"); } else audit.classList.add("hidden");
+    if (report && Object.keys(report).length && resultadoAtual) { audit.innerHTML = `<strong>Auditoria da execução</strong><pre>${esc(JSON.stringify(report, null, 2))}</pre>`; audit.classList.remove("hidden"); } else audit.classList.add("hidden");
   }
 
   async function atualizarDadosAoRetomar() {
@@ -118,8 +152,9 @@
         item.codigo === atualizada.codigo ? atualizada : item
       );
       await render(atualizada);
-    } catch (_erro) {
-      /* Mantém os dados já exibidos; a próxima retomada tenta novamente. */
+    } catch (falha) {
+      ["executar-fase3", "salvar-pesos-fase3", "sintetizar"].forEach(id => { $(id).disabled = true; });
+      erro(new Error(`Não foi possível atualizar a rodada. Os dados exibidos podem estar desatualizados: ${falha.message}`));
     } finally {
       atualizandoAoRetomar = false;
     }
@@ -132,6 +167,29 @@
 
   async function init() {
     try {
+      const usuario = SLTAdminAuth.currentUser || await SLTAdminAuth.fetchMe();
+      const podeSolicitar = ['ADMIN', 'ANALISTA', 'GESTOR'].includes(usuario?.tipo_usuario);
+      $("fase3-complementacao").hidden = !podeSolicitar;
+      $("fase3-solicitar-complementacao").onclick = async () => {
+        const hierarquizacao = atual();
+        if (!hierarquizacao) { exigirHierarquizacao(); return; }
+        const descricao = $("fase3-complementacao-descricao").value.trim();
+        if (!descricao) {
+          $("fase3-complementacao-resultado").textContent = 'Informe a orientação aos responsáveis antes de solicitar.';
+          $("fase3-complementacao-descricao").focus();
+          return;
+        }
+        const button = $("fase3-solicitar-complementacao");
+        button.disabled = true;
+        try {
+          if (!await ProcessFeedback.confirmar({
+            title: 'Solicitar complementação de atributos',
+            message: `Registrar pedidos para as demandas com atributos faltantes na hierarquização ${hierarquizacao.codigo} e tentar o envio de e-mail aos responsáveis? Pedidos persistem mesmo se o e-mail falhar.`,
+            confirmLabel: 'Registrar e tentar envio', cancelLabel: 'Cancelar',
+          })) return;
+          await SLTComplementacaoHierarquizacao.solicitar(hierarquizacao.codigo, $("fase3-complementacao-resultado"), descricao);
+        } finally { button.disabled = false; }
+      };
       hierarquizacoes = await HierApi.listar();
       $("fase-hierarquizacao").innerHTML = '<option value="">Selecione…</option>' + hierarquizacoes
         .filter((item) => (item.dados_hierarquizacao?.cabecalho_grupo?.fases_a_executar || [1, 2, 3]).includes(3))
@@ -140,6 +198,7 @@
       $("fase-hierarquizacao").onchange = () => { render(atual()).catch(erro); };
       globalThis.addEventListener("focus", atualizarDadosAoRetomar);
       document.addEventListener("visibilitychange", atualizarDadosAoRetomar);
+      document.addEventListener("atributos-pesos-alterados", () => { if (atual()) renderResultados(atual()); });
       /** Campo obrigatório: aviso do Notify e foco no seletor. */
       function exigirHierarquizacao() {
         window.Notify.warning("Hierarquização", "Selecione a hierarquização.");
@@ -185,6 +244,7 @@
           mensagemInicial: `Enviando os critérios da rodada ${hierarquizacao.codigo}…`,
           executar: () => HierApi.executarFase3(hierarquizacao.codigo, {
             criterios: window.AtributosObjetos?.criteriosPayload() || [],
+            ...window.AtributosObjetos.configuracaoPayload(),
             modo_pesos: $("fase3-modo-pesos").value,
             completude_minima: Number($("fase3-completude").value) / 100,
             regra_ausentes: $("fase3-ausentes").value,
@@ -206,7 +266,7 @@
           },
           titulo: "Salvar pesos dos atributos",
           mensagemInicial: "Gravando os pesos no servidor…",
-          executar: () => HierApi.salvarPesosFase3(hierarquizacao.codigo, { criterios: window.AtributosObjetos?.criteriosPayload() || [] }),
+          executar: () => HierApi.salvarPesosFase3(hierarquizacao.codigo, { criterios: window.AtributosObjetos?.criteriosPayload() || [], ...window.AtributosObjetos.configuracaoPayload() }),
           sucesso: "Pesos dos atributos salvos.",
         });
         if (!resposta.ok) { if (resposta.erro) erro(resposta.erro); return; }

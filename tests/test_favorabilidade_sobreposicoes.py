@@ -1,8 +1,9 @@
 """Dados completos da rosca, lidos das saídas persistidas e restritos ao usuário."""
 from tests.territorial_ogr_helpers import calcular_ogr, serializar_fixture
 from copy import deepcopy
+import csv
 from hashlib import sha256
-from io import BytesIO
+from io import BytesIO, StringIO
 import json
 from types import SimpleNamespace
 from zipfile import ZipFile
@@ -13,6 +14,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from shapely.geometry import box
 from pypdf import PdfReader
+from openpyxl import load_workbook
 
 from api.services import elegibilidade_processamento as processamento, elegibilidade_relatorio as service
 from api.services.controle_processamento import ControleProcessamento
@@ -162,17 +164,88 @@ def test_painel_completo_nomes_pdf_e_pacote_preservam_fragmentos(analise):
     assert 'fav_territorial_dim' in texto and 'fav_rede_dim' in texto
     assert 'Alta' in texto and 'Muito Baixa' in texto and '0,70' in texto and '0,00' in texto
     assert 'Área Sobreposta' not in texto and 'km²' not in texto
+    for trecho in ('1 — Identificação e alcance da análise', '3 — Como ler os resultados',
+                   '5 — Resultados por conjunto de demandas', '6 — Limites, rastreabilidade e próximos passos',
+                   'não índice zero', 'não as estatísticas exploratórias', 'job-1', 'job-2',
+                   'Cobertura e qualidade dos índices por superfície', 'Índices válidos',
+                   'as tabelas do pacote preservam', 'editar uma cópia não atualiza o SICARD'):
+        assert trecho in texto
     pacote, caminho = service.pacote(modelo, arquivos)
     assert arquivos_storage[caminho] == pacote
     with ZipFile(BytesIO(pacote)) as zipado:
         assert zipado.testzip() is None
         assert zipado.read('Relatório de Favorabilidade Territorial.pdf').startswith(b'%PDF')
         assert json.loads(zipado.read('Metadados da Análise.json'))['analise'] == 'favorabilidade'
+        manifesto = json.loads(zipado.read('Metadados da Análise.json'))
+        assert manifesto['versao_pacote'] == 2
+        assert {item['nome'] for item in manifesto['documentos']} == {
+            'Relatório de Favorabilidade Territorial.pdf',
+            'Tabelas/Favorabilidade Territorial.xlsx', 'Tabelas/Índices e Classes.csv',
+            'Tabelas/Cobertura por Superfície.csv', 'LEIA-ME.txt',
+        }
+        for item in [*manifesto['documentos'], *manifesto['arquivos']]:
+            assert sha256(zipado.read(item['nome'])).hexdigest() == item['sha256']
+        guia = zipado.read('LEIA-ME.txt').decode('utf-8-sig')
+        assert 'Alterar Excel ou CSV não atualiza o SICARD' in guia
+        assert 'Todas as entradas previstas foram concluídas' in guia
+        detalhes = list(csv.DictReader(StringIO(zipado.read('Tabelas/Índices e Classes.csv').decode('utf-8-sig')),
+                                       delimiter=';'))
+        # Cada demanda aparece em cada superficie, inclusive sem intersecao.
+        assert len(detalhes) == 12
+        assert sum(item['Situação espacial'] == 'Sem interseção' for item in detalhes) == 6
+        contatos = [item for item in detalhes if item['Situação espacial'] == 'Contato sem área']
+        assert len(contatos) == 2
+        assert all(item['Índice dimensionado'] == '0,0' and item['Estado do índice dimensionado'] == 'valido'
+                   for item in contatos)
+        assert {item['Execução'] for item in detalhes} == {'job-1', 'job-2'}
+        livro = load_workbook(BytesIO(zipado.read('Tabelas/Favorabilidade Territorial.xlsx')))
+        assert livro.sheetnames == ['Índices e Classes', 'Cobertura por Superfície', 'Fontes e Nomes', 'Como Ler']
+        assert livro['Índices e Classes'].max_row == 13
+        assert livro['Índices e Classes']['N2'].value == .7
+        assert livro['Índices e Classes'].freeze_panes == 'A2'
+        cobertura = list(csv.DictReader(StringIO(zipado.read('Tabelas/Cobertura por Superfície.csv').decode('utf-8-sig')),
+                                        delimiter=';'))
+        assert len(cobertura) == 4
+        assert cobertura[0]['Demandas com interseção'] == '2'
+        assert cobertura[0]['Demandas sem interseção'] == '1'
+        assert cobertura[0]['Índices válidos'] == '2'
         for indice, (nome, dados) in enumerate(arquivos, 1):
             assert zipado.read(nome) == arquivos_storage[resultados[f'job-{indice}']['arquivo']]
             recortes = gpd.read_file(BytesIO(dados), layer='intersecoes')
             assert 'classe' in ' '.join(recortes.columns)
             assert 'fav_territorial_dim' in ' '.join(recortes.columns)
+
+
+def test_tabelas_preservam_precisao_estados_homonimos_e_nao_executam_formulas(analise):
+    from api.services import favorabilidade_exportacao as exportacao
+    preparo = service.preparar(['job-1'], 'autor', analise='favorabilidade')
+    modelo, arquivos = service.montar(['job-1'], {f['id']: f['nome'] for f in preparo['fontes']},
+                                     'autor', True, analise='favorabilidade')
+    primeiro = modelo['entradas'][0]['linhas'][0]['sobreposicoes'][0]
+    primeiro['favorabilidade']['indice'] = .7134567890123456
+    primeiro['nome'] = '=1+2'
+    documentos = dict(exportacao.documentos(modelo, 'relatorio.pdf', [n for n, _ in arquivos]))
+    registros = list(csv.DictReader(StringIO(documentos['Tabelas/Índices e Classes.csv'].decode('utf-8-sig')),
+                                    delimiter=';'))
+    assert registros[0]['Índice dimensionado'] == repr(primeiro['favorabilidade']['indice']).replace('.', ',')
+    assert registros[0]['Feição'] == "'=1+2"
+    livro = load_workbook(BytesIO(documentos['Tabelas/Favorabilidade Territorial.xlsx']), data_only=False)
+    assert livro.active['K2'].value == '=1+2' and livro.active['K2'].data_type == 's'
+    assert livro.active['N2'].value == pytest.approx(primeiro['favorabilidade']['indice'], abs=1e-15, rel=0)
+    assert 'PACOTE PARCIAL' in documentos['LEIA-ME.txt'].decode('utf-8-sig')
+    for estado in ('ausente', 'nulo', 'invalido'):
+        primeiro['favorabilidade'].update(indice=None, estado_indice=estado)
+        linhas = exportacao.detalhe(modelo)
+        assert linhas[0][13] is None and linhas[0][14] == estado
+        resumo = exportacao.resumo(modelo)
+        assert resumo[0][9] == 1
+        assert resumo[0][{'ausente': 10, 'nulo': 11, 'invalido': 12}[estado]] == 1
+        assert resumo[0][7] == 1  # Sem intersecao nao e campo ausente/nulo.
+    segundo = modelo['entradas'][0]['linhas'][1]['sobreposicoes'][0]
+    primeiro['nome'] = segundo['nome']
+    linhas = exportacao.detalhe(modelo)
+    assert linhas[0][10] == linhas[2][10]
+    assert linhas[0][8] != linhas[2][8]
 
 
 def test_reabrir_saida_e_namespace_separado_da_elegibilidade(analise):

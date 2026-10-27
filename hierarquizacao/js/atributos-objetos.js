@@ -6,10 +6,139 @@
   const GRUPO_RISCO = "risco_ambiental_territorial";
   const INDICE_RISCO = "indice_de_risco_ambiental_e_territorial";
   let estado = { colunas: [], pesos: {} };
+  let versaoRender = 0;
+
+  function opcoesPesos() {
+    return { fonte_pesos: estado.fonte || "manual", ponderacao: estado.ponderacao || "estratificada",
+      julgamento_id: estado.fonte === "ahp" ? estado.julgamentoId || null : null };
+  }
+
+  function avisoPesos(mensagem, notificar = false) {
+    const host = document.getElementById("fase3-pesos-feedback");
+    if (host) host.textContent = mensagem;
+    if (mensagem && notificar) global.Notify?.warning("Pesos da ponderação", mensagem);
+  }
+
+  function atualizarFonteUI() {
+    const seletor = document.getElementById("fase3-julgamento");
+    if (!seletor) return;
+    const ahp = estado.fonte === "ahp";
+    document.getElementById("fase3-julgamento-campo").hidden = !ahp;
+    document.getElementById("fase3-modo-ponderacao").hidden = ahp;
+    seletor.disabled = !estado.codigo || estado.carregandoJulgamentos;
+    document.querySelectorAll('[name="fonte-pesos-fase3"]').forEach(input => {
+      input.checked = input.value === (estado.fonte || "manual"); input.disabled = !estado.codigo;
+    });
+    document.querySelectorAll('[name="ponderacao-fase3"]').forEach(input => {
+      input.checked = input.value === (estado.ponderacao || "estratificada"); input.disabled = !estado.codigo;
+    });
+    document.querySelectorAll('[data-controles-pesos] input').forEach(input => { input.disabled = ahp; });
+    const ajuda = document.querySelector('.atributos-pesos-ajuda');
+    if (ajuda) ajuda.textContent = ahp
+      ? "Os pesos dos atributos vêm da coluna Pesos consolidados do julgamento selecionado. O índice de risco herdado da Fase 1 mantém peso 1, pois não integra a matriz julgada."
+      : estado.ponderacao === "abrangente"
+        ? "Todos os atributos, incluindo os de risco, participam de uma única ponderação e somam 1. Alterar um peso redistribui o saldo entre todos os demais atributos. Os contêineres identificam a origem dos atributos."
+        : "Cada grupo soma 1. Alterar um peso redistribui o saldo entre os demais atributos do mesmo grupo. Os grupos presentes têm participação equivalente no cálculo final.";
+  }
+
+  function aplicarJulgamento(notificar = true) {
+    estado.pesosAhpValidos = false;
+    const julgamento = (estado.julgamentos || []).find(item => item.id === estado.julgamentoId);
+    let erro = julgamento?.erro;
+    if (!julgamento) erro = "Selecione um julgamento associado à hierarquização.";
+    if (julgamento && !erro) {
+      const faltantes = estado.colunas.filter(c => c.grupo !== "risco" && !Number.isFinite(julgamento.pesos?.[c.id]));
+      if (faltantes.length) erro = "Pesos consolidados indisponíveis para: " + faltantes.map(c => c.alias || c.id).join("; ") + ".";
+    }
+    if (erro) {
+      // Nunca apresenta pesos manuais como se fossem os pesos do julgamento.
+      estado.colunas.forEach(c => { estado.pesos[c.id] = 0; });
+      avisoPesos(erro, notificar);
+    } else {
+      estado.colunas.forEach(c => { estado.pesos[c.id] = c.grupo === "risco" ? 1 : julgamento.pesos[c.id]; });
+      estado.pesosAhpValidos = true;
+      avisoPesos("Pesos consolidados carregados de " + julgamento.nome + ".");
+    }
+    GRUPOS_PESO.forEach(grupo => atualizarPesos($('[data-atributos-objetos]'), grupo));
+    atualizarFonteUI();
+    document.dispatchEvent(new Event("atributos-pesos-alterados"));
+  }
+
+  async function carregarJulgamentos(notificar = true) {
+    const captura = estado;
+    estado.carregandoJulgamentos = true;
+    estado.pesosAhpValidos = false;
+    atualizarFonteUI();
+    avisoPesos("Carregando julgamentos associados…");
+    try {
+      const itens = await json(`/api/ahp/comparacao-colaborativa/hierarquizacoes/${encodeURIComponent(estado.codigo)}/pesos-fase3`);
+      if (estado !== captura || estado.fonte !== "ahp") return;
+      estado.julgamentos = itens;
+      const seletor = document.getElementById("fase3-julgamento");
+      seletor.replaceChildren(new Option("Selecione um julgamento", ""), ...itens.map(j => new Option(j.nome, j.id)));
+      seletor.value = estado.julgamentoId || "";
+      if (!seletor.value) estado.julgamentoId = null;
+      if (estado.julgamentoId) aplicarJulgamento(notificar);
+      else avisoPesos(itens.length ? "Selecione o julgamento para carregar os pesos consolidados." : "Nenhum julgamento associado a esta hierarquização.", notificar && !itens.length);
+    } catch (erro) {
+      if (estado === captura && estado.fonte === "ahp") avisoPesos("Não foi possível carregar os julgamentos: " + erro.message, notificar);
+    } finally {
+      if (estado === captura) { estado.carregandoJulgamentos = false; atualizarFonteUI(); }
+    }
+  }
+
+  function configurarFonte(hierarquizacao) {
+    const seletor = document.getElementById("fase3-julgamento");
+    if (!seletor) return;
+    const config = hierarquizacao?.dados_hierarquizacao?.cabecalho_grupo?.configuracoes?.fase_3 || {};
+    const homologada = hierarquizacao?.dados_hierarquizacao?.comparacao_colaborativa;
+    estado.codigo = hierarquizacao?.codigo;
+    estado.fonte = config.fonte_pesos || (homologada?.analise_homologada_id ? "ahp" : "manual");
+    estado.ponderacao = config.ponderacao || "estratificada";
+    estado.julgamentoId = config.julgamento_id || null;
+    seletor.replaceChildren(new Option("Selecione um julgamento", ""));
+    seletor.onchange = () => { estado.julgamentoId = seletor.value || null; aplicarJulgamento(); };
+    document.querySelectorAll('[name="fonte-pesos-fase3"]').forEach(input => { input.onchange = () => {
+      estado.fonte = input.value;
+      avisoPesos("");
+      if (estado.fonte === "ahp") {
+        estado.pesosManuais = { ...estado.pesos };
+        estado.colunas.forEach(c => { estado.pesos[c.id] = 0; });
+        carregarJulgamentos();
+      } else {
+        estado.pesos = estado.pesosManuais || pesosIniciais(estado.colunas, { ponderacao: estado.ponderacao });
+      }
+      montarPesos($('[data-atributos-objetos]'));
+      atualizarFonteUI();
+      document.dispatchEvent(new Event("atributos-pesos-alterados"));
+    }; });
+    document.querySelectorAll('[name="ponderacao-fase3"]').forEach(input => { input.onchange = () => {
+      estado.ponderacao = input.value;
+      estado.pesos = pesosIniciais(estado.colunas, { ponderacao: estado.ponderacao, criterios: criteriosPayload() });
+      montarPesos($('[data-atributos-objetos]'));
+      atualizarFonteUI();
+      document.dispatchEvent(new Event("atributos-pesos-alterados"));
+    }; });
+    const titulo = document.getElementById("fase3-titulo-tabela");
+    if (titulo) titulo.textContent = "Tabela de atributos de demanda" + (hierarquizacao ? " - " + (hierarquizacao.nome || hierarquizacao.codigo) : "");
+    avisoPesos("");
+    atualizarFonteUI();
+    if (estado.codigo && estado.fonte === "ahp") {
+      estado.colunas.forEach(c => { estado.pesos[c.id] = 0; });
+      GRUPOS_PESO.forEach(grupo => atualizarPesos($('[data-atributos-objetos]'), grupo));
+      carregarJulgamentos(false);
+    }
+  }
+
+  function configuracaoPayload() {
+    if (estado.fonte === "ahp" && !estado.pesosAhpValidos) throw new Error("Selecione um julgamento com pesos consolidados disponíveis para todos os atributos.");
+    return opcoesPesos();
+  }
 
   const $ = (seletor, raiz = document) => raiz.querySelector(seletor);
+  const vazio = (valor) => valor == null || (typeof valor === "string" && !valor.trim());
   const numero = (valor) => {
-    if (valor === null || valor === undefined || valor === "") return null;
+    if (vazio(valor)) return null;
     const n = Number(valor);
     return Number.isFinite(n) ? n : null;
   };
@@ -176,8 +305,12 @@
   }
 
   function converter(valor, coluna) {
-    if (valor === null || valor === undefined || valor === "") return null;
-    if (coluna.tipo_dado === "booleano") return [true, 1, "1", "true", "sim"].includes(typeof valor === "string" ? valor.toLowerCase() : valor) ? 1 : 0;
+    if (vazio(valor)) return null;
+    if (coluna.tipo_dado === "booleano") {
+      const token = String(valor).trim().toLowerCase();
+      if (["1", "true", "sim", "s", "yes"].includes(token)) return 1;
+      return ["0", "false", "nao", "não", "n", "no"].includes(token) ? 0 : null;
+    }
     if (["categorico", "ordinal"].includes(coluna.tipo_dado)) return numero(coluna.mapeamento?.[String(valor)]);
     return numero(valor);
   }
@@ -211,6 +344,7 @@
   }
 
   function limpar(raiz) {
+    $("[data-atributos-pesos]", raiz).hidden = true;
     $("[data-atributos-tbody]", raiz).innerHTML = "";
     $("[data-atributos-thead] tr", raiz).querySelectorAll("th.col-atributo").forEach((item) => item.remove());
     $("[data-atributos-erro]", raiz).hidden = true;
@@ -335,9 +469,10 @@
   function pesosIniciais(colunas, configuracao) {
     const anteriores = Object.fromEntries((configuracao?.criterios || []).map((item) => [item.nome_coluna || item.atributo_id, Number(item.peso)]));
     const pesos = {};
-    for (const grupo of GRUPOS_PESO) {
-      const itens = colunas.filter((coluna) => coluna.grupo === grupo);
+    for (const grupo of configuracao?.ponderacao === "abrangente" ? ["todos"] : GRUPOS_PESO) {
+      const itens = colunas.filter((coluna) => grupo === "todos" || coluna.grupo === grupo);
       const valores = itens.map((coluna) => Number.isFinite(anteriores[coluna.id]) ? anteriores[coluna.id] : 1);
+      if (valores.every(valor => valor === 0)) valores.fill(1);
       const soma = valores.reduce((a, b) => a + b, 0) || 1;
       itens.forEach((coluna, indice) => { pesos[coluna.id] = valores[indice] / soma; });
     }
@@ -346,7 +481,7 @@
 
   function redistribuir(colunaId, novoValor) {
     const alvo = estado.colunas.find((coluna) => coluna.id === colunaId);
-    const pares = estado.colunas.filter((coluna) => coluna.grupo === alvo.grupo && coluna.id !== colunaId);
+    const pares = estado.colunas.filter((coluna) => (estado.ponderacao === "abrangente" || coluna.grupo === alvo.grupo) && coluna.id !== colunaId);
     novoValor = Number.isFinite(novoValor) ? Math.max(0, Math.min(1, novoValor)) : 0;
     estado.pesos[colunaId] = novoValor;
     if (!pares.length) { estado.pesos[colunaId] = 1; return; }
@@ -362,7 +497,8 @@
       host.innerHTML = itens.map((coluna) => `<label class="atributo-peso" data-peso-id="${coluna.id}"><span>${coluna.alias || coluna.criterio}</span><input class="atributo-peso-numero" type="number" min="0" max="1" step="0.001" inputmode="decimal" value="${estado.pesos[coluna.id].toFixed(3)}" aria-label="Peso de ${coluna.alias || coluna.criterio}"><input class="atributo-peso-barra" type="range" min="0" max="1" step="0.001" value="${estado.pesos[coluna.id]}"></label>`).join("");
       host.querySelectorAll(".atributo-peso-barra, .atributo-peso-numero").forEach((input) => input.addEventListener("input", () => {
         redistribuir(input.closest("[data-peso-id]").dataset.pesoId, Number(input.value));
-        atualizarPesos(raiz, grupo);
+        GRUPOS_PESO.forEach(g => atualizarPesos(raiz, g));
+        document.dispatchEvent(new Event("atributos-pesos-alterados"));
       }));
       $(`[data-soma-pesos="${grupo}"]`, raiz).closest("section").hidden = !itens.length;
       atualizarPesos(raiz, grupo);
@@ -390,14 +526,19 @@
   }
 
   async function render(hierarquizacao, opcoes = {}) {
+    const versao = ++versaoRender;
     const raiz = $("[data-atributos-objetos]");
-    if (!raiz || !hierarquizacao?.codigo) return;
+    estado = { colunas: [], pesos: {} };
+    if (!raiz) return;
     limpar(raiz);
+    if (!opcoes.complementacao) configurarFonte(null);
+    if (!hierarquizacao?.codigo) return;
     try {
       const [respostaColunas, dominios] = await Promise.all([
         opcoes.colunas === undefined ? json(API_COLUNAS(hierarquizacao.codigo)) : Promise.resolve({colunas: opcoes.colunas}),
         opcoes.dominios === undefined ? json(API_DOMINIOS) : Promise.resolve(opcoes.dominios),
       ]);
+      if (versao !== versaoRender) return;
       const objetos = hierarquizacao.dados_hierarquizacao?.objetos || [];
       const tipo = tipoObjeto(hierarquizacao);
       const colunas = [
@@ -411,32 +552,21 @@
         complementacao: Boolean(opcoes.complementacao),
         pesos: pesosIniciais(colunas, hierarquizacao.dados_hierarquizacao?.cabecalho_grupo?.configuracoes?.fase_3),
       };
-      const homologada = hierarquizacao.dados_hierarquizacao?.comparacao_colaborativa;
-      if (homologada?.analise_homologada_id) {
-        const pesos = homologada.pesos_por_atributo || {};
-        colunas.filter(c => c.grupo !== "risco").forEach(c => { estado.pesos[c.id] = pesos[c.id] ?? 0; });
-      }
       const titulo = document.getElementById("fase3-titulo-atributos");
-      if (titulo) titulo.textContent = `${opcoes.complementacao ? "2.2" : "2."} Critérios atributo de ${tituloTipo(tipo)}`;
+      if (titulo) titulo.textContent = `${opcoes.complementacao ? "2.2 " : ""}Critérios de atributo de demanda`;
       montarTabela(raiz, objetos, colunas, opcoes);
       $("[data-atributos-pesos]", raiz).hidden = true;
       if (!opcoes.complementacao) montarPesos(raiz);
-      if (!opcoes.complementacao && homologada?.analise_homologada_id) {
-        raiz.querySelectorAll('[data-controles-pesos="cadastro"] input, [data-controles-pesos="dinamico"] input').forEach(input => { input.disabled = true; input.title = 'Peso da análise homologada desta hierarquização'; });
-        const faltantes = colunas.filter(c => c.grupo !== 'risco' && !(c.id in (homologada.pesos_por_atributo || {})));
-        if (faltantes.length || homologada.erro_vinculo_pesos) {
-          const aviso = $('[data-atributos-erro]', raiz);
-          aviso.textContent = homologada.erro_vinculo_pesos || 'Atributos sem vínculo com os critérios homologados: ' + faltantes.map(c => c.alias).join('; ') + '. A execução será bloqueada até corrigir a correspondência.';
-          aviso.hidden = false;
-        }
-      }
+      if (!opcoes.complementacao) configurarFonte(hierarquizacao);
       $("[data-atributos-sem-colunas]", raiz).hidden = Boolean(colunas.length);
       $("[data-atributos-sem-linhas]", raiz).hidden = Boolean(objetos.length);
     } catch (erro) {
+      if (versao !== versaoRender) return;
       const aviso = $("[data-atributos-erro]", raiz);
       aviso.textContent = `Não foi possível carregar os atributos: ${erro.message}`;
       aviso.hidden = false;
-      if (opcoes.complementacao) throw erro;
+      estado = { colunas: [], pesos: {} };
+      throw erro;
     }
   }
 
@@ -457,18 +587,41 @@
 
   function atributosAusentes(hierarquizacao) {
     const objetos = hierarquizacao?.dados_hierarquizacao?.objetos || [];
-    return objetos.map((objeto) => {
+    const matrizes = new Map(estado.colunas.map(coluna => [coluna.id, normalizarObjetos(objetos, coluna).normalizados]));
+    return objetos.map((objeto, indice) => {
       const cabecalho = objeto.cabecalho_objeto || {};
-      const atributos = estado.colunas.filter((coluna) => {
+      const manuais = estado.colunas.filter((coluna) => coluna.grupo !== "risco");
+      const nome = (coluna) => coluna.alias || coluna.criterio || coluna.id;
+      const atributos = manuais.filter((coluna) => vazio(valorDaColuna(objeto, coluna))).map(nome);
+      const invalidos = manuais.filter((coluna) => {
         const valor = valorDaColuna(objeto, coluna);
-        return valor === null || valor === undefined || valor === "";
-      }).map((coluna) => coluna.alias || coluna.criterio || coluna.id);
+        return !vazio(valor) && matrizes.get(coluna.id)[indice] === null;
+      }).map(nome);
+      const riscos = estado.colunas.filter((coluna) => coluna.grupo === "risco" && vazio(valorDaColuna(objeto, coluna))).map(nome);
       return {
         codigo: cabecalho.codigo || "",
         nome: cabecalho.nome || "—",
         atributos,
+        invalidos,
+        riscos,
       };
     });
+  }
+
+  function configuracaoAlterada(hierarquizacao) {
+    const config = hierarquizacao?.dados_hierarquizacao?.cabecalho_grupo?.configuracoes?.fase_3 || {};
+    if (config.fonte_pesos && (config.fonte_pesos !== estado.fonte || config.ponderacao !== estado.ponderacao || (config.julgamento_id || null) !== opcoesPesos().julgamento_id)) return true;
+    if (estado.fonte === "ahp" && !estado.pesosAhpValidos) return true;
+    const salvos = hierarquizacao?.dados_hierarquizacao?.cabecalho_grupo?.configuracoes?.fase_3?.criterios || [];
+    const assinatura = (criterios) => JSON.stringify(criterios.map((c) => ({
+      id: c.nome_coluna || c.atributo_id,
+      tipo: c.tipo_dado || "numerico",
+      direcao: c.direcao || "maior_melhor",
+      peso: Number(c.peso || 0),
+      obrigatorio: Boolean(c.obrigatorio),
+      mapeamento: Object.entries(c.mapeamento || {}).sort(([a], [b]) => a.localeCompare(b)),
+    })).sort((a, b) => String(a.id).localeCompare(String(b.id))));
+    return assinatura(salvos) !== assinatura(criteriosPayload());
   }
 
   function definirEdicao(editavel) {
@@ -494,5 +647,5 @@
     return {valores};
   }
 
-  global.AtributosObjetos = { render, criteriosPayload, atributosAusentes, definirEdicao, coletar };
+  global.AtributosObjetos = { render, criteriosPayload, configuracaoPayload, atributosAusentes, configuracaoAlterada, definirEdicao, coletar };
 })(window);

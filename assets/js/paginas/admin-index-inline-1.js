@@ -41,7 +41,7 @@ const countStatuses = (items, statuses) =>
           "stat-hierarquizacao",
           countStatuses(
             all,
-            new Set(["em_hierarquizacao", "hierarq_em_andamento"]),
+            new Set(["em_hierarquizacao", "hierarq_em_andamento", "hierarq_aguardando_complementacao"]),
           ),
         );
         setValue(

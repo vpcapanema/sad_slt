@@ -188,6 +188,64 @@ homologacao automatica.
 
 ### Apresentacao dos resultados e entrega do pacote
 
+A seção **5 — Resultados da Elegibilidade Territorial** organiza a leitura em
+revisão dos nomes (5.1), situação e detalhamento por demanda (5.2), Resumo da
+Elegibilidade (5.3) e relatório, rastreabilidade e próximos passos (5.4).
+A orientação diferencia saída não carregada, falha de leitura, lote parcial e
+ausência de interseção. O resumo restrito às demandas sem restrição não deve
+ser interpretado como a relação integral de demandas processadas.
+
+O PDF efetivamente emitido pelo fluxo de resultados, inclusive aquele associado
+à hierarquização, apresenta identificação e alcance, fontes, guia de leitura,
+metodologia da consulta, resultados por conjunto e limites/próximos passos.
+São informados os identificadores das execuções, as datas de conclusão, as
+contagens reais e a condição parcial, quando existente. O guia do pacote explica
+a relação entre PDF, tabelas, GeoPackages e assinaturas SHA-256 dos metadados.
+O índice de risco ambiental e territorial é apresentado como descrição da
+exposição espacial da demanda, não como critério multicritério ou homologação.
+Trata-se de revisão da comunicação: não modifica cálculo, classificação,
+elegibilidade, pesos, persistência ou os arquivos geoespaciais produzidos.
+PDFs anteriormente emitidos não são reescritos; a apresentação substitui o
+modelo corrente para as próximas emissões e reemissões pelo fluxo existente.
+
+O pacote de exportação, versão 2, mantém os nomes de arquivos existentes:
+
+| Arquivo | Finalidade |
+|---|---|
+| `Relatório de Elegibilidade Territorial.pdf` | Alcance, execuções, fontes, situação das demandas, mapas, resumo, detalhes e matrizes de área por camada. |
+| `Tabelas/Situação das Demandas.xlsx` | Abas de situação de todas as demandas, Resumo da Elegibilidade, detalhe das restrições e riscos, camadas consultadas e orientações. |
+| `Tabelas/Situação das Demandas.csv` | Detalhe em formato longo: uma linha por ocorrência ou uma linha sem ocorrência por demanda livre, não uma linha por demanda. |
+| `Tabelas/Resumo da Elegibilidade.xlsx` e `.csv` | Somente demandas sem restrição, com área de união dos riscos, percentual e índice existentes; ausência de linhas é explicada no guia. |
+| `Camadas/NN/*.gpkg` | Cópias binárias integrais das saídas processadas para SIG, sem regravação de geometrias ou atributos. |
+| `Metadados da Análise.json` | Identificadores, nomes revisados e SHA-256 das camadas, PDF, tabelas e guia. |
+| `LEIA-ME.txt` | Diferenças entre as tabelas, unidades, precisão, lote parcial, conferência e eventuais correções. |
+
+As tabelas incluem execução e chave posicional da demanda; o detalhe acrescenta
+IDs da camada e da feição de origem. O resumo conserva as seis colunas de
+leitura existentes e acrescenta execução, chave e identificador da demanda.
+O registro estruturado do resumo na hierarquização mantém seu contrato anterior.
+Nomes iguais não permitem fundir registros: a conferência deve usar os IDs.
+
+Os CSVs usam UTF-8 com BOM, separador ponto e vírgula e decimal vírgula,
+preservando a precisão numérica disponível sem arredondar pequenas áreas para
+zero. Percentuais são números em 0–100; no XLSX recebem formatação percentual.
+O detalhe CSV expressa áreas em m² e o resumo em hectares; a aba de detalhe
+do XLSX inclui m², km² e hectares. Contatos sem área são ocorrências com valor
+zero; ausência de interseção permanece sem área atribuída. A nota de leitura
+fica em aba própria, fora da tabela filtrável do resumo.
+
+As contagens de restrições e riscos representam feições encontradas, não
+necessariamente camadas distintas. As áreas independentes do detalhe não
+devem ser somadas para recalcular o índice do resumo, que mantém a união das
+áreas de risco. O resumo vazio não significa lote sem demandas nem erro:
+deve-se consultar a situação de todas as demandas.
+
+Os arquivos permitem conferência e análise externa, não reimportação:
+editar Excel ou CSV não atualiza o sistema. Eventuais correções devem ocorrer
+na fonte, com nova execução e preservação do pacote anterior para comparação.
+Textos são tratados como dados, não fórmulas, nas planilhas; no CSV, recebem
+proteção quando iniciados por caracteres de fórmula.
+
 A secao Resultados acompanha as saidas concluidas da mesma execucao da pagina,
 sem depender de uma lista fixa de bases. A composicao de restricao e risco e
 recuperada dos metadados de processamento, nao da selecao posteriormente editada.

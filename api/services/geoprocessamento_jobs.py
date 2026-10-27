@@ -53,6 +53,19 @@ class OperacaoCancelada(Exception):
     pass
 
 
+def _erro_legivel(exc: BaseException, job_id: str | None = None,
+                  algoritmo: str | None = None, etapa: str | None = None) -> str:
+    """Mensagem de falha com tipo, causa e contexto (sem stack trace nem segredos)."""
+    from api.error_handlers import sanitizar
+    if isinstance(exc, OperacaoCancelada):
+        return str(exc) or "Execução cancelada pelo usuário."
+    causa = sanitizar(exc, 400) or "sem mensagem da exceção"
+    contexto = ", ".join(p for p in (f"algoritmo {algoritmo}" if algoritmo else "",
+                                     f"etapa '{etapa}'" if etapa else "",
+                                     f"job {job_id}" if job_id else "") if p)
+    return f"{type(exc).__name__}: {causa}" + (f" ({contexto})" if contexto else "")
+
+
 class GeoprocessamentoJobs:
     def __init__(self) -> None:
         self._jobs: dict[str, dict[str, Any]] = {}
@@ -198,7 +211,8 @@ class GeoprocessamentoJobs:
             if job["status"] in FINAIS:
                 return
             job["status"] = "cancelado" if isinstance(exc, OperacaoCancelada) else "erro"
-            job["erro"] = str(exc)
+            etapa_falha = job.get("etapa_atual")
+            job["erro"] = _erro_legivel(exc, job_id, job.get("algoritmo_id"), etapa_falha)
             job["tarefa_estado"] = job["status"]
             self._hierarquias[job_id].encerrar(job["status"])
             job["cancelavel"] = False
@@ -206,7 +220,9 @@ class GeoprocessamentoJobs:
             job["logs"].append({
                 "sequencia": len(job["logs"]) + 1,
                 "em": datetime.now(timezone.utc).isoformat(),
-                "nivel": "erro", "mensagem": str(exc), "detalhes": {},
+                "nivel": "erro", "mensagem": job["erro"],
+                "detalhes": {"tipo_excecao": type(exc).__name__, "algoritmo_id": job.get("algoritmo_id"),
+                             "etapa_da_falha": etapa_falha},
             })
             self._publicar(job_id)
             snapshot = deepcopy(job)
@@ -338,7 +354,7 @@ class GeoprocessamentoJobs:
                     ciclo.registrar_uso(conn, resource_id, "relatorio", job_id)
             ciclo.finalizar(execution_id, temporario=destination == "memoria")
         except Exception as exc:
-            ciclo.finalizar(execution_id, erro=type(exc).__name__)
+            ciclo.finalizar(execution_id, erro=_erro_legivel(exc, job_id))
             self._fail(job_id, exc)
         finally:
             ciclo.execucao_atual.reset(token)
@@ -406,7 +422,7 @@ class GeoprocessamentoJobs:
             self._complete(job_id, result)
         except Exception as exc:
             try:
-                ciclo.finalizar(execution_id, erro=type(exc).__name__)
+                ciclo.finalizar(execution_id, erro=_erro_legivel(exc, job_id))
             finally:
                 self._fail(job_id, exc)
         finally:

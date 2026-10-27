@@ -11,8 +11,9 @@
   <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
   <link rel="stylesheet" href="/assets/css/template-painel-mapa.css">
   <link rel="stylesheet" href="/assets/css/navbar-modulo.css">
-  <link rel="stylesheet" href="/assets/css/process_feedback_system.css?v=20261019-acompanhamento">
+  <link rel="stylesheet" href="/assets/css/process_feedback_system.css?v=20261027-erro-blocos">
   {% block estilos_pagina %}{% endblock %}
+  <link rel="stylesheet" href="/assets/css/table-scrollbars.css?v=20261027-1">
 </head>
 <body class="pagina-painel-mapa layout-with-sidebar {% block classes_body %}{% endblock %}" data-navegacao="painel_{{ navegacao }}"{% if requer_autenticacao %} data-requer-autenticacao="true"{% endif %}>
   <div class="estrutura-painel-mapa layout-with-sidebar-grid">
@@ -32,9 +33,10 @@
   </div>
 
   <script src="/assets/js/notification_system.js"></script>
-  <script src="/assets/js/process_feedback_unified.js?v=20261019-acompanhamento"></script>
+  <script src="/assets/js/process_feedback_unified.js?v=20261027-relatorio-erro"></script>
   {% block scripts_pagina %}{% endblock %}
-  <script src="/assets/js/table-sort.js"></script>
+  <script src="/assets/js/table-sort.js?v=20261027-cabecalho-agrupado"></script>
   <script src="/assets/js/template-base.js"></script>
+  <script src="/assets/js/table-smart-widths.js?v=20261027-secao7-direta"></script>
 </body>
 </html>

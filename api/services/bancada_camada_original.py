@@ -120,7 +120,12 @@ def _revisao(fonte: Fonte) -> str:
 
 def _abrir(fonte: Fonte) -> tuple[gdal.Dataset, ogr.Layer]:
     from api.services.fluxo_camadas_ogr import abrir_arquivo
-    return abrir_arquivo(fonte.caminho, fonte.camada)
+    caminho = fonte.caminho
+    if isinstance(caminho, storage_geoespacial.ArquivoStorage):
+        # Leitura completa (classificação, atributos) por /vsicurl levava dezenas de segundos.
+        estado = caminho.stat()
+        caminho = storage_geoespacial._copia_local_para_tiles(caminho, (estado.st_mtime_ns, estado.st_size))
+    return abrir_arquivo(caminho, fonte.camada)
 
 
 def _campos(camada: ogr.Layer) -> list[dict[str, str]]:

@@ -80,7 +80,13 @@ class HierarquizacaoFase2ExecutarSchema(BaseModel):
     metodo_extracao: Literal["ponto"] = "ponto"
 
 
-class HierarquizacaoFase3ExecutarSchema(BaseModel):
+class FontePesosFase3Schema(BaseModel):
+    fonte_pesos: Literal["manual", "ahp"] | None = None
+    ponderacao: Literal["abrangente", "estratificada"] = "estratificada"
+    julgamento_id: UUID | None = None
+
+
+class HierarquizacaoFase3ExecutarSchema(FontePesosFase3Schema):
     criterios: list[dict[str, Any]]
     modo_pesos: Literal["normalizados", "livres"] = "normalizados"
     completude_minima: float = Field(0.6, ge=0, le=1)
@@ -94,7 +100,7 @@ class HierarquizacaoFase3AtributosSchema(BaseModel):
     valores: dict[str, dict[str, Any]] = Field(default_factory=dict)
 
 
-class HierarquizacaoFase3PesosSchema(BaseModel):
+class HierarquizacaoFase3PesosSchema(FontePesosFase3Schema):
     criterios: list[dict[str, Any]]
 
 

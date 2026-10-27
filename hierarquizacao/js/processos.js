@@ -260,7 +260,10 @@
   }
 
   let demandasAgrupamento = [], paginaAgrupamento = 1;
-  const ordenarAgrupamento = SLTTable.sorting($('hier-agrupamento-demandas').closest('table'), () => ['codigo','origem_sei_processo','nome','status'].map(key=>item=>valorAgrupamento(item,key)), () => { paginaAgrupamento=1; renderDemandasAgrupamento(); });
+  const demandasSelecionadas = new Set();
+  let demandasFiltradas = [];
+  const chaveDemanda = item => String(item.id || item.codigo);
+  const ordenarAgrupamento = SLTTable.sorting($('hier-agrupamento-demandas').closest('table'), () => [null,...['codigo','origem_sei_processo','nome','status'].map(key=>item=>valorAgrupamento(item,key))], () => { paginaAgrupamento=1; renderDemandasAgrupamento(); });
   function valorAgrupamento(item, key) { return String(key === 'codigo' ? item.codigo || item.id || '—' : item[key] || '—'); }
   function atualizarFiltroAgrupamento() {
     const column = $('hier-grupo-coluna').value;
@@ -272,14 +275,21 @@
     const filtered = ordenarAgrupamento(demandasAgrupamento.filter(item => SLTTable.matches('hier-grupo', valorAgrupamento(item, column) === value, Boolean(column && value))));
     const result = SLTTable.paginate('hier-grupo-pagination', filtered, paginaAgrupamento, page => { paginaAgrupamento = page; renderDemandasAgrupamento(); });
     paginaAgrupamento = result.page;
-    $('hier-agrupamento-demandas').innerHTML = result.rows.map(item => '<tr>' + ['codigo','origem_sei_processo','nome','status'].map(key => `<td title="${esc(valorAgrupamento(item,key))}">${esc(valorAgrupamento(item,key))}</td>`).join('') + '</tr>').join('') || '<tr><td colspan="4">Nenhuma demanda encontrada.</td></tr>';
-    SLTTable.summary('hier-grupo-summary', 0, result.rows.length, demandasAgrupamento.length);
+    demandasFiltradas = filtered;
+    $('hier-agrupamento-demandas').innerHTML = result.rows.map(item => '<tr><td class="col-select"><input type="checkbox" data-grupo-select="' + esc(chaveDemanda(item)) + '" aria-label="Selecionar demanda ' + esc(item.codigo || item.nome) + '" ' + (demandasSelecionadas.has(chaveDemanda(item)) ? 'checked' : '') + '></td>' + ['codigo','origem_sei_processo','nome','status'].map(key => `<td title="${esc(valorAgrupamento(item,key))}">${esc(valorAgrupamento(item,key))}</td>`).join('') + '</tr>').join('') || '<tr><td colspan="5">Nenhuma demanda encontrada.</td></tr>';
+    $('hier-agrupamento-demandas').querySelectorAll('[data-grupo-select]').forEach(box=>box.onchange=()=>{if(box.checked)demandasSelecionadas.add(box.dataset.grupoSelect);else demandasSelecionadas.delete(box.dataset.grupoSelect);renderDemandasAgrupamento();});
+    const count=filtered.filter(item=>demandasSelecionadas.has(chaveDemanda(item))).length;
+    $('hier-grupo-select-all').disabled=!filtered.length;
+    $('hier-grupo-select-all').checked=count>0&&count===filtered.length;
+    $('hier-grupo-select-all').indeterminate=count>0&&count<filtered.length;
+    $('hier-grupo-export').disabled=$('hier-grupo-clear').disabled=!demandasSelecionadas.size;
+    SLTTable.summary('hier-grupo-summary', demandasSelecionadas.size, result.rows.length, demandasAgrupamento.length);
   }
   function renderDemandasRegistradas(objetos, mensagem = "") {
     const resumo = $("hier-agrupamento-resumo");
     if (resumo) { resumo.hidden = true; resumo.textContent = ""; }
     if (mensagem) erro(mensagem);
-    demandasAgrupamento = objetos; paginaAgrupamento = 1; atualizarFiltroAgrupamento(); renderDemandasAgrupamento();
+    demandasAgrupamento = objetos; demandasSelecionadas.clear(); paginaAgrupamento = 1; atualizarFiltroAgrupamento(); renderDemandasAgrupamento();
   }
 
   async function renderResumoAgrupamento(id) {
@@ -530,18 +540,35 @@
     proc.tarefaAtual("Gravar hierarquização");
     let gravada = false;
     try {
-      await HierApi.criar({
+      const cadastrada = await HierApi.criar({
         nome: $("hier-nome").value.trim(),
         descricao: $("hier-descricao").value.trim() || null,
         grupo_demanda_id: $("hier-agrupamento").value,
         matriz_premissas_criterios: matrizCadastro,
       });
       gravada = true;
+      const posCadastro = $("hier-complementacao-pos-cadastro");
+      const resultadoComplementacao = $("hier-complementacao-resultado");
+      posCadastro.hidden = false;
+      resultadoComplementacao.textContent = `Hierarquização ${cadastrada.codigo} cadastrada. Solicitar a complementação agora?`;
+      $("hier-complementacao-agora").disabled = false;
+      $("hier-complementacao-depois").disabled = false;
+      $("hier-complementacao-agora").onclick = async () => {
+        $("hier-complementacao-agora").disabled = $("hier-complementacao-depois").disabled = true;
+        const concluida = await SLTComplementacaoHierarquizacao.solicitar(cadastrada.codigo, resultadoComplementacao,
+          "Complemente os atributos cadastrais aplicáveis e os atributos da matriz para prosseguir com a hierarquização.");
+        $("hier-complementacao-agora").disabled = concluida;
+        $("hier-complementacao-depois").disabled = concluida;
+      };
+      $("hier-complementacao-depois").onclick = () => {
+        $("hier-complementacao-agora").disabled = $("hier-complementacao-depois").disabled = true;
+        resultadoComplementacao.textContent = `Cadastro da hierarquização ${cadastrada.codigo} finalizado. Esta opção não criou pedido nem enviou e-mail; eventuais pedidos anteriores permanecem preservados. Os atributos faltantes continuam pendentes. Use “Solicitar complementação de atributos” na Fase 3 quando desejar.`;
+      };
       proc.concluirTarefa("Gravar hierarquização");
       $("hier-create-section").classList.add("hidden");
       const atualizada = await carregarLista();
       proc.sucesso({title: "Hierarquização cadastrada", message: atualizada
-        ? "O cadastro foi registrado e a lista foi atualizada."
+        ? "O cadastro foi registrado e a lista foi atualizada. Na página, escolha solicitar a complementação agora ou depois, na Fase 3."
         : "O cadastro foi registrado, mas a lista não foi atualizada. Recarregue-a antes de continuar.",
         _status: atualizada ? undefined : "partial"});
     } catch (err) {
@@ -640,6 +667,9 @@
     const changeGrupo = () => { paginaAgrupamento = 1; renderDemandasAgrupamento(); };
     $('hier-grupo-coluna').onchange = () => { $('hier-grupo-valor').value = ''; atualizarFiltroAgrupamento(); changeGrupo(); };
     $('hier-grupo-valor').onchange = changeGrupo;
+    $('hier-grupo-select-all').onchange = event => {demandasFiltradas.forEach(item=>{if(event.target.checked)demandasSelecionadas.add(chaveDemanda(item));else demandasSelecionadas.delete(chaveDemanda(item));});renderDemandasAgrupamento();};
+    $('hier-grupo-clear').onclick = () => {demandasSelecionadas.clear();renderDemandasAgrupamento();};
+    $('hier-grupo-export').onclick = () => SicardTableExport('demandas-do-agrupamento.csv',['Código','Processo SEI','Nome','Situação'],demandasAgrupamento.filter(item=>demandasSelecionadas.has(chaveDemanda(item))).map(item=>['codigo','origem_sei_processo','nome','status'].map(key=>valorAgrupamento(item,key))));
     SLTTable.bindFilter('hier-grupo', changeGrupo, () => { $('hier-grupo-coluna').value = ''; $('hier-grupo-valor').value = ''; atualizarFiltroAgrupamento(); });
     carregarLista();
     carregarAgrupamentos();

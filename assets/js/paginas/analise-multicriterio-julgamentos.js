@@ -26,6 +26,7 @@
   var environmentId = null, environmentSaving = false, analysisSaving = false;
   var analysisResponseIds = new Set();
   var analysisWorkspace = null;
+  var analysisMode = "view";
   var analysisRequest = 0;
   var selectedJudgeId = null; // null = todos os julgadores juntos
   var selectedMeasure = "geometrica"; // medida de tendencia central da agregacao
@@ -34,7 +35,7 @@
   var hierarquizacoesSourceUrl = "/api/ahp/hierarquizacoes/portfolio";
   var $ = function (id) { return document.getElementById(id); };
   var environmentFilterColumns = [
-    ["status", "Situação"], ["id", "ID Julgamento"], ["hierarquizacao_id", "ID Hierarquização"],
+    ["status", "Situação"], ["nome", "Nome do julgamento"], ["id", "ID Julgamento"], ["hierarquizacao_id", "ID Hierarquização"],
     ["hierarquizacao_codigo", "Código da hierarquização"], ["hierarquizacao_nome", "Hierarquização"],
     ["valido_ate", "Prazo para respostas"], ["criadoEm", "Criado em"], ["atualizadoEm", "Atualizado em"]
   ];
@@ -44,9 +45,14 @@
   function api(url, options) {
     return fetch(url, Object.assign({ credentials: "same-origin", headers: { "Content-Type": "application/json" } }, options || {})).then(async function (response) {
       var body = response.status === 204 ? null : await response.json();
-      if (!response.ok) throw new Error(Array.isArray(body?.detail)
-        ? body.detail.map(function (item) { return item.msg; }).join("; ")
-        : body?.detail?.message || body?.detail || "Não foi possível concluir a operação.");
+      if (!response.ok) {
+        var erro = new Error(window.SicardApiErro ? window.SicardApiErro.formatar(body, { status: response.status, method: (options && options.method) || "GET", url: url })
+        : (Array.isArray(body?.detail)
+          ? body.detail.map(function (item) { return item.msg; }).join("; ")
+          : body?.detail?.message || body?.detail || "Não foi possível concluir a operação (HTTP " + response.status + ")."));
+        erro.status = response.status; erro.body = body; erro.method = (options && options.method) || "GET"; erro.url = url;
+        throw erro;
+      }
       return body;
     });
   }
@@ -64,7 +70,7 @@
     } catch (error) {
       if (confirmada) proc.sucesso({_status: "partial", title: "Operação registrada; tela não atualizada",
         message: `O servidor confirmou a operação, mas a tela não foi atualizada: ${error.message}. Recarregue antes de tentar novamente.`});
-      else proc.erro({message: error.message});
+      else proc.erro({message: error.message, status: error.status, method: error.method, url: error.url, body: error.body});
     }
   }
   function matrixRows(matrix) { if (Array.isArray(matrix)) return matrix.filter(function (row) { return row && typeof row === "object"; }); if (!matrix || typeof matrix !== "object") return []; var rows = matrix.linhas || matrix.rows || matrix.criterios || matrix.dados || []; return Array.isArray(rows) ? rows.filter(function (row) { return row && typeof row === "object"; }) : []; }
@@ -117,6 +123,12 @@
   function statusLabel(status) { return { ativa: "Aberto", consolidada: "Consolidado", encerrada: "Encerrado" }[status] || status; }
   function actionLinks(j) { return { workspace: appUrl("restrict", "/analise-multicriterio/julgamentos/" + encodeURIComponent(j.id) + "/"), public: appUrl("public", "/analise-multicriterio/formulario-comparacao-pareada/" + encodeURIComponent(j.token) + "/") }; }
   function filterValue(j, column) {
+    if (modo === "julgamentos") {
+      var invited = (j.convites || []).length;
+      var metrics = { enviadas: invited, recebidas: (j.total_respostas || 0) + (j.respostas_em_preenchimento || 0), preenchimento: j.respostas_em_preenchimento || 0, finalizadas: j.total_respostas || 0, consistentes: j.respostas_consistentes || 0 };
+      if (Object.prototype.hasOwnProperty.call(metrics, column)) return metrics[column] + "/" + invited + " (" + (invited ? Math.round(metrics[column] / invited * 100) : 0) + "%)";
+      if (column === "valido_ate" || column === "atualizadoEm") return deadlineLabel(j[column]);
+    }
     var h = hierarquizacoes.find(function (item) { return item.id === (j.config_id || j.hierarquizacao_id); });
     return String(Object.assign({}, j, { status: statusLabel(j.status), hierarquizacao_nome: j.hierarquizacao_nome || h && h.nome })[column] ?? '');
   }
@@ -124,7 +136,7 @@
     if (modo === 'julgamentos') return [null, j=>statusLabel(j.status), j=>j.id, j=>(j.convites||[]).length,
       j=>(j.total_respostas||0)+(j.respostas_em_preenchimento||0), j=>j.respostas_em_preenchimento||0,
       j=>j.total_respostas||0, j=>j.respostas_consistentes||0, j=>j.valido_ate, j=>j.atualizadoEm];
-    return [null, j=>statusLabel(j.status), j=>j.id, j=>j.hierarquizacao_id, j=>j.hierarquizacao_nome||j.hierarquizacao_codigo,
+    return [null, j=>j.nome, j=>statusLabel(j.status), j=>j.id, j=>j.hierarquizacao_id, j=>j.hierarquizacao_nome||j.hierarquizacao_codigo,
       j=>(j.total_respostas||0)/Math.max(1,(j.convites||[]).length), j=>j.valido_ate, j=>j.criadoEm, j=>j.atualizadoEm,
       j=>j.n_criterios, j=>j.token, ...['lambda_max','indice_consistencia','indice_aleatorio','razao_consistencia'].map(key=>j=>j.consolidacao?.[key]),
       j=>JSON.stringify(j.consolidacao?.matriz_consolidada), j=>JSON.stringify(j.consolidacao?.pesos_consolidados)];
@@ -141,6 +153,7 @@
     $("ami-filter-valor").disabled = !column;
   }
   function setupEnvironmentFilters() {
+    if (modo === "julgamentos") environmentFilterColumns = [["status", "Situação"], ["id", "ID Julgamento"], ["enviadas", "Enviadas"], ["recebidas", "Recebidas"], ["preenchimento", "Em preenchimento"], ["finalizadas", "Finalizadas"], ["consistentes", "Finalizadas com consistência"], ["valido_ate", "Prazo"], ["atualizadoEm", "Atualizado em"]];
     $("ami-filter-coluna").insertAdjacentHTML("beforeend", environmentFilterColumns.map(function (entry) { return '<option value="' + entry[0] + '">' + entry[1] + '</option>'; }).join(''));
     function change() { currentPage = 1; selectedIds.clear(); editingId = null; render(); }
     $("ami-filter-coluna").onchange = function () { $("ami-filter-valor").value = ''; syncEnvironmentFilterOptions(); change(); };
@@ -195,7 +208,7 @@
   function fmtNumber(value) { return value == null ? "—" : Number(value).toFixed(3); }
   // Os indices atribuidos sao valores da escala de Saaty, entao aparecem na
   // notacao da propria escala (1/3, 3, 5) em vez de decimal.
-  var SAATY_ESCALA = [[1 / 9, "1/9"], [1 / 7, "1/7"], [1 / 5, "1/5"], [1 / 3, "1/3"], [1, "1"], [3, "3"], [5, "5"], [7, "7"], [9, "9"]];
+  var SAATY_ESCALA = [[1 / 9, "1/9"], [1 / 8, "1/8"], [1 / 7, "1/7"], [1 / 6, "1/6"], [1 / 5, "1/5"], [1 / 4, "1/4"], [1 / 3, "1/3"], [1 / 2, "1/2"], [1, "1"], [2, "2"], [3, "3"], [4, "4"], [5, "5"], [6, "6"], [7, "7"], [8, "8"], [9, "9"]];
   function saatyLabel(valor) {
     if (valor == null) return "—";
     for (var i = 0; i < SAATY_ESCALA.length; i++) { if (Math.abs(Number(valor) - SAATY_ESCALA[i][0]) < 0.0005) return SAATY_ESCALA[i][1]; }
@@ -224,12 +237,12 @@
         var largura = Math.max(1.2, Number(ponto.valor) / maximo * 100);
         var rotulo = saatyLabel(ponto.valor), descricao = julgador.nome + ": " + rotulo;
         // barra curta nao comporta o numero dentro: ele vai para fora, a direita
-        return '<span class="ami-pair-bars__bar' + (largura < 9 ? " is-curta" : "") + '" data-judge="' + escapeHtml(julgador.id) + '" style="width:' + largura.toFixed(2) + '%;background:' + julgador.cor + '" title="' + escapeHtml(descricao) + '" role="img" aria-label="' + escapeHtml(descricao) + '"><b>' + rotulo + '</b></span>';
+        return '<span class="ami-pair-bars__bar' + (largura < 9 ? " is-curta" : "") + '" data-judge="' + escapeHtml(julgador.id) + '" style="width:' + largura.toFixed(2) + '%;background:' + julgador.cor + '" title="' + escapeHtml(descricao) + '" role="button" tabindex="0" aria-label="' + escapeHtml(descricao) + '"><b>' + rotulo + '</b></span>';
       }).join("");
       var rotulo = pair.criterio_a + " \u00d7 " + pair.criterio_b;
       return '<div class="ami-pair-bars__row" data-pair="' + pair.i + '-' + pair.j + '"><span class="ami-pair-bars__label" title="' + escapeHtml(rotulo) + '">' + escapeHtml(rotulo) + '</span><div class="ami-pair-bars__plot"><span class="ami-pair-bars__ref" style="left:' + referencia.toFixed(2) + '%"></span>' + barras + '</div></div>';
     }).join("");
-    var legenda = destaque ? '' : '<ul class="ami-pair-bars__legend">' + cores.lista.map(function (julgador, indice) { return '<li><span class="ami-judge-chip" style="background:' + julgador.cor + '"></span><strong>J' + (indice + 1) + '</strong> ' + escapeHtml(julgador.nome) + '</li>'; }).join("") + '</ul>';
+    var legenda = destaque ? '' : '<ul class="ami-pair-bars__legend">' + cores.lista.map(function (julgador, indice) { return '<li><span class="ami-judge-chip" style="background:' + julgador.cor + '"></span><strong>J' + (indice + 1) + '</strong><span class="ami-pair-bars__judge-name">' + escapeHtml(julgador.nome) + '</span></li>'; }).join("") + '</ul>';
     return '<figure class="ami-pair-bars">' + linhas + '<figcaption>' + legenda + '<p>Linha vertical: o valor 1 (indiferen\u00e7a entre os dois crit\u00e9rios).</p></figcaption></figure>';
   }
   function analysisRangeBars(items) {
@@ -252,7 +265,6 @@
   }
   function modaLabel(pair) { var modas = pair.modas || []; return modas.length ? modas.map(saatyLabel).join(" / ") : "\u2014"; }
   function pairsTable(pairs, destaque) {
-    if (!pairs.length) return '<p class="ami-empty">Sem respostas enviadas.</p>';
     var cores = judgeColors(pairs);
     var descritivas = ["M\u00e9dia", "Mediana", "Moda"];
     var cabecalho, corpo;
@@ -262,7 +274,7 @@
       cabecalho = ["Par de crit\u00e9rios", "\u00cdndice atribu\u00eddo"];
       corpo = pairs.map(function (pair) {
         var ponto = (pair.pontos || []).filter(function (item) { return item.resposta_id === destaque; })[0];
-        return '<tr data-pair="' + pair.i + '-' + pair.j + '"><td class="ami-stats-table__name">' + escapeHtml(pair.criterio_a + " \u00d7 " + pair.criterio_b) + '</td><td><strong>' + (ponto ? saatyLabel(ponto.valor) : "\u2014") + '</strong></td></tr>';
+        return '<tr data-pair="' + pair.i + '-' + pair.j + '"><td class="ami-stats-table__name">' + escapeHtml(pair.criterio_a) + '</td><td class="ami-stats-table__name">' + escapeHtml(pair.criterio_b) + '</td><td><strong>' + (ponto ? saatyLabel(ponto.valor) : "\u2014") + '</strong></td></tr>';
       });
     } else {
       cabecalho = ["Par de crit\u00e9rios"].concat(cores.lista.map(function (julgador) {
@@ -273,13 +285,13 @@
           var ponto = (pair.pontos || []).filter(function (item) { return item.resposta_id === julgador.id; })[0];
           if (!ponto) return '<td>\u2014</td>';
           var intensidade = desvioIntensidade(ponto.valor, pair.media_geometrica);
-          return '<td class="ami-stats-table__valor' + (intensidade > 0.55 ? " is-forte" : "") + '" style="background:rgba(17,101,147,' + (intensidade * 0.8).toFixed(3) + ')" title="' + escapeHtml(julgador.nome + ": " + saatyLabel(ponto.valor) + " \u00b7 m\u00e9dia geom\u00e9trica do par " + fmtNumber(pair.media_geometrica)) + '">' + saatyLabel(ponto.valor) + '</td>';
+          return '<td class="ami-stats-table__valor' + (intensidade > 0.55 ? " is-forte" : "") + '" style="--ami-deviation-color:rgba(17,101,147,' + (intensidade * 0.8).toFixed(3) + ')" title="' + escapeHtml(julgador.nome + ": " + saatyLabel(ponto.valor) + " \u00b7 m\u00e9dia geom\u00e9trica do par " + fmtNumber(pair.media_geometrica)) + '">' + saatyLabel(ponto.valor) + '</td>';
         }).join("");
-        return '<tr data-pair="' + pair.i + '-' + pair.j + '"><td class="ami-stats-table__name">' + escapeHtml(pair.criterio_a + " \u00d7 " + pair.criterio_b) + '</td>' + celulas + '<td>' + fmtNumber(pair.media) + '</td><td>' + saatyLabel(pair.mediana) + '</td><td>' + modaLabel(pair) + '</td></tr>';
+        return '<tr data-pair="' + pair.i + '-' + pair.j + '"><td class="ami-stats-table__name">' + escapeHtml(pair.criterio_a) + '</td><td class="ami-stats-table__name">' + escapeHtml(pair.criterio_b) + '</td>' + celulas + '<td>' + fmtNumber(pair.media) + '</td><td>' + saatyLabel(pair.mediana) + '</td><td>' + modaLabel(pair) + '</td></tr>';
       });
     }
-    var rodape = destaque ? "" : '<p class="ami-table-note"><span class="ami-table-note__escala">Fundo da c\u00e9lula: afastamento da m\u00e9dia geom\u00e9trica do par <i></i><i></i><i></i><i></i></span></p>';
-    return '<table class="admin-table ami-stats-table ami-table--indices"><thead><tr>' + cabecalho.map(function (titulo) { return '<th>' + titulo + '</th>'; }).join("") + '</tr></thead><tbody>' + corpo.join("") + '</tbody></table>' + rodape;
+    var rodape = destaque ? "" : '<p class="ami-table-note"><span class="ami-table-note__escala">Marca na base da c\u00e9lula: afastamento da m\u00e9dia geom\u00e9trica do par <i></i><i></i><i></i><i></i></span></p>';
+    return '<table class="admin-table ami-stats-table ami-table--indices" data-grouped-headers="true"><thead><tr><th colspan="2" scope="colgroup">Par de critérios</th>' + cabecalho.slice(1).map(function (titulo) { return '<th rowspan="2" scope="col">' + titulo + '</th>'; }).join("") + '</tr><tr class="ami-pair-leaf-headers" hidden aria-hidden="true"><th scope="col">Critério 1</th><th scope="col">Critério 2</th></tr></thead><tbody>' + (corpo.join("") || '<tr><td colspan="' + (cabecalho.length + 1) + '">Sem respostas enviadas.</td></tr>') + '</tbody></table>' + rodape;
   }
   // A lista de julgadores vem das respostas enviadas daquele julgamento, e nao
   // de uma lista fixa: quem responde entra na lista sozinho.
@@ -294,7 +306,7 @@
     select.innerHTML = '<option value="">Todos os julgadores</option>' + julgadores.map(function (j, indice) {
       return '<option value="' + escapeHtml(j.id) + '"' + (j.id === selectedJudgeId ? " selected" : "") + '>J' + (indice + 1) + " \u00b7 " + escapeHtml(j.nome) + (j.instituicao ? " (" + escapeHtml(j.instituicao) + ")" : "") + '</option>';
     }).join("");
-    if (!select.dataset.bound) { select.dataset.bound = "1"; select.addEventListener("change", function () { selectedJudgeId = select.value || null; analysisResponseIds = new Set(selectedJudgeId ? [selectedJudgeId] : respostasEnviadas(analysisWorkspace).map(function (r) { return String(r.id); })); renderResponsesForConsolidation(analysisWorkspace); renderPairsSection(); }); }
+    if (!select.dataset.bound) { select.dataset.bound = "1"; select.addEventListener("change", function () { selectedJudgeId = select.value || null; if (analysisMode === "edit") analysisResponseIds = new Set(selectedJudgeId ? [selectedJudgeId] : respostasEnviadas(analysisWorkspace).map(function (r) { return String(r.id); })); renderResponsesForConsolidation(analysisWorkspace); renderPairsSection(); }); }
     $("ami-pairs-judge-hint").textContent = julgadores.length + (julgadores.length === 1 ? " julgador com resposta enviada" : " julgadores com resposta enviada");
     $("ami-analysis-pairs").innerHTML = pairsTable(pairs, selectedJudgeId);
     $("ami-analysis-pairs-chart").innerHTML = analysisPairBars(pairs, selectedJudgeId);
@@ -314,13 +326,14 @@
       });
     });
     $("ami-analysis-pairs-chart").querySelectorAll("[data-judge]").forEach(function (barra) {
-      barra.addEventListener("click", function () { selectedJudgeId = barra.dataset.judge; analysisResponseIds = new Set([selectedJudgeId]); renderResponsesForConsolidation(analysisWorkspace); renderPairsSection(); });
+      barra.addEventListener("click", function () { selectedJudgeId = barra.dataset.judge; if (analysisMode === "edit") analysisResponseIds = new Set([selectedJudgeId]); renderResponsesForConsolidation(analysisWorkspace); renderPairsSection(); });
+      barra.addEventListener("keydown", function (event) { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); barra.click(); } });
     });
   }
   function analysisMatrixTable(item) {
     var criteria = analysisWorkspace.ambiente.criterios || [], matrix = item.matriz_consolidada || [];
     if (!matrix.length) return '<p class="ami-empty">Matriz consolidada indisponível.</p>';
-    return '<div class="matriz-table-wrap"><table class="admin-table matriz-view-table ami-matrix"><thead><tr><th>Critério</th>' + criteria.map(function (criterion, index) { return '<th>' + escapeHtml(criterionName(criterion, index)) + '</th>'; }).join("") + '</tr></thead><tbody>' + matrix.map(function (row, rowIndex) { return '<tr><th>' + escapeHtml(criterionName(criteria[rowIndex], rowIndex)) + '</th>' + row.map(function (value) { return '<td>' + fmtNumber(value) + '</td>'; }).join("") + '</tr>'; }).join("") + '</tbody></table></div>';
+    return '<div class="matriz-table-wrap"><table class="admin-table matriz-view-table ami-matrix"><thead><tr><th>Critério</th>' + criteria.map(function (criterion, index) { return '<th>' + escapeHtml(criterionName(criterion, index)) + '</th>'; }).join("") + '</tr></thead><tbody>' + matrix.map(function (row, rowIndex) { return '<tr><th scope="row">' + escapeHtml(criterionName(criteria[rowIndex], rowIndex)) + '</th>' + row.map(function (value) { return '<td>' + fmtNumber(value) + '</td>'; }).join("") + '</tr>'; }).join("") + '</tbody></table></div>';
   }
   // Motor AHP do cliente, espelhando api/services/ahp_engine.py: vetor de
   // prioridades pela media geometrica das linhas e metricas de consistencia.
@@ -372,6 +385,11 @@
   // A matriz que alimenta as secoes 2.3 a 2.5: a do julgador selecionado, ou a
   // agregacao de todos pela medida escolhida.
   function matrizEmFoco(data) {
+    if (analysisMode === "view") {
+      var stored = selectedJudgeId ? (data.respostas || []).find(function(r){return String(r.id) === selectedJudgeId;}) : (analiseHomologada(data) || (data.analises || [])[0]);
+      var matrix = stored && (stored.matriz_consolidada || stored.matriz_comparacao);
+      return matrix && matrix.length ? {matriz:matrix, origem:"registrada", rotulo:stored.nome || stored.nome_completo || "Análise registrada", registro:stored} : null;
+    }
     if (selectedJudgeId && !$("ami-analysis-exclude-inconsistent").checked) {
       var resposta = (data.respostas || []).filter(function (r) { return String(r.id) === selectedJudgeId; })[0];
       var matriz = resposta && resposta.matriz_comparacao;
@@ -420,7 +438,7 @@
     var vazio = '<td class="ami-cell-vazio"></td>';
     $("ami-analysis-responses").innerHTML = julgadoresDoJulgamento(data).map(function (julgador) {
       var r = julgador.resposta, enviada = r && r.status === "enviada";
-      return '<tr' + (enviada ? '' : ' class="is-sem-resposta"') + '><td><input type="checkbox" ' + (enviada ? 'data-analysis-response="' + escapeHtml(r.id) + '" ' + (analysisResponseIds.has(String(r.id)) ? 'checked' : '') : 'disabled title="Sem resposta enviada"') + '></td>' +
+      return '<tr' + (enviada ? '' : ' class="is-sem-resposta"') + '><td><input type="checkbox" ' + (enviada ? 'data-analysis-response="' + escapeHtml(r.id) + '" ' + (analysisResponseIds.has(String(r.id)) ? 'checked' : '') + (analysisMode !== 'edit' ? ' disabled' : '') : 'disabled title="Sem resposta enviada"') + '></td>' +
         '<td class="ami-stats-table__name">' + (julgador.indice >= 0 ? '<strong>J' + (julgador.indice + 1) + '</strong> ' : '') + escapeHtml(julgador.nome || "\u2014") + '</td>' +
         '<td class="ami-stats-table__name">' + escapeHtml(julgador.email) + '</td><td>' + julgador.situacao + '</td>' +
         (enviada ? '<td>' + fmtNumber(r.razao_consistencia) + '</td>' : vazio) +
@@ -445,14 +463,16 @@
       : foco.origem === "julgador"
         ? 'Matriz do julgador <strong>' + escapeHtml(foco.rotulo) + '</strong>, exatamente como ele a preencheu. Cada c\u00e9lula responde: quantas vezes o crit\u00e9rio da linha importa mais que o da coluna.'
         : 'Agrega\u00e7\u00e3o dos julgamentos dos julgadores selecionados, par a par, pela <strong>' + escapeHtml(foco.rotulo) + '</strong> dos \u00edndices.' +
-          ' Pr\u00e9via das respostas selecionadas em 2.6. O resultado homologado est\u00e1 identificado em 2.7.';
-    if (!foco) { $("ami-analysis-matrix").innerHTML = '<p class="ami-empty">Sem respostas enviadas.</p>'; return; }
+          ' Pr\u00e9via das respostas selecionadas na subse\u00e7\u00e3o 6. O resultado homologado est\u00e1 identificado na subse\u00e7\u00e3o 7.';
+    if (analysisMode === "view") $("ami-analysis-matrix-hint").textContent = foco ? "Matriz registrada: " + foco.rotulo + "." : "Nenhuma matriz consolidada registrada. Selecione um julgador para consultar sua resposta.";
+    if (!foco) { $("ami-analysis-matrix").innerHTML = '<p class="ami-empty">' + (analysisMode === "view" ? "Nenhuma matriz registrada para esta consulta." : "Sem respostas incluídas na análise.") + '</p>'; return; }
     $("ami-analysis-matrix").innerHTML = '<div class="matriz-table-wrap"><table class="admin-table ami-stats-table ami-matrix" data-table-sort="off"><thead><tr><th>Crit\u00e9rio</th>' +
       criterios.map(function (nome) { return '<th>' + escapeHtml(nome) + '</th>'; }).join("") + '</tr></thead><tbody>' +
       foco.matriz.map(function (linha, i) {
         return '<tr><td class="ami-stats-table__name">' + escapeHtml(criterios[i]) + '</td>' +
           linha.map(function (valor, j) { return '<td' + (i === j ? ' class="is-diagonal"' : '') + ' title="' + escapeHtml(criterios[i] + " \u00d7 " + criterios[j]) + '">' + fmtNumber(valor) + '</td>'; }).join("") + '</tr>';
       }).join("") + '</tbody></table></div>';
+    SLTAnalysisTable($("ami-analysis-matrix").querySelector("table"));
   }
   // Explicacao curta de cada metrica, em linguagem de quem vai decidir.
   var EXPLICACAO_METRICAS = {
@@ -464,12 +484,17 @@
   function renderConsistencyMetrics(data) {
     var foco = matrizEmFoco(data);
     if (!foco) { $("ami-analysis-metrics-hint").textContent = ""; $("ami-analysis-metrics").innerHTML = '<p class="ami-empty">Sem m\u00e9tricas: nenhuma resposta enviada.</p>'; return; }
-    var resultado = analisarMatriz(foco.matriz), limite = Number($("ami-analysis-rc").value) || 0.1;
+    if (analysisMode === "view" && ["lambda_max","indice_consistencia","indice_aleatorio","razao_consistencia"].some(function(key){return foco.registro[key] == null;})) {
+      $("ami-analysis-metrics-hint").textContent="Métricas não registradas para esta análise.";
+      $("ami-analysis-metrics").innerHTML='<p class="ami-empty">Nenhuma métrica registrada.</p>';return;
+    }
+    var resultado = analysisMode === "view" ? {lambdaMax:foco.registro.lambda_max,ic:foco.registro.indice_consistencia,ri:foco.registro.indice_aleatorio,rc:foco.registro.razao_consistencia} : analisarMatriz(foco.matriz), limite = Number($("ami-analysis-rc").value) || 0.1;
     var aprovado = resultado.rc < limite, n = foco.matriz.length;
     $("ami-analysis-metrics-hint").innerHTML = (foco.origem === "julgador"
       ? 'Coer\u00eancia interna do julgamento de <strong>' + escapeHtml(foco.rotulo) + '</strong>'
       : 'Coer\u00eancia da matriz agregada pela <strong>' + escapeHtml(foco.rotulo) + '</strong>') +
       ': se ela diz que A vale 3 vezes B e que B vale 3 vezes C, esperaria-se algo perto de 9 entre A e C. As m\u00e9tricas medem esse tipo de desencontro \u2014 cada carta abaixo mostra a sua pr\u00f3pria situa\u00e7\u00e3o.';
+    if (analysisMode === "view") $("ami-analysis-metrics-hint").textContent = "Métricas registradas: " + foco.rotulo + ".";
     // Cada metrica traz o seu proprio veredito: situacao (cor), selo e, quando
     // faz sentido, a barra do quanto do limite foi consumido.
     var excedente = resultado.lambdaMax - n;
@@ -496,7 +521,7 @@
         medidor: Math.max(2, Math.min(100, resultado.rc / Math.max(limite, 0.0001) * 100)),
         conclusao: aprovado
           ? "Os julgamentos se sustentam entre si; os pesos derivados desta matriz podem ser usados."
-          : "H\u00e1 contradi\u00e7\u00f5es demais entre os julgamentos: reveja os pares mais destoantes em 2.2 antes de consolidar."
+          : "H\u00e1 contradi\u00e7\u00f5es demais entre os julgamentos: reveja os pares mais destoantes na subse\u00e7\u00e3o 2 antes de consolidar."
       }
     ];
     var icones = { ok: "fa-circle-check", atencao: "fa-triangle-exclamation", nok: "fa-circle-xmark", neutro: "fa-circle-info" };
@@ -517,12 +542,13 @@
     $("ami-analysis-metrics").innerHTML = grade + explicacoes;
   }
   function renderWeights(data) {
-    var foco = matrizEmFoco(data), resultado = foco ? analisarMatriz(foco.matriz) : null;
+    var foco = matrizEmFoco(data), resultado = foco ? (analysisMode === "view" ? {pesos:foco.registro.pesos_consolidados || []} : analisarMatriz(foco.matriz)) : null;
     var pesos = resultado ? resultado.pesos : [], criterios = (data.ambiente.criterios || []).map(criterionName);
     $("ami-analysis-weight-col").textContent = "Peso";
     $("ami-analysis-weights-hint").innerHTML = !foco ? 'Sem respostas enviadas.' : foco.origem === "julgador"
       ? 'Pesos derivados da matriz de <strong>' + escapeHtml(foco.rotulo) + '</strong>, sem agrega\u00e7\u00e3o \u2014 \u00e9 o julgamento de uma pessoa s\u00f3.'
       : 'Pesos consolidados a partir dos \u00edndices dos julgadores selecionados, agregados pela <strong>' + escapeHtml(foco.rotulo) + '</strong>.';
+    if (analysisMode === "view") $("ami-analysis-weights-hint").textContent = pesos.length ? "Pesos registrados: " + foco.rotulo + "." : "Nenhum peso consolidado registrado para esta consulta.";
     $("ami-analysis-criteria").innerHTML = criterios.map(function (nome, indice) {
       return '<tr><td class="ami-stats-table__name" title="' + escapeHtml(nome) + '">' + escapeHtml(nome) + '</td><td><strong>' + (pesos.length ? fmtNumber(pesos[indice]) : "\u2014") + '</strong></td></tr>';
     }).join("") || '<tr><td colspan="2" class="ami-empty">Sem respostas enviadas.</td></tr>';
@@ -535,7 +561,22 @@
     SLTAnalysisTable($("ami-analysis-criteria").closest("table"));
   }
   // Tudo que deriva da matriz acompanha a selecao do julgador e da medida.
+  function syncAnalysisCalculate() {
+    $("ami-analysis-calculate").disabled = analysisMode !== "edit" || analysisSaving || !analysisWorkspace || !analysisResponseIds.size;
+  }
+  function syncAnalysisMode() {
+    var readonly = analysisMode !== "edit";
+    $("ami-analysis-workspace").dataset.mode = analysisMode;
+    ["ami-analysis-name", "ami-analysis-rc", "ami-analysis-exclude-inconsistent", "ami-analysis-measure"].forEach(function(id){$(id).disabled = readonly || analysisSaving;});
+    $("ami-analysis-mode").textContent = readonly ? "Visualização somente leitura — dados registrados." : "Edição das respostas colaborativas — configure a análise e salve as alterações.";
+    $("ami-analysis-consolidations").querySelectorAll('[data-homologate-analysis]').forEach(function(button){
+      var item=(analysisWorkspace.analises||[]).find(function(a){return a.id===button.dataset.homologateAnalysis;});
+      button.disabled=readonly || analysisSaving || !item || !item.consistente;
+    });
+    syncAnalysisCalculate();
+  }
   function renderFioDerivado(data) {
+    syncAnalysisCalculate();
     renderConsolidatedMatrix(data);
     renderConsistencyMetrics(data);
     renderWeights(data);
@@ -572,7 +613,7 @@
   // Consolidacao completa: cada etapa alimenta o modal de processo e o desfecho
   // vai para o semaforo.
   function consolidarRespostas() {
-    if (!analysisWorkspace || analysisSaving) return;
+    if (!analysisWorkspace || analysisSaving || analysisMode !== "edit") return;
     var ambienteId = analysisWorkspace.ambiente.id;
     var selecionadas = Array.from(analysisResponseIds);
     var enviadas = respostasEnviadas(analysisWorkspace).length;
@@ -600,7 +641,7 @@
       marcarEtapa("recarga", "andamento");
       return api("/api/ahp/comparacao-colaborativa/ambientes/" + encodeURIComponent(ambienteId) + "/espaco-analitico");
     }).then(function (data) {
-      marcarEtapa("recarga", "ok", "Se\u00e7\u00f5es 2.1 a 2.7 atualizadas.");
+      marcarEtapa("recarga", "ok", "Se\u00e7\u00f5es 1 a 7 atualizadas.");
       renderAnalysisWorkspace(data);
       var incluidas = criada.respostas_incluidas || selecionadas.length;
       var campos = [
@@ -611,13 +652,13 @@
       ];
       if (!criada.consistente) {
         mostrarResultado("vermelha", "An\u00e1lise gravada, mas inconsistente",
-          "O RC ficou acima do limite adotado: os pesos desta an\u00e1lise n\u00e3o devem ser homologados. Reveja os pares mais destoantes em 2.2 ou exclua a resposta inconsistente.", campos);
+          "O RC ficou acima do limite adotado: os pesos desta an\u00e1lise n\u00e3o devem ser homologados. Reveja os pares mais destoantes na subse\u00e7\u00e3o 2 ou exclua a resposta inconsistente.", campos);
       } else if (incluidas < enviadas) {
         mostrarResultado("amarela", "An\u00e1lise gravada com ressalva",
           "O resultado \u00e9 consistente, mas nem todas as respostas enviadas entraram na consolida\u00e7\u00e3o. Confira se a exclus\u00e3o foi proposital antes de homologar.", campos);
       } else {
         mostrarResultado("verde", "An\u00e1lise consolidada com sucesso",
-          "Todas as respostas enviadas entraram e o resultado \u00e9 consistente. A an\u00e1lise j\u00e1 pode ser homologada em 2.7.", campos);
+          "Todas as respostas enviadas entraram e o resultado \u00e9 consistente. A an\u00e1lise j\u00e1 pode ser homologada na subse\u00e7\u00e3o 7.", campos);
       }
     }).catch(function (erro) {
       var pendente = ETAPAS_CONSOLIDACAO.filter(function (etapa) { return estadoEtapas[etapa.id] === "andamento"; })[0];
@@ -626,13 +667,21 @@
       mostrarResultado(criada ? "amarela" : "vermelha", criada ? "Análise gravada; tela não atualizada" : "Consolida\u00e7\u00e3o n\u00e3o conclu\u00edda",
         criada ? "A análise foi gravada. Recarregue o espaço analítico antes de tentar novamente. " + erro.message : erro.message,
         [["Etapa", pendente ? pendente.titulo : "\u2014"], ["Selecionadas", String(selecionadas.length)]]);
-    }).finally(function () { analysisSaving = false; $("ami-analysis-calculate").disabled = false; });
+    }).finally(function () { analysisSaving = false; syncAnalysisCalculate(); });
   }
   function renderAnalysisWorkspace(data) {
     var same = analysisWorkspace && analysisWorkspace.ambiente.id === data.ambiente.id;
     var validResponses = respostasEnviadas(data).map(function (r) { return String(r.id); });
     analysisResponseIds = new Set(same ? validResponses.filter(function (id) { return analysisResponseIds.has(id); }) : validResponses);
     analysisWorkspace = data; selectedJudgeId = null; var a = data.ambiente, p = data.participacao;
+    if (!same) {
+      var saved = analiseHomologada(data) || (data.analises || [])[0];
+      $("ami-analysis-name").value = saved ? saved.nome : (analysisMode === "edit" ? "Análise com as respostas selecionadas" : "");
+      $("ami-analysis-rc").value = saved ? (saved.rc_maximo ?? 0.1) : (analysisMode === "edit" ? "0.10" : "");
+      $("ami-analysis-exclude-inconsistent").checked = saved ? Boolean(saved.excluir_inconsistentes) : analysisMode === "edit";
+      selectedMeasure = saved ? ({aij_media_geometrica:"geometrica",aij_media_aritmetica:"aritmetica",aij_mediana:"mediana"}[saved.metodo_agregacao] || saved.metodo_agregacao || "geometrica") : "geometrica";
+      if (analysisMode === "view") analysisResponseIds = new Set(saved ? (saved.resposta_ids || []).map(String) : []);
+    }
     $("ami-analysis-context").textContent = (a.hierarquizacao_nome || a.hierarquizacao_codigo) + " · " + a.n_criterios + " critérios";
     $("ami-analysis-participation").innerHTML = [["Convidados",p.convidados],["Não iniciados",p.nao_iniciados],["Em preenchimento",p.em_preenchimento],["Enviadas",p.enviadas],["Consistentes",p.consistentes],["Inconsistentes",p.inconsistentes]].map(function (x) { return '<div class="ahp-metric-card"><div class="ahp-metric-card__label">' + x[0] + '</div><div class="ahp-metric-card__value">' + x[1] + '</div></div>'; }).join("");
     renderResponsesForConsolidation(data);
@@ -640,6 +689,7 @@
     renderJudges(data);
     renderPairsSection();
     renderConsolidatedAnalyses(data.analises, data.analise_homologada_id);
+    syncAnalysisMode();
     $("ami-analysis-workspace").classList.remove("is-hidden"); $("ami-analysis-workspace").scrollIntoView({behavior:"smooth",block:"start"});
   }
   // Com os pesos homologados, o julgamento cumpriu o seu papel: as tres fases
@@ -660,11 +710,11 @@
       }).join("") + '</ol></div>';
   }
   function renderConsolidatedAnalyses(items, homologadaId) {
-    $("ami-analysis-consolidations").innerHTML = items.map(function (item) { var official = item.id === homologadaId || item.status === "homologada"; return '<article class="info-card"><h3>' + escapeHtml(item.nome) + ' <small>' + escapeHtml(item.codigo) + '</small></h3><div class="ami-kpis"><div><strong>' + item.respostas_incluidas + '</strong><span>respostas</span></div><div><strong>' + fmtNumber(item.razao_consistencia) + '</strong><span>RC</span></div><div><strong>' + (item.consistente ? "Sim" : "Não") + '</strong><span>consistente</span></div></div><div class="ahp-collab-grid2"><div><h4>Pesos finais</h4><div class="matriz-table-wrap"><table class="admin-table"><thead><tr><th>Critério</th><th>Peso final</th></tr></thead><tbody>' + item.pesos_consolidados.map(function (w,i) { return '<tr><td>' + escapeHtml(criterionName(analysisWorkspace.ambiente.criterios[i], i)) + '</td><td>' + fmtNumber(w) + '</td></tr>'; }).join("") + '</tbody></table></div></div><div><h4>Matriz consolidada</h4>' + analysisMatrixTable(item) + '</div></div>' + (official ? analiseHomologadaAviso() : '<button type="button" class="btn btn-success" data-homologate-analysis="' + escapeHtml(item.id) + '" ' + (!item.consistente ? "disabled" : "") + '>Homologar análise</button>') + '</article>'; }).join("") || '<p class="ami-empty">Nenhuma análise consolidada.</p>';
-    $("ami-analysis-consolidations").querySelectorAll("table:not(.ami-matrix)").forEach(SLTAnalysisTable);
+    $("ami-analysis-consolidations").innerHTML = items.map(function (item) { var official = item.id === homologadaId || item.status === "homologada"; return '<p class="ami-consolidated-identification">' + escapeHtml(item.nome) + (item.codigo ? ' · ' + escapeHtml(item.codigo) : '') + '</p><div class="ami-kpis"><div><strong>' + item.respostas_incluidas + '</strong><span>respostas</span></div><div><strong>' + fmtNumber(item.razao_consistencia) + '</strong><span>RC</span></div><div><strong>' + (item.consistente ? "Sim" : "Não") + '</strong><span>consistente</span></div></div><div class="ahp-collab-grid2 ami-consolidated-tables" data-equal-table-height><div><h4>Pesos finais</h4><div class="matriz-table-wrap"><table class="admin-table"><thead><tr><th>Critério</th><th>Peso final</th></tr></thead><tbody>' + item.pesos_consolidados.map(function (w,i) { return '<tr><td>' + escapeHtml(criterionName(analysisWorkspace.ambiente.criterios[i], i)) + '</td><td>' + fmtNumber(w) + '</td></tr>'; }).join("") + '</tbody></table></div></div><div><h4>Matriz consolidada</h4>' + analysisMatrixTable(item) + '</div></div>' + (official ? analiseHomologadaAviso() : '<button type="button" class="btn btn-success" data-homologate-analysis="' + escapeHtml(item.id) + '" ' + (!item.consistente ? "disabled" : "") + '>Homologar análise</button>') ; }).join("") || '<p class="ami-empty">Nenhuma análise consolidada.</p>';
+    $("ami-analysis-consolidations").querySelectorAll("table").forEach(SLTAnalysisTable);
     $("ami-analysis-consolidations").querySelectorAll("[data-homologate-analysis]").forEach(function (button) { button.addEventListener("click", async function () {
       var ambienteId = analysisWorkspace.ambiente.id;
-      if (button.disabled || analysisSaving) return;
+      if (button.disabled || analysisSaving || analysisMode !== "edit") return;
       analysisSaving = true;
       button.disabled = true;
       try {
@@ -676,26 +726,30 @@
           const data = await api("/api/ahp/comparacao-colaborativa/ambientes/" + encodeURIComponent(ambienteId) + "/espaco-analitico");
           if (analysisWorkspace.ambiente.id === ambienteId) renderAnalysisWorkspace(data);
         });
-      } finally { analysisSaving = false; button.disabled = false; }
+      } finally { analysisSaving = false; syncAnalysisMode(); }
     }); });
   }
-  function openAnalysisWorkspace(ambienteId) {
+  function openAnalysisWorkspace(ambienteId, mode) {
     ambienteId = typeof ambienteId === "string" ? ambienteId : selectedId;
-    if (!ambienteId) return;
+    if (!ambienteId || analysisSaving) return;
     var request = ++analysisRequest;
+    $("ami-analysis-workspace").inert = true;
     $("ami-analysis-feedback").textContent = "Carregando análise…";
     api("/api/ahp/comparacao-colaborativa/ambientes/" + encodeURIComponent(ambienteId) + "/espaco-analitico").then(function (data) {
       if (request !== analysisRequest) return;
+      analysisMode = mode === "edit" ? "edit" : "view";
+      analysisWorkspace = null;
       $("ami-analysis-feedback").textContent=""; renderAnalysisWorkspace(data);
     }).catch(function (e) {
       if (request === analysisRequest) {
         $("ami-analysis-feedback").textContent=e.message;
         Notify.error("Central de respostas", e.message);
       }
-    });
+    }).finally(function(){if(request===analysisRequest)$("ami-analysis-workspace").inert=false;});
   }
   function setEnvironmentMode(mode) {
     environmentMode = mode;
+    $("ami-create-status").hidden = mode === "create";
     SICARDEmailConvites.modo(mode);
     draftEditing = mode === "create";
     draftSnapshot = [];
@@ -704,7 +758,7 @@
     $("ami-emails-filter-valor").value = "";
     SLTTable.inversion($("ami-emails-filter-inverter"), false);
     var creating = mode === "create", editing = mode === "edit", readonly = mode === "view";
-    ["ami-deadline", "ami-emails", "ami-add-emails", "ami-select-all", "ami-delete-emails", "ami-criteria-matrix"].forEach(function (id) { if ($(id)) $(id).disabled = readonly; });
+    ["ami-judgment-name", "ami-deadline", "ami-collaborator-name", "ami-emails", "ami-add-emails", "ami-select-all", "ami-delete-emails", "ami-criteria-matrix"].forEach(function (id) { if ($(id)) $(id).disabled = readonly; });
     $("ami-hierarchy").disabled = readonly || Boolean(activeSurfaceId);
     if ($("ami-criteria-matrix") && activeSurfaceId) $("ami-criteria-matrix").disabled = true;
     $("ami-email-list").querySelectorAll("input").forEach(function (input) { input.disabled = readonly; });
@@ -715,13 +769,14 @@
     $("ami-create-section").classList.toggle("is-readonly", readonly);
     renderDraftEmails();
   }
-  function showCreateSection() { if (environmentSaving || surfaceLoading) return; environmentId = null; activeSurfaceId = null; setEnvironmentMode("create"); $("ami-create-form").reset(); draftEmails = []; criteriaMatrix = null; criteriaMatrixFileBase64 = null; criteriaMatrixFileName = null; renderDraftEmails(); matrixSummary(""); $("ami-hierarchy-summary").textContent = ""; $("ami-create-status").className = "ami-empty"; $("ami-create-status").textContent = "O status será exibido após a confirmação dos colaboradores."; $("ami-email-draft-card").classList.add("is-hidden"); applySurfaceContext(); $("ami-create-section").classList.remove("is-hidden"); $("ami-deadline").focus(); $("ami-create-section").scrollIntoView({ behavior: "smooth", block: "start" }); }
+  function showCreateSection() { if (environmentSaving || surfaceLoading) return; environmentId = null; activeSurfaceId = null; setEnvironmentMode("create"); $("ami-create-form").reset(); draftEmails = []; criteriaMatrix = null; criteriaMatrixFileBase64 = null; criteriaMatrixFileName = null; renderDraftEmails(); matrixSummary(""); $("ami-hierarchy-summary").textContent = ""; $("ami-create-status").className = "ami-empty"; $("ami-create-status").textContent = "O status será exibido após a confirmação dos colaboradores."; $("ami-email-draft-card").classList.add("is-hidden"); applySurfaceContext(); $("ami-create-section").classList.remove("is-hidden"); $("ami-deadline").focus(); $("ami-create-section").querySelector(".ami-environment-title").scrollIntoView({ behavior: "smooth", block: "start" }); }
   function hideCreateSection() { $("ami-create-section").classList.add("is-hidden"); $("ami-create-feedback").textContent = ""; setEnvironmentMode("create"); }
   function dateInputValue(value) { if (!value) return ""; var date = new Date(value), parts = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(date).reduce(function (result, part) { result[part.type] = part.value; return result; }, {}); return parts.year + "-" + parts.month + "-" + parts.day; }
   function viewSelectedEnvironment() {
     var judgment = julgamentos.find(function (j) { return j.id === environmentId; }) || selectedRecord(); if (!judgment || modo !== "espaco") return;
     environmentId = judgment.id;
     activeSurfaceId = judgment.superficie_id || null;
+    $("ami-judgment-name").value = judgment.nome || "Julgamento " + judgment.id;
     $("ami-deadline").value = dateInputValue(judgment.valido_ate);
     var option = Array.from($("ami-hierarchy").options).find(function (item) { return item.dataset.hierarquizacaoId === String(judgment.hierarquizacao_id || ""); });
     $("ami-hierarchy").value = option ? option.value : "";
@@ -731,30 +786,35 @@
     matrixSummary((judgment.criterios || []).length + " critério(s) armazenado(s) neste julgamento" + (criteriaMatrixFileName ? " · " + criteriaMatrixFileName : "") + ".");
     draftEmails = (judgment.convites || []).map(function (invite) { return typeof invite === "string" ? { email: invite, nome: null } : { email: invite.email, nome: invite.nome || null }; }).filter(function (convite) { return convite.email; });
     renderDraftEmails(); setEnvironmentMode("view");
-    $("ami-create-status").className = "ami-create-success";
-    $("ami-create-status").innerHTML = '<strong>Ambiente colaborativo selecionado.</strong><span>Situação: ' + escapeHtml(statusLabel(judgment.status)) + '</span><span>Data limite: ' + escapeHtml(deadlineLabel(judgment.valido_ate)) + '</span><span>Participação: ' + escapeHtml(String(judgment.total_respostas || 0)) + ' resposta(s) de ' + escapeHtml(String((judgment.convites || []).length)) + ' convite(s)</span>';
+    $("ami-create-status").className = "ami-status-cards";
+    $("ami-create-status").innerHTML = [
+      ["Situação", statusLabel(judgment.status), "Estado atual do julgamento", "fa-circle-info"],
+      ["Data limite", deadlineLabel(judgment.valido_ate), "Prazo para envio das respostas", "fa-calendar-days"],
+      ["Participação", String(judgment.total_respostas || 0) + " de " + String((judgment.convites || []).length), "Respostas recebidas / colaboradores convidados", "fa-users"]
+    ].map(function (item) { return '<article class="ami-status-card"><span><i class="fas ' + item[3] + '" aria-hidden="true"></i> ' + item[0] + '</span><strong>' + escapeHtml(item[1]) + '</strong><small>' + item[2] + '</small></article>'; }).join("");
     renderEmailDraft(judgment); $("ami-create-feedback").textContent = "Visualização somente leitura do registro selecionado.";
-    $("ami-create-section").classList.remove("is-hidden"); $("ami-create-section").scrollIntoView({ behavior: "smooth", block: "start" });
+    $("ami-create-section").classList.remove("is-hidden"); $("ami-create-section").querySelector(".ami-environment-title").scrollIntoView({ behavior: "smooth", block: "start" });
   }
   function editSelectedEnvironment() {
     if (modo !== "espaco" || selectedIds.size !== 1 || !selectedRecord() || editingId) return;
     environmentId = selectedId; viewSelectedEnvironment();
     setEnvironmentMode("edit");
-    $("ami-edit-emails").click();
-    $("ami-create-feedback").textContent = "Edição liberada para hierarquização, prazo e colaboradores.";
+    $("ami-create-feedback").textContent = "Edite o nome, a data limite e os colaboradores. Ao salvar um prazo futuro, a coleta será reaberta e os convites poderão ser reenviados.";
     $("ami-deadline").focus();
   }
   function saveSelectedEnvironment() {
     var judgment = julgamentos.find(function (j) { return j.id === environmentId; }), feedbackNode = $("ami-create-feedback");
     if (!judgment || environmentMode !== "edit" || environmentSaving) return;
+    if (!$("ami-judgment-name").value.trim()) { avisarFormulario("Informe o nome do julgamento.", feedbackNode, $("ami-judgment-name")); return; }
     if (draftEditing) { avisarFormulario("Confirme a lista de colaboradores antes de salvar o julgamento.", feedbackNode, $("ami-confirm-emails")); return; }
     if (!draftEmails.length) { avisarFormulario("Adicione ao menos um colaborador à lista.", feedbackNode, $("ami-emails")); return; }
     if (!$("ami-deadline").value) { avisarFormulario("Informe a data limite da coleta.", feedbackNode, $("ami-deadline")); return; }
+    if (Date.parse(deadlineEndOfDay()) <= Date.now()) { avisarFormulario("A data limite já venceu. Escolha uma nova data para reabrir o período de colaboração.", feedbackNode, $("ami-deadline")); return; }
     var selectedHierarchy = $("ami-hierarchy").selectedOptions[0];
     if (!selectedHierarchy || !selectedHierarchy.dataset.hierarquizacaoId) { avisarFormulario("Selecione a hierarquização.", feedbackNode, $("ami-hierarchy")); return; }
     feedbackNode.textContent = "Salvando alterações…";
     environmentSaving = true; $("ami-environment-save").disabled = true;
-    var updatePayload = { hierarquizacao_id: selectedHierarchy.dataset.hierarquizacaoId, convites: draftEmails.map(function (convite) { return { email: convite.email, nome: convite.nome }; }), valido_ate: deadlineEndOfDay() }; if (criteriaMatrixFileBase64) { updatePayload.arquivo_matriz_base64 = criteriaMatrixFileBase64; updatePayload.arquivo_matriz_nome = criteriaMatrixFileName; }
+    var updatePayload = { nome: $("ami-judgment-name").value.trim(), hierarquizacao_id: selectedHierarchy.dataset.hierarquizacaoId, convites: draftEmails.map(function (convite) { return { email: convite.email, nome: convite.nome }; }), valido_ate: deadlineEndOfDay() }; if ($("ami-deadline").value === dateInputValue(judgment.valido_ate) && judgment.status === "ativa") delete updatePayload.valido_ate; if (judgment.status !== "ativa") updatePayload.reabrir = true; if (String(selectedHierarchy.dataset.hierarquizacaoId) === String(judgment.hierarquizacao_id)) delete updatePayload.hierarquizacao_id; if (criteriaMatrixFileBase64) { updatePayload.arquivo_matriz_base64 = criteriaMatrixFileBase64; updatePayload.arquivo_matriz_nome = criteriaMatrixFileName; }
     executarOperacao("Salvar julgamento", function () {
       return api("/api/ahp/comparacao-colaborativa/ambientes/" + encodeURIComponent(judgment.id), { method: "PATCH", body: JSON.stringify(updatePayload) });
     }, function (updated) {
@@ -771,7 +831,7 @@
   function deadlineEndOfDay() { return endOfDayIso($("ami-deadline").value); }
   function persistentPublicUrl(judgment) {
     if (!judgment || !judgment.url_publica) return "";
-    try { var url = new URL(String(judgment.url_publica), location.origin); return /^https?:$/.test(url.protocol) && /\/public\/analise-multicriterio\/[^/]+\/?$/.test(url.pathname) ? url.href : ""; }
+    try { var url = new URL(String(judgment.url_publica), location.origin); return /^https?:$/.test(url.protocol) && /\/public\/analise-multicriterio\/(?:formulario-comparacao-pareada\/)?[^/]+\/?$/.test(url.pathname) ? url.href : ""; }
     catch (_error) { return ""; }
   }
   function invitationLines(judgment) {
@@ -789,6 +849,7 @@
     SICARDEmailConvites.mostrar(judgment, message, url);
   }
   function renderDraftEmails() {
+    $("ami-collaborator-list-section").hidden = !draftEmails.length;
     var column = $("ami-emails-filter-coluna").value, valueSelect = $("ami-emails-filter-valor");
     var rows = draftEmails.map(function (item, index) { return { item: item, index: index }; });
     SLTTable.values(valueSelect, rows, function (row) { return draftValue(row, column); });
@@ -828,7 +889,8 @@
   }
   function updateDraftControls() {
     var editing = draftEditing && environmentMode !== "view";
-    ["ami-emails", "ami-add-emails", "ami-select-all", "ami-cancel-emails"].forEach(function (id) { $(id).disabled = !editing; });
+    ["ami-select-all", "ami-cancel-emails"].forEach(function (id) { $(id).disabled = !editing; });
+    ["ami-collaborator-name", "ami-emails", "ami-add-emails"].forEach(function (id) { $(id).disabled = environmentMode === "view" || environmentSaving; });
     $("ami-confirm-emails").disabled = !editing || !draftEmails.length;
     $("ami-edit-emails").disabled = editing || environmentMode === "view";
     $("ami-delete-emails").disabled = !editing || !$("ami-email-list").querySelector("[data-draft-index]:checked");
@@ -837,16 +899,28 @@
     $("ami-select-all").checked = boxes.length > 0 && boxes.every(function (box) { return box.checked; });
     $("ami-select-all").indeterminate = boxes.some(function (box) { return box.checked; }) && !$("ami-select-all").checked;
     SLTTable.summary('ami-emails-count', boxes.filter(function (box) { return box.checked; }).length, draftVisibleCount, draftEmails.length);
-    $("ami-create-form").querySelector('button[type="submit"]').disabled = environmentSaving || draftEditing || !draftEmails.length;
+    $("ami-create-form").querySelector('button[type="submit"]').disabled = environmentSaving || !draftEmails.length;
     $("ami-environment-save").disabled = environmentSaving || draftEditing || !draftEmails.length;
   }
   function addDraftEmails() {
-    if (!draftEditing || environmentMode === "view") return;
-    var incoming = parseConvites($("ami-emails").value);
-    incoming.forEach(function (convite) { if (!draftEmails.some(function (item) { return item.email === convite.email; })) draftEmails.push(convite); });
+    if (environmentMode === "view" || environmentSaving) return;
+    var nome = $("ami-collaborator-name").value.trim();
+    var email = $("ami-emails").value.trim().toLowerCase();
+    if (!nome) { avisarFormulario("Informe o nome do colaborador.", $("ami-create-feedback"), $("ami-collaborator-name")); return; }
+    if (!/^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(email) || !$("ami-emails").validity.valid) {
+      avisarFormulario("Informe um e-mail válido para o colaborador.", $("ami-create-feedback"), $("ami-emails")); return;
+    }
+    if (draftEmails.some(function (item) { return item.email.toLowerCase() === email; })) {
+      avisarFormulario("Este e-mail já está na lista de colaboradores.", $("ami-create-feedback"), $("ami-emails")); return;
+    }
+    if (!draftEditing) { draftSnapshot = draftEmails.map(function (item) { return Object.assign({}, item); }); draftEditing = true; }
+    draftEmails.push({nome: nome, email: email});
+    $("ami-collaborator-name").value = "";
     $("ami-emails").value = "";
-    $("ami-emails-feedback").textContent = incoming.length ? "Colaboradores adicionados. Confirme a lista ao terminar." : "Informe ao menos um e-mail.";
+    $("ami-create-feedback").textContent = "";
+    $("ami-emails-feedback").textContent = "Colaborador adicionado. Confirme a lista ao terminar.";
     renderDraftEmails();
+    $("ami-collaborator-name").focus();
   }
   // Aceita "Nome <email@dominio>" ou o e-mail puro, um por linha, virgula ou
   // ponto-e-virgula. Sem nome informado, fica so o e-mail.
@@ -892,8 +966,8 @@
       var reciprocal = host.querySelector('[data-reciprocal="' + parts[0] + '-' + parts[1] + '"]'); if (reciprocal) reciprocal.classList.add("is-auto-validated");
     });
   }
-  function saatyLabel(value) { var fractions = { "0.1111111111111111": "1/9", "0.125": "1/8", "0.14285714285714285": "1/7", "0.16666666666666666": "1/6", "0.2": "1/5", "0.25": "1/4", "0.3333333333333333": "1/3", "0.5": "1/2" }; return fractions[String(value)] || String(value); }
-  function saatyOptions(selected) { var values = [1 / 9, 1 / 8, 1 / 7, 1 / 6, 1 / 5, 1 / 4, 1 / 3, 1 / 2, 1, 2, 3, 4, 5, 6, 7, 8, 9]; return values.map(function (value) { return '<option value="' + value + '"' + (Math.abs(value - selected) < 0.000001 ? " selected" : "") + '>' + saatyLabel(value) + "</option>"; }).join(""); }
+  function saatySimulationLabel(value) { var fractions = { "0.1111111111111111": "1/9", "0.125": "1/8", "0.14285714285714285": "1/7", "0.16666666666666666": "1/6", "0.2": "1/5", "0.25": "1/4", "0.3333333333333333": "1/3", "0.5": "1/2" }; return fractions[String(value)] || String(value); }
+  function saatyOptions(selected) { var values = [1 / 9, 1 / 8, 1 / 7, 1 / 6, 1 / 5, 1 / 4, 1 / 3, 1 / 2, 1, 2, 3, 4, 5, 6, 7, 8, 9]; return values.map(function (value) { return '<option value="' + value + '"' + (Math.abs(value - selected) < 0.000001 ? " selected" : "") + '>' + saatySimulationLabel(value) + "</option>"; }).join(""); }
   function ahpMetrics(matrix) {
     var n = matrix.length, ri = [0, 0, 0, 0.58, 0.90, 1.12, 1.24, 1.32, 1.41, 1.45, 1.49, 1.51, 1.48, 1.56, 1.57, 1.59, 1.605, 1.61, 1.615, 1.62, 1.625];
     if (!n) return null;
@@ -928,7 +1002,7 @@
     var scale = pair.querySelector(".saaty-scale"), rail = pair.querySelector(".saaty-rail"), handle = pair.querySelector(".saaty-handle"), input = pair.querySelector("[data-pair-row]"), status = pair.querySelector(".saaty-auto-status"), row = Number(input.dataset.pairRow), column = Number(input.dataset.pairColumn), index = nearestFormStep(Number(input.value) || 1), dragging = false, validationTimer = null;
     function validateCard(target, automatic) { var targetStatus = target.querySelector(".saaty-auto-status"), targetReciprocal = target.querySelector(".saaty-reciprocal"); target.classList.remove("is-auto-editing"); target.classList.add("is-auto-validated", "is-pair-configured"); if (targetReciprocal) { targetReciprocal.classList.remove("is-auto-validating"); targetReciprocal.classList.add("is-auto-validated"); } if (targetStatus) targetStatus.innerHTML = '<i class="fas fa-check-circle" aria-hidden="true"></i><span>' + (automatic ? "Card oposto simulado automaticamente" : "Par e valor oposto simulados automaticamente") + "</span>"; }
     function scheduleVisualValidation() { var reciprocalBox = pair.querySelector(".saaty-reciprocal"), reciprocal = pairwiseMatrix(judgment)[column][row], oppositePair = document.querySelector('.saaty-pair[data-i="' + column + '"][data-j="' + row + '"]'); if (oppositePair && oppositePair._applySaaty) oppositePair._applySaaty(nearestFormStep(reciprocal)); clearTimeout(validationTimer); markPairConfigured(judgment, row, column); updateLiveMetrics(judgment); pair.classList.remove("is-auto-validated"); pair.classList.add("is-auto-editing"); reciprocalBox.classList.remove("is-auto-validated"); reciprocalBox.classList.add("is-auto-validating"); if (oppositePair) { oppositePair.classList.remove("is-auto-validated"); oppositePair.classList.add("is-auto-editing"); } status.innerHTML = '<i class="fas fa-pen" aria-hidden="true"></i><span>Julgamento em edição · card oposto sincronizado</span>'; validationTimer = setTimeout(function () { validateCard(pair, false); if (oppositePair) validateCard(oppositePair, true); }, 700); }
-    function apply(next, persist) { index = Math.max(0, Math.min(8, next)); var step = FORM_SAATY_STEPS[index], reciprocal = 1 / step.v, colors = ["#7b1a1a", "#c0392b", "#d96b61", "#f4a7a0", "#7b8794", "#a9cdec", "#5b9bd5", "#2f6fad", "#0d3b66"], readout = pair.querySelector(".saaty-readout"), reciprocalBox = pair.querySelector(".saaty-reciprocal"); handle.style.left = ((index / 8) * 100) + "%"; handle.style.backgroundColor = colors[index]; scale.setAttribute("aria-valuenow", String(index)); if (persist !== false) { input.value = String(step.v); pairwiseMatrix(judgment)[row][column] = step.v; pairwiseMatrix(judgment)[column][row] = reciprocal; scheduleVisualValidation(); } pair.classList.toggle("saaty-pair--equal", index === 4); pair.classList.toggle("saaty-pair--filled", index !== 4); readout.textContent = index === 4 ? "“" + criteria[row] + "” tem igual importância que “" + criteria[column] + "” (1)" : "“" + criteria[row] + "” é " + step.desc.toLowerCase() + (index > 4 ? " mais" : " menos") + " importante que “" + criteria[column] + "” (" + step.label + ")"; readout.className = "saaty-readout saaty-readout--" + (index === 4 ? "eq" : index > 4 ? "pos" : "neg"); pair.querySelector(".saaty-reciprocal__value").textContent = saatyLabel(reciprocal); pair.querySelector(".saaty-reciprocal__text").textContent = criteria[column] + " em relação a " + criteria[row] + " = " + saatyLabel(reciprocal); reciprocalBox.classList.remove("is-positive", "is-negative", "is-equal"); reciprocalBox.classList.add(index > 4 ? "is-negative" : index < 4 ? "is-positive" : "is-equal"); }
+    function apply(next, persist) { index = Math.max(0, Math.min(8, next)); var step = FORM_SAATY_STEPS[index], reciprocal = 1 / step.v, colors = ["#7b1a1a", "#c0392b", "#d96b61", "#f4a7a0", "#7b8794", "#a9cdec", "#5b9bd5", "#2f6fad", "#0d3b66"], readout = pair.querySelector(".saaty-readout"), reciprocalBox = pair.querySelector(".saaty-reciprocal"); handle.style.left = ((index / 8) * 100) + "%"; handle.style.backgroundColor = colors[index]; scale.setAttribute("aria-valuenow", String(index)); if (persist !== false) { input.value = String(step.v); pairwiseMatrix(judgment)[row][column] = step.v; pairwiseMatrix(judgment)[column][row] = reciprocal; scheduleVisualValidation(); } pair.classList.toggle("saaty-pair--equal", index === 4); pair.classList.toggle("saaty-pair--filled", index !== 4); readout.textContent = index === 4 ? "“" + criteria[row] + "” tem igual importância que “" + criteria[column] + "” (1)" : "“" + criteria[row] + "” é " + step.desc.toLowerCase() + (index > 4 ? " mais" : " menos") + " importante que “" + criteria[column] + "” (" + step.label + ")"; readout.className = "saaty-readout saaty-readout--" + (index === 4 ? "eq" : index > 4 ? "pos" : "neg"); pair.querySelector(".saaty-reciprocal__value").textContent = saatySimulationLabel(reciprocal); pair.querySelector(".saaty-reciprocal__text").textContent = criteria[column] + " em relação a " + criteria[row] + " = " + saatySimulationLabel(reciprocal); reciprocalBox.classList.remove("is-positive", "is-negative", "is-equal"); reciprocalBox.classList.add(index > 4 ? "is-negative" : index < 4 ? "is-positive" : "is-equal"); }
     pair._applySaaty = function (next) { input.value = String(FORM_SAATY_STEPS[Math.max(0, Math.min(8, next))].v); apply(next, false); };
     function fromX(clientX) { var bounds = rail.getBoundingClientRect(); return Math.round(Math.max(0, Math.min(1, (clientX - bounds.left) / bounds.width)) * 8); }
     function down(event) { dragging = true; pair.classList.add("saaty-pair--touched"); scale.classList.add("saaty-scale--active"); apply(fromX(event.touches && event.touches.length ? event.touches[0].clientX : event.clientX)); event.preventDefault(); }
@@ -942,7 +1016,7 @@
     context.textContent = "Critérios do julgamento " + (judgment.hierarquizacao_codigo || judgment.id) + ": " + criteria.join("; ") + ".";
     if (!criteria.length) { host.innerHTML = '<p class="ami-empty">O registro selecionado não possui critérios armazenados.</p>'; return; }
     if (isMatrix) {
-      host.innerHTML = '<div class="ami-pairwise-scroll"><table class="admin-table ami-pairwise-matrix"><thead><tr><th>Critério</th>' + criteria.map(function (name) { return '<th title="' + escapeHtml(name) + '">' + escapeHtml(name) + "</th>"; }).join("") + '</tr></thead><tbody>' + criteria.map(function (name, row) { return '<tr><th title="' + escapeHtml(name) + '">' + escapeHtml(name) + "</th>" + criteria.map(function (_other, column) { if (row === column) return '<td><span class="ami-pairwise-diagonal">1</span></td>'; if (row < column) return '<td><select class="c-form-control ami-pairwise-select" data-pair-row="' + row + '" data-pair-column="' + column + '" aria-label="Comparar ' + escapeHtml(criteria[row]) + " com " + escapeHtml(criteria[column]) + '">' + saatyOptions(matrix[row][column]) + "</select></td>"; return '<td data-reciprocal="' + column + "-" + row + '">' + escapeHtml(saatyLabel(matrix[row][column])) + "</td>"; }).join("") + "</tr>"; }).join("") + "</tbody></table></div>";
+      host.innerHTML = '<div class="ami-pairwise-scroll"><table class="admin-table ami-pairwise-matrix"><thead><tr><th>Critério</th>' + criteria.map(function (name) { return '<th title="' + escapeHtml(name) + '">' + escapeHtml(name) + "</th>"; }).join("") + '</tr></thead><tbody>' + criteria.map(function (name, row) { return '<tr><th title="' + escapeHtml(name) + '">' + escapeHtml(name) + "</th>" + criteria.map(function (_other, column) { if (row === column) return '<td><span class="ami-pairwise-diagonal">1</span></td>'; if (row < column) return '<td><select class="c-form-control ami-pairwise-select" data-pair-row="' + row + '" data-pair-column="' + column + '" aria-label="Comparar ' + escapeHtml(criteria[row]) + " com " + escapeHtml(criteria[column]) + '">' + saatyOptions(matrix[row][column]) + "</select></td>"; return '<td data-reciprocal="' + column + "-" + row + '">' + escapeHtml(saatySimulationLabel(matrix[row][column])) + "</td>"; }).join("") + "</tr>"; }).join("") + "</tbody></table></div>";
     } else {
       var pairs = [];
       criteria.forEach(function (_left, row) { criteria.forEach(function (_right, column) { if (row !== column) pairs.push(buildSaatyFormPair(row, column, criteria, matrix[row][column])); }); });
@@ -957,7 +1031,7 @@
     return fetch(appUrl("restrict", "/ahp/comparacao/"), { credentials: "same-origin" }).then(function (response) { if (!response.ok) throw new Error("Não foi possível carregar a escala de Saaty."); return response.text(); }).then(function (html) {
       var source = new DOMParser().parseFromString(html, "text/html").querySelector("#saaty-scale-subcard"); if (!source) throw new Error("A subseção Escala de Intensidade de Importância não foi encontrada.");
       host.replaceChildren(source.cloneNode(true)); host.dataset.loaded = "true";
-      var scaleIndex = host.querySelector(".ahp-subsection-num"); if (scaleIndex) { scaleIndex.textContent = "3.1"; scaleIndex.classList.remove("ahp-subsection-num--roman"); }
+      var scaleIndex = host.querySelector(".ahp-subsection-num"); if (scaleIndex) { scaleIndex.textContent = modo === "espaco" ? "1" : "3.1"; scaleIndex.classList.remove("ahp-subsection-num--roman"); }
       var toggle = host.querySelector("#saaty-scale-toggle"), extras = host.querySelectorAll(".saaty-scale-extra"), icon = host.querySelector("#saaty-scale-chevron i");
       function toggleScale() { var expanded = toggle.getAttribute("aria-expanded") !== "true"; toggle.setAttribute("aria-expanded", String(expanded)); extras.forEach(function (element) { element.classList.toggle("is-hidden", !expanded); }); if (icon) { icon.classList.toggle("fa-chevron-down", !expanded); icon.classList.toggle("fa-chevron-up", expanded); } }
       toggle.addEventListener("click", toggleScale); toggle.addEventListener("keydown", function (event) { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); toggleScale(); } });
@@ -966,15 +1040,23 @@
   function syncPairwiseButtons() { [$("ami-judgments-matrix-action"), $("ami-judgments-form-action")].forEach(function (button) { if (!button) return; var enabled = modo === "espaco" && Boolean(selectedId) && !editingId; button.disabled = !enabled; button.classList.toggle("is-disabled", !enabled); button.classList.toggle("is-hidden", modo !== "espaco"); }); }
   function syncEnvironmentEditButton() {
     var button = $("ami-environment-edit"); if (!button) return;
-    var enabled = modo === "espaco" && selectedIds.size === 1 && selectedRecord()?.status === "ativa" && !editingId && !environmentSaving;
+    var enabled = modo === "espaco" && selectedIds.size === 1 && Boolean(selectedRecord()) && !editingId && !environmentSaving;
     button.disabled = !enabled; button.classList.toggle("is-disabled", !enabled);
   }
-  function syncViewButton() { syncEnvironmentEditButton(); var button = $("ami-judgments-view-action"); if (!button) return; var enabled = ["espaco","julgamentos"].includes(modo) && Boolean(selectedId) && !editingId; button.disabled = !enabled; button.classList.toggle("is-disabled", !enabled); }
+  function syncViewButton() { var analysisEdit=$("ami-responses-edit-action"); if(analysisEdit){analysisEdit.disabled=!selectedId || analysisSaving;analysisEdit.classList.toggle("is-disabled",analysisEdit.disabled);} syncEnvironmentEditButton(); var button = $("ami-judgments-view-action"); if (!button) return; var enabled = ["espaco","julgamentos"].includes(modo) && Boolean(selectedId) && !editingId; button.disabled = !enabled; button.classList.toggle("is-disabled", !enabled); }
   function createViewButton() {
     if (!["espaco","julgamentos"].includes(modo) || $("ami-judgments-view-action")) return;
     var toolbar = document.querySelector(".ami-table-actions"), edit = $("ami-judgments-edit-action"), button = document.createElement("button");
-    button.className = "admin-icon-btn is-disabled"; button.id = "ami-judgments-view-action"; button.type = "button"; button.title = modo === "julgamentos" ? "Analisar respostas do julgamento" : "Visualizar ambiente colaborativo"; button.setAttribute("aria-label", button.title); button.disabled = true; button.innerHTML = '<i class="fa-solid fa-eye" aria-hidden="true"></i>';
-    toolbar.insertBefore(button, edit); button.addEventListener("click", modo === "julgamentos" ? openAnalysisWorkspace : function () { environmentId = selectedId; viewSelectedEnvironment(); });
+    button.className = "admin-icon-btn is-disabled"; button.id = "ami-judgments-view-action"; button.type = "button"; button.title = modo === "julgamentos" ? "Ver respostas colaborativas" : "Visualizar ambiente colaborativo"; button.setAttribute("aria-label", button.title); button.disabled = true; button.innerHTML = '<i class="fa-solid fa-eye" aria-hidden="true"></i>';
+    toolbar.insertBefore(button, edit); button.addEventListener("click", modo === "julgamentos" ? function(){openAnalysisWorkspace(selectedId,"view");} : function () { environmentId = selectedId; viewSelectedEnvironment(); });
+    if (modo === "julgamentos") {
+      var editResponses=document.createElement("button");
+      editResponses.id="ami-responses-edit-action";editResponses.type="button";
+      editResponses.className="admin-icon-btn edit-group is-disabled";editResponses.disabled=true;
+      editResponses.title="Editar respostas colaborativas";editResponses.setAttribute("aria-label",editResponses.title);
+      editResponses.innerHTML='<i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>';
+      button.after(editResponses);editResponses.addEventListener("click",function(){openAnalysisWorkspace(selectedId,"edit");});
+    }
   }
   function feedback(message, isError) {
     var node = $("ami-judgments-feedback"); node.textContent = message || ""; node.classList.toggle("is-error", Boolean(isError));
@@ -986,11 +1068,15 @@
   function inlinePayload() {
     var fields = {}; $("ami-judgments").querySelectorAll("[data-edit-field]").forEach(function (input) { fields[input.dataset.editField] = input.value.trim(); });
     if (modo === "julgamentos") return { nome_completo: fields.nome_completo, email: fields.email, instituicao: fields.instituicao };
-    var emails = Array.from(new Set((fields.convites || "").split(/[,;]+/).map(function (email) { return email.trim().toLowerCase(); }).filter(Boolean)));
-    return { convites: emails.map(function (email) { return { email: email }; }), valido_ate: endOfDayIso(fields.valido_ate) };
+    return { nome: fields.nome };
   }
   function saveInlineEdit() {
     if (!editingId || environmentSaving) return;
+    if (modo !== "julgamentos" && !inlinePayload().nome) {
+      feedback("Informe o nome do julgamento.", true);
+      $("ami-judgments").querySelector('[data-edit-field="nome"]').focus();
+      return;
+    }
     var id = editingId;
     environmentSaving = true;
     var endpoint = modo === "julgamentos" ? "/api/ahp/comparacao-colaborativa/respostas/" : "/api/ahp/comparacao-colaborativa/ambientes/";
@@ -1090,6 +1176,7 @@
       if (!draftEditing || environmentMode === "view") return;
       draftEmails = draftSnapshot.map(function (item) { return Object.assign({}, item); });
       draftEditing = false;
+      $("ami-collaborator-name").value = "";
       $("ami-emails").value = "";
       $("ami-emails-feedback").textContent = "Edição cancelada. Lista anterior restaurada.";
       renderDraftEmails();
@@ -1106,6 +1193,7 @@
       draftEmails = normalized;
       draftSnapshot = normalized.map(function (item) { return Object.assign({}, item); });
       draftEditing = false;
+      $("ami-collaborator-name").value = "";
       $("ami-emails").value = "";
       $("ami-emails-feedback").textContent = "Lista confirmada. Conclua o cadastro ou salve as alterações do julgamento.";
       renderDraftEmails();
@@ -1119,9 +1207,11 @@
       event.preventDefault();
       var feedback = $("ami-create-feedback");
       if (environmentMode !== "create" || environmentSaving || surfaceLoading) return;
+      if (!$("ami-judgment-name").value.trim()) { avisarFormulario("Informe o nome do julgamento.", feedback, $("ami-judgment-name")); return; }
       if (draftEditing) { avisarFormulario("Confirme a lista de colaboradores antes de cadastrar o julgamento.", feedback, $("ami-confirm-emails")); return; }
       if (!draftEmails.length) { avisarFormulario("Adicione ao menos um colaborador à lista.", feedback, $("ami-emails")); return; }
       if (!$("ami-deadline").value) { avisarFormulario("Informe a data limite da coleta.", feedback, $("ami-deadline")); return; }
+      if (Date.parse(deadlineEndOfDay()) <= Date.now()) { avisarFormulario("A data limite já venceu. Escolha uma data válida para a coleta de respostas.", feedback, $("ami-deadline")); return; }
       if (matrixRows(criteriaMatrix).length < 2) { avisarFormulario("Selecione uma hierarquização com matriz cadastrada de ao menos dois critérios.", feedback, $("ami-hierarchy")); return; }
       feedback.textContent = "Criando ambiente colaborativo…";
       var selectedHierarchy = $("ami-hierarchy").selectedOptions[0];
@@ -1132,7 +1222,7 @@
         warning: "Criar uma nova rodada encerrará a coleta anterior.", confirmLabel: "Criar rodada",
       }))) { feedback.textContent = ""; return; }
       await executarOperacao("Criar julgamento", function () {
-        return api("/api/ahp/comparacao-colaborativa/ambientes", { method: "POST", body: JSON.stringify({ hierarquizacao_id: selectedHierarchy.dataset.hierarquizacaoId, superficie_id: activeSurfaceId, convites: draftEmails.map(function (convite) { return { email: convite.email, nome: convite.nome }; }), valido_ate: deadlineEndOfDay() }) });
+        return api("/api/ahp/comparacao-colaborativa/ambientes", { method: "POST", body: JSON.stringify({ nome: $("ami-judgment-name").value.trim(), hierarquizacao_id: selectedHierarchy.dataset.hierarquizacaoId, superficie_id: activeSurfaceId, convites: draftEmails.map(function (convite) { return { email: convite.email, nome: convite.nome }; }), valido_ate: deadlineEndOfDay() }) });
       }, function (j) {
         julgamentos.unshift(j); currentPage = 1; selectedIds.clear(); selectedIds.add(j.id); updateSelectedId(); render();
         var links = actionLinks(j);
@@ -1150,8 +1240,13 @@
       catch (error) { Notify.error("Não foi possível copiar o link", error.message); }
     });
     $("ami-analysis-responses").addEventListener("change", function (event) {
-      var id = event.target.dataset.analysisResponse; if (!id) return;
+      var id = event.target.dataset.analysisResponse; if (!id || analysisMode !== "edit") return;
       if (event.target.checked) analysisResponseIds.add(id); else analysisResponseIds.delete(id);
+      selectedJudgeId = null; renderPairsSection();
+    });
+    $("ami-analysis-responses").addEventListener("analysis-selection", function (event) {
+      if (analysisMode !== "edit") return;
+      if (event.detail.checked) analysisResponseIds.add(event.detail.id); else analysisResponseIds.delete(event.detail.id);
       selectedJudgeId = null; renderPairsSection();
     });
     ["ami-analysis-rc", "ami-analysis-exclude-inconsistent"].forEach(function (id) { $(id).addEventListener("change", function () { if (analysisWorkspace) renderFioDerivado(analysisWorkspace); }); });

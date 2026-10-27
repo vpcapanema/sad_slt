@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, Field
 
 from api.deps.auth import require_analyst
+from api.error_handlers import sanitizar
 from api.exceptions import DatabaseUnavailableError, DemandaValidationError
 from api.services import superficie_criterios as service
 from api.services.session_service import SessionUser
@@ -43,7 +44,7 @@ def invoke(fn, *args):
         raise HTTPException(422, str(exc)) from exc
     except (DatabaseUnavailableError, StorageIndisponivel, OSError) as exc:
         logger.exception('Falha na operação de superfície de critérios')
-        raise HTTPException(503, 'Não foi possível acessar o banco ou a camada no Storage. Nenhum resultado deve ser considerado confirmado; atualize a lista antes de repetir.') from exc
+        raise HTTPException(503, f'Não foi possível acessar o banco ou a camada no Storage ({type(exc).__name__}: {sanitizar(exc, 200) or "sem mensagem"}). Nenhum resultado deve ser considerado confirmado; atualize a lista antes de repetir.') from exc
 
 
 @router.get('/catalogo')

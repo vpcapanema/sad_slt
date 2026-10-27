@@ -242,6 +242,8 @@ export function criarResultados({avisar, aoOcupar}) {
     const resposta = await fetch(`${base}${ROTA}/pacote`, {method: 'POST', credentials: 'same-origin',
       headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload())});
     if (!resposta.ok) {
+      const E = window.SicardApiErro;
+      if (E) { const err = await E.deResposta(resposta, {method: 'POST', url: `${base}${ROTA}/pacote`}); err.message = `Falha ao gerar o pacote: ${err.message}. As camadas foram mantidas.`; throw err; }
       const texto = await resposta.text();
       let erro;
       try { erro = JSON.parse(texto).detail; }

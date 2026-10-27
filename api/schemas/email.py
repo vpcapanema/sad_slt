@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Literal
 from datetime import datetime
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
@@ -61,3 +62,4 @@ class EmailConexaoResultado(BaseModel):
 class ConviteEmailEnvioSchema(EmailTesteSchema):
     texto: str = Field(min_length=1, max_length=50000)
     versao: datetime
+    reenvio_id: UUID | None = None

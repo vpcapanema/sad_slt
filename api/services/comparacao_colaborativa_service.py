@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import quote
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 from api.constants import TIPO_DEMANDA_ID_TO_COD
 from api.exceptions import DemandaValidationError
@@ -63,6 +64,23 @@ def _iso(value: Any) -> str | None:
     if isinstance(value, datetime):
         return value.isoformat()
     return str(value)
+
+
+_TZ_SP = ZoneInfo("America/Sao_Paulo")
+
+
+def _mesmo_instante(limite: datetime, atual: Any) -> bool:
+    """Prazo reenviado sem alteração pelo formulário de edição."""
+    if isinstance(atual, str):
+        try:
+            atual = datetime.fromisoformat(atual.replace("Z", "+00:00"))
+        except ValueError:
+            return False
+    if not isinstance(atual, datetime):
+        return False
+    if atual.tzinfo is None:
+        atual = atual.replace(tzinfo=timezone.utc)
+    return abs((limite - atual).total_seconds()) < 1
 
 
 def _float(value: Any) -> float | None:
@@ -166,6 +184,7 @@ def _ambiente_to_response(row: dict[str, Any], *, base_url: str = "") -> Ambient
     url = f"{base_url.rstrip('/')}/public/analise-multicriterio/formulario-comparacao-pareada/{quote(str(token), safe='')}/"
     return AmbienteColaborativoResponseSchema(
         id=str(row["id"]),
+        nome=row.get("nome") or f"Julgamento {row['id']}",
         superficie_id=superficie_ahp.superficie_id(row),
         hierarquizacao_id=str(row["hierarquizacao_id"]) if row.get("hierarquizacao_id") else None,
         hierarquizacao_codigo=row.get("hierarquizacao_codigo") or row.get("config_codigo", ""),
@@ -277,6 +296,7 @@ def criar_ambiente(
 
     row = repo.insert_ambiente(
         {
+            "nome": (payload.nome or "").strip() or "Julgamento " + (hierarq.get("nome", "") if hierarq else (config or {}).get("nome", "AHP")),
             "hierarquizacao_id": str(payload.hierarquizacao_id) if payload.hierarquizacao_id else (
                 str(config["hierarquizacao_id"]) if config and config.get("hierarquizacao_id") else None
             ),
@@ -347,11 +367,20 @@ def atualizar_ambiente(
     atual = repo.get_ambiente_by_id(ambiente_id)
     if not atual:
         raise DemandaValidationError("Julgamento não encontrado.", field="julgamento_id")
-    if atual.get("status") != "ativa":
+    somente_nome = payload.model_fields_set == {"nome"} and payload.nome is not None
+    if atual.get("status") != "ativa" and not somente_nome and not payload.reabrir:
         raise DemandaValidationError(
             "Somente julgamentos abertos podem ser editados.", field="status"
         )
     data: dict[str, Any] = {}
+    if payload.reabrir:
+        if payload.valido_ate is None:
+            raise DemandaValidationError("Informe um prazo futuro para reabrir a coleta.", field="valido_ate")
+        data["status"] = "ativa"
+    if payload.nome is not None:
+        if not payload.nome.strip():
+            raise DemandaValidationError("Informe o nome do julgamento.", field="nome")
+        data["nome"] = payload.nome.strip()
     superficie_vinculada = superficie_ahp.superficie_id(atual)
     if superficie_vinculada:
         if (
@@ -489,9 +518,32 @@ def atualizar_ambiente(
         limite = payload.valido_ate
         if limite.tzinfo is None:
             limite = limite.replace(tzinfo=timezone.utc)
-        if limite <= datetime.now(timezone.utc):
-            raise DemandaValidationError("O prazo deve ser futuro.", field="valido_ate")
-        data["valido_ate"] = limite
+        if _mesmo_instante(limite, atual.get("valido_ate")) and not payload.reabrir:
+            pass
+        elif limite <= datetime.now(timezone.utc):
+            raise DemandaValidationError(
+                f"O prazo deve ser futuro: a data limite informada ({limite.astimezone(_TZ_SP).strftime('%d/%m/%Y')}) já passou.",
+                field="valido_ate",
+                sugestao="Informe no campo \"Data limite\" uma data posterior a hoje e salve novamente. "
+                         "Se a coleta já estiver encerrada, a nova data reabre o julgamento.",
+            )
+        else:
+            data["valido_ate"] = limite
+    if payload.reabrir:
+        origem = {**atual, **data}
+        def mesma_origem(outro: dict[str, Any]) -> bool:
+            superficie = superficie_ahp.superficie_id(origem)
+            if superficie:
+                return superficie_ahp.superficie_id(outro) == superficie
+            if superficie_ahp.superficie_id(outro):
+                return False
+            if origem.get("config_id"):
+                return (outro.get("config_tipo") == origem.get("config_tipo")
+                        and str(outro.get("config_id")) == str(origem["config_id"]))
+            return bool(origem.get("hierarquizacao_id")) and str(outro.get("hierarquizacao_id")) == str(origem["hierarquizacao_id"])
+        if any(str(outro["id"]) != str(ambiente_id) and outro.get("status") == "ativa" and mesma_origem(outro)
+               for outro in repo.list_ambientes()):
+            raise DemandaValidationError("Já existe outro julgamento aberto para esta origem. Encerre-o antes de reabrir este julgamento.", field="status")
     atualizado = repo.update_ambiente(ambiente_id, data)
     if not atualizado:
         raise DemandaValidationError("Julgamento não encontrado.", field="julgamento_id")

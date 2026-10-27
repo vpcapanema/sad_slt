@@ -66,6 +66,71 @@ Resultado esperado:
 1 = melhor ajuste por atributos de projeto
 ```
 
+## Complementacao dos atributos da demanda
+
+A complementacao cadastral/geometrica pertence a avaliacao da demanda, com
+status `analise_*`. A complementacao dos atributos utilizados na hierarquizacao
+possui ciclo proprio, com status `hierarq_*`, sem reabrir a aprovacao cadastral.
+
+No registro da hierarquizacao, os atributos dinamicos derivados da matriz de
+criterios e premissas enviada sao materializados por demanda, inicialmente sem
+valor. Os atributos nativos existentes sao preservados a partir do cadastro
+oficial: maturidade, CAPEX estimado e sua base, prazo de referencia em meses e
+sua base, respeitando a aplicabilidade por tipo de demanda. Plano nao possui
+CAPEX e base de CAPEX no contrato cadastral. Metricas ja atendidas pelo cadastro
+nao constituem uma segunda coleta de valores independentes.
+
+Demandas com pendencias entram no status
+`hierarq_aguardando_complementacao` ao salvar a hierarquizacao. A decisao de
+solicitar imediatamente ou posteriormente, na Fase 3, controla apenas o registro
+da solicitacao e o email ao representante informado no cadastro; o adiamento nao
+adia o registro da pendencia. A tabela 2, denominada "Criterios de atributo de
+demanda", e a referencia comum para a coleta: reune Cadastro e Dinamicos,
+incluindo os atributos do Configurador da Fase 3. A matriz da rodada prevalece
+quando ha identificadores duplicados. O grupo Risco permanece derivado da Fase 1
+e nao integra a complementacao manual. Uma marcacao historica de conclusao nao
+oculta novos valores vazios encontrados nas colunas vigentes.
+
+Na pagina de Complementacao, o bloco de cadastro/geometria permanece separado do
+bloco de atributos da hierarquizacao. O operador acessa apenas as demandas das
+quais seja criador ou representante legal; o administrador seleciona a
+hierarquizacao e suas demandas. Analistas e gestores podem solicitar a coleta,
+mas o preenchimento de demandas alheias nesse bloco exige perfil ADMIN.
+
+O interessado salva os valores; a conclusao ocorre automaticamente por demanda
+quando todos os atributos de Cadastro e Dinamicos estao preenchidos e validos.
+A gravacao parcial preserva o status de espera. A conclusao valida os atributos
+cadastrais aplicaveis e as metricas coletadas,
+incluindo tipos e dominios, registra a autoria e a data e atende as solicitacoes
+abertas desse contexto. Zero e falso sao valores preenchidos; nulo, texto vazio
+ou composto apenas por espacos sao ausencias. A demanda retorna a
+`hierarq_em_andamento`, sem aprovacao adicional do analista; se houver outra
+rodada ainda pendente, conserva o status de espera ate a conclusao daquele
+contexto. Uma coleta aberta deve estar completa antes da execucao
+da Fase 3, sem modificar formulas ou pesos. Alteracoes de atributos, criterios
+ou pesos descartam imediatamente os resultados calculados da Fase 3 e da
+sintese, inclusive relatorios e ranking. Nenhum resultado anterior e mantido
+ou apresentado como atual. A tela apresenta os valores correntes da tabela e
+indica ausencia de calculo ate a proxima execucao. Alteracoes das Fases 1 e 2
+tambem descartam os resultados que delas dependem; a Fase 1 invalida a Fase 3
+por fornecer o grupo Risco, e ambas invalidam a sintese. A normalizacao pode
+depender do conjunto de demandas, portanto o novo calculo considera a rodada
+inteira.
+As escalas ordinais explicitadas no campo Dado ou na interface de leitura sao
+preservadas mesmo quando a metrica possui titulo proprio; nao se presume uma
+escala inexistente. Valores ausentes, valores invalidos e risco sem resultado
+da Fase 1 sao identificados separadamente. A execucao utiliza os criterios e
+pesos exibidos na tabela, respeitando a homologacao, em vez de sobrepor uma
+configuracao anterior ao envio atual. Alteracoes do conjunto de criterios ou de
+suas escalas exigem novo calculo antes da sintese; o historico e preservado.
+
+Cada tentativa de notificacao registra o destinatario cadastrado, o solicitante,
+o identificador da mensagem e o resultado. Aceitacao SMTP nao comprova entrega.
+Falhas preservam a solicitacao e sao apresentadas ao solicitante; resultados
+indeterminados ou envios interrompidos nao autorizam reenvio automatico.
+Esses estados operacionais nao substituem os criterios metodologicos de
+tratamento de valores ausentes descritos adiante.
+
 ## Entradas aceitas
 
 O modulo deve aceitar arquivos tabulares, no minimo:

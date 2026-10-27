@@ -125,6 +125,29 @@ combinacao demanda × feicao permanece individualizada, mesmo com nomes ou
 valores iguais. Fragmentos da mesma combinacao devem concordar nos atributos;
 divergencias e colunas declaradas mas inexistentes impedem a apresentacao.
 
+A seção **5 — Resultados da Favorabilidade Territorial** mantém a revisão de
+nomes (5.1), a composição e leitura dos resultados (5.2), a consulta exploratória
+por demanda (5.3) e a emissão do relatório com limites e próximos passos (5.4).
+As orientações distinguem saída não carregada, ausência de interseção, contato
+sem área, zero válido, campo ausente, valor nulo e índice inválido. Mensagens
+de carregamento, lote parcial e erro permanecem também em região de status
+acessível na própria seção, além do feedback de operação existente.
+
+O PDF corrente identifica as execuções e separa fontes, leitura, metodologia,
+resultados por conjunto e limites. Mantém os índices e classes originais por
+demanda e feição; as estatísticas exploratórias da tela não são exportadas como
+índice final. A síntese de cobertura por superfície informa demandas com e sem
+interseção, combinações demanda × feição, índices válidos, ausentes, nulos,
+inválidos e contatos sem área. Essas contagens não constituem novo escore.
+O PDF apresenta índices com duas casas decimais; Excel e CSV conservam a
+precisão numérica disponível nos resultados, sem arredondamento de apresentação.
+O pacote conserva os GeoPackages e os metadados com SHA-256.
+Falha de leitura pode ser tratada pela tentativa de carregar novamente ou pela
+reabertura da saída, sem repetir o cálculo. A preparação de superfícies no
+gerador e o avanço à Fase 3 continuam ações separadas. Essa revisão de
+apresentação não modifica operadores, pesos AHP, ranking ou persistência dos
+dados processados; documentos já emitidos não são sobrescritos.
+
 Um grafico de intervalos com pontos por superficie reune todas as combinacoes
 das saidas concluidas, inclusive em lote parcial identificado. Cada demanda
 ocupa uma linha, identificada somente pelo nome, sem codigo, identificador ou
@@ -249,10 +272,39 @@ conferencia de metadados, geometrias, vinculos e somas antes da apresentacao.
 O acesso as execucoes e as revisoes de nomes permanecem segregados por usuario
 e modalidade, sem utilizar o namespace da Fase 1. O pacote de download inclui
 PDF de Favorabilidade Territorial com indices e classes por combinacao,
-todos os GeoPackages integrais e manifesto,
+todos os GeoPackages integrais, tabelas editaveis, guia e manifesto,
 com identificacao explicita de lotes parciais e conferencia de integridade no
 Storage. A geracao do pacote nao executa novamente as intersecoes e nao
 registra relatorio de Elegibilidade ou altera indices da hierarquizacao.
+
+O pacote de exportação, versão 2, é organizado por finalidade:
+
+| Arquivo | Finalidade |
+|---|---|
+| `Relatório de Favorabilidade Territorial.pdf` | Leitura técnica: alcance, fontes, cobertura, mapas, índices e classes por demanda e feição, limites e próximos passos. |
+| `Tabelas/Favorabilidade Territorial.xlsx` | Conferência externa com abas de índices e classes, cobertura por superfície, fontes e nomes revisados e orientações. |
+| `Tabelas/Índices e Classes.csv` | Detalhe aberto, com identificadores, valores originais, estados explícitos e áreas técnicas. |
+| `Tabelas/Cobertura por Superfície.csv` | Contagens das combinações e dos estados de qualidade, sem agregação dos índices. |
+| `Camadas/NN/*.gpkg` | Saídas integrais para SIG, incluindo atributos de origem, geometrias e vínculos. |
+| `Metadados da Análise.json` | Identificação das execuções, nomes revisados e assinaturas SHA-256 das camadas, PDF, tabelas e guia. |
+| `LEIA-ME.txt` | Ordem de leitura, formato, interpretação e procedimentos para conferência e eventuais correções. |
+
+O detalhe contém uma linha por execução × demanda × superfície × feição;
+demandas sem interseção também aparecem por superfície, sem índice ou classe
+atribuídos. Contatos sem área preservam seus índices e classes. Nomes iguais
+não fundem registros: a chave de conferência combina execução, chave posicional
+da demanda, ID da superfície e ID da feição. O estado `sem_intersecao` difere
+de `ausente` (campo inexistente), `nulo` e `invalido`; zero válido permanece
+numérico. Os atributos brutos, inclusive valores incompatíveis com o domínio
+do índice dimensionado, permanecem disponíveis no GeoPackage integral.
+
+Os CSVs usam UTF-8 com BOM, separador ponto e vírgula e decimal vírgula.
+Percentuais são apresentados em 0–100, não como frações. O XLSX mantém tipos
+numéricos e os textos não são gravados como fórmulas. A exportação não é um
+formulário de reimportação: editar uma cópia não modifica o sistema. Eventuais
+correções devem ser feitas na fonte e gerar nova execução, preservando o pacote
+original para comparação. As estatísticas exploratórias da interface não
+são exportadas como se fossem resultados persistidos ou índices finais.
 
 A tabela **Indices e Classes Agregados por Demanda** fica imediatamente abaixo
 da tabela por feicao, substituindo nesta pagina a consulta de indices oficiais

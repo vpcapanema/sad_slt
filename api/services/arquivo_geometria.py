@@ -35,7 +35,9 @@ async def receber_arquivo_geometria(
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(status_code=400, detail=f"Erro ao processar arquivo: {exc}") from exc
+        raise HTTPException(status_code=400, detail=(
+            f"Não foi possível ler a geometria do arquivo '{nome_arquivo or '(sem nome)'}' "
+            f"(extensão '{extensao or 'ausente'}', {len(conteudo)} bytes): {type(exc).__name__}: {exc}")) from exc
 
     enviada = {"type": geometria.tipo, "coordinates": geometria.coordinates}
     do_arquivo = parsed["geojson"]["geometry"]

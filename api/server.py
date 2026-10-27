@@ -21,6 +21,7 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Resp
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from api.error_handlers import registrar_tratadores
 from api.exceptions import DatabaseUnavailableError
 from api.deps.auth import get_optional_session, require_geospatial_access, require_operator
 from api.middleware.subpath_rewrite import SubpathRewriteMiddleware
@@ -30,6 +31,7 @@ from api.services import storage_remoto
 from api.services.session_service import SessionUser
 
 app = FastAPI(title="SLT — Apoio à Tomada de Decisão", version="1.1.0")
+registrar_tratadores(app)
 templates = Jinja2Templates(directory=str(project_path("templates")))
 
 

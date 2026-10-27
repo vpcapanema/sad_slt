@@ -233,6 +233,7 @@ def test_fase_3_consume_indice_do_resumo_por_demanda_sem_reescalonar(monkeypatch
         obj["cabecalho_objeto"]["atributos_fase3"] = {chave: {"valor_bruto": 0.123, "origem": "complementacao"}}
         obj["hierarquizacao"]["fase_1"] = {
             "executada": True, "resumo_elegibilidade": {chave: indice}}
+        obj["hierarquizacao"]["fase_3"]["desatualizado"] = {"por": "complementacao_atributos"}
     _mock_persistencia(monkeypatch, row)
     criterio = {"nome_coluna": chave, "criterio": "Índice de risco ambiental e territorial",
                 "grupo_atributo": "risco_ambiental_territorial", "peso": 1}
@@ -242,6 +243,7 @@ def test_fase_3_consume_indice_do_resumo_por_demanda_sem_reescalonar(monkeypatch
         objetos = result.dados_hierarquizacao["objetos"]
         assert [o["hierarquizacao"]["fase_3"]["score_fase3"] for o in objetos] == [0.75, 0.9, 0.0, 1.0]
         for obj, indice in zip(objetos, [0.75, 0.9, 0.0, 1.0]):
+            assert "desatualizado" not in obj["hierarquizacao"]["fase_3"]
             slot = obj["cabecalho_objeto"]["atributos_fase3"][chave]
             assert slot["valor_bruto"] == slot["valor_rescalonado"] == indice
             assert slot["origem"] == "fase1"
@@ -327,6 +329,41 @@ def test_fase_3_usa_riscos_do_payload_e_mantem_pesos_salvos_dos_demais(monkeypat
                    {**service._atributo_risco("nova", "Camada nova"), "peso": 1}], completude_minima=0))
     pesos = result.dados_hierarquizacao["objetos"][0]["hierarquizacao"]["fase_3"]["pesos_fase3"]
     assert set(pesos) == {"Maturidade", "Sobreposição com Camada nova"}
+
+
+def test_fase3_calcula_pela_escala_da_tabela_atual_e_nao_pela_configuracao_antiga(monkeypatch):
+    from api.matriz_colunas import extrair_colunas
+    coluna = extrair_colunas([{
+        "Etapa": "Priorização", "Métrica": "Nível de complexidade",
+        "Dado": "Nível de complexidade · Indicador: escala qualitativa de 1 a 5",
+        "Unidade": "escala ordinal", "Relação": "↓ Negativa",
+    }])[0]
+    criterio = {"nome_coluna": coluna["id"], "tipo_dado": "ordinal",
+                "direcao": coluna["relacao"], "peso": 1, "mapeamento": coluna["mapeamento"]}
+    row = _db_row(_dados([3], [{coluna["id"]: i} for i in [1, 2, 3, 4]]))
+    row["dados_hierarquizacao"]["cabecalho_grupo"]["configuracoes"] = {
+        "fase_3": {"criterios": [{**criterio, "mapeamento": {}}]},
+    }
+    for objeto in row["dados_hierarquizacao"]["objetos"]:
+        objeto["hierarquizacao"]["sintese"] = {"executada": True, "score_final": 0.9}
+        objeto["hierarquizacao"]["fase_3"]["ranking_fase3"] = 99
+    _mock_persistencia(monkeypatch, row)
+    resultado = service.executar_fase_3("HIER-TESTE", HierarquizacaoFase3ExecutarSchema(criterios=[criterio]))
+    objetos = resultado.dados_hierarquizacao["objetos"]
+    assert [o["hierarquizacao"]["fase_3"]["score_fase3"] for o in objetos] == pytest.approx([1, 2 / 3, 1 / 3, 0])
+    assert [o["hierarquizacao"]["fase_3"]["ranking_fase3"] for o in objetos] == [1, 2, 3, 4]
+    assert all(o["hierarquizacao"]["sintese"]["executada"] is False for o in objetos)
+    assert all(o["hierarquizacao"]["sintese"]["score_final"] is None for o in objetos)
+
+
+def test_sintese_nao_utiliza_resultados_de_criterios_diferentes_da_tabela(monkeypatch):
+    from api.exceptions import DemandaValidationError
+    row = _db_row(_dados([3], [{}]))
+    row["dados_hierarquizacao"]["objetos"][0]["hierarquizacao"]["fase_3"] = {"executada": True, "score_fase3": 0.8}
+    _mock_persistencia(monkeypatch, row)
+    monkeypatch.setattr(service, "configuracao_fase3_desatualizada", lambda row: True)
+    with pytest.raises(DemandaValidationError, match="tabela 2 mudaram"):
+        service.sintetizar("HIER-TESTE", HierarquizacaoSinteseSchema())
 
 
 def test_fase_3_renormaliza_pesos_quando_atributo_opcional_ausente(

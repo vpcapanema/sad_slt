@@ -5,7 +5,7 @@
 {% set requer_autenticacao = true %}
 
 {% block titulo %}Gestão das hierarquizações — SICARD{% endblock %}
-{% block classes_body %}ahp-module-page hier-processos-page feedback-proprio{% endblock %}
+{% block classes_body %}ahp-module-page hier-processos-page feedback-proprio ami-page ami-espaco-page sicard-standard-page{% endblock %}
 {% block base_url %}<base href="/restrict/hierarquizacao/" />{% endblock %}
 
 {% block estilos_pagina %}
@@ -19,11 +19,15 @@
   <link rel="stylesheet" href="/assets/css/paginas/hierarquizacao-home-inline-1.css?v=20261015-instrucoes">
   <link rel="stylesheet" href="/assets/css/page-title-standard.css?v=20260820-3" />
   <link rel="stylesheet" href="/assets/css/table-standard.css?v=20261015-fontes-ordem">
+  <link rel="stylesheet" href="/assets/css/admin-table-controls.css?v=20261015-botoes-quadrados">
+  <link rel="stylesheet" href="/assets/css/paginas/ami-report-tables.css?v=20261020-paginacao">
+  <link rel="stylesheet" href="/assets/css/paginas/ami-espaco-secoes.css?v=20261027-botoes-cinza-claro">
+  <link rel="stylesheet" href="/assets/css/paginas/sicard-standard-pages.css?v=20261027-1">
 {% endblock %}
 
 {% block conteudo %}
 <div id="admin-session-bar" class="admin-session-bar hidden"></div>
-    <main class="conteudo-principal app-main ahp-main">
+    <main class="conteudo-principal app-main ahp-main ami-main">
       {% include "componentes/navegacao_fases_hierarquizacao.html" %}
       <section class="card-gestao-das-hierarquizacoes secao-gestao-das-hierarquizacoes card standard-page-hero">
         <h1 class="ahp-page-title standard-page-hero__title">
@@ -111,6 +115,15 @@
         </div>
       </section>
 
+      <section id="hier-complementacao-pos-cadastro" class="card" hidden aria-labelledby="hier-complementacao-pergunta">
+        <h2 id="hier-complementacao-pergunta">Solicitar complementação dos atributos agora ou deixar para a Fase 3?</h2>
+        <p>O cadastro já foi salvo. Demandas com atributos faltantes permanecem aguardando complementação, mesmo sem pedido ou e-mail. A opção Depois não cria pedido nem envia e-mail.</p>
+        <div class="btn-row">
+          <button type="button" class="btn btn-primary" id="hier-complementacao-agora">Solicitar agora</button>
+          <button type="button" class="btn btn-secondary" id="hier-complementacao-depois">Depois, na Fase 3</button>
+        </div>
+        <div id="hier-complementacao-resultado" role="status" aria-live="polite"></div>
+      </section>
       <section class="card-informacoes-cadastrais secao-informacoes-cadastrais card ahp-step-section hidden" id="hier-create-section">
         <div class="ahp-section-label">
           <i class="fas fa-folder-plus"></i
@@ -152,22 +165,23 @@
 
             <article class="card-tabela-demandas ahp-subcard cadastro-card standard-table-section" aria-labelledby="hier-tabela-demandas-titulo">
               <div class="ahp-subsection-title">
-                <i class="fas fa-table" aria-hidden="true"></i>
+                <span class="ahp-subsection-num">3</span>
                 <h2 id="hier-tabela-demandas-titulo">Tabela de demandas</h2>
               </div>
               {% set filtro_prefixo = "hier-grupo" %}{% set filtro_rotulo = "Filtrar demandas do agrupamento" %}{% include "componentes/filtro_tabela.html" %}
               <div class="admin-table-wrap">
                 <table class="admin-table hier-resumo-table">
-                  <thead><tr><th>Código</th><th>Processo SEI</th><th>Nome</th><th>Situação</th></tr></thead>
-                  <tbody id="hier-agrupamento-demandas"><tr><td colspan="4">Selecione um agrupamento salvo.</td></tr></tbody>
+                  <thead><tr><th class="col-select"><input type="checkbox" id="hier-grupo-select-all" aria-label="Selecionar todas as demandas filtradas"></th><th>Código</th><th>Processo SEI</th><th>Nome</th><th>Situação</th></tr></thead>
+                  <tbody id="hier-agrupamento-demandas"><tr><td colspan="5">Selecione um agrupamento salvo.</td></tr></tbody>
                 </table>
               </div>
+              <div class="admin-actions standard-table-actions" role="group" aria-label="Controles das demandas"><button type="button" id="hier-grupo-export" class="admin-icon-btn save" title="Exportar selecionadas" aria-label="Exportar selecionadas" disabled><i class="fas fa-file-csv" aria-hidden="true"></i></button><button type="button" id="hier-grupo-clear" class="admin-icon-btn cancel" title="Limpar seleção" aria-label="Limpar seleção" disabled><i class="fas fa-xmark" aria-hidden="true"></i></button></div>
               <div class="admin-table-footer"><nav id="hier-grupo-pagination" class="admin-pagination" aria-label="Paginar demandas do agrupamento"></nav>
               <p id="hier-grupo-summary" class="admin-table-summary" aria-live="polite"></p></div>
             </article>
 
     <section class="ahp-subcard cadastro-card card-matriz-de-premissas-e-criterios secao-matriz-de-premissas-e-criterios">
-      <div class="ahp-subsection-title"><span class="ahp-subsection-num">3</span><h2>Matriz de premissas e critérios</h2></div>
+      <div class="ahp-subsection-title"><span class="ahp-subsection-num">4</span><h2>Matriz de premissas e critérios</h2></div>
       <div class="ahp-section-body">
         <p class="hier-instrucao"><i class="fa-solid fa-circle-info" aria-hidden="true"></i><span>Anexe a matriz que define o contexto, as premissas e os critérios desta hierarquização. Nos julgamentos associados, os colaboradores indicarão a intensidade de importância entre esses critérios. A consolidação calcula os pesos, que, após homologados, serão aplicados na fase 3 aos valores de cada demanda nos critérios correspondentes.</span></p>
         <div class="hier-matriz-controles">
@@ -220,18 +234,21 @@
 {% endblock %}
 
 {% block scripts_pagina %}
+  <script src="/assets/js/sicard-standard-layout.js?v=20261027-1"></script>
   <script src="/assets/js/table-standard.js?v=20261015-fontes-ordem"></script>
   <script src="/assets/js/admin-auth.js"></script>
+  <script src="/assets/js/api-erro.js?v=20261027"></script>
   <script src="/assets/js/admin-api.js"></script>
   <script src="/assets/js/sigma-read.js"></script>
   <script src="/assets/js/catalog.js"></script>
   <script src="/assets/js/status-colors.js"></script>
   <script src="/assets/js/admin-labels.js"></script>
   <script src="/assets/vendor/leaflet/leaflet.js" crossorigin=""></script>
-  <script src="/restrict/hierarquizacao/js/hier-api.js"></script>
+  <script src="/restrict/hierarquizacao/js/hier-api.js?v=20261027-complementacao"></script>
+  <script src="/assets/js/hierarquizacao-complementacao.js"></script>
   <script src="/restrict/hierarquizacao/js/demandas-grupo.js?v=20261004-1"></script>
   <script src="/assets/vendor/xlsx/xlsx-0.18.5.min.js"></script>
   <script src="/assets/js/matriz-criterios-arquivo.js?v=20261009"></script>
-  <script src="/restrict/hierarquizacao/js/processos.js?v=20261024-modal-resumo-elegibilidade"></script>
+  <script src="/restrict/hierarquizacao/js/processos.js?v=20261027-padrao-ui"></script>
   <script src="/assets/js/paginas/hierarquizacao-home-inline-1.js"></script>
 {% endblock %}

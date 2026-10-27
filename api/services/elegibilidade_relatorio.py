@@ -29,6 +29,7 @@ from api.services import extracao_preparacao, analise_territorial_ogr as nativo
 from osgeo import ogr
 from api.services import extracao_atributos_relatorios as estilo
 from api.services import elegibilidade_sintese as sintese
+from api.services import favorabilidade_exportacao
 from api.services.extracao_atributos_exportacao import registros, texto
 from api.services.extracao_ogr import reproject
 from api.services.storage_geoespacial import RAIZES_LEITURA
@@ -49,15 +50,12 @@ METODOLOGIA = (
     'em metros quadrados, com cálculo em EPSG:5880, sem união ou dissolução. '
     'As geometrias, os atributos e o CRS da entrada da bancada foram preservados. '
     'O travessão indica ausência de interseção (valor nulo); zero indica interseção sem área. '
-    'Não se somam bases diferentes para formar um indicador de elegibilidade. '
+    'As somas por base não representam parcelas exclusivas: sobreposições internas podem exceder a área da demanda. '
     'As áreas são apresentadas em km², com equivalência em hectares e percentual da área da demanda. '
-    'A rosca reúne todas as entradas e demandas da análise, sem ser limitada pela seleção ou paginação. '
-    'Cada fatia representa a área total de uma demanda na soma das áreas de todas as demandas, inclusive sem interseção. '
-    'Sobre a mesma fatia são desenhadas camadas semitransparentes com hachuras para cada feição intersectada, '
-    'na proporção entre a área da interseção e a área total da demanda, preservando sua identidade de origem. '
-    'As representações partem do mesmo início do setor, não indicam a posição geográfica das feições, '
-    'não constituem parcelas exclusivas nem são normalizadas pela soma das interseções. '
-    'As cores correspondem às categorias do mapa; contatos sem área são consultados na lista da demanda, sem área gráfica fictícia. '
+    'A situação de cada demanda considera também contatos sem área. '
+    'O Resumo da Elegibilidade inclui somente demandas sem restrição e usa a união das áreas de risco '
+    'para o índice de risco ambiental e territorial, conforme a nota específica dessa tabela. '
+    'Esse resumo não altera as áreas independentes por base nem aplica classificação automática. '
     'Os atributos originais, a área total e os recortes vinculados acompanham as geometrias no mesmo GeoPackage.'
 )
 NOTA_MAPA = ('O mapa do relatório representa as demandas inteiras e as áreas atingidas por restrição (vermelho) '
@@ -71,9 +69,9 @@ METODOLOGIA_FAVORABILIDADE = (
     'Os resultados apresentam fav_territorial_dim e fav_territorial_classe para grade e '
     'fav_rede_dim e fav_rede_classe para rede, lidos dos atributos preservados nos fragmentos. '
     'Cada combinação demanda × feição mantém seu índice e sua classe originais, sem soma, média ou ponderação por área. '
-    'Os gráficos de intervalos com pontos, separados por superfície, utilizam escala fixa de 0 a 1, com uma linha por demanda, '
+    'Na página, os gráficos de intervalos com pontos, separados por superfície, utilizam escala fixa de 0 a 1, com uma linha por demanda, '
     'identificada somente pelo nome, e um ponto para cada feição intersectada. O traço liga o menor ao maior índice válido, '
-    'sem agregar os valores. As cores identificam as feições de origem na legenda. Reúnem todas as combinações das entradas concluídas, '
+    'sem agregar os valores. A legenda identifica a representação exibida. Reúnem todas as combinações das entradas concluídas, '
     'independentemente da seleção, paginação ou ocultação de vazias. Zero é um índice válido. '
     'Campos ausentes, valores nulos e índices inválidos são sinalizados e não substituídos por área ou zero. '
     'As áreas permanecem apenas como informação técnica complementar da interseção. '
@@ -927,17 +925,32 @@ def pdf(modelo: dict) -> bytes:
                                     'Resultados da Análise de Sobreposição' if analise == 'favorabilidade'
                                     else 'Situação das Demandas quanto a Restrições e Riscos',
                                     f'Emitido em {estilo.hora(modelo["gerado_em"])}'),
-                Spacer(1, 12), estilo._p(e, 'Identificação da Análise', 'h1'),
-                estilo._p(e, f'Entradas concluídas: {modelo["concluidas"]} de {modelo["previstas"]}.')]
+                Spacer(1, 12), estilo._p(e, '1 — Identificação e alcance da análise', 'h1'),
+                estilo._p(e, f'Entradas concluídas: {modelo["concluidas"]} de {modelo["previstas"]}.'),
+                estilo._p(e, 'Este relatório utiliza as saídas gravadas das execuções identificadas abaixo. '
+                          'Inclui todas as demandas dessas entradas, independentemente dos filtros ou da seleção em tela. '
+                          'A data de emissão não substitui a data de conclusão de cada processamento.')]
     if analise == 'elegibilidade':
         historia.append(estilo._p(e, sintese.CONCEITO))
+    else:
+        historia.append(estilo._p(e, 'Os resultados são índices e classes de origem por combinação demanda × feição, '
+                                 'separando grade e rede. Não constituem um índice final único ou ranking da demanda.'))
     if modelo['concluidas'] != modelo['previstas']:
         historia.append(estilo._p(e, 'RELATÓRIO PARCIAL: somente as entradas concluídas estão incluídas.', 'h2'))
-    historia += [estilo._p(e, 'Fontes Utilizadas', 'h1'),
+    historia += [estilo._tabela(e, [['Conjunto de demandas', 'Execução', 'Demandas analisadas'],
+                                  *[[item['nome'], item['id'], item['feicoes']] for item in modelo['entradas']]],
+                                 [estilo.LARGURA*.4, estilo.LARGURA*.4, estilo.LARGURA*.2]),
+                 estilo._p(e, '2 — Fontes Utilizadas', 'h1'),
                  estilo._tabela(e, [['Papel', 'Camada'], *[[PAPEIS[f['papel']], f['nome']] for f in modelo['fontes'] if f['tipo'] == 'camada']],
                                 [100, estilo.LARGURA - 100]),
-                 estilo._p(e, 'Metodologia', 'h1'), estilo._p(e, modelo['metodologia'])]
-    for entrada in modelo['entradas']:
+                 estilo._p(e, '3 — Como ler os resultados', 'h1'),
+                 estilo._p(e, sintese.NOTA_LEITURA if analise == 'elegibilidade' else
+                           'Sem interseção significa ausência de feição interceptada nas superfícies consultadas, não índice zero. '
+                           'Zero válido permanece zero; campo ausente, valor nulo e índice inválido são distintos. '
+                           'Contatos sem área conservam os atributos originais. O PDF apresenta esses valores, '
+                           'não as estatísticas exploratórias escolhidas na página.'),
+                 estilo._p(e, '4 — Metodologia da consulta espacial', 'h1'), estilo._p(e, modelo['metodologia'])]
+    for posicao, entrada in enumerate(modelo['entradas'], 1):
         fichas = sintese.caracterizar(entrada) if analise == 'elegibilidade' else []
         caracterizacao = [estilo._p(e, 'Situação das Demandas', 'h2'), sintese.kpis(e, fichas), Spacer(1, 6)] if fichas else []
         processamento = (f'Processamento concluído em {estilo.hora(entrada["concluido_em"])}. '
@@ -947,7 +960,11 @@ def pdf(modelo: dict) -> bytes:
                          f'Processamento concluído em {estilo.hora(entrada["concluido_em"])}. '
                          f'Total: {entrada["feicoes"]} feições; com interseção: {entrada["com_intersecao"]}; '
                          f'sem interseção: {entrada["sem_intersecao"]}.')
-        historia += [PageBreak(), estilo._p(e, entrada['nome'], 'h1'),
+        historia.append(PageBreak())
+        if posicao == 1:
+            historia.append(estilo._p(e, '5 — Resultados por conjunto de demandas', 'h1'))
+        historia += [estilo._p(e, f'5.{posicao} — {entrada["nome"]}', 'h1'),
+                     estilo._p(e, f'Execução: {entrada["id"]}.', 'nota'),
                      estilo._p(e, processamento),
                      *caracterizacao,
                      estilo._p(e, 'Mapa-Síntese', 'h2'), MapaPDF(entrada['mapa']),
@@ -958,8 +975,22 @@ def pdf(modelo: dict) -> bytes:
                      estilo._p(e, entrada['mapa']['nota'], 'nota')]
         if analise == 'favorabilidade':
             campos = {c['id']: c for c in entrada['campos']}
+            cobertura = favorabilidade_exportacao.resumo({'entradas': [entrada]})
+            historia += [estilo._p(e, 'Cobertura e qualidade dos índices por superfície', 'h2'),
+                         estilo._p(e, 'Contagens das combinações demanda × feição, sem agregar índices. '
+                                   'Demandas sem interseção não entram nas contagens de índices ausentes ou nulos. '
+                                   'Um contato sem área pode ter índice válido, inclusive zero.', 'nota')]
+            for item in cobertura:
+                historia += [estilo._p(e, f'{item[3]} · {item[4]}', 'h2'),
+                             estilo._p(e, f'Demandas com interseção: {item[6]} de {item[5]}; '
+                                       f'sem interseção: {item[7]}. Combinações demanda × feição: {item[8]}. '
+                                       f'Índices válidos: {item[9]}; campo ausente: {item[10]}; '
+                                       f'nulos: {item[11]}; inválidos: {item[12]}. '
+                                       f'Contatos sem área: {item[13]}.')]
             historia += [PageBreak(), estilo._p(e, 'Índices e Classes por Demanda e Feição', 'h1'),
-                         estilo._p(e, 'Valores originais, sem soma, média ou ponderação por área. Contatos sem área são identificados.')]
+                         estilo._p(e, 'Valores originais, sem soma, média ou ponderação por área. Contatos sem área são identificados. '
+                                   'Índices no PDF têm duas casas decimais para leitura; as tabelas do pacote preservam '
+                                   'a precisão disponível. Identifique homônimos pelos IDs da superfície e da feição.')]
             for linha in entrada['linhas']:
                 historia.append(estilo._p(e, f'{linha["nome"] or "Demanda"} · {linha["id"]}', 'h2'))
                 if not linha['sobreposicoes']:
@@ -970,7 +1001,8 @@ def pdf(modelo: dict) -> bytes:
                     valor = item['favorabilidade']
                     detalhes.append([
                         f'{PAPEIS[item["papel"]]} · {campos[item["base_id"]]["nome"]} · {item["nome"]} '
-                        f'[{item["identificador"]}]' + (' · Contato sem área' if item['area_m2'] == 0 else ''),
+                        f'[{item["identificador"]}] · Base: {item["base_id"]} · Feição: {item["id"]}'
+                        + (' · Contato sem área' if item['area_m2'] == 0 else ''),
                         valor['campo_indice'], _indice_pdf(valor),
                         f'{_classe_pdf(valor)} ({valor["campo_classe"]})',
                     ])
@@ -1019,6 +1051,36 @@ def pdf(modelo: dict) -> bytes:
                 historia += [PageBreak(), estilo._p(e, f'{entrada["nome"]} — Anexo: Matrizes de Área por Camada', 'h1'),
                              estilo._p(e, f'Tabela de {PAPEIS[papel]} — Bloco {inicio // 4 + 1}', 'h2'),
                              tabela]
+    historia += [PageBreak(), estilo._p(e, '6 — Limites, rastreabilidade e próximos passos', 'h1'),
+                 estilo._p(e, 'As conclusões se limitam às entradas concluídas e às camadas consultadas. '
+                           'Uma falha de processamento ou leitura não representa ausência de ocorrência. '
+                           'Entradas não concluídas não recebem resultado neste relatório. '
+                           'A consulta não altera pesos AHP, critérios multicritério, ranking ou homologação.'),
+                 estilo._p(e, 'Confira as ocorrências e as fontes antes de utilizar os resultados na fase seguinte. '
+                           'O GeoPackage preserva geometrias, atributos e vínculos de origem; '
+                           'o pacote inclui metadados com as execuções e assinaturas SHA-256 para conferência dos arquivos. '
+                           'A revisão dos nomes é de apresentação e não modifica os dados processados. '
+                           'Para consultar novamente, reabra a saída existente na seção 5, sem repetir o cálculo.')]
+    if analise == 'elegibilidade':
+        historia.append(estilo._p(e, 'O índice de risco ambiental e territorial descreve a exposição espacial da demanda; '
+                                 'não constitui critério multicritério. O resumo não inclui demandas com restrição. '
+                                 'Se estiver vazio, consulte a situação e os detalhes de todas as demandas. '
+                                 'O pacote inclui tabelas Excel e CSV e um guia de leitura. '
+                                 'Use a execução e a chave da demanda para conferir registros homônimos nas tabelas. '
+                                 'Os valores numéricos das tabelas conservam a precisão disponível, '
+                                 'independentemente do arredondamento de leitura do PDF. '
+                                 'Editar uma cópia não atualiza o SICARD; eventuais correções devem ser feitas na fonte '
+                                 'e gerar nova execução, preservando o pacote original. '
+                                 'O avanço à Fase 2 é uma ação separada na navegação da página.'))
+    else:
+        historia.append(estilo._p(e, 'Verifique na superfície de origem os campos ausentes, nulos ou inválidos. '
+                                 'Nenhum desses estados é substituído por área ou classe inferida. '
+                                 'O pacote inclui Excel e CSV com valores e estados explícitos, resumo de cobertura, '
+                                 'fontes e guia de leitura. As tabelas não são um formulário de reimportação: '
+                                 'editar uma cópia não atualiza o SICARD. Corrija a fonte e gere nova execução, '
+                                 'mantendo o pacote original para comparação. '
+                                 'A preparação de superfícies é feita no gerador indicado na seção 2 da página. '
+                                 'O avanço à Fase 3 é uma ação separada na navegação.'))
     buffer = BytesIO()
     estilo._construir(buffer, nome_analise, historia)
     return buffer.getvalue()
@@ -1040,13 +1102,17 @@ def pacote(modelo: dict, arquivos: list[tuple[str, bytes]]) -> tuple[bytes, str]
                           ('Tabelas/Resumo da Elegibilidade.xlsx', sintese.xlsx_resumo(modelo)),
                           ('Tabelas/Resumo da Elegibilidade.csv', sintese.csv_resumo(modelo)),
                           ('LEIA-ME.txt', sintese.leia_me(modelo, nome_relatorio, [n for n, _ in arquivos]))]
-            for nome, dados in documentos:
-                zipado.writestr(nome, dados)
+        else:
+            documentos = favorabilidade_exportacao.documentos(modelo, nome_relatorio, [n for n, _ in arquivos])
+        for nome, dados in documentos:
+            zipado.writestr(nome, dados)
         manifesto = {**{k: v for k, v in modelo.items() if k != 'entradas'},
                      'entradas': [{k: v for k, v in item.items() if k not in {'mapa', 'linhas', 'geometrias', 'intersecoes'}} for item in modelo['entradas']],
                      'arquivos': [{'nome': n, 'sha256': sha256(d).hexdigest()} for n, d in arquivos]}
         if documentos:
             manifesto['documentos'] = [{'nome': n, 'sha256': sha256(d).hexdigest()} for n, d in documentos]
+        manifesto['versao_pacote'] = 2
+        manifesto['documentos'].insert(0, {'nome': nome_relatorio, 'sha256': sha256(relatorio).hexdigest()})
         zipado.writestr('Metadados da Análise.json', json.dumps(manifesto, ensure_ascii=False, indent=2))
     dados = memoria.getvalue()
     with ZipFile(BytesIO(dados)) as zipado:

@@ -30,7 +30,7 @@
   <section class="secao-elegibilidade-cabecalho card card-elegibilidade-cabecalho standard-page-hero">
     <h1 class="ahp-page-title standard-page-hero__title"><i class="fas fa-shield-halved" aria-hidden="true"></i><span>Elegibilidade territorial</span></h1>
     <p class="standard-page-hero__eyebrow">Hierarquização · Fase 1</p>
-    <p class="standard-page-hero__description">Escolha sua entrada, organize as camadas de restrição e de risco e confira a prévia antes de enviá-las à bancada. <a class="fase-descricao-add" href="/public/documentacao/" aria-label="Consultar a documentação metodológica"><i class="fas fa-book" aria-hidden="true"></i></a></p>
+    <p class="standard-page-hero__description">Selecione as demandas e as bases, confira a prévia e execute na bancada. Consulte as restrições e os riscos encontrados e emita o relatório na seção 5, sem classificação automática ou homologação. <a class="fase-descricao-add" href="/public/documentacao/" aria-label="Consultar a documentação metodológica"><i class="fas fa-book" aria-hidden="true"></i></a></p>
   </section>
   <p id="ev-status" class="ea-hint" role="status" aria-live="polite">Carregando hierarquizações…</p>
   <div class="ev-preparacao-grid ea-preparation-actions">
@@ -148,7 +148,7 @@
           <p class="ea-hint" id="ev-run-warning" role="status">Aguarde o carregamento da bancada.</p>
         </div>
         <div class="ea-execute">
-          <p id="ev-run-pending" class="ea-hint">A execução utiliza as camadas confirmadas e marcadas na bancada. Produz uma cópia integral de cada entrada com as áreas de sobreposição em m² nos campos re_* e ri_*. A saída é gravada no storage e adicionada automaticamente à bancada.</p>
+          <p id="ev-run-pending" class="ea-hint">O cálculo usa somente as camadas confirmadas e marcadas na bancada: uma entrada e ao menos uma base de restrição ou risco. Cada entrada gera uma cópia integral com áreas em m² nos campos re_* e ri_* e os recortes de interseção. A saída é gravada no Storage e adicionada à bancada; na seção 5, revise os nomes para consultar os resultados e emitir o relatório. Saídas já concluídas são mantidas em caso de interrupção das entradas seguintes.</p>
           <button class="ea-btn ea-btn-primary" id="ev-calcular" type="button" aria-describedby="ev-run-pending" disabled>Calcular Elegibilidade Territorial</button>
         </div>
       </section>
@@ -163,6 +163,7 @@
 {% endblock %}
 {% block scripts_pagina %}
 <script src="/assets/js/admin-auth.js"></script>
+<script src="/assets/js/api-erro.js?v=20261027"></script>
 <script src="/assets/js/admin-api.js"></script>
 <script src="/assets/js/status-colors.js"></script>
 <script src="/assets/js/objeto-detalhe.js"></script>

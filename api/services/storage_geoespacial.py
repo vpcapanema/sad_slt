@@ -13,13 +13,18 @@ O storage é um só: o do SFTPGo da VM. Onde há montagem (VM, Codespace) ele é
 lido como pasta; num servidor local sem montagem (Windows, sem FUSE) o mesmo
 storage é lido pela API desse SFTPGo, e nunca pelos dois caminhos ao mesmo
 tempo. Nesse modo não existe pasta de trabalho local: o GDAL abre o arquivo
-onde ele está, por /vsicurl, buscando só os trechos de que precisa.
+onde ele está, por /vsicurl, buscando só os trechos de que precisa. A exceção
+são os tiles do mapa, gerados de uma cópia local de leitura por versão do
+arquivo (ver _copia_local_para_tiles), porque cada tile por /vsicurl custava
+dezenas de requisições HTTP.
 """
 from __future__ import annotations
 from api.services.extracao_ogr import reproject as _gdal_reproject
 
 import json
 import os
+import tempfile
+import threading
 import uuid
 from collections.abc import Iterator
 from functools import lru_cache
@@ -508,9 +513,90 @@ def bounds(caminho: str, camada: str | None) -> list[float] | None:
 
 
 def tile(caminho: str, camada: str | None, z: int, x: int, y: int) -> bytes:
-    arquivo = resolver(caminho)
+    arquivo = _resolver_para_tiles(caminho)
     estado = arquivo.stat()
-    return _tile(str(arquivo), camada, (estado.st_mtime_ns, estado.st_size), z, x, y)
+    versao = (estado.st_mtime_ns, estado.st_size)
+    return _tile(_copia_local_para_tiles(arquivo, versao), camada, versao, z, x, y)
+
+
+_VALIDADE_RESOLUCAO_TILES_S = 10.0
+_resolucoes_tiles: dict[str, tuple[float, Path | ArquivoStorage]] = {}
+
+
+def _resolver_para_tiles(caminho: str) -> Path | ArquivoStorage:
+    """resolver() com memória de poucos segundos, só para a rajada de tiles de um mapa.
+
+    Pela API, cada resolução lista a pasta no storage (~0,4 s); um mapa pede dezenas
+    de tiles de uma vez. Edições no arquivo aparecem após no máximo esta validade.
+    """
+    if not _via_api():
+        return resolver(caminho)
+    import time
+
+    agora = time.monotonic()
+    guardado = _resolucoes_tiles.get(caminho)
+    if guardado and agora - guardado[0] < _VALIDADE_RESOLUCAO_TILES_S:
+        return guardado[1]
+    arquivo = resolver(caminho)
+    if len(_resolucoes_tiles) > 256:
+        _resolucoes_tiles.clear()
+    _resolucoes_tiles[caminho] = (agora, arquivo)
+    return arquivo
+
+
+# Formatos de arquivo único: a cópia não precisa de acompanhantes (.shp exige .dbf/.shx/.prj).
+_COPIAVEIS_TILES = {".gpkg", ".geojson", ".json", ".fgb", ".kml"}
+_LIMITE_COPIA_TILES = int(os.getenv("SICARD_STORAGE_CACHE_MAX_BYTES", str(512 * 1024 * 1024)))
+_travas_copia: dict[str, threading.Lock] = {}
+_trava_travas = threading.Lock()
+
+
+def _diretorio_cache_tiles() -> Path:
+    return Path(os.getenv("SICARD_STORAGE_CACHE_DIR") or Path(tempfile.gettempdir()) / "sicard_storage_cache")
+
+
+def _copia_local_para_tiles(arquivo: Path | ArquivoStorage, versao: tuple[int, int]) -> str:
+    """Caminho para gerar tiles; arquivos lidos pela API do storage viram cópia local por versão.
+
+    Cada tile lido por /vsicurl faz dezenas de requisições HTTP Range ao storage
+    (um tile de 500 kB levava ~16 s, contra ~0,5 s em disco). O arquivo inteiro
+    é baixado uma vez por (mtime, tamanho); a versão muda quando ele é editado.
+    É só cache de leitura: o storage continua sendo a única fonte.
+    """
+    if not isinstance(arquivo, ArquivoStorage):
+        return str(arquivo)
+    if arquivo.suffix.lower() not in _COPIAVEIS_TILES or versao[1] > _LIMITE_COPIA_TILES or versao[1] <= 0:
+        return str(arquivo)
+    import hashlib
+
+    pasta = _diretorio_cache_tiles()
+    prefixo = hashlib.sha1(arquivo.relativo.encode("utf-8")).hexdigest()[:20]
+    destino = pasta / f"{prefixo}_{versao[0]}_{versao[1]}{arquivo.suffix.lower()}"
+    if destino.is_file() and destino.stat().st_size == versao[1]:
+        return str(destino)
+    with _trava_travas:
+        trava = _travas_copia.setdefault(prefixo, threading.Lock())
+    with trava:
+        if destino.is_file() and destino.stat().st_size == versao[1]:
+            return str(destino)
+        try:
+            dados = storage_remoto.baixar(arquivo.relativo)
+        except (storage_remoto.StorageIndisponivel, FileNotFoundError, OSError):
+            return str(arquivo)
+        if len(dados) != versao[1]:
+            # O arquivo mudou entre a listagem e o download: lê direto, sem cachear.
+            return str(arquivo)
+        pasta.mkdir(parents=True, exist_ok=True)
+        temporario = destino.with_name(f"{destino.name}.{uuid.uuid4().hex}.parcial")
+        temporario.write_bytes(dados)
+        os.replace(temporario, destino)
+        for antigo in pasta.glob(f"{prefixo}_*"):
+            if not antigo.name.startswith(destino.name) and not antigo.name.endswith(".parcial"):
+                try:
+                    antigo.unlink(missing_ok=True)
+                except OSError:
+                    pass  # Ainda aberto por outro tile (Windows); sai na próxima versão.
+        return str(destino)
 
 
 # MapLibre LineBucket reserves 10 GPU vertices per source vertex, including

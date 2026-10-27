@@ -32,7 +32,8 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
   let mapaElegibilidade = null, gerandoPacote = false, mapaFavorabilidade = null, processoResultados = null, emOperacao = false, ultimaMensagem = '';
   function informar(mensagem) {
     ultimaMensagem = mensagem;
-    if (!favorabilidade) { node('status').textContent = mensagem; return; }
+    node('status').textContent = mensagem;
+    if (!favorabilidade) return;
     if (emOperacao && !processoResultados) {
       processoResultados = window.ProcessFeedback.iniciarCadastro({title:'Resultados da Favorabilidade Territorial', tasks:[]});
     }
@@ -108,6 +109,7 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
 
   function controles() {
     const bloqueado = ocupado || externo;
+    node('vazio').hidden = Boolean(modelo);
     node('abrir').setAttribute('aria-disabled', String(bloqueado));
     document.getElementById('ev-resultados').querySelectorAll('input,button,select').forEach(c => { c.disabled = bloqueado; });
     node('download').disabled = bloqueado || !modelo || gerandoPacote;
@@ -137,7 +139,7 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
     }
     catch (erro) {
       processoResultados?.erro({title:'Resultados não carregados', message:erro.message});
-      if (!favorabilidade) node('status').textContent = erro.message;
+      node('status').textContent = erro.message;
       avisar(erro.message, 'error');
     }
     finally { processoResultados = null; emOperacao = false; ocupado = false; aoOcupar(false); controles(); }
@@ -158,13 +160,17 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
       : `Resultados parciais: ${modelo.concluidas} de ${modelo.previstas} entradas. O PDF identificará essa condição.`;
     informar(mensagem);
     if (modelo.relatorios_hierarquizacao?.length) {
-      informar(mensagem + ' PDF gravado no Storage e associado ao Relatório da Fase 1 em Gestão das hierarquizações.');
+      informar(mensagem + ` PDF gravado no Storage e associado ao Relatório da Fase ${favorabilidade ? 2 : 1} em Gestão das hierarquizações.`);
     }
     if (favorabilidade) {
       const itens = sobreposicoesDaAnalise(modelo.entradas);
       const incompletos = itens.filter(item => item.favorabilidade.estado_indice !== 'valido'
         || item.favorabilidade.estado_classe !== 'valido').length;
-      if (incompletos) avisar(`Atenção: ${incompletos} combinação(ões) com índice ou classe ausente, nulo ou inválido. Os campos são sinalizados nas tabelas; índices sem valor válido não entram nas estatísticas. Não foi atribuída área ou zero no lugar desses valores.`, 'warning');
+      if (incompletos) {
+        const alerta = `Atenção: ${incompletos} combinação(ões) com índice ou classe ausente, nulo ou inválido. Os campos são sinalizados nas tabelas; índices sem valor válido não entram nas estatísticas. Não foi atribuída área ou zero no lugar desses valores.`;
+        node('status').textContent += ` ${alerta}`;
+        avisar(alerta, 'warning');
+      }
     }
   }
   async function carregar(dados) {
@@ -517,6 +523,8 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
     const response = await fetch(`${base}${rota}/pacote`,{method:'POST',credentials:'same-origin',
       headers:{'Content-Type':'application/json'},body:JSON.stringify(payload())});
     if (!response.ok) {
+      const E = window.SicardApiErro;
+      if (E) { const err = await E.deResposta(response, {method:'POST', url:`${base}${rota}/pacote`}); err.message = `Falha ao gerar o pacote: ${err.message}. As camadas foram mantidas.`; throw err; }
       const mensagem = await response.text();
       let erro;
       try { erro = JSON.parse(mensagem).detail; }
@@ -547,7 +555,7 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
       try { await selecionarExecucoes(identificadores); }
       catch (erro) {
         const mensagem = `As camadas foram produzidas, mas os resultados não puderam ser preparados: ${erro.message}`;
-        if (!favorabilidade) node('status').textContent = mensagem;
+        node('status').textContent = mensagem;
         node('tentar').hidden = false; avisar(mensagem,'error');
       }
     },

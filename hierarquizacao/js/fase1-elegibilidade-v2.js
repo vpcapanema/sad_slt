@@ -36,8 +36,11 @@ async function resolverAdversidades(camadas) {
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({camadas:camadas.map(c => c.id)}),
   });
-  const dados = await response.json();
-  if (!response.ok) throw new Error(typeof dados.detail === 'string' ? dados.detail : 'Não foi possível consultar as adversidades das camadas.');
+  const dados = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    if (window.SicardApiErro) throw await window.SicardApiErro.deResposta(new Response(JSON.stringify(dados), {status: response.status, statusText: response.statusText}), {method: 'POST', url: '/dominios/adversidades/camadas/resolver', recurso: 'POST /dominios/adversidades/camadas/resolver (consulta de adversidades das camadas)'});
+    throw new Error(typeof dados.detail === 'string' ? dados.detail : `Não foi possível consultar as adversidades das camadas (HTTP ${response.status}).`);
+  }
   if (!Array.isArray(dados)) throw new Error('Resposta inválida ao consultar adversidades.');
   const porId = new Map(dados.map(item => [item.id, item.adversidade]));
   return camadas.map(camada => {

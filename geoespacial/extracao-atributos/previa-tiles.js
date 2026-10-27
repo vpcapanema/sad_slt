@@ -1,6 +1,22 @@
 // Um único contexto WebGL para todas as camadas da prévia.
+import '/assets/js/favorabilidade-simbologia.js?v=20261027-simbologia-compartilhada';
 const mapas=new WeakMap();
 let sequencia=0;
+// Superfícies de favorabilidade nascem com a simbologia temática, sem estilo genérico.
+function pinturaFavorabilidade(gl,ids,item){
+ const FS=globalThis.FavorabilidadeSimbologia,config=FS?.identificar(item);
+ if(!config)return null;
+ const alvo={id:item.id,arquivo:config.arquivo,campo:config.campo,revisao:item.revisao};
+ const pintura=classificacao=>{
+  const cor=FS.expressaoCor(config,config.classe?null:classificacao);
+  return {fill:{'fill-color':cor,...FS.PREENCHIMENTO},line:{'line-color':cor,'line-width':3},point:{'circle-color':cor,'circle-radius':5}};
+ };
+ if(!config.classe&&!FS.classificacaoEmCache(alvo))FS.obterClassificacao(alvo,{cache:true}).then(classificacao=>{
+  const p=pintura(classificacao);
+  [p.fill,p.line,p.point].forEach((paint,i)=>{if(gl.getLayer(ids[i]))for(const [nome,valor] of Object.entries(paint))gl.setPaintProperty(ids[i],nome,valor);});
+ }).catch(erro=>console.warn(`Contraste Jenks indisponível para ${item.nome||item.id}; mantida a rampa contínua 0–1.`,erro));
+ return pintura(config.classe?null:FS.classificacaoEmCache(alvo));
+}
 export function camadaTiles(mapa,item,color){
  const L=window.L;
  let contexto=mapas.get(mapa);
@@ -21,9 +37,10 @@ export function camadaTiles(mapa,item,color){
  const montar=()=>{
   if(!ativa||gl.getSource(id))return;
   gl.addSource(id,{type:'vector',tiles:[item.tiles_url],minzoom:0,maxzoom:22});
-  gl.addLayer({id,source:id,'source-layer':'camada',type:'fill',filter:['==',['geometry-type'],'Polygon'],paint:{'fill-color':color,'fill-opacity':.18,'fill-outline-color':color}});
-  gl.addLayer({id:ids[1],source:id,'source-layer':'camada',type:'line',filter:['==',['geometry-type'],'LineString'],paint:{'line-color':color,'line-width':3}});
-  gl.addLayer({id:ids[2],source:id,'source-layer':'camada',type:'circle',filter:['==',['geometry-type'],'Point'],paint:{'circle-color':color,'circle-radius':5}});
+  const tematica=pinturaFavorabilidade(gl,ids,item);
+  gl.addLayer({id,source:id,'source-layer':'camada',type:'fill',filter:['==',['geometry-type'],'Polygon'],paint:tematica?.fill||{'fill-color':color,'fill-opacity':.18,'fill-outline-color':color}});
+  gl.addLayer({id:ids[1],source:id,'source-layer':'camada',type:'line',filter:['==',['geometry-type'],'LineString'],paint:tematica?.line||{'line-color':color,'line-width':3}});
+  gl.addLayer({id:ids[2],source:id,'source-layer':'camada',type:'circle',filter:['==',['geometry-type'],'Point'],paint:tematica?.point||{'circle-color':color,'circle-radius':5}});
  };
  const Camada=L.Layer.extend({
   onAdd(){ativa=true;camadas.set(id,this);if(contexto.pronto)montar();else contexto.pendentes.add(montar);},

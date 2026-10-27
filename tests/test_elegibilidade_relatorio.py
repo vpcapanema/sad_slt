@@ -251,13 +251,95 @@ def test_pdf_e_pacote_informam_restricao_risco_ou_livre_por_demanda(analise):
         resumo = list(csv_lib.reader(StringIO(pacote.read('Tabelas/Resumo da Elegibilidade.csv').decode('utf-8-sig')),
                                      delimiter=';'))
         assert resumo[0] == ['Conjunto de demandas', 'Objeto de demanda', 'Camadas de risco', 'Área de sobreposição (ha)',
-                             'Porcentagem sobreposta', 'Índice de risco ambiental e territorial']
+                             'Porcentagem sobreposta', 'Índice de risco ambiental e territorial',
+                             'Execução', 'Chave da demanda', 'Identificador da demanda']
         assert len(resumo) == 1 + 2 * 1 and all(l[2] == '—' and l[5] == '1' for l in resumo[1:])
         assert 'Resumo da Elegibilidade' in texto and 'Índice de risco ambiental e territorial' in texto
         assert livro['Situação das Demandas'].max_row == 1 + 2 * 63
         assert livro['Restrições e Riscos'].max_row == 1 + 2 * (1 + 62 * 7)
         manifesto = json.loads(pacote.read('Metadados da Análise.json'))
-        assert {d['nome'] for d in manifesto['documentos']} == conteudo
+        assert {d['nome'] for d in manifesto['documentos']} == conteudo | {'Relatório de Elegibilidade Territorial.pdf'}
+        assert manifesto['versao_pacote'] == 2
+        for documento in [*manifesto['documentos'], *manifesto['arquivos']]:
+            assert documento['sha256'] == sha256(pacote.read(documento['nome'])).hexdigest()
+
+
+@pytest.mark.parametrize('valor,esperado', [
+    (0.0, '0'), (1e-7, '0,0000001'), (.1234567890123456, '0,1234567890123456'),
+    (1000000.0, '1000000'), (-.0000001, '-0,0000001'),
+])
+def test_csv_preserva_precisao_sem_transformar_area_pequena_em_zero(valor, esperado):
+    from api.services import elegibilidade_sintese as sintese
+    assert sintese._celula_csv(valor) == esperado
+
+
+def test_tabelas_identificam_homonimos_preservam_area_pequena_e_contatos(analise):
+    import csv as csv_lib
+    from io import StringIO
+    from openpyxl import load_workbook
+    from api.services import elegibilidade_sintese as sintese
+    _, _, nomes = analise
+    modelo, arquivos = service.montar(['job-1', 'job-2'], nomes, 'autor', True)
+    anterior = deepcopy(modelo)
+    documentos = {
+        'detalhe': sintese.csv_detalhe(modelo),
+        'resumo': sintese.csv_resumo(modelo),
+        'xlsx': sintese.xlsx(modelo),
+        'xlsx_resumo': sintese.xlsx_resumo(modelo),
+    }
+    assert modelo == anterior
+    detalhes = list(csv_lib.DictReader(StringIO(documentos['detalhe'].decode('utf-8-sig')), delimiter=';'))
+    assert {r['Execução'] for r in detalhes} == {'job-1', 'job-2'}
+    homonimos = [r for r in detalhes if r['Demanda'] == 'Demanda 2']
+    assert len(homonimos) == 14
+    assert {r['Chave da demanda'] for r in homonimos} == {'2'}
+    assert all(r['Área atingida (m²)'] == '0,0000001' for r in homonimos)
+    assert len({(r['Execução'], r['Chave da demanda'], r['ID da camada'], r['ID da feição'])
+                for r in homonimos}) == 14
+    livres = [r for r in detalhes if r['Chave da demanda'] == '0']
+    contatos = [r for r in detalhes if r['Chave da demanda'] == '1']
+    assert all(r['Área atingida (m²)'] == '' and r['ID da feição'] == '' for r in livres)
+    assert all(r['Área atingida (m²)'] == '0' and r['ID da feição'] != '' for r in contatos)
+    resumos = list(csv_lib.DictReader(StringIO(documentos['resumo'].decode('utf-8-sig')), delimiter=';'))
+    assert len(resumos) == 2
+    assert {r['Execução'] for r in resumos} == {'job-1', 'job-2'}
+    assert all(r['Chave da demanda'] == '0' for r in resumos)
+    livro = load_workbook(BytesIO(documentos['xlsx']))
+    linhas = list(livro['Restrições e Riscos'].values)
+    campos = linhas[0]
+    registro = next(dict(zip(campos, r)) for r in linhas[1:]
+                    if r[campos.index('Chave da demanda')] == '2')
+    assert registro['Área atingida (m²)'] == 1e-7
+    assert registro['Execução'] == 'job-1'
+    assert livro['Camadas Consultadas']['C2'].value
+    resumo_excel = load_workbook(BytesIO(documentos['xlsx_resumo']))
+    assert resumo_excel.sheetnames == ['Resumo da Elegibilidade', 'Como Ler']
+    assert resumo_excel.active.max_row == 3  # Apenas cabecalho e dados, sem nota misturada.
+    assert resumo_excel.active.auto_filter.ref == 'A1:I3'
+    assert 'Editar uma cópia' in '\n'.join(str(r[0].value) for r in resumo_excel['Como Ler'])
+    assert all(arquivos[i][1] == analise[1][analise[0][f'job-{i + 1}']['arquivo']] for i in range(2))
+
+
+def test_exportacao_sem_demanda_sem_restricao_explica_resumo_vazio(analise):
+    import csv as csv_lib
+    from io import StringIO
+    from openpyxl import load_workbook
+    from api.services import elegibilidade_sintese as sintese
+    _, _, nomes = analise
+    modelo, _ = service.montar(['job-1'], {k: v for k, v in nomes.items() if k != 'entrada-2'}, 'autor', True)
+    modelo['entradas'][0]['linhas'] = modelo['entradas'][0]['linhas'][1:]
+    modelo['entradas'][0]['linhas'][0]['nome'] = '=1+2'
+    linhas = list(csv_lib.reader(StringIO(sintese.csv_resumo(modelo).decode('utf-8-sig')), delimiter=';'))
+    assert len(linhas) == 1  # Nao inventa demanda/indice para preencher o resumo.
+    livro = load_workbook(BytesIO(sintese.xlsx_resumo(modelo)))
+    assert livro.active.max_row == 1
+    guia = '\n'.join(str(r[0].value) for r in livro['Como Ler'])
+    assert 'PACOTE PARCIAL' in guia and 'Resumo vazio' in guia
+    detalhe = sintese.csv_detalhe(modelo).decode('utf-8-sig')
+    assert "'=1+2" in detalhe
+    livro_detalhe = load_workbook(BytesIO(sintese.xlsx(modelo)), data_only=False)
+    formulas = [c for row in livro_detalhe['Situação das Demandas'] for c in row if c.value == '=1+2']
+    assert formulas and all(c.data_type == 's' for c in formulas)
 
 
 def test_resumo_da_elegibilidade_lista_demandas_sem_restricao_com_indice_de_zero_a_um():
@@ -386,6 +468,11 @@ def test_pdf_automatico_associado_so_a_hierarquizacao_de_origem(analise, monkeyp
     for i, (codigo, _, _, documento) in enumerate(chamadas):
         assert sha256(dados[documento['arquivo']]).hexdigest() == documento['sha256']
         texto = ' '.join(p.extract_text() for p in PdfReader(BytesIO(dados[documento['arquivo']])).pages)
+        for trecho in ('1 — Identificação e alcance da análise', '3 — Como ler os resultados',
+                       '5 — Resultados por conjunto de demandas', '6 — Limites, rastreabilidade e próximos passos',
+                       'não constitui critério multicritério'):
+            assert trecho in texto
+        assert ('job-1' if codigo == 'HIER-NORTE' else 'job-2') in texto
         presente, ausente = ('Norte', 'Sul') if codigo == 'HIER-NORTE' else ('Sul', 'Norte')
         assert f'Demandas do Setor {presente}' in texto and f'Demandas do Setor {ausente}' not in texto
         assert modelo['relatorios_hierarquizacao'][i]['arquivo'] == documento['arquivo']
@@ -398,6 +485,28 @@ def test_pdf_automatico_associado_so_a_hierarquizacao_de_origem(analise, monkeyp
     anteriores = dict(dados)
     service.registrar_relatorios(['job-1', 'job-2'], modelo, 'autor')
     assert not chamadas and dados == anteriores
+
+
+def test_relatorio_parcial_explica_escopo_e_resumo_sem_restricao_sem_alterar_saidas(analise):
+    _, _, nomes = analise
+    modelo, arquivos = service.montar(['job-1'], {k: v for k, v in nomes.items() if k != 'entrada-2'}, 'autor', True)
+    antes = deepcopy(modelo)
+    texto = ' '.join(' '.join(p.extract_text() for p in PdfReader(BytesIO(service.pdf(modelo))).pages).split())
+    assert modelo == antes
+    assert 'RELATÓRIO PARCIAL' in texto and 'Entradas concluídas: 1 de 2' in texto
+    assert 'job-1' in texto and 'job-2' not in texto
+    assert 'Demandas analisadas: 63' in texto
+    assert 'com restrição ou risco: 62' in texto
+    assert 'livres de restrições e riscos: 1' in texto
+    assert 'Entradas não concluídas não recebem resultado' in texto
+    assert 'Demandas com restrição não constam desta tabela' in texto
+    assert 'Esse resumo não altera as áreas independentes por base' in texto
+    assert 'A rosca' not in texto
+    pacote, _ = service.pacote(modelo, arquivos)
+    with ZipFile(BytesIO(pacote)) as zipado:
+        guia = zipado.read('LEIA-ME.txt').decode('utf-8-sig')
+        assert 'não constitui critério multicritério' in guia and 'SHA-256' in guia
+        assert zipado.read(arquivos[0][0]) == arquivos[0][1]
 
 
 def test_download_de_relatorio_exige_vinculo_autenticacao_e_assinatura(analise, monkeypatch):

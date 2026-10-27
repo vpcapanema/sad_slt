@@ -312,3 +312,9 @@
   background: #fff7ed;
   border-left: 2px solid #ea580c;
 }
+.fase3-fonte-pesos { border: 0; padding: 0; margin: .75rem 0 1rem; display: flex; flex-wrap: wrap; gap: .75rem 2rem; }
+.fase3-fonte-pesos legend { font-weight: 700; margin-bottom: .6rem; }
+.fase3-fonte-pesos label { display: inline-flex; align-items: center; gap: .5rem; }
+.fase3-fonte-pesos input[type="radio"] { width: auto; margin: 0; }
+.fase3-fonte-pesos[hidden], #fase3-julgamento-campo[hidden] { display: none; }
+#atributos-objetos-demanda > .ahp-subcard + .ahp-subcard { margin-top: 1rem; }

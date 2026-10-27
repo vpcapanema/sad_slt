@@ -8,8 +8,8 @@ const escape = value => String(value ?? "").replace(/[&<>"']/g, c => ({ "&": "&a
 
 async function api(url, options = {}) {
   const response = await fetch(url, { credentials: "same-origin", ...options, headers: { "Content-Type": "application/json", ...options.headers } });
-  const body = await response.json();
-  if (!response.ok) throw new Error(typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail || body));
+  const body = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(window.SicardApiErro ? window.SicardApiErro.formatar(body, { status: response.status, method: options.method || "GET", url }) : (typeof body?.detail === "string" ? body.detail : JSON.stringify(body?.detail || body)));
   return body;
 }
 function status(message, error = false) {

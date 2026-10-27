@@ -30,7 +30,7 @@
   <section class="secao-favorabilidade-cabecalho card card-favorabilidade-cabecalho standard-page-hero">
     <h1 class="ahp-page-title standard-page-hero__title"><i class="fas fa-map-location-dot" aria-hidden="true"></i><span>Favorabilidade territorial — município e rede rodoviária</span></h1>
     <p class="standard-page-hero__eyebrow">Hierarquização · Fase 2</p>
-    <p class="standard-page-hero__description">Escolha os objetos de demanda e as superfícies de favorabilidade territorial. As camadas de grade e de rede mantêm suas representações próprias. Confira a prévia antes de enviá-las à bancada. <a class="fase-descricao-add" href="/public/documentacao/favorabilidade/" aria-label="Consultar a documentação da favorabilidade territorial — município e rede rodoviária"><i class="fas fa-book-atlas" aria-hidden="true"></i></a></p>
+    <p class="standard-page-hero__description">Selecione as demandas e as superfícies de grade e rede, confira a prévia e execute na bancada. Consulte índices e classes originais e emita o relatório na seção 5, sem atualizar ranking, pesos AHP ou homologação. <a class="fase-descricao-add" href="/public/documentacao/favorabilidade/" aria-label="Consultar a documentação da favorabilidade territorial — município e rede rodoviária"><i class="fas fa-book-atlas" aria-hidden="true"></i></a></p>
   </section>
   <p id="fv-status" class="ea-hint" role="status" aria-live="polite">Carregando hierarquizações…</p>
   <div class="ev-preparacao-grid ea-preparation-actions">
@@ -128,7 +128,7 @@
     <header class="ea-section-head"><span class="ea-number">4</span><h2 id="fv-bancada-title">Bancada de geoprocessamento</h2></header>
     <iframe id="ea-workbench-frame" class="ea-workbench-frame" src="/restrict/geoespacial/bancada/" title="Bancada de favorabilidade de grade e da rede" allow="fullscreen"></iframe>
     <div class="ea-section-body">
-      <p class="ea-hint">Componente atualizado de geoprocessamento do SICARD. A composição abaixo acompanha as camadas confirmadas nesta página e marcadas como visíveis na bancada.</p>
+      <p class="ea-hint">A composição abaixo acompanha somente as camadas confirmadas nesta página e marcadas como visíveis na bancada. Preparar a seleção ou alterar a prévia não substitui esse conjunto nem os resultados já gravados.</p>
       <p id="fv-bancada-status" class="ea-hint" role="status">Nenhuma camada confirmada nesta página.</p>
       <section class="secao-favorabilidade-conferencia ea-checkup" aria-labelledby="fv-checkup-title">
       <h4 class="ea-checkup-title" id="fv-checkup-title">Conferir e executar</h4>
@@ -168,10 +168,12 @@
   <section class="secao-favorabilidade-resultados ea-section ev-resultados" id="ev-resultados" aria-labelledby="ev-resultados-title">
     <header class="ea-section-head"><span class="ea-number">5</span><h2 id="ev-resultados-title">Resultados da Favorabilidade Territorial</h2></header>
     <div class="ea-section-body">
-      <p id="ev-resultados-vazio" class="ea-hint">Execute a favorabilidade territorial ou <a id="ev-resultados-abrir" href="#ev-resultados">selecione uma análise já realizada</a> para apresentar os resultados.</p>
+      <p class="ea-hint">A consulta utiliza os atributos preservados nas interseções da saída gravada, não a seleção atual das seções 1 e 2. Grade e rede permanecem separadas. Cada combinação demanda × feição conserva seu índice dimensionado e sua classe de origem; não há índice final único por demanda nem ranqueamento oficial nesta etapa.</p>
+      <p id="ev-resultados-vazio" class="ea-hint">Nenhuma análise apresentada. Execute o cálculo na seção 4 ou <a id="ev-resultados-abrir" href="#ev-resultados">selecione uma análise já realizada</a> pelo GeoPackage de saída no Storage. Sem saída carregada, não é possível concluir se há interseção ou índice disponível.</p>
+      <p id="ev-resultados-status" class="ea-hint" role="status" aria-live="polite"></p>
       <button id="ev-resultados-tentar" class="ea-btn" type="button" hidden>Tentar Carregar Resultados</button>
       <form id="ev-resultados-aliases" hidden>
-        <h3>Revisão dos Nomes de Apresentação</h3>
+        <h3>5.1 — Revisão dos Nomes de Apresentação</h3>
         <p class="ea-hint">Confira os nomes das superfícies e das feições, incluindo significado, ortografia e acentuação. As alterações serão salvas no Storage e utilizadas no mapa, na tabela, no gráfico e no PDF. A revisão não modifica as fontes nem os índices registrados.</p>
         <div id="ev-resultados-nomes" class="ev-resultados-nomes"></div>
         <label class="ev-resultados-confirmacao"><input id="ev-resultados-revisados" name="nomes_revisados" type="checkbox" required> Revisei os nomes e confirmo que identificam corretamente as camadas desta análise.</label>
@@ -183,7 +185,8 @@
           <button class="ea-btn" id="ev-resultados-editar" type="button">Revisar Nomes</button>
         </div>
         <p id="ev-resultados-resumo" class="ea-hint"></p>
-        <h3>Composição da Análise</h3>
+        <h3>5.2 — Composição e leitura dos resultados</h3>
+        <p class="ea-hint">“Sem interseção” indica que a demanda não encontrou feição nas superfícies consultadas; não significa favorabilidade zero. Zero válido é mantido. Campo ausente, valor nulo e índice inválido são sinalizados separadamente, sem substituição por área, zero ou classe inferida. Contato sem área mantém os atributos da feição. Em lote parcial, somente as entradas concluídas são apresentadas.</p>
         <p id="ev-resultados-composicao" class="ea-hint"></p>
         <div class="evr-fontes">
           <div class="evr-fonte grade"><h4>Favorabilidade Territorial <small>Municípios</small></h4><div id="ev-resultados-fontes-grade" class="evr-chips"></div></div>
@@ -211,7 +214,7 @@
             <div id="ev-resultados-mapa-legenda" class="evr-legenda-mapa"></div>
             <p id="ev-resultados-mapa-camada-nota" class="ea-hint evr-instrucoes" role="status"></p>
             <button id="ev-resultados-mapa-recarregar" class="ea-btn" type="button" hidden>Tentar carregar camada oficial</button>
-            <p class="ea-hint evr-instrucoes">As cores representam as classes de favorabilidade e são as mesmas no gráfico, nos pontos e nos polígonos do mapa. Classes ausentes usam cinza. A seleção destaca a interseção registrada na execução.</p>
+            <p class="ea-hint evr-instrucoes">Consulte a legenda da representação selecionada: as classes são as da superfície, sem reclassificação. A seleção destaca a interseção registrada na execução. O PDF usa rampa contínua do índice dimensionado (0 a 1), com cinza quando não há índice válido; sua simbologia não substitui a classe original.</p>
             <p class="ea-hint evr-instrucoes" id="ev-resultados-nota-mapa" role="status"></p>
           </section>
         </div>
@@ -236,7 +239,7 @@
           <p class="ea-hint evr-instrucoes">Demandas ordenadas pelo maior índice válido, do maior para o menor. As feições de cada demanda permanecem juntas, também em ordem decrescente de índice. Demandas sem interseção e valores ausentes ou inválidos ficam ao final, sem substituição por área ou zero. O filtro considera todas as páginas e mantém índices zero e problemas sinalizados. Selecione uma linha para consultar os detalhes e ampliar o mapa.</p>
         </section>
         <section class="secao-favorabilidade-agregados secao-elegibilidade-tabela evr-painel standard-table-section" aria-labelledby="fv-resultados-title">
-          <header class="evr-titulo"><h3 id="fv-resultados-title">Índices e Classes Agregados por Demanda</h3><span class="ea-hint">Consulta exploratória · sem alterar os índices oficiais</span></header>
+          <header class="evr-titulo"><h3 id="fv-resultados-title">5.3 — Índices e Classes Agregados por Demanda</h3><span class="ea-hint">Consulta exploratória · sem alterar os índices oficiais</span></header>
           <p class="ea-hint">Cada demanda da camada selecionada reúne os índices das feições interceptadas, separando grade e rede. Escolha uma única medida entre os três seletores para substituir os conjuntos de índices pelos resultados estatísticos. Volte a “Valores originais” no seletor ativo para restaurá-los. As classes originais permanecem listadas, sem reclassificação.</p>
           <div class="fv-estatisticas-controles" role="group" aria-label="Medidas estatísticas, somente uma ativa por vez">
             <div class="ea-field">
@@ -297,7 +300,7 @@
         <details><summary>Metodologia da Análise</summary><p id="ev-resultados-metodologia" class="ea-hint"></p></details>
       </div>
       <footer class="ev-resultados-download">
-        <p class="ea-hint"><strong>Relatório e Camadas da Análise</strong><br>O pacote inclui o PDF, todas as demandas processadas, suas interseções e os metadados, independentemente da seleção em tela. Classes e índices originais permanecem nos fragmentos do GeoPackage, sem agregação. Não é necessário repetir o processamento.</p>
+        <p class="ea-hint"><strong>5.4 — Relatório, limites e próximos passos</strong><br>Após confirmar os nomes, baixe o pacote de todas as entradas concluídas, independentemente dos filtros: PDF com resultados e cobertura por superfície; Excel e CSV para conferir índices, classes, identificadores e estados de ausência; GeoPackages integrais para SIG; metadados com assinaturas SHA-256; e guia de leitura. O PDF apresenta índices com duas casas decimais; as tabelas preservam a precisão disponível. Nenhum desses arquivos reproduz as estatísticas exploratórias selecionadas nesta página. Editar as tabelas não atualiza o SICARD: eventuais correções devem ser feitas na fonte e gerar nova execução, preservando o pacote original para comparação. Se a leitura falhar, use “Tentar Carregar Resultados” ou reabra a saída existente, sem repetir o cálculo. A indisponibilidade de uma camada de contexto no mapa não elimina os recortes gravados. Confira campos ausentes ou inválidos na superfície de origem antes de interpretar os índices; para preparar superfícies, utilize o gerador da seção 2. O avanço à Fase 3 é feito pela navegação superior e não ocorre automaticamente.</p>
         <button class="ea-btn ea-btn-primary" id="ev-resultados-download" type="button" disabled>Baixar Relatório e Camadas (.zip)</button>
       </footer>
     </div>
@@ -307,6 +310,7 @@
 {% endblock %}
 {% block scripts_pagina %}
 <script src="/assets/js/admin-auth.js"></script>
+<script src="/assets/js/api-erro.js?v=20261027"></script>
 <script src="/assets/js/admin-api.js"></script>
 <script src="/assets/js/status-colors.js"></script>
 <script src="/assets/js/objeto-detalhe.js"></script>
@@ -316,5 +320,5 @@
 <script src="/assets/vendor/maplibre-gl/maplibre-gl.js"></script>
 <script src="/assets/vendor/maplibre-gl/leaflet-maplibre-gl.js"></script>
 <script src="/restrict/hierarquizacao/js/hier-api.js"></script>
-<script type="module" src="/restrict/hierarquizacao/js/fase2-favorabilidade-v2.js?v=20261025-demanda-modal"></script>
+<script type="module" src="/restrict/hierarquizacao/js/fase2-favorabilidade-v2.js?v=20261027-favorabilidade-simbologia"></script>
 {% endblock %}

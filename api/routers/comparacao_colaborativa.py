@@ -66,6 +66,21 @@ def listar_ambientes(
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
+@router.get("/hierarquizacoes/{codigo}/pesos-fase3")
+def pesos_fase3(codigo: str, _user: SessionUser = Depends(require_authenticated)) -> list[dict]:
+    from api.exceptions import HierarquizacaoNotFoundError
+    from api.services.hierarquizacao_service import _carregar
+    from api.services.ponderacao_fase3 import listar_julgamentos
+    try:
+        return listar_julgamentos(_carregar(codigo))
+    except HierarquizacaoNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except DemandaValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
 @router.post("/ambientes", response_model=AmbienteColaborativoResponseSchema, status_code=201)
 def criar_ambiente(
     body: AmbienteColaborativoCreateSchema,

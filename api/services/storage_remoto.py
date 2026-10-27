@@ -142,11 +142,15 @@ def endereco_vsi(caminho: str) -> str:
 
     O GDAL busca por HTTP Range apenas os trechos de que precisa e resolve
     sozinho os acompanhantes de um .shp trocando a extensão nesta mesma URL.
+
+    Espaços viram "+", não "%20": um GeoPackage em modo WAL é reaberto pelo
+    GDAL como URI SQLite (``file:...?immutable=1``), que decodifica os "%XX"
+    e deixaria espaços crus na URL, quebrando a requisição HTTP.
     """
-    from urllib.parse import quote
+    from urllib.parse import quote_plus
 
     url, _, _, _ = _config()
-    return f"/vsicurl/{url}/user/files?path={quote(_absoluto(caminho))}"
+    return f"/vsicurl/{url}/user/files?path={quote_plus(_absoluto(caminho), safe='/')}"
 
 
 def preparar_gdal() -> None:

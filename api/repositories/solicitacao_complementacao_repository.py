@@ -1,5 +1,6 @@
 """Solicitações explícitas de complementação e seu histórico."""
 from api.db.connection import get_connection
+from psycopg.types.json import Jsonb
 
 TABLE = "demandas.solicitacao_complementacao_demanda"
 
@@ -37,3 +38,17 @@ def atender(id, usuario_id):
     with get_connection() as conn:
         return conn.execute(f"""UPDATE {TABLE} SET status='atendida',atendido_por=%s,atendido_em=now()
           WHERE id=%s AND status='solicitada' RETURNING *""", (usuario_id,id)).fetchone()
+
+
+def reservar_notificacao(id, notificacao):
+    """Reserva persistente antes do SMTP; interrupcoes nao provocam reenvio automatico."""
+    with get_connection() as conn:
+        return conn.execute(f"""UPDATE {TABLE} SET notificacao=%s
+          WHERE id=%s AND status='solicitada'
+          AND COALESCE(notificacao->>'status','') NOT IN ('enviando','aceito_smtp','indeterminado')
+          RETURNING *""", (Jsonb(notificacao), id)).fetchone()
+
+
+def registrar_notificacao(id, notificacao):
+    with get_connection() as conn:
+        conn.execute(f"UPDATE {TABLE} SET notificacao=%s WHERE id=%s", (Jsonb(notificacao), id))

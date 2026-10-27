@@ -19,6 +19,7 @@ from api.constants import (
     TIPO_DEMANDA_COD_TO_ID,
     TIPO_DEMANDA_ID_TO_COD,
     STATUS_EM_HIERARQUIZACAO,
+    STATUS_HIERARQUIZACAO_COMPLEMENTACAO,
     STATUS_POS_APROVACAO,
 )
 from api.exceptions import (
@@ -27,13 +28,19 @@ from api.exceptions import (
     HierarquizacaoNotFoundError,
 )
 from api.matriz_colunas import extrair_colunas
-from api.services.pesos_homologados import aplicar_pesos, mapa_pesos
+from api.services.pesos_homologados import mapa_pesos
 from api.services.elegibilidade_sintese import indice_risco_ambiental
+from api.services.atributos_hierarquizacao import (
+    VINCULOS_CADASTRAIS, remover_resultados_fase3, vazio,
+    colunas_da_hierarquizacao, pendencias, configuracao_fase3_desatualizada,
+)
+from api.services.campos_demanda import mesclar_atributos_nativos
 from api.repositories import camada_geoespacial_repository as camada_repo
 from api.repositories import agrupamento_demanda_repository
 from api.repositories import config_multicriterio_repository as config_repo
 from api.repositories import hierarquizacao_repository as repo
 from api.repositories import sigma_usuario_repository
+from api.repositories import dominio_repository
 from api.schemas.hierarquizacao import (
     HierarquizacaoCreateSchema,
     HierarquizacaoFase1ExecutarSchema,
@@ -327,11 +334,14 @@ def registrar_resultado_por_demanda(codigo: str, fase: int, resultado: dict, don
                 h['fase_2'] = _fase2_da_demanda(linha, camadas, execucao, h.get('fase_2') or {})
         if fase == 1:
             dados.setdefault('cabecalho_grupo', {})['criterios_fase3_sugeridos'] = list(sugeridos.values())
-        alteracoes: dict[str, Any] = {'dados_hierarquizacao': dados}
-        agora = datetime.now(timezone.utc).isoformat()
-        for coluna in ('relatorio_fase3', 'relatorio_consolidado'):
-            if row.get(coluna):
-                alteracoes[coluna] = {**row[coluna], 'desatualizado': {'por': f'fase_{fase}', 'em': agora}}
+        remover_resultados_fase3(dados, incluir_fase3=fase == 1)
+        alteracoes: dict[str, Any] = {
+            'dados_hierarquizacao': dados,
+            'relatorio_consolidado': {},
+            'ranking': [],
+        }
+        if fase == 1:
+            alteracoes['relatorio_fase3'] = {}
         repo.update(codigo, alteracoes)
     return {'registrado': True, 'demandas': len(linhas)}
 
@@ -673,34 +683,13 @@ def _normalizar_objeto_contrato(
     return contrato
 
 
-def _prazo_meses(ini: Any, fim: Any) -> int | None:
-    try:
-        a = datetime.fromisoformat(str(ini)[:10])
-        b = datetime.fromisoformat(str(fim)[:10])
-    except (TypeError, ValueError):
-        return None
-    return (b.year - a.year) * 12 + (b.month - a.month)
-
-
-# Preenchimento híbrido dos atributos de Fase 3 (CONJUNTO MUTÁVEL — edite aqui).
-#   "cadastro" -> valor intrínseco do cadastro (Vigência e recursos)
-#   demais colunas -> "gestor" (preenchido depois no componente)
-def _prefill_fase3(col_id: str, cadastro: dict[str, Any]) -> tuple[Any, str]:
-    if col_id == "capex_custo_de_investimento":
-        v = cadastro.get("valor_global")
-        if v is None:
-            v = (cadastro.get("complementos") or {}).get("valor_estimado")
-        return (v, "cadastro") if v is not None else (None, "cadastro")
-    if col_id == "prazo_de_implantacao":
-        return (_prazo_meses(cadastro.get("vigencia_inicio"), cadastro.get("vigencia_fim")), "cadastro")
-    return (None, "gestor")
-
-
 def _atributos_fase3(colunas: list[dict[str, Any]], cadastro: dict[str, Any]) -> dict[str, Any]:
     """Slots de valor por atributo de Etapa 3, chaveados pelo id da coluna."""
     slots: dict[str, Any] = {}
+    nativos = mesclar_atributos_nativos(cadastro)
     for col in colunas:
-        valor, origem = _prefill_fase3(col["id"], cadastro)
+        nativo = VINCULOS_CADASTRAIS.get(col["id"])
+        valor, origem = (nativos.get(nativo), "cadastro") if nativo else (None, "gestor")
         slots[col["id"]] = {
             "valor_bruto": valor,
             "valor_rescalonado": None,
@@ -871,6 +860,7 @@ def _transicao_liberacao_universo(row: dict[str, Any]) -> dict[str, Any] | None:
         "tabela": ("demandas", tipo),
         "ids": sorted(ids),
         "de": STATUS_EM_HIERARQUIZACAO,
+        "de_adicionais": [STATUS_HIERARQUIZACAO_COMPLEMENTACAO],
         "para": STATUS_POS_APROVACAO,
     }
 
@@ -1557,7 +1547,7 @@ def _normalizar(
     bool_false = {"0", "false", "nao", "não", "n", "no"}
     for idx, v in enumerate(valores):
         try:
-            if v is None or v == "":
+            if vazio(v):
                 x = None
                 ausentes.add(idx)
             elif tipo == "booleano":
@@ -1634,7 +1624,9 @@ def _valor_atributo_objeto(obj: dict[str, Any], chave: Any) -> Any:
             None,
         )
     if isinstance(slot, dict):
-        valor_bruto = slot.get("valor_bruto", slot.get("valor"))
+        valor_bruto = slot.get("valor_bruto")
+        if valor_bruto is None:
+            valor_bruto = slot.get("valor")
         if valor_bruto is not None:
             return valor_bruto
     return (cab.get("atributos") or {}).get(chave)
@@ -1675,17 +1667,32 @@ def executar_fase_3(
     row = _carregar(codigo)
     dados = deepcopy(row.get("dados_hierarquizacao") or {})
     _exigir_fase(dados, 3)
+    remover_resultados_fase3(dados)
     objs = dados.get("objetos", [])
+    for objeto in objs:
+        cab = objeto["cabecalho_objeto"]
+        if (cab.get("complementacao_atributos") or {}).get("concluida") is False:
+            raise DemandaValidationError(
+                f"Conclua a complementação dos atributos da demanda {cab.get('codigo')} antes de executar a Fase 3.",
+                field="atributos_fase3",
+            )
+    if dados.get("cabecalho_grupo", {}).get("matriz_premissas_criterios") is not None:
+        colunas = colunas_da_hierarquizacao(row)
+        dominios = dominio_repository.list_atributos_objeto()
+        for objeto in objs:
+            cab = objeto["cabecalho_objeto"]
+            if pendencias(cab, colunas, dominios):
+                raise DemandaValidationError(
+                    f"Preencha os atributos de Cadastro e Dinâmicos da demanda {cab.get('codigo')} na tabela 2 antes de executar a Fase 3.",
+                    field="atributos_fase3",
+                )
     criterios_salvos = (
         dados.get("cabecalho_grupo", {}).get("configuracoes", {}).get("fase_3", {}).get("criterios")
         or []
     )
-    criterios_base = criterios_salvos or payload.criterios
-    if criterios_salvos and payload.criterios:
-        # Os critérios de risco acompanham o resumo da Fase 1 atual, não a configuração anterior por camada.
-        criterios_base = [c for c in criterios_salvos if c.get("grupo_atributo") != GRUPO_RISCO] + [
-            c for c in payload.criterios if c.get("grupo_atributo") == GRUPO_RISCO]
-    criterios = aplicar_pesos(dados, criterios_base)
+    criterios_base = payload.criterios or criterios_salvos
+    from api.services.ponderacao_fase3 import resolver
+    criterios = resolver(row, dados, criterios_base, payload)
     if not criterios:
         raise DemandaValidationError(
             "Informe ao menos um critério da Fase 3.", field="criterios"
@@ -1802,9 +1809,11 @@ def executar_fase_3(
             else None
         )
         f3 = obj["hierarquizacao"]["fase_3"]
+        f3.pop("desatualizado", None)
         f3.update(
             {
                 "executada": True,
+                "ranking_fase3": None,
                 "score_fase3": score,
                 "score_fase3_antes_risco": score_base,
                 "decisao_risco_fase1": decisao_risco,
@@ -1834,7 +1843,7 @@ def executar_fase_3(
         sorted(ranqueaveis, key=lambda x: x[1], reverse=True), 1
     ):
         obj["hierarquizacao"]["fase_3"]["ranking_fase3"] = pos
-    configuracao = payload.model_dump()
+    configuracao = payload.model_dump(mode="json")
     configuracao["criterios"] = criterios
     dados["cabecalho_grupo"].setdefault("configuracoes", {})["fase_3"] = configuracao
     dados["cabecalho_grupo"].setdefault("relatorios", {})["fase_3"] = {
@@ -1845,7 +1854,13 @@ def executar_fase_3(
         "regra_ausentes": payload.regra_ausentes,
     }
     return _response(
-        repo.update(codigo, {"dados_hierarquizacao": dados, "relatorio_fase3": dados["cabecalho_grupo"]["relatorios"]["fase_3"], "status": "em_julgamento"})
+        repo.update(codigo, {
+            "dados_hierarquizacao": dados,
+            "relatorio_fase3": dados["cabecalho_grupo"]["relatorios"]["fase_3"],
+            "relatorio_consolidado": {},
+            "ranking": [],
+            "status": "em_julgamento",
+        })
         or row
     )
 
@@ -1875,14 +1890,19 @@ def salvar_atributos_fase3(
             slot["valor"] = valor
             slot["valor_rescalonado"] = None
             slot["peso"] = None
-    return _response(repo.update(codigo, {"dados_hierarquizacao": dados}) or row)
+    remover_resultados_fase3(dados)
+    return _response(repo.update(codigo, {
+        "dados_hierarquizacao": dados, "relatorio_fase3": {},
+        "relatorio_consolidado": {}, "ranking": [],
+    }) or row)
 
 
 def salvar_pesos_fase3(codigo: str, payload: Any) -> HierarquizacaoResponseSchema:
     """Persiste o peso dos atributos dinâmicos em todos os objetos da rodada."""
     row = _carregar(codigo)
     dados = deepcopy(row.get("dados_hierarquizacao") or {})
-    criterios = aplicar_pesos(dados, payload.criterios or [])
+    from api.services.ponderacao_fase3 import resolver, configuracao
+    criterios = resolver(row, dados, payload.criterios or [], payload)
     if not criterios:
         raise DemandaValidationError("Informe os pesos dos atributos.", field="criterios")
     pesos = {
@@ -1903,7 +1923,12 @@ def salvar_pesos_fase3(codigo: str, payload: Any) -> HierarquizacaoResponseSchem
             slot["peso"] = peso
     config = dados["cabecalho_grupo"].setdefault("configuracoes", {}).setdefault("fase_3", {})
     config["criterios"] = criterios
-    return _response(repo.update(codigo, {"dados_hierarquizacao": dados}) or row)
+    config.update(configuracao(payload))
+    remover_resultados_fase3(dados)
+    return _response(repo.update(codigo, {
+        "dados_hierarquizacao": dados, "relatorio_fase3": {},
+        "relatorio_consolidado": {}, "ranking": [],
+    }) or row)
 
 
 def _chave_risco_fase1(risco: dict[str, Any]) -> str:
@@ -1956,6 +1981,21 @@ def sintetizar(
 ) -> HierarquizacaoResponseSchema:
     row = _carregar(codigo)
     dados = deepcopy(row.get("dados_hierarquizacao") or {})
+    if 3 in _fases_configuradas(dados):
+        for objeto in dados.get("objetos", []):
+            cab = objeto["cabecalho_objeto"]
+            f3 = (objeto.get("hierarquizacao") or {}).get("fase_3") or {}
+            if (cab.get("complementacao_atributos") or {}).get("concluida") is False or f3.get("desatualizado"):
+                raise DemandaValidationError(
+                    "Conclua a complementação e recalcule a Fase 3 antes de gerar a síntese.",
+                    field="fase_3",
+                )
+        if any((o.get("hierarquizacao") or {}).get("fase_3", {}).get("executada")
+               for o in dados.get("objetos", [])) and configuracao_fase3_desatualizada(row):
+            raise DemandaValidationError(
+                "Os critérios da tabela 2 mudaram. Confira os atributos e recalcule a Fase 3 antes de gerar a síntese.",
+                field="fase_3",
+            )
     campos_enviados = payload.model_fields_set
     modo_legado = "operador" not in campos_enviados and bool({"peso_fase2", "peso_fase3"} & campos_enviados)
     pesos = [payload.peso_rede, payload.peso_grade, payload.peso_prioridade]

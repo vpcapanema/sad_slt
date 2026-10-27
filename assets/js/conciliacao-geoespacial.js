@@ -23,8 +23,8 @@
           normalize.disabled=true;
           try {
             const response=await fetch(`${endpoint}/${encodeURIComponent(row.categoria_catalogo)}/${encodeURIComponent(row.id)}/normalizar`,{method:"POST"});
-            const data=await response.json();
-            if(!response.ok)throw new Error(data.detail||"Falha ao normalizar vínculo.");
+            const data=await response.json().catch(()=>null);
+            if(!response.ok)throw new Error(window.SicardApiErro?window.SicardApiErro.formatar(data,{status:response.status,method:"POST",url:`${endpoint}/${row.categoria_catalogo}/${row.id}/normalizar`}):((data&&data.detail)||`Falha ao normalizar vínculo (HTTP ${response.status}).`));
             await load();
           }catch(error){status.textContent=error.message;normalize.disabled=false;}
         });action.append(normalize);
@@ -65,7 +65,7 @@
   document.getElementById("busca").addEventListener("input",render);
   async function request(suffix,method="GET",body){
     const response=await fetch(endpoint+suffix,{method,headers:body?{"Content-Type":"application/json"}:{},body:body?JSON.stringify(body):undefined});
-    const data=await response.json();if(!response.ok)throw new Error(typeof data.detail==="string"?data.detail:"Não foi possível realizar a operação.");return data;
+    const data=await response.json().catch(()=>null);if(!response.ok)throw new Error(window.SicardApiErro?window.SicardApiErro.formatar(data,{status:response.status,method,url:endpoint+suffix}):(typeof (data&&data.detail)==="string"?data.detail:`Não foi possível realizar a operação (HTTP ${response.status}).`));return data;
   }
   const retentionStatus=document.getElementById("retencao-status");
   const remove=document.getElementById("retencao-executar");

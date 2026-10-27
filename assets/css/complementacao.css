@@ -13,6 +13,14 @@
 .complementacao-page #complementacao-editor { margin-top: 1rem; }
 .complementacao-page .complementacao-grid .form-field { min-width: 0; }
 .complementacao-page #complementacao-hierarquizacao { margin-bottom: 1rem; }
+.escala-revisada #complementacao-demanda,
+.escala-revisada label[for="complementacao-demanda"] { font-size: 12px; }
+.complementacao-page #complementacao-concluir-demandas {
+  display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem;
+}
+.complementacao-page #complementacao-concluir-demandas button {
+  max-width: 100%; white-space: normal; overflow-wrap: anywhere;
+}
 .complementacao-page #complementacao-form { margin-top: 1rem; }
 .complementacao-page #complementacao-atributos { margin-top: 1.5rem; }
 .complementacao-page #complementacao-atributos-container { margin-top: 1rem; padding: 1rem; border: 1px solid var(--pli-border); border-radius: var(--pli-radius); }

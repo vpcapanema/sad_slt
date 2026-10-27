@@ -339,7 +339,8 @@
     SLTPainelMapControls.applyStackZOrder(
       mapLayerGroup,
       layersByKey,
-      SLTPainelMapControls.buildStackKeys(SIDEBAR_GRUPOS, recordOrder)
+      // No mapa, projetos ficam acima de programas e planos, ao inverso da sidebar.
+      SLTPainelMapControls.buildStackKeys([...SIDEBAR_GRUPOS].reverse(), recordOrder)
     );
   }
 
@@ -371,6 +372,7 @@
 
   function syncAllMapVisibility() {
     entries.forEach((e) => syncEntryVisibility(e.kind, e.id));
+    applyMapLayerZOrder();
     SIDEBAR_GRUPOS.forEach((g) => {
       if (groupLabelsOn[g.id]) refreshGroupLabels(g.id);
     });
@@ -463,6 +465,7 @@
     entries
       .filter((e) => SLTPainelMapControls.groupIdFromKind(e.kind) === groupId)
       .forEach((e) => syncEntryVisibility(e.kind, e.id));
+    applyMapLayerZOrder();
     renderEntriesList();
   }
 
@@ -470,6 +473,7 @@
     const kind = findEntryKind(recordId);
     layerVisibility.setRecordVisible(recordVisibilityKey(kind, recordId), visible);
     syncEntryVisibility(kind, recordId);
+    applyMapLayerZOrder();
     const row = document.querySelector(
       `.layer-group--record[data-record-id="${CSS.escape(recordId)}"][data-group-id="${CSS.escape(groupId)}"]`
     );

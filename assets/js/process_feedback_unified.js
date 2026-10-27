@@ -34,6 +34,46 @@
     const esc = (s) => { if (s == null || s === '') return ''; const d = document.createElement('div'); d.textContent = String(s); return d.innerHTML; };
     const pfsText = (attr, text, ctx) => { const el = q(`[data-pfs="${attr}"]`, ctx); if (el) el.textContent = text == null ? '' : String(text); };
 
+    const _STATUS_HTTP = {
+        400: 'requisição inválida', 401: 'sessão ausente ou expirada', 403: 'acesso negado ao perfil atual',
+        404: 'registro ou recurso não encontrado', 409: 'conflito com o estado atual do registro',
+        413: 'conteúdo maior que o limite aceito', 422: 'dados rejeitados pela validação do servidor',
+        429: 'excesso de requisições em pouco tempo', 500: 'erro interno do servidor',
+        502: 'serviço intermediário sem resposta válida', 503: 'serviço, banco ou storage indisponível',
+        504: 'tempo de resposta do servidor esgotado'
+    };
+    const _descreverStatus = (s) => _STATUS_HTTP[s] || (s >= 500 ? 'falha no servidor' : 'requisição recusada');
+
+    const _SOLUCOES_POR_MENSAGEM = [
+        [/prazo deve ser futuro|data limite.*(futur|posterior)/i,
+            'Informe no campo "Data limite" uma data posterior a hoje e salve novamente. Se a coleta já estiver encerrada, a nova data reabre o julgamento.'],
+        [/sess[aã]o (expirada|inv[aá]lida)|n[aã]o autenticad/i, 'Entre novamente no sistema e repita a ação.'],
+        [/e-?mails? duplicad/i, 'Remova os e-mails repetidos da lista de colaboradores e salve novamente.'],
+        [/j[aá] existe outro julgamento aberto|j[aá] possui outro julgamento aberto/i,
+            'Encerre o outro julgamento aberto para a mesma origem (Central de julgamentos) e repita a ação.'],
+        [/n[aã]o foi poss[ií]vel comunicar|failed to fetch|networkerror/i,
+            'Verifique a conexão com a internet/VPN e se o servidor está no ar; depois repita a ação.']
+    ];
+
+    function _sugerirSolucao(n) {
+        const texto = `${n.message} ${(n.details || []).join(' ')}`;
+        for (const [padrao, solucao] of _SOLUCOES_POR_MENSAGEM) if (padrao.test(texto)) return solucao;
+        const acao = n.action ? ` a ação "${n.action}"` : ' a ação';
+        const campo = n.campo ? ` (campo "${n.campo}")` : '';
+        switch (n.status) {
+            case 400: case 422: return `Corrija o dado indicado na mensagem${campo} e repita${acao}.`;
+            case 401: return `Sua sessão expirou. Entre novamente no sistema e repita${acao}.`;
+            case 403: return 'Seu perfil não tem permissão para esta ação. Solicite a liberação a um administrador do SICARD.';
+            case 404: return 'O registro pode ter sido excluído ou alterado. Recarregue a página para atualizar os dados e tente de novo.';
+            case 409: return `O registro foi alterado por outra operação. Recarregue a página, confira os dados e repita${acao}.`;
+            case 413: return 'Reduza o tamanho do arquivo ou divida o envio em partes menores.';
+            case 429: return `Aguarde alguns segundos e repita${acao}.`;
+            case 500: return 'Falha interna do servidor. Baixe este relatório e envie ao suporte; o rastreamento completo fica no log do servidor.';
+            case 502: case 503: case 504: return `O serviço (banco de dados ou storage) não respondeu. Aguarde alguns instantes e repita${acao}; se persistir, acione o suporte com este relatório.`;
+            default: return `Repita${acao}. Se o erro persistir, baixe este relatório e envie ao suporte.`;
+        }
+    }
+
     /* ============================================================
        Componente (equivalente a componente_process_feedback_system.html)
        ============================================================ */
@@ -143,6 +183,7 @@
         <div class="pfs-error-icon"><i class="fas fa-times" aria-hidden="true"></i></div>
         <h2 class="pfs-error-title" data-pfs="error-title">Falha no Processo</h2>
         <p class="pfs-error-message" data-pfs="error-message">Ocorreu um erro durante o processamento.</p>
+        <p class="pfs-error-technical" data-pfs="error-technical" aria-label="Informações técnicas do erro" hidden></p>
         <div class="pfs-detail-panel" id="pfsErrorDetails" hidden>
           <div class="pfs-error-details">
             <div class="pfs-error-details-header"><i class="fas fa-bug" aria-hidden="true"></i>Detalhes do Erro</div>
@@ -941,7 +982,10 @@
             this._lastErrorData = n;
 
             pfsText('error-title', n.title, this.errorBox);
+            const technical = n.technical || [];
             pfsText('error-message', n.message, this.errorBox);
+            pfsText('error-technical', technical.join('\n'), this.errorBox);
+            q('[data-pfs="error-technical"]', this.errorBox).hidden = !technical.length;
 
             const logEl = q('#pfsErrorLog');
             logEl.innerHTML = '';
@@ -1025,8 +1069,32 @@
         }
 
         _normalize(data) {
+            const r = this._normalizeBase(data);
+            const ctx = (data && typeof data === 'object') ? data : {};
+            const body = (ctx.body && typeof ctx.body === 'object') ? ctx.body : {};
+            const tecnico = [];
+            r.message = String(r.message || '').replace(/\s*\((HTTP\s+\d{3}\b[^)]*)\)/g, (_m, v) => { tecnico.push(v); return ''; }).trim();
+            const t = /HTTP\s+(\d{3})(?:\s+—\s+([A-Z]+)\s+(\S+))?/.exec(tecnico[0] || '');
+            r.status = Number(ctx.status || body.status || (t && t[1]) || 0) || null;
+            r.method = (ctx.method || (t && t[2]) || '').toUpperCase();
+            r.endpoint = ctx.url || ctx.endpoint || body.path || (t && t[3]) || '';
+            r.campo = ctx.campo || body.campo || '';
+            r.action = ctx.actionTitle || ctx.headerTitle || ctx.acao || '';
+            r.elapsed = ctx._elapsed || '';
+            r.technical = tecnico.map(v => '(' + v + ')');
+            const extras = [];
+            if (r.status) extras.push(`Resposta do servidor: HTTP ${r.status} — ${_descreverStatus(r.status)}`);
+            if (r.endpoint) extras.push(`Requisição: ${[r.method, r.endpoint].filter(Boolean).join(' ')}`);
+            if (r.campo) extras.push(`Campo rejeitado: ${r.campo}`);
+            const proprios = r.details.filter(d => String(d).trim() && String(d).replace(/[.\s]+$/, '') !== r.message.replace(/[.\s]+$/, ''));
+            r.details = extras.concat(proprios);
+            r.solution = ctx.solution || ctx.sugestao || ctx.suggestion || body.sugestao || _sugerirSolucao(r);
+            return r;
+        }
+
+        _normalizeBase(data) {
             const r = { title: 'Falha no Processo', message: '', details: [], solution: '', raw: data };
-            if (typeof data === 'string') { r.message = data; r.details = [data]; return r; }
+            if (typeof data === 'string') { r.message = data; return r; }
             if (data instanceof Error) { r.message = data.message; r.details = data.detail ? [].concat(data.detail).map(String) : []; return r; }
             r.title = data.title || r.title;
             r.message = data.message || data.msg || (typeof data.detail === 'string' ? data.detail : '') || '';
@@ -1048,9 +1116,6 @@
                 if (data.detail.details) r.details = [].concat(data.detail.details).map(String);
             }
             if (!r.message && r.details.length) r.message = r.details[0];
-
-            r.solution = data.solution || data.sugestao || data.suggestion || '';
-            if (!r.solution && r.details.length) r.solution = 'Verifique os dados informados e tente novamente. Se o problema persistir, entre em contato com o suporte.';
             return r;
         }
 
@@ -1058,15 +1123,25 @@
             if (!this._lastErrorData) return;
             const d = this._lastErrorData;
             let bruto;
-            try { bruto = JSON.stringify(d.raw instanceof Error ? { message: d.raw.message, stack: d.raw.stack } : d.raw, null, 2); } catch { bruto = String(d.raw); }
+            try { bruto = JSON.stringify(d.raw instanceof Error ? { message: d.raw.message, status: d.raw.status, body: d.raw.body, stack: d.raw.stack } : d.raw, null, 2); } catch { bruto = String(d.raw); }
+            const linha = '═══════════════════════════════════════════';
+            const sep = '───────────────────────────────────────────';
             const lines = [
-                '═══════════════════════════════════════════',
-                '  RELATÓRIO DE ERRO — SICARD', '═══════════════════════════════════════════', '',
-                `Data/Hora: ${new Date().toLocaleString('pt-BR')}`, `URL: ${window.location.href}`, '',
-                `Título: ${d.title}`, `Mensagem: ${d.message}`, '', 'Detalhes:',
-                ...d.details.map(det => `  • ${det}`), '',
-                `Solução sugerida: ${d.solution || 'N/A'}`, '',
-                '═══════════════════════════════════════════', 'Dados brutos (JSON):', bruto
+                linha, '  RELATÓRIO DE ERRO — SICARD', linha, '',
+                `Data/Hora: ${new Date().toLocaleString('pt-BR')}`,
+                `Página:    ${document.title || '—'}`,
+                `URL:       ${window.location.href}`, '',
+                '1. RESUMO', sep,
+                `Título:    ${d.title}`,
+                ...(d.action ? [`Ação:      ${d.action}`] : []),
+                `Erro:      ${d.message || 'O sistema não recebeu descrição do erro.'}`, '',
+                '2. DETALHES', sep,
+                ...(d.details.length ? d.details.map(det => `  • ${typeof det === 'string' ? det : JSON.stringify(det)}`) : ['  • Nenhum detalhe adicional foi informado pelo servidor.']),
+                ...(d.elapsed ? [`  • Tempo até a falha: ${d.elapsed}`] : []), '',
+                '3. SOLUÇÃO SUGERIDA', sep,
+                `  ${d.solution}`, '',
+                '4. DADOS TÉCNICOS (JSON)', sep, bruto, '',
+                `Navegador: ${navigator.userAgent}`
             ];
             const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
             const url = URL.createObjectURL(blob);

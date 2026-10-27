@@ -31,7 +31,7 @@ const assert = require('node:assert/strict');
     });
     for (const id of ['ami-analysis-judges', 'ami-analysis-criteria', 'ami-analysis-responses']) {
       const table = page.locator('#' + id).locator('..');
-      const report = table.locator('..').locator('..');
+      const report = table.locator('xpath=ancestor::div[contains(@class, "ami-report-table")][1]');
       const footer = report.locator(':scope > .admin-table-footer');
       assert.equal(await footer.count(), 1);
       const nav = await footer.locator('nav').boundingBox(), summary = await footer.locator('.admin-table-summary').boundingBox();
@@ -40,8 +40,8 @@ const assert = require('node:assert/strict');
       assert.equal(await page.locator('#' + id + ' tr').count(), 15);
       await footer.getByRole('button', {name: 'Próxima página', exact: true}).click();
       assert.match(await page.locator('#' + id + ' tr').first().innerText(), /Registro 16/);
-      await report.getByLabel('Coluna do filtro', {exact: true}).selectOption('0');
-      await report.getByLabel('Valor do filtro', {exact: true}).selectOption({label: 'Registro 32 campo 1'});
+      await report.getByLabel('Coluna do filtro', {exact: true}).selectOption(id === 'ami-analysis-responses' ? '1' : '0');
+      await report.getByLabel('Valor do filtro', {exact: true}).selectOption({label: 'Registro 32 campo ' + (id === 'ami-analysis-responses' ? '2' : '1')});
       assert.equal(await page.locator('#' + id + ' tr').count(), 1);
       assert.match(await page.locator('#' + id).innerText(), /Registro 32/);
     }
@@ -58,7 +58,7 @@ const assert = require('node:assert/strict');
               rootFont: parseFloat(getComputedStyle(document.documentElement).fontSize)};
           });
           assert.equal(style.border, '0px');
-          assert.equal(style.background, 'rgba(0, 0, 0, 0)');
+          assert.equal(style.background, 'rgb(255, 255, 255)');
           assert.equal(style.shadow, 'none');
           assert.equal(style.weight, '700');
           assert.equal(style.font, style.navFont);

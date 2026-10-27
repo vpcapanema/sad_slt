@@ -47,7 +47,10 @@ def enviar(ambiente_id: str, dados: ConviteEmailEnvioSchema, usuario_id: str) ->
             field="texto",
         )
     mensagem = EmailEnvioSchema(destinatario=dados.destinatario, assunto=ASSUNTO, texto=texto)
-    resumo = sha256((ASSUNTO + "\n" + texto).encode()).hexdigest()
+    identidade = ASSUNTO + "\n" + texto
+    if dados.reenvio_id:
+        identidade += "\nReenvio: " + str(dados.reenvio_id)
+    resumo = sha256(identidade.encode()).hexdigest()
     registro, novo = repo.reservar(
         ambiente_id, destinatario, resumo, f"<sicard.{uuid4().hex}@{str(config.remetente).rsplit('@', 1)[1]}>",
         usuario_id, dados.versao,

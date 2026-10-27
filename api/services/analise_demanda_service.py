@@ -571,7 +571,8 @@ def alterar_situacao(
     if acao == "complementar":
         solicitacoes.solicitar(codigo, categorias=categorias, descricao=descricao,
                               user=user, hierarquizacao_codigo=hierarquizacao_codigo)
-        atual = status_anterior if hierarquizacao_codigo else destino
+        from api.constants import STATUS_HIERARQUIZACAO_COMPLEMENTACAO
+        atual = STATUS_HIERARQUIZACAO_COMPLEMENTACAO if hierarquizacao_codigo else destino
         return status_anterior, atual, _rotulo_status(atual)
     if acao == "retomar" and any(not s.get('hierarquizacao_codigo') for s in
             solicitacao_complementacao_repository.listar(tipo=_tipo, codigo=codigo)):

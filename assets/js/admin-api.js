@@ -9,15 +9,17 @@
   }
 
   async function request(path, options) {
-    const res = await fetch(path, { credentials: "include", ...options });
-    const body = await res.json().catch(() => null);
-    if (res.status === 401) {
-      const err = new Error(errorMessage(body) || "Sessão expirada.");
-      err.code = "UNAUTHORIZED";
+    const E = global.SicardApiErro;
+    const method = (options && options.method) || "GET";
+    let res;
+    try { res = await fetch(path, { credentials: "include", ...options }); }
+    catch (e) { throw E ? E.deRede(e, { method, url: path }) : e; }
+    if (!res.ok) {
+      const err = E ? await E.deResposta(res, { method, url: path }) : new Error(errorMessage(await res.json().catch(() => null)));
+      if (res.status === 401) err.code = "UNAUTHORIZED";
       throw err;
     }
-    if (!res.ok) throw new Error(errorMessage(body));
-    return body;
+    return res.json().catch(() => null);
   }
 
   async function listDemandas() {

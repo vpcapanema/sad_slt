@@ -1,6 +1,7 @@
 from contextlib import nullcontext
 from types import SimpleNamespace
 from uuid import uuid4
+from unittest.mock import Mock
 import pytest
 from fastapi import HTTPException
 from api.exceptions import DemandaValidationError
@@ -13,7 +14,7 @@ def fluxo(monkeypatch):
     usuario = SimpleNamespace(id=str(uuid4()), nome='Analista', tipo_usuario='ANALISTA')
     demanda = {'codigo': 'D', 'status': 'analise_em_avaliacao'}
     pedidos, eventos = [], []
-    monkeypatch.setattr(service, 'atomic_connection', lambda: nullcontext(None))
+    monkeypatch.setattr(service, 'atomic_connection', lambda: nullcontext(Mock()))
     monkeypatch.setattr(service, 'bloquear', lambda *args: demanda)
     monkeypatch.setattr(analise, '_localizar_demanda', lambda codigo: ('projeto', demanda))
     monkeypatch.setattr(service.repo, 'listar', lambda **kw: pedidos)
@@ -26,7 +27,7 @@ def fluxo(monkeypatch):
         return p
     monkeypatch.setattr(service.repo, 'criar', criar)
     monkeypatch.setattr(analise, '_aplicar_transicao', lambda **kw: eventos.append('status'))
-    monkeypatch.setattr(service.hierarquizacao_repository, 'get_by_codigo', lambda codigo: {
+    monkeypatch.setattr(service.hierarquizacao_repository, 'get_by_codigo', lambda codigo, **kw: {
         'dados_hierarquizacao': {'objetos': [{'cabecalho_objeto': {'codigo': 'D', 'tipo_demanda': 'projeto'}}]}})
     return SimpleNamespace(user=usuario, demanda=demanda, pedidos=pedidos, eventos=eventos)
 
@@ -40,7 +41,7 @@ def test_pedido_registrado_antes_da_transicao(fluxo, categorias):
 
 
 def test_atributos_independentes_por_hierarquizacao(fluxo):
-    fluxo.demanda['status'] = 'analise_aprovada'
+    fluxo.demanda['status'] = 'hierarq_em_andamento'
     for h in ['H1','H2']:
         service.solicitar('D', categorias=['atributos_objeto'], descricao='Preencher custo',
                          user=fluxo.user, hierarquizacao_codigo=h)
@@ -57,7 +58,7 @@ def test_rejeita_pedido_incompleto(fluxo,categorias,h,descricao):
 
 
 def test_atributos_rejeitam_objeto_fora_da_hierarquizacao(fluxo,monkeypatch):
-    monkeypatch.setattr(service.hierarquizacao_repository,'get_by_codigo',lambda codigo: None)
+    monkeypatch.setattr(service.hierarquizacao_repository,'get_by_codigo',lambda codigo,**kw: None)
     with pytest.raises(DemandaValidationError):
         service.solicitar('D', categorias=['atributos_objeto'],descricao='Motivo',user=fluxo.user,hierarquizacao_codigo='H')
     assert not fluxo.eventos
@@ -103,17 +104,21 @@ def test_conclusao_rejeita_operador_sem_vinculo(fluxo,monkeypatch):
 
 
 def test_conclusao_atributos_revalida_pendencias_e_aceita_zero(fluxo,monkeypatch):
+    fluxo.demanda.update(status='hierarq_em_andamento', criado_por=fluxo.user.id)
     p=service.solicitar('D',categorias=['atributos_objeto'],descricao='Preencher custo',user=fluxo.user,hierarquizacao_codigo='H')
     p['categorias_salvas']={'atributos_objeto': {}}
-    cab={'codigo':'D','atributos_fase3': {'custo': {'valor_bruto':None}}}
+    cab={'codigo':'D','tipo_demanda':'projeto','atributos_fase3': {'custo': {'valor_bruto':None}}}
     h={'codigo':'H','dados_hierarquizacao': {'objetos': [{'cabecalho_objeto':cab}]}}
-    monkeypatch.setattr(router,'atomic_connection',lambda: nullcontext(None))
+    monkeypatch.setattr(router,'atomic_connection',lambda: nullcontext(Mock()))
     monkeypatch.setattr(router,'bloquear',lambda *args: fluxo.demanda)
     monkeypatch.setattr(router,'_pessoa_id',lambda user: None)
     monkeypatch.setattr(router.demanda_repository,'get_by_codigo',lambda codigo: fluxo.demanda)
     monkeypatch.setattr(service.repo,'obter',lambda *args,**kw: p)
-    monkeypatch.setattr(router.hierarquizacao_repository,'get_by_codigo',lambda codigo: h)
-    monkeypatch.setattr(router,'colunas_da_hierarquizacao',lambda *a,**kw: [{'id':'custo'}])
+    monkeypatch.setattr(router.hierarquizacao_repository,'get_by_codigo',lambda codigo,**kw: h)
+    monkeypatch.setattr(router.hierarquizacao_repository,'list_all',lambda: [h])
+    monkeypatch.setattr(router.hierarquizacao_repository,'update',lambda codigo,data: h.update(data))
+    monkeypatch.setattr(router.dominio_repository,'list_atributos_objeto',lambda: [])
+    monkeypatch.setattr(router,'colunas_da_hierarquizacao',lambda *a,**kw: [{'id':'custo','tipo':'numerico'}])
     atendidos=[]
     monkeypatch.setattr(service.repo,'atender',lambda *args: atendidos.append(args))
     with pytest.raises(HTTPException) as e:

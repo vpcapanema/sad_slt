@@ -1,0 +1,121 @@
+/* Shared migration to Central de julgamentos. Load after the reference CSS. */
+.sicard-standard-page.ami-page {
+  background: #f4f7fa;
+  --ami-font-child: .7rem;
+  --ami-font-help: .64rem;
+  --ami-space-md: 1rem;
+  --ami-space-sm: .75rem;
+  --ami-space-xs: .5rem;
+}
+.sicard-standard-page.ami-page .ami-main {
+  width: 90%; max-width: none; margin: 0 auto; padding: 1.5rem 0 2.5rem;
+}
+.sicard-standard-page.ami-page .standard-page-hero__title {
+  font-family: Montserrat, Verdana, sans-serif; font-size: 1.45rem; font-weight: 700;
+}
+.sicard-standard-page.ami-page .standard-page-hero__description { font-size: .8rem; }
+.sicard-standard-page.ami-page .ami-main .ahp-section-label {
+  min-height: 43.2px; box-sizing: border-box; padding-block: .5rem;
+  font: 700 13px/1.4 Montserrat, Verdana, sans-serif;
+}
+.sicard-standard-page.ami-page .ami-main .ahp-subcard:has(> .ahp-subsection-title) {
+  padding: 1rem !important; border: 1px solid #00527d; border-radius: 8px; margin-bottom: .75rem !important;
+  gap: 8px;
+}
+.sicard-standard-page.ami-page .ami-main .ahp-subsection-title {
+  box-sizing: border-box; min-height: 32px !important; height: auto;
+  margin: -1rem -1rem .5rem !important; padding: 3px 1rem; gap: .625rem;
+  display: flex; align-items: center; background: #00527d; color: #fff;
+  border-bottom: 1px solid #003b5a; border-radius: 7px 7px 0 0;
+  font: 700 .75rem/1.4 Montserrat, Verdana, sans-serif;
+}
+.sicard-standard-page.ami-page .ami-main .ahp-subsection-title :is(h2, h3, span:last-child) {
+  margin: 0; font: inherit; color: inherit;
+}
+.sicard-standard-page.ami-page .ami-main .ahp-subsection-num {
+  display: inline-flex; justify-content: center; align-items: center;
+  flex: 0 0 24px; width: 24px; min-width: 24px; height: 24px; padding: 0;
+  border-radius: 50%; background: #83d9a5; color: #003b5a;
+  font: 700 .78rem/1 Montserrat, Verdana, sans-serif;
+}
+.sicard-standard-page.ami-page .ami-main .ahp-section-body { gap: 8px; padding-top: 8px; }
+.sicard-standard-page.ami-page .ami-main .ahp-subcard { background-color:#e7f0f7 !important; }
+.sicard-standard-page.ami-page .ami-main .ahp-subcard .ahp-subcard { background-color:#fff !important; }
+.sicard-standard-page.ami-page .ami-main .ahp-subcard .ahp-subcard .ahp-subcard { background-color:#e7f0f7 !important; }
+.sicard-standard-page.ami-page .ami-main form { padding:0; }
+.sicard-standard-page.ami-page .ami-main .standard-table-section > .ahp-section-label { margin-bottom:12px; }
+.sicard-standard-page.ami-page .ami-main :is(#nova-hierarquizacao, #agrupamento-form) { gap:8px; }
+.sicard-standard-page.ami-page .ami-main :is(.hier-instrucao, .agrupamento-instrucao, .hier-field-help, .step-intro, .form-help, .ami-subsection-hint, .ahp-info-note) {
+  font: 400 var(--ami-font-help)/1.4 Roboto, Arial, sans-serif;
+  margin: 0 0 8px; min-height: 0;
+}
+.sicard-standard-page.ami-page .ami-main :is(.process-field, .form-field, .c-form-group) > :is(label, span),
+.sicard-standard-page.ami-page .ami-main :is(label.process-field, .c-form-label, .ami-judge-filter__hint) {
+  font: 600 var(--ami-font-child)/1.4 Roboto, Arial, sans-serif !important;
+}
+.sicard-standard-page.ami-page .ami-main :is(input, select, textarea):not([type=checkbox]):not([type=radio]):not([type=range]):not(.admin-filter-bar *):not(table *) {
+  box-sizing: border-box; font: 400 var(--ami-font-child)/1.4 Roboto, Arial, sans-serif;
+  min-height: 34px !important; height: 34px !important; padding: 4px 8px;
+}
+.sicard-standard-page.ami-page .ami-main textarea { height: auto !important; min-height: 68px !important; }
+.sicard-standard-page.ami-page .ami-main :is(.process-grid, .ahp-collab-grid2) { gap: 1rem; }
+.sicard-standard-page.ami-page .ami-main :is(.process-actions, .ahp-form-actions) { gap: .75rem; margin-top: 1rem; }
+.sicard-standard-page.ami-page .ami-main .btn { font-size: .7rem; }
+.sicard-standard-page.ami-page.ami-espaco-page .ami-main .btn.btn-primary:is(#hier-new, #agrupamento-new),
+.sicard-standard-page.ami-page.ami-espaco-page .ami-main .btn.btn-primary:is(#hier-new, #agrupamento-new):hover:not(:disabled):not(.is-disabled) {
+  background: linear-gradient(135deg,var(--pli-blue),var(--pli-navy)) !important;
+  color: #fff !important; border: 1px solid #fff !important; border-radius: 6px;
+  padding: .6rem 1.15rem; font: 600 14px Montserrat, sans-serif; line-height: normal;
+}
+.sicard-standard-page.ami-page .ami-main .admin-filter-bar :is(select, input:not([type=checkbox])) {
+  height: 25px !important; min-height: 25px !important; padding: 2px 6px !important;
+  font: 400 .74rem/1.2 Roboto, Arial, sans-serif !important;
+}
+.sicard-standard-page.ami-page .ami-main .admin-filter-bar .admin-icon-btn {
+  width: 25px; height: 25px; min-height: 25px; min-width: 25px; flex: 0 0 25px;
+  border-radius: 50%; font-size: .74rem; padding: 0;
+}
+.sicard-standard-page.ami-page .ami-main .ami-filtered-table > :is(.admin-table-wrap, .hier-table-shell, .matriz-table-wrap) {
+  border: 0; border-radius: 0; margin: 0; overflow: auto;
+}
+.sicard-standard-page.ami-page .ami-main .standard-table-section .admin-table th {
+  box-sizing: border-box; height: 32px; padding: .5rem .6rem;
+  background: var(--pli-deep); color: #fff; vertical-align: middle;
+  font: 700 .72rem/1.1 Montserrat, Verdana, sans-serif; text-align: center;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sicard-standard-page.ami-page .ami-main .standard-table-section .admin-table td {
+  height: 1.7rem; padding: .18rem .55rem; vertical-align: middle;
+  font: 400 .74rem/1.1 Roboto, Arial, sans-serif;
+}
+.sicard-standard-page.ami-page .ami-main .standard-table-section .admin-table tbody tr:nth-child(odd) > td { background: #fff; }
+.sicard-standard-page.ami-page .ami-main .standard-table-section .admin-table tbody tr:nth-child(even) > td { background: #edf4f8; }
+.sicard-standard-page.ami-page .ami-main .standard-table-section .admin-table tbody tr:is(.is-selected, :has(input[type=checkbox]:checked)) > td { background: #eef4fa; }
+.sicard-standard-page.ami-page .ami-main .standard-table-section .admin-table input[type=checkbox] { width: .9rem; height: .9rem; min-height: 0; margin: 0; }
+.sicard-standard-page.ami-page .ami-main .admin-actions { margin: 0; padding: 0; }
+.sicard-standard-page.ami-page .ami-main .admin-pagination button { border: 0 !important; }
+.sicard-standard-page.ami-page .ami-main .admin-table-footer { margin-block:0; padding-top:6px; row-gap:8px; }
+.sicard-standard-page.ami-page .ami-main .admin-table-summary { font-size: .64rem; }
+.sicard-standard-page.ami-page .ami-main .admin-pagination { font-size: .7rem; }
+.sicard-standard-page.ami-page .ami-main :is(.view, #hier-bulk-view) { --ami-botao-cor:#1d4ed8; --ami-botao-borda:#153998; }
+.sicard-standard-page.ami-page .ami-main :is(.edit-group) { --ami-botao-cor:#6b21a8; --ami-botao-borda:#481670; }
+.sicard-standard-page.ami-page .ami-main :is(.edit, #hier-bulk-edit) { --ami-botao-cor:#92400e; --ami-botao-borda:#622b09; }
+.sicard-standard-page.ami-page .ami-main :is(.delete, #hier-bulk-delete) { --ami-botao-cor:#991b1b; --ami-botao-borda:#661212; }
+.sicard-standard-page.ami-page .ami-main :is(.save, .add, #hier-bulk-save) { --ami-botao-cor:#166534; --ami-botao-borda:#0e4322; }
+.sicard-standard-page.ami-page .ami-main :is(.cancel, #hier-bulk-cancel) { --ami-botao-cor:#475569; --ami-botao-borda:#2f3946; }
+.sicard-standard-page.ami-page .ami-main .reload { --ami-botao-cor:#0f766e; --ami-botao-borda:#0a4f49; }
+.sicard-standard-page.ami-page .ami-main table :is(a:not(.admin-icon-btn), .ami-cell-link, .hier-cell-link, .link-like, .json-cell, .matriz-link) {
+  border: 0 !important; background: transparent !important; color:#123b56 !important;
+  box-shadow: none !important; padding: 0; min-height: 0; height: auto;
+  font: inherit; text-decoration: underline; cursor: pointer;
+}
+.sicard-standard-page.ami-page .ami-main table [data-availability="available"] { color:#166534 !important; }
+.sicard-standard-page.ami-page .ami-main table [data-availability="pending"] { color:#991b1b !important; }
+.sicard-standard-page.ami-page .ami-main table :is(th, td):is(.col-select, :first-child:has(input[type="checkbox"])) {
+  box-sizing: border-box; width: 2.75rem !important; min-width: 2.75rem !important;
+  max-width: 2.75rem !important; padding-inline: 0 !important; text-align: center;
+}
+.sicard-standard-page.ami-page .ami-main .ami-table--respostas :is(th, td):last-child {
+  width: auto;
+}
+@media(max-width:700px) { .sicard-standard-page.ami-page .ami-main { width:94%; padding:.8rem 0; } }

@@ -20,8 +20,8 @@
 
   async function jsonFetch(url, options = {}) {
     const resp = await fetch(url, { credentials: "include", headers: { Accept: "application/json", ...(options.headers || {}) }, ...options });
-    const body = await resp.json();
-    if (!resp.ok) throw new Error(body.detail || `Erro HTTP ${resp.status}`);
+    const body = await resp.json().catch(() => null);
+    if (!resp.ok) throw new Error(window.SicardApiErro ? window.SicardApiErro.formatar(body, { status: resp.status, method: options.method || "GET", url }) : (body?.detail || `Erro HTTP ${resp.status}`));
     return body;
   }
 

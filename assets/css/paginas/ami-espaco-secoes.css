@@ -216,3 +216,514 @@
 .admin-pagination button,
 .standard-table-section .admin-pagination button,
 .ami-espaco-page #ami-emails-pagination button { border: 0; font-weight: 700; }
+
+/* Alturas visuais da Fase 3 (exibida a 90%): seção ~43px, campos ~34px.
+   Subseções e colunas da tabela compartilham a mesma altura compacta. */
+.ami-page.ami-espaco-page {
+  --ami-altura-secao: 2.7rem;
+  --ami-altura-campo: 2.125rem;
+  --ami-altura-subcabecalho: 2rem;
+}
+
+.ami-page.ami-espaco-page .ami-main .ahp-section-label {
+  box-sizing: border-box;
+  min-height: var(--ami-altura-secao);
+  padding-block: 0.5rem;
+  align-items: center;
+}
+
+.ami-page.ami-espaco-page .ahp-section-label .ahp-section-index-icon {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  flex: 0 0 24px;
+}
+
+.ami-page.ami-espaco-page :is(#ami-create-section, #ami-pairwise-panel, #ami-analysis-workspace) .ahp-subsection-title {
+  min-height: var(--ami-altura-subcabecalho);
+  padding-block: 3px;
+  align-items: center;
+}
+
+.ami-page.ami-espaco-page .ami-table--database thead th {
+  height: var(--ami-altura-subcabecalho);
+  box-sizing: border-box;
+  vertical-align: middle;
+}
+.ami-page.ami-espaco-page .ami-table--database tbody tr:nth-child(odd) > td {
+  background: #fff;
+}
+.ami-page.ami-espaco-page .ami-table--database tbody tr:nth-child(even) > td {
+  background: #edf4f8;
+}
+.ami-page.ami-espaco-page .ami-table--database tbody tr.is-selected > td {
+  background: #eef4fa;
+}
+
+.ami-page.ami-espaco-page .ami-main :is(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="hidden"]),
+  select:not([multiple]):not([size])
+):not(.admin-filter-bar *),
+.ami-page.ami-espaco-page #ami-email-list .ami-collaborator-cell {
+  box-sizing: border-box;
+  height: var(--ami-altura-campo);
+  min-height: var(--ami-altura-campo);
+  padding-block: 4px;
+}
+
+.ami-page.ami-espaco-page .ami-config-control .ahp-collab-add-btn {
+  width: var(--ami-altura-campo);
+  min-width: var(--ami-altura-campo);
+  height: var(--ami-altura-campo);
+}
+
+/* Ritmo vertical: 8px antes da explicação e 16px depois.
+   As linhas se ajustam ao conteúdo, sem reservar espaço para textos vazios. */
+.ami-page.ami-espaco-page {
+  --ami-espaco-texto: 0.5rem;
+}
+
+.ami-page.ami-espaco-page .ami-main .ahp-section-body {
+  padding-top: var(--ami-espaco-texto);
+  gap: var(--ami-espaco-texto);
+}
+
+.ami-page.ami-espaco-page :is(#ami-create-section, #ami-pairwise-panel, #ami-analysis-workspace) .ahp-subsection-title {
+  margin-bottom: var(--ami-espaco-texto);
+}
+
+.ami-page.ami-espaco-page .ami-main :is(.ahp-section-body, .ahp-subcard) > :is(p, .form-help),
+.ami-page.ami-espaco-page .ami-main :is(.step-intro, .ami-subsection-hint, .ami-field-source) {
+  margin-block: 0 var(--ami-espaco-texto);
+  line-height: 1.4;
+}
+
+.ami-page.ami-espaco-page .ami-config-field {
+  grid-template-rows: none;
+  grid-auto-rows: auto;
+  gap: var(--ami-espaco-texto);
+}
+
+.ami-page.ami-espaco-page .ami-config-field > .form-help {
+  margin: 0;
+  min-height: 0;
+  line-height: 1.4;
+}
+
+.ami-page.ami-espaco-page .ami-config-meta {
+  min-height: 0;
+}
+
+.ami-page.ami-espaco-page .ami-main :is(.ami-config-meta, .ami-feedback, .ami-summary):empty {
+  display: none;
+}
+
+.ami-page.ami-espaco-page #ami-interactive-analysis-component > .ahp-section-body {
+  padding-top: 0;
+}
+
+.ami-page.ami-espaco-page .ami-main .ahp-section-body > :is(p, .form-help, .c-form-group, .ahp-subcard, .info-card),
+.ami-page.ami-espaco-page #ami-interactive-analysis-component .ami-collaborator-section,
+.ami-page.ami-espaco-page .ami-deadline-hierarchy-row {
+  margin-block: 0;
+}
+
+/* O gap de 8px mais a margem inferior de 8px destaca o fim da explicação. */
+.ami-page.ami-espaco-page .ami-main .ahp-section-body > :is(p, .form-help, .ami-subsection-hint),
+.ami-page.ami-espaco-page .ami-config-field > .form-help,
+.ami-page.ami-espaco-page .ami-config-list > .form-help {
+  margin-bottom: var(--ami-espaco-texto);
+}
+
+/* Alternância por profundidade, apenas no fundo dos contêineres.
+   Níveis 1/3: branco; níveis 2/4: azul-claro. Cabeçalhos preservados. */
+.ami-page.ami-espaco-page .ami-main .ahp-step-section {
+  background-color: #fff;
+}
+.ami-page.ami-espaco-page .ami-main .ahp-subcard {
+  background-color: #e7f0f7;
+}
+.ami-page.ami-espaco-page .ami-main .ahp-subcard .ahp-subcard {
+  background-color: #fff;
+}
+.ami-page.ami-espaco-page .ami-main .ahp-subcard .ahp-subcard .ahp-subcard {
+  background-color: #e7f0f7;
+}
+
+/* Filtro e tabela formam uma única superfície; só a tabela rola na horizontal. */
+.ami-page.ami-espaco-page .ami-filtered-table {
+  --ami-filtro-fonte: 0.74rem;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  background: #fff;
+}
+.ami-page.ami-espaco-page #ami-collaborator-table .ami-filtered-table {
+  --ami-filtro-fonte: var(--ami-font-child, 0.7rem);
+}
+.ami-page.ami-espaco-page .ami-filtered-table > .admin-filter-bar {
+  box-sizing: border-box;
+  height: var(--ami-altura-subcabecalho);
+  min-height: var(--ami-altura-subcabecalho);
+  flex-wrap: nowrap;
+  margin: 0;
+  padding: 1px 8px;
+  gap: 6px;
+  border: 0;
+  border-bottom: 1px solid var(--pli-border, #cbd5e1);
+  border-radius: 0;
+  font: 400 var(--ami-filtro-fonte)/1.2 "Roboto", Arial, sans-serif;
+}
+.ami-page.ami-espaco-page .ami-filtered-table table thead th {
+  box-sizing: border-box;
+  height: var(--ami-altura-subcabecalho);
+}
+.ami-page.ami-espaco-page .ami-filtered-table .admin-filter-bar :is(select, option, input, button, .admin-filter-label),
+.ami-page.ami-espaco-page #ami-collaborator-table .admin-filter-bar :is(select, option, input, button, .admin-filter-label) {
+  font-family: inherit;
+  font-size: var(--ami-filtro-fonte);
+  line-height: 1.2;
+}
+.ami-page.ami-espaco-page .ami-filtered-table .admin-filter-bar :is(select, .filter-value-input),
+.ami-page.ami-espaco-page .ami-filtered-table :is(#ami-filter-coluna, #ami-filter-valor, #ami-emails-filter-coluna, #ami-emails-filter-valor) {
+  flex: 1 1 10rem;
+  width: auto;
+  min-width: 0;
+  height: 25px;
+  min-height: 25px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.ami-page.ami-espaco-page .ami-filtered-table .admin-filter-bar .admin-icon-btn {
+  flex: 0 0 25px;
+  width: 25px;
+  min-width: 25px;
+  height: 25px;
+  min-height: 25px;
+  padding: 0;
+  border-radius: 50%;
+}
+.ami-page.ami-espaco-page .ami-filtered-table > :is(.ami-table-shell, .ahp-collab-table-wrap),
+.ami-page.ami-espaco-page .ami-filtered-table > .ahp-collab-table-wrap:has(#ami-email-list) {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+}
+
+/* A ação colore o ícone; a borda usa um tom mais escuro da mesma cor. */
+.ami-espaco-page .ami-table-actions #ami-environment-edit {
+  --ami-botao-cor: #6b21a8;
+  --ami-botao-borda: #481670;
+}
+.ami-espaco-page .ami-table-actions #ami-judgments-view-action {
+  --ami-botao-cor: #1d4ed8;
+  --ami-botao-borda: #153998;
+}
+.ami-espaco-page .ami-table-actions #ami-judgments-edit-action {
+  --ami-botao-cor: #92400e;
+  --ami-botao-borda: #622b09;
+}
+.ami-espaco-page .ami-table-actions #ami-judgments-delete-action {
+  --ami-botao-cor: #991b1b;
+  --ami-botao-borda: #661212;
+}
+.ami-espaco-page .ami-table-actions #ami-judgments-save-action {
+  --ami-botao-cor: #166534;
+  --ami-botao-borda: #0e4322;
+}
+.ami-espaco-page .ami-table-actions #ami-judgments-cancel-action {
+  --ami-botao-cor: #475569;
+  --ami-botao-borda: #2f3946;
+}
+.ami-espaco-page .ami-table-actions #ami-judgments-public-action {
+  --ami-botao-cor: #0f766e;
+  --ami-botao-borda: #0a4f49;
+}
+.ami-espaco-page .ami-table-actions #ami-judgments-matrix-action {
+  --ami-botao-cor: #4338ca;
+  --ami-botao-borda: #2d2587;
+}
+.ami-espaco-page .ami-table-actions #ami-judgments-form-action {
+  --ami-botao-cor: #9d174d;
+  --ami-botao-borda: #690f33;
+}
+
+.ami-page.ami-espaco-page {
+  --ami-tamanho-botao-icone: 2.115rem;
+}
+
+.ami-page.ami-espaco-page .ami-main :is(
+  .admin-icon-btn,
+  #ami-add-emails,
+  .json-modal-close,
+  #ami-matrix-zoom [data-zoom-in],
+  #ami-matrix-zoom [data-zoom-out]
+):not(.admin-filter-bar *) {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 var(--ami-tamanho-botao-icone);
+  width: var(--ami-tamanho-botao-icone);
+  min-width: var(--ami-tamanho-botao-icone);
+  height: var(--ami-tamanho-botao-icone);
+  min-height: var(--ami-tamanho-botao-icone);
+  padding: 0;
+  font-size: 0.9rem;
+}
+
+.ami-page.ami-espaco-page :is(#ami-judgments-pagination, #ami-emails-pagination) button {
+  border: 0;
+}
+
+.ami-page.ami-espaco-page .ami-main :is(.save, .btn-primary, .btn-success) {
+  --ami-botao-cor: #1c7d3e;
+  --ami-botao-borda: #125229;
+}
+.ami-page.ami-espaco-page .ami-main .edit {
+  --ami-botao-cor: #b26a00;
+  --ami-botao-borda: #754600;
+}
+.ami-page.ami-espaco-page .ami-main :is(.delete, .btn-danger) {
+  --ami-botao-cor: #b42318;
+  --ami-botao-borda: #7a1810;
+}
+.ami-page.ami-espaco-page .ami-main :is(.cancel, .btn-secondary) {
+  --ami-botao-cor: #64748b;
+  --ami-botao-borda: #3f4958;
+}
+
+.ami-page.ami-espaco-page .ami-main .admin-filter-bar button {
+  --ami-botao-cor: #4b5563;
+  --ami-botao-borda: #374151;
+}
+
+/* Inclusive nos estados hover, ativo e desabilitado: nenhum fundo colorido. */
+.ami-page.ami-espaco-page .ami-main :is(button, .btn, a.admin-icon-btn) {
+  color: var(--ami-botao-cor, #1683c4) !important;
+  border-color: var(--ami-botao-borda, #0d5078) !important;
+  background: #fff !important;
+}
+.ami-page.ami-espaco-page .ami-main :is(button, .btn, a.admin-icon-btn):hover:not(:disabled):not(.is-disabled) {
+  background: #f4f4f4 !important;
+}
+.ami-page.ami-espaco-page .ami-main :is(button, .btn, a.admin-icon-btn) > i {
+  color: inherit;
+}
+.ami-page.ami-espaco-page #ami-judgments .ami-cell-link {
+  border: 0 !important;
+  box-shadow: none;
+  background: transparent !important;
+  color: #123b56 !important;
+}
+.ami-page.ami-espaco-page #ami-judgments .ami-cell-link[data-availability="available"] {
+  color: #166534 !important;
+}
+.ami-page.ami-espaco-page #ami-judgments .ami-cell-link[data-availability="pending"] {
+  color: #991b1b !important;
+}
+
+/* Botões com texto: padrão solicitado, independente dos botões de ícone. */
+.ami-page.ami-espaco-page .ami-main .btn:not(#ami-new):not(.admin-icon-btn) {
+  position: relative;
+  color: #0b263b !important;
+  border: 2px solid #123b56 !important;
+  background: #e5e7eb !important;
+  font-weight: 700;
+}
+.ami-page.ami-espaco-page .ami-main .btn:not(#ami-new):not(.admin-icon-btn):hover:not(:disabled):not(.is-disabled) {
+  background: #d9dde3 !important;
+}
+.ami-page.ami-espaco-page .ami-main .btn:not(#ami-new):not(.admin-icon-btn):is(:disabled, .is-disabled, [aria-disabled="true"]) {
+  opacity: 1;
+  cursor: not-allowed;
+}
+.ami-page.ami-espaco-page .ami-main .btn:not(#ami-new):not(.admin-icon-btn):is(:disabled, .is-disabled, [aria-disabled="true"])::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: rgb(255 255 255 / 65%);
+  pointer-events: none;
+}
+.ami-page.ami-espaco-page .ami-main #ami-new,
+.ami-page.ami-espaco-page .ami-main #ami-new:hover:not(:disabled):not(.is-disabled) {
+  background: linear-gradient(135deg, var(--pli-blue), var(--pli-navy)) !important;
+  color: #fff !important;
+  border: 1px solid #fff !important;
+  border-radius: 6px;
+  font-family: "Montserrat", sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: normal;
+  padding: 0.6rem 1.15rem;
+}
+
+/* Respiro externo depois dos contêineres, sem alterar seu preenchimento. */
+.ami-page.ami-espaco-page .ami-main .ahp-section-body > :is(.ahp-subcard, .info-card),
+.ami-page.ami-espaco-page #ami-interactive-analysis-component,
+.ami-page.ami-espaco-page #ami-interactive-analysis-component .ami-collaborator-section,
+.ami-page.ami-espaco-page .ami-deadline-hierarchy-row {
+  margin-bottom: 0.75rem;
+}
+.ami-page.ami-espaco-page #ami-interactive-analysis-component .ami-deadline-hierarchy-row > .ami-collaborator-section {
+  margin-bottom: 0;
+}
+
+/* Mesmo ritmo abaixo das tabelas: sem somar margens ao gap de 8px. */
+.ami-page.ami-espaco-page .ami-main :is(.ami-table-actions, .ami-collaborator-controls, .ami-report-table .admin-actions) {
+  margin: 0;
+  padding-block: 0;
+}
+.ami-page.ami-espaco-page .ami-main :is(.standard-table-section > .ahp-section-body, #ami-collaborator-table, .ami-report-table) {
+  row-gap: 8px;
+}
+.ami-page.ami-espaco-page .ami-main .admin-table-footer {
+  margin-block: 0;
+  padding-top: 6px;
+  row-gap: 8px;
+}
+.ami-page.ami-espaco-page .ami-main .admin-table-footer > :is(.admin-pagination, .admin-table-summary, #ami-emails-pagination, #ami-emails-count) {
+  margin-block: 0;
+  padding-block: 0;
+}
+
+/* Cadastro em duas colunas, mantendo a lista abaixo de todo o formulário. */
+.ami-page.ami-espaco-page .ami-registration-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem 1rem;
+  margin-bottom: 0.75rem;
+}
+.ami-page.ami-espaco-page #ami-interactive-analysis-component .ami-registration-grid > .ami-collaborator-section {
+  min-width: 0;
+  margin: 0;
+}
+.ami-page.ami-espaco-page #ami-collaborator-list-section[hidden] {
+  display: none;
+}
+.ami-page.ami-espaco-page .ami-collaborator-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 0.5rem;
+}
+.ami-page.ami-espaco-page .ami-collaborator-fields > label {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+  margin: 0;
+  font-family: "Roboto", Arial, sans-serif;
+  font-size: var(--ami-font-child, 0.7rem);
+  font-weight: 600;
+  line-height: 1.4;
+}
+.ami-page.ami-espaco-page .ami-collaborator-fields input {
+  width: 100%;
+  min-width: 0;
+  font-family: "Roboto", Arial, sans-serif;
+  font-size: var(--ami-font-child, 0.7rem);
+  font-weight: 400;
+}
+@media (max-width: 600px) {
+  .ami-page.ami-espaco-page .ami-registration-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ami-page.ami-espaco-page .ami-collaborator-fields {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .ami-page.ami-espaco-page .ami-collaborator-fields > label:first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Indicação como em Processos: ícone na seção e medalhão nas subseções. */
+.ami-page.ami-espaco-page :is(#ami-create-section, #ami-pairwise-panel, #ami-analysis-workspace) .ahp-subsection-num {
+  flex: 0 0 24px;
+  width: 24px;
+  min-width: 24px;
+  height: 24px;
+  padding: 0;
+  border-radius: 50%;
+}
+.ami-page.ami-espaco-page .ami-environment-content {
+  display: contents;
+}
+.ami-page.ami-espaco-page .ami-environment-title {
+  margin: 1.5rem 0 1rem;
+  font-family: "Montserrat", Verdana, sans-serif;
+  font-size: 1.45rem;
+  font-weight: 700;
+  line-height: 1.3;
+  text-align: center;
+  color: var(--pli-deep);
+}
+.ami-page.ami-espaco-page #ami-create-form {
+  margin: 0;
+}
+.ami-page.ami-espaco-page #ami-create-status.ami-status-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 0 0 1.25rem;
+  padding: 0;
+  background: none;
+  border: 0;
+}
+.ami-page.ami-espaco-page #ami-create-status[hidden] { display: none; }
+.ami-page.ami-espaco-page .ami-status-card {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  border: 1px solid var(--pli-border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--pli-deep);
+  font-family: "Roboto", Arial, sans-serif;
+}
+.ami-page.ami-espaco-page .ami-status-card > span {
+  font-size: var(--ami-font-child, 0.7rem);
+  font-weight: 600;
+  color: var(--pli-muted);
+}
+.ami-page.ami-espaco-page .ami-status-card > strong {
+  font-family: "Montserrat", Verdana, sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--pli-deep);
+}
+.ami-page.ami-espaco-page .ami-status-card > small { font-size: var(--ami-font-help, 0.64rem); }
+.ami-page.ami-espaco-page #ami-interactive-analysis-component > .ahp-section-body {
+  padding: var(--ami-espaco-texto) 0 0;
+}
+.ami-page.ami-espaco-page .ami-registration-intro {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.ami-page.ami-espaco-page #ami-interactive-analysis-component .ami-registration-intro > p {
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  line-height: 1.4;
+}
+.ami-page.ami-espaco-page #ami-monitor-table {
+  min-width: 56rem;
+  width: 100%;
+}
+.ami-page.ami-espaco-page #ami-monitor-table tbody td:is(:nth-child(2), :last-child):not([colspan]) {
+  text-align: left;
+}
+.ami-page.ami-espaco-page #ami-monitor-refresh {
+  --ami-botao-cor: #0f766e;
+  --ami-botao-borda: #0a4f49;
+}
+.ami-page.ami-espaco-page #ami-email-status-pagination button { border: 0; }
+.ami-page.ami-espaco-page .ami-monitoring-section .matriz-table-wrap { margin: 0; border: 0; }
+@media (max-width: 600px) {
+  .ami-page.ami-espaco-page #ami-create-status.ami-status-cards { grid-template-columns: 1fr; }
+}

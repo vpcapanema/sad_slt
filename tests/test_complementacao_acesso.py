@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock
 import pytest
 from fastapi import HTTPException
 from api.routers import complementacao as mod
-from api.routers import atributos_objetos
+from api.services import atributos_hierarquizacao as atributos_objetos
 from api.services.session_service import SessionUser
 from api.services.campos_demanda import extrair_atributos_nativos, mesclar_atributos_nativos
 
@@ -32,7 +32,7 @@ def tabela(monkeypatch):
                }} for codigo in ['X', 'Y', 'Z']],
            }}
     cadastros = {codigo: {'codigo': codigo, 'criado_por': 'criador' if codigo != 'Z' else 'outro',
-                         'status': 'analise_aprovada', 'prazo_referencia_meses': 12, 'capex_estimado': 100,
+                         'status': 'hierarq_aguardando_complementacao', 'prazo_referencia_meses': 12, 'capex_estimado': 100,
                          'atributos_cadastrais': {'data_base_capex': '2026-10-01'}}
                  for codigo in ['X', 'Y', 'Z']}
     dominios = [
@@ -84,6 +84,7 @@ def tabela(monkeypatch):
     monkeypatch.setattr(mod.dominio_repository, 'list_atributos_objeto', lambda: dominios)
     monkeypatch.setattr(atributos_objetos, '_colunas_configuradas', AsyncMock(return_value=[]))
     monkeypatch.setattr(mod.hierarquizacao_repository, 'get_by_codigo', lambda codigo, **kw: row if codigo == 'H' else None)
+    monkeypatch.setattr(mod.hierarquizacao_repository, 'list_all', lambda: [row])
     monkeypatch.setattr(mod.hierarquizacao_repository, 'update', salvar)
     for tipo, (repo, service, schema, _) in mod.CADASTROS.items():
         monkeypatch.setattr(repo, 'get_by_codigo', lambda codigo: cadastros.get(codigo))
@@ -100,7 +101,7 @@ def test_tabela_filtra_objetos_e_usa_cadastro_atual(tabela):
     assert objetos[0]['cabecalho_objeto']['atributos']['atributos_cadastrais']['prazo_referencia_meses'] == 12
     assert resposta['criado_em'] == tabela.row['criado_em']
     assert tabela.row == original
-    assert len(mod.obter_tabela('H', user('GESTOR'))['dados_hierarquizacao']['objetos']) == 3
+    assert len(mod.obter_tabela('H', user('ADMIN'))['dados_hierarquizacao']['objetos']) == 3
 
 
 @pytest.mark.parametrize('tipo', ['plano', 'programa', 'projeto'])
@@ -115,7 +116,7 @@ def test_tabela_grava_cadastro_oficial_e_snapshot_sem_apagar_demais_atributos(ta
     assert tabela.cadastros['X']['prazo_referencia_meses'] == 24
     assert tabela.cadastros['X']['maturidade'] == 'Nível 2'
     assert tabela.cadastros['X']['atributos_cadastrais'] == {'data_base_capex': '2026-10-01'}
-    assert tabela.cadastros['X']['status'] == 'analise_aprovada'
+    assert tabela.cadastros['X']['status'] == 'hierarq_aguardando_complementacao'
     assert tabela.atualizacoes[0][2] == 'criador'
     cab = tabela.row['dados_hierarquizacao']['objetos'][0]['cabecalho_objeto']
     assert cab['atributos']['atributos_cadastrais']['prazo_referencia_meses'] == 24
@@ -207,7 +208,7 @@ def test_tabela_indisponivel_sem_objetos_autorizados(tabela):
     assert erro.value.status_code == 403
 
 
-def test_tabela_reutiliza_colunas_do_configurador_da_fase3(tabela, monkeypatch):
+def test_tabela_usa_as_mesmas_colunas_da_fase3_incluindo_configurador(tabela, monkeypatch):
     monkeypatch.setattr(atributos_objetos, '_colunas_configuradas', AsyncMock(return_value=[
         {'id': 'extra', 'tipo': 'numerico', 'origem': 'configurador_fase3'},
         {'id': 'custo', 'tipo': 'texto', 'origem': 'configurador_fase3'},
@@ -215,9 +216,48 @@ def test_tabela_reutiliza_colunas_do_configurador_da_fase3(tabela, monkeypatch):
     resposta = mod.obter_tabela('H', user())
     assert [col['id'] for col in resposta['colunas']] == ['custo', 'prazo', 'decisao', 'extra']
     assert resposta['colunas'][0]['tipo'] == 'numerico'
-    resposta = mod.salvar_tabela('H', {'X': {'extra': 2}}, user())
-    cab = resposta['dados_hierarquizacao']['objetos'][0]['cabecalho_objeto']
+    salvo = mod.salvar_tabela('H', {'X': {'extra': 2}}, user())
+    cab = salvo['dados_hierarquizacao']['objetos'][0]['cabecalho_objeto']
     assert cab['atributos_fase3']['extra']['valor_bruto'] == 2
+    from api.routers.atributos_objetos import colunas_por_hierarquizacao
+    assert colunas_por_hierarquizacao('H', user())['colunas'] == resposta['colunas']
+
+
+def test_atributo_configurado_vazio_reabre_listagem_mesmo_com_marcador_concluido(tabela, monkeypatch):
+    monkeypatch.setattr(mod.solicitacoes, 'listar', lambda **kw: [])
+    monkeypatch.setattr(atributos_objetos, '_colunas_configuradas', AsyncMock(return_value=[
+        {'id': 'extra', 'tipo': 'numerico', 'origem': 'configurador_fase3'},
+    ]))
+    for codigo, cadastro in tabela.cadastros.items():
+        cadastro['maturidade'] = 'Nível 2'
+    for obj in tabela.row['dados_hierarquizacao']['objetos']:
+        cab = obj['cabecalho_objeto']
+        cab['complementacao_atributos'] = {'concluida': True}
+        cab['atributos_fase3'].update(prazo={'valor_bruto': 0}, decisao={'valor_bruto': False})
+    itens = mod.listar_objetos(user())
+    assert [i['objeto_codigo'] for i in itens] == ['X', 'Y']
+    assert all(i['pendencias'] == ['extra'] and i['atributos_preenchidos'] == i['total_atributos'] - 1 for i in itens)
+    assert len(mod.listar_objetos(user('ADMIN'))) == 3
+
+
+def test_ultimo_valor_atende_pedido_e_retorna_tabela_sem_403(tabela, monkeypatch):
+    pedidos = [{'id': 'pedido-X', 'demanda_codigo': 'X', 'categorias': ['atributos_objeto'],
+                'hierarquizacao_codigo': 'H'}]
+    monkeypatch.setattr(mod.solicitacoes, 'listar', lambda **kw: pedidos)
+    atendidos = []
+    def atender(id, usuario):
+        atendidos.append((id, usuario))
+        pedidos.clear()
+    monkeypatch.setattr(mod.solicitacoes, 'atender', atender)
+    salvo = mod.salvar_tabela('H', {'X': {
+        'cadastro:maturidade_objeto': 'Nível 2', 'prazo': 0, 'decisao': False,
+    }}, user())
+    cab = salvo['dados_hierarquizacao']['objetos'][0]['cabecalho_objeto']
+    assert cab['complementacao_atributos']['concluida'] is True
+    assert cab['complementacao_atributos']['automatica'] is True
+    assert cab['status'] == 'hierarq_em_andamento'
+    assert atendidos == [('pedido-X', 'criador')]
+    assert [i['objeto_codigo'] for i in mod.listar_objetos(user())] == ['Y']
 
 
 def test_rotas_da_tabela_nao_colidem_com_consulta_individual(tabela):
@@ -303,7 +343,7 @@ def test_snapshot_antigo_nao_concede_acesso():
 @pytest.mark.parametrize('owner,person', [('criador', 'outra'), ('outro', 'pessoa'), ('outro', 'outra')])
 def test_atributos_independem_do_status_cadastral(profile, state, owner, person):
     demanda = {'status': state, 'criado_por': owner, 'sigma_pessoa_id': person}
-    esperado = profile != 'OPERADOR' or owner == 'criador' or person == 'pessoa'
+    esperado = profile == 'ADMIN' or owner == 'criador' or person == 'pessoa'
     assert mod._acesso({'codigo': 'X'}, user(profile), 'pessoa', {'X': demanda}) is esperado
 
 
@@ -317,6 +357,7 @@ def test_lista_atributos_exclui_objeto_proprio_sem_pedido_de_complementacao(monk
     monkeypatch.setattr(mod.hierarquizacao_repository, 'list_all', lambda: [row])
     monkeypatch.setattr(mod, '_pessoa_id', lambda usuario: None)
     monkeypatch.setattr(mod, '_cadastros', lambda: {'X': {'criado_por': 'criador', 'status': 'analise_aprovada'}})
+    monkeypatch.setattr(mod.dominio_repository, 'list_atributos_objeto', lambda: [])
     assert mod.listar_objetos(user()) == []
 
 
@@ -331,6 +372,73 @@ def test_rota_individual_reutiliza_validacao_da_tabela(tabela):
 def test_operador_nao_grava_atributos_de_objeto_alheio(tabela):
     with pytest.raises(HTTPException) as erro:
         mod.salvar_complementacao('H', 'Z', {'custo': 10}, user())
+    assert erro.value.status_code == 403
+    assert tabela.gravacoes == []
+
+
+def test_pendencias_adiadas_aparecem_sem_criar_solicitacao(tabela, monkeypatch):
+    monkeypatch.setattr(mod.solicitacoes, 'listar', lambda **kw: [])
+    itens = mod.listar_objetos(user())
+    assert [i['objeto_codigo'] for i in itens] == ['X', 'Y']
+    assert all(i['solicitacoes'] == [] for i in itens)
+    assert 'cadastro:maturidade_objeto' in itens[0]['pendencias']
+    assert 'prazo' in itens[0]['pendencias']
+    assert tabela.gravacoes == tabela.atualizacoes == []
+    assert len(mod.obter_tabela('H', user(), demanda_codigo='X')['dados_hierarquizacao']['objetos']) == 1
+    with pytest.raises(HTTPException) as erro:
+        mod.obter_tabela('H', user(), demanda_codigo='Z')
+    assert erro.value.status_code == 403
+
+
+def test_conclusao_valida_cadastrais_dinamicos_e_retorna_hierarquizacao(tabela, monkeypatch):
+    monkeypatch.setattr(mod.solicitacoes, 'listar', lambda **kw: [])
+    monkeypatch.setattr(mod, 'bloquear', lambda *args: tabela.cadastros['X'])
+    with pytest.raises(HTTPException) as erro:
+        mod.concluir_atributos('H', 'X', user())
+    assert erro.value.status_code == 422
+    assert 'cadastro:maturidade_objeto' in erro.value.detail
+    assert tabela.gravacoes == []
+    mod.salvar_tabela('H', {'X': {'cadastro:maturidade_objeto': 'Nível 2', 'prazo': 0, 'decisao': False}}, user())
+    assert tabela.row['dados_hierarquizacao']['objetos'][0]['cabecalho_objeto']['status'] == 'hierarq_em_andamento'
+    assert [i['objeto_codigo'] for i in mod.listar_objetos(user())] == ['Y']
+    cab = tabela.row['dados_hierarquizacao']['objetos'][0]['cabecalho_objeto']
+    assert cab['complementacao_atributos']['concluida'] is True
+    assert cab['complementacao_atributos']['concluida_por'] == 'criador'
+    tabela.conn.execute.assert_any_call(
+        sql_status_update(), ('hierarq_em_andamento', 'criador', 'X'))
+
+
+def sql_status_update():
+    from psycopg import sql
+    return sql.SQL("UPDATE demandas.{} SET status=%s, atualizado_por=%s WHERE codigo=%s").format(sql.Identifier('projeto'))
+
+
+def test_conclusao_nao_admite_atributos_dinamicos_invalidos(tabela, monkeypatch):
+    monkeypatch.setattr(mod, 'bloquear', lambda *args: tabela.cadastros['X'])
+    tabela.cadastros['X']['maturidade'] = 'Nível 2'
+    cab = tabela.row['dados_hierarquizacao']['objetos'][0]['cabecalho_objeto']
+    cab['atributos_fase3'].update(prazo={'valor_bruto': 'abc'}, decisao={'valor_bruto': False})
+    with pytest.raises(HTTPException) as erro:
+        mod.concluir_atributos('H', 'X', user())
+    assert erro.value.status_code == 422
+    assert tabela.gravacoes == []
+
+
+def test_conclusao_preserva_espera_quando_outra_rodada_esta_pendente(tabela, monkeypatch):
+    monkeypatch.setattr(mod.solicitacoes, 'listar', lambda **kw: [])
+    monkeypatch.setattr(mod, 'bloquear', lambda *args: tabela.cadastros['X'])
+    outra = deepcopy(tabela.row)
+    outra['codigo'] = 'OUTRA'
+    outra['dados_hierarquizacao']['objetos'][0]['cabecalho_objeto']['complementacao_atributos'] = {'concluida': False}
+    monkeypatch.setattr(mod.hierarquizacao_repository, 'list_all', lambda: [tabela.row, outra])
+    mod.salvar_tabela('H', {'X': {'cadastro:maturidade_objeto': 'Nível 2', 'prazo': 0, 'decisao': False}}, user())
+    assert tabela.row['dados_hierarquizacao']['objetos'][0]['cabecalho_objeto']['status'] == 'hierarq_aguardando_complementacao'
+
+
+def test_conclusao_nao_permite_que_operador_conclua_demanda_alheia(tabela, monkeypatch):
+    monkeypatch.setattr(mod, 'bloquear', lambda *args: tabela.cadastros['Z'])
+    with pytest.raises(HTTPException) as erro:
+        mod.concluir_atributos('H', 'Z', user())
     assert erro.value.status_code == 403
     assert tabela.gravacoes == []
 

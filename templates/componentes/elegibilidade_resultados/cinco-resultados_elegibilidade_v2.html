@@ -1,12 +1,12 @@
 <section class="secao-elegibilidade-resultados ea-section ev2" id="cinco-resultados_elegibilidade_v2" aria-labelledby="ev2-title">
   <header class="ea-section-head"><span class="ea-number">5</span><h2 id="ev2-title">Resultados da Elegibilidade Territorial</h2></header>
   <div class="ea-section-body">
-    <p class="ea-hint">A demanda é o objeto da análise; as camadas de restrição e de risco servem para caracterizá-la. Cada demanda aparece como tendo restrição, tendo risco, tendo ambos ou livre de restrições e riscos, conforme as camadas consultadas. Selecione uma demanda no gráfico, no mapa ou na tabela: os três painéis respondem juntos.</p>
-    <p id="ev2-vazio" class="ea-hint">Execute a elegibilidade territorial ou <a id="ev2-abrir" href="#cinco-resultados_elegibilidade_v2">abra uma análise já realizada</a> para ver a situação de cada demanda.</p>
+    <p class="ea-hint">Esta seção lê as saídas gravadas do processamento, não a seleção atual das seções 1 e 2. A demanda é o objeto da análise; as camadas consultadas indicam presença de restrição, de risco, de ambos ou ausência de sobreposição. “Livre de restrições e riscos” se refere somente às bases utilizadas: não equivale a autorização de execução ou homologação.</p>
+    <p id="ev2-vazio" class="ea-hint">Nenhuma análise apresentada. Execute o cálculo na seção 4 ou <a id="ev2-abrir" href="#cinco-resultados_elegibilidade_v2">abra uma análise já realizada</a> selecionando seu GeoPackage de saída no Storage. Não é necessário repetir o cálculo para consultar um arquivo existente. Em caso de falha de leitura, tente carregar novamente; a ausência de resultados na tela não significa ausência de restrições ou riscos.</p>
     <p id="ev2-status" class="ea-hint" role="status" aria-live="polite"></p>
     <button id="ev2-tentar" class="ea-btn" type="button" hidden>Tentar carregar resultados</button>
     <form id="ev2-aliases" class="ev2-aliases" hidden>
-      <h3>Revisão dos nomes de apresentação</h3>
+      <h3>5.1 — Revisão dos nomes de apresentação</h3>
       <p class="ea-hint">Confira os nomes das camadas consultadas e dos itens encontrados, incluindo significado, ortografia e acentuação. As alterações são salvas no storage e usadas no gráfico, no mapa, na tabela e no relatório. Siglas desconhecidas não são expandidas automaticamente.</p>
       <div id="ev2-nomes" class="ev2-nomes"></div>
       <label class="ev2-confirmacao"><input id="ev2-revisados" name="nomes_revisados" type="checkbox" required> Revisei os nomes e confirmo que identificam corretamente as camadas desta análise.</label>
@@ -18,6 +18,7 @@
         <button class="ea-btn" id="ev2-editar" type="button">Revisar nomes</button>
       </div>
       <p id="ev2-resumo" class="ea-hint"></p>
+      <p class="ea-hint"><strong>5.2 — Situação e detalhamento por demanda.</strong> Selecione uma demanda no gráfico, no mapa ou na tabela para consultar os mesmos registros nos três painéis. Os filtros limitam apenas a consulta em tela, não o conteúdo do relatório. Lotes interrompidos são identificados como parciais: entradas não concluídas não são tratadas como livres de restrições e riscos.</p>
       <div id="ev2-cards" class="ev2-cards" role="group" aria-label="Situação das demandas; selecione um card para filtrar"></div>
       <div class="ev2-filtros" role="group" aria-label="Filtros do painel">
         <div class="ea-field"><label for="ev2-busca">Buscar demanda</label><input id="ev2-busca" type="search" autocomplete="off" placeholder="Nome ou identificador"></div>
@@ -68,15 +69,16 @@
         <p class="ea-hint ev2-nota">O percentual usa a área total da demanda como base. Áreas atingidas por camadas diferentes podem coincidir; por isso não são somadas. “Apenas toca o limite” indica que a restrição ou o risco encosta na demanda sem atingir área.</p>
       </section>
       <section class="secao-elegibilidade-resumo ev2-painel ev2-painel-resumo" aria-labelledby="ev2-resumo-title">
-        <header class="ev2-titulo"><h3 id="ev2-resumo-title">Resumo da Elegibilidade</h3><span class="ea-hint">Demandas sem restrição · área em hectares</span></header>
+        <header class="ev2-titulo"><h3 id="ev2-resumo-title">5.3 — Resumo da Elegibilidade</h3><span class="ea-hint">Demandas sem restrição · área em hectares</span></header>
         <div class="ea-table-wrap admin-table-wrap"><table id="ev2-resumo-tabela" class="admin-table ev2-tabela ev2-tabela-resumo" data-table-sort="off" aria-label="Resumo da Elegibilidade: sobreposição de cada demanda com as camadas de risco e índice de risco ambiental e territorial"></table></div>
         <p id="ev2-resumo-contagem" class="admin-table-summary" aria-live="polite"></p>
         <p class="ea-hint ev2-nota"><strong>Índice de risco ambiental e territorial</strong> = 1 − (área da demanda sobreposta por camadas de risco ÷ área total da demanda). Vai de 0 a 1: quanto mais próximo de 1, maior a elegibilidade da demanda para execução; quanto mais próximo de 0, menor. A área sobreposta é a união das áreas atingidas por todas as camadas de risco, sem contar duas vezes o que coincide. Demandas com restrição não constam desta tabela.</p>
+        <p class="ea-hint ev2-nota">A ausência de linhas neste resumo pode ocorrer quando todas as demandas têm restrição; consulte o detalhamento acima. Este índice descreve a exposição espacial da demanda: não constitui critério multicritério nem altera pesos AHP, ranking ou situação cadastral.</p>
       </section>
       <details class="ev2-metodologia"><summary>Como a análise foi feita</summary><p id="ev2-metodologia" class="ea-hint"></p></details>
     </div>
     <footer class="ev2-download">
-      <p class="ea-hint"><strong>Relatório e camadas da análise</strong><br>O pacote reúne o relatório em PDF, as tabelas em Excel e CSV, os arquivos geoespaciais (GeoPackage), os metadados e um guia de leitura, com todas as demandas, independentemente da seleção e dos filtros em tela.</p>
+      <p class="ea-hint"><strong>5.4 — Relatório, rastreabilidade e próximos passos</strong><br>Após confirmar os nomes, baixe o pacote com PDF, tabelas Excel e CSV, GeoPackages, metadados e guia de leitura. São incluídas todas as demandas das entradas concluídas, independentemente dos filtros. A planilha distingue a situação de todas as demandas do detalhe por ocorrência; o Resumo da Elegibilidade inclui somente demandas sem restrição e pode estar vazio. As tabelas preservam a precisão numérica disponível e trazem identificadores para conferir demandas e feições com nomes iguais; contato sem área permanece zero, não ausência. O PDF informa o alcance da análise e identifica cada execução; os metadados permitem conferir PDF, camadas, tabelas e guia por SHA-256. Editar as tabelas não atualiza o SICARD: eventuais correções devem ser feitas na fonte e gerar nova execução, preservando o pacote original. Para entradas vinculadas a uma hierarquização, o PDF e a planilha de resumo também ficam associados ao relatório da Fase 1 em Gestão das hierarquizações. Confira as bases e as ocorrências antes de prosseguir à Fase 2 pela navegação superior; esta consulta não executa a fase seguinte.</p>
       <button class="ea-btn ea-btn-primary" id="ev2-download" type="button" disabled>Baixar relatório e camadas (.zip)</button>
     </footer>
   </div>

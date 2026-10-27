@@ -1,4 +1,4 @@
-import {camadaTiles} from './previa-tiles.js';
+import {camadaTiles} from './previa-tiles.js?v=20261027-simbologia-compartilhada';
 import { $, feedback } from './ui.js';
 import { removerPrevia, entradasParaPrevia, componentes, configuracaoDaCamada } from './preparacao.js';
 const nomeArquivo=valor=>String(valor||'Arquivo sem nome').split(/[\\/]/).pop();
@@ -97,6 +97,13 @@ export function criarPrevia(state, changed, {obterCamadas, aoMudarVisibilidade, 
           const index=camadasPacote.indexOf(item);botao.style.setProperty('--layer-color',cores[index%cores.length]);
           const tipo=item.tipo==='raster'?'raster':/Point/.test(item.metadados_local?.tipos_geometria?.join(''))?'point':/Line/.test(item.metadados_local?.tipos_geometria?.join(''))?'line':'polygon';
           row.querySelector('.ea-preview-symbol').classList.add(`ea-preview-symbol--${tipo}`);
+          const favorabilidade=item.tipo!=='raster'&&globalThis.FavorabilidadeSimbologia?.identificar(item);
+          if(favorabilidade){
+            const simbolo=row.querySelector('.ea-preview-symbol');
+            simbolo.dataset.favorabilidade=favorabilidade.classe?'categorias':'continua';
+            simbolo.style.background=globalThis.FavorabilidadeSimbologia.GRADIENTE;simbolo.style.border='0';
+            simbolo.title=favorabilidade.classe?`Classes de favorabilidade · ${favorabilidade.classe}`:`Índice de favorabilidade 0–1 · ${favorabilidade.campo}`;
+          }
           row.querySelector('[data-preview-layer-name]').textContent=item.nome;
           botao.title=item.erro||`${item.tipo==='raster'?'Raster':'Vetor'} · ${item.arquivo}`;
           botao.addEventListener('click',()=>selecionarCamada(item));botoes.push([botao,item.chave]);

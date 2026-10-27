@@ -202,7 +202,11 @@ def extrair_colunas(matriz: Any) -> list[dict[str, Any]]:
             "unidade": str(unidade).strip() if unidade else None,
             "tipo": tipo,
             "formato": formato,
-            "mapeamento": _mapeamento_categorico(medido, tipo),
+            "mapeamento": (
+                _mapeamento_categorico(medido, tipo)
+                or _mapeamento_categorico(dado, tipo)
+                or _mapeamento_categorico(interface, tipo)
+            ),
             "relacao": relacao,
             "relacao_simbolo": simbolo,
             "mandatorio": _mandatorio(_resolver(rn, "mandatorio")),

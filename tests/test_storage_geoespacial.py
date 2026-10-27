@@ -487,3 +487,50 @@ def test_com_montagem_o_storage_e_lido_do_disco(storage, monkeypatch):
     assert storage_geoespacial.montado()
     assert storage_geoespacial.resolver("base-geoespacial/vetor/uf_sp.gpkg").is_file()
     assert storage_geoespacial.navegar("base-geoespacial")["pastas"]
+
+
+def test_endereco_vsi_sem_percent_para_gpkg_wal_reaberto_como_uri_sqlite(monkeypatch):
+    # GPKG em modo WAL é reaberto pelo GDAL como URI SQLite, que decodifica "%XX";
+    # "%20" viraria espaço cru na URL e a leitura falharia (422 na bancada).
+    from api.services import storage_remoto
+
+    monkeypatch.setenv("SICARD_STORAGE_API_URL", "https://storage.exemplo/api")
+    endereco = storage_remoto.endereco_vsi("superficies-indices/fav/Favorabilidade Rede Trechos pol.gpkg")
+    assert endereco == ("/vsicurl/https://storage.exemplo/api/user/files"
+                        "?path=/superficies-indices/fav/Favorabilidade+Rede+Trechos+pol.gpkg")
+    assert "%" not in endereco
+
+
+def test_tiles_de_arquivo_remoto_usam_copia_local_por_versao(monkeypatch, tmp_path):
+    # Tile por /vsicurl custava dezenas de requisições HTTP Range; a cópia é baixada uma vez por versão.
+    from api.services import storage_remoto
+
+    origem = tmp_path / "origem.gpkg"
+    _gpkg(origem)
+    dados = origem.read_bytes()
+    downloads = []
+    monkeypatch.setenv("SICARD_STORAGE_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setattr(storage_remoto, "baixar", lambda rel: downloads.append(rel) or dados)
+    arquivo = storage_geoespacial.ArquivoStorage("superficies-indices/fav/Rede pol.gpkg", len(dados), 100.0)
+
+    v1 = storage_geoespacial._copia_local_para_tiles(arquivo, (1, len(dados)))
+    assert storage_geoespacial._copia_local_para_tiles(arquivo, (1, len(dados))) == v1
+    assert downloads == ["superficies-indices/fav/Rede pol.gpkg"]
+    assert Path(v1).read_bytes() == dados
+
+    v2 = storage_geoespacial._copia_local_para_tiles(arquivo, (2, len(dados)))
+    assert v2 != v1 and len(downloads) == 2 and not Path(v1).exists()
+    storage_geoespacial._tile.cache_clear()
+    x, y = mercantile.tile(-47.5, -22, 6)[:2]
+    assert storage_geoespacial._tile(v2, "uf", (2, len(dados)), 6, x, y)
+
+
+def test_copia_local_de_tiles_recua_para_leitura_direta_quando_versao_diverge(monkeypatch, tmp_path):
+    from api.services import storage_remoto
+
+    monkeypatch.setenv("SICARD_STORAGE_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setattr(storage_remoto, "baixar", lambda rel: b"conteudo-de-outra-versao")
+    monkeypatch.setattr(storage_remoto, "preparar_gdal", lambda: None)
+    arquivo = storage_geoespacial.ArquivoStorage("superficies-indices/fav/a.gpkg", 999, 1.0)
+    assert storage_geoespacial._copia_local_para_tiles(arquivo, (1, 999)).startswith("/vsicurl/")
+    assert not (tmp_path / "cache").exists() or not any((tmp_path / "cache").iterdir())

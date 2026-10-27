@@ -61,7 +61,7 @@ def test_mesma_rota_serve_v2_sem_bancada_ou_executor_legados(cliente):
         assert f'id="{id_}"' in resultados
     assert 'id="ev-resultados-rosca"' not in html
     assert 'Consulte os valores originais de' not in resultados
-    assert 'id="ev-resultados-status"' not in resultados
+    assert 'id="ev-resultados-status"' in resultados
     assert 'id="ev-resultados-qualidade"' not in resultados
     assert 'id="ev-resultados-mapa-origem"' not in resultados
     for controle in ('mapa-superficie', 'mapa-representacao', 'mapa-legenda'):

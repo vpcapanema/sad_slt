@@ -28,12 +28,27 @@
     <h1 class="ahp-page-title standard-page-hero__title"><i class="fas fa-sliders" aria-hidden="true"></i><span>Priorização de demandas por atributos</span></h1>
     <p class="standard-page-hero__eyebrow">Hierarquização · Fase 3<span class="fase-info" tabindex="0" role="button" aria-label="Sobre esta fase"><i class="fas fa-circle-info" aria-hidden="true"></i><span class="fase-info-pop">A priorização de demandas por atributos avalia cada objeto de demanda ao combinar seus atributos próprios com o risco herdado da Elegibilidade territorial. Os critérios são normalizados e ponderados por pesos, as ausências são tratadas conforme a política escolhida e a completude mínima exigida. A síntese final combina os escores das fases selecionadas segundo os pesos definidos. Para operar, selecione a rodada, confira os critérios e atributos dos objetos de demanda, defina as regras de cálculo e execute a fase; em seguida, confira a síntese e o ranking.</span></span></p>
     <p class="standard-page-hero__description">Prioriza os objetos de demanda combinando seus atributos próprios com o risco herdado da Elegibilidade territorial.</p>
-  <p class="step-intro"><i class="fas fa-circle-info" aria-hidden="true"></i> Nos julgamentos, os colaboradores indicam a intensidade de importância entre os critérios. A consolidação calcula seus pesos. Quando há uma análise homologada nesta hierarquização, esta fase aplica os pesos homologados aos valores de cada demanda nos critérios correspondentes para calcular sua prioridade.</p>
+  <p class="step-intro"><i class="fas fa-circle-info" aria-hidden="true"></i> Escolha a fonte dos pesos na subseção 2.2: utilize os pesos consolidados de um julgamento AHP associado à hierarquização ou preencha os pesos manualmente. Na ponderação manual, os atributos podem participar de uma única ponderação abrangente ou de ponderações separadas por grupo.</p>
   </section>
-  <section class="secao-selecao-da-rodada card ahp-step-section card-selecao-da-rodada"><div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">1</span><span>Selecionar a rodada</span></div><div class="ahp-section-body"><div class="ahp-subcard info-card"><div class="ahp-subsection-title"><span class="cadastro-subsec-num">1.1</span><i class="fas fa-folder-open" aria-hidden="true"></i><span>Rodada a calcular</span></div><label>Hierarquização cadastrada <select id="fase-hierarquizacao"><option value="">Selecionar uma hierarquização</option></select></label></div><div class="ahp-subcard info-card"><div class="ahp-subsection-title"><span class="cadastro-subsec-num">1.2</span><i class="fas fa-circle-info" aria-hidden="true"></i><span>Resumo da rodada</span></div><div id="fase-resumo" class="fase-summary hidden"></div></div></div></section>
-  <section class="secao-criterios-de-atributos card ahp-step-section card-criterios-de-atributos"><div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">2</span><span id="fase3-titulo-atributos">Critérios atributo de objeto</span></div><div class="ahp-section-body">{% include "componentes/_tabela_atributos_objetos.html" %}</div></section>
+  <section class="secao-selecao-da-rodada card ahp-step-section card-selecao-da-rodada">
+    <div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">1</span><span>Selecionar a rodada</span></div>
+    <div class="ahp-section-body">
+      <label>Hierarquização cadastrada <select id="fase-hierarquizacao"><option value="">Selecionar uma hierarquização</option></select></label>
+      <div id="fase-resumo" class="fase-summary hidden"></div>
+    </div>
+  </section>
+  <div id="fase3-resultados-aviso" class="ahp-info-note hidden" role="status" aria-live="polite" aria-atomic="true"></div>
+  <section class="secao-criterios-de-atributos card ahp-step-section card-criterios-de-atributos"><div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">2</span><span id="fase3-titulo-atributos">Critérios de atributo de demanda</span></div><div class="ahp-section-body">{% set fase3_ponderacao = true %}{% include "componentes/_tabela_atributos_objetos.html" %}</div></section>
+  <section id="fase3-complementacao" class="card ahp-step-section" hidden aria-labelledby="fase3-complementacao-titulo">
+    <h2 id="fase3-complementacao-titulo">Solicitação de atributos da hierarquização</h2>
+    <p>Se a solicitação foi adiada no cadastro, solicite agora aos responsáveis pelas demandas com atributos faltantes. A pendência de hierarquização independe do cadastro e de pedido ou e-mail prévio.</p>
+    <label for="fase3-complementacao-descricao">Orientação aos responsáveis</label>
+    <textarea id="fase3-complementacao-descricao" rows="3" maxlength="4000">Complemente os atributos dos grupos Cadastro e Dinâmicos da tabela 2 para prosseguir com a hierarquização. O risco é obtido da Fase 1.</textarea>
+    <button id="fase3-solicitar-complementacao" class="btn btn-secondary" type="button">Solicitar complementação de atributos</button>
+    <div id="fase3-complementacao-resultado" role="status" aria-live="polite"></div>
+  </section>
   <section class="secao-regras-para-atributos-vazios card ahp-step-section card-regras-para-atributos-vazios"><div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">3</span><span>Regras para atributos vazios</span></div><div class="ahp-section-body">
-    <div class="ahp-subcard info-card"><div class="ahp-subsection-title"><span class="cadastro-subsec-num">3.1</span><i class="fas fa-triangle-exclamation" aria-hidden="true"></i><span>Atributos ausentes por objeto</span></div><div id="fase3-atributos-ausentes" class="fase3-ausentes-wrap" aria-live="polite"></div></div>
+    <div class="ahp-subcard info-card"><div class="ahp-subsection-title"><span class="cadastro-subsec-num">3.1</span><i class="fas fa-triangle-exclamation" aria-hidden="true"></i><span>Pendências da tabela 2 por demanda</span></div><div id="fase3-atributos-ausentes" class="fase3-ausentes-wrap" aria-live="polite"></div></div>
     <div class="ahp-subcard info-card"><div class="ahp-subsection-title"><span class="cadastro-subsec-num">3.2</span><i class="fas fa-sliders" aria-hidden="true"></i><span>Política de tratamento</span></div><div class="fase-grid-2">
       <input id="fase3-modo-pesos" type="hidden" value="normalizados">
       <label>Tratamento de atributos com valores vazios
@@ -66,8 +81,10 @@
   <script src="/assets/js/status-colors.js"></script>
   <script src="/assets/js/objeto-detalhe.js"></script>
   <script src="/assets/js/resumo-fase.js"></script>
-  <script src="/restrict/hierarquizacao/js/hier-api.js"></script>
-  <script src="/restrict/hierarquizacao/js/atributos-objetos.js?v=20261024-indice-resumo"></script>
-  <script src="/restrict/hierarquizacao/js/fase3.js"></script>
+  <script src="/assets/js/api-erro.js?v=20261027"></script>
+  <script src="/restrict/hierarquizacao/js/hier-api.js?v=20261027-complementacao"></script>
+  <script src="/assets/js/hierarquizacao-complementacao.js"></script>
+  <script src="/restrict/hierarquizacao/js/atributos-objetos.js?v=20261027-contrato-atributos"></script>
+  <script src="/restrict/hierarquizacao/js/fase3.js?v=20261027-tabela-integrada"></script>
   <script src="/assets/js/paginas/hierarquizacao-fase3-ajuste-fino-inline-1.js"></script>
 {% endblock %}

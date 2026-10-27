@@ -5,7 +5,7 @@
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const TIPOS = ["plano", "programa", "projeto"];
   const ROTULOS = { plano: "Plano", programa: "Programa", projeto: "Projeto" };
-  const STATUS_ELEGIVEIS = new Set(["analise_aprovada", "hierarq_em_andamento"]);
+  const STATUS_ELEGIVEIS = new Set(["analise_aprovada", "hierarq_em_andamento", "hierarq_aguardando_complementacao"]);
   const POR_PAGINA = 15;
   const SELECIONADOS = new Set();
   const membrosGrupo = new Map();

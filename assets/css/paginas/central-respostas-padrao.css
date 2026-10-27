@@ -1,0 +1,112 @@
+/* Final scope for analytical panels: the same scale as Julgamentos Realizados. */
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-analysis-config {
+  min-width: 0; margin: 0 0 8px; padding: 1rem;
+  border: 1px solid var(--pli-border); border-radius: 8px; background: #fff;
+}
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-analysis-config legend {
+  padding: 0 .4rem; font: 700 .75rem/1.4 Montserrat, Verdana, sans-serif; color: var(--pli-deep);
+}
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-analysis-config .c-form-control { width: 100%; }
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-analysis-checkbox {
+  display: flex; align-items: center; gap: 8px; text-align: left;
+  font: 400 .7rem/1.4 Roboto, Arial, sans-serif;
+}
+.sicard-standard-page.ami-page #ami-analysis-workspace {
+  --ami2-titulo: .75rem;
+  --ami2-texto: .64rem;
+  --ami2-dado: .74rem;
+  --ami2-nota: .64rem;
+  --ami2-numero: 1rem;
+}
+.sicard-standard-page.ami-page #ami-analysis-workspace .admin-table thead th {
+  font: 700 .72rem/1.1 Montserrat, Verdana, sans-serif;
+  color: #fff; background: var(--pli-deep);
+}
+.sicard-standard-page.ami-page #ami-analysis-workspace .admin-table tbody :is(td, th) {
+  height: 1.7rem; padding: .18rem .55rem;
+  font: 400 .74rem/1.1 Roboto, Arial, sans-serif;
+  color: var(--pli-deep); text-transform: none; letter-spacing: normal;
+}
+.sicard-standard-page.ami-page #ami-analysis-workspace .admin-table tbody tr:nth-child(odd) > :is(td, th) { background: #fff; }
+.sicard-standard-page.ami-page #ami-analysis-workspace .admin-table tbody tr:nth-child(even) > :is(td, th) { background: #edf4f8; }
+.sicard-standard-page.ami-page #ami-analysis-workspace .admin-table tbody tr:is(.is-selected, :has(input:checked)) > :is(td, th) { background: #eef4fa; }
+/* Heat is a small marker, leaving the mandatory row striping readable. */
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-stats-table__valor {
+  box-shadow: inset 0 -3px var(--ami-deviation-color, transparent);
+}
+.sicard-standard-page.ami-page #ami-analysis-workspace .ahp-subsection-title {
+  font: 700 .75rem/1.4 Montserrat, Verdana, sans-serif;
+}
+.sicard-standard-page.ami-page #ami-analysis-workspace .ahp-subsection-num { font-size: .78rem; }
+.sicard-standard-page.ami-page #ami-analysis-workspace :is(.step-intro, .ami-subsection-hint, .ami-feedback) {
+  font: 400 .64rem/1.4 Roboto, Arial, sans-serif;
+  margin: 0 0 8px;
+}
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-feedback:empty { display: none; }
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-judge-filter :is(label, select),
+.sicard-standard-page.ami-page #ami-analysis-workspace .c-form-group :is(label, input) { font-size: .7rem; }
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-judge-filter select { min-width: 0; max-width: 100%; }
+.sicard-standard-page.ami-page .ami-main :is(.ami-judge-filter, .c-form-group:has(> label[for])) {
+  display: flex; flex-direction: column; align-items: flex-start;
+  gap: 8px; text-align: left;
+}
+.sicard-standard-page.ami-page .ami-main :is(.ami-judge-filter, .c-form-group) > label[for] {
+  display: block; margin: 0; text-align: left; align-self: flex-start;
+}
+.sicard-standard-page.ami-page .ami-main :is(.ami-judge-filter, .c-form-group) > :is(input, select, textarea) {
+  text-align: left; align-self: flex-start;
+}
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-judge-filter__hint { font-size: .64rem !important; font-weight: 400 !important; }
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-report-table { display: grid; gap: 8px; min-width: 0; }
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-analysis-split > .ami-report-table { grid-column: 1; grid-row: 1; }
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-analysis-split > .ami-analysis-chart { grid-column: 2; grid-row: 1; }
+.sicard-standard-page.ami-page #ami-analysis-workspace :is(.ami-kpis, .ahp-live-metrics) { gap: 1rem; }
+.sicard-standard-page.ami-page #ami-analysis-workspace :is(.ami-kpis > div, .ahp-metric-card, .ami-metric-card) { text-align: center; }
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-metric-card__top { justify-content: center; }
+.sicard-standard-page.ami-page #ami-analysis-workspace :is(.ami-kpis strong, .ahp-metric-card__value, .ami-metric-card__value) {
+  font: 700 1rem/1.3 Montserrat, Verdana, sans-serif;
+}
+.sicard-standard-page.ami-page #ami-analysis-workspace :is(.ami-kpis span, .ahp-metric-card__label, .ami-metric-card__label) {
+  font: 600 .7rem/1.4 Roboto, Arial, sans-serif;
+}
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-consolidated-tables h4 {
+  margin: 0 0 8px; font: 700 .75rem/1.4 Montserrat, Verdana, sans-serif;
+}
+.sicard-standard-page.ami-page #ami-analysis-consolidations > .ami-kpis + .ami-consolidated-tables {
+  margin-top: 16px;
+}
+.sicard-standard-page.ami-page #ami-analysis-workspace .ahp-subsection-title { font-size: .8125rem; }
+.sicard-standard-page.ami-page #ami-analysis-workspace > .ahp-section-label { font-size: .875rem; }
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-consolidated-identification {
+  margin: 0 0 8px; font: 600 .7rem/1.4 Roboto, Arial, sans-serif; color: var(--pli-deep);
+}
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-table--indices thead th[colspan="2"] { text-align: center; }
+.ami-table--indices .ami-pair-leaf-headers { display: none !important; }
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-fio-elo { margin: 0 0 8px; }
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__bar:focus-visible { outline: 2px solid #123b56; outline-offset: 3px; }
+/* Full pair names above the bars, so text and quantitative scale do not compete. */
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars { gap: 12px; }
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__row {
+  grid-template-columns: minmax(0,1fr); gap: 8px;
+  padding: 8px; border-bottom: 1px solid var(--pli-border);
+}
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__label {
+  white-space: normal; overflow: visible; text-overflow: clip;
+  overflow-wrap: anywhere; text-align: left; line-height: 1.4;
+  font-size: .74rem; min-width: 0;
+}
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__plot { min-width: 0; margin-right: 2rem; }
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__legend { justify-content: flex-start; }
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__legend li {
+  display: grid; grid-template-columns: .6rem auto minmax(0,1fr);
+  max-width: 100%; min-width: 0; text-align: left; align-items: start; line-height: 1.4;
+}
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__judge-name { white-space: normal; overflow-wrap: anywhere; }
+@media (max-width: 720px) {
+  .sicard-standard-page.ami-page #ami-analysis-workspace .ami-analysis-split > .ami-analysis-chart { grid-column: 1; grid-row: 2; }
+  .sicard-standard-page.ami-page #ami-analysis-workspace :is(.ahp-collab-grid2, .ami-metric-grid) { grid-template-columns: minmax(0,1fr); }
+  .sicard-standard-page.ami-page #ami-analysis-workspace .ami-kpis { grid-template-columns: repeat(3,minmax(0,1fr)); }
+  .sicard-standard-page.ami-page #ami-analysis-workspace .ami-kpis > div { min-width: 0; padding: .5rem; }
+  .sicard-standard-page.ami-page #ami-analysis-workspace .ami-range-chart__row { grid-template-columns: minmax(0,1fr) minmax(0,1fr) 3rem; }
+  .sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__row { grid-template-columns: minmax(0,1fr); }
+}

@@ -26,6 +26,7 @@
   }
 
   function headerCells(table) {
+    if (table?.dataset.groupedHeaders === 'true' && global.SLTTable?.headers) return global.SLTTable.headers(table);
     const rows = directRows(table.tHead);
     if (!rows.length) return [];
     const cells = Array.from(rows[rows.length - 1].cells);

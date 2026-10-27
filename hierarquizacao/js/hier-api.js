@@ -10,14 +10,19 @@
   }
 
   async function request(path, options) {
-    const res = await fetch(path, { credentials: "same-origin", ...(options || {}) });
-    const body = await res.json().catch(() => null);
+    const E = global.SicardApiErro;
+    const method = (options && options.method) || "GET";
+    let res;
+    try { res = await fetch(path, { credentials: "same-origin", ...(options || {}) }); }
+    catch (e) { throw E ? E.deRede(e, { method, url: path }) : e; }
     if (!res.ok) {
+      if (E) throw await E.deResposta(res, { method, url: path });
+      const body = await res.json().catch(() => null);
       const err = new Error(errorMessage(body));
       err.status = res.status;
       throw err;
     }
-    return body;
+    return res.json().catch(() => null);
   }
 
   function jsonOpts(method, payload) {
@@ -42,6 +47,9 @@
     // --- Hierarquizações ---
     criar(payload) {
       return request(BASE_H, jsonOpts("POST", payload));
+    },
+    solicitarComplementacao(codigo, descricao) {
+      return request(`/api/complementacao/hierarquizacoes/${encodeURIComponent(codigo)}/solicitar`, jsonOpts("POST", {descricao}));
     },
     listar(params) {
       const qs = params ? "?" + new URLSearchParams(params).toString() : "";

@@ -16,6 +16,7 @@ class ConviteColaborativoSchema(BaseModel):
 
 
 class AmbienteColaborativoCreateSchema(BaseModel):
+    nome: str | None = Field(None, min_length=1, max_length=200)
     config_tipo: str | None = None
     config_id: UUID | None = None
     hierarquizacao_id: UUID | None = None
@@ -28,6 +29,8 @@ class AmbienteColaborativoCreateSchema(BaseModel):
 
 
 class AmbienteColaborativoUpdateSchema(BaseModel):
+    reabrir: bool = False
+    nome: str | None = Field(None, min_length=1, max_length=200)
     hierarquizacao_id: UUID | None = None
     config_tipo: str | None = None
     config_id: UUID | None = None
@@ -52,6 +55,7 @@ class ConsolidacaoColaborativaSchema(BaseModel):
 
 class AmbienteColaborativoResponseSchema(BaseModel):
     id: str
+    nome: str | None = None
     hierarquizacao_id: str | None = None
     superficie_id: str | None = None
     hierarquizacao_codigo: str

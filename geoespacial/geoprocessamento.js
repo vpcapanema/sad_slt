@@ -137,7 +137,7 @@
       ["formato_saida","Formato","select",raster?["JSON","GeoTIFF"]:["GeoJSON","GeoPackage","Shapefile"]]
     );
   });
-  const state={map:null,layers:[],basemaps:new Set(["esri-gray"]),selected:null,activeLayerId:null,activeExecution:null,toolboxScope:"geral",functions:[],flows:[],history:load("gp-history",[]),layerGroups:load("gp-layer-groups",{operational:false,basemap:false}),layerColors:load("gp-layer-colors",{}),layerStyles:load("gp-layer-styles",{}),geometryTypes:{},catalogHydrated:false,catalogSyncPending:false,leftTab:"drawing",editingLayers:new Set(),attributeEdits:{}};
+  const state={map:null,layers:[],basemaps:new Set(["esri-gray"]),selected:null,activeLayerId:null,activeExecution:null,toolboxScope:"geral",functions:[],flows:[],history:load("gp-history",[]),layerGroups:load("gp-layer-groups",{operational:false,basemap:false}),layerColors:load("gp-layer-colors",{}),layerStyles:load("gp-layer-styles",{}),geometryTypes:{},catalogHydrated:false,catalogSyncPending:false,leftTab:"drawing",editingLayers:new Set(),attributeEdits:{},favorabilidade:new Map()};
   const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
   let generatedFieldId=0;
   function associateFormFields(root=document){
@@ -272,9 +272,10 @@
     if(report)log("Simbologia da camada atualizada.","ok");return next;
   }
   function applyStyleToMap(id,next){
+    if(aplicarFavorabilidadeMapa(id,next))return;
     const fill=next.fillColor||layerColor(id),border=next.borderColor||fill,fillOpacity=Number.isFinite(next.fillOpacity)?next.fillOpacity:.32,borderOpacity=Number.isFinite(next.borderOpacity)?next.borderOpacity:1,lineWidth=Number.isFinite(next.lineWidth)?next.lineWidth:2,pointRadius=Number.isFinite(next.pointRadius)?next.pointRadius:5;
     const fillExpr=rendererColorExpression(next,"fill"),lineExpr=rendererColorExpression(next,"line");
-    if(state.map?.getLayer(id)){state.map.setPaintProperty(id,"fill-color",fillExpr||fill);state.map.setPaintProperty(id,"fill-outline-color","transparent");state.map.setPaintProperty(id,"fill-opacity",next.fillTexture==="outline"?0:fillOpacity)}
+    if(state.map?.getLayer(id)){state.map.setPaintProperty(id,"fill-color",fillExpr||fill);state.map.setPaintProperty(id,"fill-outline-color","transparent");state.map.setPaintProperty(id,"fill-opacity",next.fillTexture==="outline"?0:fillOpacity);if(state.favorabilidade.has(id))state.map.setPaintProperty(id,"fill-antialias",true)}
     if(state.map?.getLayer(`${id}-line`)){state.map.setPaintProperty(`${id}-line`,"line-color",lineExpr||border);state.map.setPaintProperty(`${id}-line`,"line-opacity",borderOpacity);state.map.setPaintProperty(`${id}-line`,"line-width",lineWidth);state.map.setPaintProperty(`${id}-line`,"line-dasharray",next.lineTexture==="dashed"?[3,2]:next.lineTexture==="dotted"?[1,2]:[1,0]);state.map.setLayoutProperty(`${id}-line`,"line-cap",next.lineCap||"butt");state.map.setLayoutProperty(`${id}-line`,"line-join",next.lineJoin||"miter")}
     if(state.map?.getLayer(`${id}-point`)){
       const shape=next.pointShape||"circle",borderW=Number.isFinite(next.lineWidth)?next.lineWidth:1;
@@ -284,11 +285,50 @@
       state.map.setPaintProperty(`${id}-point`,"icon-opacity",1);
     }
   }
+  // Superfícies de favorabilidade usam a simbologia compartilhada com o visualizador
+  // (assets/js/favorabilidade-simbologia.js), salvo renderizador temático escolhido na bancada.
+  function registrarFavorabilidade(id,nome,info={}){
+    const FS=window.FavorabilidadeSimbologia,config=FS?.identificar({...info,id});
+    if(!config){state.favorabilidade.delete(id);return null}
+    const alvo={id,arquivo:config.arquivo,campo:config.campo,revisao:info.revisao};
+    const registro={config,classificacao:config.classe?null:FS.classificacaoEmCache(alvo)};
+    state.favorabilidade.set(id,registro);
+    if(!config.classe&&!registro.classificacao&&config.arquivo){
+      FS.obterClassificacao(alvo,{cache:true}).then(classificacao=>{
+        if(state.favorabilidade.get(id)!==registro)return;
+        registro.classificacao=classificacao;applyStyleToMap(id,state.layerStyles[id]||{});renderLayers();
+      }).catch(error=>{if(state.favorabilidade.get(id)===registro)log(`${nome||id}: contraste Jenks indisponível; mantida a rampa contínua de favorabilidade 0–1. ${error.message}`,"warning")});
+    }
+    return registro;
+  }
+  function favorabilidadeAtiva(id,next={}){
+    const registro=state.favorabilidade.get(id);
+    if(!registro||!window.FavorabilidadeSimbologia)return null;
+    return rendererColorExpression(next,"fill")?null:registro;
+  }
+  function aplicarFavorabilidadeMapa(id,next){
+    const registro=favorabilidadeAtiva(id,next),map=state.map;
+    if(!registro||!map)return false;
+    const FS=window.FavorabilidadeSimbologia,cor=FS.expressaoCor(registro.config,registro.classificacao);
+    if(map.getLayer(id)){map.setPaintProperty(id,"fill-color",cor);for(const [nome,valor] of Object.entries(FS.PREENCHIMENTO))map.setPaintProperty(id,nome,valor)}
+    if(map.getLayer(`${id}-line`)){
+      map.setPaintProperty(`${id}-line`,"line-color",cor);
+      // Polígonos sem contorno; linhas da superfície seguem a mesma rampa.
+      map.setPaintProperty(`${id}-line`,"line-opacity",["match",["geometry-type"],["Polygon","MultiPolygon"],0,1]);
+      map.setPaintProperty(`${id}-line`,"line-width",Number.isFinite(next.lineWidth)?next.lineWidth:2);
+    }
+    return true;
+  }
+  function legendaFavorabilidade(layer,registro){
+    const FS=window.FavorabilidadeSimbologia,dados=FS.legenda(registro.config,registro.classificacao);
+    if(dados.tipo==="categorias")return `<div class="layer-legend" data-favorabilidade="categorias" title="Editar simbologia">${legendField({campo:dados.campo})}${dados.itens.map(item=>`<div class="layer-legend-item">${layerSymbol(layer,item.cor)}<span class="legend-label">${escapeHtml(item.rotulo)}</span></div>`).join("")}<div class="layer-legend-item">${layerSymbol(layer,dados.semClasse.cor)}<span class="legend-label">${escapeHtml(dados.semClasse.rotulo)}</span></div></div>`;
+    return `<div class="layer-legend" data-favorabilidade="continua" title="Editar simbologia">${legendField({campo:dados.campo})}<div class="layer-legend-item" style="display:grid;gap:2px"><span role="img" aria-label="Índice de favorabilidade: rampa contínua de 0 a 1${dados.provisoria?"":", com contraste Jenks"}" style="display:block;height:10px;border-radius:2px;background:${FS.gradiente(dados.paradas,"90deg")}"></span><span class="legend-label" style="display:flex;justify-content:space-between"><span>0 · Menor</span><span>1 · Maior</span></span></div><div class="layer-legend-item">${layerSymbol(layer,dados.semDado)}<span class="legend-label">Sem índice válido</span></div>${dados.provisoria?'<div class="layer-legend-item legend-more">Preparando contraste Jenks…</div>':""}</div>`;
+  }
   function replaceLayerStyle(id,style,persist=true){
     state.layerStyles[id]=JSON.parse(JSON.stringify(style||{}));if(persist)save("gp-layer-styles",state.layerStyles);
     applyStyleToMap(id,state.layerStyles[id]);
   }
-  function applySavedStyle(id){const saved=state.layerStyles[id];if(saved&&Object.keys(saved).length)applyStyleToMap(id,saved)}
+  function applySavedStyle(id){const saved=state.layerStyles[id];if(state.favorabilidade.has(id)||saved&&Object.keys(saved).length)applyStyleToMap(id,saved||{})}
   function currentEditStyle(layerId){return(state.symDraft&&state.symDraft.layerId===layerId)?state.symDraft.draft:(state.layerStyles[layerId]||{})}
   function stageStyle(layerId,patch){if(state.symDraft&&state.symDraft.layerId===layerId)Object.assign(state.symDraft.draft,patch)}
   const COLOR_RAMPS=[
@@ -482,6 +522,8 @@
   }
   function layerLegend(layer){
     const renderer=state.layerStyles[layer.id]?.renderer;
+    const favorabilidade=favorabilidadeAtiva(layer.id,state.layerStyles[layer.id]||{});
+    if(favorabilidade)return legendaFavorabilidade(layer,favorabilidade);
     if(renderer?.tipo==="categorizado"&&(renderer.categorias||[]).length){
       const cats=renderer.categorias.slice(0,8),extra=renderer.categorias.length-cats.length;
       const items=cats.map(c=>`<div class="layer-legend-item">${layerSymbol(layer,c.cor)}<span class="legend-label">${escapeHtml(c.rotulo??c.valor)}</span></div>`).join("");
@@ -1548,7 +1590,7 @@
   function removeLayerFromMap(layerId,report=true){
     if(!layerId)return;
     if(window.gpAttributeTable?.hasPendingChanges(layerId)){log('Salve ou descarte as alterações da tabela antes de remover a camada.','error');return false;}
-    removeMapResource(layerId);state.layers=state.layers.filter(layer=>layer.id!==layerId);if(state.activeLayerId===layerId)state.activeLayerId=null;renderLayers();showProperties(null);if(report)log(`${layerId} removida apenas do mapa.`,"ok");return true;
+    removeMapResource(layerId);state.favorabilidade.delete(layerId);state.layers=state.layers.filter(layer=>layer.id!==layerId);if(state.activeLayerId===layerId)state.activeLayerId=null;renderLayers();showProperties(null);if(report)log(`${layerId} removida apenas do mapa.`,"ok");return true;
   }
   async function deleteLayerFromSystem(layerId){
     if(!layerId)return;
@@ -1660,7 +1702,7 @@
     const entry={id,nome:nome||id,tipo:opts.tipo||"vetorial (memória)",origem:opts.origem||"Hierarquização",categoria:opts.categoria||"",destino:"memoria_local",crs:opts.crs_arquivo||"EPSG:4326",geometria_tipo:opts.geometria_tipo||state.geometryTypes[id].join(","),metadados_local:opts.metadados_local};
     const idx=state.layers.findIndex(l=>l.id===id);
     if(idx>=0) state.layers[idx]=entry; else state.layers.push(entry);
-    if(opts.simbologia!=="status")applySavedStyle(id);
+    if(opts.simbologia!=="status"){registrarFavorabilidade(id,nome,{arquivo:opts.arquivo,camada:opts.camada,campos:opts.campos,revisao:opts.revisao,metadados_local:opts.metadados_local,propriedades:geojson.features?.[0]?.properties});applySavedStyle(id)}
     if(!opts.lote) renderLayers();
   }
   // Camada interna fixa do MVT gerado pelo servidor (layerName do driver MVT);
@@ -1719,6 +1761,7 @@
     map.setFilter(id,["match",["geometry-type"],["Polygon","MultiPolygon"],true,false]);
     map.setFilter(id+"-line",["match",["geometry-type"],["LineString","MultiLineString","Polygon","MultiPolygon"],true,false]);
     map.setFilter(id+"-point",["match",["geometry-type"],["Point","MultiPoint"],true,false]);
+    registrarFavorabilidade(id,nome,info);
     applySavedStyle(id);
     const entry={id,nome:nome||id,tipo:"vetorial",origem:opts.origem||"Arquivo no storage",categoria:opts.categoria||"",destino:info.tiles_url?"arquivo_original":"storage_original",representacao:"tiles",arquivo:info.arquivo||info.caminho,crs:info.crs_arquivo||"",geometria_tipo:info.geometria_tipo||base||"",metadados_local:info.metadados_local,feicoes:info.feicoes,campo_fid_tile:info.campo_fid_tile};
     const idx=state.layers.findIndex(l=>l.id===id);

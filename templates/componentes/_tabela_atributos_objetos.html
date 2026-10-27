@@ -19,6 +19,10 @@
     <template id="tpl-atributo-celula">  -> célula de input (por tipo)
 #}
 <div class="componente-atributos-objetos" id="atributos-objetos-demanda" data-atributos-objetos>
+  {% if fase3_ponderacao %}
+  <section class="ahp-subcard info-card">
+    <div class="ahp-subsection-title"><span class="cadastro-subsec-num">2.1</span><span id="fase3-titulo-tabela">Tabela de atributos de demanda</span></div>
+  {% endif %}
   {% if atributos_complementacao %}
   <div class="atributos-legenda" role="status" aria-live="polite">
     <span>Modo de consulta — campos cinza com borda tracejada bloqueados. Use Editar atributos para complementar os valores.</span>
@@ -53,6 +57,25 @@
   </div>
   <div class="ahp-info-note ahp-info-note--error" data-atributos-erro hidden></div>
 
+  {% if fase3_ponderacao %}
+  </section>
+  <section class="ahp-subcard info-card">
+    <div class="ahp-subsection-title"><span class="cadastro-subsec-num">2.2</span><span>Ponderação</span></div>
+    <fieldset class="fase3-fonte-pesos">
+      <legend>Fonte dos pesos da ponderação:</legend>
+      <label><input type="radio" name="fonte-pesos-fase3" value="ahp"> Análise multicritério - AHP colaborativa</label>
+      <label><input type="radio" name="fonte-pesos-fase3" value="manual" checked> Preenchimento Manual</label>
+    </fieldset>
+    <label id="fase3-julgamento-campo" hidden>Julgamento associado à hierarquização
+      <select id="fase3-julgamento"><option value="">Selecione um julgamento</option></select>
+    </label>
+    <fieldset id="fase3-modo-ponderacao" class="fase3-fonte-pesos">
+      <legend>Modo de ponderação manual:</legend>
+      <label><input type="radio" name="ponderacao-fase3" value="abrangente"> Ponderação abrangente</label>
+      <label><input type="radio" name="ponderacao-fase3" value="estratificada" checked> Ponderação estratificada</label>
+    </fieldset>
+    <p id="fase3-pesos-feedback" class="ahp-help-text" role="status" aria-live="polite"></p>
+  {% endif %}
   <div class="atributos-pesos" data-atributos-pesos hidden>
     <section class="atributos-pesos-grupo secao-pesos-cadastro">
       <header><h3>Atributos do cadastro</h3><output data-soma-pesos="cadastro">1,000</output></header>
@@ -69,6 +92,8 @@
     <p class="ahp-help-text atributos-pesos-ajuda">Cada grupo soma 1. Ao alterar um peso, o saldo é redistribuído automaticamente entre os demais critérios do mesmo grupo. No cálculo final, os grupos apresentados têm participação equivalente. O critério de risco usa o Índice de risco ambiental e territorial do Resumo da Elegibilidade de cada demanda, preservado na escala de 0 a 1: quanto maior, maior a prioridade. Sem resumo registrado, o valor fica não informado; demandas com restrição não constam do resumo.</p>
     <div class="fase-actions atributos-pesos-acoes"><button id="salvar-pesos-fase3" class="btn btn--primary" type="button"><i class="fas fa-floppy-disk"></i> Salvar pesos dos atributos</button></div>
   </div>
+
+  {% if fase3_ponderacao %}</section>{% endif %}
 
   {# ---- Templates de renderização (consumidos pelo JS da Priorização de demandas por atributos) ---- #}
 

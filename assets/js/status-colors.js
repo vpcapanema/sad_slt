@@ -62,6 +62,13 @@
       row: "#ffe0b2",
       halo: "rgba(230, 81, 0, 0.4)",
     },
+    hierarq_aguardando_complementacao: {
+      nome: "Em hierarquização: aguardando complementação de atributos",
+      bg: "#f3e8fd",
+      text: "#4a148c",
+      row: "#e1bee7",
+      halo: "rgba(74, 20, 140, 0.4)",
+    },
     hierarq_finalizada: {
       nome: "Hierarquização concluída",
       bg: "#e0f2f1",
@@ -141,6 +148,7 @@
       title: "Fase 2 — Hierarquização e ranqueamento",
       codes: [
         "hierarq_em_andamento",
+        "hierarq_aguardando_complementacao",
         "hierarq_finalizada",
         "hierarq_ranqueada",
         "hierarq_suspensa",
@@ -163,6 +171,7 @@
     [
       "analise_aprovada",
       "hierarq_em_andamento",
+      "hierarq_aguardando_complementacao",
       "hierarq_finalizada",
       "hierarq_ranqueada",
       "hierarq_suspensa",

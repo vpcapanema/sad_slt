@@ -44,5 +44,17 @@
     node.innerHTML = html;
     return node.textContent.trim();
   }
-  window.SLTTable = { inversion, bindFilter, matches, summary, paginate, values, sorting, plainText };
+  function headers(table) {
+    const grid=[];
+    [...(table.tHead?.rows || [])].forEach((row,r)=>{
+      grid[r] ||= []; let col=0;
+      [...row.cells].forEach(cell=>{
+        while(grid[r][col])col++;
+        for(let y=r;y<r+cell.rowSpan;y++){grid[y] ||= [];for(let x=col;x<col+cell.colSpan;x++)grid[y][x]=cell;}
+        col+=cell.colSpan;
+      });
+    });
+    return grid.at(-1)||[];
+  }
+  window.SLTTable = { inversion, bindFilter, matches, summary, paginate, values, sorting, plainText, headers };
 })();

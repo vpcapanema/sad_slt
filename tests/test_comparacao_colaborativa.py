@@ -160,6 +160,46 @@ def _ambiente_row(**extra) -> dict:
     return row
 
 
+@pytest.mark.parametrize("status", ["encerrada", "consolidada"])
+def test_reabre_julgamento_com_prazo_futuro_preservando_respostas(monkeypatch, status):
+    atual = _ambiente_row(status=status, total_respostas=1)
+    monkeypatch.setattr(repo, "get_ambiente_by_id", lambda _: dict(atual))
+    monkeypatch.setattr(repo, "list_ambientes", lambda: [atual])
+    monkeypatch.setattr(repo, "list_respostas", lambda _: [{"status": "enviada"}])
+    captured = {}
+    def update(_, data):
+        captured.update(data)
+        return {**atual, **data}
+    monkeypatch.setattr(repo, "update_ambiente", update)
+    result = service.atualizar_ambiente(AMBIENTE_ID, AmbienteColaborativoUpdateSchema(
+        reabrir=True, valido_ate="2035-12-31T23:59:59+00:00"))
+    assert result.status == "ativa"
+    assert result.total_respostas == 1
+    assert set(captured) == {"status", "valido_ate"}
+    with pytest.raises(DemandaValidationError):
+        service.atualizar_ambiente(AMBIENTE_ID, AmbienteColaborativoUpdateSchema(reabrir=True))
+    with pytest.raises(DemandaValidationError):
+        service.atualizar_ambiente(AMBIENTE_ID, AmbienteColaborativoUpdateSchema(
+            reabrir=True, valido_ate="2020-01-01T00:00:00+00:00"))
+
+
+def test_prazo_vencido_inalterado_nao_bloqueia_edicao_mas_novo_prazo_passado_explica(monkeypatch):
+    vencido = datetime(2020, 5, 10, 2, 59, 59, tzinfo=timezone.utc)
+    atual = _ambiente_row(status="ativa", valido_ate=vencido)
+    monkeypatch.setattr(repo, "get_ambiente_by_id", lambda _: dict(atual))
+    monkeypatch.setattr(repo, "list_respostas", lambda _: [])
+    captured = {}
+    monkeypatch.setattr(repo, "update_ambiente", lambda _, data: captured.update(data) or {**atual, **data})
+    service.atualizar_ambiente(AMBIENTE_ID, AmbienteColaborativoUpdateSchema(
+        nome="Renomeado", valido_ate=vencido.isoformat()))
+    assert captured == {"nome": "Renomeado"}
+    with pytest.raises(DemandaValidationError) as erro:
+        service.atualizar_ambiente(AMBIENTE_ID, AmbienteColaborativoUpdateSchema(
+            valido_ate="2021-03-01T02:59:59+00:00"))
+    assert "28/02/2021" in str(erro.value)
+    assert erro.value.field == "valido_ate" and "Data limite" in erro.value.sugestao
+
+
 def test_atualiza_todos_os_campos_da_configuracao_do_preenchimento(monkeypatch) -> None:
     atual = _ambiente_row(config_tipo="portfolio", config_id=HIERARQUIZACAO_ID, total_respostas=0)
     captured: dict = {}

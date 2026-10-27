@@ -9,10 +9,16 @@
   }
 
   async function request(path, options) {
-    const res = await fetch(path, options);
-    const body = await res.json().catch(() => null);
-    if (!res.ok) throw new Error(errorMessage(body));
-    return body;
+    const E = global.SicardApiErro;
+    const method = (options && options.method) || "GET";
+    let res;
+    try { res = await fetch(path, options); }
+    catch (e) { throw E ? E.deRede(e, { method, url: path }) : e; }
+    if (!res.ok) {
+      if (E) throw await E.deResposta(res, { method, url: path });
+      throw new Error(errorMessage(await res.json().catch(() => null)));
+    }
+    return res.json().catch(() => null);
   }
 
   async function createDemanda(payload, arquivoGeometria = null) {

@@ -58,38 +58,12 @@
     { caminho: "base-geoespacial", rotulo: "Base-Geoespacial" },
     { caminho: "superficies-indices", rotulo: "Superfícies-Índice" },
   ];
-  const FAVORABILIDADE = {
-    "superficies-indices/hierarquizacao/favorabilidade/Favorabilidade Rede Trechos pol.gpkg": { camada: "subtrechos", campo: "fav_rede_dim", classe: "fav_rede_classe" },
-    "superficies-indices/hierarquizacao/favorabilidade/favorabilidade_rede_trechos.gpkg": { camada: "subtrechos", campo: "fav_rede_dim" },
-    "superficies-indices/hierarquizacao/favorabilidade/indicadores_municipais.gpkg": { camada: "municipios", campo: "fav_territorial_dim" },
-  };
-  const FAVORABILIDADE_CORES = ["#440154", "#3b528b", "#21918c", "#5ec962", "#fde725"];
+  // Simbologia compartilhada com a prévia e a bancada (assets/js/favorabilidade-simbologia.js).
+  const Favorabilidade = window.FavorabilidadeSimbologia;
   const favorabilidadeClasses = new Map();
-  const FAVORABILIDADE_SEM_DADO = "#9ca3af";
-  const FAVORABILIDADE_GRADIENTE = `linear-gradient(90deg, ${FAVORABILIDADE_CORES.map((cor, i) => `${cor} ${i * 25}%`).join(", ")})`;
+  const FAVORABILIDADE_GRADIENTE = Favorabilidade.GRADIENTE;
   function favorabilidade(camada) {
-    const config = camada.fonte === "storage" ? FAVORABILIDADE[camada.arquivo] : null;
-    return config && (!camada.camada || camada.camada === config.camada) ? config : null;
-  }
-  function corFavorabilidade(proporcao) {
-    const posicao = proporcao * (FAVORABILIDADE_CORES.length - 1);
-    const indice = Math.min(Math.floor(posicao), FAVORABILIDADE_CORES.length - 2);
-    const canais = FAVORABILIDADE_CORES.slice(indice, indice + 2).map(cor => cor.slice(1).match(/../g).map(canal => parseInt(canal, 16)));
-    return `#${canais[0].map((canal, i) => Math.round(canal + (posicao - indice) * (canais[1][i] - canal)).toString(16).padStart(2, "0")).join("")}`;
-  }
-  function paradasFavorabilidade(classificacao) {
-    const limites = [...new Set([classificacao.min, ...classificacao.quebras, classificacao.max])];
-    if (limites.length === 1) return [[0, corFavorabilidade(.5)], [1, corFavorabilidade(.5)]];
-    const intervalos = limites.length - 1;
-    // Inclui as inflexões de Jenks e da paleta, sem saturar valores dentro do intervalo observado.
-    const proporcoes = [...new Set([...limites.map((_, i) => i / intervalos), ...FAVORABILIDADE_CORES.map((_, i) => i / (FAVORABILIDADE_CORES.length - 1))])].sort((a, b) => a - b);
-    const paradas = proporcoes.map(proporcao => {
-      const posicao = proporcao * intervalos, indice = Math.min(Math.floor(posicao), intervalos - 1);
-      return [limites[indice] + (posicao - indice) * (limites[indice + 1] - limites[indice]), corFavorabilidade(proporcao)];
-    });
-    if (limites[0] > 0) paradas.unshift([0, FAVORABILIDADE_CORES[0]]);
-    if (limites[intervalos] < 1) paradas.push([1, FAVORABILIDADE_CORES[FAVORABILIDADE_CORES.length - 1]]);
-    return paradas;
+    return camada.fonte === "storage" ? Favorabilidade.identificar({ arquivo: camada.arquivo, camada: camada.camada }) : null;
   }
   async function carregarClassesFavorabilidade(camada) {
     const config = favorabilidade(camada);
@@ -101,19 +75,7 @@
     }
     favorabilidadeClasses.delete(camada.id);
     renderLegend();
-    let response = await fetch(`${API}/bancada-arquivos/preparar`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: camada.id, arquivo: camada.arquivo }) });
-    const meta = await response.json();
-    if (!response.ok) throw new Error(meta.detail || "Não foi possível ler a revisão da superfície.");
-    response = await fetch(`${API}/bancada-arquivos/classificacao`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ camada_id: camada.id, arquivo: camada.arquivo, revisao: meta.revisao, campo: config.campo, metodo: "jenks", classes: 5, dominio: [0, 1] }) });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.detail || "Não foi possível calcular as classes Jenks.");
-    if (data.metodo !== "jenks" || data.campo !== config.campo || !Number.isInteger(data.classes) || data.classes < 1 || data.classes > 5 ||
-        !Number.isFinite(data.min) || !Number.isFinite(data.max) || data.min < 0 || data.max > 1 || data.min > data.max ||
-        !Array.isArray(data.quebras) || data.quebras.length !== data.classes - 1 ||
-        data.quebras.some((valor, i) => !Number.isFinite(valor) || valor <= data.min || valor > data.max || (i > 0 && valor <= data.quebras[i - 1]))) {
-      throw new Error("A classificação Jenks retornou limites inválidos para a superfície.");
-    }
-    favorabilidadeClasses.set(camada.id, data);
+    favorabilidadeClasses.set(camada.id, await Favorabilidade.obterClassificacao({ id: camada.id, arquivo: camada.arquivo, campo: config.campo }, { fetch }));
     renderLegend();
   }
   function aplicarFavorabilidade(camada) {
@@ -121,22 +83,11 @@
     if (!config || !info) return;
     const classificacao = favorabilidadeClasses.get(camada.id);
     if (!classificacao) throw new Error("A classificação da superfície ainda não está disponível.");
-    const paradas = config.classe ? [] : paradasFavorabilidade(classificacao);
-    const valor = ["number", ["get", config.campo], -1];
-    const color = config.classe ? ["match", ["downcase", ["to-string", ["get", config.classe]]],
-      "muito baixa", "#440154", "baixa", "#3b528b", ["média", "media", "moderada"], "#21918c",
-      "alta", "#5ec962", "muito alta", "#fde725", "#808080"] : ["case",
-      ["==", ["get", "slt_geometria_valida"], false], "#dc2626",
-      ["all", [">=", valor, 0], ["<=", valor, 1]],
-      ["interpolate", ["linear"], valor, ...paradas.flat()],
-      FAVORABILIDADE_SEM_DADO,
-    ];
+    const color = Favorabilidade.expressaoCor(config, config.classe ? null : classificacao);
     const [fillId, lineId, pointId] = info.mapLayerIds;
     if (map.getLayer(fillId)) {
       map.setPaintProperty(fillId, "fill-color", color);
-      map.setPaintProperty(fillId, "fill-outline-color", "rgba(0, 0, 0, 0)");
-      map.setPaintProperty(fillId, "fill-opacity", 1);
-      map.setPaintProperty(fillId, "fill-antialias", false);
+      for (const [propriedade, valor] of Object.entries(Favorabilidade.PREENCHIMENTO)) map.setPaintProperty(fillId, propriedade, valor);
     }
     if (map.getLayer(lineId)) {
       map.setPaintProperty(lineId, "line-color", color);
@@ -202,16 +153,14 @@
     const rows = [...registro.values()].filter((camada) => layerShown(camada)).map((camada) => {
       const thematic = favorabilidade(camada);
       if (thematic?.classe) {
-        const labels = ["Muito alta", "Alta", "Média", "Baixa", "Muito baixa"];
-        const colors = [...FAVORABILIDADE_CORES].reverse();
-        return `<div class="geo-legend-categories" style="display:grid;gap:.4rem" data-campo="${thematic.classe}"><strong>${escapeHtml(displayName(camada))}</strong><span class="geo-legend-field">Classe de favorabilidade</span>${labels.map((label,i) => `<div class="geo-legend-item"><span class="geo-legend-symbol geo-legend-symbol--polygon" style="--legend-color:${colors[i]};--legend-opacity:100%;--legend-width:0px"></span><span>${label}</span></div>`).join("")}</div>`;
+        const dados = Favorabilidade.legenda(thematic);
+        return `<div class="geo-legend-categories" style="display:grid;gap:.4rem" data-campo="${thematic.classe}"><strong>${escapeHtml(displayName(camada))}</strong><span class="geo-legend-field">${dados.titulo}</span>${dados.itens.map(({ rotulo, cor }) => `<div class="geo-legend-item"><span class="geo-legend-symbol geo-legend-symbol--polygon" style="--legend-color:${cor};--legend-opacity:100%;--legend-width:0px"></span><span>${rotulo}</span></div>`).join("")}</div>`;
       }
       if (thematic) {
         const classificacao = favorabilidadeClasses.get(camada.id);
         if (!classificacao) return `<div class="geo-legend-continuous" data-campo="${thematic.campo}"><strong>${escapeHtml(displayName(camada))}</strong><span role="status">Preparando rampa contínua…</span></div>`;
-        const paradas = paradasFavorabilidade(classificacao);
-        const gradiente = `linear-gradient(0deg, ${paradas.map(([valor, cor]) => `${cor} ${valor * 100}%`).join(", ")})`;
-        return `<div class="geo-legend-continuous" data-campo="${thematic.campo}"><strong>${escapeHtml(displayName(camada))}</strong><span class="geo-legend-field">Índice por dimensões · ${thematic.campo}</span><div class="geo-legend-raster"><div class="geo-legend-ramp" role="img" aria-label="Índice de favorabilidade: rampa contínua de 0 a 1, com contraste Jenks" style="background:${gradiente}"></div><div class="geo-legend-scale"><span>1 · Maior</span><span>0,75</span><span>0,5</span><span>0,25</span><span>0 · Menor</span></div></div><span class="geo-legend-field">Rampa contínua; contraste Jenks calculado na camada inteira. Referência provisória; pesos iguais entre dimensões.</span></div>`;
+        const dados = Favorabilidade.legenda(thematic, classificacao);
+        return `<div class="geo-legend-continuous" data-campo="${thematic.campo}"><strong>${escapeHtml(displayName(camada))}</strong><span class="geo-legend-field">${dados.titulo}</span><div class="geo-legend-raster"><div class="geo-legend-ramp" role="img" aria-label="Índice de favorabilidade: rampa contínua de 0 a 1, com contraste Jenks" style="background:${dados.gradiente}"></div><div class="geo-legend-scale">${dados.escala.map(rotulo => `<span>${rotulo}</span>`).join("")}</div></div><span class="geo-legend-field">Rampa contínua; contraste Jenks calculado na camada inteira. Referência provisória; pesos iguais entre dimensões.</span></div>`;
       }
       const symbol = geometryType(camada), style = GeoespacialMap.getLayerStyle(camada.id); return `<div class="geo-legend-item"><span class="geo-legend-symbol geo-legend-symbol--${symbol}" style="--legend-color:${style.fillColor || style.color};--legend-opacity:${Math.round(style.fillOpacity * 100)}%;--legend-width:${style.lineWidth}px;--legend-radius:${style.pointRadius}px"></span><span>${escapeHtml(displayName(camada))}</span></div>`;
     }).join("");

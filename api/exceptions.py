@@ -12,9 +12,10 @@ class DatabaseUnavailableError(SLTError):
 class DemandaValidationError(SLTError):
     """Payload ou regra de negócio inválida."""
 
-    def __init__(self, message: str, *, field: str | None = None) -> None:
+    def __init__(self, message: str, *, field: str | None = None, sugestao: str | None = None) -> None:
         super().__init__(message)
         self.field = field
+        self.sugestao = sugestao
 
 
 class DemandaNotFoundError(SLTError):

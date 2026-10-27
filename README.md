@@ -101,6 +101,10 @@ perfil Analista, Gestor ou Admin, julgamento aberto, prazo vigente e versão
 atual do cadastro. Durante edição o envio fica bloqueado: primeiro salve as
 alterações. O envio usa o texto completo exibido e acrescenta, no servidor, o
 token de acesso de seis dígitos e suas instruções, sem abrir um aplicativo externo.
+O convite aceita o caminho atual `/public/analise-multicriterio/formulario-comparacao-pareada/{token}/`
+e o caminho legado `/public/analise-multicriterio/{token}/`, inclusive sob o
+prefixo `/sicard`. Ambos permitem habilitar o envio quando os demais requisitos
+do julgamento estiverem atendidos.
 
 Aplicar `database/137_email_convites_colaborativos.sql` e
 `database/138_token_acesso_julgamento.sql` antes de usar este fluxo.
@@ -940,9 +944,11 @@ Famílias: `/api/demandas`, `/api/planos`, `/api/programas`, `/api/dominios` e
 Na página `/restrict/complementacao/`, os dois fluxos são independentes.
 **Complementação de Dados Cadastrais e Geometria** mantém a tabela de demandas
 com status aguardando complementação e suas ações cadastrais e de geometria.
-**Complementação de Atributos de demanda** permanece visível: o usuário escolhe
-a hierarquização e, no contêiner abaixo, consulta a mesma tabela de atributos
-da Fase 3, limitada às suas demandas autorizadas. São reconhecidos os atributos
+**Complementação de Atributos de demanda** permanece visível: o administrador
+escolhe a hierarquização e suas demandas; o operador escolhe diretamente uma
+demanda da qual seja criador ou representante legal. No contêiner abaixo,
+consulta-se a mesma tabela de atributos da Fase 3, limitada às demandas
+autorizadas. São reconhecidos os atributos
 cadastrais já existentes, sem duplicá-los entre os atributos da matriz.
 Acima da tabela, o **Resumo da hierarquização** reproduz o resumo da Fase 3,
 inclui a data de criação e mantém o clique nas demandas para abrir seus detalhes.
@@ -965,8 +971,8 @@ A numeração é **1. Complementação de Dados Cadastrais e Geometria**, com
 (ou do tipo de demanda selecionado).
 A disponibilidade desses atributos não exige
 o status cadastral aguardando complementação; operadores continuam limitados à
-autoria ou representação do cadastro atual, e os perfis de análise e gestão
-mantêm seu acesso autorizado.
+autoria ou representação do cadastro atual. Analistas e gestores podem solicitar
+a coleta, mas a edição de demandas alheias nesse bloco exige perfil ADMIN.
 
 Os atributos abrem em consulta; **Editar**, **Confirmar** e **Cancelar** controlam
 a edição dos valores originais na tabela. Confirmar grava os atributos da matriz
@@ -1212,19 +1218,63 @@ tipados do backend.
 
 ### Solicitações de complementação de demanda
 
-A página `/restrict/complementacao/` lista pedidos abertos em
-`demandas.solicitacao_complementacao_demanda`, relacionados aos cadastros de
-projetos, programas e planos. O status da demanda não cria uma solicitação.
+A página `/restrict/complementacao/` separa os pedidos cadastrais/geometria
+abertos em `demandas.solicitacao_complementacao_demanda` das pendências de
+atributos na hierarquização. O segundo bloco também apresenta as pendências
+cuja solicitação por email foi adiada. O status não cria, sozinho, uma solicitação.
 
 Na análise, informe o tipo e o motivo antes de solicitar complementação:
 
 - `dados_cadastrais` e `geometria` podem compor o mesmo pedido e interrompem a
   análise cadastral; cada tipo precisa ser salvo antes da conclusão explícita.
 - `atributos_objeto` usa pedido separado e exige o código de uma hierarquização
-  que contenha o objeto. Não altera o status cadastral da demanda.
+  que contenha o objeto. Usa `hierarq_aguardando_complementacao`, sem reabrir
+  a avaliação nem utilizar `analise_aguardando_complementacao`.
 - Salvar mantém o pedido aberto. Concluir registra atendente/data e preserva o
   histórico. A retomada da análise exige que os pedidos cadastrais/geometria
   estejam concluídos. Atributos pendentes da matriz vigente impedem sua conclusão.
+
+Ao salvar uma hierarquização, cada demanda recebe os slots dos atributos da
+matriz enviada, com valores dinâmicos vazios, preservando-se os atributos
+nativos oficiais aplicáveis ao tipo. Se faltarem valores, o status de espera da
+hierarquização é registrado imediatamente. A escolha **Agora** cria os pedidos
+e tenta notificar o representante pelo email do cadastro; **Depois, na Fase 3**
+apenas adia o pedido e o email. O comando de solicitação da Fase 3 reutiliza
+`POST /api/complementacao/hierarquizacoes/{codigo}/solicitar`, com
+`{"descricao":"motivo da solicitação"}`.
+
+Tabela 2 da Fase 3 e complementação usam as mesmas colunas: Cadastro e Dinâmicos
+da matriz e do Configurador, sem duplicar atributos nativos. Risco é obtido da
+Fase 1 e não é preenchimento manual. A matriz prevalece em identificadores
+duplicados. Um marcador antigo de conclusão não oculta novos campos vazios.
+Ao salvar o último valor válido, a API conclui automaticamente por demanda,
+revalida os atributos e domínios, atende os pedidos do contexto e registra
+autoria/data. A demanda retorna a `hierarq_em_andamento` sem aprovação adicional;
+outra rodada ainda pendente mantém o status de espera. A gravação parcial mantém
+`hierarq_aguardando_complementacao`; não há botão adicional de conclusão.
+A rota `POST /api/complementacao/hierarquizacoes/{codigo}/demandas/{demanda_codigo}/concluir`
+permanece disponível para validar coletas anteriores ainda abertas.
+Edições de atributos, critérios ou pesos descartam imediatamente os resultados
+calculados da Fase 3 e da síntese, incluindo relatórios e ranking. A tela não
+exibe resultados anteriores: valores e pendências refletem a tabela vigente, e
+os índices ficam sem cálculo até nova execução. A Fase 1 descarta também o
+resultado da Fase 3 por fornecer o grupo Risco; alterações nas Fases 1 e 2
+descartam a síntese. O novo cálculo considera a rodada inteira.
+O cálculo usa os critérios enviados pela tabela atual, respeitando os pesos
+homologados. Escalas ordinais declaradas no campo Dado também são lidas; escalas
+ausentes não são inventadas. A síntese é bloqueada se os critérios ou escalas
+mudarem em relação ao último cálculo.
+O `GET` da tabela aceita `demanda_codigo` para restringir a seleção a uma única
+demanda autorizada; isso não substitui a validação de titularidade no servidor.
+
+**Pré-requisito de publicação:** aplicar a migração
+`146_dom_status_demanda_complementacao_hierarquizacao.sql`, já registrada no
+aplicador de banco. Ela adiciona o status, as transições dedicadas e o histórico
+JSON de notificação por pedido; sua presença no repositório não significa que
+tenha sido aplicada ao banco oficial. O envio é posterior à confirmação da
+transação do pedido. Falhas e destinatários ausentes são informados por demanda;
+aceitação SMTP não confirma entrega. Repetir a ação não reenvia mensagens já
+aceitas, indeterminadas ou ainda marcadas como em envio.
 
 A migração `140_solicitacoes_complementacao_tipos.sql` amplia a tabela existente,
 controla duplicidade por demanda/contexto e recupera os registros legados em

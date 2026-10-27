@@ -4,6 +4,8 @@ export function camadaVisivel(map,id){
   return false;
 }
 import { $, feedback } from './ui.js';
+// Simbologias temáticas (expressões MapLibre) não são uma cor de camada.
+const corSimples=valor=>typeof valor==='string'?valor:null;
 
 // Reutiliza o documento da bancada com seus módulos e estilos.
 export function criarMapa(aoMudarPainel) {
@@ -117,7 +119,7 @@ export function criarMapa(aoMudarPainel) {
     const app=context()?.gpApp;
     if(!ready||!app)return null;
     return app.state.layers.map(item=>({id:item.id,nome:item.nome,categoria:String(item.categoria||''),
-      color:item.tipo!=='raster'&&app.state.map.getLayer(item.id)?app.state.map.getPaintProperty?.(item.id,'fill-color'):null,visivel:camadaVisivel(app.state.map,item.id)}));
+      color:item.tipo!=='raster'&&app.state.map.getLayer(item.id)?corSimples(app.state.map.getPaintProperty?.(item.id,'fill-color')):null,visivel:camadaVisivel(app.state.map,item.id)}));
   }
   frame.addEventListener('load',connect);connect();
   function assertReady(ids=[]){

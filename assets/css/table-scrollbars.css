@@ -1,0 +1,10 @@
+/* Tables scroll only when their content exceeds the available width. */
+body :is(div, section):has(> table) {
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #a8b5bf transparent;
+}
+body :is(div, section):has(> table)::-webkit-scrollbar { width: 6px; height: 6px; }
+body :is(div, section):has(> table)::-webkit-scrollbar-track { background: transparent; }
+body :is(div, section):has(> table)::-webkit-scrollbar-thumb { background: #a8b5bf; border-radius: 6px; }
+body :is(div, section):has(> table)::-webkit-scrollbar-thumb:hover { background: #718391; }

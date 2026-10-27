@@ -8,7 +8,7 @@
 {% block estilos_pagina %}
 <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
 <link rel="stylesheet" href="/assets/css/admin-analysis-layout.css">
-<link rel="stylesheet" href="/assets/css/complementacao.css?v=20261024-solicitacoes">
+<link rel="stylesheet" href="/assets/css/complementacao.css?v=20261027-ciclos-independentes">
 <link rel="stylesheet" href="/assets/css/atributos-objetos.css">
 <link rel="stylesheet" href="/assets/css/fase1-execucao.css">
 <link rel="stylesheet" href="/assets/vendor/leaflet/leaflet.css">
@@ -20,7 +20,7 @@
 <main class="conteudo-principal app-main admin-main">
   <section class="secao-complementacao-introducao card card-complementacao-introducao standard-page-hero" aria-labelledby="complementacao-title">
     <h1 class="standard-page-hero__title" id="complementacao-title">Complementação de cadastro</h1>
-    <p class="standard-page-hero__description">Atenda às solicitações de dados cadastrais, geometria e atributos de objeto de demanda.</p>
+    <p class="standard-page-hero__description">Dois fluxos independentes: 1. Cadastro e geometria, para retomada da análise cadastral; 2. Atributos da hierarquização, para retomada da priorização na Fase 3.</p>
   </section>
   {% set modo_complementacao = true %}
   {% include "componentes/tabela_demandas.html" %}
@@ -42,14 +42,18 @@
   <p id="complementacao-status" class="complementacao-status" aria-live="polite"></p>
   <section id="complementacao-atributos" class="secao-complementacao-atributos card-complementacao-atributos-principal card admin-card standard-table-section" aria-labelledby="complementacao-atributos-titulo">
     <div class="admin-card-body">
-      <h2 id="complementacao-atributos-titulo">2. Complementação de Atributos de demanda</h2>
-      <p class="field-help">Selecione a hierarquização para atender às solicitações de atributos dos objetos de demanda, independentemente do status cadastral. Os atributos do cadastro também serão atualizados no cadastro oficial.</p>
+      <h2 id="complementacao-atributos-titulo">2. Atributos da hierarquização — Fase 3</h2>
+      <p class="field-help">Este fluxo não depende da situação da análise cadastral nem do recebimento de e-mail. Preencha os grupos Cadastro e Dinâmicos da tabela 2 da Fase 3. Os atributos cadastrais também serão atualizados no cadastro oficial. Ao salvar o último valor válido, a conclusão e o status são atualizados automaticamente, respeitando pendências em outras rodadas. Risco é resultado da Fase 1 e não é preenchido manualmente.</p>
       <div id="complementacao-pedidos-atributos" aria-live="polite"></div>
       <div class="form-field">
-        <label for="complementacao-hierarquizacao">Hierarquização</label>
+        <label for="complementacao-hierarquizacao" id="complementacao-seletor-label">Demanda autorizada</label>
         <select id="complementacao-hierarquizacao" disabled><option value="">Carregando hierarquizações…</option></select>
       </div>
-      <p id="complementacao-sem-atributos" class="field-help hidden">Nenhuma solicitação de atributos está pendente para seu usuário.</p>
+      <div class="form-field hidden" id="complementacao-demanda-filtro">
+        <label for="complementacao-demanda">Demanda da hierarquização</label>
+        <select id="complementacao-demanda" disabled><option value="">Todas as demandas autorizadas</option></select>
+      </div>
+      <p id="complementacao-sem-atributos" class="field-help hidden">Nenhuma pendência de atributos da hierarquização está disponível para seu usuário.</p>
       <button type="button" id="complementacao-atributos-recarregar" class="btn btn-secondary hidden">Tentar novamente</button>
       <div id="complementacao-atributos-container" class="card-complementacao-atributos hidden">
         <section class="secao-complementacao-resumo" aria-labelledby="complementacao-resumo-titulo">
@@ -65,9 +69,10 @@
           </div>
           <div class="standard-table-actions" role="group" aria-label="Ações dos atributos da demanda">
             <button type="button" class="admin-icon-btn edit" id="complementacao-atributos-editar" title="Editar atributos" aria-label="Editar atributos" disabled><i class="fas fa-pen" aria-hidden="true"></i></button>
-            <button type="submit" class="admin-icon-btn save" id="complementacao-atributos-confirmar" title="Confirmar atributos" aria-label="Confirmar atributos" disabled><i class="fas fa-check" aria-hidden="true"></i></button>
+            <button type="submit" class="admin-icon-btn save" id="complementacao-atributos-confirmar" title="Salvar atributos (não conclui a complementação)" aria-label="Salvar atributos" disabled><i class="fas fa-check" aria-hidden="true"></i></button>
             <button type="button" class="admin-icon-btn" id="complementacao-atributos-cancelar" title="Cancelar edição dos atributos" aria-label="Cancelar edição dos atributos" disabled><i class="fas fa-xmark" aria-hidden="true"></i></button>
           </div>
+          <div id="complementacao-concluir-demandas" aria-label="Conclusão individual das demandas"></div>
           <div class="admin-table-footer">
             <label class="demandas-page-size" for="complementacao-atributos-page-size">
               <span>Linhas por página</span>
@@ -92,6 +97,7 @@
 {% endblock %}
 {% block scripts_pagina %}
   <script src="/assets/js/table-standard.js?v=20261015-fontes-ordem"></script>
+<script src="/assets/js/api-erro.js?v=20261027"></script>
 <script src="/assets/js/admin-api.js"></script>
 <script src="/assets/js/admin-auth.js"></script>
 <script src="/assets/js/sigma-read.js"></script>
@@ -105,7 +111,7 @@
 <script src="/assets/js/objeto-detalhe.js"></script>
 <script src="/assets/js/resumo-fase.js?v=20261020-data-criacao"></script>
 <script src="/assets/js/input-masks.js?v=20261020-unidades"></script>
-<script src="/restrict/hierarquizacao/js/atributos-objetos.js?v=20261025-criterios-risco"></script>
-<script src="/assets/js/complementacao.js?v=20261024-solicitacoes"></script>
+<script src="/restrict/hierarquizacao/js/atributos-objetos.js?v=20261027-contrato-atributos"></script>
+<script src="/assets/js/complementacao.js?v=20261027-status-automatico"></script>
 <script src="/restrict/demandas.js?v=20261015-fontes-ordem"></script>
 {% endblock %}

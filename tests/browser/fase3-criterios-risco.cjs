@@ -120,9 +120,10 @@ const objeto = (codigo, indice, executada = true) => ({
         {cabecalho_objeto: {codigo: 'D-6', atributos: {}}, hierarquizacao: {fase_1: {executada: true, resumo_elegibilidade: null}}},
       );
       await window.AtributosObjetos.render(h, {colunas: cols, dominios: []});
-      return window.AtributosObjetos.atributosAusentes(h).map(o => o.atributos.length);
+      return window.AtributosObjetos.atributosAusentes(h).map(o => [o.atributos.length, o.riscos.length]);
     }, [hierarquizacao, colunas]);
-    assert.deepEqual(semFase1, [1, 1, 1, 1, 2, 2]);
+    assert.deepEqual(semFase1, [[1, 0], [1, 0], [1, 0], [1, 0], [1, 1], [1, 1]],
+      'risco ausente exige resultado da Fase 1, não complementação manual');
 
     const invariancia = await page.evaluate(async ([h, cols]) => {
       h.dados_hierarquizacao.objetos = h.dados_hierarquizacao.objetos.slice(0, 1);

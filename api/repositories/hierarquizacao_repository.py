@@ -4,6 +4,7 @@ from __future__ import annotations
 from api.services.extracao_ogr import reproject as _gdal_reproject
 
 import json
+from copy import deepcopy
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
@@ -13,6 +14,9 @@ from psycopg import sql
 from psycopg.types.json import Jsonb
 
 from api.db.connection import get_connection, commit_unless_atomic
+from api.constants import STATUS_EM_HIERARQUIZACAO, STATUS_HIERARQUIZACAO_COMPLEMENTACAO, STATUS_UNIVERSO_AHP
+from api.exceptions import DemandaValidationError
+from api.services.atributos_hierarquizacao import atualizar_cadastrais, colunas_da_hierarquizacao, pendencias
 
 _TABLE = sql.Identifier("hierarquizacao_demandas", "hierarquizacao_portfolio")
 
@@ -107,24 +111,49 @@ def _prepare(key: str, value: Any) -> Any:
 
 
 def insert(data: dict[str, Any], *, status_transicao: dict[str, Any] | None = None) -> dict[str, Any]:
+    data = deepcopy(data)
     columns = list(data.keys())
     query = sql.SQL("INSERT INTO {table} ({cols}) VALUES ({vals}) RETURNING id").format(
         table=_TABLE,
         cols=sql.SQL(", ").join(sql.Identifier(c) for c in columns),
         vals=sql.SQL(", ").join(sql.Placeholder(c) for c in columns),
     )
-    params = {k: _prepare(k, v) for k, v in data.items()}
     with get_connection() as conn:
+        if status_transicao:
+            ids = [i for i in status_transicao.get("ids", []) if i]
+            schema, table = status_transicao["tabela"]
+            cadastros = conn.execute(
+                sql.SQL("SELECT * FROM {} WHERE id=ANY(%s::uuid[]) ORDER BY id FOR UPDATE").format(
+                    sql.Identifier(schema, table)), (ids,),
+            ).fetchall() if ids else []
+            por_id = {str(c["id"]): c for c in cadastros}
+            from api.repositories import dominio_repository
+            dominios = dominio_repository.list_atributos_objeto()
+            colunas = colunas_da_hierarquizacao(data)
+            for objeto in (data.get("dados_hierarquizacao") or {}).get("objetos", []):
+                cab = objeto["cabecalho_objeto"]
+                cadastro = por_id.get(str(cab.get("demanda_id")))
+                if not cadastro:
+                    raise DemandaValidationError("Demanda do agrupamento não encontrada.", field="grupo_demanda_id")
+                if cadastro["status"] not in STATUS_UNIVERSO_AHP:
+                    raise DemandaValidationError("A demanda não está disponível para hierarquização.", field="status")
+                atualizar_cadastrais(cab, cadastro)
+                faltantes = pendencias(cab, colunas, dominios)
+                destino = STATUS_HIERARQUIZACAO_COMPLEMENTACAO if faltantes else STATUS_EM_HIERARQUIZACAO
+                # Uma nova rodada nao conclui pendencias abertas de outra rodada.
+                if cadastro["status"] == STATUS_HIERARQUIZACAO_COMPLEMENTACAO:
+                    destino = STATUS_HIERARQUIZACAO_COMPLEMENTACAO
+                cab["status"] = destino
+                cab["complementacao_atributos"] = {"pendencias": faltantes, "concluida": not faltantes}
+                conn.execute(
+                    sql.SQL("UPDATE {} SET status=%s WHERE id=%s").format(sql.Identifier(schema, table)),
+                    (destino, cadastro["id"]),
+                )
+        params = {k: _prepare(k, v) for k, v in data.items()}
         inserted = conn.execute(query, params).fetchone()
         if not inserted:
             raise RuntimeError("Insert de hierarquização não retornou id.")
-        if status_transicao:
-            ids = [i for i in status_transicao.get("ids", []) if i]
-            if ids:
-                schema, table = status_transicao["tabela"]
-                q = sql.SQL("UPDATE {tbl} SET status=%s WHERE id=ANY(%s::uuid[]) AND status=%s").format(tbl=sql.Identifier(schema, table))
-                conn.execute(q, (status_transicao["para"], ids, status_transicao["de"]))
-        conn.commit()
+        commit_unless_atomic(conn)
     found = get_by_id(inserted["id"])
     if not found:
         raise RuntimeError("Hierarquização inserida mas não recuperada.")
@@ -216,8 +245,8 @@ def _liberar_demandas_universo(conn: Any, transicao: dict[str, Any]) -> None:
             liberaveis.append(demanda_id)
     if liberaveis:
         conn.execute(
-            sql.SQL("UPDATE {tbl} SET status = %s WHERE id = ANY(%s::uuid[]) AND status = %s").format(tbl=tbl),
-            (transicao["para"], liberaveis, transicao["de"]),
+            sql.SQL("UPDATE {tbl} SET status = %s WHERE id = ANY(%s::uuid[]) AND status = ANY(%s::text[])").format(tbl=tbl),
+            (transicao["para"], liberaveis, [transicao["de"], *transicao.get("de_adicionais", [])]),
         )
 
 

@@ -3,7 +3,10 @@
 
   async function getJson(path) {
     const response = await fetch(path, { credentials: "include" });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    if (!response.ok) {
+      if (window.SicardApiErro) throw await window.SicardApiErro.deResposta(response, { method: "GET", url: path });
+      throw new Error(`Falha ao consultar ${path} (HTTP ${response.status})`);
+    }
     return response.json();
   }
 

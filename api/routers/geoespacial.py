@@ -902,7 +902,11 @@ def _erro_pasta_storage(exc: Exception) -> HTTPException:
     if isinstance(exc, StorageIndisponivel):
         return HTTPException(502, str(exc))
     logger.exception("Falha na operação de pasta do storage")
-    return HTTPException(500, "Não foi possível concluir a operação no storage")
+    from api.error_handlers import sanitizar
+    return HTTPException(
+        500,
+        f"Falha na operação de pasta do storage: {type(exc).__name__}: {sanitizar(exc, 300) or 'sem mensagem'}",
+    )
 
 
 @router.get("/storage/pastas")

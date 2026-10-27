@@ -88,6 +88,30 @@ def test_preserva_texto_acrescenta_token_e_nao_repete_apos_recarga(ambiente, smt
     smtp.assert_called_once()
 
 
+def test_reenvio_explicito_preserva_historico_e_idempotencia(ambiente, smtp, monkeypatch):
+    rows = {}
+    def reservar(ambiente_id, destinatario, resumo, mensagem_id, usuario_id, versao):
+        if resumo in rows:
+            return rows[resumo], False
+        row = dict(id=str(uuid4()), conteudo_hash=resumo, mensagem_id=mensagem_id)
+        rows[resumo] = row
+        return row, True
+    def finalizar(ident, status, detalhe, **kwargs):
+        row = next(r for r in rows.values() if r['id'] == ident)
+        row['envio_status'] = status
+        return row
+    monkeypatch.setattr(repo, 'reservar', reservar)
+    monkeypatch.setattr(repo, 'finalizar', finalizar)
+    original = service.enviar(ambiente['id'], payload(ambiente), 'analista')
+    resend = payload(ambiente, reenvio_id=str(uuid4()))
+    novo = service.enviar(ambiente['id'], resend, 'analista')
+    assert original['id'] != novo['id']
+    assert len(rows) == 2
+    assert service.enviar(ambiente['id'], resend, 'analista')['reutilizado']
+    assert smtp.call_count == 2
+    assert smtp.call_args_list[0].args[0].texto == smtp.call_args_list[1].args[0].texto
+
+
 def test_convite_com_link_antigo_continua_valido(ambiente, smtp, registros):
     dados = payload(ambiente, texto="https://example.com/sicard/public/analise-multicriterio/token-teste/")
     assert service.enviar(ambiente["id"], dados, "analista")["envio_status"] == "aceito_smtp"
