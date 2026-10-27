@@ -274,7 +274,7 @@ def _estatisticas(valores: list[tuple[float, float]]) -> dict[str, Any]:
 
 
 def _fase2_da_demanda(linha: dict[str, Any], camadas: dict[str, str], execucao: dict[str, Any],
-                      anterior: dict[str, Any]) -> dict[str, Any]:
+                      anterior: dict[str, Any], *, agregacao: dict | None = None) -> dict[str, Any]:
     extracao: dict[str, list] = {'grade': [], 'rede': []}
     for s in linha['sobreposicoes']:
         fav = s['favorabilidade']
@@ -292,6 +292,13 @@ def _fase2_da_demanda(linha: dict[str, Any], camadas: dict[str, str], execucao: 
     # O índice por dimensão só é registrado quando há um único valor válido; não se agrega sem regra metodológica.
     unicos = {dim: next((e['indice'] for e in itens if e['estado_indice'] == 'valido'), None)
               if sum(e['estado_indice'] == 'valido' for e in itens) == 1 else None for dim, itens in extracao.items()}
+    if agregacao is not None:
+        from api.services.agregacao_favorabilidade import valores_linha
+        unicos = valores_linha(linha, agregacao)
+        f2['agregacao'] = {**agregacao, 'unidade': '%' if agregacao['medida'] == 'cv' else 'índice',
+                           'ponderacao': 'sem ponderação por área'}
+    else:
+        f2.pop('agregacao', None)
     f2['valor_por_dimensao'] = dict(unicos)
     f2['indice_favorabilidade_grade'], f2['indice_favorabilidade_rede'] = unicos['grade'], unicos['rede']
     f2['score_fase2'] = ((unicos['grade'] + unicos['rede']) / 2
@@ -299,7 +306,7 @@ def _fase2_da_demanda(linha: dict[str, Any], camadas: dict[str, str], execucao: 
     return f2
 
 
-def registrar_resultado_por_demanda(codigo: str, fase: int, resultado: dict, dono) -> dict[str, Any]:
+def registrar_resultado_por_demanda(codigo: str, fase: int, resultado: dict, dono, *, agregacao: dict | None = None) -> dict[str, Any]:
     """Grava o resultado de cada demanda (Fases 1 e 2) em dados_hierarquizacao, no contrato lido pela Fase 3 e pela síntese."""
     from api.services import elegibilidade_relatorio, extracao_atributos_aliases as aliases
     from api.db.connection import atomic_connection
@@ -331,7 +338,7 @@ def registrar_resultado_por_demanda(codigo: str, fase: int, resultado: dict, don
                 for sugestao in h['fase_1']['criterios_fase3_sugeridos']:
                     sugeridos[sugestao['atributo_id']] = sugestao
             else:
-                h['fase_2'] = _fase2_da_demanda(linha, camadas, execucao, h.get('fase_2') or {})
+                h['fase_2'] = _fase2_da_demanda(linha, camadas, execucao, h.get('fase_2') or {}, agregacao=agregacao)
         if fase == 1:
             dados.setdefault('cabecalho_grupo', {})['criterios_fase3_sugeridos'] = list(sugeridos.values())
         remover_resultados_fase3(dados, incluir_fase3=fase == 1)

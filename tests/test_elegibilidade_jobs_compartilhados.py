@@ -56,7 +56,7 @@ def test_status_e_resultado_persistem_sem_memoria_do_worker(ambiente, monkeypatc
 
 
 @pytest.mark.parametrize('cancelar', [False, True])
-def test_favorabilidade_isola_namespace_preserva_cancelamento_e_registra_somente_a_fase2(ambiente, monkeypatch, cancelar):
+def test_favorabilidade_isola_namespace_sem_gravacao_automatica(ambiente, monkeypatch, cancelar):
     from api.services import hierarquizacao_service
     fase1, fase2, por_demanda = [], [], []
     def executar(payload, controle, *, analise):
@@ -87,9 +87,7 @@ def test_favorabilidade_isola_namespace_preserva_cancelamento_e_registra_somente
     estado = jobs.consultar(ident, 'autor', analise='favorabilidade')
     assert estado['status'] == ('cancelado' if cancelar else 'concluido')
     assert not fase1
-    assert len(fase2) == len(por_demanda) == (0 if cancelar else 1)
-    if not cancelar:
-        assert fase2[0][:2] == ('H', 2) and por_demanda[0][:2] == ('H', 2)
+    assert not fase2 and not por_demanda
 
 
 def test_cancelamento_recebido_por_outro_worker(ambiente, monkeypatch):
@@ -188,7 +186,7 @@ def test_registrar_saida_nao_oculta_storage_indisponivel(ambiente, monkeypatch):
 
 
 @pytest.mark.parametrize('codigo', [None, 'HIER-TESTE'])
-def test_conclusao_vincula_somente_entradas_de_hierarquizacao(ambiente, monkeypatch, codigo):
+def test_conclusao_nao_grava_na_hierarquizacao(ambiente, monkeypatch, codigo):
     from api.services import hierarquizacao_service
     chamadas = []
     resultado = {'arquivo': 'saidas-geoespaciais/resultado.gpkg', 'sha256': 'original',
@@ -202,13 +200,10 @@ def test_conclusao_vincula_somente_entradas_de_hierarquizacao(ambiente, monkeypa
     inicial = iniciar()
     ambiente[1].pop()()
     assert jobs.consultar(inicial['id'], 'autor')['status'] == 'concluido'
-    assert len(chamadas) == (1 if codigo else 0) and len(por_demanda) == (1 if codigo else 0)
-    if codigo:
-        assert chamadas[0] == (codigo, resultado, 'autor')
-        assert por_demanda[0] == (codigo, 1, resultado, 'autor')
+    assert not chamadas and not por_demanda
 
 
-def test_falha_ao_vincular_nao_oculta_saida_ja_gravada(ambiente, monkeypatch):
+def test_processamento_independe_da_gravacao_no_banco(ambiente, monkeypatch):
     from api.services import hierarquizacao_service
     resultado = {'arquivo': 'saidas-geoespaciais/resultado.gpkg', 'sha256': 'original',
                  'elegibilidade': {'hierarquizacao': 'HIER-TESTE'}}
@@ -219,6 +214,4 @@ def test_falha_ao_vincular_nao_oculta_saida_ja_gravada(ambiente, monkeypatch):
     inicial = iniciar()
     ambiente[1].pop()()
     final = jobs.consultar(inicial['id'], 'autor')
-    assert final['status'] == 'erro' and final['resultado']['arquivo'] == resultado['arquivo']
-    assert 'Banco indisponível' in final['erro'] and resultado['arquivo'] in final['erro']
-    assert 'sem repetir o cálculo' in final['erro']
+    assert final['status'] == 'concluido' and final['resultado']['arquivo'] == resultado['arquivo']

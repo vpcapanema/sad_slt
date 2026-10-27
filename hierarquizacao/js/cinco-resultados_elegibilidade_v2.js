@@ -1,3 +1,4 @@
+import {instalarRegistro} from './registrar-resultados-fase.js?v=20261027-finalizacao';
 import {post, base} from '../../geoespacial/extracao-atributos/api.js';
 import {el} from '../../geoespacial/extracao-atributos/ui.js';
 import {conclusaoSobreposicao} from './elegibilidade-conclusao.js?v=1';
@@ -150,19 +151,25 @@ export function criarResultados({avisar, aoOcupar}) {
     resumirSelecao(visiveis); controles();
   }
 
+  const controleRegistro = instalarRegistro({node, rota:ROTA, payload, operar, informar, fase:1});
+
   function controles() {
     const bloqueado = ocupado || externo;
     node('vazio').hidden = Boolean(modelo);
+    node('relatorios').hidden = !modelo;
     node('abrir').setAttribute('aria-disabled', String(bloqueado));
     raiz.querySelectorAll('input,button,select').forEach(c => { c.disabled = bloqueado; });
     if (bloqueado) return;
     node('download').disabled = !modelo || gerandoPacote;
+    controleRegistro(modelo);
     node('limpar').disabled = !selecao.chave; node('enquadrar').disabled = !selecao.chave;
     const limites = tabela.limites();
     node('anterior').disabled = limites.anterior; node('proxima').disabled = limites.proxima;
   }
 
   function invalidar() {
+    node('relatorios').hidden = true;
+    controleRegistro(null);
     modelo = null; selecao = SELECAO_VAZIA; popupAtual = '';
     mapa.fecharPopup();
     node('revisados').checked = false; node('conteudo').hidden = true; node('download').disabled = true;
@@ -201,7 +208,7 @@ export function criarResultados({avisar, aoOcupar}) {
       ? 'Resultados conferidos. Os nomes foram salvos; o pacote inclui todas as demandas, independentemente da seleção em tela.'
       : `Resultados parciais: ${modelo.concluidas} de ${modelo.previstas} conjuntos de demandas. O relatório identificará essa condição.`;
     informar(modelo.relatorios_hierarquizacao?.length
-      ? `${mensagem} PDF gravado no Storage e associado ao Relatório da Fase 1 em Gestão das hierarquizações.` : mensagem);
+      ? `${mensagem} PDF gravado no Storage. Use Registrar resultados da fase para efetivar a Fase 1 na hierarquização.` : mensagem);
   }
 
   async function carregar(dados) {
@@ -283,9 +290,11 @@ export function criarResultados({avisar, aoOcupar}) {
   node('abrir').onclick = event => {
     event.preventDefault();
     operar(async () => {
+      const codigo = document.getElementById('ev-hierarquizacao')?.value || modelo?.entradas?.[0]?.hierarquizacao || 'HIER-20261019-183457-93E7';
       const arquivo = await escolherArquivo({
         title: 'Selecionar análise de elegibilidade já realizada',
         raiz: 'saidas-geoespaciais', extensoes: ['gpkg'], validar: false, somenteReferencias: true,
+        pastaInicial: `saidas-geoespaciais/hierarquizacoes/${codigo}/fase-1`,
       });
       if (!arquivo) return;
       informar('Lendo e conferindo o resultado da análise selecionada no storage…');

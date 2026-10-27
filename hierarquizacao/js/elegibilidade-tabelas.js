@@ -51,6 +51,7 @@ export function criarResumoResultados({node, selecionar, controles, avisar, aoSa
   let linhas = [], pagina = 0, chave = '', entrada = null, geracao = 0;
   let editando = null, ocupado = false, bloqueado = false, tipo = '';
   let cabecalho = null, registros = new Map(), ordem = new Map(), tabelaValida = true;
+  const selecionadas = new Set();
   const cadastro = new Map(), botao = acao => document.getElementById(`ev-resumo-${acao}`);
   const status = document.getElementById('ev-resumo-status');
   const atual = () => linhas.find(l => l.chave === chave);
@@ -74,7 +75,7 @@ export function criarResumoResultados({node, selecionar, controles, avisar, aoSa
   window.SLTDemandasGrupo.bindModalClosures();
   function atualizarControles() {
     const travado = bloqueado || ocupado || !tabelaValida, vinculada = cadastro.has(atual()?.codigo_demanda);
-    const visivel = tabelaValida && filtro.filtrar(linhas).some(l => l.chave === chave);
+    const visivel = tabelaValida && (!tabelaAgregada || selecionadas.size === 1) && filtro.filtrar(linhas).some(l => l.chave === chave);
     botao('visualizar').disabled = travado || Boolean(editando) || !visivel;
     botao('editar').disabled = travado || Boolean(editando) || !visivel || (!vinculada && !salvarNomeAnalise) || !window.SLTAdminAuth.can('operate');
     botao('editar').title = vinculada ? 'Editar nome da demanda no cadastro original' : salvarNomeAnalise
@@ -163,7 +164,7 @@ export function criarResumoResultados({node, selecionar, controles, avisar, aoSa
     const filtradas = tabelaValida ? filtro.filtrar(ordenarLinhas()) : [];
     const resultado = paginarResultados({prefixo:'ev-resumo', linhas:filtradas, pagina,
       mudar:p => { pagina = p; desenhar(); controles(); },
-      selecionada:l => l.chave === chave, total:linhas.length});
+      selecionada:l => tabelaAgregada ? selecionadas.has(l.chave) : l.chave === chave, total:linhas.length});
     pagina = resultado.page - 1;
     if (!tabelaValida) { node.replaceChildren(); atualizarControles(); return; }
     const head = el('thead'), titulos = el('tr'), body = el('tbody');
@@ -175,7 +176,7 @@ export function criarResumoResultados({node, selecionar, controles, avisar, aoSa
     head.append(titulos);
     for (const linha of resultado.rows) {
       const tr = tabelaAgregada ? registros.get(linha.chave).cloneNode(true) : el('tr');
-      tr.classList.toggle('ativo', linha.chave === chave);
+      tr.classList.toggle('ativo', tabelaAgregada ? selecionadas.has(linha.chave) : linha.chave === chave);
       tr.dataset.chave = linha.chave;
       tr.setAttribute('aria-selected', String(linha.chave === chave));
       if (!tabelaAgregada) colunas.forEach(c => {
@@ -202,19 +203,43 @@ export function criarResumoResultados({node, selecionar, controles, avisar, aoSa
         seletor.setAttribute('aria-label', `Selecionar demanda ${colunas[0].valor(linha)}`);
         seletor.onchange = () => selecionar(linha.chave);
         td.append(seletor); tr.prepend(td);
+      } else {
+        const td = el('td'), seletor = el('input');
+        td.className = 'evr-col-selecao'; seletor.type = 'checkbox'; seletor.className = 'row-select';
+        seletor.checked = selecionadas.has(linha.chave);
+        seletor.setAttribute('aria-label', `Selecionar demanda ${colunas[0].valor(linha)}`);
+        seletor.onchange = () => {
+          if (seletor.checked) { selecionadas.add(linha.chave); selecionar(linha.chave); }
+          else { selecionadas.delete(linha.chave); chave = [...selecionadas][0] || ''; }
+          desenhar();
+        };
+        td.append(seletor); tr.prepend(td);
       }
       body.append(tr);
     }
     if (!resultado.rows.length) {
       const tr = el('tr'), td = el('td', 'Nenhuma demanda encontrada para os filtros selecionados.');
-      td.colSpan = colunas.length + (tabelaAgregada ? 0 : 1); tr.append(td); body.append(tr);
+      td.colSpan = colunas.length + 1; tr.append(td); body.append(tr);
     }
     node.replaceChildren(cabecalho ? cabecalho.cloneNode(true) : head, body);
+    if (tabelaAgregada) {
+      const th = el('th'), todos = el('input');
+      th.className = 'evr-col-selecao'; th.scope = 'col'; todos.type = 'checkbox'; todos.className = 'row-select';
+      todos.setAttribute('aria-label', 'Selecionar todas as demandas filtradas');
+      todos.checked = Boolean(filtradas.length) && filtradas.every(l => selecionadas.has(l.chave));
+      todos.indeterminate = !todos.checked && filtradas.some(l => selecionadas.has(l.chave));
+      todos.onchange = () => {
+        filtradas.forEach(l => todos.checked ? selecionadas.add(l.chave) : selecionadas.delete(l.chave));
+        chave = [...selecionadas][0] || ''; desenhar();
+      };
+      th.append(todos); node.tHead.rows[0].prepend(th);
+    }
     atualizarControles();
   }
   return {
     atualizar(novaEntrada) {
       entrada = novaEntrada; const versao = ++geracao;
+      selecionadas.clear();
       cabecalho = null; registros.clear(); ordem.clear(); tabelaValida = !tabelaAgregada;
       editando = null; ocupado = false; cadastro.clear(); tipo = '';
       const bases = new Map(entrada.campos.map(c => [c.id, c]));
@@ -258,7 +283,13 @@ export function criarResumoResultados({node, selecionar, controles, avisar, aoSa
       }));
       pagina = 0; filtro.atualizar(colunas, linhas); desenhar();
     },
-    selecionar(novaChave) { if (!editando) chave = novaChave; desenhar(); },
+    selecionar(novaChave) {
+      if (!editando) {
+        chave = novaChave;
+        if (tabelaAgregada && !selecionadas.has(chave)) { selecionadas.clear(); selecionadas.add(chave); }
+      }
+      desenhar();
+    },
     controles(valor) { bloqueado = valor; atualizarControles(); },
   };
 }

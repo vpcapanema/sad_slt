@@ -1,8 +1,12 @@
 <section class="secao-elegibilidade-resultados ea-section ev2" id="cinco-resultados_elegibilidade_v2" aria-labelledby="ev2-title">
   <header class="ea-section-head"><span class="ea-number">5</span><h2 id="ev2-title">Resultados da Elegibilidade Territorial</h2></header>
   <div class="ea-section-body">
-    <p class="ea-hint">Esta seção lê as saídas gravadas do processamento, não a seleção atual das seções 1 e 2. A demanda é o objeto da análise; as camadas consultadas indicam presença de restrição, de risco, de ambos ou ausência de sobreposição. “Livre de restrições e riscos” se refere somente às bases utilizadas: não equivale a autorização de execução ou homologação.</p>
-    <p id="ev2-vazio" class="ea-hint">Nenhuma análise apresentada. Execute o cálculo na seção 4 ou <a id="ev2-abrir" href="#cinco-resultados_elegibilidade_v2">abra uma análise já realizada</a> selecionando seu GeoPackage de saída no Storage. Não é necessário repetir o cálculo para consultar um arquivo existente. Em caso de falha de leitura, tente carregar novamente; a ausência de resultados na tela não significa ausência de restrições ou riscos.</p>
+    <p class="ea-hint">Confira as restrições e os riscos identificados em cada demanda. Após a conferência, registre os resultados da fase.</p>
+    <div id="ev2-vazio" class="ev2-resultados-vazio">
+      <i class="fas fa-folder-open" aria-hidden="true"></i>
+      <div><h3>Consulte os resultados de uma análise</h3><p class="ea-hint">Execute o cálculo de elegibilidade na seção 4 ou abra uma análise já salva.</p></div>
+      <button id="ev2-abrir" class="ea-btn" type="button"><i class="fas fa-folder-open" aria-hidden="true"></i> Selecionar análise já realizada</button>
+    </div>
     <p id="ev2-status" class="ea-hint" role="status" aria-live="polite"></p>
     <button id="ev2-tentar" class="ea-btn" type="button" hidden>Tentar carregar resultados</button>
     <form id="ev2-aliases" class="ev2-aliases" hidden>
@@ -77,9 +81,34 @@
       </section>
       <details class="ev2-metodologia"><summary>Como a análise foi feita</summary><p id="ev2-metodologia" class="ea-hint"></p></details>
     </div>
-    <footer class="ev2-download">
-      <p class="ea-hint"><strong>5.4 — Relatório, rastreabilidade e próximos passos</strong><br>Após confirmar os nomes, baixe o pacote com PDF, tabelas Excel e CSV, GeoPackages, metadados e guia de leitura. São incluídas todas as demandas das entradas concluídas, independentemente dos filtros. A planilha distingue a situação de todas as demandas do detalhe por ocorrência; o Resumo da Elegibilidade inclui somente demandas sem restrição e pode estar vazio. As tabelas preservam a precisão numérica disponível e trazem identificadores para conferir demandas e feições com nomes iguais; contato sem área permanece zero, não ausência. O PDF informa o alcance da análise e identifica cada execução; os metadados permitem conferir PDF, camadas, tabelas e guia por SHA-256. Editar as tabelas não atualiza o SICARD: eventuais correções devem ser feitas na fonte e gerar nova execução, preservando o pacote original. Para entradas vinculadas a uma hierarquização, o PDF e a planilha de resumo também ficam associados ao relatório da Fase 1 em Gestão das hierarquizações. Confira as bases e as ocorrências antes de prosseguir à Fase 2 pela navegação superior; esta consulta não executa a fase seguinte.</p>
-      <button class="ea-btn ea-btn-primary" id="ev2-download" type="button" disabled>Baixar relatório e camadas (.zip)</button>
-    </footer>
+      <section class="secao-elegibilidade-finalizacao resultados-finalizacao" id="ev2-relatorios" aria-labelledby="ev2-finalizacao-titulo" hidden>
+        <header class="evr-titulo"><h3 id="ev2-finalizacao-titulo">5.4 — Registrar e exportar resultados</h3></header>
+        <div class="fv-finalizacao-corpo">
+          <p class="fv-finalizacao-intro">Conclua a conferência para registrar os resultados na hierarquização ou baixar os arquivos da análise.</p>
+          <div class="fv-finalizacao-grid">
+            <div class="fv-finalizacao-card">
+              <h4><i class="fas fa-floppy-disk" aria-hidden="true"></i> Registrar na hierarquização</h4>
+              <p>Grave os resultados de restrições e riscos de cada demanda na hierarquização. O processamento não será repetido.</p>
+              <p class="fv-finalizacao-nota">Confira os resultados e os nomes das camadas antes de registrar a fase.</p>
+              <div id="ev2-registro-acoes" class="fv-finalizacao-acoes"></div>
+            </div>
+            <div class="fv-finalizacao-card">
+              <h4><i class="fas fa-file-arrow-down" aria-hidden="true"></i> Baixar os arquivos da análise</h4>
+              <p>Receba o relatório em PDF, as planilhas e as camadas geográficas de todas as demandas processadas.</p>
+              <p class="fv-finalizacao-nota">O download inclui o Resumo da Elegibilidade e não registra resultados na hierarquização.</p>
+              <div class="fv-finalizacao-acoes"><button class="ea-btn" id="ev2-download" type="button" disabled><i class="fas fa-download" aria-hidden="true"></i> Baixar relatório e camadas (.zip)</button></div>
+            </div>
+          </div>
+          <details class="fv-finalizacao-detalhes">
+            <summary>Sobre os arquivos e os próximos passos</summary>
+            <ul>
+              <li>O pacote inclui PDF, Excel, CSV, GeoPackages e guia de leitura. Os filtros da tela não limitam o conteúdo exportado.</li>
+              <li>O Resumo da Elegibilidade inclui somente demandas sem restrição e pode estar vazio. As planilhas preservam a precisão dos valores calculados.</li>
+              <li>Editar os arquivos baixados não atualiza a hierarquização. Corrija os dados de origem e execute uma nova análise quando necessário.</li>
+              <li>Após registrar os resultados, utilize a navegação superior para continuar à fase seguinte.</li>
+            </ul>
+          </details>
+        </div>
+      </section>
   </div>
 </section>

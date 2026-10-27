@@ -67,8 +67,22 @@ def test_rota_fase1_serve_v2_sem_executor_legado(cliente):
 
 def test_fase2_mantem_titulo_e_texto_proprios_de_favorabilidade():
     html = Path("templates/paginas/hierarquizacao/fase2-favorabilidade.html").read_text(encoding="utf-8")
-    assert 'titulo-saida="Camadas de superfícies de favorabilidade de grade e da rede"' in html
+    assert 'titulo-saida="Camadas de superfícies de favorabilidade territorial e da rede"' in html
     assert "texto-saida-vazia" not in html
+
+
+@pytest.mark.parametrize("arquivo", [
+    "templates/paginas/hierarquizacao/fase2-favorabilidade.html",
+    "templates/paginas/hierarquizacao/fase2-favorabilidade-v2.html",
+    "templates/paginas/hierarquizacao/fase3-ajuste-fino.html",
+    "hierarquizacao/js/fase3.js",
+    "hierarquizacao/js/ranking-privado.js",
+    "hierarquizacao/js/elegibilidade-resultados.js",
+])
+def test_interface_usa_favorabilidade_territorial(arquivo):
+    conteudo = Path(arquivo).read_text(encoding="utf-8")
+    assert re.search(r"favorabilidade territorial", conteudo, re.I)
+    assert not re.search(r"favorabilidade\s+(?:de|da)\s+grade", conteudo, re.I)
 
 
 def test_componente_slt_usa_o_texto_parametrizado_e_o_botao_padrao():

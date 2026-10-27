@@ -66,7 +66,7 @@
       const indices = indicesObjeto(objeto, incluirPrioridade);
       return `<tr><td>${esc(cabecalho.nome || "Nome não informado")}</td><td>${formatar(indices.rede)}</td><td>${formatar(indices.grade)}</td><td>${formatar(indices.prioridade)}</td></tr>`;
     }).join("");
-    $("fase3-tabela-sintese").innerHTML = `<table class="fase-table fase3-sintese-table" aria-labelledby="fase3-sintese-titulo"><thead><tr><th>Objeto de demanda</th><th>Índice de favorabilidade de rede</th><th>Índice de favorabilidade de grade</th><th>Índice de prioridade</th></tr></thead><tbody>${linhas || '<tr><td colspan="4">A rodada não possui objetos.</td></tr>'}</tbody></table>`;
+    $("fase3-tabela-sintese").innerHTML = `<table class="fase-table fase3-sintese-table" aria-labelledby="fase3-sintese-titulo"><thead><tr><th>Objeto de demanda</th><th>Índice de favorabilidade de rede</th><th>Índice de favorabilidade territorial</th><th>Índice de prioridade</th></tr></thead><tbody>${linhas || '<tr><td colspan="4">A rodada não possui objetos.</td></tr>'}</tbody></table>`;
   }
 
   function restaurarConfiguracaoSintese(hierarquizacao) {

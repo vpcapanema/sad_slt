@@ -1,0 +1,42 @@
+/* Tabela agregada: mesmos controles, seletores e ritmo da Central de julgamentos. */
+.favorabilidade-v2 .fv-agregados-quadro { border: 1px solid #374151; border-radius: 8px; overflow: hidden; }
+.favorabilidade-v2 .fv-agregados-quadro > .admin-filter-bar {
+  height: 32px; min-height: 32px; box-sizing: border-box; flex-wrap: nowrap;
+  gap: 6px; padding: 1px 8px; margin: 0; border: 0; border-bottom: 1px solid #cbd5e1;
+  border-radius: 0; font: 400 .7rem/1.2 Roboto, Arial, sans-serif;
+}
+.favorabilidade-v2 .fv-agregados-quadro .admin-filter-bar :is(select,input,button,.admin-filter-label) { font: inherit; }
+.favorabilidade-v2 .fv-agregados-quadro .admin-filter-bar select {
+  height: 25px; min-height: 25px; min-width: 0; padding: 2px 6px; flex: 1 1 10rem;
+}
+.favorabilidade-v2 .fv-agregados-quadro .admin-filter-bar .admin-icon-btn {
+  width: 25px; min-width: 25px; height: 25px; min-height: 25px; flex: 0 0 25px;
+  padding: 0; border-radius: 50%; color: #4b5563; border-color: #374151; background: #f3f4f6;
+}
+.favorabilidade-v2 .fv-agregados-quadro .fv-agregados-wrap { margin: 0; border: 0; border-radius: 0; overflow-x: auto; scrollbar-width: thin; }
+.favorabilidade-v2 #ev-resultados-agregados { margin: 0; font: 400 .7rem/1.4 Roboto, Arial, sans-serif; }
+.favorabilidade-v2 #ev-resultados-agregados thead th {
+  background: var(--pli-deep, #00527d); color: #fff; height: 32px; padding: 6px 8px;
+  font: 600 .7rem/1.4 Roboto, Arial, sans-serif; text-transform: none;
+}
+.favorabilidade-v2 #ev-resultados-agregados tbody tr:nth-child(odd) td { background: #fff; }
+.favorabilidade-v2 #ev-resultados-agregados tbody tr:nth-child(even) td { background: #edf4f8; }
+.favorabilidade-v2 #ev-resultados-agregados tbody tr.ativo td { background: #dcebf5; }
+.favorabilidade-v2 #ev-resultados-agregados :is(th,td).evr-col-selecao {
+  box-sizing: border-box; width: 44px; min-width: 44px; max-width: 44px; padding: 4px; text-align: center;
+}
+.favorabilidade-v2 #ev-resultados-agregados .row-select { width: 14px; height: 14px; min-height: 0; margin: 0; padding: 0; }
+.favorabilidade-v2 #ev-resultados-agregados td:nth-child(2) { text-align: left; }
+.favorabilidade-v2 #ev-resultados-agregados td button { font: inherit; color: #123b56; text-decoration: underline; background: none; border: 0; box-shadow: none; }
+.favorabilidade-v2 .secao-favorabilidade-agregados > .admin-actions { margin: 8px 0 0; padding-block: 0; gap: 8px; }
+.favorabilidade-v2 .secao-favorabilidade-agregados > .admin-actions .admin-icon-btn {
+  width: 2.115rem; min-width: 2.115rem; height: 2.115rem; min-height: 2.115rem; flex: 0 0 2.115rem;
+  background: #f3f4f6; color: #174d72; border-color: #123b56;
+}
+.favorabilidade-v2 .secao-favorabilidade-agregados > .admin-actions .edit { color: #925a13; border-color: #70420b; }
+.favorabilidade-v2 .secao-favorabilidade-agregados > .admin-actions .cancel { color: #991b1b; border-color: #7f1d1d; }
+.favorabilidade-v2 .secao-favorabilidade-agregados > .admin-actions .save { color: #166534; border-color: #14532d; }
+.favorabilidade-v2 #ev-resultados-salvar-medida { height: 2.115rem; min-height: 2.115rem; background: #f3f4f6; border: 2px solid #123b56; color: #123b56; font-weight: 700; }
+.favorabilidade-v2 .secao-favorabilidade-agregados > .admin-table-footer { margin-block: 0; padding-top: 6px; gap: 8px; }
+.favorabilidade-v2 .secao-favorabilidade-agregados .admin-pagination { margin-block: 0; }
+.favorabilidade-v2 .secao-favorabilidade-agregados .admin-pagination button { border: 0; background: transparent; }

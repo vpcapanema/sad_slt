@@ -1,3 +1,4 @@
+import {instalarRegistro} from './registrar-resultados-fase.js?v=20261027-finalizacao';
 import {criarMapaElegibilidade, areaLegivel} from './elegibilidade-mapa.js?v=20261023-ogr-contexto';
 import {nomeDemanda} from './nome-demanda.js?v=20261023-nomes';
 import {post, base} from '../../geoespacial/extracao-atributos/api.js';
@@ -6,8 +7,8 @@ import {escolherArquivo} from '../../geoespacial/extracao-atributos/explorador.j
 import {sobreposicoesDaAnalise, demandasDaAnalise, renderizarRoscaDemandas} from './sobreposicoes-rosca.js?v=20261023-contexto';
 import {indiceTexto, classeTexto, corClasse, compararIndices, compararDemandas, renderizarIndices} from './favorabilidade-indices.js?v=20261023-classes-ordem';
 import {renderizarAgregados} from './favorabilidade-estatisticas.js?v=20261023-classes-ordem';
-import {criarMapaFavorabilidade} from './favorabilidade-mapa.js?v=20261023-classes-ordem';
-import {criarFiltroResultados, criarResumoResultados, paginarResultados} from './elegibilidade-tabelas.js?v=20261023-contexto';
+import {criarMapaFavorabilidade} from './favorabilidade-mapa.js?v=20261027-enquadramento';
+import {criarFiltroResultados, criarResumoResultados, paginarResultados} from './elegibilidade-tabelas.js?v=20261027-seletores';
 
 const numero = valor => valor.toLocaleString('pt-BR', {
   minimumFractionDigits:2, maximumFractionDigits:valor !== 0 && Math.abs(valor) < .01 ? 20 : 2,
@@ -20,11 +21,18 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
   const favorabilidade = analise === 'favorabilidade';
   const rota = `/extracao-atributos/${analise}/resultados`;
   const categorias = favorabilidade ? ['grade','rede'] : ['restricao','risco'];
-  const papeis = favorabilidade ? {entrada:'Entrada', grade:'Favorabilidade de Grade', rede:'Favorabilidade de Rede'}
+  const papeis = favorabilidade ? {entrada:'Entrada', grade:'Favorabilidade Territorial', rede:'Favorabilidade de Rede'}
     : {entrada:'Entrada', restricao:'Restrição', risco:'Risco'};
   const node = id => document.getElementById(`ev-resultados-${id}`);
   const formulario = node('aliases'), campos = new Map();
   let pendentes = [], execucoes = [], fontes = [], modelo = null, pagina = 0, indice = 0;
+  let medidaSalva = null;
+  const configuracaoMedida = () => {
+    const medida = ['tendencia','dispersao','posicao'].map(id => node(id).value).find(Boolean) || '';
+    return {medida, percentil:medida === 'percentil' ? node('percentil').valueAsNumber : null};
+  };
+  const medidaConfirmada = () => !favorabilidade || Boolean(medidaSalva &&
+    JSON.stringify(medidaSalva) === JSON.stringify(configuracaoMedida()));
   let ocupado = false, externo = false, chave = '0', baseAtiva = '', classeAtiva = '';
   let mapa = null, demandas = null, restricoes = null, riscos = null, camadas = new Map(), recortes = [];
   let linhasPorChave = new Map(), basesPorId = new Map();
@@ -43,7 +51,7 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
   const entrada = () => modelo.entradas[indice];
   const linhaAtual = () => linhasPorChave.get(chave);
   const payload = () => ({execucoes, nomes:Object.fromEntries([...campos].map(([id,campo]) => [id,campo.value])),
-    revisados:node('revisados').checked});
+    revisados:node('revisados').checked, ...(favorabilidade ? {agregacao:medidaSalva} : {})});
   const corCategoria = papel => favorabilidade ? papel === 'grade' ? '#176878' : '#69438a'
     : papel === 'restricao' ? '#b42335' : '#c18b00';
   const vazio = valor => valor == null || (typeof valor === 'string' && !valor.trim());
@@ -107,12 +115,17 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
     linhasTabela = filtroTabela.filtrar(linhasTabela);
   }
 
+  const controleRegistro = instalarRegistro({node, rota:rota, payload, operar, informar,
+    fase:favorabilidade ? 2 : 1, podeRegistrar:medidaConfirmada});
+
   function controles() {
     const bloqueado = ocupado || externo;
     node('vazio').hidden = Boolean(modelo);
+    if (favorabilidade) node('relatorios').hidden = !modelo;
     node('abrir').setAttribute('aria-disabled', String(bloqueado));
     document.getElementById('ev-resultados').querySelectorAll('input,button,select').forEach(c => { c.disabled = bloqueado; });
     node('download').disabled = bloqueado || !modelo || gerandoPacote;
+    controleRegistro(modelo);
     node('anterior').disabled = bloqueado || !modelo || pagina === 0;
     node('proxima').disabled = bloqueado || !modelo || (pagina+1)*50 >= linhasTabela.length;
     node('vazias').disabled = bloqueado || !modelo;
@@ -121,8 +134,15 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
       .forEach(botao => { botao.disabled = bloqueado || !modelo || botao.dataset.limite === 'true'; });
     resumoTabela?.controles(bloqueado);
     if (favorabilidade) node('percentil').disabled = bloqueado || node('posicao').value !== 'percentil';
+    if (favorabilidade) {
+      const config = configuracaoMedida();
+      node('salvar-medida').disabled = bloqueado || !modelo || !config.medida || medidaConfirmada()
+        || (config.medida === 'percentil' && (!Number.isFinite(config.percentil) || config.percentil < 0 || config.percentil > 100));
+    }
   }
   function invalidar() {
+    controleRegistro(null);
+    if (favorabilidade) node('relatorios').hidden = true;
     modelo = null;
     node('revisados').checked = false;
     node('conteudo').hidden = true;
@@ -147,6 +167,14 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
   async function apresentar() {
     informar('Conferindo a saída gravada, suas interseções e os nomes de apresentação…');
     const resposta = await post(`${rota}/visualizar`, payload());
+    if (favorabilidade) {
+      const salvo = await post(`${rota}/agregacao/consultar`, {execucoes});
+      medidaSalva = salvo.configuracao;
+      for (const id of ['tendencia','dispersao','posicao']) {
+        node(id).value = [...node(id).options].some(o => o.value === medidaSalva?.medida) ? medidaSalva.medida : '';
+      }
+      node('percentil').value = medidaSalva?.percentil ?? 50;
+    }
     modelo = resposta;
     for (const fonte of modelo.fontes) campos.get(fonte.id).value = fonte.nome;
     node('entrada').replaceChildren(...modelo.entradas.map((e,i) => new Option(e.nome, String(i))));
@@ -160,7 +188,7 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
       : `Resultados parciais: ${modelo.concluidas} de ${modelo.previstas} entradas. O PDF identificará essa condição.`;
     informar(mensagem);
     if (modelo.relatorios_hierarquizacao?.length) {
-      informar(mensagem + ` PDF gravado no Storage e associado ao Relatório da Fase ${favorabilidade ? 2 : 1} em Gestão das hierarquizações.`);
+      informar(mensagem + ` PDF gravado no Storage. Use Registrar resultados da fase para efetivar a Fase ${favorabilidade ? 2 : 1} na hierarquização.`);
     }
     if (favorabilidade) {
       const itens = sobreposicoesDaAnalise(modelo.entradas);
@@ -198,6 +226,7 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
     }
   }
   async function selecionarExecucoes(identificadores, dados) {
+    medidaSalva = null;
     execucoes = [...identificadores]; invalidar(); formulario.hidden = true;
     try { await carregar(dados); }
     catch (erro) { node('tentar').hidden = false; throw erro; }
@@ -429,7 +458,7 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
     node('mapa').replaceChildren(); node('nota-mapa').textContent = ''; camadas = new Map(); recortes = [];
     const L = window.L;
     if (!L) throw new Error('O mapa Leaflet não foi carregado. Recarregue a página.');
-    mapa = L.map(node('mapa'),{scrollWheelZoom:false});
+    mapa = L.map(node('mapa'),{scrollWheelZoom:false, zoomSnap:favorabilidade ? .25 : 1});
     const fundo = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles © Esri'}).addTo(mapa);
     fundo.on('tileerror',() => { node('nota-mapa').textContent = 'O mapa-base está indisponível. As geometrias da análise continuam disponíveis.'; });
     if (!favorabilidade) for (const [nome,z] of [['ev-superficies',350],['ev-recortes',410],['ev-demandas',430],['ev-localizadores',450]]) mapa.createPane(nome).style.zIndex = z;
@@ -476,10 +505,17 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
       percentil});
     resumoTabela.atualizarTabela(tabela);
     node('estatisticas-status').textContent = medida
-      ? 'Consulta estatística por demanda, separando grade e rede. Somente índices válidos entram no cálculo; classes originais mantidas. Nenhum índice oficial foi alterado. O PDF mantém os valores originais.'
-      : 'Valores originais por demanda, em ordem decrescente. Repetições são mantidas; nenhuma estatística aplicada.';
+      ? medidaConfirmada() ? 'Medida salva nesta análise. Use Registrar resultados da fase para gravar os valores no banco.'
+        : 'Prévia da medida escolhida. Clique em Salvar para guardar esta escolha antes de registrar a fase. Classes originais mantidas.'
+      : 'Escolha uma medida nos seletores acima. É obrigatório salvar a escolha para registrar um valor único por demanda e dimensão.';
   }
   if (favorabilidade) {
+    node('salvar-medida').onclick = () => operar(async () => {
+      const resposta = await post(`${rota}/agregacao/salvar`, {execucoes, ...configuracaoMedida()});
+      medidaSalva = resposta.configuracao;
+      estatisticas();
+      informar('Medida salva para todas as demandas desta análise. Use Registrar resultados da fase para efetivar os valores no banco.');
+    });
     for (const id of ['tendencia','dispersao','posicao']) {
       node(id).onchange = () => {
         if (ocupado || externo || !modelo) return;
@@ -489,7 +525,7 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
         estatisticas(); controles();
       };
     }
-    node('percentil').oninput = () => { if (!ocupado && !externo && modelo) estatisticas(); };
+    node('percentil').oninput = () => { if (!ocupado && !externo && modelo) { estatisticas(); controles(); } };
   }
   formulario.onsubmit = event => { event.preventDefault(); if (formulario.reportValidity()) operar(apresentar); };
   node('editar').onclick = () => { formulario.hidden = false; formulario.scrollIntoView({block:'nearest'}); };
@@ -511,6 +547,10 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
       const arquivo = await escolherArquivo({
         title:`Selecionar análise de ${analise} já realizada`,
         raiz:'saidas-geoespaciais', extensoes:['gpkg'], validar:false, somenteReferencias:true,
+        pastaInicial: (() => {
+          const codigo = document.getElementById(favorabilidade ? 'fv-hierarquizacao' : 'ev-hierarquizacao')?.value || modelo?.entradas?.[0]?.hierarquizacao || 'HIER-20261019-183457-93E7';
+          return `saidas-geoespaciais/hierarquizacoes/${codigo}/fase-${favorabilidade ? 2 : 1}`;
+        })(),
       });
       if (!arquivo) return;
       informar('Lendo e conferindo o GeoPackage da análise selecionada no storage…');

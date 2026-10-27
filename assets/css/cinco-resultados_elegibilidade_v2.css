@@ -248,3 +248,14 @@
 .ev2 .ev2-ampliacao-item[aria-pressed="true"] { border: 2px solid var(--ev2-deep); background: #eef6fb; }
 .ev2 .ev2-ampliacao-trilho { display: block; height: 12px; background: #e8eef3; }
 .ev2 .ev2-ampliacao-trilho i { display: block; height: 100%; }
+.elegibilidade-v2 .ev2-resultados-vazio {
+  display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+  padding: 1rem; margin-block: .75rem; border: 1px solid #c8d9e5;
+  border-radius: 8px; background: #edf4f8; color: #123b56;
+}
+.elegibilidade-v2 .ev2-resultados-vazio[hidden] { display: none !important; }
+.elegibilidade-v2 .ev2-resultados-vazio > i { font-size: 1.6rem; }
+.elegibilidade-v2 .ev2-resultados-vazio > div { flex: 1 1 240px; }
+.elegibilidade-v2 .ev2-resultados-vazio h3 { margin: 0 0 .35rem; font-size: 1rem; }
+.elegibilidade-v2 .ev2-resultados-vazio p { margin: 0; }
+.elegibilidade-v2 #ev2-abrir { display: inline-flex; align-items: center; gap: .5rem; }

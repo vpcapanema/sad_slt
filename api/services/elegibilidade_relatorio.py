@@ -291,9 +291,7 @@ def renomear_demanda(execucao: str, chave: str, nome: str, dono) -> dict:
 
 
 def registrar_relatorios(identificadores: list[str], modelo: dict, dono, *, analise: str = 'elegibilidade') -> None:
-    from api.services import hierarquizacao_service
-    from api.services.hierarquizacao_service import registrar_saida_geoespacial_fase1
-
+    """Exporta documentos ao Storage; não altera a hierarquização."""
     fase = 1 if analise == 'elegibilidade' else 2
     grupos = {}
     for resultado in _selecionar(identificadores, dono, analise=analise):
@@ -330,15 +328,7 @@ def registrar_relatorios(identificadores: list[str], modelo: dict, dono, *, anal
                         'tabela_resumo': {'arquivo': caminho_planilha, 'sha256': assinatura_planilha,
                                           'gerado_em': modelo['gerado_em']},
                         'resumo_elegibilidade': sintese.resumo_para_registro(recorte)}
-        for resultado in resultados:
-            if fase == 1:
-                registrar_saida_geoespacial_fase1(codigo, resultado, dono, registro)
-            else:
-                hierarquizacao_service.registrar_saida_geoespacial(codigo, fase, resultado, dono, registro)
-            # Idempotente: completa o registro de análises reabertas, que não passaram pelo fim do cálculo.
-            hierarquizacao_service.registrar_resultado_por_demanda(codigo, fase, resultado, dono)
-        hierarquizacao_service.atualizar_nomes_resultado(codigo, fase, {f['id']: f['nome'] for f in recorte['fontes']})
-        documentos.append({'hierarquizacao': codigo, **documento})
+        documentos.append({'hierarquizacao': codigo, **registro})
     if documentos:
         modelo['relatorios_hierarquizacao'] = documentos
 

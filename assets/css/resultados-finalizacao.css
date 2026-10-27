@@ -1,0 +1,26 @@
+/* Conclusão da análise: ações e orientações agrupadas por finalidade. */
+.elegibilidade-v2 .resultados-finalizacao {
+  display: block; margin-top: 20px; padding: 0; overflow: hidden;
+  border: 1px solid #00527d; border-radius: 8px; background: #fff;
+}
+.elegibilidade-v2 .resultados-finalizacao > .evr-titulo {
+  margin: 0; padding: 10px 15px; min-height: 32px; background: #00527d; color: #fff;
+}
+.elegibilidade-v2 .resultados-finalizacao > .evr-titulo h3 { margin: 0; font-size: 13px; }
+.elegibilidade-v2 .fv-finalizacao-corpo { padding: 16px; }
+.elegibilidade-v2 .fv-finalizacao-intro { margin: 0 0 16px; font-size: 12px; line-height: 1.5; color: #33475b; }
+.elegibilidade-v2 .fv-finalizacao-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
+.elegibilidade-v2 .fv-finalizacao-card { display: flex; flex-direction: column; gap: 10px; padding: 16px; border: 1px solid #c8d9e5; border-radius: 6px; background: #f4f8fb; min-width: 0; }
+.elegibilidade-v2 .fv-finalizacao-card h4 { display: flex; gap: 8px; align-items: center; margin: 0; font-size: 13px; line-height: 1.4; color: #123b56; }
+.elegibilidade-v2 .fv-finalizacao-card p { margin: 0; font-size: 12px; line-height: 1.5; color: #33475b; }
+.elegibilidade-v2 .fv-finalizacao-card .fv-finalizacao-nota { font-size: 11px; color: #536677; }
+.elegibilidade-v2 .fv-finalizacao-acoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; padding-top: 6px; }
+.elegibilidade-v2 .fv-finalizacao-acoes .ea-btn { display: inline-flex; gap: 8px; align-items: center; justify-content: center; min-height: 34px; padding: 7px 12px; max-width: 100%; white-space: normal; font-size: 12px; font-weight: 700; color: #123b56; border: 2px solid #123b56; background: #f3f4f6; border-radius: 6px; }
+.elegibilidade-v2 .fv-finalizacao-acoes .ea-btn:disabled { opacity: .45; cursor: not-allowed; }
+.elegibilidade-v2 .fv-finalizacao-detalhes { margin-top: 16px; padding-top: 12px; border-top: 1px solid #dce5eb; font-size: 11px; line-height: 1.5; color: #33475b; }
+.elegibilidade-v2 .fv-finalizacao-detalhes summary { color: #123b56; font-weight: 600; cursor: pointer; }
+.elegibilidade-v2 .fv-finalizacao-detalhes ul { margin: 10px 0 0; padding-left: 20px; }
+.elegibilidade-v2 .fv-finalizacao-detalhes li + li { margin-top: 6px; }
+@media(max-width:700px) { .elegibilidade-v2 .fv-finalizacao-grid { grid-template-columns: minmax(0,1fr); } }
+
+.elegibilidade-v2 .resultados-finalizacao[hidden] { display: none !important; }

@@ -21,7 +21,9 @@
 <link rel="stylesheet" href="/assets/css/fase1-elegibilidade-v2.css?v=20261023-rosca-demandas">
 <link rel="stylesheet" href="/assets/css/fase23-execucao.css">
 <link rel="stylesheet" href="/assets/css/paginas/hierarquizacao-fases-visual.css?v=20261020-cabecalhos-linha-unica">
-<link rel="stylesheet" href="/assets/css/fase2-favorabilidade-v2.css?v=20261025-demanda-modal">
+<link rel="stylesheet" href="/assets/css/fase2-favorabilidade-v2.css?v=20261027-legenda">
+<link rel="stylesheet" href="/assets/css/favorabilidade-agregacao.css?v=20261027-finalizacao">
+<link rel="stylesheet" href="/assets/css/resultados-finalizacao.css?v=20261027">
 {% endblock %}
 {% block conteudo %}
 <div id="admin-session-bar" class="admin-session-bar hidden"></div>
@@ -65,7 +67,7 @@
       </div>
     </section>
     <section class="secao-favorabilidade-superficies card card-favorabilidade-superficies ahp-step-section" aria-labelledby="fv-superficies-title">
-      <header class="ahp-section-label"><span class="ahp-subsection-num">2</span><h2 id="fv-superficies-title">Camadas de superfícies de favorabilidade de grade e da rede</h2></header>
+      <header class="ahp-section-label"><span class="ahp-subsection-num">2</span><h2 id="fv-superficies-title">Camadas de superfícies de favorabilidade territorial e da rede</h2></header>
       <div class="ahp-section-body">
         <p class="ea-hint">Selecione as superfícies de grade e da rede, em qualquer ordem. Uma camada não pode ocupar os dois papéis nem ser usada também como entrada. Envie cada lista separadamente ou as duas juntas pelo botão abaixo. As listas guardam referências; não calculam nem homologam índices.</p>
         <div class="ev-grid">
@@ -111,7 +113,7 @@
                 <button type="button" class="ea-btn ea-btn-primary ea-staging-symbol ea-icon-button" id="ea-staging-confirmar" aria-label="Enviar pra bancada" title="Enviar pra bancada" disabled><i class="fas fa-arrow-right-to-bracket" aria-hidden="true"></i><span class="ea-sr-only">Enviar pra bancada</span></button>
               </footer>
             </aside>
-            <div id="ea-input-preview-map" role="region" aria-label="Mapa de prévia da favorabilidade de grade e da rede"></div>
+            <div id="ea-input-preview-map" role="region" aria-label="Mapa de prévia da favorabilidade territorial e da rede"></div>
           </div>
           <p id="ea-input-preview-map-status" class="ea-hint" role="status"></p>
         </section>
@@ -126,7 +128,7 @@
   </section>
   <section class="secao-favorabilidade-bancada ea-section" id="ea-workbench" aria-labelledby="fv-bancada-title">
     <header class="ea-section-head"><span class="ea-number">4</span><h2 id="fv-bancada-title">Bancada de geoprocessamento</h2></header>
-    <iframe id="ea-workbench-frame" class="ea-workbench-frame" src="/restrict/geoespacial/bancada/" title="Bancada de favorabilidade de grade e da rede" allow="fullscreen"></iframe>
+    <iframe id="ea-workbench-frame" class="ea-workbench-frame" src="/restrict/geoespacial/bancada/" title="Bancada de favorabilidade territorial e da rede" allow="fullscreen"></iframe>
     <div class="ea-section-body">
       <p class="ea-hint">A composição abaixo acompanha somente as camadas confirmadas nesta página e marcadas como visíveis na bancada. Preparar a seleção ou alterar a prévia não substitui esse conjunto nem os resultados já gravados.</p>
       <p id="fv-bancada-status" class="ea-hint" role="status">Nenhuma camada confirmada nesta página.</p>
@@ -137,22 +139,10 @@
       <div class="ea-execucao-linha"><strong>Análise:</strong> <span>Favorabilidade territorial de grade e da rede · Fase 2</span></div>
       <div class="ea-checkup-tables">
         {% for papel, rotulo in [("entrada", "Entrada"), ("grade", "Favorabilidade territorial de grade"), ("rede", "Favorabilidade territorial de rede")] %}
-        <section class="fv-tabela-conferencia secao-elegibilidade-tabela standard-table-section" aria-label="Conferência de {{ rotulo|lower }}">
-        {% set filtro_prefixo = "fv-conferencia-" ~ papel ~ "-filtro" %}
-        {% set filtro_rotulo = "Filtrar camadas de " ~ rotulo|lower %}
-        {% include "componentes/filtro_tabela.html" %}
-        <div class="ea-table-wrap admin-table-wrap"><table class="admin-table" data-table-sort="off" aria-label="Camadas de {{ rotulo|lower }} confirmadas">
-          <thead><tr><th scope="col">{{ rotulo }}</th><th scope="col">Arquivo ou referência integral</th></tr></thead>
-          <tbody id="fv-run-{{ papel }}"><tr><td colspan="2">Nenhuma camada deste grupo marcada na bancada.</td></tr></tbody>
-        </table></div>
-        <div class="admin-actions" role="toolbar" aria-label="Controles das camadas de {{ rotulo|lower }}">
-          <button id="fv-conferencia-{{ papel }}-visualizar" class="admin-icon-btn" type="button" title="Visualizar camada selecionada" aria-label="Visualizar camada selecionada" disabled><i class="fas fa-eye" aria-hidden="true"></i></button>
+        <div class="fv-conferencia-grupo" aria-label="Conferência de {{ rotulo|lower }}">
+          <div class="fv-conferencia-cabecalho"><strong>{{ rotulo }}</strong><strong>Arquivo ou referência integral</strong></div>
+          <div id="fv-run-{{ papel }}"><p class="ea-hint">Nenhuma camada deste grupo marcada na bancada.</p></div>
         </div>
-        <div class="admin-table-footer">
-          <nav id="fv-conferencia-{{ papel }}-paginacao" class="admin-pagination" aria-label="Paginação das camadas de {{ rotulo|lower }}"></nav>
-          <p id="fv-conferencia-{{ papel }}-contagem" class="admin-table-summary" aria-live="polite"></p>
-        </div>
-        </section>
         {% endfor %}
       </div>
       <p id="fv-run-count" class="ea-hint">Marque uma entrada e ao menos uma superfície poligonal na bancada.</p>
@@ -168,8 +158,12 @@
   <section class="secao-favorabilidade-resultados ea-section ev-resultados" id="ev-resultados" aria-labelledby="ev-resultados-title">
     <header class="ea-section-head"><span class="ea-number">5</span><h2 id="ev-resultados-title">Resultados da Favorabilidade Territorial</h2></header>
     <div class="ea-section-body">
-      <p class="ea-hint">A consulta utiliza os atributos preservados nas interseções da saída gravada, não a seleção atual das seções 1 e 2. Grade e rede permanecem separadas. Cada combinação demanda × feição conserva seu índice dimensionado e sua classe de origem; não há índice final único por demanda nem ranqueamento oficial nesta etapa.</p>
-      <p id="ev-resultados-vazio" class="ea-hint">Nenhuma análise apresentada. Execute o cálculo na seção 4 ou <a id="ev-resultados-abrir" href="#ev-resultados">selecione uma análise já realizada</a> pelo GeoPackage de saída no Storage. Sem saída carregada, não é possível concluir se há interseção ou índice disponível.</p>
+      <p class="ea-hint">Confira os resultados por demanda. Escolha e salve a medida de agregação e, após a conferência, registre os resultados da fase.</p>
+      <div id="ev-resultados-vazio" class="fv-resultados-vazio">
+        <i class="fas fa-folder-open" aria-hidden="true"></i>
+        <div><h3>Consulte os resultados de uma análise</h3><p class="ea-hint">Execute o cálculo na seção 4 ou abra um GeoPackage de saída já salvo no Storage.</p></div>
+        <button id="ev-resultados-abrir" class="ea-btn" type="button"><i class="fas fa-folder-open" aria-hidden="true"></i> Selecionar análise já realizada</button>
+      </div>
       <p id="ev-resultados-status" class="ea-hint" role="status" aria-live="polite"></p>
       <button id="ev-resultados-tentar" class="ea-btn" type="button" hidden>Tentar Carregar Resultados</button>
       <form id="ev-resultados-aliases" hidden>
@@ -239,22 +233,22 @@
           <p class="ea-hint evr-instrucoes">Demandas ordenadas pelo maior índice válido, do maior para o menor. As feições de cada demanda permanecem juntas, também em ordem decrescente de índice. Demandas sem interseção e valores ausentes ou inválidos ficam ao final, sem substituição por área ou zero. O filtro considera todas as páginas e mantém índices zero e problemas sinalizados. Selecione uma linha para consultar os detalhes e ampliar o mapa.</p>
         </section>
         <section class="secao-favorabilidade-agregados secao-elegibilidade-tabela evr-painel standard-table-section" aria-labelledby="fv-resultados-title">
-          <header class="evr-titulo"><h3 id="fv-resultados-title">5.3 — Índices e Classes Agregados por Demanda</h3><span class="ea-hint">Consulta exploratória · sem alterar os índices oficiais</span></header>
-          <p class="ea-hint">Cada demanda da camada selecionada reúne os índices das feições interceptadas, separando grade e rede. Escolha uma única medida entre os três seletores para substituir os conjuntos de índices pelos resultados estatísticos. Volte a “Valores originais” no seletor ativo para restaurá-los. As classes originais permanecem listadas, sem reclassificação.</p>
+          <header class="evr-titulo"><h3 id="fv-resultados-title">5.3 — Índices e Classes Agregados por Demanda</h3><span class="ea-hint">Escolha, confira e salve a medida</span></header>
+          <p class="ea-hint">Cada demanda da camada selecionada reúne os índices das feições interceptadas, separando grade e rede. Escolha uma medida entre os três seletores para obter um valor único por demanda em cada dimensão. Clique em Salvar para guardar a escolha nesta análise; depois, use Registrar resultados da fase para gravar os valores no banco. A medida se aplica a todas as demandas da análise, independentemente dos filtros. As classes originais permanecem listadas, sem reclassificação.</p>
           <div class="fv-estatisticas-controles" role="group" aria-label="Medidas estatísticas, somente uma ativa por vez">
             <div class="ea-field">
               <label for="ev-resultados-tendencia">Tendência Central</label>
               <select id="ev-resultados-tendencia">
-                <option value="">Valores originais</option>
+                <option value="">Selecione uma medida</option>
                 <option value="media">Média aritmética simples</option>
                 <option value="mediana">Mediana</option>
-                <option value="moda">Moda (todas em caso de empate)</option>
+                <option value="moda">Moda (exige resultado único)</option>
               </select>
             </div>
             <div class="ea-field">
               <label for="ev-resultados-dispersao">Dispersão</label>
               <select id="ev-resultados-dispersao">
-                <option value="">Valores originais</option>
+                <option value="">Selecione uma medida</option>
                 <option value="amplitude">Amplitude (máximo − mínimo)</option>
                 <option value="variancia">Variância populacional</option>
                 <option value="desvio">Desvio-padrão populacional</option>
@@ -265,7 +259,7 @@
             <div class="ea-field">
               <label for="ev-resultados-posicao">Posição</label>
               <select id="ev-resultados-posicao">
-                <option value="">Valores originais</option>
+                <option value="">Selecione uma medida</option>
                 <option value="minimo">Mínimo</option>
                 <option value="q1">Primeiro quartil (Q1 / P25)</option>
                 <option value="q2">Segundo quartil (Q2 / P50)</option>
@@ -282,9 +276,12 @@
           <p id="ev-resultados-estatisticas-status" class="ea-hint" role="status" aria-live="polite"></p>
           {% set filtro_prefixo = "ev-resumo-filtro" %}
           {% set filtro_rotulo = "Filtrar resumo por demanda" %}
+          <div class="fv-agregados-quadro">
           {% include "componentes/filtro_tabela.html" %}
           <div class="ea-table-wrap admin-table-wrap fv-agregados-wrap"><table id="ev-resultados-agregados" class="admin-table" data-table-sort="off" aria-label="Índices e classes agregados por demanda, separando grade e rede"></table></div>
+          </div>
           <div class="admin-actions" role="toolbar" aria-label="Controles da tabela agregada por demanda">
+            <button class="ea-btn" id="ev-resultados-salvar-medida" type="button" disabled><i class="fas fa-floppy-disk" aria-hidden="true"></i> Salvar</button>
             <button class="admin-icon-btn" id="ev-resumo-visualizar" type="button" title="Visualizar demanda" aria-label="Visualizar demanda" disabled><i class="fas fa-eye" aria-hidden="true"></i></button>
             <button class="admin-icon-btn edit" id="ev-resumo-editar" type="button" title="Editar nome da demanda" aria-label="Editar nome da demanda" disabled><i class="fas fa-pen" aria-hidden="true"></i></button>
             <button class="admin-icon-btn cancel" id="ev-resumo-cancelar" type="button" title="Cancelar edição" aria-label="Cancelar edição" disabled><i class="fas fa-xmark" aria-hidden="true"></i></button>
@@ -295,14 +292,39 @@
             <p id="ev-resumo-contagem" class="admin-table-summary" aria-live="polite"></p>
           </div>
           <p id="ev-resumo-status" class="ea-hint evr-instrucoes" role="status" aria-live="polite"></p>
-          <details><summary>Como as Estatísticas São Calculadas</summary><p class="ea-hint">Cada combinação demanda × feição contribui uma vez, sem ponderação por área. Repetições e zero válido são mantidos. Índices nulos, ausentes ou inválidos não entram nos cálculos; a contagem de valores válidos é informada. Variância e desvio-padrão são populacionais (divisor N); quartis e percentis usam interpolação linear na posição (N − 1) × p. Empates na frequência máxima da moda exibem todos os valores; conjuntos com mais de um valor, todos distintos, são indicados como sem moda. O coeficiente de variação é indefinido quando a média é zero. As medidas são apenas de consulta nesta página: não alteram o cálculo espacial, o PDF, as classes ou os índices oficiais.</p></details>
+          <details><summary>Como as Estatísticas São Calculadas</summary><p class="ea-hint">Cada combinação demanda × feição contribui uma vez, sem ponderação por área. Repetições e zero válido são mantidos. Índices nulos, ausentes ou inválidos não entram nos cálculos; a contagem de valores válidos é informada. Variância e desvio-padrão são populacionais (divisor N); quartis e percentis usam interpolação linear na posição (N − 1) × p. Empates na frequência máxima da moda exibem todos os valores; conjuntos com mais de um valor, todos distintos, são indicados como sem moda. O coeficiente de variação é indefinido quando a média é zero. Salvar guarda a medida da análise. Registrar resultados da fase aplica essa medida aos índices no banco, preservando os valores por feição e as classes originais. Moda sem resultado único e coeficiente de variação indefinido impedem o salvamento; escolha outra medida. O coeficiente de variação mantém a unidade percentual. O PDF mantém os valores por feição.</p></details>
         </section>
         <details><summary>Metodologia da Análise</summary><p id="ev-resultados-metodologia" class="ea-hint"></p></details>
       </div>
-      <footer class="ev-resultados-download">
-        <p class="ea-hint"><strong>5.4 — Relatório, limites e próximos passos</strong><br>Após confirmar os nomes, baixe o pacote de todas as entradas concluídas, independentemente dos filtros: PDF com resultados e cobertura por superfície; Excel e CSV para conferir índices, classes, identificadores e estados de ausência; GeoPackages integrais para SIG; metadados com assinaturas SHA-256; e guia de leitura. O PDF apresenta índices com duas casas decimais; as tabelas preservam a precisão disponível. Nenhum desses arquivos reproduz as estatísticas exploratórias selecionadas nesta página. Editar as tabelas não atualiza o SICARD: eventuais correções devem ser feitas na fonte e gerar nova execução, preservando o pacote original para comparação. Se a leitura falhar, use “Tentar Carregar Resultados” ou reabra a saída existente, sem repetir o cálculo. A indisponibilidade de uma camada de contexto no mapa não elimina os recortes gravados. Confira campos ausentes ou inválidos na superfície de origem antes de interpretar os índices; para preparar superfícies, utilize o gerador da seção 2. O avanço à Fase 3 é feito pela navegação superior e não ocorre automaticamente.</p>
-        <button class="ea-btn ea-btn-primary" id="ev-resultados-download" type="button" disabled>Baixar Relatório e Camadas (.zip)</button>
-      </footer>
+      <section class="secao-favorabilidade-finalizacao resultados-finalizacao" id="ev-resultados-relatorios" aria-labelledby="fv-finalizacao-titulo" hidden>
+        <header class="evr-titulo"><h3 id="fv-finalizacao-titulo">5.4 — Registrar e exportar resultados</h3></header>
+        <div class="fv-finalizacao-corpo">
+          <p class="fv-finalizacao-intro">Conclua a conferência para registrar os resultados na hierarquização ou baixar os arquivos da análise.</p>
+          <div class="fv-finalizacao-grid">
+            <div class="fv-finalizacao-card">
+              <h4><i class="fas fa-floppy-disk" aria-hidden="true"></i> Registrar na hierarquização</h4>
+              <p>Grave os valores calculados com a medida salva na seção 5.3. O processamento não será repetido.</p>
+              <p class="fv-finalizacao-nota">Para habilitar o registro, escolha uma medida e clique em Salvar na seção anterior.</p>
+              <div id="ev-resultados-registro-acoes" class="fv-finalizacao-acoes"></div>
+            </div>
+            <div class="fv-finalizacao-card">
+              <h4><i class="fas fa-file-arrow-down" aria-hidden="true"></i> Baixar os arquivos da análise</h4>
+              <p>Receba o relatório em PDF, as planilhas e as camadas geográficas de todas as demandas processadas.</p>
+              <p class="fv-finalizacao-nota">O download mantém os valores por feição e não registra resultados na hierarquização.</p>
+              <div class="fv-finalizacao-acoes"><button class="ea-btn" id="ev-resultados-download" type="button" disabled><i class="fas fa-download" aria-hidden="true"></i> Baixar relatório e camadas (.zip)</button></div>
+            </div>
+          </div>
+          <details class="fv-finalizacao-detalhes">
+            <summary>Sobre os arquivos e os próximos passos</summary>
+            <ul>
+              <li>O pacote inclui PDF, Excel, CSV, GeoPackages e guia de leitura. Os filtros da tela não limitam o conteúdo exportado.</li>
+              <li>O PDF mostra duas casas decimais; as planilhas preservam a precisão disponível. Os arquivos mantêm os valores por feição, sem aplicar a medida de agregação escolhida.</li>
+              <li>Editar os arquivos baixados não atualiza a hierarquização. Corrija os dados de origem e execute uma nova análise quando necessário.</li>
+              <li>Após registrar os resultados, utilize a navegação superior para continuar à fase seguinte.</li>
+            </ul>
+          </details>
+        </div>
+      </section>
     </div>
   </section>
 </main>
@@ -320,5 +342,5 @@
 <script src="/assets/vendor/maplibre-gl/maplibre-gl.js"></script>
 <script src="/assets/vendor/maplibre-gl/leaflet-maplibre-gl.js"></script>
 <script src="/restrict/hierarquizacao/js/hier-api.js"></script>
-<script type="module" src="/restrict/hierarquizacao/js/fase2-favorabilidade-v2.js?v=20261027-favorabilidade-simbologia"></script>
+<script type="module" src="/restrict/hierarquizacao/js/fase2-favorabilidade-v2.js?v=20261027-enquadramento"></script>
 {% endblock %}

@@ -390,7 +390,8 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  height: clamp(34rem, 78vh, 50rem);
+  min-height: clamp(34rem, 78vh, 50rem);
+  height: auto;
 }
 .favorabilidade-v2 .ev-resultados .evr-analise .evr-titulo { flex-wrap: wrap; flex: none; }
 .favorabilidade-v2 .ev-resultados .evr-analise .evr-grafico-conteudo {
@@ -398,6 +399,7 @@
   min-height: 0;
   padding: 10px;
   overflow: auto;
+  max-height: clamp(30rem, 72vh, 46rem);
 }
 .favorabilidade-v2 .ev-resultados .evr-analise .fv-intervalos-rolagem { max-height: none; }
 .favorabilidade-v2 .ev-resultados .evr-analise .fv-intervalos-quadro { min-width: 26rem; }
@@ -410,7 +412,79 @@
 .favorabilidade-v2 .ev-resultados .evr-analise .evr-instrucoes { flex: none; }
 @media (max-width: 1100px) {
   .favorabilidade-v2 .ev-resultados .evr-analise { grid-template-columns: minmax(0, 1fr); }
-  .favorabilidade-v2 .ev-resultados .evr-analise > .evr-painel { height: auto; }
+  .favorabilidade-v2 .ev-resultados .evr-analise > .evr-painel { height: auto; min-height: 0; }
   .favorabilidade-v2 .ev-resultados .evr-analise .evr-grafico-conteudo { max-height: 34rem; }
   .favorabilidade-v2 #ev-resultados-mapa { flex: none; height: clamp(22rem, 60vh, 38rem); }
 }
+/* Conferência informativa com o mesmo ritmo compacto da Fase 1. */
+.favorabilidade-v2 .fv-conferencia-grupo {
+  min-width: 0;
+  max-height: 180px;
+  overflow: auto;
+  margin: .2rem 0;
+  background: #fff;
+  border: 1px solid #d8dee4;
+  border-radius: 4px;
+  font-size: .72rem;
+  line-height: 1.35;
+  scrollbar-width: thin;
+}
+.favorabilidade-v2 .fv-conferencia-cabecalho,
+.favorabilidade-v2 .fv-conferencia-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+}
+.favorabilidade-v2 .fv-conferencia-cabecalho {
+  position: sticky;
+  top: 0;
+  background: #e7eef3;
+  color: #33566d;
+}
+.favorabilidade-v2 .fv-conferencia-cabecalho strong,
+.favorabilidade-v2 .fv-conferencia-item span {
+  padding: .3rem .4rem;
+  overflow-wrap: anywhere;
+  font-size: inherit;
+}
+.favorabilidade-v2 .fv-conferencia-cabecalho strong { font: 600 13px/1.35 Montserrat, Verdana, sans-serif; }
+.favorabilidade-v2 .fv-conferencia-item + .fv-conferencia-item { border-top: 1px solid #e7eef3; }
+.favorabilidade-v2 .fv-conferencia-grupo > div > .ea-hint { padding: .3rem .4rem; }
+.favorabilidade-v2 .fv-resultados-vazio {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  margin-block: .75rem;
+  border: 1px solid #c8d9e5;
+  border-radius: 8px;
+  background: #edf4f8;
+  color: #123b56;
+  flex-wrap: wrap;
+}
+.favorabilidade-v2 .fv-resultados-vazio > i { font-size: 1.6rem; }
+.favorabilidade-v2 .fv-resultados-vazio > div { flex: 1 1 240px; }
+.favorabilidade-v2 .fv-resultados-vazio h3 { margin: 0 0 .35rem; font-size: 1rem; }
+.favorabilidade-v2 .fv-resultados-vazio p { margin: 0; }
+.favorabilidade-v2 #ev-resultados-abrir,
+.favorabilidade-v2 #ev-resultados-salvar-medida { display: inline-flex; align-items: center; gap: .5rem; }
+.favorabilidade-v2 #ev-resultados-relatorios[hidden],
+.favorabilidade-v2 #ev-resultados-vazio[hidden] { display: none !important; }
+.favorabilidade-v2 #ev-resultados-mapa-legenda {
+  display: grid; gap: 8px; flex: none; padding: 12px 15px; margin: 0;
+  border-top: 1px solid #cbd5e1; border-bottom: 1px solid #cbd5e1;
+  background: #f4f8fb; color: #123b56;
+}
+.favorabilidade-v2 #ev-resultados-mapa-legenda h4 { font-size: 12px; font-weight: 700; margin: 0; }
+.favorabilidade-v2 #ev-resultados-mapa-legenda .fv-legenda-sentido { margin: 0; font-size: 11px; line-height: 1.4; }
+.favorabilidade-v2 #ev-resultados-mapa-legenda ul {
+  display: flex; flex-wrap: wrap; gap: 8px 16px; list-style: none; padding: 0; margin: 0;
+}
+.favorabilidade-v2 #ev-resultados-mapa-legenda .fv-legenda-classe { gap: 6px; min-width: 0; font-size: 11px; }
+.favorabilidade-v2 #ev-resultados-mapa-legenda .fv-legenda-classe span { overflow-wrap: anywhere; }
+.favorabilidade-v2 #ev-resultados-mapa-legenda i { display: inline-block; width: 18px; height: 14px; flex: 0 0 18px; box-sizing: border-box; }
+.favorabilidade-v2 #ev-resultados-mapa-legenda .fv-legenda-simbolos {
+  display: flex; flex-wrap: wrap; gap: 8px 16px; padding-top: 8px; border-top: 1px solid #dce5eb; font-size: 11px;
+}
+.favorabilidade-v2 #ev-resultados-mapa-legenda .fv-legenda-simbolos span { display: inline-flex; align-items: center; gap: 6px; }
+.favorabilidade-v2 #ev-resultados-mapa-legenda .fv-legenda-demanda { border: 2px solid #087fb7; background: transparent; }
+.favorabilidade-v2 #ev-resultados-mapa-legenda .fv-legenda-ausente { background: #808080; border: 1px solid #243746; }

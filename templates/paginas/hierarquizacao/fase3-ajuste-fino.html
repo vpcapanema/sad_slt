@@ -65,7 +65,7 @@
       <fieldset class="fase3-operadores"><legend>Operador</legend><label><input type="radio" name="operador-sintese" value="media_simples" checked> Média simples</label><label><input type="radio" name="operador-sintese" value="media_ponderada"> Média ponderada</label></fieldset>
       <div id="pesos-sintese" class="fase3-pesos-sintese" hidden>
         <label class="atributo-peso peso-sintese" data-sintese-peso="rede"><span>Índice de favorabilidade de rede</span><input class="atributo-peso-numero peso-sintese-numero" id="peso-rede" type="number" min="0" max="1" step="0.001" value="0.333"><input class="atributo-peso-barra peso-sintese-barra" type="range" min="0" max="1" step="0.001" value="0.333"></label>
-        <label class="atributo-peso peso-sintese" data-sintese-peso="grade"><span>Índice de favorabilidade de grade</span><input class="atributo-peso-numero peso-sintese-numero" id="peso-grade" type="number" min="0" max="1" step="0.001" value="0.333"><input class="atributo-peso-barra peso-sintese-barra" type="range" min="0" max="1" step="0.001" value="0.333"></label>
+        <label class="atributo-peso peso-sintese" data-sintese-peso="grade"><span>Índice de favorabilidade territorial</span><input class="atributo-peso-numero peso-sintese-numero" id="peso-grade" type="number" min="0" max="1" step="0.001" value="0.333"><input class="atributo-peso-barra peso-sintese-barra" type="range" min="0" max="1" step="0.001" value="0.333"></label>
         <label class="atributo-peso peso-sintese" data-sintese-peso="prioridade"><span>Índice de prioridade</span><input class="atributo-peso-numero peso-sintese-numero" id="peso-prioridade" type="number" min="0" max="1" step="0.001" value="0.334"><input class="atributo-peso-barra peso-sintese-barra" type="range" min="0" max="1" step="0.001" value="0.334"></label>
       </div>
       <p class="ahp-help-text">Na média ponderada, os três pesos devem somar 1.</p>
@@ -93,4 +93,3 @@
   <script src="/restrict/hierarquizacao/js/fase3.js?v=20261027-resultados-nomes"></script>
   <script src="/assets/js/paginas/hierarquizacao-fase3-ajuste-fino-inline-1.js"></script>
 {% endblock %}
-

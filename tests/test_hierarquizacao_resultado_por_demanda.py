@@ -127,6 +127,22 @@ def test_status_final_nao_recebe_resultado_por_demanda(banco, monkeypatch, statu
     assert r['registrado'] is False and banco['dados_hierarquizacao'] == antes and banco['status'] == status
 
 
+def test_fase2_registra_medida_e_valores_unicos_preservando_feicoes(banco, monkeypatch):
+    _linhas(monkeypatch, [{'codigo_demanda': 'D-1', 'area_total_m2': 1000, 'sobreposicoes': [
+        _sobreposicao('g', 'grade', 900, favorabilidade=_fav(.2)),
+        _sobreposicao('g', 'grade', 100, favorabilidade=_fav(.8)),
+        _sobreposicao('r', 'rede', 500, favorabilidade=_fav(0)),
+    ]}])
+    config = {'medida': 'media', 'percentil': None}
+    service.registrar_resultado_por_demanda('H', 2, RESULTADO, 'autor', agregacao=config)
+    fase2 = banco['dados_hierarquizacao']['objetos'][0]['hierarquizacao']['fase_2']
+    assert fase2['indice_favorabilidade_grade'] == .5
+    assert fase2['indice_favorabilidade_rede'] == 0
+    assert fase2['score_fase2'] == .25
+    assert fase2['agregacao']['medida'] == 'media'
+    assert [v['indice'] for v in fase2['extracao_por_feicao']['grade']] == [.2, .8]
+
+
 def test_fase_fora_da_rodada_nao_grava(banco, monkeypatch):
     banco['dados_hierarquizacao'] = _dados(fases=(1,))
     _linhas(monkeypatch, [])

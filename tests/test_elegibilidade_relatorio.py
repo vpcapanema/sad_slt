@@ -451,7 +451,7 @@ def test_saida_migrada_reutiliza_pasta_fisica_sem_regravar_geopackage(analise):
 
 
 @pytest.mark.parametrize('segunda_hierarquizacao', [None, 'HIER-SUL'])
-def test_pdf_automatico_associado_so_a_hierarquizacao_de_origem(analise, monkeypatch, segunda_hierarquizacao):
+def test_pdf_exportado_sem_gravar_na_hierarquizacao(analise, monkeypatch, segunda_hierarquizacao):
     from api.services import hierarquizacao_service
     resultados, dados, nomes = analise
     resultados['job-1']['elegibilidade']['hierarquizacao'] = 'HIER-NORTE'
@@ -464,8 +464,10 @@ def test_pdf_automatico_associado_so_a_hierarquizacao_de_origem(analise, monkeyp
     monkeypatch.setattr(hierarquizacao_service, 'atualizar_nomes_resultado', lambda *args: None)
     modelo, _ = service.montar(['job-1', 'job-2'], nomes, 'autor', True)
     service.registrar_relatorios(['job-1', 'job-2'], modelo, 'autor')
-    assert len(chamadas) == (2 if segunda_hierarquizacao else 1)
-    for i, (codigo, _, _, documento) in enumerate(chamadas):
+    assert not chamadas
+    assert len(modelo['relatorios_hierarquizacao']) == (2 if segunda_hierarquizacao else 1)
+    for i, documento in enumerate(modelo['relatorios_hierarquizacao']):
+        codigo = documento['hierarquizacao']
         assert sha256(dados[documento['arquivo']]).hexdigest() == documento['sha256']
         texto = ' '.join(p.extract_text() for p in PdfReader(BytesIO(dados[documento['arquivo']])).pages)
         for trecho in ('1 — Identificação e alcance da análise', '3 — Como ler os resultados',

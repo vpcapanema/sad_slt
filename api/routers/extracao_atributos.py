@@ -402,6 +402,63 @@ class ApresentacaoElegibilidade(ReferenciasResultadosElegibilidade):
     revisados: bool
 
 
+class RegistroResultadosFase(ApresentacaoElegibilidade):
+    versao: str | None = None
+    agregacao: dict | None = None
+
+
+@router.post('/elegibilidade/resultados/registrar')
+@router.post('/favorabilidade/resultados/registrar')
+def registrar_resultados_fase(request: Request, payload: RegistroResultadosFase,
+                             user: SessionUser = Depends(require_geospatial_access)):
+    from api.services.registro_fases_geoespaciais import registrar
+    try:
+        return registrar(payload.execucoes, user.id,
+                         analise='favorabilidade' if '/favorabilidade/' in request.url.path else 'elegibilidade',
+                         nomes=payload.nomes, revisados=payload.revisados, versao=payload.versao,
+                         agregacao=payload.agregacao)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    except (RuntimeError, DatabaseUnavailableError) as exc:
+        raise HTTPException(503, str(exc)) from exc
+
+
+class MedidaAgregacaoFavorabilidade(ReferenciasResultadosElegibilidade):
+    medida: str
+    percentil: float | None = Field(default=None, ge=0, le=100)
+
+
+@router.post('/favorabilidade/resultados/agregacao/consultar')
+def consultar_agregacao_favorabilidade(payload: ReferenciasResultadosElegibilidade,
+                                       user: SessionUser = Depends(require_geospatial_access)):
+    from api.services import agregacao_favorabilidade as agregacao
+    try:
+        resultados = agregacao.relatorios._selecionar(payload.execucoes, user.id, analise='favorabilidade')
+        return {'configuracao': agregacao.carregar(resultados, user.id)}
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc)) from exc
+
+
+@router.post('/favorabilidade/resultados/agregacao/salvar')
+def salvar_agregacao_favorabilidade(payload: MedidaAgregacaoFavorabilidade,
+                                    user: SessionUser = Depends(require_geospatial_access)):
+    from api.services import agregacao_favorabilidade as agregacao
+    try:
+        return agregacao.salvar(payload.execucoes, user.id, payload.medida, payload.percentil)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc)) from exc
+
+
 class ArquivoResultadosElegibilidade(BaseModel):
     arquivo: str = Field(min_length=1)
 

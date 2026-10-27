@@ -98,7 +98,7 @@
 
   function renderTabela(itens) {
     const linhas = itens.map((item) => `<tr><td class="ranking-posicao">${item.posicao}º</td><td class="ranking-objeto-identidade"><strong>${esc(item.nome)}</strong><small>${esc(item.codigo)}</small></td><td>${indice(item.indiceRede)}</td><td>${indice(item.indiceGrade)}</td><td>${indice(item.indicePrioridade)}</td><td><strong>${indice(item.score)}</strong></td></tr>`).join("");
-    $("ranking-objetos-tabela").innerHTML = `<table class="fase-table ranking-objetos-table"><thead><tr><th>Posição</th><th>Objeto de demanda</th><th>Índice de favorabilidade de rede</th><th>Índice de favorabilidade de grade</th><th>Índice de prioridade</th><th>Índice geral de hierarquização</th></tr></thead><tbody>${linhas}</tbody></table>`;
+    $("ranking-objetos-tabela").innerHTML = `<table class="fase-table ranking-objetos-table"><thead><tr><th>Posição</th><th>Objeto de demanda</th><th>Índice de favorabilidade de rede</th><th>Índice de favorabilidade territorial</th><th>Índice de prioridade</th><th>Índice geral de hierarquização</th></tr></thead><tbody>${linhas}</tbody></table>`;
   }
 
   function pontoItem(item) {

@@ -1,10 +1,15 @@
 import {post} from '../../geoespacial/extracao-atributos/api.js';
+import {renderizarLegendaFavorabilidade} from './favorabilidade-legenda.js?v=20261027-escala-completa';
 import {el} from '../../geoespacial/extracao-atributos/ui.js';
 import {corClasse, compararIndices, classeTexto, indiceTexto} from './favorabilidade-indices.js?v=20261023-classes-ordem';
 
 export function criarMapaFavorabilidade({mapa, entrada, recortes, demandas, node, avisar}) {
   const L = window.L, cache = new Map(), grupos = new Map();
   let ativo = true, geracao = 0, feicaoAtiva = '', demandaAtiva = '';
+  let enquadramentoInicial = true;
+  const cancelarEnquadramento = () => { enquadramentoInicial = false; };
+  mapa.getContainer().addEventListener('pointerdown', cancelarEnquadramento);
+  mapa.getContainer().addEventListener('wheel', cancelarEnquadramento, {passive:true});
   const superficie = node('mapa-superficie'), representacao = node('mapa-representacao');
   superficie.replaceChildren(...entrada.campos.map(c => new Option(
     `${c.papel === 'grade' ? 'Municípios' : 'Rede rodoviária'} · ${c.nome}`, c.id)));
@@ -12,13 +17,11 @@ export function criarMapaFavorabilidade({mapa, entrada, recortes, demandas, node
   const historicos = base => entrada.linhas.flatMap(l => l.sobreposicoes.filter(s => s.base_id === base).map(s => s.favorabilidade));
   const valores = base => [...historicos(base), ...(cache.get(base)?.geometrias.features.map(f => f.properties.favorabilidade) || [])];
   function simbologia(base) {
-    const classes = [...new Set(valores(base).filter(v => v.estado_classe === 'valido').map(classeTexto))]
-      .sort((a,b) => a.localeCompare(b,'pt-BR'));
-    return {cor:corClasse, classes};
+    return {cor:corClasse};
   }
   function desenhar() {
     if (!ativo) return;
-    const base = superficie.value, {cor,classes} = simbologia(base);
+    const base = superficie.value, {cor} = simbologia(base);
     for (const [id,grupo] of grupos) {
       const mostrar = id === base;
       if (mostrar && !mapa.hasLayer(grupo)) grupo.addTo(mapa);
@@ -48,13 +51,7 @@ export function criarMapaFavorabilidade({mapa, entrada, recortes, demandas, node
       });
       grupo.bringToFront();
     });
-    const legenda = node('mapa-legenda');
-    legenda.replaceChildren(el('span','Contorno azul: demanda'), el('span','Cinza: classe ausente ou inválida'));
-    classes.forEach(classe => {
-      const item = el('span',undefined,'fv-legenda-classe'), marca = el('i');
-      marca.style.background = corClasse({classe,estado_classe:'valido'});
-      item.append(marca,document.createTextNode(classe)); legenda.append(item);
-    });
+    renderizarLegendaFavorabilidade(node('mapa-legenda'), valores(base));
     node('mapa-camada-nota').textContent = cache.has(base)
       ? `Camada oficial vinculada à execução: ${entrada.campos.find(c => c.id === base).nome}.`
       : 'A camada oficial ainda não foi carregada. Os resultados da execução permanecem nas tabelas.';
@@ -79,7 +76,15 @@ export function criarMapaFavorabilidade({mapa, entrada, recortes, demandas, node
           layer.bindTooltip(el('span',`${p.nome} · ${v.campo_original}: ${original} · ${v.campo_indice}: ${indiceTexto(v)} · ${classeTexto(v)}`));
         }});
       grupos.set(base,grupo);
-      if (numero === geracao) desenhar();
+      if (numero === geracao) {
+        desenhar();
+        if (enquadramentoInicial && grupo.getBounds().isValid()) {
+          mapa.invalidateSize({pan:false});
+          // Superfície integral e contexto regional, como na referência de São Paulo.
+          mapa.fitBounds(grupo.getBounds().pad(.2), {padding:[16,16], animate:false});
+          enquadramentoInicial = false;
+        }
+      }
     } catch (erro) {
       if (!ativo || numero !== geracao) return;
       node('mapa-camada-nota').textContent = `Camada oficial indisponível: ${erro.message} Os resultados da execução foram mantidos.`;
@@ -92,12 +97,17 @@ export function criarMapaFavorabilidade({mapa, entrada, recortes, demandas, node
   atualizar();
   return {
     selecionar(base, feicao, demanda) {
+      if (feicao) cancelarEnquadramento();
       const mudou = base && superficie.value !== base;
       if (base) superficie.value = base;
       feicaoAtiva = feicao; demandaAtiva = demanda;
       if (mudou) atualizar();
       else desenhar();
     },
-    destruir() { ativo = false; },
+    destruir() {
+      ativo = false;
+      mapa.getContainer().removeEventListener('pointerdown', cancelarEnquadramento);
+      mapa.getContainer().removeEventListener('wheel', cancelarEnquadramento);
+    },
   };
 }
