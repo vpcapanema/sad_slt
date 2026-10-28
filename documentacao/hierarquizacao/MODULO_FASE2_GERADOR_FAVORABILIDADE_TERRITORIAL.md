@@ -187,18 +187,42 @@ divergencias e colunas declaradas mas inexistentes impedem a apresentacao.
 
 A seção **5 — Resultados da Favorabilidade Territorial** mantém a revisão de
 nomes (5.1), a composição e leitura dos resultados (5.2), a consulta exploratória
-por demanda (5.3) e a emissão do relatório com limites e próximos passos (5.4).
+por demanda (5.3) e a emissão do relatório com rastreabilidade (5.4).
 As orientações distinguem saída não carregada, ausência de interseção, contato
 sem área, zero válido, campo ausente, valor nulo e índice inválido. Mensagens
 de carregamento, lote parcial e erro permanecem também em região de status
 acessível na própria seção, além do feedback de operação existente.
 
-O PDF corrente identifica as execuções e separa fontes, leitura, metodologia,
-resultados por conjunto e limites. Mantém os índices e classes originais por
-demanda e feição; as estatísticas exploratórias da tela não são exportadas como
-índice final. A síntese de cobertura por superfície informa demandas com e sem
-interseção, combinações demanda × feição, índices válidos, ausentes, nulos,
-inválidos e contatos sem área. Essas contagens não constituem novo escore.
+O PDF corrente identifica as execuções e organiza a leitura em cabeçalho
+contextualizador, resultados por demanda, guia de leitura, mapas, critérios das
+superfícies utilizadas e limites/metodologia. Os índices de favorabilidade de
+grade e rede por demanda são o resultado principal da fase.
+
+O cabeçalho institucional em faixa azul contém a marca SICARD, o nome
+Sistema Inteligente de Cadastro e Ranking de Demandas e o slogan
+“Inteligência territorial para apoiar as decisões da Subsecretaria de Logística
+e Transporte (SLT)”. O título “Relatório de Favorabilidade Territorial à
+Implantação/Execução de Demandas de Logística e Transportes” aparece abaixo da faixa, seguido da
+identificação em campos rotulados de leitura. As seções explicativas utilizam
+tópicos com parágrafos justificados, sem suprimir informações. Esses ajustes
+de apresentação não modificam os índices nem a regra de média ponderada por
+área para superfícies raster.
+
+Mantêm-se os índices e classes originais por demanda e feição; as estatísticas
+exploratórias da tela não são exportadas como índice final. A síntese de
+cobertura por superfície informa demandas com e sem interseção, combinações
+demanda × feição, índices válidos, ausentes, nulos, inválidos e contatos sem
+área. Essas contagens não constituem novo escore.
+
+Os mapas obrigatórios do relatório apresentam: (i) localização das demandas;
+(ii) superfície de favorabilidade territorial de grade no contexto estadual; e
+(iii) superfície de favorabilidade de rede no contexto estadual, sempre com
+legenda, instruções de leitura e distinção explícita entre zero válido e ausência
+de dados (NoData).
+Nas fontes vetoriais, eventual reparação de geometria aplica-se somente à
+representação cartográfica e é informada por camada no PDF, sem alteração das
+fontes ou dos resultados numéricos. Uma reparação sem geometria utilizável
+impede a emissão.
 O PDF apresenta índices com duas casas decimais; Excel e CSV conservam a
 precisão numérica disponível nos resultados, sem arredondamento de apresentação.
 O pacote conserva os GeoPackages e os metadados com SHA-256.
@@ -341,7 +365,7 @@ O pacote de exportação, versão 2, é organizado por finalidade:
 
 | Arquivo | Finalidade |
 |---|---|
-| `Relatório de Favorabilidade Territorial.pdf` | Leitura técnica: alcance, fontes, cobertura, mapas, índices e classes por demanda e feição, limites e próximos passos. |
+| `Relatório de Favorabilidade Territorial.pdf` | Cabeçalho contextualizador, índices por demanda (grade e rede), mapas completos das superfícies em São Paulo, critérios/metodologia e limites com rastreabilidade. |
 | `Tabelas/Favorabilidade Territorial.xlsx` | Conferência externa com abas de índices e classes, cobertura por superfície, fontes e nomes revisados e orientações. |
 | `Tabelas/Índices e Classes.csv` | Detalhe aberto, com identificadores, valores originais, estados explícitos e áreas técnicas. |
 | `Tabelas/Cobertura por Superfície.csv` | Contagens das combinações e dos estados de qualidade, sem agregação dos índices. |

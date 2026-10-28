@@ -29,7 +29,7 @@
       let titleWidth = full;
       if (title.length > 10) {
         const words = title.split(/\s+/);
-        titleWidth = words.length > 1 ? Math.min(...words.slice(1).map((_, i) => Math.max(measure(words.slice(0, i+1).join(' '), header), measure(words.slice(i+1).join(' '), header)))) : Math.min(full, 180);
+        titleWidth = words.length > 1 ? Math.min(...words.slice(1).map((_, i) => Math.max(measure(words.slice(0, i+1).join(' '), header), measure(words.slice(i+1).join(' '), header)))) : full;
       }
       const compactAttributes = table.dataset.compactAttributes === 'true';
       const content = rows.reduce((max, row) => {
@@ -74,7 +74,7 @@
       const width = widths[i] + (selected ? 0 : extra);
       if (!selected) {
         const {label,title,full}=specifications[i], room=width-32;
-        const lines=[];let line='';
+        const lines=[];
         const adaptiveTitle = compactAttributes && header.classList.contains('col-atributo');
         if (adaptiveTitle) {
           const words = title.split(/\s+/);
@@ -93,11 +93,12 @@
           let split=1,best=Infinity;
           for(let k=1;k<words.length;k++){const a=measure(words.slice(0,k).join(' '),header),b=measure(words.slice(k).join(' '),header);if(Math.max(a,b)<best){best=Math.max(a,b);split=k;}}
           if(words.length>1 && best<=room){lines.push(words.slice(0,split).join(' '),words.slice(split).join(' '));}
-          else {for(const char of title){if(line && measure(line+char,header)>room){lines.push(line.trim());line='';}line+=char;}if(line)lines.push(line.trim());}
+          else lines.push(title);
         } else lines.push(title);
         label.replaceChildren(...lines.map((text,index)=>{const paragraph=document.createElement('span');paragraph.style.display='block';paragraph.textContent=text+(index<lines.length-1?' ':'');return paragraph;}));
         label.style.display='inline-block';label.style.maxWidth='100%';label.style.textAlign=lines.length>1?'justify':'center';
-        set(label,'white-space','normal');set(label,'overflow-wrap','anywhere');
+        set(label,'white-space','normal');set(label,'overflow-wrap','normal');
+        [...label.children].forEach(line => { set(line, 'white-space', 'nowrap'); });
         if (adaptiveTitle) {
           label.style.textAlign = 'center';
           [...label.children].forEach(line => { line.style.whiteSpace = 'nowrap'; });
@@ -108,7 +109,7 @@
         set(cell,'box-sizing','border-box');
       }
       set(header,'white-space','normal'); set(header,'overflow','visible'); set(header,'text-overflow','clip');
-      set(header,'overflow-wrap','anywhere'); set(header,'height','32px'); set(header,'min-height','32px');
+      set(header,'overflow-wrap','normal'); set(header,'height','32px'); set(header,'min-height','32px');
       set(header,'padding-top','8px'); set(header,'padding-bottom','8px');
     });
     if(table.dataset.groupedHeaders==='true'){

@@ -1,9 +1,9 @@
 {% extends "bases/base_conteudo.html" %}
-{% set subtitulo = "Extração de atributos" %}
+{% set subtitulo = "Nova extração de atributos" %}
 {% set navegacao = "restrita" %}
 {% set bloco_modulo = "geoprocessamento" %}
 {% set requer_autenticacao = true %}
-{% block titulo %}Extração de atributos — SICARD{% endblock %}
+{% block titulo %}Nova extração de atributos — SICARD{% endblock %}
 {% block classes_body %}extracao-page feedback-proprio{% endblock %}
 {% block base_url %}<base href="/restrict/geoespacial/">{% endblock %}
 {% block estilos_pagina %}
@@ -17,9 +17,9 @@
 {% block conteudo %}
 <div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
 <main class="conteudo-principal ea-main" id="extracao-app">
-  <nav class="ea-breadcrumb" aria-label="Localização"><a href="/restrict/">Início</a> / <a href="/restrict/geoespacial/">Geoprocessamento</a> / <a href="/restrict/geoespacial/extracoes-atributos/">Extrações de atributos</a> / Nova extração</nav>
+  <nav class="ea-breadcrumb" aria-label="Localização"><a href="/restrict/">Início</a> / <a href="/restrict/geoespacial/">Geoprocessamento</a> / <a href="/restrict/geoespacial/extracoes-atributos/">Extrações de atributos realizadas</a> / Nova extração de atributos</nav>
   <section class="card-extracao-de-atributos secao-extracao-de-atributos card standard-page-hero ea-intro">
-    <h1 class="ahp-page-title standard-page-hero__title"><i class="fas fa-layer-group" aria-hidden="true"></i><span>Extração de atributos</span></h1>
+    <h1 class="ahp-page-title standard-page-hero__title"><i class="fas fa-layer-group" aria-hidden="true"></i><span>Nova extração de atributos</span></h1>
     <span class="ea-eyebrow standard-page-hero__eyebrow">Análise territorial</span>
     <p class="standard-page-hero__description">Extraia os atributos das camadas que intersectam sua entrada e explore os resultados por categoria.</p>
     <nav class="ea-steps" aria-label="Seções da análise"><a href="/restrict/geoespacial/extracao-atributos/#ea-config">01 · Configurar</a><a href="/restrict/geoespacial/extracao-atributos/#ea-workbench">02 · Explorar no mapa</a><a href="/restrict/geoespacial/extracao-atributos/#ea-results">03 · Analisar e exportar</a></nav>

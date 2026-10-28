@@ -135,6 +135,8 @@ def test_relatorio_mapa_e_planilhas_usam_recortes_historicos(fonte, monkeypatch)
     from openpyxl import load_workbook
     from pypdf import PdfReader
     fonte, caminho = fonte
+    from tests.relatorio_cartografia_helpers import preparar_fontes
+    preparar_fontes(monkeypatch)
     ds = gdal.Open(str(caminho), gdal.GA_Update)
     ds.SetGeoTransform((5000000, 10, 0, 7000020, 0, -10))
     ds.Close()
@@ -158,8 +160,8 @@ def test_relatorio_mapa_e_planilhas_usam_recortes_historicos(fonte, monkeypatch)
     assert len(superficie['geometrias']['features']) == 3
     assert [f['properties']['favorabilidade']['indice'] for f in superficie['geometrias']['features']] == [.2, .8, 0]
     texto = '\n'.join(p.extract_text() for p in PdfReader(BytesIO(relatorio.pdf(modelo))).pages)
-    assert 'Média ponderada pela área: 0,60' in texto
-    assert 'cobertura válida: 50,00%' in texto
+    assert 'Média ponderada pela área' in texto and '0,60' in texto
+    assert 'Cobertura válida: 50,00%' in texto
     documentos = dict(exportacao.documentos(modelo, 'Relatorio.pdf', [n for n, _ in arquivos]))
     assert b'0,6' in documentos['Tabelas/Síntese Raster.csv']
     livro = load_workbook(BytesIO(documentos['Tabelas/Favorabilidade Territorial.xlsx']))

@@ -125,6 +125,7 @@
     const fases = hierarquizacao.dados_hierarquizacao?.cabecalho_grupo?.fases_a_executar || [1, 2, 3];
     const fase3Executada = docs.length > 0 && docs.every(objeto => objeto.hierarquizacao?.fase_3?.executada === true);
     const resultadoAtual = !coletaPendente && !resultadosDesatualizados && (!fases.includes(3) || fase3Executada);
+    if ($("fase3-baixar-relatorio")) $("fase3-baixar-relatorio").disabled = !resultadoAtual || !fase3Executada;
     document.querySelector('.secao-ranking-do-ajuste-fino').hidden = !resultadoAtual;
     document.querySelector('.secao-sintese-final').hidden = !resultadoAtual;
     let pesosProntos = true;
@@ -220,6 +221,38 @@
   async function init() {
     try {
       const usuario = SLTAdminAuth.currentUser || await SLTAdminAuth.fetchMe();
+      const botaoRelatorio = document.createElement("button");
+      botaoRelatorio.id = "fase3-baixar-relatorio";
+      botaoRelatorio.type = "button";
+      botaoRelatorio.className = "btn btn--primary";
+      botaoRelatorio.textContent = "Baixar relatório da Fase 3 (PDF)";
+      botaoRelatorio.disabled = true;
+      $("fase3-auditoria").after(botaoRelatorio);
+      botaoRelatorio.onclick = async () => {
+        const selecionada = atual();
+        if (!selecionada) { exigirHierarquizacao(); return; }
+        botaoRelatorio.disabled = true;
+        try {
+          const url = `/api/ahp/hierarquizacoes/${encodeURIComponent(selecionada.codigo)}/fases/3/relatorio.pdf`;
+          const resposta = await fetch(url, { credentials: "same-origin" });
+          if (!resposta.ok) {
+            if (window.SicardApiErro) throw await window.SicardApiErro.deResposta(resposta, { method: "GET", url });
+            throw new Error(`Não foi possível gerar o relatório da Fase 3 (HTTP ${resposta.status}).`);
+          }
+          const arquivo = URL.createObjectURL(await resposta.blob());
+          const link = document.createElement("a");
+          link.href = arquivo;
+          link.download = "Relatorio_Fase_3.pdf";
+          document.body.append(link);
+          link.click();
+          link.remove();
+          setTimeout(() => URL.revokeObjectURL(arquivo), 1000);
+        } catch (falha) {
+          erro(falha);
+        } finally {
+          botaoRelatorio.disabled = false;
+        }
+      };
       podeSolicitarComplementacao = ['ADMIN', 'ANALISTA', 'GESTOR'].includes(usuario?.tipo_usuario);
       $("fase3-complementacao").hidden = true;
       $("fase3-solicitar-complementacao").onclick = async () => {

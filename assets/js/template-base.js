@@ -10,6 +10,7 @@
 
   function marcarNavegacaoAtual() {
     document.querySelectorAll(".app-nav a[href]").forEach((link) => {
+      if (link.closest(".mapa-site-menu")) return;
       // A barra de módulo já vem marcada do servidor, que também compara a
       // query string (?menu=, ?modo=); pelo prefixo do caminho, "Início do
       // bloco" e a central do módulo ficariam ativos em todas as páginas.
@@ -40,7 +41,10 @@
         botao.setAttribute("aria-expanded", "true");
       });
     });
-    document.addEventListener("click", fecharTodos);
+    document.addEventListener("click", (evento) => {
+      if (evento.target.closest(".mapa-site-menu .app-nav-submenu")) return;
+      fecharTodos();
+    });
     document.addEventListener("keydown", (evento) => { if (evento.key === "Escape") fecharTodos(); });
   }
 

@@ -190,14 +190,47 @@ homologacao automatica.
 
 A seção **5 — Resultados da Elegibilidade Territorial** organiza a leitura em
 revisão dos nomes (5.1), situação e detalhamento por demanda (5.2), Resumo da
-Elegibilidade (5.3) e relatório, rastreabilidade e próximos passos (5.4).
+Elegibilidade (5.3) e emissão do relatório com rastreabilidade (5.4).
 A orientação diferencia saída não carregada, falha de leitura, lote parcial e
 ausência de interseção. O resumo restrito às demandas sem restrição não deve
 ser interpretado como a relação integral de demandas processadas.
 
 O PDF efetivamente emitido pelo fluxo de resultados, inclusive aquele associado
-à hierarquização, apresenta identificação e alcance, fontes, guia de leitura,
-metodologia da consulta, resultados por conjunto e limites/próximos passos.
+à hierarquização, segue estrutura comum da fase: cabeçalho contextualizador,
+resultados por demanda, guia de leitura, mapas e metodologia/limites.
+Na Fase 1, o resultado principal permanece a situação de cada demanda quanto
+a restrição e risco, com o resumo da elegibilidade apresentado sem alterar
+classificação ou cálculo original.
+
+O cabeçalho institucional em faixa azul contém a marca SICARD, o nome
+Sistema Inteligente de Cadastro e Ranking de Demandas e o slogan
+“Inteligência territorial para apoiar as decisões da Subsecretaria de Logística
+e Transporte (SLT)”. O título “Relatório de Elegibilidade Territorial à
+Implantação/Execução de Demandas de Logística e Transportes” aparece abaixo da faixa. A identificação
+é apresentada em campos rotulados de leitura, com objetivo, pergunta da fase,
+emissão, execução, conclusão e conjunto analisado. Os textos explicativos são
+organizados em tópicos justificados, preservando as informações.
+
+Os cartões de resultados e as situações por demanda usam a paleta existente:
+vermelho para restrição, amarelo para risco, marrom para ambas as situações e
+verde para ausência de restrição e risco nas fontes consultadas.
+
+Os mapas obrigatórios do relatório passaram a apresentar: (i) localização das
+demandas e (ii) conjunto completo das camadas de restrição/risco utilizadas,
+recortadas ao limite oficial de São Paulo, com legenda e instruções de leitura.
+O relatório não reduz os mapas aos fragmentos internos das demandas.
+A legenda é organizada em duas colunas, uma de restrições e outra de riscos,
+com amostras correspondentes às cores e texturas efetivamente desenhadas.
+Camadas que ocupam pelo menos 1% dos pixels do limite estadual na grade de
+exibição recebem gradação de preenchimento e hachuras ou pontilhado. As camadas
+de maior área são desenhadas primeiro, reduzindo a ocultação das menores.
+Gradações e texturas diferenciam fontes, não representam gravidade, intensidade
+ou classificação adicional e não interferem nos cálculos.
+Geometrias inválidas das fontes podem ser reparadas exclusivamente para a
+representação cartográfica, com aviso e contagem por camada no próprio PDF.
+Esse tratamento não modifica a fonte nem as áreas, situações ou índices já
+processados; uma geometria sem reparação utilizável impede a emissão.
+
 São informados os identificadores das execuções, as datas de conclusão, as
 contagens reais e a condição parcial, quando existente. O guia do pacote explica
 a relação entre PDF, tabelas, GeoPackages e assinaturas SHA-256 dos metadados.
@@ -212,7 +245,7 @@ O pacote de exportação, versão 2, mantém os nomes de arquivos existentes:
 
 | Arquivo | Finalidade |
 |---|---|
-| `Relatório de Elegibilidade Territorial.pdf` | Alcance, execuções, fontes, situação das demandas, mapas, resumo, detalhes e matrizes de área por camada. |
+| `Relatório de Elegibilidade Territorial.pdf` | Cabeçalho contextualizador, situação das demandas, resumo da elegibilidade, mapas completos (demandas e bases usadas), critérios/metodologia e limites com rastreabilidade. |
 | `Tabelas/Situação das Demandas.xlsx` | Abas de situação de todas as demandas, Resumo da Elegibilidade, detalhe das restrições e riscos, camadas consultadas e orientações. |
 | `Tabelas/Situação das Demandas.csv` | Detalhe em formato longo: uma linha por ocorrência ou uma linha sem ocorrência por demanda livre, não uma linha por demanda. |
 | `Tabelas/Resumo da Elegibilidade.xlsx` e `.csv` | Somente demandas sem restrição, com área de união dos riscos, percentual e índice existentes; ausência de linhas é explicada no guia. |

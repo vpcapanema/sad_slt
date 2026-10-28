@@ -155,6 +155,11 @@ def pagina_indice_cadastro(request: Request) -> Response:
     return render_page(request, "paginas/cadastro/index.html")
 
 
+@app.get("/public/mapa-do-site/", include_in_schema=False)
+def pagina_mapa_site(request: Request) -> Response:
+    return render_page(request, "paginas/mapa-site.html")
+
+
 @app.get("/public/cadastro/{pagina}/", include_in_schema=False)
 def pagina_publica_cadastro(
     request: Request,
@@ -449,6 +454,11 @@ def pagina_julgamento_multicriterio(
         "paginas/analise_multicriterio/espaco-trabalho-julgamento.html",
         julgamento_id=julgamento_id,
     )
+
+
+@app.get("/public/analise-multicriterio/formulario-comparacao-pareada/", include_in_schema=False)
+def pagina_demonstracao_comparacao_pareada(request: Request) -> Response:
+    return render_page(request, "paginas/analise_multicriterio/demonstracao.html")
 
 
 @app.get("/public/analise-multicriterio/{token}/", include_in_schema=False)

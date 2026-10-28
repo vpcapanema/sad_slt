@@ -30,7 +30,9 @@ e disposição devem seguir a referência. Não omitir a coluna de seletores.
   explícita, em blocos de texto separados, equilibrada entre palavras e justificada;
   se faltarem aproximadamente três caracteres para caber em uma linha,
   ampliar a coluna pela pequena diferença antes de quebrar o título.
-  admitir linhas adicionais para palavras extensas, sem reticências ou corte.
+  Admitir no máximo duas linhas, sempre com quebra entre palavras; nunca
+  dividir uma palavra, usar reticências ou cortar o título. A largura mínima
+  deve comportar a palavra inteira ou a divisão equilibrada em duas linhas.
   O conteúdo dos registros influencia a largura até 320 px, para que um valor
   excepcionalmente longo não domine a tabela. Distribuir o espaço restante
   entre colunas de dados, mantendo os seletores em 44 px. Se não couber,

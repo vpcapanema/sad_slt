@@ -344,6 +344,10 @@ def executar(payload: dict, controle: ControleProcessamento, *, analise: str = '
                 yield papel, ref['nome'], ref['id'], (_carregar(ref, aceitar_raster=True) if raster else _carregar(ref))
     intersecoes = []
     saida, auditoria = calcular(entrada, bases(), controle, intersecoes=intersecoes, analise=analise)
+    referencias = {r['id']: r for papel in config['papeis'] for r in payload[papel]}
+    for campo in auditoria['campos']:
+        if referencias[campo['id']].get('revisao'):
+            campo['revisao_fonte'] = referencias[campo['id']]['revisao']
     if analise == 'elegibilidade':
         for campo in auditoria['campos']:
             campo['adversidade'] = taxonomia[campo['id']]

@@ -3,7 +3,7 @@
 {% set navegacao = "restrita" %}
 {% set bloco_modulo = "mad" %}
 {% set requer_autenticacao = true %}
-{% block titulo %}{% if modo_pagina == 'julgamentos' %}Central de respostas{% elif modo_pagina == 'formulario' %}Formulário dos especialistas{% else %}Central de julgamentos{% endif %} — SICARD{% endblock %}
+{% block titulo %}{% if modo_pagina == 'julgamentos' %}Respostas dos especialistas aos julgamentos AHP{% elif modo_pagina == 'formulario' %}Formulário dos especialistas{% else %}Gestão de julgamentos AHP{% endif %} — SICARD{% endblock %}
 {% block classes_body %}ahp-module-page ami-page feedback-proprio{% if modo_pagina in ['espaco', 'julgamentos'] %} ami-espaco-page{% endif %}{% if modo_pagina == 'julgamentos' %} sicard-standard-page{% endif %}{% endblock %}
 {% block estilos_pagina %}
   <link rel="stylesheet" href="/assets/css/ahp-module.css">
@@ -30,7 +30,7 @@
 <div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
 <main class="conteudo-principal app-main ahp-main ami-main" data-modo="{{ modo_pagina }}">
   <section class="secao-cabecalho-julgamentos card ahp-step-intro ami-hero standard-page-hero card-cabecalho-julgamentos">
-    <h1 class="standard-page-hero__title" id="ami-page-title"><i id="ami-page-title-icon" class="{% if modo_pagina == 'julgamentos' %}fa-solid fa-list-check{% elif modo_pagina == 'formulario' %}fa-solid fa-clipboard-question{% else %}fa-solid fa-people-group{% endif %}" aria-hidden="true"></i><span id="ami-page-title-text">{% if modo_pagina == 'julgamentos' %}Central de respostas{% elif modo_pagina == 'formulario' %}Formulário dos especialistas{% else %}Central de julgamentos{% endif %}</span></h1>
+    <h1 class="standard-page-hero__title" id="ami-page-title"><i id="ami-page-title-icon" class="{% if modo_pagina == 'julgamentos' %}fa-solid fa-list-check{% elif modo_pagina == 'formulario' %}fa-solid fa-clipboard-question{% else %}fa-solid fa-people-group{% endif %}" aria-hidden="true"></i><span id="ami-page-title-text">{% if modo_pagina == 'julgamentos' %}Respostas dos especialistas aos julgamentos AHP{% elif modo_pagina == 'formulario' %}Formulário dos especialistas{% else %}Gestão de julgamentos AHP{% endif %}</span></h1>
     <p class="ami-eyebrow standard-page-hero__eyebrow">Análise Multicritério Interativa</p>
     <p class="standard-page-hero__description" id="ami-page-intro">{% if modo_pagina == 'julgamentos' %}Consulte as respostas enviadas pelos especialistas nos julgamentos colaborativos.{% elif modo_pagina == 'formulario' %}Selecione um julgamento e abra o formulário público destinado aos especialistas.{% else %}Configure participantes, prazo de coleta e acesso ao ambiente colaborativo.{% endif %}</p>
   </section>

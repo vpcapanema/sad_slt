@@ -80,7 +80,7 @@
       $("hier-loading").classList.add("hidden");
       $("hier-error").textContent = e.message;
       $("hier-error").classList.remove("hidden");
-      Notify.error("Central de hierarquização", e.message);
+      Notify.error("Gestão das hierarquizações", e.message);
       return false;
     }
   }

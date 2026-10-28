@@ -50,6 +50,9 @@ const rodada = (codigo, pendente, desatualizada) => ({codigo, nome: codigo, dado
     await page.route('https://**/*', route => route.abort());
     await page.route('**/api/**', route => {
       const url = new URL(route.request().url()), p = url.pathname;
+      if (p.endsWith('/fases/3/relatorio.pdf')) {
+        return route.fulfill({contentType: 'application/pdf', body: '%PDF-1.4\n% Mock de download'});
+      }
       let json = [];
       if (p === '/api/auth/me') json = {id: 'u1', nome: 'Teste', tipo_usuario: 'ADMIN'};
       else if (p === '/api/auth/session') json = {authenticated: true};
@@ -71,6 +74,11 @@ const rodada = (codigo, pendente, desatualizada) => ({codigo, nome: codigo, dado
     assert.equal(await page.locator('.secao-criterios-de-atributos').isVisible(), true);
     assert.equal(await page.locator('.secao-ranking-do-ajuste-fino').isVisible(), true);
     assert.equal(await page.locator('.secao-sintese-final').isVisible(), true);
+    assert.equal(await page.locator('#fase3-baixar-relatorio').isEnabled(), true);
+    const [download] = await Promise.all([
+      page.waitForEvent('download'), page.locator('#fase3-baixar-relatorio').click(),
+    ]);
+    assert.equal(download.suggestedFilename(), 'Relatorio_Fase_3.pdf');
     await page.waitForTimeout(150);
     const demandLayout = await page.locator('table[data-ranking-order]').evaluate(table => {
       const cell = table.tBodies[0].rows[0].cells[2], range = document.createRange();
@@ -106,6 +114,7 @@ const rodada = (codigo, pendente, desatualizada) => ({codigo, nome: codigo, dado
       assert.doesNotMatch(await page.locator('#fase3-tabela-sintese').innerText(), /0\.7500/,
         'síntese antiga não deve aparecer como atual');
       assert.equal(await page.locator('#sintetizar').isDisabled(), true);
+      assert.equal(await page.locator('#fase3-baixar-relatorio').isDisabled(), true);
       assert.equal(await page.locator('.secao-ranking-do-ajuste-fino').isVisible(), false);
       assert.equal(await page.locator('.secao-sintese-final').isVisible(), false);
     }

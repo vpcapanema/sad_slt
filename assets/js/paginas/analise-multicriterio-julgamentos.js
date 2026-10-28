@@ -117,7 +117,7 @@
   }
   function avisarFormulario(message, node, field) {
     node.textContent = message;
-    Notify.warning("Central de julgamentos", message);
+    Notify.warning("Gestão de julgamentos AHP", message);
     if (field) field.focus();
   }
   function statusLabel(status) { return { ativa: "Aberto", consolidada: "Consolidado", encerrada: "Encerrado" }[status] || status; }
@@ -743,7 +743,7 @@
     }).catch(function (e) {
       if (request === analysisRequest) {
         $("ami-analysis-feedback").textContent=e.message;
-        Notify.error("Central de respostas", e.message);
+        Notify.error("Respostas dos especialistas aos julgamentos AHP", e.message);
       }
     }).finally(function(){if(request===analysisRequest)$("ami-analysis-workspace").inert=false;});
   }
@@ -1120,10 +1120,10 @@
  pairwiseMode = mode; [["ami-judgments-matrix-action", "matrix"], ["ami-judgments-form-action", "form"]].forEach(function (entry) { var active = mode === entry[1]; $(entry[0]).classList.toggle("is-active", active); $(entry[0]).setAttribute("aria-pressed", String(active)); }); $("ami-pairwise-panel").classList.remove("is-hidden"); loadSaatyScale().then(function () { renderPairwise(judgment); $("ami-pairwise-panel").scrollIntoView({ behavior: "smooth", block: "start" }); }); }
   function setupMode() {
     if (modo === "espaco") {
-      $("ami-page-title-text").textContent = "Central de julgamentos";
+      $("ami-page-title-text").textContent = "Gestão de julgamentos AHP";
       $("ami-page-title-icon").className = "fa-solid fa-people-group";
       $("ami-page-intro").textContent = "Configure participantes, prazo de coleta e acesso ao ambiente colaborativo.";
-      document.title = "Central de julgamentos — SICARD";
+      document.title = "Gestão de julgamentos AHP — SICARD";
       $("ami-new").classList.remove("is-hidden");
     } else if (modo === "formulario") {
       $("ami-page-title-text").textContent = "Formulário dos especialistas";
@@ -1131,10 +1131,10 @@
       $("ami-page-intro").textContent = "Selecione um julgamento e use o botão acima da tabela para abrir o formulário público.";
       document.title = "Formulário dos especialistas — SICARD";
     } else {
-      $("ami-page-title-text").textContent = "Central de respostas";
+      $("ami-page-title-text").textContent = "Respostas dos especialistas aos julgamentos AHP";
       $("ami-page-title-icon").className = "fa-solid fa-list-check";
       $("ami-page-intro").textContent = "Consulte as respostas enviadas pelos especialistas nos julgamentos colaborativos.";
-      document.title = "Central de respostas — SICARD";
+      document.title = "Respostas dos especialistas aos julgamentos AHP — SICARD";
       ["edit","save","cancel","delete","public"].forEach(function (action) { var element=$("ami-judgments-"+action+"-action"); if(element) element.classList.add("is-hidden"); });
     }
   }
@@ -1159,7 +1159,7 @@
       $("ami-hierarchy").dataset.source = hierarquizacoesSourceUrl;
       $("ami-hierarchy").insertAdjacentHTML("beforeend", hierarquizacoes.map(function (h) { return '<option value="' + escapeHtml(h.id) + '" data-hierarquizacao-id="' + escapeHtml(h.id) + '">' + escapeHtml((h.nome || "Sem nome") + " — " + (h.codigo || "Sem código")) + "</option>"; }).join(""));
       return loadRequestedSurface();
-      }).catch(function (err) { Notify.error("Central de julgamentos", err.message); $("ami-hierarchy-summary").textContent = "Não foi possível carregar as hierarquizações: " + err.message; });
+      }).catch(function (err) { Notify.error("Gestão de julgamentos AHP", err.message); $("ami-hierarchy-summary").textContent = "Não foi possível carregar as hierarquizações: " + err.message; });
     }
 
     if ($("ami-search")) $("ami-search").addEventListener("input", function () { currentPage = 1; render(); });

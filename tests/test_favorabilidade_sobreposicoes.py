@@ -20,6 +20,12 @@ from api.services import elegibilidade_processamento as processamento, elegibili
 from api.services.controle_processamento import ControleProcessamento
 
 
+@pytest.fixture(autouse=True)
+def fontes_cartograficas(monkeypatch):
+    from tests.relatorio_cartografia_helpers import preparar_fontes
+    preparar_fontes(monkeypatch)
+
+
 @pytest.fixture
 def analise(monkeypatch):
     entrada = gpd.GeoDataFrame({'nome': ['A', 'B', 'Sem interseção']},
@@ -158,17 +164,20 @@ def test_painel_completo_nomes_pdf_e_pacote_preservam_fragmentos(analise):
     documento = service.pdf(modelo)
     texto = '\n'.join(p.extract_text() for p in PdfReader(BytesIO(documento)).pages)
     assert 'Relatório de Favorabilidade Territorial' in texto
-    assert 'Favorabilidade de Grade' in texto and 'Favorabilidade de Rede' in texto
+    assert 'Índice de favorabilidade territorial de grade' in texto
+    assert 'Índice de favorabilidade de rede' in texto
     assert 'Demandas Sul' in texto and 'Demanda' in texto
     assert 'Relatório de Elegibilidade' not in texto and 'Restrição' not in texto and 'Risco' not in texto
     assert 'fav_territorial_dim' in texto and 'fav_rede_dim' in texto
-    assert 'Alta' in texto and 'Muito Baixa' in texto and '0,70' in texto and '0,00' in texto
+    assert '0,70' in texto and '0,00' in texto
     assert 'Área Sobreposta' not in texto and 'km²' not in texto
     for trecho in ('1 — Identificação e alcance da análise', '3 — Como ler os resultados',
-                   '5 — Resultados por conjunto de demandas', '6 — Limites, rastreabilidade e próximos passos',
-                   'não índice zero', 'não as estatísticas exploratórias', 'job-1', 'job-2',
-                   'Cobertura e qualidade dos índices por superfície', 'Índices válidos',
-                   'as tabelas do pacote preservam', 'editar uma cópia não atualiza o SICARD'):
+                   '4 — Localização das demandas e bases utilizadas',
+                   '5 — Critérios e metodologia das bases utilizadas',
+                   '6 — Limites, rastreabilidade e próximos passos',
+                   'Zero é um índice válido', 'job-1', 'job-2',
+                   'Cobertura válida',
+                   'tabelas do pacote', 'atualiza o SICARD'):
         assert trecho in texto
     pacote, caminho = service.pacote(modelo, arquivos)
     assert arquivos_storage[caminho] == pacote

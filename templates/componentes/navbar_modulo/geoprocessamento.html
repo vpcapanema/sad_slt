@@ -1,15 +1,15 @@
 {% from "componentes/navbar_modulo/_barra.html" import barra with context %}
 {{ barra("Páginas do Geoprocessamento", [
-  {"href": "/restrict/geoespacial/", "texto": "Central geoespacial"},
+  {"href": "/restrict/geoespacial/", "texto": "Central de geoprocessamento"},
   {"texto": "Camadas", "itens": [
     {"href": "/api/geoespacial/catalogo/conciliacao/pagina", "texto": "Conciliação do catálogo"}
   ]},
   {"texto": "Geradores", "itens": [
-    {"href": "/restrict/geoespacial/gerador-camadas-territoriais/", "texto": "Tributação de camadas territoriais"}
+    {"href": "/restrict/geoespacial/gerador-camadas-territoriais/", "texto": "Gerador de camadas de indicadores territoriais"}
   ]},
   {"texto": "Análise territorial", "itens": [
-    {"href": "/restrict/geoespacial/extracoes-atributos/", "texto": "Extrações de atributos"},
+    {"href": "/restrict/geoespacial/extracoes-atributos/", "texto": "Extrações de atributos realizadas"},
     {"href": "/restrict/geoespacial/extracao-atributos/", "texto": "Nova extração de atributos"},
-    {"href": "/restrict/geoespacial/bancada/", "texto": "Bancada geoprocessamento"}
+    {"href": "/restrict/geoespacial/bancada/", "texto": "Bancada de geoprocessamento"}
   ]}
 ]) }}

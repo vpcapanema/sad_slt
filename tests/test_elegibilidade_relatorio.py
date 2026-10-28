@@ -18,6 +18,12 @@ from api.services.arquivos_geoespaciais_memoria import vetor
 from tests.territorial_ogr_helpers import serializar_fixture as serializar
 
 
+@pytest.fixture(autouse=True)
+def fontes_cartograficas(monkeypatch):
+    from tests.relatorio_cartografia_helpers import preparar_fontes
+    preparar_fontes(monkeypatch)
+
+
 @pytest.fixture
 def analise(monkeypatch):
     fontes = [{'id': f'base-{i}', 'nome': f'base_tecnica_{i}', 'papel': 'restricao' if i < 4 else 'risco',
@@ -194,12 +200,13 @@ def test_tabela_mapa_e_pdf_completos_sem_nomes_tecnicos(analise):
     documento = PdfReader(BytesIO(service.pdf(modelo)))
     texto = '\n'.join(p.extract_text() for p in documento.pages)
     assert len(documento.pages) >= 7
-    assert 'Feição 62' in texto and '0,0000000000001' in texto
+    assert 'Situação das Demandas quanto a Restrições e Riscos' in texto
+    assert 'Com restrição e risco' in texto and 'Livre de restrições e riscos' in texto
     assert 'km²' in texto and ' ha' in texto and 'Trecho do Setor 6' in texto
     assert 'Bacia Hidrográfica do Setor 6' in texto
     assert 'Demandas do Setor Norte' in texto and 'Demandas do Setor Sul' in texto
     assert 'entrada_tecnica' not in texto and 'base_tecnica' not in texto and 'campo_0' not in texto
-    assert 'Metodologia' in texto and 'Mapa-Síntese' in texto
+    assert 'Metodologia' in texto and 'Mapa de localização das demandas' in texto
     for pagina in documento.pages:
         assert float(pagina.mediabox.width) == pytest.approx(595.2756, abs=.01)
         assert float(pagina.mediabox.height) == pytest.approx(841.8898, abs=.01)
@@ -229,11 +236,12 @@ def test_pdf_e_pacote_informam_restricao_risco_ou_livre_por_demanda(analise):
     modelo, arquivos = service.montar(['job-1', 'job-2'], nomes, 'autor', True)
     texto = '\n'.join(p.extract_text() for p in PdfReader(BytesIO(service.pdf(modelo))).pages)
     for trecho in ('Situação das Demandas quanto a Restrições e Riscos', 'A demanda é o objeto da análise',
-                   'Distribuição das Demandas por Situação', 'Resumo por Demanda', 'Livre de restrições e riscos',
-                   'Com restrição e risco', 'Tem 4 restrições', 'Anexo: Matrizes de Área por Camada'):
+                   'Demandas analisadas', 'Livre de restrições e riscos',
+                   'Com restrição e risco', 'Tem 4 restrições', '4 — Localização das demandas e bases utilizadas',
+                   '5 — Critérios e metodologia das bases utilizadas'):
         assert trecho in texto, trecho
     assert 'Cobertura' not in texto
-    assert texto.index('Resumo por Demanda') < texto.index('Detalhes por Demanda') < texto.index('Anexo: Matrizes')
+    assert texto.index('2 — Resultados por demanda') < texto.index('3 — Como ler os resultados') < texto.index('4 — Localização')
     zip_bytes, _ = service.pacote(modelo, arquivos)
     with ZipFile(BytesIO(zip_bytes)) as pacote:
         conteudo = {'LEIA-ME.txt', 'Tabelas/Situação das Demandas.xlsx', 'Tabelas/Situação das Demandas.csv',
@@ -471,7 +479,8 @@ def test_pdf_exportado_sem_gravar_na_hierarquizacao(analise, monkeypatch, segund
         assert sha256(dados[documento['arquivo']]).hexdigest() == documento['sha256']
         texto = ' '.join(p.extract_text() for p in PdfReader(BytesIO(dados[documento['arquivo']])).pages)
         for trecho in ('1 — Identificação e alcance da análise', '3 — Como ler os resultados',
-                       '5 — Resultados por conjunto de demandas', '6 — Limites, rastreabilidade e próximos passos',
+                       '4 — Localização das demandas e bases utilizadas', '5 — Critérios e metodologia das bases utilizadas',
+                       '6 — Limites, rastreabilidade e próximos passos',
                        'não constitui critério multicritério'):
             assert trecho in texto
         assert ('job-1' if codigo == 'HIER-NORTE' else 'job-2') in texto
@@ -498,11 +507,11 @@ def test_relatorio_parcial_explica_escopo_e_resumo_sem_restricao_sem_alterar_sai
     assert 'RELATÓRIO PARCIAL' in texto and 'Entradas concluídas: 1 de 2' in texto
     assert 'job-1' in texto and 'job-2' not in texto
     assert 'Demandas analisadas: 63' in texto
-    assert 'com restrição ou risco: 62' in texto
-    assert 'livres de restrições e riscos: 1' in texto
+    assert 'Demandas com restrição ou risco: 62' in texto
+    assert 'Demandas livres de restrições e riscos: 1' in texto
     assert 'Entradas não concluídas não recebem resultado' in texto
-    assert 'Demandas com restrição não constam desta tabela' in texto
-    assert 'Esse resumo não altera as áreas independentes por base' in texto
+    assert 'não constitui critério multicritério' in texto
+    assert '6 — Limites, rastreabilidade e próximos passos' in texto
     assert 'A rosca' not in texto
     pacote, _ = service.pacote(modelo, arquivos)
     with ZipFile(BytesIO(pacote)) as zipado:
@@ -871,7 +880,7 @@ def test_processamento_real_alimenta_painel_e_pdf_sem_recalcular(monkeypatch):
     assert arquivos[0][1] == dados
     texto = ' '.join(p.extract_text() for p in PdfReader(BytesIO(service.pdf(modelo))).pages)
     assert 'Margens do Rio Claro' in texto and 'Reserva do Vale Verde' in texto
-    assert '80,00%' in texto and 'Demanda Sul' in texto
+    assert 'Demanda Sul' in texto and 'Tem 2 restrições' in texto
     recortes[0]['area_m2'] = 99.
     adulterado = processamento.serializar(saida,audit,recortes,'saida.gpkg')['saida.gpkg']
     resultado['sha256'] = sha256(adulterado).hexdigest()

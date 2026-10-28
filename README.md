@@ -10,6 +10,21 @@ Os nomes oficiais de módulos, fases e objetos estão em
 [`documentacao/geral/TERMINOLOGIA.md`](documentacao/geral/TERMINOLOGIA.md).
 A apresentação integrada está em `/public/documentacao/visao-geral/`.
 
+O menu **Mapa do site**, na navegação pública, reúne os acessos dos cards da
+área restrita e suas páginas vinculadas, preservando grupos, subgrupos e nomes.
+A página `/public/mapa-do-site/` apresenta também as rotas e os padrões de
+endereços que exigem identificador ou token. O inventário compartilhado fica em
+[`templates/componentes/mapa_site.html`](templates/componentes/mapa_site.html).
+Os links do menu e da lista abrem em outra aba e não concedem permissões de acesso.
+
+O formulário público genérico em
+`/public/analise-multicriterio/formulario-comparacao-pareada/` é demonstrativo,
+sem identificação, envio ou persistência. Utiliza os 17 indicadores do arquivo
+`documentacao/fundamentacao/PLI_Fig_Estrutura_Criterios_v6.pptx` como critérios,
+sem códigos, organizados nas sete dimensões de origem. As comparações ocorrem
+dentro de cada dimensão e são reiniciadas ao trocar a dimensão. Julgamentos
+reais continuam acessíveis exclusivamente pelos respectivos convites.
+
 ## Arquitetura
 
 | Componente | Tecnologia | Responsabilidade |

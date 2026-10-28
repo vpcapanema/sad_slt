@@ -1,0 +1,118 @@
+{# Inventário compartilhado pelo menu público e pela página do mapa do site.
+   Os títulos dos acessos principais reproduzem os cards da área restrita. #}
+{% set grupos = [
+  ('MOCAD — Cadastro e análise de demandas', [
+    ('', [
+      ('Mapa de demandas', '/restrict/painel/'),
+      ('Demandas cadastradas — tabela', '/restrict/demandas/'),
+      ('Análise de demanda', '/restrict/demanda/'),
+      ('Cadastro de demandas a partir de PDFs do SEI', '/restrict/sei-documentos/')
+    ])
+  ]),
+  ('MAD — Apoio à decisão', [
+    ('Organização das hierarquizações e julgamentos AHP', [
+      ('Agrupamento de demandas', '/restrict/agrupamento-demandas/'),
+      ('Gestão das hierarquizações', '/restrict/hierarquizacao/processos/'),
+      ('Gestão de julgamentos AHP', '/restrict/analise-multicriterio/central-julgamentos'),
+      ('Respostas dos especialistas aos julgamentos AHP', '/restrict/analise-multicriterio/central-respostas'),
+      ('Formulário público de comparação pareada', '/public/analise-multicriterio/formulario-comparacao-pareada/')
+    ]),
+    ('Avaliação territorial e priorização', [
+      ('Elegibilidade territorial', '/restrict/hierarquizacao/fase-1/'),
+      ('Favorabilidade territorial', '/restrict/hierarquizacao/fase-2/'),
+      ('Priorização de demandas por atributos', '/restrict/hierarquizacao/fase-3/')
+    ])
+  ]),
+  ('RESULTADOS', [
+    ('', [
+      ('Resultados e ranking de demandas', '/restrict/hierarquizacao/ranking/'),
+      ('Transparência e acompanhamento', '/public/transparencia/')
+    ])
+  ]),
+  ('PÚBLICO', [
+    ('', [
+      ('Portal público', '/public/'),
+      ('Cadastro de demandas — acesso e orientações', '/public/cadastro/'),
+      ('Painel público de demandas', '/public/painel/'),
+      ('Documentação', '/public/documentacao/'),
+      ('Visão geral do SICARD', '/public/documentacao/visao-geral/'),
+      ('Tutoriais do SICARD', '/public/documentacao/tutoriais/'),
+      ('Entrar no SICARD', '/public/login/'),
+      ('Área restrita', '/restrict/')
+    ])
+  ]),
+  ('CATÁLOGOS', [
+    ('', [
+      ('Diretorias', '/public/cadastro/catalogo-diretorias/'),
+      ('Planos', '/public/cadastro/catalogo-planos/'),
+      ('Frentes do PLI', '/public/cadastro/catalogo-frentes-pli/'),
+      ('Eixos do PEF', '/public/cadastro/catalogo-eixos-pef/')
+    ])
+  ]),
+  ('Ações do operador', [
+    ('', [
+      ('Cadastrar nova demanda', '/public/cadastro/nova-demanda/'),
+      ('Complementação de dados da demanda', '/restrict/complementacao/')
+    ]),
+    ('Cadastros de apoio no SIGMA-PLI', [
+      ('Cadastro de pessoa e usuário no SIGMA-PLI', 'https://56.125.163.194/cadastro/sigma'),
+      ('Cadastro de instituição no SIGMA-PLI', 'https://56.125.163.194/cadastro/instituicao'),
+      ('Cadastro de pessoa no SIGMA-PLI', 'https://56.125.163.194/cadastro/pessoa/')
+    ])
+  ]),
+  ('Geoprocessamento e documentação técnica', [
+    ('Geoprocessamento', [
+      ('Central de geoprocessamento', '/restrict/geoespacial/'),
+      ('Visualizador de camadas geoespaciais', '/restrict/geoespacial/visualizador-camadas/'),
+      ('Extrações de atributos realizadas', '/restrict/geoespacial/extracoes-atributos/'),
+      ('Gerador de camadas de indicadores territoriais', '/restrict/geoespacial/gerador-camadas-territoriais/'),
+      ('Gerador de superfícies de favorabilidade', '/restrict/geoespacial/gerador-superficies-favorabilidade/'),
+      ('Bancada de geoprocessamento', '/restrict/geoespacial/bancada/'),
+      ('Explorador de camadas geoespaciais', '/restrict/geoespacial/explorador-camadas/'),
+      ('Nova extração de atributos', '/restrict/geoespacial/extracao-atributos/'),
+      ('Transparência, procedimentos e rastreabilidade das camadas territoriais', '/restrict/geoespacial/documentacao-camadas-territoriais/')
+    ]),
+    ('Documentação técnica', [
+      ('Fundamentos da elegibilidade territorial — restrições e riscos', '/public/documentacao/risco-restricao/'),
+      ('Fundamentos da favorabilidade territorial — município e rede rodoviária', '/public/documentacao_favorabilidade_v2/'),
+      ('Fundamentos do limite marítimo de referência de São Paulo', '/public/documentacao/limite-maritimo/'),
+      ('Glossário técnico-conceitual', '/public/documentacao/glossario/'),
+      ('Especificação da priorização de demandas por atributos', '/public/documentacao/hierarquizacao/MODULO_FASE3_ATRIBUTOS_PROJETO_AJUSTE.md')
+    ])
+  ]),
+  ('Administração', [
+    ('Tabelas do banco de dados', [
+      ('Tabelas de domínio', '/restrict/admin/?menu=__dominios__'),
+      ('AHP', '/restrict/admin/?menu=ahp'),
+      ('Auditoria', '/restrict/admin/?menu=auditoria'),
+      ('Demandas', '/restrict/admin/?menu=demandas'),
+      ('Geografia', '/restrict/admin/?menu=geo'),
+      ('Geoprocessamento', '/restrict/admin/?menu=geoprocessamento'),
+      ('Hierarquização de Demandas', '/restrict/admin/?menu=hierarquizacao_demandas')
+    ]),
+    ('Armazenamento de dados geoespaciais', [
+      ('Acesso administrativo ao armazenamento', '/sicard/storage/web/admin/login'),
+      ('Acesso ao gerenciador de arquivos geoespaciais', '/sicard/storage/web/client/login')
+    ])
+  ])
+] %}
+
+{% macro lista(rotas=false) %}
+<ul class="mapa-site-grupos">
+  {% for grupo, subgrupos in grupos %}
+  <li>
+    <details>
+      <summary>{{ grupo }}</summary>
+      {% for subgrupo, paginas in subgrupos %}
+      {% if subgrupo %}<h3>{{ subgrupo }}</h3>{% endif %}
+      <ul class="mapa-site-links">
+        {% for nome, rota in paginas %}
+        <li><a href="{{ rota }}" target="_blank" rel="noopener noreferrer">{{ nome }}{% if rotas %}<code>{{ rota }}</code>{% endif %}</a></li>
+        {% endfor %}
+      </ul>
+      {% endfor %}
+    </details>
+  </li>
+  {% endfor %}
+</ul>
+{% endmacro %}

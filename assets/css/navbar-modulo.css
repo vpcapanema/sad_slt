@@ -16,6 +16,119 @@
   font-weight: 700;
 }
 
+.mapa-site-menu .app-nav-submenu {
+  width: min(36rem, calc(100vw - 2rem));
+  max-height: 70vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  color: #fff;
+}
+
+.mapa-site-grupos,
+.mapa-site-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.mapa-site-grupos summary {
+  padding: 0.75rem;
+  cursor: pointer;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.mapa-site-grupos h3 {
+  margin: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.mapa-site-menu .mapa-site-links a {
+  white-space: normal;
+}
+
+.mapa-site-menu .mapa-site-grupos {
+  padding: 0.25rem 0.25rem 0.5rem;
+}
+
+.mapa-site-menu .mapa-site-grupos > li + li {
+  margin-top: 0.5rem;
+  padding-top: 0.375rem;
+  border-top: 1px solid rgba(134, 239, 172, 0.2);
+}
+
+.mapa-site-menu .mapa-site-grupos summary {
+  padding: 0.3rem 0.5rem;
+  color: #86efac;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+}
+
+.mapa-site-menu .mapa-site-grupos h3 {
+  margin: 0.5rem 0.5rem 0.15rem 1.5rem;
+  color: #bbf7d0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.mapa-site-menu .mapa-site-links {
+  margin: 0.15rem 0.25rem 0.25rem 1.5rem;
+  padding-left: 0.5rem;
+  border-left: 1px solid rgba(134, 239, 172, 0.25);
+}
+
+.mapa-site-menu h3 + .mapa-site-links {
+  margin-left: 2rem;
+}
+
+.app-nav .mapa-site-menu .mapa-site-links a {
+  margin: 0;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.mapa-site-menu summary:focus-visible {
+  outline: 2px solid #86efac;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.mapa-site-pagina details {
+  margin-block: 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+}
+
+.mapa-site-pagina .mapa-site-links a {
+  display: block;
+  padding: 0.6rem 1rem;
+}
+
+.mapa-site-pagina code {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 900px) {
+  .navbar-publica:has(.mapa-site-menu) {
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+
+  .app-nav .mapa-site-menu .app-nav-submenu {
+    position: fixed;
+    top: auto;
+    right: 1rem;
+    left: 1rem;
+    width: auto;
+    max-height: 60vh;
+    margin-top: 0.35rem;
+  }
+}
+
 .app-nav .app-nav-bloco:hover {
   background: rgba(255, 255, 255, 0.24);
 }

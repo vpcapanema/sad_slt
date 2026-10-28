@@ -1,0 +1,21 @@
+{% extends "bases/base_conteudo.html" %}
+{% from "componentes/mapa_site.html" import lista %}
+{% set navegacao = "publica" %}
+{% set requer_autenticacao = false %}
+{% block titulo %}Mapa do site — SICARD{% endblock %}
+{% block conteudo %}
+<main class="conteudo-principal app-main mapa-site-pagina">
+  <section class="secao-mapa-site" aria-labelledby="mapa-site-titulo">
+    <h1 id="mapa-site-titulo">Mapa do site</h1>
+    <p>Páginas e rotas do SICARD, organizadas conforme os grupos e subgrupos da área restrita. Expanda um grupo para consultar seus acessos.</p>
+    <p>Os links não alteram as permissões: páginas restritas e administrativas exigem o perfil correspondente. Os cadastros SIGMA-PLI e o storage possuem acesso próprio.</p>
+    {{ lista(rotas=true) }}
+    <h2>Acessos vinculados a um registro</h2>
+    <p>Estes endereços são abertos a partir das centrais, com o identificador do julgamento ou o token do convite. Não são links genéricos.</p>
+    <ul>
+      <li>Espaço de trabalho do julgamento: <code>/restrict/analise-multicriterio/julgamentos/{julgamento_id}/</code></li>
+      <li>Formulário de comparação pareada: <code>/public/analise-multicriterio/formulario-comparacao-pareada/{token}/</code></li>
+    </ul>
+  </section>
+</main>
+{% endblock %}

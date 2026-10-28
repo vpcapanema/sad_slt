@@ -135,6 +135,14 @@ def _response(row: dict[str, Any]) -> HierarquizacaoResponseSchema:
     )
 
 
+def relatorio_pdf_fase3(codigo: str) -> bytes:
+    from api.services.relatorio_fase3_pdf import documento
+    row = _carregar(codigo)
+    if configuracao_fase3_desatualizada(row):
+        raise ValueError('Os critérios da Fase 3 mudaram. Recalcule antes de emitir o relatório.')
+    return documento(row)
+
+
 def _carregar(codigo: str) -> dict[str, Any]:
     row = repo.get_by_codigo(codigo)
     if not row:

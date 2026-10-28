@@ -1,9 +1,9 @@
 {% from "componentes/navbar_modulo/_barra.html" import barra with context %}
 {{ barra("Páginas do MAD", [
-  {"href": "/restrict/hierarquizacao/processos/", "texto": "Processos de hierarquização"},
+  {"href": "/restrict/hierarquizacao/processos/", "texto": "Gestão das hierarquizações"},
   {"texto": "Julgamentos", "itens": [
-    {"href": "/restrict/analise-multicriterio/central-julgamentos", "texto": "Central de julgamentos"},
-    {"href": "/restrict/analise-multicriterio/central-respostas", "texto": "Central de respostas"},
+    {"href": "/restrict/analise-multicriterio/central-julgamentos", "texto": "Gestão de julgamentos AHP"},
+    {"href": "/restrict/analise-multicriterio/central-respostas", "texto": "Respostas dos especialistas aos julgamentos AHP"},
     {"href": "/restrict/analise-multicriterio/?modo=formulario", "texto": "Formulário dos especialistas", "modo": "formulario"}
   ]}
 ]) }}

@@ -1,5 +1,5 @@
 {% extends "bases/base_conteudo.html" %}
-{% set subtitulo = "Camadas geoespaciais" %}
+{% set subtitulo = "Explorador de camadas geoespaciais" %}
 {% set navegacao = "restrita" %}
 {% set bloco_modulo = "geoprocessamento" %}
 {% set requer_autenticacao = true %}
@@ -14,8 +14,8 @@
 {% endblock %}
 {% block conteudo %}
 <main class="conteudo-principal app-main geo-explorer-main">
-  <nav class="geoespacial-breadcrumb"><a href="/restrict/geoespacial/">Central geoespacial</a><span>›</span><span>Camadas geoespaciais</span></nav>
-  <header class="card-explorador-camadas-hero card standard-page-hero"><h1 class="standard-page-hero__title"><i class="fa-solid fa-folder-open" aria-hidden="true"></i><span>Camadas geoespaciais</span></h1><p class="standard-page-hero__description">Explore as fontes da plataforma e consulte, visualize ou baixe suas camadas.</p></header>
+  <nav class="geoespacial-breadcrumb"><a href="/restrict/geoespacial/">Central de geoprocessamento</a><span>›</span><span>Explorador de camadas geoespaciais</span></nav>
+  <header class="card-explorador-camadas-hero card standard-page-hero"><h1 class="standard-page-hero__title"><i class="fa-solid fa-folder-open" aria-hidden="true"></i><span>Explorador de camadas geoespaciais</span></h1><p class="standard-page-hero__description">Explore as fontes da plataforma e consulte, visualize ou baixe suas camadas.</p></header>
   <section class="secao-explorador-camadas card-explorador-camadas card geo-explorer" aria-label="Explorador de camadas">
     <nav id="explorer-breadcrumb" aria-label="Caminho atual"></nav>
     <div id="explorer-toolbar" class="geo-explorer-toolbar" hidden>

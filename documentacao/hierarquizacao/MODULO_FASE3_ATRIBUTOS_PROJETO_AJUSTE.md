@@ -34,6 +34,38 @@ O modulo deve produzir um pacote de Fase 3 contendo:
 - relatorio de processamento;
 - identificador de versao ou rodada.
 
+### Relatório em PDF
+
+O relatório adota o título “Relatório de Priorização por Atributos para
+Implantação/Execução de Demandas de Logística e Transportes”. Segue o padrão
+institucional das Fases 1 e 2: faixa azul com a marca SICARD, nome completo
+Sistema Inteligente de Cadastro e Ranking de Demandas e slogan
+“Inteligência territorial para apoiar as decisões da Subsecretaria de Logística
+e Transporte (SLT)”, com o título do relatório abaixo da faixa.
+
+A identificação é apresentada em campos rotulados de leitura. As seções
+explicativas utilizam tópicos justificados, preservando a informação:
+
+1. Identificação e alcance: rodada, emissão, cálculo, objetivo, pergunta da fase,
+   fonte dos pesos, ponderação, política de ausências e completude mínima.
+2. Resultados por demanda: posição registrada, índice de prioridade, completude,
+   situação, pendências e motivos de ausência de índice.
+3. Orientações de leitura: distinção entre zero e ausência, prioridade relativa,
+   completude e tratamento dos valores imputados.
+4. Critérios, pesos e contribuições efetivamente registrados na execução,
+   incluindo índice anterior ao risco e fator de penalização quando disponíveis.
+5. Metodologia e limites: leitura dos resultados persistidos, sem novo cálculo,
+   sem criar superfícies espaciais ou substituir os relatórios das Fases 1 e 2.
+6. Rastreabilidade e próximos passos, sem homologação ou alteração automática
+   dos resultados pela emissão.
+
+A página da Fase 3 oferece o download por rota autenticada. Cálculos não
+executados, desatualizados, com critérios alterados ou complementação pendente
+impedem a emissão. Dados não registrados são identificados como tais, sem
+estimativas. Demandas legitimamente sem índice permanecem no relatório com
+seus motivos. O documento é gerado para download, sem gravação automática
+no Storage ou no cadastro.
+
 ## Conceito metodologico
 
 O modulo recebe um arquivo tabular com a lista de projetos e seus atributos. Cada

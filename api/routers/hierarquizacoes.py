@@ -35,6 +35,22 @@ from api.services.session_service import SessionUser
 router = APIRouter(prefix="/ahp/hierarquizacoes", tags=["ahp-hierarquizacoes"])
 
 
+@router.get("/{codigo}/fases/3/relatorio.pdf")
+def baixar_relatorio_fase3(codigo: str, _user: SessionUser = Depends(require_authenticated)):
+    try:
+        dados = service.relatorio_pdf_fase3(codigo)
+        return Response(dados, media_type="application/pdf", headers={
+            "Content-Disposition": 'attachment; filename="Relatorio_Fase_3.pdf"',
+            "Cache-Control": "no-store",
+        })
+    except HierarquizacaoNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except (ValueError, DemandaValidationError) as exc:
+        raise HTTPException(422, str(exc)) from exc
+    except (DatabaseUnavailableError, RuntimeError) as exc:
+        raise HTTPException(503, str(exc)) from exc
+
+
 @router.get("/{codigo}/relatorios/{tipo}/arquivo")
 def baixar_arquivo_relatorio(codigo: str, tipo: str, arquivo: str,
                             _user: SessionUser = Depends(require_authenticated)):

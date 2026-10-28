@@ -1,12 +1,12 @@
 {% from "componentes/navbar_modulo/_barra.html" import barra with context %}
 {{ barra("Páginas do MOCAD", [
   {"texto": "Demandas", "itens": [
-    {"href": "/restrict/painel/", "texto": "Painel de demandas"},
-    {"href": "/restrict/demandas/", "texto": "Tabela de demandas"},
-    {"href": "/restrict/demanda/", "texto": "Análise de demandas"}
+    {"href": "/restrict/painel/", "texto": "Mapa de demandas"},
+    {"href": "/restrict/demandas/", "texto": "Demandas cadastradas — tabela"},
+    {"href": "/restrict/demanda/", "texto": "Análise de demanda"}
   ]},
   {"texto": "Cadastro e documentos", "itens": [
-    {"href": "/restrict/complementacao/", "texto": "Complementação de cadastro"},
-    {"href": "/restrict/sei-documentos/", "texto": "Contribuições do SEI"}
+    {"href": "/restrict/complementacao/", "texto": "Complementação de dados da demanda"},
+    {"href": "/restrict/sei-documentos/", "texto": "Cadastro de demandas a partir de PDFs do SEI"}
   ]}
 ]) }}

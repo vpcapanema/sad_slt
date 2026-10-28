@@ -50,7 +50,7 @@
         [/sess[aã]o (expirada|inv[aá]lida)|n[aã]o autenticad/i, 'Entre novamente no sistema e repita a ação.'],
         [/e-?mails? duplicad/i, 'Remova os e-mails repetidos da lista de colaboradores e salve novamente.'],
         [/j[aá] existe outro julgamento aberto|j[aá] possui outro julgamento aberto/i,
-            'Encerre o outro julgamento aberto para a mesma origem (Central de julgamentos) e repita a ação.'],
+            'Encerre o outro julgamento aberto para a mesma origem (Gestão de julgamentos AHP) e repita a ação.'],
         [/n[aã]o foi poss[ií]vel comunicar|failed to fetch|networkerror/i,
             'Verifique a conexão com a internet/VPN e se o servidor está no ar; depois repita a ação.']
     ];

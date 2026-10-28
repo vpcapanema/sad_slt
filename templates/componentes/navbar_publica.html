@@ -13,6 +13,14 @@
       <a href="/public/cadastro/">Cadastro de Demandas</a>
       <a href="/public/transparencia/">Transparência e Acompanhamento</a>
       <a href="/public/documentacao/">Documentação</a>
+      <div class="app-nav-group app-nav-grupo-modulo mapa-site-menu">
+        <button type="button" class="app-nav-grupo-botao" aria-expanded="false" aria-controls="mapa-site-submenu">Mapa do site</button>
+        <div class="app-nav-submenu" id="mapa-site-submenu">
+          <a href="/public/mapa-do-site/" target="_blank" rel="noopener noreferrer">Abrir página Mapa do site</a>
+          {% from "componentes/mapa_site.html" import lista %}
+          {{ lista() }}
+        </div>
+      </div>
       <a href="/public/login/" class="acao-area-restrita app-nav-action" data-link-area-restrita>Área restrita</a>
     </nav>
   </div>

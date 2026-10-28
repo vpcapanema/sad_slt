@@ -2,6 +2,7 @@
 from contextlib import contextmanager
 from dataclasses import dataclass
 import math
+import json
 from pathlib import PurePosixPath
 
 from osgeo import gdal, ogr, osr
@@ -60,10 +61,18 @@ def preparar(ident: str, revisao: str | None = None) -> dict:
     fonte = SuperficieRaster(ident, revisao)
     with fonte.abrir() as (dataset, revisao):
         banda = dataset.GetRasterBand(1)
+        texto = dataset.GetMetadataItem('SICARD_METODOLOGIA')
+        try:
+            metodologia = json.loads(texto) if texto else None
+        except json.JSONDecodeError as exc:
+            raise ValueError('Metadados de metodologia do raster são inválidos.') from exc
+        if metodologia is not None and not isinstance(metodologia, dict):
+            raise ValueError('Metadados de metodologia do raster devem ser um objeto.')
         return {'revisao_fonte': revisao, 'banda': 1, 'crs_raster': dataset.GetProjection(),
                 'nodata': str(banda.GetNoDataValue()), 'transformacao': list(dataset.GetGeoTransform()),
                 'largura': dataset.RasterXSize, 'altura': dataset.RasterYSize,
-                'metrica': 'media_ponderada_area', 'validacao': 'Domínio 0–1 conferido nas células recortadas durante o cálculo.'}
+                'metrica': 'media_ponderada_area', 'metodologia_origem': metodologia,
+                'validacao': 'Domínio 0–1 conferido nas células recortadas durante o cálculo.'}
 
 
 def resumir(itens, area_total: float) -> dict:
