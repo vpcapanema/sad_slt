@@ -270,7 +270,8 @@ $migrations = @(
     "141_dominio_adversidades.sql",
     "142_vinculos_camadas_adversidades.sql",
     "146_dom_status_demanda_complementacao_hierarquizacao.sql",
-    "147_nome_julgamento.sql"
+    "147_nome_julgamento.sql",
+    "148_dimensoes_criterios_pli.sql"
 )
 
 if ($OnlyMigration) {
@@ -410,6 +411,10 @@ if (-not $OnlyMigration) {
         if (-not (Test-SchemaReady "SELECT EXISTS (SELECT 1 FROM demandas.dom_status_demanda WHERE codigo='hierarq_aguardando_complementacao' AND fase='hierarquizacao' AND ativo) AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='demandas' AND table_name='solicitacao_complementacao_demanda' AND column_name='notificacao') AND (SELECT count(*)=3 FROM demandas.dom_status_demanda_transicao WHERE via_aprovar AND (status_origem,status_destino) IN (('analise_aprovada','hierarq_aguardando_complementacao'),('hierarq_em_andamento','hierarq_aguardando_complementacao'),('hierarq_aguardando_complementacao','hierarq_em_andamento')));")) {
             $migrations += "146_dom_status_demanda_complementacao_hierarquizacao.sql"
             Write-Ok "Migration 146 pendente: complementacao de atributos na hierarquizacao e notificacao."
+        }
+        if (-not (Test-SchemaReady "SELECT to_regclass('dominios.criterio') IS NOT NULL AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='dominios' AND table_name='categoria_extracao_atributos' AND column_name='grupo_conceitual');")) {
+            $migrations += "148_dimensoes_criterios_pli.sql"
+            Write-Ok "Migration 148 pendente: dimensoes e criterios do PLI."
         }
     } elseif (Test-SchemaReady $schema090Query) {
         Write-Ok "Schema ja esta na migration 090; aplicando somente migrations pendentes (>= 091)"

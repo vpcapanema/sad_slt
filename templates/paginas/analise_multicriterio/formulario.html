@@ -2,15 +2,15 @@
 {% set subtitulo = "Matriz de comparação pareada AHP" %}
 {% set navegacao = "publica" %}
 {% set requer_autenticacao = false %}
-{% block titulo %}Julgamento interativo — SICARD{% endblock %}
+{% block titulo %}{% if modo_modelo %}Formulário de comparação pareada — modelo PLI{% else %}Julgamento interativo{% endif %} — SICARD{% endblock %}
 {% block classes_body %}ahp-module-page ahp-colaborativa-page ami-public-page escala-revisada{% endblock %}
 {% block base_url %}<base href="/public/analise-multicriterio/formulario-comparacao-pareada/">{% endblock %}
 {% block estilos_pagina %}
-	<link rel="stylesheet" href="/assets/css/ahp-module.css?v=20261020-contexto-identificacao">
+	<link rel="stylesheet" href="/assets/css/ahp-module.css?v=20261027-fundo-validacao">
 	<link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
 	<link rel="stylesheet" href="/assets/css/analise-multicriterio.css?v=20260819-ui6">
 	<link rel="stylesheet" href="/assets/css/escala-tipografica.css">
-	<link rel="stylesheet" href="/assets/css/paginas/ahp-formulario-publico.css?v=20261023-titulo-comparacao">
+	<link rel="stylesheet" href="/assets/css/paginas/ahp-formulario-publico.css?v=20261027-escala-saaty-8">
 {% endblock %}
 
 {% block conteudo %}
@@ -53,7 +53,7 @@
 					<div class="c-form-group"><label for="colab-nome" class="c-form-label">Nome completo</label><input id="colab-nome" class="c-form-control" required></div>
 					<div class="c-form-group"><label for="colab-inst" class="c-form-label">Instituição vinculada</label><input id="colab-inst" class="c-form-control" required></div>
 					<div class="c-form-group"><label for="colab-email" class="c-form-label">E-mail</label><input id="colab-email" type="email" class="c-form-control" required></div>
-					<div class="c-form-group"><label for="colab-token" class="c-form-label">Código de acesso ao formulário</label><input id="colab-token" name="token_acesso" type="text" class="c-form-control" inputmode="numeric" pattern="[0-9]{6}" minlength="6" maxlength="6" autocomplete="one-time-code" aria-describedby="colab-token-help" required><p id="colab-token-help" class="form-help">Digite os seis números do e-mail, incluindo eventuais zeros no início.</p></div>
+					{% if not modo_modelo %}<div class="c-form-group"><label for="colab-token" class="c-form-label">Código de acesso ao formulário</label><input id="colab-token" name="token_acesso" type="text" class="c-form-control" inputmode="numeric" pattern="[0-9]{6}" minlength="6" maxlength="6" autocomplete="one-time-code" aria-describedby="colab-token-help" required><p id="colab-token-help" class="form-help">Digite os seis números do e-mail, incluindo eventuais zeros no início.</p></div>{% endif %}
 				</div>
 				<button type="button" class="btn btn-primary" id="btn-liberar-form"><i class="fas fa-unlock c-btn__icon"></i>Liberar formulário</button>
 				<p id="colab-id-feedback" class="ahp-matriz-edit-feedback" role="status"></p>
@@ -75,7 +75,32 @@
 				</section>
 				<section class="secao-collab-pairwise ahp-subcard info-card collab-comparison-subcard" aria-labelledby="collab-pairwise-title">
 					<h2 class="ahp-subsection-title" id="collab-pairwise-title"><span class="ahp-subsection-num" aria-hidden="true">3.2</span><span>Formulário de comparação pareada</span></h2>
-					<div class="info-card-content"><div id="comparisonContent" class="ahp-comparison-content"></div></div>
+					<div class="info-card-content">
+						<section class="collab-guia-saaty" aria-labelledby="collab-guia-titulo">
+							<h3 id="collab-guia-titulo"><i class="fas fa-lightbulb" aria-hidden="true"></i><span>Entenda a escala antes de comparar</span></h3>
+							<p class="collab-guia-resumo">A <strong>escala de Saaty</strong>, de 1 a 9, mede a <strong>intensidade da preferência entre dois critérios</strong>: quantas vezes um é mais importante que o outro para o objetivo da análise. Suas comparações definem o <strong>peso de cada critério</strong> no método AHP.</p>
+							<div class="collab-guia-escala" role="group" aria-labelledby="collab-guia-escala-titulo">
+								<p class="collab-guia-subtitulo" id="collab-guia-escala-titulo">Escala de Saaty: o que cada nome da barra significa</p>
+								<ul class="collab-guia-intensidades">
+									<li class="collab-guia-intensidade collab-guia-intensidade--igual"><span class="collab-guia-nome">Igual</span><span class="collab-guia-valor">1</span><span class="collab-guia-significado">igual importância</span></li>
+									<li class="collab-guia-intensidade collab-guia-intensidade--pouco"><span class="collab-guia-nome">Pouco</span><span class="collab-guia-valor">3</span><span class="collab-guia-significado">importância moderada</span></li>
+									<li class="collab-guia-intensidade collab-guia-intensidade--medio"><span class="collab-guia-nome">Médio</span><span class="collab-guia-valor">5</span><span class="collab-guia-significado">importância forte</span></li>
+									<li class="collab-guia-intensidade collab-guia-intensidade--bastante"><span class="collab-guia-nome">Bastante</span><span class="collab-guia-valor">7</span><span class="collab-guia-significado">importância muito forte</span></li>
+									<li class="collab-guia-intensidade collab-guia-intensidade--extremamente"><span class="collab-guia-nome">Extremamente</span><span class="collab-guia-valor">9</span><span class="collab-guia-significado">importância extrema</span></li>
+								</ul>
+								<p class="collab-guia-inverso"><i class="fas fa-rotate" aria-hidden="true"></i><span>À <strong>esquerda do centro</strong>, os mesmos nomes valem o inverso (1/3, 1/5, 1/7 e 1/9): indicam que o <strong>outro critério</strong> é o mais importante.</span></p>
+							</div>
+							<div class="collab-guia-passos-bloco">
+								<p class="collab-guia-subtitulo">Como atribuir a importância em cada card</p>
+								<ol class="collab-guia-passos">
+									<li><span class="collab-guia-passo-num" aria-hidden="true">1</span><div><strong>Compare os dois critérios</strong><p>O card mostra o <b>critério 1</b> e o <b>critério 2</b>. Decida qual deles é mais importante para o objetivo.</p></div></li>
+									<li><span class="collab-guia-passo-num" aria-hidden="true">2</span><div><strong>Mova o seletor</strong><p>Para a <b>direita</b>, se o critério 1 for o mais importante. Para a <b>esquerda</b>, se for o critério 2.</p></div></li>
+									<li><span class="collab-guia-passo-num" aria-hidden="true">3</span><div><strong>Defina a intensidade</strong><p>Quanto <b>mais longe do centro</b>, maior a importância. Se forem igualmente importantes, deixe em <b>Igual</b>.</p></div></li>
+								</ol>
+							</div>
+						</section>
+						<div id="comparisonContent" class="ahp-comparison-content"></div>
+					</div>
 				</section>
 				<p id="collab-submit-feedback" class="ahp-matriz-edit-feedback" role="status"></p>
 				<p id="collab-save-feedback" class="form-help" role="status"></p>
@@ -87,8 +112,8 @@
 
 {% block scripts_pagina %}
 	<script src="/restrict/ahp/js/ahp-core.js"></script>
-	<script src="/restrict/ahp/js/colaborativa-api.js?v=20261019-subpath-publico"></script>
-	<script src="/restrict/ahp/js/colaborativa-simulacao.js?v=20261027-1"></script>
-	<script src="/restrict/ahp/js/script.js?v=20261023-titulo-comparacao"></script>
-	<script src="/restrict/ahp/js/colaborativa.js?v=20261027-formulario-unificado"></script>
+	<script src="/restrict/ahp/js/colaborativa-api.js?v=20261027-modelo-pli"></script>
+	{% if modo_modelo %}<script src="/restrict/ahp/js/colaborativa-modelo.js?v=20261027-1"></script>{% else %}<script src="/restrict/ahp/js/colaborativa-simulacao.js?v=20261027-1"></script>{% endif %}
+	<script src="/restrict/ahp/js/script.js?v=20261027-tick-selecionado"></script>
+	<script src="/restrict/ahp/js/colaborativa.js?v=20261027-escala-saaty"></script>
 {% endblock %}

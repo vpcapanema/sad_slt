@@ -268,6 +268,16 @@ def obter_ambiente_hierarquizacao(
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
+@router.get("/modelo-pli")
+def obter_modelo_formulario_pli(response: Response) -> dict:
+    """Critérios do PLI-SP 2050 para o formulário-modelo público (sem gravação)."""
+    response.headers["Cache-Control"] = "no-store"
+    try:
+        return service.obter_modelo_formulario_pli()
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
 @router.get("/publico/{token}", response_model=AmbientePublicoSchema)
 def obter_ambiente_publico(
     token: str,

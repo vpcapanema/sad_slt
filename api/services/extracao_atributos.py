@@ -47,7 +47,8 @@ def camada_para_mapa(ident):
 def catalogo():
     with get_connection() as conn:
         categories = [dict(r) for r in conn.execute('''SELECT codigo AS id,nome,conceito
-            FROM dominios.categoria_extracao_atributos WHERE ativo ORDER BY ordem,nome''').fetchall()]
+            FROM dominios.categoria_extracao_atributos
+            WHERE ativo AND grupo_conceitual IS DISTINCT FROM 'PLI' ORDER BY ordem,nome''').fetchall()]
         hidden = {r['recurso_sessao_id'] for r in conn.execute('''SELECT c.recurso_sessao_id
             FROM geoprocessamento.arquivo_resultado a JOIN geoprocessamento.camada_processada c ON c.id=a.camada_id
             WHERE a.estado IN ('temporario','removido')''').fetchall()}

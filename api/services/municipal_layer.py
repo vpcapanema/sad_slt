@@ -59,7 +59,8 @@ def categorias():
     """A ferramenta independente não precisa inventariar arquivos do storage."""
     with get_connection() as conn:
         return [dict(row) for row in conn.execute('''SELECT codigo AS id,nome,conceito
-            FROM dominios.categoria_extracao_atributos WHERE ativo ORDER BY ordem,nome''').fetchall()]
+            FROM dominios.categoria_extracao_atributos
+            WHERE ativo AND grupo_conceitual IS DISTINCT FROM 'PLI' ORDER BY ordem,nome''').fetchall()]
 
 
 def backend(territorialidade='municipios'):

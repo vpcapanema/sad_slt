@@ -157,7 +157,6 @@ const assert = require('node:assert/strict');
     const pair = page.locator('.saaty-pair').first(), scale = pair.locator('.saaty-scale');
     const rc = page.locator('#metricRCValue').locator('..');
     assert.equal(await rc.evaluate(el => el.classList.contains('is-success') || el.classList.contains('is-failure')), false);
-    const inverseColor = await pair.locator('.saaty-reciprocal').evaluate(el => getComputedStyle(el).borderColor);
     holdSaves = true;
     await scale.press('ArrowRight');
     assert.match(await scale.getAttribute('aria-valuetext'), /\(3\)/);
@@ -175,11 +174,24 @@ const assert = require('node:assert/strict');
     assert.equal(await page.locator('#btn-enviar-resposta').isDisabled(), true, 'RC inconsistente mantém o envio bloqueado');
     await page.clock.runFor(1999);
     assert.equal(await pair.evaluate(el => el.classList.contains('is-auto-validated')), false);
+    const antes = await pair.evaluate(el => ({
+      fundo: getComputedStyle(el).backgroundColor,
+      borda: getComputedStyle(el).borderTopColor,
+      inverso: getComputedStyle(el.querySelector('.saaty-reciprocal')).borderColor,
+    }));
+    const bordaNeutra = await page.locator('.saaty-pair').nth(1).evaluate(el => getComputedStyle(el).borderTopColor);
     await page.clock.runFor(1);
     assert.equal(await pair.evaluate(el => el.classList.contains('is-auto-validated')), true);
     assert.equal(await page.evaluate(() => metricRuns.length), 1, 'Confirmar o par não repete o cálculo');
     assert.equal(heldSaves.length, 1, 'Simular salvamento ainda pendente na rede');
-    assert.notEqual(await pair.locator('.saaty-reciprocal').evaluate(el => getComputedStyle(el).borderColor), inverseColor);
+    const depois = await pair.evaluate(el => ({
+      fundo: getComputedStyle(el).backgroundColor,
+      borda: getComputedStyle(el).borderTopColor,
+      inverso: getComputedStyle(el.querySelector('.saaty-reciprocal')).borderColor,
+    }));
+    assert.notEqual(depois.fundo, antes.fundo, 'A validação colore o fundo do card');
+    assert.equal(depois.borda, bordaNeutra, 'A validação não colore a borda do card');
+    assert.equal(depois.inverso, antes.inverso, 'A validação não colore os elementos internos');
     await scale.press('ArrowLeft');
     await page.clock.runFor(999);
     assert.equal(await page.evaluate(() => metricRuns.length), 1);

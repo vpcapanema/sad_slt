@@ -66,6 +66,10 @@
   const ALIAS_POR_TABELA = {
     categoria_extracao_atributos: {
       nome: "Categoria", conceito: "Conceito", criado_em: "Data de criação",
+      grupo_conceitual: "Grupo conceitual",
+    },
+    criterio: {
+      nome: "Critério", dimensao_codigo: "Dimensão", criado_em: "Data de criação",
     },
     familia_adversidade: {
       nome: "Família da adversidade", conceito: "Conceito", criado_em: "Data de criação",
@@ -132,6 +136,7 @@
   };
   const TABELA_ALIAS = {
     categoria_extracao_atributos: "Categorias de Extração de Atributos",
+    criterio: "Critérios",
     familia_adversidade: "Famílias de Adversidades",
     tipo_adversidade: "Tipos de Adversidade",
     camada_adversidade: "Adversidades das Camadas",

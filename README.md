@@ -17,13 +17,17 @@ endereços que exigem identificador ou token. O inventário compartilhado fica e
 [`templates/componentes/mapa_site.html`](templates/componentes/mapa_site.html).
 Os links do menu e da lista abrem em outra aba e não concedem permissões de acesso.
 
-O formulário público genérico em
-`/public/analise-multicriterio/formulario-comparacao-pareada/` é demonstrativo,
-sem identificação, envio ou persistência. Utiliza os 17 indicadores do arquivo
-`documentacao/fundamentacao/PLI_Fig_Estrutura_Criterios_v6.pptx` como critérios,
-sem códigos, organizados nas sete dimensões de origem. As comparações ocorrem
-dentro de cada dimensão e são reiniciadas ao trocar a dimensão. Julgamentos
-reais continuam acessíveis exclusivamente pelos respectivos convites.
+O formulário público em
+`/public/analise-multicriterio/formulario-comparacao-pareada/` é o mesmo
+formulário enviado ao colaborador, em modo de modelo: não exige código de acesso
+e não envia nem grava respostas. Seus critérios vêm do domínio
+`dominios.criterio`, vinculados às dimensões de
+`dominios.categoria_extracao_atributos` cujo `grupo_conceitual` é `PLI`
+(migration `148_dimensoes_criterios_pli.sql`). Correspondem aos 17 indicadores
+de `documentacao/fundamentacao/PLI_Fig_Estrutura_Criterios_v6.pptx`, apresentados
+como critérios e sem os códigos de identificação do arquivo. As dimensões do PLI
+não aparecem nas categorias da extração de atributos. Julgamentos reais
+continuam acessíveis exclusivamente pelos respectivos convites.
 
 ## Arquitetura
 

@@ -130,15 +130,39 @@ def test_mapa_site_respeita_prefixo_publicado():
     assert "/sicard/sicard/" not in response.text
 
 
-def test_formulario_publico_generico_e_demonstrativo():
+def test_formulario_publico_e_o_formulario_do_colaborador_em_modo_modelo():
     response = TestClient(app).get(
         "/public/analise-multicriterio/formulario-comparacao-pareada/"
     )
     assert response.status_code == 200
-    assert "Demonstração interativa" in response.text
-    assert response.text.count('class="demo-dimensao"') == 7
-    assert "Saturação e alívio de gargalos" in response.text
-    assert "Risco de demanda e benefício" in response.text
-    assert "T1 ·" not in response.text
-    assert "colaborativa-api.js" not in response.text
-    assert 'id="btn-enviar-resposta"' not in response.text
+    for elemento in (
+        'id="collab-context"', 'id="btn-liberar-form"', 'id="comparisonContent"',
+        'id="btn-enviar-resposta"', "Passo a passo da sua participação",
+        "colaborativa-api.js", "colaborativa-modelo.js",
+    ):
+        assert elemento in response.text
+    assert 'id="colab-token"' not in response.text
+    assert "colaborativa-simulacao.js" not in response.text
+
+
+def test_modelo_pli_usa_dominio_de_criterios_sem_codigos():
+    response = TestClient(app).get("/api/ahp/comparacao-colaborativa/modelo-pli")
+    assert response.status_code == 200
+    corpo = response.json()
+    assert [d["nome"] for d in corpo["dimensoes"]] == [
+        "Técnica e logística", "Econômica", "Social e territorial", "Segurança",
+        "Ambiental e climática", "Viabilidade institucional e financeira", "Riscos",
+    ]
+    assert len(corpo["criterios"]) == 17
+    assert corpo["criterios"][0] == "Saturação e alívio de gargalos"
+    assert corpo["criterios"][-1] == "Risco de demanda e benefício"
+    assert not any(re.match(r"^[A-Z]{1,3}\d?\s*·", nome) for nome in corpo["criterios"])
+    assert response.headers["cache-control"] == "no-store"
+
+
+def test_dimensoes_pli_ficam_fora_das_categorias_de_extracao():
+    from api.services import extracao_atributos, municipal_layer
+
+    nomes_pli = {"Técnica e logística", "Econômica", "Social e territorial", "Riscos"}
+    assert not nomes_pli & {c["nome"] for c in municipal_layer.categorias()}
+    assert not nomes_pli & {c["nome"] for c in extracao_atributos.catalogo()["categorias"]}

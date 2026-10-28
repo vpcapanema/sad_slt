@@ -990,6 +990,9 @@ function updateSaatyReadout(pair, idx) {
   el.className = "saaty-readout saaty-readout--" + mod;
   pair.classList.toggle("saaty-pair--filled", idx !== SAATY_CENTER);
   pair.classList.toggle("saaty-pair--equal", idx === SAATY_CENTER);
+  pair.querySelectorAll(".saaty-tick").forEach((tick, position) => {
+    tick.classList.toggle("is-selected", position === idx);
+  });
 }
 
 function updateSaatyReciprocal(pair, idx) {

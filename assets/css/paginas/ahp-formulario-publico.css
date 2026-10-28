@@ -90,7 +90,6 @@ body.ami-public-page {
 .ami-public-page .ahp-section-body .step-intro,
 .ami-public-page .ahp-section-body .form-help,
 .ami-public-page .ahp-section-body .ahp-matriz-edit-feedback,
-.ami-public-page .saaty-auto-status,
 .ami-public-page .ahp-collab-reciprocal-hint {
   font-size: var(--ami-font-help);
   line-height: 1.5;
@@ -174,16 +173,241 @@ body.ami-public-page {
 .ami-public-page #collab-form-section .saaty-pair-title {
   width: 100%;
   margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
   text-align: center;
 }
 
 .ami-public-page #collab-form-section :is(
   .saaty-tick-desc, .saaty-readout, .saaty-reciprocal__label,
-  .saaty-reciprocal__text, .saaty-reciprocal__value,
-  .saaty-auto-status, .saaty-auto-status *
+  .saaty-reciprocal__text, .saaty-reciprocal__value
 ) {
   font-size: var(--ami-font-help);
 }
+
+.ami-public-page #collab-form-section .collab-guia-saaty {
+  display: grid;
+  gap: 1.25rem;
+  margin: 0 0 1rem;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid #b7d4e6;
+  border-left: 6px solid #197c89;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(13, 59, 102, 0.08);
+  color: var(--pli-deep);
+  text-align: left;
+}
+
+.ami-public-page #collab-form-section .collab-guia-saaty h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+  font-size: 1.2rem;
+  line-height: 1.3;
+}
+
+.ami-public-page #collab-form-section .collab-guia-saaty h3 i {
+  color: #e0a800;
+}
+
+.ami-public-page #collab-form-section .collab-guia-resumo {
+  margin: 0;
+  padding: 0.8rem 1rem;
+  border-radius: 8px;
+  background: #eaf3fa;
+  font-size: 1.1rem;
+  line-height: 1.5;
+}
+
+.ami-public-page #collab-form-section .collab-guia-subtitulo {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.ami-public-page #collab-form-section .collab-guia-intensidades,
+.ami-public-page #collab-form-section .collab-guia-passos {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ami-public-page #collab-form-section .collab-guia-intensidades {
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+}
+
+.ami-public-page #collab-form-section .collab-guia-intensidade {
+  display: grid;
+  gap: 0.15rem;
+  justify-items: center;
+  padding: 0.75rem 0.5rem;
+  border-top: 6px solid var(--intensidade-cor);
+  border-radius: 8px;
+  background: var(--intensidade-fundo);
+  text-align: center;
+}
+
+.ami-public-page #collab-form-section .collab-guia-intensidade--igual {
+  --intensidade-cor: #94a3b8;
+  --intensidade-fundo: #f1f5f9;
+}
+
+.ami-public-page #collab-form-section .collab-guia-intensidade--pouco {
+  --intensidade-cor: #a9cdec;
+  --intensidade-fundo: #eef6fc;
+}
+
+.ami-public-page #collab-form-section .collab-guia-intensidade--medio {
+  --intensidade-cor: #5b9bd5;
+  --intensidade-fundo: #e3f0fa;
+}
+
+.ami-public-page #collab-form-section .collab-guia-intensidade--bastante {
+  --intensidade-cor: #2f6fad;
+  --intensidade-fundo: #d6e7f5;
+}
+
+.ami-public-page #collab-form-section .collab-guia-intensidade--extremamente {
+  --intensidade-cor: #0d3b66;
+  --intensidade-fundo: #c5dbee;
+}
+
+.ami-public-page #collab-form-section .collab-guia-nome {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.ami-public-page #collab-form-section .collab-guia-valor {
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.ami-public-page #collab-form-section .collab-guia-significado {
+  font-size: 0.95rem;
+  line-height: 1.3;
+}
+
+.ami-public-page #collab-form-section .collab-guia-inverso {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.75rem 0 0;
+  padding: 0.65rem 0.9rem;
+  border-radius: 8px;
+  background: #fff7e0;
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+.ami-public-page #collab-form-section .collab-guia-inverso i {
+  flex: 0 0 auto;
+  color: #b7791f;
+  font-size: 1.15rem;
+}
+
+.ami-public-page #collab-form-section .collab-guia-passos {
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+}
+
+.ami-public-page #collab-form-section .collab-guia-passos li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+  padding: 0.9rem 1rem;
+  border-radius: 8px;
+  background: #e8f5ee;
+}
+
+.ami-public-page #collab-form-section .collab-guia-passo-num {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 50%;
+  background: #197c89;
+  color: #fff;
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.ami-public-page #collab-form-section .collab-guia-passos strong {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 1.05rem;
+}
+
+.ami-public-page #collab-form-section .collab-guia-passos p {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
+/* A escala mostra apenas os nomes das intensidades, sempre em uma linha. O card
+   nunca fica mais estreito que a escala; em telas estreitas, o widget rola na
+   horizontal para que os nomes não se sobreponham nem sejam cortados. */
+.ami-public-page #collab-form-section .saaty-form {
+  grid-template-columns: repeat(auto-fit, minmax(min(39.5rem, 100%), 1fr));
+}
+
+.ami-public-page #collab-form-section .saaty-widget {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.ami-public-page #collab-form-section :is(.saaty-scale, .saaty-dir) {
+  min-width: 37.5rem;
+}
+
+.ami-public-page #collab-form-section .saaty-scale:focus-visible {
+  box-shadow: inset 0 0 0 2px rgba(21, 101, 192, 0.35);
+}
+
+.ami-public-page #collab-form-section .saaty-scale {
+  height: 4.4rem;
+}
+
+.ami-public-page #collab-form-section .saaty-tick-val {
+  display: none;
+}
+
+.ami-public-page #collab-form-section .saaty-tick {
+  width: auto;
+}
+
+.ami-public-page #collab-form-section .saaty-tick-desc {
+  display: inline-block;
+  margin: 0 -0.25rem 0.8rem;
+  padding: 0.1rem 0.25rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  transition: background-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+/* Nome da intensidade selecionada: auréola e pílula na cor da barra naquele ponto. */
+.ami-public-page #collab-form-section .saaty-tick.is-selected .saaty-tick-desc {
+  background: var(--tick-cor);
+  box-shadow: 0 0 0 2px var(--tick-halo);
+  color: var(--tick-texto);
+  font-weight: 700;
+}
+
+.ami-public-page #collab-form-section .saaty-tick:nth-child(1) { --tick-cor: #7b1a1a; --tick-texto: #fff; --tick-halo: rgba(123, 26, 26, 0.35); }
+.ami-public-page #collab-form-section .saaty-tick:nth-child(2) { --tick-cor: #a52a22; --tick-texto: #fff; --tick-halo: rgba(165, 42, 34, 0.35); }
+.ami-public-page #collab-form-section .saaty-tick:nth-child(3) { --tick-cor: #b83c32; --tick-texto: #fff; --tick-halo: rgba(184, 60, 50, 0.35); }
+.ami-public-page #collab-form-section .saaty-tick:nth-child(4) { --tick-cor: #f4a7a0; --tick-texto: #5b1a14; --tick-halo: rgba(244, 167, 160, 0.7); }
+.ami-public-page #collab-form-section .saaty-tick:nth-child(5) { --tick-cor: #cbd5e1; --tick-texto: #0d3b66; --tick-halo: rgba(148, 163, 184, 0.6); }
+.ami-public-page #collab-form-section .saaty-tick:nth-child(6) { --tick-cor: #a9cdec; --tick-texto: #0d3b66; --tick-halo: rgba(169, 205, 236, 0.8); }
+.ami-public-page #collab-form-section .saaty-tick:nth-child(7) { --tick-cor: #3f7ab3; --tick-texto: #fff; --tick-halo: rgba(63, 122, 179, 0.35); }
+.ami-public-page #collab-form-section .saaty-tick:nth-child(8) { --tick-cor: #2f6fad; --tick-texto: #fff; --tick-halo: rgba(47, 111, 173, 0.35); }
+.ami-public-page #collab-form-section .saaty-tick:nth-child(9) { --tick-cor: #0d3b66; --tick-texto: #fff; --tick-halo: rgba(13, 59, 102, 0.35); }
 
 .ami-public-page #collab-form-section :is(.saaty-criteria, .saaty-dir) {
   margin-top: var(--ami-space-xs);
@@ -209,8 +433,8 @@ body.ami-public-page {
 }
 
 .ami-public-page #collab-form-section .saaty-rail {
-  left: 2.65rem;
-  right: 2.65rem;
+  left: 2.6rem;
+  right: 2.6rem;
 }
 
 .ami-public-page #collab-form-section .saaty-handle {
@@ -232,17 +456,6 @@ body.ami-public-page {
 .ami-public-page #collab-form-section .saaty-crit__tag {
   background: #71808e;
   color: #fff;
-}
-
-.ami-public-page #collab-form-section .saaty-auto-status {
-  order: -1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.35rem;
-  width: 100%;
-  min-height: 1.2rem;
-  margin: 0;
 }
 
 @media (max-width: 800px) {

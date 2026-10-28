@@ -19,7 +19,7 @@
 
   function bloquearIdentificacao(bloqueado) {
     ["colab-nome", "colab-inst", "colab-email", "colab-token", "btn-liberar-form"].forEach(function (id) {
-      el(id).disabled = bloqueado;
+      if (el(id)) el(id).disabled = bloqueado;
     });
   }
 
@@ -78,23 +78,16 @@
 
   function patchSaatyTracking() {
     document.querySelectorAll("#comparisonContent .saaty-pair").forEach(function (pair) {
-      var status = document.createElement("p");
-      status.className = "saaty-auto-status";
-      status.setAttribute("role", "status");
-      status.textContent = "Ajuste a barra para confirmar este par.";
-      pair.appendChild(status);
       pair.addEventListener("saaty:change", function () {
         if (!draftActive) return;
         trackPair(pair.querySelector(".saaty-scale").dataset.pid);
         clearTimeout(pairTimers.get(pair));
         pair.classList.remove("is-auto-validated");
         pair.classList.add("is-auto-editing");
-        status.textContent = "Em edição. Confirmação após 3 segundos sem novos ajustes.";
         pairTimers.set(pair, setTimeout(function () {
           pairTimers.delete(pair);
           pair.classList.remove("is-auto-editing");
           pair.classList.add("is-auto-validated");
-          status.textContent = "Par e valor inverso confirmados. Você pode ajustar novamente.";
           updateProgressHint(latestCR);
         }, 3000));
       });
@@ -184,7 +177,7 @@
     var nome = (el("colab-nome").value || "").trim();
     var inst = (el("colab-inst").value || "").trim();
     var email = (el("colab-email").value || "").trim().toLowerCase();
-    var codigo = (el("colab-token").value || "").trim();
+    var codigo = global.SLTColaborativaModelo ? "000000" : (el("colab-token").value || "").trim();
     if (!nome || !inst || !email) {
       feedback("Informe nome, instituição e e-mail para iniciar o preenchimento.", "error");
       return;
@@ -291,7 +284,7 @@
 
   document.addEventListener("DOMContentLoaded", function () {
     var tokenPath = global.location.pathname.match(/\/public\/analise-multicriterio\/formulario-comparacao-pareada\/([^/]+)\/?$/);
-    token = qp("token") || (tokenPath ? decodeURIComponent(tokenPath[1]) : "");
+    token = global.SLTColaborativaModelo ? "modelo-pli" : (qp("token") || (tokenPath ? decodeURIComponent(tokenPath[1]) : ""));
     var preEmail = qp("email") || "";
     if (preEmail && el("colab-email")) el("colab-email").value = preEmail;
     if (!token) {

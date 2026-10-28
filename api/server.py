@@ -458,7 +458,7 @@ def pagina_julgamento_multicriterio(
 
 @app.get("/public/analise-multicriterio/formulario-comparacao-pareada/", include_in_schema=False)
 def pagina_demonstracao_comparacao_pareada(request: Request) -> Response:
-    return render_page(request, "paginas/analise_multicriterio/demonstracao.html")
+    return render_page(request, "paginas/analise_multicriterio/formulario.html", modo_modelo=True)
 
 
 @app.get("/public/analise-multicriterio/{token}/", include_in_schema=False)

@@ -41,6 +41,9 @@
     obterPublico: function (token) {
       return request("/publico/" + encodeURIComponent(token));
     },
+    obterModeloPli: function () {
+      return request("/modelo-pli");
+    },
     validarAcesso: function (token, email, tokenAcesso) {
       return request("/publico/" + encodeURIComponent(token) + "/acesso", {
         method: "POST", headers: { "Content-Type": "application/json" },

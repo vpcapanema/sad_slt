@@ -16,6 +16,7 @@ from zoneinfo import ZoneInfo
 from api.constants import TIPO_DEMANDA_ID_TO_COD
 from api.exceptions import DemandaValidationError
 from api.repositories import comparacao_colaborativa_repository as repo
+from api.repositories import dominio_repository as dominio_repo
 from api.repositories import hierarquizacao_repository as hierarq_repo
 from api.repositories import config_multicriterio_repository as config_repo
 from api.repositories import comparacao_colaborativa_analise_repository as analise_repo
@@ -568,6 +569,26 @@ def listar_ambientes_hierarquizacao(
         _ambiente_to_response(row, base_url=base_url)
         for row in repo.list_ambientes_by_hierarquizacao(hierarq_id)
     ]
+
+
+def obter_modelo_formulario_pli() -> dict[str, Any]:
+    """Metadados do formulário-modelo: critérios das dimensões do grupo conceitual PLI."""
+    dimensoes = dominio_repo.list_dimensoes_criterios("PLI")
+    criterios = [nome for dimensao in dimensoes for nome in dimensao["criterios"]]
+    if len(criterios) < 2:
+        raise DemandaValidationError("Os critérios do PLI não estão cadastrados no domínio.", field="criterios")
+    return {
+        "escopo": "Hierarquização da carteira de projetos e ações — PLI-SP 2050",
+        "objetivo": (
+            "Definir a importância relativa dos critérios selecionados pela equipe do PLI, "
+            "que orientarão a hierarquização da carteira de projetos e ações."
+        ),
+        "criterios": criterios,
+        "dimensoes": dimensoes,
+        "valido_ate": None,
+        "status": "ativa",
+        "email_autorizado": True,
+    }
 
 
 def obter_ambiente_publico(

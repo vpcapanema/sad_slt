@@ -2955,18 +2955,18 @@ a.ahp-progress-step:hover {
   }
 }
 
-.ahp-colaborativa-page .ahp-metric-card.is-success,
-.ahp-colaborativa-page .saaty-pair.is-auto-validated,
-.ahp-colaborativa-page .saaty-pair.is-auto-validated .saaty-reciprocal {
+.ahp-colaborativa-page .ahp-metric-card.is-success {
   border-color: var(--pfs-green-dark);
   background: var(--pfs-green-light);
 }
 
-.ahp-colaborativa-page .ahp-metric-card.is-success,
-.ahp-colaborativa-page .saaty-pair.is-auto-validated .saaty-auto-status,
-.ahp-colaborativa-page .saaty-pair.is-auto-validated .saaty-reciprocal__label,
-.ahp-colaborativa-page .saaty-pair.is-auto-validated .saaty-reciprocal__value,
-.ahp-colaborativa-page .saaty-pair.is-auto-validated .saaty-reciprocal__text {
+/* A validação do par colore apenas o fundo do card; os elementos internos
+   mantêm a aparência normal. */
+.ahp-colaborativa-page .saaty-pair.is-auto-validated {
+  background: var(--pfs-green-light);
+}
+
+.ahp-colaborativa-page .ahp-metric-card.is-success {
   color: var(--pfs-green-dark);
 }
 

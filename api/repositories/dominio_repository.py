@@ -42,6 +42,36 @@ def list_tipo_demanda() -> list[dict]:
         return list(conn.execute(sql).fetchall())
 
 
+def list_dimensoes_criterios(grupo_conceitual: str) -> list[dict]:
+    """Dimensões ativas de um grupo conceitual, cada uma com seus critérios ativos."""
+    with get_connection() as conn:
+        dimensoes = conn.execute(
+            """
+            SELECT codigo, nome FROM dominios.categoria_extracao_atributos
+            WHERE ativo AND grupo_conceitual = %s ORDER BY ordem, nome
+            """,
+            (grupo_conceitual,),
+        ).fetchall()
+        criterios = conn.execute(
+            """
+            SELECT c.dimensao_codigo, c.nome
+            FROM dominios.criterio c
+            JOIN dominios.categoria_extracao_atributos d ON d.codigo = c.dimensao_codigo
+            WHERE c.ativo AND d.ativo AND d.grupo_conceitual = %s
+            ORDER BY c.ordem, c.nome
+            """,
+            (grupo_conceitual,),
+        ).fetchall()
+    return [
+        {
+            "codigo": d["codigo"],
+            "nome": d["nome"],
+            "criterios": [c["nome"] for c in criterios if c["dimensao_codigo"] == d["codigo"]],
+        }
+        for d in dimensoes
+    ]
+
+
 def list_atributos_objeto() -> list[dict]:
     """Atributos estaveis coletados no cadastro dos objetos."""
     sql = """
