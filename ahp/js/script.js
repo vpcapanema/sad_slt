@@ -802,6 +802,39 @@ function prefillPairwiseInputsFromStorage() {
   }
 }
 
+function criterionIcon(name) {
+  const text = String(name).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const rules = [
+    [/logistic|transporte|gargalo|saturacao|confiabilidade|multimodal|intermodal|conectividade/, "fa-truck-fast"],
+    [/seguranca|vitima|acidente/, "fa-shield-halved"],
+    [/climatic|emiss|carbono|gee\b/, "fa-earth-americas"],
+    [/ambiental|socioambiental|biodiversidade|sustentabilidade/, "fa-leaf"],
+    [/risco|incerteza|ameaca|dispersao|condicionante/, "fa-triangle-exclamation"],
+    [/governanca|institucional|plano diretor/, "fa-building-columns"],
+    [/maturidade|prontidao|licenciamento|licenca/, "fa-clipboard-check"],
+    [/prazo|tempo|cronograma|faseamento/, "fa-clock"],
+    [/financeir|fiscal|alavancagem|custo|capex|opex|investimento|financiamento|orcamento/, "fa-coins"],
+    [/economic|produtiv|cadeia|emprego|renda|beneficio/, "fa-chart-line"],
+    [/acesso|acessibilidade|servico essencial/, "fa-universal-access"],
+    [/social|equidade|inclusao|populacao|focalizacao/, "fa-people-group"],
+    [/territori|espacial|localizacao|regional/, "fa-map-location-dot"],
+    [/rodovia|rodoviari|travessia|viari/, "fa-road"],
+    [/saude|hospital/, "fa-heart-pulse"],
+    [/educacao|escola/, "fa-graduation-cap"],
+    [/energia|eletric/, "fa-bolt"],
+    [/agua|hidric|saneamento/, "fa-droplet"],
+    [/tecnic|engenharia|infraestrutura/, "fa-gears"],
+    [/qualidade|eficiencia|desempenho/, "fa-gauge-high"],
+  ];
+  const match = rules.find(function (rule) { return rule[0].test(text); });
+  return match ? match[1] : "fa-list-check";
+}
+
+function criterionLabelHtml(name) {
+  return '<i class="fas ' + criterionIcon(name) + ' saaty-crit__icon" aria-hidden="true"></i>' +
+    '<span>' + escAhp(name) + '</span>';
+}
+
 function buildSaatyPair(i, j, sourceCriteria) {
   const names = normalizeCriteriaNames(sourceCriteria && sourceCriteria.length ? sourceCriteria : criteria);
   const pid = i + "_" + j;
@@ -811,10 +844,10 @@ function buildSaatyPair(i, j, sourceCriteria) {
   const criteriaHtml =
     '<div class="saaty-criteria">' +
     '<span class="saaty-crit saaty-crit--left"><span class="saaty-crit__tag">1</span><span class="saaty-crit__name">' +
-    escAhp(leftName) + "</span></span>" +
+    criterionLabelHtml(leftName) + "</span></span>" +
     '<span class="saaty-vs">vs</span>' +
     '<span class="saaty-crit saaty-crit--right"><span class="saaty-crit__tag">2</span><span class="saaty-crit__name">' +
-    escAhp(rightName) + "</span></span>" +
+    criterionLabelHtml(rightName) + "</span></span>" +
     "</div>";
   let ticks = "";
   SAATY_STEPS.forEach((s, idx) => {

@@ -27,6 +27,15 @@ Os indicadores espaciais da Fase 2 são excluídos. Os nomes são apresentados s
 os códigos de identificação do arquivo. As dimensões do PLI
 não aparecem nas categorias da extração de atributos. Julgamentos reais
 continuam acessíveis exclusivamente pelos respectivos convites.
+No formulário, os nomes dos critérios recebem ícones da biblioteca local,
+selecionados automaticamente por palavras associadas ao tema. O ícone é apenas
+um apoio visual: não substitui o nome nem altera a importância ou o julgamento.
+Temas sem associação conhecida recebem um ícone neutro de lista.
+Nas duas matrizes PLI v6 geradas, a dimensão D1 passa a se chamar
+**Eficiência logística**, sem alterar seus indicadores ou seu enquadramento na
+Fase 2. A denominação original permanece nas abas de fonte e rastreabilidade;
+matrizes e julgamentos já cadastrados não são renomeados. Por pertencer à Fase 2,
+D1 não integra o modelo público de comparação AHP.
 
 ## Arquitetura
 
