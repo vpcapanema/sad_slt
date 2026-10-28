@@ -85,6 +85,13 @@ def test_matriz_individual_valida_consistencia_e_reciprocidade():
         service.pesos_matriz([[1,9,1/9],[1/9,1,9],[9,1/9,1]],3)
 
 
+@pytest.mark.parametrize("origem", [{"matriz": [[1, 1], [1, 1]]}, {"ambiente_id": "historico"}])
+def test_fase2_nao_calcula_novos_pesos_por_julgamento(monkeypatch, origem):
+    monkeypatch.setattr(service, "obter", lambda *_: pytest.fail("Deve recusar antes de carregar a superfície"))
+    with pytest.raises(ValueError, match="exclusivos da Fase 3"):
+        service.calcular("superficie", {"operador": "ahp", **origem}, None)
+
+
 def test_excel_usa_somente_criterios_da_superficie():
     row = {'id':'superficie','hierarquizacao_id':'hierarquia',
            'criterios':[{'id':'c001','dimensao':'Social','criterio':'Atendimento',

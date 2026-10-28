@@ -102,6 +102,28 @@ def test_validacao_normaliza_email_e_nao_retorna_codigo(monkeypatch):
     assert response.headers["cache-control"] == "no-store"
 
 
+@pytest.mark.parametrize("operacao", ["acesso", "respostas/iniciar", "respostas/progresso", "respostas"])
+def test_publico_bloqueia_julgamento_legado_misto_sem_reinterpretar_respostas(monkeypatch, operacao):
+    row = _ambiente_row()
+    row["criterios"].append({"criterio": "Espacial", "Etapa": "Fase 2"})
+    monkeypatch.setattr(repo, "get_ambiente_by_token", lambda _: row)
+    access = MagicMock(side_effect=AssertionError("Não ler respostas do julgamento incompatível"))
+    monkeypatch.setattr(repo, "get_resposta_by_ambiente_email", access)
+    payload = {
+        "email": "a@x.gov.br", "token_acesso": "012345",
+        "identificacao": {"nome_completo": "Ana", "email": "a@x.gov.br", "instituicao": "Instituição"},
+        "matriz_comparacao": [[1, 1, 1], [1, 1, 1], [1, 1, 1]],
+    }
+    response = TestClient(app).request(
+        "PATCH" if operacao == "respostas/progresso" else "POST",
+        f"/api/ahp/comparacao-colaborativa/publico/tok-abc/{operacao}", json=payload,
+    )
+    assert response.status_code == 422, response.text
+    assert "somente critérios da Fase 3" in response.json()["detail"]
+    access.assert_not_called()
+    assert len(row["criterios"]) == 3
+
+
 @pytest.mark.parametrize("tipo_id,demandas", [
     (1, "os planos"), (2, "os programas"), (3, "os projetos"),
     (None, "as demandas"),
@@ -153,7 +175,7 @@ def _ambiente_row(**extra) -> dict:
         "atualizado_em": datetime(2026, 1, 1, tzinfo=timezone.utc),
         "total_respostas": 0,
         "matriz_consolidada": None,
-        "criterios": [{"criterio": "Custo"}, {"criterio": "Prazo"}],
+        "criterios": [{"criterio": "Custo", "Etapa": "Fase 3"}, {"criterio": "Prazo", "Etapa": "Fase 3"}],
         "n_criterios": 2,
     }
     row.update(extra)
@@ -222,7 +244,7 @@ def test_atualiza_todos_os_campos_da_configuracao_do_preenchimento(monkeypatch) 
             "codigo": "CFG-EDITADA",
             "nome": "Configuração editada",
             "hierarquizacao_id": HIERARQUIZACAO_ID,
-            "criterios": [{"criterio": "Custo"}, {"criterio": "Prazo"}],
+            "criterios": [{"criterio": "Custo", "Etapa": "Fase 3"}, {"criterio": "Prazo", "Etapa": "Fase 3"}],
         },
     )
 
@@ -269,8 +291,8 @@ def test_atualiza_ambiente_a_partir_da_hierarquizacao_selecionada(monkeypatch) -
                 "cabecalho_grupo": {
                     "matriz_premissas_criterios": {
                         "linhas": [
-                            {"criterio": "Custo", "premissa": "Menor é melhor"},
-                            {"criterio": "Prazo", "premissa": "Menor é melhor"},
+                            {"criterio": "Custo", "premissa": "Menor é melhor", "Etapa": "Fase 3"},
+                            {"criterio": "Prazo", "premissa": "Menor é melhor", "Etapa": "Fase 3"},
                         ]
                     }
                 }
@@ -315,8 +337,8 @@ def _resposta_row(matriz, *, consistente=True, email="a@x.gov.br") -> dict:
 
 def _ambiente_dimensoes():
     return _ambiente_row(
-        criterios=[{"Critério": "Custo", "Dimensão": "Financeira"}, {"Critério": "Retorno", "Dimensão": "Financeira"},
-                   {"Critério": "Acesso", "Dimensão": "Social"}, {"Critério": "Equidade", "Dimensão": "Social"}],
+        criterios=[{"Critério": "Custo", "Dimensão": "Financeira", "Etapa": "Fase 3"}, {"Critério": "Retorno", "Dimensão": "Financeira", "Etapa": "Fase 3"},
+                   {"Critério": "Acesso", "Dimensão": "Social", "Etapa": "Fase 3"}, {"Critério": "Equidade", "Dimensão": "Social", "Etapa": "Fase 3"}],
         n_criterios=4, convites=[{"email": "a@x.gov.br", "dimensoes": ["Social"]},
                                 {"email": "b@x.gov.br", "dimensoes": ["Financeira", "Social"]}],
     )
@@ -565,7 +587,7 @@ def test_consolidar_ambiente_grava_media_geometrica_e_status(monkeypatch) -> Non
         lambda _id: {
             "codigo": "HIER-001",
             "dados_hierarquizacao": {
-                "criterios": [{"criterio": "Custo"}, {"criterio": "Prazo"}]
+                "criterios": [{"criterio": "Custo", "Etapa": "Fase 3"}, {"criterio": "Prazo", "Etapa": "Fase 3"}]
             },
         },
     )
@@ -868,7 +890,7 @@ def _instalar_fake_repo(monkeypatch) -> _FakeRepo:
             "objetivo": "Hierarquizar demandas",
             "codigo": "HIER-001",
             "dados_hierarquizacao": {"cabecalho_grupo": {
-                "matriz_premissas_criterios": {"linhas": [{"criterio": "Custo"}, {"criterio": "Prazo"}]}
+                "matriz_premissas_criterios": {"linhas": [{"criterio": "Custo", "Etapa": "Fase 3"}, {"criterio": "Prazo", "Etapa": "Fase 3"}]}
             }},
         },
     )
@@ -1021,7 +1043,7 @@ def test_fluxo_colaborativo_completo(monkeypatch) -> None:
 
 def test_julgamento_usa_matriz_cadastrada_ignora_matriz_enviada(monkeypatch):
     fake = _instalar_fake_repo(monkeypatch)
-    criteria = [{"criterio":"Oficial A","premissa":"Premissa preservada"},{"criterio":"Oficial B"}]
+    criteria = [{"criterio":"Oficial A","premissa":"Premissa preservada","Etapa":"Fase 3"},{"criterio":"Oficial B","Etapa":"Fase 3"}]
     monkeypatch.setattr(service.hierarq_repo,"get_by_id",lambda _: {"codigo":"H-1","nome":"Hierarquização","dados_hierarquizacao":{"cabecalho_grupo":{"matriz_premissas_criterios":{"arquivo":"original.xlsx","linhas":criteria}}}})
     response = _client_autenticado().post("/api/ahp/comparacao-colaborativa/ambientes",json={"hierarquizacao_id":HIERARQUIZACAO_ID,"matriz_premissas_criterios":[{"criterio":"Injetado A"},{"criterio":"Injetado B"}],"convites":[{"email":"a@x.gov.br"}],"valido_ate":"2030-12-31T23:59:59+00:00"})
     assert response.status_code == 201, response.text

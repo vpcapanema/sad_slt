@@ -24,7 +24,7 @@
   <link rel="stylesheet" href="/assets/css/paginas/ami-report-tables.css?v=20261020-paginacao">
   <link rel="stylesheet" href="/assets/css/paginas/ami-espaco-secoes.css?v=20261027-botoes-cinza-claro">
   <link rel="stylesheet" href="/assets/css/paginas/sicard-standard-pages.css?v=20261027-1">
-  <link rel="stylesheet" href="/assets/css/paginas/hierarquizacao-processos-padrao.css?v=20261027-1">
+  <link rel="stylesheet" href="/assets/css/paginas/hierarquizacao-processos-padrao.css?v=20261028-editor-modal">
 {% endblock %}
 
 {% block conteudo %}
@@ -208,6 +208,7 @@
         </div>
       </section>
 
+      <div id="hier-matrix-editors"></div>
     </main>
     {% include "componentes/modal/_modal_demandas_do_grupo_hierarquizacoes_realizadas_gestao_das_hierarquizacoes.html" %}
     {% include "componentes/modal/_modal_julgamentos_dos_projetos_hierarquizacoes_realizadas_gestao_das_hierarquizacoes.html" %}
@@ -253,7 +254,7 @@
   <script src="/assets/vendor/xlsx/xlsx-0.18.5.min.js"></script>
   <script src="/assets/js/matriz-criterios-arquivo.js?v=20261009"></script>
   <script src="/assets/js/analysis-table-controls.js?v=20261027-formulario-unificado"></script>
-  <script src="/assets/js/matrizes-criterios.js?v=20261028-binario"></script>
-  <script src="/restrict/hierarquizacao/js/processos.js?v=20261028-matrizes-independentes"></script>
+  <script src="/assets/js/matrizes-criterios.js?v=20261028-ahp-fase3"></script>
+  <script src="/restrict/hierarquizacao/js/processos.js?v=20261028-editor-modal"></script>
   <script src="/assets/js/paginas/hierarquizacao-home-inline-1.js"></script>
 {% endblock %}

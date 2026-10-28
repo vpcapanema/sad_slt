@@ -18,7 +18,7 @@ superficie de favorabilidade territorial previamente gerada e extrai, para cada
 projeto, um indice espacial normalizado.
 
 O papel deste modulo e produzir essa superficie de favorabilidade a partir de camadas
-geoespaciais, operadores espaciais, reescalonamento, pesos AHP e algebra de mapas.
+geoespaciais, operadores espaciais, reescalonamento, pesos informados e algebra de mapas.
 
 ## Gerador autônomo de superfícies por critérios territoriais
 
@@ -48,19 +48,14 @@ originais e reescalonadas. Os metadados documentam a correspondência entre
 critérios, campos, fontes e transformações. O visualizador lê essa camada salva,
 inclusive quando carregada de uma sessão anterior, sem recalcular pelo catálogo.
 
-O índice utiliza média simples ou média ponderada por pesos AHP. Pesos
-informados devem identificar exatamente os critérios salvos e somar um;
-comparações individuais devem ser recíprocas e apresentar razão de consistência
-não superior a 0,10. Na modalidade colaborativa, exporta-se cópia preenchida do
-modelo oficial, acrescida da comparação pareada e dos vínculos, e abre-se o
-cadastro de julgamento com hierarquização e critérios fixados pela superfície.
-O arquivo também é persistido no julgamento; o modelo original não é alterado.
-O envio de convites permanece uma ação explícita, separada da criação.
+O índice utiliza média simples ou média ponderada por pesos explicitamente
+informados. Esses pesos devem identificar exatamente os critérios salvos e somar
+um. Julgamentos AHP são exclusivos dos critérios da Fase 3: não se abrem novos
+julgamentos individuais ou colaborativos para superfícies da Fase 2, nem se
+aplicam matrizes pareadas ou julgamentos anteriores a novos cálculos territoriais.
+Registros históricos permanecem consultáveis, sem alteração de seus snapshots.
 
-Somente um julgamento consolidado e consistente, vinculado à mesma superfície
-e ao mesmo conjunto de critérios, pode fornecer pesos para a retomada do
-cálculo. Essa consolidação não sobrescreve critérios ou pesos globais da
-hierarquização. Alterações de critérios exigem uma nova superfície. O índice
+Alterações de critérios exigem uma nova superfície. O índice
 é salvo em camada derivada, com operador, pesos e origem registrados; qualquer
 valor ausente entre os critérios mantém o índice territorial nulo, sem
 redistribuição de pesos. A geração do produto não representa sua homologação.
@@ -229,7 +224,7 @@ O pacote conserva os GeoPackages e os metadados com SHA-256.
 Falha de leitura pode ser tratada pela tentativa de carregar novamente ou pela
 reabertura da saída, sem repetir o cálculo. A preparação de superfícies no
 gerador e o avanço à Fase 3 continuam ações separadas. Essa revisão de
-apresentação não modifica operadores, pesos AHP, ranking ou persistência dos
+apresentação não modifica operadores, pesos informados, ranking ou persistência dos
 dados processados; documentos já emitidos não são sobrescritos.
 
 Um grafico de intervalos com pontos por superficie reune todas as combinacoes
@@ -430,7 +425,7 @@ O modulo deve produzir um pacote homologado de Fase 2 contendo:
 - raster final de favorabilidade territorial;
 - rasters intermediarios por criterio;
 - rasters intermediarios normalizados;
-- pesos AHP utilizados;
+- pesos de composicao utilizados;
 - metadados das camadas de origem;
 - regras de transformacao por criterio;
 - relatorio de processamento;
@@ -445,7 +440,7 @@ territorial, ficando disponivel para consumo pela Fase 2 da espinha dorsal.
 
 O modulo deve transformar dados geoespaciais de entrada em superficies raster
 continuas e comparaveis. Cada criterio gera um raster normalizado entre 0 e 1. Em
-seguida, os rasters sao ponderados por pesos AHP e combinados por algebra de mapas,
+seguida, os rasters sao ponderados por pesos informados e combinados por algebra de mapas,
 preferencialmente por operador de media ponderada.
 
 Fluxo conceitual:
@@ -457,7 +452,7 @@ camadas de entrada
     -> raster continuo por criterio
     -> reescalonamento 0-1
     -> inversao de criterios de relacao negativa
-    -> aplicacao dos pesos AHP
+    -> aplicacao dos pesos informados
     -> media ponderada
     -> raster final de favorabilidade territorial
     -> homologacao
@@ -501,18 +496,14 @@ Cada criterio processado pelo modulo deve possuir cadastro minimo:
 Antes de gerar a superficie, o modulo deve verificar se os criterios selecionados
 sao efetivamente independentes entre si.
 
-A superficie combina os criterios por media — simples nesta versao, ponderada por
-AHP na versao homologada. Em qualquer das duas, dois criterios que medem o mesmo
+A superficie combina os criterios por media — simples ou ponderada por pesos
+explicitamente informados. Em qualquer das duas, dois criterios que medem o mesmo
 fator latente nao se compensam: eles somam. O fator passa a pesar tantas vezes
 quantos forem os criterios que o representam.
 
-Isso e especialmente grave quando os pesos vem de AHP. A comparacao pareada de
-Saaty pergunta ao especialista o peso de cada criterio assumindo que os criterios
-sao independentes. Se dois deles medem a mesma coisa, o especialista atribui peso
-a cada um separadamente e o fator recebe a soma dos dois, sem que isso apareca na
-razao de consistencia — a matriz pode ficar perfeitamente consistente e ainda
-assim ponderar errado. A verificacao de independencia precisa acontecer na
-composicao do catalogo, nao na ponderacao.
+Se dois criterios medem a mesma coisa, o fator recebe a soma de seus pesos,
+independentemente da forma de atribuicao. A verificacao de independencia precisa
+acontecer na composicao do catalogo, nao apenas na ponderacao.
 
 ### Procedimento
 
@@ -692,17 +683,17 @@ Exemplo:
 A inversao deve respeitar a semantica do criterio. O cadastro do criterio deve
 informar se o valor maior representa maior ou menor favorabilidade.
 
-## Pesos AHP
+## Pesos de composicao territorial
 
-Os pesos dos criterios devem ser gerados pelo modulo de pesos AHP ja existente e
-consumidos por este modulo.
+Os pesos dos criterios espaciais sao explicitamente informados e documentados.
+O julgamento AHP do SICARD destina-se somente aos criterios da Fase 3.
 
 Regras minimas:
 
 - cada criterio processado deve possuir peso associado;
 - pesos devem estar normalizados;
 - soma dos pesos deve ser igual a 1, salvo tolerancia numerica;
-- a matriz AHP e a razao de consistencia devem ser registradas;
+- a origem e a justificativa dos pesos devem ser registradas;
 - se houver criterio sem raster valido, o sistema deve bloquear a homologacao ou
   recalcular pesos conforme regra explicita.
 
@@ -968,7 +959,7 @@ disponivel.
 Possibilidades:
 
 - simulacao de variacao de pesos;
-- comparacao entre cenarios AHP;
+- comparacao entre cenarios de ponderacao;
 - mapa de sensibilidade espacial;
 - identificacao de criterios mais sensiveis;
 - comparacao entre ranking original e ranking por cenario.
@@ -988,8 +979,8 @@ Itens minimos da homologacao:
 - operadores aplicados;
 - regras de normalizacao;
 - criterios invertidos;
-- pesos AHP aplicados;
-- razao de consistencia AHP;
+- pesos de composicao aplicados;
+- origem e justificativa da ponderacao;
 - regra de NoData;
 - estatisticas do raster final;
 - visualizacao do raster final;
@@ -1040,7 +1031,7 @@ A biblioteca deve permitir:
 - consultar metadados;
 - visualizar raster final;
 - consultar rasters intermediarios;
-- consultar pesos AHP;
+- consultar pesos de composicao;
 - consultar relatorio de processamento;
 - selecionar pacote para uma rodada da Fase 2.
 
@@ -1114,7 +1105,7 @@ Toda execucao do modulo deve gerar trilha de auditoria:
 - extensao de processamento;
 - regras de normalizacao;
 - criterios invertidos;
-- pesos AHP aplicados;
+- pesos de composicao aplicados;
 - algebra de mapas executada;
 - erros e avisos;
 - decisao de homologacao.
@@ -1126,7 +1117,7 @@ Toda execucao do modulo deve gerar trilha de auditoria:
    homologada equivalente.
 3. Todos os criterios devem ser normalizados para 0 a 1.
 4. Criterios de relacao negativa devem ser invertidos antes da ponderacao.
-5. Pesos AHP devem ser consumidos do modulo de pesos ja existente.
+5. Pesos territoriais devem ser explicitamente informados; julgamentos AHP sao exclusivos da Fase 3.
 6. O raster final deve ser gerado por algebra de mapas, preferencialmente media
    ponderada.
 7. O pacote deve preservar rasters intermediarios, pesos e metadados para auditoria.
@@ -1141,7 +1132,7 @@ Fase 2. Os proximos documentos devem detalhar:
 - modulo de recepcao, validacao e normalizacao de atributos de projeto da Fase 3;
 - modelo de dados para biblioteca de camadas;
 - contrato de API para execucao da Fase 2;
-- relacao entre pesos AHP, cenarios e superficies homologadas.
+- relacao entre pesos informados, cenarios e superficies homologadas.
 
 ## Implementação da página geradora
 

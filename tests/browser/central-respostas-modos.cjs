@@ -1,13 +1,15 @@
 const { chromium } = require('playwright');
 const fs = require('fs'); const assert = require('node:assert/strict');
+const BASE = process.env.SICARD_BROWSER_BASE_URL || 'http://127.0.0.1:8083';
 (async () => {
  const browser = await chromium.launch({channel:'msedge',headless:true});
  try {
  const page = await browser.newPage(); const errors=[],writes=[],assets=new Map();
+ if (process.env.SICARD_BROWSER_SESSION) await page.context().addCookies([{name:'slt_session',value:process.env.SICARD_BROWSER_SESSION,url:BASE}]);
  page.on('pageerror',e=>errors.push(e.message));
  page.on('response',async r=>{if(/\.(css|js)(\?|$)/.test(r.url())) {try {assets.set(r.url(),await r.text());}catch{}}});
  const criteria=[{nome:'C1'},{nome:'C2'}];
- const rounds=['j1','j2'].map(id=>({id,token:id,status:'ativa',hierarquizacao_nome:id,hierarquizacao_id:'h1',n_criterios:2,criterios:criteria,convites:[{email:'a@example.com'},{email:'b@example.com'}],total_respostas:2,valido_ate:'2027-12-31'}));
+ const rounds=['j1','j2'].map((id,i)=>({id,nome:['Zeta','Alfa'][i],token:id,status:'ativa',hierarquizacao_nome:id,hierarquizacao_id:'h1',n_criterios:2,criterios:criteria,convites:[{email:'a@example.com'},{email:'b@example.com'}],total_respostas:2,valido_ate:'2027-12-31'}));
  const answers=[1,9].map((v,i)=>({id:'r'+i,nome_completo:'Pessoa '+i,email:['a','b'][i]+'@example.com',instituicao:'Inst',status:'enviada',consistente:true,razao_consistencia:0,matriz_comparacao:[[1,v],[1/v,1]]}));
  const official={id:'an1',nome:'Somente primeira resposta',codigo:'AN1',status:'homologada',consistente:true,resposta_ids:['r0'],respostas_incluidas:1,pesos_consolidados:[.2,.8],matriz_consolidada:[[1,4],[.25,1]],lambda_max:2,indice_consistencia:0,indice_aleatorio:0,rc_maximo:.12,excluir_inconsistentes:true,metodo_agregacao:'aij_media_geometrica',razao_consistencia:0};
  const workspace={ambiente:rounds[0],participacao:{convidados:2,nao_iniciados:0,em_preenchimento:0,enviadas:2,consistentes:2,inconsistentes:0},respostas:answers,estatisticas:{por_par:[{i:0,j:1,criterio_a:'C1',criterio_b:'C2',media:5,mediana:5,media_geometrica:3,pontos:answers.map((r,i)=>({resposta_id:r.id,respondente:r.nome_completo,valor:[1,9][i]}))}]},analises:[official,{...official,id:'an2',nome:'Ainda nao homologada',status:'calculada'}],analise_homologada_id:'an1'};
@@ -25,7 +27,15 @@ const fs = require('fs'); const assert = require('node:assert/strict');
  if(path==='/api/agrupamentos-demandas/g1')json=group;
  return r.fulfill({json});});
  const out={};
- await page.goto('http://127.0.0.1:8083/restrict/analise-multicriterio/central-respostas');
+ await page.goto(BASE+'/restrict/analise-multicriterio/central-respostas');
+ const table=page.locator('#ami-judgments').locator('xpath=ancestor::table');
+ const nameHeader=table.locator('thead th').nth(1);
+ assert.match((await nameHeader.innerText()).replace(/\s+/g,' '),/Nome do julgamento/i);
+ await nameHeader.click();
+ assert.deepEqual(await page.locator('#ami-judgments tr td:nth-child(2)').allTextContents(),['Alfa','Zeta']);
+ await nameHeader.click();
+ assert.deepEqual(await page.locator('#ami-judgments tr td:nth-child(2)').allTextContents(),['Zeta','Alfa']);
+ assert.equal(await table.locator('thead th').filter({hasText:'ID Julgamento'}).count(),0);
  await page.locator('[data-analysis-round="j1"]').check();await page.locator('#ami-judgments-view-action').click();
  await page.locator('#ami-analysis-workspace').waitFor({state:'visible'});
 

@@ -20,12 +20,11 @@ Os links do menu e da lista abrem em outra aba e não concedem permissões de ac
 O formulário público em
 `/public/analise-multicriterio/formulario-comparacao-pareada/` é o mesmo
 formulário enviado ao colaborador, em modo de modelo: não exige código de acesso
-e não envia nem grava respostas. Seus critérios vêm do domínio
-`dominios.criterio`, vinculados às dimensões de
-`dominios.categoria_extracao_atributos` cujo `grupo_conceitual` é `PLI`
-(migration `148_dimensoes_criterios_pli.sql`). Correspondem aos 17 indicadores
-de `documentacao/fundamentacao/PLI_Fig_Estrutura_Criterios_v6.pptx`, apresentados
-como critérios e sem os códigos de identificação do arquivo. As dimensões do PLI
+e não envia nem grava respostas. Seus critérios vêm do recorte da Fase 3 de
+`documentacao/matrizes/Matriz_PLI_v6_Dimensoes_Indicadores.xlsx`, elaborado a partir
+de `documentacao/fundamentacao/PLI_Fig_Estrutura_Criterios_v6.pptx`.
+Os indicadores espaciais da Fase 2 são excluídos. Os nomes são apresentados sem
+os códigos de identificação do arquivo. As dimensões do PLI
 não aparecem nas categorias da extração de atributos. Julgamentos reais
 continuam acessíveis exclusivamente pelos respectivos convites.
 
@@ -126,13 +125,29 @@ de importância é preenchida nessa visualização; a coleta continua pelo
 formulário público.
 
 Ao adicionar colaboradores a novos julgamentos, selecione uma ou mais dimensões
-da matriz para cada pessoa. O convite individual e o formulário público apresentam
+**dos critérios da Fase 3** para cada pessoa. A matriz integral pode conter outras
+fases, mas o recorte AHP exclui todos os critérios das Fases 1 e 2 antes de contar
+critérios e oferecer dimensões. O convite individual e o formulário público apresentam
 somente os critérios atribuídos. A lista permite conferir e editar as dimensões
 antes de confirmar. Recortes com menos de dois critérios são recusados. Após
 iniciar uma resposta, seu recorte não pode ser removido ou alterado.
 O espaço analítico separa os recortes; análises parciais geram pesos locais, sem
-homologação como pesos da matriz inteira. Não há migração adicional: os recortes
+homologação como pesos do conjunto completo da Fase 3. Os recortes dimensionais
 são persistidos nos convites e nos snapshots das respostas e análises.
+Na Central de respostas, o nome do julgamento ocupa a primeira coluna após os
+seletores, sem exibir seu UUID. O espaço analítico abre e recarrega com o recorte
+**Todos**, reunindo julgadores e pares das dimensões e mantendo os pesos locais
+identificados por seu escopo. Respostas de escopos diferentes não são consolidadas
+como uma matriz global.
+Na tabela de processos de hierarquização, **Alterar matriz** abre o seletor em uma
+janela própria, fora da célula. Fechar a janela mantém a seleção provisória;
+**Salvar alterações** confirma a associação e **Cancelar edição** a descarta.
+A migração `152_julgamentos_apenas_fase3.sql` permite que o julgamento referencie
+o recorte da Fase 3 sem alterar a matriz integral imutável. Julgamentos históricos
+incompatíveis permanecem consultáveis, mas não aceitam novas respostas,
+convites, análises ou homologação; deve-se cadastrar um novo julgamento.
+Na Fase 2 não se abrem julgamentos nem se calculam pesos por comparação pareada;
+permanecem a média simples e a ponderação por pesos explicitamente informados.
 
 A seção **Convites e acompanhamento** envia a mensagem exibida pelo botão **Enviar
 e-mail**, individualmente para os colaboradores salvos do julgamento. Exige

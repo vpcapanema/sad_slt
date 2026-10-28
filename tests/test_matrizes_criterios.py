@@ -141,3 +141,58 @@ def test_julgamento_por_id_nao_aceita_conteudo_substituto(monkeypatch):
     )
     with pytest.raises(DemandaValidationError, match="somente a matriz"):
         colaborativa.criar_ambiente(payload)
+
+
+def test_julgamento_filtra_fase3_antes_de_validar_dimensoes(monkeypatch):
+    ident = str(uuid4())
+    conteudo = matriz()
+    conteudo["linhas"].insert(0, {"criterio": "Espacial", "Dimensão": "Território",
+                                 "Etapa": "Favorabilidade territorial — município e rede rodoviária"})
+    for row in conteudo["linhas"][1:]:
+        row["Dimensão"] = "Atributos"
+    original = deepcopy(conteudo)
+    monkeypatch.setattr(service, "obter", lambda _: {"id": ident, "nome": "Mista", "conteudo": conteudo})
+    saved = {}
+    def insert(data):
+        saved.update(data)
+        return {**_ambiente_row(), **data}
+    monkeypatch.setattr(colaborativa.repo, "insert_ambiente", insert)
+    payload = AmbienteColaborativoCreateSchema(
+        matriz_id=ident, convites=[{"email": "teste@example.org", "dimensoes": ["Atributos"]}],
+        valido_ate="2030-01-01T00:00:00Z",
+    )
+    result = colaborativa.criar_ambiente(payload)
+    assert result.n_criterios == 2
+    assert result.criterios == conteudo["linhas"][1:]
+    assert conteudo == original
+    payload.convites[0].dimensoes = ["Território"]
+    with pytest.raises(DemandaValidationError, match="dimensões válidas"):
+        colaborativa.criar_ambiente(payload)
+
+
+@pytest.mark.parametrize("etapa", ["", "Não definido no documento; pendente de validação.", "Fase 4"])
+def test_fase_ausente_ou_invalida_nao_vira_fase3(etapa):
+    with pytest.raises(DemandaValidationError, match="Etapa válida"):
+        service.criterios_fase3([{"Critério": "A", "Etapa": etapa}])
+
+
+def test_fase_divergente_e_julgamento_legado_misto_sao_bloqueados():
+    with pytest.raises(DemandaValidationError, match="divergem"):
+        service.criterios_fase3([{"Critério": "A", "Etapa": "Fase 3", "Fase": "Fase 2"}])
+    with pytest.raises(DemandaValidationError, match="somente critérios da Fase 3"):
+        service.exigir_julgamento_fase3({"criterios": [
+            *matriz()["linhas"], {"criterio": "Espacial", "Etapa": "Fase 2"},
+        ]})
+
+
+@pytest.mark.parametrize("fases", [[1, 2], [2, 2], [2, 3]])
+def test_julgamento_exige_ao_menos_dois_criterios_fase3(monkeypatch, fases):
+    ident = str(uuid4())
+    monkeypatch.setattr(service, "obter", lambda _: {
+        "id": ident, "nome": "Insuficiente",
+        "conteudo": {"linhas": [{"criterio": f"C{i}", "Etapa": f"Fase {fase}"} for i, fase in enumerate(fases)]},
+    })
+    monkeypatch.setattr(colaborativa.repo, "insert_ambiente", lambda _: pytest.fail("Não deve gravar"))
+    with pytest.raises(DemandaValidationError, match="dois critérios da Fase 3"):
+        colaborativa.criar_ambiente(AmbienteColaborativoCreateSchema(
+            matriz_id=ident, convites=[{"email": "teste@example.org"}], valido_ate="2030-01-01T00:00:00Z"))

@@ -47,7 +47,7 @@ def ambiente(superficie):
             "valido_ate": datetime(2035, 1, 1, tzinfo=timezone.utc)}
 
 
-def test_criacao_usa_snapshot_salvo_sem_encerrar_ou_enviar_convites(monkeypatch, superficie, conexao):
+def test_criacao_de_julgamento_fase2_rejeitada_sem_gravar(monkeypatch, superficie, conexao):
     monkeypatch.setattr(service.matrizes_criterios, "criar",
                         lambda nome, conteudo, *args: {"id": AID, "nome": nome, "conteudo": conteudo})
     monkeypatch.setattr(service, "_carregar_hierarquizacao", lambda _: {
@@ -67,17 +67,11 @@ def test_criacao_usa_snapshot_salvo_sem_encerrar_ou_enviar_convites(monkeypatch,
         superficie_id=SID, hierarquizacao_id=HID,
         matriz_premissas_criterios=[{"criterio": "Injetado"}],
         convites=[{"email": "p@example.com"}], valido_ate=datetime(2035, 1, 1, tzinfo=timezone.utc))
-    response = service.criar_ambiente(payload)
-    assert response.superficie_id == SID
-    assert response.criterios == [dict(c, _superficie_id=SID) for c in superficie["criterios"]]
-    assert response.n_criterios == 2
-    assert "_superficie_id" not in superficie["criterios"][0]
-    assert "superficie_id" not in captured  # Sem coluna nova.
-    assert captured["arquivo_matriz_nome"] == "matriz_fase2.xlsx"
-    assert captured["arquivo_excel_matriz_criterios_premissas"].startswith(b"PK")
+    with pytest.raises(DemandaValidationError, match="exclusivos.*Fase 3"):
+        service.criar_ambiente(payload)
+    assert captured == {}
     close.assert_not_called()
-    assert "geoprocessamento.superficie_criterios" in conexao.execute.call_args.args[0]
-    assert conexao.execute.call_args.args[1] == (SID,)
+    conexao.execute.assert_not_called()
 
 
 @pytest.mark.parametrize("change", ["missing", "hierarchy", "duplicate", "name"])
@@ -144,7 +138,7 @@ def test_pesos_rejeitam_julgamento_incompativel(monkeypatch, superficie, change)
         ahp.pesos_consolidados(superficie, AID)
 
 
-def test_edicao_de_convites_preserva_snapshot_sem_reler_superficie(monkeypatch, superficie):
+def test_edicao_de_convites_de_superficie_legada_bloqueada(monkeypatch, superficie):
     row = ambiente(superficie)
     row["status"] = "ativa"
     row["total_respostas"] = 3
@@ -152,18 +146,17 @@ def test_edicao_de_convites_preserva_snapshot_sem_reler_superficie(monkeypatch, 
     monkeypatch.setattr(service.repo, "list_respostas", lambda _: [])
     monkeypatch.setattr(service.repo, "update_ambiente", lambda _, data: dict(row, **data))
     monkeypatch.setattr(service, "_carregar_hierarquizacao", MagicMock(side_effect=AssertionError("Não reler matriz global")))
-    response = service.atualizar_ambiente(AID, AmbienteColaborativoUpdateSchema(
-        hierarquizacao_id=HID, convites=[{"email": "novo@example.com"}]))
-    assert response.superficie_id == SID
-    assert response.criterios == row["criterios"]
-    assert response.convites[0]["email"] == "novo@example.com"
+    with pytest.raises(DemandaValidationError, match="exclusivos da Fase 3"):
+        service.atualizar_ambiente(AID, AmbienteColaborativoUpdateSchema(
+            hierarquizacao_id=HID, convites=[{"email": "novo@example.com"}]))
+    assert row["convites"] == [{"email": "p@example.com"}]
     for patch in [{"hierarquizacao_id": AID}, {"config_tipo": "portfolio", "config_id": HID},
                   {"matriz_premissas_criterios": []}, {"arquivo_matriz_base64": "YQ=="}]:
         with pytest.raises(DemandaValidationError):
             service.atualizar_ambiente(AID, AmbienteColaborativoUpdateSchema(**patch))
 
 
-def test_consolidacao_da_superficie_nao_altera_pesos_globais(monkeypatch, superficie):
+def test_consolidacao_de_julgamento_fase2_bloqueada(monkeypatch, superficie):
     row = ambiente(superficie)
     row["status"] = "ativa"
     monkeypatch.setattr(service.repo, "get_ambiente_by_id", lambda _: row)
@@ -171,11 +164,9 @@ def test_consolidacao_da_superficie_nao_altera_pesos_globais(monkeypatch, superf
         {"status": "enviada", "consistente": True, "matriz_comparacao": row["matriz_consolidada"]}])
     save = MagicMock(side_effect=lambda _, data, hierarchy: dict(row, **data))
     monkeypatch.setattr(service.repo, "atualizar_consolidacao", save)
-    response = service.consolidar_ambiente(AID)
-    assert save.call_args.args[2] is None
-    assert response.superficie_id == SID
-    assert response.status == "consolidada"
-    assert response.consolidacao.pesos_consolidados == pytest.approx([.75, .25])
+    with pytest.raises(DemandaValidationError, match="exclusivos da Fase 3"):
+        service.consolidar_ambiente(AID)
+    save.assert_not_called()
 
 
 def test_encerramento_global_exclui_superficies(conexao):
@@ -186,16 +177,17 @@ def test_encerramento_global_exclui_superficies(conexao):
     conexao.commit.assert_called_once()
 
 
-def test_publico_autorizado_usa_nomes_snapshot(monkeypatch, superficie):
+def test_publico_autorizado_rejeita_julgamento_fase2(monkeypatch, superficie):
     row = ambiente(superficie)
     row.update(status="ativa", token_acesso="012345")
     monkeypatch.setattr(service.repo, "get_ambiente_by_token", lambda _: row)
     monkeypatch.setattr(service, "_carregar_hierarquizacao", lambda _: {"nome": "Hierarquização"})
-    public = service.obter_ambiente_publico("token", email="p@example.com", token_acesso="012345")
-    assert public.criterios == ["Acesso", "Distância"]
+    with pytest.raises(DemandaValidationError, match="exclusivos da Fase 3"):
+        service.obter_ambiente_publico("token", email="p@example.com", token_acesso="012345")
+    assert service.obter_ambiente_publico("token").criterios == []
 
 
-def test_homologacao_surface_nao_sobrescreve_hierarquizacao(monkeypatch, superficie):
+def test_homologacao_de_julgamento_fase2_bloqueada(monkeypatch, superficie):
     row = ambiente(superficie)
     analysis = {"id": "an1", "ambiente_id": AID, "consistente": True,
                 "matriz_consolidada": row["matriz_consolidada"], "pesos_consolidados": [.5, .5]}
@@ -206,10 +198,9 @@ def test_homologacao_surface_nao_sobrescreve_hierarquizacao(monkeypatch, superfi
     monkeypatch.setattr(service, "_analise_response", lambda value: value)
     save = MagicMock()
     monkeypatch.setattr(service.repo, "atualizar_consolidacao", save)
-    service.homologar_analise("an1")
-    assert save.call_args.args[2] is None
-    assert save.call_args.args[1]["pesos_consolidados"] == pytest.approx([.75, .25])
-    assert save.call_args.kwargs["homologacao"] == ("an1", None)
+    with pytest.raises(DemandaValidationError, match="exclusivos da Fase 3"):
+        service.homologar_analise("an1")
+    save.assert_not_called()
 
 
 def test_rc_limite_e_aceito_sem_confiar_em_arredondamento(monkeypatch, superficie):
@@ -223,7 +214,7 @@ def test_rc_limite_e_aceito_sem_confiar_em_arredondamento(monkeypatch, superfici
         ahp.pesos_consolidados(superficie, AID)
 
 
-def test_javascript_carrega_surface_fixa_matriz_sem_convites_automaticos():
+def test_javascript_rejeita_novo_julgamento_para_superficie():
     response = TestClient(app).get(
         "/assets/js/paginas/analise-multicriterio-julgamentos.js",
         headers={"X-Forwarded-Prefix": "/sicard"},
@@ -254,31 +245,10 @@ function showCreateSection() { opened++; applySurfaceContext(); }
 """
     checks = r"""
 (async function () {
-  await loadRequestedSurface();
-  assert.equal(opened,1);
-  assert.equal(surfaceLoading,false);
-  assert.equal(activeSurfaceId,'s1');
-  assert.equal($('ami-hierarchy').value,'h1');
-  assert.equal($('ami-hierarchy').disabled,true);
-  assert.equal($('ami-criteria-matrix').disabled,true);
-  assert.equal($('ami-matrix-section').hidden,true);
-  assert.equal($('ami-surface-hierarchy-section').hidden,false);
-  assert.equal(matrixPicker.disabled,true);
-  assert.equal($('ami-surface-return').href,
-    '/sicard/restrict/geoespacial/gerador-superficies-favorabilidade/?superficie_id=s1');
-  assert.deepEqual(criteriaMatrix.linhas,surface.criterios);
-  assert.equal(criteriaMatrixFileBase64,null);
-  assert.equal(criteriaMatrixFileName,null);
-  assert.deepEqual(calls,[['/sicard/api/ahp/superficies-criterios/s1',undefined]]);
-  assert.match(summary,/Matriz fixa/);
-  location.search='?superficie_id=s1&hierarquizacao_id=outra&novo=1';
-  await assert.rejects(loadRequestedSurface(),/não pertence/);
-  assert.equal(opened,1);
-  assert.equal(surfaceLoading,true);
-  location.search='?superficie_id=s1&hierarquizacao_id=h1&novo=1';
-  surface.criterios = [surface.criterios[0]];
-  await assert.rejects(loadRequestedSurface(),/dois critérios/);
-  assert.equal(opened,1);
+  await assert.rejects(loadRequestedSurface(),/exclusivos da Fase 3/);
+  assert.equal(opened,0);
+  assert.equal(activeSurfaceId,null);
+  assert.deepEqual(calls,[]);
 })().catch(e => {console.error(e);process.exitCode=1});
 """
     result = subprocess.run(["node", "-"], input=harness + functions + checks,

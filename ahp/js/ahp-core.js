@@ -75,6 +75,36 @@
     return analyzeMatrix(matrix);
   }
 
+  function consistencyReviews(matrix, answeredPairs) {
+    const n = matrix.length, total = n * (n - 1) / 2;
+    const pairs = [];
+    for (let i = 0; i < n; i++) {
+      for (let j = i + 1; j < n; j++) {
+        if (answeredPairs.has(i + "_" + j)) pairs.push({ i, j });
+      }
+    }
+    if (!total || pairs.length / total <= 0.7) return [];
+    const current = analyzeMatrix(matrix);
+    if (current.CR < 0.1) return [];
+    pairs.forEach(pair => {
+      pair.deviation = Math.abs(Math.log(matrix[pair.i][pair.j]) -
+        Math.log(current.weights[pair.i] / current.weights[pair.j]));
+    });
+    const values = [1 / 9, 1 / 7, 1 / 5, 1 / 3, 1, 3, 5, 7, 9];
+    // Limit simulations to the largest residuals to keep large forms responsive.
+    return pairs.sort((a, b) => b.deviation - a.deviation).slice(0, 8).map(pair => {
+      const trial = matrix.map(row => row.slice());
+      let bestCR = current.CR;
+      values.forEach(value => {
+        trial[pair.i][pair.j] = value;
+        trial[pair.j][pair.i] = 1 / value;
+        bestCR = Math.min(bestCR, analyzeMatrix(trial).CR);
+      });
+      return { i: pair.i, j: pair.j, projectedCR: bestCR, improvement: current.CR - bestCR };
+    }).filter(pair => pair.improvement > 1e-8)
+      .sort((a, b) => b.improvement - a.improvement).slice(0, 3);
+  }
+
   /**
    * Sintetiza o ranking global das alternativas.
    * @param {number[]} criteriaWeights  pesos dos critérios (tamanho C).
@@ -119,6 +149,7 @@
     consistency,
     analyzeMatrix,
     calculateAHP,
+    consistencyReviews,
     synthesize,
     matrixFromUpper,
   };

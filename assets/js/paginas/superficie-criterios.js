@@ -278,16 +278,7 @@ $("mode").onchange = async () => {
 $("judgment").onchange = syncCalculation;
 $("judgment-refresh").onclick = () => operation("Consultando julgamentos…", judgments);
 async function startJudgment() {
-  if (!saved) return status("Salve ou carregue a superfície primeiro.", true);
-  await operation("Exportando a matriz específica da Fase 2 e abrindo novo julgamento…", async () => {
-    const response = await fetch(`${endpoint}/${saved.id}/matriz.xlsx`, {credentials:"same-origin"});
-    if (!response.ok) throw new Error("Não foi possível exportar a matriz desta superfície.");
-    const url = URL.createObjectURL(await response.blob());
-    const link = document.createElement("a");
-    link.href = url; link.download = "matriz_fase2.xlsx"; link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 30000);
-    location.assign(`/restrict/analise-multicriterio/central-julgamentos?novo=1&superficie_id=${saved.id}&hierarquizacao_id=${saved.hierarquizacao_id}`);
-  });
+  status("Julgamentos AHP são exclusivos da Fase 3. Critérios espaciais da Fase 2 não participam.", true);
 }
 $("judgment-new").onclick = startJudgment;
 $("individual").onchange = event => {

@@ -217,6 +217,8 @@ def compor(frame, criterios, pesos):
 
 
 def calcular(ident, payload, user):
+    if payload.get('matriz') is not None or payload.get('ambiente_id'):
+        raise ValueError('Julgamentos AHP são exclusivos da Fase 3. Na Fase 2, utilize média simples ou pesos explicitamente informados.')
     row = obter(ident, user)
     criteria = row['criterios']
     method = payload['operador']

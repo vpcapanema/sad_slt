@@ -8,6 +8,7 @@ import unicodedata
 import base64
 import binascii
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 from uuid import UUID
@@ -16,7 +17,6 @@ from zoneinfo import ZoneInfo
 from api.constants import TIPO_DEMANDA_ID_TO_COD
 from api.exceptions import DemandaValidationError
 from api.repositories import comparacao_colaborativa_repository as repo
-from api.repositories import dominio_repository as dominio_repo
 from api.repositories import hierarquizacao_repository as hierarq_repo
 from api.repositories import config_multicriterio_repository as config_repo
 from api.repositories import comparacao_colaborativa_analise_repository as analise_repo
@@ -123,14 +123,8 @@ def _criterios_from_hierarquizacao(hierarq: dict[str, Any]) -> list[dict[str, An
 
 
 def _criterios_from_matriz(matriz: Any) -> list[dict[str, Any]]:
-    """Retém as linhas completas da matriz usada como contexto do julgamento."""
-    if isinstance(matriz, dict):
-        for chave in ("linhas", "rows", "criterios", "dados"):
-            if isinstance(matriz.get(chave), list):
-                return [item for item in matriz[chave] if isinstance(item, dict)]
-    if isinstance(matriz, list):
-        return [item for item in matriz if isinstance(item, dict)]
-    return []
+    """Recorta apenas a Fase 3, sem modificar a matriz cadastrada."""
+    return matrizes_criterios.criterios_fase3(matriz)
 
 
 def _arquivo_matriz(base64_value: str | None) -> bytes | None:
@@ -184,6 +178,7 @@ def _validar_dimensoes(convites: list[dict[str, Any]], criterios: list[dict[str,
 
 
 def _criterios_convidado(ambiente: dict[str, Any], email: str) -> list[dict[str, Any]]:
+    matrizes_criterios.exigir_julgamento_fase3(ambiente)
     criterios = ambiente.get("criterios") or []
     convite = next((c for c in ambiente.get("convites", []) if c["email"].strip().lower() == email.strip().lower()), None)
     if convite is None:
@@ -299,22 +294,21 @@ def criar_ambiente(
         criterios = _criterios_from_matriz(matriz["conteudo"])
         config = hierarq = None
     elif payload.superficie_id:
-        if not payload.hierarquizacao_id or payload.config_tipo or payload.config_id:
-            raise DemandaValidationError("Informe somente a hierarquização da superfície.", field="hierarquizacao_id")
-        hierarq = _carregar_hierarquizacao(payload.hierarquizacao_id)
-        criterios = superficie_ahp.snapshot(str(payload.superficie_id), str(payload.hierarquizacao_id))
-        config = None
+        raise DemandaValidationError(
+            "Julgamentos AHP são exclusivos dos critérios da Fase 3; não abra julgamentos para superfícies da Fase 2.",
+            field="superficie_id",
+        )
     elif payload.config_tipo and payload.config_id:
         if payload.config_tipo not in {"avulsa", "portfolio"}:
             raise DemandaValidationError("Origem de configuração inválida.", field="config_tipo")
         config = config_repo.get_by_id(payload.config_tipo, payload.config_id)
         if not config:
             raise DemandaValidationError("Configuração multicritério não encontrada.", field="config_id")
-        criterios = config.get("criterios") or []
+        criterios = _criterios_from_matriz(config.get("criterios") or [])
         hierarq = None
     elif payload.hierarquizacao_id:
         hierarq = _carregar_hierarquizacao(payload.hierarquizacao_id)
-        criterios = _criterios_from_hierarquizacao(hierarq)
+        criterios = _criterios_from_matriz(_criterios_from_hierarquizacao(hierarq))
         config = None
     elif payload.matriz_premissas_criterios is not None:
         criterios = _criterios_from_matriz(payload.matriz_premissas_criterios)
@@ -324,7 +318,7 @@ def criar_ambiente(
 
     if len(criterios) < 2:
         raise DemandaValidationError(
-            "A matriz de premissas e critérios deve possuir ao menos dois critérios para abrir um ambiente colaborativo.",
+            "A matriz deve possuir ao menos dois critérios da Fase 3 para abrir um julgamento AHP.",
             field="criterios",
         )
 
@@ -444,6 +438,8 @@ def atualizar_ambiente(
     if not atual:
         raise DemandaValidationError("Julgamento não encontrado.", field="julgamento_id")
     somente_nome = payload.model_fields_set == {"nome"} and payload.nome is not None
+    if not somente_nome:
+        matrizes_criterios.exigir_julgamento_fase3(atual)
     if atual.get("status") != "ativa" and not somente_nome and not payload.reabrir:
         raise DemandaValidationError(
             "Somente julgamentos abertos podem ser editados.", field="status"
@@ -499,7 +495,7 @@ def atualizar_ambiente(
         )
     if payload.hierarquizacao_id is not None and not superficie_vinculada:
         hierarq = _carregar_hierarquizacao(payload.hierarquizacao_id)
-        criterios = _criterios_from_hierarquizacao(hierarq)
+        criterios = _criterios_from_matriz(_criterios_from_hierarquizacao(hierarq))
         if len(criterios) < 2:
             raise DemandaValidationError(
                 "A hierarquização deve possuir ao menos dois critérios.",
@@ -558,7 +554,7 @@ def atualizar_ambiente(
         config = config_repo.get_by_id(payload.config_tipo, payload.config_id)
         if not config:
             raise DemandaValidationError("Configuração multicritério não encontrada.", field="config_id")
-        criterios = config.get("criterios") or []
+        criterios = _criterios_from_matriz(config.get("criterios") or [])
         if len(criterios) < 2:
             raise DemandaValidationError(
                 "A configuração deve possuir ao menos dois critérios.", field="config_id"
@@ -675,15 +671,35 @@ def listar_ambientes_hierarquizacao(
 
 
 def obter_modelo_formulario_pli() -> dict[str, Any]:
-    """Metadados do formulário-modelo: critérios das dimensões do grupo conceitual PLI."""
-    dimensoes = dominio_repo.list_dimensoes_criterios("PLI")
+    """O modelo público também julga somente o recorte da Fase 3."""
+    from openpyxl import load_workbook
+
+    arquivo = Path(__file__).resolve().parents[2] / "documentacao" / "matrizes" / "Matriz_PLI_v6_Dimensoes_Indicadores.xlsx"
+    with arquivo.open("rb") as stream:
+        workbook = load_workbook(stream, read_only=True, data_only=True)
+        try:
+            rows = workbook["Matriz Crit Premissas v3"].iter_rows(values_only=True)
+            headers = next(rows)
+            elegiveis = matrizes_criterios.criterios_fase3({"linhas": [
+                dict(zip(headers, row)) for row in rows if any(value is not None for value in row)
+            ]})
+        finally:
+            workbook.close()
+    dimensoes = []
+    for criterio in elegiveis:
+        nome_dimensao = _dimensao(criterio).split(" · ", 1)[-1]
+        dimensao = next((d for d in dimensoes if d["nome"] == nome_dimensao), None)
+        if dimensao is None:
+            dimensao = {"codigo": _dimensao(criterio).split(" · ")[0], "nome": nome_dimensao, "criterios": []}
+            dimensoes.append(dimensao)
+        dimensao["criterios"].extend(nome.split(" · ", 1)[-1] for nome in _criterio_nomes([criterio]))
     criterios = [nome for dimensao in dimensoes for nome in dimensao["criterios"]]
     if len(criterios) < 2:
         raise DemandaValidationError("Os critérios do PLI não estão cadastrados no domínio.", field="criterios")
     return {
         "escopo": "Hierarquização da carteira de projetos e ações — PLI-SP 2050",
         "objetivo": (
-            "Definir a importância relativa dos critérios selecionados pela equipe do PLI, "
+            "Definir a importância relativa dos critérios da Fase 3 selecionados pela equipe do PLI, "
             "que orientarão a hierarquização da carteira de projetos e ações."
         ),
         "criterios": criterios,
@@ -771,6 +787,7 @@ def _validar_ambiente_ativo(row: dict[str, Any]) -> None:
             raise DemandaValidationError(
                 "O prazo para preenchimento encerrou.", field="valido_ate"
             )
+    matrizes_criterios.exigir_julgamento_fase3(row)
 
 
 def _validar_matriz_pareada(matriz: list[list[float]], n: int) -> None:
@@ -1078,6 +1095,7 @@ def criar_analise(ambiente_id: str, payload: AnaliseColaborativaCreateSchema, us
     ambiente = repo.get_ambiente_by_id(ambiente_id)
     if not ambiente:
         raise DemandaValidationError("Julgamento não encontrado.", field="ambiente_id")
+    matrizes_criterios.exigir_julgamento_fase3(ambiente)
     respostas = [r for r in repo.list_respostas(ambiente_id) if r.get("status", "enviada") == "enviada"]
     selecionadas = {str(v) for v in payload.resposta_ids} if payload.resposta_ids is not None else None
     if selecionadas is not None:
@@ -1163,6 +1181,7 @@ def homologar_analise(analise_id: str, usuario_id: str | None = None, *, base_ur
     ambiente = repo.get_ambiente_by_id(str(analise["ambiente_id"]))
     if not ambiente:
         raise DemandaValidationError("Julgamento da análise não encontrado.", field="ambiente_id")
+    matrizes_criterios.exigir_julgamento_fase3(ambiente)
     criterios_analise = (analise.get("estatisticas_analise") or {}).get("criterios_atribuidos", ambiente.get("criterios") or [])
     if criterios_analise != (ambiente.get("criterios") or []):
         raise DemandaValidationError("Esta análise contém apenas um recorte de dimensões e não pode substituir os pesos da matriz inteira.", field="analise_id")
@@ -1198,6 +1217,7 @@ def consolidar_ambiente(
     if not amb:
         raise DemandaValidationError("Ambiente não encontrado.", field="ambiente_id")
 
+    matrizes_criterios.exigir_julgamento_fase3(amb)
     respostas = [
         r for r in repo.list_respostas(ambiente_id)
         if r.get("status", "enviada") == "enviada" and r.get("consistente")

@@ -4,6 +4,20 @@ body.ami-public-page {
   --ami-font-help: 11.5px;
 }
 
+.ami-public-page #collab-consistency-help[hidden] {
+  display: none;
+}
+
+.ami-public-page #collab-consistency-help {
+  font-size: var(--ami-font-help);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.ami-public-page #collab-consistency-help :is(p, li, a) {
+  font-size: inherit;
+}
+
 .ami-public-page .ahp-step-section.card {
   margin-bottom: 1.25rem;
 }

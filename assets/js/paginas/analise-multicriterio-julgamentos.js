@@ -27,7 +27,7 @@
   var environmentId = null, environmentSaving = false, analysisSaving = false;
   var analysisResponseIds = new Set();
   var analysisWorkspace = null;
-  var analysisSource = null, analysisScope = 0;
+  var analysisSource = null, analysisScope = -1;
   var analysisMode = "view";
   var analysisRequest = 0;
   var selectedJudgeId = null; // null = todos os julgadores juntos
@@ -83,13 +83,16 @@
     });
     return key ? String(row[key] || "").trim() : "";
   }
+  function phase3Rows(matrix) {
+    return SLTMatrizesCriterios.phase3Rows(matrix);
+  }
   function renderDimensionOptions() {
-    var host = $("ami-dimension-options"), rows = matrixRows(criteriaMatrix);
+    var host = $("ami-dimension-options"), rows = phase3Rows(criteriaMatrix);
     var selected = Array.from(host.querySelectorAll("input:checked")).map(function (input) { return input.value; });
     host.replaceChildren();
     var dimensions = Array.from(new Set(rows.map(criterionDimension).filter(Boolean)));
     $("ami-collaborator-dimensions").hidden = Boolean(activeSurfaceId);
-    if (!dimensions.length) { host.textContent = "Selecione uma matriz com a dimensão informada em cada critério."; return; }
+    if (!dimensions.length) { host.textContent = "Selecione uma matriz com ao menos dois critérios da Fase 3 e suas dimensões informadas."; return; }
     dimensions.forEach(function (dimension) {
       var label = document.createElement("label"), input = document.createElement("input");
       input.type = "checkbox"; input.value = dimension; input.checked = selected.includes(dimension);
@@ -126,18 +129,7 @@
   function loadRequestedSurface() {
     var params = new URLSearchParams(location.search), surfaceId = params.get("superficie_id");
     if (!surfaceId) { if (params.get("novo") === "1") showCreateSection(); return Promise.resolve(); }
-    surfaceLoading = true;
-    if ($("ami-new")) $("ami-new").disabled = true;
-    return api("/api/ahp/superficies-criterios/" + encodeURIComponent(surfaceId)).then(function (surface) {
-      var hierarchyId = params.get("hierarquizacao_id");
-      if (String(surface.id) !== surfaceId || (hierarchyId && String(surface.hierarquizacao_id) !== hierarchyId)) throw new Error("A superfície não pertence à hierarquização informada.");
-      if (!hierarquizacoes.some(function (h) { return String(h.id) === String(surface.hierarquizacao_id); })) throw new Error("Hierarquização da superfície indisponível.");
-      if (matrixRows(surface.criterios).length < 2) throw new Error("A superfície deve possuir ao menos dois critérios.");
-      surfaceContext = surface;
-      surfaceLoading = false;
-      if ($("ami-new")) $("ami-new").disabled = false;
-      if (params.get("novo") === "1") showCreateSection();
-    });
+    return Promise.reject(new Error("Julgamentos AHP são exclusivos da Fase 3. Superfícies da Fase 2 não participam."));
   }
   function matrixSummary(message, isError) {
     var node = $("ami-criteria-matrix-summary"); node.textContent = message || ""; node.classList.toggle("hidden", !message); node.classList.toggle("ahp-info-note--error", Boolean(isError));
@@ -152,7 +144,7 @@
   function selectedMatrixId(feedbackNode) {
     if (matrixPicker.pending()) { avisarFormulario("Aguarde o carregamento ou conclua o cadastro do arquivo da matriz.", feedbackNode); return null; }
     var record = matrixPicker.selected();
-    if (!record || matrixRows(record.conteudo).length < 2) { avisarFormulario("Selecione uma matriz cadastrada com ao menos dois critérios.", feedbackNode); return null; }
+    if (!record || phase3Rows(record.conteudo).length < 2) { avisarFormulario("Selecione uma matriz cadastrada com ao menos dois critérios da Fase 3.", feedbackNode); return null; }
     return record.id;
   }
   function avisarFormulario(message, node, field) {
@@ -173,7 +165,7 @@
     return String(Object.assign({}, j, { status: statusLabel(j.status), hierarquizacao_nome: j.hierarquizacao_nome || h && h.nome })[column] ?? '');
   }
   var ordenarJulgamentos = SLTTable.sorting($('ami-judgments').closest('table'), function () {
-    if (modo === 'julgamentos') return [null, j=>statusLabel(j.status), j=>j.id, j=>(j.convites||[]).length,
+    if (modo === 'julgamentos') return [null, j=>j.nome, j=>statusLabel(j.status), j=>(j.convites||[]).length,
       j=>(j.total_respostas||0)+(j.respostas_em_preenchimento||0), j=>j.respostas_em_preenchimento||0,
       j=>j.total_respostas||0, j=>j.respostas_consistentes||0, j=>j.valido_ate, j=>j.atualizadoEm];
     return [null, j=>j.nome, j=>statusLabel(j.status), j=>j.id, j=>j.matriz_id||j.hierarquizacao_id, j=>j.matriz_nome||j.hierarquizacao_nome||j.hierarquizacao_codigo,
@@ -193,7 +185,7 @@
     $("ami-filter-valor").disabled = !column;
   }
   function setupEnvironmentFilters() {
-    if (modo === "julgamentos") environmentFilterColumns = [["status", "Situação"], ["id", "ID Julgamento"], ["enviadas", "Enviadas"], ["recebidas", "Recebidas"], ["preenchimento", "Em preenchimento"], ["finalizadas", "Finalizadas"], ["consistentes", "Finalizadas com consistência"], ["valido_ate", "Prazo"], ["atualizadoEm", "Atualizado em"]];
+    if (modo === "julgamentos") environmentFilterColumns = [["nome", "Nome do julgamento"], ["status", "Situação"], ["enviadas", "Enviadas"], ["recebidas", "Recebidas"], ["preenchimento", "Em preenchimento"], ["finalizadas", "Finalizadas"], ["consistentes", "Finalizadas com consistência"], ["valido_ate", "Prazo"], ["atualizadoEm", "Atualizado em"]];
     $("ami-filter-coluna").insertAdjacentHTML("beforeend", environmentFilterColumns.map(function (entry) { return '<option value="' + entry[0] + '">' + entry[1] + '</option>'; }).join(''));
     function change() { currentPage = 1; selectedIds.clear(); editingId = null; render(); }
     $("ami-filter-coluna").onchange = function () { $("ami-filter-valor").value = ''; syncEnvironmentFilterOptions(); change(); };
@@ -241,7 +233,7 @@
     pagination.querySelector("[data-page-last]").disabled = pagination.querySelector("[data-page-next]").disabled = currentPage >= pageCount;
   }
   function renderAnalysisRounds(rows) {
-    $("ami-judgments").innerHTML = rows.map(function (j) { var selected = selectedIds.has(j.id), convidados = (j.convites || []).length, finalizadas = j.total_respostas || 0, preenchendo = j.respostas_em_preenchimento || 0, consistentes = j.respostas_consistentes || 0, recebidas = finalizadas + preenchendo; return '<tr class="collab-round-row ' + (selected ? "is-selected" : "") + '"><td class="col-select"><input type="checkbox" class="ami-row-select" data-analysis-round="' + escapeHtml(j.id) + '" ' + (selected ? "checked" : "") + '></td><td>' + escapeHtml(statusLabel(j.status)) + '</td><td class="ami-cell-id">' + escapeHtml(j.id) + '</td><td>' + ratioLabel(convidados, convidados) + '</td><td>' + ratioLabel(recebidas, convidados) + '</td><td>' + ratioLabel(preenchendo, convidados) + '</td><td>' + ratioLabel(finalizadas, convidados) + '</td><td>' + ratioLabel(consistentes, convidados) + '</td><td>' + escapeHtml(deadlineLabel(j.valido_ate)) + '</td><td>' + escapeHtml(deadlineLabel(j.atualizadoEm)) + '</td></tr>'; }).join("") || '<tr><td colspan="10" class="ami-empty">Nenhum julgamento encontrado.</td></tr>';
+    $("ami-judgments").innerHTML = rows.map(function (j) { var selected = selectedIds.has(j.id), convidados = (j.convites || []).length, finalizadas = j.total_respostas || 0, preenchendo = j.respostas_em_preenchimento || 0, consistentes = j.respostas_consistentes || 0, recebidas = finalizadas + preenchendo; return '<tr class="collab-round-row ' + (selected ? "is-selected" : "") + '"><td class="col-select"><input type="checkbox" class="ami-row-select" data-analysis-round="' + escapeHtml(j.id) + '" ' + (selected ? "checked" : "") + '></td><td>' + escapeHtml(j.nome || "—") + '</td><td>' + escapeHtml(statusLabel(j.status)) + '</td><td>' + ratioLabel(convidados, convidados) + '</td><td>' + ratioLabel(recebidas, convidados) + '</td><td>' + ratioLabel(preenchendo, convidados) + '</td><td>' + ratioLabel(finalizadas, convidados) + '</td><td>' + ratioLabel(consistentes, convidados) + '</td><td>' + escapeHtml(deadlineLabel(j.valido_ate)) + '</td><td>' + escapeHtml(deadlineLabel(j.atualizadoEm)) + '</td></tr>'; }).join("") || '<tr><td colspan="10" class="ami-empty">Nenhum julgamento encontrado.</td></tr>';
     $("ami-judgments").querySelectorAll("[data-analysis-round]").forEach(function (input) { input.addEventListener("change", function () { changeRowSelection(input.dataset.analysisRound, input.checked); }); });
   }
   function ratioLabel(realizado, total) { var percentage = total > 0 ? Math.round((realizado / total) * 100) : 0; return '<span class="ami-ratio"><strong>' + realizado + '/' + total + '</strong><small>' + percentage + '%</small></span>'; }
@@ -371,7 +363,7 @@
     });
   }
   function analysisMatrixTable(item) {
-    var criteria = analysisWorkspace.ambiente.criterios || [], matrix = item.matriz_consolidada || [];
+    var criteria = criteriosDoRegistro(analysisWorkspace, item), matrix = item.matriz_consolidada || [];
     if (!matrix.length) return '<p class="ami-empty">Matriz consolidada indisponível.</p>';
     return '<div class="matriz-table-wrap"><table class="admin-table matriz-view-table ami-matrix"><thead><tr><th>Critério</th>' + criteria.map(function (criterion, index) { return '<th>' + escapeHtml(criterionName(criterion, index)) + '</th>'; }).join("") + '</tr></thead><tbody>' + matrix.map(function (row, rowIndex) { return '<tr><th scope="row">' + escapeHtml(criterionName(criteria[rowIndex], rowIndex)) + '</th>' + row.map(function (value) { return '<td>' + fmtNumber(value) + '</td>'; }).join("") + '</tr>'; }).join("") + '</tbody></table></div>';
   }
@@ -401,6 +393,17 @@
     mediana: { rotulo: "mediana", calcula: function (valores) { var ordem = valores.slice().sort(function (a, b) { return a - b; }), meio = Math.floor(ordem.length / 2); return ordem.length % 2 ? ordem[meio] : (ordem[meio - 1] + ordem[meio]) / 2; } }
   };
   function respostasEnviadas(data) { return (data.respostas || []).filter(function (r) { return r.status === "enviada" && (r.matriz_comparacao || []).length; }); }
+  function criteriosDoRegistro(data, registro) {
+    var snapshot = (registro.estatisticas_analise || registro.estatisticas || {}).criterios_atribuidos;
+    var recorte = (data.recortes || []).find(function (r) { return r.resposta_ids.includes(String(registro.id)); });
+    return snapshot || (recorte && recorte.criterios) || data.ambiente.criterios || [];
+  }
+  function respostasMesmoRecorte(data) {
+    var respostas = respostasEnviadas(data).filter(function (r) { return analysisResponseIds.has(String(r.id)); });
+    return respostas.length < 2 || respostas.every(function (r) {
+      return JSON.stringify(criteriosDoRegistro(data, r)) === JSON.stringify(criteriosDoRegistro(data, respostas[0]));
+    });
+  }
   // Agrega o triangulo superior pela medida escolhida e espelha o reciproco: com
   // media aritmetica ou mediana, agregar as duas metades separadamente quebraria
   // a reciprocidade (a_ij x a_ji deixaria de ser 1).
@@ -409,7 +412,7 @@
     var enviadas = respostasEnviadas(data).filter(function (r) {
       return analysisResponseIds.has(String(r.id)) && (!$("ami-analysis-exclude-inconsistent").checked || (r.consistente && Number(r.razao_consistencia) <= limite));
     });
-    if (!enviadas.length) return null;
+    if (!enviadas.length || !respostasMesmoRecorte(data)) return null;
     var n = enviadas[0].matriz_comparacao.length, calcula = (MEDIDAS[medida] || MEDIDAS.geometrica).calcula;
     var matriz = [];
     for (var i = 0; i < n; i++) { matriz.push([]); for (var j = 0; j < n; j++) matriz[i].push(1); }
@@ -426,17 +429,20 @@
   // agregacao de todos pela medida escolhida.
   function matrizEmFoco(data) {
     if (analysisMode === "view") {
-      var stored = selectedJudgeId ? (data.respostas || []).find(function(r){return String(r.id) === selectedJudgeId;}) : (analiseHomologada(data) || (data.analises || [])[0]);
+      var stored = selectedJudgeId ? (data.respostas || []).find(function(r){return String(r.id) === selectedJudgeId;}) : (analiseHomologada(data) || (data.analises || []).find(function (item) {
+        return JSON.stringify(criteriosDoRegistro(data, item)) === JSON.stringify(data.ambiente.criterios);
+      }));
       var matrix = stored && (stored.matriz_consolidada || stored.matriz_comparacao);
-      return matrix && matrix.length ? {matriz:matrix, origem:"registrada", rotulo:stored.nome || stored.nome_completo || "Análise registrada", registro:stored} : null;
+      return matrix && matrix.length ? {matriz:matrix, criterios:criteriosDoRegistro(data, stored), origem:"registrada", rotulo:stored.nome || stored.nome_completo || "Análise registrada", registro:stored} : null;
     }
     if (selectedJudgeId && !$("ami-analysis-exclude-inconsistent").checked) {
       var resposta = (data.respostas || []).filter(function (r) { return String(r.id) === selectedJudgeId; })[0];
       var matriz = resposta && resposta.matriz_comparacao;
-      return matriz && matriz.length ? { matriz: matriz, origem: "julgador", rotulo: resposta.nome_completo } : null;
+      return matriz && matriz.length ? { matriz: matriz, criterios: criteriosDoRegistro(data, resposta), origem: "julgador", rotulo: resposta.nome_completo } : null;
     }
     var agregada = matrizAgregada(data, selectedMeasure);
-    return agregada ? { matriz: agregada, origem: "todos", rotulo: (MEDIDAS[selectedMeasure] || MEDIDAS.geometrica).rotulo } : null;
+    var primeira = respostasEnviadas(data).find(function (r) { return analysisResponseIds.has(String(r.id)); });
+    return agregada ? { matriz: agregada, criterios: criteriosDoRegistro(data, primeira), origem: "todos", rotulo: (MEDIDAS[selectedMeasure] || MEDIDAS.geometrica).rotulo } : null;
   }
   function analiseHomologada(data) {
     return (data.analises || []).filter(function (item) { return item.id === data.analise_homologada_id || item.status === "homologada"; })[0] || null;
@@ -488,7 +494,7 @@
     SLTAnalysisTable($("ami-analysis-responses").closest("table"));
   }
   function renderConsolidatedMatrix(data) {
-    var foco = matrizEmFoco(data), criterios = (data.ambiente.criterios || []).map(criterionName);
+    var foco = matrizEmFoco(data), criterios = (foco ? foco.criterios : data.ambiente.criterios || []).map(criterionName);
     var caixa = $("ami-analysis-measure-box");
     caixa.classList.toggle("is-hidden", !!selectedJudgeId);
     var seletor = $("ami-analysis-measure");
@@ -582,8 +588,8 @@
     $("ami-analysis-metrics").innerHTML = grade + explicacoes;
   }
   function renderWeights(data) {
-    var foco = matrizEmFoco(data), resultado = foco ? (analysisMode === "view" ? {pesos:foco.registro.pesos_consolidados || []} : analisarMatriz(foco.matriz)) : null;
-    var pesos = resultado ? resultado.pesos : [], criterios = (data.ambiente.criterios || []).map(criterionName);
+    var foco = matrizEmFoco(data), resultado = foco ? (analysisMode === "view" ? {pesos:foco.registro.pesos_consolidados || foco.registro.pesos || []} : analisarMatriz(foco.matriz)) : null;
+    var pesos = resultado ? resultado.pesos : [], criterios = (foco ? foco.criterios : data.ambiente.criterios || []).map(criterionName);
     $("ami-analysis-weight-col").textContent = "Peso";
     $("ami-analysis-weights-hint").innerHTML = !foco ? 'Sem respostas enviadas.' : foco.origem === "julgador"
       ? 'Pesos derivados da matriz de <strong>' + escapeHtml(foco.rotulo) + '</strong>, sem agrega\u00e7\u00e3o \u2014 \u00e9 o julgamento de uma pessoa s\u00f3.'
@@ -602,7 +608,10 @@
   }
   // Tudo que deriva da matriz acompanha a selecao do julgador e da medida.
   function syncAnalysisCalculate() {
-    $("ami-analysis-calculate").disabled = analysisMode !== "edit" || analysisSaving || !analysisWorkspace || !analysisResponseIds.size;
+    $("ami-analysis-calculate").disabled = analysisMode !== "edit" || analysisSaving || !analysisWorkspace || !analysisResponseIds.size || !respostasMesmoRecorte(analysisWorkspace);
+    var message = "Para consolidar, selecione respostas de um mesmo recorte de dimensões.";
+    if (analysisWorkspace && !respostasMesmoRecorte(analysisWorkspace)) $("ami-analysis-feedback").textContent = message;
+    else if ($("ami-analysis-feedback").textContent === message) $("ami-analysis-feedback").textContent = "";
   }
   function syncAnalysisMode() {
     var readonly = analysisMode !== "edit";
@@ -653,7 +662,7 @@
   // Consolidacao completa: cada etapa alimenta o modal de processo e o desfecho
   // vai para o semaforo.
   function consolidarRespostas() {
-    if (!analysisWorkspace || analysisSaving || analysisMode !== "edit") return;
+    if (!analysisWorkspace || analysisSaving || analysisMode !== "edit" || !respostasMesmoRecorte(analysisWorkspace)) return;
     var ambienteId = analysisWorkspace.ambiente.id;
     var selecionadas = Array.from(analysisResponseIds);
     var enviadas = respostasEnviadas(analysisWorkspace).length;
@@ -714,20 +723,36 @@
   }
   function renderAnalysisWorkspace(data, scope) {
     if (scope == null) {
-      if (!analysisSource || analysisSource.ambiente.id !== data.ambiente.id) analysisScope = 0;
+      analysisScope = -1;
+      analysisWorkspace = null;
       analysisSource = data;
     } else analysisScope = scope;
     var recortes = analysisSource.recortes || [], picker = $("ami-analysis-scope");
     picker.replaceChildren();
+    picker.add(new Option("Todos", "-1"));
     recortes.forEach(function (recorte, index) {
       var label = Array.from(new Set(recorte.criterios.map(criterionDimension).filter(Boolean))).join(" · ") || "Matriz integral";
       picker.add(new Option(label + " · " + recorte.criterios.length + " critérios", String(index)));
     });
-    picker.parentElement.hidden = recortes.length < 2;
-    if (analysisScope >= recortes.length) analysisScope = 0;
+    picker.parentElement.hidden = false;
+    if (analysisScope >= recortes.length) analysisScope = -1;
     picker.value = String(analysisScope);
     picker.onchange = function () { analysisWorkspace = null; renderAnalysisWorkspace(analysisSource, Number(picker.value)); };
     var recorte = recortes[analysisScope];
+    $("ami-analysis-scope-hint").hidden = Boolean(recorte) || recortes.length < 2;
+    data = analysisSource;
+    if (!recorte && recortes.length) {
+      data = Object.assign({}, analysisSource, { estatisticas: {
+        por_par: recortes.flatMap(function (r, index) {
+          return r.estatisticas.por_par.map(function (pair) {
+            var label = Array.from(new Set(r.criterios.map(criterionDimension).filter(Boolean))).join(" · ");
+            return Object.assign({}, pair, { i: index + ":" + pair.i,
+              criterio_a: (label ? label + " — " : "") + pair.criterio_a,
+              criterio_b: (label ? label + " — " : "") + pair.criterio_b });
+          });
+        })
+      } });
+    }
     if (recorte) {
       var ids = new Set(recorte.resposta_ids);
       data = Object.assign({}, analysisSource, {
@@ -782,14 +807,20 @@
       }).join("") + '</ol></div>';
   }
   function renderConsolidatedAnalyses(items, homologadaId) {
-    $("ami-analysis-consolidations").innerHTML = items.map(function (item) { var official = item.id === homologadaId || item.status === "homologada"; return '<p class="ami-consolidated-identification">' + escapeHtml(item.nome) + (item.codigo ? ' · ' + escapeHtml(item.codigo) : '') + '</p><div class="ami-kpis"><div><strong>' + item.respostas_incluidas + '</strong><span>respostas</span></div><div><strong>' + fmtNumber(item.razao_consistencia) + '</strong><span>RC</span></div><div><strong>' + (item.consistente ? "Sim" : "Não") + '</strong><span>consistente</span></div></div><div class="ahp-collab-grid2 ami-consolidated-tables" data-equal-table-height><div><h4>Pesos finais</h4><div class="matriz-table-wrap"><table class="admin-table"><thead><tr><th>Critério</th><th>Peso final</th></tr></thead><tbody>' + item.pesos_consolidados.map(function (w,i) { return '<tr><td>' + escapeHtml(criterionName(analysisWorkspace.ambiente.criterios[i], i)) + '</td><td>' + fmtNumber(w) + '</td></tr>'; }).join("") + '</tbody></table></div></div><div><h4>Matriz consolidada</h4>' + analysisMatrixTable(item) + '</div></div>' + (official ? analiseHomologadaAviso() : '<button type="button" class="btn btn-success" data-homologate-analysis="' + escapeHtml(item.id) + '" ' + (!item.consistente ? "disabled" : "") + '>Homologar análise</button>') ; }).join("") || '<p class="ami-empty">Nenhuma análise consolidada.</p>';
+    $("ami-analysis-consolidations").innerHTML = items.map(function (item) {
+      var criteria = criteriosDoRegistro(analysisWorkspace, item);
+      var official = item.id === homologadaId || item.status === "homologada";
+      var local = JSON.stringify(criteria) !== JSON.stringify(analysisSource.ambiente.criterios);
+      var dimensions = Array.from(new Set(criteria.map(criterionDimension).filter(Boolean))).join(" · ");
+      var action = local ? '<p class="form-help">Pesos locais deste recorte. Não substituem os pesos da matriz inteira.</p>'
+        : official ? analiseHomologadaAviso()
+        : '<button type="button" class="btn btn-success" data-homologate-analysis="' + escapeHtml(item.id) + '" ' + (!item.consistente ? "disabled" : "") + '>Homologar análise</button>';
+      return '<p class="ami-consolidated-identification">' + escapeHtml(item.nome) + (item.codigo ? ' · ' + escapeHtml(item.codigo) : '') + (dimensions ? ' · ' + escapeHtml(dimensions) : '') +
+        '</p><div class="ami-kpis"><div><strong>' + item.respostas_incluidas + '</strong><span>respostas</span></div><div><strong>' + fmtNumber(item.razao_consistencia) + '</strong><span>RC</span></div><div><strong>' + (item.consistente ? "Sim" : "Não") + '</strong><span>consistente</span></div></div><div class="ahp-collab-grid2 ami-consolidated-tables" data-equal-table-height><div><h4>Pesos finais</h4><div class="matriz-table-wrap"><table class="admin-table"><thead><tr><th>Critério</th><th>Peso final</th></tr></thead><tbody>' +
+        item.pesos_consolidados.map(function (w,i) { return '<tr><td>' + escapeHtml(criterionName(criteria[i], i)) + '</td><td>' + fmtNumber(w) + '</td></tr>'; }).join("") +
+        '</tbody></table></div></div><div><h4>Matriz consolidada</h4>' + analysisMatrixTable(item) + '</div></div>' + action;
+    }).join("") || '<p class="ami-empty">Nenhuma análise consolidada.</p>';
     $("ami-analysis-consolidations").querySelectorAll("table").forEach(SLTAnalysisTable);
-    if (analysisSource && JSON.stringify(analysisWorkspace.ambiente.criterios) !== JSON.stringify(analysisSource.ambiente.criterios)) {
-      $("ami-analysis-consolidations").querySelectorAll("[data-homologate-analysis]").forEach(function (button) {
-        var note = document.createElement("p"); note.className = "form-help";
-        note.textContent = "Pesos locais deste recorte. Não substituem os pesos da matriz inteira."; button.replaceWith(note);
-      });
-    }
     $("ami-analysis-consolidations").querySelectorAll("[data-homologate-analysis]").forEach(function (button) { button.addEventListener("click", async function () {
       var ambienteId = analysisWorkspace.ambiente.id;
       if (button.disabled || analysisSaving || analysisMode !== "edit") return;
@@ -968,7 +999,7 @@
         });
         if (draftEmails[index].dimensoes && !activeSurfaceId) {
           var fieldset = document.createElement("div");
-          Array.from(new Set(matrixRows(criteriaMatrix).map(criterionDimension).filter(Boolean))).forEach(function (dimension) {
+          Array.from(new Set(phase3Rows(criteriaMatrix).map(criterionDimension).filter(Boolean))).forEach(function (dimension) {
             var label = document.createElement("label"), box = document.createElement("input");
             box.type = "checkbox"; box.checked = draftEmails[index].dimensoes.includes(dimension);
             box.setAttribute("aria-label", dimension + " para " + draftEmails[index].email);
@@ -1020,7 +1051,7 @@
     }
     if (!draftEditing) { draftSnapshot = draftEmails.map(function (item) { return Object.assign({}, item); }); draftEditing = true; }
     var dimensions = Array.from($("ami-dimension-options").querySelectorAll("input:checked")).map(function (input) { return input.value; });
-    if (!activeSurfaceId && (!dimensions.length || matrixRows(criteriaMatrix).filter(function (row) { return dimensions.includes(criterionDimension(row)); }).length < 2)) {
+    if (!activeSurfaceId && (!dimensions.length || phase3Rows(criteriaMatrix).filter(function (row) { return dimensions.includes(criterionDimension(row)); }).length < 2)) {
       avisarFormulario("Selecione dimensões que contenham ao menos dois critérios para este colaborador.", $("ami-create-feedback")); return;
     }
     draftEmails.push({nome: nome, email: email, ...(!activeSurfaceId ? {dimensoes: dimensions} : {})});
@@ -1322,7 +1353,7 @@
     $("ami-confirm-emails").addEventListener("click", function () {
       if (!draftEditing || environmentMode === "view") return;
       var normalized = draftEmails.map(function (item) { return {...invitePayload(item), nome: (item.nome || "").trim() || null, email: item.email.trim().toLowerCase() }; });
-      if (normalized.some(function (item) { return item.dimensoes && (item.dimensoes.length === 0 || matrixRows(criteriaMatrix).filter(function (row) { return item.dimensoes.includes(criterionDimension(row)); }).length < 2); })) {
+      if (normalized.some(function (item) { return item.dimensoes && (item.dimensoes.length === 0 || phase3Rows(criteriaMatrix).filter(function (row) { return item.dimensoes.includes(criterionDimension(row)); }).length < 2); })) {
         avisarFormulario("Cada colaborador deve ter dimensões válidas com ao menos dois critérios.", $("ami-emails-feedback")); return;
       }
       if (!normalized.length || normalized.some(function (item) { return !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(item.email); })) {

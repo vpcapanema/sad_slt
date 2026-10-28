@@ -63,21 +63,42 @@ mudanças de critérios, estrutura ou premissas exigem novos julgamentos e
 recálculo dos pesos. Os resultados derivados devem ser recalculados após a troca,
 mantendo-se os julgamentos originais associados à matriz que avaliaram.
 Metadados de arquivo e aba não caracterizam alteração metodológica.
-Julgamentos de superfícies preservam adicionalmente seu contexto espacial e
-o snapshot específico da superfície.
+O julgamento AHP destina-se exclusivamente aos critérios da Fase 3
+(Priorização de demandas por atributos). Critérios espaciais destinam-se à
+Fase 2 e não participam da comparação pareada. A coluna Etapa identifica o
+enquadramento; sua ausência ou inconsistência com a coluna Fase exige correção.
+A matriz integral permanece imutável, enquanto o julgamento conserva somente
+as linhas da Fase 3, na ordem original, com ao menos dois critérios.
+Registros históricos de superfícies ou julgamentos com critérios de outras
+fases permanecem consultáveis, sem novas respostas, convites, análises ou
+homologação. Não se reinterpretam respostas históricas nem se removem linhas
+de matrizes já respondidas. Na Fase 2 permanecem a média simples e os pesos
+explicitamente informados, sem nova derivação por comparação pareada.
 
 Nos novos convites de julgamentos por dimensão, o responsável seleciona uma ou
-mais dimensões da matriz para cada colaborador. O recorte contém os critérios
+mais dimensões do recorte da Fase 3 para cada colaborador. O recorte contém os critérios
 dessas dimensões, na ordem original, e deve conter ao menos dois critérios.
 O convite individual e o formulário autenticado pelo e-mail e código de acesso
 apresentam somente esse recorte. A resposta conserva um snapshot dos critérios
 atribuídos; o recorte não pode ser alterado após o início do preenchimento.
-Convites integrais legados e julgamentos de superfícies preservam seu comportamento.
+Convites integrais cobrem o conjunto completo da Fase 3, desde que o julgamento
+atenda ao enquadramento vigente.
 
 Análises agregam somente respostas do mesmo recorte, inclusive quando recortes
 distintos possuem o mesmo número de critérios. Os pesos resultantes de recortes
-parciais são locais e não substituem os pesos globais da matriz. A homologação
-global exige a avaliação da matriz inteira; não se presume peso entre dimensões.
+parciais são locais e não substituem os pesos do conjunto completo da Fase 3.
+A homologação integral exige a avaliação desse conjunto; não se presume peso
+entre dimensões nem se aplica peso AHP da Fase 3 aos critérios da Fase 2.
+
+No formulário público, a ajuda de consistência aparece somente após mais de
+70% dos pares efetivamente respondidos e quando RC ≥ 0,10. Até oito pares
+respondidos com maior desvio logarítmico em relação às razões dos pesos são
+avaliados mediante simulações isoladas na escala oferecida pelo formulário;
+os três com maior potencial de redução do RC são indicados para revisão.
+O diagnóstico é provisório enquanto houver pares não respondidos, cujos
+valores iniciais de igualdade não são contabilizados como respostas.
+A ajuda não modifica julgamentos, não garante consistência por uma revisão
+isolada e mantém o requisito de envio RC < 0,10.
 
 ### Fase 1 — Elegibilidade territorial
 
@@ -134,7 +155,7 @@ A Fase 2 e o nucleo do ranking tecnico-territorial.
 
 Ela consome uma ou mais superficies de favorabilidade territorial e cruza essas
 superficies com a geometria dos projetos. A favorabilidade pode ter sido gerada por
-algebra de mapas, AHP, media ponderada, modelo de rede ou outro procedimento
+algebra de mapas, media ponderada com pesos explicitamente informados, modelo de rede ou outro procedimento
 homologado.
 
 Operacoes possiveis:
@@ -325,7 +346,7 @@ Produtos esperados:
 - metodo de algebra de mapas ou modelo de rede utilizado.
 
 Este modulo deve seguir metodologia homologada, como a logica de variaveis
-geoespaciais continuas, reescalonamento para 0 a 1, ponderacao por AHP e extracao
+geoespaciais continuas, reescalonamento para 0 a 1, ponderacao explicitamente informada e extracao
 por estatistica espacial.
 
 ### 3. Modulo de recepcao e validacao de atributos de projeto

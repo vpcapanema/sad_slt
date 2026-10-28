@@ -25,6 +25,7 @@ def ambiente(monkeypatch):
         "id": str(uuid4()), "atualizado_em": datetime.now(timezone.utc),
         "status": "ativa", "valido_ate": datetime.now(timezone.utc) + timedelta(days=2),
         "convites": [{"email": DEST}], "token": "token-teste", "token_acesso": "012345",
+        "criterios": [{"criterio": "Custo", "Etapa": "Fase 3"}, {"criterio": "Prazo", "Etapa": "Fase 3"}],
     }
     monkeypatch.setattr(service.ambientes, "get_ambiente_by_id", lambda _: row)
     return row
@@ -75,9 +76,9 @@ def payload(ambiente, **extras):
 
 def test_convite_individual_inclui_somente_dimensoes_atribuidas(ambiente, smtp, registros):
     ambiente["convites"] = [{"email": DEST, "nome": "Ana", "dimensoes": ["Social"]}]
-    ambiente["criterios"] = [{"criterio": "Custo", "dimensao": "Financeira"},
-                            {"criterio": "Acesso", "dimensao": "Social"},
-                            {"criterio": "Equidade", "dimensao": "Social"}]
+    ambiente["criterios"] = [{"criterio": "Custo", "dimensao": "Financeira", "Etapa": "Fase 3"},
+                            {"criterio": "Acesso", "dimensao": "Social", "Etapa": "Fase 3"},
+                            {"criterio": "Equidade", "dimensao": "Social", "Etapa": "Fase 3"}]
     service.enviar(ambiente["id"], payload(ambiente, texto=payload(ambiente).texto + "\nCusto"), "analista")
     texto = smtp.call_args.args[0].texto
     assert "Acesso" in texto and "Equidade" in texto

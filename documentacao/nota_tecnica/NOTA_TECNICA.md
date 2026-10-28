@@ -18,7 +18,7 @@
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Título**                 | Metodologia do Sistema de Hierarquização de Demandas — SICARD                                                                                                         |
 | **Número**                 | NT-SICARD-001/2026                                                                                                                                                       |
-| **Versão**                 | 1.63                                                                                                                                                                      |
+| **Versão**                 | 1.65                                                                                                                                                                      |
 | **Data de emissão**        | 28/10/2026                                                                                                                                                               |
 | **Classificação**         | Documento técnico-metodológico de entrega ao cliente                                                                                                                   |
 | **Sistema**                 | SICARD — Sistema Inteligente de Cadastro e Ranking de Demandas                                                                                                        |
@@ -97,6 +97,8 @@
 | 1.61    | 28/10/2026 | `[preencher]` | Individualização das matrizes de critérios e premissas, vínculo direto dos julgamentos AHP à matriz e associação de uma matriz por hierarquização; verificação de equivalência e confirmação explícita para reuso de pesos, com novos julgamentos e recálculo quando houver alteração metodológica. |
 | 1.62    | 28/10/2026 | `[preencher]` | Substituição da carga antecipada dos valores setoriais pela disponibilização integral dos metadados e obtenção, validação e persistência dos atributos originais sob demanda, sem alteração das fórmulas ou dos critérios metodológicos. |
 | 1.63    | 28/10/2026 | `[preencher]` | Individualização dos convites AHP por uma ou mais dimensões da matriz; preservação do recorte respondido e agregação somente entre respostas de critérios equivalentes, sem conversão automática de pesos locais em pesos globais. |
+| 1.64    | 28/10/2026 | `[preencher]` | Inclusão de ajuda consultiva de consistência após mais de 70% dos pares respondidos, com indicação de pares para revisão sem alteração automática dos julgamentos. |
+| 1.65    | 28/10/2026 | `[preencher]` | Restrição dos julgamentos AHP aos critérios da Fase 3, filtragem anterior à atribuição de dimensões e preservação dos registros históricos incompatíveis sem novas operações de julgamento. |
 
 ---
 
@@ -369,7 +371,7 @@ legais brasileiros e estaduais aplicáveis:
 | **Favorabilidade territorial**              | Superfície raster contínua normalizada de 0 (menor) a 1 (maior favorabilidade).                                                                                                                                                                                                                                                                        |
 | **Normalização (0–1)**                   | Reescalonamento de valores brutos para escala comparável:`(valor − mín)/(máx − mín)`.                                                                                                                                                                                                                                                            |
 | **Inversão de critério negativo**         | Transformação`1 − valor_normalizado` para critérios em que valor maior é pior.                                                                                                                                                                                                                                                                    |
-| **Álgebra de mapas**                       | Combinação de rasters normalizados por média ponderada dos pesos AHP.                                                                                                                                                                                                                                                                                 |
+| **Álgebra de mapas**                       | Combinação de rasters normalizados por média ponderada com pesos explicitamente informados. |                                                                                                                                                                                                                                                                                 |
 | **Completude**                              | Proporção de atributos válidos frente ao esperado, por objeto de demanda ou rodada.                                                                                                                                                                                                                                                                   |
 | **Protocolo epistemológico**               | Estrutura invariante de fundamentação que todo critério percorre (premissa → critério → variável → relação com o escopo → dado → métrica → fonte). Constitui o núcleo metodológico permanente do sistema, ao passo que as dimensões e os critérios específicos constituem conteúdo temático, adaptável ao domínio de aplicação. |
 | **AHP**                                     | *Analytic Hierarchy Process* — método de análise hierárquica para definição de pesos.                                                                                                                                                                                                                                                            |
@@ -823,13 +825,12 @@ mínimo–máximo, com inversão dos critérios negativos; variáveis constantes
 rejeitadas. Zero observado é válido; valores desconhecidos ou protegidos por
 sigilo não são convertidos em zero.
 
-A composição utiliza média simples ou pesos AHP correspondentes exatamente aos
-critérios salvos. Admite-se informação de pesos, comparação pareada individual
-ou julgamento colaborativo vinculado à superfície e à hierarquização já
-cadastrada. Nesta última modalidade, utiliza-se um snapshot dos critérios,
-exporta-se e persiste-se cópia preenchida do modelo oficial e aguarda-se
-consolidação consistente antes da retomada. Não se sobrescrevem os pesos globais
-da hierarquização. Valores ausentes mantêm o índice nulo, sem redistribuição.
+A composição utiliza média simples ou pesos explicitamente informados,
+correspondentes exatamente aos critérios salvos. Não se admite novo julgamento
+individual ou colaborativo para os critérios espaciais da Fase 2; o julgamento
+AHP destina-se exclusivamente à Fase 3. Registros anteriores são preservados
+para consulta, sem transferência de seus pesos para novos cálculos.
+Valores ausentes mantêm o índice nulo, sem redistribuição.
 Registram-se operador, pesos e origem no produto derivado; sua produção não
 implica homologação. O detalhamento consta no
 [módulo da Fase 2](../hierarquizacao/MODULO_FASE2_GERADOR_FAVORABILIDADE_TERRITORIAL.md).
@@ -846,7 +847,7 @@ estatística por trecho, corredor ou área de influência (análise de rede).
 Camadas de entrada → Validação/compatibilização →
 Operador espacial por critério → Raster contínuo por critério →
 Reescalonamento 0–1 → Inversão de critérios negativos →
-Aplicação dos pesos AHP → Média ponderada →
+Aplicação dos pesos explicitamente informados → Média ponderada →
 Raster final de favorabilidade → Homologação → Publicação
 ```
 
@@ -862,7 +863,7 @@ winsorização, quebras naturais, curva fuzzy, limite saturado e normalização 
 **Inversão de critérios negativos:** `valor_favorabilidade = 1 − valor_normalizado`.
 
 **Operacionalização vetorial dos insumos vigentes.** Enquanto as superfícies raster
-finais e os pesos AHP não estão homologados, os valores disponíveis são preservados nas
+finais e os pesos de composição não estão homologados, os valores disponíveis são preservados nas
 unidades espaciais de origem — setor censitário para a grade e subtrecho para a rede —
 e reescalonados pelo método linear min–max. Na rede, as contagens de segurança são
 convertidas em densidades por quilômetro; extensões urbanas, em proporções do subtrecho;
@@ -881,13 +882,13 @@ econômica é representada pelo PIB setorial e a vulnerabilidade pelo PIB per ca
 invertido; os demais indicadores permanecem auxiliares. Os valores ausentes permanecem
 como NoData.
 
-Para análise do cenário sem pesos AHP, são produzidas duas superfícies vetoriais
+Para análise do cenário sem pesos diferenciados, são produzidas duas superfícies vetoriais
 identificadas como **média simples**. A superfície de grade combina seus dois critérios;
 a superfície de rede combina os 14 critérios calculáveis, mantendo pavimento e
 sobrecarga sazonal como lacunas. Em cada unidade espacial, a média é calculada sobre os
 critérios válidos e o denominador é registrado em `n_criterios`. Esses produtos são
 cenários não ponderados e não constituem superfícies homologadas; a composição oficial
-permanece dependente dos pesos AHP e da regra de NoData homologados.
+permanece dependente dos pesos de composição e da regra de NoData homologados.
 
 **Álgebra de mapas (média ponderada):**
 
@@ -1211,7 +1212,7 @@ desfaçam o ranking técnico-territorial.
 ## 9. Método multicritério AHP
 
 O sistema utiliza o **Método de Análise Hierárquica (AHP)** para determinar os pesos
-dos critérios da Fase 2 (favorabilidade) e da Fase 3 (atributos). O AHP transforma
+exclusivamente dos critérios da Fase 3 (atributos). O AHP transforma
 julgamentos qualitativos em valores numéricos comparáveis, com **consistência lógica**
 e **rastreabilidade**.
 
@@ -1231,9 +1232,24 @@ no formulário apenas os critérios atribuídos, na ordem original da matriz. Ca
 recorte deve conter ao menos dois critérios e é preservado com a resposta. Após
 o início do preenchimento, não se admite alterar o recorte desse colaborador.
 A agregação admite somente respostas do mesmo conjunto ordenado de critérios.
-Pesos de recortes parciais são locais e não substituem os pesos da matriz
-integral; não se estabelece automaticamente importância relativa entre dimensões.
-Convites integrais legados e contextos específicos de superfícies são preservados.
+O julgamento AHP contempla exclusivamente os critérios da Fase 3, identificados
+pela coluna Etapa, sem incorporar critérios espaciais da Fase 2. A matriz integral
+permanece preservada; a filtragem antecede a atribuição de dimensões e exige ao
+menos dois critérios elegíveis. Pesos de recortes parciais são locais e não
+substituem os pesos do conjunto completo da Fase 3; não se estabelece
+automaticamente importância relativa entre dimensões. Registros históricos
+incompatíveis, inclusive julgamentos de superfícies, permanecem disponíveis
+para consulta, mas não admitem novas respostas, convites, análises ou homologação.
+Na Fase 2 não se derivam novos pesos por comparação pareada; permanecem a média
+simples e a ponderação por pesos explicitamente informados.
+O formulário público oferece ajuda consultiva quando mais de 70% dos pares
+foram efetivamente respondidos e RC ≥ 0,10. São simuladas revisões isoladas
+dos oito pares respondidos com maior desvio logarítmico em relação às razões
+dos pesos; até três pares com maior potencial de redução do RC são indicados.
+Enquanto houver pares não respondidos, o diagnóstico é provisório, pois esses
+pares mantêm valores iniciais de igualdade. Não se alteram respostas
+automaticamente nem se garante consistência por uma revisão isolada.
+Permanece o requisito de envio RC < 0,10.
 Cada hierarquização associa-se a uma única matriz por vez, enquanto os julgamentos
 AHP se vinculam diretamente à matriz avaliada. Uma matriz pode atender a vários
 processos e julgamentos; estes podem existir de forma avulsa, antes da associação
@@ -1625,7 +1641,7 @@ risco; mapa de pré-visualização; amostra de atributos; aprovador e data.
 
 - **Pacote Fase 1:** camadas consolidadas de restrição e risco + relatório + metadados.
 - **Pacote Fase 2:** raster final de favorabilidade + rasters por critério e por
-  dimensão + pesos AHP + regras de normalização + relatório + metadados.
+  dimensão + pesos de composição + regras de normalização + relatório + metadados.
 - **Pacote Fase 3:** tabela de escores por objeto de demanda + pesos + contribuição por
   critério + relatório de completude.
 - **Resultado de rodada:** rankings por fase e ranking final sintético, com trilha de

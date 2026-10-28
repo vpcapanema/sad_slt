@@ -145,16 +145,15 @@ def test_formulario_publico_e_o_formulario_do_colaborador_em_modo_modelo():
     assert "colaborativa-simulacao.js" not in response.text
 
 
-def test_modelo_pli_usa_dominio_de_criterios_sem_codigos():
+def test_modelo_pli_usa_apenas_criterios_fase3_sem_codigos():
     response = TestClient(app).get("/api/ahp/comparacao-colaborativa/modelo-pli")
     assert response.status_code == 200
     corpo = response.json()
     assert [d["nome"] for d in corpo["dimensoes"]] == [
-        "Técnica e logística", "Econômica", "Social e territorial", "Segurança",
-        "Ambiental e climática", "Viabilidade institucional e financeira", "Riscos",
+        "Econômica", "Viabilidade institucional e financeira", "Riscos",
     ]
-    assert len(corpo["criterios"]) == 17
-    assert corpo["criterios"][0] == "Saturação e alívio de gargalos"
+    assert len(corpo["criterios"]) == 6
+    assert corpo["criterios"][0] == "Impacto nas cadeias produtivas"
     assert corpo["criterios"][-1] == "Risco de demanda e benefício"
     assert not any(re.match(r"^[A-Z]{1,3}\d?\s*·", nome) for nome in corpo["criterios"])
     assert response.headers["cache-control"] == "no-store"

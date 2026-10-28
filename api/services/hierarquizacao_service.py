@@ -549,8 +549,8 @@ def _criterios(
                 "Como corrigir:\n"
                 "1) Abra a matriz e verifique a coluna Etapa.\n"
                 "2) Marque como “Favorabilidade territorial — município e rede rodoviária” (Fase 2) e/ou "
-                "“Priorização de demandas por atributos” (Fase 3) os critérios que devem entrar"
-                " no cálculo AHP.\n"
+                "“Priorização de demandas por atributos” (Fase 3) os critérios utilizados"
+                " em cada fase. Somente os critérios da Fase 3 participam do julgamento AHP.\n"
                 "3) Salve e reenvie a matriz."
             ),
             field="matriz",

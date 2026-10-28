@@ -138,7 +138,7 @@
       `<td>${esc(h.julgamento_id || "—")}</td>` +
       `<td>${nome}</td>` +
       `<td>${desc}</td>` +
-      `<td>${editing ? '<div data-hier-matrix-editor></div>' : matrizCell(h)}</td>` +
+      `<td>${editing ? `<button type="button" class="matriz-link" data-edit-matrix="${esc(h.codigo)}">Alterar matriz</button><span data-matrix-edit-summary></span>` : matrizCell(h)}</td>` +
       `<td>${jsonButton(h, "objetos", "Visualizar demandas")}</td>` +
       `<td>${jsonButton(h, "julgamento_projetos", "Visualizar julgamentos")}</td>` +
       `<td>${jsonButton(h, "pesos_projetos", "Visualizar pesos")}</td>` +
@@ -184,11 +184,23 @@
   function ligarEventosTabela() {
     const tbody = $("hier-tbody");
     matrixEditors.clear();
-    tbody.querySelectorAll("[data-hier-matrix-editor]").forEach(root => {
-      const codigo = root.closest("tr").dataset.codigo, h = listaCache.find(item => item.codigo === codigo);
+    $("hier-matrix-editors").replaceChildren();
+    tbody.querySelectorAll("[data-edit-matrix]").forEach(button => {
+      const codigo = button.dataset.editMatrix, h = listaCache.find(item => item.codigo === codigo);
+      const dialog = document.createElement("dialog");
+      dialog.className = "matrix-details-dialog hier-matrix-editor-dialog";
+      dialog.setAttribute("aria-label", `Alterar matriz de critérios e premissas — ${codigo}`);
+      dialog.innerHTML = `<header class="json-modal-head"><h2>Alterar matriz — ${esc(codigo)}</h2><button type="button" class="json-modal-close" aria-label="Fechar"><i class="fas fa-xmark" aria-hidden="true"></i></button></header><div class="json-modal-body" data-hier-matrix-editor></div>`;
+      $("hier-matrix-editors").appendChild(dialog);
+      const root = dialog.querySelector("[data-hier-matrix-editor]");
       root.appendChild($("hier-matrix-editor-template").content.cloneNode(true));
+      const help = document.createElement("p");
+      help.className = "form-help";
+      help.textContent = "Selecione ou cadastre a matriz, feche esta janela e use Salvar alterações na tabela para confirmar. Cancelar edição na tabela descarta a associação selecionada.";
+      root.prepend(help);
       const reuseLabel = document.createElement("label"), reuse = document.createElement("input");
       reuse.type = "checkbox"; reuse.disabled = true;
+      reuseLabel.className = "hier-matrix-reuse";
       reuseLabel.append(reuse, " Reutilizar pesos existentes (somente matriz equivalente)");
       root.appendChild(reuseLabel);
       let original = null;
@@ -197,9 +209,12 @@
         const equivalent = Boolean(original?.assinatura && record?.assinatura === original.assinatura);
         reuse.checked = false;
         reuse.disabled = !equivalent || !temPesos(h) || String(record?.id) === String(h.matriz_id);
+        button.parentElement.querySelector("[data-matrix-edit-summary]").textContent = record ? record.nome : "";
       } });
       matrixEditors.set(codigo, { picker, reuse, original: () => original });
       picker.ready.then(() => { if (h.matriz_id && root.isConnected) picker.choose(h.matriz_id); });
+      button.onclick = () => dialog.showModal();
+      dialog.querySelector(".json-modal-close").onclick = () => dialog.close();
     });
     tbody.querySelectorAll(".json-cell").forEach((b) => {
       b.onclick = () => {
@@ -207,7 +222,7 @@
         abrirColuna(b.dataset.json, h);
       };
     });
-    tbody.querySelectorAll(".matriz-link").forEach((b) => {
+    tbody.querySelectorAll(".matriz-link:not([data-edit-matrix])").forEach((b) => {
       b.onclick = () => abrirMatriz(b.dataset.codigo);
     });
     tbody.querySelectorAll(".hier-row-select").forEach((cb) => {

@@ -2,6 +2,7 @@
   <div class="ahp-section-label">{% if indicacao_processos %}<i class="fas fa-chart-line" aria-hidden="true"></i>{% else %}<span class="ahp-section-index-icon">2</span>{% endif %}<span>Espaço analítico do julgamento</span></div>
   <div class="ahp-section-body">
     <label class="c-form-group">Recorte de dimensões<select id="ami-analysis-scope" class="c-form-control"></select></label>
+    <p class="step-intro" id="ami-analysis-scope-hint" hidden>Todos os recortes estão em exibição. Os pares e os pesos locais permanecem identificados por seu recorte; respostas com critérios diferentes não formam uma matriz global. Selecione um recorte ou um julgador para consultar sua matriz.</p>
     <div id="ami-analysis-context" class="step-intro"></div>
     <p id="ami-analysis-mode" class="step-intro" role="status"></p>
     <p class="step-intro"><i class="fas fa-circle-info" aria-hidden="true"></i> As respostas expressam a intensidade de importância entre os critérios. A consolidação dessas comparações calcula os pesos dos critérios da matriz associada ao julgamento. Após a homologação, os pesos poderão ser selecionados em hierarquizações compatíveis com essa matriz. Julgamentos de superfícies preservam seu contexto específico.</p>

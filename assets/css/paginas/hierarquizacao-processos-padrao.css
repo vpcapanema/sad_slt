@@ -27,6 +27,30 @@
   flex-shrink: 0;
   line-height: 1;
 }
+.hier-processos-page [data-matrix-edit-summary] {
+  display: block;
+  margin-top: .35rem;
+  font: inherit;
+}
+.hier-processos-page .hier-matrix-editor-dialog {
+  font: 400 var(--ami-font-child, .7rem)/1.4 "Roboto", Arial, sans-serif;
+}
+.hier-processos-page .hier-matrix-editor-dialog .hier-matrix-reuse {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  margin-top: .75rem;
+  font: inherit;
+}
+.hier-processos-page .hier-matrix-editor-dialog .hier-matrix-reuse input {
+  width: auto;
+  margin: 0;
+}
+#hier-matrix-editors .hier-matrix-editor-dialog [data-matrix-picker] :is([data-matrix-name], [data-matrix-select]) {
+  min-height: var(--process-control-height);
+  padding: .4rem .6rem;
+  font-size: .84rem;
+}
 @media (max-width: 900px) {
   .hier-processos-page #nova-hierarquizacao { grid-template-columns: minmax(0, 1fr); }
 }

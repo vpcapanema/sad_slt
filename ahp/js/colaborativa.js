@@ -134,6 +134,7 @@
       res.CR < 0.1 ? "success" : "error"
     );
     updateProgressHint(res.CR);
+    renderConsistencyHelp(matrix, res.CR);
     if (draftActive) {
       var version = editVersion;
       el("collab-save-feedback").textContent = "Alterações aguardando salvamento…";
@@ -148,12 +149,63 @@
     clearTimeout(saveTimer);
     editVersion++;
     latestCR = null;
+    el("collab-consistency-help").hidden = true;
     el("liveMetrics").setAttribute("aria-busy", "true");
     el("collab-rc-status").textContent = "Atualizando…";
     el("btn-enviar-resposta").disabled = true;
     el("collab-save-feedback").textContent = "Alterações aguardando salvamento…";
     submitFeedback("Atualizando os indicadores de consistência…", "info");
     metricsTimer = setTimeout(updateCollabMetrics, 1000);
+  }
+
+  function renderConsistencyHelp(matrix, cr) {
+    var box = el("collab-consistency-help");
+    box.replaceChildren();
+    box.hidden = true;
+    var answered = new Set(Object.keys(stats.pares).filter(function (key) { return stats.pares[key] > 0; }));
+    var total = matrix.length * (matrix.length - 1) / 2;
+    var count = 0;
+    for (var i = 0; i < matrix.length; i++) {
+      for (var j = i + 1; j < matrix.length; j++) if (answered.has(i + "_" + j)) count++;
+    }
+    if (!total || count / total <= 0.7 || cr < 0.1) return;
+    box.hidden = false;
+    var intro = document.createElement("p");
+    intro.textContent = "Ajuda de consistência — " + count + "/" + total + " pares respondidos. " +
+      (count < total ? "Diagnóstico provisório: os pares não respondidos ainda usam igualdade e podem alterar o RC. " : "") +
+      "Revise os pares abaixo, preservando seu julgamento sobre os critérios. Nenhuma resposta será alterada automaticamente.";
+    box.appendChild(intro);
+    var reviews = SLTAhp.consistencyReviews(matrix, answered);
+    if (!reviews.length) {
+      var empty = document.createElement("p");
+      empty.textContent = "Não foi identificada uma melhoria isolada entre os pares avaliados. Complete os pares restantes e reveja o conjunto das comparações.";
+      box.appendChild(empty);
+      return;
+    }
+    var list = document.createElement("ol");
+    reviews.forEach(function (review) {
+      var item = document.createElement("li"), link = document.createElement("a");
+      var pair = el("pair_" + review.i + "_" + review.j).closest(".saaty-pair");
+      var names = normalizeCriteriaNames(meta.criterios);
+      pair.id = "collab-review-" + review.i + "-" + review.j;
+      link.href = "#" + pair.id;
+      link.textContent = names[review.i] + " × " + names[review.j];
+      link.addEventListener("click", function (event) {
+        event.preventDefault();
+        pair.scrollIntoView({ behavior: "smooth", block: "center" });
+        pair.querySelector(".saaty-scale").focus({ preventScroll: true });
+      });
+      item.appendChild(link);
+      item.appendChild(document.createTextNode(
+        " — revisão prioritária; potencial de redução do RC em simulação isolada."
+      ));
+      list.appendChild(item);
+    });
+    box.appendChild(list);
+    var note = document.createElement("p");
+    note.textContent = "As prioridades consideram até oito pares com maior desvio e simulam valores da escala. " +
+      "Não há garantia de atingir RC < 0,10 com uma única revisão. Reavalie a ajuda após cada ajuste.";
+    box.appendChild(note);
   }
 
   function updateProgressHint(cr) {

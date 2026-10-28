@@ -61,17 +61,17 @@
     <div class="ahp-section-label"><span class="ahp-section-index-icon">6</span><span>Calcular o índice de favorabilidade</span></div>
     <div class="ahp-section-body">
       <div class="sc-fields sc-fields--calculation">
-        <label>Operador<select id="sc-operator"><option value="media_simples">Média simples</option><option value="ahp">Média ponderada — pesos AHP</option></select></label>
-        <label id="sc-have-wrap" hidden>Já possui os pesos para estes critérios?<select id="sc-have"><option value="">Selecione</option><option value="sim">Sim, informar pesos</option><option value="nao">Não</option></select></label>
-        <label id="sc-mode-wrap" hidden>Como preencher a matriz?<select id="sc-mode"><option value="">Selecione</option><option value="individual">Preenchimento individual</option><option value="colaborativo">Preenchimento colaborativo</option></select></label>
+        <label>Operador<select id="sc-operator"><option value="media_simples">Média simples</option><option value="ahp">Média ponderada — pesos informados</option></select></label>
+        <label id="sc-have-wrap" hidden>Já possui os pesos para estes critérios?<select id="sc-have"><option value="">Selecione</option><option value="sim">Sim, informar pesos</option><option value="nao" disabled>Não — utilizar média simples</option></select></label>
+        <label id="sc-mode-wrap" hidden>Como preencher a matriz?<select id="sc-mode"><option value="">Selecione</option><option value="individual" disabled>Indisponível — AHP exclusivo da Fase 3</option><option value="colaborativo" disabled>Indisponível — AHP exclusivo da Fase 3</option></select></label>
       </div>
       <div id="sc-weights" class="sc-fields sc-fields--two" hidden></div>
       <div id="sc-individual" class="fase-table-wrap" hidden></div>
       <div id="sc-collaborative" hidden>
-        <p>Crie um julgamento da Fase 2 com os critérios desta superfície. A hierarquização e a matriz serão levadas ao formulário; informe os colaboradores e envie os convites. Depois das respostas, consolide o julgamento e retorne aqui.</p>
+        <p>Julgamentos AHP são exclusivos da Fase 3. Critérios espaciais desta superfície não participam. Registros anteriores são preservados para consulta.</p>
         <div class="sc-actions">
         <a id="sc-matrix-download" class="btn btn-secondary">Exportar matriz de comparação</a>
-        <button id="sc-judgment-new" class="btn btn-primary" type="button">Novo julgamento colaborativo</button>
+        <button id="sc-judgment-new" class="btn btn-primary" type="button" disabled title="Julgamentos AHP são exclusivos da Fase 3">Novo julgamento colaborativo</button>
         <button id="sc-judgment-refresh" class="btn btn-secondary" type="button">Consultar julgamentos</button>
         </div>
         <label>Julgamento desta superfície<select id="sc-judgment"><option value="">Selecione um julgamento consolidado</option></select></label>

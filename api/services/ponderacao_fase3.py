@@ -6,10 +6,11 @@ from api.exceptions import DemandaValidationError
 from api.repositories import comparacao_colaborativa_repository as julgamentos
 from api.services.pesos_homologados import aplicar_pesos, mapa_pesos
 from api.services.comparacao_colaborativa_service import _criterio_nomes
-from api.services.matrizes_criterios import exigir_compativel
+from api.services.matrizes_criterios import exigir_compativel, exigir_julgamento_fase3
 
 
 def pesos_do_julgamento(julgamento):
+    exigir_julgamento_fase3(julgamento)
     valores = julgamento.get("pesos_consolidados") or []
     if not valores:
         raise DemandaValidationError("Os pesos consolidados deste julgamento ainda não estão disponíveis.", field="julgamento_id")

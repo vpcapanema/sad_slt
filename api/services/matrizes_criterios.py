@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import base64
 import binascii
+import re
+import unicodedata
 from copy import deepcopy
 from typing import Any
 
@@ -10,6 +12,57 @@ from psycopg.types.json import Jsonb
 
 from api.db.connection import get_connection
 from api.exceptions import DemandaValidationError
+
+
+def fase_criterio(row: dict) -> int:
+    if not isinstance(row, dict):
+        raise DemandaValidationError("Cada critério deve ser uma linha válida da matriz.", field="matriz")
+    campos = {
+        unicodedata.normalize("NFKD", str(k)).encode("ascii", "ignore").decode().strip().casefold(): v
+        for k, v in row.items()
+    }
+    etapa = str(campos.get("etapa") or campos.get("etapa da hierarquizacao") or campos.get("etapa_hierarquizacao") or "").strip()
+    normalizado = unicodedata.normalize("NFKD", etapa).encode("ascii", "ignore").decode().casefold()
+    normalizado = re.sub(r"[\s-]+", "_", normalizado)
+    for fase, prefixos in (
+        (1, ("elegibilidade",)),
+        (2, ("favorabilidade",)),
+        (3, ("priorizacao", "ajuste")),
+    ):
+        if normalizado in {str(fase), f"fase{fase}", f"fase_{fase}"} or normalizado.startswith(prefixos):
+            declarada = str(campos.get("fase") or "").strip().casefold()
+            if declarada and declarada not in {str(fase), f"fase{fase}", f"fase_{fase}", f"fase {fase}"}:
+                raise DemandaValidationError(
+                    f"As colunas Etapa e Fase divergem no critério “{campos.get('criterio', campos.get('nome', 'sem nome'))}”.",
+                    field="matriz.fase",
+                )
+            return fase
+    raise DemandaValidationError(
+        f"Informe uma Etapa válida no critério “{campos.get('criterio', campos.get('nome', 'sem nome'))}”. "
+        "Use Elegibilidade territorial, Favorabilidade territorial — município e rede rodoviária "
+        "ou Priorização de demandas por atributos.",
+        field="matriz.fase",
+    )
+
+
+def criterios_fase3(conteudo: Any) -> list[dict]:
+    return [row for row in comparavel(conteudo)["linhas"] if fase_criterio(row) == 3]
+
+
+def exigir_julgamento_fase3(ambiente: dict) -> None:
+    rows = ambiente.get("criterios") or []
+    if any(row.get("_superficie_id") for row in rows):
+        raise DemandaValidationError(
+            "Julgamentos AHP são exclusivos da Fase 3. Superfícies da Fase 2 não participam.",
+            field="criterios",
+        )
+    filtrados = criterios_fase3(rows)
+    if len(filtrados) < 2 or filtrados != rows:
+        raise DemandaValidationError(
+            "O julgamento AHP deve conter somente critérios da Fase 3, no mínimo dois. "
+            "Cadastre outro julgamento com o recorte correto; respostas anteriores não serão alteradas.",
+            field="criterios",
+        )
 
 
 def comparavel(conteudo: Any) -> dict:

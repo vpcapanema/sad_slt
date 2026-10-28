@@ -10,7 +10,7 @@
 	<link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
 	<link rel="stylesheet" href="/assets/css/analise-multicriterio.css?v=20260819-ui6">
 	<link rel="stylesheet" href="/assets/css/escala-tipografica.css">
-	<link rel="stylesheet" href="/assets/css/paginas/ahp-formulario-publico.css?v=20261027-escala-saaty-8">
+	<link rel="stylesheet" href="/assets/css/paginas/ahp-formulario-publico.css?v=20261028-ajuda-consistencia">
 {% endblock %}
 
 {% block conteudo %}
@@ -71,6 +71,7 @@
 							<div class="ahp-metric-card"><div class="ahp-metric-card__label">Índice de consistência (IC)</div><div class="ahp-metric-card__value" id="metricICValue">—</div></div>
 							<div class="ahp-metric-card"><div class="ahp-metric-card__label">Razão de consistência (RC)</div><div class="ahp-metric-card__value" id="metricRCValue">—</div><div id="collab-rc-status" class="ahp-metric-card__sub" role="status">RC zero</div></div>
 						</div>
+						<div id="collab-consistency-help" class="ahp-recommendation" role="status" aria-live="polite" hidden></div>
 					</div>
 				</section>
 				<section class="secao-collab-pairwise ahp-subcard info-card collab-comparison-subcard" aria-labelledby="collab-pairwise-title">
@@ -111,9 +112,9 @@
 {% endblock %}
 
 {% block scripts_pagina %}
-	<script src="/restrict/ahp/js/ahp-core.js"></script>
+	<script src="/restrict/ahp/js/ahp-core.js?v=20261028-ajuda-consistencia"></script>
 	<script src="/restrict/ahp/js/colaborativa-api.js?v=20261027-modelo-pli"></script>
 	{% if modo_modelo %}<script src="/restrict/ahp/js/colaborativa-modelo.js?v=20261027-1"></script>{% else %}<script src="/restrict/ahp/js/colaborativa-simulacao.js?v=20261027-1"></script>{% endif %}
 	<script src="/restrict/ahp/js/script.js?v=20261027-tick-selecionado"></script>
-	<script src="/restrict/ahp/js/colaborativa.js?v=20261027-escala-saaty"></script>
+	<script src="/restrict/ahp/js/colaborativa.js?v=20261028-ajuda-consistencia"></script>
 {% endblock %}

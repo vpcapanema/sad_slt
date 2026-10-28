@@ -14,8 +14,8 @@ const ids = {
   hierarchy: '66666666-6666-4666-8666-666666666666',
   surface: '77777777-7777-4777-8777-777777777777',
 };
-const content = { linhas: [{ criterio: 'Custo', dimensao: 'Financeira' }, { criterio: 'Benefício', dimensao: 'Financeira' }] };
-const uploadedContent = { linhas: [{ criterio: 'Acesso', dimensao: 'Social' }, { criterio: 'Impacto', dimensao: 'Social' }] };
+const content = { linhas: [{ criterio: 'Custo', dimensao: 'Financeira', Etapa: 'Fase 3' }, { criterio: 'Benefício', dimensao: 'Financeira', Etapa: 'Fase 3' }] };
+const uploadedContent = { linhas: [{ criterio: 'Acesso', dimensao: 'Social', Etapa: 'Fase 3' }, { criterio: 'Impacto', dimensao: 'Social', Etapa: 'Fase 3' }] };
 
 (async () => {
   const preview = await fetch(BASE + '/restrict/analise-multicriterio/central-julgamentos');
@@ -274,6 +274,9 @@ const uploadedContent = { linhas: [{ criterio: 'Acesso', dimensao: 'Social' }, {
     await page.locator('.hier-row-select').check();
     await page.locator('#hier-bulk-edit').click();
     const editor = page.locator('[data-hier-matrix-editor]');
+    assert.equal(await page.locator('#hier-tbody [data-matrix-picker]').count(), 0, 'Editor não deve ocupar a célula');
+    await page.locator('[data-edit-matrix]').click();
+    assert.equal(await page.locator('.hier-matrix-editor-dialog').evaluate(el => el.open), true);
     await editor.locator('[data-matrix-select] option[value="' + ids.equivalent + '"]').waitFor({ state: 'attached' });
     await page.waitForFunction(() => document.querySelector('[data-hier-matrix-editor] [data-matrix-select]').value === '11111111-1111-4111-8111-111111111111' &&
       !document.querySelector('[data-hier-matrix-editor] [data-matrix-select]').disabled);
@@ -281,6 +284,16 @@ const uploadedContent = { linhas: [{ criterio: 'Acesso', dimensao: 'Social' }, {
     const reuse = editor.getByRole('checkbox');
     assert.equal(await reuse.isEnabled(), true);
     await reuse.check();
+    const pickerFont = await editor.locator('[data-matrix-select]').evaluate(el => getComputedStyle(el).fontSize);
+    const referenceFont = await hierarchyPicker.locator('[data-matrix-select]').evaluate(el => getComputedStyle(el).fontSize);
+    assert.equal(pickerFont, referenceFont, 'Editor usa a tipografia do cadastro, fora da célula');
+    assert.equal(await editor.locator('.hier-matrix-reuse').evaluate(el => getComputedStyle(el).fontSize),
+      await editor.locator('[data-matrix-picker]').evaluate(el => getComputedStyle(el).fontSize), 'Reutilização de pesos mantém a escala do seletor');
+    await page.setViewportSize({ width: 390, height: 844 });
+    assert.equal(await page.locator('.hier-matrix-editor-dialog').evaluate(el => el.scrollWidth <= el.clientWidth + 1), true, 'Janela sem transbordamento em tela estreita');
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.locator('.hier-matrix-editor-dialog > .json-modal-head .json-modal-close').click();
+    assert.equal(await page.locator('[data-matrix-edit-summary]').textContent(), 'Matriz equivalente');
     await page.locator('#hier-bulk-save').click();
     await page.locator('[data-hier-matrix-editor]').waitFor({ state: 'detached' });
     const equivalentWrite = writes.find(write => write.path === HIER + '/H-1');
@@ -290,21 +303,34 @@ const uploadedContent = { linhas: [{ criterio: 'Acesso', dimensao: 'Social' }, {
     assert.match(confirmations[0].warning, /reaproveitamento/);
     await page.locator('.hier-row-select').check();
     await page.locator('#hier-bulk-edit').click();
+    await page.locator('[data-edit-matrix]').click();
     await page.waitForFunction(() => document.querySelector('[data-hier-matrix-editor] [data-matrix-select]').value === '22222222-2222-4222-8222-222222222222' &&
       !document.querySelector('[data-hier-matrix-editor] [data-matrix-select]').disabled);
     await selectMatrix(editor, ids.different);
     assert.equal(await editor.getByRole('checkbox').isDisabled(), true);
+    await page.keyboard.press('Escape');
     await page.locator('#hier-bulk-save').click();
     await page.locator('[data-hier-matrix-editor]').waitFor({ state: 'detached' });
     const differentWrite = writes.filter(write => write.path === HIER + '/H-1').at(-1);
     assert.equal(differentWrite.data.matriz_id, ids.different);
     assert.equal(differentWrite.data.confirmar_reuso_pesos, false);
+    await page.locator('.hier-row-select').check();
+    await page.locator('#hier-bulk-edit').click();
+    await page.locator('[data-edit-matrix]').click();
+    await selectMatrix(editor, ids.equivalent);
+    await page.keyboard.press('Escape');
+    await page.locator('#hier-bulk-cancel').click();
+    assert.equal(await page.locator('[data-hier-matrix-editor]').count(), 0);
+    assert.equal(writes.filter(write => write.path === HIER + '/H-1').length, 2, 'Cancelar descarta associação sem gravar');
 
     matrices.push({ id: '99999999-9999-4999-8999-999999999999', nome: 'Matriz por dimensão',
-      conteudo: { linhas: [...content.linhas, ...uploadedContent.linhas] }, arquivo_nome: 'por-dimensao.xlsx' });
+      conteudo: { linhas: [...content.linhas, ...uploadedContent.linhas,
+        { criterio: 'Incidência espacial', dimensao: 'Território', Etapa: 'Favorabilidade territorial — município e rede rodoviária' }] }, arquivo_nome: 'por-dimensao.xlsx' });
     await prepare('/restrict/analise-multicriterio/central-julgamentos');
     await page.locator('#ami-new').click();
     await selectMatrix(judgmentPicker, '99999999-9999-4999-8999-999999999999');
+    assert.equal(await page.locator('#ami-dimension-options input').count(), 2);
+    assert.doesNotMatch(await page.locator('#ami-dimension-options').textContent(), /Território/);
     await page.locator('#ami-judgment-name').fill('Especialistas por dimensão');
     await page.locator('#ami-deadline').fill('2030-12-31');
     await collaborators(['Social'], 'social@example.com');
@@ -319,11 +345,15 @@ const uploadedContent = { linhas: [{ criterio: 'Acesso', dimensao: 'Social' }, {
     await page.locator('#ami-email-preview-recipient').selectOption('multidisciplinar@example.com');
     assert.match(await page.locator('#ami-email-template').textContent(), /Custo/);
 
-    const scopedJudgment = judgments.at(-1);
+    const scopedJudgment = { ...judgments.at(-1),
+      criterios: [...content.linhas, ...uploadedContent.linhas], n_criterios: 4 };
     const responseFor = (id, email) => ({ id, email, nome_completo: email, status: 'enviada',
       matriz_comparacao: [[1, 2], [0.5, 1]], consistente: true, razao_consistencia: 0,
       pesos: [2 / 3, 1 / 3] });
     const stats = { individuais: [], por_par: [], por_criterio: [] };
+    const pairStats = (rows, id) => ({ ...stats, por_par: [{ i: 0, j: 1,
+      criterio_a: rows[0].criterio, criterio_b: rows[1].criterio, media: 2, mediana: 2,
+      media_geometrica: 2, modas: [2], pontos: [{ resposta_id: id, respondente: id, valor: 2 }] }] });
     const localAnalysis = { id: 'local', nome: 'Pesos sociais', status: 'calculada',
       respostas_incluidas: 1, consistente: true, razao_consistencia: 0,
       pesos_consolidados: [2 / 3, 1 / 3], matriz_consolidada: [[1, 2], [0.5, 1]],
@@ -335,14 +365,35 @@ const uploadedContent = { linhas: [{ criterio: 'Acesso', dimensao: 'Social' }, {
       estatisticas: stats, analises: [localAnalysis], participacao: { convidados: 2, nao_iniciados: 0,
         em_preenchimento: 0, enviadas: 2, consistentes: 2, inconsistentes: 0 },
       recortes: [
-        { criterios: uploadedContent.linhas, resposta_ids: ['social'], estatisticas: stats },
-        { criterios: content.linhas, resposta_ids: ['financeira'], estatisticas: stats },
+        { criterios: uploadedContent.linhas, resposta_ids: ['social'], estatisticas: pairStats(uploadedContent.linhas, 'social') },
+        { criterios: content.linhas, resposta_ids: ['financeira'], estatisticas: pairStats(content.linhas, 'financeira') },
       ] };
     judgments = [scopedJudgment];
     await prepare('/restrict/analise-multicriterio/central-respostas');
+    const headers = await page.locator('#ami-judgments').evaluate(body => [...body.closest('table').tHead.rows[0].cells].map(cell => cell.textContent.trim()));
+    assert.equal(headers[1], 'Nome do julgamento');
+    assert.equal(headers.includes('ID Julgamento'), false);
+    assert.equal(await page.locator('#ami-judgments tr td').nth(1).textContent(), scopedJudgment.nome);
+    await page.locator('#ami-filter-coluna').selectOption('nome');
+    await page.locator('#ami-filter-valor').selectOption(scopedJudgment.nome);
+    assert.equal(await page.locator('#ami-judgments tr').count(), 1);
+    await page.locator('#ami-filter-limpar').click();
     await page.locator('[data-analysis-round]').check();
     await page.locator('#ami-responses-edit-action').click();
     await page.locator('#ami-analysis-workspace:not(.is-hidden)').waitFor();
+    assert.equal(await page.locator('#ami-analysis-scope').inputValue(), '-1');
+    assert.match(await page.locator('#ami-analysis-context').textContent(), /4 critérios/);
+    assert.match(await page.locator('#ami-analysis-judges').textContent(), /social@example.com/);
+    assert.match(await page.locator('#ami-analysis-judges').textContent(), /financeira@example.com/);
+    assert.match(await page.locator('#ami-analysis-pairs').textContent(), /Social — Acesso/);
+    assert.match(await page.locator('#ami-analysis-pairs').textContent(), /Financeira — Custo/);
+    assert.equal(await page.locator('#ami-analysis-calculate').isDisabled(), true, 'Não agregar matrizes de mesmo tamanho mas critérios distintos');
+    assert.match(await page.locator('#ami-analysis-consolidations').textContent(), /Acesso/);
+    assert.doesNotMatch(await page.locator('#ami-analysis-consolidations').textContent(), /Custo|Benefício/);
+    await page.locator('#ami-pairs-judge').selectOption('social');
+    assert.match(await page.locator('#ami-analysis-matrix').textContent(), /Acesso/);
+    assert.doesNotMatch(await page.locator('#ami-analysis-matrix').textContent(), /Custo/);
+    await page.locator('#ami-analysis-scope').selectOption('0');
     assert.match(await page.locator('#ami-analysis-context').textContent(), /2 critérios/);
     assert.match(await page.locator('#ami-analysis-judges').textContent(), /social@example.com/);
     assert.doesNotMatch(await page.locator('#ami-analysis-judges').textContent(), /financeira@example.com/);
@@ -352,24 +403,23 @@ const uploadedContent = { linhas: [{ criterio: 'Acesso', dimensao: 'Social' }, {
     assert.match(await page.locator('#ami-analysis-judges').textContent(), /financeira@example.com/);
     assert.doesNotMatch(await page.locator('#ami-analysis-judges').textContent(), /social@example.com/);
     assert.doesNotMatch(await page.locator('#ami-analysis-consolidations').textContent(), /Pesos sociais/);
+    await page.locator('#ami-responses-edit-action').click();
+    await page.waitForFunction(() => document.getElementById('ami-analysis-scope').value === '-1');
+    await page.locator('#ami-analysis-scope').selectOption('0');
+    await page.reload();
+    await page.locator('[data-analysis-round]').check();
+    await page.locator('#ami-judgments-view-action').click();
+    await page.locator('#ami-analysis-workspace:not(.is-hidden)').waitFor();
+    assert.equal(await page.locator('#ami-analysis-scope').inputValue(), '-1');
+    assert.match(await page.locator('#ami-analysis-judges').textContent(), /financeira@example.com/);
 
     judgments = [];
     await prepare('/restrict/analise-multicriterio/central-julgamentos?novo=1&superficie_id=' + ids.surface + '&hierarquizacao_id=' + ids.hierarchy);
-    await page.locator('#ami-create-section:not(.is-hidden)').waitFor();
-    assert.equal(await judgmentPicker.isVisible(), false);
-    assert.equal(await page.locator('#ami-surface-hierarchy-section').isVisible(), true);
-    assert.equal(await page.locator('#ami-hierarchy').isDisabled(), true);
-    await page.locator('#ami-judgment-name').fill('Julgamento da superfície');
-    await page.locator('#ami-deadline').fill('2030-12-31');
-    await collaborators();
-    await page.locator('#ami-create-form button[type=submit]').click();
-    await page.locator('#ami-create-section.is-readonly').waitFor();
-    const surfaceWrite = writes.filter(write => write.path === AMBIENTES).at(-1);
-    assert.equal(surfaceWrite.data.hierarquizacao_id, ids.hierarchy);
-    assert.equal(surfaceWrite.data.superficie_id, ids.surface);
-    assert.equal('matriz_id' in surfaceWrite.data, false);
+    await page.waitForFunction(() => document.getElementById('ami-hierarchy-summary').textContent.includes('exclusivos da Fase 3'));
+    assert.equal(await page.locator('#ami-create-section').isVisible(), false);
+    assert.equal(judgments.length, 0);
     assert.equal(requests.includes(MATRIZES + '/' + ids.matrix), true);
     assert.deepEqual(errors, []);
-    console.log('PASS: upload independente, seleção por UUID, criar/editar julgamento avulso com matriz imutável, criar/editar hierarquização, confirmação de reuso equivalente, invalidação não equivalente e contexto legado de superfície. APIs simuladas.');
+    console.log('PASS: matrizes independentes, editor modal responsivo com tipografia do cadastro, salvar/cancelar, coluna de nome sem UUID, recorte Todos padrão ao abrir/recarregar, pesos locais e proteção contra agregação de escopos distintos. APIs simuladas.');
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

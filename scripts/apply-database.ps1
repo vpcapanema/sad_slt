@@ -274,7 +274,8 @@ $migrations = @(
     "148_dimensoes_criterios_pli.sql",
     "149_reconciliar_demandas_hierarquizacao_concluida.sql",
     "150_reverter_homologacao_hierarquizacao.sql",
-    "151_matrizes_criterios_independentes.sql"
+    "151_matrizes_criterios_independentes.sql",
+    "152_julgamentos_apenas_fase3.sql"
 )
 
 if ($OnlyMigration) {
@@ -446,6 +447,12 @@ if (-not $OnlyMigration) {
     } elseif (Test-SchemaReady $coreSchemaQuery) {
         Write-Ok "Schema legado ja esta atualizado; migrations 002-036 serao ignoradas"
         $migrations = $migrations | Where-Object { [int]$_.Substring(0, 3) -ge 37 }
+    }
+}
+
+if (-not $OnlyMigration -and "152_julgamentos_apenas_fase3.sql" -notin $migrations) {
+    if (-not (Test-SchemaReady "SELECT to_regprocedure('ahp.criterios_fase3_matriz(jsonb)') IS NOT NULL;")) {
+        $migrations += "152_julgamentos_apenas_fase3.sql"
     }
 }
 
