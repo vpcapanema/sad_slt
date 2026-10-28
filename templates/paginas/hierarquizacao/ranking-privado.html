@@ -6,7 +6,7 @@
 
 {% block titulo %}Ranking de demandas — SICARD{% endblock %}
 {% set fase_ativa = "ranking" %}
-{% block classes_body %}ahp-module-page ranking-privado-page{% endblock %}
+{% block classes_body %}ahp-module-page ranking-privado-page ami-page ami-espaco-page sicard-standard-page{% endblock %}
 {% block base_url %}<base href="/restrict/hierarquizacao/">{% endblock %}
 
 {% block estilos_pagina %}
@@ -14,14 +14,21 @@
   <link rel="stylesheet" href="/assets/vendor/leaflet/leaflet.css" crossorigin="">
   <link rel="stylesheet" href="/restrict/hierarquizacao/processos.css">
   <link rel="stylesheet" href="/assets/css/paginas/hierarquizacao-home-inline-1.css">
-  <link rel="stylesheet" href="/assets/css/ranking-privado.css">
+  <link rel="stylesheet" href="/assets/css/fase1-execucao.css">
+  <link rel="stylesheet" href="/assets/css/table-standard.css">
+  <link rel="stylesheet" href="/assets/css/admin-table-controls.css">
+  <link rel="stylesheet" href="/assets/css/paginas/ami-report-tables.css">
+  <link rel="stylesheet" href="/assets/css/paginas/ami-espaco-secoes.css">
+  <link rel="stylesheet" href="/assets/css/paginas/sicard-standard-pages.css">
+  <link rel="stylesheet" href="/assets/css/sidebar-theme.css">
+  <link rel="stylesheet" href="/assets/css/ranking-privado.css?v=20261028-status-mapa">
   <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
   <link rel="stylesheet" href="/assets/css/page-title-standard.css?v=20260820-3">
 {% endblock %}
 
 {% block conteudo %}
 <div id="admin-session-bar" class="admin-session-bar hidden"></div>
-<main class="conteudo-principal app-main ahp-main">
+<main class="conteudo-principal app-main ahp-main ami-main">
   {% include "componentes/navegacao_fases_hierarquizacao.html" %}
   <section class="card-ranking-demandas secao-ranking-demandas card standard-page-hero">
     <h1 class="ahp-page-title standard-page-hero__title"><i class="fas fa-ranking-star" aria-hidden="true"></i><span>Ranking de demandas</span></h1>
@@ -29,13 +36,17 @@
     <p class="standard-page-hero__description">Selecione uma hierarquização finalizada para consultar sua classificação e distribuição territorial.</p>
   </section>
 
+  <div class="standard-section-action-row">
+    <button type="button" class="btn btn-primary" id="ranking-gerenciar-publicacao" disabled aria-describedby="ranking-publicacao-aviso"><i class="fas fa-bullhorn" aria-hidden="true"></i> Gerenciar publicação</button>
+    <p id="ranking-publicacao-aviso" class="ahp-help-text">A gestão de publicações será disponibilizada em uma próxima etapa.</p>
+  </div>
   <section class="card-hierarquizacoes-finalizadas secao-hierarquizacoes-finalizadas card ahp-step-section">
     <div class="ahp-section-label"><i class="fas fa-table"></i><span>Hierarquizações realizadas</span></div>
     <div class="ahp-section-body">
       <div id="ranking-hier-loading">Carregando…</div>
       <div id="ranking-hier-error" class="hidden ahp-info-note ahp-info-note--error"></div>
       <div class="hier-table-shell">
-        <table class="admin-table hier-register-table ranking-hier-table">
+        <table class="admin-table hier-register-table ranking-hier-table" aria-label="Hierarquizações realizadas">
           <thead><tr>
             <th>Situação</th><th>Código da hierarquização</th><th>Identificador da configuração AHP</th><th>Nome</th><th>Descrição</th><th>Matriz de critérios e premissas</th><th>Demandas do grupo</th><th>Julgamentos dos projetos</th><th>Pesos dos projetos</th><th>Classificação resultante</th><th>Data da homologação</th><th>Responsável pela homologação</th><th>Responsável pelo cadastro</th><th>Data de cadastro</th><th>Última atualização</th><th>Tipo de demanda</th><th>Grupo comparável</th><th>Dados completos da hierarquização</th>
           </tr></thead>
@@ -52,19 +63,36 @@
 
   <section id="ranking-mapa-section" class="card-ranking-mapa secao-ranking-mapa card ahp-step-section hidden">
     <div class="ahp-section-label"><i class="fas fa-map-location-dot"></i><span id="ranking-mapa-titulo">Mapa do ranking de objetos aptos à implementação</span></div>
-    <div class="ahp-section-body ranking-map-layout">
-      <aside class="ranking-map-sidebar" aria-label="Objetos classificados"><ol id="ranking-map-list"></ol></aside>
-      <div id="ranking-map" class="ranking-map" aria-label="Mapa dos objetos classificados"></div>
+    <div class="ahp-section-body">
+      {% from "componentes/mapa_ranking.html" import mapa_ranking %}
+      {{ mapa_ranking(somente_canvas=true) }}
+      <div id="ranking-mapa-legenda" class="status-color-legend-host" aria-label="Legenda das demandas"></div>
+      <p class="ahp-help-text">O número na gota indica a posição no ranking; sua cor e a cor da geometria indicam a situação atual da demanda, conforme a legenda. Planos têm listras diagonais, programas têm malha cruzada e projetos têm preenchimento liso. As fases da legenda são as do ciclo de vida da demanda, não as etapas do cálculo. Clique em uma linha da tabela para enquadrar sua geometria no mapa.</p>
     </div>
   </section>
+  <div id="ranking-detalhes-modal" class="json-modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="ranking-detalhes-titulo">
+    <div class="json-modal">
+      <header class="json-modal-head">
+        <h2 id="ranking-detalhes-titulo">Detalhes da hierarquização</h2>
+        <button type="button" class="json-modal-close" data-ranking-modal-close aria-label="Fechar"><i class="fas fa-xmark" aria-hidden="true"></i></button>
+      </header>
+      <div id="ranking-detalhes-conteudo" class="json-modal-body"></div>
+    </div>
+  </div>
 </main>
 {% endblock %}
 
 {% block scripts_pagina %}
   <script src="/assets/js/admin-auth.js"></script>
+  <script src="/assets/js/admin-api.js"></script>
   <script src="/assets/vendor/leaflet/leaflet.js" crossorigin=""></script>
+  <script src="/assets/js/status-colors.js?v=20261028-alfinetes"></script>
   <script src="/assets/js/painel-map-controls.js"></script>
+  <script src="/assets/js/table-standard.js"></script>
+  <script src="/assets/js/analysis-table-controls.js"></script>
+  <script src="/assets/js/ranking-dados.js?v=20261028-nomes-originais"></script>
+  <script src="/assets/js/ranking-mapa.js?v=20261028-centroide"></script>
   <script src="/assets/js/api-erro.js?v=20261027"></script>
   <script src="/restrict/hierarquizacao/js/hier-api.js"></script>
-  <script src="/restrict/hierarquizacao/js/ranking-privado.js"></script>
+  <script src="/restrict/hierarquizacao/js/ranking-privado.js?v=20261028-homologacao"></script>
 {% endblock %}

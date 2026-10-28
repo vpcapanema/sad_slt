@@ -611,8 +611,13 @@ def pagina_documentacao_camadas_territoriais(
 ) -> Response:
     with project_path("config/documentacao-camadas-territoriais.json").open(encoding="utf-8-sig") as source:
         matriz = json.load(source)
-    with project_path("config/catalogo-territorial-incorporado.json").open(encoding="utf-8") as source:
+    with project_path("config/catalogo-setorial-on-demand.json").open(encoding="utf-8") as source:
         catalogo = json.load(source)
+    catalogo["situacao"] = (
+        "O catálogo contém metadados dos 3.519 atributos originais e 10 combinações. "
+        "Os valores originais são consultados na fonte oficial e persistidos quando solicitados."
+    )
+    catalogo["completude"] = {"metadados_completos": len(catalogo["atributos_setoriais"]) == 3529}
     return render_page(
         request, "paginas/geoespacial/documentacao-camadas-territoriais.html",
         matriz=matriz, catalogo=catalogo,

@@ -47,6 +47,25 @@ em um resultado final unico, com pesos configuraveis e regras explicitas.
 
 ## Papel de cada fase
 
+### Matriz independente e julgamentos AHP
+
+A matriz de critérios e premissas enviada constitui um registro próprio e
+imutável, identificado por UUID. Cada hierarquização referencia uma única
+matriz por vez; uma mesma matriz pode ser utilizada por várias hierarquizações.
+O julgamento AHP referencia diretamente essa matriz, independentemente da
+existência de uma hierarquização. Sem processo associado à matriz, o julgamento
+é avulso. Os critérios e as premissas não são obtidos por dependência da rodada.
+
+A troca de matriz exige nova verificação dos critérios, da estrutura e das
+premissas. Pesos de outra matriz não são transferidos automaticamente. O reuso
+somente é admitido quando o conteúdo é equivalente e há confirmação explícita;
+mudanças de critérios, estrutura ou premissas exigem novos julgamentos e
+recálculo dos pesos. Os resultados derivados devem ser recalculados após a troca,
+mantendo-se os julgamentos originais associados à matriz que avaliaram.
+Metadados de arquivo e aba não caracterizam alteração metodológica.
+Julgamentos de superfícies preservam adicionalmente seu contexto espacial e
+o snapshot específico da superfície.
+
 ### Fase 1 — Elegibilidade territorial
 
 A Fase 1 nao deve ranquear projetos. Sua funcao e classificar a elegibilidade
@@ -189,6 +208,25 @@ A sintese nao deve apagar a leitura por fase. O usuario deve conseguir ver:
 - ranking da Fase 3;
 - ranking final composto;
 - motivos da diferenca entre ranking tecnico e ranking ajustado.
+
+### Consulta por demanda e ciclo de vida
+
+Os resultados permanecem associados à demanda em cada rodada, preservando a
+leitura separada das fases, dos pesos, do índice final e da posição no grupo.
+Uma demanda pode participar de várias hierarquizações; os resultados de uma
+rodada não substituem os de outra. Os painéis público e restrito organizam a
+consulta por tipo de demanda, hierarquização e demanda desde a criação da rodada,
+com uma única geometria cadastral por demanda e apresentação da situação da rodada.
+Demandas sem hierarquização continuam disponíveis na raiz de seu tipo.
+
+A persistência da síntese conclui o status técnico das demandas ainda em
+hierarquização na mesma transação do resultado. Situações de execução, suspensão,
+retirada ou publicação não são sobrescritas. Conclusão do cálculo não equivale a
+homologação nem a publicação. O controle gerencial de publicação destina-se apenas
+ao painel público; sua implementação futura não deve limitar a consulta restrita.
+Enquanto esse controle não estiver implementado, preserva-se a visibilidade
+atual dos dois painéis. A consulta pública expõe somente o resumo individual
+dos resultados, sem documentos internos, caminhos de arquivos ou dados pessoais.
 
 ### Tratamento da Fase 1 na sintese
 

@@ -17,7 +17,7 @@ def test_cards_mocad_mad_carregam_feedback_compartilhado():
         )
         assert section is not None
         links.extend(re.findall(r'class="platform-tile[^"]*" href="([^"]+)"', section.group()))
-    assert len(links) == 13
+    assert len(links) == 11
     for link in links:
         response = client.get(link)
         assert response.status_code == 200, link

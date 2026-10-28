@@ -23,7 +23,7 @@
   <link rel="stylesheet" href="/assets/css/paginas/ami-report-tables.css?v=20261027-fase3-padrao">
   <link rel="stylesheet" href="/assets/css/paginas/ami-espaco-secoes.css?v=20261027-fase3-padrao">
   <link rel="stylesheet" href="/assets/css/paginas/sicard-standard-pages.css?v=20261027-fase3-padrao">
-  <link rel="stylesheet" href="/assets/css/paginas/fase3-padrao.css?v=20261027-resultados-nomes">
+  <link rel="stylesheet" href="/assets/css/paginas/fase3-padrao.css?v=20261028-sintese-final">
 {% endblock %}
 
 {% block conteudo %}
@@ -37,7 +37,7 @@
   <p class="step-intro"><i class="fas fa-circle-info" aria-hidden="true"></i> Escolha a fonte dos pesos na subseção Ponderação: utilize os pesos consolidados de um julgamento AHP associado à hierarquização ou preencha os pesos manualmente. Na ponderação manual, os atributos podem participar de uma única ponderação abrangente ou de ponderações separadas por grupo.</p>
   </section>
   <section class="secao-selecao-da-rodada card ahp-step-section card-selecao-da-rodada">
-    <div class="ahp-section-label"><i class="fas fa-list-check" aria-hidden="true"></i><span>Selecionar a rodada</span></div>
+    <div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">1</span><i class="fas fa-list-check" aria-hidden="true"></i><span>Selecionar a rodada</span></div>
     <div class="ahp-section-body">
       <label>Hierarquização cadastrada <select id="fase-hierarquizacao"><option value="">Selecionar uma hierarquização</option></select></label>
       <div id="fase-resumo" class="fase-summary hidden"></div>
@@ -45,10 +45,11 @@
   </section>
   <div id="fase3-erro" class="ahp-info-note ahp-info-note--error hidden"></div>
   <div id="fase3-resultados-aviso" class="ahp-info-note hidden" role="status" aria-live="polite" aria-atomic="true"></div>
-  <section hidden data-fase3-progressiva class="secao-criterios-de-atributos card ahp-step-section card-criterios-de-atributos"><div class="ahp-section-label"><i class="fas fa-table" aria-hidden="true"></i><span id="fase3-titulo-atributos">Critérios de atributo de demanda</span></div><div class="ahp-section-body">{% set fase3_ponderacao = true %}{% include "componentes/_tabela_atributos_objetos.html" %}</div></section>
-  <section id="fase3-regras-vazios" hidden class="secao-regras-para-atributos-vazios card ahp-step-section card-regras-para-atributos-vazios"><div class="ahp-section-label"><i class="fas fa-triangle-exclamation" aria-hidden="true"></i><span>Regras para atributos vazios</span></div><div class="ahp-section-body">
+  <section hidden data-fase3-progressiva class="secao-criterios-de-atributos card ahp-step-section card-criterios-de-atributos"><div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">2</span><i class="fas fa-table" aria-hidden="true"></i><span id="fase3-titulo-atributos">Critérios de atributo de demanda</span></div><div class="ahp-section-body">{% set fase3_ponderacao = true %}{% include "componentes/_tabela_atributos_objetos.html" %}</div></section>
+  <section id="fase3-regras-vazios" hidden class="secao-regras-para-atributos-vazios card ahp-step-section card-regras-para-atributos-vazios"><div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">3</span><i class="fas fa-triangle-exclamation" aria-hidden="true"></i><span>Regras para atributos vazios</span></div><div class="ahp-section-body">
+    <div class="ahp-subsection-title"><span class="cadastro-subsec-num">3.1</span><span>Atributos ausentes ou inválidos</span></div>
     <div id="fase3-atributos-ausentes" class="fase-table-wrap fase3-ausentes-wrap fase3-tabela-secao" aria-live="polite"></div>
-    <div class="ahp-subcard info-card"><div class="ahp-subsection-title"><span class="ahp-subsection-num">2</span><i class="fas fa-sliders" aria-hidden="true"></i><span>Política de tratamento</span></div><div class="fase-grid-2">
+    <div class="ahp-subcard info-card"><div class="ahp-subsection-title"><span class="cadastro-subsec-num">3.2</span><i class="fas fa-sliders" aria-hidden="true"></i><span>Política de tratamento</span></div><div class="fase-grid-2">
       <input id="fase3-modo-pesos" type="hidden" value="normalizados">
       <label>Tratamento de atributos com valores vazios
         <select id="fase3-ausentes"><option value="renormalizar">Ignorar e renormalizar</option><option value="bloquear">Bloquear objeto de demanda</option><option value="imputar_neutro">Imputar neutro</option><option value="imputar_pior">Imputar pior valor</option><option value="imputar_medio">Imputar média</option></select>
@@ -56,12 +57,12 @@
       <label>Completude mínima (% de atributos preenchidos para que o objeto seja considerado no cálculo) <input id="fase3-completude" type="number" min="0" max="100" step="5" value="60"></label>
     </div><p class="ahp-help-text">Critérios obrigatórios ausentes ou inválidos bloqueiam o índice, independentemente da política escolhida.</p></div></div></section>
   <div id="fase3-acao-calculo" class="fase-actions fase3-calculo-acoes" hidden><button id="executar-fase3" class="btn btn--primary fase3-calculo-btn" type="button"><i class="fas fa-calculator"></i> Calcular índice de prioridade</button></div>
-  <section hidden data-fase3-progressiva class="secao-ranking-do-ajuste-fino card ahp-step-section card-ranking-do-ajuste-fino"><div class="ahp-section-label"><i class="fas fa-ranking-star" aria-hidden="true"></i><span>Resultados</span></div><div class="ahp-section-body"><div id="fase3-indicadores" class="fase-summary-grid"></div><div class="fase-table-wrap fase3-tabela-secao"><table class="fase-table" data-ranking-order="true" data-table-sort="off"><caption class="atributos-subsecao-caption"><div class="ahp-subsection-title"><span class="ahp-subsection-num">1</span><i class="fas fa-list-ol" aria-hidden="true"></i><span>Ranking de demandas</span></div></caption><thead><tr><th scope="col" aria-sort="ascending">Posição</th><th>Demanda</th><th>Índice de prioridade</th><th>Completude</th><th>Situação</th><th>Pendências</th></tr></thead><tbody id="fase3-resultados"></tbody></table></div><div id="fase3-auditoria" class="fase-audit hidden"></div></div></section>
-  <section hidden data-fase3-progressiva class="secao-sintese-final card ahp-step-section card-sintese-final"><div class="ahp-section-label"><i class="fas fa-chart-line" aria-hidden="true"></i><span>Gerar a síntese final</span></div><div class="ahp-section-body">
-    <h3 id="fase3-sintese-titulo" class="fase3-titulo-tabela-simples">Tabela da síntese</h3>
+  <section hidden data-fase3-progressiva class="secao-ranking-do-ajuste-fino card ahp-step-section card-ranking-do-ajuste-fino"><div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">4</span><i class="fas fa-ranking-star" aria-hidden="true"></i><span>Resultados</span></div><div class="ahp-section-body"><div id="fase3-indicadores" class="fase-summary-grid"></div><div class="fase-table-wrap fase3-tabela-secao"><table class="fase-table" data-ranking-order="true" data-table-sort="off"><caption class="atributos-subsecao-caption"><div class="ahp-subsection-title"><span class="cadastro-subsec-num">4.1</span><i class="fas fa-list-ol" aria-hidden="true"></i><span>Ranking de demandas</span></div></caption><thead><tr><th scope="col" aria-sort="ascending">Posição</th><th>Demanda</th><th>Índice de prioridade</th><th>Completude</th><th>Situação</th><th>Pendências</th></tr></thead><tbody id="fase3-resultados"></tbody></table></div><div class="ahp-subsection-title"><span class="cadastro-subsec-num">4.2</span><span>Auditoria</span></div><div id="fase3-auditoria" class="fase-audit hidden"></div></div></section>
+  <section hidden data-fase3-progressiva class="secao-sintese-final card ahp-step-section card-sintese-final"><div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">5</span><i class="fas fa-chart-line" aria-hidden="true"></i><span>Gerar a síntese final</span></div><div class="ahp-section-body">
+    <h3 id="fase3-sintese-titulo" class="fase3-titulo-tabela-simples"><span class="cadastro-subsec-num">5.1</span> Tabela da síntese</h3>
     <div id="fase3-tabela-sintese" class="fase-table-wrap fase3-tabela-secao"></div>
     <section class="fase3-calculo-geral secao-calculo-indice-geral ahp-subcard info-card">
-      <div class="ahp-subsection-title"><span class="ahp-subsection-num">2</span><i class="fas fa-calculator" aria-hidden="true"></i><span>Calcular o índice geral e o ranking</span></div>
+      <div class="ahp-subsection-title"><span class="cadastro-subsec-num">5.2</span><i class="fas fa-calculator" aria-hidden="true"></i><span>Calcular o índice geral e o ranking</span></div>
       <fieldset class="fase3-operadores"><legend>Operador</legend><label><input type="radio" name="operador-sintese" value="media_simples" checked> Média simples</label><label><input type="radio" name="operador-sintese" value="media_ponderada"> Média ponderada</label></fieldset>
       <div id="pesos-sintese" class="fase3-pesos-sintese" hidden>
         <label class="atributo-peso peso-sintese" data-sintese-peso="rede"><span>Índice de favorabilidade de rede</span><input class="atributo-peso-numero peso-sintese-numero" id="peso-rede" type="number" min="0" max="1" step="0.001" value="0.333"><input class="atributo-peso-barra peso-sintese-barra" type="range" min="0" max="1" step="0.001" value="0.333"></label>
@@ -69,9 +70,24 @@
         <label class="atributo-peso peso-sintese" data-sintese-peso="prioridade"><span>Índice de prioridade</span><input class="atributo-peso-numero peso-sintese-numero" id="peso-prioridade" type="number" min="0" max="1" step="0.001" value="0.334"><input class="atributo-peso-barra peso-sintese-barra" type="range" min="0" max="1" step="0.001" value="0.334"></label>
       </div>
       <p class="ahp-help-text">Na média ponderada, os três pesos devem somar 1.</p>
+      <p class="ahp-help-text">O cálculo grava o ranking na hierarquização, sem alterar o status das demandas. Enquanto não houver homologação, qualquer índice das três fases pode ser recalculado. A homologação, feita na página de ranking, conclui as demandas e trava o recálculo.</p>
       <div class="fase-actions fase3-calculo-acoes"><button id="sintetizar" class="btn btn--primary fase3-calculo-btn" type="button"><i class="fas fa-ranking-star"></i> Calcular índice geral de hierarquização</button></div>
     </section>
+    <div id="fase3-ranking-final" hidden>
+      <h3 id="fase3-ranking-final-titulo" class="fase3-titulo-tabela-simples">Ranking final de demandas</h3>
+      <p class="ahp-help-text">Clique no índice geral de hierarquização para consultar os índices, os pesos e a equação utilizados no cálculo salvo.</p>
+      <div id="fase3-ranking-final-tabela" class="fase-table-wrap fase3-tabela-secao"></div>
+    </div>
   </div></section>
+  <div id="fase3-memoria-sintese" class="json-modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="fase3-memoria-sintese-titulo">
+    <div class="json-modal">
+      <header class="json-modal-head">
+        <h2 id="fase3-memoria-sintese-titulo">Memória de cálculo da síntese final</h2>
+        <button type="button" class="json-modal-close" data-modal-close aria-label="Fechar"><i class="fas fa-xmark" aria-hidden="true"></i></button>
+      </header>
+      <div id="fase3-memoria-sintese-conteudo" class="json-modal-body"></div>
+    </div>
+  </div>
   {% include "componentes/modal/_modal_demandas_do_grupo_hierarquizacoes_realizadas_gestao_das_hierarquizacoes.html" %}
 </main>
 {% endblock %}
@@ -89,7 +105,7 @@
   <script src="/assets/js/api-erro.js?v=20261027"></script>
   <script src="/restrict/hierarquizacao/js/hier-api.js?v=20261027-complementacao"></script>
   <script src="/assets/js/hierarquizacao-complementacao.js"></script>
-  <script src="/restrict/hierarquizacao/js/atributos-objetos.js?v=20261027-fase3-padrao"></script>
-  <script src="/restrict/hierarquizacao/js/fase3.js?v=20261027-resultados-nomes"></script>
+  <script src="/restrict/hierarquizacao/js/atributos-objetos.js?v=20261028-nomes-originais"></script>
+  <script src="/restrict/hierarquizacao/js/fase3.js?v=20261028-homologacao"></script>
   <script src="/assets/js/paginas/hierarquizacao-fase3-ajuste-fino-inline-1.js"></script>
 {% endblock %}

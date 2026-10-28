@@ -16,7 +16,7 @@
     const attrPairs = Object.entries(attrs || {})
       .map(([k, v]) => ` data-${k}="${escapeAttr(v)}"`)
       .join("");
-    const idSource = [scope, attrs?.["group-id"], attrs?.["record-id"]].filter(Boolean).join("-");
+    const idSource = [scope, attrs?.["group-id"], attrs?.["record-id"], attrs?.["instance-id"]].filter(Boolean).join("-");
     const inputId = `vis-${String(idSource).replace(/[^a-zA-Z0-9_-]/g, "_")}`;
     const inputName = scope === "group" ? "visibilidade_grupo" : "visibilidade_demanda";
     const text = labelText || "Visível no mapa";
@@ -40,7 +40,7 @@
     const getRecordKey = options.getRecordKey || ((r) => String(getRecordId(r)));
     const recordKey = getRecordKey(record);
     const selected = id === selectedId;
-    const sectionDomId = String(id).replace(/[^a-zA-Z0-9_-]/g, "_");
+    const sectionDomId = String(`${groupId}-${id}-${options.instanceId || ""}`).replace(/[^a-zA-Z0-9_-]/g, "_");
     const sections = sectionsFor(record) || [];
     const recordVisible = visibility ? visibility.isRecordVisible(groupId, id) : true;
     const groupVisible = visibility ? visibility.isGroupVisible(groupId) : true;
@@ -63,7 +63,7 @@
     const visHtml = visibility && options.showRecordVisibility !== false
       ? visibilityToggleHtml(
           "record",
-          { "record-id": id, "group-id": groupId },
+          { "record-id": id, "group-id": groupId, "instance-id": options.instanceId || "" },
           recordVisible && groupVisible,
           `Exibir ${getRecordLabel(record)} no mapa`
         )
@@ -84,6 +84,7 @@
             ${getRecordBadgeHtml(record)}
           </button>
         </div>
+        ${options.hierarquizacao ? resultadosHierarquizacaoHtml([options.hierarquizacao]) : ""}
         ${sectionsHtml}
       </div>`;
   }
@@ -107,7 +108,7 @@
           return;
         }
         const record = (options.findRecord || (() => null))(id);
-        options.onSelect?.(id, record);
+        options.onSelect?.(id, record, btn);
       });
     });
   }
@@ -132,6 +133,12 @@
         input.addEventListener("change", (ev) => {
           ev.stopPropagation();
           options.onRecordVisibilityChange(input.dataset.groupId, input.dataset.recordId, input.checked);
+          container.querySelectorAll(".layer-group--record").forEach(row => {
+            if (row.dataset.groupId !== input.dataset.groupId || row.dataset.recordId !== input.dataset.recordId) return;
+            row.classList.toggle("is-map-hidden", !input.checked || !options.visibility.isGroupVisible(input.dataset.groupId));
+            const checkbox = row.querySelector(".layer-visibility-input--record");
+            if (checkbox) checkbox.checked = input.checked;
+          });
         });
       });
     }
@@ -282,6 +289,67 @@
     });
   }
 
+  function resultadosHierarquizacaoHtml(rodadas = []) {
+    const valor = n => typeof n === "number" && Number.isFinite(n) ? escapeHtml(n.toFixed(4)) : "Não calculado";
+    const pesos = (p, ausentes = "Não registrados") => Object.entries(p || {}).map(([nome, peso]) => `${escapeHtml(nome)}: ${valor(peso)}`).join("; ") || ausentes;
+    return rodadas.map(h => `<details class="painel-hierarquizacao-resultados">
+      <summary>${escapeHtml(h.nome)} — ${escapeHtml(h.codigo)}${h.posicao != null ? ` · ${escapeHtml(h.posicao)}º` : ""}</summary>
+      <dl>
+        <dt>Situação da rodada</dt><dd>${escapeHtml(statusHierarquizacaoLabel(h.status))}</dd>
+        ${h.desatualizada ? "<dt>Validade</dt><dd>Resultados desatualizados; recálculo necessário.</dd>" : ""}
+        <dt>Elegibilidade territorial</dt><dd>${escapeHtml(h.elegibilidade || "Não calculada")}</dd>
+        <dt>Índice de risco ambiental e territorial</dt><dd>${valor(h.indice_risco)}</dd>
+        <dt>Índice de favorabilidade de rede</dt><dd>${valor(h.indice_rede)}</dd>
+        <dt>Índice de favorabilidade territorial</dt><dd>${valor(h.indice_territorial)}</dd>
+        <dt>Índice de prioridade</dt><dd>${valor(h.indice_prioridade)}</dd>
+        <dt>Pesos da prioridade</dt><dd>${pesos(h.pesos_prioridade)}</dd>
+        <dt>Operador da síntese</dt><dd>${escapeHtml(h.operador || "Não registrado")}</dd>
+        <dt>Pesos da síntese</dt><dd>${pesos(h.pesos_sintese, "Não disponíveis para reconstituir o resultado")}</dd>
+        <dt>Índice geral de hierarquização</dt><dd>${valor(h.indice_final)}</dd>
+        <dt>Posição no grupo</dt><dd>${h.posicao != null ? `${escapeHtml(h.posicao)}º` : "Sem posição"}</dd>
+      </dl>
+    </details>`).join("");
+  }
+
+  function statusHierarquizacaoLabel(status) {
+    return ({em_julgamento: "Em julgamento", calculada: "Finalizado — Ranking calculado",
+      homologada: "Finalizada e homologada", arquivada: "Arquivada"})[status] || status;
+  }
+
+  function recordsBody(group, records, options, expandState) {
+    const markup = (r, extra = {}) => recordMarkup(r, {
+      ...options, getRecordGroupId: rec => options.getRecordGroupId(rec, group), ...extra,
+    });
+    if (!options.getRecordSubgroups) return records.map(r => markup(r)).join("");
+    const subgrupos = new Map(), livres = [];
+    records.forEach(r => {
+      const rodadas = options.getRecordSubgroups(r) || [];
+      if (!rodadas.length) livres.push(r);
+      rodadas.forEach(h => {
+        if (!subgrupos.has(h.codigo)) subgrupos.set(h.codigo, {rodada: h, records: []});
+        subgrupos.get(h.codigo).records.push({record: r, rodada: h});
+      });
+    });
+    const gruposHtml = [...subgrupos.values()].map(({rodada, records: membros}) => {
+      const chave = `${group.id}:hierarquizacao:${rodada.codigo}`;
+      if (membros.some(({record}) => options.getRecordId(record) === options.selectedId)) expandState[chave] = true;
+      const open = expandState[chave] !== false;
+      return `<div class="layer-group layer-group--hierarquizacao${open ? "" : " collapsed"}" data-hierarquizacao="${escapeAttr(rodada.codigo)}" data-expand-key="${escapeAttr(chave)}">
+        <div class="layer-group-header-row">
+          <button type="button" class="layer-group-header layer-group-header--hierarquizacao" aria-expanded="${open}">
+            <span class="layer-group-toggle" aria-hidden="true">▼</span>
+            <span class="layer-group-name">${escapeHtml(rodada.nome)}<small class="painel-hierarquizacao-situacao">${escapeHtml(statusHierarquizacaoLabel(rodada.status))}</small></span>
+            <span class="layer-group-active-count">${membros.length}</span>
+          </button>
+        </div>
+        <div class="layer-group-body">${membros.map(({record, rodada: h}) => markup(record, {
+          instanceId: rodada.codigo, hierarquizacao: h, onRecordReorder: null,
+        })).join("")}</div>
+      </div>`;
+    }).join("");
+    return gruposHtml + livres.map(r => markup(r)).join("");
+  }
+
   function renderGroupedDemandasSidebar(options) {
     const container = document.querySelector(options.containerSelector || "#records-list");
     if (!container) return;
@@ -342,14 +410,7 @@
             )
           : "";
         const body = records.length
-          ? records
-              .map((r) =>
-                recordMarkup(r, {
-                  ...options,
-                  getRecordGroupId: (rec) => getRecordGroupId(rec, group),
-                })
-              )
-              .join("")
+          ? recordsBody(group, records, {...options, getRecordId, getRecordGroupId}, expandState)
           : `<p class="layers-empty layers-empty--nested">${escapeHtml(group.emptyMessage || "Nenhum registro.")}</p>`;
         return `
           <div class="layer-group layer-group--tipo${open ? "" : " collapsed"}${groupVisible ? "" : " is-map-hidden"}" data-group-id="${escapeAttr(group.id)}">
@@ -376,6 +437,14 @@
         const groupId = grp.dataset.groupId;
         if (groupId) expandState[groupId] = !collapsed;
       });
+      container.querySelectorAll(".layer-group-header--hierarquizacao").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const group = btn.closest(".layer-group--hierarquizacao");
+          const collapsed = group.classList.toggle("collapsed");
+          btn.setAttribute("aria-expanded", String(!collapsed));
+          expandState[group.dataset.expandKey] = !collapsed;
+        });
+      });
     });
 
     bindRecordClicks(container, { ...options, findRecord });
@@ -384,5 +453,5 @@
     bindGroupLabelToggle(container, options);
   }
 
-  global.SLTGroupedSidebar = { renderGroupedDemandasSidebar };
+  global.SLTGroupedSidebar = { renderGroupedDemandasSidebar, resultadosHierarquizacaoHtml };
 })(window);

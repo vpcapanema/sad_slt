@@ -188,7 +188,7 @@
         </div>
         <div class="evr-analise">
           <section class="secao-favorabilidade-sobreposicoes evr-painel">
-            <header class="evr-titulo"><h3>Índices por Demanda e Feição</h3></header>
+            <header class="evr-titulo">            <h3>Índices por Demanda e Feição</h3></header>
             <div class="evr-grafico-conteudo">
               <div class="ea-field"><label for="ev-resultados-base">Superfície em Análise</label><select id="ev-resultados-base" name="base_resultados"></select></div>
               <div class="fv-detalhes-indices">
@@ -317,10 +317,13 @@
           <details class="fv-finalizacao-detalhes">
             <summary>Sobre os arquivos e os próximos passos</summary>
             <ul>
-              <li>O pacote inclui PDF, Excel, CSV, GeoPackages e guia de leitura. Os filtros da tela não limitam o conteúdo exportado.</li>
-              <li>O PDF mostra duas casas decimais; as planilhas preservam a precisão disponível. Os arquivos mantêm os valores por feição ou célula. Para raster, incluem também a média ponderada pela área e a cobertura válida; a medida escolhida para vetores não altera essa regra.</li>
-              <li>Editar os arquivos baixados não atualiza a hierarquização. Corrija os dados de origem e execute uma nova análise quando necessário.</li>
+              <li>O pacote inclui PDF, tabelas, Excel e CSV, GeoPackages e guia de leitura. Os filtros da tela não limitam o conteúdo exportado.</li>
+              <li>O manifesto do pacote registra os hashes SHA-256 dos arquivos para conferência de integridade.</li>
+              <li>Nenhum desses arquivos reproduz as estatísticas exploratórias exibidas na tela; o pacote documenta os resultados calculados por demanda e feição, preservando o pacote original.</li>
+              <li>O PDF mostra duas casas decimais; as tabelas preservam a precisão disponível. Os arquivos mantêm os valores por feição ou célula. Para raster, incluem também a média ponderada pela área e a cobertura válida; a medida escolhida para vetores não altera essa regra.</li>
+              <li>Editar as tabelas não atualiza o SICARD nem a hierarquização. Corrija os dados de origem e execute uma nova análise quando necessário.</li>
               <li>Após registrar os resultados, utilize a navegação superior para continuar à fase seguinte.</li>
+              <li>Os resultados registrados subsidiam a Fase 3; baixar os arquivos não executa nem grava essa fase.</li>
             </ul>
           </details>
         </div>

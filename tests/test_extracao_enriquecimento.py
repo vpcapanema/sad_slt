@@ -175,14 +175,27 @@ def test_execucao_do_servico_grava_camadas_pacote_e_finaliza_sem_erro(monkeypatc
     from contextlib import contextmanager
     from api.services import ciclo_vida_arquivos as ciclo
     from api.services import extracao_atributos as service
+    from api.services import extracao_preparacao as preparo
     from api.services import municipal_layer
     from api.services.extracao_atributos_regras import validar_conjunto
+    from tests.territorial_ogr_helpers import camada as camada_ogr
     entrada = gdf([LineString([(X + 10, Y + 50), (X + 190, Y + 50)]), Point(X + 5, Y + 5)], proj_id=['P1', 'P2'])
     frames = {'entrada': entrada, 'mun': MUNICIPIOS, 'uc': gdf([box(X, Y, X + 50, Y + 100)], nome=['UC'])}
     monkeypatch.setattr(municipal_layer, 'carregar_para_extracao', lambda ident: frames[ident])
     gravadas, inseridos, finalizacoes, usos = [], [], [], []
-    monkeypatch.setattr(service.geo, 'registrar_camada',
-                        lambda frame, nome, origem, **kw: gravadas.append((nome, len(frame))) or f'camada_{len(gravadas)}')
+    camadas_registradas = {}
+
+    def registrar_camada(frame, nome, origem, **kw):
+        identificador = f'camada_{len(gravadas) + 1}'
+        gravadas.append((nome, len(frame)))
+        camadas_registradas[identificador] = frame
+        return identificador
+
+    monkeypatch.setattr(service.geo, 'registrar_camada', registrar_camada)
+    monkeypatch.setattr(
+        preparo.nativo, 'carregar_referencia',
+        lambda ident: camada_ogr(camadas_registradas[ident]),
+    )
 
     class Conexao:
         def execute(self, sql, parametros=None):

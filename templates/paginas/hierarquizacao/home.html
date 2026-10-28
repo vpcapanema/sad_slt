@@ -116,7 +116,7 @@
         </div>
       </section>
 
-      <section id="hier-complementacao-pos-cadastro" class="card" hidden aria-labelledby="hier-complementacao-pergunta">
+      <section id="hier-complementacao-pos-cadastro" class="secao-hier-complementacao-pos-cadastro card card-hier-complementacao-pos-cadastro" hidden aria-labelledby="hier-complementacao-pergunta">
         <h2 id="hier-complementacao-pergunta">Solicitar complementação dos atributos agora ou deixar para a Fase 3?</h2>
         <p>O cadastro já foi salvo. Demandas com atributos faltantes permanecem aguardando complementação, mesmo sem pedido ou e-mail. A opção Depois não cria pedido nem envia e-mail.</p>
         <div class="btn-row">
@@ -184,9 +184,9 @@
     <section class="ahp-subcard cadastro-card card-matriz-de-premissas-e-criterios secao-matriz-de-premissas-e-criterios">
       <div class="ahp-subsection-title"><span class="ahp-subsection-num">4</span><h2>Matriz de premissas e critérios</h2></div>
       <div class="ahp-section-body">
-        <p class="hier-instrucao"><i class="fa-solid fa-circle-info" aria-hidden="true"></i><span>Anexe a matriz que define o contexto, as premissas e os critérios desta hierarquização. Nos julgamentos associados, os colaboradores indicarão a intensidade de importância entre esses critérios. A consolidação calcula os pesos, que, após homologados, serão aplicados na fase 3 aos valores de cada demanda nos critérios correspondentes.</span></p>
+        <p class="hier-instrucao"><i class="fa-solid fa-circle-info" aria-hidden="true"></i><span>Selecione uma única matriz cadastrada ou cadastre um novo arquivo. A hierarquização será associada à matriz pelo seu identificador, permitindo reutilizar a mesma matriz nos julgamentos.</span></p>
+        <div id="hier-matrix-picker">{% include "componentes/_seletor_matriz_criterios.html" %}</div>
         <div class="hier-matriz-controles">
-          <label class="process-field" for="hier-criteria-matrix"><span>Matriz de premissas e critérios</span><input id="hier-criteria-matrix" type="file" accept=".json,.csv,.xlsx" required aria-describedby="hier-criteria-matrix-formats hier-criteria-matrix-summary"></label>
           <a href="/public/documentacao/matrizes/Modelo_Matriz_Criterios_Premissas_SLT.xlsx" download="Modelo_Matriz_Criterios_Premissas_SLT.xlsx" class="btn btn-secondary btn-sm"><i class="fas fa-file-excel" aria-hidden="true"></i> Baixar modelo XLSX</a>
         </div>
         <p id="hier-criteria-matrix-formats" class="hier-field-help">Formatos aceitos: JSON, CSV ou XLSX.</p>
@@ -214,6 +214,7 @@
     {% include "componentes/modal/_modal_classificacao_resultante_hierarquizacoes_realizadas_gestao_das_hierarquizacoes.html" %}
     {% include "componentes/modal/_modal_matriz_de_criterios_e_premissas_hierarquizacoes_realizadas_gestao_das_hierarquizacoes.html" %}
     {% include "componentes/modal/_modal_dados_completos_da_hierarquizacao_hierarquizacoes_realizadas_gestao_das_hierarquizacoes.html" %}
+    <template id="hier-matrix-editor-template">{% include "componentes/_seletor_matriz_criterios.html" %}</template>
     <div id="modal-relatorios" class="json-modal-backdrop hidden" data-modal role="dialog" aria-modal="true" aria-labelledby="modal-relatorios-title">
       <div class="json-modal">
         <header class="json-modal-head">
@@ -250,6 +251,7 @@
   <script src="/restrict/hierarquizacao/js/demandas-grupo.js?v=20261004-1"></script>
   <script src="/assets/vendor/xlsx/xlsx-0.18.5.min.js"></script>
   <script src="/assets/js/matriz-criterios-arquivo.js?v=20261009"></script>
-  <script src="/restrict/hierarquizacao/js/processos.js?v=20261027-padrao-ui"></script>
+  <script src="/assets/js/matrizes-criterios.js?v=20261028"></script>
+  <script src="/restrict/hierarquizacao/js/processos.js?v=20261028-matrizes-independentes"></script>
   <script src="/assets/js/paginas/hierarquizacao-home-inline-1.js"></script>
 {% endblock %}

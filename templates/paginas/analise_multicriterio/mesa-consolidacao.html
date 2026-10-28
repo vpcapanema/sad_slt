@@ -29,7 +29,7 @@
     <p class="standard-page-hero__description">Escolha o julgamento, defina quais respostas entram e com qual regra, confira o resultado em tempo real e grave ou homologue a análise, tudo em uma só tela.</p>
   </section>
 
-  <section class="card ahp-step-section ami-panel standard-table-section" id="mesa-julgamentos">
+  <section class="secao-mesa-julgamentos card card-mesa-julgamentos ahp-step-section ami-panel standard-table-section" id="mesa-julgamentos">
     <div class="ahp-section-label"><span><i class="fas fa-table" aria-hidden="true"></i> Julgamentos com respostas colaborativas</span></div>
     <div class="ahp-section-body">
       <p class="mesa-aviso" id="mesa-demo-pagina" hidden><i class="fa-solid fa-flask" aria-hidden="true"></i> Modo demonstração: os julgamentos, as respostas e as análises são fictícios, mantidos apenas nesta aba. Nada é lido nem gravado no servidor.</p>
@@ -39,7 +39,7 @@
     </div>
   </section>
 
-  <section class="card ahp-step-section is-hidden" id="mesa" aria-labelledby="mesa-titulo">
+  <section class="secao-mesa-consolidacao card card-mesa-consolidacao ahp-step-section is-hidden" id="mesa" aria-labelledby="mesa-titulo">
     <div class="ahp-section-label"><i class="fas fa-scale-balanced" aria-hidden="true"></i><span id="mesa-titulo">Mesa de consolidação · <span id="mesa-titulo-nome"></span></span></div>
     <div class="ahp-section-body">
       <p class="mesa-aviso" id="mesa-demo" hidden><i class="fa-solid fa-flask" aria-hidden="true"></i> Dados de demonstração: gravar e homologar atuam apenas na memória desta aba.</p>
@@ -68,7 +68,7 @@
         </div>
       </div>
 
-      <section class="ahp-subcard">
+      <section class="secao-mesa-subcard ahp-subcard">
         <div class="ahp-subsection-title"><span class="ahp-subsection-num">1</span><span>Quem entra e com qual regra</span></div>
         <p class="ami-subsection-hint">Marque as respostas que devem compor a consolidação. A coluna “No cálculo” mostra o efeito real das marcações e das regras; “RC do grupo sem ele” e “Pares destoantes” indicam quem mais pesa na inconsistência.</p>
         <fieldset class="mesa-regras">
@@ -87,7 +87,7 @@
         <div id="mesa-tabela-respostas"></div>
       </section>
 
-      <section class="ahp-subcard">
+      <section class="secao-mesa-subcard ahp-subcard">
         <div class="ahp-subsection-title"><span class="ahp-subsection-num">2</span><span>Resultado da consolidação</span></div>
         <div class="mesa-abas" role="tablist" aria-label="Visões do resultado">
           <button type="button" role="tab" id="mesa-aba-pesos" aria-controls="mesa-painel-pesos" aria-selected="true">Pesos dos critérios</button>
@@ -108,7 +108,7 @@
         </div>
       </section>
 
-      <section class="ahp-subcard">
+      <section class="secao-mesa-subcard ahp-subcard">
         <div class="ahp-subsection-title"><span class="ahp-subsection-num">3</span><span>Análises gravadas e homologação</span></div>
         <p class="ami-subsection-hint">Selecione uma análise para carregá-la na mesa (restaura respostas e regras para revisão) ou para homologá-la. A coluna “Diferença máx. para a mesa” compara os pesos de cada análise gravada com a prévia atual.</p>
         <div id="mesa-tabela-analises"></div>

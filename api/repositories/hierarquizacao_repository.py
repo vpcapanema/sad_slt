@@ -14,7 +14,7 @@ from psycopg import sql
 from psycopg.types.json import Jsonb
 
 from api.db.connection import get_connection, commit_unless_atomic
-from api.constants import STATUS_EM_HIERARQUIZACAO, STATUS_HIERARQUIZACAO_COMPLEMENTACAO, STATUS_UNIVERSO_AHP
+from api.constants import STATUS_EM_HIERARQUIZACAO, STATUS_HIERARQUIZACAO_COMPLEMENTACAO, STATUS_POS_APROVACAO, STATUS_UNIVERSO_AHP, TIPO_DEMANDA_ID_TO_COD
 from api.exceptions import DemandaValidationError
 from api.services.atributos_hierarquizacao import atualizar_cadastrais, colunas_da_hierarquizacao, pendencias
 
@@ -25,12 +25,14 @@ _SELECT_BASE = """
         h.id,
         h.codigo,
         h.config_id,
+        h.matriz_id,
         h.grupo_demanda_id,
         g.codigo AS grupo_demanda_codigo,
         c.codigo AS config_codigo,
         (SELECT a.id
            FROM ahp.comparacao_colaborativa_ambiente a
-          WHERE a.hierarquizacao_id = h.id
+          WHERE a.matriz_id = h.matriz_id
+            AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(a.criterios) c WHERE c ? '_superficie_id')
           ORDER BY (a.status = 'ativa') DESC, a.criado_em DESC
           LIMIT 1) AS julgamento_id,
         c.criterios AS config_criterios,
@@ -160,10 +162,70 @@ def insert(data: dict[str, Any], *, status_transicao: dict[str, Any] | None = No
     return found
 
 
+def _sinalizar_composicao(conn: Any, row: dict[str, Any]) -> None:
+    """O grupo (agente agrupador) é a fonte da composição; divergência marca a hierarquização."""
+    dados = row.get("dados_hierarquizacao")
+    if not dados or not row.get("grupo_demanda_id"):
+        return
+    grupo = conn.execute(
+        "SELECT objetos FROM demandas.grupos_demandas WHERE id=%s", (row["grupo_demanda_id"],)
+    ).fetchone()
+    cabecalho = dados.setdefault("cabecalho_grupo", {})
+    cabecalho.pop("composicao_divergente", None)
+    if not grupo:
+        return
+    do_grupo = {str(o["id"]) for o in grupo["objetos"] or [] if isinstance(o, dict) and o.get("id")}
+    da_hierarquizacao = {
+        str(o["cabecalho_objeto"]["demanda_id"]) for o in dados.get("objetos") or []
+        if (o.get("cabecalho_objeto") or {}).get("demanda_id")
+    }
+    adicionadas, removidas = sorted(do_grupo - da_hierarquizacao), sorted(da_hierarquizacao - do_grupo)
+    if adicionadas or removidas:
+        cabecalho["composicao_divergente"] = {"adicionadas": adicionadas, "removidas": removidas}
+
+
+def _hidratar(conn: Any, row: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Faz o registro cadastral vir sempre do cadastro vivo.
+
+    A rodada só guarda o que as fases produzem (`hierarquizacao`, `atributos_fase3`,
+    `complementacao_atributos`); qualquer campo cadastral copiado é sobreposto.
+    """
+    if not row or row.get("tipo_demanda_id") not in TIPO_DEMANDA_ID_TO_COD:
+        return row
+    _sinalizar_composicao(conn, row)
+    objetos = (row.get("dados_hierarquizacao") or {}).get("objetos") or []
+    ids = sorted({str(o["cabecalho_objeto"]["demanda_id"]) for o in objetos
+                  if (o.get("cabecalho_objeto") or {}).get("demanda_id")})
+    if not ids:
+        return row
+    tabela = sql.Identifier("demandas", TIPO_DEMANDA_ID_TO_COD[row["tipo_demanda_id"]])
+    vivos = {
+        str(d["id"]): d for d in conn.execute(
+            sql.SQL("SELECT * FROM {} WHERE id=ANY(%s::uuid[])").format(tabela), (ids,)
+        ).fetchall()
+    }
+    for objeto in objetos:
+        cab = objeto.get("cabecalho_objeto") or {}
+        vivo = vivos.get(str(cab.get("demanda_id")))
+        if not vivo:
+            continue
+        for campo in ("codigo", "nome", "status", "latitude", "longitude"):
+            cab[campo] = vivo[campo]
+        atributos = cab.setdefault("atributos", {})
+        for campo in atributos:
+            if campo in vivo:
+                atributos[campo] = vivo[campo]
+    for posicao in row.get("ranking") or []:
+        vivo = vivos.get(str(posicao.get("demanda_id")))
+        if vivo:
+            posicao["nome"], posicao["codigo"] = vivo["nome"], vivo["codigo"]
+    return row
+
+
 def get_by_id(hierarquizacao_id: Any) -> dict[str, Any] | None:
     query = _SELECT_BASE + " WHERE h.id = %s"
     with get_connection() as conn:
-        return conn.execute(query, (hierarquizacao_id,)).fetchone()
+        return _hidratar(conn, conn.execute(query, (hierarquizacao_id,)).fetchone())
 
 
 def get_by_codigo(codigo: str, *, for_update: bool = False) -> dict[str, Any] | None:
@@ -171,7 +233,7 @@ def get_by_codigo(codigo: str, *, for_update: bool = False) -> dict[str, Any] | 
     if for_update:
         query += " FOR UPDATE OF h"
     with get_connection() as conn:
-        return conn.execute(query, (codigo,)).fetchone()
+        return _hidratar(conn, conn.execute(query, (codigo,)).fetchone())
 
 
 def list_all(
@@ -197,22 +259,196 @@ def list_all(
         params.append(config_id)
     query += " ORDER BY h.criado_em DESC"
     with get_connection() as conn:
-        return list(conn.execute(query, params).fetchall())
+        return [_hidratar(conn, linha) for linha in conn.execute(query, params).fetchall()]
 
 
-def update(codigo: str, data: dict[str, Any]) -> dict[str, Any] | None:
+MENSAGEM_HOMOLOGADA = (
+    "Esta hierarquização está homologada e não pode ser recalculada nem alterada. "
+    "Peça a outro gestor ou a um administrador que reverta a homologação."
+)
+
+
+def update(
+    codigo: str, data: dict[str, Any], *, permitir_homologada: bool = False
+) -> dict[str, Any] | None:
+    """Grava a rodada. Rodada homologada só muda pelos fluxos de homologação."""
     if not data:
         return get_by_codigo(codigo)
-    assignments = [sql.SQL("{} = {}").format(sql.Identifier(k), sql.Placeholder(k)) for k in data]
-    params: dict[str, Any] = {k: _prepare(k, v) for k, v in data.items()}
-    params["codigo"] = codigo
-    query = sql.SQL("UPDATE {table} SET {sets} WHERE codigo = {codigo}").format(
-        table=_TABLE,
-        sets=sql.SQL(", ").join(assignments),
-        codigo=sql.Placeholder("codigo"),
-    )
+    data = deepcopy(data)
     with get_connection() as conn:
+        atual = conn.execute(
+            sql.SQL("SELECT status FROM {} WHERE codigo = %s FOR UPDATE").format(_TABLE), (codigo,)
+        ).fetchone()
+        if atual and atual["status"] == "homologada" and not permitir_homologada:
+            raise DemandaValidationError(MENSAGEM_HOMOLOGADA, field="status")
+        assignments = [sql.SQL("{} = {}").format(sql.Identifier(k), sql.Placeholder(k)) for k in data]
+        params: dict[str, Any] = {k: _prepare(k, v) for k, v in data.items()}
+        params["codigo"] = codigo
+        query = sql.SQL("UPDATE {table} SET {sets} WHERE codigo = {codigo}").format(
+            table=_TABLE,
+            sets=sql.SQL(", ").join(assignments),
+            codigo=sql.Placeholder("codigo"),
+        )
         conn.execute(query, params)
+        commit_unless_atomic(conn)
+    return get_by_codigo(codigo)
+
+
+def sincronizar_composicao(
+    codigo: str, dados: dict[str, Any], adicionadas: list[str]
+) -> dict[str, Any] | None:
+    """Grava a composição alinhada ao grupo; as demandas novas entram em hierarquização."""
+    with get_connection() as conn:
+        row = conn.execute(
+            sql.SQL("SELECT status, tipo_demanda_id FROM {} WHERE codigo=%s FOR UPDATE").format(_TABLE), (codigo,)
+        ).fetchone()
+        if not row:
+            raise DemandaValidationError("Hierarquização não encontrada.", field="codigo")
+        if row["status"] == "homologada":
+            raise DemandaValidationError(MENSAGEM_HOMOLOGADA, field="status")
+        if adicionadas:
+            tabela = sql.Identifier("demandas", TIPO_DEMANDA_ID_TO_COD[row["tipo_demanda_id"]])
+            conn.execute(
+                sql.SQL("UPDATE {} SET status=%s WHERE id=ANY(%s::uuid[]) AND status=%s").format(tabela),
+                (STATUS_EM_HIERARQUIZACAO, adicionadas, STATUS_POS_APROVACAO),
+            )
+        conn.execute(
+            sql.SQL("UPDATE {} SET dados_hierarquizacao=%s WHERE codigo=%s").format(_TABLE),
+            (_prepare("dados_hierarquizacao", dados), codigo),
+        )
+        commit_unless_atomic(conn)
+    return get_by_codigo(codigo)
+
+
+def _concluir_demandas(conn: Any, codigo: str, dados: dict[str, Any]) -> None:
+    """Conclui o ciclo técnico na mesma transação da síntese; não publica."""
+    row = conn.execute(
+        "SELECT tipo_demanda_id FROM hierarquizacao_demandas.hierarquizacao_portfolio WHERE codigo=%s FOR UPDATE",
+        (codigo,),
+    ).fetchone()
+    if not row:
+        raise DemandaValidationError("Hierarquização não encontrada para concluir as demandas.", field="codigo")
+    tipo = TIPO_DEMANDA_ID_TO_COD[row["tipo_demanda_id"]]
+    tabela = sql.Identifier("demandas", tipo)
+    objetos = dados.get("objetos") or []
+    ids = [o["cabecalho_objeto"]["demanda_id"] for o in objetos]
+    if not ids:
+        return
+    cadastros = conn.execute(
+        sql.SQL("SELECT id, status FROM {} WHERE id=ANY(%s::uuid[]) ORDER BY id FOR UPDATE").format(tabela),
+        (ids,),
+    ).fetchall()
+    por_id = {str(c["id"]): c["status"] for c in cadastros}
+    if any(str(i) not in por_id for i in ids):
+        raise DemandaValidationError("Demanda da hierarquização não encontrada.", field="demanda_id")
+    if STATUS_EM_HIERARQUIZACAO in por_id.values():
+        permitida = conn.execute("""
+            SELECT 1 FROM demandas.dom_status_demanda_transicao
+            WHERE status_origem=%s AND status_destino='hierarq_finalizada'
+        """, (STATUS_EM_HIERARQUIZACAO,)).fetchone()
+        if not permitida:
+            raise DemandaValidationError("O domínio não permite concluir a hierarquização das demandas.", field="status")
+        conn.execute(
+            sql.SQL("UPDATE {} SET status='hierarq_finalizada' WHERE id=ANY(%s::uuid[]) AND status=%s").format(tabela),
+            (ids, STATUS_EM_HIERARQUIZACAO),
+        )
+    for objeto in objetos:
+        cab = objeto["cabecalho_objeto"]
+        atual = por_id[str(cab["demanda_id"])]
+        cab["status"] = "hierarq_finalizada" if atual == STATUS_EM_HIERARQUIZACAO else atual
+
+
+def _registrar_historico(dados: dict[str, Any], acao: str, usuario_id: Any) -> None:
+    historico = dados.setdefault("cabecalho_grupo", {}).setdefault("historico_homologacao", [])
+    historico.append({
+        "acao": acao,
+        "usuario_id": str(usuario_id) if usuario_id else None,
+        "em": datetime.now().astimezone().isoformat(),
+    })
+
+
+def _bloquear_para_status(conn: Any, codigo: str, esperado: str, mensagem: str) -> dict[str, Any]:
+    row = conn.execute(
+        sql.SQL("SELECT status, ranking, homologado_por, dados_hierarquizacao FROM {} WHERE codigo=%s FOR UPDATE").format(_TABLE),
+        (codigo,),
+    ).fetchone()
+    if not row:
+        raise DemandaValidationError("Hierarquização não encontrada.", field="codigo")
+    if row["status"] != esperado:
+        raise DemandaValidationError(mensagem, field="status")
+    return row
+
+
+def homologar(codigo: str, usuario_id: Any) -> dict[str, Any] | None:
+    """Homologa a rodada e conclui as demandas na mesma transação; não publica."""
+    with get_connection() as conn:
+        row = _bloquear_para_status(
+            conn, codigo, "calculada", "Só é possível homologar uma hierarquização com ranking calculado.",
+        )
+        if not row["ranking"]:
+            raise DemandaValidationError("Gere a síntese antes de homologar.", field="status")
+        dados = deepcopy(row["dados_hierarquizacao"] or {})
+        _concluir_demandas(conn, codigo, dados)
+        _registrar_historico(dados, "homologada", usuario_id)
+        conn.execute(
+            sql.SQL("UPDATE {} SET status='homologada', homologado_em=now(), homologado_por=%s, dados_hierarquizacao=%s WHERE codigo=%s").format(_TABLE),
+            (usuario_id, _prepare("dados_hierarquizacao", dados), codigo),
+        )
+        commit_unless_atomic(conn)
+    return get_by_codigo(codigo)
+
+
+def _reabrir_demandas(conn: Any, codigo: str, dados: dict[str, Any]) -> None:
+    """Devolve as demandas a 'em hierarquização', salvo se outra rodada homologada as mantém."""
+    row = conn.execute(
+        sql.SQL("SELECT tipo_demanda_id FROM {} WHERE codigo=%s").format(_TABLE), (codigo,)
+    ).fetchone()
+    tabela = sql.Identifier("demandas", TIPO_DEMANDA_ID_TO_COD[row["tipo_demanda_id"]])
+    ids = [o["cabecalho_objeto"]["demanda_id"] for o in dados.get("objetos") or []]
+    if not ids:
+        return
+    permitida = conn.execute("""
+        SELECT 1 FROM demandas.dom_status_demanda_transicao
+        WHERE status_origem='hierarq_finalizada' AND status_destino=%s
+    """, (STATUS_EM_HIERARQUIZACAO,)).fetchone()
+    if not permitida:
+        raise DemandaValidationError(
+            "O domínio não permite reabrir a hierarquização das demandas. Aplique a migração 150.", field="status",
+        )
+    mantidas = {
+        str(r["demanda_id"]) for r in conn.execute(
+            sql.SQL("""
+                SELECT DISTINCT o.item->'cabecalho_objeto'->>'demanda_id' AS demanda_id
+                FROM {} h
+                CROSS JOIN LATERAL jsonb_array_elements(COALESCE(h.dados_hierarquizacao->'objetos', '[]'::jsonb)) AS o(item)
+                WHERE h.status='homologada' AND h.codigo<>%s AND h.tipo_demanda_id=%s
+            """).format(_TABLE),
+            (codigo, row["tipo_demanda_id"]),
+        ).fetchall()
+    }
+    liberar = [i for i in ids if str(i) not in mantidas]
+    if liberar:
+        conn.execute(
+            sql.SQL("UPDATE {} SET status=%s WHERE id=ANY(%s::uuid[]) AND status='hierarq_finalizada'").format(tabela),
+            (STATUS_EM_HIERARQUIZACAO, liberar),
+        )
+    for objeto in dados.get("objetos") or []:
+        cab = objeto["cabecalho_objeto"]
+        if str(cab["demanda_id"]) in {str(i) for i in liberar} and cab.get("status") == "hierarq_finalizada":
+            cab["status"] = STATUS_EM_HIERARQUIZACAO
+
+
+def reverter_homologacao(codigo: str, usuario_id: Any) -> dict[str, Any] | None:
+    """Reabre a rodada (volta a 'calculada') e devolve as demandas ao estado em hierarquização."""
+    with get_connection() as conn:
+        row = _bloquear_para_status(conn, codigo, "homologada", "Só é possível reverter uma hierarquização homologada.")
+        dados = deepcopy(row["dados_hierarquizacao"] or {})
+        _reabrir_demandas(conn, codigo, dados)
+        _registrar_historico(dados, "revertida", usuario_id)
+        conn.execute(
+            sql.SQL("UPDATE {} SET status='calculada', homologado_em=NULL, homologado_por=NULL, dados_hierarquizacao=%s WHERE codigo=%s").format(_TABLE),
+            (_prepare("dados_hierarquizacao", dados), codigo),
+        )
         commit_unless_atomic(conn)
     return get_by_codigo(codigo)
 

@@ -69,7 +69,7 @@ def test_documentation_preserves_reverse_proxy_links(client):
     assert response.status_code == 200
     assert f'href="/sicard{PAGE}baixa-renda-2022.csv"' in response.text
     assert 'href="/sicard/config/documentacao-camadas-territoriais.json"' in response.text
-    assert 'href="/sicard/config/catalogo-territorial-incorporado.json"' in response.text
+    assert 'href="/sicard/config/catalogo-setorial-on-demand.json"' in response.text
 
 
 def test_download_is_exact_versioned_csv(client):
@@ -149,7 +149,7 @@ def test_template_escapes_data_and_has_no_inline_execution(client, monkeypatch):
 
 
 def test_incorporated_catalog_is_distinct_and_fully_rendered(client):
-    catalog = json.loads((CONFIG / "catalogo-territorial-incorporado.json").read_text(encoding="utf-8"))
+    catalog = json.loads((CONFIG / "catalogo-setorial-on-demand.json").read_text(encoding="utf-8"))
     response = client.get(PAGE)
     assert response.status_code == 200
     items = catalog["atributos_setoriais"]
@@ -159,22 +159,21 @@ def test_incorporated_catalog_is_distinct_and_fully_rendered(client):
     for item in items:
         assert f'id="atributo-{item["id"]}"' in response.text
         assert item["campo"] in response.text
-        assert f'{item["cobertura"]} / 103319' in response.text
         assert item["detalhe"]["dicionario"] in response.text
         if item["origem"] == "combinados":
             assert item["detalhe"]["formula"] in response.text
             assert item["detalhe"]["homologado_hierarquizacao"] is False
+        else:
+            assert item["cobertura"] is None
     assert len(catalog["combinados_municipais"]) == 18
     for item in catalog["combinados_municipais"]:
         assert item["cobertura"] == item["conferida"] == 645
         assert item["campo"] in response.text
-    for item in catalog["procedencia"]:
-        assert item["sha256"] in response.text
     for text in (
         "prévia histórica", "3519 originais e 10 combinados", "6.393 atributos",
-        "A cobertura varia conforme o conjunto", "células com sigilo X",
+        "A cobertura varia conforme o conjunto", "Fonte oficial consultada sob demanda",
         "mesmos IDs, campos, universos ou períodos",
-        "carga aditiva de agregados oficiais de universo do IBGE foi aplicada",
+        "O catálogo descreve os 3.519 campos",
     ):
         assert text in response.text
     assert "Está em andamento" not in response.text
@@ -186,35 +185,22 @@ def test_incorporated_catalog_is_distinct_and_fully_rendered(client):
         "renda", "registro_nascimento", "entorno_faces", "entorno_moradores", "entorno_domicilios",
         "domicilio3", "pessoas_indigenas", "pessoas_quilombolas",
     }
-    assert all(item["sigilos_x"] >= 0 for item in sources)
-    assert catalog["completude"]["completa"] is True
-    assert "completude da carga setorial não está certificada" not in response.text
+    assert all(item["carregamento"] == "sob_demanda" for item in sources)
+    assert catalog["estrategia"] == "catalogo_de_metadados_com_valores_carregados_sob_demanda"
+    assert catalog["completude"]["metadados_completos"] is True
 
 
-@pytest.mark.parametrize("metadata", ["ausente", "nulo", "zero"])
-def test_relatorio_parcial_nao_afirma_carga_integral_nem_inventa_sigilo(client, monkeypatch, metadata):
+def test_catalogo_parcial_nao_afirma_metadados_completos(client, monkeypatch):
     original = json.load
 
     def partial(source, *args, **kwargs):
         report = original(source, *args, **kwargs)
         if "atributos_setoriais" in report:
             report["atributos_setoriais"] = report["atributos_setoriais"][:204]
-            report.pop("completude", None)
-            report["conjuntos_setoriais"] = [{
-                "conjunto": "basico", "url": "https://ftp.ibge.gov.br/",
-                "campos": 9, "setores": 103319,
-            }]
-            if metadata != "ausente":
-                report["conjuntos_setoriais"][0]["sigilos_x"] = None if metadata == "nulo" else 0
         return report
 
     monkeypatch.setattr("api.server.json.load", partial)
     response = client.get(PAGE)
     assert response.status_code == 200
-    assert "completude da carga setorial não está certificada" in response.text
-    assert "Abrange todos os campos dos dicionários" not in response.text
-    if metadata == "zero":
-        assert "0 células com sigilo X" in response.text
-    else:
-        assert "Contagem de células com sigilo X não informada" in response.text
-        assert "0 células com sigilo X" not in response.text
+    assert "O catálogo de metadados não está completo." in response.text
+    assert "não significa que todos os valores estejam carregados no banco" in response.text

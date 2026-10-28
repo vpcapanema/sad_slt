@@ -1,0 +1,11 @@
+<div data-matrix-picker>
+  <label class="process-field c-form-group"><span>Matriz cadastrada</span><select data-matrix-select class="c-form-control"><option value="">Selecione uma matriz…</option></select></label>
+  <p class="form-help">Reutilize uma matriz existente ou cadastre um arquivo independente. O cadastro da matriz não cria uma hierarquização nem um julgamento.</p>
+  <label class="process-field c-form-group"><span>Nome da nova matriz</span><input data-matrix-name class="c-form-control" type="text" maxlength="200"></label>
+  <label class="process-field c-form-group"><span>Arquivo da nova matriz (JSON, CSV ou XLSX)</span><input data-matrix-file class="c-form-control" type="file" accept=".json,.csv,.xlsx"></label>
+  <div class="ahp-form-actions">
+    <button data-matrix-upload type="button" class="btn btn-secondary"><i class="fas fa-upload" aria-hidden="true"></i> Cadastrar matriz</button>
+    <button data-matrix-refresh type="button" class="btn btn-secondary"><i class="fas fa-arrows-rotate" aria-hidden="true"></i> Atualizar matrizes</button>
+  </div>
+  <p data-matrix-feedback class="form-help" role="status" aria-live="polite"></p>
+</div>

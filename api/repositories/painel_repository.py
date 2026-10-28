@@ -151,7 +151,37 @@ def list_all() -> list[dict[str, Any]]:
         planos = list(conn.execute(_PLANOS_SQL).fetchall())
         programas = list(conn.execute(_PROGRAMAS_SQL).fetchall())
         projetos = list(conn.execute(_PROJETOS_SQL).fetchall())
-    return planos + programas + projetos
+        resultados = conn.execute("""
+            SELECT h.codigo, h.nome, h.status, h.tipo_demanda_id, h.atualizado_em,
+                   h.dados_hierarquizacao->'cabecalho_grupo'->'sintese' AS sintese,
+                   h.dados_hierarquizacao->'cabecalho_grupo'->'relatorios' AS relatorios,
+                   jsonb_build_object(
+                       'cabecalho_objeto', jsonb_build_object(
+                           'codigo', COALESCE(vivo.codigo, o.item->'cabecalho_objeto'->>'codigo')
+                       ),
+                       'hierarquizacao', o.item->'hierarquizacao'
+                   ) AS objeto
+            FROM hierarquizacao_demandas.hierarquizacao_portfolio h
+            CROSS JOIN LATERAL jsonb_array_elements(
+                COALESCE(h.dados_hierarquizacao->'objetos', '[]'::jsonb)
+            ) AS o(item)
+            LEFT JOIN (
+                SELECT id::text AS id, codigo FROM demandas.plano
+                UNION ALL SELECT id::text, codigo FROM demandas.programa
+                UNION ALL SELECT id::text, codigo FROM demandas.projeto
+            ) vivo ON vivo.id = o.item->'cabecalho_objeto'->>'demanda_id'
+            ORDER BY h.criado_em DESC, h.codigo
+        """).fetchall()
+    por_demanda: dict[tuple[int, str], list[dict[str, Any]]] = {}
+    for resultado in resultados:
+        cab = (resultado["objeto"] or {}).get("cabecalho_objeto") or {}
+        chave = (resultado["tipo_demanda_id"], cab.get("codigo"))
+        por_demanda.setdefault(chave, []).append(resultado)
+    tipos = {"plano": 1, "programa": 2, "projeto": 3}
+    return [
+        {**row, "hierarquizacoes": por_demanda.get((tipos[row["tipo"]], row["codigo"]), [])}
+        for row in planos + programas + projetos
+    ]
 
 
 def list_filter_metadata() -> list[dict[str, Any]]:

@@ -18,8 +18,8 @@
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Título**                 | Metodologia do Sistema de Hierarquização de Demandas — SICARD                                                                                                         |
 | **Número**                 | NT-SICARD-001/2026                                                                                                                                                       |
-| **Versão**                 | 1.59                                                                                                                                                                      |
-| **Data de emissão**        | 27/10/2026                                                                                                                                                               |
+| **Versão**                 | 1.62                                                                                                                                                                      |
+| **Data de emissão**        | 28/10/2026                                                                                                                                                               |
 | **Classificação**         | Documento técnico-metodológico de entrega ao cliente                                                                                                                   |
 | **Sistema**                 | SICARD — Sistema Inteligente de Cadastro e Ranking de Demandas                                                                                                        |
 | **Domínio de aplicação** | Logística e transportes. Concebido no âmbito do Plano de Logística Integrada do Estado de São Paulo (PLI-SP), aplica-se a qualquer objeto de demanda desse domínio. |
@@ -93,6 +93,9 @@
 | 1.57    | 27/10/2026 | `[preencher]` | Reestruturação metodológica dos relatórios das Fases 1 e 2 com cabeçalho contextualizador padronizado, apresentação dos resultados principais por demanda, mapas completos das fontes no contexto estadual (incluindo superfícies de grade e rede na Fase 2), seção explícita dos critérios utilizados e reforço da rastreabilidade por revisão física das fontes e metadados. |
 | 1.58    | 27/10/2026 | `[preencher]` | Padronização institucional dos relatórios das Fases 1 e 2 com marca, nome completo do sistema, slogan, títulos contextualizados, identificação em campos e tópicos justificados; aplicação das cores de situação na Fase 1 e legenda em duas colunas com gradações e texturas cartográficas nas camadas extensas, sem alteração de resultados ou classificação. |
 | 1.59    | 27/10/2026 | `[preencher]` | Explicitação da finalidade de implantação/execução nos títulos dos relatórios das Fases 1 e 2 e extensão do padrão institucional à emissão autenticada do relatório da Fase 3, com prioridade, ranking, completude, critérios, pesos, contribuições e pendências persistidos; bloqueio de emissão com resultados desatualizados, sem alteração de cálculo ou homologação. |
+| 1.60    | 28/10/2026 | `[preencher]` | Vinculação da consulta dos resultados individuais às respectivas rodadas nos painéis público e restrito, com agrupamento por tipo e hierarquização, geometria cadastral única por demanda e distinção entre conclusão técnica, homologação e controle de publicação pública, sem alteração das fórmulas ou dos pesos. |
+| 1.61    | 28/10/2026 | `[preencher]` | Individualização das matrizes de critérios e premissas, vínculo direto dos julgamentos AHP à matriz e associação de uma matriz por hierarquização; verificação de equivalência e confirmação explícita para reuso de pesos, com novos julgamentos e recálculo quando houver alteração metodológica. |
+| 1.62    | 28/10/2026 | `[preencher]` | Substituição da carga antecipada dos valores setoriais pela disponibilização integral dos metadados e obtenção, validação e persistência dos atributos originais sob demanda, sem alteração das fórmulas ou dos critérios metodológicos. |
 
 ---
 
@@ -741,13 +744,17 @@ de viabilidade auditada em 25/10/2026, preservada em
 O registro explicita campos de origem, fórmulas, fontes, universo, período,
 unidade, cobertura e ressalvas de 46 indicadores originais ou combinados.
 Esse registro preliminar é mantido sem alterações como prévia histórica,
-distinta do relatório da carga aplicada e auditada, versionado em
-`config/catalogo-territorial-incorporado.json`. O relatório registra 3.529 atributos
-setoriais (3.519 originais e 10 combinados), com descrições oficiais, campos,
-fórmulas, cobertura e procedência SHA-256, além de 18 combinados municipais
-persistidos, todos com 645/645 valores. O catálogo municipal totaliza 6.393
-atributos, dos quais 6.375 originais. Persistência e conferência não constituem
-homologação de combinações, pesos AHP ou critérios.
+distinta do catálogo de metadados versionado em
+`config/catalogo-setorial-on-demand.json`. O catálogo descreve 3.529 atributos
+setoriais (3.519 originais e 10 combinados), com identificadores, descrições,
+fontes e fórmulas. A presença de metadados não significa que todos os valores
+estejam carregados. Os originais são obtidos quando um processamento os solicita,
+validados contra os códigos da malha e persistidos com cobertura e procedência
+SHA-256 para reutilização. As dez combinações são recalculadas após a obtenção
+dos respectivos insumos. O banco municipal mantém 18 combinados, todos com
+645/645 valores; o catálogo municipal totaliza 6.393 atributos, dos quais
+6.375 originais. Persistência e conferência não constituem homologação de
+combinações, pesos AHP ou critérios.
 
 O retrato compreende 645 municípios. A camada oficial setorial de 2022 reúne
 103.319 códigos e 103.620 partes geométricas, com 8 geometrias oficiais inválidas.
@@ -759,13 +766,14 @@ atributos municipais nos setores. A incorporação aditiva em
 alfabetização, domicílios Partes 1, 2 e 3, cor ou raça, parentesco, óbitos,
 pessoas e domicílios indígenas e quilombolas, rendimento do responsável,
 entorno por domicílios, moradores e faces de via e registro de nascimento.
-A completude se refere aos campos dos dicionários e arquivos desses
-18 conjuntos, identificados no relatório por URL e SHA-256.
-A cobertura varia por conjunto e permanece registrada separadamente.
+O catálogo completo de metadados não pressupõe a carga integral dos valores
+desses 18 conjuntos. Como as fontes configuradas são arquivos oficiais, o
+SICARD obtém o arquivo que contém a variável solicitada, extrai as colunas
+necessárias e compara os códigos e valores com a malha antes da gravação.
 Ausência de linha não produz estimativa; símbolos de sigilo `X` são mantidos
-como sinais, não como zero. A presença de registro no CSV não garante valor
-numérico em todos os atributos. A aplicação compara os valores e sinais
-persistidos com cada arquivo antes da confirmação da respectiva transação.
+como sinais, não como zero. A cobertura, a procedência e o hash são registrados
+para os atributos carregados. Solicitações posteriores reutilizam os valores
+persistidos; a operação não desagrega amostras municipais.
 Não se trata de desagregação de amostra municipal; temas comuns nas duas
 escalas não significam mesmos identificadores, períodos ou universos.
 O rendimento nominal médio e mediano do responsável, suas variâncias e
@@ -773,16 +781,16 @@ contagens não equivalem à renda domiciliar per capita nem a uma medida de
 pobreza. O indicador de baixa renda anteriormente calculado permanece municipal.
 As datas de divulgação ou revisão em 2025 e 2026 não alteram a referência
 censitária de 2022; períodos específicos permanecem nas descrições oficiais.
-A disponibilidade operacional posterior à conferência pode ser consultada no catálogo API
+A disponibilidade operacional e a cobertura dos atributos carregados podem ser consultadas no catálogo API
 `/api/geoespacial/extracao-atributos/municipal/catalog?territorialidade=setores_2022`.
 A incorporação não implica homologação automática das combinações.
-A conferência do relatório é reproduzível pelo comando
-`scripts/preparar_catalogo_territorial.py --conferir --relatorio config/catalogo-territorial-incorporado.json`,
-associado à migração `database/143_catalogo_territorial.sql`. A ampliação
-é reproduzível por `scripts/completar_setores_2022.py --insumos DIR --aplicar`,
-com transação por arquivo, preservação dos IDs e da geometria e recálculo dos
-dez combinados existentes ao final; a página documental
-não executa cargas nem modifica os procedimentos das fases de hierarquização.
+O catálogo de metadados é reproduzível por
+`scripts/preparar_catalogo_setorial_on_demand.py --insumos DIR`. A consulta
+operacional baixa o pacote oficial correspondente, valida a fonte e persiste
+somente as chaves solicitadas, sob trava consultiva e em transação. As
+combinações setoriais são recalculadas quando solicitadas após a obtenção dos
+insumos. A página documental não executa cargas nem modifica os procedimentos
+das fases de hierarquização.
 
 O CSV municipal de baixa renda de 2022 conserva as contagens da tabela SIDRA
 10296: soma dos moradores até um quarto de salário mínimo, dos moradores acima
@@ -1216,6 +1224,17 @@ e **rastreabilidade**.
 
 ### Preenchimento colaborativo e consolidação de julgamentos
 
+A matriz de critérios e premissas constitui um registro independente e imutável.
+Cada hierarquização associa-se a uma única matriz por vez, enquanto os julgamentos
+AHP se vinculam diretamente à matriz avaliada. Uma matriz pode atender a vários
+processos e julgamentos; estes podem existir de forma avulsa, antes da associação
+a uma hierarquização. A troca da matriz não altera o vínculo dos julgamentos
+anteriores. O reaproveitamento dos pesos exige equivalência dos critérios, da
+estrutura e das premissas, além de confirmação explícita. Quando houver alteração
+metodológica, os julgamentos devem ser revistos e os pesos recalculados; os
+resultados derivados não permanecem válidos automaticamente. Essa organização
+segue a especificação da espinha dorsal do motor de hierarquização.
+
 A matriz de comparação pareada pode ser preenchida de forma **individual** ou
 **colaborativa**. No modo colaborativo, o responsável pela análise abre um ambiente de
 preenchimento com prazo definido e lista nominal de especialistas convidados,
@@ -1567,6 +1586,19 @@ demanda, o sistema responde: por que foi apto/apto com ressalva/restrito; quais 
 intersectaram; qual valor espacial foi extraído na Fase 2; quais atributos foram usados
 e quais faltaram na Fase 3; quais pesos foram aplicados; quanto cada fase contribuiu; e
 se houve exceção metodológica.
+
+**Consulta individual das rodadas.** Os resultados das fases, os pesos registrados,
+o índice final e a posição são consultados por demanda e hierarquização, sem
+substituir os resultados de outras rodadas. Os painéis organizam a navegação por
+tipo de demanda, hierarquização e demanda desde a criação da rodada, preservando
+uma única geometria cadastral por demanda. A conclusão da síntese atualiza o
+status técnico das demandas ainda em hierarquização na mesma transação do
+resultado, sem sobrescrever situações posteriores ou suspensas e sem implicar
+homologação ou publicação. O controle gerencial de publicação destina-se
+exclusivamente ao painel público; enquanto não implementado, a visibilidade
+existente é preservada. A consulta pública dos resultados individuais não inclui
+documentos internos, caminhos de arquivos ou dados pessoais. Resultados
+desatualizados não são apresentados como posição ou índice final correntes.
 
 **Versionamento.** Pacotes recebem identificador reprodutível, no padrão
 `fase<n>_<produto>_<area>_<data>_v<numero>` (ex.: `fase1_restricao_risco_sp_2026_07_02_v1`),

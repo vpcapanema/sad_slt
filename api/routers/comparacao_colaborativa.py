@@ -24,8 +24,46 @@ from api.schemas.comparacao_colaborativa import (
 )
 from api.services import comparacao_colaborativa_service as service
 from api.services.session_service import SessionUser
+from pydantic import BaseModel, Field
+from typing import Any
+from api.services import matrizes_criterios
 
 router = APIRouter(prefix="/ahp/comparacao-colaborativa", tags=["ahp-comparacao-colaborativa"])
+
+
+class MatrizCreateSchema(BaseModel):
+    nome: str = Field(..., min_length=1, max_length=200)
+    conteudo: dict[str, Any] | list[dict[str, Any]]
+    arquivo_base64: str | None = None
+    arquivo_nome: str | None = Field(None, max_length=255)
+
+
+@router.get("/matrizes")
+def listar_matrizes(_user: SessionUser = Depends(require_authenticated)) -> list[dict]:
+    try:
+        return matrizes_criterios.listar()
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.get("/matrizes/{matriz_id}")
+def obter_matriz(matriz_id: UUID, _user: SessionUser = Depends(require_authenticated)) -> dict:
+    try:
+        return matrizes_criterios.obter(matriz_id)
+    except DemandaValidationError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.post("/matrizes", status_code=201)
+def criar_matriz(body: MatrizCreateSchema, _user: SessionUser = Depends(require_analyst)) -> dict:
+    try:
+        return matrizes_criterios.criar(body.nome, body.conteudo, body.arquivo_base64, body.arquivo_nome)
+    except DemandaValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @router.get("/configuracoes")

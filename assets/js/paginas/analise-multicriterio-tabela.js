@@ -1,6 +1,6 @@
 (function (global) {
   "use strict";
-  function esc(value) { var node = document.createElement("span"); node.textContent = value == null ? "" : String(value); return node.innerHTML; }
+  function esc(value) { var node = document.createElement("span"); node.textContent = value == null ? "" : String(value); return node.innerHTML.replace(/"/g, "&quot;"); }
   function date(value) { var parsed = new Date(value); return !value || isNaN(parsed.getTime()) ? "—" : parsed.toLocaleString("pt-BR"); }
   function num(value) { return value == null ? "—" : Number(value).toLocaleString("pt-BR", { maximumFractionDigits: 4 }); }
   function json(value, label) { return value == null ? "—" : '<details><summary>' + esc(label) + '</summary><pre>' + esc(JSON.stringify(value, null, 2)) + '</pre></details>'; }
@@ -22,9 +22,11 @@
     function syncTopActions(selectedId) { var selected = (julgamentos || []).find(function (item) { return item.id === selectedId; }); var links = selected && options.linksFor ? options.linksFor(selected) : {}; setTopAction("public", links && links.public); syncCrudActions(tbodyId, selectedId, options.editingId); }
     body.innerHTML = (julgamentos || []).map(function (j) {
       var c = j.consolidacao, invited = (j.convites || []).length, received = Number(j.total_respostas || 0), selected = options.selectedIds ? options.selectedIds.has(j.id) : options.selectedId === j.id, editing = options.editingId === j.id;
+      var matrixId = j.matriz_id || j.hierarquizacao_id || "—";
+      var matrixName = j.matriz_nome || [j.hierarquizacao_nome, j.hierarquizacao_codigo].filter(Boolean).join(" · ") || "—";
       return '<tr class="collab-round-row ' + (selected ? "is-selected" : "") + '" aria-selected="' + selected + '"><td class="col-select"><input type="checkbox" class="ami-row-select" data-select-id="' + esc(j.id) + '" ' + (selected ? "checked" : "") + (options.editingId ? " disabled" : "") + ' aria-label="Selecionar julgamento ' + esc(j.hierarquizacao_codigo) + '"></td>' +
-        '<td>' + (editing ? '<input class="ami-inline-input" data-edit-field="nome" type="text" maxlength="200" required aria-label="Nome do julgamento">' : esc(j.nome || 'Julgamento ' + j.id)) + '</td><td>' + esc({ ativa: "Aberto", consolidada: "Consolidado", encerrada: "Encerrado" }[j.status] || j.status) + '</td><td class="ami-cell-id" title="' + esc(j.id) + '">' + esc(j.id) + '</td><td class="ami-cell-id" title="' + esc(j.hierarquizacao_id) + '">' + esc(j.hierarquizacao_id) + '</td>' +
-        '<td title="' + esc((j.hierarquizacao_nome || j.hierarquizacao_codigo) + " · " + j.hierarquizacao_codigo) + '">' + esc(j.hierarquizacao_nome || j.hierarquizacao_codigo) + ' · ' + esc(j.hierarquizacao_codigo) + '</td>' +
+        '<td>' + (editing ? '<input class="ami-inline-input" data-edit-field="nome" type="text" maxlength="200" required aria-label="Nome do julgamento">' : esc(j.nome || 'Julgamento ' + j.id)) + '</td><td>' + esc({ ativa: "Aberto", consolidada: "Consolidado", encerrada: "Encerrado" }[j.status] || j.status) + '</td><td class="ami-cell-id" title="' + esc(j.id) + '">' + esc(j.id) + '</td><td class="ami-cell-id" title="' + esc(matrixId) + '">' + esc(matrixId) + '</td>' +
+        '<td title="' + esc(matrixName) + '">' + esc(matrixName) + '</td>' +
         '<td>' + participationLink(j, received, invited) + '</td><td>' + deadlineDate(j.valido_ate) + '</td><td>' + date(j.criadoEm) + '</td><td>' + date(j.atualizadoEm) + '</td>' +
         '<td><button class="ami-cell-link" data-modal-kind="criteria" data-record-id="' + esc(j.id) + '">' + esc(j.n_criterios) + ' critérios</button></td>' +
         '<td class="ami-cell-token" title="Código de seis números usado com o e-mail convidado para liberar o formulário">' + esc(j.token_acesso || 'Não gerado') + '</td><td>' + num(c && c.lambda_max) + '</td><td>' + num(c && c.indice_consistencia) + '</td><td>' + num(c && c.indice_aleatorio) + '</td><td>' + num(c && c.razao_consistencia) + '</td>' +

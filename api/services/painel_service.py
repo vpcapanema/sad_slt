@@ -2,12 +2,13 @@
 from __future__ import annotations
 
 import json
+import math
 from datetime import date, datetime
 from typing import Any
 
 from api.repositories import painel_repository
 from api.schemas.demanda import GeometriaSchema, RepresentanteSchema
-from api.schemas.painel import PainelDemandaSchema
+from api.schemas.painel import PainelDemandaSchema, PainelHierarquizacaoSchema
 
 
 def _iso(value: Any) -> str | None:
@@ -25,6 +26,58 @@ def _geometria_from_row(row: dict[str, Any]) -> GeometriaSchema | None:
     if isinstance(raw, str):
         raw = json.loads(raw)
     return GeometriaSchema(tipo=raw.get("type"), coordinates=raw.get("coordinates"))
+
+
+def _resultado_individual(row: dict[str, Any]) -> PainelHierarquizacaoSchema:
+    h = (row.get("objeto") or {}).get("hierarquizacao") or {}
+    f1, f2, f3, sintese = (h.get(chave) or {} for chave in ("fase_1", "fase_2", "fase_3", "sintese"))
+    relatorios = row.get("relatorios") or {}
+    desatualizada = any(
+        parte.get("desatualizado") for parte in (
+            f1, f2, f3, sintese, relatorios.get("fase_3") or {}, relatorios.get("sintese") or {},
+        )
+    )
+    config = row.get("sintese") or {}
+    dimensoes = f2.get("valor_por_dimensao") or {}
+    contribuicoes = sintese.get("contribuicoes") or {
+        "favorabilidade_rede": f2.get("indice_favorabilidade_rede", dimensoes.get("rede")),
+        "favorabilidade_grade": f2.get("indice_favorabilidade_grade", dimensoes.get("grade")),
+        "prioridade": f3.get("score_fase3"),
+    }
+    pesos = {}
+    if sintese.get("executada") and not desatualizada:
+        if config.get("operador") == "media_simples":
+            pesos = dict.fromkeys(("rede", "territorial", "prioridade"), 1 / 3)
+        elif config.get("operador") == "media_ponderada":
+            pesos = {
+                nome: config[chave] for nome, chave in (
+                    ("rede", "peso_rede"), ("territorial", "peso_grade"), ("prioridade", "peso_prioridade"),
+                ) if config.get(chave) is not None
+            }
+    if pesos:
+        valores = [
+            float(v) for k in ("favorabilidade_rede", "favorabilidade_grade", "prioridade")
+            if isinstance((v := contribuicoes.get(k)), (int, float)) and math.isfinite(v)
+        ]
+        score = sintese.get("score_final")
+        if (len(pesos) != 3 or len(valores) != 3
+                or not isinstance(score, (int, float)) or not math.isclose(
+                    sum(v * p for v, p in zip(valores, pesos.values())), score, rel_tol=0, abs_tol=1e-10,
+                )):
+            pesos = {}
+    return PainelHierarquizacaoSchema(
+        codigo=row["codigo"], nome=row["nome"], status=row["status"],
+        atualizado_em=_iso(row.get("atualizado_em")), desatualizada=desatualizada,
+        elegibilidade=f1.get("status_fase1"),
+        indice_risco=(f1.get("resumo_elegibilidade") or {}).get("indice_de_risco_ambiental_e_territorial"),
+        indice_rede=f2.get("indice_favorabilidade_rede", dimensoes.get("rede")),
+        indice_territorial=f2.get("indice_favorabilidade_grade", dimensoes.get("grade")),
+        indice_prioridade=f3.get("score_fase3") if not f3.get("desatualizado") else None,
+        indice_final=sintese.get("score_final") if not desatualizada else None,
+        posicao=sintese.get("posicao_final") if not desatualizada else None,
+        operador=config.get("operador"), pesos_sintese=pesos,
+        pesos_prioridade=f3.get("pesos_fase3") or {},
+    )
 
 
 def _row_to_item(row: dict[str, Any]) -> PainelDemandaSchema:
@@ -72,6 +125,7 @@ def _row_to_item(row: dict[str, Any]) -> PainelDemandaSchema:
         publico_alvo=row.get("publico_alvo"),
         orgao_responsavel=row.get("orgao_responsavel"),
         justificativa=row.get("justificativa"),
+        hierarquizacoes=[_resultado_individual(h) for h in row.get("hierarquizacoes", [])],
     )
 
 

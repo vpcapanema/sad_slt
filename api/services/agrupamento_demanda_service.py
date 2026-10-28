@@ -56,7 +56,7 @@ def _objetos_validados(payload: Any) -> list[dict[str, Any]]:
             field="demanda_ids",
         )
 
-    return [por_id[codigo] for codigo in ids]
+    return [{"id": codigo, "tipo_demanda": payload.tipo_demanda} for codigo in ids]
 
 
 def criar(payload: Any, *, user: SessionUser) -> dict[str, Any]:

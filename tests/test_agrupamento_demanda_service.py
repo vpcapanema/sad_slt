@@ -27,7 +27,7 @@ def _universe_item(code: str, *, tipo: str = "projeto") -> UniversoItemSchema:
     )
 
 
-def test_criar_salva_snapshot_das_demandas_elegiveis(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_criar_grava_somente_o_vinculo_das_demandas_elegiveis(monkeypatch: pytest.MonkeyPatch) -> None:
     item = _universe_item("I-PRJ-001")
     monkeypatch.setattr(service.universo_service, "listar_universo", lambda tipo: [item])
     capturado = {}
@@ -55,7 +55,7 @@ def test_criar_salva_snapshot_das_demandas_elegiveis(monkeypatch: pytest.MonkeyP
     assert result["nome"] == "Grupo de teste"
     assert result["tipo_demanda"] == "projeto"
     assert result["quantidade_demandas"] == 1
-    assert result["objetos"][0]["descricao"] == "Descrição confiável do banco"
+    assert capturado["objetos"] == [{"id": item.id, "tipo_demanda": "projeto"}]
     assert capturado["codigo"].startswith("AGR-")
 
 

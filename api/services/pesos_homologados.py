@@ -26,6 +26,14 @@ def mapa_pesos(dados):
     official = dados.get("comparacao_colaborativa") or {}
     if not official.get("analise_homologada_id"):
         return {}
+    atual = (dados.get("cabecalho_grupo") or {}).get("matriz_premissas_criterios")
+    if atual is not None and official.get("criterios"):
+        from api.services.matrizes_criterios import comparavel
+        if comparavel(atual)["linhas"] != official["criterios"]:
+            raise DemandaValidationError(
+                "Os critérios ou premissas mudaram. Refaça os julgamentos e recalcule os pesos.",
+                field="pesos",
+            )
     names = (official.get("pesos") or {}).get("criteria", [])
     values = (official.get("pesos") or {}).get("weights", [])
     if len(names) != len(values) or not names:

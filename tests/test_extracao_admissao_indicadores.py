@@ -21,9 +21,9 @@ def test_validacao_recusa_registro_sem_geometria_e_identifica_fid(geometry):
 
 def test_catalogo_bloqueia_antes_de_criar_tiles(monkeypatch):
     from api.services import extracao_preparacao as preparo
-    from api.repositories import camada_geoespacial_repository as repo
+    from tests.territorial_ogr_helpers import camada as camada_ogr
     frame = gpd.GeoDataFrame(geometry=[Point(-46,-23),None],crs=4674)
-    monkeypatch.setattr(repo,'carregar_vetor_bruto',lambda _: (frame,{'nome':'Base'}))
+    monkeypatch.setattr(preparo.nativo,'carregar_referencia',lambda _: camada_ogr(frame))
     monkeypatch.setattr(preparo,'representar',lambda *a: pytest.fail('Não deve gerar tiles'))
     with pytest.raises(ValueError, match='sem geometria utilizável'):
         preparo.preparar('base','autor')

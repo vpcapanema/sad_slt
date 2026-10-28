@@ -75,10 +75,11 @@
       });
 
     objetos.forEach((o) => {
+      const cadastro = painelItems.find(d => d.tipo === "projeto" && d.id === o.demanda_codigo);
       entries.push({
         kind: "objeto",
         id: o.codigo,
-        data: o,
+        data: cadastro ? {...o, status: cadastro.status, hierarquizacoes: cadastro.hierarquizacoes} : o,
         sortAt: o.statusAtualizadoEm || o.aprovadoEm || "",
       });
     });
@@ -305,7 +306,8 @@
     header.style.color = st.text;
     pop.querySelector(".painel-detail-kicker").textContent = kickerText(entry);
     pop.querySelector(".painel-detail-title").textContent = entry.data.nome;
-    pop.querySelector(".painel-detail-body").innerHTML = detailHtml(entry);
+    pop.querySelector(".painel-detail-body").innerHTML = detailHtml(entry)
+      + SLTGroupedSidebar.resultadosHierarquizacaoHtml(entry.data.hierarquizacoes);
     pop.classList.remove("hidden");
     openEntry = entry;
     requestAnimationFrame(repositionPopover);
@@ -495,6 +497,7 @@
       getRecordId: (r) => r.id,
       getRecordGroupId: (r) => SLTPainelMapControls.groupIdFromKind(r.__kind),
       getRecordLabel: (r) => r.nome,
+      getRecordSubgroups: r => r.hierarquizacoes,
       getRecordBadgeHtml: (r) => statusBadgeFor(r.__kind, r),
       sectionsFor: () => [],
       emptyMessage: "Nenhuma demanda registrada.",
@@ -506,11 +509,8 @@
       onGroupLabelToggle,
       onGroupVisibilityChange,
       onRecordVisibilityChange,
-      onSelect: (id, record) => {
+      onSelect: (id, record, anchorEl) => {
         if (!record) return;
-        const anchorEl = document.querySelector(
-          `.layer-group--record[data-record-id="${CSS.escape(id)}"]`
-        );
         openDetail(record.__kind, id, { anchorEl });
       },
     });
@@ -524,7 +524,7 @@
       el.classList.toggle("collapsed", !on);
       el.querySelector(".layer-group-header-row .layer-group-header--record")?.setAttribute("aria-expanded", String(on));
     });
-    document.querySelectorAll(".layer-group--tipo").forEach((grp) => {
+    document.querySelectorAll(".layer-group--tipo, .layer-group--hierarquizacao").forEach((grp) => {
       const hit = grp.querySelector(`.layer-group--record[data-record-id="${CSS.escape(id)}"]`);
       if (hit) {
         grp.classList.remove("collapsed");

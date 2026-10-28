@@ -87,7 +87,98 @@
     $("pesos-sintese").hidden = operador !== "media_ponderada";
   }
 
+  const formatarIndice = valor => Number.isFinite(valor) ? valor.toFixed(4) : "—";
+  const posicaoFinal = sintese => Number.isInteger(sintese?.posicao_final) && sintese.posicao_final > 0
+    ? sintese.posicao_final : null;
+
+  function renderRankingFinal(hierarquizacao, resultadoAtual) {
+    const objetos = hierarquizacao.dados_hierarquizacao?.objetos || [];
+    const gerada = objetos.some(objeto => objeto.hierarquizacao?.sintese?.executada === true);
+    $("fase3-ranking-final").hidden = !resultadoAtual || !gerada;
+    $("fase3-ranking-final-tabela").innerHTML = "";
+    if (!resultadoAtual || !gerada) return;
+    const linhas = objetos.map((objeto, indice) => {
+      const sintese = objeto.hierarquizacao?.sintese || {};
+      const posicao = posicaoFinal(sintese);
+      const valido = sintese.executada === true && Number.isFinite(sintese.score_final) && posicao != null;
+      const nome = objeto.cabecalho_objeto?.nome || "Nome não informado";
+      const situacao = sintese.barrado_por_risco ? "Barrada por risco"
+        : sintese.restrito_segregado ? "Restrita — segregada"
+        : valido ? "Ranqueada" : "Sem índice combinado — confira os índices de entrada";
+      const valor = valido
+        ? `<button type="button" class="ami-cell-link" data-memoria-sintese="${indice}" aria-label="Ver memória de cálculo de ${esc(nome)}">${formatarIndice(sintese.score_final)}</button>`
+        : "—";
+      return `<tr data-ranking-posicao="${valido ? posicao : ''}"><td><span class="ranking-posicao">${valido ? posicao : '—'}</span></td><td>${esc(nome)}</td><td class="ranking-indice">${valor}</td><td>${situacao}</td></tr>`;
+    }).join("");
+    $("fase3-ranking-final-tabela").innerHTML = `<table class="fase-table" data-ranking-order="true" data-table-sort="off" aria-labelledby="fase3-ranking-final-titulo"><thead><tr><th scope="col" aria-sort="ascending">Posição final</th><th>Demanda</th><th>Índice geral de hierarquização</th><th>Situação</th></tr></thead><tbody>${linhas}</tbody></table>`;
+    window.Fase3TableStandard?.($("fase3-ranking-final-tabela").querySelector("table"));
+  }
+
+  function abrirMemoriaSintese(indice, acionador) {
+    const hierarquizacao = atual();
+    const objeto = hierarquizacao?.dados_hierarquizacao?.objetos?.[indice];
+    const sintese = objeto?.hierarquizacao?.sintese;
+    if (!sintese?.executada || !Number.isFinite(sintese.score_final)) {
+      window.Notify.warning("Síntese final", "A memória de cálculo não está disponível. Gere novamente a síntese.");
+      return;
+    }
+    const config = hierarquizacao.dados_hierarquizacao.cabecalho_grupo?.sintese || {};
+    const contribuicoes = sintese.contribuicoes || {};
+    const valores = [contribuicoes.favorabilidade_rede, contribuicoes.favorabilidade_grade, contribuicoes.prioridade];
+    const simples = config.operador === "media_simples";
+    const pesos = simples ? [1 / 3, 1 / 3, 1 / 3] : [config.peso_rede, config.peso_grade, config.peso_prioridade];
+    // Historical syntheses may use a legacy operator: do not invent their calculation.
+    const rastreavel = ["media_simples", "media_ponderada"].includes(config.operador)
+      && valores.every(Number.isFinite) && pesos.every(Number.isFinite)
+      && Math.abs(pesos.reduce((soma, peso) => soma + peso, 0) - 1) < 1e-6
+      && Math.abs(valores.reduce((soma, valor, i) => soma + valor * pesos[i], 0) - sintese.score_final) < 1e-10;
+    const modal = $("fase3-memoria-sintese");
+    const corpo = $("fase3-memoria-sintese-conteudo");
+    const pesosTexto = rastreavel ? simples ? "Rede = Territorial = Prioridade = 1/3"
+      : `Rede = ${pesos[0]}; Territorial = ${pesos[1]}; Prioridade = ${pesos[2]}` : "Não reconstituídos";
+    const equacao = simples ? "IGH = (IFR + IFT + IP) / 3" : "IGH = pR × IFR + pT × IFT + pP × IP";
+    corpo.innerHTML = `<p class="ahp-help-text">Hierarquização ${esc(hierarquizacao.codigo)} · Valores da síntese salva. A exibição dos índices é arredondada a quatro casas decimais; o cálculo utiliza a precisão integral.</p>
+      <div class="fase-table-wrap"><table class="fase-table" aria-label="Índices e pesos da síntese final"><thead><tr><th>Demanda</th><th>Índice de favorabilidade de rede</th><th>Índice de favorabilidade territorial</th><th>Índice de prioridade</th><th>Pesos</th><th>Índice geral de hierarquização</th></tr></thead><tbody><tr><td>${esc(objeto.cabecalho_objeto?.nome || "Nome não informado")}</td>${valores.map(valor => `<td>${formatarIndice(valor)}</td>`).join("")}<td>${esc(pesosTexto)}</td><td>${formatarIndice(sintese.score_final)}</td></tr></tbody></table></div>
+      <section class="fase3-equacao-sintese"><h3 class="fase3-titulo-tabela-simples">Equação de cálculo</h3>${rastreavel
+        ? `<p>${simples ? "Média simples" : "Média ponderada"}: <strong>${equacao}</strong></p><p>${simples
+          ? `(${valores.join(" + ")}) / 3`
+          : valores.map((valor, i) => `${pesos[i]} × ${valor}`).join(" + ")} = ${sintese.score_final}</p>
+          <dl class="fase3-execucao-resumo"><div><dt>IGH</dt><dd>Índice geral de hierarquização: índice combinado do ranking final da demanda.</dd></div><div><dt>IFR</dt><dd>Índice de favorabilidade de rede.</dd></div><div><dt>IFT</dt><dd>Índice de favorabilidade territorial.</dd></div><div><dt>IP</dt><dd>Índice de prioridade.</dd></div><div><dt>pR, pT e pP</dt><dd>Pesos da rede, do território e da prioridade, respectivamente. Sua soma é 1. Na média simples, cada índice tem peso 1/3.</dd></div></dl>`
+        : '<p role="alert">Esta síntese histórica não possui dados compatíveis para reconstituir a equação dos três índices. O valor final salvo foi preservado; gere novamente a síntese para obter a memória completa.</p>'}</section>`;
+    modal.classList.remove("hidden");
+    window.Fase3TableStandard?.(corpo.querySelector("table"));
+    modal.acionadorSintese = acionador;
+    modal.querySelector("[data-modal-close]").focus();
+    window.SLTTableFit?.();
+  }
+
+  function fecharMemoriaSintese() {
+    const modal = $("fase3-memoria-sintese");
+    if (modal.classList.contains("hidden")) return;
+    modal.classList.add("hidden");
+    if (modal.acionadorSintese?.isConnected) modal.acionadorSintese.focus();
+  }
+
+  $("fase3-ranking-final").addEventListener("click", event => {
+    const botao = event.target.closest("[data-memoria-sintese]");
+    if (botao) abrirMemoriaSintese(Number(botao.dataset.memoriaSintese), botao);
+  });
+  $("fase3-memoria-sintese").addEventListener("click", event => {
+    if (event.target === event.currentTarget || event.target.closest("[data-modal-close]")) fecharMemoriaSintese();
+  });
+  $("fase3-memoria-sintese").addEventListener("keydown", event => {
+    if (event.key === "Escape") { event.preventDefault(); fecharMemoriaSintese(); }
+    if (event.key !== "Tab") return;
+    const focaveis = [...event.currentTarget.querySelectorAll('button:not(:disabled), select:not(:disabled), input:not(:disabled), a[href], [tabindex="0"]')]
+      .filter(elemento => elemento.getClientRects().length);
+    const primeiro = focaveis[0], ultimo = focaveis.at(-1);
+    if (event.shiftKey && document.activeElement === primeiro) { event.preventDefault(); ultimo.focus(); }
+    else if (!event.shiftKey && document.activeElement === ultimo) { event.preventDefault(); primeiro.focus(); }
+  });
+
   async function render(hierarquizacao) {
+    fecharMemoriaSintese();
+    $("fase3-ranking-final").hidden = true;
     document.querySelectorAll('[data-fase3-progressiva]').forEach(section => { section.hidden = true; });
     $("fase3-acao-calculo").hidden = true;
     $("fase3-regras-vazios").hidden = true;
@@ -102,6 +193,39 @@
     renderResultados(hierarquizacao, true);
     $("executar-fase3").disabled = false;
     $("salvar-pesos-fase3").disabled = false;
+    travarSeHomologada(hierarquizacao);
+    avisarComposicaoDivergente(hierarquizacao);
+  }
+
+  function avisarComposicaoDivergente(hierarquizacao) {
+    const divergencia = hierarquizacao?.dados_hierarquizacao?.cabecalho_grupo?.composicao_divergente;
+    if (!divergencia || hierarquizacao.status === "homologada") return;
+    const aviso = $("fase3-resultados-aviso");
+    aviso.textContent = "O grupo de demandas foi alterado depois da criação desta hierarquização. ";
+    const botao = document.createElement("button");
+    botao.type = "button";
+    botao.className = "btn btn-secondary";
+    botao.textContent = "Sincronizar composição";
+    botao.addEventListener("click", async () => {
+      botao.disabled = true;
+      try {
+        await HierApi.sincronizarComposicao(hierarquizacao.codigo);
+        window.location.reload();
+      } catch (erro) {
+        botao.disabled = false;
+        aviso.append(` ${erro.message || "Falha ao sincronizar."}`);
+      }
+    });
+    aviso.append(botao);
+    aviso.classList.remove("hidden");
+  }
+
+  function travarSeHomologada(hierarquizacao) {
+    if (hierarquizacao?.status !== "homologada") return;
+    ["executar-fase3", "salvar-pesos-fase3", "sintetizar"].forEach(id => { $(id).disabled = true; });
+    const aviso = $("fase3-resultados-aviso");
+    aviso.textContent = "Esta hierarquização está homologada: os resultados das três fases estão travados e não podem ser recalculados. Para recalcular, outro gestor ou um administrador deve reverter a homologação na página de ranking.";
+    aviso.classList.remove("hidden");
   }
 
   function renderResultados(hierarquizacao, restaurar = false) {
@@ -142,6 +266,7 @@
     $("sintetizar").disabled = !resultadoAtual;
     renderAtributosAusentes(hierarquizacao);
     renderSintese(docs, resultadoAtual);
+    renderRankingFinal(hierarquizacao, resultadoAtual);
     if (restaurar) restaurarConfiguracaoSintese(hierarquizacao);
     const metric = (label, value) => `<div class="fase-metric"><small>${esc(label)}</small><strong>${esc(value)}</strong></div>`;
     window.SLTResumoFase?.secao1($("fase-resumo"), hierarquizacao);
@@ -385,7 +510,7 @@
             peso_prioridade: Number($("peso-prioridade").value),
             incluir_restritos: false,
           }),
-          sucesso: ["Índice geral calculado.", "O ranking final já está disponível."],
+          sucesso: ["Índice geral calculado.", "Confira o Ranking final de demandas nesta página. Clique no índice geral para ver a memória de cálculo."],
           // Navegar sozinho tirava o usuário da página antes de ele ver o desfecho:
           // o modal de sucesso oferece "Ver ranking" e OK continua na Fase 3.
           irRanking: true,
@@ -394,6 +519,7 @@
         const codigo = resposta.resultado.codigo;
         hierarquizacoes = hierarquizacoes.map((item) => item.codigo === codigo ? resposta.resultado : item);
         await render(resposta.resultado);
+        $("fase3-ranking-final").scrollIntoView({ behavior: "smooth", block: "start" });
       };
     } catch (error) { erro(error); }
   }

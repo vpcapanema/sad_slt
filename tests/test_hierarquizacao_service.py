@@ -16,6 +16,13 @@ from api.schemas.hierarquizacao import (
 from api.services import hierarquizacao_service as service
 
 
+@pytest.fixture(autouse=True)
+def matrizes_em_memoria(monkeypatch):
+    monkeypatch.setattr(service.matrizes_criterios, "criar",
+                        lambda nome, conteudo: {"id": "88888888-8888-8888-8888-888888888888",
+                                               "nome": nome, "conteudo": deepcopy(conteudo)})
+
+
 @pytest.mark.parametrize("etapa2, etapa3", [
     ("Favorabilidade territorial em grade e da rede", "Ajuste por atributos do objeto de demanda"),
     ("Favorabilidade territorial — município e rede rodoviária", "Priorização de demandas por atributos"),

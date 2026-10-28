@@ -54,6 +54,7 @@ def test_sucesso_confirma_transacao(connection):
 ])
 def test_update_participa_da_transacao_atomica(connection, monkeypatch, repo):
     monkeypatch.setattr(repo, 'get_by_codigo', lambda codigo: {'codigo': codigo})
+    connection.execute.return_value.fetchone.return_value = {'status': 'calculada'}
     with db.atomic_connection():
         data = {'dados_hierarquizacao': {'objetos': []}} if repo is hierarquizacao_repository else {
             'prazo_referencia_meses': 24, 'atributos_cadastrais': {'data_base_capex': '2026-10-01'},
@@ -69,6 +70,7 @@ def test_update_participa_da_transacao_atomica(connection, monkeypatch, repo):
 def test_falha_em_lote_nao_confirma_updates_parciais(connection, monkeypatch):
     for repo in (demanda_repository, hierarquizacao_repository):
         monkeypatch.setattr(repo, 'get_by_codigo', lambda codigo: {'codigo': codigo})
+    connection.execute.return_value.fetchone.return_value = {'status': 'calculada'}
     with pytest.raises(RuntimeError, match='falha'):
         with db.atomic_connection():
             demanda_repository.update('X', {'nome': 'Nome atualizado'})

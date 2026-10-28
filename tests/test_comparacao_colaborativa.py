@@ -729,6 +729,13 @@ class _FakeRepo:
 
 def _instalar_fake_repo(monkeypatch) -> _FakeRepo:
     fake = _FakeRepo()
+    matrizes = {}
+    def criar_matriz(nome, conteudo, arquivo_base64=None, arquivo_nome=None):
+        registro = {"id": CONFIG_ID, "nome": nome, "conteudo": conteudo, "arquivo_nome": arquivo_nome}
+        matrizes[CONFIG_ID] = registro
+        return registro
+    monkeypatch.setattr(service.matrizes_criterios, "criar", criar_matriz)
+    monkeypatch.setattr(service.matrizes_criterios, "obter", lambda ident: matrizes[str(ident)])
     monkeypatch.setattr(service.superficie_ahp, "encerrar_rodadas_hierarquizacao", fake.encerrar_ambientes_anteriores)
     for nome in (
         "insert_ambiente",
@@ -754,9 +761,9 @@ def _instalar_fake_repo(monkeypatch) -> _FakeRepo:
             "nome": "Configuração de teste",
             "objetivo": "Hierarquizar demandas",
             "codigo": "HIER-001",
-            "dados_hierarquizacao": {
-                "criterios": [{"criterio": "Custo"}, {"criterio": "Prazo"}]
-            },
+            "dados_hierarquizacao": {"cabecalho_grupo": {
+                "matriz_premissas_criterios": {"linhas": [{"criterio": "Custo"}, {"criterio": "Prazo"}]}
+            }},
         },
     )
     return fake
@@ -901,7 +908,9 @@ def test_fluxo_colaborativo_completo(monkeypatch) -> None:
     assert cons["pesos_consolidados"] == pytest.approx([0.5, 0.5])
     assert cons["consistente"] is True
     assert fake.ambientes[ambiente_id]["status"] == "consolidada"
-    assert fake.ambientes[ambiente_id]["hierarquizacao_data_persistida"]["comparacao_colaborativa"]["modo_preenchimento"] == "colaborativo"
+    assert fake.ambientes[ambiente_id]["hierarquizacao_data_persistida"] is None
+    assert fake.ambientes[ambiente_id]["matriz_id"] == CONFIG_ID
+    assert fake.ambientes[ambiente_id]["hierarquizacao_id"] is None
 
 
 def test_julgamento_usa_matriz_cadastrada_ignora_matriz_enviada(monkeypatch):

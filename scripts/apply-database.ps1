@@ -271,7 +271,10 @@ $migrations = @(
     "142_vinculos_camadas_adversidades.sql",
     "146_dom_status_demanda_complementacao_hierarquizacao.sql",
     "147_nome_julgamento.sql",
-    "148_dimensoes_criterios_pli.sql"
+    "148_dimensoes_criterios_pli.sql",
+    "149_reconciliar_demandas_hierarquizacao_concluida.sql",
+    "150_reverter_homologacao_hierarquizacao.sql",
+    "151_matrizes_criterios_independentes.sql"
 )
 
 if ($OnlyMigration) {

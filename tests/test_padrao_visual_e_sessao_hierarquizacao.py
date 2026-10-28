@@ -52,7 +52,7 @@ def test_secoes_numeradas_em_medalhao(cliente, rota):
     if rota in {"/restrict/hierarquizacao/fase-1/", "/restrict/hierarquizacao/fase-2/"}:
         # A v2 reutiliza os índices da entrada/prévia e da bancada de extração.
         indices = re.findall(r'<span class="(?:ahp-subsection-num|ea-number)">(\d+)</span>', html)
-        esperados = [1, 2, 3, 4, 5, 6] if rota == "/restrict/hierarquizacao/fase-2/" else [1, 2, 3, 4, 5]
+        esperados = [1, 2, 3, 4, 5]
         assert [int(numero) for numero in indices] == esperados
         if rota == "/restrict/hierarquizacao/fase-2/":
             assert 'id="fv-sobreposicoes-title"' in html

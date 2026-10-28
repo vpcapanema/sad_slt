@@ -68,3 +68,26 @@ O catálogo `camada_processada` permanece como metadados, sem conteúdo geoespac
 
 Evidências: `outputs/inventario-saidas-20261008/migracao-storage.json`,
 `resultado-migracao-completa.json` e `versao-vm-storage.json`.
+
+## Insumos para os critérios da FAP do PLI
+
+`scripts/preparar_insumos_pli.py` prepara fontes existentes segundo
+`config/insumos-pli-fap.json`, sem calcular notas, valores da FAP ou modificar
+a metodologia de hierarquização. Os 17 critérios são conferidos contra a tabela
+do segundo slide de `documentacao/fundamentacao/PLI_Fig_Estrutura_Criterios_v6.pptx`.
+
+Sem argumentos, o script confere a configuração e as fontes locais, sem escrita
+remota. Com `--publicar --manifesto CAMINHO`, publica em diretório exclusivo
+`aplicacao/insumos-pli-fap/<data>-<identificador>/`:
+
+- Novas camadas GeoPackage, camada interna `resultado`, recortadas pelo limite
+  de SP do acervo e reprojetadas para EPSG:4674, preservando atributos.
+- `manifesto.json`, com associação critério–variável–insumo, procedência, hashes,
+  campos, contagens, CRS, ocorrências de geometria inválida e limitações.
+- `variaveis.csv`, com a disponibilidade de insumos para as 32 variáveis.
+
+Bases que já existem no Storage são referenciadas, sem duplicação ou alteração.
+Seu conteúdo é lido e conferido; novas camadas e os dois arquivos de inventário
+são baixados novamente para conferir tamanho e SHA-256. A existência de insumos
+de apoio não significa que a variável da FAP esteja calculada. Fontes sem CRS
+identificado permanecem pendentes, sem atribuição por suposição.

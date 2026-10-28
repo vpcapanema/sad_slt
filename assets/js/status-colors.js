@@ -446,15 +446,16 @@
         "</svg>"
       );
     }
-    if (faseId === "execucao") {
+    if (faseId !== "execucao") {
       return (
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 36" aria-hidden="true" focusable="false">' +
-        `<line x1="12" y1="15" x2="12" y2="35" stroke="${s}" stroke-width="2.2" stroke-linecap="round"/>` +
-        `<polygon points="12,2 19,11 12,15 5,11" fill="${fill}" stroke="${s}" stroke-width="1.2" stroke-linejoin="round"/>` +
-        `<polygon points="12,5.5 16.2,10.5 12,13.5 7.8,10.5" fill="${inner}" stroke="${s}" stroke-width="0.85" stroke-linejoin="round"/>` +
+        `<line x1="12" y1="18" x2="12" y2="35" stroke="${s}" stroke-width="2.2" stroke-linecap="round"/>` +
+        `<circle cx="12" cy="10" r="8.5" fill="${fill}" stroke="${s}" stroke-width="1.25"/>` +
+        `<circle cx="12" cy="10" r="3.5" fill="${inner}" stroke="${s}" stroke-width="1"/>` +
         "</svg>"
       );
     }
+    // Gota apenas para a Fase 3 (execução).
     return (
       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 36" aria-hidden="true" focusable="false">' +
       `<path fill="${fill}" stroke="${s}" stroke-width="1.25" d="M12 1C7.03 1 3 5.03 3 10c0 7.08 9 17.5 9 17.5S21 17.08 21 10c0-4.97-4.03-9-9-9z"/>` +
@@ -466,7 +467,10 @@
   function pinInnerHtml(codigo, kind) {
     const fase = getStatusFase(codigo);
     const pal = pinPalette(codigo, kind);
-    const layout = PIN_FASE_LAYOUT[fase] || PIN_FASE_LAYOUT.analise;
+    if (fase === "execucao") pal.fill = legendStrongFill(resolveStatus(codigo, kind));
+    const layout = fase === "execucao"
+      ? { ...PIN_FASE_LAYOUT.analise, pinClass: PIN_FASE_LAYOUT.execucao.pinClass }
+      : PIN_FASE_LAYOUT[fase] || PIN_FASE_LAYOUT.analise;
     return (
       `<div class="painel-pin ${layout.pinClass}"` +
       ` style="--pin-halo-dark:${pal.dark};--pin-halo-mid:${pal.mid};--pin-halo-light:${pal.light};` +
@@ -502,6 +506,11 @@
       pinSvgByFase(fase, fill) +
       `</span>`
     );
+  }
+
+  function rankingPinHtml(codigo, posicao = "n") {
+    const st = getStatusDemanda(codigo);
+    return `<div class="ranking-marker-pin" data-status="${escapeHtml(codigo)}" style="--ranking-pin-fill:${st.bg};--ranking-pin-ink:${st.text}"><span>${escapeHtml(posicao)}º</span></div>`;
   }
 
   function decorateLeafletLayer(layer, codigo) {
@@ -613,7 +622,15 @@
       layout === "demandas" ? "status-color-legend-swatch status-color-legend-swatch--lg" : "status-color-legend-swatch";
 
     const itemsHtml =
-      layout === "painel"
+      options.marcadorRanking
+        ? fase.codes
+            .filter((c) => STATUS_DEMANDA[c])
+            .map((c) => `<li class="status-color-legend-item" data-status="${escapeHtml(c)}">
+              <span class="ranking-legend-pin" aria-hidden="true">${rankingPinHtml(c)}</span>
+              <span class="status-color-legend-label">${escapeHtml(labelFn(c))}</span>
+            </li>`)
+            .join("")
+        : layout === "painel"
         ? fase.codes
             .filter((c) => STATUS_DEMANDA[c])
             .map((c) => legendStatusItemHtml(c, labelFn))
@@ -836,6 +853,7 @@
     const renderOpts = {
       layout,
       tipoDemanda: opts.tipoDemanda || "projeto",
+      marcadorRanking: opts.marcadorRanking === true,
     };
 
     const body = fases.map((fase) => renderFaseBlock(fase, labelFn, renderOpts)).join("");
@@ -891,6 +909,7 @@
     leafletPathStyle,
     pinColors,
     pinSwatchHtml,
+    rankingPinHtml,
     leafletPinIcon,
     pinSvgByFase,
     decorateLeafletLayer,

@@ -8,6 +8,26 @@ from pydantic import BaseModel, Field
 from api.schemas.demanda import GeometriaSchema, RepresentanteSchema
 
 
+class PainelHierarquizacaoSchema(BaseModel):
+    """Resultados individuais da rodada, sem documentos internos ou dados pessoais."""
+
+    codigo: str
+    nome: str
+    status: str
+    atualizado_em: str | None = None
+    desatualizada: bool = False
+    elegibilidade: str | None = None
+    indice_risco: float | None = None
+    indice_rede: float | None = None
+    indice_territorial: float | None = None
+    indice_prioridade: float | None = None
+    indice_final: float | None = None
+    posicao: int | None = None
+    operador: str | None = None
+    pesos_sintese: dict[str, float] = Field(default_factory=dict)
+    pesos_prioridade: dict[str, float] = Field(default_factory=dict)
+
+
 class PainelDemandaSchema(BaseModel):
     """Item unificado exibido no mapa e na sidebar dos painéis."""
 
@@ -42,6 +62,7 @@ class PainelDemandaSchema(BaseModel):
     publico_alvo: str | None = None
     orgao_responsavel: str | None = None
     justificativa: str | None = None
+    hierarquizacoes: list[PainelHierarquizacaoSchema] = Field(default_factory=list)
 
 
 class EstatisticasOperadorSchema(BaseModel):

@@ -14,6 +14,8 @@ RIDS = ['11111111-1111-1111-1111-111111111111','22222222-2222-2222-2222-22222222
 
 
 def test_convite_preserva_nome_em_criacao_e_edicao_parcial(monkeypatch):
+    monkeypatch.setattr(service.matrizes_criterios, 'criar',
+                        lambda nome, conteudo, *args: {'id':HID,'nome':nome,'conteudo':conteudo})
     criteria = [{'criterio':'C1'},{'criterio':'C2'}]
     current = {'id':'j1','status':'ativa','convites':[{'email':'p@example.com','nome':'Pessoa'}]}
     monkeypatch.setattr(service,'_carregar_hierarquizacao',lambda _id: {'id':HID,'dados_hierarquizacao':{'cabecalho_grupo':{'matriz_premissas_criterios':criteria}}})
@@ -71,10 +73,13 @@ def test_pesos_proprios_substituem_payload_e_rejeitam_atributo_sem_vinculo():
         aplicar_pesos(data,[{'nome_coluna':'outro','peso':1}])
 
 
-def test_hierarquizacao_com_julgamentos_nao_e_excluida(monkeypatch):
-    monkeypatch.setattr(hier.repo,'get_by_codigo',lambda code:{'julgamento_id':'j1'})
-    with pytest.raises(DemandaValidationError):
-        hier.excluir_hierarquizacao('H1')
+def test_exclusao_hierarquizacao_preserva_julgamento_da_matriz(monkeypatch):
+    monkeypatch.setattr(hier.repo,'get_by_codigo',lambda code:{'julgamento_id':'j1','status':'em_julgamento'})
+    calls = []
+    monkeypatch.setattr(hier.repo,'delete_by_codigo',lambda codigo, **kwargs: calls.append(codigo) or True)
+    monkeypatch.setattr(service.repo,'delete_ambiente',lambda _: pytest.fail('Não excluir julgamento independente'))
+    hier.excluir_hierarquizacao('H1')
+    assert calls == ['H1']
 
 
 def test_homologacao_grava_vinculo_e_snapshot_juntos(monkeypatch):
@@ -93,3 +98,54 @@ def test_homologacao_grava_vinculo_e_snapshot_juntos(monkeypatch):
     assert kwargs['homologacao']==('an1','u1')
     assert args[2]['comparacao_colaborativa']['hierarquizacao_id']==HID
     assert args[2]['comparacao_colaborativa']['pesos']['weights']==[.75,.25]
+
+
+def test_migracao_matrizes_em_transacao_revertida():
+    """DDL, backfill, FKs e imutabilidade, sem persistir mudanças no banco oficial."""
+    from pathlib import Path
+    import psycopg
+    from psycopg.types.json import Jsonb
+    from api.db.connection import atomic_connection
+    from api.services import matrizes_criterios
+
+    script = (Path(__file__).resolve().parents[1] / 'database' /
+              '151_matrizes_criterios_independentes.sql').read_text(encoding='utf-8')
+    script = script.strip().removeprefix('BEGIN;').removesuffix('COMMIT;')
+    with atomic_connection() as conn:
+        assert conn.execute('SELECT 1 AS disponivel').fetchone()['disponivel'] == 1
+        with conn.transaction(force_rollback=True):
+            conn.execute("SET LOCAL lock_timeout='3s'")
+            conn.execute("SET LOCAL statement_timeout='30s'")
+            conn.execute(script)
+            # A segunda aplicação também precisa ser segura.
+            conn.execute(script)
+            matriz = {'linhas': [{'criterio': 'A', 'premissa': 'Maior é melhor'},
+                                 {'criterio': 'B', 'premissa': 'Menor é melhor'}]}
+            ident = conn.execute(
+                "INSERT INTO ahp.matriz_criterios_premissas(nome,conteudo) VALUES ('Teste transacional',%s) RETURNING id",
+                (Jsonb(matriz),),
+            ).fetchone()['id']
+            with pytest.raises(psycopg.errors.RaiseException, match='imutável'):
+                with conn.transaction():
+                    conn.execute("UPDATE ahp.matriz_criterios_premissas SET conteudo='[]' WHERE id=%s", (ident,))
+            assert conn.execute(
+                "SELECT conteudo FROM ahp.matriz_criterios_premissas WHERE id=%s", (ident,),
+            ).fetchone()['conteudo'] == matriz
+            assert conn.execute(
+                "SELECT count(*) AS n FROM ahp.comparacao_colaborativa_ambiente WHERE matriz_id IS NULL",
+            ).fetchone()['n'] == 0
+            cadastro = matrizes_criterios.criar('Matriz avulsa transacional', matriz)
+            julgamento = service.criar_ambiente(AmbienteColaborativoCreateSchema(
+                matriz_id=cadastro['id'], convites=[{'email':'teste@example.org'}],
+                valido_ate=datetime(2035,1,1,tzinfo=timezone.utc),
+            ))
+            assert julgamento.matriz_id == str(cadastro['id'])
+            assert julgamento.hierarquizacao_id is None
+            assert service.obter_ambiente_id(julgamento.id).matriz_nome == cadastro['nome']
+            assert any(item.id == julgamento.id for item in service.listar_ambientes())
+            with pytest.raises(psycopg.errors.RaiseException, match='divergem'):
+                with conn.transaction():
+                    conn.execute(
+                        "UPDATE ahp.comparacao_colaborativa_ambiente SET criterios='[]' WHERE id=%s",
+                        (julgamento.id,),
+                    )

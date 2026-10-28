@@ -29,9 +29,14 @@ def test_identificador_longo_e_entradas_invalidas():
 
 
 def test_visualizacao_banco_usa_id_exato_e_preserva_atributos(monkeypatch):
+    from api.services import extracao_preparacao as preparo
+    from tests.territorial_ogr_helpers import camada as camada_ogr
     frame=gpd.GeoDataFrame({'nome':['Água'], 'campo_nulo':[None]},geometry=[Point(-47,-23)],crs=4674)
     calls=[]
-    monkeypatch.setattr(service.repo,'carregar_vetor',lambda ident:(calls.append(ident) or frame,{'nome':'Camada escolhida'}))
+    monkeypatch.setattr(
+        preparo.nativo, 'carregar_referencia',
+        lambda ident: (calls.append(ident) or camada_ogr(frame)),
+    )
     response=routes.arquivo_mapa(routes.ArquivoMapa(id='camada_exata',arquivo='arquivo_com_outra_versao.gpkg'))
     assert calls==['camada_exata']
     assert response['geojson']['features'][0]['properties']=={'nome':'Água','campo_nulo':None}
@@ -87,13 +92,15 @@ def test_configuracao_preserva_analise_completa(tmp_path,monkeypatch):
         config.salvar('Inválida',[{'id':'ambiental','camadas':['base']}],None,entradas=[{'id':'base'}])
 
 
-def test_visualizacao_municipal_usa_arquivo_materializado(monkeypatch):
-    from api.services import municipal_layer
-    vazio=gpd.GeoDataFrame(geometry=[],crs=4674)
+def test_visualizacao_municipal_le_pela_referencia_catalogada(monkeypatch):
+    from api.services import extracao_preparacao as preparo
+    from tests.territorial_ogr_helpers import camada as camada_ogr
     materializado=gpd.GeoDataFrame({'CD_MUN':['3550308']},geometry=[Point(-46.6,-23.5)],crs=4674)
-    monkeypatch.setattr(service.repo,'carregar_vetor',lambda ident:(vazio,{'nome':'Municipal','metadados':{'origem':'municipal-layer'}}))
     calls=[]
-    monkeypatch.setattr(municipal_layer,'carregar_para_extracao',lambda ident:calls.append(ident) or materializado)
+    monkeypatch.setattr(
+        preparo.nativo, 'carregar_referencia',
+        lambda ident: (calls.append(ident) or camada_ogr(materializado)),
+    )
     result=service.camada_para_mapa('municipal_exata')
     assert calls==['municipal_exata']
     assert result['geojson']['features'][0]['properties']['CD_MUN']=='3550308'

@@ -1,0 +1,13 @@
+{% macro mapa_ranking(somente_canvas=false, prefixo="ranking") %}
+<div class="ranking-map-component{% if somente_canvas %} ranking-map-component--canvas{% else %} layout-with-sidebar{% endif %}" data-ranking-map>
+  {% if not somente_canvas %}
+  <aside class="ranking-map-sidebar layout-sidebar" aria-label="Camadas ranqueadas">
+    <div class="nav-section painel-layers-section" data-ranking-tree></div>
+  </aside>
+  {% endif %}
+  <div class="ranking-map-surface">
+    <div id="{{ prefixo }}-map" class="ranking-map" data-ranking-canvas aria-label="Mapa das demandas ranqueadas"></div>
+    <p class="ranking-map-status hidden" data-ranking-map-status role="status" aria-live="polite"></p>
+  </div>
+</div>
+{% endmacro %}

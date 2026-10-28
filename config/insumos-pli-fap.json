@@ -1,0 +1,193 @@
+{
+  "documento": "documentacao/fundamentacao/PLI_Fig_Estrutura_Criterios_v6.pptx",
+  "criterios": {
+    "T1": ["V01", "V02"],
+    "T2": ["V03", "V04"],
+    "T3": ["V05", "V06", "REL"],
+    "E1": ["V08", "V09", "V10"],
+    "E2": ["V11"],
+    "S1": ["V12"],
+    "S2": ["V13"],
+    "S3": ["V15", "V14"],
+    "SEG": ["V18", "V16", "V17"],
+    "A1": ["V19"],
+    "A2": ["V20"],
+    "A3": ["V21", "V22"],
+    "F1": ["V23", "V24"],
+    "I1": ["V25"],
+    "I2": ["V26", "V27", "V28", "V29", "V30"],
+    "R1": ["V31", "V28", "REL"],
+    "R2": ["V32"]
+  },
+  "insumos": [
+    {
+      "id": "setores_censo_2022",
+      "storage": "base-geodatabase/codespace-geoespacial/local/favorabilidade_grade/SP_setores_atributos_CD2022.gpkg",
+      "variaveis": ["V08", "V12", "V13", "V14", "V17"],
+      "fonte": "IBGE, Censo 2022",
+      "limite": "Base populacional de apoio; nao representa empregos gerados, focalizacao, ganho de acesso, exposicao urbana ou vulneraveis no transito. A malha possui partes de setores; nao somar atributos repetidos por parte."
+    },
+    {
+      "id": "sinistros_municipais_2018",
+      "local": "data/geoespacial/uploads/datastorage/vetor/municipios_sp_5b2fbb24_acidentes/municipios_sp_5b2fbb24_acidentes.fgb",
+      "variaveis": ["V16"],
+      "fonte": "InfoSiga, extracao municipal existente, 2018",
+      "limite": "Obitos no transito e sinistros envolvendo veiculos de carga, por municipio, em 2018. Nao representa toda a sinistralidade, pontos de ocorrencia ou vitimas evitadas."
+    },
+    {
+      "id": "rede_capacidade_rodoviaria",
+      "local": "data/geoespacial/local/cap_rodo/cap_rodo_painel.shp",
+      "variaveis": ["V01", "V03", "V06", "V22"],
+      "fonte": "Acervo local cap_rodo_painel; procedencia e ano a confirmar",
+      "limite": "Rede com capacidade, volume e v_c existentes. Nao representa alivio, reducao de veiculos-hora, funcao de conexao avaliada ou redundancia criada. Nao comprovada equivalencia com a rede D-12."
+    },
+    {
+      "id": "areas_urbanizadas_2019",
+      "local": "data/geoespacial/local/favorabilidade_rede/AreasUrbanizadas2019_Brasil/AU_2022_AreasUrbanizadas2019_Brasil.shp",
+      "encoding": "UTF-8",
+      "variaveis": ["V14", "V15"],
+      "fonte": "IBGE, Areas Urbanizadas 2019, arquivo AU_2022 do acervo",
+      "limite": "Manchas urbanizadas recortadas em SP; nao representa exposicao populacional nem travessias de um projeto."
+    },
+    {
+      "id": "aeroportos_2021",
+      "local": "data/geoespacial/local/favorabilidade_rede/bloco_b/aeroportos_anac_2021.geojson",
+      "variaveis": ["V06"],
+      "fonte": "ANAC, aeroportos publicos 2021, acervo existente",
+      "limite": "Localizacao de aeroportos publicos recortada em SP; nao representa participacao modal ou nota de conexao."
+    },
+    {
+      "id": "malha_rodoviaria",
+      "storage": "base-geoespacial/vetor/malha_rodoviaria.gpkg",
+      "variaveis": ["V06", "V22"],
+      "fonte": "Malha rodoviaria do acervo SICARD; consultar metadados originais",
+      "limite": "Rede de apoio, sem calculo de conectividade, redundancia criada ou equivalencia comprovada com D-12."
+    },
+    {
+      "id": "inundacao_2014",
+      "storage": "base-geoespacial/vetor/vwm_area_risco_inundacao_ig_2014_pol_polygon.gpkg",
+      "variaveis": ["V21"],
+      "fonte": "IG / DataGeo, areas de risco de inundacao, 2014",
+      "limite": "Inventario de risco existente; nao equivale automaticamente a ameaca climatica alta. Classes, cobertura e compatibilidade temporal dependem de conferencia."
+    },
+    {
+      "id": "escorregamento_2014",
+      "storage": "base-geoespacial/vetor/vwm_area_risco_escorregamento_ig_2014_pol_polygon.gpkg",
+      "variaveis": ["V21"],
+      "fonte": "IG / DataGeo, areas de risco de escorregamento, 2014",
+      "limite": "Inventario de risco existente; nao equivale automaticamente a ameaca climatica alta."
+    },
+    {
+      "id": "ucs_protecao_integral",
+      "storage": "base-geoespacial/vetor/ucs_protecao_integral_sp.gpkg",
+      "variaveis": ["V20"],
+      "fonte": "Acervo SICARD, unidades de conservacao de protecao integral",
+      "limite": "Insumo de cruzamento SIG; nao representa a classe de sensibilidade socioambiental da FAP."
+    },
+    {
+      "id": "ucs_uso_sustentavel",
+      "storage": "base-geoespacial/vetor/ucs_uso_sustentavel_sp.gpkg",
+      "variaveis": ["V20"],
+      "fonte": "Acervo SICARD, unidades de conservacao de uso sustentavel",
+      "limite": "Insumo de cruzamento SIG; nao representa a classe de sensibilidade socioambiental da FAP."
+    },
+    {
+      "id": "terras_indigenas",
+      "storage": "base-geoespacial/vetor/terras_indigenas_sp.gpkg",
+      "variaveis": ["V20"],
+      "fonte": "FUNAI, acervo SICARD",
+      "limite": "Geometria territorial de apoio; sem classificacao de sensibilidade."
+    },
+    {
+      "id": "quilombos",
+      "storage": "base-geoespacial/vetor/quilombos_sp.gpkg",
+      "variaveis": ["V20"],
+      "fonte": "INCRA, acervo SICARD",
+      "limite": "Geometria territorial de apoio; sem classificacao de sensibilidade."
+    },
+    {
+      "id": "assentamentos",
+      "storage": "base-geoespacial/vetor/assentamentos_sp.gpkg",
+      "variaveis": ["V20"],
+      "fonte": "INCRA, acervo SICARD",
+      "limite": "Geometria territorial de apoio; sem classificacao de sensibilidade."
+    },
+    {
+      "id": "manguezais",
+      "storage": "base-geoespacial/vetor/manguezais_ibama_sp.gpkg",
+      "variaveis": ["V20"],
+      "fonte": "IBAMA, acervo SICARD",
+      "limite": "Insumo de cruzamento SIG; sem classificacao de sensibilidade."
+    },
+    {
+      "id": "bens_tombados_iphan",
+      "storage": "base-geoespacial/vetor/bens_tombados_iphan_sp.gpkg",
+      "variaveis": ["V20"],
+      "fonte": "IPHAN, acervo SICARD",
+      "limite": "Insumo patrimonial; sem classificacao de sensibilidade."
+    },
+    {
+      "id": "bens_tombados_condephaat",
+      "storage": "base-geoespacial/vetor/bens_tombados_condephaat.gpkg",
+      "variaveis": ["V20"],
+      "fonte": "CONDEPHAAT, acervo SICARD",
+      "limite": "Insumo patrimonial; sem classificacao de sensibilidade."
+    },
+    {
+      "id": "sitios_arqueologicos",
+      "storage": "base-geoespacial/vetor/sitios_arqueologicos.gpkg",
+      "variaveis": ["V20"],
+      "fonte": "IPHAN, acervo SICARD",
+      "limite": "Insumo patrimonial; sem classificacao de sensibilidade."
+    },
+    {
+      "id": "cavidades_influencia",
+      "storage": "base-geoespacial/vetor/cavidades_influencia.gpkg",
+      "variaveis": ["V20"],
+      "fonte": "CECAV / ICMBio, acervo SICARD",
+      "limite": "Indicador preliminar de area de influencia; sem classificacao de sensibilidade."
+    },
+    {
+      "id": "areas_contaminadas",
+      "storage": "base-geoespacial/vetor/areas_contaminadas_cetesb.gpkg",
+      "variaveis": ["V20"],
+      "fonte": "CETESB, acervo SICARD",
+      "limite": "Inventario existente; sem classificacao de sensibilidade."
+    },
+    {
+      "id": "aprm_alto_juquery",
+      "storage": "base-geoespacial/vetor/aprm_alto_juquery.gpkg",
+      "variaveis": ["V20"],
+      "fonte": "SEMIL / DataGeo, acervo SICARD",
+      "limite": "Geometria de APRM; sem classificacao de sensibilidade."
+    },
+    {
+      "id": "aprm_alto_tiete",
+      "storage": "base-geoespacial/vetor/aprm_alto_tiete_cabec.gpkg",
+      "variaveis": ["V20"],
+      "fonte": "SEMIL / DataGeo, acervo SICARD",
+      "limite": "Geometria de APRM; sem classificacao de sensibilidade."
+    },
+    {
+      "id": "aprm_billings",
+      "storage": "base-geoespacial/vetor/aprm_billings.gpkg",
+      "variaveis": ["V20"],
+      "fonte": "SEMIL / DataGeo, acervo SICARD",
+      "limite": "Geometria de APRM; sem classificacao de sensibilidade."
+    },
+    {
+      "id": "aprm_guarapiranga",
+      "storage": "base-geoespacial/vetor/aprm_guarapiranga.gpkg",
+      "variaveis": ["V20"],
+      "fonte": "SEMIL / DataGeo, acervo SICARD",
+      "limite": "Geometria de APRM; sem classificacao de sensibilidade."
+    }
+  ],
+  "pendencias": [
+    {
+      "fonte": "ferrovia_estacoes e ferrovia_linhas do acervo local",
+      "motivo": "Fontes sem sistema de coordenadas identificado pelo GDAL. Nao reprojetadas por suposicao.",
+      "variaveis": ["V06", "V22"]
+    }
+  ]
+}

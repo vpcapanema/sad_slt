@@ -20,7 +20,8 @@ class HierarquizacaoCreateSchema(BaseModel):
     grupo_id: str | None = Field(
         None, max_length=64, description="Conjunto comparável (pai): diretoria/plano/programa"
     )
-    matriz_premissas_criterios: dict[str, Any] | list[Any]
+    matriz_id: UUID | None = None
+    matriz_premissas_criterios: dict[str, Any] | list[Any] | None = None
     # Omitir o campo significa "a rodada percorre as três fases". O default
     # anterior era uma lista vazia, que `_exigir_fase` lê como "nenhuma fase" e
     # que inviabilizava executar qualquer fase da rodada recém-criada.
@@ -46,6 +47,8 @@ class HierarquizacaoCreateSchema(BaseModel):
 
 
 class HierarquizacaoUpdateSchema(BaseModel):
+    matriz_id: UUID | None = None
+    confirmar_reuso_pesos: bool = False
     nome: str | None = Field(None, min_length=1, max_length=200)
     descricao: str | None = None
     status: str | None = None
@@ -126,6 +129,7 @@ class HierarquizacaoSinteseSchema(BaseModel):
 
 
 class HierarquizacaoResponseSchema(BaseModel):
+    matriz_id: str | None = None
     id: str
     codigo: str
     config_id: str | None = None

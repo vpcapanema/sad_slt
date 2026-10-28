@@ -205,6 +205,18 @@ def test_zip_nao_escolhe_csv_arbitrario(tmp_path):
             pass
 
 
+def test_leitura_zip_em_memoria_valida_dados_e_malha():
+    content = io.BytesIO()
+    with zipfile.ZipFile(content, 'w') as archive:
+        archive.writestr('basico.csv', 'CD_SETOR;V0001\n350010505000001;5\n')
+
+    with abrir_csv(content.getvalue(), 'basico') as reader:
+        code, fields = campos_csv(reader, 'basico', {'V0001': {}})
+        result = list(linhas_sp(reader, code, fields, {'350010505000001'}))
+
+    assert result == [('350010505000001', {'v0001': 5}, {})]
+
+
 @pytest.mark.parametrize('name,key,description,tipo,expected', [
     ('renda', 'V06004', '', '', 'R$'),
     ('renda', 'V06005', '', '', 'R$²'),

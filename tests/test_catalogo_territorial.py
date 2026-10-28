@@ -139,3 +139,126 @@ def test_ids_de_outra_escala_nao_sao_aceitos(monkeypatch):
     monkeypatch.setattr(base_setorial, 'catalog', lambda: [{'id': 'setorial'}])
     with pytest.raises(ValueError, match='catalogo setorial'):
         base_setorial.selection(['municipal'])
+
+
+def test_catalogo_setorial_completo_nao_exige_valores_carregados(monkeypatch):
+    from contextlib import contextmanager
+    from api.services import base_setorial
+    from api.path_policy import project_path
+    import json
+
+    metadata = json.loads(project_path('config/catalogo-setorial-on-demand.json').read_text(encoding='utf-8'))
+    loaded = metadata['atributos_setoriais'][0]
+    stored = {
+        'id': loaded['id'], 'source': loaded['fonte'], 'year': 2022, 'theme': loaded['tema'],
+        'field': loaded['campo'], 'label': loaded['rotulo'], 'unit': loaded['unidade'],
+        'url': loaded['url'], 'detail': {'sha256': 'a' * 64}, 'coverage': 99,
+        'chave': loaded['chave'], 'origin': 'originais',
+    }
+
+    class Connection:
+        def execute(self, _query):
+            return self
+
+        def fetchall(self):
+            return [stored]
+
+    @contextmanager
+    def connection():
+        yield Connection()
+
+    monkeypatch.setattr(base_setorial, 'get_connection', connection)
+    catalog = base_setorial.catalog()
+    originals = [item for item in catalog if item['origin'] == 'originais']
+    available = next(item for item in originals if item['id'] == loaded['id'])
+    pending = next(item for item in originals if item['id'] != loaded['id'])
+    assert len(originals) == 3519
+    assert available['loaded'] is True
+    assert available['coverage'] == 99
+    assert pending['loaded'] is False
+    assert pending['coverage'] is None
+
+
+def test_carregamento_sob_demanda_ignora_dataset_confirmado(monkeypatch, tmp_path):
+    from contextlib import contextmanager
+    from api.services import catalogo_setorial_on_demand as loader
+
+    @contextmanager
+    def temporary_directory(**_kwargs):
+        yield tmp_path
+
+    @contextmanager
+    def connection():
+        yield Connection()
+
+    class Result(list):
+        pass
+
+    class Connection:
+        @contextmanager
+        def transaction(self):
+            yield
+
+        def execute(self, query):
+            if 'array_agg(chave)' in query:
+                return Result([{'conjunto': 'renda', 'chaves': ['V06001']}])
+            if 'SELECT cd_setor' in query:
+                return Result([{'cd_setor': f'{index:015d}'} for index in range(103319)])
+            return Result()
+
+    applied = []
+    derived = []
+    monkeypatch.setattr(loader.storage_policy, 'sem_montagem', lambda: False)
+    monkeypatch.setattr(loader.storage_policy, 'TemporaryDirectory', temporary_directory)
+    monkeypatch.setattr(loader.carga, 'preparar_dicionarios', lambda _path: ({}, []))
+    monkeypatch.setattr(loader.carga, 'baixar', lambda _folder, file, _url: tmp_path / file)
+    monkeypatch.setattr(loader, 'get_connection', lambda: connection())
+    monkeypatch.setattr(loader.carga, 'aplicar_fonte', lambda *args: applied.append(args))
+    monkeypatch.setattr(loader, 'materializar_setores', lambda _conn: derived.append(True))
+    loader.carregar_atributos({'renda': {'V06001'}})
+    assert applied == []
+    assert derived == []
+
+
+@pytest.mark.parametrize('in_memory', [False, True])
+def test_carregamento_sob_demanda_persiste_somente_a_chave_pedida(monkeypatch, tmp_path, in_memory):
+    from contextlib import contextmanager
+    from api.services import catalogo_setorial_on_demand as loader
+
+    @contextmanager
+    def temporary_directory(**_kwargs):
+        yield tmp_path
+
+    class Result(list):
+        pass
+
+    class Connection:
+        @contextmanager
+        def transaction(self):
+            yield
+
+        def execute(self, query):
+            if 'array_agg(chave)' in query:
+                return Result()
+            if 'SELECT cd_setor' in query:
+                return Result([{'cd_setor': f'{index:015d}'} for index in range(103319)])
+            return Result()
+
+    @contextmanager
+    def connection():
+        yield Connection()
+
+    calls = []
+    monkeypatch.setattr(loader.storage_policy, 'sem_montagem', lambda: in_memory)
+    monkeypatch.setattr(loader.storage_policy, 'TemporaryDirectory', temporary_directory)
+    monkeypatch.setattr(loader.carga, 'preparar_dicionarios', lambda _path: ({}, []))
+    monkeypatch.setattr(loader.carga, 'baixar', lambda _folder, file, _url: tmp_path / file)
+    monkeypatch.setattr(loader.carga, 'preparar_dicionarios_memoria', lambda: ({}, []))
+    monkeypatch.setattr(loader.carga, 'baixar_bytes', lambda _url: b'official-data')
+    monkeypatch.setattr(loader, 'get_connection', connection)
+    monkeypatch.setattr(loader.carga, 'aplicar_fonte', lambda *args, **kwargs: calls.append((args, kwargs)))
+    loader.carregar_atributos({'renda': {'V06001'}})
+    assert len(calls) == 1
+    assert calls[0][0][2] == 'renda'
+    assert calls[0][1]['only_keys'] == {'V06001'}
+    assert isinstance(calls[0][0][1], bytes) is in_memory

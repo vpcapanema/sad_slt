@@ -88,7 +88,7 @@ def test_no_legacy_html_remains_outside_template_directory() -> None:
 
 
 def test_all_page_templates_compile_and_render() -> None:
-    request = SimpleNamespace(url=SimpleNamespace(path="/teste/"))
+    request = SimpleNamespace(url=SimpleNamespace(path="/teste/"), query_params={})
     page_templates = sorted(PAGES_ROOT.rglob("*.html"))
     # Guarda contra varredura vazia (que faria o teste passar sem renderizar
     # nada); o número exato mudava a cada página nova e só dava falso alarme.
@@ -214,24 +214,24 @@ def test_restricted_home_groups_operator_and_territorial_actions() -> None:
     mocad = group("group-mocad")
     public = group("group-publico")
     mad = group("group-mad")
-    assert "Cadastrar Nova Demanda" in operator
-    assert "Complementação de cadastro" in operator
+    assert "Cadastrar nova demanda" in operator
+    assert "Complementação de dados da demanda" in operator
     assert content.index('id="group-operador"') > content.index('id="group-publico"')
     assert content.index('id="group-operador"') > content.index('id="group-catalogos"')
     assert "Complementação de cadastro" not in mocad
-    assert "Instruções para cadastro de demanda" in public
+    assert "Cadastro de demandas — acesso e orientações" in public
     assert "/public/cadastro/nova-demanda/" not in public
     assert "Formulário colaborativo AHP" not in public
     assert "/public/ahp/colaborativa/" not in mad
     ahp = mad.split("subgroup-analise-multicriterio-ahp-e-obtencao-de-pesos", 1)[1].split("subgroup-ranqueamento", 1)[0]
     assert re.findall(r'class="platform-tile__label">([^<]+)</span>', ahp) == [
         "Agrupamento de demandas",
-        "Central de hierarquização",
-        "Central de julgamentos",
-        "Central de respostas",
+        "Gestão das hierarquizações",
+        "Gestão de julgamentos AHP",
+        "Respostas dos especialistas aos julgamentos AHP",
     ]
     assert "?modo=formulario" not in mad
-    assert mad.index("Análise Multicritério (AHP)") < mad.index("Ranqueamento")
+    assert mad.index("Organização das hierarquizações e julgamentos AHP") < mad.index("Avaliação territorial e priorização")
     assert 'class="platform-tile platform-tile--amber" href="/restrict/agrupamento-demandas/"' in ahp
     ranking = mad.split("subgroup-ranqueamento", 1)[1]
     assert set(re.findall(r'href="([^"]+)"', ranking)) == {
@@ -316,18 +316,22 @@ def test_restricted_home_geoprocessing_subgroups_and_independent_accesses() -> N
     }
     assert groups == {
         "geoprocessamento": [
-            "Central geoespacial",
-            "Visualizador de camadas",
+            "Central de geoprocessamento",
+            "Visualizador de camadas geoespaciais",
+            "Extrações de atributos realizadas",
+            "Gerador de camadas de indicadores territoriais",
+            "Gerador de superfícies de favorabilidade",
             "Bancada de geoprocessamento",
-            "Extração de atributos",
-            "Tributação de camadas territoriais",
+            "Explorador de camadas geoespaciais",
+            "Nova extração de atributos",
+            "Transparência, procedimentos e rastreabilidade das camadas territoriais",
         ],
         "documentacao-tecnica": [
-            "Arcabouço teórico-conceitual de risco e restrição",
-            "Documentação da favorabilidade",
-            "Documentação da favorabilidade — v2",
-            "Limite marítimo de referência de São Paulo",
+            "Fundamentos da elegibilidade territorial — restrições e riscos",
+            "Fundamentos da favorabilidade territorial e da rede rodoviária",
+            "Fundamentos do limite marítimo de referência de São Paulo",
             "Glossário técnico-conceitual",
+            "Especificação da priorização de demandas por atributos",
         ],
     }
     index_css = Path("admin/index.css").read_text(encoding="utf-8")
@@ -340,7 +344,7 @@ def test_restricted_home_geoprocessing_subgroups_and_independent_accesses() -> N
     ):
         assert content.count(f'href="{href}"') == 1
         assert f'class="platform-tile platform-tile--green" href="{href}"' in geo
-    assert "/restrict/geoespacial/extracao-atributos/" not in geo
+    assert content.count('href="/restrict/geoespacial/extracao-atributos/"') == 1
     assert 'aria-labelledby="group-documentacao-ranqueamento"' not in content
     assert "/restrict/hierarquizacao/" not in geo
 

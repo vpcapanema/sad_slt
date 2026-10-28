@@ -108,6 +108,19 @@
 .fase3-standard-page .ranking-posicao {
   color: #123b56; font-weight: 700; font-variant-numeric: tabular-nums;
 }
+.fase3-standard-page #fase3-ranking-final { margin-top: 16px; }
+.fase3-standard-page #fase3-memoria-sintese .json-modal {
+  width: min(980px, 100%); min-width: 0;
+}
+.fase3-standard-page #fase3-memoria-sintese .json-modal-head h2 { min-width: 0; }
+.fase3-standard-page #fase3-memoria-sintese .json-modal-close { flex-shrink: 0; }
+.fase3-standard-page #fase3-memoria-sintese .json-modal-body { min-width: 0; overflow: auto; }
+.fase3-standard-page .fase3-equacao-sintese {
+  margin-top: 16px; padding: 16px; border: 1px solid #c5d7e4;
+  border-radius: 8px; background: #e7f0f7;
+  font: 400 12px/1.5 Roboto, Arial, sans-serif; overflow-wrap: anywhere;
+}
+.fase3-standard-page .fase3-equacao-sintese p { margin: 8px 0; }
 .fase3-standard-page.sicard-standard-page .ami-main .admin-table td.ranking-indice { color: #123b56; font-weight: 700; font-variant-numeric: tabular-nums; }
 .fase3-standard-page.sicard-standard-page .ami-main .admin-table td.ranking-situacao { text-align: center; }
 .fase3-standard-page #fase3-indicadores + .ami-report-table,

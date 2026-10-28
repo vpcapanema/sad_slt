@@ -57,6 +57,12 @@ def baixar(folder, file, url):
     return path
 
 
+def baixar_bytes(url):
+    with requests.get(url, timeout=(10, 180)) as response:
+        response.raise_for_status()
+        return response.content
+
+
 def ler_dicionarios(content, url, result):
     book = pd.ExcelFile(io.BytesIO(content))
     for sheet in book.sheet_names:
@@ -93,19 +99,46 @@ def preparar_dicionarios(folder):
     return result, paths
 
 
+def preparar_dicionarios_memoria():
+    result, sources = {}, []
+    for file, url in [
+        (DICIONARIO, BASE + DICIONARIO),
+        ('dicionario_de_dados_renda_responsavel_20260508.xlsx',
+         RENDA + 'dicionario_de_dados_renda_responsavel_20260508.xlsx'),
+        ('dicionarios_de_dados_entorno.zip', ENTORNO + 'dicionarios_de_dados_entorno.zip'),
+    ]:
+        content = baixar_bytes(url)
+        sources.append((content, url))
+        if file.endswith('.zip'):
+            with zipfile.ZipFile(io.BytesIO(content)) as archive:
+                for member in archive.namelist():
+                    if member.endswith('.xlsx'):
+                        ler_dicionarios(archive.read(member), url, result)
+        else:
+            ler_dicionarios(content, url, result)
+    return result, sources
+
+
 @contextmanager
-def abrir_csv(path):
-    if path.suffix.lower() == '.zip':
-        with zipfile.ZipFile(path) as archive:
+def abrir_csv(path, name=None):
+    filename = path.name if isinstance(path, Path) else next(
+        file for source, file, _ in FONTES if source == name
+    )
+    if filename.lower().endswith('.zip'):
+        binary_source = path.open('rb') if isinstance(path, Path) else io.BytesIO(path)
+        with binary_source, zipfile.ZipFile(binary_source) as archive:
             members = [n for n in archive.namelist() if n.lower().endswith('.csv')]
             if len(members) != 1:
-                raise ValueError(f'CSV ambiguo: {path.name}.')
+                raise ValueError(f'CSV ambiguo: {filename}.')
             with archive.open(members[0]) as binary:
-                encoding = 'cp1252' if '_basico_' in path.name else 'utf-8-sig'
+                encoding = 'cp1252' if '_basico_' in filename else 'utf-8-sig'
                 with io.TextIOWrapper(binary, encoding=encoding) as stream:
                     yield csv.DictReader(stream, delimiter=';')
     else:
-        with path.open(encoding='cp1252', newline='') as stream:
+        text_source = path.open(encoding='cp1252', newline='') if isinstance(path, Path) else io.TextIOWrapper(
+            io.BytesIO(path), encoding='cp1252', newline=''
+        )
+        with text_source as stream:
             next(stream)  # Titulo acima do cabecalho no arquivo oficial.
             yield csv.DictReader(stream, delimiter=';')
 
@@ -170,9 +203,14 @@ def unidade(name, key, description, tipo):
     return 'Domicilios'
 
 
-def aplicar_fonte(conn, path, name, theme, url, descriptions, codes, dictionaries):
-    with abrir_csv(path) as reader:
+def aplicar_fonte(conn, path, name, theme, url, descriptions, codes, dictionaries, only_keys=None):
+    with abrir_csv(path, name) as reader:
         code_key, fields = campos_csv(reader, name, descriptions)
+        if only_keys is not None:
+            fields = {column: value for column, value in fields.items() if value[0] in only_keys}
+            found = {value[0] for value in fields.values()}
+            if found != set(only_keys):
+                raise ValueError(f'Campos solicitados não encontrados em {name}: {set(only_keys) - found}.')
         keys = [key for key, _ in fields.values()]
         if len(set(keys)) != len(keys):
             raise ValueError(f'Chaves repetidas: {name}.')

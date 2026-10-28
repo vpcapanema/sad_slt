@@ -20,7 +20,7 @@ def test_paginas_atuais_com_cinco_secoes_e_resultados_acessiveis(fase, raiz, tit
     resultados = html.split(f'id="{raiz}"', 1)[1]
     for numero in ("5.1", "5.2", "5.3", "5.4"):
         assert f"{numero} —" in resultados
-    assert "Nenhuma análise apresentada" in resultados
+    assert "Consulte os resultados de uma análise" in resultados
     assert "GeoPackage" in resultados and "SHA-256" in resultados
     assert f'id="{prefixo}-status" class="ea-hint" role="status" aria-live="polite"' in resultados
     assert f'id="{prefixo}-download" type="button" disabled' in resultados

@@ -112,6 +112,31 @@
   display: none;
 }
 
+.layer-group--hierarquizacao > .layer-group-body {
+  margin-left: var(--tree-step);
+  padding-left: 0.45rem;
+  border-left: 1px solid var(--tree-guide);
+}
+.layer-group--hierarquizacao.collapsed > .layer-group-body,
+.layer-group--record.collapsed > .painel-hierarquizacao-resultados {
+  display: none;
+}
+.layer-group--hierarquizacao.collapsed > .layer-group-header-row .layer-group-toggle {
+  transform: rotate(-90deg);
+}
+.layer-group-header--hierarquizacao .layer-group-name {
+  font-size: var(--sb-record-name-size);
+}
+.painel-hierarquizacao-situacao { display: block; font-size: var(--sb-badge-size); font-weight: 400; }
+.painel-hierarquizacao-resultados {
+  margin: 0.4rem;
+  overflow-wrap: anywhere;
+}
+.painel-hierarquizacao-resultados summary { cursor: pointer; font-weight: 600; }
+.painel-hierarquizacao-resultados dl { margin: 0.5rem 0; }
+.painel-hierarquizacao-resultados dt { font-weight: 600; }
+.painel-hierarquizacao-resultados dd { margin: 0 0 0.4rem; }
+
 /* Nível 1 — tipo (PLANO | PROGRAMA | PROJETOS) */
 .demandas-tree > .layer-group--tipo > .layer-group-header-row--tipo {
   margin-left: var(--tree-step);
@@ -627,4 +652,3 @@ body.is-layer-reorder-active {
 .layer-group-header--tipo .layer-group-active-count {
   flex-shrink: 0;
 }
-

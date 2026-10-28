@@ -126,10 +126,14 @@ def ler_zip(path, fields, codes):
 
 
 def registrar_fonte(conn, path, url):
-    with path.open('rb') as stream:
-        digest = hashlib.file_digest(stream, 'sha256').hexdigest()
+    if isinstance(path, bytes):
+        digest, size = hashlib.sha256(path).hexdigest(), len(path)
+    else:
+        with path.open('rb') as stream:
+            digest = hashlib.file_digest(stream, 'sha256').hexdigest()
+        size = path.stat().st_size
     conn.execute('''INSERT INTO base_territorial.procedencia(url,sha256,bytes)
-        VALUES (%s,%s,%s) ON CONFLICT (url,sha256) DO NOTHING''', (url, digest, path.stat().st_size))
+        VALUES (%s,%s,%s) ON CONFLICT (url,sha256) DO NOTHING''', (url, digest, size))
     return digest
 
 
@@ -256,7 +260,7 @@ def materializar_municipios(conn, matrix):
         print(f'{code}: {coverage}/645.', flush=True)
 
 
-def materializar_setores(conn):
+def materializar_setores(conn, somente=None):
     definitions = [
         ('densidade_populacao', 'Densidade demografica setorial', 'v0001 / area_km2', 'habitantes/km2', '01_populacao'),
         ('densidade_domicilios', 'Densidade de domicilios particulares ocupados', 'v0007 / area_km2', 'domicilios/km2', '03_domicilios'),
@@ -272,6 +276,13 @@ def materializar_setores(conn):
     literate = ' + '.join(f'V{n:05d}' for n in range(748, 761))
     definitions.append(('analfabetismo_15_mais', 'Pessoas nao alfabetizadas de 15 anos ou mais (%)',
                         f'100 * (({ages}) - ({literate})) / ({ages})', '%', '05_educacao'))
+    if somente is not None:
+        selected = set(somente)
+        definitions = [definition for definition in definitions if definition[0] in selected]
+        if {definition[0] for definition in definitions} != selected:
+            raise ValueError(f'Combinados setoriais não reconhecidos: {selected - {d[0] for d in definitions}}.')
+        if not definitions:
+            return
     needed = sorted({node.id for _, _, formula, _, _ in definitions
                      for node in ast.walk(ast.parse(formula, mode='eval'))
                      if isinstance(node, ast.Name) and node.id != 'area_km2'})

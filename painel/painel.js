@@ -195,7 +195,8 @@
 
     pop.querySelector(".painel-detail-kicker").textContent = `${tipoLabel(d.tipo)} · ${st.nome}`;
     pop.querySelector(".painel-detail-title").textContent = d.nome;
-    pop.querySelector(".painel-detail-body").innerHTML = detailBodyHtml(d);
+    pop.querySelector(".painel-detail-body").innerHTML = detailBodyHtml(d)
+      + SLTGroupedSidebar.resultadosHierarquizacaoHtml(d.hierarquizacoes);
 
     pop.classList.remove("hidden");
     openItem = d;
@@ -369,6 +370,7 @@
       getRecordId: (r) => r.id,
       getRecordGroupId: (r) => r.tipo,
       getRecordLabel: (r) => r.nome,
+      getRecordSubgroups: r => r.hierarquizacoes,
       getRecordBadgeHtml: (r) => {
         const st = statusStyle(r.status);
         const acao = SLTStatusColors.actionClass(r.status);
@@ -384,11 +386,8 @@
       onGroupLabelToggle,
       onGroupVisibilityChange,
       onRecordVisibilityChange,
-      onSelect: (id, record) => {
+      onSelect: (id, record, anchorEl) => {
         if (!record) return;
-        const anchorEl = document.querySelector(
-          `.layer-group--record[data-record-id="${CSS.escape(id)}"]`
-        );
         openDetail(record.tipo, id, { anchorEl });
       },
     });
@@ -402,7 +401,7 @@
       el.classList.toggle("collapsed", !on);
       el.querySelector(".layer-group-header-row .layer-group-header--record")?.setAttribute("aria-expanded", String(on));
     });
-    document.querySelectorAll(".layer-group--tipo").forEach((grp) => {
+    document.querySelectorAll(".layer-group--tipo, .layer-group--hierarquizacao").forEach((grp) => {
       const hit = grp.querySelector(`.layer-group--record[data-record-id="${CSS.escape(id)}"]`);
       if (hit) {
         grp.classList.remove("collapsed");

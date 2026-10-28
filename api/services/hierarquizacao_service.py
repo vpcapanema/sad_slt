@@ -29,6 +29,7 @@ from api.exceptions import (
 )
 from api.matriz_colunas import extrair_colunas
 from api.services.pesos_homologados import mapa_pesos
+from api.services import matrizes_criterios
 from api.services.elegibilidade_sintese import indice_risco_ambiental
 from api.services.atributos_hierarquizacao import (
     VINCULOS_CADASTRAIS, remover_resultados_fase3, vazio,
@@ -102,6 +103,7 @@ def _response(row: dict[str, Any]) -> HierarquizacaoResponseSchema:
     criado_por = str(row["criado_por"]) if row.get("criado_por") else None
     nomes = _nomes_usuarios([homologado_por, criado_por])
     return HierarquizacaoResponseSchema(
+        matriz_id=str(row["matriz_id"]) if row.get("matriz_id") else None,
         id=str(row["id"]),
         codigo=row["codigo"],
         config_id=str(row["config_id"]) if row.get("config_id") else None,
@@ -730,9 +732,57 @@ def _atributos_fase3(colunas: list[dict[str, Any]], cadastro: dict[str, Any]) ->
     return slots
 
 
+def _objeto_novo(
+    o: dict[str, Any], idx: int, tipo_demanda: str | None, grupo_id: Any,
+    colunas_f3: Any, f2: Any, f3: Any,
+) -> dict[str, Any]:
+    cabecalho = _normalizar_objeto_contrato(
+        o, indice=idx, tipo_demanda=tipo_demanda, grupo_id=grupo_id,
+    )
+    cabecalho["atributos_fase3"] = _atributos_fase3(colunas_f3, cabecalho.get("atributos") or {})
+    return {
+        "cabecalho_objeto": cabecalho,
+        "hierarquizacao": {
+            "fase_1": _fase1_vazia(),
+            "fase_2": {
+                "executada": False,
+                "score_fase2": None,
+                "ranking_fase2": None,
+                "valor_por_dimensao": {},
+                "valor_por_criterio": deepcopy(f2),
+                "metodo_extracao": None,
+                "geometria_usada_na_extracao": None,
+            },
+            "fase_3": {
+                "executada": False,
+                "score_fase3": None,
+                "ranking_fase3": None,
+                "criterios": deepcopy(f3),
+                "atributos_utilizados": [],
+                "atributos_ausentes": [],
+                "atributos_invalidos": [],
+                "grau_completude_fase3": None,
+                "contribuicao_por_criterio": {},
+            },
+            "sintese": {"executada": False, "score_final": None, "posicao_final": None},
+        },
+    }
+
+
 def criar_hierarquizacao(
     payload: HierarquizacaoCreateSchema, *, criado_por: str | None = None
 ) -> HierarquizacaoResponseSchema:
+    if payload.matriz_id:
+        matriz_registro = matrizes_criterios.obter(payload.matriz_id)
+        if payload.matriz_premissas_criterios is not None and not matrizes_criterios.equivalentes(
+            matriz_registro["conteudo"], payload.matriz_premissas_criterios
+        ):
+            raise DemandaValidationError("O conteúdo informado diverge da matriz selecionada.", field="matriz_id")
+        payload = payload.model_copy(update={"matriz_premissas_criterios": matriz_registro["conteudo"]})
+    elif payload.matriz_premissas_criterios is None:
+        raise DemandaValidationError("Selecione ou envie uma matriz de critérios e premissas.", field="matriz_id")
+    else:
+        matriz_registro = None
     grupo_demanda = agrupamento_demanda_repository.get_by_id(payload.grupo_demanda_id)
     if not grupo_demanda:
         raise DemandaValidationError("Grupo de demandas selecionado não encontrado.", field="grupo_demanda_id")
@@ -755,50 +805,10 @@ def criar_hierarquizacao(
     )
     colunas_f3 = extrair_colunas(payload.matriz_premissas_criterios)
     codigo = _codigo()
-    objetos_doc = []
-    for idx, o in enumerate(objetos_selecionados):
-        cabecalho = _normalizar_objeto_contrato(
-            o,
-            indice=idx,
-            tipo_demanda=tipo_demanda,
-            grupo_id=payload.grupo_id,
-        )
-        cabecalho["atributos_fase3"] = _atributos_fase3(
-            colunas_f3, cabecalho.get("atributos") or {}
-        )
-        objetos_doc.append(
-            {
-                "cabecalho_objeto": cabecalho,
-                "hierarquizacao": {
-                    "fase_1": _fase1_vazia(),
-                    "fase_2": {
-                        "executada": False,
-                        "score_fase2": None,
-                        "ranking_fase2": None,
-                        "valor_por_dimensao": {},
-                        "valor_por_criterio": deepcopy(f2),
-                        "metodo_extracao": None,
-                        "geometria_usada_na_extracao": None,
-                    },
-                    "fase_3": {
-                        "executada": False,
-                        "score_fase3": None,
-                        "ranking_fase3": None,
-                        "criterios": deepcopy(f3),
-                        "atributos_utilizados": [],
-                        "atributos_ausentes": [],
-                        "atributos_invalidos": [],
-                        "grau_completude_fase3": None,
-                        "contribuicao_por_criterio": {},
-                    },
-                    "sintese": {
-                        "executada": False,
-                        "score_final": None,
-                        "posicao_final": None,
-                    },
-                },
-            }
-        )
+    objetos_doc = [
+        _objeto_novo(o, idx, tipo_demanda, payload.grupo_id, colunas_f3, f2, f3)
+        for idx, o in enumerate(objetos_selecionados)
+    ]
     dados = {
         "versao": 1,
         "cabecalho_grupo": {
@@ -827,6 +837,10 @@ def criar_hierarquizacao(
     }
     if config:
         data["config_id"] = config["id"]
+    if matriz_registro is None:
+        matriz_registro = matrizes_criterios.criar(payload.nome, payload.matriz_premissas_criterios)
+    data["matriz_id"] = matriz_registro["id"]
+    dados["cabecalho_grupo"]["matriz_id"] = str(matriz_registro["id"])
     uid = _uuid(criado_por)
     if uid:
         data["criado_por"] = uid
@@ -893,23 +907,38 @@ def excluir_hierarquizacao(codigo: str) -> None:
     row = repo.get_by_codigo(codigo)
     if not row:
         raise HierarquizacaoNotFoundError(codigo)
-    if row.get("julgamento_id"):
-        raise DemandaValidationError("Esta hierarquização possui julgamentos vinculados. Preserve o histórico arquivando o processo.", field="julgamento_id")
+    if row.get("status") == "homologada":
+        raise DemandaValidationError("Reverta a homologação antes de excluir a hierarquização.", field="status")
     transicao = _transicao_liberacao_universo(row)
     if not repo.delete_by_codigo(codigo, liberar_demandas=transicao):
         raise HierarquizacaoNotFoundError(codigo)
 
 
 def matriz_da_hierarquizacao(codigo: str) -> Any:
-    """Matriz de critérios e premissas armazenada na hierarquização."""
-    dados = _carregar(codigo).get("dados_hierarquizacao") or {}
-    return (dados.get("cabecalho_grupo") or {}).get("matriz_premissas_criterios")
+    """Matriz independente associada à hierarquização."""
+    return matrizes_criterios.da_hierarquizacao(_carregar(codigo))
 
 
 def atualizar_hierarquizacao(
     codigo: str, payload: HierarquizacaoUpdateSchema
 ) -> HierarquizacaoResponseSchema:
-    row = _carregar(codigo)
+    if "matriz_id" in payload.model_fields_set:
+        from api.db.connection import atomic_connection
+        with atomic_connection():
+            return _atualizar_hierarquizacao(codigo, payload, bloquear=True)
+    return _atualizar_hierarquizacao(codigo, payload)
+
+
+def _atualizar_hierarquizacao(
+    codigo: str, payload: HierarquizacaoUpdateSchema, *, bloquear: bool = False
+) -> HierarquizacaoResponseSchema:
+    if bloquear:
+        locked = repo.get_by_codigo(codigo, for_update=True)
+        if not locked:
+            raise HierarquizacaoNotFoundError(codigo)
+        row = locked
+    else:
+        row = _carregar(codigo)
     raw = payload.model_dump(exclude_unset=True)
     data = {}
     for key in {
@@ -921,6 +950,61 @@ def atualizar_hierarquizacao(
     }:
         if key in raw:
             data[key] = raw[key]
+    if "dados_hierarquizacao" in raw:
+        anterior = (row.get("dados_hierarquizacao") or {}).get("cabecalho_grupo") or {}
+        novo = (raw["dados_hierarquizacao"] or {}).get("cabecalho_grupo") or {}
+        if row.get("matriz_id") and novo.get("matriz_premissas_criterios") != anterior.get("matriz_premissas_criterios"):
+            raise DemandaValidationError("Troque a matriz pelo seu identificador, sem editar o conteúdo associado.", field="matriz_id")
+        if row.get("matriz_id") and str(novo.get("matriz_id")) != str(row["matriz_id"]):
+            raise DemandaValidationError("O identificador da matriz não pode ser alterado no cabeçalho.", field="matriz_id")
+    if "matriz_id" in raw:
+        if "dados_hierarquizacao" in raw:
+            raise DemandaValidationError("Troque a matriz em uma operação separada dos demais dados do processo.", field="matriz_id")
+        if raw["matriz_id"] is None:
+            raise DemandaValidationError("A hierarquização deve possuir uma matriz.", field="matriz_id")
+        if str(raw["matriz_id"]) != str(row.get("matriz_id")):
+            if row.get("status") in STATUS_SEM_ALTERACAO:
+                raise DemandaValidationError("Reabra o processo antes de trocar sua matriz.", field="status")
+            nova = matrizes_criterios.obter(raw["matriz_id"])
+            dados = deepcopy(row.get("dados_hierarquizacao") or {})
+            cab = dados.setdefault("cabecalho_grupo", {})
+            f2, f3 = _criterios(nova["conteudo"], fases_a_executar=cab.get("fases_a_executar"))
+            igual = matrizes_criterios.equivalentes(matrizes_criterios.da_hierarquizacao(row), nova["conteudo"])
+            cab.update(matriz_id=str(nova["id"]), matriz_premissas_criterios=nova["conteudo"])
+            official = dados.get("comparacao_colaborativa") or {}
+            if igual and payload.confirmar_reuso_pesos:
+                dados["reuso_matriz"] = {"origem_id": str(row.get("matriz_id")),
+                                        "destino_id": str(nova["id"]), "confirmado": True}
+                if official:
+                    official.update(reuso_confirmado=True, matriz_destino_id=str(nova["id"]))
+            else:
+                dados.pop("comparacao_colaborativa", None)
+                dados.pop("reuso_matriz", None)
+            if not igual or not payload.confirmar_reuso_pesos:
+                (cab.get("configuracoes") or {}).pop("fase_3", None)
+            if not igual:
+                for obj in dados.get("objetos", []):
+                    fases = obj.setdefault("hierarquizacao", {})
+                    fases["fase_2"] = {"executada": False, "score_fase2": None, "valor_por_criterio": deepcopy(f2)}
+                    fases["fase_3"] = {"executada": False, "score_fase3": None, "criterios": deepcopy(f3)}
+                    fases["sintese"] = {"executada": False}
+                    objeto_cab = obj.setdefault("cabecalho_objeto", {})
+                    objeto_cab["atributos_fase3"] = _atributos_fase3(
+                        extrair_colunas(nova["conteudo"]), objeto_cab.get("atributos") or {})
+                (cab.get("configuracoes") or {}).pop("fase_2", None)
+                cab.pop("pacotes", None)
+            remover_resultados_fase3(dados, incluir_fase3=True)
+            cab["troca_matriz"] = {
+                "anterior_id": str(row["matriz_id"]) if row.get("matriz_id") else None,
+                "nova_id": str(nova["id"]), "equivalente": igual,
+                "reuso_confirmado": bool(igual and payload.confirmar_reuso_pesos),
+                "registrado_em": datetime.now(timezone.utc).isoformat(),
+            }
+            data.update(matriz_id=nova["id"], dados_hierarquizacao=dados, ranking=[],
+                        relatorio_fase3={}, relatorio_consolidado={}, pesos_projetos=None,
+                        julgamento_projetos=None)
+            if not igual:
+                data["relatorio_fase2"] = {}
     if raw.get("config_codigo"):
         cfg = config_repo.get_by_codigo("portfolio", raw["config_codigo"])
         if not cfg:
@@ -941,6 +1025,8 @@ def atualizar_hierarquizacao(
                 "A homologação deve ser realizada pelo fluxo específico de homologação.",
                 field="status",
             )
+    if "matriz_id" in data:
+        data["status"] = "em_julgamento"
     return _response(repo.update(codigo, data) or row)
 
 
@@ -2120,19 +2206,96 @@ def calcular_hierarquizacao(codigo: str) -> HierarquizacaoResponseSchema:
     )
 
 
+def _sintese_vencida(dados: dict[str, Any]) -> bool:
+    if (dados.get("cabecalho_grupo") or {}).get("composicao_divergente"):
+        return True
+    relatorios = (dados.get("cabecalho_grupo") or {}).get("relatorios") or {}
+    if any((relatorios.get(chave) or {}).get("desatualizado") for chave in ("fase_3", "sintese")):
+        return True
+    for objeto in dados.get("objetos") or []:
+        h = objeto.get("hierarquizacao") or {}
+        if any((h.get(chave) or {}).get("desatualizado") for chave in ("fase_1", "fase_2", "fase_3", "sintese")):
+            return True
+        if (objeto.get("cabecalho_objeto", {}).get("complementacao_atributos") or {}).get("concluida") is False:
+            return True
+    return False
+
+
 def homologar_hierarquizacao(
     codigo: str, *, homologado_por: str | None = None
 ) -> HierarquizacaoResponseSchema:
+    """Única operação que conclui as demandas; trava o recálculo das três fases."""
     row = _carregar(codigo)
-    if not row.get("ranking"):
+    if row.get("status") != "calculada":
         raise DemandaValidationError(
-            "Gere a síntese antes de homologar.", field="status"
+            "Só é possível homologar uma hierarquização com ranking calculado.", field="status"
         )
-    data: dict[str, Any] = {
-        "status": "homologada",
-        "homologado_em": datetime.now(timezone.utc),
-    }
-    uid = _uuid(homologado_por)
-    if uid:
-        data["homologado_por"] = uid
-    return _response(repo.update(codigo, data) or row)
+    if not row.get("ranking"):
+        raise DemandaValidationError("Gere a síntese antes de homologar.", field="status")
+    if _sintese_vencida(row.get("dados_hierarquizacao") or {}):
+        raise DemandaValidationError(
+            "Há resultados desatualizados, complementação pendente ou o grupo de demandas foi alterado. Recalcule as fases e a síntese antes de homologar.",
+            field="status",
+        )
+    return _response(repo.homologar(codigo, _uuid(homologado_por)) or row)
+
+
+def sincronizar_composicao(codigo: str) -> HierarquizacaoResponseSchema:
+    """Alinha as demandas da hierarquização ao grupo; resultados anteriores ficam desatualizados."""
+    row = _carregar(codigo)
+    if row.get("status") == "homologada":
+        raise DemandaValidationError(repo.MENSAGEM_HOMOLOGADA, field="status")
+    dados = deepcopy(row.get("dados_hierarquizacao") or {})
+    divergencia = (dados.get("cabecalho_grupo") or {}).get("composicao_divergente")
+    if not divergencia:
+        return _response(row)
+    grupo = agrupamento_demanda_repository.get_by_id(row["grupo_demanda_id"])
+    if not grupo:
+        raise DemandaValidationError("Grupo de demandas não encontrado.", field="grupo_demanda_id")
+    cabecalho = dados["cabecalho_grupo"]
+    tipo_demanda = cabecalho.get("tipo_demanda")
+    f2, f3 = _criterios(
+        cabecalho.get("matriz_premissas_criterios"),
+        fases_a_executar=cabecalho.get("fases_a_executar"),
+    )
+    colunas_f3 = extrair_colunas(cabecalho.get("matriz_premissas_criterios"))
+    removidas = set(divergencia.get("removidas") or [])
+    adicionadas = set(divergencia.get("adicionadas") or [])
+    objetos = [
+        o for o in dados.get("objetos") or []
+        if str((o.get("cabecalho_objeto") or {}).get("demanda_id")) not in removidas
+    ]
+    for idx, membro in enumerate(grupo.get("objetos") or [], start=len(objetos)):
+        if str(membro.get("id")) in adicionadas:
+            objetos.append(_objeto_novo(membro, idx, tipo_demanda, row.get("grupo_id"), colunas_f3, f2, f3))
+    for objeto in objetos:
+        for fase in ("fase_1", "fase_2", "fase_3", "sintese"):
+            bloco = (objeto.get("hierarquizacao") or {}).get(fase)
+            if isinstance(bloco, dict):
+                bloco["desatualizado"] = True
+    relatorios = cabecalho.setdefault("relatorios", {})
+    for chave in ("fase_3", "sintese"):
+        if isinstance(relatorios.get(chave), dict):
+            relatorios[chave]["desatualizado"] = True
+    dados["objetos"] = objetos
+    cabecalho["quantidade_objetos"] = len(objetos)
+    cabecalho.pop("composicao_divergente", None)
+    return _response(repo.sincronizar_composicao(codigo, dados, sorted(adicionadas)) or row)
+
+
+def pode_reverter_homologacao(row: dict[str, Any], user: Any) -> bool:
+    """ADMIN sempre; GESTOR somente se não for quem homologou."""
+    perfil = (user.tipo_usuario or "").strip().upper()
+    if perfil == "ADMIN":
+        return True
+    homologou = str(row["homologado_por"]) if row.get("homologado_por") else None
+    return perfil == "GESTOR" and homologou != str(user.id)
+
+
+def reverter_homologacao(codigo: str, user: Any) -> HierarquizacaoResponseSchema:
+    row = _carregar(codigo)
+    if row.get("status") != "homologada":
+        raise DemandaValidationError("Só é possível reverter uma hierarquização homologada.", field="status")
+    if not pode_reverter_homologacao(row, user):
+        raise PermissionError("A homologação só pode ser revertida por outro gestor ou por um administrador.")
+    return _response(repo.reverter_homologacao(codigo, _uuid(user.id)) or row)

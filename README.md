@@ -391,61 +391,51 @@ com correspondência no dicionário/QML. A exibição de aliases na camada depen
 do suporte e das configurações do SIG; arquivos anteriormente gerados não mudam.
 
 A página autenticada `/restrict/geoespacial/documentacao-camadas-territoriais/`
-documenta originais e combinados, campos, fórmulas, universos, fontes, períodos,
-cobertura e pendências. Distingue o catálogo incorporado, conferido em 25/10/2026,
-da matriz preliminar histórica de 46 indicadores; não é consulta ao banco em
-tempo real nem homologação de novas combinações.
-Não importa dados, materializa indicadores ou modifica o gerador.
+documenta originais e combinados, campos, fórmulas, universos, fontes, períodos
+e pendências, distinguindo o catálogo de metadados da matriz preliminar histórica
+de 46 indicadores. A listagem do catálogo não afirma que todos os valores estejam
+carregados no banco nem homologa novas combinações.
 O universo auditado contém 645 municípios; a camada setorial de 2022 contém
 103.319 códigos e 103.620 partes, com 8 geometrias oficiais inválidas.
-Não há replicação municipal nos setores. A ampliação contempla integralmente
-os campos numéricos de 18 conjuntos oficiais de 2022: nove básicos
+Não há replicação municipal nos setores. O catálogo de metadados contempla
+3.519 campos originais dos 18 conjuntos oficiais de 2022 e 10 combinações
+setoriais: nove campos básicos
 (`v0001–v0009`), demografia, alfabetização, domicílios Partes 1, 2 e 3,
 cor ou raça, parentesco, óbitos, pessoas e domicílios indígenas e quilombolas,
 rendimento do responsável, entorno por domicílios, moradores e faces e
-registro de nascimento. São 3.519 originais e 10 combinados setoriais.
-A completude se refere a esses conjuntos e dicionários identificados,
-não a qualquer produto presente ou futuro do IBGE.
-Cada arquivo mantém sua cobertura: ausência de linha e sigilo `X` não são
-substituídos por zero. O relatório registra os setores presentes e os sigilos
-por conjunto, além da cobertura numérica de cada atributo.
+registro de nascimento. Os valores são obtidos quando um processamento os
+solicita. Como as fontes configuradas são arquivos oficiais, o SICARD baixa o
+conjunto que contém o atributo, extrai e valida as colunas solicitadas e as
+persiste para reutilização. Não se presume a existência de consulta oficial
+por variável na API do IBGE.
+Ausência de linha e sigilo `X` não são substituídos por zero; a cobertura,
+os sinais e o SHA-256 da fonte são registrados com os valores obtidos.
 Foram persistidos 18 combinados municipais, todos com 645/645 valores; o catálogo
 municipal totaliza 6.393 atributos, dos quais 6.375 originais.
-A disponibilidade operacional posterior à conferência pode ser
-conferidas em `/api/geoespacial/extracao-atributos/municipal/catalog?territorialidade=setores_2022`;
-essa carga não utiliza amostra municipal nem homologa combinações automaticamente.
+O estado operacional de cada atributo setorial, inclusive sua cobertura após
+carregamento, pode ser consultado em
+`/api/geoespacial/extracao-atributos/municipal/catalog?territorialidade=setores_2022`.
 Temas comuns às duas escalas não implicam mesmos IDs, períodos ou universos.
 Rendimento médio e mediano do responsável e suas variâncias foram incorporados;
 não equivalem à renda domiciliar per capita ou à pobreza. O indicador de
 baixa renda já calculado permanece municipal. Dados divulgados em 2025/2026
 mantêm a referência censitária de 2022 e as janelas específicas da descrição.
 
-A carga completa é reproduzível por
-`scripts/completar_setores_2022.py --insumos DIR --aplicar --relatorio INVENTARIO.json`. Sem `--aplicar`,
-valida todos os arquivos e linhas de SP sem escrita. A aplicação usa transação
-por arquivo, verifica os valores e sinais persistidos contra o CSV e recalcula
-os dez combinados ao final. Os IDs anteriores e a geometria são preservados.
-Os dicionários e arquivos usados são identificados por URL e SHA-256.
-Em caso de interrupção, `--retomar` reutiliza somente os arquivos cuja
-transação foi confirmada com o mesmo SHA-256 e o mesmo conjunto de campos;
-a transação interrompida não é considerada concluída.
-Uma trava consultiva de sessão impede cargas concorrentes durante toda a
-execução, inclusive entre as transações; a conexão que mantém a trava é a
-mesma que aplica cada arquivo. A tentativa concorrente falha antes de escrever.
-
-A certificação somente é emitida após comparar os campos exatos, hashes,
-coberturas e metadados dos 18 conjuntos com o inventário da carga completa:
-`scripts/preparar_catalogo_territorial.py --conferir --inventario INVENTARIO.json --relatorio config/catalogo-territorial-incorporado.json`.
-O relatório certificado incorpora esse inventário, permitindo usá-lo depois
-como entrada de `--inventario`, sem depender de diretório local de trabalho.
-Relatórios anteriores ou parciais não certificam completude; a página não os
-apresenta como carga integral nem interpreta metadados de sigilo ausentes como zero.
+O catálogo estático de metadados é reproduzível com
+`scripts/preparar_catalogo_setorial_on_demand.py --insumos DIR`.
+Esse comando descreve as fontes e os 3.519 atributos sem gravar valores no banco.
+Durante a operação, a primeira solicitação de um atributo obtém o arquivo oficial,
+valida códigos e valores contra a malha, preserva ausências e sigilos, grava
+apenas as chaves solicitadas e registra a procedência em transação protegida
+por trava consultiva. Solicitações seguintes reutilizam os dados persistidos.
+As dez combinações setoriais são recalculadas quando solicitadas, após obtenção
+dos respectivos insumos. A malha e seus IDs são preservados.
 
 Os dados públicos de referência estão versionados, sem dependência de pasta de sessão:
 
-- `config/catalogo-territorial-incorporado.json`: carga efetiva, 3.529 atributos
-  setoriais com descrições, campos, fórmulas, cobertura, dicionário, procedência
-  SHA-256 e conferência dos 18 combinados municipais;
+- `config/catalogo-setorial-on-demand.json`: catálogo de metadados dos 3.519
+  atributos originais e 10 combinados setoriais; os valores originais são
+  carregados e têm cobertura confirmada somente quando solicitados;
 - `config/documentacao-camadas-territoriais.json`: prévia histórica integral,
   46 indicadores, preservada sem alterações e usada nas fórmulas da carga;
 - `config/documentacao-camadas-territoriais/matriz-viabilidade-variaveis.csv`: mesma matriz em CSV;
@@ -475,10 +465,10 @@ do retrato original, a equivalência JSON/CSV e reproduzem os 645 percentuais co
 `100 × (até 1/4 SM + mais de 1/4 até 1/2 SM + sem rendimento) / total do universo`.
 Uma atualização deliberada do retrato exige revisar os dados, as ressalvas e
 os hashes esperados nos testes, sem tratar disponibilidade numérica como homologação.
-O relatório da carga aplicada é reproduzível por
-`scripts\preparar_catalogo_territorial.py --conferir --relatorio config\catalogo-territorial-incorporado.json`.
-A preparação usa `--insumos DIR --aplicar` e a migração
-`database\143_catalogo_territorial.sql`; a página não executa essas operações.
+O catálogo de metadados setoriais é reproduzível por
+`scripts\preparar_catalogo_setorial_on_demand.py --insumos DIR`.
+Essa geração não grava valores no banco. O carregamento de valores ocorre no
+fluxo da aplicação, quando um processamento solicita atributos não persistidos.
 
 As novas saídas usam uma organização por contexto, não por formato de arquivo:
 
@@ -1283,6 +1273,113 @@ exibe resultados anteriores: valores e pendências refletem a tabela vigente, e
 os índices ficam sem cálculo até nova execução. A Fase 1 descarta também o
 resultado da Fase 3 por fornecer o grupo Risco; alterações nas Fases 1 e 2
 descartam a síntese. O novo cálculo considera a rodada inteira.
+Na Fase 3, após calcular o índice geral, a seção **Gerar a síntese final**
+exibe o **Ranking final de demandas**, em ordem de posição, com o
+**Índice geral de hierarquização** e a situação de cada demanda. Demandas
+segregadas, barradas por risco ou sem os índices necessários ficam sem posição.
+O índice é clicável e abre a memória de cálculo no modal padrão: demanda,
+índices de favorabilidade de rede, favorabilidade territorial e prioridade,
+pesos efetivamente utilizados, resultado combinado, equação e definição dos
+termos. A consulta utiliza os valores da síntese salva, não alterações ainda
+não calculadas dos controles. Na média simples, cada índice tem peso 1/3.
+Sínteses históricas sem dados compatíveis para reconstrução recebem aviso
+explícito, sem inventar pesos ou equações. A tabela reaparece ao reabrir a
+rodada, desde que os resultados continuem atuais.
+
+Na página **Ranking de demandas**, as hierarquizações finalizadas e atuais são
+consultadas na tabela padrão, com filtros, seleção, controles, paginação e
+contador. Uma única seleção habilita **Visualizar**, que abre o ranking do grupo,
+e os atalhos para os painéis restrito e público existentes. Esses atalhos não
+publicam o grupo nem aplicam filtros que os painéis ainda não suportam. O nome da
+hierarquização abre um modal com os índices das três fases por demanda, pesos
+registrados e resultado final. Pesos da síntese incompatíveis com o resultado
+salvo não são apresentados como reconstituídos. **Gerenciar publicação** permanece
+desabilitado até a implementação da gestão de publicações.
+No modal, a leitura começa pela posição final, demanda e índice geral de
+hierarquização, seguidos pelos pesos da síntese e pelo detalhamento das Fases
+1, 2 e 3. O texto esclarece que o índice de risco da Fase 1 participa do índice
+de prioridade da Fase 3, sem entrar separadamente na síntese final. Após um
+separador na barra de filtros, os botões de ícone **Pesos**, **Índices das fases**
+e **Elegibilidade** alternam seus grupos de colunas. Todas começam visíveis;
+seletores, posição, demanda e índice final permanecem disponíveis. A escolha
+de visibilidade é mantida na filtragem e paginação e reinicia ao reabrir o modal.
+Ocultar colunas não remove dados dos filtros nem da exportação.
+
+O título do ranking incorpora o tipo de demanda e o nome da hierarquização.
+Os nomes das demandas são exibidos como registrados, sem normalização
+automática de capitalização, siglas ou grafia, no ranking, mapa, modal de
+detalhes e em todas as seções da Fase 3.
+
+O componente `templates/componentes/mapa_ranking.html` exporta a macro
+`mapa_ranking(somente_canvas=false, prefixo="ranking")`. A versão completa oferece
+a árvore **Plano/Programa/Projeto → Hierarquização → Demanda**, com controles de
+visibilidade que atuam simultaneamente sobre a geometria e o marcador ordinal.
+Tipos sem grupos finalizados são omitidos. A página de ranking usa
+`somente_canvas=true`, sem sidebar. Carregar `ranking-dados.js`, `ranking-mapa.js`,
+`ranking-privado.css`, Leaflet, `status-colors.js` e `painel-map-controls.js`;
+inicializar com `SLTRankingMapa.criar(elemento, {hierarquizacoes, demandas})`.
+O mapa privado recebe geometrias reais do endpoint autenticado
+`/api/painel/demandas/internas`, associadas pelo tipo e pelo código da demanda.
+Não cria pontos substitutos a partir das coordenadas de referência; geometrias
+ausentes ou inválidas são informadas explicitamente. A posição aparece somente
+no marcador em gota.
+Em polígonos, a gota é posicionada no centroide da área em coordenadas GeoJSON,
+descontando os anéis internos e ponderando as partes dos multipolígonos pela
+área, independentemente da orientação dos anéis; não usa o centro do retângulo
+envolvente. O centroide de um polígono côncavo pode ficar fora de sua área.
+A tabela do grupo e a seção do mapa iniciam ocultas e aparecem juntas ao
+visualizar uma hierarquização (inclusive pelo parâmetro `codigo`). O canvas
+mostra apenas as demandas do grupo visualizado. Clicar em uma linha do ranking,
+ou focá-la e pressionar Enter ou Espaço, enquadra a geometria correspondente;
+os seletores da tabela continuam independentes dessa navegação. A legenda
+compartilhada de demandas é exibida na seção do mapa, fora do canvas.
+Nesse componente, `SLTStatusColors.rankingPinHtml` gera a mesma gota ordinal
+para o mapa e para a legenda (`renderLegend` com `marcadorRanking: true`).
+Fundo e texto usam a paleta central, e a geometria usa `leafletPathStyle`,
+preservando listras de planos, malha de programas e preenchimento liso de projetos.
+O status atual do cadastro interno prevalece sobre o retrato salvo no grupo;
+concluir o cálculo não equivale a publicar a demanda. Status ausentes ou
+desconhecidos geram aviso explícito e impedem a exibição da demanda no mapa,
+sem atribuir uma situação presumida. As fases da legenda representam o ciclo
+de vida cadastral, não as três etapas do cálculo multicritério.
+
+Para a futura integração de publicação, a instância oferece
+`definirPoliticaPublicacao(hierarquizacao => boolean)`, que recompõe mapa e árvore
+segundo a política recebida, e `atualizar(hierarquizacoes, demandas)`. Por enquanto,
+a página privada permite consultar todos os grupos finalizados e atuais.
+O componente não autoriza acesso a dados públicos: a futura página pública deve
+receber apenas dados autorizados pelo servidor e a política oficial de publicação,
+sem reutilizar o endpoint interno nem inferir publicação a partir de homologação.
+
+Nos painéis existentes (`/restrict/painel/` e `/public/painel/`), a API unificada
+de demandas inclui `hierarquizacoes`: resumo seguro das fases e dos pesos, índice
+final e posição **daquela demanda em cada rodada**. Não transfere o documento
+interno completo da rodada para o painel público. A sidebar cria
+**Tipo → Hierarquização → Demanda** desde a formação do grupo, com situação da
+rodada; demandas sem grupo permanecem na raiz de seu tipo. Várias participações
+compartilham uma única geometria e um único estado de visibilidade da demanda.
+O contador considera demandas únicas, não participações. Os detalhes individuais
+permitem consultar todas as rodadas, sem presumir ranking global entre grupos.
+
+Ciclo da hierarquização: o cálculo da síntese apenas **grava** o ranking e deixa a
+rodada em `calculada`; o status das demandas não muda. Nesse estado qualquer
+índice das três fases pode ser recalculado. A **homologação**
+(`POST /api/ahp/hierarquizacoes/{codigo}/homologar`, gestor ou administrador) é a
+única operação que conclui as demandas (`hierarq_em_andamento` para
+`hierarq_finalizada`, conferida no domínio, na mesma transação), exige síntese
+atual e **trava** o recálculo das fases, da síntese e da complementação. A
+reversão (`POST .../reverter-homologacao`) só é permitida a administrador ou a
+gestor diferente de quem homologou; devolve a rodada a `calculada` e as demandas a
+`hierarq_em_andamento`, exceto as que pertençam a outra rodada homologada. Ambas as
+ações ficam registradas em `cabecalho_grupo.historico_homologacao`. Demandas em
+execução, suspensas, retiradas ou já publicadas não são sobrescritas. A publicação
+é um controle gerencial somente do painel público, ainda não implementado.
+As migrações `149_reconciliar_demandas_hierarquizacao_concluida.sql` (corrige
+somente demandas de rodadas já homologadas, por tipo e ID) e
+`150_reverter_homologacao_hierarquizacao.sql` (transições da reversão) estão
+registradas no aplicador e devem ser aplicadas explicitamente após revisão. A
+presença dos arquivos no repositório não significa aplicação ao banco oficial.
+
 O cálculo usa os critérios enviados pela tabela atual, respeitando os pesos
 homologados. Escalas ordinais declaradas no campo Dado também são lidas; escalas
 ausentes não são inventadas. A síntese é bloqueada se os critérios ou escalas

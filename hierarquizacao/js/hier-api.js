@@ -70,6 +70,12 @@
     homologar(codigo) {
       return request(`${BASE_H}/${encodeURIComponent(codigo)}/homologar`, jsonOpts("POST"));
     },
+    reverterHomologacao(codigo) {
+      return request(`${BASE_H}/${encodeURIComponent(codigo)}/reverter-homologacao`, jsonOpts("POST"));
+    },
+    sincronizarComposicao(codigo) {
+      return request(`${BASE_H}/${encodeURIComponent(codigo)}/sincronizar-composicao`, jsonOpts("POST"));
+    },
 
     // --- Configurações (portfólio) ---
     listarConfigs(params) {

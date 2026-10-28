@@ -22,9 +22,9 @@
   let listaCache = [],
     agrupamentosCache = [],
     hierEditMode = false,
-    matrizAtual = null,
-    matrizCadastro = null,
-    matrizLeitura = 0;
+    matrizAtual = null;
+  const matrixEditors = new Map();
+  const cadastroMatrixPicker = window.SLTMatrizesCriterios.mount($("hier-matrix-picker"));
   const ordenarHier = SLTTable.sorting($('hier-tbody').closest('table'), () => [null,
     h=>rotuloSituacaoHier(h.status), h=>h.codigo, h=>h.julgamento_id, h=>h.nome, h=>h.descricao,
     h=>JSON.stringify(matrizDaHier(h)), ...['objetos','julgamento_projetos','pesos_projetos','ranking'].map(key=>h=>JSON.stringify(h[key])),
@@ -138,7 +138,7 @@
       `<td>${esc(h.julgamento_id || "—")}</td>` +
       `<td>${nome}</td>` +
       `<td>${desc}</td>` +
-      `<td>${matrizCell(h)}</td>` +
+      `<td>${editing ? '<div data-hier-matrix-editor></div>' : matrizCell(h)}</td>` +
       `<td>${jsonButton(h, "objetos", "Visualizar demandas")}</td>` +
       `<td>${jsonButton(h, "julgamento_projetos", "Visualizar julgamentos")}</td>` +
       `<td>${jsonButton(h, "pesos_projetos", "Visualizar pesos")}</td>` +
@@ -183,6 +183,24 @@
   }
   function ligarEventosTabela() {
     const tbody = $("hier-tbody");
+    matrixEditors.clear();
+    tbody.querySelectorAll("[data-hier-matrix-editor]").forEach(root => {
+      const codigo = root.closest("tr").dataset.codigo, h = listaCache.find(item => item.codigo === codigo);
+      root.appendChild($("hier-matrix-editor-template").content.cloneNode(true));
+      const reuseLabel = document.createElement("label"), reuse = document.createElement("input");
+      reuse.type = "checkbox"; reuse.disabled = true;
+      reuseLabel.append(reuse, " Reutilizar pesos existentes (somente matriz equivalente)");
+      root.appendChild(reuseLabel);
+      let original = null;
+      const picker = window.SLTMatrizesCriterios.mount(root, { onChange(record) {
+        if (record && String(record.id) === String(h.matriz_id)) original = record;
+        const equivalent = Boolean(original?.assinatura && record?.assinatura === original.assinatura);
+        reuse.checked = false;
+        reuse.disabled = !equivalent || !temPesos(h) || String(record?.id) === String(h.matriz_id);
+      } });
+      matrixEditors.set(codigo, { picker, reuse, original: () => original });
+      picker.ready.then(() => { if (h.matriz_id && root.isConnected) picker.choose(h.matriz_id); });
+    });
     tbody.querySelectorAll(".json-cell").forEach((b) => {
       b.onclick = () => {
         const h = listaCache.find((x) => x.codigo === b.dataset.codigo);
@@ -224,11 +242,12 @@
     $("nova-hierarquizacao").querySelectorAll("input, select, textarea, button").forEach((control) => {
       if (!control.closest('.admin-filter-bar, .admin-pagination')) control.disabled = readonly;
     });
+    cadastroMatrixPicker.setDisabled(readonly);
     $("nova-hierarquizacao").querySelector('.process-actions').classList.toggle("hidden", readonly);
   }
   function mostrarCadastroNovo() {
     setCadastroReadonly(false); $("nova-hierarquizacao").reset();
-    matrizCadastro = null; matrizLeitura++; $("hier-criteria-matrix-summary").textContent = "";
+    cadastroMatrixPicker.reset(); $("hier-criteria-matrix-summary").textContent = "";
     carregarAgrupamentos();
     $("hier-create-section").classList.remove("hidden");
     $("hier-create-section").scrollIntoView({ behavior: "smooth", block: "start" }); $("hier-nome").focus();
@@ -316,7 +335,8 @@
     if (selecionadasHier.size !== 1) return;
     const codigo = [...selecionadasHier][0], h = listaCache.find((item) => item.codigo === codigo); if (!h) return;
     $("nova-hierarquizacao").reset(); $("hier-nome").value = h.nome || ""; $("hier-descricao").value = h.descricao || "";
-    matrizCadastro = null; matrizLeitura++;
+    cadastroMatrixPicker.reset();
+    if (h.matriz_id) cadastroMatrixPicker.choose(h.matriz_id);
     const matrix = matrizDaHier(h);
     $("hier-criteria-matrix-summary").classList.remove("hidden");
     $("hier-criteria-matrix-summary").textContent = matrix ? "Matriz cadastrada nesta hierarquização. Consulte e baixe pelo botão Ver matriz na tabela." : "Esta hierarquização não possui matriz cadastrada.";
@@ -509,31 +529,12 @@
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
-  $("hier-criteria-matrix").addEventListener("change", async (event) => {
-    const file = event.target.files[0], request = ++matrizLeitura;
-    matrizCadastro = null;
-    const summary = $("hier-criteria-matrix-summary");
-    summary.classList.remove("hidden"); summary.textContent = file ? "Lendo matriz…" : "Selecione uma matriz.";
-    if (!file) return;
-    try {
-      const parsed = await window.SLTMatrizArquivo.ler(file);
-      if (request !== matrizLeitura) return;
-      const rows = Array.isArray(parsed) ? parsed : (parsed.linhas || parsed.rows || parsed.criterios || parsed.dados || []);
-      if (!Array.isArray(rows) || rows.filter(row => row && typeof row === "object" && !Array.isArray(row)).length < 2) throw new Error("A matriz deve conter ao menos dois critérios.");
-      matrizCadastro = { ...(Array.isArray(parsed) ? {} : parsed), arquivo: file.name, linhas: rows };
-      summary.textContent = `${file.name} · ${rows.length} critérios carregados.`;
-    } catch (err) {
-      if (request !== matrizLeitura) return;
-      event.target.value = ""; summary.textContent = err.message;
-      Notify.warning("Matriz de critérios", err.message);
-    }
-  });
   $("nova-hierarquizacao").onsubmit = async (e) => {
     e.preventDefault();
     if (operando) return;
     if (!$("hier-agrupamento").value)
       return erro("Selecione um agrupamento salvo antes de criar a hierarquização.");
-    if (!matrizCadastro) return erro("Anexe e aguarde a leitura da matriz de premissas e critérios.");
+    if (cadastroMatrixPicker.pending() || !cadastroMatrixPicker.selected()) return erro("Selecione uma matriz cadastrada ou conclua o cadastro do arquivo.");
     operando = true;
     atualizarBotoesLote();
     const proc = ProcessFeedback.iniciarCadastro({title: "Cadastrar hierarquização", tasks: ["Gravar hierarquização"]});
@@ -544,7 +545,7 @@
         nome: $("hier-nome").value.trim(),
         descricao: $("hier-descricao").value.trim() || null,
         grupo_demanda_id: $("hier-agrupamento").value,
-        matriz_premissas_criterios: matrizCadastro,
+        matriz_id: cadastroMatrixPicker.selected().id,
       });
       gravada = true;
       const posCadastro = $("hier-complementacao-pos-cadastro");
@@ -592,6 +593,11 @@
     };
   }
   const bindLote = (id, fn) => { const el = $(id); if (el) el.onclick = fn; };
+  function temPesos(h) {
+    const official = h.dados_hierarquizacao?.comparacao_colaborativa;
+    return Boolean((h.pesos_projetos && Object.keys(h.pesos_projetos).length) ||
+      official?.pesos_consolidados?.length || h.dados_hierarquizacao?.cabecalho_grupo?.configuracoes?.fase_3);
+  }
   bindLote("hier-bulk-edit", () => { if (!selecionadasHier.size) return; hierEditMode = true; renderTabela(); });
   bindLote("hier-bulk-view", visualizarHierarquizacaoSelecionada);
   bindLote("hier-bulk-cancel", () => { hierEditMode = false; renderTabela(); });
@@ -617,6 +623,22 @@
           if (!tr) throw new Error(`Registro ${cod} não está disponível para edição.`);
           const payload = {};
           tr.querySelectorAll("[data-k]").forEach(el => { payload[el.dataset.k] = el.value; });
+          const editor = matrixEditors.get(cod), h = listaCache.find(item => item.codigo === cod);
+          if (editor?.picker.pending()) throw new Error(`Conclua o carregamento ou cadastro da matriz de ${cod}.`);
+          const matrix = editor?.picker.selected();
+          if (matrix && String(matrix.id) !== String(h.matriz_id)) {
+            payload.matriz_id = matrix.id;
+            payload.confirmar_reuso_pesos = !editor.reuse.disabled && editor.reuse.checked;
+            if (!(await ProcessFeedback.confirmar({
+              title: "Alterar matriz da hierarquização",
+              message: `${cod}: associar a matriz "${matrix.nome}"?`,
+              warning: payload.confirmar_reuso_pesos
+                ? "O reaproveitamento dos pesos da matriz equivalente será registrado. Resultados dependentes deverão ser recalculados."
+                : temPesos(h) ? "Os pesos e resultados dependentes serão invalidados. Para matriz equivalente, marque Reutilizar pesos antes de salvar caso deseje preservá-los."
+                  : "Resultados dependentes da matriz serão invalidados.",
+              confirmLabel: "Alterar matriz",
+            }))) throw new Error(`Alteração da matriz de ${cod} cancelada. Nenhuma alteração deste registro foi enviada.`);
+          } else if (h.matriz_id && !matrix) throw new Error(`Selecione uma matriz para ${cod}.`);
           await HierApi.atualizar(cod, payload);
         }
         concluidas++;

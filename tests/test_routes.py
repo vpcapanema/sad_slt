@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from fastapi.testclient import TestClient
 
 from api.exceptions import DatabaseUnavailableError
@@ -125,7 +127,7 @@ def test_multicriterio_centrais_preservam_modo_e_navegacao() -> None:
             assert f'data-modo="{modo}"' in response.text
             assert f"<title>{titulo} — SICARD</title>" in response.text
             assert f'href="{path}" class="active" aria-current="page"' in response.text
-            assert ('ami-espaco-page' in response.text) == (modo == "espaco")
+            assert ('ami-espaco-page' in response.text) == (modo in {"espaco", "julgamentos"})
         prefixed = client.get(path, headers={"x-forwarded-prefix": "/sicard"})
         assert prefixed.status_code == 200
         assert f'data-modo="{modo}"' in prefixed.text
@@ -183,17 +185,17 @@ def test_indice_organiza_analise_multicriterio_no_mad_e_recursos_no_geoprocessam
     assert "/restrict/analise-multicriterio/central-julgamentos" in html
     assert "/restrict/analise-multicriterio/?modo=formulario" not in html
     trecho_mad = html.split('id="group-mad"', 1)[1].split('id="group-resultados"', 1)[0]
-    trecho_geo = html.split('id="group-geoprocessamento"', 1)[1].split('id="group-ahp-restrict"', 1)[0]
+    trecho_geo = html.split('id="group-geoprocessamento"', 1)[1].split('id="group-administracao"', 1)[0]
     assert "Hierarquização e Ranking" not in trecho_geo
     assert "Visualizador de camadas" in trecho_geo
-    assert trecho_geo.index("Central geoespacial") < trecho_geo.index("Visualizador de camadas") < trecho_geo.index("Bancada de geoprocessamento")
-    assert "Ferramentas de geoprocessamento e documentação" in trecho_geo
+    assert trecho_geo.index("Central de geoprocessamento") < trecho_geo.index("Visualizador de camadas") < trecho_geo.index("Bancada de geoprocessamento")
+    assert "Geoprocessamento e documentação técnica" in trecho_geo
     assert "Documentação técnica" in trecho_geo
-    assert "/public/documentacao/favorabilidade/" in trecho_geo
+    assert "/public/documentacao_favorabilidade_v2/" in trecho_geo
     assert "/public/documentacao/risco-restricao/" in trecho_geo
     assert trecho_mad.index("/restrict/hierarquizacao/processos/") < trecho_mad.index("/central-julgamentos") < trecho_mad.index("/central-respostas")
-    assert "Central de julgamentos" in trecho_mad
-    assert "Central de respostas" in trecho_mad
+    assert "Gestão de julgamentos AHP" in trecho_mad
+    assert "Respostas dos especialistas aos julgamentos AHP" in trecho_mad
     assert "Apoio à decisão e hierarquização" in trecho_mad
     assert "/restrict/geoespacial/visualizador-bases-geoespaciais/" not in trecho_geo
     assert "/restrict/geoespacial/visualizador-camadas/" in trecho_geo
@@ -239,11 +241,11 @@ def test_indice_organiza_analise_multicriterio_no_mad_e_recursos_no_geoprocessam
     assert "border: 1px solid" in bloco_subcard
     trecho_admin = html.split('id="group-administracao"', 1)[1].split("</section>", 1)[0]
     assert "Tabelas do banco de dados" in trecho_admin
-    assert "Storage de dados geoespaciais" in trecho_admin
-    assert "Análise Multicritério (AHP) e obtenção de pesos" in trecho_mad
-    assert "Ranqueamento" in trecho_mad
+    assert "Armazenamento de dados geoespaciais" in trecho_admin
+    assert "Organização das hierarquizações e julgamentos AHP" in trecho_mad
+    assert "Avaliação territorial e priorização" in trecho_mad
     assert "Elegibilidade territorial" in trecho_mad
-    assert "Favorabilidade territorial — município e rede rodoviária" in trecho_mad
+    assert "Favorabilidade territorial" in trecho_mad
     assert "Priorização de demandas por atributos" in trecho_mad
 
 
@@ -324,7 +326,7 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
     assert "Card oposto simulado automaticamente" in julgamentos_js
     assert "pair._applySaaty = function" in julgamentos_js
     assert 'class="admin-bulk-actions ami-table-actions standard-table-actions"' in html
-    assert html.index('</table></div><div class="admin-bulk-actions ami-table-actions standard-table-actions"') > html.index('class="admin-table hier-register-table ami-table--database"')
+    assert html.index('class="admin-bulk-actions ami-table-actions standard-table-actions"') > html.index("</table>")
     assert 'id="ami-pairwise-panel"' in html
     assert 'id="ami-live-metrics"' in html
     for metric_id in ("ami-metric-lambda", "ami-metric-ic", "ami-metric-ia", "ami-metric-rc"):
@@ -440,7 +442,7 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
         "Criado em",
         "Atualizado em",
         "Critérios",
-        "Token de acesso",
+        "Código de acesso ao formulário",
         "Lambda máximo (λmax)",
         "Índice de consistência (IC)",
         "Índice aleatório (IA)",
@@ -487,17 +489,25 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
     assert '>3.3</span><span>Matriz de comparação pareada' in html
     assert '>3.3</span><span>Formulário de comparação pareada' in html
     assert ">2</span><span>Ambiente colaborativo" in html
-    assert ">2.1</span><span>Análise Multicritério Interativa" in html
-    assert '>2.1.1</span><span id="ami-deadline-section-title">Data limite da coleta' in html
+    assert ">2.1</span><span>Dados do ambiente colaborativo" in html
+    assert '>2.1.2</span><span id="ami-deadline-section-title">Data limite da coleta' in html
     assert 'id="ami-criteria-matrix-summary"' in html
     assert ">2.2</span><span>Status do ambiente colaborativo" in html
     assert ">2.3</span><span>Mensagem de email" in html
-    assert html.count("ami-config-field") == 3
-    for field_id in ("ami-deadline", "ami-hierarchy", "ami-emails"):
-        field = html.split(f'for="{field_id}"', 1)[1].split("</div>", 1)[0]
-        assert field.index("form-help") < field.index(f'id="{field_id}"')
+    assert html.count("ami-config-field") == 4
+    for field_id, help_id in (
+        ("ami-deadline", "ami-deadline-help"),
+        ("ami-hierarchy", "ami-hierarchy-source"),
+        ("ami-emails", "ami-collaborator-help"),
+    ):
+        input_tag = re.search(
+            rf'<(?:input|select)\b(?=[^>]*\bid="{field_id}")[^>]*>', html
+        )
+        assert input_tag is not None
+        assert help_id in input_tag.group(0)
+        assert html.index(f'id="{help_id}"') < input_tag.start()
     assert html.count('class="ami-config-control') == 3
-    assert 'id="ami-emails" class="c-form-control" type="text"' in html
+    assert 'id="ami-emails" class="c-form-control" type="email"' in html
     assert 'class="c-form-group ami-config-list"' in html
     collaborator_card = html.split('class="c-form-group ami-config-field ami-collaborator-entry"', 1)[1]
     assert collaborator_card.index('for="ami-emails"') < collaborator_card.index('class="c-form-group ami-config-list"')

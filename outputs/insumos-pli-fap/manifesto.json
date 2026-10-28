@@ -1,0 +1,2594 @@
+{
+  "versao": 1,
+  "criado_em": "2026-10-28T17:17:39.610729+00:00",
+  "diretorio_storage": "aplicacao/insumos-pli-fap/20261028T171437Z-00cf913c4d65",
+  "documento": "documentacao/fundamentacao/PLI_Fig_Estrutura_Criterios_v6.pptx",
+  "documento_sha256": "ad16c1de163e60f73eb347d9cbbbb68d120430cc926024aa81c6bc3eaec0519a",
+  "configuracao_sha256": "b4b3d77e5211dffa35bcbb899f58a9706afad6e61dbd76fd1f5d491d4255d577",
+  "finalidade": "Insumos para calculos futuros; nenhum criterio ou valor FAP calculado ou homologado.",
+  "limite_recorte": {
+    "storage": "base-geoespacial/vetor/uf_sp.gpkg",
+    "sha256": "8b59f4e682cf60e7ee5f4a0c5dde204c4f8d817c7bc47a6c7f23f8e2baebc4bd"
+  },
+  "criterios": [
+    {
+      "dimensao": "D1 Técnica e logística",
+      "indicador": "T1 Saturação e alívio de gargalos",
+      "variaveis_documento": "V01 alívio de saturação (V/C ponderado) · V02 horizonte (só faseamento)",
+      "origem": "Rede (D-12)",
+      "natureza": "Misto",
+      "oes": "OE6",
+      "codigo": "T1",
+      "variaveis": [
+        "V01",
+        "V02"
+      ]
+    },
+    {
+      "dimensao": "",
+      "indicador": "T2 Tempo e confiabilidade",
+      "variaveis_documento": "V03 redução de veículos·hora · V04 confiabilidade (P95/mediana)",
+      "origem": "Rede (D-12); estudo",
+      "natureza": "Fórmula",
+      "oes": "OE5 OE6",
+      "codigo": "T2",
+      "variaveis": [
+        "V03",
+        "V04"
+      ]
+    },
+    {
+      "dimensao": "",
+      "indicador": "T3 Conectividade e intermodalidade",
+      "variaveis_documento": "V05 participação não rodoviária · V06 função de conexão · REL",
+      "origem": "Rede (D-12); rubrica",
+      "natureza": "Misto",
+      "oes": "OE6",
+      "codigo": "T3",
+      "variaveis": [
+        "V05",
+        "V06",
+        "REL"
+      ]
+    },
+    {
+      "dimensao": "D2 Econômica",
+      "indicador": "E1 Emprego e desenv. regional",
+      "variaveis_documento": "V08 empregos permanentes por mil hab. · V09–V10 dinamismo econômico (ponderadores)",
+      "origem": "D-15 / D-16; SICARD",
+      "natureza": "Misto",
+      "oes": "OE2",
+      "codigo": "E1",
+      "variaveis": [
+        "V08",
+        "V09",
+        "V10"
+      ]
+    },
+    {
+      "dimensao": "",
+      "indicador": "E2 Impacto nas cadeias produtivas",
+      "variaveis_documento": "V11 impacto nas cadeias produtivas (nível 1–5, com descrição)",
+      "origem": "Documental / rubrica",
+      "natureza": "Painel*",
+      "oes": "OE5",
+      "codigo": "E2",
+      "variaveis": [
+        "V11"
+      ]
+    },
+    {
+      "dimensao": "D3 Social e territorial",
+      "indicador": "S1 Equidade territorial",
+      "variaveis_documento": "V12 índice de focalização",
+      "origem": "SICARD",
+      "natureza": "Fórmula",
+      "oes": "OE2",
+      "codigo": "S1",
+      "variaveis": [
+        "V12"
+      ]
+    },
+    {
+      "dimensao": "",
+      "indicador": "S2 Acessibilidade a serviços",
+      "variaveis_documento": "V13 pessoas que passam a alcançar serviços essenciais",
+      "origem": "Rede (D-12)",
+      "natureza": "Fórmula",
+      "oes": "OE2",
+      "codigo": "S2",
+      "variaveis": [
+        "V13"
+      ]
+    },
+    {
+      "dimensao": "",
+      "indicador": "S3 Integração urbana",
+      "variaveis_documento": "V15 travessias urbanas · V14 exposição urbana (evidência)",
+      "origem": "Rubrica; SICARD",
+      "natureza": "Painel",
+      "oes": "OE2",
+      "codigo": "S3",
+      "variaveis": [
+        "V15",
+        "V14"
+      ]
+    },
+    {
+      "dimensao": "D4 Segurança",
+      "indicador": "SEG Sinistros graves",
+      "variaveis_documento": "V18 vítimas evitadas · V16 sinistralidade base · V17 vulneráveis (evidência)",
+      "origem": "SICARD; estudo",
+      "natureza": "Fórmula",
+      "oes": "OE7",
+      "codigo": "SEG",
+      "variaveis": [
+        "V18",
+        "V16",
+        "V17"
+      ]
+    },
+    {
+      "dimensao": "D5 Ambiental e climática",
+      "indicador": "A1 Descarbonização",
+      "variaveis_documento": "V19 GEE evitado 2028–2050",
+      "origem": "Rede (D-12)",
+      "natureza": "Fórmula",
+      "oes": "OE1 OE9",
+      "codigo": "A1",
+      "variaveis": [
+        "V19"
+      ]
+    },
+    {
+      "dimensao": "",
+      "indicador": "A2 Sensibilidade socioambiental",
+      "variaveis_documento": "V20 classe de sensibilidade socioambiental (cruzamento SIG)",
+      "origem": "SIG",
+      "natureza": "Painel*",
+      "oes": "OE1",
+      "codigo": "A2",
+      "variaveis": [
+        "V20"
+      ]
+    },
+    {
+      "dimensao": "",
+      "indicador": "A3 Resiliência climática",
+      "variaveis_documento": "V21 extensão em ameaça alta · V22 redundância criada",
+      "origem": "SIG",
+      "natureza": "Misto",
+      "oes": "OE3",
+      "codigo": "A3",
+      "variaveis": [
+        "V21",
+        "V22"
+      ]
+    },
+    {
+      "dimensao": "D6 Viabilidade institucional e financeira",
+      "indicador": "F1 Esforço fiscal e alavancagem",
+      "variaveis_documento": "V23 CAPEX não estadual · V24 OPEX a cargo do Estado",
+      "origem": "D-15 / D-16",
+      "natureza": "Misto",
+      "oes": "OE4",
+      "codigo": "F1",
+      "variaveis": [
+        "V23",
+        "V24"
+      ]
+    },
+    {
+      "dimensao": "",
+      "indicador": "I1 Governança e aderência a planos",
+      "variaveis_documento": "V25 governança e aderência a planos (pergunta única, nível 1–5)",
+      "origem": "Documental / rubrica",
+      "natureza": "Painel*",
+      "oes": "OE10",
+      "codigo": "I1",
+      "variaveis": [
+        "V25"
+      ]
+    },
+    {
+      "dimensao": "",
+      "indicador": "I2 Prontidão",
+      "variaveis_documento": "V26–V30 maturidade (demanda, engenharia, ambiente, instituições, finanças)",
+      "origem": "Documental / rubrica",
+      "natureza": "Regra",
+      "oes": "OE10",
+      "codigo": "I2",
+      "variaveis": [
+        "V26",
+        "V27",
+        "V28",
+        "V29",
+        "V30"
+      ]
+    },
+    {
+      "dimensao": "D7 Riscos",
+      "indicador": "R1 Risco de entrega",
+      "variaveis_documento": "V31 condições críticas de entrega · V28 · REL",
+      "origem": "Documental / rubrica",
+      "natureza": "Painel*",
+      "oes": "OE8 OE10",
+      "codigo": "R1",
+      "variaveis": [
+        "V31",
+        "V28",
+        "REL"
+      ]
+    },
+    {
+      "dimensao": "",
+      "indicador": "R2 Risco de demanda e benefício",
+      "variaveis_documento": "V32 dispersão (P90−P10)/P50",
+      "origem": "Rede (D-12)",
+      "natureza": "Misto",
+      "oes": "OE4",
+      "codigo": "R2",
+      "variaveis": [
+        "V32"
+      ]
+    }
+  ],
+  "variaveis": [
+    {
+      "variavel": "V01",
+      "criterios": [
+        "T1"
+      ],
+      "insumos": [
+        "rede_capacidade_rodoviaria"
+      ],
+      "situacao": "insumos_de_apoio_disponiveis",
+      "valor_fap_calculado": false,
+      "observacao": ""
+    },
+    {
+      "variavel": "V02",
+      "criterios": [
+        "T1"
+      ],
+      "insumos": [],
+      "situacao": "sem_insumo_preparado",
+      "valor_fap_calculado": false,
+      "observacao": "Somente faseamento."
+    },
+    {
+      "variavel": "V03",
+      "criterios": [
+        "T2"
+      ],
+      "insumos": [
+        "rede_capacidade_rodoviaria"
+      ],
+      "situacao": "insumos_de_apoio_disponiveis",
+      "valor_fap_calculado": false,
+      "observacao": ""
+    },
+    {
+      "variavel": "V04",
+      "criterios": [
+        "T2"
+      ],
+      "insumos": [],
+      "situacao": "sem_insumo_preparado",
+      "valor_fap_calculado": false,
+      "observacao": ""
+    },
+    {
+      "variavel": "V05",
+      "criterios": [
+        "T3"
+      ],
+      "insumos": [],
+      "situacao": "sem_insumo_preparado",
+      "valor_fap_calculado": false,
+      "observacao": ""
+    },
+    {
+      "variavel": "V06",
+      "criterios": [
+        "T3"
+      ],
+      "insumos": [
+        "rede_capacidade_rodoviaria",
+        "aeroportos_2021",
+        "malha_rodoviaria"
+      ],
+      "situacao": "insumos_de_apoio_disponiveis",
+      "valor_fap_calculado": false,
+      "observacao": ""
+    },
+    {
+      "variavel": "V07",
+      "criterios": [],
+      "insumos": [],
+      "situacao": "sem_insumo_preparado",
+      "valor_fap_calculado": false,
+      "observacao": "Calculada no D-16; fora da ponderacao."
+    },
+    {
+      "variavel": "V08",
+      "criterios": [
+        "E1"
+      ],
+      "insumos": [
+        "setores_censo_2022"
+      ],
+      "situacao": "insumos_de_apoio_disponiveis",
+      "valor_fap_calculado": false,
+      "observacao": ""
+    },
+    {
+      "variavel": "V09",
+      "criterios": [
+        "E1"
+      ],
+      "insumos": [],
+      "situacao": "sem_insumo_preparado",
+      "valor_fap_calculado": false,
+      "observacao": ""
+    },
+    {
+      "variavel": "V10",
+      "criterios": [
+        "E1"
+      ],
+      "insumos": [],
+      "situacao": "sem_insumo_preparado",
+      "valor_fap_calculado": false,
+      "observacao": ""
+    },
+    {
+      "variavel": "V11",
+      "criterios": [
+        "E2"
+      ],
+      "insumos": [],
+      "situacao": "sem_insumo_preparado",
+      "valor_fap_calculado": false,
+      "observacao": ""
+    },
+    {
+      "variavel": "V12",
+      "criterios": [
+        "S1"
+      ],
+      "insumos": [
+        "setores_censo_2022"
+      ],
+      "situacao": "insumos_de_apoio_disponiveis",
+      "valor_fap_calculado": false,
+      "observacao": ""
+    },
+    {
+      "variavel": "V13",
+      "criterios": [
+        "S2"
+      ],
+      "insumos": [
+        "setores_censo_2022"
+      ],
+      "situacao": "insumos_de_apoio_disponiveis",
+      "valor_fap_calculado": false,
+      "observacao": ""
+    },
+    {
+      "variavel": "V14",
+      "criterios": [
+        "S3"
+      ],
+      "insumos": [
+        "setores_censo_2022",
+        "areas_urbanizadas_2019"
+      ],
+      "situacao": "insumos_de_apoio_disponiveis",
+      "valor_fap_calculado": false,
+      "observacao": ""
+    },
+    {
+      "variavel": "V15",
+      "criterios": [
+        "S3"
+      ],
+      "insumos": [
+        "areas_urbanizadas_2019"
+      ],
+      "situacao": "insumos_de_apoio_disponiveis",
+      "valor_fap_calculado": false,
+      "observacao": ""
+    },
+    {
+      "variavel": "V16",
+      "criterios": [
+        "SEG"
+      ],
+      "insumos": [
+        "sinistros_municipais_2018"
+      ],
+      "situacao": "insumos_de_apoio_disponiveis",
+      "valor_fap_calculado": false,
+      "observacao": ""
+    },
+    {
+      "variavel": "V17",
+      "criterios": [
+        "SEG"
+      ],
+      "insumos": [
+        "setores_censo_2022"
+      ],
+      "situacao": "insumos_de_apoio_disponiveis",
+      "valor_fap_calculado": false,
+      "observacao": ""
+    },
+    {
+      "variavel": "V18",
+      "criterios": [
+        "SEG"
+      ],
+      "insumos": [],
+      "situacao": "sem_insumo_preparado",
+      "valor_fap_calculado": false,
+      "observacao": ""
+    },
+    {
+      "variavel": "V19",
+      "criterios": [
+        "A1"
+      ],
+      "insumos": [],
+      "situacao": "sem_insumo_preparado",
+      "valor_fap_calculado": false,
+      "observacao": ""
+    },
+    {
+      "variavel": "V20",
+      "criterios": [
+        "A2"
+      ],
+      "insumos": [
+        "ucs_protecao_integral",
+        "ucs_uso_sustentavel",
+        "terras_indigenas",
+        "quilombos",
+        "assentamentos",
+        "manguezais",
+        "bens_tombados_iphan",
+        "bens_tombados_condephaat",
+        "sitios_arqueologicos",
+        "cavidades_influencia",
+        "areas_contaminadas",
+        "aprm_alto_juquery",
+        "aprm_alto_tiete",
+        "aprm_billings",
+        "aprm_guarapiranga"
+      ],
+      "situacao": "insumos_de_apoio_disponiveis",
+      "valor_fap_calculado": false,
+      "observacao": ""
+    },
+    {
+      "variavel": "V21",
+      "criterios": [
+        "A3"
+      ],
+      "insumos": [
+        "inundacao_2014",
+        "escorregamento_2014"
+      ],
+      "situacao": "insumos_de_apoio_disponiveis",
+      "valor_fap_calculado": false,
+      "observacao": ""
+    },
+    {
+      "variavel": "V22",
+      "criterios": [
+        "A3"
+      ],
+      "insumos": [
+        "rede_capacidade_rodoviaria",
+        "malha_rodoviaria"
+      ],
+      "situacao": "insumos_de_apoio_disponiveis",
+      "valor_fap_calculado": false,
+      "observacao": ""
+    },
+    {
+      "variavel": "V23",
+      "criterios": [
+        "F1"
+      ],
+      "insumos": [],
+      "situacao": "sem_insumo_preparado",
+      "valor_fap_calculado": false,
+      "observacao": ""
+    },
+    {
+      "variavel": "V24",
+      "criterios": [
+        "F1"
+      ],
+      "insumos": [],
+      "situacao": "sem_insumo_preparado",
+      "valor_fap_calculado": false,
+      "observacao": ""
+    },
+    {
+      "variavel": "V25",
+      "criterios": [
+        "I1"
+      ],
+      "insumos": [],
+      "situacao": "sem_insumo_preparado",
+      "valor_fap_calculado": false,
+      "observacao": ""
+    },
+    {
+      "variavel": "V26",
+      "criterios": [
+        "I2"
+      ],
+      "insumos": [],
+      "situacao": "sem_insumo_preparado",
+      "valor_fap_calculado": false,
+      "observacao": ""
+    },
+    {
+      "variavel": "V27",
+      "criterios": [
+        "I2"
+      ],
+      "insumos": [],
+      "situacao": "sem_insumo_preparado",
+      "valor_fap_calculado": false,
+      "observacao": ""
+    },
+    {
+      "variavel": "V28",
+      "criterios": [
+        "I2",
+        "R1"
+      ],
+      "insumos": [],
+      "situacao": "sem_insumo_preparado",
+      "valor_fap_calculado": false,
+      "observacao": "Compartilhada por I2 e R1."
+    },
+    {
+      "variavel": "V29",
+      "criterios": [
+        "I2"
+      ],
+      "insumos": [],
+      "situacao": "sem_insumo_preparado",
+      "valor_fap_calculado": false,
+      "observacao": ""
+    },
+    {
+      "variavel": "V30",
+      "criterios": [
+        "I2"
+      ],
+      "insumos": [],
+      "situacao": "sem_insumo_preparado",
+      "valor_fap_calculado": false,
+      "observacao": ""
+    },
+    {
+      "variavel": "V31",
+      "criterios": [
+        "R1"
+      ],
+      "insumos": [],
+      "situacao": "sem_insumo_preparado",
+      "valor_fap_calculado": false,
+      "observacao": ""
+    },
+    {
+      "variavel": "V32",
+      "criterios": [
+        "R2"
+      ],
+      "insumos": [],
+      "situacao": "sem_insumo_preparado",
+      "valor_fap_calculado": false,
+      "observacao": ""
+    }
+  ],
+  "insumos": [
+    {
+      "id": "setores_censo_2022",
+      "storage": "base-geodatabase/codespace-geoespacial/local/favorabilidade_grade/SP_setores_atributos_CD2022.gpkg",
+      "variaveis": [
+        "V08",
+        "V12",
+        "V13",
+        "V14",
+        "V17"
+      ],
+      "fonte": "IBGE, Censo 2022",
+      "limite": "Base populacional de apoio; nao representa empregos gerados, focalizacao, ganho de acesso, exposicao urbana ou vulneraveis no transito. A malha possui partes de setores; nao somar atributos repetidos por parte.",
+      "camadas": [
+        {
+          "camada": "SP_setores_CD2022",
+          "feicoes": 103620,
+          "crs": "GEOGCS[\"SIRGAS 2000\",DATUM[\"Sistema_de_Referencia_Geocentrico_para_las_AmericaS_2000\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6674\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AXIS[\"Latitude\",NORTH],AXIS[\"Longitude\",EAST],AUTHORITY[\"EPSG\",\"4674\"]]",
+          "epsg": "4674",
+          "extensao": [
+            -53.1101115,
+            -44.1613652,
+            -25.3579997999999,
+            -19.7796557999999
+          ],
+          "campos": [
+            {
+              "nome": "CD_SETOR",
+              "tipo": "String"
+            },
+            {
+              "nome": "SITUACAO",
+              "tipo": "String"
+            },
+            {
+              "nome": "CD_SIT",
+              "tipo": "String"
+            },
+            {
+              "nome": "CD_TIPO",
+              "tipo": "String"
+            },
+            {
+              "nome": "AREA_KM2",
+              "tipo": "Real"
+            },
+            {
+              "nome": "CD_REGIAO",
+              "tipo": "String"
+            },
+            {
+              "nome": "NM_REGIAO",
+              "tipo": "String"
+            },
+            {
+              "nome": "CD_UF",
+              "tipo": "String"
+            },
+            {
+              "nome": "NM_UF",
+              "tipo": "String"
+            },
+            {
+              "nome": "CD_MUN",
+              "tipo": "String"
+            },
+            {
+              "nome": "NM_MUN",
+              "tipo": "String"
+            },
+            {
+              "nome": "CD_DIST",
+              "tipo": "String"
+            },
+            {
+              "nome": "NM_DIST",
+              "tipo": "String"
+            },
+            {
+              "nome": "CD_SUBDIST",
+              "tipo": "String"
+            },
+            {
+              "nome": "NM_SUBDIST",
+              "tipo": "String"
+            },
+            {
+              "nome": "CD_BAIRRO",
+              "tipo": "String"
+            },
+            {
+              "nome": "NM_BAIRRO",
+              "tipo": "String"
+            },
+            {
+              "nome": "CD_NU",
+              "tipo": "String"
+            },
+            {
+              "nome": "NM_NU",
+              "tipo": "String"
+            },
+            {
+              "nome": "CD_FCU",
+              "tipo": "String"
+            },
+            {
+              "nome": "NM_FCU",
+              "tipo": "String"
+            },
+            {
+              "nome": "CD_AGLOM",
+              "tipo": "String"
+            },
+            {
+              "nome": "NM_AGLOM",
+              "tipo": "String"
+            },
+            {
+              "nome": "CD_RGINT",
+              "tipo": "String"
+            },
+            {
+              "nome": "NM_RGINT",
+              "tipo": "String"
+            },
+            {
+              "nome": "CD_RGI",
+              "tipo": "String"
+            },
+            {
+              "nome": "NM_RGI",
+              "tipo": "String"
+            },
+            {
+              "nome": "CD_CONCURB",
+              "tipo": "String"
+            },
+            {
+              "nome": "NM_CONCURB",
+              "tipo": "String"
+            },
+            {
+              "nome": "v0001",
+              "tipo": "Integer64"
+            },
+            {
+              "nome": "v0002",
+              "tipo": "Integer64"
+            },
+            {
+              "nome": "v0003",
+              "tipo": "Integer64"
+            },
+            {
+              "nome": "v0004",
+              "tipo": "Integer64"
+            },
+            {
+              "nome": "v0005",
+              "tipo": "Real"
+            },
+            {
+              "nome": "v0006",
+              "tipo": "Real"
+            },
+            {
+              "nome": "v0007",
+              "tipo": "Integer64"
+            }
+          ],
+          "geometrias_nulas": 0,
+          "geometrias_vazias": 0,
+          "geometrias_invalidas": 8
+        }
+      ],
+      "bytes": 182128640,
+      "sha256": "07affc966f82292d6f9a359adccc49e69ed55d2075936ef6d1e9c346b29a04bc",
+      "tratamento": "Referencia a base existente, sem copia ou alteracao."
+    },
+    {
+      "id": "sinistros_municipais_2018",
+      "local": "data/geoespacial/uploads/datastorage/vetor/municipios_sp_5b2fbb24_acidentes/municipios_sp_5b2fbb24_acidentes.fgb",
+      "variaveis": [
+        "V16"
+      ],
+      "fonte": "InfoSiga, extracao municipal existente, 2018",
+      "limite": "Obitos no transito e sinistros envolvendo veiculos de carga, por municipio, em 2018. Nao representa toda a sinistralidade, pontos de ocorrencia ou vitimas evitadas.",
+      "bytes": 14966784,
+      "sha256": "7e51d4ace99d6069e7a83c5c37c6ecdd1d5cb7414b6dce2fb775e558e6f41b09",
+      "storage": "aplicacao/insumos-pli-fap/20261028T171437Z-00cf913c4d65/camadas/sinistros_municipais_2018.gpkg",
+      "camadas": [
+        {
+          "camada": "resultado",
+          "feicoes": 645,
+          "crs": "GEOGCS[\"SIRGAS 2000\",DATUM[\"Sistema_de_Referencia_Geocentrico_para_las_AmericaS_2000\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6674\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AXIS[\"Latitude\",NORTH],AXIS[\"Longitude\",EAST],AUTHORITY[\"EPSG\",\"4674\"]]",
+          "epsg": "4674",
+          "extensao": [
+            -53.1101115,
+            -44.1613652205754,
+            -25.357999778,
+            -19.7796558
+          ],
+          "campos": [
+            {
+              "nome": "CD_MUN",
+              "tipo": "String"
+            },
+            {
+              "nome": "NM_MUN",
+              "tipo": "String"
+            },
+            {
+              "nome": "SIGLA_UF",
+              "tipo": "String"
+            },
+            {
+              "nome": "AREA_KM2",
+              "tipo": "Real"
+            },
+            {
+              "nome": "infosiga_obitos_transito_2018",
+              "tipo": "Real"
+            },
+            {
+              "nome": "infosiga_sinistros_veiculos_carga_2018",
+              "tipo": "Real"
+            }
+          ],
+          "geometrias_nulas": 0,
+          "geometrias_vazias": 0,
+          "geometrias_invalidas": 0
+        }
+      ],
+      "procedencia": [
+        {
+          "arquivo": "data\\geoespacial\\uploads\\datastorage\\vetor\\municipios_sp_5b2fbb24_acidentes\\municipios_sp_5b2fbb24_acidentes.fgb",
+          "bytes": 13892320,
+          "sha256": "514cc20a6ce75ff37fef1ab4ac4df6a684ec62b3cd7a48d6de7f3047f639296e"
+        }
+      ],
+      "tratamento": "Recorte pelo limite SP do acervo e reprojecao EPSG:4674; atributos preservados; sem calculo FAP."
+    },
+    {
+      "id": "rede_capacidade_rodoviaria",
+      "local": "data/geoespacial/local/cap_rodo/cap_rodo_painel.shp",
+      "variaveis": [
+        "V01",
+        "V03",
+        "V06",
+        "V22"
+      ],
+      "fonte": "Acervo local cap_rodo_painel; procedencia e ano a confirmar",
+      "limite": "Rede com capacidade, volume e v_c existentes. Nao representa alivio, reducao de veiculos-hora, funcao de conexao avaliada ou redundancia criada. Nao comprovada equivalencia com a rede D-12.",
+      "bytes": 3522560,
+      "sha256": "dea223adeab8f975889b4f9fc053f048e8cba41375901a583e7b0d708b69e6ee",
+      "storage": "aplicacao/insumos-pli-fap/20261028T171437Z-00cf913c4d65/camadas/rede_capacidade_rodoviaria.gpkg",
+      "camadas": [
+        {
+          "camada": "resultado",
+          "feicoes": 6922,
+          "crs": "GEOGCS[\"SIRGAS 2000\",DATUM[\"Sistema_de_Referencia_Geocentrico_para_las_AmericaS_2000\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6674\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AXIS[\"Latitude\",NORTH],AXIS[\"Longitude\",EAST],AUTHORITY[\"EPSG\",\"4674\"]]",
+          "epsg": "4674",
+          "extensao": [
+            -53.0553558998549,
+            -44.1638451888531,
+            -25.0597498996129,
+            -19.8473186943271
+          ],
+          "campos": [
+            {
+              "nome": "fid_",
+              "tipo": "Integer64"
+            },
+            {
+              "nome": "no",
+              "tipo": "Integer64"
+            },
+            {
+              "nome": "fromnodeno",
+              "tipo": "Integer64"
+            },
+            {
+              "nome": "tonodeno",
+              "tipo": "Integer64"
+            },
+            {
+              "nome": "uf",
+              "tipo": "String"
+            },
+            {
+              "nome": "zona_nome",
+              "tipo": "String"
+            },
+            {
+              "nome": "cod_rod",
+              "tipo": "String"
+            },
+            {
+              "nome": "tipo_rede",
+              "tipo": "String"
+            },
+            {
+              "nome": "length",
+              "tipo": "String"
+            },
+            {
+              "nome": "tipologia",
+              "tipo": "String"
+            },
+            {
+              "nome": "id_tipolog",
+              "tipo": "Real"
+            },
+            {
+              "nome": "capdiasent",
+              "tipo": "Real"
+            },
+            {
+              "nome": "vol_inter",
+              "tipo": "Integer64"
+            },
+            {
+              "nome": "v_c",
+              "tipo": "Real"
+            },
+            {
+              "nome": "los",
+              "tipo": "String"
+            },
+            {
+              "nome": "nf",
+              "tipo": "String"
+            },
+            {
+              "nome": "v0",
+              "tipo": "String"
+            },
+            {
+              "nome": "pavim",
+              "tipo": "String"
+            },
+            {
+              "nome": "entorno",
+              "tipo": "String"
+            },
+            {
+              "nome": "jurisd",
+              "tipo": "String"
+            },
+            {
+              "nome": "relevo",
+              "tipo": "String"
+            },
+            {
+              "nome": "nm_mun",
+              "tipo": "String"
+            },
+            {
+              "nome": "st_length_",
+              "tipo": "Real"
+            }
+          ],
+          "geometrias_nulas": 0,
+          "geometrias_vazias": 0,
+          "geometrias_invalidas": 0
+        }
+      ],
+      "procedencia": [
+        {
+          "arquivo": "data\\geoespacial\\local\\cap_rodo\\cap_rodo_painel.cpg",
+          "bytes": 5,
+          "sha256": "3ad3031f5503a4404af825262ee8232cc04d4ea6683d42c5dd0a2f2a27ac9824"
+        },
+        {
+          "arquivo": "data\\geoespacial\\local\\cap_rodo\\cap_rodo_painel.dbf",
+          "bytes": 14806928,
+          "sha256": "4a56078fb68225e69835626290573eba107a9dd320d39296209713ed82797041"
+        },
+        {
+          "arquivo": "data\\geoespacial\\local\\cap_rodo\\cap_rodo_painel.prj",
+          "bytes": 425,
+          "sha256": "f2e7fb14d55bdd8d6a3bc2c272a48729d8f9d0ad72936e20eae6a9a81c2fccd0"
+        },
+        {
+          "arquivo": "data\\geoespacial\\local\\cap_rodo\\cap_rodo_painel.sbn",
+          "bytes": 66940,
+          "sha256": "7c653f29c0c49e40b7279b868f2e7324348c07400680936a71c91cd82ebb964b"
+        },
+        {
+          "arquivo": "data\\geoespacial\\local\\cap_rodo\\cap_rodo_painel.sbx",
+          "bytes": 3876,
+          "sha256": "4c6dbdf14a484f63ff836c38623157e173fc5d85b5e8c7d3f4fddcb6ea8129ff"
+        },
+        {
+          "arquivo": "data\\geoespacial\\local\\cap_rodo\\cap_rodo_painel.shp",
+          "bytes": 1516324,
+          "sha256": "a585e4a2c6408cd54bfc2948fc39c393b840f72f3c40c62b7237008134bc959f"
+        },
+        {
+          "arquivo": "data\\geoespacial\\local\\cap_rodo\\cap_rodo_painel.shp.xml",
+          "bytes": 492,
+          "sha256": "166bcdc6f2c60860668f16b44bc12fc4b2eb2ad8bd9949f56011327059ed1fb9"
+        },
+        {
+          "arquivo": "data\\geoespacial\\local\\cap_rodo\\cap_rodo_painel.shx",
+          "bytes": 55476,
+          "sha256": "526fa2a86ae441b663372b6cd18ee15486c25f48aebb5f91bf2fcc0475ca232d"
+        }
+      ],
+      "tratamento": "Recorte pelo limite SP do acervo e reprojecao EPSG:4674; atributos preservados; sem calculo FAP."
+    },
+    {
+      "id": "areas_urbanizadas_2019",
+      "local": "data/geoespacial/local/favorabilidade_rede/AreasUrbanizadas2019_Brasil/AU_2022_AreasUrbanizadas2019_Brasil.shp",
+      "encoding": "UTF-8",
+      "variaveis": [
+        "V14",
+        "V15"
+      ],
+      "fonte": "IBGE, Areas Urbanizadas 2019, arquivo AU_2022 do acervo",
+      "limite": "Manchas urbanizadas recortadas em SP; nao representa exposicao populacional nem travessias de um projeto.",
+      "bytes": 11829248,
+      "sha256": "20a531b7949f45d03c85b0750bf946b9a5d66641cebea4fa11fc72a22aa05940",
+      "storage": "aplicacao/insumos-pli-fap/20261028T171437Z-00cf913c4d65/camadas/areas_urbanizadas_2019.gpkg",
+      "camadas": [
+        {
+          "camada": "resultado",
+          "feicoes": 15992,
+          "crs": "GEOGCS[\"SIRGAS 2000\",DATUM[\"Sistema_de_Referencia_Geocentrico_para_las_AmericaS_2000\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6674\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AXIS[\"Latitude\",NORTH],AXIS[\"Longitude\",EAST],AUTHORITY[\"EPSG\",\"4674\"]]",
+          "epsg": "4674",
+          "extensao": [
+            -53.0652927294759,
+            -44.1745078259753,
+            -25.218590825706,
+            -19.8700308281602
+          ],
+          "campos": [
+            {
+              "nome": "Densidade",
+              "tipo": "String"
+            },
+            {
+              "nome": "Tipo",
+              "tipo": "String"
+            },
+            {
+              "nome": "Comparacao",
+              "tipo": "String"
+            }
+          ],
+          "geometrias_nulas": 0,
+          "geometrias_vazias": 0,
+          "geometrias_invalidas": 0
+        }
+      ],
+      "procedencia": [
+        {
+          "arquivo": "data\\geoespacial\\local\\favorabilidade_rede\\AreasUrbanizadas2019_Brasil\\AU_2022_AreasUrbanizadas2019_Brasil.cpg",
+          "bytes": 5,
+          "sha256": "3ad3031f5503a4404af825262ee8232cc04d4ea6683d42c5dd0a2f2a27ac9824"
+        },
+        {
+          "arquivo": "data\\geoespacial\\local\\favorabilidade_rede\\AreasUrbanizadas2019_Brasil\\AU_2022_AreasUrbanizadas2019_Brasil.dbf",
+          "bytes": 38666289,
+          "sha256": "7373339d848c524a5ec2e9775d57a29536b6f15721f8ab5baa721dfc13e6ed55"
+        },
+        {
+          "arquivo": "data\\geoespacial\\local\\favorabilidade_rede\\AreasUrbanizadas2019_Brasil\\AU_2022_AreasUrbanizadas2019_Brasil.prj",
+          "bytes": 151,
+          "sha256": "b7fe68a2eb827ea974a1a995a73676e095a366b383a10a66c7498300d1c58153"
+        },
+        {
+          "arquivo": "data\\geoespacial\\local\\favorabilidade_rede\\AreasUrbanizadas2019_Brasil\\AU_2022_AreasUrbanizadas2019_Brasil.shp",
+          "bytes": 57726384,
+          "sha256": "fc52d4b02fd14ca14ef4cf9ecd0f6ef03bdd8bb704c775165d090aca2d265ae0"
+        },
+        {
+          "arquivo": "data\\geoespacial\\local\\favorabilidade_rede\\AreasUrbanizadas2019_Brasil\\AU_2022_AreasUrbanizadas2019_Brasil.shx",
+          "bytes": 1027772,
+          "sha256": "be80c6edba7795da1c00aca5fa9b8c6b066205171b600c4b581674875aacaaf4"
+        },
+        {
+          "arquivo": "data\\geoespacial\\local\\favorabilidade_rede\\AreasUrbanizadas2019_Brasil\\AU_2022_AreasUrbanizadas2019_Brasil.xml",
+          "bytes": 1210,
+          "sha256": "fbae7fb6009ea218374a1695737e56b52b69f788856c478719cf70e71bcdd1f7"
+        }
+      ],
+      "tratamento": "Recorte pelo limite SP do acervo e reprojecao EPSG:4674; atributos preservados; sem calculo FAP."
+    },
+    {
+      "id": "aeroportos_2021",
+      "local": "data/geoespacial/local/favorabilidade_rede/bloco_b/aeroportos_anac_2021.geojson",
+      "variaveis": [
+        "V06"
+      ],
+      "fonte": "ANAC, aeroportos publicos 2021, acervo existente",
+      "limite": "Localizacao de aeroportos publicos recortada em SP; nao representa participacao modal ou nota de conexao.",
+      "bytes": 167936,
+      "sha256": "4869b0f1b473ee1aeb15c764106ec19f59b1fe2208df0d79fc48c4dafafed046",
+      "storage": "aplicacao/insumos-pli-fap/20261028T171437Z-00cf913c4d65/camadas/aeroportos_2021.gpkg",
+      "camadas": [
+        {
+          "camada": "resultado",
+          "feicoes": 290,
+          "crs": "GEOGCS[\"SIRGAS 2000\",DATUM[\"Sistema_de_Referencia_Geocentrico_para_las_AmericaS_2000\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6674\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AXIS[\"Latitude\",NORTH],AXIS[\"Longitude\",EAST],AUTHORITY[\"EPSG\",\"4674\"]]",
+          "epsg": "4674",
+          "extensao": [
+            -52.67416667,
+            -45.07611111,
+            -24.87083335,
+            -19.88416668
+          ],
+          "campos": [
+            {
+              "nome": "id",
+              "tipo": "String"
+            },
+            {
+              "nome": "Codigo",
+              "tipo": "Integer"
+            },
+            {
+              "nome": "ICAO",
+              "tipo": "String"
+            },
+            {
+              "nome": "Nome",
+              "tipo": "String"
+            },
+            {
+              "nome": "Tipo",
+              "tipo": "String"
+            }
+          ],
+          "geometrias_nulas": 0,
+          "geometrias_vazias": 0,
+          "geometrias_invalidas": 0
+        }
+      ],
+      "procedencia": [
+        {
+          "arquivo": "data\\geoespacial\\local\\favorabilidade_rede\\bloco_b\\aeroportos_anac_2021.geojson",
+          "bytes": 77914,
+          "sha256": "7177436ae8f0c843bdc1f3563f91736062e8ff65e375a70d7cb68e59467ca4d2"
+        }
+      ],
+      "tratamento": "Recorte pelo limite SP do acervo e reprojecao EPSG:4674; atributos preservados; sem calculo FAP."
+    },
+    {
+      "id": "malha_rodoviaria",
+      "storage": "base-geoespacial/vetor/malha_rodoviaria.gpkg",
+      "variaveis": [
+        "V06",
+        "V22"
+      ],
+      "fonte": "Malha rodoviaria do acervo SICARD; consultar metadados originais",
+      "limite": "Rede de apoio, sem calculo de conectividade, redundancia criada ou equivalencia comprovada com D-12.",
+      "camadas": [
+        {
+          "camada": "malha_rodoviaria",
+          "feicoes": 4782,
+          "crs": "PROJCS[\"SIRGAS 2000 / Brazil Polyconic\",GEOGCS[\"SIRGAS 2000\",DATUM[\"Sistema_de_Referencia_Geocentrico_para_las_AmericaS_2000\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6674\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4674\"]],PROJECTION[\"Polyconic\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-54],PARAMETER[\"false_easting\",5000000],PARAMETER[\"false_northing\",10000000],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"5880\"]]",
+          "epsg": "5880",
+          "extensao": [
+            5097133.5487,
+            6009800.2383,
+            7216327.4298,
+            7800447.0824
+          ],
+          "campos": [
+            {
+              "nome": "Rodovia",
+              "tipo": "String"
+            },
+            {
+              "nome": "TipoRodovi",
+              "tipo": "String"
+            },
+            {
+              "nome": "Orientacao",
+              "tipo": "String"
+            },
+            {
+              "nome": "Origem",
+              "tipo": "String"
+            },
+            {
+              "nome": "Municipio",
+              "tipo": "String"
+            },
+            {
+              "nome": "CodRegiona",
+              "tipo": "String"
+            },
+            {
+              "nome": "SedeRegion",
+              "tipo": "String"
+            },
+            {
+              "nome": "Residencia",
+              "tipo": "String"
+            },
+            {
+              "nome": "SedeReside",
+              "tipo": "String"
+            },
+            {
+              "nome": "KmInicial",
+              "tipo": "Real"
+            },
+            {
+              "nome": "KmFinal",
+              "tipo": "Real"
+            },
+            {
+              "nome": "Extensao",
+              "tipo": "Real"
+            },
+            {
+              "nome": "DescricaoI",
+              "tipo": "String"
+            },
+            {
+              "nome": "DescricaoF",
+              "tipo": "String"
+            },
+            {
+              "nome": "Jurisdicao",
+              "tipo": "String"
+            },
+            {
+              "nome": "Administra",
+              "tipo": "String"
+            },
+            {
+              "nome": "Conservado",
+              "tipo": "String"
+            },
+            {
+              "nome": "TipoPista",
+              "tipo": "String"
+            },
+            {
+              "nome": "Sobreposic",
+              "tipo": "String"
+            },
+            {
+              "nome": "Subposicao",
+              "tipo": "String"
+            },
+            {
+              "nome": "PerimetroU",
+              "tipo": "String"
+            },
+            {
+              "nome": "DataInicio",
+              "tipo": "String"
+            },
+            {
+              "nome": "DataFimCon",
+              "tipo": "String"
+            },
+            {
+              "nome": "EstadualCo",
+              "tipo": "String"
+            },
+            {
+              "nome": "Denominaca",
+              "tipo": "String"
+            },
+            {
+              "nome": "Legislacao",
+              "tipo": "String"
+            },
+            {
+              "nome": "TPUso",
+              "tipo": "String"
+            },
+            {
+              "nome": "TransfMuni",
+              "tipo": "String"
+            },
+            {
+              "nome": "Observacao",
+              "tipo": "String"
+            },
+            {
+              "nome": "Subtrecho",
+              "tipo": "String"
+            },
+            {
+              "nome": "AnoImplant",
+              "tipo": "Integer64"
+            },
+            {
+              "nome": "Status",
+              "tipo": "String"
+            },
+            {
+              "nome": "RegistroAt",
+              "tipo": "String"
+            },
+            {
+              "nome": "DataCriaca",
+              "tipo": "Date"
+            },
+            {
+              "nome": "DataAtuali",
+              "tipo": "Date"
+            }
+          ],
+          "geometrias_nulas": 0,
+          "geometrias_vazias": 0,
+          "geometrias_invalidas": 0
+        }
+      ],
+      "bytes": 7192576,
+      "sha256": "7d8eee40d51b4d7c2bd2772d3cd33794d1159588400a699708597259ac8f1104",
+      "tratamento": "Referencia a base existente, sem copia ou alteracao."
+    },
+    {
+      "id": "inundacao_2014",
+      "storage": "base-geoespacial/vetor/vwm_area_risco_inundacao_ig_2014_pol_polygon.gpkg",
+      "variaveis": [
+        "V21"
+      ],
+      "fonte": "IG / DataGeo, areas de risco de inundacao, 2014",
+      "limite": "Inventario de risco existente; nao equivale automaticamente a ameaca climatica alta. Classes, cobertura e compatibilidade temporal dependem de conferencia.",
+      "camadas": [
+        {
+          "camada": "vwm_area_risco_inundacao_ig_2014_pol_polygon",
+          "feicoes": 776,
+          "crs": "GEOGCS[\"SIRGAS 2000\",DATUM[\"Sistema_de_Referencia_Geocentrico_para_las_AmericaS_2000\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6674\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AXIS[\"Latitude\",NORTH],AXIS[\"Longitude\",EAST],AUTHORITY[\"EPSG\",\"4674\"]]",
+          "epsg": "4674",
+          "extensao": [
+            -49.4074477289999,
+            -44.9171791377546,
+            -24.4420634518239,
+            -20.7774028699999
+          ],
+          "campos": [
+            {
+              "nome": "Cod_area",
+              "tipo": "String"
+            },
+            {
+              "nome": "Risco",
+              "tipo": "String"
+            },
+            {
+              "nome": "Municipio",
+              "tipo": "String"
+            },
+            {
+              "nome": "Ano",
+              "tipo": "String"
+            }
+          ],
+          "geometrias_nulas": 0,
+          "geometrias_vazias": 0,
+          "geometrias_invalidas": 0
+        }
+      ],
+      "bytes": 720896,
+      "sha256": "48b1ec142dad4c02112060cf80d2fb8856bc334f3db808cf03f42804a8fc5c1c",
+      "tratamento": "Referencia a base existente, sem copia ou alteracao."
+    },
+    {
+      "id": "escorregamento_2014",
+      "storage": "base-geoespacial/vetor/vwm_area_risco_escorregamento_ig_2014_pol_polygon.gpkg",
+      "variaveis": [
+        "V21"
+      ],
+      "fonte": "IG / DataGeo, areas de risco de escorregamento, 2014",
+      "limite": "Inventario de risco existente; nao equivale automaticamente a ameaca climatica alta.",
+      "camadas": [
+        {
+          "camada": "vwm_area_risco_escorregamento_ig_2014_pol_polygon",
+          "feicoes": 920,
+          "crs": "GEOGCS[\"SIRGAS 2000\",DATUM[\"Sistema_de_Referencia_Geocentrico_para_las_AmericaS_2000\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6674\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AXIS[\"Latitude\",NORTH],AXIS[\"Longitude\",EAST],AUTHORITY[\"EPSG\",\"4674\"]]",
+          "epsg": "4674",
+          "extensao": [
+            -47.5153208673147,
+            -44.8183108962327,
+            -24.4330325253402,
+            -22.702109457912
+          ],
+          "campos": [
+            {
+              "nome": "Cod_Area",
+              "tipo": "String"
+            },
+            {
+              "nome": "Risco",
+              "tipo": "String"
+            },
+            {
+              "nome": "Municipio",
+              "tipo": "String"
+            },
+            {
+              "nome": "Ano",
+              "tipo": "String"
+            }
+          ],
+          "geometrias_nulas": 0,
+          "geometrias_vazias": 0,
+          "geometrias_invalidas": 0
+        }
+      ],
+      "bytes": 806912,
+      "sha256": "41b035493801b6312db5ee91e3ed598ec63999d53a09da4ea7ca94819a0b9a4a",
+      "tratamento": "Referencia a base existente, sem copia ou alteracao."
+    },
+    {
+      "id": "ucs_protecao_integral",
+      "storage": "base-geoespacial/vetor/ucs_protecao_integral_sp.gpkg",
+      "variaveis": [
+        "V20"
+      ],
+      "fonte": "Acervo SICARD, unidades de conservacao de protecao integral",
+      "limite": "Insumo de cruzamento SIG; nao representa a classe de sensibilidade socioambiental da FAP.",
+      "camadas": [
+        {
+          "camada": "ucs_protecao_integral_sp",
+          "feicoes": 117,
+          "crs": "GEOGCS[\"SIRGAS 2000\",DATUM[\"Sistema_de_Referencia_Geocentrico_para_las_AmericaS_2000\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6674\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AXIS[\"Latitude\",NORTH],AXIS[\"Longitude\",EAST],AUTHORITY[\"EPSG\",\"4674\"]]",
+          "epsg": "4674",
+          "extensao": [
+            -52.539552623,
+            -44.327179916,
+            -25.301314416,
+            -19.920696391
+          ],
+          "campos": [
+            {
+              "nome": "objectid",
+              "tipo": "String"
+            },
+            {
+              "nome": "uc_id",
+              "tipo": "String"
+            },
+            {
+              "nome": "cd_cnuc",
+              "tipo": "String"
+            },
+            {
+              "nome": "nome_uc",
+              "tipo": "String"
+            },
+            {
+              "nome": "cria_ano",
+              "tipo": "String"
+            },
+            {
+              "nome": "cria_ato",
+              "tipo": "String"
+            },
+            {
+              "nome": "pl_manejo",
+              "tipo": "String"
+            },
+            {
+              "nome": "co_gestor",
+              "tipo": "String"
+            },
+            {
+              "nome": "esfera",
+              "tipo": "String"
+            },
+            {
+              "nome": "uf",
+              "tipo": "String"
+            },
+            {
+              "nome": "municipio",
+              "tipo": "String"
+            },
+            {
+              "nome": "org_gestor",
+              "tipo": "String"
+            },
+            {
+              "nome": "grupo",
+              "tipo": "String"
+            },
+            {
+              "nome": "categoria",
+              "tipo": "String"
+            },
+            {
+              "nome": "cat_iucn",
+              "tipo": "String"
+            },
+            {
+              "nome": "situacao",
+              "tipo": "String"
+            },
+            {
+              "nome": "dt_sync",
+              "tipo": "Date"
+            },
+            {
+              "nome": "shape_Leng",
+              "tipo": "Real"
+            },
+            {
+              "nome": "shape_Area",
+              "tipo": "Real"
+            }
+          ],
+          "geometrias_nulas": 0,
+          "geometrias_vazias": 0,
+          "geometrias_invalidas": 0
+        }
+      ],
+      "bytes": 3440640,
+      "sha256": "1dbe465e880106bae0b781978f1800c05d3d352b0e9909e8dbcd55db9dd74158",
+      "tratamento": "Referencia a base existente, sem copia ou alteracao."
+    },
+    {
+      "id": "ucs_uso_sustentavel",
+      "storage": "base-geoespacial/vetor/ucs_uso_sustentavel_sp.gpkg",
+      "variaveis": [
+        "V20"
+      ],
+      "fonte": "Acervo SICARD, unidades de conservacao de uso sustentavel",
+      "limite": "Insumo de cruzamento SIG; nao representa a classe de sensibilidade socioambiental da FAP.",
+      "camadas": [
+        {
+          "camada": "ucs_uso_sustentavel_sp",
+          "feicoes": 182,
+          "crs": "GEOGCS[\"SIRGAS 2000\",DATUM[\"Sistema_de_Referencia_Geocentrico_para_las_AmericaS_2000\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6674\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AXIS[\"Latitude\",NORTH],AXIS[\"Longitude\",EAST],AUTHORITY[\"EPSG\",\"4674\"]]",
+          "epsg": "4674",
+          "extensao": [
+            -53.1101115,
+            -44.1903728228366,
+            -25.3579998,
+            -20.1838000009999
+          ],
+          "campos": [
+            {
+              "nome": "objectid",
+              "tipo": "String"
+            },
+            {
+              "nome": "uc_id",
+              "tipo": "String"
+            },
+            {
+              "nome": "cd_cnuc",
+              "tipo": "String"
+            },
+            {
+              "nome": "nome_uc",
+              "tipo": "String"
+            },
+            {
+              "nome": "cria_ano",
+              "tipo": "String"
+            },
+            {
+              "nome": "cria_ato",
+              "tipo": "String"
+            },
+            {
+              "nome": "pl_manejo",
+              "tipo": "String"
+            },
+            {
+              "nome": "co_gestor",
+              "tipo": "String"
+            },
+            {
+              "nome": "esfera",
+              "tipo": "String"
+            },
+            {
+              "nome": "uf",
+              "tipo": "String"
+            },
+            {
+              "nome": "municipio",
+              "tipo": "String"
+            },
+            {
+              "nome": "org_gestor",
+              "tipo": "String"
+            },
+            {
+              "nome": "grupo",
+              "tipo": "String"
+            },
+            {
+              "nome": "categoria",
+              "tipo": "String"
+            },
+            {
+              "nome": "cat_iucn",
+              "tipo": "String"
+            },
+            {
+              "nome": "situacao",
+              "tipo": "String"
+            },
+            {
+              "nome": "dt_sync",
+              "tipo": "Date"
+            },
+            {
+              "nome": "shape_Leng",
+              "tipo": "Real"
+            },
+            {
+              "nome": "shape_Area",
+              "tipo": "Real"
+            }
+          ],
+          "geometrias_nulas": 0,
+          "geometrias_vazias": 0,
+          "geometrias_invalidas": 0
+        }
+      ],
+      "bytes": 5603328,
+      "sha256": "a391fb6a1195848f9a777c17f1912296168ae48c534f0368dc5c03eb56aa0e20",
+      "tratamento": "Referencia a base existente, sem copia ou alteracao."
+    },
+    {
+      "id": "terras_indigenas",
+      "storage": "base-geoespacial/vetor/terras_indigenas_sp.gpkg",
+      "variaveis": [
+        "V20"
+      ],
+      "fonte": "FUNAI, acervo SICARD",
+      "limite": "Geometria territorial de apoio; sem classificacao de sensibilidade.",
+      "camadas": [
+        {
+          "camada": "terras_indigenas_sp",
+          "feicoes": 29,
+          "crs": "GEOGCS[\"SIRGAS 2000\",DATUM[\"Sistema_de_Referencia_Geocentrico_para_las_AmericaS_2000\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6674\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AXIS[\"Latitude\",NORTH],AXIS[\"Longitude\",EAST],AUTHORITY[\"EPSG\",\"4674\"]]",
+          "epsg": "4674",
+          "extensao": [
+            -50.40003472,
+            -44.9504010820405,
+            -25.1434261,
+            -21.553749444895
+          ],
+          "campos": [
+            {
+              "nome": "gid",
+              "tipo": "String"
+            },
+            {
+              "nome": "terrai_cod",
+              "tipo": "String"
+            },
+            {
+              "nome": "terrai_nom",
+              "tipo": "String"
+            },
+            {
+              "nome": "etnia_nome",
+              "tipo": "String"
+            },
+            {
+              "nome": "municipio_",
+              "tipo": "String"
+            },
+            {
+              "nome": "uf_sigla",
+              "tipo": "String"
+            },
+            {
+              "nome": "superficie",
+              "tipo": "Real"
+            },
+            {
+              "nome": "fase_ti",
+              "tipo": "String"
+            },
+            {
+              "nome": "modalidade",
+              "tipo": "String"
+            },
+            {
+              "nome": "reestudo_t",
+              "tipo": "String"
+            },
+            {
+              "nome": "cr",
+              "tipo": "String"
+            },
+            {
+              "nome": "faixa_fron",
+              "tipo": "String"
+            },
+            {
+              "nome": "undadm_cod",
+              "tipo": "Real"
+            },
+            {
+              "nome": "undadm_nom",
+              "tipo": "String"
+            },
+            {
+              "nome": "undadm_sig",
+              "tipo": "String"
+            },
+            {
+              "nome": "dominio_un",
+              "tipo": "String"
+            },
+            {
+              "nome": "data_atual",
+              "tipo": "String"
+            },
+            {
+              "nome": "epsg",
+              "tipo": "String"
+            }
+          ],
+          "geometrias_nulas": 0,
+          "geometrias_vazias": 0,
+          "geometrias_invalidas": 0
+        }
+      ],
+      "bytes": 528384,
+      "sha256": "a7af7222d6f2e10a29477542be0a939e0f9c6f0c35a37cb6ab7e5b6f639fb3d7",
+      "tratamento": "Referencia a base existente, sem copia ou alteracao."
+    },
+    {
+      "id": "quilombos",
+      "storage": "base-geoespacial/vetor/quilombos_sp.gpkg",
+      "variaveis": [
+        "V20"
+      ],
+      "fonte": "INCRA, acervo SICARD",
+      "limite": "Geometria territorial de apoio; sem classificacao de sensibilidade.",
+      "camadas": [
+        {
+          "camada": "quilombos_sp",
+          "feicoes": 23,
+          "crs": "GEOGCS[\"SIRGAS 2000\",DATUM[\"Sistema_de_Referencia_Geocentrico_para_las_AmericaS_2000\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6674\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AXIS[\"Latitude\",NORTH],AXIS[\"Longitude\",EAST],AUTHORITY[\"EPSG\",\"4674\"]]",
+          "epsg": "4674",
+          "extensao": [
+            -48.8466472752011,
+            -44.7244114690725,
+            -25.0234953314969,
+            -23.0157531413104
+          ],
+          "campos": [
+            {
+              "nome": "cd_quilomb",
+              "tipo": "String"
+            },
+            {
+              "nome": "cd_sr",
+              "tipo": "String"
+            },
+            {
+              "nome": "nr_process",
+              "tipo": "String"
+            },
+            {
+              "nome": "nm_comunid",
+              "tipo": "String"
+            },
+            {
+              "nome": "nm_municip",
+              "tipo": "String"
+            },
+            {
+              "nome": "cd_uf",
+              "tipo": "String"
+            },
+            {
+              "nome": "dt_publica",
+              "tipo": "String"
+            },
+            {
+              "nome": "dt_public1",
+              "tipo": "String"
+            },
+            {
+              "nome": "nr_familia",
+              "tipo": "String"
+            },
+            {
+              "nome": "dt_titulac",
+              "tipo": "String"
+            },
+            {
+              "nome": "nr_area_ha",
+              "tipo": "Real"
+            },
+            {
+              "nome": "nr_perimet",
+              "tipo": "Real"
+            },
+            {
+              "nome": "cd_sipra",
+              "tipo": "String"
+            },
+            {
+              "nome": "ob_descric",
+              "tipo": "String"
+            },
+            {
+              "nome": "st_titulad",
+              "tipo": "String"
+            },
+            {
+              "nome": "dt_decreto",
+              "tipo": "String"
+            },
+            {
+              "nome": "tp_levanta",
+              "tipo": "String"
+            },
+            {
+              "nome": "nr_escalao",
+              "tipo": "String"
+            },
+            {
+              "nome": "area_calc_",
+              "tipo": "Real"
+            },
+            {
+              "nome": "perimetro_",
+              "tipo": "Real"
+            },
+            {
+              "nome": "esfera",
+              "tipo": "String"
+            },
+            {
+              "nome": "fase",
+              "tipo": "String"
+            },
+            {
+              "nome": "responsave",
+              "tipo": "String"
+            }
+          ],
+          "geometrias_nulas": 0,
+          "geometrias_vazias": 0,
+          "geometrias_invalidas": 0
+        }
+      ],
+      "bytes": 421888,
+      "sha256": "b618adf3c24e8ab4a48206bece5d9e76e7daac0d87235a070ee9b177a3ebe930",
+      "tratamento": "Referencia a base existente, sem copia ou alteracao."
+    },
+    {
+      "id": "assentamentos",
+      "storage": "base-geoespacial/vetor/assentamentos_sp.gpkg",
+      "variaveis": [
+        "V20"
+      ],
+      "fonte": "INCRA, acervo SICARD",
+      "limite": "Geometria territorial de apoio; sem classificacao de sensibilidade.",
+      "camadas": [
+        {
+          "camada": "assentamentos_sp",
+          "feicoes": 209,
+          "crs": "GEOGCS[\"SIRGAS 2000\",DATUM[\"Sistema_de_Referencia_Geocentrico_para_las_AmericaS_2000\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6674\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AXIS[\"Latitude\",NORTH],AXIS[\"Longitude\",EAST],AUTHORITY[\"EPSG\",\"4674\"]]",
+          "epsg": "4674",
+          "extensao": [
+            -52.8739642443163,
+            -45.3042726026582,
+            -24.5128044598811,
+            -19.9622823426841
+          ],
+          "campos": [
+            {
+              "nome": "cd_sipra",
+              "tipo": "String"
+            },
+            {
+              "nome": "uf",
+              "tipo": "String"
+            },
+            {
+              "nome": "nome_proje",
+              "tipo": "String"
+            },
+            {
+              "nome": "municipio",
+              "tipo": "String"
+            },
+            {
+              "nome": "area_hecta",
+              "tipo": "String"
+            },
+            {
+              "nome": "capacidade",
+              "tipo": "Integer"
+            },
+            {
+              "nome": "num_famili",
+              "tipo": "Integer"
+            },
+            {
+              "nome": "fase",
+              "tipo": "Integer"
+            },
+            {
+              "nome": "data_de_cr",
+              "tipo": "String"
+            },
+            {
+              "nome": "forma_obte",
+              "tipo": "String"
+            },
+            {
+              "nome": "data_obten",
+              "tipo": "String"
+            },
+            {
+              "nome": "area_calc_",
+              "tipo": "Real"
+            },
+            {
+              "nome": "sr",
+              "tipo": "String"
+            },
+            {
+              "nome": "descricao_",
+              "tipo": "String"
+            }
+          ],
+          "geometrias_nulas": 0,
+          "geometrias_vazias": 0,
+          "geometrias_invalidas": 0
+        }
+      ],
+      "bytes": 1376256,
+      "sha256": "33e8095fe45f997163d6e4efc371fe80bbbf77f58b57f52ff748f8fcd7c3c39b",
+      "tratamento": "Referencia a base existente, sem copia ou alteracao."
+    },
+    {
+      "id": "manguezais",
+      "storage": "base-geoespacial/vetor/manguezais_ibama_sp.gpkg",
+      "variaveis": [
+        "V20"
+      ],
+      "fonte": "IBAMA, acervo SICARD",
+      "limite": "Insumo de cruzamento SIG; sem classificacao de sensibilidade.",
+      "camadas": [
+        {
+          "camada": "manguezais_ibama_sp",
+          "feicoes": 462,
+          "crs": "GEOGCS[\"SIRGAS 2000\",DATUM[\"Sistema_de_Referencia_Geocentrico_para_las_AmericaS_2000\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6674\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AXIS[\"Latitude\",NORTH],AXIS[\"Longitude\",EAST],AUTHORITY[\"EPSG\",\"4674\"]]",
+          "epsg": "4674",
+          "extensao": [
+            -48.0886704019999,
+            -44.8271823069999,
+            -25.2950354189999,
+            -23.3313246929999
+          ],
+          "campos": [
+            {
+              "nome": "objectid_1",
+              "tipo": "Integer"
+            },
+            {
+              "nome": "objectid",
+              "tipo": "Integer"
+            },
+            {
+              "nome": "join_count",
+              "tipo": "Integer"
+            },
+            {
+              "nome": "target_fid",
+              "tipo": "Integer"
+            },
+            {
+              "nome": "nome",
+              "tipo": "String"
+            },
+            {
+              "nome": "bioma",
+              "tipo": "String"
+            },
+            {
+              "nome": "area_ha",
+              "tipo": "Real"
+            },
+            {
+              "nome": "cd_uf",
+              "tipo": "String"
+            },
+            {
+              "nome": "nm_uf",
+              "tipo": "String"
+            },
+            {
+              "nome": "sigla",
+              "tipo": "String"
+            },
+            {
+              "nome": "nm_regiao",
+              "tipo": "String"
+            },
+            {
+              "nome": "st_area_sh",
+              "tipo": "Real"
+            },
+            {
+              "nome": "st_length_",
+              "tipo": "Real"
+            },
+            {
+              "nome": "Shape__Are",
+              "tipo": "Real"
+            },
+            {
+              "nome": "Shape__Len",
+              "tipo": "Real"
+            }
+          ],
+          "geometrias_nulas": 0,
+          "geometrias_vazias": 0,
+          "geometrias_invalidas": 0
+        }
+      ],
+      "bytes": 921600,
+      "sha256": "0184b00644eb88a5f18c8031ffc82dd22fc1a7f07de5f54501bfab3768755ebb",
+      "tratamento": "Referencia a base existente, sem copia ou alteracao."
+    },
+    {
+      "id": "bens_tombados_iphan",
+      "storage": "base-geoespacial/vetor/bens_tombados_iphan_sp.gpkg",
+      "variaveis": [
+        "V20"
+      ],
+      "fonte": "IPHAN, acervo SICARD",
+      "limite": "Insumo patrimonial; sem classificacao de sensibilidade.",
+      "camadas": [
+        {
+          "camada": "bens_tombados_iphan_sp",
+          "feicoes": 1136,
+          "crs": "GEOGCS[\"SIRGAS 2000\",DATUM[\"Sistema_de_Referencia_Geocentrico_para_las_AmericaS_2000\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6674\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AXIS[\"Latitude\",NORTH],AXIS[\"Longitude\",EAST],AUTHORITY[\"EPSG\",\"4674\"]]",
+          "epsg": "4674",
+          "extensao": [
+            -53.065364,
+            -44.2257613,
+            -25.22096,
+            -19.827501488
+          ],
+          "campos": [
+            {
+              "nome": "id_bem",
+              "tipo": "Integer"
+            },
+            {
+              "nome": "identifica",
+              "tipo": "String"
+            },
+            {
+              "nome": "co_iphan",
+              "tipo": "String"
+            },
+            {
+              "nome": "no_logrado",
+              "tipo": "String"
+            },
+            {
+              "nome": "nu_logrado",
+              "tipo": "String"
+            },
+            {
+              "nome": "id_naturez",
+              "tipo": "Integer"
+            },
+            {
+              "nome": "ds_naturez",
+              "tipo": "String"
+            },
+            {
+              "nome": "codigo_iph",
+              "tipo": "String"
+            },
+            {
+              "nome": "id_classif",
+              "tipo": "Integer"
+            },
+            {
+              "nome": "ds_classif",
+              "tipo": "String"
+            },
+            {
+              "nome": "id_tipo_be",
+              "tipo": "Integer"
+            },
+            {
+              "nome": "ds_tipo_be",
+              "tipo": "String"
+            },
+            {
+              "nome": "sg_tipo_be",
+              "tipo": "String"
+            },
+            {
+              "nome": "sintese_be",
+              "tipo": "String"
+            },
+            {
+              "nome": "dt_cadastr",
+              "tipo": "Date"
+            }
+          ],
+          "geometrias_nulas": 0,
+          "geometrias_vazias": 0,
+          "geometrias_invalidas": 0
+        }
+      ],
+      "bytes": 720896,
+      "sha256": "6c0d4492f2a19d2c192a5949bb1da990098a861a94ba07b8cad9233f6e797c05",
+      "tratamento": "Referencia a base existente, sem copia ou alteracao."
+    },
+    {
+      "id": "bens_tombados_condephaat",
+      "storage": "base-geoespacial/vetor/bens_tombados_condephaat.gpkg",
+      "variaveis": [
+        "V20"
+      ],
+      "fonte": "CONDEPHAAT, acervo SICARD",
+      "limite": "Insumo patrimonial; sem classificacao de sensibilidade.",
+      "camadas": [
+        {
+          "camada": "bens_tombados_condephaat",
+          "feicoes": 940,
+          "crs": "GEOGCS[\"SIRGAS 2000\",DATUM[\"Sistema_de_Referencia_Geocentrico_para_las_AmericaS_2000\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6674\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AXIS[\"Latitude\",NORTH],AXIS[\"Longitude\",EAST],AUTHORITY[\"EPSG\",\"4674\"]]",
+          "epsg": "4674",
+          "extensao": [
+            -51.8542875371943,
+            -44.3134712207917,
+            -25.3040864439696,
+            -20.0385305403214
+          ],
+          "campos": [
+            {
+              "nome": "id",
+              "tipo": "String"
+            },
+            {
+              "nome": "nome_bem_t",
+              "tipo": "String"
+            },
+            {
+              "nome": "processo",
+              "tipo": "String"
+            },
+            {
+              "nome": "link_regul",
+              "tipo": "String"
+            },
+            {
+              "nome": "observacao",
+              "tipo": "String"
+            },
+            {
+              "nome": "modo_produ",
+              "tipo": "String"
+            },
+            {
+              "nome": "produto",
+              "tipo": "String"
+            },
+            {
+              "nome": "cid",
+              "tipo": "Integer"
+            }
+          ],
+          "geometrias_nulas": 0,
+          "geometrias_vazias": 0,
+          "geometrias_invalidas": 0
+        }
+      ],
+      "bytes": 6500352,
+      "sha256": "f9bd04cd49bcb543a66fa0dc84a331d070b4487ef5980eefe94184f3d6ba7c15",
+      "tratamento": "Referencia a base existente, sem copia ou alteracao."
+    },
+    {
+      "id": "sitios_arqueologicos",
+      "storage": "base-geoespacial/vetor/sitios_arqueologicos.gpkg",
+      "variaveis": [
+        "V20"
+      ],
+      "fonte": "IPHAN, acervo SICARD",
+      "limite": "Insumo patrimonial; sem classificacao de sensibilidade.",
+      "camadas": [
+        {
+          "camada": "sitios_arqueologicos",
+          "feicoes": 1110,
+          "crs": "GEOGCS[\"SIRGAS 2000\",DATUM[\"Sistema_de_Referencia_Geocentrico_para_las_AmericaS_2000\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6674\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AXIS[\"Latitude\",NORTH],AXIS[\"Longitude\",EAST],AUTHORITY[\"EPSG\",\"4674\"]]",
+          "epsg": "4674",
+          "extensao": [
+            -53.065364,
+            -44.223627,
+            -25.22096,
+            -19.827501
+          ],
+          "campos": [
+            {
+              "nome": "objectid",
+              "tipo": "Integer64"
+            },
+            {
+              "nome": "id_bem",
+              "tipo": "Integer64"
+            },
+            {
+              "nome": "identifica",
+              "tipo": "String"
+            },
+            {
+              "nome": "co_iphan",
+              "tipo": "String"
+            },
+            {
+              "nome": "no_logrado",
+              "tipo": "String"
+            },
+            {
+              "nome": "no_lograd1",
+              "tipo": "String"
+            },
+            {
+              "nome": "nu_logrado",
+              "tipo": "String"
+            },
+            {
+              "nome": "nu_lograd1",
+              "tipo": "String"
+            },
+            {
+              "nome": "id_naturez",
+              "tipo": "Integer64"
+            },
+            {
+              "nome": "ds_naturez",
+              "tipo": "String"
+            },
+            {
+              "nome": "codigo_iph",
+              "tipo": "String"
+            },
+            {
+              "nome": "id_classif",
+              "tipo": "Integer64"
+            }
+          ],
+          "geometrias_nulas": 0,
+          "geometrias_vazias": 0,
+          "geometrias_invalidas": 0
+        }
+      ],
+      "bytes": 458752,
+      "sha256": "8d56ad8fd35cd301e710c1d717fe9573d095d040f62ba6dd871aa2b67ce02e6c",
+      "tratamento": "Referencia a base existente, sem copia ou alteracao."
+    },
+    {
+      "id": "cavidades_influencia",
+      "storage": "base-geoespacial/vetor/cavidades_influencia.gpkg",
+      "variaveis": [
+        "V20"
+      ],
+      "fonte": "CECAV / ICMBio, acervo SICARD",
+      "limite": "Indicador preliminar de area de influencia; sem classificacao de sensibilidade.",
+      "camadas": [
+        {
+          "camada": "cavidades_influencia",
+          "feicoes": 693,
+          "crs": "GEOGCS[\"SIRGAS 2000\",DATUM[\"Sistema_de_Referencia_Geocentrico_para_las_AmericaS_2000\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6674\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AXIS[\"Latitude\",NORTH],AXIS[\"Longitude\",EAST],AUTHORITY[\"EPSG\",\"4674\"]]",
+          "epsg": "4674",
+          "extensao": [
+            -52.22115899,
+            -44.463971,
+            -24.85415202,
+            -20.72764801
+          ],
+          "campos": [
+            {
+              "nome": "id",
+              "tipo": "String"
+            },
+            {
+              "nome": "Codigo_SBE",
+              "tipo": "String"
+            },
+            {
+              "nome": "CODEX",
+              "tipo": "String"
+            },
+            {
+              "nome": "Nome",
+              "tipo": "String"
+            }
+          ],
+          "geometrias_nulas": 0,
+          "geometrias_vazias": 0,
+          "geometrias_invalidas": 0
+        }
+      ],
+      "bytes": 626688,
+      "sha256": "9619c20ad5c5879b435d7e665b93984f50779f435e22132e1fdd41f3a74231f0",
+      "tratamento": "Referencia a base existente, sem copia ou alteracao."
+    },
+    {
+      "id": "areas_contaminadas",
+      "storage": "base-geoespacial/vetor/areas_contaminadas_cetesb.gpkg",
+      "variaveis": [
+        "V20"
+      ],
+      "fonte": "CETESB, acervo SICARD",
+      "limite": "Inventario existente; sem classificacao de sensibilidade.",
+      "camadas": [
+        {
+          "camada": "areas_contaminadas_cetesb",
+          "feicoes": 7241,
+          "crs": "GEOGCS[\"SIRGAS 2000\",DATUM[\"Sistema_de_Referencia_Geocentrico_para_las_AmericaS_2000\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6674\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AXIS[\"Latitude\",NORTH],AXIS[\"Longitude\",EAST],AUTHORITY[\"EPSG\",\"4674\"]]",
+          "epsg": "4674",
+          "extensao": [
+            -52.166883907,
+            -44.32427072,
+            -25.05844596,
+            -19.98042282
+          ],
+          "campos": [
+            {
+              "nome": "OBJECTID",
+              "tipo": "Integer"
+            },
+            {
+              "nome": "Razao_Soci",
+              "tipo": "String"
+            },
+            {
+              "nome": "Atividade",
+              "tipo": "String"
+            },
+            {
+              "nome": "Classifica",
+              "tipo": "String"
+            },
+            {
+              "nome": "Data_Class",
+              "tipo": "String"
+            },
+            {
+              "nome": "Grupo_Cont",
+              "tipo": "String"
+            },
+            {
+              "nome": "Contaminan",
+              "tipo": "String"
+            },
+            {
+              "nome": "Data_Atual",
+              "tipo": "String"
+            },
+            {
+              "nome": "Meios_Impa",
+              "tipo": "String"
+            },
+            {
+              "nome": "Endereco",
+              "tipo": "String"
+            },
+            {
+              "nome": "Localizaca",
+              "tipo": "String"
+            },
+            {
+              "nome": "Complement",
+              "tipo": "String"
+            },
+            {
+              "nome": "Bairro",
+              "tipo": "String"
+            },
+            {
+              "nome": "Distrito",
+              "tipo": "String"
+            },
+            {
+              "nome": "CEP",
+              "tipo": "String"
+            },
+            {
+              "nome": "Municipio",
+              "tipo": "String"
+            }
+          ],
+          "geometrias_nulas": 0,
+          "geometrias_vazias": 0,
+          "geometrias_invalidas": 0
+        }
+      ],
+      "bytes": 3260416,
+      "sha256": "1f6480a2e7f9bc51e5a2fb3e8fb65e709622bed70887978bbd559c1aad3e3694",
+      "tratamento": "Referencia a base existente, sem copia ou alteracao."
+    },
+    {
+      "id": "aprm_alto_juquery",
+      "storage": "base-geoespacial/vetor/aprm_alto_juquery.gpkg",
+      "variaveis": [
+        "V20"
+      ],
+      "fonte": "SEMIL / DataGeo, acervo SICARD",
+      "limite": "Geometria de APRM; sem classificacao de sensibilidade.",
+      "camadas": [
+        {
+          "camada": "aprm_alto_juquery",
+          "feicoes": 257,
+          "crs": "GEOGCS[\"SIRGAS 2000\",DATUM[\"Sistema_de_Referencia_Geocentrico_para_las_AmericaS_2000\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6674\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AXIS[\"Latitude\",NORTH],AXIS[\"Longitude\",EAST],AUTHORITY[\"EPSG\",\"4674\"]]",
+          "epsg": "4674",
+          "extensao": [
+            -46.7111149787336,
+            -46.4001158468736,
+            -23.4467816733425,
+            -23.2188791858928
+          ],
+          "campos": [
+            {
+              "nome": "Sub_areas",
+              "tipo": "String"
+            }
+          ],
+          "geometrias_nulas": 0,
+          "geometrias_vazias": 0,
+          "geometrias_invalidas": 0
+        }
+      ],
+      "bytes": 1368064,
+      "sha256": "d5d09a1c097fcb3d1260e8f8023c5ef66bc68dc71c2befdae4171f98d02b9480",
+      "tratamento": "Referencia a base existente, sem copia ou alteracao."
+    },
+    {
+      "id": "aprm_alto_tiete",
+      "storage": "base-geoespacial/vetor/aprm_alto_tiete_cabec.gpkg",
+      "variaveis": [
+        "V20"
+      ],
+      "fonte": "SEMIL / DataGeo, acervo SICARD",
+      "limite": "Geometria de APRM; sem classificacao de sensibilidade.",
+      "camadas": [
+        {
+          "camada": "aprm_alto_tiete_cabec",
+          "feicoes": 80,
+          "crs": "GEOGCS[\"SIRGAS 2000\",DATUM[\"Sistema_de_Referencia_Geocentrico_para_las_AmericaS_2000\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6674\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AXIS[\"Latitude\",NORTH],AXIS[\"Longitude\",EAST],AUTHORITY[\"EPSG\",\"4674\"]]",
+          "epsg": "4674",
+          "extensao": [
+            -46.3819827478317,
+            -45.632490816044,
+            -23.7705710035992,
+            -23.4721865704712
+          ],
+          "campos": [
+            {
+              "nome": "SubArea",
+              "tipo": "String"
+            },
+            {
+              "nome": "Area_km2",
+              "tipo": "Real"
+            },
+            {
+              "nome": "LoteMin_m2",
+              "tipo": "Real"
+            },
+            {
+              "nome": "CoefAprov",
+              "tipo": "Real"
+            },
+            {
+              "nome": "TaxaPermea",
+              "tipo": "Real"
+            },
+            {
+              "nome": "IndAreaVeg",
+              "tipo": "Real"
+            }
+          ],
+          "geometrias_nulas": 0,
+          "geometrias_vazias": 0,
+          "geometrias_invalidas": 0
+        }
+      ],
+      "bytes": 569344,
+      "sha256": "9384df11242bd6114884e89d3ebb334ff428dff61f8aec912424955c1176359f",
+      "tratamento": "Referencia a base existente, sem copia ou alteracao."
+    },
+    {
+      "id": "aprm_billings",
+      "storage": "base-geoespacial/vetor/aprm_billings.gpkg",
+      "variaveis": [
+        "V20"
+      ],
+      "fonte": "SEMIL / DataGeo, acervo SICARD",
+      "limite": "Geometria de APRM; sem classificacao de sensibilidade.",
+      "camadas": [
+        {
+          "camada": "aprm_billings",
+          "feicoes": 903,
+          "crs": "GEOGCS[\"SIRGAS 2000\",DATUM[\"Sistema_de_Referencia_Geocentrico_para_las_AmericaS_2000\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6674\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AXIS[\"Latitude\",NORTH],AXIS[\"Longitude\",EAST],AUTHORITY[\"EPSG\",\"4674\"]]",
+          "epsg": "4674",
+          "extensao": [
+            -46.7381255635928,
+            -46.2785627539054,
+            -23.9086538718192,
+            -23.6625453421326
+          ],
+          "campos": [
+            {
+              "nome": "DAPRMB",
+              "tipo": "String"
+            },
+            {
+              "nome": "IAOD",
+              "tipo": "String"
+            },
+            {
+              "nome": "DAREA",
+              "tipo": "String"
+            },
+            {
+              "nome": "DCORMAP",
+              "tipo": "String"
+            }
+          ],
+          "geometrias_nulas": 0,
+          "geometrias_vazias": 0,
+          "geometrias_invalidas": 0
+        }
+      ],
+      "bytes": 9551872,
+      "sha256": "201ce39d57775e1661f48f3018fda7a7e67016ed227d7296fdcd6e3c63272fb1",
+      "tratamento": "Referencia a base existente, sem copia ou alteracao."
+    },
+    {
+      "id": "aprm_guarapiranga",
+      "storage": "base-geoespacial/vetor/aprm_guarapiranga.gpkg",
+      "variaveis": [
+        "V20"
+      ],
+      "fonte": "SEMIL / DataGeo, acervo SICARD",
+      "limite": "Geometria de APRM; sem classificacao de sensibilidade.",
+      "camadas": [
+        {
+          "camada": "aprm_guarapiranga",
+          "feicoes": 90,
+          "crs": "GEOGCS[\"SIRGAS 2000\",DATUM[\"Sistema_de_Referencia_Geocentrico_para_las_AmericaS_2000\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6674\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AXIS[\"Latitude\",NORTH],AXIS[\"Longitude\",EAST],AUTHORITY[\"EPSG\",\"4674\"]]",
+          "epsg": "4674",
+          "extensao": [
+            -46.9424529115252,
+            -46.6851916596531,
+            -24.008191669586,
+            -23.6227717358867
+          ],
+          "campos": [
+            {
+              "nome": "DCLASS",
+              "tipo": "String"
+            }
+          ],
+          "geometrias_nulas": 0,
+          "geometrias_vazias": 0,
+          "geometrias_invalidas": 0
+        }
+      ],
+      "bytes": 724992,
+      "sha256": "8bfac394af1ec0aa6b397dd84077dfeb78bede53155312c3a3a2719f6416cca6",
+      "tratamento": "Referencia a base existente, sem copia ou alteracao."
+    }
+  ],
+  "pendencias": [
+    {
+      "fonte": "ferrovia_estacoes e ferrovia_linhas do acervo local",
+      "motivo": "Fontes sem sistema de coordenadas identificado pelo GDAL. Nao reprojetadas por suposicao.",
+      "variaveis": [
+        "V06",
+        "V22"
+      ]
+    }
+  ],
+  "REL": "Sigla presente na fonte, sem definicao no documento; nenhum dado associado por suposicao."
+}

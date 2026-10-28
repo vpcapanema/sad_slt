@@ -143,6 +143,8 @@ JS_IMPORT = re.compile(
 
 def _para_disco(url: str) -> Path | None:
     limpa = url.split("?")[0].split("#")[0]
+    if any(getattr(route, "path", None) == limpa for route in app.routes):
+        return None  # Rotas de download servidas pela aplicação não são arquivos de mount.
     if not Path(limpa).suffix:
         return None  # É uma rota de página, não um arquivo estático.
     for prefixo, diretorio in MOUNTS:

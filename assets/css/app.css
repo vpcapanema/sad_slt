@@ -2523,8 +2523,8 @@ body.admin-data-page .admin-card--revisao-status {
 }
 
 .status-legend-pin--fase-execucao svg {
-  width: 1rem;
-  height: 1.5rem;
+  width: 1.15rem;
+  height: 1.45rem;
 }
 
 .status-color-legend-label {

@@ -48,6 +48,8 @@ def ambiente(superficie):
 
 
 def test_criacao_usa_snapshot_salvo_sem_encerrar_ou_enviar_convites(monkeypatch, superficie, conexao):
+    monkeypatch.setattr(service.matrizes_criterios, "criar",
+                        lambda nome, conteudo, *args: {"id": AID, "nome": nome, "conteudo": conteudo})
     monkeypatch.setattr(service, "_carregar_hierarquizacao", lambda _: {
         "id": HID, "codigo": "H-1", "dados_hierarquizacao": {"criterios": [{"criterio": "Global"}]}})
     close = MagicMock(side_effect=AssertionError("Não deve encerrar outra coleta"))
@@ -229,6 +231,7 @@ def test_javascript_carrega_surface_fixa_matriz_sem_convites_automaticos():
     assert response.status_code == 200
     source = response.text
     functions = source[source.index("  function matrixRows("):source.index("  function matrixSummary(")]
+    functions += source[source.index("  function syncMatrixContext("):source.index("  function selectedMatrixId(")]
     harness = r"""
 const assert = require('node:assert/strict');
 var nodes = {}, calls = [], opened = 0, summary = '';
@@ -240,6 +243,7 @@ var document = {
 var location = {pathname:'/sicard/restrict/analise-multicriterio/central-julgamentos',
   search:'?superficie_id=s1&hierarquizacao_id=h1&novo=1'};
 var surfaceContext = null, surfaceLoading = true, activeSurfaceId = null;
+var environmentMode = 'create', matrixPicker = {setDisabled(value) {this.disabled = value;}};
 var criteriaMatrix = null, criteriaMatrixFileBase64 = 'old', criteriaMatrixFileName = 'global.xlsx';
 var hierarquizacoes = [{id:'h1'}];
 var surface = {id:'s1',hierarquizacao_id:'h1',nome:'Fase 2',criterios:[
@@ -257,6 +261,9 @@ function showCreateSection() { opened++; applySurfaceContext(); }
   assert.equal($('ami-hierarchy').value,'h1');
   assert.equal($('ami-hierarchy').disabled,true);
   assert.equal($('ami-criteria-matrix').disabled,true);
+  assert.equal($('ami-matrix-section').hidden,true);
+  assert.equal($('ami-surface-hierarchy-section').hidden,false);
+  assert.equal(matrixPicker.disabled,true);
   assert.equal($('ami-surface-return').href,
     '/sicard/restrict/geoespacial/gerador-superficies-favorabilidade/?superficie_id=s1');
   assert.deepEqual(criteriaMatrix.linhas,surface.criterios);

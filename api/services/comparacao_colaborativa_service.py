@@ -35,7 +35,7 @@ from api.schemas.comparacao_colaborativa import (
     RespostaColaborativaResponseSchema,
     RespostaColaborativaUpdateSchema,
 )
-from api.services import ahp_engine, superficie_ahp
+from api.services import ahp_engine, superficie_ahp, matrizes_criterios
 
 logger = logging.getLogger(__name__)
 
@@ -184,11 +184,13 @@ def _ambiente_to_response(row: dict[str, Any], *, base_url: str = "") -> Ambient
     token = row["token"]
     url = f"{base_url.rstrip('/')}/public/analise-multicriterio/formulario-comparacao-pareada/{quote(str(token), safe='')}/"
     return AmbienteColaborativoResponseSchema(
+        matriz_id=str(row["matriz_id"]) if row.get("matriz_id") else None,
+        matriz_nome=row.get("matriz_nome"),
         id=str(row["id"]),
         nome=row.get("nome") or f"Julgamento {row['id']}",
         superficie_id=superficie_ahp.superficie_id(row),
         hierarquizacao_id=str(row["hierarquizacao_id"]) if row.get("hierarquizacao_id") else None,
-        hierarquizacao_codigo=row.get("hierarquizacao_codigo") or row.get("config_codigo", ""),
+        hierarquizacao_codigo=row.get("hierarquizacao_codigo") or row.get("config_codigo") or "",
         hierarquizacao_nome=row.get("hierarquizacao_nome"),
         config_tipo=row.get("config_tipo"),
         config_id=str(row["config_id"]) if row.get("config_id") else None,
@@ -239,7 +241,14 @@ def criar_ambiente(
     payload: AmbienteColaborativoCreateSchema, *, base_url: str = ""
 ) -> AmbienteColaborativoResponseSchema:
     """Cria ambiente colaborativo a partir de uma configuração multicritério."""
-    if payload.superficie_id:
+    matriz = None
+    if payload.matriz_id:
+        if payload.hierarquizacao_id or payload.config_id or payload.superficie_id or payload.matriz_premissas_criterios is not None or payload.arquivo_matriz_base64:
+            raise DemandaValidationError("Selecione somente a matriz cadastrada.", field="matriz_id")
+        matriz = matrizes_criterios.obter(payload.matriz_id)
+        criterios = _criterios_from_matriz(matriz["conteudo"])
+        config = hierarq = None
+    elif payload.superficie_id:
         if not payload.hierarquizacao_id or payload.config_tipo or payload.config_id:
             raise DemandaValidationError("Informe somente a hierarquização da superfície.", field="hierarquizacao_id")
         hierarq = _carregar_hierarquizacao(payload.hierarquizacao_id)
@@ -257,8 +266,11 @@ def criar_ambiente(
         hierarq = _carregar_hierarquizacao(payload.hierarquizacao_id)
         criterios = _criterios_from_hierarquizacao(hierarq)
         config = None
+    elif payload.matriz_premissas_criterios is not None:
+        criterios = _criterios_from_matriz(payload.matriz_premissas_criterios)
+        config = hierarq = None
     else:
-        raise DemandaValidationError("Selecione uma configuração multicritério.", field="config_id")
+        raise DemandaValidationError("Selecione uma matriz de critérios e premissas.", field="matriz_id")
 
     if len(criterios) < 2:
         raise DemandaValidationError(
@@ -281,11 +293,21 @@ def criar_ambiente(
             "Há e-mails duplicados na lista de convites.", field="convites"
         )
 
-    if not payload.superficie_id:
-        if config:
-            repo.encerrar_ambientes_anteriores_config(payload.config_tipo, payload.config_id)
+    if not matriz:
+        if hierarq and hierarq.get("matriz_id") and not payload.superficie_id:
+            matriz = matrizes_criterios.obter(hierarq["matriz_id"])
+            criterios = _criterios_from_matriz(matriz["conteudo"])
         else:
-            superficie_ahp.encerrar_rodadas_hierarquizacao(payload.hierarquizacao_id)
+            conteudo = (
+                {"linhas": criterios} if payload.superficie_id or config
+                else matrizes_criterios.da_hierarquizacao(hierarq) if hierarq
+                else payload.matriz_premissas_criterios or {"linhas": criterios}
+            )
+            matriz = matrizes_criterios.criar(
+                payload.arquivo_matriz_nome or payload.nome or "Matriz AHP",
+                conteudo, payload.arquivo_matriz_base64,
+                _nome_arquivo_hierarquizacao(hierarq) if hierarq else payload.arquivo_matriz_nome,
+            )
     token = secrets.token_urlsafe(32)
     nomes_criterios = _criterio_nomes(criterios)
     arquivo_superficie = None
@@ -298,21 +320,20 @@ def criar_ambiente(
 
     row = repo.insert_ambiente(
         {
+            "matriz_id": matriz["id"],
             "nome": (payload.nome or "").strip() or "Julgamento " + (hierarq.get("nome", "") if hierarq else (config or {}).get("nome", "AHP")),
-            "hierarquizacao_id": str(payload.hierarquizacao_id) if payload.hierarquizacao_id else (
-                str(config["hierarquizacao_id"]) if config and config.get("hierarquizacao_id") else None
-            ),
-            "hierarquizacao_codigo": hierarq.get("codigo", "") if hierarq else None,
-            "config_tipo": payload.config_tipo if config else None,
-            "config_id": str(payload.config_id) if config else None,
-            "config_avulsa_id": str(payload.config_id) if config and payload.config_tipo == "avulsa" else None,
-            "config_portfolio_id": str(payload.config_id) if config and payload.config_tipo == "portfolio" else None,
+            "hierarquizacao_id": str(payload.hierarquizacao_id) if payload.superficie_id else None,
+            "hierarquizacao_codigo": hierarq.get("codigo", "") if payload.superficie_id else None,
+            "config_tipo": None,
+            "config_id": None,
+            "config_avulsa_id": None,
+            "config_portfolio_id": None,
             "config_codigo": config.get("codigo") if config else None,
             "config_nome": config.get("nome") if config else None,
             "criterios": criterios,
             "n_criterios": len(nomes_criterios),
             "arquivo_excel_matriz_criterios_premissas": arquivo_superficie if payload.superficie_id else (None if hierarq else _arquivo_matriz(payload.arquivo_matriz_base64)),
-            "arquivo_matriz_nome": "matriz_fase2.xlsx" if payload.superficie_id else (_nome_arquivo_hierarquizacao(hierarq) if hierarq else payload.arquivo_matriz_nome),
+            "arquivo_matriz_nome": "matriz_fase2.xlsx" if payload.superficie_id else matriz.get("arquivo_nome"),
             "token": token,
             "token_acesso": gerar_token_acesso(),
             "convites": convites,
@@ -320,6 +341,7 @@ def criar_ambiente(
             "status": "ativa",
         }
     )
+    row["matriz_nome"] = matriz["nome"]
     if hierarq:
         row["hierarquizacao_nome"] = hierarq.get("nome")
     return _ambiente_to_response(row, base_url=base_url)
@@ -383,6 +405,17 @@ def atualizar_ambiente(
         if not payload.nome.strip():
             raise DemandaValidationError("Informe o nome do julgamento.", field="nome")
         data["nome"] = payload.nome.strip()
+    if atual.get("matriz_id"):
+        if payload.matriz_id is not None and str(payload.matriz_id) != str(atual["matriz_id"]):
+            raise DemandaValidationError(
+                "A matriz deste julgamento é imutável. Crie outro julgamento para a nova matriz.",
+                field="matriz_id",
+            )
+        if (payload.matriz_premissas_criterios is not None or payload.arquivo_matriz_base64 is not None
+                or payload.config_id is not None
+                or (payload.hierarquizacao_id is not None
+                    and str(payload.hierarquizacao_id) != str(atual.get("hierarquizacao_id")))):
+            raise DemandaValidationError("O julgamento referencia diretamente uma matriz imutável.", field="matriz_id")
     superficie_vinculada = superficie_ahp.superficie_id(atual)
     if superficie_vinculada:
         if (
@@ -534,6 +567,8 @@ def atualizar_ambiente(
     if payload.reabrir:
         origem = {**atual, **data}
         def mesma_origem(outro: dict[str, Any]) -> bool:
+            if origem.get("matriz_id"):
+                return str(outro.get("matriz_id")) == str(origem["matriz_id"])
             superficie = superficie_ahp.superficie_id(origem)
             if superficie:
                 return superficie_ahp.superficie_id(outro) == superficie
@@ -620,7 +655,15 @@ def obter_ambiente_publico(
     if status == "ativa" and valido_ate and valido_ate < datetime.now(timezone.utc):
         status = "encerrada"
 
-    # Tenta carregar a hierarquização para preencher escopo e objetivo
+    if row.get("matriz_id"):
+        matriz = matrizes_criterios.obter(row["matriz_id"])
+        return AmbientePublicoSchema(
+            token=token, escopo=matriz["nome"],
+            objetivo="Avaliar a importância relativa dos critérios da matriz de critérios e premissas.",
+            criterios=criterios, valido_ate=_iso(valido_ate) or "", status=status,
+            email_autorizado=autorizado,
+        )
+    # Contexto dos registros anteriores à migração.
     try:
         hierarq = _carregar_hierarquizacao(row["hierarquizacao_id"])
         escopo = hierarq.get("nome") or hierarq.get("codigo")
@@ -811,7 +854,9 @@ def listar_respostas_central() -> list[dict[str, Any]]:
         {
             **_resposta_to_response(row).model_dump(),
             "hierarquizacao_id": str(row["hierarquizacao_id"]) if row.get("hierarquizacao_id") else None,
-            "hierarquizacao_codigo": row.get("hierarquizacao_codigo", ""),
+            "hierarquizacao_codigo": row.get("hierarquizacao_codigo") or "",
+            "matriz_id": str(row["matriz_id"]) if row.get("matriz_id") else None,
+            "matriz_nome": row.get("matriz_nome"),
             "hierarquizacao_nome": row.get("hierarquizacao_nome"),
             "criterios": row.get("criterios") or [],
             "token": row["token"],

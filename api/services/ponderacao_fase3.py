@@ -6,6 +6,7 @@ from api.exceptions import DemandaValidationError
 from api.repositories import comparacao_colaborativa_repository as julgamentos
 from api.services.pesos_homologados import aplicar_pesos, mapa_pesos
 from api.services.comparacao_colaborativa_service import _criterio_nomes
+from api.services.matrizes_criterios import exigir_compativel
 
 
 def pesos_do_julgamento(julgamento):
@@ -30,6 +31,8 @@ def listar_julgamentos(row):
     for julgamento in julgamentos.list_ambientes_by_hierarquizacao(row["id"]):
         item = {"id": str(julgamento["id"]), "nome": julgamento.get("nome") or f"Julgamento {julgamento['id']}", "pesos": {}, "erro": None}
         try:
+            if row.get("matriz_id"):
+                exigir_compativel(row, julgamento)
             item["pesos"] = pesos_do_julgamento(julgamento)
         except (DemandaValidationError, TypeError, ValueError) as exc:
             item["erro"] = str(exc)
@@ -44,8 +47,9 @@ def resolver(row, dados, criterios, payload):
     resultado = deepcopy(criterios)
     if fonte == "ahp":
         julgamento = julgamentos.get_ambiente_by_id(str(payload.julgamento_id)) if payload.julgamento_id else None
-        if not julgamento or str(julgamento.get("hierarquizacao_id")) != str(row["id"]):
-            raise DemandaValidationError("Selecione um julgamento associado a esta hierarquização.", field="julgamento_id")
+        if not julgamento:
+            raise DemandaValidationError("Selecione um julgamento da matriz desta hierarquização.", field="julgamento_id")
+        exigir_compativel(row, julgamento)
         pesos = pesos_do_julgamento(julgamento)
         for criterio in resultado:
             if criterio.get("grupo_atributo") == "risco_ambiental_territorial":
