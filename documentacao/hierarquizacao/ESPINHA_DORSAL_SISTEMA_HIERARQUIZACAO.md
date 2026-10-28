@@ -66,6 +66,19 @@ Metadados de arquivo e aba não caracterizam alteração metodológica.
 Julgamentos de superfícies preservam adicionalmente seu contexto espacial e
 o snapshot específico da superfície.
 
+Nos novos convites de julgamentos por dimensão, o responsável seleciona uma ou
+mais dimensões da matriz para cada colaborador. O recorte contém os critérios
+dessas dimensões, na ordem original, e deve conter ao menos dois critérios.
+O convite individual e o formulário autenticado pelo e-mail e código de acesso
+apresentam somente esse recorte. A resposta conserva um snapshot dos critérios
+atribuídos; o recorte não pode ser alterado após o início do preenchimento.
+Convites integrais legados e julgamentos de superfícies preservam seu comportamento.
+
+Análises agregam somente respostas do mesmo recorte, inclusive quando recortes
+distintos possuem o mesmo número de critérios. Os pesos resultantes de recortes
+parciais são locais e não substituem os pesos globais da matriz. A homologação
+global exige a avaliação da matriz inteira; não se presume peso entre dimensões.
+
 ### Fase 1 — Elegibilidade territorial
 
 A Fase 1 nao deve ranquear projetos. Sua funcao e classificar a elegibilidade

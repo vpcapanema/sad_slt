@@ -73,6 +73,19 @@ def payload(ambiente, **extras):
     })
 
 
+def test_convite_individual_inclui_somente_dimensoes_atribuidas(ambiente, smtp, registros):
+    ambiente["convites"] = [{"email": DEST, "nome": "Ana", "dimensoes": ["Social"]}]
+    ambiente["criterios"] = [{"criterio": "Custo", "dimensao": "Financeira"},
+                            {"criterio": "Acesso", "dimensao": "Social"},
+                            {"criterio": "Equidade", "dimensao": "Social"}]
+    service.enviar(ambiente["id"], payload(ambiente, texto=payload(ambiente).texto + "\nCusto"), "analista")
+    texto = smtp.call_args.args[0].texto
+    assert "Acesso" in texto and "Equidade" in texto
+    assert "Custo" not in texto and "Financeira" not in texto
+    assert "https://example.com/sicard/public/" in texto
+    assert "012345" in texto
+
+
 def test_preserva_texto_acrescenta_token_e_nao_repete_apos_recarga(ambiente, smtp, registros):
     dados = payload(ambiente)
     result = service.enviar(ambiente["id"], dados, "analista")

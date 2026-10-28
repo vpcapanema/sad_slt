@@ -114,7 +114,27 @@ corpo, destinatário ou resposta bruta do provedor.
 
 #### Convites da Central de julgamentos
 
-A seção **Mensagem de email** envia a mensagem exibida pelo botão **Enviar
+A seleção da matriz inicia sem opção marcada e usa duas opções exclusivas, cada uma com seu próprio
+contêiner: **Matriz cadastrada** mostra a lista de matrizes; **Cadastrar nova
+matriz** mostra o nome, o botão de arquivo e, ao lado, o download do modelo XLSX
+oficial. Após a leitura de um arquivo JSON,
+CSV ou XLSX, o botão passa a cadastrar a matriz na tabela independente de
+matrizes, sem criar um julgamento. O resumo interativo permanece dentro da
+opção utilizada e abre os dados cadastrais, os critérios e premissas e a
+estrutura de comparação pareada, somente para consulta. Nenhuma intensidade
+de importância é preenchida nessa visualização; a coleta continua pelo
+formulário público.
+
+Ao adicionar colaboradores a novos julgamentos, selecione uma ou mais dimensões
+da matriz para cada pessoa. O convite individual e o formulário público apresentam
+somente os critérios atribuídos. A lista permite conferir e editar as dimensões
+antes de confirmar. Recortes com menos de dois critérios são recusados. Após
+iniciar uma resposta, seu recorte não pode ser removido ou alterado.
+O espaço analítico separa os recortes; análises parciais geram pesos locais, sem
+homologação como pesos da matriz inteira. Não há migração adicional: os recortes
+são persistidos nos convites e nos snapshots das respostas e análises.
+
+A seção **Convites e acompanhamento** envia a mensagem exibida pelo botão **Enviar
 e-mail**, individualmente para os colaboradores salvos do julgamento. Exige
 perfil Analista, Gestor ou Admin, julgamento aberto, prazo vigente e versão
 atual do cadastro. Durante edição o envio fica bloqueado: primeiro salve as

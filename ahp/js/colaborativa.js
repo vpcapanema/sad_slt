@@ -58,7 +58,7 @@
         }).format(data);
     }
     box.replaceChildren();
-    [["Hierarquização", meta.escopo], ["Objetivo", meta.objetivo],
+    [["Matriz / contexto do julgamento", meta.escopo], ["Objetivo", meta.objetivo],
       ["Prazo", prazo], ["Status da rodada de julgamento", meta.status]].forEach(function (item) {
       var line = document.createElement("p"), label = document.createElement("strong");
       label.textContent = item[0] + ": ";

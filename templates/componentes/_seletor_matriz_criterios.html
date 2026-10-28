@@ -1,11 +1,29 @@
 <div data-matrix-picker>
-  <label class="process-field c-form-group"><span>Matriz cadastrada</span><select data-matrix-select class="c-form-control"><option value="">Selecione uma matriz…</option></select></label>
-  <p class="form-help">Reutilize uma matriz existente ou cadastre um arquivo independente. O cadastro da matriz não cria uma hierarquização nem um julgamento.</p>
-  <label class="process-field c-form-group"><span>Nome da nova matriz</span><input data-matrix-name class="c-form-control" type="text" maxlength="200"></label>
-  <label class="process-field c-form-group"><span>Arquivo da nova matriz (JSON, CSV ou XLSX)</span><input data-matrix-file class="c-form-control" type="file" accept=".json,.csv,.xlsx"></label>
-  <div class="ahp-form-actions">
-    <button data-matrix-upload type="button" class="btn btn-secondary"><i class="fas fa-upload" aria-hidden="true"></i> Cadastrar matriz</button>
-    <button data-matrix-refresh type="button" class="btn btn-secondary"><i class="fas fa-arrows-rotate" aria-hidden="true"></i> Atualizar matrizes</button>
+  <small class="form-help matrix-source-help"><i class="fas fa-info-circle" aria-hidden="true"></i> Selecione uma matriz cadastrada ou cadastre uma nova matriz de critérios e premissas.</small>
+  <div class="matrix-source-options" role="group" aria-label="Origem da matriz">
+    <fieldset class="matrix-source-option">
+      <legend><label>Matriz cadastrada <input data-matrix-mode type="radio" value="existing"></label></legend>
+      <div data-matrix-existing hidden>
+        <label class="process-field c-form-group"><span>Selecione a matriz</span><select data-matrix-select class="c-form-control"><option value="">Selecione uma matriz…</option></select></label>
+        <button data-matrix-refresh type="button" class="matrix-icon-button" title="Atualizar matrizes" aria-label="Atualizar matrizes"><i class="fas fa-arrows-rotate" aria-hidden="true"></i></button>
+      </div>
+      <div data-matrix-existing-summary></div>
+    </fieldset>
+    <fieldset class="matrix-source-option">
+      <legend><label>Cadastrar nova matriz <input data-matrix-mode type="radio" value="new"></label></legend>
+      <div data-matrix-new hidden>
+        <label class="process-field c-form-group"><span>Nome da matriz</span><input data-matrix-name class="c-form-control" type="text" maxlength="200"></label>
+        <input data-matrix-file type="file" accept=".json,.csv,.xlsx" aria-label="Arquivo da matriz (JSON, CSV ou XLSX)" hidden>
+        <button data-matrix-upload type="button" class="matrix-icon-button" title="Carregar arquivo da matriz" aria-label="Carregar arquivo da matriz"><i class="fas fa-folder-open" aria-hidden="true"></i></button>
+        <a data-matrix-model href="/public/documentacao/matrizes/Modelo_Matriz_Criterios_Premissas_SLT.xlsx" download="Modelo_Matriz_Criterios_Premissas_SLT.xlsx" class="matrix-icon-button" title="Baixar arquivo modelo da matriz" aria-label="Baixar arquivo modelo da matriz"><i class="fas fa-download" aria-hidden="true"></i></a>
+      </div>
+      <div data-matrix-new-summary></div>
+    </fieldset>
   </div>
+  <button data-matrix-details type="button" class="matrix-summary-link" hidden></button>
   <p data-matrix-feedback class="form-help" role="status" aria-live="polite"></p>
+  <dialog data-matrix-dialog class="matrix-details-dialog" aria-label="Detalhes da matriz de critérios e premissas">
+    <header class="json-modal-head"><h2>Detalhes da matriz</h2><button data-matrix-close type="button" class="json-modal-close" aria-label="Fechar detalhes da matriz"><i class="fas fa-xmark" aria-hidden="true"></i></button></header>
+    <div data-matrix-detail-content class="json-modal-body"></div>
+  </dialog>
 </div>

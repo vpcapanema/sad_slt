@@ -9,7 +9,9 @@ from api.repositories import comparacao_colaborativa_repository as ambientes
 from api.repositories import email_convites_repository as repo
 from api.schemas.email import ConviteEmailEnvioSchema, EmailEnvioSchema
 from api.services import email_service
-from api.services.comparacao_colaborativa_service import _validar_ambiente_ativo, gerar_token_acesso
+from api.services.comparacao_colaborativa_service import (
+    _validar_ambiente_ativo, gerar_token_acesso, _criterios_convidado, _criterio_nomes,
+)
 
 ASSUNTO = "Convite para preenchimento colaborativo AHP - SICARD"
 
@@ -36,8 +38,22 @@ def enviar(ambiente_id: str, dados: ConviteEmailEnvioSchema, usuario_id: str) ->
     codigo = ambiente.get("token_acesso")
     if not codigo:
         codigo = ambientes.garantir_token_acesso(ambiente_id, dados.versao, gerar_token_acesso())
+    convite = next(c for c in ambiente["convites"] if c["email"].strip().lower() == destinatario)
+    corpo = dados.texto
+    if convite.get("dimensoes") is not None:
+        criterios = _criterio_nomes(_criterios_convidado(ambiente, destinatario))
+        link = next(linha.strip() for linha in dados.texto.splitlines() if any(caminho in linha for caminho in caminhos))
+        corpo = (
+            f"Olá, {convite.get('nome') or 'colaborador(a)'}!\n\n"
+            "Você foi convidado(a) a preencher a comparação pareada AHP no SICARD.\n"
+            f"Dimensões atribuídas: {', '.join(convite['dimensoes'])}.\n\n"
+            "Critérios a comparar:\n" + "\n".join(f"{i + 1}. {nome}" for i, nome in enumerate(criterios))
+            + f"\n\nPrazo: {ambiente['valido_ate'].isoformat()}.\n"
+            f"Acesse o formulário: {link}\n"
+            "Para enviar a resposta, a consistência (RC) deve ser menor que 0,10."
+        )
     texto = (
-        f"{dados.texto}\n\nCódigo de acesso ao formulário: {codigo}\n"
+        f"{corpo}\n\nCódigo de acesso ao formulário: {codigo}\n"
         "Para liberar o formulário, informe seu nome, o e-mail convidado e este código de acesso de seis dígitos. "
         "O código de acesso é válido somente para este julgamento, dentro do prazo informado."
     )

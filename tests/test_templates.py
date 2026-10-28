@@ -26,6 +26,30 @@ def _classes(opening_tag: str) -> list[str]:
     return match.group(1).split() if match else []
 
 
+def test_central_julgamentos_cabecalhos_e_indices_coerentes() -> None:
+    request = SimpleNamespace(url=SimpleNamespace(path="/teste/"), query_params={})
+    template = templates.env.get_template("paginas/analise_multicriterio/central-respostas.html")
+    for mode in ("espaco", "julgamentos", "formulario"):
+        html = template.render(request=request, modo_pagina=mode)
+        assert "Dados do ambiente colaborativo" not in html
+        assert ">Status do ambiente colaborativo</span>" not in html
+        assert "2.1.1" not in html
+        assert html.count("<span>Configuração do julgamento</span>") == 1
+        assert "<span>Convites e acompanhamento</span>" in html
+        assert "convidados para esta hierarquização" not in html
+        ids = re.findall(r'\bid="([^"]+)"', html)
+        assert len(ids) == len(set(ids))
+        analysis = html.split('id="ami-analysis-workspace"', 1)[1].split('id="ami-create-section"', 1)[0]
+        indices = re.findall(r'class="ahp-subsection-num">([^<]+)</span>', analysis)
+        expected = [str(n) for n in range(1, 8)] if mode != "formulario" else [f"2.{n}" for n in range(1, 8)]
+        assert indices == expected
+        if mode != "formulario":
+            simulation = html.split('id="ami-pairwise-panel"', 1)[1]
+            assert re.findall(r'class="ahp-subsection-num">([^<]+)</span>', simulation) == ["2", "3", "3"]
+        registration = html.split('class="ami-registration-grid"', 1)[1].split('id="ami-environment-actions"', 1)[0]
+        assert re.findall(r'class="ahp-subsection-num">([^<]+)</span>', registration) == ["1", "2", "3", "3", "4", "5"]
+
+
 def test_shared_template_contract_is_complete() -> None:
     expected = {
         TEMPLATES_ROOT / "bases/base_conteudo.html",

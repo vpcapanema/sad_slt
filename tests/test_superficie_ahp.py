@@ -235,7 +235,7 @@ def test_javascript_carrega_surface_fixa_matriz_sem_convites_automaticos():
     harness = r"""
 const assert = require('node:assert/strict');
 var nodes = {}, calls = [], opened = 0, summary = '';
-var $ = id => nodes[id] || (nodes[id] = {after() {}});
+var $ = id => nodes[id] || (nodes[id] = {after() {}, querySelectorAll() {return [];}, replaceChildren() {}});
 var document = {
   getElementById: id => nodes[id],
   createElement: () => ({set id(value) { nodes[value] = this; }})

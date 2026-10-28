@@ -1,13 +1,14 @@
 <section class="card ahp-step-section is-hidden" id="ami-analysis-workspace">
   <div class="ahp-section-label">{% if indicacao_processos %}<i class="fas fa-chart-line" aria-hidden="true"></i>{% else %}<span class="ahp-section-index-icon">2</span>{% endif %}<span>Espaço analítico do julgamento</span></div>
   <div class="ahp-section-body">
+    <label class="c-form-group">Recorte de dimensões<select id="ami-analysis-scope" class="c-form-control"></select></label>
     <div id="ami-analysis-context" class="step-intro"></div>
     <p id="ami-analysis-mode" class="step-intro" role="status"></p>
-    <p class="step-intro"><i class="fas fa-circle-info" aria-hidden="true"></i> As respostas expressam a intensidade de importância entre os critérios. A consolidação dessas comparações calcula os pesos dos critérios. Ao homologar uma análise, seus pesos passam a ser utilizados na fase 3 da hierarquização vinculada, aplicada aos valores de cada demanda nos critérios correspondentes.</p>
+    <p class="step-intro"><i class="fas fa-circle-info" aria-hidden="true"></i> As respostas expressam a intensidade de importância entre os critérios. A consolidação dessas comparações calcula os pesos dos critérios da matriz associada ao julgamento. Após a homologação, os pesos poderão ser selecionados em hierarquizações compatíveis com essa matriz. Julgamentos de superfícies preservam seu contexto específico.</p>
     <div class="ahp-live-metrics ami-live-metrics" id="ami-analysis-participation"></div>
 
     <section class="ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">{{ '1' if indicacao_processos else '2.1' }}</span><span>Julgadores</span></div>
-      <p class="ami-subsection-hint">Todos os julgadores convidados para esta hierarquização. Quem ainda não respondeu aparece com nome e e-mail, e os demais campos em branco.</p>
+      <p class="ami-subsection-hint">Todos os julgadores convidados para este julgamento. Quem ainda não respondeu aparece com nome e e-mail, e os demais campos em branco.</p>
       <div class="ahp-section-body"><div class="matriz-table-wrap"><table class="admin-table ami-stats-table ami-table--julgadores"><thead><tr><th>Julgador</th><th>E-mail</th><th>Instituição</th><th>Situação</th><th>RC individual</th><th>Início</th><th>Envio</th></tr></thead><tbody id="ami-analysis-judges"></tbody></table></div></div>
     </section>
     <p class="ami-fio-elo"><span>Cada julgador que respondeu atribuiu, par a par, os índices de importância abaixo.</span></p>
@@ -18,7 +19,7 @@
     </section>
     <p class="ami-fio-elo"><span>Esses índices formam a matriz de comparação pareada: a do julgador selecionado, ou a agregação de todos pela medida de tendência central escolhida.</span></p>
 
-    <section class="ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">3.3</span><span>Matriz de comparação pareada</span></div>
+    <section class="ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">{{ '3' if indicacao_processos else '2.3' }}</span><span>Matriz de comparação pareada</span></div>
       <p class="ami-subsection-hint" id="ami-analysis-matrix-hint"></p>
       <div class="ami-judge-filter is-hidden" id="ami-analysis-measure-box"><label class="c-form-label" for="ami-analysis-measure">Medida de tendência central</label><select class="c-form-control" id="ami-analysis-measure"><option value="geometrica">Média geométrica dos índices</option><option value="aritmetica">Média aritmética dos índices</option><option value="mediana">Mediana dos índices</option></select><span class="ami-judge-filter__hint">Aplicada par a par; o recíproco é preservado abaixo da diagonal.</span></div>
       <div class="ahp-section-body" id="ami-analysis-matrix"></div>

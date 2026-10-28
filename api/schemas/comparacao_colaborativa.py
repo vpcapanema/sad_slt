@@ -13,6 +13,7 @@ class ConviteColaborativoSchema(BaseModel):
     # Nome informado no convite; sem cadastro de usuarios, e a unica origem do
     # nome enquanto a pessoa nao envia a resposta.
     nome: str | None = Field(None, max_length=200)
+    dimensoes: list[str] | None = Field(None, min_length=1)
 
 
 class AmbienteColaborativoCreateSchema(BaseModel):

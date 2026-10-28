@@ -163,6 +163,56 @@ def _criterio_nomes(criterios: list[dict[str, Any]]) -> list[str]:
     return nomes
 
 
+def _dimensao(criterio: dict[str, Any]) -> str:
+    for key, value in criterio.items():
+        normalizado = unicodedata.normalize("NFKD", str(key)).encode("ascii", "ignore").decode("ascii").strip().casefold()
+        if normalizado in {"dimensao", "dimensao de criterio", "dimensao de criterios"}:
+            return str(value or "").strip()
+    return ""
+
+
+def _validar_dimensoes(convites: list[dict[str, Any]], criterios: list[dict[str, Any]]) -> None:
+    disponiveis = {_dimensao(c) for c in criterios} - {""}
+    for convite in convites:
+        dimensoes = convite.get("dimensoes")
+        if dimensoes is None:
+            continue  # Convites integrais legados continuam válidos.
+        if not dimensoes or len(set(dimensoes)) != len(dimensoes) or set(dimensoes) - disponiveis:
+            raise DemandaValidationError("Selecione dimensões válidas da matriz, sem repetições.", field="convites")
+        if sum(_dimensao(c) in dimensoes for c in criterios) < 2:
+            raise DemandaValidationError("O recorte do colaborador deve conter ao menos dois critérios.", field="convites")
+
+
+def _criterios_convidado(ambiente: dict[str, Any], email: str) -> list[dict[str, Any]]:
+    criterios = ambiente.get("criterios") or []
+    convite = next((c for c in ambiente.get("convites", []) if c["email"].strip().lower() == email.strip().lower()), None)
+    if convite is None:
+        raise DemandaValidationError("Colaborador não pertence ao julgamento.", field="email")
+    dimensoes = convite.get("dimensoes")
+    return criterios if dimensoes is None else [c for c in criterios if _dimensao(c) in dimensoes]
+
+
+def _estatisticas_recorte(ambiente: dict[str, Any], email: str, estatisticas: dict | None) -> dict:
+    criterios = _criterios_convidado(ambiente, email)
+    return {**(estatisticas or {}), "criterios_atribuidos": criterios,
+            "dimensoes_atribuidas": list(dict.fromkeys(_dimensao(c) for c in criterios if _dimensao(c)))}
+
+
+def _criterios_resposta(ambiente: dict[str, Any], resposta: dict[str, Any]) -> list[dict[str, Any]]:
+    snapshot = (resposta.get("estatisticas") or {}).get("criterios_atribuidos")
+    return snapshot if snapshot is not None else ambiente.get("criterios") or []
+
+
+def _recorte_analise(ambiente: dict[str, Any], respostas: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    criterios = _criterios_resposta(ambiente, respostas[0])
+    if any(_criterios_resposta(ambiente, resposta) != criterios for resposta in respostas):
+        raise DemandaValidationError(
+            "Selecione respostas do mesmo recorte de dimensões. Respostas com critérios diferentes não podem ser agregadas.",
+            field="resposta_ids",
+        )
+    return criterios
+
+
 def _consolidacao_from_row(row: dict[str, Any]) -> ConsolidacaoColaborativaSchema | None:
     matriz = row.get("matriz_consolidada")
     if not matriz:
@@ -286,7 +336,9 @@ def criar_ambiente(
             "A data limite deve ser futura.", field="valido_ate"
         )
 
-    convites = [{"email": str(c.email).strip().lower(), "nome": (c.nome or "").strip() or None} for c in payload.convites]
+    convites = [{"email": str(c.email).strip().lower(), "nome": (c.nome or "").strip() or None,
+                **({"dimensoes": [d.strip() for d in c.dimensoes]} if c.dimensoes is not None else {})} for c in payload.convites]
+    _validar_dimensoes(convites, criterios)
     emails = {c["email"] for c in convites}
     if len(emails) != len(convites):
         raise DemandaValidationError(
@@ -545,6 +597,22 @@ def atualizar_ambiente(
         convites = [{"email": str(item.email).strip().lower(),
                     "nome": ((item.nome or "").strip() or None) if "nome" in item.model_fields_set
                     else nomes_atuais.get(str(item.email).strip().lower())} for item in payload.convites]
+        anteriores = {c["email"].strip().lower(): c for c in atual.get("convites", [])}
+        for convite, item in zip(convites, payload.convites):
+            anterior = anteriores.get(convite["email"], {})
+            dimensoes = item.dimensoes if "dimensoes" in item.model_fields_set else anterior.get("dimensoes")
+            if dimensoes is not None:
+                convite["dimensoes"] = [d.strip() for d in dimensoes]
+        _validar_dimensoes(convites, atual.get("criterios") or [])
+        respostas = repo.list_respostas(ambiente_id)
+        proposto = {**atual, "convites": convites}
+        for resposta in respostas:
+            email = resposta["email"].strip().lower()
+            if email not in {c["email"] for c in convites} or _criterios_convidado(proposto, email) != _criterios_resposta(atual, resposta):
+                raise DemandaValidationError(
+                    "Não é possível remover ou mudar o recorte de quem já iniciou uma resposta. Crie outro julgamento.",
+                    field="convites",
+                )
         emails = [item["email"] for item in convites]
         if len(set(emails)) != len(emails):
             raise DemandaValidationError("Há e-mails duplicados.", field="convites")
@@ -641,7 +709,7 @@ def obter_ambiente_publico(
     if not autorizado:
         criterios = []
     elif criterios_snapshot:
-        criterios = _criterio_nomes(criterios_snapshot)
+        criterios = _criterio_nomes(_criterios_convidado(row, email))
     else:
         hierarq = _carregar_hierarquizacao(row["hierarquizacao_id"])
         criterios_lista = _criterios_from_hierarquizacao(hierarq)
@@ -745,7 +813,7 @@ def iniciar_resposta(token: str, payload: RespostaColaborativaInicioSchema) -> R
     existente = repo.get_resposta_by_ambiente_email(str(ambiente["id"]), email)
     if existente:
         return _resposta_to_response(existente)
-    n = len(_criterio_nomes(ambiente.get("criterios") or []))
+    n = len(_criterios_convidado(ambiente, email))
     matriz_inicial = [[1.0 for _ in range(n)] for _ in range(n)]
     inserted = repo.insert_resposta({
         "ambiente_id": str(ambiente["id"]),
@@ -755,7 +823,7 @@ def iniciar_resposta(token: str, payload: RespostaColaborativaInicioSchema) -> R
         "matriz_comparacao": matriz_inicial,
         "consistente": False,
         "status": "em_preenchimento",
-        "estatisticas": {},
+        "estatisticas": _estatisticas_recorte(ambiente, email, None),
         "enviado_em": None,
     })
     if not inserted:
@@ -775,10 +843,10 @@ def salvar_progresso_resposta(token: str, payload: RespostaColaborativaProgresso
         raise DemandaValidationError("Inicie o preenchimento antes de salvar o progresso.", field="email")
     if resposta.get("status", "enviada") == "enviada":
         raise DemandaValidationError("Esta resposta já foi enviada.", field="status")
-    _validar_matriz_pareada(payload.matriz_comparacao, len(_criterio_nomes(ambiente.get("criterios") or [])))
+    _validar_matriz_pareada(payload.matriz_comparacao, len(_criterios_convidado(ambiente, email)))
     updated = repo.update_resposta_progresso(str(resposta["id"]), {
         "matriz_comparacao": payload.matriz_comparacao,
-        "estatisticas": payload.estatisticas or {},
+        "estatisticas": _estatisticas_recorte(ambiente, email, payload.estatisticas),
     })
     return _resposta_to_response(updated)
 def registrar_resposta(token: str, payload: RespostaColaborativaCreateSchema) -> RespostaColaborativaResponseSchema:
@@ -798,7 +866,7 @@ def registrar_resposta(token: str, payload: RespostaColaborativaCreateSchema) ->
 
     criterios_snapshot = row.get("criterios") or []
     if criterios_snapshot:
-        nomes = _criterio_nomes(criterios_snapshot)
+        nomes = _criterio_nomes(_criterios_convidado(row, email))
     else:
         hierarq = _carregar_hierarquizacao(row["hierarquizacao_id"])
         criterios_lista = _criterios_from_hierarquizacao(hierarq)
@@ -829,7 +897,7 @@ def registrar_resposta(token: str, payload: RespostaColaborativaCreateSchema) ->
             "razao_consistencia": rc,
             "consistente": True,
             "status": "enviada",
-            "estatisticas": payload.estatisticas or {},
+            "estatisticas": _estatisticas_recorte(row, email, payload.estatisticas),
             "enviado_em": datetime.now(timezone.utc),
         }
     inserted = repo.update_resposta_progresso(str(existente["id"]), dados_resposta) if existente else repo.insert_resposta(dados_resposta)
@@ -858,7 +926,7 @@ def listar_respostas_central() -> list[dict[str, Any]]:
             "matriz_id": str(row["matriz_id"]) if row.get("matriz_id") else None,
             "matriz_nome": row.get("matriz_nome"),
             "hierarquizacao_nome": row.get("hierarquizacao_nome"),
-            "criterios": row.get("criterios") or [],
+            "criterios": _criterios_resposta(row, row),
             "token": row["token"],
             "config_tipo": row.get("config_tipo"),
             "config_id": str(row["config_id"]) if row.get("config_id") else None,
@@ -1020,6 +1088,7 @@ def criar_analise(ambiente_id: str, payload: AnaliseColaborativaCreateSchema, us
         respostas = [r for r in respostas if r.get("consistente") and float(r.get("razao_consistencia") or 0) <= payload.rc_maximo]
     if not respostas:
         raise DemandaValidationError("Nenhuma resposta enviada atende aos filtros da análise.", field="respostas")
+    criterios_recorte = _recorte_analise(ambiente, respostas)
     superficie_vinculada = superficie_ahp.superficie_id(ambiente)
     if superficie_vinculada:
         for resposta in respostas:
@@ -1032,9 +1101,10 @@ def criar_analise(ambiente_id: str, payload: AnaliseColaborativaCreateSchema, us
                 valor = sum(valores) / len(valores) if payload.metodo_agregacao == "aritmetica" else _mediana(valores)
                 consolidada[i][j], consolidada[j][i] = valor, 1 / valor
     resultado = ahp_engine.analyze_matrix(consolidada)
-    nomes = _criterio_nomes(ambiente.get("criterios") or [])
+    nomes = _criterio_nomes(criterios_recorte)
     estatisticas = _estatisticas_respostas(respostas, nomes)
     estatisticas["total_respostas"] = len(respostas)
+    estatisticas["criterios_atribuidos"] = criterios_recorte
     row = analise_repo.insert_with_respostas({
         "ambiente_id": ambiente_id, "codigo": "ANL-" + secrets.token_hex(6).upper(), "nome": payload.nome.strip(),
         "descricao": payload.descricao, "metodo_agregacao": {"geometrica": "aij_media_geometrica", "aritmetica": "aij_media_aritmetica", "mediana": "aij_mediana"}[payload.metodo_agregacao], "rc_maximo": payload.rc_maximo,
@@ -1060,12 +1130,25 @@ def obter_espaco_analitico(ambiente_id: str, *, base_url: str = "") -> dict[str,
     respostas = repo.list_respostas(ambiente_id)
     enviados = [r for r in respostas if r.get("status", "enviada") == "enviada"]
     nomes = _criterio_nomes(ambiente.get("criterios") or [])
-    estatisticas = _estatisticas_respostas(enviados, nomes) if enviados else {"individuais": [], "por_criterio": [], "por_par": []}
+    grupos: list[dict[str, Any]] = []
+    for resposta in respostas:
+        criterios_recorte = _criterios_resposta(ambiente, resposta)
+        grupo = next((g for g in grupos if g["criterios"] == criterios_recorte), None)
+        if grupo is None:
+            grupo = {"criterios": criterios_recorte, "respostas": []}
+            grupos.append(grupo)
+        grupo["respostas"].append(resposta)
+    for grupo in grupos:
+        enviadas = [r for r in grupo["respostas"] if r.get("status", "enviada") == "enviada"]
+        grupo["estatisticas"] = _estatisticas_respostas(enviadas, _criterio_nomes(grupo["criterios"])) if enviadas else {"individuais": [], "por_criterio": [], "por_par": []}
+        grupo["resposta_ids"] = [str(r["id"]) for r in grupo.pop("respostas")]
+    estatisticas = grupos[0]["estatisticas"] if len(grupos) == 1 else {"individuais": [], "por_criterio": [], "por_par": []}
     return {
         "ambiente": _ambiente_to_response(ambiente, base_url=base_url).model_dump(),
         "participacao": {"convidados": len(ambiente.get("convites") or []), "nao_iniciados": max(0, len(ambiente.get("convites") or [])-len(respostas)), "em_preenchimento": sum(r.get("status") == "em_preenchimento" for r in respostas), "enviadas": len(enviados), "consistentes": sum(bool(r.get("consistente")) for r in enviados), "inconsistentes": sum(not bool(r.get("consistente")) for r in enviados)},
         "respostas": [_resposta_to_response(r).model_dump() for r in respostas],
         "estatisticas": estatisticas,
+        "recortes": grupos,
         "analises": [a.model_dump() for a in listar_analises(ambiente_id)],
         "analise_homologada_id": str(ambiente["analise_homologada_id"]) if ambiente.get("analise_homologada_id") else None,
     }
@@ -1080,6 +1163,9 @@ def homologar_analise(analise_id: str, usuario_id: str | None = None, *, base_ur
     ambiente = repo.get_ambiente_by_id(str(analise["ambiente_id"]))
     if not ambiente:
         raise DemandaValidationError("Julgamento da análise não encontrado.", field="ambiente_id")
+    criterios_analise = (analise.get("estatisticas_analise") or {}).get("criterios_atribuidos", ambiente.get("criterios") or [])
+    if criterios_analise != (ambiente.get("criterios") or []):
+        raise DemandaValidationError("Esta análise contém apenas um recorte de dimensões e não pode substituir os pesos da matriz inteira.", field="analise_id")
     if superficie_ahp.superficie_id(ambiente):
         _validar_matriz_pareada(analise["matriz_consolidada"], len(ambiente["criterios"]))
         resultado = ahp_engine.analyze_matrix(analise["matriz_consolidada"])
@@ -1122,6 +1208,8 @@ def consolidar_ambiente(
             field="respostas",
         )
 
+    if _recorte_analise(amb, respostas) != (amb.get("criterios") or []):
+        raise DemandaValidationError("Use análises separadas por recorte de dimensões. Não há julgamento da matriz inteira para consolidar.", field="respostas")
     matrizes = [r.get("matriz_comparacao") or [] for r in respostas]
     superficie_vinculada = superficie_ahp.superficie_id(amb)
     if superficie_vinculada:

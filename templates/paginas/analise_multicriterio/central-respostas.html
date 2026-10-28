@@ -6,6 +6,7 @@
 {% block titulo %}{% if modo_pagina == 'espaco' %}Central de julgamentos{% elif modo_pagina == 'julgamentos' %}Central de respostas{% elif modo_pagina == 'formulario' %}Formulário dos especialistas{% else %}Gestão de julgamentos AHP{% endif %} — SICARD{% endblock %}
 {% block classes_body %}ahp-module-page ami-page feedback-proprio{% if modo_pagina in ['espaco', 'julgamentos'] %} ami-espaco-page{% endif %}{% if modo_pagina == 'julgamentos' %} sicard-standard-page{% endif %}{% endblock %}
 {% block estilos_pagina %}
+  <link rel="stylesheet" href="/assets/css/matrizes-criterios.css?v=20261028-binario">
   <link rel="stylesheet" href="/assets/css/ahp-module.css">
   <link rel="stylesheet" href="/assets/css/ahp-collab-analytics.css">
   <link rel="stylesheet" href="/assets/css/ahp-collab-explorer.css">
@@ -37,20 +38,19 @@
   {% set tabela_colaborativa_id = "ami-judgments" %}{% set tabela_colaborativa_respostas = modo_pagina == 'julgamentos' %}{% set tabela_colaborativa_comparacao = modo_pagina == 'espaco' %}{% include "componentes/_tabela_colaborativa.html" %}
   {% include "componentes/analise_multicriterio/_espaco_analitico_respostas.html" %}
   <div class="ami-environment-content is-hidden" id="ami-create-section">
-    <h2 class="ami-environment-title"><span class="ahp-section-index-icon" aria-hidden="true">2</span><span>Ambiente colaborativo</span></h2>
-    <div class="ahp-subsection-title"><span class="ahp-subsection-num">2.1</span><span>Dados do ambiente colaborativo</span></div>
-    <div class="ahp-subsection-title"><span class="ahp-subsection-num">2.2</span><span>Status do ambiente colaborativo</span></div>
+    <h2 class="ami-environment-title"><i class="fas fa-people-group" aria-hidden="true"></i> <span>Ambiente colaborativo</span></h2>
     <div id="ami-create-status" class="ami-status-cards" aria-label="Status do ambiente colaborativo" hidden></div>
     <form id="ami-create-form">
       {% include "componentes/analise_multicriterio/_analise_multicriterio_interativa.html" %}
     </form>
       <section id="ami-email-draft-card" class="secao-collab-email-draft-card card card-ami-email-draft ahp-step-section is-hidden">
-        <div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">2.3</span><span>Mensagem de email</span></div>
+        <div class="ahp-section-label"><i class="fas fa-envelope" aria-hidden="true"></i><span>Convites e acompanhamento</span></div>
         <div class="ahp-section-body">
           <section class="secao-ami-subcard ahp-subcard">
             <div class="ahp-subsection-title"><span class="ahp-subsection-num">1</span><span>Mensagem de email e notificação</span></div>
             <div class="ahp-section-body">
           <p class="step-intro ami-email-instrucao"><i class="fas fa-circle-info" aria-hidden="true"></i><span>Confira a mensagem abaixo e envie o convite pelo SICARD aos colaboradores salvos. Cada pessoa recebe um e-mail individual, com o link persistente e os critérios deste julgamento.</span></p>
+          <label class="c-form-group">Prévia do convite por colaborador<select id="ami-email-preview-recipient" class="c-form-control"></select></label>
           <div class="c-form-group"><label for="ami-email-template" class="c-form-label"><i class="fas fa-envelope-open-text"></i> Mensagem aos colaboradores</label><div id="ami-email-template" class="c-form-control collab-email-template" role="textbox" aria-readonly="true" tabindex="0"></div>
           <p class="form-help" id="ami-email-link-row"><i class="fas fa-link"></i> Link persistente do formulário: <a id="ami-email-form-link" href="#" target="_blank" rel="noopener"></a></p>
           </div>
@@ -78,11 +78,11 @@
       </section>
   </div>
   <section class="card-ami-pairwise secao-ami-pairwise card ahp-step-section is-hidden" id="ami-pairwise-panel">
-    <div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">3</span><span>Simulação de comparação pareada</span></div>
+    <div class="ahp-section-label"><i class="fas fa-table-cells" aria-hidden="true"></i><span>Simulação de comparação pareada</span></div>
     <div class="ahp-section-body">
       <p class="step-intro">Simulação local: as alterações não são salvas e não modificam respostas, análises ou pesos homologados.</p><div id="ami-saaty-scale-host"></div>
       <div class="ahp-subcard info-card info-card--spaced" id="ami-metrics-card">
-        <div class="ahp-subsection-title"><span class="ahp-subsection-num">3.2</span><span>Indicadores instantâneos de consistência AHP</span></div>
+        <div class="ahp-subsection-title"><span class="ahp-subsection-num">{{ '2' if indicacao_processos else '3.2' }}</span><span>Indicadores instantâneos de consistência AHP</span></div>
         <div class="info-card-content"><div class="ahp-live-metrics ami-live-metrics is-initial" id="ami-live-metrics" aria-live="polite">
           <div class="ahp-metric-card"><div class="ahp-metric-card__label">Lambda máximo (λmax)</div><div class="ahp-metric-card__value" id="ami-metric-lambda">—</div><div class="ahp-metric-card__sub">instantâneo</div></div>
           <div class="ahp-metric-card"><div class="ahp-metric-card__label">Índice de consistência (IC)</div><div class="ahp-metric-card__value" id="ami-metric-ic">—</div><div class="ahp-metric-card__sub">instantâneo</div></div>
@@ -106,6 +106,6 @@
   <script src="/assets/js/api-erro.js?v=20261027"></script>
   <script src="/assets/js/paginas/ami-email.js?v=20261027-monitoramento-seletores"></script>
   <script src="/assets/js/matriz-criterios-arquivo.js?v=20261009"></script>
-  <script src="/assets/js/matrizes-criterios.js?v=20261028"></script>
+  <script src="/assets/js/matrizes-criterios.js?v=20261028-binario"></script>
   <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20261028-matrizes-independentes"></script>
 {% endblock %}

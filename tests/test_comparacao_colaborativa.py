@@ -313,6 +313,112 @@ def _resposta_row(matriz, *, consistente=True, email="a@x.gov.br") -> dict:
     }
 
 
+def _ambiente_dimensoes():
+    return _ambiente_row(
+        criterios=[{"Critério": "Custo", "Dimensão": "Financeira"}, {"Critério": "Retorno", "Dimensão": "Financeira"},
+                   {"Critério": "Acesso", "Dimensão": "Social"}, {"Critério": "Equidade", "Dimensão": "Social"}],
+        n_criterios=4, convites=[{"email": "a@x.gov.br", "dimensoes": ["Social"]},
+                                {"email": "b@x.gov.br", "dimensoes": ["Financeira", "Social"]}],
+    )
+
+
+def test_formulario_publico_limita_criterios_por_email(monkeypatch):
+    row = _ambiente_dimensoes()
+    monkeypatch.setattr(repo, "get_ambiente_by_token", lambda _: row)
+    monkeypatch.setattr(service.hierarq_repo, "get_by_id", lambda _: {"nome": "Teste"})
+    assert service.obter_ambiente_publico("tok-abc").criterios == []
+    assert service.obter_ambiente_publico("tok-abc", "a@x.gov.br", "012345").criterios == ["Acesso", "Equidade"]
+    assert len(service.obter_ambiente_publico("tok-abc", "b@x.gov.br", "012345").criterios) == 4
+
+
+@pytest.mark.parametrize("dimensoes", [[], ["Inexistente"], ["Social", "Social"]])
+def test_recusa_dimensoes_invalidas(dimensoes):
+    with pytest.raises(DemandaValidationError):
+        service._validar_dimensoes([{"dimensoes": dimensoes}], _ambiente_dimensoes()["criterios"])
+
+
+def test_snapshot_recorte_nao_aceita_estatisticas_forjadas():
+    row = _ambiente_dimensoes()
+    stats = service._estatisticas_recorte(row, "a@x.gov.br", {"criterios_atribuidos": row["criterios"], "duracao_ms": 10})
+    assert service._criterio_nomes(stats["criterios_atribuidos"]) == ["Acesso", "Equidade"]
+    assert stats["dimensoes_atribuidas"] == ["Social"]
+    assert stats["duracao_ms"] == 10
+
+
+def test_resposta_dimensoes_valida_tamanho_e_grava_snapshot(monkeypatch):
+    from api.schemas.comparacao_colaborativa import RespostaColaborativaCreateSchema
+    row = _ambiente_dimensoes()
+    monkeypatch.setattr(repo, "get_ambiente_by_token", lambda _: row)
+    monkeypatch.setattr(repo, "get_resposta_by_ambiente_email", lambda *_: None)
+    inserted = MagicMock(side_effect=lambda data: {**_resposta_row(data["matriz_comparacao"]), **data})
+    monkeypatch.setattr(repo, "insert_resposta", inserted)
+    payload = RespostaColaborativaCreateSchema(
+        token_acesso="012345", identificacao={"nome_completo": "Ana", "email": "a@x.gov.br", "instituicao": "Teste"},
+        matriz_comparacao=[[1, 2], [.5, 1]],
+    )
+    result = service.registrar_resposta("tok-abc", payload)
+    assert service._criterio_nomes(result.estatisticas["criterios_atribuidos"]) == ["Acesso", "Equidade"]
+    payload.matriz_comparacao = [[1] * 4 for _ in range(4)]
+    with pytest.raises(DemandaValidationError):
+        service.registrar_resposta("tok-abc", payload)
+    assert inserted.call_count == 1
+
+
+def test_recortes_diferentes_mesmo_tamanho_nao_sao_agregados():
+    row = _ambiente_dimensoes()
+    social = {**_resposta_row([[1, 1], [1, 1]]), "estatisticas": {"criterios_atribuidos": row["criterios"][2:]}}
+    financeira = {**_resposta_row([[1, 1], [1, 1]], email="b@x.gov.br"), "estatisticas": {"criterios_atribuidos": row["criterios"][:2]}}
+    with pytest.raises(DemandaValidationError, match="mesmo recorte"):
+        service._recorte_analise(row, [social, financeira])
+    assert service._recorte_analise(row, [social]) == row["criterios"][2:]
+
+
+def test_nao_altera_recorte_apos_inicio(monkeypatch):
+    row = _ambiente_dimensoes()
+    resposta = {**_resposta_row([[1, 1], [1, 1]]), "status": "em_preenchimento",
+                "estatisticas": service._estatisticas_recorte(row, "a@x.gov.br", None)}
+    monkeypatch.setattr(repo, "get_ambiente_by_id", lambda _: row)
+    monkeypatch.setattr(repo, "list_respostas", lambda _: [resposta])
+    update = MagicMock()
+    monkeypatch.setattr(repo, "update_ambiente", update)
+    with pytest.raises(DemandaValidationError, match="recorte"):
+        service.atualizar_ambiente(AMBIENTE_ID, AmbienteColaborativoUpdateSchema(
+            convites=[{"email": "a@x.gov.br", "dimensoes": ["Financeira"]}],
+        ))
+    update.assert_not_called()
+
+
+def test_nao_homologa_pesos_locais_como_globais(monkeypatch):
+    row = _ambiente_dimensoes()
+    monkeypatch.setattr(repo, "get_ambiente_by_id", lambda _: row)
+    monkeypatch.setattr(service.analise_repo, "get_by_id", lambda _: {
+        "ambiente_id": AMBIENTE_ID, "consistente": True,
+        "estatisticas_analise": {"criterios_atribuidos": row["criterios"][2:]},
+    })
+    gravar = MagicMock()
+    monkeypatch.setattr(repo, "atualizar_consolidacao", gravar)
+    with pytest.raises(DemandaValidationError, match="recorte"):
+        service.homologar_analise("analise-local")
+    gravar.assert_not_called()
+
+
+def test_espaco_analitico_separa_recortes_mesmo_tamanho(monkeypatch):
+    row = _ambiente_dimensoes()
+    respostas = [
+        {**_resposta_row([[1, 1], [1, 1]]), "estatisticas": {"criterios_atribuidos": row["criterios"][2:]}},
+        {**_resposta_row([[1, 2], [.5, 1]], email="b@x.gov.br"), "id": "outra",
+         "estatisticas": {"criterios_atribuidos": row["criterios"][:2]}},
+    ]
+    monkeypatch.setattr(repo, "get_ambiente_by_id", lambda _: row)
+    monkeypatch.setattr(repo, "list_respostas", lambda _: respostas)
+    monkeypatch.setattr(service, "listar_analises", lambda _: [])
+    result = service.obter_espaco_analitico(AMBIENTE_ID)
+    assert len(result["recortes"]) == 2
+    assert result["estatisticas"]["por_par"] == []
+    assert result["recortes"][0]["estatisticas"]["por_par"][0]["criterio_a"] == "Acesso"
+    assert result["recortes"][1]["estatisticas"]["por_par"][0]["criterio_a"] == "Custo"
+
+
 # ------------------------------------------------------------------
 # média geométrica (AIJ)
 # ------------------------------------------------------------------

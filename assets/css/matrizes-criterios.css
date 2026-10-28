@@ -1,0 +1,118 @@
+.matrix-source-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+  align-items: start;
+}
+.matrix-source-option {
+  min-width: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: .75rem 1.5rem;
+  padding: .75rem;
+  border: 1px solid #d8e0e5;
+  border-radius: .6rem;
+  background: #fff;
+}
+.ami-page [data-matrix-picker] {
+  font: 400 var(--ami-font-child, .7rem)/1.4 "Roboto", Arial, sans-serif;
+}
+.ami-page [data-matrix-picker] .matrix-source-option > legend {
+  padding: 0 .35rem;
+  color: var(--pli-deep);
+  font: 600 var(--ami-font-child, .7rem)/1.4 "Roboto", Arial, sans-serif;
+}
+.matrix-source-option > legend label { display: inline-flex; align-items: center; gap: .4rem; }
+[data-matrix-picker] .matrix-source-options input { width: auto; min-height: 0; margin: 0; }
+[data-matrix-existing], [data-matrix-new] { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: .5rem; }
+[data-matrix-new] { grid-template-columns: minmax(0, 1fr) auto auto; }
+[data-matrix-picker] [hidden] { display: none !important; }
+.ami-page [data-matrix-picker] :is([data-matrix-existing], [data-matrix-new]) > label {
+  display: grid;
+  gap: .5rem;
+  min-width: 0;
+  margin: 0;
+  font: 600 var(--ami-font-child, .7rem)/1.4 "Roboto", Arial, sans-serif;
+}
+.ami-page [data-matrix-picker] :is([data-matrix-name], [data-matrix-select]) {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  font: 400 var(--ami-font-child, .7rem)/1.4 "Roboto", Arial, sans-serif;
+}
+.ami-page.ami-espaco-page .ami-main [data-matrix-picker] .matrix-summary-link,
+.ami-page.ami-espaco-page .ami-main [data-matrix-picker] .matrix-summary-link:hover:not(:disabled):not(.is-disabled) {
+  font: 700 var(--ami-font-child, .7rem)/1.4 "Roboto", Arial, sans-serif;
+  background: transparent !important;
+  color: #123b56 !important;
+  border: 0 !important;
+  box-shadow: none;
+}
+.ami-page [data-matrix-picker] .matrix-source-option > legend label { margin: 0; font: inherit; }
+.matrix-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 2.115rem;
+  width: 2.115rem;
+  height: 2.115rem;
+  padding: 0;
+  border: 1px solid #374151;
+  border-radius: 6px;
+  color: #123b56;
+  background: #f3f4f6;
+  cursor: pointer;
+}
+.matrix-icon-button:disabled { opacity: .5; cursor: default; }
+.ami-page [data-matrix-picker] .matrix-icon-button {
+  box-sizing: border-box;
+  height: var(--ami-altura-campo, 2.125rem);
+  min-height: var(--ami-altura-campo, 2.125rem);
+  align-self: end;
+  margin: 0;
+}
+.ami-page [data-matrix-picker] .matrix-source-help {
+  display: block;
+  margin: 0 0 .5rem;
+}
+.matrix-summary-link {
+  display: block;
+  margin-top: .75rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #123b56;
+  font: inherit;
+  text-align: left;
+  text-decoration: underline;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.matrix-details-dialog {
+  width: min(1100px, 94vw);
+  max-height: 90vh;
+  box-sizing: border-box;
+  padding: 0;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  color: var(--pli-deep);
+}
+.matrix-details-dialog::backdrop { background: rgb(19 34 49 / 55%); }
+.matrix-details-dialog .json-modal-body { overflow: auto; max-height: 75vh; }
+.matrix-details-dialog dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: .4rem 1rem; }
+.matrix-details-dialog dd { margin: 0; overflow-wrap: anywhere; }
+.matrix-details-dialog dt { font-weight: 700; }
+.matrix-details-dialog .matriz-table-wrap { overflow-x: auto; }
+.ami-page #ami-collaborator-dimensions { margin-top: .5rem; }
+.ami-page #ami-collaborator-dimensions[hidden] { display: none; }
+.ami-page #ami-collaborator-dimensions legend,
+.ami-page #ami-dimension-options label {
+  font: 600 var(--ami-font-child, .7rem)/1.4 "Roboto", Arial, sans-serif;
+}
+.ami-page #ami-dimension-options label { display: flex; align-items: center; gap: .4rem; margin: .35rem 0; }
+.ami-page #ami-dimension-options input { width: auto; margin: 0; }
+@media (max-width: 760px) {
+  .matrix-source-options { grid-template-columns: minmax(0, 1fr); }
+}

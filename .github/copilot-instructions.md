@@ -2,6 +2,20 @@
 
 Estas instruções valem para **todas** as interações de agentes de IA neste repositório.
 
+## Verificação obrigatória antes de codificar
+
+**Antes de criar ou alterar qualquer código, verificar se já existem padrões
+estabelecidos e seguir esses padrões.** A obrigação vale para todos os agentes,
+inclusive subagentes e especialistas. Ler as instruções e as implementações de
+referência antes de editar; reutilizar componentes, estilos, funções e fluxos
+existentes em vez de criar variações locais.
+
+Em UI, verificar também tipografia, textos suplementares, estados iniciais,
+dimensões, alinhamentos e espaçamentos, comparando os estilos computados no
+navegador. Referências indicadas pelo usuário devem ser examinadas antes da
+implementação. Divergências exigem solicitação explícita ou aprovação prévia do
+usuário. Ao delegar, transmitir esta regra e a referência aplicável.
+
 ## Execucao e acompanhamento dos testes
 
 - No VS Code, usar prioritariamente o painel **Testing** e a ferramenta

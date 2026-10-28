@@ -18,7 +18,7 @@
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Título**                 | Metodologia do Sistema de Hierarquização de Demandas — SICARD                                                                                                         |
 | **Número**                 | NT-SICARD-001/2026                                                                                                                                                       |
-| **Versão**                 | 1.62                                                                                                                                                                      |
+| **Versão**                 | 1.63                                                                                                                                                                      |
 | **Data de emissão**        | 28/10/2026                                                                                                                                                               |
 | **Classificação**         | Documento técnico-metodológico de entrega ao cliente                                                                                                                   |
 | **Sistema**                 | SICARD — Sistema Inteligente de Cadastro e Ranking de Demandas                                                                                                        |
@@ -96,6 +96,7 @@
 | 1.60    | 28/10/2026 | `[preencher]` | Vinculação da consulta dos resultados individuais às respectivas rodadas nos painéis público e restrito, com agrupamento por tipo e hierarquização, geometria cadastral única por demanda e distinção entre conclusão técnica, homologação e controle de publicação pública, sem alteração das fórmulas ou dos pesos. |
 | 1.61    | 28/10/2026 | `[preencher]` | Individualização das matrizes de critérios e premissas, vínculo direto dos julgamentos AHP à matriz e associação de uma matriz por hierarquização; verificação de equivalência e confirmação explícita para reuso de pesos, com novos julgamentos e recálculo quando houver alteração metodológica. |
 | 1.62    | 28/10/2026 | `[preencher]` | Substituição da carga antecipada dos valores setoriais pela disponibilização integral dos metadados e obtenção, validação e persistência dos atributos originais sob demanda, sem alteração das fórmulas ou dos critérios metodológicos. |
+| 1.63    | 28/10/2026 | `[preencher]` | Individualização dos convites AHP por uma ou mais dimensões da matriz; preservação do recorte respondido e agregação somente entre respostas de critérios equivalentes, sem conversão automática de pesos locais em pesos globais. |
 
 ---
 
@@ -1225,6 +1226,14 @@ e **rastreabilidade**.
 ### Preenchimento colaborativo e consolidação de julgamentos
 
 A matriz de critérios e premissas constitui um registro independente e imutável.
+Os convites podem delimitar uma ou mais dimensões por colaborador, apresentando
+no formulário apenas os critérios atribuídos, na ordem original da matriz. Cada
+recorte deve conter ao menos dois critérios e é preservado com a resposta. Após
+o início do preenchimento, não se admite alterar o recorte desse colaborador.
+A agregação admite somente respostas do mesmo conjunto ordenado de critérios.
+Pesos de recortes parciais são locais e não substituem os pesos da matriz
+integral; não se estabelece automaticamente importância relativa entre dimensões.
+Convites integrais legados e contextos específicos de superfícies são preservados.
 Cada hierarquização associa-se a uma única matriz por vez, enquanto os julgamentos
 AHP se vinculam diretamente à matriz avaliada. Uma matriz pode atender a vários
 processos e julgamentos; estes podem existir de forma avulsa, antes da associação
