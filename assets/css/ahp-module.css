@@ -2970,6 +2970,24 @@ a.ahp-progress-step:hover {
   color: var(--pfs-green-dark);
 }
 
+/* Fundos opacos: equivalem aos tons translúcidos sobre o card branco e evitam que
+   o verde do card validado se misture aos elementos internos. */
+.ahp-colaborativa-page .saaty-readout--pos {
+  background: #ecf3fa;
+}
+
+.ahp-colaborativa-page .saaty-readout--neg {
+  background: #faf0ec;
+}
+
+.ahp-colaborativa-page .saaty-reciprocal.is-positive {
+  background: #f1f6fb;
+}
+
+.ahp-colaborativa-page .saaty-reciprocal.is-negative {
+  background: #fbf4f0;
+}
+
 .ahp-colaborativa-page .ahp-metric-card.is-failure {
   border-color: var(--pfs-red-dark);
   background: var(--pfs-red-light);
