@@ -55,7 +55,7 @@ async def criar_demanda_com_arquivo_geometria(
 def listar_demandas() -> list[DemandaResponseSchema]:
     """Lista somente demandas cuja publicação foi autorizada pelo status."""
     try:
-        return [item for item in demanda_service.listar_demandas() if item.status == "hierarq_ranqueada"]
+        return [item for item in demanda_service.listar_demandas() if item.status in {"hierarq_ranqueada", "hierarq_publicada"}]
     except DatabaseUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
@@ -80,7 +80,7 @@ def obter_demanda(codigo: str) -> DemandaResponseSchema:
     """Obtém os detalhes de uma demanda pelo código."""
     try:
         item = demanda_service.obter_demanda(codigo)
-        if item.status != "hierarq_ranqueada":
+        if item.status not in {"hierarq_ranqueada", "hierarq_publicada"}:
             raise DemandaNotFoundError(codigo)
         return item
     except DemandaNotFoundError as exc:

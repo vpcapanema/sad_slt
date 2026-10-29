@@ -75,6 +75,20 @@
       "row": "#b2dfdb",
       "halo": "rgba(0, 105, 92, 0.4)"
     },
+    "hierarq_homologada": {
+      "nome": "Homologada",
+      "bg": "#e0f2f1",
+      "text": "#00695c",
+      "row": "#b2dfdb",
+      "halo": "rgba(0, 105, 92, 0.4)"
+    },
+    "hierarq_publicada": {
+      "nome": "Publicada",
+      "bg": "#e0f7fa",
+      "text": "#00838f",
+      "row": "#b2ebf2",
+      "halo": "rgba(0, 131, 143, 0.4)"
+    },
     "hierarq_ranqueada": {
       "nome": "Ranqueada (publicada)",
       "bg": "#e0f7fa",
@@ -148,6 +162,8 @@
         "hierarq_em_andamento",
         "hierarq_aguardando_complementacao",
         "hierarq_finalizada",
+        "hierarq_homologada",
+        "hierarq_publicada",
         "hierarq_ranqueada",
         "hierarq_suspensa",
         "hierarq_retirada",
@@ -171,6 +187,8 @@
       "hierarq_em_andamento",
       "hierarq_aguardando_complementacao",
       "hierarq_finalizada",
+      "hierarq_homologada",
+      "hierarq_publicada",
       "hierarq_ranqueada",
       "hierarq_suspensa",
       "hierarq_retirada",

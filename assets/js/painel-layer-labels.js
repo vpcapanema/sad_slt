@@ -131,6 +131,22 @@
     return labels;
   }
 
+  function buildRankingLabels(entry, item, L) {
+    const resultados = (item.hierarquizacoes || []).filter(h =>
+      h.publicada === true && !h.desatualizada && Number.isInteger(h.posicao) && h.posicao > 0);
+    const anchor = entry.latlng || (entry.bounds?.isValid() ? entry.bounds.getCenter() : null);
+    if (!resultados.length || !anchor) return [];
+    const marker = createPinLabel(anchor, "", "#123b56", L);
+    marker.setIcon(L.divIcon({
+      className: "slt-map-label-wrap slt-map-label-wrap--pin",
+      html: `<span class="slt-map-label slt-map-ranking-label">${resultados.map(h =>
+        `<span class="slt-map-ranking-position" data-posicao="${h.posicao}" title="${escapeHtml(`${h.nome} — ${h.codigo}`)}">${resultados.length > 1 ? `${escapeHtml(h.codigo)} · ` : ""}${h.posicao}º</span>`
+      ).join("")}</span>`,
+      iconSize: [0, 0], iconAnchor: [0, 46],
+    }));
+    return [marker];
+  }
+
   function rectsOverlap(a, b) {
     return !(
       a.x + a.w + LABEL_PAD_PX < b.x ||
@@ -205,7 +221,7 @@
     const markers = [];
     if (!mapLayerGroup || !layersByKey) return markers;
     layersByKey.forEach((entry) => {
-      (entry.labelLayers || []).forEach((layer) => {
+      [...(entry.labelLayers || []), ...(entry.rankingLabelLayers || [])].forEach((layer) => {
         if (mapLayerGroup.hasLayer(layer)) markers.push(layer);
       });
     });
@@ -231,6 +247,7 @@
     shortProgramaLabel,
     shortProjetoLabel,
     buildEntryLabels,
+    buildRankingLabels,
     resolveCollisions,
     collectVisibleLabels,
     scheduleResolveCollisions,

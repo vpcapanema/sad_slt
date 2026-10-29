@@ -49,6 +49,8 @@ def armazenamento(monkeypatch):
         return deepcopy(row)
 
     monkeypatch.setattr(service.repo, "update", update)
+    monkeypatch.setattr(service.repo, "atualizar_publicacao",
+                        lambda codigo, dados, **kwargs: update(codigo, {"dados_hierarquizacao": dados}, permitir_homologada=True))
     return row
 
 
@@ -82,6 +84,34 @@ def test_publicacao_persistente_auditavel_idempotente_preserva_resultados(armaze
     assert primeira["dados_hierarquizacao"]["objetos"] == original["dados_hierarquizacao"]["objetos"]
     segunda = service.publicar_hierarquizacao("H1", publicado_por="outro")
     assert segunda == primeira
+
+
+def test_despublicacao_preserva_homologacao_resultados_e_auditoria(armazenamento):
+    service.publicar_hierarquizacao("H1", publicado_por="gestor")
+    original = deepcopy(armazenamento)
+    resultado = service.despublicar_hierarquizacao("H1", despublicado_por="outro")
+    assert resultado["status"] == "homologada" and not publicacao_vigente(resultado)
+    assert resultado["ranking"] == original["ranking"]
+    assert resultado["dados_hierarquizacao"]["objetos"] == original["dados_hierarquizacao"]["objetos"]
+    cab = resultado["dados_hierarquizacao"]["cabecalho_grupo"]
+    assert cab["publicacao"]["despublicado_por"] == "outro"
+    assert cab["publicacao"]["despublicado_em"]
+    assert [h["acao"] for h in cab["historico_homologacao"]] == ["publicada", "despublicada"]
+    republicada = service.publicar_hierarquizacao("H1", publicado_por="gestor")
+    assert publicacao_vigente(republicada)
+
+
+def test_despublicacao_rejeita_rodada_nao_publicada(armazenamento):
+    with pytest.raises(DemandaValidationError, match="publicada"):
+        service.despublicar_hierarquizacao("H1", despublicado_por="gestor")
+
+
+@pytest.mark.parametrize("perfil,esperado", [("ANALISTA", 403), ("GESTOR", 200), ("ADMIN", 200)])
+def test_api_despublicacao_exige_gestor(armazenamento, perfil, esperado):
+    service.publicar_hierarquizacao("H1", publicado_por="gestor")
+    cliente = TestClient(app)
+    cliente.cookies.set(cookie_name(), create_token(SessionUser("autor", "", "fixture_gestor", "Fixture", perfil)))
+    assert cliente.post("/api/ahp/hierarquizacoes/H1/despublicar").status_code == esperado
 
 
 @pytest.mark.parametrize("motivo", ["fase", "sintese", "composicao", "criterios", "sem_ranking", "consolidado"])

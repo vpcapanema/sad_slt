@@ -73,6 +73,9 @@
     publicar(codigo) {
       return request(`${BASE_H}/${encodeURIComponent(codigo)}/publicar`, jsonOpts("POST"));
     },
+    despublicar(codigo) {
+      return request(`${BASE_H}/${encodeURIComponent(codigo)}/despublicar`, jsonOpts("POST"));
+    },
     reverterHomologacao(codigo) {
       return request(`${BASE_H}/${encodeURIComponent(codigo)}/reverter-homologacao`, jsonOpts("POST"));
     },

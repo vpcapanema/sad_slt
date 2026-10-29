@@ -45,6 +45,31 @@ def test_painel_restrito_mantem_dados_pessoais(monkeypatch) -> None:
     assert item.representante.email == "restrito@example.org"
 
 
+def test_posicao_publicada_identificada_nos_dois_paineis(monkeypatch) -> None:
+    from api.services.publicacao_hierarquizacao import assinatura_resultados
+
+    hierarquizacao = {
+        "codigo": "H-PUBLICADA", "nome": "Publicada", "status": "homologada",
+        "ranking": [{"demanda_id": "P-1", "posicao": 2, "score": 0.6}],
+        "dados_hierarquizacao": {"cabecalho_grupo": {}},
+        "objeto": {"hierarquizacao": {"sintese": {"executada": True, "posicao_final": 2}}},
+    }
+    hierarquizacao["dados_hierarquizacao"]["cabecalho_grupo"]["publicacao"] = {
+        "ativa": True, "assinatura_resultados": assinatura_resultados(hierarquizacao),
+    }
+    row = {**_row("P-1", "hierarq_finalizada"), "hierarquizacoes": [hierarquizacao]}
+    monkeypatch.setattr(painel_service.painel_repository, "list_all", lambda: [row])
+    for publico in (False, True):
+        [item] = painel_service.listar_demandas_painel(public_only=publico)
+        [resultado] = item.hierarquizacoes
+        assert resultado.publicada and resultado.posicao == 2
+    hierarquizacao["dados_hierarquizacao"]["cabecalho_grupo"]["publicacao"]["ativa"] = False
+    [item] = painel_service.listar_demandas_painel()
+    assert not item.hierarquizacoes[0].publicada
+    [item] = painel_service.listar_demandas_painel(public_only=True)
+    assert item.hierarquizacoes == []
+
+
 def test_resultados_individuais_acumulados_sem_expor_documentos_internos(monkeypatch) -> None:
     row = _row("PROJ-001", "hierarq_finalizada")
     row["hierarquizacoes"] = [{

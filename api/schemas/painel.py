@@ -18,6 +18,7 @@ class PainelHierarquizacaoSchema(BaseModel):
     grupo_codigo: str | None = None
     atualizado_em: str | None = None
     desatualizada: bool = False
+    publicada: bool = False
     elegibilidade: str | None = None
     indice_risco: float | None = None
     indice_rede: float | None = None

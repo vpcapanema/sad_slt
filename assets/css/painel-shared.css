@@ -288,6 +288,18 @@ body.painel-dashboard-page {
     0 0 2px #fff;
 }
 
+.slt-map-ranking-label { display: flex !important; flex-direction: column; gap: 4px; }
+.slt-map-ranking-position {
+  display: block; min-width: 42px; padding: 5px 10px; box-sizing: border-box;
+  border: 2px solid #fff; border-radius: 999px;
+  background: var(--pli-deep); color: #fff; text-align: center; text-shadow: none;
+  box-shadow: 0 0 0 1px var(--pli-deep), 0 3px 7px rgb(0 0 0 / 30%);
+  font: 700 17px/22px Roboto, Arial, sans-serif;
+}
+.slt-map-ranking-position[data-posicao="1"] { background: #ffc400; color: #3d2c00; }
+.slt-map-ranking-position[data-posicao="2"] { background: #cbd5e1; color: #1e293b; }
+.slt-map-ranking-position[data-posicao="3"] { background: #b87333; color: #1c1007; }
+
 .painel-detail-popover {
   position: fixed;
   z-index: 1100;

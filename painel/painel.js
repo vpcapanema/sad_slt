@@ -460,6 +460,8 @@
     if (entry.layers.length) {
       const style = geomStyle(d.status, d.tipo);
       entry.labelLayers = SLTPainelLayerLabels.buildEntryLabels(entry, d, d.tipo, style.color, L);
+      entry.rankingLabelLayers = SLTPainelLayerLabels.buildRankingLabels(entry, d, L);
+      entry.rankingLabelLayers.forEach(layer => { entry.layers.push(layer); group.addLayer(layer); });
       layersByKey.set(key, entry);
     }
   }
@@ -560,7 +562,7 @@
       }
     });
     map.on("zoomend moveend", () => {
-      if (Object.values(groupLabelsOn).some(Boolean)) resolveAllLabelCollisions();
+      resolveAllLabelCollisions();
     });
 
     setTimeout(() => map.invalidateSize(), 0);

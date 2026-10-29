@@ -45,7 +45,8 @@ STATUS_PRE_REPROVACAO = frozenset({"analise_em_avaliacao"})
 
 # Universo AHP comparável (aprovada, em hierarquização ou já hierarquizada/salva)
 STATUS_UNIVERSO_AHP = frozenset(
-    {"analise_aprovada", "hierarq_em_andamento", "hierarq_aguardando_complementacao", "hierarq_finalizada"}
+    {"analise_aprovada", "hierarq_em_andamento", "hierarq_aguardando_complementacao", "hierarq_finalizada",
+     "hierarq_homologada", "hierarq_publicada"}
 )
 
 # Rótulos de exibição por tipo (plano / programa / projeto) — Camada 2 e pós-hierarquizado
@@ -76,6 +77,12 @@ STATUS_ROTULOS_POR_TIPO: dict[str, dict[str, str]] = {
         plano="Plano ranqueado",
         programa="Programa ranqueado",
         projeto="Projeto ranqueado",
+    ),
+    "hierarq_homologada": _rotulos_tipo(
+        plano="Plano homologado", programa="Programa homologado", projeto="Projeto homologado",
+    ),
+    "hierarq_publicada": _rotulos_tipo(
+        plano="Plano publicado", programa="Programa publicado", projeto="Projeto publicado",
     ),
     "hierarq_suspensa": _rotulos_tipo(
         plano="Plano suspenso na hierarquização",

@@ -391,6 +391,21 @@ def publicar_hierarquizacao(
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
+@router.post("/{codigo}/despublicar", response_model=HierarquizacaoResponseSchema)
+def despublicar_hierarquizacao(
+    codigo: str,
+    user: SessionUser = Depends(require_gestor),
+) -> HierarquizacaoResponseSchema:
+    try:
+        return service.despublicar_hierarquizacao(codigo, despublicado_por=user.id)
+    except HierarquizacaoNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except DemandaValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
 @router.post("/{codigo}/sincronizar-composicao", response_model=HierarquizacaoResponseSchema)
 def sincronizar_composicao(
     codigo: str,

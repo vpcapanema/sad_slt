@@ -2292,7 +2292,27 @@ def publicar_hierarquizacao(codigo: str, *, publicado_por: str) -> Hierarquizaca
             "assinatura_resultados": assinatura_resultados(row),
         }
         repo._registrar_historico(dados, "publicada", publicado_por)
-        return _response(repo.update(codigo, {"dados_hierarquizacao": dados}, permitir_homologada=True) or row)
+        return _response(repo.atualizar_publicacao(codigo, dados, publicada=True) or row)
+
+
+def despublicar_hierarquizacao(codigo: str, *, despublicado_por: str) -> HierarquizacaoResponseSchema:
+    """Revoga a divulgação sem desfazer a homologação nem alterar os índices."""
+    from api.db.connection import atomic_connection
+
+    with atomic_connection():
+        row = repo.get_by_codigo(codigo, for_update=True)
+        if not row:
+            raise HierarquizacaoNotFoundError(codigo)
+        dados = deepcopy(row.get("dados_hierarquizacao") or {})
+        publicacao = dados.get("cabecalho_grupo", {}).get("publicacao") or {}
+        if row.get("status") != "homologada" or not publicacao.get("ativa"):
+            raise DemandaValidationError("Somente uma hierarquização publicada pode ser despublicada.", field="status")
+        publicacao.update({
+            "ativa": False, "despublicado_por": despublicado_por,
+            "despublicado_em": datetime.now(timezone.utc).isoformat(),
+        })
+        repo._registrar_historico(dados, "despublicada", despublicado_por)
+        return _response(repo.atualizar_publicacao(codigo, dados, publicada=False) or row)
 
 
 def sincronizar_composicao(codigo: str) -> HierarquizacaoResponseSchema:

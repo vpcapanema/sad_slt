@@ -13,7 +13,7 @@ const referencia = '/restrict/analise-multicriterio/central-julgamentos';
     'from api.services.session_service import SessionUser, cookie_name, create_token',
     'c = TestClient(app)',
     'c.cookies.set(cookie_name(), create_token(SessionUser("fixture", "", "fixture_admin", "Fixture", "ADMIN")))',
-    `rotas = ${JSON.stringify([rota, referencia, '/public/painel/'])}`,
+    `rotas = ${JSON.stringify([rota, referencia, '/public/painel/', '/restrict/painel/'])}`,
     'respostas = {p: c.get(p) for p in rotas}',
     'assert all(r.status_code == 200 for r in respostas.values())',
     'print(json.dumps({p:r.text for p,r in respostas.items()}))',
@@ -21,7 +21,8 @@ const referencia = '/restrict/analise-multicriterio/central-julgamentos';
   const server = http.createServer((req, res) => {
     const nome = new URL(req.url, 'http://local').pathname;
     if (paginas[nome]) { res.setHeader('Content-Type', 'text/html; charset=utf-8'); return res.end(paginas[nome]); }
-    const arquivo = path.resolve(root, '.' + nome.replace(/^\/restrict\/hierarquizacao\//, '/hierarquizacao/').replace(/^\/public\/painel\//, '/painel/'));
+    const arquivo = path.resolve(root, '.' + nome.replace(/^\/restrict\/hierarquizacao\//, '/hierarquizacao/')
+      .replace(/^\/public\/painel\//, '/painel/').replace(/^\/restrict\/painel\.js$/, '/admin/painel.js'));
     if (path.relative(root, arquivo).startsWith('..')) return res.writeHead(403).end();
     fs.readFile(arquivo, (erro, dados) => {
       if (erro) return res.writeHead(404).end();
@@ -34,7 +35,7 @@ const referencia = '/restrict/analise-multicriterio/central-julgamentos';
   try {
     browser = await chromium.launch({channel: process.env.SICARD_TEST_BROWSER || 'msedge', headless: true});
     const page = await browser.newPage({viewport: {width: 1600, height: 1000}});
-    let perfil = 'ADMIN', publicacoes = 0, homologacoes = 0, falhar = false;
+    let perfil = 'ADMIN', publicacoes = 0, homologacoes = 0, despublicacoes = 0, divulgada = false, falhar = false;
     const objeto = {cabecalho_objeto: {demanda_id: 'D', codigo: 'D', nome: 'Demanda'},
       hierarquizacao: {fase_1: {}, fase_2: {}, fase_3: {}, sintese: {executada: true, posicao_final: 7, score_final: 0.123456}}};
     const rodadas = ['calculada', 'homologada'].map((status, i) => ({
@@ -45,6 +46,13 @@ const referencia = '/restrict/analise-multicriterio/central-julgamentos';
     await page.route('https://**/*', route => route.abort());
     await page.route('**/api/**', route => {
       const p = new URL(route.request().url()).pathname;
+      if (p.endsWith('/despublicar')) {
+        despublicacoes++;
+        if (falhar) return route.fulfill({status: 503, json: {detail: 'Falha ao despublicar'}});
+        divulgada = false;
+        rodadas[1].dados_hierarquizacao.cabecalho_grupo.publicacao.ativa = false;
+        return route.fulfill({json: rodadas[1]});
+      }
       if (p.endsWith('/homologar')) {
         homologacoes++;
         if (falhar) return route.fulfill({status: 503, json: {detail: 'Falha ao homologar'}});
@@ -53,6 +61,7 @@ const referencia = '/restrict/analise-multicriterio/central-julgamentos';
       }
       if (p.endsWith('/publicar')) {
         publicacoes++;
+        divulgada = true;
         rodadas[1].dados_hierarquizacao.cabecalho_grupo.publicacao = {ativa: true, publicado_em: '2026-10-29T12:00:00Z', publicado_por: 'fixture'};
         return route.fulfill({json: rodadas[1]});
       }
@@ -80,27 +89,33 @@ const referencia = '/restrict/analise-multicriterio/central-julgamentos';
     if (process.argv.includes('--baseline')) return;
     const publico = await browser.newPage();
     await publico.route('https://**/*', r => r.abort());
-    await publico.route('**/api/**', route => {
+    const apiPainel = route => {
       const p = new URL(route.request().url()).pathname;
-      return route.fulfill({json: p.startsWith('/api/painel/demandas') ? [{
+      return route.fulfill({json: p === '/api/auth/me' ? {id: 'fixture', nome: 'Fixture', tipo_usuario: 'ADMIN'}
+        : p === '/api/auth/session' ? {authenticated: true}
+        : p.startsWith('/api/painel/demandas') ? [{
         id: 'D', nome: 'Demanda', tipo: 'projeto', status: 'hierarq_finalizada', criadoEm: '',
         lat: -23, lng: -48, geometria: {tipo: 'Point', coordinates: [-48, -23]},
-        hierarquizacoes: publicacoes ? [
+        hierarquizacoes: divulgada ? [
           {codigo: 'H1', nome: 'Rodada publicada', grupo_nome: 'Grupo comparável A', status: 'homologada',
-            posicao: 7, indice_final: 0.123456, indice_rede: 0.7, indice_territorial: 0, indice_prioridade: 0.9,
+            publicada: true, posicao: 7, indice_final: 0.123456, indice_rede: 0.7, indice_territorial: 0, indice_prioridade: 0.9,
             elegibilidade: 'apto', indice_risco: 0},
           {codigo: 'H2', nome: 'Outra rodada publicada', grupo_nome: 'Grupo comparável B', status: 'homologada', posicao: null},
         ] : [],
       }] : []});
-    });
+    };
+    await publico.route('**/api/**', apiPainel);
     await publico.goto(base + '/public/painel/');
     await publico.locator('.layer-group-header--record').first().click();
     const popup = publico.locator('#painel-detail-popover');
     await popup.waitFor({state: 'visible'});
     assert.match(await popup.innerText(), /Demanda/);
     assert.equal(await popup.locator('.painel-hierarquizacao-resultados').count(), 0, 'cadastro visível antes de publicar, sem resultados');
+    assert.equal(await publico.locator('.slt-map-ranking-position').count(), 0, 'sem publicação não há posição no mapa');
     const publicar = host.getByRole('button', {name: 'Publicar', exact: true});
+    const despublicar = host.getByRole('button', {name: 'Despublicar', exact: true});
     assert.equal(await publicar.isDisabled(), true);
+    assert.equal(await despublicar.isDisabled(), true);
     await host.locator('tbody tr[data-row-codigo="H0"] input').check();
     assert.equal(await publicar.isDisabled(), true);
     await host.locator('tbody tr[data-row-codigo="H0"] input').uncheck();
@@ -150,6 +165,16 @@ const referencia = '/restrict/analise-multicriterio/central-julgamentos';
     assert.match(await host.locator('tbody tr[data-row-codigo="H0"]').innerText(), /Finalizada e homologada/);
     await page.locator('#pfsSuccessOk').click();
     await publico.reload();
+    await publico.locator('.slt-map-ranking-position').waitFor({state: 'visible'});
+    assert.equal(await publico.locator('.slt-map-ranking-position').innerText(), '7º',
+      'posição publicada aparece sem ativar rótulos de nomes');
+    const privado = await browser.newPage();
+    await privado.route('https://**/*', r => r.abort());
+    await privado.route('**/api/**', apiPainel);
+    await privado.goto(base + '/restrict/painel/');
+    await privado.locator('.slt-map-ranking-position').waitFor({state: 'visible'});
+    assert.equal(await privado.locator('.slt-map-ranking-position').innerText(), '7º',
+      'posição publicada aparece também no painel restrito');
     await publico.locator('.layer-group-header--record').first().click();
     await popup.waitFor({state: 'visible'});
     assert.equal(await popup.locator('.painel-hierarquizacao-resultados').count(), 2);
@@ -164,6 +189,31 @@ const referencia = '/restrict/analise-multicriterio/central-julgamentos';
       await page.reload();
       await host.locator('tbody tr[data-row-codigo="H1"] input').check();
       assert.equal(await publicar.isEnabled(), perfil === 'GESTOR');
+      assert.equal(await despublicar.isEnabled(), perfil === 'GESTOR');
+    }
+    assert.equal((await despublicar.innerText()).trim(), '', 'despublicação usa somente o ícone');
+    await despublicar.click();
+    await page.locator('#pfsConfirmCancel').click();
+    assert.equal(despublicacoes, 0, 'cancelamento não despublica');
+    falhar = true;
+    await despublicar.click();
+    await page.locator('#pfsConfirmOk').click();
+    await page.locator('#pfsProgressBox').waitFor({state: 'visible'});
+    await page.locator('#pfsErrorBox').waitFor({state: 'visible'});
+    await page.locator('#pfsErrorClose').click();
+    assert.equal(divulgada, true, 'falha preserva publicação');
+    falhar = false;
+    await despublicar.click();
+    await page.locator('#pfsConfirmOk').click();
+    await page.locator('#pfsProgressBox').waitFor({state: 'visible'});
+    await page.locator('#pfsSuccessBox').waitFor({state: 'visible'});
+    assert.match(await page.locator('#pfsSuccessBox').innerText(), /Hierarquização despublicada/);
+    assert.equal(rodadas[1].status, 'homologada');
+    await page.locator('#pfsSuccessOk').click();
+    for (const painel of [publico, privado]) {
+      await painel.reload();
+      await painel.locator('.layer-group-header--record').first().waitFor();
+      assert.equal(await painel.locator('.slt-map-ranking-position').count(), 0, 'despublicar retira posição dos dois mapas');
     }
     await page.addScriptTag({path: path.join(root, 'assets', 'js', 'grouped-sidebar.js')});
     const html = await page.evaluate(() => SLTGroupedSidebar.resultadosHierarquizacaoHtml([

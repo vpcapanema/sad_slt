@@ -53,7 +53,7 @@ async def criar_plano_com_arquivo_geometria(
 def listar_planos() -> list[PlanoResponseSchema]:
     """Lista os planos cadastrados."""
     try:
-        return [item for item in plano_service.listar_planos() if item.status == "hierarq_ranqueada"]
+        return [item for item in plano_service.listar_planos() if item.status in {"hierarq_ranqueada", "hierarq_publicada"}]
     except DatabaseUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
@@ -87,7 +87,7 @@ def obter_plano(codigo: str) -> PlanoResponseSchema:
     """Obtém os detalhes de um plano pelo código."""
     try:
         item = plano_service.obter_plano(codigo)
-        if item.status != "hierarq_ranqueada":
+        if item.status not in {"hierarq_ranqueada", "hierarq_publicada"}:
             raise DemandaNotFoundError(codigo)
         return item
     except DemandaNotFoundError as exc:

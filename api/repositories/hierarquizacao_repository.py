@@ -349,7 +349,15 @@ def sincronizar_composicao(
 
 
 def _concluir_demandas(conn: Any, codigo: str, dados: dict[str, Any]) -> None:
-    """Conclui o ciclo técnico na mesma transação da síntese; não publica."""
+    """Homologa as demandas na mesma transação da rodada; não publica."""
+    _sincronizar_status_demandas(conn, codigo, dados, "hierarq_homologada")
+
+
+def _sincronizar_status_demandas(
+    conn: Any, codigo: str, dados: dict[str, Any], destino: str,
+) -> None:
+    from api.services.publicacao_hierarquizacao import publicacao_vigente
+
     row = conn.execute(
         "SELECT tipo_demanda_id FROM hierarquizacao_demandas.hierarquizacao_portfolio WHERE codigo=%s FOR UPDATE",
         (codigo,),
@@ -369,21 +377,60 @@ def _concluir_demandas(conn: Any, codigo: str, dados: dict[str, Any]) -> None:
     por_id = {str(c["id"]): c["status"] for c in cadastros}
     if any(str(i) not in por_id for i in ids):
         raise DemandaValidationError("Demanda da hierarquização não encontrada.", field="demanda_id")
-    if STATUS_EM_HIERARQUIZACAO in por_id.values():
-        permitida = conn.execute("""
-            SELECT 1 FROM demandas.dom_status_demanda_transicao
-            WHERE status_origem=%s AND status_destino='hierarq_finalizada'
-        """, (STATUS_EM_HIERARQUIZACAO,)).fetchone()
-        if not permitida:
-            raise DemandaValidationError("O domínio não permite concluir a hierarquização das demandas.", field="status")
-        conn.execute(
-            sql.SQL("UPDATE {} SET status='hierarq_finalizada' WHERE id=ANY(%s::uuid[]) AND status=%s").format(tabela),
-            (ids, STATUS_EM_HIERARQUIZACAO),
-        )
+    outras = conn.execute(
+        sql.SQL("""
+            SELECT h.* FROM {} h
+            WHERE h.status='homologada' AND h.codigo<>%s AND h.tipo_demanda_id=%s
+              AND EXISTS (
+                  SELECT 1 FROM jsonb_array_elements(COALESCE(h.dados_hierarquizacao->'objetos', '[]'::jsonb)) o(item)
+                  WHERE o.item->'cabecalho_objeto'->>'demanda_id'=ANY(%s::text[])
+              )
+        """).format(_TABLE),
+        (codigo, row["tipo_demanda_id"], [str(i) for i in ids]),
+    ).fetchall()
+    estados = {str(i): destino for i in ids}
+    for outra in outras:
+        publicada = publicacao_vigente(outra)
+        for objeto in (outra.get("dados_hierarquizacao") or {}).get("objetos") or []:
+            id_demanda = str((objeto.get("cabecalho_objeto") or {}).get("demanda_id"))
+            if id_demanda not in estados:
+                continue
+            if publicada:
+                estados[id_demanda] = "hierarq_publicada"
+            elif estados[id_demanda] == STATUS_EM_HIERARQUIZACAO:
+                estados[id_demanda] = "hierarq_homologada"
+    gerenciados = {
+        STATUS_EM_HIERARQUIZACAO, "hierarq_finalizada", "hierarq_homologada",
+        "hierarq_publicada", "hierarq_ranqueada",
+    }
     for objeto in objetos:
         cab = objeto["cabecalho_objeto"]
         atual = por_id[str(cab["demanda_id"])]
-        cab["status"] = "hierarq_finalizada" if atual == STATUS_EM_HIERARQUIZACAO else atual
+        novo = estados[str(cab["demanda_id"])] if atual in gerenciados else atual
+        if novo != atual:
+            permitida = conn.execute("""
+                SELECT 1 FROM demandas.dom_status_demanda_transicao
+                WHERE status_origem=%s AND status_destino=%s
+            """, (atual, novo)).fetchone()
+            if not permitida:
+                raise DemandaValidationError(
+                    f"O domínio não permite a transição {atual} → {novo}. Aplique a migração 157.",
+                    field="status",
+                )
+            conn.execute(
+                sql.SQL("UPDATE {} SET status=%s WHERE id=%s::uuid AND status=%s").format(tabela),
+                (novo, cab["demanda_id"], atual),
+            )
+        cab["status"] = novo
+
+
+def atualizar_publicacao(codigo: str, dados: dict[str, Any], *, publicada: bool) -> dict[str, Any] | None:
+    """Sincroniza a publicação e o estado das demandas na transação do serviço."""
+    with get_connection() as conn:
+        _sincronizar_status_demandas(
+            conn, codigo, dados, "hierarq_publicada" if publicada else "hierarq_homologada",
+        )
+    return update(codigo, {"dados_hierarquizacao": dados}, permitir_homologada=True)
 
 
 def _registrar_historico(dados: dict[str, Any], acao: str, usuario_id: Any) -> None:
@@ -428,42 +475,7 @@ def homologar(codigo: str, usuario_id: Any) -> dict[str, Any] | None:
 
 def _reabrir_demandas(conn: Any, codigo: str, dados: dict[str, Any]) -> None:
     """Devolve as demandas a 'em hierarquização', salvo se outra rodada homologada as mantém."""
-    row = conn.execute(
-        sql.SQL("SELECT tipo_demanda_id FROM {} WHERE codigo=%s").format(_TABLE), (codigo,)
-    ).fetchone()
-    tabela = sql.Identifier("demandas", TIPO_DEMANDA_ID_TO_COD[row["tipo_demanda_id"]])
-    ids = [o["cabecalho_objeto"]["demanda_id"] for o in dados.get("objetos") or []]
-    if not ids:
-        return
-    permitida = conn.execute("""
-        SELECT 1 FROM demandas.dom_status_demanda_transicao
-        WHERE status_origem='hierarq_finalizada' AND status_destino=%s
-    """, (STATUS_EM_HIERARQUIZACAO,)).fetchone()
-    if not permitida:
-        raise DemandaValidationError(
-            "O domínio não permite reabrir a hierarquização das demandas. Aplique a migração 150.", field="status",
-        )
-    mantidas = {
-        str(r["demanda_id"]) for r in conn.execute(
-            sql.SQL("""
-                SELECT DISTINCT o.item->'cabecalho_objeto'->>'demanda_id' AS demanda_id
-                FROM {} h
-                CROSS JOIN LATERAL jsonb_array_elements(COALESCE(h.dados_hierarquizacao->'objetos', '[]'::jsonb)) AS o(item)
-                WHERE h.status='homologada' AND h.codigo<>%s AND h.tipo_demanda_id=%s
-            """).format(_TABLE),
-            (codigo, row["tipo_demanda_id"]),
-        ).fetchall()
-    }
-    liberar = [i for i in ids if str(i) not in mantidas]
-    if liberar:
-        conn.execute(
-            sql.SQL("UPDATE {} SET status=%s WHERE id=ANY(%s::uuid[]) AND status='hierarq_finalizada'").format(tabela),
-            (STATUS_EM_HIERARQUIZACAO, liberar),
-        )
-    for objeto in dados.get("objetos") or []:
-        cab = objeto["cabecalho_objeto"]
-        if str(cab["demanda_id"]) in {str(i) for i in liberar} and cab.get("status") == "hierarq_finalizada":
-            cab["status"] = STATUS_EM_HIERARQUIZACAO
+    _sincronizar_status_demandas(conn, codigo, dados, STATUS_EM_HIERARQUIZACAO)
 
 
 def reverter_homologacao(codigo: str, usuario_id: Any) -> dict[str, Any] | None:

@@ -41,19 +41,19 @@ class Conexao:
 
 
 @pytest.mark.parametrize("tipo,tabela", [(1, "plano"), (2, "programa"), (3, "projeto")])
-def test_conclusao_por_id_preserva_execucao_publicacao_e_suspensao(tipo, tabela):
-    estados = ["hierarq_em_andamento", "exec_em_execucao", "hierarq_ranqueada", "hierarq_suspensa"]
+def test_conclusao_por_id_preserva_execucao_e_suspensao(tipo, tabela):
+    estados = ["hierarq_em_andamento", "exec_em_execucao", "hierarq_suspensa"]
     cadastros = [{"id": str(i), "status": s} for i, s in enumerate(estados)]
     conn = Conexao(tipo, cadastros)
     dados = {"objetos": [{"cabecalho_objeto": {"demanda_id": c["id"]}} for c in cadastros]}
     repo._concluir_demandas(conn, "H-1", dados)
     assert [o["cabecalho_objeto"]["status"] for o in dados["objetos"]] == [
-        "hierarq_finalizada", *estados[1:],
+        "hierarq_homologada", *estados[1:],
     ]
     update = next((q, p) for q, p in conn.operacoes if q.startswith("UPDATE"))
     assert f'"demandas"."{tabela}"' in update[0]
-    assert "id=ANY" in update[0] and "AND status=%s" in update[0]
-    assert update[1][1] == "hierarq_em_andamento"
+    assert "id=%s::uuid" in update[0] and "AND status=%s" in update[0]
+    assert update[1] == ("hierarq_homologada", "0", "hierarq_em_andamento")
 
 
 def test_dominio_bloqueia_conclusao_sem_transicao():
@@ -80,7 +80,7 @@ class ConexaoRodada(Conexao):
             return Consulta([self.rodada])
         if "jsonb_array_elements" in texto:
             self.operacoes.append((texto, params))
-            return Consulta([{"demanda_id": i} for i in self.outras])
+            return Consulta(self.outras)
         return super().execute(query, params)
 
 
@@ -119,11 +119,11 @@ def test_homologar_conclui_demandas_e_registra_responsavel(monkeypatch):
     _preparar(monkeypatch, conn)
     repo.homologar("H-1", "u-1")
     demanda = next(q for q, _ in conn.operacoes if '"demandas"."projeto"' in q and q.startswith("UPDATE"))
-    assert "hierarq_finalizada" in demanda
+    assert "status=%s" in demanda
     query, params = conn.operacoes[-1]
     assert "status='homologada'" in query and params[0] == "u-1"
     dados = params[1].obj
-    assert dados["objetos"][0]["cabecalho_objeto"]["status"] == "hierarq_finalizada"
+    assert dados["objetos"][0]["cabecalho_objeto"]["status"] == "hierarq_homologada"
     assert dados["cabecalho_grupo"]["historico_homologacao"][0]["acao"] == "homologada"
 
 
@@ -138,15 +138,17 @@ def test_reverter_devolve_demandas_exceto_as_de_outra_homologada(monkeypatch):
     rodada = {"status": "homologada", "ranking": [1], "homologado_por": "u-1", "dados_hierarquizacao": _dados("1", "2")}
     for o in rodada["dados_hierarquizacao"]["objetos"]:
         o["cabecalho_objeto"]["status"] = "hierarq_finalizada"
-    conn = ConexaoRodada(3, [], rodada, outras=["2"])
+    outra = {"status": "homologada", "dados_hierarquizacao": _dados("2")}
+    conn = ConexaoRodada(3, [{"id": i, "status": "hierarq_homologada"} for i in ("1", "2")],
+                         rodada, outras=[outra])
     _preparar(monkeypatch, conn)
     repo.reverter_homologacao("H-1", "u-2")
     liberacao = next(p for q, p in conn.operacoes if q.startswith("UPDATE") and '"projeto"' in q)
-    assert liberacao[1] == ["1"]
+    assert liberacao[1] == "1"
     query, params = conn.operacoes[-1]
     assert "status='calculada'" in query and "homologado_por=NULL" in query
     status = [o["cabecalho_objeto"]["status"] for o in params[0].obj["objetos"]]
-    assert status == ["hierarq_em_andamento", "hierarq_finalizada"]
+    assert status == ["hierarq_em_andamento", "hierarq_homologada"]
 
 
 def test_reverter_exige_rodada_homologada(monkeypatch):
@@ -156,11 +158,39 @@ def test_reverter_exige_rodada_homologada(monkeypatch):
         repo.reverter_homologacao("H-1", "u-2")
 
 
+@pytest.mark.parametrize("destino,origem", [
+    ("hierarq_publicada", "hierarq_homologada"),
+    ("hierarq_homologada", "hierarq_publicada"),
+    ("hierarq_em_andamento", "hierarq_publicada"),
+])
+def test_sincronizacao_status_publicacao_confere_transicao(destino, origem):
+    dados = _dados("1")
+    conn = ConexaoRodada(3, [{"id": "1", "status": origem}], {})
+    repo._sincronizar_status_demandas(conn, "H1", dados, destino)
+    assert dados["objetos"][0]["cabecalho_objeto"]["status"] == destino
+    assert any("dom_status_demanda_transicao" in q and p == (origem, destino) for q, p in conn.operacoes)
+
+
+def test_despublicar_preserva_status_de_outra_publicacao_vigente():
+    from api.services.publicacao_hierarquizacao import assinatura_resultados
+
+    outra = {"status": "homologada", "ranking": [{"demanda_id": "1", "posicao": 1}],
+             "dados_hierarquizacao": _dados("1")}
+    outra["dados_hierarquizacao"]["cabecalho_grupo"] = {"publicacao": {
+        "ativa": True, "assinatura_resultados": assinatura_resultados(outra),
+    }}
+    dados = _dados("1")
+    conn = ConexaoRodada(3, [{"id": "1", "status": "hierarq_publicada"}], {}, outras=[outra])
+    repo._sincronizar_status_demandas(conn, "H1", dados, "hierarq_homologada")
+    assert dados["objetos"][0]["cabecalho_objeto"]["status"] == "hierarq_publicada"
+    assert not any(q.startswith("UPDATE") for q, _ in conn.operacoes)
+
+
 def test_reverter_revoga_publicacao_e_preserva_auditoria(monkeypatch):
     dados = _dados("1")
     dados["cabecalho_grupo"] = {"publicacao": {"ativa": True, "publicado_por": "u1", "publicado_em": "data"}}
     rodada = {"status": "homologada", "ranking": [1], "homologado_por": "u1", "dados_hierarquizacao": dados}
-    conn = ConexaoRodada(3, [], rodada)
+    conn = ConexaoRodada(3, [{"id": "1", "status": "hierarq_publicada"}], rodada)
     _preparar(monkeypatch, conn)
     repo.reverter_homologacao("H-1", "u2")
     persistidos = conn.operacoes[-1][1][0].obj["cabecalho_grupo"]

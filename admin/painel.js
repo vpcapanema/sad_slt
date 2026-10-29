@@ -586,6 +586,8 @@
         style.color,
         L
       );
+      entryLayers.rankingLabelLayers = SLTPainelLayerLabels.buildRankingLabels(entryLayers, item, L);
+      entryLayers.rankingLabelLayers.forEach(layer => { entryLayers.layers.push(layer); group.addLayer(layer); });
       layersByKey.set(key, entryLayers);
     }
   }
@@ -683,7 +685,7 @@
       }
     });
     map.on("zoomend moveend", () => {
-      if (Object.values(groupLabelsOn).some(Boolean)) resolveAllLabelCollisions();
+      resolveAllLabelCollisions();
     });
     setTimeout(() => map.invalidateSize(), 0);
     window.addEventListener("resize", () => {

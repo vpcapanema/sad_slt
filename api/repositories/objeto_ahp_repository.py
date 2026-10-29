@@ -15,7 +15,8 @@ from api.constants import STATUS_POS_APROVACAO, STATUS_PRE_APROVACAO
 from api.db.connection import get_connection
 
 # Status da fase de hierarquização que compõem o universo do AHP.
-AHP_STATUSES = ("analise_aprovada", "hierarq_em_andamento", "hierarq_aguardando_complementacao", "hierarq_finalizada")
+AHP_STATUSES = ("analise_aprovada", "hierarq_em_andamento", "hierarq_aguardando_complementacao", "hierarq_finalizada",
+                "hierarq_homologada", "hierarq_publicada")
 
 _SELECT_BASE = """
     SELECT

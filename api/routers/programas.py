@@ -53,7 +53,7 @@ async def criar_programa_com_arquivo_geometria(
 def listar_programas() -> list[ProgramaResponseSchema]:
     """Lista os programas cadastrados."""
     try:
-        return [item for item in programa_service.listar_programas() if item.status == "hierarq_ranqueada"]
+        return [item for item in programa_service.listar_programas() if item.status in {"hierarq_ranqueada", "hierarq_publicada"}]
     except DatabaseUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
@@ -87,7 +87,7 @@ def obter_programa(codigo: str) -> ProgramaResponseSchema:
     """Obtém os detalhes de um programa pelo código."""
     try:
         item = programa_service.obter_programa(codigo)
-        if item.status != "hierarq_ranqueada":
+        if item.status not in {"hierarq_ranqueada", "hierarq_publicada"}:
             raise DemandaNotFoundError(codigo)
         return item
     except DemandaNotFoundError as exc:

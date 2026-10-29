@@ -70,6 +70,7 @@ def _resultado_individual(row: dict[str, Any]) -> PainelHierarquizacaoSchema:
         codigo=row["codigo"], nome=row["nome"], status=row["status"],
         grupo_nome=row.get("grupo_nome"), grupo_codigo=row.get("grupo_codigo"),
         atualizado_em=_iso(row.get("atualizado_em")), desatualizada=desatualizada,
+        publicada=publicacao_vigente(row) and not desatualizada,
         elegibilidade=f1.get("status_fase1"),
         indice_risco=(f1.get("resumo_elegibilidade") or {}).get("indice_de_risco_ambiental_e_territorial"),
         indice_rede=f2.get("indice_favorabilidade_rede", dimensoes.get("rede")),

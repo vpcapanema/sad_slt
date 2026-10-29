@@ -81,6 +81,19 @@
         : {title: "Homologação revertida", message: "O recálculo das fases foi liberado e a publicação desta rodada foi revogada."},
     });
   }
+  async function despublicar(item) {
+    if (!item || !gestor() || !item.dados_hierarquizacao?.cabecalho_grupo?.publicacao?.ativa) return;
+    await executarAcao(item, {
+      confirmacao: {
+        title: "Despublicar hierarquização",
+        message: `Retirar os índices e as posições de “${item.nome}” do painel público? A homologação e os resultados salvos serão preservados.`,
+        confirmLabel: "Despublicar",
+      },
+      tarefa: "Revogar publicação dos resultados",
+      executar: () => HierApi.despublicar(item.codigo),
+      sucesso: {title: "Hierarquização despublicada", message: "Os resultados não estão mais disponíveis no painel público. A homologação foi preservada."},
+    });
+  }
   function renderHierarquizacoes() {
     const body = $("ranking-hier-tbody");
     body.innerHTML = hierarquizacoes.map(item => `<tr data-row-codigo="${esc(item.codigo)}">
@@ -106,6 +119,7 @@
     controls.innerHTML = '<button type="button" class="admin-icon-btn view" aria-label="Visualizar" title="Visualizar ranking e informações do grupo selecionado"><i class="fas fa-eye" aria-hidden="true"></i></button><button type="button" class="admin-icon-btn edit-group" aria-label="Visualizar no painel restrito" title="Abrir painel restrito existente"><i class="fas fa-lock" aria-hidden="true"></i></button><button type="button" class="admin-icon-btn reload" aria-label="Visualizar no painel público" title="Abrir painel público existente"><i class="fas fa-globe" aria-hidden="true"></i></button>'
       + '<button type="button" class="admin-icon-btn save" data-acao="homologar" aria-label="Homologar" title="Homologar: conclui as demandas do grupo e trava o recálculo"><i class="fas fa-circle-check" aria-hidden="true"></i></button>'
       + '<button type="button" class="admin-icon-btn save" data-acao="publicar" aria-label="Publicar" title="Publicar os resultados homologados no painel público"><i class="fas fa-bullhorn" aria-hidden="true"></i></button>'
+      + '<button type="button" class="admin-icon-btn cancel" data-acao="despublicar" aria-label="Despublicar" title="Retirar os resultados do painel público sem reverter a homologação"><i class="fas fa-eye-slash" aria-hidden="true"></i></button>'
       + '<button type="button" class="admin-icon-btn delete" data-acao="reverter" aria-label="Reverter homologação" title="Reverter homologação (outro gestor ou administrador)"><i class="fas fa-rotate-left" aria-hidden="true"></i></button>';
     const selecionados = () => state.rows.filter(row => row.querySelector('input[type="checkbox"]:checked'));
     const itemSelecionado = () => hierarquizacoes.find(h => h.codigo === selecionados()[0]?.dataset.rowCodigo);
@@ -116,7 +130,9 @@
       const item = unica ? itemSelecionado() : null;
       controls.querySelectorAll("button").forEach(button => { button.disabled = !unica; });
       controls.querySelector('[data-acao="homologar"]').disabled = !(item && item.status === "calculada" && gestor());
+      const publicada = Boolean(item?.dados_hierarquizacao?.cabecalho_grupo?.publicacao?.ativa);
       controls.querySelector('[data-acao="publicar"]').disabled = !(item && item.status === "homologada" && gestor());
+      controls.querySelector('[data-acao="despublicar"]').disabled = !(item && item.status === "homologada" && gestor() && publicada);
       controls.querySelector('[data-acao="reverter"]').disabled = !(item && item.status === "homologada" && podeReverter(item));
     };
     controls.children[0].onclick = () => selecionar(selecionados()[0]?.dataset.rowCodigo);
@@ -124,6 +140,7 @@
     controls.children[2].onclick = () => window.open("/public/painel/", "_blank", "noopener,noreferrer");
     controls.querySelector('[data-acao="homologar"]').onclick = () => alterarHomologacao(itemSelecionado(), true);
     controls.querySelector('[data-acao="publicar"]').onclick = () => publicar(itemSelecionado());
+    controls.querySelector('[data-acao="despublicar"]').onclick = () => despublicar(itemSelecionado());
     controls.querySelector('[data-acao="reverter"]').onclick = () => alterarHomologacao(itemSelecionado(), false);
     state.draw();
     body.addEventListener("click", event => {
