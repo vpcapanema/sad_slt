@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs'), http = require('node:http'), path = require('node:path');
 const {execFileSync} = require('node:child_process');
 const root = path.resolve(__dirname, '../..');
-const rota = '/restrict/hierarquizacao/ranking/';
+const rota = '/restrict/hierarquizacao/homologacao-ranking-publicacao/';
 const referencia = '/restrict/analise-multicriterio/central-julgamentos';
 const processos = '/restrict/hierarquizacao/processos/';
 const geometria = {tipo: 'Polygon', coordinates: [[[-48, -23], [-47.9, -23], [-47.9, -22.9], [-48, -23]]]};
@@ -35,6 +35,8 @@ function rodada(codigo, tipo, quantidade = 3) {
   const paginas = JSON.parse(execFileSync(path.join(root, '.venv', 'Scripts', 'python.exe'), ['-B', '-X', 'utf8', '-c', [
     'import json', 'from fastapi.testclient import TestClient', 'from api.server import app, templates',
     `rotas = ${JSON.stringify([rota, referencia, processos])}`, 'client = TestClient(app)',
+    'from api.services.session_service import SessionUser, cookie_name, create_token',
+    'client.cookies.set(cookie_name(), create_token(SessionUser("fixture", "", "fixture_admin", "Fixture", "ADMIN")))',
     'respostas = {rota: client.get(rota) for rota in rotas}', 'assert all(r.status_code == 200 for r in respostas.values())',
     'paginas = {rota: r.text for rota, r in respostas.items()}',
     'paginas["componente"] = templates.env.get_template("componentes/mapa_ranking.html").module.mapa_ranking(prefixo="teste")',
@@ -83,7 +85,7 @@ function rodada(codigo, tipo, quantidade = 3) {
     const host = page.locator('.ami-report-table:has(.ranking-hier-table)');
     await host.locator('.admin-table-summary').waitFor();
     assert.equal(await host.locator('tbody tr').count(), 3, 'somente finalizadas e atuais');
-    assert.equal(await page.locator('#ranking-gerenciar-publicacao').isDisabled(), true);
+    assert.equal(await host.getByRole('button', {name: 'Publicar', exact: true}).isDisabled(), true);
     assert.equal(await host.getByRole('button', {name: 'Visualizar', exact: true}).isDisabled(), true);
     assert.equal(await page.locator('[data-ranking-tree]').count(), 0, 'servir somente canvas');
     assert.equal(await page.locator('#ranking-mapa-section').isVisible(), false, 'mapa inicia oculto');
@@ -158,26 +160,68 @@ function rodada(codigo, tipo, quantidade = 3) {
     assert.equal(await page.locator('#ranking-objetos-titulo').textContent(), 'Ranking de projetos do grupo Grupo H1 aptos à implementação');
     assert.equal(await page.locator('#ranking-mapa-section').isVisible(), true);
     await page.waitForFunction(() => document.querySelectorAll('#ranking-map .ranking-marker-pin').length === 32);
+    const molduras = await page.locator('#ranking-map .ranking-marker-wrap, #ranking-map .ranking-label-wrap').evaluateAll(es =>
+      es.map(e => ({border: getComputedStyle(e).borderWidth, background: getComputedStyle(e).backgroundColor})));
+    molduras.forEach(m => {
+      assert.equal(m.border, '0px', 'papel de botão do Leaflet não cria retângulo ao redor do símbolo');
+      assert.equal(m.background, 'rgba(0, 0, 0, 0)');
+    });
+    const labelEstilo = await page.locator('#ranking-map .ranking-position-label[data-posicao="4"]').evaluate(e => {
+      const s = getComputedStyle(e);
+      return {font: parseFloat(s.fontSize), background: s.backgroundColor, color: s.color, radius: s.borderRadius, shadow: s.boxShadow};
+    });
+    assert.ok(labelEstilo.font >= 17);
+    assert.equal(labelEstilo.background, 'rgb(0, 59, 90)');
+    assert.equal(labelEstilo.color, 'rgb(255, 255, 255)');
+    assert.equal(labelEstilo.radius, '999px');
+    assert.notEqual(labelEstilo.shadow, 'none');
+    const podio = await page.locator('#ranking-map .ranking-position-label').evaluateAll(es =>
+      es.slice(0, 3).map(e => ({posicao: e.dataset.posicao, cor: getComputedStyle(e).backgroundColor})));
+    assert.deepEqual(podio, [
+      {posicao: '1', cor: 'rgb(255, 196, 0)'},
+      {posicao: '2', cor: 'rgb(203, 213, 225)'},
+      {posicao: '3', cor: 'rgb(184, 115, 51)'},
+    ]);
+    await page.waitForTimeout(100);
+    const deslocamento = await page.locator('#ranking-map .ranking-position-label[data-posicao="1"]').evaluate(e =>
+      new DOMMatrixReadOnly(getComputedStyle(e).transform).m42);
+    assert.equal(deslocamento, -60, 'posição preferencial 12px acima da anterior');
     assert.equal(await page.locator('.ranking-marker-label').count(), 0);
     assert.ok(await page.locator('#ranking-map svg path').count() >= 32);
     assert.equal(await page.locator('#ranking-mapa-legenda').isVisible(), true);
     assert.equal(await page.locator('#ranking-map #ranking-mapa-legenda').count(), 0, 'legenda fora do canvas');
     assert.match(await page.locator('#ranking-mapa-legenda').textContent(), /Legenda das demandas/);
+    const fasesLegenda = await page.locator('#ranking-mapa-legenda .status-color-legend-fase').evaluateAll(es =>
+      es.map(e => e.getBoundingClientRect().toJSON()));
+    assert.equal(fasesLegenda.length, 3);
+    assert.equal(fasesLegenda[0].top, fasesLegenda[1].top);
+    assert.equal(fasesLegenda[1].top, fasesLegenda[2].top);
+    assert.ok(fasesLegenda[0].right < fasesLegenda[1].left && fasesLegenda[1].right < fasesLegenda[2].left);
+    const basePadrao = await page.evaluate(() => {
+      const el = document.createElement('div');
+      el.style.cssText = 'height:200px;width:300px'; document.body.append(el);
+      const mapa = SLTPainelMapControls.initPainelMap(el);
+      const urls = Object.values(mapa._layers).filter(l => l instanceof L.TileLayer).map(l => l._url);
+      mapa.remove(); el.remove();
+      return urls;
+    });
+    assert.deepEqual(basePadrao, ['https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png']);
     const cores = await page.evaluate(() => {
-      const estilo = el => {
-        const s = getComputedStyle(el);
-        return {fundo: s.backgroundColor, texto: s.color, forma: s.borderRadius};
-      };
       return [...document.querySelectorAll('#ranking-map .ranking-marker-pin')].map(pin => {
-        const legenda = document.querySelector(`#ranking-mapa-legenda .ranking-marker-pin[data-status="${pin.dataset.status}"]`);
-        return {status: pin.dataset.status, mapa: estilo(pin), legenda: legenda && estilo(legenda)};
+        const referencia = document.createElement('div');
+        referencia.innerHTML = SLTStatusColors.leafletPinIcon(pin.dataset.status, 'demanda', L).options.html;
+        return {status: pin.dataset.status, mapa: pin.querySelector('svg').outerHTML,
+          referencia: referencia.querySelector('svg').outerHTML};
       });
     });
     assert.deepEqual([...new Set(cores.map(c => c.status))].sort(), [...statusDemanda].sort(), 'todos os status atuais representados');
     for (const [i, cor] of cores.entries()) {
       assert.equal(cor.status, statusDemanda[i % statusDemanda.length], 'cadastro atual prevalece sobre snapshot');
-      assert.deepEqual(cor.mapa, cor.legenda, 'mapa e legenda usam a mesma gota e cores');
+      assert.equal(cor.mapa, cor.referencia, 'mapa usa o alfinete canônico dos painéis, por fase e status');
     }
+    assert.equal(await page.locator('#ranking-mapa-legenda .ranking-marker-pin').count(), 0);
+    assert.equal(await page.locator('#ranking-mapa-legenda .status-legend-pin').count(), 3);
+    assert.equal(await page.locator('#ranking-mapa-legenda .status-color-legend-item').count(), statusDemanda.length);
     const legendaPadrao = await page.evaluate(() => {
       const el = document.createElement('div');
       SLTStatusColors.renderLegend(el, {layout: 'demandas', tipoDemanda: 'projeto'});
@@ -264,7 +308,9 @@ function rodada(codigo, tipo, quantidade = 3) {
         const s = getComputedStyle(el);
         return {font: s.fontFamily, size: s.fontSize, height: s.height, padding: s.padding, background: s.backgroundImage, radius: s.borderRadius};
       };
-      assert.deepEqual(await page.locator('#ranking-gerenciar-publicacao').evaluate(botaoEstilo), await refPage.locator('#hier-new').evaluate(botaoEstilo));
+      const publicarEstilo = await host.getByRole('button', {name: 'Publicar', exact: true}).evaluate(botaoEstilo);
+      const controleEstilo = await host.locator('.admin-actions .view').evaluate(botaoEstilo);
+      assert.deepEqual({...publicarEstilo, padding: ''}, {...controleEstilo, padding: ''});
     } finally { await refPage.close(); }
     // O componente completo usa a mesma macro e o mesmo controlador do canvas.
     await page.evaluate(([html, h, demandas]) => {
@@ -294,7 +340,7 @@ function rodada(codigo, tipo, quantidade = 3) {
       const cadastro = grupos.flatMap(g => demandas.filter(d => d.tipo === 'projeto' && d.id.startsWith('H1-')).map(d => ({...d, tipo: g.tipo_demanda})));
       componenteTeste.atualizar(grupos, cadastro);
       componenteTeste.definirPoliticaPublicacao(() => true);
-      return [...document.querySelectorAll('[data-ranking-map]:has([data-ranking-tree]) .leaflet-overlay-pane path')].map((p, i) => {
+      return [...document.querySelectorAll('[data-ranking-map]:has([data-ranking-tree]) .leaflet-overlay-pane path:not(.ranking-marker-connector)')].map((p, i) => {
         const tipo = grupos[Math.floor(i / h.ranking.length)].tipo_demanda;
         const codigo = cadastro.find(d => d.tipo === tipo && d.id === `H1-D${i % h.ranking.length + 1}`).status;
         const st = SLTStatusColors.STATUS_DEMANDA[codigo];
@@ -327,7 +373,7 @@ function rodada(codigo, tipo, quantidade = 3) {
       const posicoes = [];
       const original = L.marker;
       L.marker = function(latlng, options) {
-        posicoes.push([latlng.lng, latlng.lat]);
+        if (options.icon?.options.className === 'ranking-marker-wrap') posicoes.push([latlng.lng, latlng.lat]);
         return original(latlng, options);
       };
       try {
@@ -352,6 +398,63 @@ function rodada(codigo, tipo, quantidade = 3) {
         'centroide de área exato para triângulo, vazios e multipolígonos, nas duas orientações');
     });
     await page.evaluate(([h, demandas]) => {
+      const original = L.marker;
+      window.marcasCoincidentes = [];
+      L.marker = function(latlng, options) {
+        const marca = original(latlng, options);
+        if (options.icon?.options.className === 'ranking-marker-wrap') window.marcasCoincidentes.push(marca);
+        return marca;
+      };
+      try {
+        componenteTeste.atualizar([{...h, codigo: 'COINCIDENTES'}], demandas.map(d => ({
+          ...d, geometria: {type: 'Polygon', coordinates: [[[-48, -23], [-42, -23], [-48, -20], [-48, -23]]]},
+        })));
+      } finally { L.marker = original; }
+    }, [rodadas[0], demandas]);
+    const verificarSobreposicoes = async () => {
+      await page.waitForTimeout(150);
+      const estado = await full.evaluate(el => {
+        const numeros = [...el.querySelectorAll('.ranking-position-label')].map(n => n.getBoundingClientRect().toJSON());
+        const conflitos = numeros.flatMap((a, i) => numeros.slice(i + 1).filter(b =>
+          a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top));
+        return {quantidade: numeros.length, conflitos: conflitos.length,
+          ancoras: marcasCoincidentes.map(m => [m.getLatLng().lng, m.getLatLng().lat]),
+          retangulos: marcasCoincidentes[0]._map && Object.values(marcasCoincidentes[0]._map._layers).filter(l => l instanceof L.Rectangle).length,
+          simbolos: [...el.querySelectorAll('.ranking-marker-pin')].map(pin => ({
+            transform: getComputedStyle(pin).transform, rect: pin.getBoundingClientRect().toJSON(),
+          })),
+          rotulo: {font: parseFloat(getComputedStyle(el.querySelector('.ranking-position-label')).fontSize),
+            altura: numeros[0].height,
+            pane: Number(getComputedStyle(el.querySelector('.leaflet-ranking-labels-pane')).zIndex),
+            simboloPane: Number(getComputedStyle(el.querySelector('.leaflet-marker-pane')).zIndex)},
+        };
+      });
+      assert.equal(estado.quantidade, 32);
+      assert.equal(estado.conflitos, 0, 'todas as posições ficam legíveis, inclusive demandas 2 e 3');
+      assert.equal(estado.retangulos, 0, 'nenhum retângulo envolvente é desenhado');
+      assert.ok(estado.rotulo.font >= 15 && estado.rotulo.altura >= 30, 'rótulo ampliado e estilizado');
+      assert.ok(estado.rotulo.pane > estado.rotulo.simboloPane, 'rótulos na frente de todos os alfinetes');
+      estado.simbolos.forEach(pin => {
+        assert.equal(pin.transform, 'none', 'símbolos nunca deslocados, nem visualmente');
+        assert.equal(pin.rect.x, estado.simbolos[0].rect.x);
+        assert.equal(pin.rect.y, estado.simbolos[0].rect.y);
+      });
+      estado.ancoras.forEach(([lng, lat]) => {
+        assert.ok(Math.abs(lng + 46) < 1e-10 && Math.abs(lat + 22) < 1e-10,
+          'deslocamento visual não altera o centroide geográfico');
+      });
+    };
+    await verificarSobreposicoes();
+    await full.getByText('3º', {exact: true}).click();
+    assert.match(await full.locator('.leaflet-popup-content').innerText(), /Posição: 3º/);
+    await full.locator('.leaflet-popup-close-button').click();
+    await page.evaluate(() => marcasCoincidentes[0]._map.zoomIn(1, {animate: false}));
+    await verificarSobreposicoes();
+    await full.getByRole('checkbox', {name: 'Exibir Grupo Grupo H1 no mapa', exact: true}).uncheck();
+    assert.equal(await full.locator('.ranking-marker-pin').count(), 0);
+    await full.getByRole('checkbox', {name: 'Exibir Grupo Grupo H1 no mapa', exact: true}).check();
+    await verificarSobreposicoes();
+    await page.evaluate(([h, demandas]) => {
       h.dados_hierarquizacao.objetos[0].cabecalho_objeto.geometria = {type: 'Polygon', coordinates: []};
       const restantes = demandas.filter(d => d.id !== h.ranking.find(r => r.posicao === 1).codigo);
       componenteTeste.definirPoliticaPublicacao(() => true);
@@ -362,6 +465,9 @@ function rodada(codigo, tipo, quantidade = 3) {
     assert.equal(await full.locator('.ranking-layer-record input:disabled').count(), 1);
     await page.evaluate(() => componenteTeste.destruir());
     await page.setViewportSize({width: 390, height: 844});
+    const fasesMobile = await page.locator('#ranking-mapa-legenda .status-color-legend-fase').evaluateAll(es =>
+      es.map(e => e.getBoundingClientRect().toJSON()));
+    assert.ok(fasesMobile[0].bottom <= fasesMobile[1].top && fasesMobile[1].bottom <= fasesMobile[2].top);
     await nome.click();
     const dimensoes = await modal.locator('.json-modal').evaluate(el => {
       const r = el.getBoundingClientRect(); return {left: r.left, right: r.right, width: innerWidth};

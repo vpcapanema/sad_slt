@@ -6,6 +6,7 @@
   })[char]);
   const queryCode = new URLSearchParams(location.search).get("codigo");
   let hierarquizacoes = [];
+  const previsualizacoes = new Map();
   let atualizandoAoRetomar = false;
   let podeSolicitarComplementacao = false;
   const atual = () => hierarquizacoes.find((item) => item.codigo === $("fase-hierarquizacao").value);
@@ -114,8 +115,21 @@
     window.Fase3TableStandard?.($("fase3-ranking-final-tabela").querySelector("table"));
   }
 
+  function estadoPrevisualizacao(codigo) {
+    return previsualizacoes.get(codigo) || {};
+  }
+
+  function descartarPrevisualizacao(codigo, fase) {
+    const estado = estadoPrevisualizacao(codigo);
+    delete estado[fase];
+    if (!estado.fase3 && !estado.sintese) previsualizacoes.delete(codigo);
+    else previsualizacoes.set(codigo, estado);
+  }
+
   function abrirMemoriaSintese(indice, acionador) {
-    const hierarquizacao = atual();
+    const selecionada = atual();
+    const pendente = selecionada && estadoPrevisualizacao(selecionada.codigo);
+    const hierarquizacao = pendente?.sintese?.resultado || selecionada;
     const objeto = hierarquizacao?.dados_hierarquizacao?.objetos?.[indice];
     const sintese = objeto?.hierarquizacao?.sintese;
     if (!sintese?.executada || !Number.isFinite(sintese.score_final)) {
@@ -137,7 +151,7 @@
     const pesosTexto = rastreavel ? simples ? "Rede = Territorial = Prioridade = 1/3"
       : `Rede = ${pesos[0]}; Territorial = ${pesos[1]}; Prioridade = ${pesos[2]}` : "Não reconstituídos";
     const equacao = simples ? "IGH = (IFR + IFT + IP) / 3" : "IGH = pR × IFR + pT × IFT + pP × IP";
-    corpo.innerHTML = `<p class="ahp-help-text">Hierarquização ${esc(hierarquizacao.codigo)} · Valores da síntese salva. A exibição dos índices é arredondada a quatro casas decimais; o cálculo utiliza a precisão integral.</p>
+    corpo.innerHTML = `<p class="ahp-help-text">Hierarquização ${esc(hierarquizacao.codigo)} · ${pendente?.sintese ? "Prévia ainda não salva." : "Valores da síntese salva."} A exibição dos índices é arredondada a quatro casas decimais; o cálculo utiliza a precisão integral.</p>
       <div class="fase-table-wrap"><table class="fase-table" aria-label="Índices e pesos da síntese final"><thead><tr><th>Demanda</th><th>Índice de favorabilidade de rede</th><th>Índice de favorabilidade territorial</th><th>Índice de prioridade</th><th>Pesos</th><th>Índice geral de hierarquização</th></tr></thead><tbody><tr><td>${esc(objeto.cabecalho_objeto?.nome || "Nome não informado")}</td>${valores.map(valor => `<td>${formatarIndice(valor)}</td>`).join("")}<td>${esc(pesosTexto)}</td><td>${formatarIndice(sintese.score_final)}</td></tr></tbody></table></div>
       <section class="fase3-equacao-sintese"><h3 class="fase3-titulo-tabela-simples">Equação de cálculo</h3>${rastreavel
         ? `<p>${simples ? "Média simples" : "Média ponderada"}: <strong>${equacao}</strong></p><p>${simples
@@ -178,6 +192,8 @@
 
   async function render(hierarquizacao) {
     fecharMemoriaSintese();
+    const pendente = hierarquizacao ? estadoPrevisualizacao(hierarquizacao.codigo) : {};
+    const exibicao = pendente.sintese?.resultado || pendente.fase3?.resultado || hierarquizacao;
     $("fase3-ranking-final").hidden = true;
     document.querySelectorAll('[data-fase3-progressiva]').forEach(section => { section.hidden = true; });
     $("fase3-acao-calculo").hidden = true;
@@ -186,13 +202,15 @@
     $("fase-resumo").classList.add("hidden");
     $("fase-resumo").innerHTML = "";
     $("fase3-erro").classList.add("hidden");
-    ["executar-fase3", "salvar-pesos-fase3", "sintetizar"].forEach(id => { $(id).disabled = true; });
-    await window.AtributosObjetos.render(hierarquizacao);
+    ["executar-fase3", "salvar-resultado-fase3", "salvar-pesos-fase3", "sintetizar", "salvar-sintese"].forEach(id => { $(id).disabled = true; });
+    await window.AtributosObjetos.render(exibicao);
     if (hierarquizacao !== atual()) return;
     if (!hierarquizacao) return;
-    renderResultados(hierarquizacao, true);
+    renderResultados(exibicao, true);
     $("executar-fase3").disabled = false;
     $("salvar-pesos-fase3").disabled = false;
+    $("salvar-resultado-fase3").disabled = !pendente.fase3;
+    $("salvar-sintese").disabled = !pendente.sintese;
     travarSeHomologada(hierarquizacao);
     avisarComposicaoDivergente(hierarquizacao);
   }
@@ -222,7 +240,7 @@
 
   function travarSeHomologada(hierarquizacao) {
     if (hierarquizacao?.status !== "homologada") return;
-    ["executar-fase3", "salvar-pesos-fase3", "sintetizar"].forEach(id => { $(id).disabled = true; });
+    ["executar-fase3", "salvar-resultado-fase3", "salvar-pesos-fase3", "sintetizar", "salvar-sintese"].forEach(id => { $(id).disabled = true; });
     const aviso = $("fase3-resultados-aviso");
     aviso.textContent = "Esta hierarquização está homologada: os resultados das três fases estão travados e não podem ser recalculados. Para recalcular, outro gestor ou um administrador deve reverter a homologação na página de ranking.";
     aviso.classList.remove("hidden");
@@ -248,22 +266,31 @@
         || hierarquizacao.dados_hierarquizacao?.cabecalho_grupo?.relatorios?.sintese?.desatualizado);
     const fases = hierarquizacao.dados_hierarquizacao?.cabecalho_grupo?.fases_a_executar || [1, 2, 3];
     const fase3Executada = docs.length > 0 && docs.every(objeto => objeto.hierarquizacao?.fase_3?.executada === true);
+    const pendente = estadoPrevisualizacao(hierarquizacao.codigo);
     const resultadoAtual = !coletaPendente && !resultadosDesatualizados && (!fases.includes(3) || fase3Executada);
-    if ($("fase3-baixar-relatorio")) $("fase3-baixar-relatorio").disabled = !resultadoAtual || !fase3Executada;
+    const fase3NaoSalva = Boolean(pendente.fase3);
+    document.querySelectorAll(".fase3-baixar-relatorio").forEach(button => {
+      button.disabled = !resultadoAtual || !fase3Executada;
+    });
     document.querySelector('.secao-ranking-do-ajuste-fino').hidden = !resultadoAtual;
+    $("fase3-relatorio-container").hidden = !resultadoAtual;
+    document.querySelector('.fase3-auditoria-details').hidden = !resultadoAtual;
     document.querySelector('.secao-sintese-final').hidden = !resultadoAtual;
     let pesosProntos = true;
     try { window.AtributosObjetos.configuracaoPayload(); } catch (_) { pesosProntos = false; }
     $("fase3-acao-calculo").hidden = !docs.length || !pesosProntos;
-    const destinoCalculo = $("fase3-regras-vazios").hidden
-      ? $("salvar-pesos-fase3").closest('.ahp-subcard')
-      : $("fase3-regras-vazios").querySelector('.ahp-section-body');
-    if (destinoCalculo && $("fase3-acao-calculo").parentElement !== destinoCalculo) {
-      destinoCalculo.append($("fase3-acao-calculo"));
-    }
     aviso.classList.add("hidden");
     aviso.textContent = "";
-    $("sintetizar").disabled = !resultadoAtual;
+    $("sintetizar").disabled = !resultadoAtual || fase3NaoSalva;
+    $("salvar-resultado-fase3").disabled = !pendente.fase3;
+    $("salvar-sintese").disabled = !pendente.sintese;
+    if (pendente.sintese) {
+      aviso.textContent = "Prévia do índice geral calculada, mas ainda não salva. Use “Salvar resultado” para gravá-la na hierarquização.";
+      aviso.classList.remove("hidden");
+    } else if (pendente.fase3) {
+      aviso.textContent = "Prévia do índice de prioridade calculada, mas ainda não salva. Salve este resultado antes de calcular o índice geral.";
+      aviso.classList.remove("hidden");
+    }
     renderAtributosAusentes(hierarquizacao);
     renderSintese(docs, resultadoAtual);
     renderRankingFinal(hierarquizacao, resultadoAtual);
@@ -316,8 +343,7 @@
         <h4>Critérios e pesos utilizados</h4>${pesosTexto ? `<ul class="fase3-execucao-pesos">${pesosTexto}</ul>` : '<p>Pesos não registrados no resultado deste cálculo.</p>'}
         <h4>Demandas sem índice</h4>${semIndice ? `<ul>${semIndice}</ul>` : '<p>Todas as demandas avaliadas receberam um índice.</p>'}
         ${report && Object.keys(report).length ? `<details class="fase3-detalhes-tecnicos"><summary>Detalhes técnicos</summary><pre>${esc(JSON.stringify(report, null, 2))}</pre></details>` : ''}`;
-      audit.classList.remove('hidden');
-    } else { audit.replaceChildren(); audit.classList.add('hidden'); }
+    } else { audit.replaceChildren(); }
   }
 
   async function atualizarDadosAoRetomar() {
@@ -326,12 +352,13 @@
     atualizandoAoRetomar = true;
     try {
       const atualizada = await HierApi.obter(selecionada.codigo);
+      previsualizacoes.delete(selecionada.codigo);
       hierarquizacoes = hierarquizacoes.map((item) =>
         item.codigo === atualizada.codigo ? atualizada : item
       );
       await render(atualizada);
     } catch (falha) {
-      ["executar-fase3", "salvar-pesos-fase3", "sintetizar"].forEach(id => { $(id).disabled = true; });
+      ["executar-fase3", "salvar-resultado-fase3", "salvar-pesos-fase3", "sintetizar", "salvar-sintese"].forEach(id => { $(id).disabled = true; });
       erro(new Error(`Não foi possível atualizar a rodada. Os dados exibidos podem estar desatualizados: ${falha.message}`));
     } finally {
       atualizandoAoRetomar = false;
@@ -346,38 +373,33 @@
   async function init() {
     try {
       const usuario = SLTAdminAuth.currentUser || await SLTAdminAuth.fetchMe();
-      const botaoRelatorio = document.createElement("button");
-      botaoRelatorio.id = "fase3-baixar-relatorio";
-      botaoRelatorio.type = "button";
-      botaoRelatorio.className = "btn btn--primary";
-      botaoRelatorio.textContent = "Baixar relatório da Fase 3 (PDF)";
-      botaoRelatorio.disabled = true;
-      $("fase3-auditoria").after(botaoRelatorio);
-      botaoRelatorio.onclick = async () => {
-        const selecionada = atual();
-        if (!selecionada) { exigirHierarquizacao(); return; }
-        botaoRelatorio.disabled = true;
-        try {
-          const url = `/api/ahp/hierarquizacoes/${encodeURIComponent(selecionada.codigo)}/fases/3/relatorio.pdf`;
-          const resposta = await fetch(url, { credentials: "same-origin" });
-          if (!resposta.ok) {
-            if (window.SicardApiErro) throw await window.SicardApiErro.deResposta(resposta, { method: "GET", url });
-            throw new Error(`Não foi possível gerar o relatório da Fase 3 (HTTP ${resposta.status}).`);
+      document.querySelectorAll(".fase3-baixar-relatorio").forEach(botaoRelatorio => {
+        botaoRelatorio.onclick = async () => {
+          const selecionada = atual();
+          if (!selecionada) { exigirHierarquizacao(); return; }
+          document.querySelectorAll(".fase3-baixar-relatorio").forEach(button => { button.disabled = true; });
+          try {
+            const url = `/api/ahp/hierarquizacoes/${encodeURIComponent(selecionada.codigo)}/fases/3/relatorio.pdf`;
+            const resposta = await fetch(url, { credentials: "same-origin" });
+            if (!resposta.ok) {
+              if (window.SicardApiErro) throw await window.SicardApiErro.deResposta(resposta, { method: "GET", url });
+              throw new Error(`Não foi possível gerar o relatório da Fase 3 (HTTP ${resposta.status}).`);
+            }
+            const arquivo = URL.createObjectURL(await resposta.blob());
+            const link = document.createElement("a");
+            link.href = arquivo;
+            link.download = "Relatorio_Fase_3.pdf";
+            document.body.append(link);
+            link.click();
+            link.remove();
+            setTimeout(() => URL.revokeObjectURL(arquivo), 1000);
+          } catch (falha) {
+            erro(falha);
+          } finally {
+            document.querySelectorAll(".fase3-baixar-relatorio").forEach(button => { button.disabled = false; });
           }
-          const arquivo = URL.createObjectURL(await resposta.blob());
-          const link = document.createElement("a");
-          link.href = arquivo;
-          link.download = "Relatorio_Fase_3.pdf";
-          document.body.append(link);
-          link.click();
-          link.remove();
-          setTimeout(() => URL.revokeObjectURL(arquivo), 1000);
-        } catch (falha) {
-          erro(falha);
-        } finally {
-          botaoRelatorio.disabled = false;
-        }
-      };
+        };
+      });
       podeSolicitarComplementacao = ['ADMIN', 'ANALISTA', 'GESTOR'].includes(usuario?.tipo_usuario);
       $("fase3-complementacao").hidden = true;
       $("fase3-solicitar-complementacao").onclick = async () => {
@@ -408,7 +430,35 @@
       $("fase-hierarquizacao").onchange = () => { render(atual()).catch(erro); };
       globalThis.addEventListener("focus", atualizarDadosAoRetomar);
       document.addEventListener("visibilitychange", atualizarDadosAoRetomar);
-      document.addEventListener("atributos-pesos-alterados", () => { if (atual()) renderResultados(atual()); });
+      document.addEventListener("atributos-pesos-alterados", () => {
+        const hierarquizacao = atual();
+        if (!hierarquizacao) return;
+        descartarPrevisualizacao(hierarquizacao.codigo, "fase3");
+        descartarPrevisualizacao(hierarquizacao.codigo, "sintese");
+        renderResultados(hierarquizacao);
+      });
+      ["fase3-completude", "fase3-ausentes"].forEach(id => $(id).addEventListener("input", () => {
+        const hierarquizacao = atual();
+        if (!hierarquizacao) return;
+        descartarPrevisualizacao(hierarquizacao.codigo, "fase3");
+        descartarPrevisualizacao(hierarquizacao.codigo, "sintese");
+        renderResultados(hierarquizacao);
+      }));
+      document.querySelectorAll("[data-sintese-peso] input, input[name='operador-sintese']").forEach(input =>
+        ["input", "change"].forEach(evento => input.addEventListener(evento, () => {
+          const hierarquizacao = atual();
+          if (!hierarquizacao) return;
+          descartarPrevisualizacao(hierarquizacao.codigo, "sintese");
+          renderResultados(hierarquizacao);
+        })));
+      document.querySelector('[data-atributos-objetos]').addEventListener("change", event => {
+        if (!event.target.matches("[data-atributo-coluna]")) return;
+        const hierarquizacao = atual();
+        if (!hierarquizacao) return;
+        descartarPrevisualizacao(hierarquizacao.codigo, "fase3");
+        descartarPrevisualizacao(hierarquizacao.codigo, "sintese");
+        renderResultados(hierarquizacao);
+      });
       /** Campo obrigatório: aviso do Notify e foco no seletor. */
       function exigirHierarquizacao() {
         window.Notify.warning("Hierarquização", "Selecione a hierarquização.");
@@ -418,51 +468,86 @@
        * Confirmação → progresso → desfecho, no ProcessFeedback (SIGMA). O
        * sucesso só é anunciado depois que o servidor responde.
        */
-      async function executarAcao({ confirmacao, titulo, mensagemInicial, executar, sucesso, irRanking }) {
+      async function executarAcao({ confirmacao, titulo, mensagemInicial, executar, sucesso, irRanking, duracaoMinimaMs = 0 }) {
         if (confirmacao && !(await window.ProcessFeedback.confirmar(confirmacao))) return { ok: false, cancelado: true };
         const tarefa = (mensagemInicial || "Enviando a solicitação ao servidor").replace(/…$/, "");
         const proc = window.ProcessFeedback.iniciarCadastro({ title: titulo, tasks: [tarefa] });
         proc.tarefaAtual(tarefa);
+        const inicioProcessamento = performance.now();
+        const aguardarDuracaoMinima = async () => {
+          const restante = duracaoMinimaMs - (performance.now() - inicioProcessamento);
+          if (restante > 0) await new Promise(resolve => setTimeout(resolve, restante));
+        };
         try {
           const resultado = await executar();
+          await aguardarDuracaoMinima();
           proc.concluirTarefa(tarefa, "Servidor respondeu");
           const [titulo1, ...resto] = [].concat(sucesso || "Operação concluída.");
           const subprocesses = irRanking ? [{
             name: "Ranking final", status: "success", detail: "Abra o ranking desta hierarquização.",
             action_label: "Ver ranking",
-            action_url: `/restrict/hierarquizacao/ranking/?codigo=${encodeURIComponent(resultado.codigo)}`,
+            action_url: `/restrict/hierarquizacao/homologacao-ranking-publicacao/?codigo=${encodeURIComponent(resultado.codigo)}`,
           }] : [];
           proc.sucesso({ title: titulo1, message: resto.join("\n"), subprocesses });
           return { ok: true, resultado };
         } catch (e) {
+          await aguardarDuracaoMinima();
           proc.erro({ message: e?.message || String(e), detail: e?.detail });
           return { ok: false, erro: e };
         }
       }
+      const payloadFase3 = () => ({
+        criterios: window.AtributosObjetos?.criteriosPayload() || [],
+        ...window.AtributosObjetos.configuracaoPayload(),
+        modo_pesos: $("fase3-modo-pesos").value,
+        completude_minima: Number($("fase3-completude").value) / 100,
+        regra_ausentes: $("fase3-ausentes").value,
+      });
       $("executar-fase3").onclick = async () => {
         const hierarquizacao = atual();
         if (!hierarquizacao) { exigirHierarquizacao(); return; }
+        let payload;
+        try { payload = payloadFase3(); } catch (falha) { erro(falha); return; }
         const resposta = await executarAcao({
           confirmacao: {
             title: "Calcular índice de prioridade (Fase 3)",
-            message: `Hierarquização ${hierarquizacao.codigo}, pesos por “${$("fase3-modo-pesos").value}”, completude mínima de ${$("fase3-completude").value}%.`,
-            warning: "O resultado atual da Fase 3 será substituído e a síntese já gerada, se houver, ficará desatualizada.",
+            message: `Será calculada uma prévia para a hierarquização ${hierarquizacao.codigo}, com pesos por “${$("fase3-modo-pesos").value}” e completude mínima de ${$("fase3-completude").value}%.`,
+            warning: "Este cálculo não grava dados. Para substituir o resultado atual, use “Salvar resultado” após conferir a prévia.",
             confirmLabel: "Calcular Fase 3",
           },
           acompanhamento: true,
           titulo: "Calcular índice de prioridade (Fase 3)",
           mensagemInicial: `Enviando os critérios da rodada ${hierarquizacao.codigo}…`,
-          executar: () => HierApi.executarFase3(hierarquizacao.codigo, {
-            criterios: window.AtributosObjetos?.criteriosPayload() || [],
-            ...window.AtributosObjetos.configuracaoPayload(),
-            modo_pesos: $("fase3-modo-pesos").value,
-            completude_minima: Number($("fase3-completude").value) / 100,
-            regra_ausentes: $("fase3-ausentes").value,
-          }),
-          sucesso: ["Índice de prioridade calculado.", "Confira a tabela de objetos abaixo."],
+          duracaoMinimaMs: 2000,
+          executar: () => HierApi.calcularFase3(hierarquizacao.codigo, payload),
+          sucesso: ["Prévia do índice de prioridade calculada.", "O resultado ainda não foi salvo. Confira a tabela e use “Salvar resultado” para registrá-lo."],
         });
         if (!resposta.ok) { if (resposta.erro) erro(resposta.erro); return; }
-        hierarquizacoes = hierarquizacoes.map((item) => item.codigo === resposta.resultado.codigo ? resposta.resultado : item);
+        const pendente = estadoPrevisualizacao(hierarquizacao.codigo);
+        pendente.fase3 = { resultado: resposta.resultado, payload, versao: resposta.resultado.atualizadoEm };
+        delete pendente.sintese;
+        previsualizacoes.set(hierarquizacao.codigo, pendente);
+        renderResultados(resposta.resultado, true);
+      };
+      $("salvar-resultado-fase3").onclick = async () => {
+        const hierarquizacao = atual();
+        const pendente = hierarquizacao && estadoPrevisualizacao(hierarquizacao.codigo).fase3;
+        if (!hierarquizacao || !pendente) return;
+        const resposta = await executarAcao({
+          confirmacao: {
+            title: "Salvar índice de prioridade",
+            message: `O índice de prioridade calculado será gravado na hierarquização ${hierarquizacao.codigo}, substituindo o resultado anterior, se houver.`,
+            confirmLabel: "Salvar resultado",
+          },
+          titulo: "Salvar índice de prioridade",
+          mensagemInicial: "Gravando o resultado da Fase 3…",
+          duracaoMinimaMs: 2000,
+          executar: () => HierApi.executarFase3(hierarquizacao.codigo, pendente.payload, pendente.versao),
+          sucesso: "Índice de prioridade salvo na hierarquização.",
+        });
+        if (!resposta.ok) { if (resposta.erro) erro(resposta.erro); return; }
+        previsualizacoes.delete(hierarquizacao.codigo);
+        hierarquizacoes = hierarquizacoes.map(item => item.codigo === resposta.resultado.codigo ? resposta.resultado : item);
         await render(resposta.resultado);
       };
       $("salvar-pesos-fase3").onclick = async () => {
@@ -480,6 +565,7 @@
           sucesso: "Pesos dos atributos salvos.",
         });
         if (!resposta.ok) { if (resposta.erro) erro(resposta.erro); return; }
+        previsualizacoes.delete(hierarquizacao.codigo);
         hierarquizacoes = hierarquizacoes.map((item) => item.codigo === resposta.resultado.codigo ? resposta.resultado : item);
         await render(resposta.resultado);
       };
@@ -489,33 +575,61 @@
       document.querySelectorAll(".peso-sintese-barra, .peso-sintese-numero").forEach((input) => input.addEventListener("input", () => {
         atualizarPesosSintese(input.closest("[data-sintese-peso]").dataset.sintesePeso, Number(input.value));
       }));
+      const payloadSintese = () => ({
+        operador: operadorSintese(),
+        peso_rede: Number($("peso-rede").value),
+        peso_grade: Number($("peso-grade").value),
+        peso_prioridade: Number($("peso-prioridade").value),
+        incluir_restritos: false,
+      });
       $("sintetizar").onclick = async () => {
         const hierarquizacao = atual();
         if (!hierarquizacao) { exigirHierarquizacao(); return; }
+        if (estadoPrevisualizacao(hierarquizacao.codigo).fase3) {
+          erro(new Error("Salve o índice de prioridade antes de calcular o índice geral."));
+          return;
+        }
         const operador = operadorSintese();
+        const payload = payloadSintese();
         const resposta = await executarAcao({
           confirmacao: {
             title: "Calcular índice geral de hierarquização",
-            message: `A síntese final da hierarquização ${hierarquizacao.codigo} será gerada com o operador “${operador}”.`,
-            warning: "A síntese anterior, se existir, é substituída. Ela combina os resultados das Fases 1, 2 e 3 como estão agora — confira se as três estão atualizadas antes de seguir.",
+            message: `Será calculada uma prévia da síntese da hierarquização ${hierarquizacao.codigo} com o operador “${operador}”.`,
+            warning: "Este cálculo não grava dados. A síntese combina os resultados salvos das Fases 1, 2 e 3; confira-os antes de salvar a prévia.",
             confirmLabel: "Calcular síntese",
           },
           acompanhamento: true,
           titulo: "Calcular índice geral de hierarquização",
           mensagemInicial: "Sintetizando as três fases no servidor…",
-          executar: () => HierApi.sintetizar(hierarquizacao.codigo, {
-            operador,
-            peso_rede: Number($("peso-rede").value),
-            peso_grade: Number($("peso-grade").value),
-            peso_prioridade: Number($("peso-prioridade").value),
-            incluir_restritos: false,
-          }),
-          sucesso: ["Índice geral calculado.", "Confira o Ranking final de demandas nesta página. Clique no índice geral para ver a memória de cálculo."],
-          // Navegar sozinho tirava o usuário da página antes de ele ver o desfecho:
-          // o modal de sucesso oferece "Ver ranking" e OK continua na Fase 3.
+          duracaoMinimaMs: 2000,
+          executar: () => HierApi.calcularSintese(hierarquizacao.codigo, payload),
+          sucesso: ["Prévia do índice geral calculada.", "O resultado ainda não foi salvo. Confira o ranking e use “Salvar resultado” para registrá-lo. Após salvar, homologue a hierarquização antes de publicar os resultados."],
+        });
+        if (!resposta.ok) { if (resposta.erro) erro(resposta.erro); return; }
+        const pendente = estadoPrevisualizacao(hierarquizacao.codigo);
+        pendente.sintese = { resultado: resposta.resultado, payload, versao: resposta.resultado.atualizadoEm };
+        previsualizacoes.set(hierarquizacao.codigo, pendente);
+        renderResultados(resposta.resultado);
+      };
+      $("salvar-sintese").onclick = async () => {
+        const hierarquizacao = atual();
+        const pendente = hierarquizacao && estadoPrevisualizacao(hierarquizacao.codigo).sintese;
+        if (!hierarquizacao || !pendente) return;
+        const resposta = await executarAcao({
+          confirmacao: {
+            title: "Salvar índice geral de hierarquização",
+            message: `O índice geral e o ranking calculados serão gravados na hierarquização ${hierarquizacao.codigo}, substituindo a síntese anterior, se houver.`,
+            confirmLabel: "Salvar resultado",
+          },
+          titulo: "Salvar índice geral de hierarquização",
+          mensagemInicial: "Gravando a síntese e o ranking…",
+          duracaoMinimaMs: 2000,
+          executar: () => HierApi.sintetizar(hierarquizacao.codigo, pendente.payload, pendente.versao),
+          sucesso: ["Índice geral e ranking salvos na hierarquização.", "Agora, acesse o ranking e homologue a hierarquização. A homologação é obrigatória antes de publicar os resultados."],
           irRanking: true,
         });
         if (!resposta.ok) { if (resposta.erro) erro(resposta.erro); return; }
+        previsualizacoes.delete(hierarquizacao.codigo);
         const codigo = resposta.resultado.codigo;
         hierarquizacoes = hierarquizacoes.map((item) => item.codigo === codigo ? resposta.resultado : item);
         await render(resposta.resultado);

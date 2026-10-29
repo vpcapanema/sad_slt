@@ -5,6 +5,8 @@ exige gestor autenticado.
 """
 from __future__ import annotations
 
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse, Response
 
@@ -103,9 +105,26 @@ def executar_fase_2(codigo: str, body: HierarquizacaoFase2ExecutarSchema, _user:
 
 
 @router.post("/{codigo}/fases/3/executar", response_model=HierarquizacaoResponseSchema)
-def executar_fase_3(codigo: str, body: HierarquizacaoFase3ExecutarSchema, _user: SessionUser = Depends(require_operator)) -> HierarquizacaoResponseSchema:
+def executar_fase_3(
+    codigo: str,
+    body: HierarquizacaoFase3ExecutarSchema,
+    versao_esperada: datetime | None = Query(None),
+    _user: SessionUser = Depends(require_operator),
+) -> HierarquizacaoResponseSchema:
     try:
-        return service.executar_fase_3(codigo, body)
+        return service.executar_fase_3(codigo, body, versao_esperada=versao_esperada)
+    except HierarquizacaoNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except DemandaValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.post("/{codigo}/fases/3/calcular", response_model=HierarquizacaoResponseSchema)
+def calcular_fase_3(codigo: str, body: HierarquizacaoFase3ExecutarSchema, _user: SessionUser = Depends(require_operator)) -> HierarquizacaoResponseSchema:
+    try:
+        return service.executar_fase_3(codigo, body, persistir=False)
     except HierarquizacaoNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except DemandaValidationError as exc:
@@ -155,9 +174,26 @@ def salvar_tratamentos_riscos_fase_3(
 
 
 @router.post("/{codigo}/sintetizar", response_model=HierarquizacaoResponseSchema)
-def sintetizar(codigo: str, body: HierarquizacaoSinteseSchema, _user: SessionUser = Depends(require_operator)) -> HierarquizacaoResponseSchema:
+def sintetizar(
+    codigo: str,
+    body: HierarquizacaoSinteseSchema,
+    versao_esperada: datetime | None = Query(None),
+    _user: SessionUser = Depends(require_operator),
+) -> HierarquizacaoResponseSchema:
     try:
-        return service.sintetizar(codigo, body)
+        return service.sintetizar(codigo, body, versao_esperada=versao_esperada)
+    except HierarquizacaoNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except DemandaValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.post("/{codigo}/sintese/calcular", response_model=HierarquizacaoResponseSchema)
+def calcular_sintese(codigo: str, body: HierarquizacaoSinteseSchema, _user: SessionUser = Depends(require_operator)) -> HierarquizacaoResponseSchema:
+    try:
+        return service.sintetizar(codigo, body, persistir=False)
     except HierarquizacaoNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except DemandaValidationError as exc:
@@ -332,6 +368,21 @@ def homologar_hierarquizacao(
 ) -> HierarquizacaoResponseSchema:
     try:
         return service.homologar_hierarquizacao(codigo, homologado_por=user.id)
+    except HierarquizacaoNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except DemandaValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.post("/{codigo}/publicar", response_model=HierarquizacaoResponseSchema)
+def publicar_hierarquizacao(
+    codigo: str,
+    user: SessionUser = Depends(require_gestor),
+) -> HierarquizacaoResponseSchema:
+    try:
+        return service.publicar_hierarquizacao(codigo, publicado_por=user.id)
     except HierarquizacaoNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except DemandaValidationError as exc:

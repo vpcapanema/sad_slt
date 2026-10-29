@@ -296,6 +296,7 @@
       <summary>${escapeHtml(h.nome)} — ${escapeHtml(h.codigo)}${h.posicao != null ? ` · ${escapeHtml(h.posicao)}º` : ""}</summary>
       <dl>
         <dt>Situação da rodada</dt><dd>${escapeHtml(statusHierarquizacaoLabel(h.status))}</dd>
+        ${h.grupo_nome || h.grupo_codigo ? `<dt>Grupo comparável</dt><dd>${escapeHtml(h.grupo_nome || h.grupo_codigo)}${h.grupo_nome && h.grupo_codigo ? ` — ${escapeHtml(h.grupo_codigo)}` : ""}</dd>` : ""}
         ${h.desatualizada ? "<dt>Validade</dt><dd>Resultados desatualizados; recálculo necessário.</dd>" : ""}
         <dt>Elegibilidade territorial</dt><dd>${escapeHtml(h.elegibilidade || "Não calculada")}</dd>
         <dt>Índice de risco ambiental e territorial</dt><dd>${valor(h.indice_risco)}</dd>

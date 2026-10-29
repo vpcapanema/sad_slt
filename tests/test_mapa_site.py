@@ -23,6 +23,51 @@ def test_mapa_site_preserva_todos_os_cards_da_area_restrita():
     assert [nome for nome, _ in inventario.grupos] == grupos
 
 
+def test_mocad_oferece_central_e_copia_do_cadastro():
+    origem = Path("templates/paginas/admin/index.html").read_text(encoding="utf-8")
+    mocad = re.search(r'<section\b[^>]*aria-labelledby="group-mocad".*?</section>', origem, re.S)
+    assert mocad is not None
+    for rota, titulo in (
+        ("/restrict/central-pendencias/", "Central de pendências"),
+        ("/public/cadastro/", "Cadastro de demandas — acesso e orientações"),
+    ):
+        assert re.search(rf"link_card\('{re.escape(rota)}', '[^']+', '{re.escape(titulo)}', 'blue'\)", mocad.group())
+    assert origem.count("link_card('/public/cadastro/',") == 2
+    inventario = templates.env.get_template("componentes/mapa_site.html").module
+    paginas_mocad = {rota for _, links in inventario.grupos[0][1] for _, rota in links}
+    assert {"/restrict/central-pendencias/", "/public/cadastro/"} <= paginas_mocad
+
+
+def test_mad_reorganiza_preparacao_fases_e_julgamentos():
+    origem = Path("templates/paginas/admin/index.html").read_text(encoding="utf-8")
+    hierarquizacao = re.search(
+        r'<div class="platform-subgroup subgroup-ranqueamento">(.*?)</div>\s*</div>', origem, re.S)
+    assert hierarquizacao is not None
+    assert '<h3 class="platform-subgroup__title">Hierarquização de Demandas</h3>' in hierarquizacao.group()
+    cards = re.findall(r"link_card\('([^']+)', '[^']+', '([^']+)', 'green', '([^']+)'\)",
+                       hierarquizacao.group())
+    assert cards == [
+        ("/restrict/agrupamento-demandas/", "Agrupamento de demandas", "Preparação"),
+        ("/restrict/hierarquizacao/processos/", "Cadastrar Hierarquização", "Preparação"),
+        ("/restrict/hierarquizacao/fase-1/", "Elegibilidade Territorial", "Fase 1"),
+        ("/restrict/hierarquizacao/fase-2/", "Favorabilidade territorial e de rede", "Fase 2"),
+        ("/restrict/hierarquizacao/fase-3/", "Priorização por atributos", "Fase 3"),
+    ]
+    julgamentos = re.search(
+        r'<div class="platform-subgroup subgroup-analise-multicriterio-ahp-e-obtencao-de-pesos">(.*?)</div>\s*</div>',
+        origem, re.S)
+    assert julgamentos is not None
+    assert '<h3 class="platform-subgroup__title">Central de Julgamentos AHP</h3>' in julgamentos.group()
+    assert re.findall(r"link_card\('([^']+)', '[^']+', '([^']+)'", julgamentos.group()) == [
+        ("/restrict/analise-multicriterio/central-julgamentos", "Gestão de julgamentos AHP"),
+        ("/restrict/analise-multicriterio/central-respostas", "Gestão de Respostas"),
+    ]
+    inventario = templates.env.get_template("componentes/mapa_site.html").module
+    grupos_mad = dict(inventario.grupos[1][1])
+    assert list(grupos_mad) == ["Central de Julgamentos AHP", "Hierarquização de Demandas"]
+    assert grupos_mad["Hierarquização de Demandas"] == [(titulo, rota) for rota, titulo, _ in cards]
+
+
 def test_menu_remove_acessos_retirados_e_usa_nomes_da_documentacao():
     inventario = templates.env.get_template("componentes/mapa_site.html").module
     paginas = {
@@ -76,11 +121,11 @@ def test_nomes_aprovados_e_excecoes_preservadas():
         "/restrict/demandas/": "Demandas cadastradas — tabela",
         "/restrict/demanda/": "Análise de demanda",
         "/restrict/sei-documentos/": "Cadastro de demandas a partir de PDFs do SEI",
-        "/restrict/hierarquizacao/processos/": "Gestão das hierarquizações",
+        "/restrict/hierarquizacao/processos/": "Cadastrar Hierarquização",
         "/restrict/analise-multicriterio/central-julgamentos": "Gestão de julgamentos AHP",
-        "/restrict/analise-multicriterio/central-respostas": "Respostas dos especialistas aos julgamentos AHP",
+        "/restrict/analise-multicriterio/central-respostas": "Gestão de Respostas",
         "/public/analise-multicriterio/formulario-comparacao-pareada/": "Formulário público de comparação pareada",
-        "/restrict/hierarquizacao/ranking/": "Resultados e ranking de demandas",
+        "/restrict/hierarquizacao/homologacao-ranking-publicacao/": "Homologação, Ranking e Publicação",
         "/public/cadastro/": "Cadastro de demandas — acesso e orientações",
         "/public/login/": "Entrar no SICARD",
         "/restrict/complementacao/": "Complementação de dados da demanda",

@@ -24,6 +24,7 @@ _SELECT_BASE = """
            avaliacao_geometria,
            avaliador_id,
            avaliador_nome,
+           analise_realizada_em,
            (parecer_pdf IS NOT NULL) AS tem_parecer_pdf,
            parecer_pdf_gerado_em,
            criado_em,
@@ -57,6 +58,15 @@ def get_by_codigo(demanda_codigo: str) -> dict[str, Any] | None:
     return dict(row) if row else None
 
 
+def listar_pareceres(codigos: list[str]) -> list[dict[str, Any]]:
+    with get_connection() as conn:
+        return conn.execute(
+            """SELECT demanda_codigo, demanda_tipo, (parecer_pdf IS NOT NULL) AS tem_parecer_pdf,
+                      parecer_pdf_gerado_em
+               FROM demandas.analise_demanda WHERE demanda_codigo = ANY(%s)""", (codigos,),
+        ).fetchall()
+
+
 def upsert(
     *,
     demanda_codigo: str,
@@ -79,9 +89,10 @@ def upsert(
          sql.SQL("{} = EXCLUDED.{}").format(sql.Identifier(col), sql.Identifier(col)))
         for col in ("demanda_tipo", *dados)
     ]
+    atualizacoes.append(sql.SQL("analise_realizada_em = CURRENT_TIMESTAMP"))
 
     query = sql.SQL(
-        "INSERT INTO demandas.analise_demanda ({colunas}) VALUES ({valores}) "
+        "INSERT INTO demandas.analise_demanda ({colunas}, analise_realizada_em) VALUES ({valores}, CURRENT_TIMESTAMP) "
         "ON CONFLICT (demanda_codigo) DO UPDATE SET {atualizacoes} RETURNING id"
     ).format(
         colunas=sql.SQL(", ").join(sql.Identifier(col) for col in colunas),

@@ -145,6 +145,31 @@ def test_ssl_direto_e_email_sem_html_ou_reply_to(client, smtp, monkeypatch):
     assert mensagem["Reply-To"] is None
 
 
+def test_anexa_pdf_existente_com_bytes_originais(smtp):
+    from api.schemas.email import EmailEnvioSchema
+    pdf = b"%PDF-1.7\nParecer original da analise"
+    email_service.enviar(EmailEnvioSchema(**dados()), usuario_id="usuario-teste",
+                         solicitar_confirmacoes=True, anexo_pdf=("parecer-analise-D.pdf", pdf))
+    mensagem = smtp[0].send_message.call_args.args[0]
+    anexos = list(mensagem.iter_attachments())
+    assert len(anexos) == 1
+    assert anexos[0].get_content_type() == "application/pdf"
+    assert anexos[0].get_filename() == "parecer-analise-D.pdf"
+    assert anexos[0].get_payload(decode=True) == pdf
+    assert mensagem["Disposition-Notification-To"] == "sicard@example.com"
+
+
+@pytest.mark.parametrize("anexo", [
+    ("parecer.pdf", b"texto"), ("../parecer.pdf", b"%PDF-1.7"),
+    ("parecer.txt", b"%PDF-1.7"), ("parecer\r\n.pdf", b"%PDF-1.7"),
+])
+def test_anexo_invalido_nao_chega_ao_smtp(smtp, anexo):
+    from api.schemas.email import EmailEnvioSchema
+    with pytest.raises(email_service.FalhaEmail):
+        email_service.enviar(EmailEnvioSchema(**dados()), usuario_id="usuario-teste", anexo_pdf=anexo)
+    smtp[0].send_message.assert_not_called()
+
+
 def test_diagnostico_nao_conecta_nem_expoe_credenciais(client, smtp):
     response = client.get("/api/email/diagnostico", headers=autenticacao())
     assert response.status_code == 200

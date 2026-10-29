@@ -214,7 +214,7 @@ def notificacao(monkeypatch):
 
     def criar(codigo, **kw):
         p = {"id": "pedido", "demanda_codigo": codigo, "hierarquizacao_codigo": "H",
-             "descricao": kw["descricao"], "notificacao": {}, "status": "solicitada"}
+             "descricao": kw["descricao"], "notificacao": {}, "status": "registrada"}
         pedidos.append(p)
         return p
 
@@ -226,7 +226,8 @@ def notificacao(monkeypatch):
 
     def enviar(dados, **kw):
         emails.append((dados, kw))
-        return SimpleNamespace(status="aceito_smtp", mensagem="Aceita no SMTP, entrega não confirmada.")
+        return SimpleNamespace(status="aceito_smtp", mensagem="Aceita no SMTP, entrega não confirmada.",
+                               confirmacao_entrega_solicitada=False, confirmacao_leitura_solicitada=True)
 
     monkeypatch.setattr(service, "solicitar", criar)
     monkeypatch.setattr(service.pedidos, "reservar_notificacao", reservar)

@@ -47,16 +47,64 @@
 .ranking-layer-group summary { cursor: pointer; font: 700 .74rem/1.4 Roboto, Arial, sans-serif; }
 .ranking-layer-record { padding-left: 12px; }
 .ranking-map-surface { position: relative; min-width: 0; }
+#ranking-mapa-legenda .status-color-legend-stack {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+#ranking-mapa-legenda .status-color-legend-fase { min-width: 0; }
+#ranking-mapa-legenda .status-legend-symbology { grid-column: 1 / -1; }
+#ranking-mapa-legenda .status-legend-symbology-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 16px;
+}
+@media (max-width: 700px) {
+  #ranking-mapa-legenda .status-color-legend-stack,
+  #ranking-mapa-legenda .status-legend-symbology-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 .ranking-map { height: 38rem; min-height: 24rem; width: 100%; border: 1px solid #cbd5da; border-radius: 8px; overflow: hidden; }
 .ranking-map-status { position: absolute; z-index: 500; bottom: 32px; left: 12px; right: 12px; max-height: 8rem; overflow: auto; margin: 0; padding: 10px; background: #fff; border: 1px solid #92400e; border-radius: 8px; color: #622b09; font: 400 .74rem/1.4 Roboto, Arial, sans-serif; }
-.ranking-marker-wrap { background: transparent; border: 0; }
-.ranking-marker-pin {
-  display: flex; align-items: center; justify-content: center;
-  width: 2.2rem; height: 2.2rem; border: 3px solid #fff;
-  border-radius: 50% 50% 50% 0; background: var(--ranking-pin-fill); color: var(--ranking-pin-ink);
-  box-shadow: 0 2px 7px rgb(0 0 0 / 35%); font-size: .75rem; font-weight: 800; transform: rotate(-45deg);
+.ranking-privado-page.ami-espaco-page .ami-main .ranking-map .leaflet-marker-icon:is(.ranking-marker-wrap, .ranking-label-wrap) {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
 }
-.ranking-marker-pin span { transform: rotate(45deg); }
+.ranking-map .ranking-marker-wrap:focus-visible .ranking-marker-pin svg,
+.ranking-map .ranking-label-wrap:focus-visible .ranking-position-label {
+  filter: drop-shadow(0 0 3px var(--pli-deep));
+}
+.ranking-marker-pin {
+  position: relative; width: 42px; height: 56px;
+  background: transparent; border: 0;
+  font-size: .75rem; font-weight: 800;
+}
+.ranking-marker-pin svg { position: absolute; left: 5px; top: var(--ranking-pin-top); width: 32px; height: 48px; }
+.ranking-label-wrap { background: transparent; border: 0; }
+.ranking-position-label {
+  display: inline-block; position: absolute; white-space: nowrap;
+  min-width: 42px; padding: 5px 10px; box-sizing: border-box;
+  border: 2px solid #fff; border-radius: 999px;
+  background: var(--pli-deep); color: #fff;
+  box-shadow: 0 0 0 1px var(--pli-deep), 0 3px 7px rgb(0 0 0 / 30%);
+  font: 700 17px/22px Roboto, Arial, sans-serif; text-align: center;
+  cursor: pointer;
+}
+.ranking-marker-connector { pointer-events: none; }
+.ranking-position-label[data-posicao="1"] {
+  background: #ffc400; color: #3d2c00;
+}
+.ranking-position-label[data-posicao="2"] {
+  background: #cbd5e1; color: #1e293b;
+}
+.ranking-position-label[data-posicao="3"] {
+  background: #b87333; color: #1c1007;
+}
 .ranking-legend-pin { display: inline-flex; flex: 0 0 42px; align-items: center; justify-content: center; height: 48px; }
 @media (max-width: 700px) {
   .ranking-map-component { grid-template-columns: minmax(0, 1fr); }

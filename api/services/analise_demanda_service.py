@@ -8,9 +8,12 @@ e a decisão do avaliador aplica a transição de status pelos fluxos já existe
 from __future__ import annotations
 
 import uuid
+import json
 from datetime import datetime
 from io import BytesIO
+from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from psycopg.types.json import Jsonb
 
@@ -22,6 +25,7 @@ from api.repositories import (
     geometria_historico_repository,
     plano_repository,
     programa_repository,
+    sigma_usuario_repository,
 )
 from api.schemas.analise_demanda import (
     AvaliacaoGeometriaResponseSchema,
@@ -40,13 +44,56 @@ from api.services.session_service import SessionUser
 from api.services.status_transicoes import destinos_permitidos_com_handoff
 
 CRITERIOS = (
-    {"campo": "criterio_competencia", "rotulo": "Competência", "pergunta": "O objeto da demanda está dentro das atribuições da SLT?", "classe": "eliminatorio", "peso": 0},
-    {"campo": "criterio_nao_duplicidade", "rotulo": "Não duplicidade", "pergunta": "Esta demanda é inédita, sem duplicidade com outra demanda já cadastrada no SICARD?", "classe": "eliminatorio", "peso": 0},
-    {"campo": "criterio_clareza", "rotulo": "Clareza do pedido", "pergunta": "As informações apresentadas permitem identificar claramente o que está sendo solicitado à SLT?", "classe": "classificatorio", "peso": 20},
-    {"campo": "criterio_finalidade_publica", "rotulo": "Finalidade pública", "pergunta": "As informações apresentadas indicam benefícios para a coletividade decorrentes do atendimento da demanda?", "classe": "classificatorio", "peso": 30},
-    {"campo": "criterio_relevancia_setorial", "rotulo": "Relevância setorial", "pergunta": "O atendimento da demanda contribui para melhorar o transporte ou a logística no Estado?", "classe": "classificatorio", "peso": 50},
+    {"campo": "criterio_competencia", "rotulo": "Competência", "pergunta": "O objeto da demanda está dentro das atribuições da SLT?", "classe": "eliminatorio", "peso": 0,
+     "parecer_nao": "O objeto da demanda NÃO está dentro das atribuições da SLT."},
+    {"campo": "criterio_nao_duplicidade", "rotulo": "Não duplicidade", "pergunta": "Esta demanda é inédita, sem duplicidade com outra demanda já cadastrada no SICARD?", "classe": "eliminatorio", "peso": 0,
+     "parecer_nao": "A demanda NÃO é inédita: há duplicidade com outra demanda já cadastrada no SICARD."},
+    {"campo": "criterio_clareza", "rotulo": "Clareza do pedido", "pergunta": "As informações apresentadas permitem identificar claramente o que está sendo solicitado à SLT?", "classe": "classificatorio", "peso": 20,
+     "parecer_nao": "As informações apresentadas NÃO permitem identificar claramente o que está sendo solicitado à SLT."},
+    {"campo": "criterio_finalidade_publica", "rotulo": "Finalidade pública", "pergunta": "As informações apresentadas indicam benefícios para a coletividade decorrentes do atendimento da demanda?", "classe": "classificatorio", "peso": 30,
+     "parecer_nao": "As informações apresentadas NÃO indicam benefícios para a coletividade decorrentes do atendimento da demanda."},
+    {"campo": "criterio_relevancia_setorial", "rotulo": "Relevância setorial", "pergunta": "O atendimento da demanda contribui para melhorar o transporte ou a logística no Estado?", "classe": "classificatorio", "peso": 50,
+     "parecer_nao": "A demanda NÃO contribui para melhorar o transporte ou a logística no Estado."},
 )
 ELIMINATORIOS = ("criterio_competencia", "criterio_nao_duplicidade")
+FUSO_ANALISE = ZoneInfo("America/Sao_Paulo")
+LOCAL_ANALISE = "São Paulo - SP"
+MODELO_PARECER_PDF = "2026-10-29.4"
+
+
+def _cores_status_parecer(status: str) -> dict[str, str]:
+    caminho = Path(__file__).resolve().parents[2] / "assets" / "js" / "status-colors.js"
+    try:
+        fonte = caminho.read_text(encoding="utf-8")
+        bloco = fonte.split("const STATUS_DEMANDA = ", 1)[1].split(";\n", 1)[0].strip()
+        paleta = json.loads(bloco)
+        cores = {campo: paleta[status][campo] for campo in ("bg", "text")}
+        for cor in cores.values():
+            if not isinstance(cor, str) or len(cor) != 7 or not cor.startswith("#"):
+                raise ValueError("Cor inválida na paleta oficial.")
+            int(cor[1:], 16)
+    except (OSError, IndexError, KeyError, TypeError, ValueError) as exc:
+        raise DemandaValidationError(
+            f"Não foi possível obter a cor oficial do status «{status}» para o parecer.",
+            field="status",
+        ) from exc
+    return cores
+
+
+def _motivos_nao_atendidos(respostas: dict[str, bool | None]) -> list[str]:
+    liberado = all(respostas.get(c) is True for c in ELIMINATORIOS)
+    return [item["parecer_nao"] for item in CRITERIOS
+            if respostas.get(item["campo"]) is False
+            and (liberado or item["classe"] == "eliminatorio")]
+
+
+def _frase_geometria(avaliacao: dict) -> str:
+    if avaliacao.get("adequada") is False:
+        return "A geometria NÃO representa adequadamente o objeto da demanda. REQUER AJUSTE."
+    if avaliacao.get("adequada") is True:
+        return ("A geometria representa adequadamente o objeto da demanda. " +
+                ("AVALIAÇÃO CONFIRMADA." if avaliacao.get("confirmada") else "CONFIRMAÇÃO PENDENTE."))
+    return "A geometria ainda não foi avaliada."
 
 
 def pontuacao(respostas):
@@ -140,6 +187,39 @@ def _data_extenso(momento: datetime) -> str:
     return momento.strftime("%d/%m/%Y às %H:%M")
 
 
+def _nome_analista(analise: dict[str, Any]) -> str:
+    id = analise.get("avaliador_id")
+    if not id:
+        return "Não identificado — análise sem usuário vinculado"
+    nome = sigma_usuario_repository.nome_pessoa_por_id(str(id))
+    return nome or "Não identificado — usuário sem nome de pessoa registrado"
+
+
+def _momento_analise(analise: dict[str, Any]) -> datetime | None:
+    valor = analise.get("analise_realizada_em")
+    if not valor:
+        return None
+    momento = valor if isinstance(valor, datetime) else datetime.fromisoformat(str(valor))
+    if momento.tzinfo is None:
+        momento = momento.replace(tzinfo=FUSO_ANALISE)
+    return momento.astimezone(FUSO_ANALISE)
+
+
+def _conclusao_criterios(respostas: dict[str, bool | None]) -> str:
+    reprovados = [item["rotulo"] for item in CRITERIOS
+                 if item["classe"] == "eliminatorio" and respostas.get(item["campo"]) is False]
+    if reprovados:
+        return "Conclusão: a demanda é REPROVADA por não atender ao(s) critério(s) eliminatório(s): " + "; ".join(reprovados) + "."
+    if not all(respostas.get(c) is True for c in ELIMINATORIOS):
+        return "Conclusão: pendente — responda os dois critérios eliminatórios. Os critérios classificatórios e a avaliação da geometria serão liberados somente após duas respostas Sim."
+    resultado = calcular_resultado(respostas)
+    if resultado is None:
+        return "Conclusão: pendente — responda os três critérios classificatórios para apurar a pontuação final."
+    if resultado == "aprovado":
+        return "Conclusão: a demanda é APROVADA por atender aos dois eliminatórios e superar 50% de pontuação favorável."
+    return "Conclusão: a demanda é REPROVADA por não superar 50% de pontuação favorável, embora tenha atendido aos dois eliminatórios."
+
+
 def _nome_demanda_duplicada(codigo: str | None) -> str | None:
     if not codigo:
         return None
@@ -179,10 +259,10 @@ def gerar_parecer_texto(
         linhas.append(f"Demanda já cadastrada identificada como duplicada: {referencia}.")
     linhas.append("")
     if reprovados:
-        linhas.append("Conclusão: a demanda é REPROVADA por não atender ao(s) critério(s) eliminatório(s): " + "; ".join(reprovados) + ".")
+        linhas.append(_conclusao_criterios(respostas))
         linhas.append("Os critérios classificatórios e a avaliação da geometria não se aplicam nesta etapa. Não há apuração de pontuação classificatória.")
     elif not liberado:
-        linhas.append("Conclusão: pendente — responda os dois critérios eliminatórios. Os critérios classificatórios e a avaliação da geometria serão liberados somente após duas respostas Sim.")
+        linhas.append(_conclusao_criterios(respostas))
     else:
         linhas.append("Ambos os critérios eliminatórios foram atendidos.")
         linhas.append("Critérios classificatórios:")
@@ -194,15 +274,13 @@ def gerar_parecer_texto(
             linhas.append(f"  - {item['rotulo']} (peso {item['peso']}%): {item['pergunta']} — {marcador}.")
         linhas.append("Regra: Sim soma o peso à aprovação; Não soma o peso à reprovação. A aprovação exige mais de 50% favoráveis; 50% ou menos reprova.")
         if resultado is None:
-            linhas.append("Conclusão: pendente — responda os três critérios classificatórios para apurar a pontuação final.")
+            linhas.append(_conclusao_criterios(respostas))
         else:
             pontos = pontuacao(respostas)
             linhas.append(f"Pontuação classificatória: {pontos}% favoráveis e {100 - pontos}% contrários.")
-            if resultado == "aprovado":
-                linhas.append("Conclusão: a demanda é APROVADA por atender aos dois eliminatórios e superar 50% de pontuação favorável.")
-            else:
-                linhas.append("Conclusão: a demanda é REPROVADA por não superar 50% de pontuação favorável, embora tenha atendido aos dois eliminatórios.")
+            linhas.append(_conclusao_criterios(respostas))
     linhas.append("")
+    linhas.extend(_motivos_nao_atendidos(respostas))
     linhas.append(f"Avaliador: {avaliador_nome or 'não identificado'}.")
     linhas.append(f"Data da análise: {_data_extenso(momento)}.")
     return "\n".join(linhas)
@@ -234,7 +312,8 @@ def _montar_resposta(
             respostas=respostas, avaliador_nome=analise.get("avaliador_nome"),
             demanda_duplicada_codigo=analise.get("demanda_duplicada_codigo"),
             demanda_duplicada_nome=_nome_demanda_duplicada(analise.get("demanda_duplicada_codigo")),
-            momento=analise.get("atualizado_em") if isinstance(analise.get("atualizado_em"), datetime) else None,
+            momento=_momento_analise(analise) or (
+                analise.get("atualizado_em") if isinstance(analise.get("atualizado_em"), datetime) else None),
         ))
     return AnaliseDemandaResponseSchema(
         demanda_codigo=codigo,
@@ -282,13 +361,15 @@ def _avaliacao_geometria(
 def _parecer_com_geometria(analise: dict) -> str | None:
     texto = analise.get("parecer_texto") or ""
     avaliacao = analise.get("avaliacao_geometria") or {}
+    linhas = _linhas_parecer_geometria(avaliacao)
+    return (texto + "\n\nGeometria\n" + "\n".join(linhas)).strip() if linhas else texto or None
+
+
+def _linhas_parecer_geometria(avaliacao: dict) -> list[str]:
     linhas = []
-    if avaliacao.get("adequada") is True and avaliacao.get("confirmada") is True:
-        linhas.append("A geometria apresentada foi aprovada como suficientemente adequada para representar o objeto da demanda.")
-    elif avaliacao.get("adequada") is True:
-        linhas.append("A geometria foi considerada adequada; a confirmação pelo botão Aprovar geometria está pendente.")
-    elif avaliacao.get("adequada") is False:
-        linhas.append("A geometria apresentada foi considerada insuficientemente adequada para representar o objeto da demanda.")
+    if avaliacao.get("adequada") in (True, False):
+        linhas.append(_frase_geometria(avaliacao))
+    if avaliacao.get("adequada") is False:
         if avaliacao.get("encaminhamento") == "complementacao":
             linhas.append("Encaminhamento: solicitar complementação do interessado. Tipo: Ajuste de geometria.")
         elif avaliacao.get("encaminhamento") == "substituicao":
@@ -300,7 +381,7 @@ def _parecer_com_geometria(analise: dict) -> str | None:
         )
     if avaliacao.get("observacao"):
         linhas.append(f"Observação sobre a geometria: {avaliacao['observacao']}")
-    return (texto + "\n\nGeometria\n" + "\n".join(linhas)).strip() if linhas else texto or None
+    return linhas
 
 
 def _avaliador_id(user: SessionUser | None) -> str | None:
@@ -650,7 +731,7 @@ def decidir(
         decisao=decisao,
     )
 
-    momento = datetime.now()
+    momento = datetime.now(FUSO_ANALISE)
     parecer = gerar_parecer_texto(
         codigo=codigo_demanda,
         nome=demanda.get("nome") or codigo_demanda,
@@ -721,194 +802,178 @@ def gerar_pdf(
     try:
         from reportlab.lib import colors
         from reportlab.lib.enums import TA_JUSTIFY
-        from reportlab.lib.pagesizes import A4
-        from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-        from reportlab.lib.units import mm
-        from reportlab.platypus import (
-            Paragraph,
-            SimpleDocTemplate,
-            Spacer,
-            Table,
-            TableStyle,
-        )
+        from reportlab.lib.styles import ParagraphStyle
+        from reportlab.platypus import KeepTogether, Spacer, Table, TableStyle
+        from api.services import extracao_atributos_relatorios as estilo
+        from api.services.relatorio_fases_pdf import _campos, _hero
     except ImportError as exc:  # pragma: no cover - dependência declarada em requirements.txt
         raise DemandaValidationError(
             "Geração de PDF indisponível: dependência «reportlab» não instalada no servidor.",
             field="pdf",
         ) from exc
 
-    estilos = getSampleStyleSheet()
-    titulo = ParagraphStyle(
-        "TituloSLT",
-        parent=estilos["Title"],
-        fontSize=14,
-        spaceAfter=4,
-        textColor=colors.HexColor("#003b5a"),
-    )
-    subtitulo = ParagraphStyle(
-        "SubtituloSLT",
-        parent=estilos["Normal"],
-        fontSize=9,
-        textColor=colors.HexColor("#5a7184"),
-        spaceAfter=10,
-    )
-    secao = ParagraphStyle(
-        "SecaoSLT",
-        parent=estilos["Heading2"],
-        fontSize=11,
-        spaceBefore=12,
-        spaceAfter=5,
-        textColor=colors.HexColor("#003b5a"),
-    )
-    corpo = ParagraphStyle(
-        "CorpoSLT", parent=estilos["Normal"], fontSize=9, leading=13, alignment=TA_JUSTIFY
-    )
-    celula = ParagraphStyle("CelulaSLT", parent=estilos["Normal"], fontSize=8.5, leading=11)
+    e = estilo._estilos()
+    cores_status = _cores_status_parecer(status_atual)
+    cor_status = colors.HexColor(cores_status["text"])
+    e["corpo"].alignment = TA_JUSTIFY
+    for chave in ("h1", "h2"):
+        e[chave].keepWithNext = True
+    e["resultadoRotulo"] = ParagraphStyle(
+        "resultadoRotulo", parent=e["nota"], fontName="Helvetica-Bold",
+        textColor=cor_status, spaceAfter=5)
+    e["resultado"] = ParagraphStyle(
+        "resultado", parent=e["h1"], fontSize=18, leading=22, spaceBefore=0, spaceAfter=7,
+        textColor=cor_status)
+    e["motivo"] = ParagraphStyle(
+        "motivo", parent=e["corpo"], textColor=cor_status, spaceAfter=5)
+    e["statusNota"] = ParagraphStyle("statusNota", parent=e["nota"], textColor=cor_status)
+    e["statusH2"] = ParagraphStyle("statusH2", parent=e["h2"], textColor=cor_status)
+    e["providencias"] = ParagraphStyle(
+        "providencias", parent=e["h1"], fontSize=12, leading=15,
+        backColor=estilo.AZUL_CLARO, borderPadding=8, spaceBefore=14, spaceAfter=12)
+    e["orientacao"] = ParagraphStyle(
+        "orientacao", parent=e["corpo"], fontSize=10, leading=14,
+        leftIndent=16, bulletIndent=1, spaceAfter=7)
 
-    def escapar(texto: Any) -> str:
-        return (
-            str(texto if texto is not None else "—")
-            .replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-        )
+    def p(texto, chave="corpo"):
+        return estilo._p(e, texto, chave)
 
-    sim, nao, _ = _placar(respostas)
-    resultado = analise.get("resultado") or calcular_resultado(respostas)
-    total = len(CRITERIOS)
-
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(
-        buffer,
-        pagesize=A4,
-        leftMargin=20 * mm,
-        rightMargin=20 * mm,
-        topMargin=18 * mm,
-        bottomMargin=18 * mm,
-        title=f"Parecer de admissibilidade — {demanda.get('codigo')}",
-        author="SICARD — SLT/SP",
-    )
-
+    titulo = "Parecer técnico de admissibilidade"
     fluxo: list[Any] = [
-        Paragraph("Parecer técnico de admissibilidade", titulo),
-        Paragraph(
-            "SICARD — Secretaria de Logística e Transportes do Estado de São Paulo",
-            subtitulo,
-        ),
+        _hero(e, titulo), Spacer(1, 12),
+        p("Identificação da demanda", "h1"),
+        _campos(e, [
+            ("Código", demanda.get("codigo")),
+            ("Nome", demanda.get("nome")),
+            ("Tipo", tipo.capitalize()),
+            ("Situação da demanda", _rotulo_status(status_atual)),
+            ("Emitido em", estilo.hora(momento.isoformat())),
+        ]),
+        p("Análise e parecer técnico", "h1"),
     ]
+    liberado = all(respostas.get(c) is True for c in ELIMINATORIOS)
+    resultado = calcular_resultado(respostas)
+    complementacao = decisao == "complementacao"
+    rotulos = {"aprovado": "APROVADA NOS CRITÉRIOS", "reprovado": "REPROVADA NOS CRITÉRIOS"}
+    conclusao = rotulos.get(resultado, "ANÁLISE PENDENTE") if complementacao else {
+        "aprovada": "APROVADA", "ressalvas": "APROVADA COM RESSALVAS", "reprovada": "REPROVADA",
+    }.get(decisao, "ANÁLISE PENDENTE")
+    falhas = _motivos_nao_atendidos(respostas)
+    if not liberado and resultado == "reprovado":
+        motivo = "Não há apuração de pontuação classificatória."
+    elif resultado is None:
+        pendentes = [item["rotulo"] for item in CRITERIOS if respostas.get(item["campo"]) is None
+                     and (liberado or item["classe"] == "eliminatorio")]
+        motivo = "Faltam respostas para concluir a análise: " + "; ".join(pendentes) + "."
+    else:
+        motivo = (f"Pontuação favorável: {pontuacao(respostas)}%. "
+                  "A aprovação exige mais de 50%, além dos dois critérios eliminatórios atendidos.")
+    if decisao == "reprovada" and resultado == "aprovado":
+        motivo = "Os critérios foram atendidos, mas o analista decidiu reprovar a demanda. A justificativa está destacada abaixo."
+    if resultado == "reprovado":
+        conclusao += ", POIS:"
+    destaque = [p("CONCLUSÃO DA ANÁLISE", "resultadoRotulo"), p(conclusao, "resultado")]
+    for frase in falhas:
+        destaque.append(p(frase, "motivo"))
+    destaque.append(p(motivo, "statusNota"))
+    avaliacao = analise.get("avaliacao_geometria") or {}
+    if liberado:
+        destaque += [Spacer(1, 6), p(_frase_geometria(avaliacao), "motivo")]
+    if complementacao:
+        destaque += [Spacer(1, 5), p("Encaminhamento: COMPLEMENTAÇÃO NECESSÁRIA.", "statusH2"),
+                     p("O resultado dos critérios não representa uma decisão final. "
+                       "Confira abaixo o que deve ser complementado.", "statusNota")]
+    quadro = Table([[destaque]], colWidths=[estilo.LARGURA], hAlign="LEFT")
+    quadro.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor(cores_status["bg"])),
+        ("LINEBEFORE", (0, 0), (-1, -1), 4, cor_status),
+        ("LEFTPADDING", (0, 0), (-1, -1), 12),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 12),
+        ("TOPPADDING", (0, 0), (-1, -1), 10),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+    ]))
+    fluxo.append(quadro)
 
-    identificacao = [
-        ["Código", escapar(demanda.get("codigo"))],
-        ["Nome", escapar(demanda.get("nome"))],
-        ["Tipo", escapar(tipo.capitalize())],
-        ["Status após a decisão", escapar(_rotulo_status(status_atual))],
-    ]
-    tabela_id = Table(
-        [[Paragraph(f"<b>{rot}</b>", celula), Paragraph(val, celula)] for rot, val in identificacao],
-        colWidths=[45 * mm, 125 * mm],
-    )
-    tabela_id.setStyle(
-        TableStyle(
-            [
-                ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#c9d6e0")),
-                ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#eef4f8")),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("LEFTPADDING", (0, 0), (-1, -1), 5),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 5),
-                ("TOPPADDING", (0, 0), (-1, -1), 4),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-            ]
-        )
-    )
-    fluxo.append(tabela_id)
+    vistos = {" ".join(frase.split()).casefold() for frase in falhas}
+    if liberado:
+        vistos.add(" ".join(_frase_geometria(avaliacao).split()).casefold())
 
-    fluxo.append(Paragraph("Critérios de análise", secao))
-    linhas = [
-        [
-            Paragraph("<b>Critério</b>", celula),
-            Paragraph("<b>Pergunta</b>", celula),
-            Paragraph("<b>Resposta</b>", celula),
-        ]
-    ]
-    for item in CRITERIOS:
-        resposta = respostas.get(item["campo"])
-        marcador = "Sim" if resposta is True else "Não" if resposta is False else "—"
-        linhas.append(
-            [
-                Paragraph(escapar(item["rotulo"]), celula),
-                Paragraph(escapar(item["pergunta"]), celula),
-                Paragraph(marcador, celula),
-            ]
-        )
-    tabela_criterios = Table(linhas, colWidths=[38 * mm, 112 * mm, 20 * mm], repeatRows=1)
-    tabela_criterios.setStyle(
-        TableStyle(
-            [
-                ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#c9d6e0")),
-                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#eef4f8")),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("ALIGN", (2, 1), (2, -1), "CENTER"),
-                ("LEFTPADDING", (0, 0), (-1, -1), 5),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 5),
-                ("TOPPADDING", (0, 0), (-1, -1), 4),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-            ]
-        )
-    )
-    fluxo.append(tabela_criterios)
-
-    fluxo.append(Paragraph("Resultado da análise", secao))
-    rotulo_resultado = {"aprovado": "Aprovado", "reprovado": "Reprovado"}.get(
-        resultado or "", "Pendente"
-    )
-    fluxo.append(
-        Paragraph(
-            (f"<b>{rotulo_resultado}</b> — pontuação classificatória favorável: {pontuacao(respostas)}%."
-             if all(respostas.get(c) is True for c in ELIMINATORIOS)
-             else f"<b>{rotulo_resultado}</b> — avaliação pelos critérios eliminatórios; pontuação classificatória não apurada."),
-            corpo,
-        )
-    )
-
-    fluxo.append(Paragraph("Parecer técnico", secao))
-    for paragrafo in (_parecer_com_geometria(analise) or "").split("\n"):
-        if paragrafo.strip():
-            fluxo.append(Paragraph(escapar(paragrafo), corpo))
-        else:
-            fluxo.append(Spacer(1, 4))
+    def paragrafos(texto: str) -> list[str]:
+        novos = []
+        for trecho in texto.splitlines():
+            trecho = trecho.strip()
+            chave = " ".join(trecho.split()).casefold()
+            if chave and chave not in vistos:
+                vistos.add(chave)
+                novos.append(trecho)
+        return novos
 
     complemento = (analise.get("parecer_complemento") or "").strip()
-    if complemento:
-        fluxo.append(Paragraph("Complementação do parecer", secao))
-        for paragrafo in complemento.split("\n"):
-            if paragrafo.strip():
-                fluxo.append(Paragraph(escapar(paragrafo), corpo))
-            else:
-                fluxo.append(Spacer(1, 4))
+    solicitacao = (analise.get("solicitacao_complementacao") or "").strip()
+    observacao_geometria = (avaliacao.get("observacao") or "").strip() if liberado else ""
+    if complementacao:
+        fluxo.append(p("O QUE VOCÊ PRECISA ENVIAR OU CORRIGIR", "providencias"))
+        orientacoes = paragrafos(solicitacao) + paragrafos(complemento) + paragrafos(observacao_geometria)
+        if not orientacoes:
+            fluxo.append(p("O analista ainda não registrou os documentos ou ajustes necessários. "
+                           "A solicitação deve ser detalhada antes do envio.", "orientacao"))
+        for numero, orientacao in enumerate(orientacoes, 1):
+            fluxo.append(estilo._p(e, orientacao, "orientacao", bulletText=f"{numero}."))
+    elif complemento:
+        fluxo.append(p("JUSTIFICATIVA DA DECISÃO" if decisao == "reprovada"
+                       else "RESSALVAS E ORIENTAÇÕES DO ANALISTA", "providencias"))
+        fluxo.extend(p(trecho, "orientacao") for trecho in paragrafos(complemento))
 
-    fluxo.append(Paragraph("Decisão", secao))
-    fluxo.append(
-        Paragraph(
-            f"<b>{escapar(DECISAO_ROTULO.get(decisao, decisao))}</b> — a demanda passou ao status "
-            f"«{escapar(_rotulo_status(status_atual))}».",
-            corpo,
-        )
-    )
+    fluxo.append(p("Fundamentação — perguntas, respostas e geometria", "h2"))
+    linhas = [["Critério", "Pergunta / avaliação", "Resposta"]]
+    for item in CRITERIOS:
+        resposta = respostas.get(item["campo"])
+        marcador = "Sim" if resposta is True else "Não" if resposta is False else "Não respondido"
+        classe = "Eliminatório" if item["classe"] == "eliminatorio" else f"Peso {item['peso']}%"
+        if item["classe"] == "classificatorio" and not liberado and resposta is None:
+            marcador = "Não se aplica nesta etapa"
+        linhas.append([f"{item['rotulo']} ({classe})", item["pergunta"], marcador])
+    if not liberado:
+        linhas.append(["Geometria", "Avaliação condicionada ao atendimento dos critérios eliminatórios.",
+                       "Não se aplica nesta etapa"])
+    else:
+        adequada = avaliacao.get("adequada")
+        resposta_geometria = ("Sim — confirmada" if avaliacao.get("confirmada") else "Sim — confirmação pendente"
+                             ) if adequada is True else "Não — requer ajuste" if adequada is False else "Não respondido"
+        linhas.append(["Geometria", "A geometria representa adequadamente o objeto da demanda?", resposta_geometria])
+        legados = {
+            "delimitacao_intervencao": "Delimitação da intervenção",
+            "correspondencia_local_dimensoes": "Correspondência com o local e as dimensões",
+            "area_influencia_direta": "Área de influência direta",
+            "precisao_localizacao": "Precisão da localização",
+        }
+        for campo, rotulo in legados.items():
+            if avaliacao.get(campo):
+                linhas.append(["Geometria", rotulo, {"atende": "Atende", "ajuste": "Requer ajuste",
+                                                    "nao_se_aplica": "Não se aplica"}[avaliacao[campo]]])
+    fluxo.append(estilo._tabela(e, linhas, [estilo.LARGURA * v for v in (.23, .59, .18)]))
+    if respostas.get("criterio_nao_duplicidade") is False:
+        fluxo.append(p("Demanda identificada como duplicada: " +
+                       (analise.get("demanda_duplicada_codigo") or "Identificação pendente") + "."))
+    if liberado:
+        if avaliacao.get("encaminhamento") == "substituicao":
+            fluxo.append(p("A nova geometria será enviada pelo analista."))
+        historico = _linhas_parecer_geometria({"substituicoes": avaliacao.get("substituicoes")})
+        notas = paragrafos(observacao_geometria) + paragrafos("\n".join(historico))
+        if notas:
+            fluxo.append(p("Observações técnicas", "h2"))
+            fluxo.extend(p(trecho) for trecho in notas)
+    if complementacao:
+        fluxo.append(p("Este documento solicita complementação e não altera as respostas, "
+                       "a decisão ou a situação da demanda.", "nota"))
 
-    fluxo.append(Spacer(1, 14))
-    rodape = ParagraphStyle(
-        "RodapeSLT",
-        parent=estilos["Normal"],
-        fontSize=8,
-        textColor=colors.HexColor("#5a7184"),
-    )
-    fluxo.append(
-        Paragraph(
-            f"Avaliador: {escapar(analise.get('avaliador_nome') or 'não identificado')} · "
-            f"Emitido em {_data_extenso(momento)}.",
-            rodape,
-        )
-    )
-
-    doc.build(fluxo)
+    data_analise = _momento_analise(analise)
+    fluxo.append(KeepTogether([
+        Spacer(1, 16),
+        p("Analista responsável: " + _nome_analista(analise)),
+        p(LOCAL_ANALISE + " · " + (_data_extenso(data_analise) + " (horário de Brasília)"
+                                  if data_analise else "Data e hora da análise não registradas")),
+    ]))
+    buffer = BytesIO()
+    estilo._construir(buffer, titulo, fluxo)
     return buffer.getvalue()

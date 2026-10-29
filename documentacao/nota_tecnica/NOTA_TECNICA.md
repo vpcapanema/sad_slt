@@ -18,8 +18,8 @@
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Título**                 | Metodologia do Sistema de Hierarquização de Demandas — SICARD                                                                                                         |
 | **Número**                 | NT-SICARD-001/2026                                                                                                                                                       |
-| **Versão**                 | 1.65                                                                                                                                                                      |
-| **Data de emissão**        | 28/10/2026                                                                                                                                                               |
+| **Versão**                 | 1.74                                                                                                                                                                      |
+| **Data de emissão**        | 29/10/2026                                                                                                                                                               |
 | **Classificação**         | Documento técnico-metodológico de entrega ao cliente                                                                                                                   |
 | **Sistema**                 | SICARD — Sistema Inteligente de Cadastro e Ranking de Demandas                                                                                                        |
 | **Domínio de aplicação** | Logística e transportes. Concebido no âmbito do Plano de Logística Integrada do Estado de São Paulo (PLI-SP), aplica-se a qualquer objeto de demanda desse domínio. |
@@ -99,6 +99,15 @@
 | 1.63    | 28/10/2026 | `[preencher]` | Individualização dos convites AHP por uma ou mais dimensões da matriz; preservação do recorte respondido e agregação somente entre respostas de critérios equivalentes, sem conversão automática de pesos locais em pesos globais. |
 | 1.64    | 28/10/2026 | `[preencher]` | Inclusão de ajuda consultiva de consistência após mais de 70% dos pares respondidos, com indicação de pares para revisão sem alteração automática dos julgamentos. |
 | 1.65    | 28/10/2026 | `[preencher]` | Restrição dos julgamentos AHP aos critérios da Fase 3, filtragem anterior à atribuição de dimensões e preservação dos registros históricos incompatíveis sem novas operações de julgamento. |
+| 1.66    | 29/10/2026 | `[preencher]` | Publicação explícita de resultados homologados por gestor ou administrador, com autoria, data e vínculo à versão dos resultados; separação entre consulta pública e restrita, revogação na reversão e exigência de nova publicação após recálculo, sem alteração da metodologia de cálculo. |
+| 1.67    | 29/10/2026 | `[preencher]` | Identificação automática das demandas da fase de hierarquização com atributos não preenchidos na Central de pendências, independentemente de solicitação prévia; registro e envio explícitos, com revalidação do contexto, autoria e histórico, sem alteração das fórmulas ou reabertura automática de resultados. |
+| 1.68    | 29/10/2026 | `[preencher]` | Separação dos dados do cadastro e da notificação de pendências; envio do parecer PDF já emitido na análise, rastreabilidade do anexo e acompanhamento de entrega, leitura e cumprimento por evidências registradas, sem alteração dos critérios ou das fórmulas. |
+| 1.69    | 29/10/2026 | `[preencher]` | Prévia e confirmação explícita da notificação, revalidação de destinatário, mensagem e anexo, preservação das tentativas de envio e do conteúdo integral na auditoria, sem alteração da metodologia de pontuação. |
+| 1.70    | 29/10/2026 | `[preencher]` | Distinção explícita entre pendência registrada e notificação enviada, com migração auditada do estado interno e apresentação do estado da comunicação sem inferir envio a partir do registro. |
+| 1.71    | 29/10/2026 | `[preencher]` | Versionamento dos pareceres cadastrais reemitidos conforme as perguntas vigentes da análise e revisão humana obrigatória antes da notificação, preservando respostas, decisões, documentos anteriores e metodologia de pontuação. |
+| 1.72    | 29/10/2026 | `[preencher]` | Padronização institucional do parecer PDF em cinco blocos, consolidação de orientações repetidas, identificação do analista pela pessoa vinculada ao usuário e separação da data da análise e da emissão do documento, sem alteração das perguntas ou da pontuação. |
+| 1.73    | 29/10/2026 | `[preencher]` | Reorganização visual do parecer em bloco único de análise, com destaque para conclusão, motivo e providências, fundamentação consolidada e assinatura simplificada; distinção entre resultado dos critérios e decisão final, sem alteração das regras de análise. |
+| 1.74    | 29/10/2026 | `[preencher]` | Explicitação das condições não atendidas em frases declarativas e da conclusão geométrica; aplicação da paleta oficial ao status efetivamente registrado e inclusão das cores nas fontes versionadas, sem alteração dos critérios ou das fórmulas. |
 
 ---
 
@@ -1127,6 +1136,56 @@ Pendências são registradas ao salvar a hierarquização no status
 cadastral. A solicitação pode ser registrada e notificada imediatamente ou
 adiada para a Fase 3, sem adiar o registro da pendência.
 
+A Central de pendências apresenta automaticamente as demandas cujo status
+pertence à fase de hierarquização no domínio oficial e que possuem atributos
+cadastrais ou dinâmicos não preenchidos, por contexto de rodada. A ausência de
+solicitação prévia não impede a apresentação. Demandas de outras fases e
+contextos com atributos completos não integram esse bloco. A consulta não
+altera status nem cria pedidos: o gestor ou administrador registra a solicitação
+e, por ação explícita posterior, envia a mensagem externa com o parecer PDF
+previamente gerado na análise cadastral, sem incluir as anotações técnicas
+internas da pendência. A ausência do PDF impede o envio pela Central. Os dados
+do solicitante e da data do cadastro permanecem separados da autoria, data e
+destinatário da notificação. A identificação do anexo e os retornos de entrega e
+leitura são registrados por mensagem; ausência de confirmação não constitui
+evidência de que o e-mail não foi aberto. Antes do envio, a prévia apresenta o
+conteúdo integral, o destinatário e a identificação do anexo. A confirmação
+revalida esses dados e registra o resultado comunicado pelo servidor; tentativas
+anteriores e conteúdo enviado são preservados na auditoria. No bloco cadastral,
+o texto do parecer da análise constitui a mensagem; para atributos, utiliza-se
+a mensagem salva do gestor. O cumprimento é acompanhado pelas
+categorias salvas e pela conclusão registrada. O estado interno de um pedido
+aberto é denominado `registrada`, sem comprovar que houve comunicação. A migração
+154 preserva no histórico a denominação anterior; somente o estado e as evidências
+da notificação permitem informar seu envio, conforme a fonte interna do motor.
+Para pendências cadastrais abertas, a reemissão utiliza as perguntas vigentes da
+análise e as respostas registradas, sem alterar estas respostas ou a decisão. As
+versões anteriores são preservadas, e a revisão humana vinculada ao documento e
+às fontes vigentes é obrigatória antes da notificação. Esse procedimento não
+reabre resultados da hierarquização nem altera fórmulas ou critérios de pontuação.
+O parecer apresenta identificação seguida de um único bloco de análise e parecer,
+com a identidade visual dos relatórios da Fase 3. A conclusão, seu motivo e as
+providências requeridas recebem destaque antes da fundamentação, que reúne
+perguntas, respostas e geometria em tabela única. Na complementação, distingue-se
+o resultado dos critérios da decisão final. A assinatura apresenta analista,
+local e data em texto simples, sem seção numerada ou quadro. As orientações repetidas são consolidadas e a
+solicitação pública de complementação é apresentada sem expor anotações internas.
+As condições não atendidas são explicitadas em frases declarativas, baseadas
+somente nas respostas negativas aplicáveis. A conclusão geométrica distingue
+adequação, necessidade de ajuste e confirmação pendente. O bloco da conclusão
+adota as cores do status efetivamente registrado após a análise, lidas da paleta
+oficial única, conforme a fonte interna do motor; não se infere a cor a partir
+do placar. A paleta utilizada integra as fontes versionadas, sujeitas à revisão.
+O nome do analista corresponde à pessoa vinculada ao seu ID de usuário no SIGMA;
+identificação ausente é explicitada. O local institucional é São Paulo - SP.
+A data da análise é persistida separadamente da emissão e não é alterada pela
+reemissão do documento, conforme a fonte interna do motor. Modelo, autoria, data
+e solicitação integram as fontes verificadas para a liberação da notificação.
+O registro revalida as pendências e a inexistência de pedido
+aberto, preservando autoria e histórico. A ausência de rodada aberta é
+apresentada como impedimento ao registro, sem reabertura automática de resultados,
+suspensões ou retiradas, conforme a fonte interna do motor de hierarquização.
+
 O criador ou representante legal preenche e salva os atributos; o
 administrador pode selecionar a hierarquização e suas demandas. A conclusão
 é automática quando todos os valores cadastrais e dinâmicos estão preenchidos
@@ -1614,16 +1673,32 @@ se houve exceção metodológica.
 
 **Consulta individual das rodadas.** Os resultados das fases, os pesos registrados,
 o índice final e a posição são consultados por demanda e hierarquização, sem
-substituir os resultados de outras rodadas. Os painéis organizam a navegação por
-tipo de demanda, hierarquização e demanda desde a criação da rodada, preservando
-uma única geometria cadastral por demanda. A conclusão da síntese atualiza o
-status técnico das demandas ainda em hierarquização na mesma transação do
-resultado, sem sobrescrever situações posteriores ou suspensas e sem implicar
-homologação ou publicação. O controle gerencial de publicação destina-se
-exclusivamente ao painel público; enquanto não implementado, a visibilidade
-existente é preservada. A consulta pública dos resultados individuais não inclui
-documentos internos, caminhos de arquivos ou dados pessoais. Resultados
-desatualizados não são apresentados como posição ou índice final correntes.
+substituir os resultados de outras rodadas. O painel restrito organiza a navegação
+por tipo de demanda, hierarquização e demanda desde a criação da rodada,
+preservando uma única geometria cadastral por demanda. A homologação explícita
+atualiza o status técnico das demandas ainda em hierarquização na mesma
+transação, sem sobrescrever situações posteriores ou suspensas. A conclusão do
+cálculo não implica homologação nem publicação.
+
+**Publicação dos resultados homologados.** Conforme a espinha dorsal, a
+divulgação pública exige seleção de uma única rodada homologada e ação explícita
+de gestor ou administrador. Analistas têm somente leitura no MAD; operadores
+não têm acesso. A publicação é bloqueada quando não há ranking, quando os
+resultados ou a configuração de atributos estão desatualizados, quando há
+complementação pendente ou divergência na composição do grupo.
+Divulgam-se elegibilidade e índice de risco, favorabilidade de rede e territorial,
+priorização, índice geral e posição registrada, com identificação da rodada e
+do grupo comparável. Preservam-se os valores originais e a leitura independente
+de múltiplas rodadas, sem presumir posições ausentes.
+
+O estado, a autoria, a data e a assinatura dos resultados são persistidos no JSON
+da rodada, com histórico das ações de publicação e revogação. A reversão da
+homologação revoga a publicação na mesma transação. Resultados alterados ou
+desatualizados deixam de ser divulgados; o recálculo e a nova homologação exigem
+nova ação de publicação. A restrição aplica-se somente aos resultados públicos,
+sem ocultar o cadastro da demanda nem limitar a consulta restrita. A divulgação
+não inclui documentos internos, caminhos de arquivos, autoria da publicação ou
+dados pessoais e não modifica fórmulas, índices, pesos ou operadores de cálculo.
 
 **Versionamento.** Pacotes recebem identificador reprodutível, no padrão
 `fase<n>_<produto>_<area>_<data>_v<numero>` (ex.: `fase1_restricao_risco_sp_2026_07_02_v1`),

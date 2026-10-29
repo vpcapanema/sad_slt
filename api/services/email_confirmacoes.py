@@ -9,6 +9,7 @@ import imaplib
 import logging
 import re
 import ssl
+from collections.abc import Callable
 
 from api.repositories import email_convites_repository as repo
 from api.services.email_service import FalhaEmail, _config
@@ -75,15 +76,14 @@ def _aspas(valor: str) -> str:
     return '"' + valor.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
-def coletar(ambiente_id: str, *, usuario_id: str) -> dict:
+def _coletar_registros(registros: list[dict], registrar_evento: Callable[[dict, str, str], None],
+                       *, usuario_id: str) -> int:
     config = _config()
     if not config.imap_habilitado or not config.imap_host or not config.imap_pasta:
         logger.warning("Consulta IMAP desativada ou incompleta usuario=%s", usuario_id)
         raise FalhaEmail("imap", "A coleta IMAP de confirmações não está configurada no SICARD.")
-    registros = [r for r in repo.listar(ambiente_id)
-                 if r["envio_status"] in {"aceito_smtp", "indeterminado", "enviando"}]
     if not registros:
-        return {"registros": repo.listar(ambiente_id), "relatorios_consultados": 0}
+        return 0
     caixa = None
     consultados = 0
     try:
@@ -115,7 +115,7 @@ def coletar(ambiente_id: str, *, usuario_id: str) -> dict:
                 conteudo = corpos[0]
                 consultados += 1
                 for evento in interpretar(conteudo, mensagem_id, registro["destinatario"]):
-                    repo.registrar_evento(str(registro["id"]), evento, sha256(conteudo).hexdigest())
+                    registrar_evento(registro, evento, sha256(conteudo).hexdigest())
     except (imaplib.IMAP4.error, OSError, UnicodeError) as exc:
         logger.error("Consulta IMAP falhou usuario=%s tipo=%s", usuario_id, type(exc).__name__)
         raise FalhaEmail(
@@ -130,4 +130,30 @@ def coletar(ambiente_id: str, *, usuario_id: str) -> dict:
                 caixa.logout()
             except (imaplib.IMAP4.error, OSError) as exc:
                 logger.warning("Encerramento IMAP sem confirmação tipo=%s", type(exc).__name__)
+    return consultados
+
+
+def coletar(ambiente_id: str, *, usuario_id: str) -> dict:
+    registros = [r for r in repo.listar(ambiente_id)
+                 if r["envio_status"] in {"aceito_smtp", "indeterminado", "enviando"}]
+    consultados = _coletar_registros(
+        registros, lambda r, evento, fonte: repo.registrar_evento(str(r["id"]), evento, fonte),
+        usuario_id=usuario_id,
+    )
     return {"registros": repo.listar(ambiente_id), "relatorios_consultados": consultados}
+
+
+def coletar_pendencia(pedido: dict, *, usuario_id: str) -> dict:
+    from api.repositories import solicitacao_complementacao_repository as solicitacoes
+    notificacao = pedido.get("notificacao") or {}
+    mensagem_id, destinatario = notificacao.get("id_mensagem"), notificacao.get("destinatario")
+    if not mensagem_id or not destinatario:
+        raise FalhaEmail("historico", "A notificação não possui identificador e destinatário para correlacionar os retornos.")
+    registro = {"id": pedido["id"], "mensagem_id": mensagem_id, "destinatario": destinatario}
+    consultados = _coletar_registros(
+        [registro], lambda r, evento, fonte: solicitacoes.registrar_confirmacao(
+            r["id"], r["mensagem_id"], evento, fonte),
+        usuario_id=usuario_id,
+    )
+    return {"solicitacao": solicitacoes.obter(pedido["id"], interno=True),
+            "relatorios_consultados": consultados}

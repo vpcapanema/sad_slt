@@ -132,6 +132,6 @@ def substituir(tipo,codigo,geometry,arquivo,usuario):
         conn.execute("""UPDATE demandas.solicitacao_complementacao_demanda
             SET categorias_salvas = categorias_salvas || jsonb_build_object('geometria',
                 jsonb_build_object('por',%s::text,'em',now()))
-            WHERE demanda_tipo=%s AND demanda_codigo=%s AND status='solicitada'
+            WHERE demanda_tipo=%s AND demanda_codigo=%s AND status='registrada'
               AND 'geometria'=ANY(categorias)""", (usuario,tipo,codigo))
     return {'codigo':codigo,'tipo':tipo,'mensagem':'Geometria substituída; original preservado no histórico.'}

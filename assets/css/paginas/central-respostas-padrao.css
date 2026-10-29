@@ -30,6 +30,9 @@
 .sicard-standard-page.ami-page #ami-analysis-workspace .admin-table tbody tr:nth-child(odd) > :is(td, th) { background: #fff; }
 .sicard-standard-page.ami-page #ami-analysis-workspace .admin-table tbody tr:nth-child(even) > :is(td, th) { background: #edf4f8; }
 .sicard-standard-page.ami-page #ami-analysis-workspace .admin-table tbody tr:is(.is-selected, :has(input:checked)) > :is(td, th) { background: #eef4fa; }
+/* Selecao cruzada tabela <-> grafico: o hover e o clique sobrepoem o zebrado. */
+.sicard-standard-page.ami-page #ami-analysis-workspace .admin-table tbody tr.is-hl > :is(td, th) { background: #e3eef8; }
+.sicard-standard-page.ami-page #ami-analysis-workspace .admin-table tbody tr.is-sel > :is(td, th) { background: #c9ddf0; font-weight: 700; }
 /* Heat is a small marker, leaving the mandatory row striping readable. */
 .sicard-standard-page.ami-page #ami-analysis-workspace .ami-stats-table__valor {
   box-shadow: inset 0 -3px var(--ami-deviation-color, transparent);
@@ -60,6 +63,11 @@
 .sicard-standard-page.ami-page #ami-analysis-workspace .ami-report-table { display: grid; gap: 8px; min-width: 0; }
 .sicard-standard-page.ami-page #ami-analysis-workspace .ami-analysis-split > .ami-report-table { grid-column: 1; grid-row: 1; }
 .sicard-standard-page.ami-page #ami-analysis-workspace .ami-analysis-split > .ami-analysis-chart { grid-column: 2; grid-row: 1; }
+/* Cada grafico fica no seu proprio conteiner, afastado da tabela ao lado. */
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-analysis-split { column-gap: 2.25rem; }
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-analysis-split > .ami-analysis-chart {
+  padding: 1rem; border: 1px solid var(--pli-border); border-radius: 8px; background: #fff;
+}
 .sicard-standard-page.ami-page #ami-analysis-workspace :is(.ami-kpis, .ahp-live-metrics) { gap: 1rem; }
 .sicard-standard-page.ami-page #ami-analysis-workspace :is(.ami-kpis > div, .ahp-metric-card, .ami-metric-card) { text-align: center; }
 .sicard-standard-page.ami-page #ami-analysis-workspace .ami-metric-card__top { justify-content: center; }
@@ -86,6 +94,13 @@
 .sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__bar:focus-visible { outline: 2px solid #123b56; outline-offset: 3px; }
 /* Full pair names above the bars, so text and quantitative scale do not compete. */
 .sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars { gap: 12px; }
+/* Pares em duas colunas (a primeira metade a esquerda), com uma so coluna quando o conteiner e estreito. */
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 1.5rem; }
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-analysis-split > .ami-analysis-chart { container-type: inline-size; }
+@container (max-width: 20rem) {
+  .sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__grid { grid-template-columns: minmax(0, 1fr); }
+}
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__grid > .ami-pair-bars__row { margin-bottom: 12px; }
 .sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__row {
   grid-template-columns: minmax(0,1fr); gap: 8px;
   padding: 8px; border-bottom: 1px solid var(--pli-border);
@@ -95,7 +110,7 @@
   overflow-wrap: anywhere; text-align: left; line-height: 1.4;
   font-size: .74rem; min-width: 0;
 }
-.sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__plot { min-width: 0; margin-right: 2rem; }
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__plot { min-width: 0; margin-right: 0; }
 .sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__legend { justify-content: flex-start; }
 .sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__legend li {
   display: grid; grid-template-columns: .6rem auto minmax(0,1fr);

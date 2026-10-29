@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.templating import Jinja2Templates
 
-from api.deps.auth import require_admin
+from api.deps.auth import require_analyst
 from api.exceptions import DatabaseUnavailableError
 from api.path_policy import project_path
 from api.services.catalogo_arquivos import obter_conciliacao, normalizar_vinculo
@@ -10,7 +10,7 @@ from api.services.session_service import SessionUser
 from api.services import ciclo_vida_arquivos as ciclo
 from pydantic import BaseModel, Field, StrictInt
 
-router = APIRouter(dependencies=[Depends(require_admin)])
+router = APIRouter(dependencies=[Depends(require_analyst)])
 templates = Jinja2Templates(directory=str(project_path("templates")))
 
 
@@ -28,7 +28,7 @@ def pagina(request: Request):
 
 
 @router.post("/catalogo/conciliacao/{categoria}/{recurso_id}/normalizar")
-def normalizar(categoria: str, recurso_id: str, user: SessionUser = Depends(require_admin)):
+def normalizar(categoria: str, recurso_id: str, user: SessionUser = Depends(require_analyst)):
     try:
         return normalizar_vinculo(categoria, recurso_id, str(user.id))
     except ValueError as exc:
@@ -54,12 +54,12 @@ def ciclo_vida():
 
 
 @router.post('/catalogo/conciliacao/resultados/{recurso_id}/regularizar')
-def regularizar(recurso_id: str, user: SessionUser = Depends(require_admin)):
+def regularizar(recurso_id: str, user: SessionUser = Depends(require_analyst)):
     return _executar(lambda: ciclo.regularizar(recurso_id, str(user.id)))
 
 
 @router.post('/catalogo/conciliacao/resultados/{recurso_id}/publicar')
-def publicar(recurso_id: str, user: SessionUser = Depends(require_admin)):
+def publicar(recurso_id: str, user: SessionUser = Depends(require_analyst)):
     return _executar(lambda: ciclo.publicar(recurso_id, str(user.id)))
 
 
@@ -68,15 +68,15 @@ class RetencaoInput(BaseModel):
 
 
 @router.put('/catalogo/conciliacao/retencao')
-def configurar_retencao(payload: RetencaoInput, user: SessionUser = Depends(require_admin)):
+def configurar_retencao(payload: RetencaoInput, user: SessionUser = Depends(require_analyst)):
     return _executar(lambda: ciclo.politica(payload.dias_temporarios, str(user.id), salvar=True))
 
 
 @router.get('/catalogo/conciliacao/retencao/previa')
-def previa(user: SessionUser = Depends(require_admin)):
+def previa(user: SessionUser = Depends(require_analyst)):
     return _executar(lambda: ciclo.limpar(str(user.id)))
 
 
 @router.post('/catalogo/conciliacao/retencao/executar')
-def reter(user: SessionUser = Depends(require_admin)):
+def reter(user: SessionUser = Depends(require_analyst)):
     return _executar(lambda: ciclo.limpar(str(user.id), executar=True))

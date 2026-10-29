@@ -1,0 +1,71 @@
+{% extends "paginas/admin/central_pendencias.html" %}
+{% block titulo %}Solicitação de complementação — SICARD{% endblock %}
+{% block pendencias_conteudo %}
+<section class="secao-cabecalho-julgamentos card ahp-step-intro ami-hero standard-page-hero card-cabecalho-julgamentos">
+  <h1 class="standard-page-hero__title"><i class="fa-solid fa-clipboard-list" aria-hidden="true"></i><span id="solicitacao-titulo">Gerenciar pendência</span></h1>
+  <p class="ami-eyebrow standard-page-hero__eyebrow">Central de pendências</p>
+  <p class="standard-page-hero__description">Confira o que falta, registre a orientação ao representante e revise a notificação antes de enviar.</p>
+</section>
+<div class="standard-section-action-row">
+  <a href="/restrict/central-pendencias/">Voltar à central de pendências</a>
+</div>
+<p id="pendencias-feedback" role="status" aria-live="polite">Carregando solicitação…</p>
+<section class="card ahp-step-section ami-panel" id="solicitacao-cadastro-parecer" hidden>
+  <div class="ahp-section-label"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i><span>Revisão do parecer para notificação</span></div>
+  <div class="ahp-section-body">
+    <p class="form-help">A mensagem abaixo é o conteúdo que será enviado ao representante. Para rever respostas ou acrescentar a justificativa técnica, abra a análise da demanda; depois atualize o parecer e o PDF nesta página. Atualizar não altera respostas, decisão ou situação da demanda.</p>
+    <div class="process-actions">
+      <a class="btn btn-secondary" id="solicitacao-abrir-analise">Revisar perguntas e respostas na análise</a>
+      <button class="btn btn-secondary" type="button" id="solicitacao-atualizar-parecer">Atualizar parecer e PDF</button>
+    </div>
+  </div>
+</section>
+<section class="card ahp-step-section ami-panel" data-attributes-section>
+  <div class="ahp-section-label"><i class="fa-solid fa-circle-info" aria-hidden="true"></i><span>1. Confira a demanda e o representante</span></div>
+  <div class="ahp-section-body"><p class="form-help">A notificação será enviada ao e-mail do representante cadastrado. Nenhum e-mail é enviado ao abrir ou salvar esta página.</p><dl class="notificacao-resumo" id="solicitacao-contexto"></dl></div>
+</section>
+<section class="card ahp-step-section ami-panel" id="solicitacao-pendencias" hidden>
+  <div class="ahp-section-label"><i class="fa-solid fa-list-check" aria-hidden="true"></i><span>Atributos que precisam ser preenchidos</span></div>
+  <div class="ahp-section-body">
+    <p class="form-help">Esta tela prepara o pedido de complementação; não é o formulário de preenchimento dos atributos. Oriente o representante sobre os itens abaixo. O atendimento é feito em <a href="/restrict/complementacao/">Complementação de demandas</a>.</p>
+    <div id="solicitacao-pendencias-lista"></div>
+  </div>
+</section>
+<section class="card ahp-step-section ami-panel" data-attributes-section>
+  <div class="ahp-section-label"><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i><span>2. Prepare e salve o pedido</span></div>
+  <div class="ahp-section-body">
+    <p id="solicitacao-pdf-status" class="form-help"></p>
+    <a id="solicitacao-pdf" target="_blank" rel="noopener noreferrer" hidden>Ver parecer PDF da análise da demanda</a>
+    <form id="solicitacao-form">
+      <fieldset id="solicitacao-campos" class="solicitacao-campos" disabled>
+        <legend>Conteúdo da solicitação</legend>
+        <div class="form-field"><label for="solicitacao-descricao">O que precisa ser complementado?</label><p class="form-help">Descreva o motivo do pedido. Esta orientação ficará disponível ao representante no atendimento.</p><textarea class="c-form-control" id="solicitacao-descricao" rows="4" required maxlength="5000"></textarea></div>
+        <fieldset class="solicitacao-categorias"><legend>Tipo de complementação</legend>
+          <label><input type="checkbox" name="categoria" value="dados_cadastrais"> Dados cadastrais</label>
+          <label><input type="checkbox" name="categoria" value="geometria"> Geometria</label>
+          <label><input type="checkbox" name="categoria" value="atributos_objeto"> Atributos da demanda</label>
+        </fieldset>
+        <div class="form-field"><label for="solicitacao-parecer">Anotações internas da equipe</label><p class="form-help">Opcional. Estas anotações não são enviadas por e-mail.</p><textarea class="c-form-control" id="solicitacao-parecer" rows="4" maxlength="10000"></textarea></div>
+        <div class="form-field"><label for="solicitacao-mensagem">Mensagem do e-mail ao representante</label><p class="form-help">Informe quais itens devem ser preenchidos e como proceder. Salve a mensagem antes de preparar a notificação.</p><textarea class="c-form-control" id="solicitacao-mensagem" rows="5" maxlength="10000"></textarea></div>
+      </fieldset>
+      <p class="form-help">Salvar apenas registra o pedido. Depois, use “Preparar notificação” para conferir a prévia; o envio só ocorre ao confirmar “Enviar notificação”.</p>
+      <div class="process-actions">
+        <button type="submit" class="btn btn-primary" id="solicitacao-salvar" disabled>Salvar pedido</button>
+        <button type="button" class="btn btn-secondary" id="solicitacao-recarregar">Recarregar</button>
+        <button type="button" class="btn btn-secondary" id="solicitacao-notificar" disabled>Preparar notificação</button>
+        <button type="button" class="btn btn-secondary" id="solicitacao-confirmacoes" disabled>Consultar entrega e leitura</button>
+      </div>
+    </form>
+  </div>
+</section>
+{% set previa_id = "solicitacao-previa" %}
+{% include "componentes/previsualizacao_notificacao.html" %}
+<section class="card ahp-step-section ami-panel" data-attributes-section>
+  <div class="ahp-section-label"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i><span>3. Acompanhe a notificação e o atendimento</span></div>
+  <div class="ahp-section-body">
+    <dl class="notificacao-resumo" id="solicitacao-auditoria"></dl>
+    <div id="solicitacao-historico"></div>
+    <details class="form-help"><summary>Dados técnicos para auditoria</summary><p>Identificadores internos e registro integral. Não são instruções de preenchimento.</p><pre class="solicitacao-dados-tecnicos" id="solicitacao-dados-tecnicos"></pre></details>
+  </div>
+</section>
+{% endblock %}

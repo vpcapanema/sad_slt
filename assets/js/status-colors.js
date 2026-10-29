@@ -3,129 +3,127 @@
    * Paleta única de status do SLT — fonte de verdade para badges, linhas de tabela,
    * pins do mapa e legendas. Não duplique cores em CSS estático; use injectTheme().
    */
+  // Manter o objeto em JSON estrito: o parecer PDF lê esta mesma paleta.
   const STATUS_DEMANDA = {
-    // Fase 1 — cadastro e análise da demanda
-    analise_rascunho: {
-      nome: "Em rascunho",
-      bg: "#e8eef3",
-      text: "#2c5282",
-      row: "#dce4eb",
-      halo: "rgba(44, 82, 130, 0.4)",
+    "analise_rascunho": {
+      "nome": "Em rascunho",
+      "bg": "#e8eef3",
+      "text": "#2c5282",
+      "row": "#dce4eb",
+      "halo": "rgba(44, 82, 130, 0.4)"
     },
-    analise_em_avaliacao: {
-      nome: "Em análise",
-      bg: "#fff8e1",
-      text: "#6d4c41",
-      row: "#ffecb3",
-      halo: "rgba(109, 76, 65, 0.4)",
+    "analise_em_avaliacao": {
+      "nome": "Em análise",
+      "bg": "#fff8e1",
+      "text": "#6d4c41",
+      "row": "#ffecb3",
+      "halo": "rgba(109, 76, 65, 0.4)"
     },
-    analise_aguardando_complementacao: {
-      nome: "Aguardando complementação",
-      bg: "#f3e8fd",
-      text: "#4a148c",
-      row: "#e1bee7",
-      halo: "rgba(74, 20, 140, 0.4)",
+    "analise_aguardando_complementacao": {
+      "nome": "Aguardando complementação",
+      "bg": "#f3e8fd",
+      "text": "#4a148c",
+      "row": "#e1bee7",
+      "halo": "rgba(74, 20, 140, 0.4)"
     },
-    analise_aprovada: {
-      nome: "Aprovada",
-      bg: "#e8f5e9",
-      text: "#2e7d32",
-      row: "#c8e6c9",
-      halo: "rgba(46, 125, 50, 0.4)",
+    "analise_aprovada": {
+      "nome": "Aprovada",
+      "bg": "#e8f5e9",
+      "text": "#2e7d32",
+      "row": "#c8e6c9",
+      "halo": "rgba(46, 125, 50, 0.4)"
     },
-    analise_reprovada: {
-      nome: "Reprovada na análise",
-      bg: "#ffebee",
-      text: "#c62828",
-      row: "#ffcdd2",
-      halo: "rgba(198, 40, 40, 0.4)",
+    "analise_reprovada": {
+      "nome": "Reprovada na análise",
+      "bg": "#ffebee",
+      "text": "#c62828",
+      "row": "#ffcdd2",
+      "halo": "rgba(198, 40, 40, 0.4)"
     },
-    analise_suspensa: {
-      nome: "Análise suspensa",
-      bg: "#eceff1",
-      text: "#546e7a",
-      row: "#dfe6e9",
-      halo: "rgba(84, 110, 122, 0.35)",
+    "analise_suspensa": {
+      "nome": "Análise suspensa",
+      "bg": "#eceff1",
+      "text": "#546e7a",
+      "row": "#dfe6e9",
+      "halo": "rgba(84, 110, 122, 0.35)"
     },
-    analise_cancelada: {
-      nome: "Cadastro cancelado",
-      bg: "#eceff1",
-      text: "#455a64",
-      row: "#e0e0e0",
-      halo: "rgba(69, 90, 100, 0.35)",
+    "analise_cancelada": {
+      "nome": "Cadastro cancelado",
+      "bg": "#eceff1",
+      "text": "#455a64",
+      "row": "#e0e0e0",
+      "halo": "rgba(69, 90, 100, 0.35)"
     },
-    // Fase 2 — hierarquização e ranqueamento
-    hierarq_em_andamento: {
-      nome: "Em hierarquização",
-      bg: "#fff3e0",
-      text: "#e65100",
-      row: "#ffe0b2",
-      halo: "rgba(230, 81, 0, 0.4)",
+    "hierarq_em_andamento": {
+      "nome": "Em hierarquização",
+      "bg": "#fff3e0",
+      "text": "#e65100",
+      "row": "#ffe0b2",
+      "halo": "rgba(230, 81, 0, 0.4)"
     },
-    hierarq_aguardando_complementacao: {
-      nome: "Em hierarquização: aguardando complementação de atributos",
-      bg: "#f3e8fd",
-      text: "#4a148c",
-      row: "#e1bee7",
-      halo: "rgba(74, 20, 140, 0.4)",
+    "hierarq_aguardando_complementacao": {
+      "nome": "Em hierarquização: aguardando complementação de atributos",
+      "bg": "#f3e8fd",
+      "text": "#4a148c",
+      "row": "#e1bee7",
+      "halo": "rgba(74, 20, 140, 0.4)"
     },
-    hierarq_finalizada: {
-      nome: "Hierarquização concluída",
-      bg: "#e0f2f1",
-      text: "#00695c",
-      row: "#b2dfdb",
-      halo: "rgba(0, 105, 92, 0.4)",
+    "hierarq_finalizada": {
+      "nome": "Hierarquização concluída",
+      "bg": "#e0f2f1",
+      "text": "#00695c",
+      "row": "#b2dfdb",
+      "halo": "rgba(0, 105, 92, 0.4)"
     },
-    hierarq_ranqueada: {
-      nome: "Ranqueada (publicada)",
-      bg: "#e0f7fa",
-      text: "#00838f",
-      row: "#b2ebf2",
-      halo: "rgba(0, 131, 143, 0.4)",
+    "hierarq_ranqueada": {
+      "nome": "Ranqueada (publicada)",
+      "bg": "#e0f7fa",
+      "text": "#00838f",
+      "row": "#b2ebf2",
+      "halo": "rgba(0, 131, 143, 0.4)"
     },
-    hierarq_suspensa: {
-      nome: "Hierarquização suspensa",
-      bg: "#eceff1",
-      text: "#546e7a",
-      row: "#dfe6e9",
-      halo: "rgba(84, 110, 122, 0.35)",
+    "hierarq_suspensa": {
+      "nome": "Hierarquização suspensa",
+      "bg": "#eceff1",
+      "text": "#546e7a",
+      "row": "#dfe6e9",
+      "halo": "rgba(84, 110, 122, 0.35)"
     },
-    hierarq_retirada: {
-      nome: "Retirada do ranking",
-      bg: "#fbe9e7",
-      text: "#d84315",
-      row: "#ffccbc",
-      halo: "rgba(216, 67, 21, 0.4)",
+    "hierarq_retirada": {
+      "nome": "Retirada do ranking",
+      "bg": "#fbe9e7",
+      "text": "#d84315",
+      "row": "#ffccbc",
+      "halo": "rgba(216, 67, 21, 0.4)"
     },
-    // Fase 3 — pós-ranqueamento / execução
-    exec_em_execucao: {
-      nome: "Em execução",
-      bg: "#e8eaf6",
-      text: "#283593",
-      row: "#c5cae9",
-      halo: "rgba(40, 53, 147, 0.4)",
+    "exec_em_execucao": {
+      "nome": "Em execução",
+      "bg": "#e8eaf6",
+      "text": "#283593",
+      "row": "#c5cae9",
+      "halo": "rgba(40, 53, 147, 0.4)"
     },
-    exec_suspensa: {
-      nome: "Execução suspensa",
-      bg: "#eceff1",
-      text: "#546e7a",
-      row: "#dfe6e9",
-      halo: "rgba(84, 110, 122, 0.35)",
+    "exec_suspensa": {
+      "nome": "Execução suspensa",
+      "bg": "#eceff1",
+      "text": "#546e7a",
+      "row": "#dfe6e9",
+      "halo": "rgba(84, 110, 122, 0.35)"
     },
-    exec_finalizada: {
-      nome: "Finalizada",
-      bg: "#e8f5e9",
-      text: "#1b5e20",
-      row: "#a5d6a7",
-      halo: "rgba(27, 94, 32, 0.4)",
+    "exec_finalizada": {
+      "nome": "Finalizada",
+      "bg": "#e8f5e9",
+      "text": "#1b5e20",
+      "row": "#a5d6a7",
+      "halo": "rgba(27, 94, 32, 0.4)"
     },
-    exec_cancelada: {
-      nome: "Cancelada",
-      bg: "#ffebee",
-      text: "#b71c1c",
-      row: "#ef9a9a",
-      halo: "rgba(183, 28, 28, 0.4)",
-    },
+    "exec_cancelada": {
+      "nome": "Cancelada",
+      "bg": "#ffebee",
+      "text": "#b71c1c",
+      "row": "#ef9a9a",
+      "halo": "rgba(183, 28, 28, 0.4)"
+    }
   };
 
   /** Fases do ciclo de vida — uma linha por fase na legenda. */
@@ -509,8 +507,11 @@
   }
 
   function rankingPinHtml(codigo, posicao = "n") {
-    const st = getStatusDemanda(codigo);
-    return `<div class="ranking-marker-pin" data-status="${escapeHtml(codigo)}" style="--ranking-pin-fill:${st.bg};--ranking-pin-ink:${st.text}"><span>${escapeHtml(posicao)}º</span></div>`;
+    const fase = getStatusFase(codigo);
+    const pal = pinPalette(codigo, "demanda");
+    const fill = fase === "execucao" ? legendStrongFill(getStatusDemanda(codigo)) : pal.fill;
+    const ponta = fase === "execucao" ? 27.5 : fase === "hierarquizacao" ? 32 : 35;
+    return `<div class="ranking-marker-pin" data-status="${escapeHtml(codigo)}" data-posicao="${escapeHtml(posicao)}" style="--ranking-pin-top:${52 - ponta * 48 / 36}px">${pinSvgByFase(fase, fill)}</div>`;
   }
 
   function decorateLeafletLayer(layer, codigo) {
@@ -580,12 +581,14 @@
   function renderSymbologyBlock() {
     registerLegendPattern("plano", "_sym", SYM_SAMPLE);
     registerLegendPattern("programa", "_sym", SYM_SAMPLE);
-    const pinFase1 = pinSwatchHtml("analise_em_avaliacao");
-    const pinFase2 = pinSwatchHtml("hierarq_em_andamento");
-    const pinFase3 = pinSwatchHtml("exec_em_execucao");
+    const pinsPorFase = LEGEND_FASES.map((fase) => `
+        <li class="status-legend-symbology-item status-legend-symbology-item--projeto">
+          ${pinSwatchHtml(fase.codes[0])}
+          <span class="status-legend-symbology-text"><strong>Projeto</strong> — ${escapeHtml(fase.title)}</span>
+        </li>`).join("");
     return `<div class="status-legend-symbology" data-legend="symbology">
       <p class="status-color-legend-layer-title">Simbologia no mapa</p>
-      <p class="status-legend-symbology-hint">Cor = status (acima). Forma e textura = tipo de demanda.</p>
+      <p class="status-legend-symbology-hint">Cor = status. Textura = tipo de demanda. Formato do alfinete = fase.</p>
       <ul class="status-legend-symbology-list" role="list">
         <li class="status-legend-symbology-item">
           ${textureSampleHtml("plano")}
@@ -595,10 +598,7 @@
           ${textureSampleHtml("programa")}
           <span class="status-legend-symbology-text"><strong>Programa</strong> — polígono com malha cruzada</span>
         </li>
-        <li class="status-legend-symbology-item status-legend-symbology-item--projeto">
-          <span class="status-legend-pin-row" aria-hidden="true">${pinFase1}${pinFase2}${pinFase3}</span>
-          <span class="status-legend-symbology-text"><strong>Projeto</strong> — alfinete (formato varia por fase do status)</span>
-        </li>
+        ${pinsPorFase}
       </ul>
     </div>`;
   }

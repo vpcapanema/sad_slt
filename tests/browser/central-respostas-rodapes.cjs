@@ -6,6 +6,7 @@ const assert = require('node:assert/strict');
   try {
     const page = await browser.newPage({viewport: {width: 1440, height: 1000}});
     const errors = [];
+    if (process.env.SICARD_BROWSER_SESSION) await page.context().addCookies([{name: 'slt_session', value: process.env.SICARD_BROWSER_SESSION, url: 'http://127.0.0.1:8083'}]);
     page.on('pageerror', error => errors.push(error.message));
     await page.route('**/api/**', route => {
       const path = new URL(route.request().url()).pathname;

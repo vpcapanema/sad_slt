@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response
 
 from api.deps.auth import require_analyst, require_authenticated
 from api.exceptions import DatabaseUnavailableError, DemandaValidationError
@@ -23,6 +23,7 @@ from api.schemas.comparacao_colaborativa import (
     RespostaCentralResponseSchema,
 )
 from api.services import comparacao_colaborativa_service as service
+from api.services import email_resposta_colaborador
 from api.services.session_service import SessionUser
 from pydantic import BaseModel, Field
 from typing import Any
@@ -348,14 +349,17 @@ def validar_acesso_publico(
 def enviar_resposta(
     token: str,
     body: RespostaColaborativaCreateSchema,
+    segundo_plano: BackgroundTasks,
 ) -> RespostaColaborativaResponseSchema:
-    """Envia resposta colaborativa (RC < 0,10 obrigatório)."""
+    """Envia resposta colaborativa (RC < 0,10 obrigatório) e confirma o recebimento por e-mail."""
     try:
-        return service.registrar_resposta(token, body)
+        resposta = service.registrar_resposta(token, body)
     except DemandaValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except DatabaseUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+    segundo_plano.add_task(email_resposta_colaborador.notificar, resposta.ambiente_id, resposta.id)
+    return resposta
 
 
 @router.post("/publico/{token}/respostas/iniciar", response_model=RespostaColaborativaResponseSchema)

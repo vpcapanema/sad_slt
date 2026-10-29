@@ -1771,9 +1771,18 @@ def _decisao_risco_fase3(obj: dict[str, Any]) -> tuple[str, float]:
 
 
 def executar_fase_3(
-    codigo: str, payload: HierarquizacaoFase3ExecutarSchema
+    codigo: str,
+    payload: HierarquizacaoFase3ExecutarSchema,
+    *,
+    persistir: bool = True,
+    versao_esperada: datetime | None = None,
 ) -> HierarquizacaoResponseSchema:
     row = _carregar(codigo)
+    if versao_esperada and row.get("atualizado_em") != versao_esperada:
+        raise DemandaValidationError(
+            "A hierarquização mudou desde a prévia. Recalcule o índice antes de salvar.",
+            field="versao_esperada",
+        )
     dados = deepcopy(row.get("dados_hierarquizacao") or {})
     _exigir_fase(dados, 3)
     remover_resultados_fase3(dados)
@@ -1962,16 +1971,18 @@ def executar_fase_3(
         "completude_minima": payload.completude_minima,
         "regra_ausentes": payload.regra_ausentes,
     }
-    return _response(
-        repo.update(codigo, {
-            "dados_hierarquizacao": dados,
-            "relatorio_fase3": dados["cabecalho_grupo"]["relatorios"]["fase_3"],
-            "relatorio_consolidado": {},
-            "ranking": [],
-            "status": "em_julgamento",
-        })
-        or row
-    )
+    atualizacoes = {
+        "dados_hierarquizacao": dados,
+        "relatorio_fase3": dados["cabecalho_grupo"]["relatorios"]["fase_3"],
+        "relatorio_consolidado": {},
+        "ranking": [],
+        "status": "em_julgamento",
+    }
+    if not persistir:
+        return _response({**row, **atualizacoes})
+    if versao_esperada:
+        return _response(repo.update(codigo, atualizacoes, expected_updated_at=versao_esperada) or row)
+    return _response(repo.update(codigo, atualizacoes) or row)
 
 
 def salvar_atributos_fase3(
@@ -2086,9 +2097,18 @@ def _indices_objeto(obj: dict[str, Any]) -> tuple[Any, Any, Any]:
 
 
 def sintetizar(
-    codigo: str, payload: HierarquizacaoSinteseSchema
+    codigo: str,
+    payload: HierarquizacaoSinteseSchema,
+    *,
+    persistir: bool = True,
+    versao_esperada: datetime | None = None,
 ) -> HierarquizacaoResponseSchema:
     row = _carregar(codigo)
+    if versao_esperada and row.get("atualizado_em") != versao_esperada:
+        raise DemandaValidationError(
+            "A hierarquização mudou desde a prévia. Recalcule a síntese antes de salvar.",
+            field="versao_esperada",
+        )
     dados = deepcopy(row.get("dados_hierarquizacao") or {})
     if 3 in _fases_configuradas(dados):
         for objeto in dados.get("objetos", []):
@@ -2185,18 +2205,17 @@ def sintetizar(
             if obj["hierarquizacao"]["sintese"].get("restrito_segregado")
         ),
     }
-    return _response(
-        repo.update(
-            codigo,
-            {
-                "dados_hierarquizacao": dados,
-                "ranking": final,
-                "relatorio_consolidado": dados["cabecalho_grupo"]["relatorios"]["sintese"],
-                "status": "calculada",
-            },
-        )
-        or row
-    )
+    atualizacoes = {
+        "dados_hierarquizacao": dados,
+        "ranking": final,
+        "relatorio_consolidado": dados["cabecalho_grupo"]["relatorios"]["sintese"],
+        "status": "calculada",
+    }
+    if not persistir:
+        return _response({**row, **atualizacoes})
+    if versao_esperada:
+        return _response(repo.update(codigo, atualizacoes, expected_updated_at=versao_esperada) or row)
+    return _response(repo.update(codigo, atualizacoes) or row)
 
 
 def calcular_hierarquizacao(codigo: str) -> HierarquizacaoResponseSchema:
@@ -2238,6 +2257,42 @@ def homologar_hierarquizacao(
             field="status",
         )
     return _response(repo.homologar(codigo, _uuid(homologado_por)) or row)
+
+
+def resultados_desatualizados(row: dict[str, Any]) -> bool:
+    return (
+        _sintese_vencida(row.get("dados_hierarquizacao") or {})
+        or any((row.get(chave) or {}).get("desatualizado") for chave in (
+            "relatorio_fase1", "relatorio_fase2", "relatorio_fase3", "relatorio_consolidado",
+        ))
+        or configuracao_fase3_desatualizada(row)
+    )
+
+
+def publicar_hierarquizacao(codigo: str, *, publicado_por: str) -> HierarquizacaoResponseSchema:
+    """Publica somente a versão homologada e atual, sob trava da rodada."""
+    from api.db.connection import atomic_connection
+    from api.services.publicacao_hierarquizacao import assinatura_resultados, publicacao_vigente
+
+    with atomic_connection():
+        row = repo.get_by_codigo(codigo, for_update=True)
+        if not row:
+            raise HierarquizacaoNotFoundError(codigo)
+        if row.get("status") != "homologada" or not row.get("ranking"):
+            raise DemandaValidationError("Somente uma hierarquização homologada com ranking pode ser publicada.", field="status")
+        if resultados_desatualizados(row):
+            raise DemandaValidationError("Resultados desatualizados. Reverta a homologação e recalcule antes de publicar.", field="status")
+        if publicacao_vigente(row):
+            return _response(row)
+        dados = deepcopy(row.get("dados_hierarquizacao") or {})
+        dados.setdefault("cabecalho_grupo", {})["publicacao"] = {
+            "ativa": True,
+            "publicado_por": publicado_por,
+            "publicado_em": datetime.now(timezone.utc).isoformat(),
+            "assinatura_resultados": assinatura_resultados(row),
+        }
+        repo._registrar_historico(dados, "publicada", publicado_por)
+        return _response(repo.update(codigo, {"dados_hierarquizacao": dados}, permitir_homologada=True) or row)
 
 
 def sincronizar_composicao(codigo: str) -> HierarquizacaoResponseSchema:

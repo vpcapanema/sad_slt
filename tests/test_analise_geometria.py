@@ -141,10 +141,10 @@ def test_parecer_distingue_intencao_de_envio_e_substituicao_efetiva():
 
 def test_sim_so_aprova_geometria_depois_de_confirmar():
     analise = {"avaliacao_geometria": {"adequada": True, "confirmada": False}}
-    assert "está pendente" in service._parecer_com_geometria(analise)
-    assert "foi aprovada" not in service._parecer_com_geometria(analise)
+    assert "CONFIRMAÇÃO PENDENTE" in service._parecer_com_geometria(analise)
+    assert "AVALIAÇÃO CONFIRMADA" not in service._parecer_com_geometria(analise)
     analise["avaliacao_geometria"]["confirmada"] = True
-    assert "foi aprovada" in service._parecer_com_geometria(analise)
+    assert "AVALIAÇÃO CONFIRMADA" in service._parecer_com_geometria(analise)
 
 
 @pytest.mark.parametrize("adequada,encaminhamento,tipo_esperado", [

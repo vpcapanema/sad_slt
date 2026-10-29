@@ -9,7 +9,7 @@
 
 {% block estilos_pagina %}
   <link rel="stylesheet" href="/restrict/hierarquizacao/platform-map.css?v=20260814-1">
-  <link rel="stylesheet" href="/restrict/index.css?v=20261022-cards-3d-coloridos" />
+  <link rel="stylesheet" href="/restrict/index.css?v=20261029-cards-preparacao-fases" />
   <link
       rel="stylesheet"
       href="/assets/vendor/fontawesome/css/all.min.css"
@@ -18,10 +18,11 @@
 {% endblock %}
 
 
-{% macro link_card(href, icon, title, tone='blue') %}
+{% macro link_card(href, icon, title, tone='blue', subtitle='') %}
   <a class="platform-tile platform-tile--{{ tone }}" href="{{ href }}" title="{{ title }}" target="_blank" rel="noopener noreferrer">
     <span class="platform-tile__icon"><i class="{{ icon }}" aria-hidden="true"></i></span>
     <span class="platform-tile__label">{{ title }}</span>
+    {% if subtitle %}<span class="platform-tile__subtitle">{{ subtitle }}</span>{% endif %}
   </a>
 {% endmacro %}
 {% macro group_heading(identifier, title, subtitle, description) %}
@@ -114,9 +115,11 @@
         <section class="platform-group secao-platform-mocad" aria-labelledby="group-mocad">
           {{ group_heading('group-mocad', 'MOCAD — Cadastro e análise de demandas', 'Cadastro e análise de demandas', 'Cadastro, acompanhamento e análise.') }}
           <div class="platform-grid">
+            {{ link_card('/public/cadastro/', 'fa-solid fa-folder-open', 'Cadastro de demandas — acesso e orientações', 'blue') }}
             {{ link_card('/restrict/painel/', 'fa-solid fa-map-location-dot', 'Mapa de demandas', 'blue') }}
             {{ link_card('/restrict/demandas/', 'fa-solid fa-table-list', 'Demandas cadastradas — tabela', 'blue') }}
             {{ link_card('/restrict/demanda/', 'fa-solid fa-magnifying-glass-chart', 'Análise de demanda', 'blue') }}
+            {{ link_card('/restrict/central-pendencias/', 'fa-solid fa-list-check', 'Central de pendências', 'blue') }}
             {{ link_card('/restrict/sei-documentos/', 'fa-solid fa-file-import', 'Cadastro de demandas a partir de PDFs do SEI', 'blue') }}
           </div>
         </section>
@@ -125,20 +128,20 @@
           {{ group_heading('group-mad', 'MAD — Apoio à decisão', 'Apoio à decisão e hierarquização', 'Processos, critérios e prioridades.') }}
           <div class="platform-subgroups">
             <div class="platform-subgroup subgroup-analise-multicriterio-ahp-e-obtencao-de-pesos">
-              <h3 class="platform-subgroup__title">Organização das hierarquizações e julgamentos AHP</h3>
+              <h3 class="platform-subgroup__title">Central de Julgamentos AHP</h3>
               <div class="platform-grid">
-                {{ link_card('/restrict/agrupamento-demandas/', 'fa-solid fa-object-group', 'Agrupamento de demandas', 'amber') }}
-                {{ link_card('/restrict/hierarquizacao/processos/', 'fa-solid fa-diagram-project', 'Gestão das hierarquizações', 'amber') }}
                 {{ link_card('/restrict/analise-multicriterio/central-julgamentos', 'fa-solid fa-people-group', 'Gestão de julgamentos AHP', 'amber') }}
-                {{ link_card('/restrict/analise-multicriterio/central-respostas', 'fa-solid fa-list-check', 'Respostas dos especialistas aos julgamentos AHP', 'amber') }}
+                {{ link_card('/restrict/analise-multicriterio/central-respostas', 'fa-solid fa-list-check', 'Gestão de Respostas', 'amber') }}
               </div>
             </div>
             <div class="platform-subgroup subgroup-ranqueamento">
-              <h3 class="platform-subgroup__title">Avaliação territorial e priorização</h3>
+              <h3 class="platform-subgroup__title">Hierarquização de Demandas</h3>
               <div class="platform-grid">
-                {{ link_card('/restrict/hierarquizacao/fase-1/', 'fa-solid fa-filter-circle-xmark', 'Elegibilidade territorial', 'green') }}
-                {{ link_card('/restrict/hierarquizacao/fase-2/', 'fa-solid fa-mountain-sun', 'Favorabilidade territorial', 'green') }}
-                {{ link_card('/restrict/hierarquizacao/fase-3/', 'fa-solid fa-sliders', 'Priorização de demandas por atributos', 'green') }}
+                {{ link_card('/restrict/agrupamento-demandas/', 'fa-solid fa-object-group', 'Agrupamento de demandas', 'green', 'Preparação') }}
+                {{ link_card('/restrict/hierarquizacao/processos/', 'fa-solid fa-diagram-project', 'Cadastrar Hierarquização', 'green', 'Preparação') }}
+                {{ link_card('/restrict/hierarquizacao/fase-1/', 'fa-solid fa-filter-circle-xmark', 'Elegibilidade Territorial', 'green', 'Fase 1') }}
+                {{ link_card('/restrict/hierarquizacao/fase-2/', 'fa-solid fa-mountain-sun', 'Favorabilidade territorial e de rede', 'green', 'Fase 2') }}
+                {{ link_card('/restrict/hierarquizacao/fase-3/', 'fa-solid fa-sliders', 'Priorização por atributos', 'green', 'Fase 3') }}
               </div>
             </div>
           </div>
@@ -149,7 +152,7 @@
         <section class="platform-group secao-platform-resultados" aria-labelledby="group-resultados">
           {{ group_heading('group-resultados', 'RESULTADOS', 'Resultados e transparência', 'Rankings e publicações.') }}
           <div class="platform-grid">
-            {{ link_card('/restrict/hierarquizacao/ranking/', 'fa-solid fa-ranking-star', 'Resultados e ranking de demandas', 'violet') }}
+            {{ link_card('/restrict/hierarquizacao/homologacao-ranking-publicacao/', 'fa-solid fa-ranking-star', 'Homologação, Ranking e Publicação', 'violet') }}
             {{ link_card('/public/transparencia/', 'fa-solid fa-eye', 'Transparência e acompanhamento', 'violet') }}
           </div>
         </section>

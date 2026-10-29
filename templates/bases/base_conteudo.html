@@ -19,6 +19,7 @@
   {% block navbar %}{% include "componentes/navbar_" ~ navegacao ~ ".html" %}{% endblock %}
 
   {% block antes_conteudo %}{% endblock %}
+  {% include "componentes/access_mode.html" %}
   {% block conteudo %}{% endblock %}
 
   {% include "componentes/footer.html" %}

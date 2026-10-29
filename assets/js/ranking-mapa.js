@@ -46,13 +46,58 @@
     const arvore = root.querySelector("[data-ranking-tree]");
     const aviso = root.querySelector("[data-ranking-map-status]");
     const mapa = SLTPainelMapControls.initPainelMap(canvas);
+    mapa.createPane("ranking-labels").style.zIndex = "660";
     const camadas = L.featureGroup().addTo(mapa);
+    const ligacoes = L.layerGroup().addTo(mapa);
     const entradas = new Map();
     const visibilidade = new Map();
     let politica = podeExibir;
     let rodadas = hierarquizacoes;
     let cadastro = demandas;
     let enquadramento;
+    let reposicionamento;
+
+    function separarRotulos() {
+      ligacoes.clearLayers();
+      const ocupados = [];
+      entradas.forEach(entrada => {
+        if (!habilitada(entrada)) return;
+        const el = entrada.rotulo.getElement()?.querySelector(".ranking-position-label");
+        if (!el) return;
+        const ponto = mapa.latLngToContainerPoint(entrada.marker.getLatLng());
+        let x = 0, y = 0, livre = false;
+        for (let raio = 0; !livre; raio++) {
+          for (let coluna = -raio; coluna <= raio && !livre; coluna++) {
+            for (let linha = -raio; linha <= raio && !livre; linha++) {
+              if (Math.max(Math.abs(coluna), Math.abs(linha)) !== raio) continue;
+              x = 20 + coluna * (el.offsetWidth + 6);
+              y = -60 + linha * (el.offsetHeight + 6);
+              const rect = { x: ponto.x + x, y: ponto.y + y, width: el.offsetWidth, height: el.offsetHeight };
+              if (ocupados.some(outro => rect.x < outro.x + outro.width + 4
+                && rect.x + rect.width + 4 > outro.x && rect.y < outro.y + outro.height + 4
+                && rect.y + rect.height + 4 > outro.y)) continue;
+              ocupados.push(rect); livre = true;
+            }
+          }
+        }
+        el.style.transform = `translate(${x}px, ${y}px)`;
+        if (x !== 20 || y !== -60) {
+          const borda = L.point(
+            Math.max(ponto.x + x, Math.min(ponto.x, ponto.x + x + el.offsetWidth)),
+            Math.max(ponto.y + y, Math.min(ponto.y, ponto.y + y + el.offsetHeight)),
+          );
+          L.polyline([entrada.marker.getLatLng(), mapa.containerPointToLatLng(borda)], {
+            color: "#374151", weight: 1, opacity: 0.8, interactive: false,
+            className: "ranking-marker-connector",
+          }).addTo(ligacoes);
+        }
+      });
+    }
+    function agendarSeparacao() {
+      cancelAnimationFrame(reposicionamento);
+      reposicionamento = requestAnimationFrame(separarRotulos);
+    }
+    mapa.on("zoomend moveend resize", agendarSeparacao);
 
     function chave(h, item) { return JSON.stringify([h.codigo, item.codigo || item.demanda_id]); }
     function habilitada(entrada) {
@@ -62,6 +107,7 @@
     }
     function aplicarVisibilidade() {
       entradas.forEach(entrada => SLTPainelMapControls.applyEntryVisibility(entrada, camadas, habilitada(entrada)));
+      agendarSeparacao();
     }
     function focar(codigo, demanda) {
       cancelAnimationFrame(enquadramento);
@@ -142,16 +188,31 @@
             });
             geometria.eachLayer(layer => SLTStatusColors.decorateLeafletLayer(layer, status));
             if (!geometria.getBounds().isValid()) throw new Error("geometria inválida ou vazia");
-            const marker = L.marker(centroidePoligonal(geo) || geometria.getBounds().getCenter(), {
+            let ancora = centroidePoligonal(geo);
+            if (!ancora) geometria.eachLayer(layer => {
+              if (!ancora) ancora = layer.getLatLng?.() || layer.getCenter?.();
+            });
+            if (!ancora) throw new Error("geometria sem ponto de ancoragem");
+            const marker = L.marker(ancora, {
               icon: L.divIcon({ className: "ranking-marker-wrap",
                 html: SLTStatusColors.rankingPinHtml(status, item.posicao),
-                iconSize: [42, 48], iconAnchor: [18, 38] }),
+                iconSize: [42, 56], iconAnchor: [21, 52] }),
+              zIndexOffset: 10000 - item.posicao,
+              title: `${item.nome} — ${item.posicao}º`,
+            });
+            const rotulo = L.marker(ancora, {
+              pane: "ranking-labels",
+              icon: L.divIcon({ className: "ranking-label-wrap",
+                html: `<span class="ranking-position-label" data-posicao="${D.esc(item.posicao)}">${D.esc(item.posicao)}º</span>`,
+                iconSize: [0, 0], iconAnchor: [0, 0] }),
+              title: `${item.posicao}º — ${item.nome}`,
               zIndexOffset: 10000 - item.posicao,
             });
             const popup = `<strong>${D.esc(item.nome)}</strong><br>${D.esc(h.nome)}<br>Situação: ${D.esc(SLTStatusColors.getStatusDemanda(status).nome)}<br>Posição: ${D.esc(item.posicao)}º · Índice: ${D.indice(item.score)}`;
-            geometria.bindPopup(popup); marker.bindPopup(popup);
+            geometria.bindPopup(popup); marker.bindPopup(popup); rotulo.bindPopup(popup);
             const key = chave(h, item);
-            entradas.set(key, { chave: key, tipo: item.tipo, grupo: h.codigo, demanda: item.codigo || item.demanda_id, layers: [geometria, marker] });
+            entradas.set(key, { chave: key, tipo: item.tipo, grupo: h.codigo, demanda: item.codigo || item.demanda_id,
+              marker, rotulo, layers: [geometria, marker, rotulo] });
           } catch (error) {
             problemas.push(`${h.codigo} / ${item.codigo}: ${error.message}`);
           }
@@ -175,7 +236,10 @@
         if (typeof resolver !== "function") throw new TypeError("Informe uma função de autorização de publicação.");
         politica = resolver; render();
       },
-      destruir() { cancelAnimationFrame(enquadramento); mapa.stop(); mapa.remove(); },
+      destruir() {
+        cancelAnimationFrame(enquadramento); cancelAnimationFrame(reposicionamento);
+        mapa.off("zoomend moveend resize", agendarSeparacao); mapa.stop(); mapa.remove();
+      },
     };
   }
   global.SLTRankingMapa = { criar };

@@ -224,7 +224,10 @@
 .ami-page .ami-result-modal .ami-data-modal__head h2 { font-size: var(--ami2-titulo) }
 .ami-page #ami-analysis-workspace .ahp-subsection-num { font-size: var(--ami2-nota) }
 .ami-page .ami-result-title,
-.ami-page .ami-metric-help h4 { font-size: var(--ami2-titulo) }
+.ami-page .ami-metric-help h4,
+.ami-page .ami-pane-title { font-size: var(--ami2-titulo) }
+.ami-pane-title{margin:0 0 .75rem;color:var(--pli-deep);font-weight:700;text-align:center;text-transform:uppercase;letter-spacing:.03em}
+.ami-stats-table__codigo{white-space:nowrap}
 
 /* --- texto corrido ------------------------------------------------------- */
 .ami-page #ami-analysis-workspace .ami-subsection-hint,
@@ -279,6 +282,51 @@
 .ami-homologada__fases{display:grid;gap:.4rem;margin:0;padding:0;list-style:none}
 .ami-homologada__fases a{display:flex;gap:.6rem;align-items:center;padding:.5rem .7rem;border:1px solid #d5e3da;border-radius:8px;background:#fff;color:var(--pli-deep);text-decoration:none}
 .ami-homologada__fases a:hover{border-color:#1f8a4c;background:#f3faf6}
+
+/* Barras em escala de Saaty completa (1/9 ... 1 ... 9), centrada em 1. */
+.ami-page .ami-pair-bars__line{display:grid;grid-template-columns:1.4rem minmax(0,1fr) 2rem;gap:.4rem;align-items:center}
+.ami-page .ami-pair-bars__who{color:var(--pli-muted);font-size:.6rem;font-weight:700}
+.ami-page .ami-pair-bars__value{color:var(--pli-deep);font-size:.64rem;font-variant-numeric:tabular-nums;text-align:right}
+.ami-page .ami-scale{position:relative;display:block;height:.72rem;border-radius:3px;background:repeating-linear-gradient(90deg,#eef3f7 0,#eef3f7 calc(100%/16 - 1px),#d6e0e8 calc(100%/16 - 1px),#d6e0e8 calc(100%/16))}
+.ami-page .ami-scale::after{content:"";position:absolute;z-index:1;left:50%;top:-2px;bottom:-2px;width:1px;background:#4f6676}
+.ami-page .ami-scale__fill{position:absolute;top:0;bottom:0;display:block}
+.ami-page .ami-scale__fill.is-a{left:50%;border-radius:0 3px 3px 0;background:var(--pli-blue,#116593)}
+.ami-page .ami-scale__fill.is-b{right:50%;border-radius:3px 0 0 3px;background:#7a1620}
+.ami-page .ami-scale-key{display:grid;grid-template-columns:auto minmax(0,12rem) auto;gap:.4rem;align-items:center;justify-content:center;margin:.5rem 0 .3rem;color:var(--pli-muted);font-size:.62rem;font-variant-numeric:tabular-nums}
+.ami-page .ami-pair-bars__legend [data-judge-open]{display:inline-flex}
+.ami-page .ami-pair-bars__legend strong{flex:none;white-space:nowrap;overflow-wrap:normal}
+.ami-page .ami-pair-bars__plot{margin-right:0}
+.ami-page .ami-stats-table tbody tr[data-pair],.ami-page .ami-stats-table tbody tr[data-criterio]{cursor:pointer}
+.ami-page .ami-analysis-split .ami-stats-table tbody tr.is-hl td{background:#e3eef8}
+.ami-page .ami-analysis-split .ami-stats-table tbody tr.is-sel td{background:#c9ddf0;font-weight:700}
+.ami-page .ami-pair-bars__row{cursor:pointer;border-radius:.3rem;transition:opacity .15s,background .15s}
+.ami-page .ami-pair-bars__row.is-hl{background:#e3eef8;box-shadow:inset 3px 0 0 var(--pli-blue)}
+.ami-page .ami-pair-bars__row.is-sel{background:#c9ddf0;box-shadow:inset 3px 0 0 var(--pli-deep)}
+.ami-page .ami-pair-bars.has-sel .ami-pair-bars__row:not(.is-sel){opacity:.4}
+.ami-page .ami-pair-bars__legend [data-judge-open]{cursor:pointer}
+.ami-page .ami-pair-bars__legend [data-judge-open]:hover .ami-pair-bars__judge-name{text-decoration:underline}
+.ami-page :is(.ami-pair-bars__row,.ami-donut-chart li,.ami-pair-bars__legend [data-judge-open]):focus-visible{outline:2px solid var(--pli-blue);outline-offset:1px}
+
+/* Rosca dos pesos: a figura empilha (rosca em cima, legenda embaixo) e se
+   ajusta a qualquer largura da coluna, sem invadir a tabela ao lado. */
+.ami-page .ami-analysis-chart{overflow:hidden}
+.ami-page .ami-analysis-chart .ami-donut-chart{display:grid;grid-template-columns:minmax(0,1fr);justify-items:center;gap:1rem;margin:0}
+.ami-page .ami-donut-chart__plot{position:relative;display:grid;place-items:center;width:min(100%,13rem);aspect-ratio:1;margin:0 auto;border-radius:0;background:none}
+.ami-page .ami-donut-chart__plot:after{content:none}
+.ami-page .ami-donut-chart__plot svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.ami-page .ami-donut-chart__slice{fill:none;stroke-width:20;cursor:pointer;outline:none;-webkit-tap-highlight-color:transparent;transition:stroke-width .15s,opacity .15s}
+.ami-page .ami-donut-chart__slice:focus,.ami-page .ami-donut-chart__plot svg:focus{outline:none}
+.ami-page .ami-donut-chart__slice:focus-visible{stroke-width:23}
+.ami-page .ami-donut-chart__slice.is-hl{stroke-width:23}
+.ami-page .ami-donut-chart__slice.is-sel{stroke-width:25}
+.ami-page .ami-donut-chart.has-sel .ami-donut-chart__slice:not(.is-sel){opacity:.35}
+.ami-page .ami-donut-chart__plot span{pointer-events:none}
+.ami-page .ami-donut-chart figcaption{width:100%;min-width:0}
+.ami-page .ami-donut-chart ul{grid-template-columns:repeat(auto-fit,minmax(7.5rem,1fr));gap:.3rem .6rem}
+.ami-page .ami-donut-chart li{cursor:pointer;padding:.2rem .35rem;border-radius:.3rem}
+.ami-page .ami-donut-chart li.is-hl{background:#e3eef8}
+.ami-page .ami-donut-chart li.is-sel{background:#c9ddf0;font-weight:700}
+.ami-page .ami-donut-chart.has-sel li:not(.is-sel){opacity:.55}
 .ami-homologada__fases a>span:nth-child(2){display:grid;min-width:0}
 .ami-homologada__fases strong{font-size:var(--ami2-dado,.64rem)}
 .ami-homologada__fases small{color:var(--pli-muted);font-size:var(--ami2-nota,.6rem)}

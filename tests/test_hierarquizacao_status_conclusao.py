@@ -156,6 +156,31 @@ def test_reverter_exige_rodada_homologada(monkeypatch):
         repo.reverter_homologacao("H-1", "u-2")
 
 
+def test_reverter_revoga_publicacao_e_preserva_auditoria(monkeypatch):
+    dados = _dados("1")
+    dados["cabecalho_grupo"] = {"publicacao": {"ativa": True, "publicado_por": "u1", "publicado_em": "data"}}
+    rodada = {"status": "homologada", "ranking": [1], "homologado_por": "u1", "dados_hierarquizacao": dados}
+    conn = ConexaoRodada(3, [], rodada)
+    _preparar(monkeypatch, conn)
+    repo.reverter_homologacao("H-1", "u2")
+    persistidos = conn.operacoes[-1][1][0].obj["cabecalho_grupo"]
+    assert persistidos["publicacao"] == {"ativa": False, "publicado_por": "u1", "publicado_em": "data"}
+    assert [h["acao"] for h in persistidos["historico_homologacao"]] == ["publicacao_revogada", "revertida"]
+    assert all(h["usuario_id"] == "u2" for h in persistidos["historico_homologacao"])
+
+
+def test_recalculo_nao_reutiliza_publicacao_anterior(monkeypatch):
+    conn = ConexaoRodada(3, [], {"status": "calculada"})
+    _preparar(monkeypatch, conn)
+    dados = {"cabecalho_grupo": {"publicacao": {"ativa": True, "publicado_por": "u1"}}}
+    repo.update("H-1", {"dados_hierarquizacao": dados, "ranking": []})
+    params = conn.operacoes[-1][1]
+    cab = params["dados_hierarquizacao"].obj["cabecalho_grupo"]
+    assert cab["publicacao"]["ativa"] is False
+    assert cab["historico_homologacao"][0]["acao"] == "publicacao_invalidada"
+    assert dados["cabecalho_grupo"]["publicacao"]["ativa"] is True
+
+
 def test_registro_cadastral_vem_do_cadastro_vivo_e_preserva_resultados_das_fases():
     vivo = {"id": "1", "codigo": "C-1", "nome": "Nome corrigido", "status": "hierarq_finalizada",
             "latitude": 1.5, "longitude": 2.5, "descricao": "nova", "valor_global": 10}

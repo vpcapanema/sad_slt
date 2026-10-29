@@ -1,0 +1,54 @@
+.central-pendencias-page [hidden] { display: none !important; }
+.central-pendencias-page .admin-filter-column-divider {
+  flex: 0 0 1px;
+  width: 1px;
+  height: 18px;
+  margin: 0 4px;
+  background: #a9bdcb;
+}
+.central-pendencias-page .notificacao-resumo {
+  display: grid;
+  grid-template-columns: minmax(100px, max-content) 1fr;
+  gap: .4rem 1rem;
+  margin: 0;
+  font: 400 .8rem/1.5 Roboto, Arial, sans-serif;
+}
+.central-pendencias-page .notificacao-resumo dt { font-weight: 600; }
+.central-pendencias-page .notificacao-resumo dd { margin: 0; overflow-wrap: anywhere; }
+.central-pendencias-page .notificacao-mensagem {
+  max-width: 85ch;
+  color: #123b56;
+  font: 400 .85rem/1.65 Roboto, Arial, sans-serif;
+}
+.central-pendencias-page .notificacao-mensagem p {
+  margin: .75rem 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.central-pendencias-page .notificacao-rastreio code { overflow-wrap: anywhere; }
+.central-pendencias-page .solicitacao-campos {
+  display: grid;
+  gap: 1rem;
+  border: 0;
+  padding: 0;
+  min-width: 0;
+}
+.central-pendencias-page .solicitacao-categorias { border: 0; padding: 0; }
+.central-pendencias-page .solicitacao-categorias label { display: inline-flex; gap: .4rem; margin-right: 1rem; }
+.central-pendencias-page .ami-main #solicitacao-form textarea {
+  width: 100%;
+  height: auto !important;
+  min-height: 100px !important;
+}
+.central-pendencias-page #solicitacao-pendencias-lista ul { margin: .5rem 0; padding-left: 1.25rem; }
+.central-pendencias-page #solicitacao-pendencias-lista li { font: 400 .8rem/1.5 Roboto, Arial, sans-serif; margin-bottom: .65rem; }
+.central-pendencias-page .solicitacao-dados-tecnicos {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 24rem;
+  overflow: auto;
+}
+@media (max-width: 600px) {
+  .central-pendencias-page .notificacao-resumo { grid-template-columns: 1fr; gap: .2rem; }
+  .central-pendencias-page .notificacao-resumo dd { margin-bottom: .5rem; }
+}

@@ -1,0 +1,9 @@
+{% if access_read_only %}
+<p id="access-mode-notice" class="pfs-current" role="status" aria-live="polite">
+  <strong>Somente visualização — {{ access_module|upper }}.</strong>
+  Seu perfil permite consultar este módulo, mas não alterar dados. Os controles de alteração estão desativados.
+</p>
+{% endif %}
+{% if access_profile in ["ANALISTA", "GESTOR", "OPERADOR"] %}
+<script src="/assets/js/access-mode.js" data-access-profile="{{ access_profile }}" data-access-module="{{ access_module }}"></script>
+{% endif %}

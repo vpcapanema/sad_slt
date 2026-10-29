@@ -7,7 +7,7 @@
   <meta name="description" content="{% block descricao %}Painel cartográfico do SICARD.{% endblock %}">
   <title>{% block titulo %}Painel — SICARD{% endblock %}</title>
   <link rel="icon" href="/assets/img/brand/sicard-simbolo.png" type="image/png">
-  <link rel="stylesheet" href="/assets/css/app.css">
+  <link rel="stylesheet" href="/assets/css/app.css?v=20261029-legenda-fases">
   <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
   <link rel="stylesheet" href="/assets/css/template-painel-mapa.css">
   <link rel="stylesheet" href="/assets/css/navbar-modulo.css">
@@ -27,6 +27,7 @@
     </aside>
 
     <div class="area-principal-painel layout-main">
+      {% include "componentes/access_mode.html" %}
       {% block antes_painel %}{% endblock %}
       {% block painel %}{% endblock %}
     </div>

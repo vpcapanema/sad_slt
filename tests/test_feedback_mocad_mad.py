@@ -4,10 +4,13 @@ import re
 from fastapi.testclient import TestClient
 
 from api.server import app
+from api.services.session_service import SessionUser, cookie_name, create_token
 
 
 def test_cards_mocad_mad_carregam_feedback_compartilhado():
     client = TestClient(app)
+    user = SessionUser("00000000-0000-4000-8000-000000000001", "teste@example.org", "teste_ADMIN", "Teste", "ADMIN")
+    client.cookies.set(cookie_name(), create_token(user))
     index = client.get("/restrict/").text
     links = []
     for group in ("mocad", "mad"):
@@ -17,7 +20,7 @@ def test_cards_mocad_mad_carregam_feedback_compartilhado():
         )
         assert section is not None
         links.extend(re.findall(r'class="platform-tile[^"]*" href="([^"]+)"', section.group()))
-    assert len(links) == 11
+    assert len(links) == 13
     for link in links:
         response = client.get(link)
         assert response.status_code == 200, link

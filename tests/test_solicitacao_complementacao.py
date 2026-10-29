@@ -21,7 +21,7 @@ def fluxo(monkeypatch):
     def criar(tipo, codigo, categorias, descricao, user, hierarquizacao):
         p = dict(id=str(uuid4()), demanda_tipo=tipo, demanda_codigo=codigo, categorias=categorias,
                  descricao=descricao, hierarquizacao_codigo=hierarquizacao,
-                 status='solicitada', categorias_salvas={})
+                 status='registrada', categorias_salvas={})
         pedidos.append(p)
         eventos.append('pedido')
         return p
@@ -38,6 +38,34 @@ def test_pedido_registrado_antes_da_transicao(fluxo, categorias):
     assert fluxo.eventos == ['pedido','status']
     with pytest.raises(DemandaValidationError):
         service.solicitar('D', categorias=categorias, descricao='Duplicado', user=fluxo.user)
+
+
+def test_pedido_para_espera_legada_sem_inventar_autoria_anterior(fluxo):
+    fluxo.demanda["status"] = "analise_aguardando_complementacao"
+    pedido = service.solicitar("D", categorias=["geometria"], descricao="Corrigir geometria", user=fluxo.user)
+    assert pedido["status"] == "registrada"
+    assert fluxo.eventos == ["pedido"]
+
+
+def test_tipo_explicito_nao_localiza_apenas_pelo_codigo(fluxo, monkeypatch):
+    localizar = Mock(side_effect=AssertionError("Não buscar outra tabela pelo mesmo código"))
+    monkeypatch.setattr(analise, "_localizar_demanda", localizar)
+    pedido = service.solicitar("D", categorias=["dados_cadastrais"], descricao="Corrigir dados",
+                               user=fluxo.user, demanda_tipo="plano")
+    assert pedido["demanda_tipo"] == "plano"
+    localizar.assert_not_called()
+
+
+@pytest.mark.parametrize("status", ["arquivada", "homologada"])
+def test_solicitacao_nao_reabre_hierarquizacao_fechada(fluxo, monkeypatch, status):
+    fluxo.demanda["status"] = "hierarq_em_andamento"
+    monkeypatch.setattr(service.hierarquizacao_repository, "get_by_codigo",
+                        lambda *a, **kw: {"status": status, "dados_hierarquizacao": {
+                            "objetos": [{"cabecalho_objeto": {"codigo": "D", "tipo_demanda": "projeto"}}]}})
+    with pytest.raises(DemandaValidationError):
+        service.solicitar("D", categorias=["atributos_objeto"], descricao="Preencher",
+                         user=fluxo.user, hierarquizacao_codigo="H")
+    assert fluxo.eventos == []
 
 
 def test_atributos_independentes_por_hierarquizacao(fluxo):
@@ -104,6 +132,7 @@ def test_conclusao_rejeita_operador_sem_vinculo(fluxo,monkeypatch):
 
 
 def test_conclusao_atributos_revalida_pendencias_e_aceita_zero(fluxo,monkeypatch):
+    fluxo.user.tipo_usuario = 'GESTOR'
     fluxo.demanda.update(status='hierarq_em_andamento', criado_por=fluxo.user.id)
     p=service.solicitar('D',categorias=['atributos_objeto'],descricao='Preencher custo',user=fluxo.user,hierarquizacao_codigo='H')
     p['categorias_salvas']={'atributos_objeto': {}}

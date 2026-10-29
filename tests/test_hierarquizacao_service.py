@@ -396,6 +396,36 @@ def test_fase_3_renormaliza_pesos_quando_atributo_opcional_ausente(
     assert sum(primeiro["contribuicao_por_criterio"].values()) == primeiro["score_fase3"]
 
 
+def test_previa_fase3_nao_persiste_resultado(monkeypatch):
+    row = _db_row(_dados([3], [{"maturidade": 10}, {"maturidade": 20}]))
+    _mock_persistencia(monkeypatch, row)
+    monkeypatch.setattr(service.repo, "update", lambda *_args, **_kwargs: pytest.fail("prévia não pode gravar"))
+    payload = HierarquizacaoFase3ExecutarSchema(
+        criterios=[{"criterio": "Maturidade", "nome_coluna": "maturidade", "peso": 1}],
+    )
+
+    resultado = service.executar_fase_3("HIER-TESTE", payload, persistir=False)
+
+    assert resultado.dados_hierarquizacao["objetos"][0]["hierarquizacao"]["fase_3"]["executada"] is True
+    assert row["dados_hierarquizacao"]["objetos"][0]["hierarquizacao"]["fase_3"]["executada"] is False
+
+
+def test_salvar_previa_fase3_rejeita_hierarquizacao_alterada(monkeypatch):
+    row = _db_row(_dados([3], [{"maturidade": 10}]))
+    _mock_persistencia(monkeypatch, row)
+    monkeypatch.setattr(service.repo, "update", lambda *_args, **_kwargs: pytest.fail("versão obsoleta não pode gravar"))
+    payload = HierarquizacaoFase3ExecutarSchema(
+        criterios=[{"criterio": "Maturidade", "nome_coluna": "maturidade", "peso": 1}],
+    )
+
+    with pytest.raises(service.DemandaValidationError, match="mudou desde a prévia"):
+        service.executar_fase_3(
+            "HIER-TESTE",
+            payload,
+            versao_esperada=datetime(2000, 1, 1, tzinfo=timezone.utc),
+        )
+
+
 def test_fase_3_bloqueia_booleano_invalido_obrigatorio(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -493,6 +523,22 @@ def test_sintese_segrega_restrito_e_explica_contribuicoes(
     ranking = list(result.ranking or [])
     assert ranking
     assert ranking[0]["codigo"] == "P-2"
+
+
+def test_previa_sintese_nao_persiste_ranking(monkeypatch):
+    dados = _dados([1, 2, 3], [{}, {}])
+    for indice, objeto in enumerate(dados["objetos"], start=1):
+        objeto["hierarquizacao"]["fase_2"]["score_fase2"] = 0.6 + indice / 10
+        objeto["hierarquizacao"]["fase_3"]["score_fase3"] = 0.4 + indice / 10
+    row = _db_row(dados)
+    _mock_persistencia(monkeypatch, row)
+    monkeypatch.setattr(service.repo, "update", lambda *_args, **_kwargs: pytest.fail("prévia não pode gravar"))
+
+    resultado = service.sintetizar("HIER-TESTE", HierarquizacaoSinteseSchema(), persistir=False)
+
+    assert resultado.ranking
+    assert row["ranking"] is None
+    assert row["status"] == "em_julgamento"
 
 
 def test_excluir_hierarquizacao_libera_demandas_do_universo(

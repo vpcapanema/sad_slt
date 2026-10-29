@@ -9,6 +9,7 @@ from typing import Any
 from api.repositories import painel_repository
 from api.schemas.demanda import GeometriaSchema, RepresentanteSchema
 from api.schemas.painel import PainelDemandaSchema, PainelHierarquizacaoSchema
+from api.services.publicacao_hierarquizacao import publicacao_vigente
 
 
 def _iso(value: Any) -> str | None:
@@ -67,6 +68,7 @@ def _resultado_individual(row: dict[str, Any]) -> PainelHierarquizacaoSchema:
             pesos = {}
     return PainelHierarquizacaoSchema(
         codigo=row["codigo"], nome=row["nome"], status=row["status"],
+        grupo_nome=row.get("grupo_nome"), grupo_codigo=row.get("grupo_codigo"),
         atualizado_em=_iso(row.get("atualizado_em")), desatualizada=desatualizada,
         elegibilidade=f1.get("status_fase1"),
         indice_risco=(f1.get("resumo_elegibilidade") or {}).get("indice_de_risco_ambiental_e_territorial"),
@@ -133,9 +135,22 @@ def listar_demandas_painel(*, public_only: bool = False) -> list[PainelDemandaSc
     """Retorna todas as demandas, sanitizando dados pessoais no painel público."""
     rows = painel_repository.list_all()
     if public_only:
+        from api.services.hierarquizacao_service import resultados_desatualizados
+
+        visibilidade = {}
+        for row in rows:
+            for h in row.get("hierarquizacoes") or []:
+                if h["codigo"] not in visibilidade:
+                    visibilidade[h["codigo"]] = (
+                        publicacao_vigente(h)
+                        and not resultados_desatualizados(h)
+                    )
         rows = [
             {
                 **row,
+                "hierarquizacoes": [
+                    h for h in row.get("hierarquizacoes") or [] if visibilidade[h["codigo"]]
+                ],
                 "sigma_pessoa_id": None,
                 "representante_nome": None,
                 "representante_email": None,

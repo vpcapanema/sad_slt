@@ -255,27 +255,36 @@
   // Barras dos indices atribuidos, ligadas linha a linha com a tabela ao lado:
   // cada grupo carrega o data-pair da linha correspondente, e o realce e
   // acionado pelos dois sentidos em renderPairsSection.
-  function analysisPairBars(pairs, destaque) {
-    if (!pairs.length) return '<p class="ami-empty">Sem respostas enviadas para o gr\u00e1fico.</p>';
-    var cores = judgeColors(pairs);
+  // Pares que o julgador respondeu: em recortes de dimensoes distintos cada
+  // julgador so recebe os pares dos seus criterios.
+  function paresDoJulgador(pairs, julgadorId) {
+    if (!julgadorId) return pairs;
+    return pairs.filter(function (pair) { return (pair.pontos || []).some(function (ponto) { return String(ponto.resposta_id) === String(julgadorId); }); });
+  }
+  function analysisPairBars(todosPares, destaque) {
+    var cores = judgeColors(todosPares), pairs = paresDoJulgador(todosPares, destaque);
+    var escolhido = destaque ? cores.lista.filter(function (j) { return j.id === destaque; })[0] : null;
+    var titulo = '<h4 class="ami-pane-title">Gr\u00e1fico dos \u00edndices por par de crit\u00e9rios' + (escolhido ? ' \u00b7 ' + escapeHtml(escolhido.nome) : '') + '</h4>';
+    if (!pairs.length) return titulo + '<p class="ami-empty">Sem respostas enviadas para o gr\u00e1fico.</p>';
     var visiveis = destaque ? cores.lista.filter(function (j) { return j.id === destaque; }) : cores.lista;
-    var maximo = 1;
-    pairs.forEach(function (pair) { (pair.pontos || []).forEach(function (ponto) { if (visiveis.some(function (j) { return j.id === ponto.resposta_id; }) && ponto.valor > maximo) maximo = ponto.valor; }); });
-    var referencia = 1 / maximo * 100;
+    // Escala de Saaty completa (1/9 ... 1 ... 9) centrada em 1: cada degrau da
+    // escala, para um lado ou para o outro, vale 1/8 da meia-largura da trilha.
     var linhas = pairs.map(function (pair) {
-      var barras = visiveis.map(function (julgador) {
+      var trilhas = visiveis.map(function (julgador) {
         var ponto = (pair.pontos || []).filter(function (item) { return item.resposta_id === julgador.id; })[0];
         if (!ponto) return '';
-        var largura = Math.max(1.2, Number(ponto.valor) / maximo * 100);
-        var rotulo = saatyLabel(ponto.valor), descricao = julgador.nome + ": " + rotulo;
-        // barra curta nao comporta o numero dentro: ele vai para fora, a direita
-        return '<span class="ami-pair-bars__bar' + (largura < 9 ? " is-curta" : "") + '" data-judge="' + escapeHtml(julgador.id) + '" style="width:' + largura.toFixed(2) + '%;background:' + julgador.cor + '" title="' + escapeHtml(descricao) + '" role="button" tabindex="0" aria-label="' + escapeHtml(descricao) + '"><b>' + rotulo + '</b></span>';
+        var valor = Number(ponto.valor) || 1, passos = Math.min(8, Math.max(0, (valor >= 1 ? valor : 1 / valor) - 1));
+        var largura = passos / 8 * 50, rotulo = saatyLabel(ponto.valor), sentido = valor > 1.0005 ? "a" : valor < 0.9995 ? "b" : "";
+        var descricao = julgador.nome + ": " + rotulo + (sentido === "a" ? " (" + pair.criterio_a + " mais importante)" : sentido === "b" ? " (" + pair.criterio_b + " mais importante)" : " (indiferen\u00e7a)");
+        var preenchimento = sentido ? '<span class="ami-scale__fill is-' + sentido + '" style="width:' + largura.toFixed(2) + '%"></span>' : '';
+        return '<div class="ami-pair-bars__line" data-judge="' + escapeHtml(julgador.id) + '" title="' + escapeHtml(descricao) + '" aria-label="' + escapeHtml(descricao) + '"><span class="ami-pair-bars__who">J' + (cores.lista.indexOf(julgador) + 1) + '</span><span class="ami-scale">' + preenchimento + '</span><b class="ami-pair-bars__value">' + rotulo + '</b></div>';
       }).join("");
-      var rotulo = pair.criterio_a + " \u00d7 " + pair.criterio_b;
-      return '<div class="ami-pair-bars__row" data-pair="' + pair.i + '-' + pair.j + '"><span class="ami-pair-bars__label" title="' + escapeHtml(rotulo) + '">' + escapeHtml(rotulo) + '</span><div class="ami-pair-bars__plot"><span class="ami-pair-bars__ref" style="left:' + referencia.toFixed(2) + '%"></span>' + barras + '</div></div>';
+      var rotulo = pair.criterio_a + " \u00d7 " + pair.criterio_b, codigo = codigoPar(pair, todosPares);
+      return '<div class="ami-pair-bars__row" data-pair="' + pair.i + '-' + pair.j + '" role="button" tabindex="0" aria-label="' + escapeHtml("Selecionar " + codigo + ": " + rotulo) + '"><span class="ami-pair-bars__label" title="' + escapeHtml(codigo + " \u00b7 " + rotulo) + '">' + escapeHtml(codigo) + '</span><div class="ami-pair-bars__plot">' + trilhas + '</div></div>';
     }).join("");
-    var legenda = destaque ? '' : '<ul class="ami-pair-bars__legend">' + cores.lista.map(function (julgador, indice) { return '<li><span class="ami-judge-chip" style="background:' + julgador.cor + '"></span><strong>J' + (indice + 1) + '</strong><span class="ami-pair-bars__judge-name">' + escapeHtml(julgador.nome) + '</span></li>'; }).join("") + '</ul>';
-    return '<figure class="ami-pair-bars">' + linhas + '<figcaption>' + legenda + '<p>Linha vertical: o valor 1 (indiferen\u00e7a entre os dois crit\u00e9rios).</p></figcaption></figure>';
+    var legenda = destaque ? '' : '<ul class="ami-pair-bars__legend">' + cores.lista.map(function (julgador, indice) { return '<li data-judge-open="' + escapeHtml(julgador.id) + '" role="button" tabindex="0" title="Ver somente este julgador"><strong>J' + (indice + 1) + '</strong><span class="ami-pair-bars__judge-name">' + escapeHtml(julgador.nome) + '</span></li>'; }).join("") + '</ul>';
+    var escala = '<div class="ami-scale-key" aria-hidden="true"><span>1/9</span><span class="ami-scale"><i class="ami-scale__fill is-b" style="width:50%"></i><i class="ami-scale__fill is-a" style="width:50%"></i></span><span>9</span></div>';
+    return titulo + '<figure class="ami-pair-bars" data-selecionavel><div class="ami-pair-bars__grid">' + linhas + '</div>' + '<figcaption>' + legenda + escala + '<p>Escala de Saaty, de 1/9 a 9, centrada em 1 (indiferen\u00e7a). Azul: o primeiro crit\u00e9rio do par \u00e9 mais importante; vermelho: o segundo.</p></figcaption></figure>';
   }
   function analysisRangeBars(items) {
     if (!items.length) return '<p class="ami-empty">Sem respostas enviadas para o gr\u00e1fico.</p>';
@@ -296,8 +305,12 @@
     return Math.min(1, distancia / Math.log(3));
   }
   function modaLabel(pair) { var modas = pair.modas || []; return modas.length ? modas.map(saatyLabel).join(" / ") : "\u2014"; }
-  function pairsTable(pairs, destaque) {
-    var cores = judgeColors(pairs);
+  // O codigo identifica o par na tabela e no grafico e nao muda com o filtro de
+  // julgador: o mesmo par mantem o mesmo codigo em qualquer visao.
+  function codigoPar(pair, todosPares) { return "Par " + (todosPares.indexOf(pair) + 1); }
+  function celulaCodigo(codigo) { return '<td class="ami-stats-table__codigo"><strong>' + escapeHtml(codigo) + '</strong></td>'; }
+  function pairsTable(todosPares, destaque) {
+    var cores = judgeColors(todosPares), pairs = paresDoJulgador(todosPares, destaque);
     var descritivas = ["M\u00e9dia", "Mediana", "Moda"];
     var cabecalho, corpo;
     if (destaque) {
@@ -306,7 +319,7 @@
       cabecalho = ["Par de crit\u00e9rios", "\u00cdndice atribu\u00eddo"];
       corpo = pairs.map(function (pair) {
         var ponto = (pair.pontos || []).filter(function (item) { return item.resposta_id === destaque; })[0];
-        return '<tr data-pair="' + pair.i + '-' + pair.j + '"><td class="ami-stats-table__name">' + escapeHtml(pair.criterio_a) + '</td><td class="ami-stats-table__name">' + escapeHtml(pair.criterio_b) + '</td><td><strong>' + (ponto ? saatyLabel(ponto.valor) : "\u2014") + '</strong></td></tr>';
+        return '<tr data-pair="' + pair.i + '-' + pair.j + '">' + celulaCodigo(codigoPar(pair, todosPares)) + '<td class="ami-stats-table__name">' + escapeHtml(pair.criterio_a) + '</td><td class="ami-stats-table__name">' + escapeHtml(pair.criterio_b) + '</td><td><strong>' + (ponto ? saatyLabel(ponto.valor) : "\u2014") + '</strong></td></tr>';
       });
     } else {
       cabecalho = ["Par de crit\u00e9rios"].concat(cores.lista.map(function (julgador) {
@@ -319,11 +332,11 @@
           var intensidade = desvioIntensidade(ponto.valor, pair.media_geometrica);
           return '<td class="ami-stats-table__valor' + (intensidade > 0.55 ? " is-forte" : "") + '" style="--ami-deviation-color:rgba(17,101,147,' + (intensidade * 0.8).toFixed(3) + ')" title="' + escapeHtml(julgador.nome + ": " + saatyLabel(ponto.valor) + " \u00b7 m\u00e9dia geom\u00e9trica do par " + fmtNumber(pair.media_geometrica)) + '">' + saatyLabel(ponto.valor) + '</td>';
         }).join("");
-        return '<tr data-pair="' + pair.i + '-' + pair.j + '"><td class="ami-stats-table__name">' + escapeHtml(pair.criterio_a) + '</td><td class="ami-stats-table__name">' + escapeHtml(pair.criterio_b) + '</td>' + celulas + '<td>' + fmtNumber(pair.media) + '</td><td>' + saatyLabel(pair.mediana) + '</td><td>' + modaLabel(pair) + '</td></tr>';
+        return '<tr data-pair="' + pair.i + '-' + pair.j + '">' + celulaCodigo(codigoPar(pair, todosPares)) + '<td class="ami-stats-table__name">' + escapeHtml(pair.criterio_a) + '</td><td class="ami-stats-table__name">' + escapeHtml(pair.criterio_b) + '</td>' + celulas + '<td>' + fmtNumber(pair.media) + '</td><td>' + saatyLabel(pair.mediana) + '</td><td>' + modaLabel(pair) + '</td></tr>';
       });
     }
     var rodape = destaque ? "" : '<p class="ami-table-note"><span class="ami-table-note__escala">Marca na base da c\u00e9lula: afastamento da m\u00e9dia geom\u00e9trica do par <i></i><i></i><i></i><i></i></span></p>';
-    return '<table class="admin-table ami-stats-table ami-table--indices" data-grouped-headers="true"><thead><tr><th colspan="2" scope="colgroup">Par de critérios</th>' + cabecalho.slice(1).map(function (titulo) { return '<th rowspan="2" scope="col">' + titulo + '</th>'; }).join("") + '</tr><tr class="ami-pair-leaf-headers" hidden aria-hidden="true"><th scope="col">Critério 1</th><th scope="col">Critério 2</th></tr></thead><tbody>' + (corpo.join("") || '<tr><td colspan="' + (cabecalho.length + 1) + '">Sem respostas enviadas.</td></tr>') + '</tbody></table>' + rodape;
+    return '<table class="admin-table ami-stats-table ami-table--indices" data-grouped-headers="true"><thead><tr><th rowspan="2" scope="col">C\u00f3digo</th><th colspan="2" scope="colgroup">Par de critérios</th>' + cabecalho.slice(1).map(function (titulo) { return '<th rowspan="2" scope="col">' + titulo + '</th>'; }).join("") + '</tr><tr class="ami-pair-leaf-headers" hidden aria-hidden="true"><th scope="col">Critério 1</th><th scope="col">Critério 2</th></tr></thead><tbody>' + (corpo.join("") || '<tr><td colspan="' + (cabecalho.length + 2) + '">Sem respostas enviadas.</td></tr>') + '</tbody></table>' + rodape;
   }
   // A lista de julgadores vem das respostas enviadas daquele julgamento, e nao
   // de uma lista fixa: quem responde entra na lista sozinho.
@@ -339,27 +352,61 @@
       return '<option value="' + escapeHtml(j.id) + '"' + (j.id === selectedJudgeId ? " selected" : "") + '>J' + (indice + 1) + " \u00b7 " + escapeHtml(j.nome) + (j.instituicao ? " (" + escapeHtml(j.instituicao) + ")" : "") + '</option>';
     }).join("");
     if (!select.dataset.bound) { select.dataset.bound = "1"; select.addEventListener("change", function () { selectedJudgeId = select.value || null; if (analysisMode === "edit") analysisResponseIds = new Set(selectedJudgeId ? [selectedJudgeId] : respostasEnviadas(analysisWorkspace).map(function (r) { return String(r.id); })); renderResponsesForConsolidation(analysisWorkspace); renderPairsSection(); }); }
-    $("ami-pairs-judge-hint").textContent = julgadores.length + (julgadores.length === 1 ? " julgador com resposta enviada" : " julgadores com resposta enviada");
+    var visiveis = paresDoJulgador(pairs, selectedJudgeId).length;
+    $("ami-pairs-judge-hint").textContent = (selectedJudgeId
+      ? visiveis + (visiveis === 1 ? " par atribu\u00eddo a este julgador" : " pares atribu\u00eddos a este julgador") + " de " + pairs.length + " do julgamento"
+      : julgadores.length + (julgadores.length === 1 ? " julgador com resposta enviada" : " julgadores com resposta enviada") + " \u00b7 " + pairs.length + (pairs.length === 1 ? " par de crit\u00e9rios" : " pares de crit\u00e9rios"));
     $("ami-analysis-pairs").innerHTML = pairsTable(pairs, selectedJudgeId);
     $("ami-analysis-pairs-chart").innerHTML = analysisPairBars(pairs, selectedJudgeId);
     SLTAnalysisTable($("ami-analysis-pairs").querySelector("table"));
     renderFioDerivado(analysisWorkspace);
     ligarRealcePares();
   }
-  function ligarRealcePares() {
-    var alvos = [$("ami-analysis-pairs"), $("ami-analysis-pairs-chart")];
-    function realcar(par, ligado) {
-      alvos.forEach(function (area) { area.querySelectorAll('[data-pair="' + par + '"]').forEach(function (elemento) { elemento.classList.toggle("is-hl", ligado); }); });
-    }
-    alvos.forEach(function (area) {
-      area.querySelectorAll("[data-pair]").forEach(function (elemento) {
-        elemento.addEventListener("mouseenter", function () { realcar(elemento.dataset.pair, true); });
-        elemento.addEventListener("mouseleave", function () { realcar(elemento.dataset.pair, false); });
-      });
+  // Selecao cruzada entre tabela e grafico: passar o cursor realca (is-hl) e
+  // clicar fixa (is-sel) o mesmo par/criterio nos dois lados, e clicar de novo
+  // desfaz. A delegacao fica na raiz da secao, que nao e recriada, e um
+  // observador reaplica a selecao quando o conteudo e redesenhado (filtro,
+  // paginacao ou troca de julgador).
+  var selecaoCruzada = { pair: null, criterio: null };
+  function marcarCruzado(raiz, atributo, chave, classe) {
+    raiz.querySelectorAll("." + classe).forEach(function (el) { el.classList.remove(classe); });
+    if (chave != null) raiz.querySelectorAll('[data-' + atributo + '="' + chave + '"]').forEach(function (el) { el.classList.add(classe); });
+    if (classe === "is-sel") raiz.querySelectorAll("[data-selecionavel]").forEach(function (el) { el.classList.toggle("has-sel", chave != null); });
+  }
+  function ligarSelecaoCruzada(raiz, atributo) {
+    if (!raiz || raiz.dataset.selecaoCruzada) return;
+    raiz.dataset.selecaoCruzada = atributo;
+    function alvoDe(evento) { return evento.target.closest ? evento.target.closest('[data-' + atributo + ']') : null; }
+    raiz.addEventListener("mouseover", function (evento) { var alvo = alvoDe(evento); marcarCruzado(raiz, atributo, alvo ? alvo.dataset[atributo] : null, "is-hl"); });
+    raiz.addEventListener("mouseleave", function () { marcarCruzado(raiz, atributo, null, "is-hl"); });
+    raiz.addEventListener("click", function (evento) {
+      var alvo = alvoDe(evento);
+      if (!alvo || evento.target.closest("input, button, a, label, select")) return;
+      var chave = alvo.dataset[atributo];
+      selecaoCruzada[atributo] = selecaoCruzada[atributo] === chave ? null : chave;
+      marcarCruzado(raiz, atributo, selecaoCruzada[atributo], "is-sel");
     });
-    $("ami-analysis-pairs-chart").querySelectorAll("[data-judge]").forEach(function (barra) {
-      barra.addEventListener("click", function () { selectedJudgeId = barra.dataset.judge; if (analysisMode === "edit") analysisResponseIds = new Set([selectedJudgeId]); renderResponsesForConsolidation(analysisWorkspace); renderPairsSection(); });
-      barra.addEventListener("keydown", function (event) { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); barra.click(); } });
+    raiz.addEventListener("keydown", function (evento) {
+      var alvo = alvoDe(evento);
+      if (alvo && alvo.getAttribute("role") === "button" && (evento.key === "Enter" || evento.key === " ")) { evento.preventDefault(); alvo.click(); }
+    });
+    new MutationObserver(function () { marcarCruzado(raiz, atributo, selecaoCruzada[atributo], "is-sel"); }).observe(raiz, { childList: true, subtree: true });
+  }
+  function ligarRealcePares() {
+    ligarSelecaoCruzada($("ami-analysis-pairs-body"), "pair");
+    var grafico = $("ami-analysis-pairs-chart");
+    if (grafico.dataset.legendaLigada) return;
+    grafico.dataset.legendaLigada = "1";
+    grafico.addEventListener("click", function (evento) {
+      var item = evento.target.closest("[data-judge-open]");
+      if (!item) return;
+      selectedJudgeId = item.dataset.judgeOpen;
+      if (analysisMode === "edit") analysisResponseIds = new Set([selectedJudgeId]);
+      renderResponsesForConsolidation(analysisWorkspace); renderPairsSection();
+    });
+    grafico.addEventListener("keydown", function (evento) {
+      var item = evento.target.closest("[data-judge-open]");
+      if (item && (evento.key === "Enter" || evento.key === " ")) { evento.preventDefault(); item.click(); }
     });
   }
   function analysisMatrixTable(item) {
@@ -398,21 +445,28 @@
     var recorte = (data.recortes || []).find(function (r) { return r.resposta_ids.includes(String(registro.id)); });
     return snapshot || (recorte && recorte.criterios) || data.ambiente.criterios || [];
   }
-  function respostasMesmoRecorte(data) {
-    var respostas = respostasEnviadas(data).filter(function (r) { return analysisResponseIds.has(String(r.id)); });
+  function respostasMesmoRecorte(data, lista) {
+    var respostas = lista || respostasEnviadas(data).filter(function (r) { return analysisResponseIds.has(String(r.id)); });
     return respostas.length < 2 || respostas.every(function (r) {
       return JSON.stringify(criteriosDoRegistro(data, r)) === JSON.stringify(criteriosDoRegistro(data, respostas[0]));
+    });
+  }
+  // Na consulta (modo de visualizacao) nada e gravado: a agregacao usa todas as
+  // respostas enviadas do recorte, sem a selecao nem a exclusao de inconsistentes
+  // da consolidacao.
+  function respostasDaAgregacao(data) {
+    if (analysisMode !== "edit") return respostasEnviadas(data);
+    var limite = Number($("ami-analysis-rc").value);
+    return respostasEnviadas(data).filter(function (r) {
+      return analysisResponseIds.has(String(r.id)) && (!$("ami-analysis-exclude-inconsistent").checked || (r.consistente && Number(r.razao_consistencia) <= limite));
     });
   }
   // Agrega o triangulo superior pela medida escolhida e espelha o reciproco: com
   // media aritmetica ou mediana, agregar as duas metades separadamente quebraria
   // a reciprocidade (a_ij x a_ji deixaria de ser 1).
   function matrizAgregada(data, medida) {
-    var limite = Number($("ami-analysis-rc").value);
-    var enviadas = respostasEnviadas(data).filter(function (r) {
-      return analysisResponseIds.has(String(r.id)) && (!$("ami-analysis-exclude-inconsistent").checked || (r.consistente && Number(r.razao_consistencia) <= limite));
-    });
-    if (!enviadas.length || !respostasMesmoRecorte(data)) return null;
+    var enviadas = respostasDaAgregacao(data);
+    if (!enviadas.length || !respostasMesmoRecorte(data, analysisMode === "edit" ? undefined : enviadas)) return null;
     var n = enviadas[0].matriz_comparacao.length, calcula = (MEDIDAS[medida] || MEDIDAS.geometrica).calcula;
     var matriz = [];
     for (var i = 0; i < n; i++) { matriz.push([]); for (var j = 0; j < n; j++) matriz[i].push(1); }
@@ -425,24 +479,39 @@
     }
     return matriz;
   }
-  // A matriz que alimenta as secoes 2.3 a 2.5: a do julgador selecionado, ou a
-  // agregacao de todos pela medida escolhida.
+  // A matriz que alimenta as secoes 3 a 5: a do julgador selecionado, a analise
+  // registrada (so na consulta) ou a agregacao de todos pela medida escolhida.
+  function analiseRegistrada(data) {
+    return analiseHomologada(data) || (data.analises || []).find(function (item) {
+      return JSON.stringify(criteriosDoRegistro(data, item)) === JSON.stringify(data.ambiente.criterios);
+    }) || null;
+  }
   function matrizEmFoco(data) {
-    if (analysisMode === "view") {
-      var stored = selectedJudgeId ? (data.respostas || []).find(function(r){return String(r.id) === selectedJudgeId;}) : (analiseHomologada(data) || (data.analises || []).find(function (item) {
-        return JSON.stringify(criteriosDoRegistro(data, item)) === JSON.stringify(data.ambiente.criterios);
-      }));
-      var matrix = stored && (stored.matriz_consolidada || stored.matriz_comparacao);
-      return matrix && matrix.length ? {matriz:matrix, criterios:criteriosDoRegistro(data, stored), origem:"registrada", rotulo:stored.nome || stored.nome_completo || "Análise registrada", registro:stored} : null;
-    }
-    if (selectedJudgeId && !$("ami-analysis-exclude-inconsistent").checked) {
+    var consulta = analysisMode !== "edit";
+    if (selectedJudgeId && (consulta || !$("ami-analysis-exclude-inconsistent").checked)) {
       var resposta = (data.respostas || []).filter(function (r) { return String(r.id) === selectedJudgeId; })[0];
       var matriz = resposta && resposta.matriz_comparacao;
-      return matriz && matriz.length ? { matriz: matriz, criterios: criteriosDoRegistro(data, resposta), origem: "julgador", rotulo: resposta.nome_completo } : null;
+      return matriz && matriz.length ? { matriz: matriz, criterios: criteriosDoRegistro(data, resposta), origem: "julgador", rotulo: resposta.nome_completo, registro: consulta ? resposta : undefined } : null;
+    }
+    if (consulta && selectedMeasure === "registrada") {
+      var stored = analiseRegistrada(data), matrix = stored && stored.matriz_consolidada;
+      return matrix && matrix.length ? { matriz: matrix, criterios: criteriosDoRegistro(data, stored), origem: "registrada", rotulo: stored.nome || "Análise registrada", registro: stored } : null;
     }
     var agregada = matrizAgregada(data, selectedMeasure);
-    var primeira = respostasEnviadas(data).find(function (r) { return analysisResponseIds.has(String(r.id)); });
-    return agregada ? { matriz: agregada, criterios: criteriosDoRegistro(data, primeira), origem: "todos", rotulo: (MEDIDAS[selectedMeasure] || MEDIDAS.geometrica).rotulo } : null;
+    var primeira = respostasDaAgregacao(data)[0];
+    return agregada ? { matriz: agregada, criterios: criteriosDoRegistro(data, primeira), origem: "todos", rotulo: (MEDIDAS[selectedMeasure] || MEDIDAS.geometrica).rotulo, respostas: respostasDaAgregacao(data).length } : null;
+  }
+  // Por que nao ha matriz: sem respostas, ou respostas de recortes distintos
+  // (criterios diferentes nao formam uma matriz unica).
+  function motivoSemMatriz(data) {
+    var enviadas = respostasDaAgregacao(data);
+    if (enviadas.length > 1 && !respostasMesmoRecorte(data, enviadas)) return "As respostas enviadas usam crit\u00e9rios de recortes diferentes e n\u00e3o formam uma matriz \u00fanica. Selecione um recorte de dimens\u00f5es ou um julgador.";
+    return analysisMode === "edit" ? "Sem respostas inclu\u00eddas na an\u00e1lise." : "Sem respostas enviadas: ainda n\u00e3o h\u00e1 matriz.";
+  }
+  // A analise registrada so existe na consulta e depende do recorte exibido;
+  // fora disso a medida volta a ser uma das tres medidas de tendencia central.
+  function normalizarMedida(data) {
+    if (selectedMeasure === "registrada" && (analysisMode === "edit" || !analiseRegistrada(data))) selectedMeasure = "geometrica";
   }
   function analiseHomologada(data) {
     return (data.analises || []).filter(function (item) { return item.id === data.analise_homologada_id || item.status === "homologada"; })[0] || null;
@@ -497,7 +566,9 @@
     var foco = matrizEmFoco(data), criterios = (foco ? foco.criterios : data.ambiente.criterios || []).map(criterionName);
     var caixa = $("ami-analysis-measure-box");
     caixa.classList.toggle("is-hidden", !!selectedJudgeId);
-    var seletor = $("ami-analysis-measure");
+    var seletor = $("ami-analysis-measure"), registrada = analysisMode === "edit" ? null : analiseRegistrada(data);
+    var medidas = '<option value="geometrica">M\u00e9dia geom\u00e9trica dos \u00edndices</option><option value="aritmetica">M\u00e9dia aritm\u00e9tica dos \u00edndices</option><option value="mediana">Mediana dos \u00edndices</option>';
+    seletor.innerHTML = (registrada ? '<option value="registrada">An\u00e1lise registrada \u2014 ' + escapeHtml(registrada.nome || registrada.codigo || "sem nome") + '</option>' : '') + medidas;
     seletor.value = selectedMeasure;
     if (!seletor.dataset.bound) {
       seletor.dataset.bound = "1";
@@ -505,13 +576,16 @@
     }
 
     $("ami-analysis-matrix-hint").innerHTML = !foco
-      ? 'Sem respostas enviadas: ainda n\u00e3o h\u00e1 matriz.'
+      ? escapeHtml(motivoSemMatriz(data))
       : foco.origem === "julgador"
         ? 'Matriz do julgador <strong>' + escapeHtml(foco.rotulo) + '</strong>, exatamente como ele a preencheu. Cada c\u00e9lula responde: quantas vezes o crit\u00e9rio da linha importa mais que o da coluna.'
-        : 'Agrega\u00e7\u00e3o dos julgamentos dos julgadores selecionados, par a par, pela <strong>' + escapeHtml(foco.rotulo) + '</strong> dos \u00edndices.' +
-          ' Pr\u00e9via das respostas selecionadas na subse\u00e7\u00e3o 6. O resultado homologado est\u00e1 identificado na subse\u00e7\u00e3o 7.';
-    if (analysisMode === "view") $("ami-analysis-matrix-hint").textContent = foco ? "Matriz registrada: " + foco.rotulo + "." : "Nenhuma matriz consolidada registrada. Selecione um julgador para consultar sua resposta.";
-    if (!foco) { $("ami-analysis-matrix").innerHTML = '<p class="ami-empty">' + (analysisMode === "view" ? "Nenhuma matriz registrada para esta consulta." : "Sem respostas incluídas na análise.") + '</p>'; return; }
+        : foco.origem === "registrada"
+          ? 'Matriz da an\u00e1lise registrada <strong>' + escapeHtml(foco.rotulo) + '</strong>. Para recalcular com todas as respostas enviadas, escolha uma medida de tend\u00eancia central.'
+          : analysisMode !== "edit"
+            ? 'Agrega\u00e7\u00e3o das <strong>' + foco.respostas + '</strong> respostas enviadas, par a par, pela <strong>' + escapeHtml(foco.rotulo) + '</strong> dos \u00edndices. C\u00e1lculo de consulta, sem exclus\u00e3o de respostas inconsistentes e sem grava\u00e7\u00e3o; a an\u00e1lise registrada est\u00e1 na subse\u00e7\u00e3o 7.'
+            : 'Agrega\u00e7\u00e3o dos julgamentos dos julgadores selecionados, par a par, pela <strong>' + escapeHtml(foco.rotulo) + '</strong> dos \u00edndices.' +
+              ' Pr\u00e9via das respostas selecionadas na subse\u00e7\u00e3o 6. O resultado homologado est\u00e1 identificado na subse\u00e7\u00e3o 7.';
+    if (!foco) { $("ami-analysis-matrix").innerHTML = '<p class="ami-empty">' + escapeHtml(motivoSemMatriz(data)) + '</p>'; return; }
     $("ami-analysis-matrix").innerHTML = '<div class="matriz-table-wrap"><table class="admin-table ami-stats-table ami-matrix" data-table-sort="off"><thead><tr><th>Crit\u00e9rio</th>' +
       criterios.map(function (nome) { return '<th>' + escapeHtml(nome) + '</th>'; }).join("") + '</tr></thead><tbody>' +
       foco.matriz.map(function (linha, i) {
@@ -527,20 +601,26 @@
     ri: "\u00cdndice aleat\u00f3rio: o IC m\u00e9dio de matrizes preenchidas ao acaso, do mesmo tamanho. Serve de r\u00e9gua para saber se o IC obtido \u00e9 pequeno de verdade.",
     rc: "Raz\u00e3o de consist\u00eancia: o IC comparado \u00e0 r\u00e9gua do acaso (IC \u00f7 IA). \u00c9 a m\u00e9trica de aceita\u00e7\u00e3o: abaixo do limite, os julgamentos s\u00e3o coerentes o bastante para virar peso."
   };
+  function metricasArmazenadas(registro) {
+    var chaves = ["lambda_max", "indice_consistencia", "indice_aleatorio", "razao_consistencia"];
+    if (!registro || chaves.some(function (chave) { return registro[chave] == null; })) return null;
+    return { lambdaMax: registro.lambda_max, ic: registro.indice_consistencia, ri: registro.indice_aleatorio, rc: registro.razao_consistencia };
+  }
   function renderConsistencyMetrics(data) {
     var foco = matrizEmFoco(data);
-    if (!foco) { $("ami-analysis-metrics-hint").textContent = ""; $("ami-analysis-metrics").innerHTML = '<p class="ami-empty">Sem m\u00e9tricas: nenhuma resposta enviada.</p>'; return; }
-    if (analysisMode === "view" && ["lambda_max","indice_consistencia","indice_aleatorio","razao_consistencia"].some(function(key){return foco.registro[key] == null;})) {
+    if (!foco) { $("ami-analysis-metrics-hint").textContent = ""; $("ami-analysis-metrics").innerHTML = '<p class="ami-empty">Sem m\u00e9tricas. ' + escapeHtml(motivoSemMatriz(data)) + '</p>'; return; }
+    var armazenadas = metricasArmazenadas(foco.registro);
+    if (foco.origem === "registrada" && !armazenadas) {
       $("ami-analysis-metrics-hint").textContent="Métricas não registradas para esta análise.";
       $("ami-analysis-metrics").innerHTML='<p class="ami-empty">Nenhuma métrica registrada.</p>';return;
     }
-    var resultado = analysisMode === "view" ? {lambdaMax:foco.registro.lambda_max,ic:foco.registro.indice_consistencia,ri:foco.registro.indice_aleatorio,rc:foco.registro.razao_consistencia} : analisarMatriz(foco.matriz), limite = Number($("ami-analysis-rc").value) || 0.1;
+    var resultado = armazenadas || analisarMatriz(foco.matriz), limite = Number($("ami-analysis-rc").value) || 0.1;
     var aprovado = resultado.rc < limite, n = foco.matriz.length;
     $("ami-analysis-metrics-hint").innerHTML = (foco.origem === "julgador"
       ? 'Coer\u00eancia interna do julgamento de <strong>' + escapeHtml(foco.rotulo) + '</strong>'
+      : foco.origem === "registrada" ? 'Coer\u00eancia da an\u00e1lise registrada <strong>' + escapeHtml(foco.rotulo) + '</strong>'
       : 'Coer\u00eancia da matriz agregada pela <strong>' + escapeHtml(foco.rotulo) + '</strong>') +
       ': se ela diz que A vale 3 vezes B e que B vale 3 vezes C, esperaria-se algo perto de 9 entre A e C. As m\u00e9tricas medem esse tipo de desencontro \u2014 cada carta abaixo mostra a sua pr\u00f3pria situa\u00e7\u00e3o.';
-    if (analysisMode === "view") $("ami-analysis-metrics-hint").textContent = "Métricas registradas: " + foco.rotulo + ".";
     // Cada metrica traz o seu proprio veredito: situacao (cor), selo e, quando
     // faz sentido, a barra do quanto do limite foi consumido.
     var excedente = resultado.lambdaMax - n;
@@ -588,23 +668,39 @@
     $("ami-analysis-metrics").innerHTML = grade + explicacoes;
   }
   function renderWeights(data) {
-    var foco = matrizEmFoco(data), resultado = foco ? (analysisMode === "view" ? {pesos:foco.registro.pesos_consolidados || foco.registro.pesos || []} : analisarMatriz(foco.matriz)) : null;
-    var pesos = resultado ? resultado.pesos : [], criterios = (foco ? foco.criterios : data.ambiente.criterios || []).map(criterionName);
+    var foco = matrizEmFoco(data), armazenados = foco && foco.registro && (foco.registro.pesos_consolidados || foco.registro.pesos);
+    var pesos = foco ? (armazenados && armazenados.length ? armazenados : analisarMatriz(foco.matriz).pesos) : [], criterios = (foco ? foco.criterios : data.ambiente.criterios || []).map(criterionName);
     $("ami-analysis-weight-col").textContent = "Peso";
-    $("ami-analysis-weights-hint").innerHTML = !foco ? 'Sem respostas enviadas.' : foco.origem === "julgador"
+    $("ami-analysis-weights-hint").innerHTML = !foco ? escapeHtml(motivoSemMatriz(data)) : foco.origem === "julgador"
       ? 'Pesos derivados da matriz de <strong>' + escapeHtml(foco.rotulo) + '</strong>, sem agrega\u00e7\u00e3o \u2014 \u00e9 o julgamento de uma pessoa s\u00f3.'
-      : 'Pesos consolidados a partir dos \u00edndices dos julgadores selecionados, agregados pela <strong>' + escapeHtml(foco.rotulo) + '</strong>.';
-    if (analysisMode === "view") $("ami-analysis-weights-hint").textContent = pesos.length ? "Pesos registrados: " + foco.rotulo + "." : "Nenhum peso consolidado registrado para esta consulta.";
+      : foco.origem === "registrada"
+        ? 'Pesos gravados na an\u00e1lise registrada <strong>' + escapeHtml(foco.rotulo) + '</strong>.'
+        : analysisMode !== "edit"
+          ? 'Pesos calculados a partir da matriz agregada de todas as respostas enviadas, pela <strong>' + escapeHtml(foco.rotulo) + '</strong> dos \u00edndices.'
+          : 'Pesos consolidados a partir dos \u00edndices dos julgadores selecionados, agregados pela <strong>' + escapeHtml(foco.rotulo) + '</strong>.';
+    $("ami-analysis-weights-hint").innerHTML += ' Cada crit\u00e9rio tem um c\u00f3digo (CT1, CT2\u2026), usado tamb\u00e9m na rosca ao lado; clicar numa linha ou numa fatia seleciona o crit\u00e9rio nos dois lados.';
     $("ami-analysis-criteria").innerHTML = criterios.map(function (nome, indice) {
-      return '<tr><td class="ami-stats-table__name" title="' + escapeHtml(nome) + '">' + escapeHtml(nome) + '</td><td><strong>' + (pesos.length ? fmtNumber(pesos[indice]) : "\u2014") + '</strong></td></tr>';
-    }).join("") || '<tr><td colspan="2" class="ami-empty">Sem respostas enviadas.</td></tr>';
-    $("ami-analysis-criteria-chart").innerHTML = pesos.length
-      ? '<figure class="ami-range-chart">' + criterios.map(function (nome, indice) {
-          var percentual = pesos[indice] * 100;
-          return '<div class="ami-range-chart__row"><span class="ami-range-chart__label" title="' + escapeHtml(nome) + '">' + escapeHtml(nome) + '</span><div class="ami-range-chart__track"><span class="ami-range-chart__span" style="left:0;width:' + Math.max(1, percentual).toFixed(2) + '%"></span></div><strong>' + percentual.toFixed(1) + '%</strong></div>';
-        }).join("") + '<figcaption>Participa\u00e7\u00e3o de cada crit\u00e9rio no total dos pesos.</figcaption></figure>'
-      : '<p class="ami-empty">Sem respostas enviadas.</p>';
+      return '<tr data-criterio="' + indice + '"><td class="ami-stats-table__codigo"><strong>CT' + (indice + 1) + '</strong></td><td class="ami-stats-table__name" title="' + escapeHtml(nome) + '">' + escapeHtml(nome) + '</td><td><strong>' + (pesos.length ? fmtNumber(pesos[indice]) : "\u2014") + '</strong></td></tr>';
+    }).join("") || '<tr><td colspan="3" class="ami-empty">Sem respostas enviadas.</td></tr>';
+    $("ami-analysis-criteria-chart").innerHTML = pesos.length ? weightsDonut(criterios, pesos) : '<p class="ami-empty">Sem respostas enviadas.</p>';
     SLTAnalysisTable($("ami-analysis-criteria").closest("table"));
+    ligarSelecaoCruzada($("ami-analysis-criteria-chart").parentElement, "criterio");
+  }
+  // Os pesos somam 100%, entao cabem numa rosca: cada fatia e um criterio,
+  // identificado pelo codigo CT da tabela ao lado. A rosca e um SVG para que cada
+  // fatia possa ser realcada e clicada.
+  function weightsDonut(criterios, pesos) {
+    var total = pesos.reduce(function (soma, peso) { return soma + Number(peso); }, 0) || 1, inicio = 0;
+    var cores = criterios.map(function (nome, indice) { return indice < 8 ? "var(--ami-chart-" + (indice + 1) + ")" : "hsl(" + ((indice * 47) % 360) + " 55% 45%)"; });
+    var fatias = pesos.map(function (peso, indice) {
+      var parte = Number(peso) / total * 100, rotulo = "CT" + (indice + 1) + " \u00b7 " + criterios[indice] + " \u2014 " + parte.toFixed(1) + "%";
+      var fatia = '<circle class="ami-donut-chart__slice" data-criterio="' + indice + '" cx="50" cy="50" r="36" pathLength="100" style="stroke:' + cores[indice] + '" stroke-dasharray="' + parte.toFixed(3) + " " + (100 - parte).toFixed(3) + '" stroke-dashoffset="' + (-inicio).toFixed(3) + '" transform="rotate(-90 50 50)" role="button" tabindex="0" aria-label="' + escapeHtml(rotulo) + '"><title>' + escapeHtml(rotulo) + '</title></circle>';
+      inicio += parte; return fatia;
+    }).join("");
+    var legenda = criterios.map(function (nome, indice) {
+      return '<li data-criterio="' + indice + '" role="button" tabindex="0" title="' + escapeHtml("CT" + (indice + 1) + " \u00b7 " + nome) + '"><span class="ami-donut-chart__swatch" style="background:' + cores[indice] + '"></span><span>CT' + (indice + 1) + '</span><strong>' + (Number(pesos[indice]) / total * 100).toFixed(1) + '%</strong></li>';
+    }).join("");
+    return '<h4 class="ami-pane-title">Participa\u00e7\u00e3o de cada crit\u00e9rio nos pesos</h4><figure class="ami-donut-chart" data-selecionavel aria-label="Peso de cada crit\u00e9rio, identificado pelo c\u00f3digo CT"><div class="ami-donut-chart__plot"><svg viewBox="0 0 100 100" aria-hidden="false">' + fatias + '</svg><span><strong>100%</strong>' + criterios.length + ' crit\u00e9rios</span></div><figcaption><ul>' + legenda + '</ul></figcaption></figure>';
   }
   // Tudo que deriva da matriz acompanha a selecao do julgador e da medida.
   function syncAnalysisCalculate() {
@@ -616,7 +712,10 @@
   function syncAnalysisMode() {
     var readonly = analysisMode !== "edit";
     $("ami-analysis-workspace").dataset.mode = analysisMode;
-    ["ami-analysis-name", "ami-analysis-rc", "ami-analysis-exclude-inconsistent", "ami-analysis-measure"].forEach(function(id){$(id).disabled = readonly || analysisSaving;});
+    ["ami-analysis-name", "ami-analysis-rc", "ami-analysis-exclude-inconsistent"].forEach(function(id){$(id).disabled = readonly || analysisSaving;});
+    // A medida de tendencia central e so de leitura: na consulta nada e gravado,
+    // entao ela segue liberada para recalcular as secoes 3 a 5.
+    $("ami-analysis-measure").disabled = analysisSaving;
     $("ami-analysis-mode").textContent = readonly ? "Visualização somente leitura — dados registrados." : "Edição das respostas colaborativas — configure a análise e salve as alterações.";
     $("ami-analysis-consolidations").querySelectorAll('[data-homologate-analysis]').forEach(function(button){
       var item=(analysisWorkspace.analises||[]).find(function(a){return a.id===button.dataset.homologateAnalysis;});
@@ -625,6 +724,7 @@
     syncAnalysisCalculate();
   }
   function renderFioDerivado(data) {
+    normalizarMedida(data);
     syncAnalysisCalculate();
     renderConsolidatedMatrix(data);
     renderConsistencyMetrics(data);
@@ -722,6 +822,7 @@
     }).finally(function () { analysisSaving = false; syncAnalysisCalculate(); });
   }
   function renderAnalysisWorkspace(data, scope) {
+    selecaoCruzada.pair = null; selecaoCruzada.criterio = null;
     if (scope == null) {
       analysisScope = -1;
       analysisWorkspace = null;
@@ -777,6 +878,7 @@
       $("ami-analysis-rc").value = saved ? (saved.rc_maximo ?? 0.1) : (analysisMode === "edit" ? "0.10" : "");
       $("ami-analysis-exclude-inconsistent").checked = saved ? Boolean(saved.excluir_inconsistentes) : analysisMode === "edit";
       selectedMeasure = saved ? ({aij_media_geometrica:"geometrica",aij_media_aritmetica:"aritmetica",aij_mediana:"mediana"}[saved.metodo_agregacao] || saved.metodo_agregacao || "geometrica") : "geometrica";
+      if (analysisMode !== "edit" && analiseRegistrada(data)) selectedMeasure = "registrada";
       if (analysisMode === "view") analysisResponseIds = new Set(saved ? (saved.resposta_ids || []).map(String) : []);
     }
     $("ami-analysis-context").textContent = (a.matriz_nome || a.hierarquizacao_nome || a.hierarquizacao_codigo || a.nome || "Julgamento avulso") + " · " + a.n_criterios + " critérios";

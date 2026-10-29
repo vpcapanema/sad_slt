@@ -269,27 +269,55 @@ MENSAGEM_HOMOLOGADA = (
 
 
 def update(
-    codigo: str, data: dict[str, Any], *, permitir_homologada: bool = False
+    codigo: str,
+    data: dict[str, Any],
+    *,
+    permitir_homologada: bool = False,
+    expected_updated_at: datetime | None = None,
 ) -> dict[str, Any] | None:
     """Grava a rodada. Rodada homologada só muda pelos fluxos de homologação."""
     if not data:
         return get_by_codigo(codigo)
     data = deepcopy(data)
+    if not permitir_homologada and "dados_hierarquizacao" in data:
+        cab = data["dados_hierarquizacao"].get("cabecalho_grupo") or {}
+        if (cab.get("publicacao") or {}).get("ativa"):
+            cab["publicacao"]["ativa"] = False
+            _registrar_historico(data["dados_hierarquizacao"], "publicacao_invalidada", None)
     with get_connection() as conn:
         atual = conn.execute(
-            sql.SQL("SELECT status FROM {} WHERE codigo = %s FOR UPDATE").format(_TABLE), (codigo,)
+            sql.SQL("SELECT status, atualizado_em FROM {} WHERE codigo = %s FOR UPDATE").format(_TABLE), (codigo,)
         ).fetchone()
+        if expected_updated_at and atual and atual["atualizado_em"] != expected_updated_at:
+            raise DemandaValidationError(
+                "A hierarquização mudou desde a prévia. Recalcule o resultado antes de salvar.",
+                field="versao_esperada",
+            )
         if atual and atual["status"] == "homologada" and not permitir_homologada:
             raise DemandaValidationError(MENSAGEM_HOMOLOGADA, field="status")
         assignments = [sql.SQL("{} = {}").format(sql.Identifier(k), sql.Placeholder(k)) for k in data]
         params: dict[str, Any] = {k: _prepare(k, v) for k, v in data.items()}
         params["codigo"] = codigo
-        query = sql.SQL("UPDATE {table} SET {sets} WHERE codigo = {codigo}").format(
-            table=_TABLE,
-            sets=sql.SQL(", ").join(assignments),
-            codigo=sql.Placeholder("codigo"),
-        )
-        conn.execute(query, params)
+        if expected_updated_at:
+            params["expected_updated_at"] = expected_updated_at
+            query = sql.SQL("UPDATE {table} SET {sets} WHERE codigo = {codigo} AND atualizado_em = {expected_updated_at}").format(
+                table=_TABLE,
+                sets=sql.SQL(", ").join(assignments),
+                codigo=sql.Placeholder("codigo"),
+                expected_updated_at=sql.Placeholder("expected_updated_at"),
+            )
+        else:
+            query = sql.SQL("UPDATE {table} SET {sets} WHERE codigo = {codigo}").format(
+                table=_TABLE,
+                sets=sql.SQL(", ").join(assignments),
+                codigo=sql.Placeholder("codigo"),
+            )
+        cursor = conn.execute(query, params)
+        if expected_updated_at and cursor.rowcount != 1:
+            raise DemandaValidationError(
+                "A hierarquização mudou desde a prévia. Recalcule o resultado antes de salvar.",
+                field="versao_esperada",
+            )
         commit_unless_atomic(conn)
     return get_by_codigo(codigo)
 
@@ -444,6 +472,9 @@ def reverter_homologacao(codigo: str, usuario_id: Any) -> dict[str, Any] | None:
         row = _bloquear_para_status(conn, codigo, "homologada", "Só é possível reverter uma hierarquização homologada.")
         dados = deepcopy(row["dados_hierarquizacao"] or {})
         _reabrir_demandas(conn, codigo, dados)
+        if (dados.get("cabecalho_grupo", {}).get("publicacao") or {}).get("ativa"):
+            dados["cabecalho_grupo"]["publicacao"]["ativa"] = False
+            _registrar_historico(dados, "publicacao_revogada", usuario_id)
         _registrar_historico(dados, "revertida", usuario_id)
         conn.execute(
             sql.SQL("UPDATE {} SET status='calculada', homologado_em=NULL, homologado_por=NULL, dados_hierarquizacao=%s WHERE codigo=%s").format(_TABLE),

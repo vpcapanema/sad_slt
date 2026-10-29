@@ -23,12 +23,13 @@ from fastapi.templating import Jinja2Templates
 
 from api.error_handlers import registrar_tratadores
 from api.exceptions import DatabaseUnavailableError
-from api.deps.auth import get_optional_session, require_geospatial_access, require_operator
+from api.deps.auth import get_optional_session, require_admin, require_geospatial_access, require_operator
+from api.deps.access_policy import module_for_path, read_only
 from api.middleware.subpath_rewrite import SubpathRewriteMiddleware
 from api.path_policy import project_path, relative_path
 from api.routers import api_router
 from api.services import storage_remoto
-from api.services.session_service import SessionUser
+from api.services.session_service import SessionUser, cookie_name
 
 app = FastAPI(title="SLT — Apoio à Tomada de Decisão", version="1.1.0")
 registrar_tratadores(app)
@@ -37,6 +38,11 @@ templates = Jinja2Templates(directory=str(project_path("templates")))
 
 def render_page(request: Request, template_name: str, **context: object) -> Response:
     """Renderiza uma página pelo contrato comum de templates da aplicação."""
+    user = getattr(request.state, "access_user", None)
+    module = module_for_path(request.url.path)
+    context["access_read_only"] = bool(user and read_only(user.tipo_usuario.strip().upper(), module))
+    context["access_module"] = module or ""
+    context["access_profile"] = user.tipo_usuario.strip().upper() if user else ""
     return templates.TemplateResponse(
         request=request,
         name=template_name,
@@ -81,8 +87,39 @@ app.add_middleware(SubpathRewriteMiddleware)
 app.include_router(api_router)
 
 
+@app.middleware("http")
+async def protect_restricted_pages(request: Request, call_next):
+    path = request.url.path
+    # Scripts e folhas de estilo não contêm dados de sessão; HTML legado também
+    # passa pela guarda, antes de qualquer montagem estática.
+    page = path.startswith("/restrict") and (
+        "." not in path.rsplit("/", 1)[-1] or path.lower().endswith((".html", ".htm"))
+    )
+    if page or path.rstrip("/") == "/public/cadastro/nova-demanda":
+        user = get_optional_session(request, request.cookies.get(cookie_name()))
+        request.state.access_user = user
+        if page and not user:
+            prefix = request.headers.get("x-forwarded-prefix", "").rstrip("/")
+            return RedirectResponse(
+                prefix + "/public/login/?" + urlencode({"next": prefix + path + ("?" + request.url.query if request.url.query else "")}),
+                status_code=303, headers={"Cache-Control": "no-store"},
+            )
+        if page and user:
+            profile = user.tipo_usuario.strip().upper()
+            module = module_for_path(path)
+            if path.rstrip("/") in {"/restrict/central-pendencias", "/restrict/solicitacao-complementacao"} and profile not in {"ANALISTA", "GESTOR", "ADMIN"}:
+                return JSONResponse(status_code=403, content={"detail": "A central é exclusiva dos perfis de análise e gestão."})
+            if module == "admin" and profile != "ADMIN":
+                return JSONResponse(status_code=403, content={"detail": "O bloco Admin é exclusivo do Administrador."})
+            if profile == "OPERADOR" and path.rstrip("/") not in {
+                "/restrict", "/restrict/operador", "/restrict/complementacao",
+            }:
+                return JSONResponse(status_code=403, content={"detail": "Acesso limitado ao cadastro e à complementação das suas demandas."})
+    return await call_next(request)
+
+
 @app.get("/sicard/storage/web/{area}/login", include_in_schema=False)
-def pagina_login_storage(area: str) -> RedirectResponse:
+def pagina_login_storage(area: str, _user: SessionUser = Depends(require_admin)) -> RedirectResponse:
     if area not in ("admin", "client"):
         raise HTTPException(status_code=404)
     storage_api_url = storage_remoto._config()[0]
@@ -141,6 +178,8 @@ RESTRICTED_PAGES = {
     "demanda": "analise_demanda.html",
     "revisao-status": "revisao-status.html",
     "complementacao": "complementacao.html",
+    "central-pendencias": "central_pendencias.html",
+    "solicitacao-complementacao": "solicitacao_complementacao.html",
     "sei-documentos": "sei_documentos.html",
 }
 
@@ -370,7 +409,7 @@ def pagina_fase_3_hierarquizacao(request: Request) -> Response:
     return render_page(request, "paginas/hierarquizacao/fase3-ajuste-fino.html")
 
 
-@app.get("/restrict/hierarquizacao/ranking/", include_in_schema=False)
+@app.get("/restrict/hierarquizacao/homologacao-ranking-publicacao/", include_in_schema=False)
 def pagina_ranking_privado_hierarquizacao(request: Request) -> Response:
     return render_page(request, "paginas/hierarquizacao/ranking-privado.html")
 
@@ -487,6 +526,7 @@ def pagina_restrita(request: Request, pagina: str) -> Response:
 
 
 LEGACY_PAGE_REDIRECTS = {
+    "/restrict/hierarquizacao/ranking/": "/restrict/hierarquizacao/homologacao-ranking-publicacao/",
     "/": "/public/",
     "/index.html": "/public/",
     "/public/index.html": "/public/",

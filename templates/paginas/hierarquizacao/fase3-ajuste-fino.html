@@ -56,9 +56,11 @@
       </label>
       <label>Completude mínima (% de atributos preenchidos para que o objeto seja considerado no cálculo) <input id="fase3-completude" type="number" min="0" max="100" step="5" value="60"></label>
     </div><p class="ahp-help-text">Critérios obrigatórios ausentes ou inválidos bloqueiam o índice, independentemente da política escolhida.</p></div></div></section>
-  <div id="fase3-acao-calculo" class="fase-actions fase3-calculo-acoes" hidden><button id="executar-fase3" class="btn btn--primary fase3-calculo-btn" type="button"><i class="fas fa-calculator"></i> Calcular índice de prioridade</button></div>
-  <section hidden data-fase3-progressiva class="secao-ranking-do-ajuste-fino card ahp-step-section card-ranking-do-ajuste-fino"><div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">4</span><i class="fas fa-ranking-star" aria-hidden="true"></i><span>Resultados</span></div><div class="ahp-section-body"><div id="fase3-indicadores" class="fase-summary-grid"></div><div class="fase-table-wrap fase3-tabela-secao"><table class="fase-table" data-ranking-order="true" data-table-sort="off"><caption class="atributos-subsecao-caption"><div class="ahp-subsection-title"><span class="cadastro-subsec-num">4.1</span><i class="fas fa-list-ol" aria-hidden="true"></i><span>Ranking de demandas</span></div></caption><thead><tr><th scope="col" aria-sort="ascending">Posição</th><th>Demanda</th><th>Índice de prioridade</th><th>Completude</th><th>Situação</th><th>Pendências</th></tr></thead><tbody id="fase3-resultados"></tbody></table></div><div class="ahp-subsection-title"><span class="cadastro-subsec-num">4.2</span><span>Auditoria</span></div><div id="fase3-auditoria" class="fase-audit hidden"></div></div></section>
-  <section hidden data-fase3-progressiva class="secao-sintese-final card ahp-step-section card-sintese-final"><div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">5</span><i class="fas fa-chart-line" aria-hidden="true"></i><span>Gerar a síntese final</span></div><div class="ahp-section-body">
+  <div id="fase3-acao-calculo" class="fase-actions fase3-calculo-acoes" hidden><button id="executar-fase3" class="btn btn--primary fase3-calculo-btn" type="button"><i class="fas fa-calculator"></i> Calcular índice de prioridade</button><button id="salvar-resultado-fase3" class="btn btn--secondary fase3-calculo-btn" type="button" disabled><i class="fas fa-floppy-disk"></i> Salvar resultado</button><button id="fase3-baixar-relatorio-acao" class="btn btn--secondary fase3-calculo-btn fase3-baixar-relatorio" type="button" disabled><i class="fas fa-file-pdf" aria-hidden="true"></i> Baixar relatório da Fase 3 (PDF)</button></div>
+  <section hidden data-fase3-progressiva class="secao-ranking-do-ajuste-fino card ahp-step-section card-ranking-do-ajuste-fino"><div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">4</span><i class="fas fa-ranking-star" aria-hidden="true"></i><span>Resultados</span></div><div class="ahp-section-body"><div id="fase3-indicadores" class="fase-summary-grid"></div><div class="fase-table-wrap fase3-tabela-secao"><table class="fase-table" data-ranking-order="true" data-table-sort="off"><caption class="atributos-subsecao-caption"><div class="ahp-subsection-title"><i class="fas fa-list-ol" aria-hidden="true"></i><span>Ranking de demandas</span></div></caption><thead><tr><th scope="col" aria-sort="ascending">Posição</th><th>Demanda</th><th>Índice de prioridade</th><th>Completude</th><th>Situação</th><th>Pendências</th></tr></thead><tbody id="fase3-resultados"></tbody></table></div></div></section>
+  <div id="fase3-relatorio-container" hidden data-fase3-progressiva class="fase3-relatorio-acoes"><button id="fase3-baixar-relatorio" class="btn btn--secondary fase3-calculo-btn fase3-baixar-relatorio" type="button" disabled><i class="fas fa-file-pdf" aria-hidden="true"></i> Baixar relatório da Fase 3 (PDF)</button></div>
+  <details hidden data-fase3-progressiva class="fase3-auditoria-details card ahp-step-section"><summary class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">4.1</span><i class="fas fa-clipboard-check" aria-hidden="true"></i><span>Auditoria</span><i class="fas fa-chevron-down fase3-collapse-icon" aria-hidden="true"></i></summary><div class="ahp-section-body"><div id="fase3-auditoria" class="fase-audit"></div></div></details>
+  <details hidden data-fase3-progressiva class="secao-sintese-final card ahp-step-section card-sintese-final"><summary class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">5</span><i class="fas fa-chart-line" aria-hidden="true"></i><span>Gerar a síntese final</span><i class="fas fa-chevron-down fase3-collapse-icon" aria-hidden="true"></i></summary><div class="ahp-section-body">
     <h3 id="fase3-sintese-titulo" class="fase3-titulo-tabela-simples"><span class="cadastro-subsec-num">5.1</span> Tabela da síntese</h3>
     <div id="fase3-tabela-sintese" class="fase-table-wrap fase3-tabela-secao"></div>
     <section class="fase3-calculo-geral secao-calculo-indice-geral ahp-subcard info-card">
@@ -70,15 +72,15 @@
         <label class="atributo-peso peso-sintese" data-sintese-peso="prioridade"><span>Índice de prioridade</span><input class="atributo-peso-numero peso-sintese-numero" id="peso-prioridade" type="number" min="0" max="1" step="0.001" value="0.334"><input class="atributo-peso-barra peso-sintese-barra" type="range" min="0" max="1" step="0.001" value="0.334"></label>
       </div>
       <p class="ahp-help-text">Na média ponderada, os três pesos devem somar 1.</p>
-      <p class="ahp-help-text">O cálculo grava o ranking na hierarquização, sem alterar o status das demandas. Enquanto não houver homologação, qualquer índice das três fases pode ser recalculado. A homologação, feita na página de ranking, conclui as demandas e trava o recálculo.</p>
-      <div class="fase-actions fase3-calculo-acoes"><button id="sintetizar" class="btn btn--primary fase3-calculo-btn" type="button"><i class="fas fa-ranking-star"></i> Calcular índice geral de hierarquização</button></div>
+      <p class="ahp-help-text">O cálculo apresenta uma prévia, sem gravar o resultado. Use o botão Salvar resultado para registrar o índice e o ranking na hierarquização. Enquanto não houver homologação, qualquer índice das três fases pode ser recalculado. A homologação, feita na página de ranking, conclui as demandas e trava o recálculo.</p>
+      <div class="fase-actions fase3-calculo-acoes"><button id="sintetizar" class="btn btn--primary fase3-calculo-btn" type="button"><i class="fas fa-ranking-star"></i> Calcular índice geral de hierarquização</button><button id="salvar-sintese" class="btn btn--secondary fase3-calculo-btn" type="button" disabled><i class="fas fa-floppy-disk"></i> Salvar resultado</button></div>
     </section>
     <div id="fase3-ranking-final" hidden>
       <h3 id="fase3-ranking-final-titulo" class="fase3-titulo-tabela-simples">Ranking final de demandas</h3>
       <p class="ahp-help-text">Clique no índice geral de hierarquização para consultar os índices, os pesos e a equação utilizados no cálculo salvo.</p>
       <div id="fase3-ranking-final-tabela" class="fase-table-wrap fase3-tabela-secao"></div>
     </div>
-  </div></section>
+  </div></details>
   <div id="fase3-memoria-sintese" class="json-modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="fase3-memoria-sintese-titulo">
     <div class="json-modal">
       <header class="json-modal-head">
@@ -106,6 +108,6 @@
   <script src="/restrict/hierarquizacao/js/hier-api.js?v=20261027-complementacao"></script>
   <script src="/assets/js/hierarquizacao-complementacao.js"></script>
   <script src="/restrict/hierarquizacao/js/atributos-objetos.js?v=20261028-nomes-originais"></script>
-  <script src="/restrict/hierarquizacao/js/fase3.js?v=20261028-homologacao"></script>
+  <script src="/restrict/hierarquizacao/js/fase3.js?v=20261029-salvar-resultados"></script>
   <script src="/assets/js/paginas/hierarquizacao-fase3-ajuste-fino-inline-1.js"></script>
 {% endblock %}

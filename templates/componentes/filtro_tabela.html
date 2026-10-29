@@ -4,4 +4,10 @@
   <select id="{{ filtro_prefixo }}-valor" aria-label="Valor do filtro" disabled><option value="">— selecione a coluna —</option></select>
   <button type="button" class="admin-icon-btn admin-filter-inv" id="{{ filtro_prefixo }}-inverter" aria-label="Inverter seleção" aria-pressed="false" title="Inverter seleção"><i class="fa-solid fa-right-left" aria-hidden="true"></i></button>
   <button type="button" class="admin-icon-btn" id="{{ filtro_prefixo }}-limpar" aria-label="Limpar" title="Limpar filtros"><i class="fa-solid fa-filter-circle-xmark" aria-hidden="true"></i></button>
+  {% if filtro_grupos_colunas|default([]) %}
+  <span class="admin-filter-column-divider" role="separator" aria-orientation="vertical" aria-label="Grupos de colunas"></span>
+  {% for grupo, titulo, icone in filtro_grupos_colunas %}
+  <button type="button" class="admin-icon-btn admin-filter-inv" data-column-group="{{ grupo }}" aria-pressed="false" title="Mostrar/ocultar {{ titulo }}" aria-label="Mostrar/ocultar {{ titulo }}"><i class="fa-solid fa-{{ icone }}" aria-hidden="true"></i></button>
+  {% endfor %}
+  {% endif %}
 </div>

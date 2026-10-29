@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from api.deps.access_policy import require_module_policy
 
 from api.routers.auth import router as auth_router
 from api.routers.admin_tabelas import router as admin_tabelas_router
@@ -30,7 +31,7 @@ from api.routers.sigma import router as sigma_router
 from api.routers.universo import router as universo_router
 from api.routers.superficie_criterios import router as superficie_criterios_router
 
-api_router = APIRouter(prefix="/api")
+api_router = APIRouter(prefix="/api", dependencies=[Depends(require_module_policy)])
 api_router.include_router(health_router)
 api_router.include_router(auth_router)
 api_router.include_router(email_router)

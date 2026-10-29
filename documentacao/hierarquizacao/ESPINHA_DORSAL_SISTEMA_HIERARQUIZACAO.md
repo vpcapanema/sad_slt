@@ -248,19 +248,113 @@ A sintese nao deve apagar a leitura por fase. O usuario deve conseguir ver:
 Os resultados permanecem associados à demanda em cada rodada, preservando a
 leitura separada das fases, dos pesos, do índice final e da posição no grupo.
 Uma demanda pode participar de várias hierarquizações; os resultados de uma
-rodada não substituem os de outra. Os painéis público e restrito organizam a
+rodada não substituem os de outra. O painel restrito organiza a
 consulta por tipo de demanda, hierarquização e demanda desde a criação da rodada,
 com uma única geometria cadastral por demanda e apresentação da situação da rodada.
 Demandas sem hierarquização continuam disponíveis na raiz de seu tipo.
 
-A persistência da síntese conclui o status técnico das demandas ainda em
-hierarquização na mesma transação do resultado. Situações de execução, suspensão,
+A homologação explícita conclui o status técnico das demandas ainda em
+hierarquização na mesma transação da homologação. Situações de execução, suspensão,
 retirada ou publicação não são sobrescritas. Conclusão do cálculo não equivale a
-homologação nem a publicação. O controle gerencial de publicação destina-se apenas
-ao painel público; sua implementação futura não deve limitar a consulta restrita.
-Enquanto esse controle não estiver implementado, preserva-se a visibilidade
-atual dos dois painéis. A consulta pública expõe somente o resumo individual
-dos resultados, sem documentos internos, caminhos de arquivos ou dados pessoais.
+homologação nem a publicação.
+
+### Gestão das pendências de atributos
+
+A Central de pendências identifica automaticamente as demandas cujo status
+pertence à fase `hierarquizacao` no domínio oficial e que apresentam atributos
+cadastrais ou dinâmicos não preenchidos. A identificação utiliza o cadastro
+oficial e as colunas vigentes de cada rodada, independentemente da existência
+de solicitação. Zero e falso são valores preenchidos; nulos e textos vazios
+permanecem pendentes. Demandas de outras fases e contextos com atributos
+completos não integram o bloco de atributos.
+
+A consulta não cria solicitações, não altera status e não envia notificações.
+O gestor ou administrador seleciona a pendência, preenche o motivo e a mensagem
+externa e salva o pedido; o envio exige ação explícita posterior. As anotações
+técnicas da pendência permanecem internas. O envio pela Central anexa o PDF já
+gerado na análise cadastral, sem gerar outro documento; sua ausência impede a
+notificação. A notificação registra responsável, data, destinatário e identificação
+do anexo, separadamente do solicitante e da data do cadastro. A prévia abaixo da
+tabela apresenta destinatário, texto integral e anexo, sem enviar mensagem.
+O envio confirmado revalida o conteúdo e utiliza o feedback de processos do SICARD;
+somente a resposta do servidor atualiza o resultado da notificação. Assunto,
+texto integral, revisão, identificação do anexo e tentativas anteriores são
+preservados no registro de auditoria. No bloco cadastral, a mensagem é o próprio
+texto do parecer da análise; no bloco de atributos, é a mensagem salva do gestor.
+O ciclo interno do pedido permanece separado da comunicação: `registrada` indica registro ainda aberto
+e `atendida` indica sua conclusão. A migração 154 renomeia o antigo estado
+`solicitada`, preservando o histórico; não o utiliza como prova de comunicação.
+Na Central, apresenta-se somente o estado da notificação, inicialmente
+`nao_enviado` quando não houver evidência de envio.
+No bloco cadastral, a página de gerenciamento apresenta diretamente a
+notificação e permite reemitir o parecer da análise com as perguntas vigentes,
+preservando respostas e decisões. A migração 155 mantém versões anteriores,
+fontes e hashes. O envio exige confirmação humana da revisão da versão vigente;
+alterações nas fontes ou no PDF invalidam essa liberação. Essa reemissão não se
+aplica a pedidos de atributos, atendidos ou com envio em andamento, aceito ou
+indeterminado e não modifica a metodologia de pontuação da hierarquização.
+O parecer PDF adota a identidade visual dos relatórios da Fase 3 e apresenta a
+identificação seguida de um único bloco de análise e parecer. Nesse bloco,
+destacam-se primeiro a conclusão, seu motivo e a lista do que enviar ou corrigir,
+quando aplicável; a fundamentação reúne perguntas, respostas e geometria em uma
+única tabela. Na complementação, o resultado dos critérios é distinguido da
+decisão final do analista. Ao final, a assinatura apresenta analista, local e
+data em texto simples, sem seção numerada ou quadro de responsabilidade.
+As respostas negativas aplicáveis são expressas em frases declarativas que
+explicitam a condição não atendida; respostas ausentes não são convertidas em
+reprovação. A conclusão geométrica explicita adequação, necessidade de ajuste ou
+confirmação pendente, conforme o registro do analista. O bloco da conclusão
+utiliza as cores do status efetivamente adquirido pela demanda após a análise,
+lidas da paleta oficial única em `assets/js/status-colors.js`, sem inferência
+pelo resultado classificatório. As cores utilizadas integram as fontes
+versionadas e sua alteração exige nova revisão do documento.
+As orientações repetidas são consolidadas; a descrição pública da solicitação
+de complementação integra o encaminhamento, sem exposição das anotações internas.
+A autoria é obtida pelo nome da pessoa vinculada ao ID do analista no SIGMA;
+ausência de identificação é explicitada. O local institucional é São Paulo - SP.
+A migração 156 persiste a data da análise separadamente da emissão do documento,
+utilizando o registro legado anterior às reemissões quando aplicável. A reemissão
+não altera essa data. Modelo, autoria, data e descrição da solicitação integram
+as fontes verificadas para a revisão, sem alteração das perguntas ou da pontuação.
+A coleta de retornos
+DSN/MDN correlaciona a mensagem e o destinatário em caixa IMAP somente leitura,
+sem presumir abertura quando não houver confirmação. O cumprimento decorre das
+categorias salvas e da conclusão registrada, não do envio ou da leitura do e-mail.
+O registro revalida o contexto, as ausências e a
+inexistência de pedido aberto, preservando autoria e histórico. Pendências sem
+rodada aberta permanecem visíveis com indicação do impedimento; a consulta
+não reabre resultados homologados, suspensões ou retiradas. O cadastro e a
+geometria mantêm fluxo independente, gerido pelo analista ou administrador.
+
+### Publicação dos resultados homologados
+
+A divulgação exige ação explícita **Publicar**, na barra de controles de
+**Homologação, Ranking e Publicação**, com uma única hierarquização homologada
+selecionada. Gestores e administradores podem publicar; analistas têm somente
+leitura no MAD e operadores não têm acesso. A API aplica as mesmas restrições.
+Ranking ausente, fases ou síntese desatualizadas, complementação pendente,
+divergência de composição do grupo ou configuração de atributos desatualizada
+impedem a publicação.
+
+A publicação controla somente os resultados individuais no painel público:
+elegibilidade e índice de risco, favorabilidade de rede e territorial,
+priorização, índice geral e posição efetivamente registrada no ranking.
+Os índices originais são preservados, sem recálculo, renormalização ou posições
+presumidas. Cada resultado identifica a rodada e o grupo comparável; múltiplas
+rodadas publicadas são apresentadas separadamente. A ausência de publicação não
+oculta os dados cadastrais da demanda nem altera o painel restrito.
+
+O estado é persistido em `cabecalho_grupo.publicacao`, no JSON da rodada, com
+autoria, data e assinatura dos resultados. Publicação e revogação utilizam
+`historico_homologacao`. A operação é transacional e idempotente para a mesma
+versão. A reversão da homologação revoga a publicação na mesma transação;
+alterações dos resultados invalidam a versão divulgada. Recalcular e homologar
+novamente não publica os novos resultados: exige-se nova ação explícita.
+A consulta pública rejeita publicação sem vínculo com a versão corrente,
+resultados desatualizados e composição divergente do grupo.
+Somente o resumo individual é divulgado, sem documentos internos, caminhos de
+arquivos, autoria da publicação ou dados pessoais. Essas regras de divulgação
+não alteram a metodologia de cálculo.
 
 ### Tratamento da Fase 1 na sintese
 

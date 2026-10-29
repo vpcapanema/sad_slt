@@ -213,7 +213,7 @@ def test_viewer_cannot_register_demand() -> None:
 
 
 def test_operator_profiles_pass_demand_registration_authorization() -> None:
-    for profile in ("OPERADOR", "ANALISTA", "GESTOR", "ADMIN"):
+    for profile in ("OPERADOR", "ANALISTA", "ADMIN"):
         client = TestClient(app)
         client.cookies.set(cookie_name(), create_token(_user(profile)))
         for route in ("/api/demandas", "/api/demandas/com-arquivo-geometria", "/api/planos", "/api/programas"):

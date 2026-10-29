@@ -69,3 +69,15 @@ def nomes_por_ids(ids: list[str]) -> dict[str, str]:
     with get_sigma_connection() as conn:
         rows = conn.execute(_SELECT_NOMES, {"ids": ids}).fetchall()
     return {str(r["id"]): r["nome_pessoa"] for r in rows if r.get("nome_pessoa")}
+
+
+def nome_pessoa_por_id(usuario_id: str) -> str | None:
+    """Nome civil associado ao usuário, inclusive se a conta foi desativada."""
+    with get_sigma_connection() as conn:
+        row = conn.execute(
+            """SELECT p.nome_completo
+               FROM usuarios.usuario u
+               JOIN cadastro.pessoa p ON p.id = u.pessoa_id
+               WHERE u.id = %(id)s""", {"id": usuario_id},
+        ).fetchone()
+    return row["nome_completo"] if row else None

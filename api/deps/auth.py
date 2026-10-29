@@ -75,8 +75,7 @@ def require_analyst(
 def require_admin(
     user: SessionUser = Depends(require_authenticated),
 ) -> SessionUser:
-    # Área do administrador: perfis elevados (ADMIN e GESTOR).
-    return _require_profiles(user, frozenset({"ADMIN", "GESTOR"}), "acessar a área do administrador")
+    return _require_profiles(user, frozenset({"ADMIN"}), "acessar a área do administrador")
 
 
 def require_geospatial_access(
@@ -90,7 +89,7 @@ def require_geospatial_access(
     if request.method == "GET":
         return user
     if "/homologar" in request.url.path:
-        return _require_profiles(user, frozenset({"GESTOR"}), "homologar produtos geoespaciais")
+        return _require_profiles(user, frozenset({"ANALISTA", "GESTOR", "ADMIN"}), "homologar produtos geoespaciais")
     return _require_profiles(user, _OPERATE_PROFILES, "executar operações geoespaciais")
 
 

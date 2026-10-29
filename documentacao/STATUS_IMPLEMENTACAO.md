@@ -69,7 +69,7 @@ JSONB autocontido com cabeçalho, objetos e resultados das fases.
 
 As interfaces vigentes são a gestão das hierarquizações em `/restrict/hierarquizacao/processos/`,
 as três fases em `/restrict/hierarquizacao/fase-1/`, `/fase-2/` e `/fase-3/`
-e o ranking em `/restrict/hierarquizacao/ranking/`. As cinco telas antigas
+e a página Homologação, Ranking e Publicação em `/restrict/hierarquizacao/homologacao-ranking-publicacao/`. As cinco telas antigas
 de etapas avulsas do portfólio foram removidas.
 
 As fases da rodada são selecionáveis e independentes. As interfaces atuais das

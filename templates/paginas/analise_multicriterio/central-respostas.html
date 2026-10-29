@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="/assets/css/ahp-collab-analytics.css">
   <link rel="stylesheet" href="/assets/css/ahp-collab-explorer.css">
   <link rel="stylesheet" href="/assets/css/ahp-collab-rounds.css">
-  <link rel="stylesheet" href="/assets/css/analise-multicriterio.css?v=20260831-espaco-analitico">
+  <link rel="stylesheet" href="/assets/css/analise-multicriterio.css?v=20261029-escala-saaty2">
   <link rel="stylesheet" href="/assets/css/analise-multicriterio-tabela.css?v=20260831-larguras-colunas">
   <link rel="stylesheet" href="/assets/css/central-respostas-layout.css?v=20260821-table-left-chart-right">
   <link rel="stylesheet" href="/assets/css/analise-multicriterio-modal.css?v=20260819-modal5">
@@ -24,7 +24,7 @@
   <link rel="stylesheet" href="/assets/css/paginas/ami-espaco-secoes.css?v=20261027-botoes-cinza-claro">
   {% endif %}
   {% if modo_pagina == 'julgamentos' %}<link rel="stylesheet" href="/assets/css/paginas/sicard-standard-pages.css?v=20261027-1">{% endif %}
-  {% if modo_pagina == 'julgamentos' %}<link rel="stylesheet" href="/assets/css/paginas/central-respostas-padrao.css?v=20261027-espaco-cards">{% endif %}
+  {% if modo_pagina == 'julgamentos' %}<link rel="stylesheet" href="/assets/css/paginas/central-respostas-padrao.css?v=20261029-escala-saaty">{% endif %}
 {% endblock %}
 {% block conteudo %}
 {% set indicacao_processos = modo_pagina in ['espaco', 'julgamentos'] %}
@@ -107,5 +107,5 @@
   <script src="/assets/js/paginas/ami-email.js?v=20261027-monitoramento-seletores"></script>
   <script src="/assets/js/matriz-criterios-arquivo.js?v=20261009"></script>
   <script src="/assets/js/matrizes-criterios.js?v=20261028-ahp-fase3"></script>
-  <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20261028-recorte-todos"></script>
+  <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20261029-escala-saaty"></script>
 {% endblock %}

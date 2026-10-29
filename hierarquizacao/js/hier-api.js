@@ -70,6 +70,9 @@
     homologar(codigo) {
       return request(`${BASE_H}/${encodeURIComponent(codigo)}/homologar`, jsonOpts("POST"));
     },
+    publicar(codigo) {
+      return request(`${BASE_H}/${encodeURIComponent(codigo)}/publicar`, jsonOpts("POST"));
+    },
     reverterHomologacao(codigo) {
       return request(`${BASE_H}/${encodeURIComponent(codigo)}/reverter-homologacao`, jsonOpts("POST"));
     },
@@ -104,11 +107,19 @@
     listarFatiamentosFase1() { return request(`${BASE_H}/fatiamentos/fase1`); },
     salvarFatiamentoFase1(payload) { return request(`${BASE_H}/fatiamentos/fase1`, jsonOpts("POST", payload)); },
     executarFase2(codigo, payload) { return request(`${BASE_H}/${encodeURIComponent(codigo)}/fases/2/executar`, jsonOpts("POST", payload)); },
-    executarFase3(codigo, payload) { return request(`${BASE_H}/${encodeURIComponent(codigo)}/fases/3/executar`, jsonOpts("POST", payload)); },
+    executarFase3(codigo, payload, versaoEsperada) {
+      const qs = versaoEsperada ? `?versao_esperada=${encodeURIComponent(versaoEsperada)}` : "";
+      return request(`${BASE_H}/${encodeURIComponent(codigo)}/fases/3/executar${qs}`, jsonOpts("POST", payload));
+    },
+    calcularFase3(codigo, payload) { return request(`${BASE_H}/${encodeURIComponent(codigo)}/fases/3/calcular`, jsonOpts("POST", payload)); },
     salvarAtributosFase3(codigo, payload) { return request(`${BASE_H}/${encodeURIComponent(codigo)}/fases/3/atributos`, jsonOpts("PATCH", payload)); },
     salvarPesosFase3(codigo, payload) { return request(`${BASE_H}/${encodeURIComponent(codigo)}/fases/3/pesos`, jsonOpts("PATCH", payload)); },
     salvarRiscosFase3(codigo, payload) { return request(`${BASE_H}/${encodeURIComponent(codigo)}/fases/3/riscos`, jsonOpts("PATCH", payload)); },
-    sintetizar(codigo, payload) { return request(`${BASE_H}/${encodeURIComponent(codigo)}/sintetizar`, jsonOpts("POST", payload)); },
+    sintetizar(codigo, payload, versaoEsperada) {
+      const qs = versaoEsperada ? `?versao_esperada=${encodeURIComponent(versaoEsperada)}` : "";
+      return request(`${BASE_H}/${encodeURIComponent(codigo)}/sintetizar${qs}`, jsonOpts("POST", payload));
+    },
+    calcularSintese(codigo, payload) { return request(`${BASE_H}/${encodeURIComponent(codigo)}/sintese/calcular`, jsonOpts("POST", payload)); },
     listarUniverso(tipo, status) {
       const qs = new URLSearchParams(status ? { status } : {}).toString();
       return request(`/api/ahp/universo/${encodeURIComponent(tipo)}${qs ? "?" + qs : ""}`);

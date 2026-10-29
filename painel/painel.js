@@ -231,7 +231,7 @@
     SLTPainelMapControls.applyStackZOrder(
       mapLayerGroup,
       layersByKey,
-      SLTPainelMapControls.buildStackKeys(SIDEBAR_GRUPOS, recordOrder)
+      SLTPainelMapControls.buildStackKeys([...SIDEBAR_GRUPOS].reverse(), recordOrder)
     );
   }
 
@@ -258,6 +258,7 @@
 
   function syncAllMapVisibility() {
     items.forEach((d) => syncEntryVisibility(d.tipo, d.id));
+    applyMapLayerZOrder();
     SIDEBAR_GRUPOS.forEach((g) => {
       if (groupLabelsOn[g.id]) refreshGroupLabels(g.id);
     });
@@ -343,12 +344,14 @@
     items
       .filter((d) => SLTPainelMapControls.groupIdFromKind(d.tipo) === groupId)
       .forEach((d) => syncEntryVisibility(d.tipo, d.id));
+    applyMapLayerZOrder();
     renderSidebar();
   }
 
   function onRecordVisibilityChange(groupId, recordId, visible) {
     layerVisibility.setRecordVisible(recordVisibilityKey(groupId, recordId), visible);
     syncEntryVisibility(groupId, recordId);
+    applyMapLayerZOrder();
     const row = document.querySelector(
       `.layer-group--record[data-record-id="${CSS.escape(recordId)}"][data-group-id="${CSS.escape(groupId)}"]`
     );
@@ -613,8 +616,9 @@
     buildMapLayers();
     $("layers-container").setAttribute("aria-busy", "false");
     $("painel-load-status").textContent = items.length
-      ? `${items.length} registro(s) carregado(s). A presença no painel não comprova aprovação ou homologação.`
+      ? ""
       : "Consulta concluída: nenhum registro retornado pelo servidor.";
+    $("painel-load-status").hidden = items.length > 0;
     document.querySelector("#map-painel .painel-map-loading")?.remove();
   }
 

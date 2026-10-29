@@ -103,13 +103,27 @@ def test_cada_botao_das_fases_confirma_antes_de_chamar_o_servidor():
     for js, chamada in [
         (FASE1_JS, "HierApi.executarFase1"),
         (FASE2_JS, "HierApi.executarFase2"),
+        (FASE3_JS, "HierApi.calcularFase3"),
         (FASE3_JS, "HierApi.executarFase3"),
         (FASE3_JS, "HierApi.salvarPesosFase3"),
         (FASE3_JS, "HierApi.salvarRiscosFase3"),
+        (FASE3_JS, "HierApi.calcularSintese"),
         (FASE3_JS, "HierApi.sintetizar"),
     ]:
         antes = js.split(chamada, 1)[0]
         assert "ProcessFeedback.confirmar" in antes or "confirmacao:" in antes, chamada
+
+
+def test_calculos_fase3_mantem_processamento_visivel_por_dois_segundos():
+    assert FASE3_JS.count("duracaoMinimaMs: 2000") == 4
+    helper = FASE3_JS.split("async function executarAcao(", 1)[1].split(
+        '$("executar-fase3").onclick', 1
+    )[0]
+    assert "duracaoMinimaMs = 0" in helper
+    assert helper.count("await aguardarDuracaoMinima();") == 2
+    assert helper.index("await aguardarDuracaoMinima();") < helper.index("proc.sucesso(")
+    erro = helper.split("} catch (e) {", 1)[1]
+    assert erro.index("await aguardarDuracaoMinima();") < erro.index("proc.erro(")
 
 
 def test_fases_1_e_2_relatam_o_desfecho_pelo_processo_e_nao_por_toast_solto():
@@ -127,7 +141,7 @@ def test_sintetizar_nao_redireciona_sozinho():
     assert "window.location" not in trecho
     helper = FASE3_JS.split("async function executarAcao(", 1)[1].split("$(\"executar-fase3\")", 1)[0]
     assert 'action_label: "Ver ranking"' in helper
-    assert "/restrict/hierarquizacao/ranking/?codigo=" in helper
+    assert "/restrict/hierarquizacao/homologacao-ranking-publicacao/?codigo=" in helper
 
 
 def test_upload_usa_as_rotas_com_log_real_do_servidor():

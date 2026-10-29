@@ -33,26 +33,58 @@
     if (perfil() === "ADMIN") return true;
     return perfil() === "GESTOR" && (!item.homologadoPor || String(item.homologadoPor) !== String(usuario?.id));
   }
+  async function executarAcao(item, {confirmacao, tarefa, executar, sucesso}) {
+    if (!await window.ProcessFeedback.confirmar(confirmacao)) return;
+    const proc = window.ProcessFeedback.iniciarCadastro({title: confirmacao.title, tasks: [tarefa]});
+    proc.tarefaAtual(tarefa);
+    const inicio = performance.now();
+    const aguardarProcessamento = async () => {
+      const restante = 2000 - (performance.now() - inicio);
+      if (restante > 0) await new Promise(resolve => setTimeout(resolve, restante));
+    };
+    try {
+      const resultado = await executar();
+      await aguardarProcessamento();
+      hierarquizacoes = hierarquizacoes.map(h => h.codigo === item.codigo ? resultado : h);
+      renderHierarquizacoes();
+      $("ranking-hier-error").classList.add("hidden");
+      proc.concluirTarefa(tarefa, "Operação registrada no servidor");
+      proc.sucesso(sucesso);
+    } catch (error) {
+      await aguardarProcessamento();
+      proc.erro({message: error.message || String(error), detail: error.detail});
+    }
+  }
+  async function publicar(item) {
+    if (!item || item.status !== "homologada" || !gestor()) return;
+    await executarAcao(item, {
+      confirmacao: {
+        title: "Publicar hierarquização",
+        message: `Publicar os índices e as posições de “${item.nome}” no painel público? Os resultados serão identificados pelo grupo e pela rodada. Dados pessoais não serão publicados.`,
+        confirmLabel: "Publicar",
+      },
+      tarefa: "Publicar resultados homologados",
+      executar: () => HierApi.publicar(item.codigo),
+      sucesso: {title: "Hierarquização publicada", message: "Os índices e as posições desta rodada estão disponíveis no painel público."},
+    });
+  }
   async function alterarHomologacao(item, homologar) {
     if (!item) return;
-    const confirmado = await window.ProcessFeedback.confirmar(homologar
+    await executarAcao(item, {
+      confirmacao: homologar
       ? { title: "Homologar hierarquização", message: `Homologar “${item.nome}”? As demandas do grupo passarão a Hierarquização concluída e nenhuma fase poderá ser recalculada. A reversão exige outro gestor ou um administrador.`, confirmLabel: "Homologar" }
-      : { title: "Reverter homologação", message: `Reverter a homologação de “${item.nome}”? As demandas voltarão a Em hierarquização e o recálculo das fases será liberado.`, confirmLabel: "Reverter" });
-    if (!confirmado) return;
-    const erro = $("ranking-hier-error");
-    try {
-      await (homologar ? HierApi.homologar(item.codigo) : HierApi.reverterHomologacao(item.codigo));
-      erro.classList.add("hidden");
-      window.location.reload();
-    } catch (error) {
-      erro.textContent = error.message || String(error);
-      erro.classList.remove("hidden");
-    }
+      : { title: "Reverter homologação", message: `Reverter a homologação de “${item.nome}”? As demandas voltarão a Em hierarquização, o recálculo das fases será liberado e a publicação desta rodada será revogada.`, confirmLabel: "Reverter" },
+      tarefa: homologar ? "Homologar resultados da hierarquização" : "Reverter homologação dos resultados",
+      executar: () => homologar ? HierApi.homologar(item.codigo) : HierApi.reverterHomologacao(item.codigo),
+      sucesso: homologar
+        ? {title: "Hierarquização homologada", message: "As demandas foram concluídas e o recálculo das fases foi travado. Agora você pode publicar os resultados no painel público."}
+        : {title: "Homologação revertida", message: "O recálculo das fases foi liberado e a publicação desta rodada foi revogada."},
+    });
   }
   function renderHierarquizacoes() {
     const body = $("ranking-hier-tbody");
     body.innerHTML = hierarquizacoes.map(item => `<tr data-row-codigo="${esc(item.codigo)}">
-      <td><span class="ranking-finalizado">${item.status === "homologada" ? "Finalizada e homologada" : "Ranking calculado — aguardando homologação"}</span></td>
+      <td><span class="ranking-finalizado">${item.status === "homologada" ? "Finalizada e homologada" : "Ranking calculado — aguardando homologação"}${item.dados_hierarquizacao?.cabecalho_grupo?.publicacao?.ativa ? " · Publicada" : " · Não publicada"}</span></td>
       <td><button type="button" class="ami-cell-link" data-visualizar="${esc(item.codigo)}">${esc(item.codigo)}</button></td>
       <td>${item.config_codigo || item.config_id ? `<button type="button" class="ami-cell-link" data-visualizar="${esc(item.codigo)}">${esc(item.config_codigo || item.config_id)}</button>` : "—"}</td>
       <td><button type="button" class="ami-cell-link" data-detalhes="${esc(item.codigo)}">${esc(item.nome)}</button></td>
@@ -73,6 +105,7 @@
     const controls = table.closest(".ami-report-table").querySelector(".admin-actions");
     controls.innerHTML = '<button type="button" class="admin-icon-btn view" aria-label="Visualizar" title="Visualizar ranking e informações do grupo selecionado"><i class="fas fa-eye" aria-hidden="true"></i></button><button type="button" class="admin-icon-btn edit-group" aria-label="Visualizar no painel restrito" title="Abrir painel restrito existente"><i class="fas fa-lock" aria-hidden="true"></i></button><button type="button" class="admin-icon-btn reload" aria-label="Visualizar no painel público" title="Abrir painel público existente"><i class="fas fa-globe" aria-hidden="true"></i></button>'
       + '<button type="button" class="admin-icon-btn save" data-acao="homologar" aria-label="Homologar" title="Homologar: conclui as demandas do grupo e trava o recálculo"><i class="fas fa-circle-check" aria-hidden="true"></i></button>'
+      + '<button type="button" class="admin-icon-btn save" data-acao="publicar" aria-label="Publicar" title="Publicar os resultados homologados no painel público"><i class="fas fa-bullhorn" aria-hidden="true"></i></button>'
       + '<button type="button" class="admin-icon-btn delete" data-acao="reverter" aria-label="Reverter homologação" title="Reverter homologação (outro gestor ou administrador)"><i class="fas fa-rotate-left" aria-hidden="true"></i></button>';
     const selecionados = () => state.rows.filter(row => row.querySelector('input[type="checkbox"]:checked'));
     const itemSelecionado = () => hierarquizacoes.find(h => h.codigo === selecionados()[0]?.dataset.rowCodigo);
@@ -83,12 +116,14 @@
       const item = unica ? itemSelecionado() : null;
       controls.querySelectorAll("button").forEach(button => { button.disabled = !unica; });
       controls.querySelector('[data-acao="homologar"]').disabled = !(item && item.status === "calculada" && gestor());
+      controls.querySelector('[data-acao="publicar"]').disabled = !(item && item.status === "homologada" && gestor());
       controls.querySelector('[data-acao="reverter"]').disabled = !(item && item.status === "homologada" && podeReverter(item));
     };
     controls.children[0].onclick = () => selecionar(selecionados()[0]?.dataset.rowCodigo);
     controls.children[1].onclick = () => window.open("/restrict/painel/", "_blank", "noopener,noreferrer");
     controls.children[2].onclick = () => window.open("/public/painel/", "_blank", "noopener,noreferrer");
     controls.querySelector('[data-acao="homologar"]').onclick = () => alterarHomologacao(itemSelecionado(), true);
+    controls.querySelector('[data-acao="publicar"]').onclick = () => publicar(itemSelecionado());
     controls.querySelector('[data-acao="reverter"]').onclick = () => alterarHomologacao(itemSelecionado(), false);
     state.draw();
     body.addEventListener("click", event => {
@@ -133,7 +168,7 @@
     $("ranking-mapa-section").classList.remove("hidden");
     $("ranking-mapa-titulo").textContent = `Mapa do ranking de ${plural} do grupo ${item.nome}`;
     SLTStatusColors.renderLegend($("ranking-mapa-legenda"), {
-      layout: "demandas", tipoDemanda: D.tipo(item), title: "Legenda das demandas", marcadorRanking: true,
+      layout: "painel", title: "Legenda das demandas",
     });
     if (mapa) {
       mapa.definirPoliticaPublicacao(h => h.codigo === codigoSelecionado);
@@ -220,7 +255,7 @@
         <td>${pesosHtml(f3.pesos_fase3)}</td></tr>`;
     }).join("");
     $("ranking-detalhes-titulo").textContent = `Detalhes da hierarquização — ${item.nome}`;
-    $("ranking-detalhes-conteudo").innerHTML = `<dl class="ranking-detalhes-meta"><dt>Código</dt><dd>${esc(item.codigo)}</dd><dt>Tipo de demanda</dt><dd>${esc(nomesTipo[D.tipo(item)] || "Não informado")}</dd><dt>Descrição</dt><dd>${esc(item.descricao || "Não informada")}</dd><dt>Operador da síntese</dt><dd>${esc({media_simples: "Média simples", media_ponderada: "Média ponderada"}[cab.sintese?.operador] || "Não registrado")}</dd></dl>
+    $("ranking-detalhes-conteudo").innerHTML = `<dl class="ranking-detalhes-meta"><dt>Código</dt><dd>${esc(item.codigo)}</dd><dt>Tipo de demanda</dt><dd>${esc(nomesTipo[D.tipo(item)] || "Não informado")}</dd><dt>Descrição</dt><dd>${esc(item.descricao || "Não informada")}</dd><dt>Operador da síntese</dt><dd>${esc({media_simples: "Média simples", media_ponderada: "Média ponderada"}[cab.sintese?.operador] || "Não registrado")}</dd><dt>Publicação</dt><dd>${cab.publicacao?.ativa ? "Publicada" : "Não publicada"}</dd><dt>Última publicação</dt><dd>${esc(dataPt(cab.publicacao?.publicado_em))}</dd><dt>Responsável pela publicação</dt><dd>${esc(cab.publicacao?.publicado_por || "—")}</dd></dl>
       <p class="ahp-help-text">Resumo dos resultados e pesos salvos. A Fase 1 verifica a elegibilidade territorial e fornece o Índice de risco ambiental e territorial, utilizado na composição do Índice de prioridade da Fase 3, conforme os critérios e pesos da rodada. A síntese final combina os índices de favorabilidade de rede, favorabilidade territorial e prioridade, sem contabilizar o índice de risco separadamente. Valores ausentes não são substituídos por zero.</p>
       <div class="hier-table-shell"><table class="admin-table" data-table-sort="off" aria-label="Resumo das fases por demanda"><thead><tr><th>Posição final</th><th>Demanda</th><th>Índice geral de hierarquização</th><th data-grupo-colunas="pesos">Pesos da síntese</th><th data-grupo-colunas="elegibilidade">Elegibilidade territorial</th><th data-grupo-colunas="indices">Índice de risco ambiental e territorial</th><th data-grupo-colunas="indices">Índice de favorabilidade de rede</th><th data-grupo-colunas="indices">Índice de favorabilidade territorial</th><th data-grupo-colunas="pesos">Pesos da Fase 2</th><th data-grupo-colunas="indices">Índice de prioridade</th><th data-grupo-colunas="pesos">Pesos da Fase 3</th></tr></thead><tbody>${linhas}</tbody></table></div>`;
     acionadorModal = acionador;

@@ -343,7 +343,7 @@ def test_snapshot_antigo_nao_concede_acesso():
 @pytest.mark.parametrize('owner,person', [('criador', 'outra'), ('outro', 'pessoa'), ('outro', 'outra')])
 def test_atributos_independem_do_status_cadastral(profile, state, owner, person):
     demanda = {'status': state, 'criado_por': owner, 'sigma_pessoa_id': person}
-    esperado = profile == 'ADMIN' or owner == 'criador' or person == 'pessoa'
+    esperado = profile in {'ADMIN', 'GESTOR', 'ANALISTA'} or owner == 'criador' or person == 'pessoa'
     assert mod._acesso({'codigo': 'X'}, user(profile), 'pessoa', {'X': demanda}) is esperado
 
 

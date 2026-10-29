@@ -61,6 +61,32 @@ def test_legacy_specialist_form_redirect_preserves_token_query_and_prefix() -> N
         assert 'data-requer-autenticacao="true"' not in page.text
 
 
+def test_homologacao_ranking_publicacao_page_name_and_route() -> None:
+    client = TestClient(app)
+    user = SessionUser(id="admin-teste", email="", username="teste_admin", nome="Teste", tipo_usuario="ADMIN")
+    client.cookies.set(cookie_name(), create_token(user))
+    response = client.get("/restrict/hierarquizacao/homologacao-ranking-publicacao/", follow_redirects=False)
+    assert response.status_code == 200
+    assert "<title>Homologação, Ranking e Publicação — SICARD</title>" in response.text
+    assert "<span>Homologação, Ranking e Publicação</span></h1>" in response.text
+    assert 'id="ranking-gerenciar-publicacao" disabled' in response.text
+    assert 'data-requer-autenticacao="true"' in response.text
+
+
+def test_legacy_ranking_redirect_preserves_query_and_prefix() -> None:
+    client = TestClient(app)
+    for prefix in ("", "/sicard"):
+        response = client.get(
+            "/restrict/hierarquizacao/ranking/?codigo=H-001",
+            headers={"x-forwarded-prefix": prefix},
+            follow_redirects=False,
+        )
+        assert response.status_code == 308
+        assert response.headers["location"] == (
+            f"{prefix}/restrict/hierarquizacao/homologacao-ranking-publicacao/?codigo=H-001"
+        )
+
+
 def test_all_router_modules_are_exposed_by_openapi() -> None:
     paths = TestClient(app).get("/openapi.json").json()["paths"]
 
@@ -84,6 +110,9 @@ def test_all_router_modules_are_exposed_by_openapi() -> None:
 
     for prefix in expected_prefixes:
         assert any(path.startswith(prefix) for path in paths), prefix
+
+    assert "/api/ahp/hierarquizacoes/{codigo}/fases/3/calcular" in paths
+    assert "/api/ahp/hierarquizacoes/{codigo}/sintese/calcular" in paths
 
 
 def test_canonical_pages_are_available() -> None:
@@ -725,7 +754,7 @@ def test_paginas_descontinuadas_respondem_410() -> None:
         "/restrict/hierarquizacao/fase-1/",
         "/restrict/hierarquizacao/fase-2/",
         "/restrict/hierarquizacao/fase-3/",
-        "/restrict/hierarquizacao/ranking/",
+        "/restrict/hierarquizacao/homologacao-ranking-publicacao/",
         "/restrict/analise-multicriterio/",
         "/public/analise-multicriterio/formulario-comparacao-pareada/token-de-teste/",
     ):

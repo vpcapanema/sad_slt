@@ -15,7 +15,10 @@ const rodada = (codigo, pendente, desatualizada) => ({codigo, nome: codigo, dado
 (async () => {
   const paginas = JSON.parse(execFileSync(path.join(root, '.venv', 'Scripts', 'python.exe'), ['-B', '-X', 'utf8', '-c', [
     'import json', 'from fastapi.testclient import TestClient', 'from api.server import app',
+    'from api.services.session_service import SessionUser, cookie_name, create_token',
     `rotas = ${JSON.stringify([rota, referencia])}`, 'client = TestClient(app)',
+    'usuario = SessionUser(id="00000000-0000-0000-0000-000000000021", email="teste@example.org", username="teste_admin", nome="Teste", tipo_usuario="ADMIN")',
+    'client.cookies.set(cookie_name(), create_token(usuario))',
     'respostas = {rota: client.get(rota) for rota in rotas}', 'assert all(r.status_code == 200 for r in respostas.values())',
     'print(json.dumps({rota: r.text for rota, r in respostas.items()}))',
   ].join('\n')], {cwd: root, encoding: 'utf8'}));
@@ -39,6 +42,7 @@ const rodada = (codigo, pendente, desatualizada) => ({codigo, nome: codigo, dado
     page.on('pageerror', erro => erros.push(erro.message));
     const rodadas = [rodada('ATUAL', false, false), rodada('COLETA', true, false),
       rodada('ANTIGA', false, true), rodada('AMBOS', true, true)];
+    const gravacoes = [];
     rodadas[0].dados_hierarquizacao.objetos = [3, 1, 2].map(posicao => {
       const objeto = structuredClone(rodadas[0].dados_hierarquizacao.objetos[0]);
       objeto.cabecalho_objeto.codigo = 'D' + posicao;
@@ -95,15 +99,17 @@ const rodada = (codigo, pendente, desatualizada) => ({codigo, nome: codigo, dado
       else if (p === '/api/auth/session') json = {authenticated: true};
       else if (p === '/api/ahp/hierarquizacoes') json = rodadas;
       else if (p.endsWith('/colunas')) json = {colunas: []};
-      else if (p === '/api/ahp/hierarquizacoes/ANTIGA/fases/3/executar') json = rodada('ANTIGA', false, false);
-      else if (p === '/api/ahp/hierarquizacoes/ATUAL/sintetizar') json = sintetizada('ATUAL', 'media_simples');
+      else if (p === '/api/ahp/hierarquizacoes/ANTIGA/fases/3/calcular') json = rodada('ANTIGA', false, false);
+      else if (p === '/api/ahp/hierarquizacoes/ANTIGA/fases/3/executar') { gravacoes.push(p); json = rodada('ANTIGA', false, false); }
+      else if (p === '/api/ahp/hierarquizacoes/ATUAL/sintese/calcular') json = sintetizada('ATUAL', 'media_simples');
+      else if (p === '/api/ahp/hierarquizacoes/ATUAL/sintetizar') { gravacoes.push(p); json = sintetizada('ATUAL', 'media_simples'); }
       else if (p.startsWith('/api/ahp/hierarquizacoes/')) json = rodadas.find(h => h.codigo === p.split('/').at(-1)) || [];
       return route.fulfill({json});
     });
     await page.goto(`http://127.0.0.1:${server.address().port}${rota}`);
     const seletor = page.locator('#fase-hierarquizacao'), aviso = page.locator('#fase3-resultados-aviso');
     await seletor.locator('option[value="ATUAL"]').waitFor({state: 'attached'});
-    for (const section of ['.secao-criterios-de-atributos', '#fase3-regras-vazios', '.secao-ranking-do-ajuste-fino', '.secao-sintese-final', '#fase3-acao-calculo']) {
+    for (const section of ['.secao-criterios-de-atributos', '#fase3-regras-vazios', '.secao-ranking-do-ajuste-fino', '#fase3-relatorio-container', '.fase3-auditoria-details', '.secao-sintese-final', '#fase3-acao-calculo']) {
       assert.equal(await page.locator(section).isVisible(), false);
     }
     await seletor.selectOption('ATUAL');
@@ -118,11 +124,62 @@ const rodada = (codigo, pendente, desatualizada) => ({codigo, nome: codigo, dado
     assert.equal(await page.locator('.secao-criterios-de-atributos').isVisible(), true);
     assert.equal(await page.locator('.secao-ranking-do-ajuste-fino').isVisible(), true);
     assert.equal(await page.locator('.secao-sintese-final').isVisible(), true);
+    assert.equal(await page.locator('.secao-sintese-final').evaluate(el => el.open), false,
+      'síntese inicia recolhida');
+    assert.equal(await page.locator('.fase3-auditoria-details').evaluate(el => el.open), false,
+      'auditoria inicia recolhida');
+    assert.equal(await page.locator('.fase3-auditoria-details > summary .ahp-section-index-icon').textContent(), '4.1');
+    const verificarContainersResultados = async () => {
+      const layout = await page.locator('.secao-ranking-do-ajuste-fino').evaluate(resultados => {
+        const relatorio = document.querySelector('#fase3-relatorio-container');
+        const auditoria = document.querySelector('.fase3-auditoria-details');
+        const sintese = document.querySelector('.secao-sintese-final');
+        const siblings = resultados.nextElementSibling === relatorio
+          && relatorio.nextElementSibling === auditoria && auditoria.nextElementSibling === sintese;
+        const boxes = [resultados, relatorio, auditoria, sintese].map(el => el.getBoundingClientRect());
+        const scale = boxes[0].width / resultados.offsetWidth;
+        const spacing = parseFloat(getComputedStyle(resultados).marginBottom) * scale;
+        return {siblings, spacing, gaps: boxes.slice(1).map((box, i) => box.top - boxes[i].bottom)};
+      });
+      assert.equal(layout.siblings, true, 'Resultados, relatório, Auditoria e síntese são containers irmãos');
+      layout.gaps.forEach(gap => assert.ok(gap >= layout.spacing - 1,
+        `espaçamento vertical preservado entre containers: ${gap}px; padrão: ${layout.spacing}px`));
+    };
+    await verificarContainersResultados();
+    const estruturaTabela = await page.locator('table[data-ranking-order]').evaluate(table => {
+      const container = table.closest('.ami-report-table');
+      return {
+        filter: container.contains(container.querySelector('.admin-filter-bar')),
+        table: container.contains(table),
+        controls: container.contains(container.querySelector('.standard-table-actions')),
+        footer: container.contains(container.querySelector('.admin-table-footer')),
+        reportOutside: !container.contains(document.querySelector('#fase3-relatorio-container')),
+      };
+    });
+    assert.deepEqual(estruturaTabela, {filter: true, table: true, controls: true, footer: true, reportOutside: true});
+    assert.equal(await page.locator('#fase3-acao-calculo').evaluate(el =>
+      Boolean(el.compareDocumentPosition(document.querySelector('.secao-ranking-do-ajuste-fino')) & Node.DOCUMENT_POSITION_FOLLOWING)),
+    true, 'ações de cálculo aparecem antes dos resultados');
+    const gapAcoesResultados = await page.locator('#fase3-acao-calculo').evaluate(el => {
+      const next = document.querySelector('.secao-ranking-do-ajuste-fino');
+      const gap = next.getBoundingClientRect().top - el.getBoundingClientRect().bottom;
+      const marginBottom = parseFloat(getComputedStyle(el).marginBottom);
+      const spacing = parseFloat(getComputedStyle(document.documentElement).fontSize) * 1.5;
+      return {gap, marginBottom, spacing};
+    });
+    assert.ok(Math.abs(gapAcoesResultados.marginBottom - gapAcoesResultados.spacing) < 1,
+      'a barra usa a margem vertical padrão de 1.5rem');
+    assert.ok(gapAcoesResultados.gap > 20, 'há um respiro visual entre as ações e Resultados');
     assert.equal(await page.locator('#fase3-baixar-relatorio').isEnabled(), true);
+    assert.equal(await page.locator('#fase3-baixar-relatorio-acao').isEnabled(), true);
     const [download] = await Promise.all([
       page.waitForEvent('download'), page.locator('#fase3-baixar-relatorio').click(),
     ]);
     assert.equal(download.suggestedFilename(), 'Relatorio_Fase_3.pdf');
+    const [downloadAcao] = await Promise.all([
+      page.waitForEvent('download'), page.locator('#fase3-baixar-relatorio-acao').click(),
+    ]);
+    assert.equal(downloadAcao.suggestedFilename(), 'Relatorio_Fase_3.pdf');
     await page.waitForTimeout(150);
     const demandLayout = await page.locator('table[data-ranking-order]').evaluate(table => {
       const cell = table.tBodies[0].rows[0].cells[2], range = document.createRange();
@@ -135,13 +192,24 @@ const rodada = (codigo, pendente, desatualizada) => ({codigo, nome: codigo, dado
     assert.ok(demandLayout.width > demandLayout.statusWidth * 2);
     await page.setViewportSize({width: 1600, height: 1000});
     await page.waitForTimeout(150);
+    const reportButtonStyles = await page.locator('.fase3-baixar-relatorio').evaluateAll(buttons =>
+      buttons.map(button => {
+        const style = getComputedStyle(button);
+        return {display: style.display, minHeight: style.minHeight};
+      }));
+    assert.deepEqual(reportButtonStyles, [
+      {display: 'flex', minHeight: '46px'},
+      {display: 'flex', minHeight: '46px'},
+    ]);
     assert.ok(await page.locator('table[data-ranking-order]').evaluate(table => table.parentElement.scrollWidth <= table.parentElement.clientWidth), 'no horizontal scrollbar when columns fit');
     assert.deepEqual(await page.locator('#fase3-resultados .ranking-posicao').allTextContents(), ['1', '2', '3']);
     assert.match(await page.locator('table[data-ranking-order] thead th').nth(1).textContent(), /Posição/);
     assert.equal(await page.locator('#fase3-resultados .ranking-posicao').first().evaluate(el => getComputedStyle(el).backgroundColor), 'rgba(0, 0, 0, 0)');
     assert.deepEqual(await page.locator('table[data-ranking-order] thead th').evaluateAll(headers => headers.slice(1).map(h => h.textContent.trim())), ['Posição', 'Demanda', 'Índice de prioridade', 'Completude', 'Situação', 'Pendências']);
     assert.equal(await page.locator('#fase-resumo').evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(231, 240, 247)');
-    assert.equal((await page.locator('.secao-ranking-do-ajuste-fino > .ahp-section-label').textContent()).trim(), 'Resultados');
+    assert.match((await page.locator('.secao-ranking-do-ajuste-fino > .ahp-section-label').textContent()).trim(), /Resultados$/);
+    await page.locator('.fase3-auditoria-details > summary').click();
+    assert.equal(await page.locator('.fase3-auditoria-details').evaluate(el => el.open), true);
     assert.match(await page.locator('#fase3-auditoria').innerText(), /60%/);
     assert.match(await page.locator('.fase3-execucao-pesos').innerText(), /Beneficio/);
     assert.equal(await page.locator('.fase3-detalhes-tecnicos pre').isVisible(), false);
@@ -150,6 +218,7 @@ const rodada = (codigo, pendente, desatualizada) => ({codigo, nome: codigo, dado
     assert.equal(await page.locator('#fase3-ranking-final').isVisible(), false, 'não inventar síntese antes do cálculo');
     const ranking = page.locator('#fase3-ranking-final');
     const modal = page.locator('#fase3-memoria-sintese');
+    await page.locator('.secao-sintese-final > summary').click();
     const selecionarRodada = async codigo => {
       await seletor.selectOption(codigo);
       await page.waitForFunction(codigo => document.querySelectorAll('#fase-resumo .fase1-meta-card strong')[1]?.textContent === codigo, codigo);
@@ -247,6 +316,13 @@ const rodada = (codigo, pendente, desatualizada) => ({codigo, nome: codigo, dado
     assert.equal(await ranking.isVisible(), false, 'não mostrar síntese desatualizada');
     await selecionarRodada('SIMPLES');
     await page.setViewportSize({width: 390, height: 844});
+    await verificarContainersResultados();
+    const actionMobileWidth = await page.locator('#fase3-acao-calculo').evaluate(el => ({
+      action: el.clientWidth,
+      button: el.querySelector('.fase3-calculo-btn').getBoundingClientRect().width,
+    }));
+    assert.ok(actionMobileWidth.button >= actionMobileWidth.action * 0.9,
+      'ações de cálculo usam a largura disponível no celular');
     await ranking.locator('[data-memoria-sintese]').first().click();
     const dimensoesModal = await modal.locator('.json-modal').evaluate(el => {
       const rect = el.getBoundingClientRect();
@@ -259,11 +335,33 @@ const rodada = (codigo, pendente, desatualizada) => ({codigo, nome: codigo, dado
     await page.setViewportSize({width: 1600, height: 1000});
     await selecionarRodada('ATUAL');
     await page.evaluate(() => {
+      window.feedbackDuracoes = [];
+      window.feedbackSucessos = [];
       ProcessFeedback.confirmar = async () => true;
-      ProcessFeedback.iniciarCadastro = () => ({tarefaAtual() {}, concluirTarefa() {}, sucesso() {}, erro(e) { throw new Error(JSON.stringify(e)); }});
+      ProcessFeedback.iniciarCadastro = () => {
+        const inicio = performance.now();
+        return {tarefaAtual() {}, concluirTarefa() {},
+          sucesso(resultado) {
+            window.feedbackDuracoes.push(performance.now() - inicio);
+            window.feedbackSucessos.push(resultado);
+          },
+          erro(e) { window.feedbackDuracoes.push(performance.now() - inicio); throw new Error(JSON.stringify(e)); }};
+      };
     });
     await page.locator('#sintetizar').click();
+    await page.waitForFunction(() => window.feedbackSucessos.length === 1);
     await ranking.waitFor({state: 'visible'});
+    assert.ok((await page.evaluate(() => window.feedbackDuracoes.at(-1))) >= 2000,
+      'síntese mantém o modal de processamento por pelo menos dois segundos');
+    assert.equal(gravacoes.length, 0, 'calcular síntese não deve gravar o resultado');
+    assert.match(await page.evaluate(() => window.feedbackSucessos.at(-1).message),
+      /Após salvar, homologue a hierarquização antes de publicar os resultados/);
+    assert.equal(await page.locator('#salvar-sintese').isDisabled(), false);
+    await page.locator('#salvar-sintese').click();
+    await page.waitForFunction(() => window.feedbackSucessos.length === 2);
+    assert.equal(gravacoes.length, 1, 'salvar síntese grava explicitamente o ranking');
+    assert.match(await page.evaluate(() => window.feedbackSucessos.at(-1).message),
+      /A homologação é obrigatória antes de publicar os resultados/);
     assert.deepEqual(await ranking.locator('.ranking-posicao').allTextContents(), ['1', '2', '3', '—']);
     await selecionarRodada('SIMPLES');
     await selecionarRodada('ATUAL');
@@ -281,17 +379,31 @@ const rodada = (codigo, pendente, desatualizada) => ({codigo, nome: codigo, dado
       assert.equal(await page.locator('#sintetizar').isDisabled(), true);
       assert.equal(await page.locator('#fase3-baixar-relatorio').isDisabled(), true);
       assert.equal(await page.locator('.secao-ranking-do-ajuste-fino').isVisible(), false);
+      assert.equal(await page.locator('#fase3-relatorio-container').isVisible(), false);
+      assert.equal(await page.locator('.fase3-auditoria-details').isVisible(), false);
       assert.equal(await page.locator('.secao-sintese-final').isVisible(), false);
     }
     await seletor.selectOption('ANTIGA');
     await page.evaluate(() => {
       ProcessFeedback.confirmar = async () => true;
-      ProcessFeedback.iniciarCadastro = () => ({tarefaAtual() {}, concluirTarefa() {}, sucesso() {}, erro() {}});
+      ProcessFeedback.iniciarCadastro = () => {
+        const inicio = performance.now();
+        return {tarefaAtual() {}, concluirTarefa() {},
+          sucesso() { window.feedbackDuracoes.push(performance.now() - inicio); },
+          erro() { window.feedbackDuracoes.push(performance.now() - inicio); }};
+      };
     });
     await page.locator('#executar-fase3').click();
-    await aviso.waitFor({state: 'hidden'});
+    await aviso.getByText('Prévia do índice de prioridade calculada').waitFor();
     await page.waitForFunction(() => document.querySelector('#fase3-indicadores').textContent.includes('Com índice de prioridade'));
+    assert.ok((await page.evaluate(() => window.feedbackDuracoes.at(-1))) >= 2000,
+      'cálculo do índice de prioridade mantém o modal de processamento por pelo menos dois segundos');
     assert.match(await page.locator('#fase3-resultados').innerText(), /0\.7500/);
+    assert.equal(gravacoes.length, 1, 'calcular Fase 3 não deve gravar o resultado');
+    assert.equal(await page.locator('#salvar-resultado-fase3').isDisabled(), false);
+    await page.locator('#salvar-resultado-fase3').click();
+    assert.equal(gravacoes.length, 2, 'salvar Fase 3 grava explicitamente o resultado');
+    await aviso.waitFor({state: 'hidden'});
     assert.equal(await page.locator('.secao-sintese-final').isVisible(), true);
     await seletor.selectOption('');
     assert.equal(await page.locator('.secao-criterios-de-atributos').isVisible(), false);

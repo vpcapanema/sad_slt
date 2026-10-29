@@ -14,6 +14,8 @@ class PainelHierarquizacaoSchema(BaseModel):
     codigo: str
     nome: str
     status: str
+    grupo_nome: str | None = None
+    grupo_codigo: str | None = None
     atualizado_em: str | None = None
     desatualizada: bool = False
     elegibilidade: str | None = None

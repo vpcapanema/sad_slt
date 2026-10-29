@@ -289,6 +289,19 @@ def test_coleta_so_relatorios_correlacionados_sem_marcar_lida(caixa):
     imap.logout.assert_called_once()
 
 
+def test_mesma_coleta_imap_correlaciona_notificacao_de_pendencia(caixa, monkeypatch, smtp):
+    from api.repositories import solicitacao_complementacao_repository as pendencias
+    pedido = {"id": "pedido", "notificacao": {"id_mensagem": MID, "destinatario": DEST}}
+    registrar = MagicMock()
+    monkeypatch.setattr(pendencias, "registrar_confirmacao", registrar)
+    monkeypatch.setattr(pendencias, "obter", lambda *a, **kw: pedido)
+    resultado = recibos.coletar_pendencia(pedido, usuario_id="analista")
+    assert resultado["relatorios_consultados"] == 1
+    assert registrar.call_args.args[:3] == ("pedido", MID, "confirmada")
+    caixa[0].select.assert_called_once_with('"INBOX"', readonly=True)
+    smtp.assert_not_called()
+
+
 def test_coleta_expoe_erro_sem_reenviar(caixa, smtp, caplog):
     caixa[0].login.side_effect = recibos.imaplib.IMAP4.error("resposta-privada")
     with pytest.raises(email_service.FalhaEmail, match="não será repetido"):

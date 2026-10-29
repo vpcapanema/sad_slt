@@ -24,7 +24,7 @@ const STATIC_ROUTES = new Map([
   ["paginas/hierarquizacao/fase1-elegibilidade.html", "/restrict/hierarquizacao/fase-1/"],
   ["paginas/hierarquizacao/fase2-favorabilidade.html", "/restrict/hierarquizacao/fase-2/"],
   ["paginas/hierarquizacao/fase3-ajuste-fino.html", "/restrict/hierarquizacao/fase-3/"],
-  ["paginas/hierarquizacao/ranking-privado.html", "/restrict/hierarquizacao/ranking/"],
+  ["paginas/hierarquizacao/ranking-privado.html", "/restrict/hierarquizacao/homologacao-ranking-publicacao/"],
   ["paginas/analise_multicriterio/formulario.html", "/public/analise-multicriterio/token-de-teste/"],
   ["paginas/geoespacial/index.html", "/restrict/geoespacial/"]
 ]);

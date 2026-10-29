@@ -19,7 +19,7 @@ SLOGAN = ('Inteligência territorial para apoiar as decisões da '
           'Subsecretaria de Logística e Transporte (SLT)')
 
 
-def _hero(e):
+def _hero(e, titulo_documento=None):
     caminho = Path(__file__).resolve().parents[2] / 'assets' / 'img' / 'brand' / 'sicard-simbolo.png'
     # O arquivo institucional tem margens transparentes; o recorte só remove essas margens.
     with Image.open(caminho) as imagem:
@@ -36,6 +36,8 @@ def _hero(e):
     texto = [Paragraph('SICARD', titulo),
              Paragraph('Sistema Inteligente de Cadastro e Ranking de Demandas', nome),
              Spacer(1, 5), Paragraph(escape(SLOGAN), slogan)]
+    if titulo_documento:
+        texto += [Spacer(1, 8), Paragraph(escape(titulo_documento), nome)]
     tabela = Table([[marca, texto]], colWidths=[68, estilo.LARGURA - 68])
     tabela.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, -1), estilo.AZUL),

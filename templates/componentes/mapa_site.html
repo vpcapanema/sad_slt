@@ -3,29 +3,31 @@
 {% set grupos = [
   ('MOCAD — Cadastro e análise de demandas', [
     ('', [
+      ('Cadastro de demandas — acesso e orientações', '/public/cadastro/'),
       ('Mapa de demandas', '/restrict/painel/'),
       ('Demandas cadastradas — tabela', '/restrict/demandas/'),
       ('Análise de demanda', '/restrict/demanda/'),
+      ('Central de pendências', '/restrict/central-pendencias/'),
       ('Cadastro de demandas a partir de PDFs do SEI', '/restrict/sei-documentos/')
     ])
   ]),
   ('MAD — Apoio à decisão', [
-    ('Organização das hierarquizações e julgamentos AHP', [
-      ('Agrupamento de demandas', '/restrict/agrupamento-demandas/'),
-      ('Gestão das hierarquizações', '/restrict/hierarquizacao/processos/'),
+    ('Central de Julgamentos AHP', [
       ('Gestão de julgamentos AHP', '/restrict/analise-multicriterio/central-julgamentos'),
-      ('Respostas dos especialistas aos julgamentos AHP', '/restrict/analise-multicriterio/central-respostas'),
+      ('Gestão de Respostas', '/restrict/analise-multicriterio/central-respostas'),
       ('Formulário público de comparação pareada', '/public/analise-multicriterio/formulario-comparacao-pareada/')
     ]),
-    ('Avaliação territorial e priorização', [
-      ('Elegibilidade territorial', '/restrict/hierarquizacao/fase-1/'),
-      ('Favorabilidade territorial', '/restrict/hierarquizacao/fase-2/'),
-      ('Priorização de demandas por atributos', '/restrict/hierarquizacao/fase-3/')
+    ('Hierarquização de Demandas', [
+      ('Agrupamento de demandas', '/restrict/agrupamento-demandas/'),
+      ('Cadastrar Hierarquização', '/restrict/hierarquizacao/processos/'),
+      ('Elegibilidade Territorial', '/restrict/hierarquizacao/fase-1/'),
+      ('Favorabilidade territorial e de rede', '/restrict/hierarquizacao/fase-2/'),
+      ('Priorização por atributos', '/restrict/hierarquizacao/fase-3/')
     ])
   ]),
   ('RESULTADOS', [
     ('', [
-      ('Resultados e ranking de demandas', '/restrict/hierarquizacao/ranking/'),
+      ('Homologação, Ranking e Publicação', '/restrict/hierarquizacao/homologacao-ranking-publicacao/'),
       ('Transparência e acompanhamento', '/public/transparencia/')
     ])
   ]),

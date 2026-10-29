@@ -143,7 +143,7 @@ def atualizar_demanda(
     try:
         return demanda_service.atualizar_demanda(
             codigo, body, usuario_id=user.id,
-            status_livre_gestor=user.tipo_usuario.strip().upper() == "GESTOR",
+            status_livre_gestor=user.tipo_usuario.strip().upper() in {"GESTOR", "ADMIN"},
         )
     except DemandaNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

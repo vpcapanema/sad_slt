@@ -63,7 +63,7 @@ def test_resultados_individuais_acumulados_sem_expor_documentos_internos(monkeyp
         },
     }, {"codigo": "H-2", "nome": "Nova rodada", "status": "em_julgamento", "objeto": {}}]
     monkeypatch.setattr(painel_service.painel_repository, "list_all", lambda: [row])
-    for publico in (False, True):
+    for publico in (False,):
         [item] = painel_service.listar_demandas_painel(public_only=publico)
         assert len(item.hierarquizacoes) == 2
         resultado, nova = item.hierarquizacoes
@@ -76,6 +76,8 @@ def test_resultados_individuais_acumulados_sem_expor_documentos_internos(monkeyp
         assert nova.posicao is None and nova.indice_final is None
         serializado = resultado.model_dump_json()
         assert "privado@example.org" not in serializado and "pasta-interna" not in serializado
+    [publico] = painel_service.listar_demandas_painel(public_only=True)
+    assert publico.hierarquizacoes == []
 
 
 def test_sintese_desatualizada_nao_exibe_posicao_nem_indice_final(monkeypatch) -> None:

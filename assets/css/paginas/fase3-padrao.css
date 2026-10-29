@@ -1,6 +1,16 @@
 /* Page-specific integration of the shared Julgamentos table and section styles. */
 .fase3-standard-page .ahp-step-section { background: #fff; }
 .fase3-standard-page #fase3-auditoria { margin-top: 12px; padding: 16px; background: #e7f0f7; border: 1px solid #c5d7e4; border-radius: 8px; font: 400 12px/1.5 Roboto, Arial, sans-serif; }
+.fase3-standard-page .fase3-auditoria-details > summary {
+  display: flex; align-items: center; gap: 8px; cursor: pointer; list-style: none;
+}
+.fase3-standard-page .fase3-auditoria-details > summary::-webkit-details-marker,
+.fase3-standard-page .secao-sintese-final > summary::-webkit-details-marker { display: none; }
+.fase3-standard-page .fase3-collapse-icon { margin-left: auto; transition: transform .18s ease; }
+.fase3-standard-page details[open] > summary .fase3-collapse-icon { transform: rotate(180deg); }
+.fase3-standard-page .secao-sintese-final > summary { cursor: pointer; list-style: none; }
+.fase3-standard-page :is(.secao-sintese-final, .fase3-auditoria-details):not([open]) > summary { margin-bottom: -1.25rem; }
+.fase3-standard-page .fase3-relatorio-acoes { display: flex; justify-content: flex-end; margin: 0 0 1.5rem; }
 .fase3-standard-page .fase3-execucao-resumo { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 20px; margin: 12px 0; }
 .fase3-standard-page .fase3-execucao-resumo dt { font-weight: 700; color: #123b56; }
 .fase3-standard-page .fase3-execucao-resumo dd { margin: 2px 0 0; }
@@ -28,10 +38,11 @@
   .fase3-standard-page :is(.fase3-execucao-resumo, .fase3-execucao-pesos) { grid-template-columns: 1fr; }
 }
 .fase3-standard-page .ami-main .fase3-calculo-acoes {
-  display: flex; justify-content: flex-end; align-items: center;
+  display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 12px;
   margin: 12px 0 0; padding: 16px 0 0;
   border-top: 1px solid #a9bdcb;
 }
+.fase3-standard-page .ami-main #fase3-acao-calculo { margin-bottom: 1.5rem; }
 .fase3-standard-page.sicard-standard-page.ami-page.ami-espaco-page .ami-main .fase3-calculo-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 10px;
   min-height: 46px; height: auto; padding: 10px 20px; border-radius: 8px;

@@ -688,6 +688,14 @@ body.operador-home-page {
   overflow-wrap: anywhere;
 }
 
+.restrict-platform-groups .platform-tile__subtitle {
+  font-size: 0.64rem;
+  font-weight: 400;
+  line-height: 1.2;
+  color: inherit;
+  text-align: center;
+}
+
 /* Abaixo de 1050px dois módulos lado a lado espremem os blocos de dez itens
    (Geoprocessamento e AHP) e desalinham a altura entre vizinhos de tamanhos
    diferentes. Um módulo por linha mantém a contagem por linha legível e

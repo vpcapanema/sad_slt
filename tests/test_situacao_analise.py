@@ -43,7 +43,7 @@ def test_campos_da_analise_tem_id_nome_e_rotulo():
 
 
 def test_complementacao_tem_cor_propria_na_fase_de_analise():
-    assert "analise_aguardando_complementacao:" in STATUS_COLORS_JS
+    assert '"analise_aguardando_complementacao": {' in STATUS_COLORS_JS
     assert '"analise_aguardando_complementacao"' in STATUS_COLORS_JS
 
 

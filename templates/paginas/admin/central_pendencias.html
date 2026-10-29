@@ -1,0 +1,96 @@
+{% extends "bases/base_conteudo.html" %}
+{% set subtitulo = "Central de pendências" %}
+{% set navegacao = "restrita" %}
+{% set bloco_modulo = "mocad" %}
+{% set requer_autenticacao = true %}
+{% block titulo %}Central de pendências — SICARD{% endblock %}
+{% block classes_body %}ahp-module-page ami-page ami-espaco-page sicard-standard-page feedback-proprio central-pendencias-page{% endblock %}
+{% block estilos_pagina %}
+<link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="/assets/css/ahp-module.css">
+<link rel="stylesheet" href="/assets/css/analise-multicriterio.css">
+<link rel="stylesheet" href="/assets/css/analise-multicriterio-tabela.css">
+<link rel="stylesheet" href="/assets/css/page-title-standard.css">
+<link rel="stylesheet" href="/assets/css/table-standard.css">
+<link rel="stylesheet" href="/assets/css/admin-table-controls.css">
+<link rel="stylesheet" href="/assets/css/paginas/ami-report-tables.css">
+<link rel="stylesheet" href="/assets/css/paginas/ami-espaco-secoes.css">
+<link rel="stylesheet" href="/assets/css/paginas/sicard-standard-pages.css">
+<link rel="stylesheet" href="/assets/css/paginas/central-pendencias.css?v=20261029-detalhes-legiveis">
+{% endblock %}
+{% block conteudo %}
+<div id="admin-session-bar" class="admin-session-bar hidden"></div>
+<main class="conteudo-principal app-main ahp-main ami-main">
+{% block pendencias_conteudo %}
+  <section class="secao-cabecalho-julgamentos card ahp-step-intro ami-hero standard-page-hero card-cabecalho-julgamentos">
+    <h1 class="standard-page-hero__title"><i class="fa-solid fa-clipboard-list" aria-hidden="true"></i><span>Central de pendências</span></h1>
+    <p class="ami-eyebrow standard-page-hero__eyebrow">Cadastro e análise de demandas</p>
+    <p class="standard-page-hero__description">Gerencie complementações cadastrais, de geometria e de atributos, com acompanhamento das notificações e do cumprimento.</p>
+  </section>
+  <section class="card ahp-step-section ami-panel" aria-labelledby="pendencias-contexto-titulo">
+    <div class="ahp-section-label"><i class="fa-solid fa-circle-info" aria-hidden="true"></i><span id="pendencias-contexto-titulo">Contextualização</span></div>
+    <div class="ahp-section-body">
+      <article class="ahp-subcard">
+        <div class="ahp-subsection-title"><span class="ahp-subsection-num">1</span><h2>Cadastro e geometria</h2></div>
+        <p class="form-help">O solicitante corresponde ao representante do cadastro. O e-mail do representante é usado no envio; o destinatário registra o endereço efetivamente utilizado. A mensagem deste bloco é o texto do parecer da análise, acompanhado do PDF já gerado.</p>
+      </article>
+      <article class="ahp-subcard">
+        <div class="ahp-subsection-title"><span class="ahp-subsection-num">2</span><h2>Atributos da demanda</h2></div>
+        <p class="form-help">Somente demandas da fase 2 com atributos não preenchidos aparecem automaticamente. Registre a solicitação e salve a mensagem antes de abrir a prévia.</p>
+      </article>
+      <p class="form-help">Selecione uma solicitação e abra a prévia abaixo da tabela. Apenas “Enviar notificação” realiza o envio. Aceitação SMTP não confirma entrega; ausência de confirmação não significa que o e-mail não foi aberto. O cumprimento depende do atendimento da pendência, não do e-mail.</p>
+      <a href="/restrict/complementacao/">Abrir atendimento das complementações</a>
+  </section>
+  <p id="pendencias-feedback" role="status" aria-live="polite">Carregando solicitações…</p>
+  {% for chave, rotulo in [("cadastro", "1. Cadastro e geometria"), ("atributos", "2. Atributos da demanda — somente fase 2")] %}
+  <section class="card ahp-step-section ami-panel standard-table-section" id="pendencias-{{ chave }}">
+    <div class="ahp-section-label ami-table-heading"><span><i class="fa-solid fa-table" aria-hidden="true"></i> {{ rotulo }}</span></div>
+    <div class="ahp-section-body">
+      <div class="ami-filtered-table">
+        {% set filtro_prefixo = "pendencias-" ~ chave ~ "-filtro" %}
+        {% set filtro_rotulo = "Filtrar " ~ rotulo %}
+        {% with filtro_grupos_colunas=[("contexto", "Contexto adicional", "circle-info"), ("envio", "Dados do envio", "paper-plane"), ("confirmacoes", "Entrega e leitura", "envelope-circle-check"), ("cumprimento", "Parecer e cumprimento", "clipboard-check")] %}
+        {% include "componentes/filtro_tabela.html" %}
+        {% endwith %}
+        <div class="hier-table-shell ami-table-shell">
+          <table class="admin-table hier-register-table ami-table--database">
+            <thead><tr>
+              <th class="col-select"><input type="checkbox" data-select-all aria-label="Selecionar registros desta página"></th>
+              <th hidden>Tipo</th><th>Código</th><th>Nome da demanda</th><th>Categorias</th>
+              <th>Status da notificação</th>
+              {% if chave == "atributos" %}<th hidden>Atributos pendentes</th><th hidden>Hierarquização</th>{% endif %}
+              <th>Solicitante da demanda</th><th>E-mail do representante</th><th hidden>Cadastro solicitado em</th>
+              <th hidden>Notificado por</th><th hidden>Notificado em</th><th hidden>Destinatário</th>
+              <th hidden>Entrega do e-mail</th><th hidden>Abertura do e-mail</th><th hidden>Parecer técnico (PDF)</th>
+              <th hidden>Cumprimento da pendência</th><th hidden>Cumprida em</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="admin-bulk-actions ami-table-actions standard-table-actions">
+        <button type="button" class="admin-icon-btn view" data-open disabled title="Gerenciar solicitação" aria-label="Gerenciar solicitação"><i class="fa-solid fa-eye" aria-hidden="true"></i></button>
+        <button type="button" class="admin-icon-btn export" data-export disabled title="Exportar selecionados" aria-label="Exportar selecionados"><i class="fa-solid fa-file-export" aria-hidden="true"></i></button>
+        <button type="button" class="admin-icon-btn edit" data-preview disabled title="Preparar notificação" aria-label="Preparar notificação"><i class="fa-solid fa-envelope" aria-hidden="true"></i></button>
+        <button type="button" class="admin-icon-btn" data-receipts disabled title="Consultar confirmações do e-mail selecionado" aria-label="Consultar confirmações do e-mail selecionado"><i class="fa-solid fa-envelope-circle-check" aria-hidden="true"></i></button>
+        <button type="button" class="admin-icon-btn" data-reload title="Atualizar solicitações" aria-label="Atualizar solicitações"><i class="fa-solid fa-rotate" aria-hidden="true"></i></button>
+      </div>
+      <div class="admin-table-footer">
+        <nav class="admin-pagination ami-pagination" id="pendencias-{{ chave }}-pagination" aria-label="Paginação de {{ rotulo }}"></nav>
+        <p class="admin-table-summary" id="pendencias-{{ chave }}-count" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+  {% set previa_id = "pendencias-" ~ chave ~ "-previa" %}
+  {% include "componentes/previsualizacao_notificacao.html" %}
+  {% endfor %}
+{% endblock %}
+</main>
+{% endblock %}
+{% block scripts_pagina %}
+<script src="/assets/js/api-erro.js"></script>
+<script src="/assets/js/admin-api.js"></script>
+<script src="/assets/js/admin-auth.js"></script>
+<script src="/assets/js/table-standard.js"></script>
+<script src="/assets/js/central-pendencias.js?v=20261029-revisao-parecer"></script>
+{% endblock %}

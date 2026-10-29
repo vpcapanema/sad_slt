@@ -153,6 +153,9 @@ def list_all() -> list[dict[str, Any]]:
         projetos = list(conn.execute(_PROJETOS_SQL).fetchall())
         resultados = conn.execute("""
             SELECT h.codigo, h.nome, h.status, h.tipo_demanda_id, h.atualizado_em,
+                   h.matriz_id, h.ranking, h.dados_hierarquizacao,
+                   h.relatorio_fase1, h.relatorio_fase2, h.relatorio_fase3, h.relatorio_consolidado,
+                   g.nome AS grupo_nome, g.codigo AS grupo_codigo, g.objetos AS grupo_objetos,
                    h.dados_hierarquizacao->'cabecalho_grupo'->'sintese' AS sintese,
                    h.dados_hierarquizacao->'cabecalho_grupo'->'relatorios' AS relatorios,
                    jsonb_build_object(
@@ -162,6 +165,7 @@ def list_all() -> list[dict[str, Any]]:
                        'hierarquizacao', o.item->'hierarquizacao'
                    ) AS objeto
             FROM hierarquizacao_demandas.hierarquizacao_portfolio h
+            JOIN demandas.grupos_demandas g ON g.id = h.grupo_demanda_id
             CROSS JOIN LATERAL jsonb_array_elements(
                 COALESCE(h.dados_hierarquizacao->'objetos', '[]'::jsonb)
             ) AS o(item)

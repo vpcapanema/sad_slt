@@ -11,21 +11,35 @@
   const PERMISSIONS = {
     read: new Set(Object.keys(TIPO_LABELS)),
     operate: new Set(["OPERADOR", "ANALISTA", "GESTOR", "ADMIN"]),
-    analyze: new Set(["ANALISTA", "GESTOR"]),
-    manage: new Set(["GESTOR"]),
+    analyze: new Set(["ANALISTA", "GESTOR", "ADMIN"]),
+    manage: new Set(["GESTOR", "ADMIN"]),
     administer: new Set(["ADMIN"]),
   };
   let currentUser = null;
 
   function can(permission, user = currentUser) {
     const profile = String(user?.tipo_usuario || "").toUpperCase();
+    if (permission !== "read" && permission !== "administer" &&
+        document.getElementById("access-mode-notice")) return false;
     return Boolean(PERMISSIONS[permission]?.has(profile));
   }
 
   function applyPermissions(root = document) {
     root.querySelectorAll("[data-permission]").forEach((element) => {
       const allowed = can(element.dataset.permission);
-      element.hidden = !allowed;
+      if (element.dataset.permission === "administer") {
+        element.hidden = !allowed;
+      } else {
+        element.hidden = false;
+        if (!allowed) {
+          element.setAttribute("aria-disabled", "true");
+          element.title = "Seu perfil permite somente visualização desta ação.";
+          element.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+          }, { capture: true });
+        }
+      }
       if ("disabled" in element) element.disabled = !allowed;
     });
   }

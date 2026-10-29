@@ -5,13 +5,14 @@ from copy import deepcopy
 from datetime import datetime, timezone
 from decimal import Decimal
 from math import isfinite
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
+from urllib.parse import quote
 from api.repositories import solicitacao_complementacao_repository as solicitacoes
-from api.services.solicitacao_complementacao_service import bloquear
+from api.services.solicitacao_complementacao_service import bloquear, solicitar
 
 from fastapi import APIRouter, Body, Depends, HTTPException, File, Form, UploadFile
-from pydantic import ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from psycopg import sql
 
 from api.db.connection import atomic_connection
@@ -23,7 +24,7 @@ from api.services.atributos_hierarquizacao import (
 )
 from api.services.complementacao_atributos_service import solicitar_hierarquizacao
 from api.matriz_colunas import extrair_colunas
-from api.repositories import hierarquizacao_repository, sigma_usuario_repository, demanda_repository, plano_repository, programa_repository, dominio_repository
+from api.repositories import hierarquizacao_repository, sigma_usuario_repository, demanda_repository, plano_repository, programa_repository, dominio_repository, analise_demanda_repository
 from api.services.session_service import SessionUser
 from api.services import demanda_service, plano_service, programa_service
 from api.services.campos_demanda import resolver_nomes_registros, mesclar_atributos_nativos
@@ -43,6 +44,343 @@ ATRIBUTOS_CADASTRAIS = {
     "maturidade_objeto", "capex_estimado", "base_estimativa_capex",
     "prazo_referencia_meses", "base_estimativa_prazo",
 }
+
+
+class SolicitacaoConteudo(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    descricao: str = Field(min_length=1, max_length=5000)
+    categorias: list[str] = Field(min_length=1, max_length=2)
+    parecer_tecnico: str = Field(max_length=10000)
+    mensagem_gestor: str = Field(max_length=10000)
+
+
+class SolicitacaoEdicao(SolicitacaoConteudo):
+    revisao: int = Field(ge=0)
+
+
+class SolicitacaoCriacao(SolicitacaoConteudo):
+    demanda_tipo: str
+    demanda_codigo: str = Field(min_length=1)
+    hierarquizacao_codigo: str | None = None
+
+
+class NotificacaoConfirmacao(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    assinatura: str = Field(pattern=r"^[a-f0-9]{64}$")
+
+
+class ParecerRevisao(NotificacaoConfirmacao):
+    confirmado: Literal[True]
+
+
+def _perfil_central(user):
+    if user.tipo_usuario.strip().upper() not in {"ANALISTA", "GESTOR", "ADMIN"}:
+        raise HTTPException(403, "A central é exclusiva dos perfis de análise e gestão.")
+
+
+def _pode_gerir_pedido(pedido, user):
+    from api.deps.access_policy import read_only
+    modulo = "mad" if "atributos_objeto" in pedido["categorias"] else "mocad"
+    return not read_only(user.tipo_usuario.strip().upper(), modulo)
+
+
+def _pedido_central(id, user, *, editar=False, lock=False):
+    _perfil_central(user)
+    pedido = solicitacoes.obter(id, interno=True, lock=lock)
+    if not pedido:
+        raise HTTPException(404, "Solicitação não encontrada.")
+    if editar and not _pode_gerir_pedido(pedido, user):
+        raise HTTPException(403, "Seu perfil tem somente visualização neste módulo.")
+    if editar and "revisao" not in pedido:
+        raise HTTPException(409, "A edição depende da aplicação da migração 153 no banco.")
+    return pedido
+
+
+def _enriquecer_pedido(pedido, user, cadastro=None, parecer=None, status_nomes=None):
+    tipo = pedido["demanda_tipo"]
+    cadastro = cadastro if cadastro is not None else CADASTROS[tipo][0].get_by_codigo(pedido["demanda_codigo"])
+    if parecer is None:
+        parecer = analise_demanda_repository.get_by_codigo(pedido["demanda_codigo"]) or {}
+    tem_pdf = bool(parecer.get("tem_parecer_pdf") and parecer.get("demanda_tipo") == tipo)
+    salvas = set(pedido.get("categorias_salvas") or {}) & set(pedido["categorias"])
+    cumprimento = ("cumprida" if pedido["status"] == "atendida" else "em_atendimento" if salvas else "nao_iniciada")
+    if status_nomes is None:
+        status_nomes = {s["codigo"]: s.get("nome") for s in dominio_repository.list_status_demanda()}
+    return {**pedido,
+            "demanda_nome": (cadastro or {}).get("nome") or (cadastro or {}).get("titulo"),
+            "demanda_status": (cadastro or {}).get("status"),
+            "demanda_status_nome": status_nomes.get((cadastro or {}).get("status")),
+            "representante_nome": (cadastro or {}).get("representante_nome"),
+            "representante_email": (cadastro or {}).get("representante_email"),
+            "demanda_solicitante": (cadastro or {}).get("representante_nome"),
+            "demanda_solicitado_em": (cadastro or {}).get("criado_em"),
+            "tem_parecer_pdf": tem_pdf,
+            "parecer_pdf_url": f"/api/analise/{quote(pedido['demanda_codigo'], safe='')}/parecer.pdf" if tem_pdf else None,
+            "parecer_pdf_gerado_em": parecer.get("parecer_pdf_gerado_em") if tem_pdf else None,
+            "cumprimento_status": cumprimento,
+            "categorias_atendidas": len(salvas),
+            "pode_consultar_confirmacoes": _pode_gerir_pedido(pedido, user),
+            "cadastro_disponivel": cadastro is not None,
+            "migracao_pendente": "revisao" not in pedido,
+            "pode_editar": bool(cadastro and "revisao" in pedido and pedido["status"] == "registrada"
+                                and _pode_gerir_pedido(pedido, user))}
+
+
+def _candidatos_central(cadastros):
+    fases = {s["codigo"] for s in dominio_repository.list_status_demanda()
+             if s["fase"] == "hierarquizacao"}
+    dominios = dominio_repository.list_atributos_objeto()
+    candidatos = {}
+    vinculados = set()
+
+    def adicionar(tipo, codigo, cadastro, categorias, hierarquia=None, faltantes=None, colunas=None):
+        codigo_h = hierarquia["codigo"] if hierarquia else None
+        atributos = categorias == ["atributos_objeto"]
+        pode_criar = (cadastro.get("status") in {STATUS_EM_HIERARQUIZACAO, STATUS_HIERARQUIZACAO_COMPLEMENTACAO}
+                      and hierarquia is not None and hierarquia.get("status") not in {"arquivada", "homologada"}
+                      if atributos else cadastro.get("status") in {"analise_em_avaliacao", STATUS_COMPLEMENTACAO})
+        chave = (tipo, str(codigo), codigo_h)
+        rotulos = {f"cadastro:{d['codigo']}": {
+            "nome": d.get("nome"), "descricao": d.get("descricao"), "unidade": d.get("unidade"),
+            "grupo": "Dados cadastrais",
+        } for d in dominios}
+        rotulos.update({c["id"]: {"nome": c.get("alias"), "descricao": c.get("variavel"),
+                                  "unidade": c.get("unidade"), "grupo": "Atributos da demanda"}
+                        for c in colunas or []})
+        candidatos[chave] = {
+            "id": None, "demanda_tipo": tipo, "demanda_codigo": str(codigo),
+            "hierarquizacao_codigo": codigo_h, "categorias": categorias,
+            "status": "nao_solicitada", "descricao": "", "parecer_tecnico": "", "mensagem_gestor": "",
+            "revisao": 0, "categorias_salvas": {}, "notificacao": {},
+            "pendencias_atributos": faltantes or [], "pode_criar": pode_criar,
+            "pendencias_detalhadas": [{"codigo": codigo, **rotulos.get(codigo, {}),
+                                      "nome": (rotulos.get(codigo) or {}).get("nome") or "Atributo sem rótulo configurado"}
+                                     for codigo in faltantes or []],
+            "hierarquizacao_nome": (hierarquia or {}).get("nome"),
+            "impedimento": (
+                "Vincule a demanda a uma hierarquização aberta antes de solicitar atributos."
+                if atributos and hierarquia is None else
+                "Retome a demanda e a hierarquização antes de solicitar atributos."
+                if atributos and not pode_criar else None
+            ),
+        }
+
+    for (tipo, codigo), cadastro in cadastros.items():
+        if cadastro.get("status") in {"analise_em_avaliacao", STATUS_COMPLEMENTACAO}:
+            adicionar(tipo, codigo, cadastro, ["dados_cadastrais", "geometria"])
+    for hierarquia in hierarquizacao_repository.list_all():
+        if hierarquia.get("status") in {"arquivada", "homologada"}:
+            continue
+        colunas = None
+        for obj in (hierarquia.get("dados_hierarquizacao") or {}).get("objetos", []):
+            cab = deepcopy(obj.get("cabecalho_objeto") or {})
+            tipo, codigo = cab.get("tipo_demanda"), str(cab.get("codigo"))
+            cadastro = cadastros.get((tipo, codigo))
+            if not cadastro or cadastro.get("status") not in fases:
+                continue
+            vinculados.add((tipo, codigo))
+            if colunas is None:
+                colunas = colunas_da_hierarquizacao(hierarquia)
+            atualizar_cadastrais(cab, cadastro)
+            faltantes = pendencias(cab, colunas, dominios)
+            if faltantes:
+                adicionar(tipo, codigo, cadastro, ["atributos_objeto"], hierarquia, faltantes, colunas)
+    sem_contexto = [(chave, cadastro) for chave, cadastro in cadastros.items()
+                   if cadastro.get("status") in fases and chave not in vinculados]
+    if sem_contexto:
+        colunas = colunas_da_hierarquizacao({})
+        for (tipo, codigo), cadastro in sem_contexto:
+            cab = {"tipo_demanda": tipo, "codigo": codigo}
+            atualizar_cadastrais(cab, cadastro)
+            faltantes = pendencias(cab, colunas, dominios)
+            if faltantes:
+                adicionar(tipo, codigo, cadastro, ["atributos_objeto"], faltantes=faltantes, colunas=colunas)
+    return candidatos
+
+
+@router.get("/solicitacoes")
+def central_solicitacoes(user: SessionUser = Depends(require_analyst)):
+    _perfil_central(user)
+    cadastros = {(tipo, str(row["codigo"])): row for tipo, cadastro in CADASTROS.items()
+                 for row in cadastro[0].list_all()}
+    candidatos = _candidatos_central(cadastros)
+    status_nomes = {s["codigo"]: s.get("nome") for s in dominio_repository.list_status_demanda()}
+    pareceres = {(p["demanda_tipo"], p["demanda_codigo"]): p
+                 for p in analise_demanda_repository.listar_pareceres([codigo for _, codigo in cadastros])}
+    itens, abertos = [], set()
+    for pedido in solicitacoes.listar(abertas=False, interno=True):
+        chave = (pedido["demanda_tipo"], str(pedido["demanda_codigo"]), pedido.get("hierarquizacao_codigo"))
+        atributos = "atributos_objeto" in pedido["categorias"]
+        candidato = candidatos.get(chave)
+        if atributos and (not candidato or candidato["categorias"] != ["atributos_objeto"]):
+            continue
+        item = _enriquecer_pedido(pedido, user, cadastros.get(chave[:2]), pareceres.get(chave[:2], {}), status_nomes)
+        if atributos and candidato is not None:
+            item["pendencias_atributos"] = candidato["pendencias_atributos"]
+            item["pendencias_detalhadas"] = candidato["pendencias_detalhadas"]
+            item["hierarquizacao_nome"] = candidato["hierarquizacao_nome"]
+        itens.append(item)
+        if pedido["status"] == "registrada":
+            abertos.add(chave)
+    for chave, candidato in candidatos.items():
+        if chave in abertos:
+            continue
+        item = _enriquecer_pedido(candidato, user, cadastros[chave[:2]], pareceres.get(chave[:2], {}), status_nomes)
+        item["pode_editar"] = candidato["pode_criar"] and _pode_gerir_pedido(candidato, user)
+        itens.append(item)
+    return itens
+
+
+@router.get("/solicitacoes/contexto")
+def preparar_solicitacao(tipo: str, codigo: str, hierarquizacao_codigo: str | None = None,
+                         user: SessionUser = Depends(require_analyst)):
+    for item in central_solicitacoes(user):
+        if (item["demanda_tipo"] == tipo and item["demanda_codigo"] == codigo
+                and item.get("hierarquizacao_codigo") == hierarquizacao_codigo
+                and item["status"] in {"nao_solicitada", "registrada"}):
+            return item
+    raise HTTPException(404, "Não há pendência disponível neste contexto. Atualize a central.")
+
+
+@router.post("/solicitacoes", status_code=201)
+def criar_solicitacao(body: SolicitacaoCriacao, user: SessionUser = Depends(require_analyst)):
+    _perfil_central(user)
+    if body.demanda_tipo not in CADASTROS:
+        raise HTTPException(422, "Tipo de demanda inválido.")
+    if not body.descricao.strip():
+        raise HTTPException(422, "Informe o motivo da solicitação.")
+    categorias = list(dict.fromkeys(body.categorias))
+    atributos = categorias == ["atributos_objeto"]
+    if not set(categorias) <= ({"atributos_objeto"} if atributos else {"dados_cadastrais", "geometria"}):
+        raise HTTPException(422, "Solicite atributos separadamente do cadastro e geometria.")
+    if atributos != bool(body.hierarquizacao_codigo):
+        raise HTTPException(422, "Selecione uma hierarquização somente para atributos.")
+    if not _pode_gerir_pedido({"categorias": categorias}, user):
+        raise HTTPException(403, "Seu perfil tem somente visualização neste módulo.")
+    with atomic_connection() as conn:
+        if body.hierarquizacao_codigo:
+            hierarquizacao_repository.get_by_codigo(body.hierarquizacao_codigo, for_update=True)
+        cadastro = bloquear(conn, body.demanda_tipo, body.demanda_codigo)
+        if not cadastro:
+            raise HTTPException(404, "Demanda não encontrada.")
+        candidato = preparar_solicitacao(body.demanda_tipo, body.demanda_codigo, body.hierarquizacao_codigo, user)
+        if candidato["id"]:
+            raise HTTPException(409, "Já existe solicitação aberta. Atualize a central para editá-la.")
+        if not candidato["pode_criar"]:
+            raise HTTPException(409, candidato["impedimento"])
+        pedido = solicitar(body.demanda_codigo, categorias=categorias, descricao=body.descricao,
+                           user=user, hierarquizacao_codigo=body.hierarquizacao_codigo,
+                           demanda_tipo=body.demanda_tipo)
+        campos = body.model_dump(include={"descricao", "categorias", "parecer_tecnico", "mensagem_gestor"})
+        campos.update(categorias=categorias, descricao=body.descricao.strip(),
+                      parecer_tecnico=body.parecer_tecnico.strip(), mensagem_gestor=body.mensagem_gestor.strip())
+        atualizado = solicitacoes.editar(pedido["id"], campos, user)
+    return _enriquecer_pedido(atualizado, user, cadastro)
+
+
+@router.get("/solicitacoes/{solicitacao_id}")
+def detalhe_solicitacao(solicitacao_id: UUID, user: SessionUser = Depends(require_analyst)):
+    pedido = _pedido_central(solicitacao_id, user)
+    if "atributos_objeto" in pedido["categorias"]:
+        for item in central_solicitacoes(user):
+            if item.get("id") == pedido["id"]:
+                return item
+    return _enriquecer_pedido(pedido, user)
+
+
+@router.patch("/solicitacoes/{solicitacao_id}")
+def editar_solicitacao(solicitacao_id: UUID, body: SolicitacaoEdicao,
+                      user: SessionUser = Depends(require_analyst)):
+    with atomic_connection():
+        pedido = _pedido_central(solicitacao_id, user, editar=True, lock=True)
+        if pedido["status"] != "registrada":
+            raise HTTPException(409, "Solicitações atendidas são somente leitura.")
+        if body.revisao != pedido["revisao"]:
+            raise HTTPException(409, "A solicitação foi alterada. Recarregue antes de editar.")
+        if (pedido.get("notificacao") or {}).get("status") == "enviando":
+            raise HTTPException(409, "Aguarde a conclusão da notificação antes de editar.")
+        categorias = list(dict.fromkeys(body.categorias))
+        permitidas = {"atributos_objeto"} if pedido.get("hierarquizacao_codigo") else {"dados_cadastrais", "geometria"}
+        if not set(categorias) <= permitidas or not body.descricao.strip():
+            raise HTTPException(422, "Informe o motivo e categorias compatíveis com o contexto original.")
+        if set(categorias) != set(pedido["categorias"]) and pedido.get("categorias_salvas"):
+            raise HTTPException(409, "As categorias já possuem atendimento registrado e não podem ser alteradas.")
+        if not CADASTROS[pedido["demanda_tipo"]][0].get_by_codigo(pedido["demanda_codigo"]):
+            raise HTTPException(409, "Cadastro de origem indisponível.")
+        campos = body.model_dump(exclude={"revisao"})
+        campos.update(categorias=categorias, descricao=body.descricao.strip(),
+                      parecer_tecnico=body.parecer_tecnico.strip(), mensagem_gestor=body.mensagem_gestor.strip())
+        atualizado = solicitacoes.editar(solicitacao_id, campos, user)
+    return _enriquecer_pedido(atualizado, user)
+
+
+@router.get("/solicitacoes/{solicitacao_id}/previsualizacao")
+def previsualizar_notificacao(solicitacao_id: UUID, user: SessionUser = Depends(require_analyst)):
+    from api.services.complementacao_atributos_service import preparar_notificacao
+    pedido = _pedido_central(solicitacao_id, user, editar=True)
+    if pedido["status"] != "registrada":
+        raise HTTPException(409, "A solicitação já foi atendida.")
+    cadastro = CADASTROS[pedido["demanda_tipo"]][0].get_by_codigo(pedido["demanda_codigo"])
+    if not cadastro:
+        raise HTTPException(409, "Cadastro de origem indisponível.")
+    previa, _ = preparar_notificacao(pedido, cadastro.get("representante_email"), pedido.get("hierarquizacao_codigo") or "")
+    if "atributos_objeto" not in pedido["categorias"]:
+        from api.services import parecer_complementacao_service
+        previa["parecer_revisao"] = parecer_complementacao_service.estado(pedido)
+    return previa
+
+
+@router.post("/solicitacoes/{solicitacao_id}/parecer/atualizar")
+def atualizar_parecer_pendencia(solicitacao_id: UUID, user: SessionUser = Depends(require_analyst)):
+    from api.services import parecer_complementacao_service
+    return parecer_complementacao_service.atualizar(_pedido_central(solicitacao_id, user, editar=True), user)
+
+
+@router.post("/solicitacoes/{solicitacao_id}/parecer/revisar")
+def revisar_parecer_pendencia(solicitacao_id: UUID, body: ParecerRevisao,
+                            user: SessionUser = Depends(require_analyst)):
+    from api.services import parecer_complementacao_service
+    return parecer_complementacao_service.revisar(
+        _pedido_central(solicitacao_id, user, editar=True), body.assinatura, user)
+
+
+@router.post("/solicitacoes/{solicitacao_id}/notificar")
+def notificar_solicitacao(solicitacao_id: UUID, user: SessionUser = Depends(require_analyst),
+                         body: NotificacaoConfirmacao | None = None):
+    from api.services.complementacao_atributos_service import _notificar
+    pedido = _pedido_central(solicitacao_id, user, editar=True)
+    if pedido["status"] != "registrada":
+        raise HTTPException(409, "A solicitação já foi atendida.")
+    if "atributos_objeto" in pedido["categorias"] and not pedido.get("mensagem_gestor", "").strip():
+        raise HTTPException(422, "Preencha e salve a mensagem ao solicitante antes de notificar.")
+    revisao = None
+    if "atributos_objeto" not in pedido["categorias"]:
+        from api.services import parecer_complementacao_service
+        revisao = parecer_complementacao_service.estado(pedido)
+        if not revisao["atualizado"] or not revisao["revisado"]:
+            raise HTTPException(409, "Atualize e confirme a revisão do parecer vigente antes de enviar.")
+    cadastro = CADASTROS[pedido["demanda_tipo"]][0].get_by_codigo(pedido["demanda_codigo"])
+    if not cadastro:
+        raise HTTPException(409, "Cadastro de origem indisponível.")
+    return _notificar(pedido, cadastro.get("representante_email"), pedido.get("hierarquizacao_codigo") or "",
+                      user, anexar_parecer=True, assinatura_previa=body.assinatura if body else None,
+                      revisao_parecer=revisao,
+                      cadastro_snapshot={k: str(cadastro[k]) if cadastro.get(k) is not None else None
+                                         for k in ("representante_nome", "representante_email", "criado_em")})
+
+
+@router.post("/solicitacoes/{solicitacao_id}/confirmacoes")
+def confirmar_notificacao(solicitacao_id: UUID, user: SessionUser = Depends(require_analyst)):
+    from api.services import email_confirmacoes
+    from api.services.email_service import FalhaEmail
+    from api.routers.email import _erro
+    pedido = _pedido_central(solicitacao_id, user, editar=True)
+    if (pedido.get("notificacao") or {}).get("status") not in {"aceito_smtp", "indeterminado", "enviando"}:
+        raise HTTPException(409, "Não há envio registrado para consultar confirmações.")
+    try:
+        return email_confirmacoes.coletar_pendencia(pedido, usuario_id=str(user.id))
+    except FalhaEmail as exc:
+        raise _erro(exc) from exc
 
 
 def _visivel(demanda: dict, user: SessionUser, pessoa_id: str | None) -> bool:
@@ -78,8 +416,12 @@ def concluir_solicitacao(solicitacao_id: UUID, user: SessionUser = Depends(requi
     if not pedido:
         raise HTTPException(404, 'Solicitação não encontrada.')
     if "atributos_objeto" in pedido["categorias"]:
+        if user.tipo_usuario.strip().upper() in {"OPERADOR", "ANALISTA"}:
+            raise HTTPException(403, "Seu perfil não pode concluir complementações de atributos do MAD.")
         concluir_atributos(pedido["hierarquizacao_codigo"], pedido["demanda_codigo"], user)
         return solicitacoes.obter(solicitacao_id)
+    if user.tipo_usuario.strip().upper() == "GESTOR":
+        raise HTTPException(403, "Seu perfil tem somente visualização no MOCAD.")
     tipo, codigo = pedido['demanda_tipo'], pedido['demanda_codigo']
     cadastro = CADASTROS[tipo][0].get_by_codigo(codigo)
     if not cadastro or not (
@@ -89,7 +431,7 @@ def concluir_solicitacao(solicitacao_id: UUID, user: SessionUser = Depends(requi
     with atomic_connection() as conn:
         bloquear(conn, tipo, codigo)
         pedido = solicitacoes.obter(solicitacao_id, lock=True)
-        if pedido['status'] != 'solicitada':
+        if pedido['status'] != 'registrada':
             return pedido
         faltantes = set(pedido['categorias']) - set(pedido['categorias_salvas'])
         if faltantes:
@@ -131,7 +473,7 @@ def _acesso(cab: dict[str, Any], user: SessionUser, pessoa_id: str | None,
     # Não utiliza a cópia histórica do agrupamento como fonte de autorização.
     demanda = cadastros.get(str(cab.get("codigo")))
     return bool(demanda and (
-        user.tipo_usuario.strip().upper() == "ADMIN"
+        user.tipo_usuario.strip().upper() in {"ADMIN", "GESTOR", "ANALISTA"}
         or _pode_editar({}, pessoa_id=pessoa_id, usuario_id=str(user.id), demanda=demanda)
     ))
 

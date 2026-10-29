@@ -128,7 +128,8 @@ def testar_conexao(*, usuario_id: str) -> EmailConexaoResultado:
 
 
 def enviar(dados: EmailEnvioSchema, *, usuario_id: str, id_mensagem: str | None = None,
-           solicitar_confirmacoes: bool = False) -> EmailEnvioResultado:
+           solicitar_confirmacoes: bool = False,
+           anexo_pdf: tuple[str, bytes] | None = None) -> EmailEnvioResultado:
     config = _config()
     remetente = str(config.remetente)
     id_mensagem = id_mensagem or make_msgid(domain=remetente.rsplit("@", 1)[1])
@@ -145,6 +146,13 @@ def enviar(dados: EmailEnvioSchema, *, usuario_id: str, id_mensagem: str | None 
     mensagem.set_content(dados.texto)
     if dados.html is not None:
         mensagem.add_alternative(dados.html, subtype="html")
+    if anexo_pdf is not None:
+        nome, conteudo = anexo_pdf
+        if (not conteudo.startswith(b"%PDF-") or len(conteudo) > 10 * 1024 * 1024
+                or not nome.lower().endswith(".pdf") or any(ord(c) < 32 for c in nome)
+                or any(c in nome for c in "\\/")):
+            raise FalhaEmail("anexo", "O parecer deve ser um PDF válido de até 10 MiB, com nome de arquivo seguro.")
+        mensagem.add_attachment(conteudo, maintype="application", subtype="pdf", filename=nome)
 
     iniciou_envio = False
     dsn_solicitada = False

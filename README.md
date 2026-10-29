@@ -39,6 +39,141 @@ D1 não integra o modelo público de comparação AHP.
 
 ## Arquitetura
 
+### Central de pendências
+
+`/restrict/central-pendencias/` permite iniciar e gerenciar solicitações de projetos,
+programas e planos, associadas ao cadastro por **tipo e código**. Cadastro/geometria
+e `atributos_objeto` permanecem em blocos e ciclos independentes. O primeiro bloco
+inclui demandas em avaliação ou aguardando complementação, mesmo sem pedido, e
+preserva o histórico cadastral. O segundo é calculado a partir das demandas cujo
+status pertence à **fase 2** (`hierarquizacao` no domínio oficial) e que têm
+atributos cadastrais ou dinâmicos não preenchidos no contexto da rodada vigente.
+Não depende da existência de uma solicitação, não inclui outras fases e retira
+demandas cujos atributos estão completos. Zero e falso são valores preenchidos.
+Uma demanda pode aparecer em mais de uma rodada com pendências diferentes.
+Sem rodada aberta, a pendência permanece visível, mas informa o impedimento para
+solicitar. Suspensões, retiradas e resultados concluídos não são reabertos pela consulta.
+O detalhe em `/restrict/solicitacao-complementacao/?id=<uuid>` permite editar motivo, categorias
+do mesmo contexto (antes de registrar atendimento), parecer técnico interno e
+mensagem ao solicitante. Identidade, contexto, situação e auditoria não são editáveis.
+O histórico guarda valores anteriores, responsável e data; uma revisão concorrente
+exige recarregamento. Solicitações atendidas são somente leitura.
+
+Registros “Não solicitada” abrem o mesmo detalhe por tipo, código e hierarquização.
+Salvar cria o pedido com autoria da sessão, sem enviar e-mail; a categoria, a fase,
+as ausências e a inexistência de outro pedido aberto são revalidadas na transação.
+O envio utiliza a mensagem salva e o botão explícito de notificação. Consultar a
+Central nunca cria pedidos, muda status ou envia mensagens.
+
+Analistas editam cadastro/geometria; gestores editam atributos; administradores
+editam ambos. A central não substitui `/restrict/complementacao/`, que mantém o
+atendimento autorizado, inclusive pelo operador vinculado à demanda. O parecer
+interno e seu histórico não são retornados pelas respostas de atendimento.
+
+O envio explícito reutiliza a reserva persistente do serviço de e-mail. No bloco
+cadastral, a mensagem é o texto do parecer da análise, incluindo geometria e
+complemento do parecer; no bloco de atributos, utiliza a mensagem do gestor salva.
+“Preparar notificação” abre uma prévia abaixo da tabela, sem enviar; o botão
+“Enviar notificação”, fora da caixa de mensagem, confirma o envio com o feedback
+de processos do SICARD. Destinatário, mensagem e hash do PDF são revalidados
+contra a prévia: alterações exigem abrir a prévia novamente.
+Nas duas tabelas, o envio pela Central exige e anexa o PDF
+**da análise da demanda**; não permite anexar arquivos arbitrários.
+Na página cadastral, a própria notificação é o conteúdo principal: destinatário,
+assunto, parecer, PDF e revisão. “Atualizar parecer e PDF” reemite o documento com
+as perguntas vigentes e respostas já registradas, sem alterar respostas,
+decisão ou situação da demanda. As anotações técnicas internas da pendência nunca integram
+o envio. O nome, o tamanho e o SHA-256 do PDF enviado são registrados na notificação,
+assim como assunto, corpo completo, revisão e representante no momento do envio.
+Tentativas anteriores com falha são preservadas antes de nova reserva. Estes
+registros utilizam `solicitacao_complementacao_demanda.notificacao` (JSONB);
+cadastro, parecer e cumprimento permanecem nas respectivas colunas existentes,
+sem duplicar cada coluna de exibição em nova coluna física.
+Envios antigos de atributos
+mantêm compatibilidade com o motivo público quando não houver mensagem específica.
+Estados `enviando`, `aceito_smtp` e `indeterminado` não permitem reenvio automático;
+aceitação SMTP não significa entrega. O resultado e a mensagem enviada ficam na
+notificação persistente.
+
+“Solicitante da demanda” e “Cadastro solicitado em” provêm do representante e da
+data de criação do cadastro, não da autoria do pedido de complementação. O bloco
+cadastral não exibe colunas de atributos ou hierarquização. Ambos exibem situação
+da notificação, autoria/data do envio, destinatário, aceitação SMTP, entrega,
+abertura do e-mail, acesso ao parecer PDF e cumprimento da pendência. A autoria
+legada não é reconstruída; campos de notificação permanecem vazios até haver
+evidência real. O cumprimento utiliza categorias salvas e conclusão registrada,
+sem confundir envio ou leitura do e-mail com atendimento.
+
+O envio solicita DSN/MDN. O controle “Consultar confirmações” reutiliza a coleta
+IMAP dos julgamentos: caixa somente leitura, correlação exata de Message-ID e
+destinatário, eventos idempotentes e proteção contra regressão de estado.
+Confirmar recebimento SMTP não confirma entrega; ausência de MDN não significa
+que o destinatário não abriu o e-mail. A coleta exige IMAP configurado, apresenta
+falhas explicitamente e não reenvia mensagens nem altera o cumprimento.
+
+A migração `154_pendencias_registradas_nao_notificadas.sql` substitui o estado
+interno `solicitada` por `registrada`, preservando a alteração no histórico.
+Esse estado mantém o atendimento aberto, mas não afirma que houve envio.
+Notificações sem evidência de envio recebem `nao_enviado`; dados legados com
+identificador de mensagem ou retornos, mas sem resultado, ficam `indeterminado`,
+nunca são tratados automaticamente como seguros para reenvio.
+
+As duas tabelas exibem apenas **Status da notificação**, sem uma segunda coluna
+“Situação da pendência”. Inicialmente ficam visíveis código, nome, categorias,
+solicitante, e-mail e status. Os botões de grupos, na barra de filtros após um
+separador vertical e com o mesmo estilo dos controles de filtro, mostram/ocultam contexto
+adicional, dados do envio, entrega/leitura e parecer/cumprimento, sem remover
+dados dos filtros ou da exportação. A prévia apresenta a mensagem em parágrafos
+de leitura, sem textarea; o hash permanece disponível em detalhes de auditoria.
+
+“Gerenciar solicitação” apresenta a demanda, o representante e as pendências com
+nomes de domínio e aliases da matriz vigente, agrupadas entre dados cadastrais e
+atributos. O formulário explica a diferença entre registrar o pedido, preparar
+a notificação e enviar. Identificadores internos e JSON integral permanecem
+acessíveis em “Dados técnicos para auditoria”, recolhidos inicialmente; não
+substituem as orientações de preenchimento.
+
+A migração 155 cria `demandas.parecer_complementacao_versao`. Antes de substituir
+um documento cadastral, preservam-se o texto e o PDF anteriores (inclusive a
+ausência de PDF), a versão vigente, as fontes, os hashes e a autoria de geração
+quando houver usuário executor. O envio cadastral exige confirmação humana da
+revisão vinculada ao PDF e às fontes vigentes. Mudanças nas perguntas, respostas,
+observações, cadastro ou PDF invalidam a liberação anterior. Atualizar não envia
+e-mail; não se reemitem documentos de pedidos atendidos, de atributos ou com
+envio aceito, em andamento ou indeterminado.
+
+O PDF do parecer utiliza os componentes institucionais dos relatórios da Fase 3:
+hero SICARD com o título, A4, tipografia, cores, quadros e rodapé paginado. Após a
+identificação, um único bloco reúne a análise e o parecer: conclusão em destaque,
+motivo e, quando aplicável, lista numerada do que enviar ou corrigir, antes da
+fundamentação em tabela única com perguntas, respostas e geometria. O resultado
+dos critérios não é apresentado como decisão final quando o encaminhamento é
+complementação. A assinatura final contém apenas o analista, local e data, sem
+seção numerada nem tabela. As perguntas não são repetidas na conclusão;
+orientações idênticas aparecem uma única vez. No caso de
+complementação, inclui-se a descrição pública da solicitação do analista, além
+das observações pertinentes, sem expor o parecer interno da pendência.
+Os motivos são frases declarativas vinculadas às respostas negativas, como
+“A demanda NÃO contribui para melhorar o transporte ou a logística no Estado”,
+sem converter respostas ausentes em reprovação. A geometria é descrita da mesma
+forma, explicitando necessidade de ajuste ou confirmação ainda pendente.
+O fundo, o texto e a borda da conclusão usam a paleta oficial de
+`assets/js/status-colors.js`, conforme o status efetivamente registrado após a
+análise, e não uma cor inferida do placar. O objeto `STATUS_DEMANDA` permanece
+em JSON estrito dentro desse arquivo para leitura compartilhada pelo PDF e pelo
+navegador, sem duplicação de cores. A paleta utilizada integra a versão auditada.
+O nome do responsável é consultado na pessoa vinculada ao ID do usuário SIGMA,
+inclusive para contas desativadas; ausência de vínculo ou nome é informada, sem
+substituir a identidade por login. O local institucional é São Paulo - SP.
+A migração 156 separa `analise_realizada_em` da emissão do PDF, recuperando a data
+anterior às reemissões a partir do legado preservado, quando aplicável. Novas
+ações de análise atualizam essa data; reemitir o documento não a altera.
+Mudanças no modelo, autoria, data ou solicitação invalidam a revisão anterior.
+
+**Pré-requisito de implantação:** aplicar `database/153_central_pendencias.sql`
+antes de editar solicitações. A migração é aditiva, não altera solicitações
+históricas nem preenche pareceres ou mensagens em nome de usuários.
+
 | Componente | Tecnologia | Responsabilidade |
 |---|---|---|
 | Backend | FastAPI / Python 3.11+ | API, autenticação, regras e páginas estáticas |
@@ -951,7 +1086,7 @@ Rotas restritas principais:
 | `/restrict/demandas/` | Análise das demandas |
 | `/restrict/hierarquizacao/` | Árvore metodológica |
 | `/restrict/hierarquizacao/processos/` | Gestão das rodadas |
-| `/restrict/hierarquizacao/ranking/` | Resultados e ranking das demandas |
+| `/restrict/hierarquizacao/homologacao-ranking-publicacao/` | Homologação, Ranking e Publicação |
 | `/restrict/analise-multicriterio/central-julgamentos` | Central de julgamentos colaborativos |
 | `/restrict/analise-multicriterio/central-respostas` | Central de respostas dos especialistas |
 | `/restrict/analise-multicriterio/mesa-consolidacao` | Mesa de consolidação: proposta simplificada que reúne seleção de respostas, regras, resultado em tempo real, gravação e homologação em uma só tela. `?demo=1` abre com dados fictícios em memória; `?julgamento=<id>` abre direto um julgamento |
@@ -1115,13 +1250,36 @@ consolidou o modelo atual no esquema `demandas`.
 Os perfis são derivados do usuário SIGMA:
 
 - `VISUALIZADOR`: consulta autorizada;
-- `OPERADOR`: operações de cadastro e processamento;
-- `ANALISTA`: análise e aprovação;
-- `GESTOR`: análise, homologação e supervisão;
-- `ADMIN`: administração técnica, sem herdar automaticamente decisões de
-  analista ou gestor.
+- `OPERADOR`: cadastra demandas e preenche somente complementações solicitadas
+  de cadastro/geometria das próprias demandas (autoria ou representação no
+  cadastro oficial). Não acessa análise, SEI, MAD, ferramentas nem Admin.
+- `ANALISTA`: cadastra demandas, inclusive pelo SEI, analisa e solicita
+  complementações no MOCAD. Consulta o MAD sem alterar seus dados. Usa as
+  ferramentas normalmente, sem acesso ao bloco Admin.
+- `GESTOR`: consulta o MOCAD sem cadastrar, editar, analisar ou concluir
+  complementações cadastrais/geometria. Controla o MAD e as ferramentas, sem
+  acesso ao bloco Admin.
+- `ADMIN`: todas as capacidades nesta etapa, inclusive análise, homologação
+  e administração.
 
-As permissões efetivas são aplicadas no backend por dependências de rota.
+MOCAD significa Módulo de Cadastro e Análise de Demandas; MAD significa Módulo
+de Apoio à Decisão (agrupamentos, hierarquizações e julgamentos AHP).
+Superfícies de critérios e geoprocessamento são ferramentas, inclusive quando
+seu endpoint usa o prefixo histórico `/api/ahp/`.
+
+A dependência comum `api/deps/access_policy.py` bloqueia operações por módulo
+antes dos serviços; as dependências específicas continuam exigindo sessão e
+perfil. As páginas restritas também verificam sessão/perfil no servidor.
+Atualizações diretas de demandas não substituem o fluxo autorizado de
+complementação do Operador: a categoria solicitada, situação e propriedade
+são conferidas no cadastro atual, não em snapshots históricos.
+
+O modo **Somente visualização** reutiliza o feedback contextual do SICARD,
+desativa controles de alteração com motivo acessível e mantém consulta,
+filtros, seleção, paginação e exportação. Controles inseridos dinamicamente
+também são protegidos. Na página de complementação, o bloco de atributos da
+Fase 3 obedece ao MAD, independentemente do cadastro/geometria (MOCAD).
+Convites públicos AHP conservam sua autorização específica por token.
 
 Na Área do Administrador, o filtro de valor permite digitar um valor ou parte
 dele, com sugestões dos valores existentes. A busca é aplicada com Enter ou ao
@@ -1330,15 +1488,19 @@ Sínteses históricas sem dados compatíveis para reconstrução recebem aviso
 explícito, sem inventar pesos ou equações. A tabela reaparece ao reabrir a
 rodada, desde que os resultados continuem atuais.
 
-Na página **Ranking de demandas**, as hierarquizações finalizadas e atuais são
+Na página **Homologação, Ranking e Publicação**, as hierarquizações finalizadas e atuais são
 consultadas na tabela padrão, com filtros, seleção, controles, paginação e
 contador. Uma única seleção habilita **Visualizar**, que abre o ranking do grupo,
 e os atalhos para os painéis restrito e público existentes. Esses atalhos não
 publicam o grupo nem aplicam filtros que os painéis ainda não suportam. O nome da
 hierarquização abre um modal com os índices das três fases por demanda, pesos
 registrados e resultado final. Pesos da síntese incompatíveis com o resultado
-salvo não são apresentados como reconstituídos. **Gerenciar publicação** permanece
-desabilitado até a implementação da gestão de publicações.
+salvo não são apresentados como reconstituídos. **Publicar**, na barra de controles,
+fica habilitado somente com uma hierarquização homologada selecionada e perfil
+Gestor ou Administrador. A ação exige confirmação e divulga os resultados dessa
+rodada no painel público, sem publicar dados pessoais.
+A rota anterior `/restrict/hierarquizacao/ranking/` redireciona permanentemente
+para a nova rota, preservando os parâmetros da consulta.
 No modal, a leitura começa pela posição final, demanda e índice geral de
 hierarquização, seguidos pelos pesos da síntese e pelo detalhamento das Fases
 1, 2 e 3. O texto esclarece que o índice de risco da Fase 1 participa do índice
@@ -1366,8 +1528,8 @@ O mapa privado recebe geometrias reais do endpoint autenticado
 `/api/painel/demandas/internas`, associadas pelo tipo e pelo código da demanda.
 Não cria pontos substitutos a partir das coordenadas de referência; geometrias
 ausentes ou inválidas são informadas explicitamente. A posição aparece somente
-no marcador em gota.
-Em polígonos, a gota é posicionada no centroide da área em coordenadas GeoJSON,
+no alfinete, identificado pelo formato da fase cadastral.
+Em polígonos, o alfinete é ancorado no centroide da área em coordenadas GeoJSON,
 descontando os anéis internos e ponderando as partes dos multipolígonos pela
 área, independentemente da orientação dos anéis; não usa o centro do retângulo
 envolvente. O centroide de um polígono côncavo pode ficar fora de sua área.
@@ -1377,9 +1539,26 @@ mostra apenas as demandas do grupo visualizado. Clicar em uma linha do ranking,
 ou focá-la e pressionar Enter ou Espaço, enquadra a geometria correspondente;
 os seletores da tabela continuam independentes dessa navegação. A legenda
 compartilhada de demandas é exibida na seção do mapa, fora do canvas.
-Nesse componente, `SLTStatusColors.rankingPinHtml` gera a mesma gota ordinal
-para o mapa e para a legenda (`renderLegend` com `marcadorRanking: true`).
-Fundo e texto usam a paleta central, e a geometria usa `leafletPathStyle`,
+No desktop, as três fases ocupam colunas lado a lado; em telas estreitas,
+a legenda é empilhada. O mapa-base padrão dos painéis público, restrito e
+de ranking é o OpenStreetMap (ruas), definido pelo inicializador compartilhado
+`SLTPainelMapControls.initPainelMap`, sem configurações locais divergentes.
+No painel público, a sobreposição do mapa é inversa à sequência de tipos da
+sidebar: projetos sobre programas e programas sobre planos. A regra é preservada
+ao ocultar e reexibir grupos ou registros, sem alterar a ordem da sidebar.
+Nesse componente, `SLTStatusColors.rankingPinHtml` reutiliza os mesmos SVGs e
+cores dos alfinetes dos painéis público e restrito, acrescentando a posição.
+A legenda usa `renderLegend` com `layout: "painel"`, sem símbolos alternativos.
+Os alfinetes permanecem fixos nos centroides, mesmo quando coincidem.
+Os rótulos ordinais são maiores e renderizados em uma camada acima dos símbolos;
+o pódio usa ouro (1º), prata (2º) e bronze (3º), sem alterar as cores de status
+dos alfinetes. A posição preferencial do rótulo fica 60 pixels acima da âncora.
+somente os rótulos são reposicionados para evitar colisões, com linhas-guia
+quando afastados da posição preferencial. Cada rótulo abre os detalhes da sua
+demanda. A disposição é recalculada ao navegar, alterar o zoom, redimensionar
+ou mudar a visibilidade; não modifica coordenadas nem posições no ranking.
+Nenhum retângulo envolvente é desenhado.
+A geometria usa `leafletPathStyle`,
 preservando listras de planos, malha de programas e preenchimento liso de projetos.
 O status atual do cadastro interno prevalece sobre o retrato salvo no grupo;
 concluir o cálculo não equivale a publicar a demanda. Status ausentes ou
@@ -1387,23 +1566,24 @@ desconhecidos geram aviso explícito e impedem a exibição da demanda no mapa,
 sem atribuir uma situação presumida. As fases da legenda representam o ciclo
 de vida cadastral, não as três etapas do cálculo multicritério.
 
-Para a futura integração de publicação, a instância oferece
+O componente de mapa oferece
 `definirPoliticaPublicacao(hierarquizacao => boolean)`, que recompõe mapa e árvore
-segundo a política recebida, e `atualizar(hierarquizacoes, demandas)`. Por enquanto,
-a página privada permite consultar todos os grupos finalizados e atuais.
-O componente não autoriza acesso a dados públicos: a futura página pública deve
-receber apenas dados autorizados pelo servidor e a política oficial de publicação,
+segundo a política recebida, e `atualizar(hierarquizacoes, demandas)`.
+A página privada permite consultar todos os grupos finalizados e atuais.
+O componente não autoriza acesso a dados públicos: qualquer consumo público deve
+receber apenas dados autorizados pelo servidor e pela política oficial de publicação,
 sem reutilizar o endpoint interno nem inferir publicação a partir de homologação.
 
 Nos painéis existentes (`/restrict/painel/` e `/public/painel/`), a API unificada
 de demandas inclui `hierarquizacoes`: resumo seguro das fases e dos pesos, índice
 final e posição **daquela demanda em cada rodada**. Não transfere o documento
-interno completo da rodada para o painel público. A sidebar cria
-**Tipo → Hierarquização → Demanda** desde a formação do grupo, com situação da
+interno completo da rodada para o painel público. No painel restrito, a sidebar cria
+**Tipo → Hierarquização → Demanda** desde a formação do grupo; no público, somente
+as rodadas com publicação vigente entram nesse agrupamento, com situação da
 rodada; demandas sem grupo permanecem na raiz de seu tipo. Várias participações
 compartilham uma única geometria e um único estado de visibilidade da demanda.
 O contador considera demandas únicas, não participações. Os detalhes individuais
-permitem consultar todas as rodadas, sem presumir ranking global entre grupos.
+permitem consultar as rodadas autorizadas em cada painel, sem presumir ranking global entre grupos.
 
 Ciclo da hierarquização: o cálculo da síntese apenas **grava** o ranking e deixa a
 rodada em `calculada`; o status das demandas não muda. Nesse estado qualquer
@@ -1417,7 +1597,20 @@ gestor diferente de quem homologou; devolve a rodada a `calculada` e as demandas
 `hierarq_em_andamento`, exceto as que pertençam a outra rodada homologada. Ambas as
 ações ficam registradas em `cabecalho_grupo.historico_homologacao`. Demandas em
 execução, suspensas, retiradas ou já publicadas não são sobrescritas. A publicação
-é um controle gerencial somente do painel público, ainda não implementado.
+é um controle gerencial somente do painel público:
+`POST /api/ahp/hierarquizacoes/{codigo}/publicar` exige gestor ou administrador, rodada
+homologada com ranking e resultados atuais (inclusive composição e atributos).
+Analistas têm leitura no MAD; operadores não têm acesso. O JSON
+`cabecalho_grupo.publicacao` persiste estado, autoria, data e assinatura dos
+resultados; `historico_homologacao` registra publicação e revogação, sem migração.
+Antes da publicação, a demanda continua visível, mas seus índices e posições
+não são enviados no endpoint público. No painel restrito, a consulta permanece
+inalterada. Após publicar, os popups públicos mostram elegibilidade/risco,
+favorabilidade de rede e territorial, prioridade, índice geral e posição
+registrada, separados por rodada e grupo comparável, sem inventar posições nem
+alterar valores. A reversão revoga a publicação; resultados alterados ou
+desatualizados não são divulgados. Recalcular e homologar novamente não publica
+implicitamente: exige-se nova ação **Publicar**.
 As migrações `149_reconciliar_demandas_hierarquizacao_concluida.sql` (corrige
 somente demandas de rodadas já homologadas, por tipo e ID) e
 `150_reverter_homologacao_hierarquizacao.sql` (transições da reversão) estão

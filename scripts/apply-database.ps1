@@ -275,7 +275,11 @@ $migrations = @(
     "149_reconciliar_demandas_hierarquizacao_concluida.sql",
     "150_reverter_homologacao_hierarquizacao.sql",
     "151_matrizes_criterios_independentes.sql",
-    "152_julgamentos_apenas_fase3.sql"
+    "152_julgamentos_apenas_fase3.sql",
+    "153_central_pendencias.sql",
+    "154_pendencias_registradas_nao_notificadas.sql",
+    "155_versoes_parecer_complementacao.sql"
+    "156_data_analise_parecer.sql"
 )
 
 if ($OnlyMigration) {
@@ -447,6 +451,12 @@ if (-not $OnlyMigration) {
     } elseif (Test-SchemaReady $coreSchemaQuery) {
         Write-Ok "Schema legado ja esta atualizado; migrations 002-036 serao ignoradas"
         $migrations = $migrations | Where-Object { [int]$_.Substring(0, 3) -ge 37 }
+    }
+}
+
+if (-not $OnlyMigration -and "153_central_pendencias.sql" -notin $migrations) {
+    if (-not (Test-SchemaReady "SELECT count(*)=6 FROM information_schema.columns WHERE table_schema='demandas' AND table_name='solicitacao_complementacao_demanda' AND column_name IN ('parecer_tecnico','mensagem_gestor','revisao','atualizado_por','atualizado_em','historico_edicoes');")) {
+        $migrations += "153_central_pendencias.sql"
     }
 }
 
