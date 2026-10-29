@@ -18,7 +18,7 @@
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Título**                 | Metodologia do Sistema de Hierarquização de Demandas — SICARD                                                                                                         |
 | **Número**                 | NT-SICARD-001/2026                                                                                                                                                       |
-| **Versão**                 | 1.74                                                                                                                                                                      |
+| **Versão**                 | 1.75                                                                                                                                                                      |
 | **Data de emissão**        | 29/10/2026                                                                                                                                                               |
 | **Classificação**         | Documento técnico-metodológico de entrega ao cliente                                                                                                                   |
 | **Sistema**                 | SICARD — Sistema Inteligente de Cadastro e Ranking de Demandas                                                                                                        |
@@ -108,6 +108,7 @@
 | 1.72    | 29/10/2026 | `[preencher]` | Padronização institucional do parecer PDF em cinco blocos, consolidação de orientações repetidas, identificação do analista pela pessoa vinculada ao usuário e separação da data da análise e da emissão do documento, sem alteração das perguntas ou da pontuação. |
 | 1.73    | 29/10/2026 | `[preencher]` | Reorganização visual do parecer em bloco único de análise, com destaque para conclusão, motivo e providências, fundamentação consolidada e assinatura simplificada; distinção entre resultado dos critérios e decisão final, sem alteração das regras de análise. |
 | 1.74    | 29/10/2026 | `[preencher]` | Explicitação das condições não atendidas em frases declarativas e da conclusão geométrica; aplicação da paleta oficial ao status efetivamente registrado e inclusão das cores nas fontes versionadas, sem alteração dos critérios ou das fórmulas. |
+| 1.75    | 29/10/2026 | `[preencher]` | Distinção dos estados Homologada e Publicada no ciclo das demandas e inclusão da despublicação auditável, preservando a homologação, os resultados e a situação sustentada por outras rodadas. |
 
 ---
 
@@ -1681,7 +1682,15 @@ transação, sem sobrescrever situações posteriores ou suspensas. A conclusão
 cálculo não implica homologação nem publicação.
 
 **Publicação dos resultados homologados.** Conforme a espinha dorsal, a
-divulgação pública exige seleção de uma única rodada homologada e ação explícita
+homologação registra o estado Homologada nas demandas e a publicação registra
+Publicada, mediante transições dedicadas no domínio. A despublicação revoga
+a divulgação sem desfazer a homologação ou modificar os resultados salvos,
+retornando a demanda ao estado Homologada. Quando outra rodada conserva
+publicação vigente, preserva-se o estado Publicada. Situações de execução,
+suspensão ou retirada não são sobrescritas. As operações e seus responsáveis
+são registrados no histórico da rodada.
+
+A divulgação pública exige seleção de uma única rodada homologada e ação explícita
 de gestor ou administrador. Analistas têm somente leitura no MAD; operadores
 não têm acesso. A publicação é bloqueada quando não há ranking, quando os
 resultados ou a configuração de atributos estão desatualizados, quando há

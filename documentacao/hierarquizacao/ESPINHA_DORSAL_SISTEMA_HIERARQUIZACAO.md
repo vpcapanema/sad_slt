@@ -328,6 +328,18 @@ geometria mantêm fluxo independente, gerido pelo analista ou administrador.
 
 ### Publicação dos resultados homologados
 
+Os estados de demanda `hierarq_homologada` (Homologada) e
+`hierarq_publicada` (Publicada) pertencem ao grupo de hierarquização e possuem
+transições dedicadas no domínio. A homologação registra o primeiro estado;
+a publicação registra o segundo. A ação **Despublicar**, restrita a gestores e
+administradores, revoga a divulgação e retorna a demanda a Homologada, sem
+alterar a homologação, os índices ou o ranking. O estado Publicada é mantido
+quando outra rodada da demanda conserva publicação vigente. A reversão da
+homologação retorna a demanda a Em hierarquização somente quando nenhuma outra
+rodada homologada ou publicada sustenta um estado posterior. Situações de
+execução, suspensão e retirada são preservadas. As operações são transacionais,
+auditáveis e conferem as transições permitidas no domínio.
+
 A divulgação exige ação explícita **Publicar**, na barra de controles de
 **Homologação, Ranking e Publicação**, com uma única hierarquização homologada
 selecionada. Gestores e administradores podem publicar; analistas têm somente

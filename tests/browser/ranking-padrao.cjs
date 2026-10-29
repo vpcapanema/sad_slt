@@ -11,7 +11,7 @@ const statusDemanda = [
   'analise_rascunho', 'analise_em_avaliacao', 'analise_aguardando_complementacao',
   'analise_aprovada', 'analise_reprovada', 'analise_suspensa', 'analise_cancelada',
   'hierarq_em_andamento', 'hierarq_aguardando_complementacao', 'hierarq_finalizada',
-  'hierarq_ranqueada', 'hierarq_suspensa', 'hierarq_retirada',
+  'hierarq_homologada', 'hierarq_publicada', 'hierarq_ranqueada', 'hierarq_suspensa', 'hierarq_retirada',
   'exec_em_execucao', 'exec_suspensa', 'exec_finalizada', 'exec_cancelada',
 ];
 function rodada(codigo, tipo, quantidade = 3) {

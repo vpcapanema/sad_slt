@@ -379,7 +379,8 @@ def _sincronizar_status_demandas(
         raise DemandaValidationError("Demanda da hierarquização não encontrada.", field="demanda_id")
     outras = conn.execute(
         sql.SQL("""
-            SELECT h.* FROM {} h
+            SELECT h.*, g.objetos AS grupo_objetos FROM {} h
+            JOIN demandas.grupos_demandas g ON g.id=h.grupo_demanda_id
             WHERE h.status='homologada' AND h.codigo<>%s AND h.tipo_demanda_id=%s
               AND EXISTS (
                   SELECT 1 FROM jsonb_array_elements(COALESCE(h.dados_hierarquizacao->'objetos', '[]'::jsonb)) o(item)

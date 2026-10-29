@@ -1585,24 +1585,36 @@ compartilham uma única geometria e um único estado de visibilidade da demanda.
 O contador considera demandas únicas, não participações. Os detalhes individuais
 permitem consultar as rodadas autorizadas em cada painel, sem presumir ranking global entre grupos.
 
-Ciclo da hierarquização: o cálculo da síntese apenas **grava** o ranking e deixa a
-rodada em `calculada`; o status das demandas não muda. Nesse estado qualquer
+Ciclo da hierarquização: o cálculo da síntese gera uma **prévia**; somente a ação
+**Salvar resultado** grava o ranking e deixa a rodada em `calculada`, sem mudar o
+status das demandas. Nesse estado qualquer
 índice das três fases pode ser recalculado. A **homologação**
 (`POST /api/ahp/hierarquizacoes/{codigo}/homologar`, gestor ou administrador) é a
 única operação que conclui as demandas (`hierarq_em_andamento` para
-`hierarq_finalizada`, conferida no domínio, na mesma transação), exige síntese
+`hierarq_homologada`, conferida no domínio, na mesma transação), exige síntese
 atual e **trava** o recálculo das fases, da síntese e da complementação. A
 reversão (`POST .../reverter-homologacao`) só é permitida a administrador ou a
 gestor diferente de quem homologou; devolve a rodada a `calculada` e as demandas a
 `hierarq_em_andamento`, exceto as que pertençam a outra rodada homologada. Ambas as
 ações ficam registradas em `cabecalho_grupo.historico_homologacao`. Demandas em
-execução, suspensas, retiradas ou já publicadas não são sobrescritas. A publicação
+execução, suspensas ou retiradas não são sobrescritas; outra publicação vigente
+preserva o estado Publicada. A publicação
 é um controle gerencial somente do painel público:
 `POST /api/ahp/hierarquizacoes/{codigo}/publicar` exige gestor ou administrador, rodada
 homologada com ranking e resultados atuais (inclusive composição e atributos).
 Analistas têm leitura no MAD; operadores não têm acesso. O JSON
 `cabecalho_grupo.publicacao` persiste estado, autoria, data e assinatura dos
-resultados; `historico_homologacao` registra publicação e revogação, sem migração.
+resultados; `historico_homologacao` registra publicação e revogação no próprio JSON.
+Os estados **Homologada** (`hierarq_homologada`) e **Publicada**
+(`hierarq_publicada`) e suas transições dedicadas são adicionados pela migração
+`157_status_homologada_publicada.sql`, registrada no aplicador. Aplicar
+explicitamente antes de usar as ações atualizadas. **Despublicar**
+(`POST .../despublicar`) exige gestor ou administrador e revoga apenas a
+divulgação, mantendo a homologação, os resultados e sua auditoria.
+As demandas retornam a Homologada, salvo quando outra rodada mantém publicação
+vigente; situações de execução, suspensão e retirada não são sobrescritas.
+As posições publicadas aparecem permanentemente nos dois painéis, separadas por
+rodada quando há mais de uma, independentemente do controle de nomes no mapa.
 Antes da publicação, a demanda continua visível, mas seus índices e posições
 não são enviados no endpoint público. No painel restrito, a consulta permanece
 inalterada. Após publicar, os popups públicos mostram elegibilidade/risco,

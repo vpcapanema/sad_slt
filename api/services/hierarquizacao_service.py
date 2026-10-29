@@ -2283,7 +2283,12 @@ def publicar_hierarquizacao(codigo: str, *, publicado_por: str) -> Hierarquizaca
         if resultados_desatualizados(row):
             raise DemandaValidationError("Resultados desatualizados. Reverta a homologação e recalcule antes de publicar.", field="status")
         if publicacao_vigente(row):
-            return _response(row)
+            atualizada = repo.atualizar_publicacao(
+                codigo, deepcopy(row.get("dados_hierarquizacao") or {}), publicada=True,
+            )
+            if not atualizada:
+                raise HierarquizacaoNotFoundError(codigo)
+            return _response(atualizada)
         dados = deepcopy(row.get("dados_hierarquizacao") or {})
         dados.setdefault("cabecalho_grupo", {})["publicacao"] = {
             "ativa": True,
@@ -2292,7 +2297,10 @@ def publicar_hierarquizacao(codigo: str, *, publicado_por: str) -> Hierarquizaca
             "assinatura_resultados": assinatura_resultados(row),
         }
         repo._registrar_historico(dados, "publicada", publicado_por)
-        return _response(repo.atualizar_publicacao(codigo, dados, publicada=True) or row)
+        atualizada = repo.atualizar_publicacao(codigo, dados, publicada=True)
+        if not atualizada:
+            raise HierarquizacaoNotFoundError(codigo)
+        return _response(atualizada)
 
 
 def despublicar_hierarquizacao(codigo: str, *, despublicado_por: str) -> HierarquizacaoResponseSchema:
@@ -2312,7 +2320,10 @@ def despublicar_hierarquizacao(codigo: str, *, despublicado_por: str) -> Hierarq
             "despublicado_em": datetime.now(timezone.utc).isoformat(),
         })
         repo._registrar_historico(dados, "despublicada", despublicado_por)
-        return _response(repo.atualizar_publicacao(codigo, dados, publicada=False) or row)
+        atualizada = repo.atualizar_publicacao(codigo, dados, publicada=False)
+        if not atualizada:
+            raise HierarquizacaoNotFoundError(codigo)
+        return _response(atualizada)
 
 
 def sincronizar_composicao(codigo: str) -> HierarquizacaoResponseSchema:

@@ -5,7 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from api.db import connection
-from api.exceptions import DemandaValidationError
+from api.exceptions import DemandaValidationError, HierarquizacaoNotFoundError
 from api.server import app
 from api.services import hierarquizacao_service as service, painel_service
 from api.services.publicacao_hierarquizacao import assinatura_resultados, publicacao_vigente
@@ -101,6 +101,33 @@ def test_despublicacao_preserva_homologacao_resultados_e_auditoria(armazenamento
     assert publicacao_vigente(republicada)
 
 
+def test_republicacao_vigente_reconcilia_status_sem_duplicar_historico(armazenamento, monkeypatch):
+    service.publicar_hierarquizacao("H1", publicado_por="gestor")
+    original = deepcopy(armazenamento)
+    chamadas = []
+    atualizar = service.repo.atualizar_publicacao
+
+    def registrar(codigo, dados, *, publicada):
+        chamadas.append(publicada)
+        return atualizar(codigo, dados, publicada=publicada)
+
+    monkeypatch.setattr(service.repo, "atualizar_publicacao", registrar)
+    assert service.publicar_hierarquizacao("H1", publicado_por="outro") == original
+    assert chamadas == [True]
+
+
+@pytest.mark.parametrize("acao", ["publicar", "republicar", "despublicar"])
+def test_falha_de_persistencia_nao_retorna_sucesso(armazenamento, monkeypatch, acao):
+    if acao != "publicar":
+        service.publicar_hierarquizacao("H1", publicado_por="gestor")
+    monkeypatch.setattr(service.repo, "atualizar_publicacao", lambda *args, **kwargs: None)
+    with pytest.raises(HierarquizacaoNotFoundError):
+        if acao == "despublicar":
+            service.despublicar_hierarquizacao("H1", despublicado_por="gestor")
+        else:
+            service.publicar_hierarquizacao("H1", publicado_por="gestor")
+
+
 def test_despublicacao_rejeita_rodada_nao_publicada(armazenamento):
     with pytest.raises(DemandaValidationError, match="publicada"):
         service.despublicar_hierarquizacao("H1", despublicado_por="gestor")
@@ -110,7 +137,7 @@ def test_despublicacao_rejeita_rodada_nao_publicada(armazenamento):
 def test_api_despublicacao_exige_gestor(armazenamento, perfil, esperado):
     service.publicar_hierarquizacao("H1", publicado_por="gestor")
     cliente = TestClient(app)
-    cliente.cookies.set(cookie_name(), create_token(SessionUser("autor", "", "fixture_gestor", "Fixture", perfil)))
+    cliente.cookies.set(cookie_name(), create_token(SessionUser("autor", "", f"fixture_{perfil.lower()}", "Fixture", perfil)))
     assert cliente.post("/api/ahp/hierarquizacoes/H1/despublicar").status_code == esperado
 
 

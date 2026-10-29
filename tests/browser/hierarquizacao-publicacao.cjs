@@ -175,6 +175,20 @@ const referencia = '/restrict/analise-multicriterio/central-julgamentos';
     await privado.locator('.slt-map-ranking-position').waitFor({state: 'visible'});
     assert.equal(await privado.locator('.slt-map-ranking-position').innerText(), '7º',
       'posição publicada aparece também no painel restrito');
+    const variasPosicoes = await publico.evaluate(() => {
+      const entrada = {latlng: L.latLng(-23, -48)};
+      const [rotulo] = SLTPainelLayerLabels.buildRankingLabels(entrada, {hierarquizacoes: [
+        {codigo: 'H1', nome: 'Primeira rodada', publicada: true, posicao: 1},
+        {codigo: 'H2', nome: 'Segunda rodada', publicada: true, posicao: 3},
+        {codigo: 'PRIVADA', publicada: false, posicao: 2},
+        {codigo: 'ANTIGA', publicada: true, desatualizada: true, posicao: 4},
+        {codigo: 'SEM-POSICAO', publicada: true, posicao: null},
+      ]}, L);
+      return rotulo.options.icon.options.html;
+    });
+    assert.match(variasPosicoes, /H1 · 1º/);
+    assert.match(variasPosicoes, /H2 · 3º/);
+    assert.doesNotMatch(variasPosicoes, /PRIVADA|ANTIGA|SEM-POSICAO/);
     await publico.locator('.layer-group-header--record').first().click();
     await popup.waitFor({state: 'visible'});
     assert.equal(await popup.locator('.painel-hierarquizacao-resultados').count(), 2);
