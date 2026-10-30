@@ -190,17 +190,23 @@ def test_formulario_publico_e_o_formulario_do_colaborador_em_modo_modelo():
     assert "colaborativa-simulacao.js" not in response.text
 
 
-def test_modelo_pli_usa_apenas_criterios_fase3_sem_codigos():
+def test_modelo_pli_compara_sete_criterios_agrupados_em_tres_blocos():
     response = TestClient(app).get("/api/ahp/comparacao-colaborativa/modelo-pli")
     assert response.status_code == 200
     corpo = response.json()
     assert [d["nome"] for d in corpo["dimensoes"]] == [
-        "Econômica", "Viabilidade institucional e financeira", "Riscos",
+        "Mérito e resultados", "Sustentabilidade e território", "Capacidade de entrega",
     ]
-    assert len(corpo["criterios"]) == 6
-    assert corpo["criterios"][0] == "Impacto nas cadeias produtivas"
-    assert corpo["criterios"][-1] == "Risco de demanda e benefício"
-    assert not any(re.match(r"^[A-Z]{1,3}\d?\s*·", nome) for nome in corpo["criterios"])
+    assert corpo["criterios"] == [
+        "D1 · Eficiência logística", "D2 · Econômica", "D3 · Social e territorial",
+        "D4 · Segurança", "D5 · Ambiental e climática",
+        "D6 · Viabilidade institucional e financeira", "D7 · Riscos",
+    ]
+    assert [d["criterios"] for d in corpo["dimensoes"]] == [
+        corpo["criterios"][:2], corpo["criterios"][2:5], corpo["criterios"][5:],
+    ]
+    assert "Simular" in corpo["objetivo"]
+    assert "sem gravação" in corpo["objetivo"]
     assert response.headers["cache-control"] == "no-store"
 
 

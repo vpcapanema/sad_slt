@@ -460,8 +460,9 @@ body.ami-public-page {
 }
 
 .ami-public-page #collab-form-section :is(.saaty-crit--left, .saaty-crit--right) {
-  background: #f4f6f8;
-  border-color: #cbd5df;
+  background: transparent;
+  border: 0;
+  padding: 0;
   color: var(--pli-deep);
   text-align: left;
   flex-direction: row;
@@ -469,8 +470,13 @@ body.ami-public-page {
 
 .ami-public-page #collab-form-section .saaty-crit__name {
   display: inline-flex;
-  align-items: baseline;
-  gap: .4em;
+  align-items: center;
+  gap: .6em;
+  align-self: stretch;
+  padding: 0.45rem 0.6rem;
+  border: 2px solid #cbd5df;
+  border-radius: 10px;
+  background: #f4f6f8;
   min-width: 0;
   white-space: normal;
   overflow: visible;
@@ -482,6 +488,7 @@ body.ami-public-page {
 }
 .ami-public-page #collab-form-section .saaty-crit__icon {
   flex: none;
+  font-size: 1.05rem;
   width: 1.25em;
   text-align: center;
 }
@@ -497,6 +504,14 @@ body.ami-public-page {
 }
 
 @media (max-width: 480px) {
+  .ami-public-page #collab-form-section .saaty-criteria {
+    flex-direction: column;
+  }
+
+  .ami-public-page #collab-form-section .saaty-vs {
+    align-self: center;
+  }
+
   .ami-public-page #collab-form-section .ahp-live-metrics {
     grid-template-columns: minmax(0, 1fr);
   }

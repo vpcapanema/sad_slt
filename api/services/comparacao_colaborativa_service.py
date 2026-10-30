@@ -677,36 +677,38 @@ def listar_ambientes_hierarquizacao(
 
 
 def obter_modelo_formulario_pli() -> dict[str, Any]:
-    """O modelo público também julga somente o recorte da Fase 3."""
+    """Simulação pública dos sete critérios D1–D7, agrupados nos blocos do PLI."""
     from openpyxl import load_workbook
 
-    arquivo = Path(__file__).resolve().parents[2] / "documentacao" / "matrizes" / "Matriz_PLI_v6_Dimensoes_Indicadores.xlsx"
+    arquivo = Path(__file__).resolve().parents[2] / "documentacao" / "matrizes" / "Matriz_PLI_v6_Blocos_Dimensoes.xlsx"
     with arquivo.open("rb") as stream:
         workbook = load_workbook(stream, read_only=True, data_only=True)
         try:
-            rows = workbook["Matriz Crit Premissas v3"].iter_rows(values_only=True)
-            headers = next(rows)
-            elegiveis = matrizes_criterios.criterios_fase3({"linhas": [
-                dict(zip(headers, row)) for row in rows if any(value is not None for value in row)
-            ]})
+            dimensoes = [
+                {"codigo": str(codigo), "nome": nome, "criterios": []}
+                for codigo, nome, *_ in workbook["Dimensões de Critérios"].iter_rows(min_row=2, values_only=True)
+                if codigo is not None and nome
+            ]
+            criterios = []
+            for _, nome, bloco in workbook["Critérios"].iter_rows(min_row=2, values_only=True):
+                if not nome:
+                    continue
+                dimensao = next((d for d in dimensoes if d["nome"] == bloco), None)
+                if dimensao is None:
+                    raise DemandaValidationError(
+                        f"O critério “{nome}” não possui bloco válido na matriz PLI.", field="criterios",
+                    )
+                criterios.append(nome)
+                dimensao["criterios"].append(nome)
         finally:
             workbook.close()
-    dimensoes = []
-    for criterio in elegiveis:
-        nome_dimensao = _dimensao(criterio).split(" · ", 1)[-1]
-        dimensao = next((d for d in dimensoes if d["nome"] == nome_dimensao), None)
-        if dimensao is None:
-            dimensao = {"codigo": _dimensao(criterio).split(" · ")[0], "nome": nome_dimensao, "criterios": []}
-            dimensoes.append(dimensao)
-        dimensao["criterios"].extend(nome.split(" · ", 1)[-1] for nome in _criterio_nomes([criterio]))
-    criterios = [nome for dimensao in dimensoes for nome in dimensao["criterios"]]
     if len(criterios) < 2:
         raise DemandaValidationError("Os critérios do PLI não estão cadastrados no domínio.", field="criterios")
     return {
         "escopo": "Hierarquização da carteira de projetos e ações — PLI-SP 2050",
         "objetivo": (
-            "Definir a importância relativa dos critérios da Fase 3 selecionados pela equipe do PLI, "
-            "que orientarão a hierarquização da carteira de projetos e ações."
+            "Simular a comparação dos sete critérios D1–D7 do PLI-SP 2050, organizados em três blocos, "
+            "sem gravação de respostas nem aplicação dos pesos às hierarquizações."
         ),
         "criterios": criterios,
         "dimensoes": dimensoes,

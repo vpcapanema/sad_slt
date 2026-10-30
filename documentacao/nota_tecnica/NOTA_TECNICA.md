@@ -18,8 +18,8 @@
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Título**                 | Metodologia do Sistema de Hierarquização de Demandas — SICARD                                                                                                         |
 | **Número**                 | NT-SICARD-001/2026                                                                                                                                                       |
-| **Versão**                 | 1.75                                                                                                                                                                      |
-| **Data de emissão**        | 29/10/2026                                                                                                                                                               |
+| **Versão**                 | 1.76                                                                                                                                                                      |
+| **Data de emissão**        | 30/10/2026                                                                                                                                                               |
 | **Classificação**         | Documento técnico-metodológico de entrega ao cliente                                                                                                                   |
 | **Sistema**                 | SICARD — Sistema Inteligente de Cadastro e Ranking de Demandas                                                                                                        |
 | **Domínio de aplicação** | Logística e transportes. Concebido no âmbito do Plano de Logística Integrada do Estado de São Paulo (PLI-SP), aplica-se a qualquer objeto de demanda desse domínio. |
@@ -109,6 +109,7 @@
 | 1.73    | 29/10/2026 | `[preencher]` | Reorganização visual do parecer em bloco único de análise, com destaque para conclusão, motivo e providências, fundamentação consolidada e assinatura simplificada; distinção entre resultado dos critérios e decisão final, sem alteração das regras de análise. |
 | 1.74    | 29/10/2026 | `[preencher]` | Explicitação das condições não atendidas em frases declarativas e da conclusão geométrica; aplicação da paleta oficial ao status efetivamente registrado e inclusão das cores nas fontes versionadas, sem alteração dos critérios ou das fórmulas. |
 | 1.75    | 29/10/2026 | `[preencher]` | Distinção dos estados Homologada e Publicada no ciclo das demandas e inclusão da despublicação auditável, preservando a homologação, os resultados e a situação sustentada por outras rodadas. |
+| 1.76    | 30/10/2026 | `[preencher]` | Explicitação do formulário-modelo como simulação dos sete critérios D1–D7 da matriz PLI v6 de blocos e dimensões, sem gravação ou aplicação de pesos, preservando o recorte da Fase 3 nos julgamentos reais. |
 
 ---
 
@@ -1285,6 +1286,13 @@ e **rastreabilidade**.
   explícita.
 
 ### Preenchimento colaborativo e consolidação de julgamentos
+
+O formulário-modelo público constitui demonstração isolada, sem gravação de
+respostas nem aplicação dos pesos às hierarquizações. Conforme a espinha dorsal,
+utiliza os sete critérios D1–D7 da planilha
+`Matriz_PLI_v6_Blocos_Dimensoes.xlsx`, organizados em três blocos e comparados em
+21 pares, sem filtro por fase. Essa simulação não modifica a exclusividade da
+Fase 3 nos julgamentos reais.
 
 A matriz de critérios e premissas constitui um registro independente e imutável.
 Os convites podem delimitar uma ou mais dimensões por colaborador, apresentando
