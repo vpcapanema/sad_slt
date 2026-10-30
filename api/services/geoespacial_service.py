@@ -1267,7 +1267,10 @@ class GeoespacialService:
     ) -> dict[str, Any]:
         """Lê um COG remoto, limitado à extensão solicitada, e o registra no catálogo."""
         try:
-            with rasterio.open(url) as source:
+            from api.services.stac_transport import baixar_asset
+            from rasterio.io import MemoryFile
+            # Somente GTiff em memória: GDAL não recebe uma URL, VRT ou sidecars.
+            with rasterio.Env(GDAL_DISABLE_READDIR_ON_OPEN="EMPTY_DIR"), MemoryFile(baixar_asset(url)) as memory, memory.open(driver="GTiff") as source:
                 if not source.crs:
                     raise ValueError("O asset remoto não informa CRS")
                 window = Window(0, 0, source.width, source.height)

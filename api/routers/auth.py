@@ -3,9 +3,11 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
-from api.deps.auth import get_optional_session, get_request_meta, require_authenticated
+from api.deps.auth import get_optional_session, get_request_meta, require_authenticated, require_admin
+from uuid import UUID
 from api.exceptions import AuthError, DatabaseUnavailableError
 from api.repositories import sigma_usuario_repository
+from api.repositories import session_repository
 from api.schemas.auth import LoginRequestSchema, LoginResponseSchema, SessionUserSchema
 from api.services import auth_service
 from api.services.session_service import SessionUser, cookie_name, REMEMBER_TTL_SECONDS
@@ -14,15 +16,6 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 def _user_schema(user: SessionUser) -> SessionUserSchema:
     nome = user.nome
-    try:
-        usuario_sigma = sigma_usuario_repository.find_active_by_id(user.id)
-        nome_associado = (usuario_sigma or {}).get("nome_pessoa")
-        if nome_associado:
-            nome = str(nome_associado).strip()
-    except DatabaseUnavailableError:
-        # A sessão continua utilizável durante uma indisponibilidade transitória
-        # do SIGMA; o nome gravado no token funciona como contingência.
-        pass
     return SessionUserSchema(
         id=user.id,
         email=user.email,
@@ -103,6 +96,10 @@ def logout(
 ):
     meta = get_request_meta(request)
     if user:
+        try:
+            session_repository.revoke(user.session_id)
+        except DatabaseUnavailableError as exc:
+            raise HTTPException(503, "Não foi possível revogar a sessão. Tente novamente.") from exc
         auth_service.logout_usuario(
             user,
             ip_address=meta["ip_address"],
@@ -110,3 +107,12 @@ def logout(
         )
     _clear_session_cookie(response)
     return {"ok": True}
+
+
+@router.delete("/sessoes/usuario/{usuario_id}", status_code=204)
+def revogar_sessoes_usuario(usuario_id: UUID, _admin: SessionUser = Depends(require_admin)):
+    """Revogação administrativa, inclusive no procedimento de desativação SIGMA."""
+    try:
+        session_repository.revoke_user(str(usuario_id))
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(503, "Não foi possível revogar as sessões. Tente novamente.") from exc

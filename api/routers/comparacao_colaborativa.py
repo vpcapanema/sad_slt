@@ -94,13 +94,17 @@ def _base_url(request: Request) -> str:
     return base if not prefix or base.endswith(prefix) else base + prefix
 
 
+def _gestao(user: SessionUser) -> bool:
+    return user.tipo_usuario in {"GESTOR", "ADMIN"}
+
+
 @router.get("/ambientes", response_model=list[AmbienteColaborativoResponseSchema])
 def listar_ambientes(
     request: Request,
     _user: SessionUser = Depends(require_authenticated),
 ) -> list[AmbienteColaborativoResponseSchema]:
     try:
-        return service.listar_ambientes(base_url=_base_url(request))
+        return service.listar_ambientes(base_url=_base_url(request), gestao=_gestao(_user))
     except DatabaseUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
@@ -203,7 +207,7 @@ def listar_ambientes_hierarquizacao(
 ) -> list[AmbienteColaborativoResponseSchema]:
     """Lista todos os julgamentos colaborativos de uma hierarquização."""
     try:
-        return service.listar_ambientes_hierarquizacao(hierarquizacao_id, base_url=_base_url(request))
+        return service.listar_ambientes_hierarquizacao(hierarquizacao_id, base_url=_base_url(request), gestao=_gestao(_user))
     except DemandaValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except DatabaseUnavailableError as exc:
@@ -227,7 +231,7 @@ def listar_respostas(
 @router.get("/ambientes/{ambiente_id}/espaco-analitico")
 def obter_espaco_analitico(ambiente_id: str, request: Request, _user: SessionUser = Depends(require_authenticated)) -> dict:
     try:
-        return service.obter_espaco_analitico(ambiente_id, base_url=_base_url(request))
+        return service.obter_espaco_analitico(ambiente_id, base_url=_base_url(request), gestao=_gestao(_user))
     except DemandaValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except DatabaseUnavailableError as exc:
@@ -267,7 +271,7 @@ def obter_ambiente_id(
 ) -> AmbienteColaborativoResponseSchema:
     """Obtém todas as informações persistidas do ambiente colaborativo."""
     try:
-        return service.obter_ambiente_id(ambiente_id, base_url=_base_url(request))
+        return service.obter_ambiente_id(ambiente_id, base_url=_base_url(request), gestao=_gestao(_user))
     except DemandaValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except DatabaseUnavailableError as exc:
@@ -297,7 +301,7 @@ def obter_ambiente_hierarquizacao(
 ) -> AmbienteColaborativoResponseSchema:
     """Obtém o ambiente colaborativo mais recente de uma configuração."""
     try:
-        amb = service.obter_ambiente_hierarquizacao(hierarquizacao_id, base_url=_base_url(request))
+        amb = service.obter_ambiente_hierarquizacao(hierarquizacao_id, base_url=_base_url(request), gestao=_gestao(_user))
         if not amb:
             raise HTTPException(status_code=404, detail="Ambiente colaborativo não encontrado.")
         return amb
@@ -305,6 +309,15 @@ def obter_ambiente_hierarquizacao(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except DatabaseUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.delete("/ambientes/{ambiente_id}/convites/{email}", status_code=204)
+def revogar_convite(ambiente_id: UUID, email: str, _user: SessionUser = Depends(require_analyst)):
+    from api.repositories import convite_individual_repository
+    try:
+        convite_individual_repository.revogar(str(ambiente_id), email.strip().lower())
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(503, "Não foi possível revogar o convite. Tente novamente.") from exc
 
 
 @router.get("/modelo-pli")

@@ -323,7 +323,7 @@ def _asset_stac_raster(asset: dict[str, Any]) -> bool:
     """Aceita somente GeoTIFF/COG que o importador rasterio consegue abrir."""
     href = str(asset.get("href") or "")
     media_type = str(asset.get("type") or "").split(";", 1)[0].lower()
-    return href.startswith(("https://", "http://")) and (
+    return href.startswith("https://") and (
         media_type in {"image/tiff", "image/geotiff", "application/geotiff", "application/x-geotiff"}
         or href.split("?", 1)[0].lower().endswith((".tif", ".tiff"))
     )
@@ -374,9 +374,11 @@ async def buscar_itens_stac(parametros: dict[str, Any]) -> list[dict[str, Any]]:
     except httpx.HTTPError as exc:
         raise HTTPException(status_code=502, detail="A busca STAC não pôde ser concluída") from exc
     resultado = []
+    from api.services.stac_transport import autorizar_asset
     for item in items:
         assets = [
-            {"chave": chave, "titulo": asset.get("title") or chave, "url": asset.get("href"), "tipo": asset.get("type")}
+            {"chave": chave, "titulo": asset.get("title") or chave, "url": asset.get("href"), "tipo": asset.get("type"),
+             "autorizacao": autorizar_asset(str(parametros["servico_id"]), servico["url"], asset["href"])}
             for chave, asset in (item.get("assets") or {}).items()
             if _asset_stac_raster(asset)
         ]
@@ -388,11 +390,13 @@ async def buscar_itens_stac(parametros: dict[str, Any]) -> list[dict[str, Any]]:
 @router.post("/catalogo/portal/stac/importar")
 def importar_asset_stac(parametros: dict[str, Any]) -> dict[str, Any]:
     """Importa um COG escolhido pelo usuário para o catálogo e mapa da bancada."""
-    asyncio.run(_servico_portal(str(parametros.get("servico_id", "")), "STAC"))
+    servico = asyncio.run(_servico_portal(str(parametros.get("servico_id", "")), "STAC"))
     url = str(parametros.get("url", ""))
     if not _asset_stac_raster({"href": url, "type": parametros.get("tipo")}):
         raise HTTPException(status_code=422, detail="Selecione um asset GeoTIFF/COG do resultado da pesquisa")
     try:
+        from api.services.stac_transport import verificar_asset
+        verificar_asset(str(parametros.get("autorizacao", "")), str(parametros.get("servico_id", "")), servico["url"], url)
         return asyncio.run(geoespacial_service.importar_raster_url(
             url, str(parametros.get("titulo") or "Asset STAC"),
             _bbox_portal(parametros["bbox"]) if parametros.get("bbox") else None,

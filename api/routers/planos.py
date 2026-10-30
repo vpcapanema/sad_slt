@@ -9,6 +9,9 @@ from api.exceptions import DatabaseUnavailableError, DemandaNotFoundError, Deman
 from api.schemas.objeto_ahp import AprovarDemandaSchema, ReprovarDemandaSchema
 from api.schemas.plano import PlanoCreateSchema, PlanoResponseSchema, PlanoUpdateSchema
 from api.services import plano_service
+from api.repositories import plano_repository
+from api.services.vinculacao_policy import elegivel
+from api.schemas.vinculacao import OpcaoVinculacaoSchema
 from api.services.arquivo_geometria import receber_arquivo_geometria
 from api.services.session_service import SessionUser
 
@@ -58,11 +61,12 @@ def listar_planos() -> list[PlanoResponseSchema]:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
-@router.get("/vinculaveis", response_model=list[PlanoResponseSchema])
-def listar_planos_vinculaveis() -> list[PlanoResponseSchema]:
+@router.get("/vinculaveis", response_model=list[OpcaoVinculacaoSchema])
+def listar_planos_vinculaveis() -> list[OpcaoVinculacaoSchema]:
     """Lista os planos que podem ser selecionados como pai no cadastro."""
     try:
-        return plano_service.listar_planos()
+        return [OpcaoVinculacaoSchema(codigo=r["codigo"], nome=r["nome"])
+                for r in plano_repository.list_all() if elegivel(r)]
     except DatabaseUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 

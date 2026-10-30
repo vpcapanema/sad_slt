@@ -17,14 +17,18 @@ from api.services.session_service import SessionUser, cookie_name, create_token
 AMBIENTE_ID = "22222222-2222-2222-2222-222222222222"
 HIERARQUIZACAO_ID = "44444444-4444-4444-4444-444444444444"
 CONFIG_ID = "55555555-5555-5555-5555-555555555555"
+KEY = "A" * 43
 
 
-@pytest.mark.parametrize("numero,esperado", [(0, "000000"), (7, "000007"), (999999, "999999")])
-def test_token_acesso_tem_seis_digitos_incluindo_zeros(monkeypatch, numero, esperado):
-    gerar = MagicMock(return_value=numero)
-    monkeypatch.setattr(service.secrets, "randbelow", gerar)
-    assert service.gerar_token_acesso() == esperado
-    gerar.assert_called_once_with(1_000_000)
+@pytest.fixture(autouse=True)
+def convites_sinteticos(monkeypatch):
+    monkeypatch.setattr(service.convites_repo, "validar", lambda _, email, key: key == KEY)
+    monkeypatch.setattr(service.convites_repo, "revogar", lambda *a: None)
+
+
+def test_token_individual_tem_256_bits():
+    tokens = {service.gerar_token_acesso() for _ in range(10)}
+    assert len(tokens) == 10 and all(len(token) == 43 for token in tokens)
 
 
 def test_token_legado_e_atomico_e_preserva_versao(monkeypatch):
@@ -33,19 +37,16 @@ def test_token_legado_e_atomico_e_preserva_versao(monkeypatch):
     conn.execute.return_value.fetchone.return_value = {"token_acesso": "012345"}
     monkeypatch.setattr(repo, "get_connection", lambda: contexto)
     versao = datetime.now(timezone.utc)
-    assert repo.garantir_token_acesso(AMBIENTE_ID, versao, "999999") == "012345"
-    query, params = conn.execute.call_args.args
-    assert "COALESCE(token_acesso, %s)" in query
-    assert "atualizado_em=%s" in query and "valido_ate >= now()" in query
-    assert "atualizado_em" not in query.split("WHERE")[0]
-    assert params == ("999999", AMBIENTE_ID, versao)
+    with pytest.raises(DemandaValidationError, match="desativados"):
+        repo.garantir_token_acesso(AMBIENTE_ID, versao, "999999")
+    conn.execute.assert_not_called()
 
 
 def test_token_legado_nao_grava_em_versao_obsoleta(monkeypatch):
     contexto = MagicMock()
     contexto.__enter__.return_value.execute.return_value.fetchone.return_value = None
     monkeypatch.setattr(repo, "get_connection", lambda: contexto)
-    with pytest.raises(DemandaValidationError, match="julgamento mudou"):
+    with pytest.raises(DemandaValidationError, match="desativados"):
         repo.garantir_token_acesso(AMBIENTE_ID, datetime.now(timezone.utc), "012345")
 
 
@@ -57,7 +58,7 @@ def test_token_legado_nao_grava_em_versao_obsoleta(monkeypatch):
 def test_rotas_publicas_exigem_email_e_token_antes_de_ler_ou_gravar(monkeypatch, operacao, caso):
     row = _ambiente_row()
     payload = {
-        "token_acesso": "012345", "email": "a@x.gov.br",
+        "token_acesso": KEY, "email": "a@x.gov.br",
         "identificacao": {"nome_completo": "Outro nome permitido", "email": "a@x.gov.br", "instituicao": "Instituição"},
         "matriz_comparacao": [[1, 2], [0.5, 1]],
     }
@@ -73,7 +74,7 @@ def test_rotas_publicas_exigem_email_e_token_antes_de_ler_ou_gravar(monkeypatch,
     elif caso == "removido":
         row["convites"] = []
     elif caso == "sem_codigo":
-        row["token_acesso"] = None
+        monkeypatch.setattr(service.convites_repo, "validar", lambda *a: False)
     elif caso == "encerrado":
         row["status"] = "encerrada"
     elif caso == "expirado":
@@ -94,7 +95,7 @@ def test_validacao_normaliza_email_e_nao_retorna_codigo(monkeypatch):
     monkeypatch.setattr(repo, "get_ambiente_by_token", lambda _: _ambiente_row())
     monkeypatch.setattr(service.hierarq_repo, "get_by_id", lambda _: {"nome": "Teste"})
     response = TestClient(app).post("/api/ahp/comparacao-colaborativa/publico/tok-abc/acesso",
-                                   json={"email": " A@X.GOV.BR ", "token_acesso": "012345"})
+                                   json={"email": " A@X.GOV.BR ", "token_acesso": KEY})
     assert response.status_code == 200, response.text
     assert response.json()["email_autorizado"] is True
     assert response.json()["criterios"] == ["Custo", "Prazo"]
@@ -110,7 +111,7 @@ def test_publico_bloqueia_julgamento_legado_misto_sem_reinterpretar_respostas(mo
     access = MagicMock(side_effect=AssertionError("Não ler respostas do julgamento incompatível"))
     monkeypatch.setattr(repo, "get_resposta_by_ambiente_email", access)
     payload = {
-        "email": "a@x.gov.br", "token_acesso": "012345",
+        "email": "a@x.gov.br", "token_acesso": KEY,
         "identificacao": {"nome_completo": "Ana", "email": "a@x.gov.br", "instituicao": "Instituição"},
         "matriz_comparacao": [[1, 1, 1], [1, 1, 1], [1, 1, 1]],
     }
@@ -148,7 +149,7 @@ def test_contexto_publico_descreve_objetivo_por_tipo(monkeypatch, tipo_id, deman
     assert "token_acesso" not in contexto
 
 
-def _client_autenticado(perfil: str = "ANALISTA") -> TestClient:
+def _client_autenticado(perfil: str = "GESTOR") -> TestClient:
     client = TestClient(app)
     user = SessionUser(
         id="11111111-1111-1111-1111-111111111111",
@@ -182,9 +183,9 @@ def _ambiente_row(**extra) -> dict:
     return row
 
 
-def test_resposta_administrativa_expoe_codigo_correto_sem_trocar_token_do_link():
-    resposta = service._ambiente_to_response(_ambiente_row())
-    assert resposta.token_acesso == "012345"
+def test_resposta_administrativa_nao_expoe_chave_individual():
+    resposta = service._ambiente_to_response(_ambiente_row(), gestao=True)
+    assert resposta.token_acesso is None
     assert resposta.token == "tok-abc"
     assert "/tok-abc/" in resposta.url_publica
     assert "012345" not in resposta.url_publica
@@ -349,8 +350,8 @@ def test_formulario_publico_limita_criterios_por_email(monkeypatch):
     monkeypatch.setattr(repo, "get_ambiente_by_token", lambda _: row)
     monkeypatch.setattr(service.hierarq_repo, "get_by_id", lambda _: {"nome": "Teste"})
     assert service.obter_ambiente_publico("tok-abc").criterios == []
-    assert service.obter_ambiente_publico("tok-abc", "a@x.gov.br", "012345").criterios == ["Acesso", "Equidade"]
-    assert len(service.obter_ambiente_publico("tok-abc", "b@x.gov.br", "012345").criterios) == 4
+    assert service.obter_ambiente_publico("tok-abc", "a@x.gov.br", KEY).criterios == ["Acesso", "Equidade"]
+    assert len(service.obter_ambiente_publico("tok-abc", "b@x.gov.br", KEY).criterios) == 4
 
 
 @pytest.mark.parametrize("dimensoes", [[], ["Inexistente"], ["Social", "Social"]])
@@ -375,7 +376,7 @@ def test_resposta_dimensoes_valida_tamanho_e_grava_snapshot(monkeypatch):
     inserted = MagicMock(side_effect=lambda data: {**_resposta_row(data["matriz_comparacao"]), **data})
     monkeypatch.setattr(repo, "insert_resposta", inserted)
     payload = RespostaColaborativaCreateSchema(
-        token_acesso="012345", identificacao={"nome_completo": "Ana", "email": "a@x.gov.br", "instituicao": "Teste"},
+        token_acesso=KEY, identificacao={"nome_completo": "Ana", "email": "a@x.gov.br", "instituicao": "Teste"},
         matriz_comparacao=[[1, 2], [.5, 1]],
     )
     result = service.registrar_resposta("tok-abc", payload)
@@ -502,7 +503,7 @@ def test_resposta_usa_snapshot_de_criterios_e_ambiente_correto(monkeypatch) -> N
 
     monkeypatch.setattr(repo, "insert_resposta", fake_insert)
     payload = service.RespostaColaborativaCreateSchema.model_validate({
-        "token_acesso": "012345",
+        "token_acesso": KEY,
         "identificacao": {
             "nome_completo": "Ana",
             "email": "A@X.GOV.BR",
@@ -526,7 +527,7 @@ def test_resposta_rejeita_matriz_ahp_invalida(monkeypatch, matriz) -> None:
     monkeypatch.setattr(repo, "get_ambiente_by_token", lambda _token: _ambiente_row())
     monkeypatch.setattr(repo, "get_resposta_by_ambiente_email", lambda _ambiente, _email: None)
     payload = service.RespostaColaborativaCreateSchema.model_validate({
-        "token_acesso": "012345",
+        "token_acesso": KEY,
         "identificacao": {
             "nome_completo": "Ana",
             "email": "a@x.gov.br",
@@ -697,7 +698,7 @@ def test_rotas_excluem_registro_colaborativo(monkeypatch, recurso, identificador
 def test_rota_lista_todas_as_rodadas_da_configuracao(monkeypatch) -> None:
     chamado: dict = {}
 
-    def fake_listar(hierarquizacao_id, *, base_url: str = ""):
+    def fake_listar(hierarquizacao_id, *, base_url: str = "", gestao=False):
         chamado["hierarquizacao_id"] = str(hierarquizacao_id)
         return []
 
@@ -733,7 +734,7 @@ def test_rota_consolidar_resolve_para_consolidar_ambiente(monkeypatch) -> None:
         return service._ambiente_to_response(row, base_url=base_url)
 
     monkeypatch.setattr(service, "consolidar_ambiente", fake_consolidar)
-    client = _client_autenticado("ANALISTA")
+    client = _client_autenticado("GESTOR")
 
     resp = client.post(
         f"/api/ahp/comparacao-colaborativa/ambientes/{AMBIENTE_ID}/consolidar"
@@ -899,7 +900,7 @@ def _instalar_fake_repo(monkeypatch) -> _FakeRepo:
 
 def test_invitation_uses_active_form_with_production_prefix(monkeypatch) -> None:
     _instalar_fake_repo(monkeypatch)
-    response = _client_autenticado("ANALISTA").post(
+    response = _client_autenticado("GESTOR").post(
         "/api/ahp/comparacao-colaborativa/ambientes",
         headers={"x-forwarded-prefix": "/sicard"},
         json={
@@ -915,7 +916,7 @@ def test_invitation_uses_active_form_with_production_prefix(monkeypatch) -> None
 
 def test_fluxo_colaborativo_completo(monkeypatch) -> None:
     fake = _instalar_fake_repo(monkeypatch)
-    gestor = _client_autenticado("ANALISTA")
+    gestor = _client_autenticado("GESTOR")
 
     # 1. Gestor cria o ambiente colaborativo com dois convidados.
     resp = gestor.post(
@@ -954,9 +955,9 @@ def test_fluxo_colaborativo_completo(monkeypatch) -> None:
     assert resp.json()["email_autorizado"] is False
     assert resp.json()["criterios"] == []
     assert "token_acesso" not in resp.json()
-    codigo = fake.ambientes[ambiente["id"]]["token_acesso"]
-    assert ambiente["token_acesso"] == codigo
-    assert len(codigo) == 6 and codigo.isascii() and codigo.isdigit()
+    codigo = KEY
+    assert ambiente["token_acesso"] is None
+    assert fake.ambientes[ambiente["id"]]["token_acesso"] is None
     resp = publico.post(f"/api/ahp/comparacao-colaborativa/publico/{token}/acesso",
                         json={"email": "a@x.gov.br", "token_acesso": codigo})
     assert resp.status_code == 200, resp.text

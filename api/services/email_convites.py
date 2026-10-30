@@ -7,10 +7,11 @@ from uuid import uuid4
 from api.exceptions import DatabaseUnavailableError, DemandaValidationError
 from api.repositories import comparacao_colaborativa_repository as ambientes
 from api.repositories import email_convites_repository as repo
+from api.repositories import convite_individual_repository
 from api.schemas.email import ConviteEmailEnvioSchema, EmailEnvioSchema
 from api.services import email_service
 from api.services.comparacao_colaborativa_service import (
-    _validar_ambiente_ativo, gerar_token_acesso, _criterios_convidado, _criterio_nomes,
+    _validar_ambiente_ativo, _criterios_convidado, _criterio_nomes,
 )
 
 ASSUNTO = "Convite para preenchimento colaborativo AHP - SICARD"
@@ -35,9 +36,6 @@ def enviar(ambiente_id: str, dados: ConviteEmailEnvioSchema, usuario_id: str) ->
     if not any(caminho in dados.texto for caminho in caminhos):
         raise DemandaValidationError("A mensagem não contém o link deste julgamento.", field="texto")
     config = email_service._config()
-    codigo = ambiente.get("token_acesso")
-    if not codigo:
-        codigo = ambientes.garantir_token_acesso(ambiente_id, dados.versao, gerar_token_acesso())
     convite = next(c for c in ambiente["convites"] if c["email"].strip().lower() == destinatario)
     corpo = dados.texto
     if convite.get("dimensoes") is not None:
@@ -52,17 +50,18 @@ def enviar(ambiente_id: str, dados: ConviteEmailEnvioSchema, usuario_id: str) ->
             f"Acesse o formulário: {link}\n"
             "Para enviar a resposta, a consistência (RC) deve ser menor que 0,10."
         )
-    texto = (
-        f"{corpo}\n\nCódigo de acesso ao formulário: {codigo}\n"
-        "Para liberar o formulário, informe seu nome, o e-mail convidado e este código de acesso de seis dígitos. "
-        "O código de acesso é válido somente para este julgamento, dentro do prazo informado."
+    instrucoes = (
+        "\n\nChave individual do convite: {segredo}\n"
+        "Informe seu e-mail convidado e esta chave no formulário. Não compartilhe a chave. "
+        "Ela é revogável, exclusiva deste destinatário e válida dentro do prazo do julgamento. "
+        "Um novo envio invalida a chave anterior."
     )
-    if len(texto) > 50000:
+    texto = corpo
+    if len(texto) + len(instrucoes.format(segredo="x" * 43)) > 50000:
         raise DemandaValidationError(
-            "Reduza a mensagem para que o texto, incluindo as instruções do código de acesso, tenha até 50.000 caracteres.",
+            "Reduza a mensagem para que o texto, incluindo a chave individual e suas instruções, tenha até 50.000 caracteres.",
             field="texto",
         )
-    mensagem = EmailEnvioSchema(destinatario=dados.destinatario, assunto=ASSUNTO, texto=texto)
     identidade = ASSUNTO + "\n" + texto
     if dados.reenvio_id:
         identidade += "\nReenvio: " + str(dados.reenvio_id)
@@ -74,10 +73,16 @@ def enviar(ambiente_id: str, dados: ConviteEmailEnvioSchema, usuario_id: str) ->
     if not novo:
         return {**registro, "reutilizado": True}
     try:
+        segredo = convite_individual_repository.emitir(ambiente_id, destinatario, dados.versao)
+        texto += instrucoes.format(segredo=segredo)
+        mensagem = EmailEnvioSchema(destinatario=dados.destinatario, assunto=ASSUNTO, texto=texto)
         resultado = email_service.enviar(
             mensagem,
             usuario_id=usuario_id, id_mensagem=registro["mensagem_id"], solicitar_confirmacoes=True,
         )
+    except (DatabaseUnavailableError, DemandaValidationError):
+        repo.finalizar(str(registro["id"]), "falha", "Convite não emitido. Reabra o julgamento e tente novamente.")
+        raise
     except email_service.FalhaEmail as exc:
         status = "indeterminado" if exc.codigo == "resultado_indeterminado" else "falha"
         return repo.finalizar(str(registro["id"]), status, str(exc))

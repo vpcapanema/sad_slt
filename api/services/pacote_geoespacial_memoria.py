@@ -33,88 +33,77 @@ MAX_COMPONENTES = 2000
 MAX_PROFUNDIDADE = 5
 
 
-def _pacote_sem_libarchive(dados, extensao):
+def _pacote_sem_libarchive(dados, extensao, limite=32 * 1024 * 1024, prazo=None):
     """Produz a mesma interface mínima do libarchive para formatos comuns."""
     if extensao in {'.zip', '.kmz'}:
         with zipfile.ZipFile(io.BytesIO(dados)) as arquivo:
-            itens = []
             for info in arquivo.infolist():
                 modo = info.external_attr >> 16
-                bytes_item = b'' if info.is_dir() else arquivo.read(info)
-                itens.append(SimpleNamespace(
+                yield SimpleNamespace(
                     pathname=info.filename,
                     isdir=info.is_dir(),
                     isfile=not info.is_dir(),
                     issym=(modo & 0o170000) == 0o120000,
                     islnk=False,
-                    size=len(bytes_item),
-                    get_blocks=lambda bytes_item=bytes_item: (bytes_item,),
-                ))
-            return itens
+                    size=info.file_size,
+                    get_blocks=lambda info=info: zip_blocks(arquivo, info),
+                )
+        return
     if extensao in {'.tar', '.tgz', '.tbz2', '.txz'}:
         with tarfile.open(fileobj=io.BytesIO(dados), mode='r:*') as arquivo:
-            itens = []
-            for info in arquivo.getmembers():
-                bytes_item = b'' if not info.isfile() else arquivo.extractfile(info).read()
-                itens.append(SimpleNamespace(
+            for info in arquivo:
+                yield SimpleNamespace(
                     pathname=info.name,
                     isdir=info.isdir(),
                     isfile=info.isfile(),
                     issym=info.issym(),
                     islnk=info.islnk(),
                     size=info.size,
-                    get_blocks=lambda bytes_item=bytes_item: (bytes_item,),
-                ))
-            return itens
+                    get_blocks=lambda info=info: tar_blocks(arquivo, info),
+                )
+        return
     if extensao == '.7z':
         import py7zr
-        from py7zr.io import BytesIOFactory
-
+        from api.services.archive_budget import ArchiveBudget, sevenzip_contents
+        budget = ArchiveBudget(limite)
+        if prazo is not None:
+            budget.deadline = prazo
         with py7zr.SevenZipFile(io.BytesIO(dados)) as arquivo:
-            informacoes = arquivo.list()
-            # O py7zr 1.x extrai por fábrica de escritores; a de memória mantém
-            # o pacote inteiro em RAM, o que já é a premissa deste módulo.
-            necessario = sum(info.uncompressed or 0 for info in informacoes) + 1
-            fabrica = BytesIOFactory(necessario)
-            arquivo.extract(factory=fabrica)
-            produtos = fabrica.products
-            itens = []
-            for info in informacoes:
-                bytes_item = b''
-                fluxo = produtos.get(info.filename)
-                if fluxo is not None and not info.is_directory:
-                    fluxo.seek(0)
-                    bytes_item = fluxo.read()
-                itens.append(SimpleNamespace(
-                    pathname=info.filename,
-                    isdir=info.is_directory,
-                    isfile=not info.is_directory,
-                    issym=bool(getattr(info, 'is_symlink', False)),
-                    islnk=False,
-                    size=len(bytes_item),
-                    get_blocks=lambda bytes_item=bytes_item: (bytes_item,),
-                ))
-            return itens
+            contents = sevenzip_contents(arquivo, budget)
+        for name, data in contents.items():
+            yield SimpleNamespace(pathname=name, isdir=False, isfile=True, issym=False, islnk=False,
+                                  size=len(data), get_blocks=lambda data=data: (data,))
+        return
     if extensao == '.rar':
         import rarfile
 
         with rarfile.RarFile(io.BytesIO(dados)) as arquivo:
-            itens = []
             for info in arquivo.infolist():
-                bytes_item = b'' if info.is_dir() else arquivo.read(info)
-                itens.append(SimpleNamespace(
+                yield SimpleNamespace(
                     pathname=info.filename,
                     isdir=info.is_dir(),
                     isfile=not info.is_dir(),
                     issym=bool(info.is_symlink()),
                     islnk=False,
-                    size=len(bytes_item),
-                    get_blocks=lambda bytes_item=bytes_item: (bytes_item,),
-                ))
-            return itens
+                    size=info.file_size,
+                    get_blocks=lambda info=info: zip_blocks(arquivo, info),
+                )
+        return
     raise ValueError(
         'A leitura deste formato compactado exige a biblioteca nativa libarchive.'
     )
+
+
+def zip_blocks(archive, info):
+    with archive.open(info) as source:
+        while block := source.read(65536):
+            yield block
+
+
+def tar_blocks(archive, info):
+    with archive.extractfile(info) as source:
+        while block := source.read(65536):
+            yield block
 
 
 def componentes(conteudo, nome, limite):
@@ -162,7 +151,7 @@ def componentes(conteudo, nome, limite):
         pacote = (
             libarchive.memory_reader(dados)
             if libarchive is not None
-            else nullcontext(_pacote_sem_libarchive(dados, ext))
+            else nullcontext(_pacote_sem_libarchive(dados, ext, limite - total, prazo))
         )
         with pacote as itens:
             for item in itens:

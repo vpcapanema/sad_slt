@@ -155,6 +155,8 @@ def _build_persist_row(
     geom_tipo, geom_json = _geometria_to_geojson_str(
         payload.geometria.model_dump() if payload.geometria else None
     )
+    if payload.vinculo_institucional and payload.vinculo_tipo not in {"programa", "plano"}:
+        raise DemandaValidationError("Selecione o tipo de vínculo institucional.", field="vinculo_tipo")
 
     programa_id = resolve_programa_pai_id(
         programa_codigo=payload.programa_codigo,
@@ -163,6 +165,15 @@ def _build_persist_row(
     )
     plano_id = (payload.plano_id or "").strip()
     diretoria_id = (payload.diretoria_id or "").strip()
+    if payload.vinculo_institucional and payload.vinculo_tipo == "programa":
+        from api.repositories import programa_repository
+        parent = programa_repository.get_by_codigo(payload.programa_codigo)
+        plano_id = parent["plano_codigo"]
+        diretoria_id = str(parent["diretoria_id"])
+    if payload.vinculo_institucional and payload.vinculo_tipo == "plano":
+        from api.services.hierarquia_outros import resolve_plano_pai_id
+        resolve_plano_pai_id(plano_codigo=plano_id, vinculo_institucional=True)
+        diretoria_id = str(plano_repository.get_by_codigo(plano_id)["diretoria_id"])
     classificacao = payload.classificacao
     if not payload.vinculo_institucional:
         plano_outros = plano_repository.get_by_codigo(CODIGO_PLANO_OUTROS)
@@ -336,13 +347,25 @@ def atualizar_demanda(
         if not status_livre_gestor:
             validar_transicao_status(de=existing["status"], para=data["status"])
 
-    if "programa_codigo" in data:
-        programa_id = resolve_programa_pai_id(
-            programa_codigo=data.pop("programa_codigo"),
-            vinculo_institucional=bool(existing.get("vinculo_institucional")),
-            vinculo_tipo=existing.get("vinculo_tipo"),
-        )
-        data["programa_id"] = programa_id
+    if {"programa_codigo", "plano_id", "diretoria_id"} & data.keys():
+        if existing.get("vinculo_institucional") and existing.get("vinculo_tipo") == "programa":
+            from api.repositories import programa_repository
+            parent_code = data.pop("programa_codigo", existing.get("programa_codigo"))
+            data["programa_id"] = resolve_programa_pai_id(
+                programa_codigo=parent_code, vinculo_institucional=True, vinculo_tipo="programa")
+            parent = programa_repository.get_by_codigo(parent_code)
+            data["plano_id"] = parent["plano_codigo"]
+            data["diretoria_id"] = parent["diretoria_id"]
+        elif existing.get("vinculo_institucional"):
+            from api.services.hierarquia_outros import resolve_plano_pai_id
+            parent_code = data.get("plano_id", existing.get("plano_id"))
+            resolve_plano_pai_id(plano_codigo=parent_code, vinculo_institucional=True)
+            data.pop("programa_codigo", None)
+            data["diretoria_id"] = plano_repository.get_by_codigo(parent_code)["diretoria_id"]
+        else:
+            data.pop("programa_codigo", None)
+            data["plano_id"] = CODIGO_PLANO_OUTROS
+            data["diretoria_id"] = plano_repository.get_by_codigo(CODIGO_PLANO_OUTROS)["diretoria_id"]
 
     apply_instituicao(data, data)
     apply_representante(data, data)

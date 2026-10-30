@@ -298,14 +298,16 @@ e-mail**, individualmente para os colaboradores salvos do julgamento. Exige
 perfil Analista, Gestor ou Admin, julgamento aberto, prazo vigente e versão
 atual do cadastro. Durante edição o envio fica bloqueado: primeiro salve as
 alterações. O envio usa o texto completo exibido e acrescenta, no servidor, o
-token de acesso de seis dígitos e suas instruções, sem abrir um aplicativo externo.
+chave individual de 43 caracteres e suas instruções, sem abrir um aplicativo externo.
 O convite aceita o caminho atual `/public/analise-multicriterio/formulario-comparacao-pareada/{token}/`
 e o caminho legado `/public/analise-multicriterio/{token}/`, inclusive sob o
 prefixo `/sicard`. Ambos permitem habilitar o envio quando os demais requisitos
 do julgamento estiverem atendidos.
 
 Aplicar `database/137_email_convites_colaborativos.sql` e
-`database/138_token_acesso_julgamento.sql` antes de usar este fluxo.
+`database/138_token_acesso_julgamento.sql` e `database/159_convites_individuais.sql`
+antes de usar este fluxo. A migração 159 desativa os códigos compartilhados antigos;
+é necessário reenviar convites individuais.
 Os endpoints, todos no SICARD, são:
 
 - `GET /api/ahp/comparacao-colaborativa/ambientes/{id}/emails`: histórico;
@@ -314,21 +316,25 @@ Os endpoints, todos no SICARD, são:
 - `POST .../{id}/emails/confirmacoes`: coleta os retornos por IMAP e atualiza o
   histórico, sem reenviar mensagens.
 
-O código é único por julgamento (compartilhado pelos convidados), gerado por
-fonte criptográfica e gravado em `ahp.comparacao_colaborativa_ambiente.token_acesso`.
-Zeros iniciais são preservados. O código não muda nos reenvios ou nas edições;
-é válido enquanto o julgamento estiver aberto e dentro do prazo. E-mails
-removidos da lista de convidados perdem o acesso, mesmo conhecendo o código.
-O token do link público continua distinto desse código de seis dígitos.
+A chave usa 32 bytes aleatórios (256 bits), exclusiva de cada destinatário.
+Somente seu hash SHA-256 é armazenado em `ahp.convite_individual`; a chave em
+claro é entregue por e-mail, nunca pela API de consulta ou administração.
+Reenvios explícitos substituem a chave anterior apenas daquela pessoa.
+O controle “Revogar convite selecionado” invalida a chave sem excluir respostas.
+A remoção do destinatário também revoga seu acesso. O token do link identifica
+o ambiente, mas não autoriza respostas e não é retornado a perfis de consulta.
 
 No formulário público, nome e instituição identificam a resposta; a autorização
-é feita pelo par **e-mail convidado + token de acesso**, no servidor:
+é feita pelo par **e-mail convidado + chave individual**, no servidor:
 `POST /api/ahp/comparacao-colaborativa/publico/{token}/acesso`.
 O corpo contém `email` e `token_acesso`; os endpoints de início, progresso e envio
 também exigem `token_acesso`, além dos seus campos anteriores. O GET público
-retorna apenas contexto, sem critérios ou autorização por e-mail. O código
+retorna apenas contexto, sem critérios ou autorização por e-mail. A chave
 não é devolvido pelas respostas das APIs de julgamentos nem incluído em URLs
 ou armazenamento local do navegador.
+
+Os seis fluxos de segurança, contratos mínimos, limites, migrações preparadas e
+procedimentos de transição estão em [`docs/seguranca-fluxos.md`](docs/seguranca-fluxos.md).
 
 A contextualização pública preserva o objetivo informado ou, quando ausente,
 descreve a hierarquização de planos, programas ou projetos conforme o tipo

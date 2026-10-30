@@ -27,8 +27,17 @@
   }
 
   async function listPessoas() {
-    const body = await apiGet("/api/pessoas");
-    return body.data || [];
+    const session = await apiGet("/api/auth/session");
+    if (!session.authenticated) throw new Error("Faça login no SICARD para consultar representantes e seus contatos.");
+    const pessoas = [];
+    let page = 1;
+    let body;
+    do {
+      body = await apiGet(`/api/pessoas?page=${page}&limit=200`);
+      pessoas.push(...(body.data || []));
+      page += 1;
+    } while (page <= body.pages);
+    return pessoas;
   }
 
   function labelInstituicao(inst) {

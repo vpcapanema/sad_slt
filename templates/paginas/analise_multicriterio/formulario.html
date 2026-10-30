@@ -31,7 +31,7 @@
 						<h3 id="collab-scope-steps">Passo a passo da sua participação</h3>
 						<ol>
 							<li><strong>Confira a rodada.</strong> Leia o objetivo, verifique o prazo e o status apresentados acima e confirme que está participando da hierarquização para a qual recebeu o convite.</li>
-							<li><strong>Identifique-se.</strong> Informe nome completo, instituição, e-mail convidado e código de acesso de seis números recebido por e-mail. Clique em “Liberar formulário”. O acesso é validado pelo e-mail e pelo código de acesso; nome e instituição identificam sua resposta.</li>
+							<li><strong>Identifique-se.</strong> Informe nome completo, instituição, e-mail convidado e chave individual recebida por e-mail. Clique em “Liberar formulário”. O convite é exclusivo do destinatário; nome e instituição identificam sua resposta.</li>
 							<li><strong>Compare todos os pares.</strong> Leia os critérios e ajuste cada barra para expressar a importância relativa. Use 1 quando considerar os critérios igualmente importantes. Após três segundos sem novos ajustes, o par e seu valor inverso recebem confirmação visual verde. Essa indicação não significa que a resposta já foi enviada; você pode movimentar a barra novamente para revisar sua escolha.</li>
 							<li><strong>Acompanhe a consistência.</strong> Observe a Razão de Consistência (RC) e revise as comparações quando necessário. Procure coerência entre suas escolhas: se A é mais importante que B e B é mais importante que C, uma preferência muito forte de C sobre A merece reavaliação.</li>
 							<li><strong>Revise o preenchimento.</strong> Confira todos os pares, inclusive os que permaneceram em igual importância. O progresso é salvo automaticamente durante o preenchimento; acompanhe a mensagem de salvamento. Salvar o progresso não substitui o envio definitivo.</li>
@@ -48,12 +48,12 @@
 		<section class="card-colab-nome secao-colab-nome card ahp-step-section">
 			<div class="ahp-section-label"><i class="fas fa-id-card"></i><span>Identificação</span></div>
 			<div class="ahp-section-body">
-				<p class="step-intro">Informe seus dados e o código de acesso de seis números recebido no convite. O acesso é validado pelo e-mail convidado e pelo código de acesso deste julgamento; o nome é usado para identificar sua resposta.</p>
+				<p class="step-intro">Informe seus dados e a chave individual recebida no convite. Códigos compartilhados antigos não são aceitos; solicite um novo convite ao responsável.</p>
 				<div class="collab-identificacao-grid">
 					<div class="c-form-group"><label for="colab-nome" class="c-form-label">Nome completo</label><input id="colab-nome" class="c-form-control" required></div>
 					<div class="c-form-group"><label for="colab-inst" class="c-form-label">Instituição vinculada</label><input id="colab-inst" class="c-form-control" required></div>
 					<div class="c-form-group"><label for="colab-email" class="c-form-label">E-mail</label><input id="colab-email" type="email" class="c-form-control" required></div>
-					{% if not modo_modelo %}<div class="c-form-group"><label for="colab-token" class="c-form-label">Código de acesso ao formulário</label><input id="colab-token" name="token_acesso" type="text" class="c-form-control" inputmode="numeric" pattern="[0-9]{6}" minlength="6" maxlength="6" autocomplete="one-time-code" aria-describedby="colab-token-help" required><p id="colab-token-help" class="form-help">Digite os seis números do e-mail, incluindo eventuais zeros no início.</p></div>{% endif %}
+					{% if not modo_modelo %}<div class="c-form-group"><label for="colab-token" class="c-form-label">Chave individual do convite</label><input id="colab-token" name="token_acesso" type="text" class="c-form-control" pattern="[A-Za-z0-9_-]{43}" minlength="43" maxlength="43" autocomplete="off" aria-describedby="colab-token-help" required><p id="colab-token-help" class="form-help">Cole a chave de 43 caracteres recebida por e-mail, sem espaços. Não compartilhe.</p></div>{% endif %}
 				</div>
 				<button type="button" class="btn btn-primary" id="btn-liberar-form"><i class="fas fa-unlock c-btn__icon"></i>Liberar formulário</button>
 				<p id="colab-id-feedback" class="ahp-matriz-edit-feedback" role="status"></p>

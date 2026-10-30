@@ -21,6 +21,7 @@ DEST = "destino@example.com"
 
 @pytest.fixture
 def ambiente(monkeypatch):
+    monkeypatch.setattr(service.convite_individual_repository, "emitir", lambda *a: "A" * 43)
     row = {
         "id": str(uuid4()), "atualizado_em": datetime.now(timezone.utc),
         "status": "ativa", "valido_ate": datetime.now(timezone.utc) + timedelta(days=2),
@@ -84,7 +85,7 @@ def test_convite_individual_inclui_somente_dimensoes_atribuidas(ambiente, smtp, 
     assert "Acesso" in texto and "Equidade" in texto
     assert "Custo" not in texto and "Financeira" not in texto
     assert "https://example.com/sicard/public/" in texto
-    assert "012345" in texto
+    assert "A" * 43 in texto and "012345" not in texto
 
 
 def test_preserva_texto_acrescenta_token_e_nao_repete_apos_recarga(ambiente, smtp, registros):
@@ -93,8 +94,8 @@ def test_preserva_texto_acrescenta_token_e_nao_repete_apos_recarga(ambiente, smt
     assert result["envio_status"] == "aceito_smtp"
     texto = smtp.call_args.args[0].texto
     assert texto.startswith(dados.texto + "\n\n")
-    assert "Código de acesso ao formulário: 012345" in texto
-    assert registros[0]["conteudo_hash"] == sha256((service.ASSUNTO + "\n" + texto).encode()).hexdigest()
+    assert "Chave individual do convite: " + "A" * 43 in texto
+    assert registros[0]["conteudo_hash"] == sha256((service.ASSUNTO + "\n" + dados.texto).encode()).hexdigest()
     assert smtp.call_args.kwargs["solicitar_confirmacoes"] is True
     assert smtp.call_args.kwargs["id_mensagem"] == registros[0]["mensagem_id"]
     assert "sicard." in registros[0]["mensagem_id"]
@@ -132,24 +133,24 @@ def test_convite_com_link_antigo_continua_valido(ambiente, smtp, registros):
     smtp.assert_called_once()
 
 
-def test_legado_persiste_token_antes_de_reservar_e_enviar(ambiente, smtp, registros, monkeypatch):
+def test_legado_emite_convite_individual_antes_de_enviar(ambiente, smtp, registros, monkeypatch):
     ambiente["token_acesso"] = None
-    garantir = MagicMock(return_value="000123")
-    monkeypatch.setattr(service.ambientes, "garantir_token_acesso", garantir)
+    garantir = MagicMock(return_value="A" * 43)
+    monkeypatch.setattr(service.convite_individual_repository, "emitir", garantir)
     service.enviar(ambiente["id"], payload(ambiente), "analista")
     garantir.assert_called_once()
-    assert len(garantir.call_args.args[2]) == 6
-    assert "Código de acesso ao formulário: 000123" in smtp.call_args.args[0].texto
+    assert garantir.call_args.args[1] == DEST
+    assert "Chave individual do convite: " + "A" * 43 in smtp.call_args.args[0].texto
 
 
 def test_falha_ao_persistir_token_nao_envia(ambiente, smtp, registros, monkeypatch):
     ambiente["token_acesso"] = None
-    monkeypatch.setattr(service.ambientes, "garantir_token_acesso",
+    monkeypatch.setattr(service.convite_individual_repository, "emitir",
                         MagicMock(side_effect=DatabaseUnavailableError("indisponivel")))
     with pytest.raises(DatabaseUnavailableError):
         service.enviar(ambiente["id"], payload(ambiente), "analista")
     smtp.assert_not_called()
-    assert registros == []
+    assert registros[0]["envio_status"] == "falha"
 
 
 def test_texto_com_token_acima_do_limite_nao_reserva_envio(ambiente, smtp, registros):

@@ -111,7 +111,7 @@
             button.innerHTML = '<i data-lucide="loader-circle" class="spinning"></i>';
             window.lucide?.createIcons({ attrs: { "stroke-width": 1.7 } });
             try {
-              await syncResource(await request("/catalogo/portal/stac/importar", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ servico_id: service.id || service.servico_id, url: asset.url, tipo: asset.tipo, titulo: `${item.titulo} · ${asset.titulo}`, bbox: mapBbox() }) }));
+              await syncResource(await request("/catalogo/portal/stac/importar", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ servico_id: service.id || service.servico_id, url: asset.url, tipo: asset.tipo, autorizacao: asset.autorizacao, titulo: `${item.titulo} · ${asset.titulo}`, bbox: mapBbox() }) }));
               button.title = "Adicionado ao mapa";
               button.setAttribute("aria-label", "Adicionado ao mapa");
               button.innerHTML = '<i data-lucide="circle-check"></i>';

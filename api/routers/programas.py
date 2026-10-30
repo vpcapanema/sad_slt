@@ -9,6 +9,9 @@ from api.exceptions import DatabaseUnavailableError, DemandaNotFoundError, Deman
 from api.schemas.objeto_ahp import AprovarDemandaSchema, ReprovarDemandaSchema
 from api.schemas.programa import ProgramaCreateSchema, ProgramaResponseSchema, ProgramaUpdateSchema
 from api.services import programa_service
+from api.repositories import programa_repository
+from api.services.vinculacao_policy import elegivel
+from api.schemas.vinculacao import OpcaoVinculacaoSchema
 from api.services.arquivo_geometria import receber_arquivo_geometria
 from api.services.session_service import SessionUser
 
@@ -58,11 +61,12 @@ def listar_programas() -> list[ProgramaResponseSchema]:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
-@router.get("/vinculaveis", response_model=list[ProgramaResponseSchema])
-def listar_programas_vinculaveis() -> list[ProgramaResponseSchema]:
+@router.get("/vinculaveis", response_model=list[OpcaoVinculacaoSchema])
+def listar_programas_vinculaveis() -> list[OpcaoVinculacaoSchema]:
     """Lista os programas que podem ser selecionados como pai no cadastro."""
     try:
-        return programa_service.listar_programas()
+        return [OpcaoVinculacaoSchema(codigo=r["codigo"], nome=r["nome"])
+                for r in programa_repository.list_all() if elegivel(r)]
     except DatabaseUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 

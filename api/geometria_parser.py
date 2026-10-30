@@ -4,7 +4,6 @@ from __future__ import annotations
 import io
 from contextvars import ContextVar
 import json
-import shutil
 from api import storage_policy as tempfile
 import zipfile
 import xml.etree.ElementTree as ET
@@ -14,6 +13,7 @@ from typing import Any, Sequence
 from fastapi import HTTPException
 from osgeo import ogr, gdal
 from api.services.normalizacao_demanda import reprojetar
+from api.services.archive_budget import ArchiveBudget, zip_members
 
 MAX_GEOMETRIA_UPLOAD_BYTES = 50 * 1024 * 1024
 _SOURCE_CRS = ContextVar('demanda_source_crs', default=None)
@@ -69,21 +69,20 @@ def parse_shapefile_zip(content: bytes) -> dict[str, Any]:
         raise HTTPException(400, "Arquivo ZIP inválido.") from exc
 
     with archive, tempfile.TemporaryDirectory() as extract_dir:
+        budget = ArchiveBudget(MAX_GEOMETRIA_UPLOAD_BYTES)
+        validated = list(zip_members(archive, budget))
         shp_names = [name for name in archive.namelist() if name.lower().endswith(".shp")]
         if not shp_names:
             raise HTTPException(400, "ZIP não contém arquivo .shp.")
         members = [
-            name for name in archive.namelist()
-            if Path(name).suffix.lower() in (".shp", ".shx", ".dbf", ".prj", ".cpg")
+            (info, path) for info, path in validated
+            if path.suffix.lower() in (".shp", ".shx", ".dbf", ".prj", ".cpg")
         ]
-        for member in members:
-            relative = PurePosixPath(member.replace("\\", "/"))
-            if relative.is_absolute() or ".." in relative.parts or (relative.parts and ":" in relative.parts[0]):
-                raise HTTPException(400, "ZIP contém um caminho de arquivo inválido.")
+        for member, relative in members:
             destination = Path(extract_dir).joinpath(*relative.parts)
             destination.parent.mkdir(parents=True, exist_ok=True)
             with archive.open(member) as source, destination.open("wb") as target:
-                shutil.copyfileobj(source, target)
+                budget.copy(source, target)
 
         geometries = []
         for shp_name in shp_names:
@@ -175,12 +174,14 @@ def parse_kml(content: bytes) -> dict[str, Any]:
 def parse_kmz(content: bytes) -> dict[str, Any]:
     try:
         with zipfile.ZipFile(io.BytesIO(content)) as archive:
-            kml_names = [name for name in archive.namelist() if name.lower().endswith(".kml")]
+            budget = ArchiveBudget(MAX_GEOMETRIA_UPLOAD_BYTES)
+            kml_names = [info for info, path in zip_members(archive, budget) if path.suffix.lower() == ".kml"]
             if not kml_names:
                 raise HTTPException(400, "KMZ não contém arquivo KML.")
             geometries = []
             for name in kml_names:
-                geometries.extend(_kml_geometries(ET.fromstring(archive.read(name))))
+                with archive.open(name) as source:
+                    geometries.extend(_kml_geometries(ET.fromstring(budget.read(source))))
     except zipfile.BadZipFile as exc:
         raise HTTPException(400, "Arquivo KMZ inválido.") from exc
     except ET.ParseError as exc:
@@ -239,6 +240,8 @@ def _parse_upload(filename: str, content: bytes) -> dict[str, Any]:
 
 
 def parse_upload(filename: str, content: bytes) -> dict[str, Any]:
+    if len(content) > MAX_GEOMETRIA_UPLOAD_BYTES:
+        raise HTTPException(413, "Arquivo maior que 50 MB.")
     token = _SOURCE_CRS.set([])
     try:
         result = _parse_upload(filename, content)

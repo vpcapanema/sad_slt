@@ -16,7 +16,6 @@ def isolated(monkeypatch):
     user = session_service.SessionUser('id-teste', '', 'teste_analista', 'Teste', 'ANALISTA')
     monkeypatch.setattr(auth_service, '_audit_auth', lambda **kwargs: None)
     monkeypatch.setattr(auth_service, 'logout_usuario', lambda *a, **k: None)
-    monkeypatch.setattr(auth.sigma_usuario_repository, 'find_active_by_id', lambda _id: None)
     monkeypatch.setattr(session_service, 'get_settings', lambda: SimpleNamespace(session_secret='isolated-test-secret'))
     async def authenticate(*args, **kwargs):
         return user, session_service.create_token(user, permanecer_conectado=kwargs.get('permanecer_conectado', False))

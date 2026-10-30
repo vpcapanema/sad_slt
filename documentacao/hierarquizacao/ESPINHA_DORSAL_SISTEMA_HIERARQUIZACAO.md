@@ -78,7 +78,7 @@ explicitamente informados, sem nova derivação por comparação pareada.
 Nos novos convites de julgamentos por dimensão, o responsável seleciona uma ou
 mais dimensões do recorte da Fase 3 para cada colaborador. O recorte contém os critérios
 dessas dimensões, na ordem original, e deve conter ao menos dois critérios.
-O convite individual e o formulário autenticado pelo e-mail e código de acesso
+O convite individual e o formulário autorizado pelo e-mail e chave individual revogável
 apresentam somente esse recorte. A resposta conserva um snapshot dos critérios
 atribuídos; o recorte não pode ser alterado após o início do preenchimento.
 Convites integrais cobrem o conjunto completo da Fase 3, desde que o julgamento

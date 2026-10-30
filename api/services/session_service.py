@@ -8,8 +8,11 @@ import json
 import time
 from dataclasses import dataclass
 from typing import Any
+from uuid import uuid4
+from datetime import datetime, timezone
 
 from api.config import get_settings
+from api.repositories import session_repository, sigma_usuario_repository
 
 _COOKIE_NAME = "slt_session"
 _TTL_SECONDS = 60 * 60 * 8  # 8 horas
@@ -24,6 +27,7 @@ class SessionUser:
     username: str
     nome: str
     tipo_usuario: str
+    session_id: str | None = None
 
 
 def profile_from_username(username: str) -> str | None:
@@ -51,6 +55,7 @@ def _b64url_decode(raw: str) -> bytes:
 def create_token(user: SessionUser, *, permanecer_conectado: bool = False) -> str:
     settings = get_settings()
     payload = {
+        "sid": str(uuid4()),
         "sub": user.id,
         "email": user.email,
         "username": user.username,
@@ -64,6 +69,7 @@ def create_token(user: SessionUser, *, permanecer_conectado: bool = False) -> st
         body.encode("ascii"),
         hashlib.sha256,
     ).digest()
+    session_repository.register(payload["sid"], user, payload["exp"])
     return f"{body}.{_b64url_encode(sig)}"
 
 
@@ -72,36 +78,48 @@ def parse_token(token: str | None) -> SessionUser | None:
         return None
     body, sig = token.rsplit(".", 1)
     settings = get_settings()
-    expected = hmac.new(
-        settings.session_secret.encode("utf-8"),
-        body.encode("ascii"),
-        hashlib.sha256,
-    ).digest()
     try:
+        expected = hmac.new(
+            settings.session_secret.encode("utf-8"), body.encode("ascii"), hashlib.sha256,
+        ).digest()
         if not hmac.compare_digest(_b64url_encode(expected), sig):
             return None
         payload: dict[str, Any] = json.loads(_b64url_decode(body))
-    except (ValueError, json.JSONDecodeError):
+    except (ValueError, UnicodeError, json.JSONDecodeError):
         return None
 
-    if int(payload.get("exp") or 0) < int(time.time()):
+    if not isinstance(payload, dict) or not isinstance(payload.get("exp"), int):
+        return None
+    if payload["exp"] <= int(time.time()):
         return None
 
     sub = payload.get("sub")
-    if not sub:
+    sid = payload.get("sid")
+    if not sub or not isinstance(sid, str):
         return None
 
-    username = str(payload.get("username") or "").strip()
+    if not session_repository.is_active(sid, str(sub)):
+        return None
+    account = sigma_usuario_repository.find_active_by_id(str(sub))
+    if not account or account.get("ativo") is not True:
+        session_repository.revoke_user(str(sub))
+        return None
+    blocked = account.get("bloqueado_ate")
+    if blocked and blocked.replace(tzinfo=blocked.tzinfo or timezone.utc) > datetime.now(timezone.utc):
+        session_repository.revoke_user(str(sub))
+        return None
+    username = str(account.get("username") or "").strip()
     profile = profile_from_username(username)
     if not profile:
         return None
 
     return SessionUser(
         id=str(sub),
-        email=str(payload.get("email") or ""),
+        email=str(account.get("email_institucional") or ""),
         username=username,
-        nome=str(payload.get("nome") or username),
+        nome=str(account.get("nome_pessoa") or username),
         tipo_usuario=profile,
+        session_id=sid,
     )
 
 

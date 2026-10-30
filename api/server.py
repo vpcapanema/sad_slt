@@ -96,7 +96,11 @@ async def protect_restricted_pages(request: Request, call_next):
         "." not in path.rsplit("/", 1)[-1] or path.lower().endswith((".html", ".htm"))
     )
     if page or path.rstrip("/") == "/public/cadastro/nova-demanda":
-        user = get_optional_session(request, request.cookies.get(cookie_name()))
+        try:
+            user = get_optional_session(request, request.cookies.get(cookie_name()))
+        except HTTPException as exc:
+            return JSONResponse({"detail": exc.detail}, status_code=exc.status_code,
+                                headers={"Cache-Control": "no-store"})
         request.state.access_user = user
         if page and not user:
             prefix = request.headers.get("x-forwarded-prefix", "").rstrip("/")

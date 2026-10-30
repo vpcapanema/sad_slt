@@ -17,6 +17,7 @@ from zoneinfo import ZoneInfo
 from api.constants import TIPO_DEMANDA_ID_TO_COD
 from api.exceptions import DemandaValidationError
 from api.repositories import comparacao_colaborativa_repository as repo
+from api.repositories import convite_individual_repository as convites_repo
 from api.repositories import hierarquizacao_repository as hierarq_repo
 from api.repositories import config_multicriterio_repository as config_repo
 from api.repositories import comparacao_colaborativa_analise_repository as analise_repo
@@ -41,20 +42,17 @@ logger = logging.getLogger(__name__)
 
 
 def gerar_token_acesso() -> str:
-    return f"{secrets.randbelow(1_000_000):06d}"
+    return secrets.token_urlsafe(32)
 
 
 def _validar_email_token(row: dict[str, Any], email: str, token_acesso: str | None) -> None:
     _validar_ambiente_ativo(row)
-    codigo = row.get("token_acesso")
-    codigo_valido = (
-        isinstance(token_acesso, str) and token_acesso.isascii()
-        and isinstance(codigo, str) and len(codigo) == 6 and secrets.compare_digest(codigo, token_acesso)
-    )
-    if not codigo_valido or email.strip().lower() not in _emails_convites(row.get("convites") or []):
+    email = email.strip().lower()
+    if (email not in _emails_convites(row.get("convites") or [])
+            or not convites_repo.validar(str(row["id"]), email, token_acesso)):
         logger.warning("Acesso colaborativo recusado ambiente=%s", row["id"])
         raise DemandaValidationError(
-            "E-mail ou código de acesso inválido. Confira os dados do convite recebido.",
+            "Convite individual inválido, revogado ou expirado. Solicite um novo convite por e-mail.",
             field="token_acesso",
         )
 
@@ -225,7 +223,7 @@ def _consolidacao_from_row(row: dict[str, Any]) -> ConsolidacaoColaborativaSchem
     )
 
 
-def _ambiente_to_response(row: dict[str, Any], *, base_url: str = "") -> AmbienteColaborativoResponseSchema:
+def _ambiente_to_response(row: dict[str, Any], *, base_url: str = "", gestao: bool = False) -> AmbienteColaborativoResponseSchema:
     token = row["token"]
     url = f"{base_url.rstrip('/')}/public/analise-multicriterio/formulario-comparacao-pareada/{quote(str(token), safe='')}/"
     return AmbienteColaborativoResponseSchema(
@@ -244,12 +242,14 @@ def _ambiente_to_response(row: dict[str, Any], *, base_url: str = "") -> Ambient
         criterios=row.get("criterios") or [],
         n_criterios=int(row.get("n_criterios") or 0),
         arquivo_matriz_nome=row.get("arquivo_matriz_nome"),
-        token=token,
-        token_acesso=row.get("token_acesso"),
-        convites=row.get("convites") or [],
+        token=token if gestao else "",
+        token_acesso=None,
+        total_convites=len(row.get("convites") or []),
+        convites=[{k: c[k] for k in ("email", "nome", "dimensoes") if k in c}
+                  for c in row.get("convites") or []] if gestao else [],
         valido_ate=_iso(row.get("valido_ate")) or "",
         status=row["status"],
-        url_publica=url,
+        url_publica=url if gestao else "",
         criadoEm=_iso(row.get("criado_em")) or "",
         atualizadoEm=_iso(row.get("atualizado_em")) or "",
         total_respostas=int(row.get("total_respostas") or 0),
@@ -381,7 +381,7 @@ def criar_ambiente(
             "arquivo_excel_matriz_criterios_premissas": arquivo_superficie if payload.superficie_id else (None if hierarq else _arquivo_matriz(payload.arquivo_matriz_base64)),
             "arquivo_matriz_nome": "matriz_fase2.xlsx" if payload.superficie_id else matriz.get("arquivo_nome"),
             "token": token,
-            "token_acesso": gerar_token_acesso(),
+            "token_acesso": None,
             "convites": convites,
             "valido_ate": valido_ate,
             "status": "ativa",
@@ -390,23 +390,23 @@ def criar_ambiente(
     row["matriz_nome"] = matriz["nome"]
     if hierarq:
         row["hierarquizacao_nome"] = hierarq.get("nome")
-    return _ambiente_to_response(row, base_url=base_url)
+    return _ambiente_to_response(row, base_url=base_url, gestao=True)
 
 
-def obter_ambiente_hierarquizacao(hierarq_id: UUID, *, base_url: str = "") -> AmbienteColaborativoResponseSchema | None:
+def obter_ambiente_hierarquizacao(hierarq_id: UUID, *, base_url: str = "", gestao: bool = False) -> AmbienteColaborativoResponseSchema | None:
     """Retorna o ambiente colaborativo mais recente da hierarquização."""
     row = repo.get_ambiente_by_hierarquizacao(hierarq_id)
     if not row:
         return None
-    return _ambiente_to_response(row, base_url=base_url)
+    return _ambiente_to_response(row, base_url=base_url, gestao=gestao)
 
 
-def obter_ambiente_id(ambiente_id: str, *, base_url: str = "") -> AmbienteColaborativoResponseSchema:
+def obter_ambiente_id(ambiente_id: str, *, base_url: str = "", gestao: bool = False) -> AmbienteColaborativoResponseSchema:
     """Retorna o registro completo do ambiente para a gestão autenticada."""
     row = repo.get_ambiente_by_id(ambiente_id)
     if not row:
         raise DemandaValidationError("Ambiente não encontrado.", field="ambiente_id")
-    return _ambiente_to_response(row, base_url=base_url)
+    return _ambiente_to_response(row, base_url=base_url, gestao=gestao)
 
 
 def listar_configuracoes_origem() -> list[dict[str, Any]]:
@@ -423,9 +423,9 @@ def listar_configuracoes_origem() -> list[dict[str, Any]]:
     return sorted(itens, key=lambda item: (item["nome"].casefold(), item["codigo"].casefold()))
 
 
-def listar_ambientes(*, base_url: str = "") -> list[AmbienteColaborativoResponseSchema]:
+def listar_ambientes(*, base_url: str = "", gestao: bool = False) -> list[AmbienteColaborativoResponseSchema]:
     """Lista todos os julgamentos interativos persistidos."""
-    return [_ambiente_to_response(row, base_url=base_url) for row in repo.list_ambientes()]
+    return [_ambiente_to_response(row, base_url=base_url, gestao=gestao) for row in repo.list_ambientes()]
 
 
 def atualizar_ambiente(
@@ -648,10 +648,16 @@ def atualizar_ambiente(
     atualizado = repo.update_ambiente(ambiente_id, data)
     if not atualizado:
         raise DemandaValidationError("Julgamento não encontrado.", field="julgamento_id")
+    if "convites" in data:
+        novos = {c["email"].strip().lower(): c for c in data["convites"]}
+        for anterior in atual.get("convites") or []:
+            email = anterior["email"].strip().lower()
+            if email not in novos or anterior.get("dimensoes") != novos[email].get("dimensoes"):
+                convites_repo.revogar(ambiente_id, email)
     atualizado["total_respostas"] = sum(1 for r in repo.list_respostas(ambiente_id) if r.get("status", "enviada") == "enviada")
     if payload.hierarquizacao_id is not None and not superficie_vinculada:
         atualizado["hierarquizacao_nome"] = hierarq.get("nome")
-    return _ambiente_to_response(atualizado, base_url=base_url)
+    return _ambiente_to_response(atualizado, base_url=base_url, gestao=True)
 
 
 def excluir_ambiente(ambiente_id: str) -> None:
@@ -660,12 +666,12 @@ def excluir_ambiente(ambiente_id: str) -> None:
 
 
 def listar_ambientes_hierarquizacao(
-    hierarq_id: UUID, *, base_url: str = ""
+    hierarq_id: UUID, *, base_url: str = "", gestao: bool = False
 ) -> list[AmbienteColaborativoResponseSchema]:
     """Lista o histórico completo de julgamentos colaborativos da hierarquização."""
     _carregar_hierarquizacao(hierarq_id)
     return [
-        _ambiente_to_response(row, base_url=base_url)
+        _ambiente_to_response(row, base_url=base_url, gestao=gestao)
         for row in repo.list_ambientes_by_hierarquizacao(hierarq_id)
     ]
 
@@ -944,7 +950,7 @@ def listar_respostas_central() -> list[dict[str, Any]]:
             "matriz_nome": row.get("matriz_nome"),
             "hierarquizacao_nome": row.get("hierarquizacao_nome"),
             "criterios": _criterios_resposta(row, row),
-            "token": row["token"],
+            "token": "",
             "config_tipo": row.get("config_tipo"),
             "config_id": str(row["config_id"]) if row.get("config_id") else None,
             "config_codigo": row.get("config_codigo"),
@@ -1141,7 +1147,7 @@ def listar_analises(ambiente_id: str) -> list[AnaliseColaborativaResponseSchema]
     return [_analise_response(row) for row in analise_repo.list_by_ambiente(ambiente_id)]
 
 
-def obter_espaco_analitico(ambiente_id: str, *, base_url: str = "") -> dict[str, Any]:
+def obter_espaco_analitico(ambiente_id: str, *, base_url: str = "", gestao: bool = False) -> dict[str, Any]:
     ambiente = repo.get_ambiente_by_id(ambiente_id)
     if not ambiente:
         raise DemandaValidationError("Julgamento não encontrado.", field="ambiente_id")
@@ -1162,7 +1168,7 @@ def obter_espaco_analitico(ambiente_id: str, *, base_url: str = "") -> dict[str,
         grupo["resposta_ids"] = [str(r["id"]) for r in grupo.pop("respostas")]
     estatisticas = grupos[0]["estatisticas"] if len(grupos) == 1 else {"individuais": [], "por_criterio": [], "por_par": []}
     return {
-        "ambiente": _ambiente_to_response(ambiente, base_url=base_url).model_dump(),
+        "ambiente": _ambiente_to_response(ambiente, base_url=base_url, gestao=gestao).model_dump(),
         "participacao": {"convidados": len(ambiente.get("convites") or []), "nao_iniciados": max(0, len(ambiente.get("convites") or [])-len(respostas)), "em_preenchimento": sum(r.get("status") == "em_preenchimento" for r in respostas), "enviadas": len(enviados), "consistentes": sum(bool(r.get("consistente")) for r in enviados), "inconsistentes": sum(not bool(r.get("consistente")) for r in enviados)},
         "respostas": [_resposta_to_response(r).model_dump() for r in respostas],
         "estatisticas": estatisticas,
@@ -1299,4 +1305,4 @@ def consolidar_ambiente(
             "consistente": rc < 0.10,
             "modo_preenchimento": "colaborativo",
         })
-    return _ambiente_to_response(atualizado, base_url=base_url)
+    return _ambiente_to_response(atualizado, base_url=base_url, gestao=True)

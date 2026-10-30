@@ -5,6 +5,7 @@ from ipaddress import ip_address
 from fastapi import Cookie, Depends, HTTPException, Request
 
 from api.services.session_service import SessionUser, cookie_name, is_gestor, parse_token
+from api.exceptions import DatabaseUnavailableError
 
 _OPERATE_PROFILES = frozenset({"OPERADOR", "ANALISTA", "GESTOR", "ADMIN"})
 # ADMIN é perfil elevado: herda as capacidades de análise.
@@ -29,7 +30,10 @@ def get_optional_session(
     slt_session: str | None = Cookie(default=None, alias=cookie_name()),
 ) -> SessionUser | None:
     token = slt_session or request.headers.get("authorization", "").removeprefix("Bearer ").strip()
-    return parse_token(token or None)
+    try:
+        return parse_token(token or None)
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(503, "Serviço de sessão temporariamente indisponível.") from exc
 
 
 def require_gestor(

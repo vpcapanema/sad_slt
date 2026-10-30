@@ -33,6 +33,7 @@
     const response = await fetch(path, Object.assign({
       credentials: "same-origin", headers: {"Content-Type": "application/json"}
     }, options));
+    if (response.status === 204) return null;
     let body;
     try { body = await response.json(); }
     catch (_) { throw new Error("O servidor retornou uma resposta inválida. Consulte o histórico antes de tentar enviar novamente."); }
@@ -46,6 +47,7 @@
       !contexto.url || contexto.julgamento.status !== "ativa" ||
       !(Date.parse(contexto.julgamento.valido_ate) >= Date.now()) || !contexto.destinatarios.length;
     $("ami-email-receipts").disabled = ocupado || !contexto || modo !== "view";
+    $("ami-revoke-invitation").disabled = ocupado || !contexto || modo !== "view" || !contexto.destinatarios.length;
     $("ami-monitor-refresh").disabled = $("ami-email-receipts").disabled;
     $("ami-monitor-export").disabled = ocupado || !pronto || !selected.size;
     $("ami-monitor-clear").disabled = ocupado || !selected.size;
@@ -196,6 +198,23 @@
     }
   };
   $("ami-open-mail").addEventListener("click", enviar);
+  $("ami-revoke-invitation").addEventListener("click", async () => {
+    const email = $("ami-email-preview-recipient").value;
+    if (!contexto || ocupado || !contexto.destinatarios.includes(email)) return;
+    if (!(await ProcessFeedback.confirmar({
+      title: "Revogar convite individual", message: "Revogar o acesso de " + email + "?",
+      warning: "A resposta registrada será preservada. Um novo envio será necessário para liberar o acesso novamente.",
+      confirmLabel: "Revogar convite"
+    }))) return;
+    bloquear(true);
+    try {
+      await request("/api/ahp/comparacao-colaborativa/ambientes/" + encodeURIComponent(contexto.julgamento.id) +
+        "/convites/" + encodeURIComponent(email), {method: "DELETE"});
+      $("ami-email-status").textContent = "Convite individual revogado. Os demais destinatários não foram afetados.";
+    } catch (error) {
+      $("ami-email-status").textContent = "Não foi possível revogar o convite. " + error.message;
+    } finally { bloquear(false); }
+  });
   $("ami-email-receipts").addEventListener("click", coletar);
   $("ami-monitor-refresh").addEventListener("click", coletar);
   $("ami-monitor-select-all").addEventListener("change", event => {

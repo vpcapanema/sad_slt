@@ -669,7 +669,7 @@
         return $("#pj-plano-vinculo")?.value || null;
       }
       const prog = getSelectedPrograma();
-      return prog?.plano_codigo || null;
+      return prog?.plano_codigo || "";
     }
     return CODIGO_PLANO_OUTROS;
   }
@@ -678,10 +678,10 @@
     if (isPjVinculoAtivo()) {
       if (getPjVinculoTipo() === "plano") {
         const planoApi = planosCache.find((p) => p.id === $("#pj-plano-vinculo")?.value);
-        return planoApi?.diretoria_id || null;
+        return planoApi?.diretoria_id || "";
       }
       const prog = getSelectedPrograma();
-      return prog?.diretoria_id || null;
+      return prog?.diretoria_id || "";
     }
     return planosCache.find((p) => p.id === CODIGO_PLANO_OUTROS)?.diretoria_id || "DIR-PLAN";
   }

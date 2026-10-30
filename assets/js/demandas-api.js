@@ -67,7 +67,7 @@
   }
 
   async function listPlanosVinculaveis() {
-    return request("/api/planos/vinculaveis");
+    return (await request("/api/planos/vinculaveis")).map(item => ({ id: item.codigo, nome: item.nome }));
   }
 
   async function listProgramas() {
@@ -75,7 +75,7 @@
   }
 
   async function listProgramasVinculaveis() {
-    return request("/api/programas/vinculaveis");
+    return (await request("/api/programas/vinculaveis")).map(item => ({ id: item.codigo, nome: item.nome }));
   }
 
   async function listGeoTipos() {

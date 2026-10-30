@@ -5,6 +5,7 @@ from fastapi import Depends, HTTPException, Request
 
 from api.deps.auth import get_optional_session
 from api.services.session_service import SessionUser
+from api.services.session_service import cookie_name
 
 SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 MOCAD = {"demandas", "planos", "programas", "analise", "sei", "geometria"}
@@ -50,9 +51,15 @@ def read_only(profile: str, module: str | None) -> bool:
     )
 
 
+def _policy_session(request: Request) -> SessionUser | None:
+    if request.url.path.startswith("/api/ahp/comparacao-colaborativa/publico/"):
+        return None
+    return get_optional_session(request, request.cookies.get(cookie_name()))
+
+
 def require_module_policy(
     request: Request,
-    user: SessionUser | None = Depends(get_optional_session),
+    user: SessionUser | None = Depends(_policy_session),
 ) -> None:
     path = request.url.path
     module = module_for_path(path)

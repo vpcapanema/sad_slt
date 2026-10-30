@@ -234,8 +234,8 @@
       feedback("Informe nome, instituição e e-mail para iniciar o preenchimento.", "error");
       return;
     }
-    if (!/^[0-9]{6}$/.test(codigo)) {
-      feedback("Informe o código de acesso de seis números recebido por e-mail.", "error");
+    if (!global.SLTColaborativaModelo && !/^[A-Za-z0-9_-]{43}$/.test(codigo)) {
+      feedback("Informe a chave individual recebida por e-mail. Códigos antigos não são mais aceitos.", "error");
       return;
     }
     verificando = true;

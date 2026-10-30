@@ -4,15 +4,20 @@ from __future__ import annotations
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from api.geometria_parser import MAX_GEOMETRIA_UPLOAD_BYTES, parse_upload
+from threading import BoundedSemaphore
+
+_PARSE_SLOTS = BoundedSemaphore(3)
 
 router = APIRouter(tags=["geometria"])
 
 
 @router.post("/geometria/parse")
 def api_geometria_parse(file: UploadFile = File(...)):
-    content = file.file.read()
+    content = file.file.read(MAX_GEOMETRIA_UPLOAD_BYTES + 1)
     if len(content) > MAX_GEOMETRIA_UPLOAD_BYTES:
         raise HTTPException(413, "Arquivo maior que 50 MB.")
+    if not _PARSE_SLOTS.acquire(blocking=False):
+        raise HTTPException(429, "Processamento de geometrias ocupado. Tente novamente.")
     try:
         parsed = parse_upload(file.filename or "", content)
         from api.services.normalizacao_demanda import normalizar
@@ -28,6 +33,8 @@ def api_geometria_parse(file: UploadFile = File(...)):
             f"Não foi possível ler a geometria do arquivo '{file.filename or '(sem nome)'}' "
             f"({len(content)} bytes): {type(exc).__name__}: {exc}",
         ) from exc
+    finally:
+        _PARSE_SLOTS.release()
 
 
 from fastapi import Depends, Form

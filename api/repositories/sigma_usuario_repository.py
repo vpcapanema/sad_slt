@@ -41,6 +41,8 @@ def find_active_by_id(usuario_id: str) -> dict[str, Any] | None:
             u.username,
             u.tipo_usuario,
             u.ativo,
+            u.email_institucional,
+            u.bloqueado_ate,
             p.nome_completo AS nome_pessoa
         FROM usuarios.usuario u
         LEFT JOIN cadastro.pessoa p ON p.id = u.pessoa_id

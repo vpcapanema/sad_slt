@@ -75,6 +75,7 @@ class AmbienteColaborativoResponseSchema(BaseModel):
     token: str
     token_acesso: str | None = None
     convites: list[dict[str, Any]]
+    total_convites: int = 0
     valido_ate: str
     status: str
     url_publica: str
@@ -105,7 +106,7 @@ class IdentificacaoColaboradorSchema(BaseModel):
 
 
 class TokenAcessoColaborativoSchema(BaseModel):
-    token_acesso: str = Field(..., pattern=r"^[0-9]{6}$", min_length=6, max_length=6)
+    token_acesso: str = Field(..., pattern=r"^[A-Za-z0-9_-]{43}$", min_length=43, max_length=43)
 
 
 class AcessoColaborativoSchema(TokenAcessoColaborativoSchema):

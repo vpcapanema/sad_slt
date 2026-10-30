@@ -12,6 +12,7 @@ from pathlib import Path, PurePosixPath
 from typing import Iterable
 
 from api.path_policy import project_path, project_relative
+from api.services.archive_budget import ArchiveBudget, zip_members
 
 
 VECTOR_EXTENSIONS = {
@@ -186,20 +187,22 @@ def _classify(path: Path, members: Iterable[str] = ()) -> str:
 
 def _extract(path: Path, destination: Path, kind: str) -> None:
     destination.mkdir(parents=True, exist_ok=True)
+    budget = ArchiveBudget()
     if kind == "zip":
         with zipfile.ZipFile(path) as archive:
-            for item in archive.infolist():
-                name = _validate_member_name(item.filename)
+            for item, relative in zip_members(archive, budget):
+                name = str(relative)
                 if item.is_dir():
                     continue
                 target = destination.joinpath(*PurePosixPath(name).parts)
                 target.parent.mkdir(parents=True, exist_ok=True)
                 with archive.open(item) as source, target.open("wb") as output:
-                    shutil.copyfileobj(source, output)
+                    budget.copy(source, output)
         return
     if kind == "tar":
         with tarfile.open(path, "r:*") as archive:
-            for item in archive.getmembers():
+            for item in archive:
+                budget.member(item.name, item.size, item.issym() or item.islnk() or not (item.isfile() or item.isdir()))
                 if not item.isfile():
                     continue
                 name = _validate_member_name(item.name)
@@ -209,24 +212,31 @@ def _extract(path: Path, destination: Path, kind: str) -> None:
                 target = destination.joinpath(*PurePosixPath(name).parts)
                 target.parent.mkdir(parents=True, exist_ok=True)
                 with source, target.open("wb") as output:
-                    shutil.copyfileobj(source, output)
+                    budget.copy(source, output)
         return
     if kind == "rar":
         import rarfile
         with rarfile.RarFile(path) as archive:
             for item in archive.infolist():
+                budget.member(item.filename, item.file_size, item.is_symlink())
                 if item.isdir():
                     continue
                 name = _validate_member_name(item.filename)
                 target = destination.joinpath(*PurePosixPath(name).parts)
                 target.parent.mkdir(parents=True, exist_ok=True)
                 with archive.open(item) as source, target.open("wb") as output:
-                    shutil.copyfileobj(source, output)
+                    budget.copy(source, output)
         return
     if kind == "7z":
         import py7zr
+        from api.services.archive_budget import sevenzip_contents
         with py7zr.SevenZipFile(path, "r") as archive:
-            archive.extractall(destination)
+            contents = sevenzip_contents(archive, budget)
+        for name, data in contents.items():
+            budget.check()
+            target = destination.joinpath(*PurePosixPath(_validate_member_name(name)).parts)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(data)
         return
 
 
@@ -281,7 +291,7 @@ def prepare_upload(filename: str, content: bytes) -> PreparedUpload:
             name, category, probe, import_path, extracted,
             bool(archive_kind), members, digest,
         )
-    except Exception:
+    except BaseException:
         probe.unlink(missing_ok=True)
         extracted_candidate = staging / f"{staging_key}.contents"
         if extracted_candidate.exists():

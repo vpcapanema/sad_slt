@@ -9,6 +9,39 @@ import pytest
 
 
 @pytest.fixture(autouse=True)
+def sessoes_sinteticas(monkeypatch):
+    """Tokens de testes usam registro e contas sintéticos, nunca bancos oficiais."""
+    from api.services import session_service
+    from api.repositories import session_repository, sigma_usuario_repository
+    sessions, accounts = {}, {}
+
+    def register(sid, user, expires):
+        sessions[sid] = {"user": user.id, "expires": expires, "revoked": False}
+        accounts[user.id] = {
+            "id": user.id, "username": user.username, "ativo": True,
+            "nome_pessoa": user.nome, "email_institucional": user.email,
+        }
+
+    def revoke(sid):
+        if sid in sessions:
+            sessions[sid]["revoked"] = True
+
+    def revoke_user(uid):
+        for sid, row in sessions.items():
+            if row["user"] == uid:
+                revoke(sid)
+
+    monkeypatch.setattr(session_repository, "register", register)
+    monkeypatch.setattr(session_repository, "is_active", lambda sid, uid: (
+        sid in sessions and sessions[sid]["user"] == uid and not sessions[sid]["revoked"]
+        and sessions[sid]["expires"] > session_service.time.time()))
+    monkeypatch.setattr(session_repository, "revoke", revoke)
+    monkeypatch.setattr(session_repository, "revoke_user", revoke_user)
+    monkeypatch.setattr(sigma_usuario_repository, "find_active_by_id", lambda uid: accounts.get(uid))
+    return sessions, accounts
+
+
+@pytest.fixture(autouse=True)
 def email_desabilitado(monkeypatch):
     # O .env local pode habilitar o SMTP; nenhum teste deve enviar email real.
     # Testes de email definem suas proprias variaveis depois desta fixture.
