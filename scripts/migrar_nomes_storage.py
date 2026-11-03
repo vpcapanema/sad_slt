@@ -12,6 +12,7 @@ import re
 import sqlite3
 import sys
 from uuid import NAMESPACE_URL, UUID, uuid5
+from urllib.parse import quote
 from zipfile import ZipFile
 
 from scripts import migrar_destinos_storage as base
@@ -472,12 +473,66 @@ def consolidar_catalogo(conn, mapa):
     return aliases, exclusoes
 
 
+def planejar_reconciliacao_codificacao(root, conn, manifesto_caminho):
+    """Repara somente aliases exatos de destinos de uma migração concluída.
+
+    Não move arquivos, não decodifica nomes arbitrários e mantém URLs legítimas.
+    Todas as saídas devem corresponder aos hashes registrados no manifesto.
+    """
+    prefixo = base.CONFIG + '/migracoes-storage/'
+    if not manifesto_caminho.startswith(prefixo) or not manifesto_caminho.endswith('/manifesto.json'):
+        raise ValueError('Informe o manifesto concluído dentro de migracoes-storage.')
+    dados = base.caminho_fisico(root, manifesto_caminho).read_bytes()
+    manifesto = json.loads(dados)
+    if manifesto.get('estado') != 'concluida' or not manifesto.get('mapa'):
+        raise ValueError('A reconciliação exige manifesto de migração concluída com destinos.')
+    originais, referencias, esperados = {}, {}, {}
+    for origem, destino in manifesto['mapa'].items():
+        hash_esperado = manifesto['arquivos'][origem]['sha256_depois']
+        if destino in esperados and esperados[destino] != hash_esperado:
+            raise ValueError('Manifesto contém hashes divergentes para o mesmo destino: ' + destino)
+        esperados[destino] = hash_esperado
+    for destino, hash_esperado in esperados.items():
+        conteudo = base.caminho_fisico(root, destino).read_bytes()
+        if base.assinatura(conteudo) != hash_esperado:
+            raise ValueError('Destino diverge do manifesto; reconciliação bloqueada: ' + destino)
+        originais[destino] = conteudo
+        for seguro in ('/', ''):
+            encoded = quote(destino, safe=seguro)
+            if encoded == destino:
+                continue
+            if base.caminho_fisico(root, encoded).exists():
+                raise ValueError('Alias encoded identifica arquivo físico; reconciliação bloqueada: ' + encoded)
+            if encoded in referencias and referencias[encoded] != destino:
+                raise ValueError('Aliases encoded ambíguos no manifesto.')
+            referencias[encoded] = destino
+    preservados = manifesto.get('arquivos_sem_vinculo_preservados', [])
+    for item in preservados:
+        conteudo = base.caminho_fisico(root, item['caminho']).read_bytes()
+        if base.assinatura(conteudo) != item['sha256']:
+            raise ValueError('Arquivo preservado diverge do manifesto: ' + item['caminho'])
+        originais[item['caminho']] = conteudo
+    plano = Plano({}, originais, {}, manifesto.get('pendencias_preexistentes', []), preservados)
+    plano.mapa_referencias = referencias
+    plano.reconciliacao_codificacao = {
+        'manifesto_origem': manifesto_caminho, 'sha256_manifesto_origem': base.assinatura(dados),
+        'variantes_exatas': len(referencias),
+    }
+    return plano
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--aplicar', action='store_true')
     parser.add_argument('--manutencao', action='store_true',
                         help='Confirma que produtores estão parados durante a aplicação.')
+    parser.add_argument('--reconciliar-codificacao', metavar='MANIFESTO',
+                        help='Concilia variantes encoded exatas dos destinos de um manifesto concluído, sem mover arquivos.')
     args = parser.parse_args()
     if args.aplicar and not args.manutencao:
         parser.error('--aplicar exige --manutencao e suspensão dos produtores')
-    base.executar(args.aplicar, planejador=planejar, consolidar=consolidar_catalogo)
+    if args.reconciliar_codificacao:
+        base.executar(args.aplicar, planejador=lambda root, conn: planejar_reconciliacao_codificacao(
+            root, conn, args.reconciliar_codificacao))
+    else:
+        base.executar(args.aplicar, planejador=planejar, consolidar=consolidar_catalogo)

@@ -105,6 +105,14 @@ Conflitos de identidade e versões com datas empatadas e conteúdo divergente
 também bloqueiam a aplicação. O manifesto e os backups permitem conciliação;
 não existe comando automático de restauração depois do COMMIT.
 
+Quando uma migração concluída tiver gravado caminhos físicos com codificação de
+URL, `--reconciliar-codificacao MANIFESTO` planeja a correção das variantes exatas
+dos destinos daquele manifesto. O argumento é o caminho relativo no Storage,
+dentro de `aplicacao/data/geoespacial/configuracoes/migracoes-storage/`.
+A aplicação exige também `--aplicar --manutencao`, confere os hashes físicos e
+gera backups e outro manifesto. Não movimenta arquivos, não altera o manifesto
+original e preserva URLs legítimas e registros imutáveis de auditoria.
+
 Layouts anteriores à organização por contexto podem exigir primeiro o
 planejamento com `scripts/migrar_destinos_storage.py`. Não se deve executar
 os dois migradores indiscriminadamente nem iniciar exclusões por padrões de nome.

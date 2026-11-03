@@ -216,7 +216,8 @@ def destinos(root: Path, conn) -> tuple[dict[str, str], dict[str, bytes], dict[s
 
 
 def transformar_jsons(originais: dict[str, bytes], mapa: dict[str, str],
-                      preferidas: dict[str, bytes] | None = None, *, ids=None, preservar=()):
+                      preferidas: dict[str, bytes] | None = None, *, ids=None, preservar=(),
+                      preservar_urls=False):
     preferidas = preferidas or {}
     preservar = set(preservar)
     if preservar & (set(mapa) | set(mapa.values()) | set(preferidas)):
@@ -235,7 +236,8 @@ def transformar_jsons(originais: dict[str, bytes], mapa: dict[str, str],
         if ambiguos:
             raise ValueError('Hashes de JSON duplicados exigem resolução por contexto.')
         remapear = Remapeamento(mapa, {h: next(iter(novos)) for h, novos in hashes.items()},
-                                {p: len(data) for p, data in resultado.items()}, ids=ids)
+                                {p: len(data) for p, data in resultado.items()}, ids=ids,
+                                preservar_urls=preservar_urls)
         novos = dict(resultado)
         for p, documento in documentos.items():
             revisao = isinstance(documento, dict) and {'nomes', 'dono', 'sha256'} <= documento.keys()
@@ -363,6 +365,8 @@ def executar(aplicar=False, *, planejador=None, consolidar=None):
         conn.execute("SELECT pg_advisory_xact_lock(hashtext('sicard:migrar-destinos-storage'))")
         plano = (planejador or destinos)(root, conn)
         mapa, originais, preferidas = plano
+        mapa_referencias = getattr(plano, 'mapa_referencias', mapa)
+        reconciliacao = getattr(plano, 'reconciliacao_codificacao', None)
         pendencias = getattr(plano, 'pendencias_preexistentes', [])
         inventario_preservados = getattr(plano, 'arquivos_sem_vinculo_preservados', [])
         caminhos_preservados = {p['caminho'] for p in inventario_preservados}
@@ -372,7 +376,7 @@ def executar(aplicar=False, *, planejador=None, consolidar=None):
             return [a for a in alteracoes if not (
                 a['tabela'][0] == 'geoprocessamento'
                 and (a['tabela'][1], str(a['chaves'].get('id'))) in preservados)]
-        if not mapa and not pendencias and not inventario_preservados:
+        if not mapa and not mapa_referencias and not pendencias and not inventario_preservados:
             print('Nenhuma origem legada pendente.')
             if not aplicar:
                 conn.rollback()
@@ -395,13 +399,14 @@ def executar(aplicar=False, *, planejador=None, consolidar=None):
                 if caminho_fisico(root, p).read_bytes() != data:
                     raise ValueError('O acervo mudou durante o planejamento: ' + p)
         ids, exclusoes = consolidar(conn, mapa) if consolidar else ({}, [])
-        arquivos, remapear = transformar_jsons(originais, mapa, preferidas, ids=ids,
-                                              preservar=caminhos_preservados)
+        arquivos, remapear = transformar_jsons(originais, mapa_referencias, preferidas, ids=ids,
+                                              preservar=caminhos_preservados,
+                                              preservar_urls=reconciliacao is not None)
         existentes = {mapa[p] for p in preferidas if p in mapa and mapa[p] in originais}
         if any(arquivos[p] != arquivos[mapa[p]] for p in preferidas
                if p in mapa and mapa[p] in originais):
             raise ValueError('O histórico vigente e o legado não convergiram para o mesmo resultado.')
-        alteracoes = preservar_orfaos(alteracoes_banco(conn, remapear, arquivos, mapa))
+        alteracoes = preservar_orfaos(alteracoes_banco(conn, remapear, arquivos, mapa_referencias))
         excluidos = {str(r['id']) for r in exclusoes}
         alteracoes = [item for item in alteracoes if not (
             item['tabela'] == ('geoprocessamento', 'arquivo_exportado')
@@ -412,6 +417,7 @@ def executar(aplicar=False, *, planejador=None, consolidar=None):
                           'exportacoes_consolidadas': len(exclusoes),
                           'pendencias_preexistentes': pendencias,
                           'arquivos_sem_vinculo_preservados': inventario_preservados,
+                          'reconciliacao_codificacao': reconciliacao,
                           'destinos': dict((k, sum('/'+k+'/' in p for p in mapa.values()))
                                            for k in ('hierarquizacoes','analises-avulsas','exportacoes'))},
                          ensure_ascii=False))
@@ -423,6 +429,8 @@ def executar(aplicar=False, *, planejador=None, consolidar=None):
         manifesto = {'id': ident, 'estado': 'preparando', 'mapa': mapa, 'banco': alteracoes,
                       'pendencias_preexistentes': pendencias,
                       'arquivos_sem_vinculo_preservados': inventario_preservados,
+                      'reconciliacao_codificacao': reconciliacao,
+                      'mapa_referencias': mapa_referencias,
                       'exportacoes_consolidadas': exclusoes, 'aliases_exportacoes': ids,
                       'arquivos': {p: {'sha256_antes': assinatura(originais[p]), 'sha256_depois': assinatura(data)}
                                    for p, data in arquivos.items() if p in mapa or p in configuracoes or p in existentes}}
@@ -474,7 +482,7 @@ def executar(aplicar=False, *, planejador=None, consolidar=None):
                 resultado = conn.execute(query, valores + list(item['chaves'].values()))
                 if resultado.rowcount != 1:
                     raise ValueError('Atualização não atingiu exatamente uma chave primária.')
-            if preservar_orfaos(alteracoes_banco(conn, remapear, arquivos, mapa)):
+            if preservar_orfaos(alteracoes_banco(conn, remapear, arquivos, mapa_referencias)):
                 raise ValueError('Ainda há referências operacionais que exigem remapeamento.')
             for p in caminhos_preservados:
                 if caminho_fisico(root, p).read_bytes() != originais[p]:

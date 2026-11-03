@@ -32,15 +32,22 @@ def metadados_arquivo(path, dados):
 
 
 class Remapeamento:
-    def __init__(self, caminhos, hashes=None, tamanhos=None, ids=None):
+    def __init__(self, caminhos, hashes=None, tamanhos=None, ids=None, *, preservar_urls=False):
+        self.preservar_urls = preservar_urls
         self.tokens = {}
+        self.brutos = {}
         for origem, destino in caminhos.items():
             for prefixo in ('', '/', 'storage:'):
-                for seguro in (None, '', '/'):
+                self.brutos[prefixo + origem] = prefixo + destino
+        self.tokens.update(self.brutos)
+        for origem, destino in caminhos.items():
+            for prefixo in ('', '/', 'storage:'):
+                for seguro in ('', '/'):
                     antes, depois = prefixo + origem, prefixo + destino
-                    if seguro is not None:
-                        antes, depois = quote(antes, safe=seguro), quote(depois, safe=seguro)
-                    self.tokens[antes] = depois
+                    antes, depois = quote(antes, safe=seguro), quote(depois, safe=seguro)
+                    # Uma origem ASCII pode coincidir com seu alias URL, mas seu
+                    # destino Unicode não deve contaminar caminhos físicos raw.
+                    self.tokens.setdefault(antes, depois)
         alternativas = '|'.join(re.escape(s) for s in sorted(self.tokens, key=len, reverse=True))
         self.pattern = re.compile(
             r"(?<![\w./%+-])(?:" + alternativas
@@ -51,7 +58,14 @@ class Remapeamento:
     def texto(self, texto):
         if texto in self.hashes:
             return self.hashes[texto]
-        return self.pattern.sub(lambda m: self.tokens[m.group()], texto) if self.pattern else texto
+        url = texto.lower().startswith(('http://', 'https://')) or (texto.startswith('/') and '?' in texto)
+        if url and self.preservar_urls:
+            return texto
+        def substituir(match):
+            token = match.group()
+            destino = self.tokens[token]
+            return quote(destino, safe='/:') if url and token in self.brutos else destino
+        return self.pattern.sub(substituir, texto) if self.pattern else texto
 
     def valor(self, valor, *, revisao=False):
         if isinstance(valor, str):

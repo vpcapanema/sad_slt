@@ -1,19 +1,24 @@
 """Ausências anteriores não autorizam reparo, consolidação ou identidade presumida."""
 from contextlib import contextmanager
+from copy import deepcopy
 from datetime import datetime, timezone
 from io import BytesIO
 import json
 import os
 from pathlib import Path
 import shutil
+import re
 from types import SimpleNamespace
 from uuid import uuid4
+from urllib.parse import quote
 from zipfile import ZipFile
 
 import pytest
 
 from scripts import migrar_destinos_storage as engine
-from scripts.migrar_nomes_storage import Plano, consolidar_catalogo, planejar
+from scripts.migrar_nomes_storage import (
+    Plano, consolidar_catalogo, planejar, planejar_reconciliacao_codificacao,
+)
 
 
 class Consulta:
@@ -443,6 +448,172 @@ def test_revisao_demandas_recalcula_caminho_conforme_produtor(root_revisoes):
     esperado = produtor._caminho_nomes_demandas(
         {'arquivo': plano[0][principal], 'elegibilidade': {}}, 'autor-sintetico')
     assert plano[0][revisao] == esperado
+
+
+@pytest.mark.parametrize('titulo', ['Camada', 'Hierarquização — Teste 01_f5830ebe7f63'])
+def test_aplicacao_real_do_catalogo_e_disco_permite_novo_planejamento(
+        root_revisoes, monkeypatch, nomes_storage_sinteticos, titulo):
+    root = root_revisoes
+    antes, vigente = PASTA + '/antes.gpkg', PASTA + '/vigente.gpkg'
+    ausente = PASTA + '/orfao.gpkg'
+    agora = datetime.now(timezone.utc)
+    registros = []
+    for indice, caminho, dados in [(0, antes, b'antigo'), (1, vigente, b'vigente')]:
+        gravar(root, caminho, dados)
+        r = registro(
+            caminho, id=str(uuid4()), recurso_origem='camada:1', validacao={'nome': titulo},
+            componentes=[{'caminho': caminho, 'sha256': engine.assinatura(dados), 'tamanho_bytes': len(dados)}])
+        r.update(registro_id=r['id'], criado_em=agora, iniciado_em=agora.replace(microsecond=indice))
+        registros.append(r)
+    orfao = registro(ausente, id=str(uuid4()), criado_em=agora)
+    orfao['registro_id'] = orfao['id']
+    registros.append(orfao)
+    revisao, _ = criar_revisao(root, vigente, b'vigente')
+
+    class Catalogo:
+        def execute(self, query, params=()):
+            query = query if isinstance(query, str) else query.as_string()
+            if 'nome_storage' in query:
+                escopo, nome = params
+                return Consulta([{'identidade': identidade} for (pasta, identidade), reservado
+                                 in nomes_storage_sinteticos.items() if pasta == escopo and reservado == nome])
+            if 'arquivo_resultado' in query or 'extracao_atributos' in query:
+                return Consulta([])
+            if query.startswith('DELETE'):
+                removidos = [r for r in registros if r['id'] == params[0]]
+                registros[:] = [r for r in registros if r['id'] != params[0]]
+                return SimpleNamespace(rowcount=len(removidos))
+            if query.startswith('UPDATE'):
+                campos = re.findall(r'"([^"]+)"=%s', query)
+                assert campos[-1] == 'id'
+                atualizados = [r for r in registros if r['id'] == params[-1]]
+                for r in atualizados:
+                    for campo, valor in zip(campos[:-1], params[:-1]):
+                        r[campo] = deepcopy(getattr(valor, 'obj', valor))
+                return SimpleNamespace(rowcount=len(atualizados))
+            if 'arquivo_exportado' in query:
+                return Consulta([{**deepcopy(r), 'data_execucao': r['iniciado_em']} for r in registros])
+            return Consulta([{'adquirido': True}])
+
+        def commit(self):
+            pass
+
+        def rollback(self):
+            pass
+
+    banco = Catalogo()
+
+    @contextmanager
+    def conectar(*args, **kwargs):
+        yield banco
+
+    def publicar(r, p, d, **kwargs):
+        if kwargs.get('exclusivo') and r.joinpath(*p.split('/')).exists():
+            raise FileExistsError(p)
+        gravar(r, p, d)
+
+    def conferir(arquivos):
+        for caminho, dados in arquivos.items():
+            assert root.joinpath(*caminho.split('/')).read_bytes() == dados
+
+    colunas = {'caminho': 'text', 'componentes': 'jsonb', 'validacao': 'jsonb', 'recurso_origem': 'text'}
+    tabela = ('geoprocessamento', 'arquivo_exportado')
+    monkeypatch.setattr(engine, 'raiz_escrita', lambda: root)
+    monkeypatch.setattr(engine, 'get_settings', lambda: SimpleNamespace(slt_database_url='sintetico'))
+    monkeypatch.setattr(engine.psycopg, 'connect', conectar)
+    monkeypatch.setattr(engine, 'gravar', publicar)
+    monkeypatch.setattr(engine, 'conferir_api', conferir)
+    monkeypatch.setattr(engine, 'colunas_operacionais', lambda conn: ({tabela: colunas}, {tabela: ['id']}))
+    engine.executar(True, planejador=planejar, consolidar=consolidar_catalogo)
+    assert len(registros) == 2
+    sobrevivente = next(r for r in registros if r['caminho'] != ausente)
+    destino = sobrevivente['caminho']
+    assert destino.endswith('/' + titulo + '.gpkg')
+    assert sobrevivente['componentes'][0]['caminho'] == destino
+    assert sobrevivente['componentes'][0]['sha256'] == engine.assinatura(b'vigente')
+    assert not root.joinpath(*antes.split('/')).exists()
+    assert not root.joinpath(*vigente.split('/')).exists()
+    assert root.joinpath(*destino.split('/')).read_bytes() == b'vigente'
+    assert not root.joinpath(*revisao.split('/')).exists()
+    repetido = planejar(root, banco)
+    assert repetido[0] == {}
+    assert len(repetido.pendencias_preexistentes) == 1
+    assert next(iter(repetido.arquivos_sem_vinculo_preservados))['motivo'] == (
+        'revisao_privada_resultado_preservado')
+    if quote(destino, safe='/') != destino:
+        # Reproduz o estado deixado pelo helper antigo, sem alterar o arquivo físico.
+        encoded = quote(destino, safe='/')
+        sobrevivente['caminho'] = encoded
+        sobrevivente['componentes'][0]['caminho'] = encoded
+        manifesto_original = next(root.rglob('manifesto.json'))
+        dados_manifesto = manifesto_original.read_bytes()
+        relativo_manifesto = manifesto_original.relative_to(root).as_posix()
+        job = engine.CONFIG + '/execucoes/job-codificacao.json'
+        url = 'https://sicard/api?arquivo=' + encoded
+        documento = {'arquivo': encoded, 'url': url, 'logs': [{'caminho': encoded}]}
+        gravar(root, job, json.dumps(documento).encode())
+        planejador = lambda r, conn: planejar_reconciliacao_codificacao(r, conn, relativo_manifesto)
+        engine.executar(False, planejador=planejador)
+        assert sobrevivente['caminho'] == encoded
+        engine.executar(True, planejador=planejador)
+        assert sobrevivente['caminho'] == destino
+        assert sobrevivente['componentes'][0]['caminho'] == destino
+        corrigido = json.loads(root.joinpath(*job.split('/')).read_bytes())
+        assert corrigido == {**documento, 'arquivo': destino}
+        assert manifesto_original.read_bytes() == dados_manifesto
+        manifesto_reparo = next(p for p in root.rglob('manifesto.json') if p != manifesto_original)
+        reparo = json.loads(manifesto_reparo.read_bytes())
+        assert reparo['mapa'] == {} and reparo['estado'] == 'concluida'
+        assert reparo['reconciliacao_codificacao']['manifesto_origem'] == relativo_manifesto
+        assert reparo['backups'] and reparo['banco']
+        assert root.joinpath(*destino.split('/')).read_bytes() == b'vigente'
+        assert planejar(root, banco)[0] == {}
+
+
+@pytest.mark.parametrize('prefixo', ['', '/', 'storage:'])
+@pytest.mark.parametrize('nome_origem', ['origem.gpkg', 'Entrada ç.gpkg'])
+def test_remapeamento_para_unicode_preserva_representacao_raw(prefixo, nome_origem):
+    antigo = PASTA + '/' + nome_origem
+    novo = PASTA + '/Hierarquização — Teste 01_f5830ebe7f63.gpkg'
+    remapear = engine.Remapeamento({antigo: novo})
+    assert remapear.texto(prefixo + antigo) == prefixo + novo
+    for seguro in ('/', ''):
+        entrada = quote(prefixo + antigo, safe=seguro)
+        esperado = prefixo + novo if entrada == prefixo + antigo else quote(prefixo + novo, safe=seguro)
+        assert remapear.texto(entrada) == esperado
+    assert remapear.texto('https://sicard/api?arquivo=' + prefixo + antigo) == (
+        'https://sicard/api?arquivo=' + quote(prefixo + novo, safe='/:'))
+
+
+def test_reconciliacao_exata_preserva_urls_legitimas_e_auditoria():
+    raw = PASTA + '/Hierarquização — Teste 01_f5830ebe7f63.gpkg'
+    encoded = quote(raw, safe='/')
+    remapear = engine.Remapeamento({encoded: raw}, preservar_urls=True)
+    url = 'https://sicard/api?arquivo=' + encoded
+    assert remapear.valor({'caminho': encoded, 'url': url, 'logs': [encoded]}) == {
+        'caminho': raw, 'url': url, 'logs': [encoded]}
+    estranho = PASTA + '/Fora%20do%20manifesto.gpkg'
+    assert remapear.texto(estranho) == estranho
+
+
+@pytest.mark.parametrize('problema', ['hash', 'estado', 'alias_fisico'])
+def test_reconciliacao_recusa_destino_ou_manifesto_inconsistente(root, problema):
+    antigo, destino = PASTA + '/original.gpkg', PASTA + '/Camada ç.gpkg'
+    gravar(root, destino, b'conteudo')
+    manifesto = {
+        'estado': 'concluida', 'mapa': {antigo: destino},
+        'arquivos': {antigo: {'sha256_depois': engine.assinatura(b'conteudo')}},
+    }
+    if problema == 'hash':
+        manifesto['arquivos'][antigo]['sha256_depois'] = '0' * 64
+    elif problema == 'estado':
+        manifesto['estado'] = 'copiando'
+    else:
+        gravar(root, quote(destino, safe='/'), b'outro arquivo real')
+    caminho = engine.CONFIG + '/migracoes-storage/exemplo/manifesto.json'
+    gravar(root, caminho, json.dumps(manifesto).encode())
+    with pytest.raises(ValueError):
+        planejar_reconciliacao_codificacao(root, Banco([]), caminho)
 
 
 def test_consolidacao_nao_apaga_duplicados_orfaos():
