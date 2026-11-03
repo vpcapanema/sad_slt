@@ -51,6 +51,35 @@ def nome_legivel_sem_vinculo(caminho):
     return any(letra.isalpha() for letra in PurePosixPath(caminho).stem)
 
 
+def validar_revisao_privada(caminho, dados):
+    """Confere o contrato de elegibilidade_relatorio sem expor nomes/proprietário."""
+    padrao = re.fullmatch(
+        r'saidas-geoespaciais/(?:analises-avulsas/[^/]+/[^/]+|'
+        r'hierarquizacoes/[^/]+/fase-[123]/[^/]+|exportacoes/[^/]+)'
+        r'/revisoes/([a-f0-9]{64})/([a-f0-9]{64})(\.demandas)?\.json', caminho)
+    if not padrao:
+        raise ValueError('Estrutura de revisão privada inválida: ' + caminho)
+    try:
+        documento = json.loads(dados)
+    except (ValueError, UnicodeDecodeError) as exc:
+        raise ValueError('JSON de revisão privada inválido: ' + caminho) from exc
+    if (not isinstance(documento, dict) or set(documento) != {'dono', 'sha256', 'nomes'}
+            or not isinstance(documento['dono'], str) or not documento['dono']
+            or base.assinatura(documento['dono'].encode()) != padrao[1]
+            or not isinstance(documento['sha256'], str)
+            or not re.fullmatch(r'[a-f0-9]{64}', documento['sha256'])
+            or not isinstance(documento['nomes'], dict)
+            or any(not isinstance(k, str) or not isinstance(v, str)
+                   for k, v in documento['nomes'].items())):
+        raise ValueError('Conteúdo de revisão privada inválido: ' + caminho)
+    if padrao[3] and any(
+            not k.isascii() or not k.isdecimal() or str(int(k)) != k
+            or not v or v != v.strip() or len(v) > 200 or re.search(r'[\x00-\x1f\x7f]', v)
+            for k, v in documento['nomes'].items()):
+        raise ValueError('Nomes de demandas da revisão privada inválidos: ' + caminho)
+    return padrao[1], padrao[2], '.demandas.json' if padrao[3] else '.json', documento['sha256']
+
+
 def titulo_gpkg(root, caminho):
     """Usa apenas título interno unívoco, nunca o nome físico legado."""
     path = base.caminho_fisico(root, caminho)
@@ -191,6 +220,7 @@ def planejar(root: Path, conn):
     pastas = {}
     pendencias = []
     preservados = []
+    revisoes = {}
     for r in registros:
         caminho = r['caminho']
         caminhos_catalogados = {caminho, *(c['caminho'] for c in r['componentes'])}
@@ -315,6 +345,9 @@ def planejar(root: Path, conn):
     for caminho in sorted(originais.keys() - evidencias.keys()):
         parent = str(PurePosixPath(caminho).parent)
         nome = PurePosixPath(caminho).name
+        if '/revisoes/' in caminho:
+            revisoes[caminho] = validar_revisao_privada(caminho, originais[caminho])
+            continue
         if nome_legivel_sem_vinculo(caminho):
             preservados.append({
                 'caminho': caminho, 'sha256': base.assinatura(originais[caminho]),
@@ -322,14 +355,6 @@ def planejar(root: Path, conn):
                 'motivo': 'nome_legivel_sem_vinculo_catalogado',
                 'acao': 'preservado_integralmente_no_caminho_original; requer_catalogacao',
             })
-            continue
-        internos = [p for p in pastas if caminho.startswith(p + '/revisoes/')]
-        if internos:
-            analise = max(internos, key=len)
-            restante = caminho[len(analise) + 1:]
-            evidencias[caminho] = (analise, 'interno:' + restante, restante,
-                                   datetime.fromtimestamp(base.caminho_fisico(root, caminho).stat().st_mtime,
-                                                          timezone.utc))
             continue
         if parent not in pastas:
             raise ValueError('Arquivo sem vínculo verificável; plano bloqueado: ' + caminho)
@@ -347,12 +372,6 @@ def planejar(root: Path, conn):
     for caminho, (parent, identidade, nome, data) in sorted(evidencias.items()):
         from api.services.nomes_storage import reservar
         pasta = destinos_pastas[parent]
-        if identidade.startswith('interno:'):
-            destino = pasta + '/' + nome
-            grupos[destino].append((data, caminho, identidade))
-            if caminho != destino:
-                mapa[caminho] = destino
-            continue
         principal = PurePosixPath(nome)
         # Reserva a base inteira; componentes de um shapefile compartilham identidade.
         if identidade.startswith('documento:'):
@@ -380,6 +399,39 @@ def planejar(root: Path, conn):
             preferidas[caminho] = vigente
         if destino in originais:
             preferidas[destino] = vigente
+    resultados_por_hash = defaultdict(list)
+    for caminho in originais:
+        if PurePosixPath(caminho).suffix.lower() == '.gpkg':
+            resultados_por_hash[base.assinatura(caminho.encode())].append(caminho)
+    destinos_revisoes = {}
+    for caminho, (usuario, hash_caminho, sufixo, hash_resultado) in revisoes.items():
+        principais = resultados_por_hash.get(hash_caminho, [])
+        if len(principais) > 1:
+            raise ValueError('Vínculo de revisão privada ambíguo: ' + caminho)
+        principal = next(iter(principais), None)
+        diverge = principal is not None and base.assinatura(originais[principal]) != hash_resultado
+        if principal not in mapa or diverge:
+            preservados.append({
+                'caminho': caminho, 'sha256': base.assinatura(originais[caminho]),
+                'tamanho_bytes': len(originais[caminho]),
+                'motivo': ('revisao_privada_historica_resultado_divergente' if diverge else
+                           'revisao_privada_resultado_preservado' if principal else
+                           'revisao_privada_historica_sem_resultado_presente'),
+                'acao': 'preservado_integralmente_no_caminho_original; resultado_nao_reatribuido',
+            })
+            continue
+        resultado_novo = mapa[principal]
+        destino = (str(PurePosixPath(resultado_novo).parent) + '/revisoes/' + usuario + '/'
+                   + base.assinatura(resultado_novo.encode()) + sufixo)
+        anterior = destinos_revisoes.get(destino)
+        if (anterior and originais[anterior] != originais[caminho]
+                or destino in originais and originais[destino] != originais[caminho]):
+            raise ValueError('Revisões privadas convergem com conteúdo divergente: ' + caminho)
+        destinos_revisoes[destino] = caminho
+        if destino in originais:
+            preferidas[caminho] = preferidas[destino] = originais[caminho]
+        if caminho != destino:
+            mapa[caminho] = destino
     ausentes = {p for item in pendencias for p in item['caminhos_ausentes']}
     if ausentes & set(mapa.values()):
         raise ValueError('Destino coincide com referência órfã; recupere ou audite antes de migrar: '

@@ -3,6 +3,7 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from io import BytesIO
 import json
+import os
 from pathlib import Path
 import shutil
 from types import SimpleNamespace
@@ -43,7 +44,12 @@ def root():
     try:
         yield pasta
     finally:
-        shutil.rmtree(pasta)
+        shutil.rmtree('\\\\?\\' + str(pasta) if os.name == 'nt' else pasta)
+
+
+@pytest.fixture
+def root_revisoes(root):
+    return Path('\\\\?\\' + str(root)) if os.name == 'nt' else root
 
 
 def registro(caminho, **campos):
@@ -339,6 +345,104 @@ def test_preservados_nao_sao_parseados_nem_remapeados():
 def test_preservados_nao_podem_ser_destinos_origens_ou_versoes(mapa, preferidas):
     with pytest.raises(ValueError, match='Arquivo preservado não pode participar'):
         engine.transformar_jsons({'preservado': b'original'}, mapa, preferidas, preservar={'preservado'})
+
+
+def criar_revisao(root, principal, conteudo, *, dono='autor-sintetico', demandas=False, alterar=None):
+    pasta = str(Path(principal).parent).replace('\\', '/')
+    caminho = (pasta + '/revisoes/' + engine.assinatura(dono.encode()) + '/'
+               + engine.assinatura(principal.encode()) + ('.demandas.json' if demandas else '.json'))
+    documento = {'dono': dono, 'sha256': engine.assinatura(conteudo),
+                 'nomes': {'0': 'Demanda Revista'} if demandas else {'fonte:1': 'Fonte Revista'}}
+    documento.update(alterar or {})
+    dados = json.dumps(documento, ensure_ascii=False).encode()
+    gravar(root, caminho, dados)
+    return caminho, dados
+
+
+def test_doze_contextos_revisoes_preservam_so_orfa_e_remapeiam_onze_presentes(root_revisoes):
+    from api.services import elegibilidade_relatorio as produtor
+    root = root_revisoes
+    registros, revisoes = [], []
+    for indice in range(12):
+        if indice == 0:
+            pasta = ('saidas-geoespaciais/analises-avulsas/elegibilidade-territorial/'
+                     'elegibilidade_territorial_e965e7b4f7aa58499a151f107d733856')
+        else:
+            codigo = 'HIER-20261019-183457-93E7' if indice <= 9 else 'HIER-20261103-120000-AAAA'
+            fase = 'fase-1' if indice % 2 else 'fase-2'
+            pasta = (f'saidas-geoespaciais/hierarquizacoes/{codigo}/{fase}/'
+                     f'analise_{indice:032x}')
+        principal = pasta + '/resultado.gpkg'
+        conteudo = f'conteudo sintetico {indice}'.encode()
+        dono = f'autor-sintetico-{indice}'
+        revisao, dados = criar_revisao(root, principal, conteudo, dono=dono)
+        revisoes.append((principal, revisao, dados, dono))
+        if indice:
+            gravar(root, principal, conteudo)
+            registros.append(registro(principal, recurso_origem=f'camada:{indice}',
+                                      validacao={'nome': f'Camada {indice}'}))
+    plano = planejar(root, Banco(registros))
+    mapa, originais, preferidas = plano
+    preservados = plano.arquivos_sem_vinculo_preservados
+    assert len(preservados) == 1
+    assert preservados[0]['caminho'] == revisoes[0][1]
+    assert preservados[0]['motivo'] == 'revisao_privada_historica_sem_resultado_presente'
+    assert len(mapa) == 22
+    for principal, revisao, dados, dono in revisoes[1:]:
+        esperado = produtor._caminho_revisao(
+            {'arquivo': mapa[principal], 'elegibilidade': {}}, dono)
+        assert mapa[revisao] == esperado
+        assert esperado.endswith('/' + engine.assinatura(mapa[principal].encode()) + '.json')
+        assert root.joinpath(*revisao.split('/')).read_bytes() == dados
+    novos, _ = engine.transformar_jsons(
+        originais, mapa, preferidas, preservar={p['caminho'] for p in preservados})
+    assert novos[revisoes[0][1]] == revisoes[0][2]
+    assert set(plano.pendencias_preexistentes) == set()
+
+
+@pytest.mark.parametrize('alterar', [
+    {'dono': 'outro-autor'}, {'dono': 1}, {'sha256': 'invalido'}, {'sha256': None},
+    {'nomes': []}, {'nomes': {'fonte': 123}}, {'campo_inesperado': True},
+])
+def test_revisao_hash_sem_conteudo_valido_nao_e_liberada(root_revisoes, alterar):
+    root = root_revisoes
+    principal = PASTA + '/resultado.gpkg'
+    criar_revisao(root, principal, b'ausente', alterar=alterar)
+    with pytest.raises(ValueError, match='Conteúdo de revisão privada inválido'):
+        planejar(root, Banco([]))
+
+
+def test_estrutura_privada_invalida_nao_libera_json_hash(root_revisoes):
+    root = root_revisoes
+    gravar(root, PASTA + '/revisoes/qualquer/' + 'a' * 64 + '.json', b'{}')
+    with pytest.raises(ValueError, match='Estrutura de revisão privada inválida'):
+        planejar(root, Banco([]))
+
+
+def test_revisao_de_conteudo_antigo_no_mesmo_caminho_nao_e_reatribuida(root_revisoes):
+    root = root_revisoes
+    principal = PASTA + '/resultado.gpkg'
+    gravar(root, principal, b'resultado atual')
+    revisao, dados = criar_revisao(root, principal, b'conteudo anterior')
+    plano = planejar(root, Banco([
+        registro(principal, recurso_origem='camada:1', validacao={'nome': 'Camada'})]))
+    assert principal in plano[0] and revisao not in plano[0]
+    assert plano.arquivos_sem_vinculo_preservados[0]['motivo'] == (
+        'revisao_privada_historica_resultado_divergente')
+    assert root.joinpath(*revisao.split('/')).read_bytes() == dados
+
+
+def test_revisao_demandas_recalcula_caminho_conforme_produtor(root_revisoes):
+    from api.services import elegibilidade_relatorio as produtor
+    root = root_revisoes
+    principal = PASTA + '/resultado.gpkg'
+    gravar(root, principal, b'conteudo')
+    revisao, _ = criar_revisao(root, principal, b'conteudo', demandas=True)
+    plano = planejar(root, Banco([
+        registro(principal, recurso_origem='camada:1', validacao={'nome': 'Camada'})]))
+    esperado = produtor._caminho_nomes_demandas(
+        {'arquivo': plano[0][principal], 'elegibilidade': {}}, 'autor-sintetico')
+    assert plano[0][revisao] == esperado
 
 
 def test_consolidacao_nao_apaga_duplicados_orfaos():

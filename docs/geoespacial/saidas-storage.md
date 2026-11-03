@@ -87,6 +87,9 @@ aplicação, em vez de receberem nomes presumidos. Produtos sem vínculo que já
 possuem caminhos legíveis permanecem intactos, sem receber identidade ou reserva;
 seus caminhos, tamanhos e SHA-256 constam em `arquivos_sem_vinculo_preservados`
 no pré-voo e no manifesto. Seus JSONs e ZIPs não são interpretados nem reescritos.
+Revisões privadas históricas cujo resultado esteja ausente exigem validação
+específica do formato e da propriedade; são preservadas, sem criar um resultado
+substituto. Revisões de resultados presentes acompanham o remapeamento do caminho.
 Pacotes municipais legados sem nome de saída exigem vínculo único de camada e
 concordância entre as evidências da mesma execução. Registros de catálogo cujos arquivos já estavam
 integralmente ausentes são inventariados como pendências preexistentes no
