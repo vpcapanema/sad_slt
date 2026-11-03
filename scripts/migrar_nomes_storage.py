@@ -5,12 +5,14 @@ import argparse
 from collections import defaultdict
 from contextlib import closing
 from datetime import datetime, timezone
+from io import BytesIO
 import json
 from pathlib import Path, PurePosixPath
 import re
 import sqlite3
 import sys
 from uuid import NAMESPACE_URL, UUID, uuid5
+from zipfile import ZipFile
 
 from scripts import migrar_destinos_storage as base
 from api.services.ciclo_vida_arquivos import apelido
@@ -19,10 +21,34 @@ from api.services.ciclo_vida_arquivos import apelido
 class Plano(tuple):
     """Preserva a API de três mapas e anexa o inventário de ausências anteriores."""
 
-    def __new__(cls, mapa, originais, preferidas, pendencias):
+    def __new__(cls, mapa, originais, preferidas, pendencias, preservados=()):
         plano = super().__new__(cls, (mapa, originais, preferidas))
         plano.pendencias_preexistentes = pendencias
+        plano.arquivos_sem_vinculo_preservados = list(preservados)
         return plano
+
+
+def nome_legivel_sem_vinculo(caminho):
+    """Reconhece nomes descritivos já organizados, sem atribuir identidade."""
+    from api.services.pastas_storage import nome_valido
+    partes = PurePosixPath(caminho).parts
+    if len(partes) < 2 or partes[0] != 'saidas-geoespaciais':
+        return False
+    minimo = {'analises-avulsas': 5, 'hierarquizacoes': 6, 'exportacoes': 4}
+    if len(partes) < minimo.get(partes[1], 1000):
+        return False
+    for parte in partes[2:]:
+        try:
+            nome_valido(parte)
+        except ValueError:
+            return False
+        if re.search(r'[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}', parte, re.I):
+            return False
+        for token in re.split(r'[_ .-]+', parte):
+            if re.fullmatch(r'[a-f0-9]{8,}', token, re.I) and (
+                    len(token) >= 12 or re.search(r'[a-f]', token, re.I)):
+                return False
+    return any(letra.isalpha() for letra in PurePosixPath(caminho).stem)
 
 
 def titulo_gpkg(root, caminho):
@@ -45,11 +71,75 @@ def titulo_gpkg(root, caminho):
     return nome
 
 
+def titulo_pacote_municipal(registro, registros, originais, conn):
+    """Confronta manifesto interno e catálogo/relatório do mesmo recurso.
+
+    O produtor municipal grava o nome humano na camada, não no manifesto.
+    O basename aleatório serve apenas para relacionar membros, nunca como título.
+    """
+    recurso = registro['recurso_origem']
+    if not recurso:
+        return None
+    with ZipFile(BytesIO(originais[registro['caminho']])) as pacote:
+        membros = pacote.namelist()
+        if (len(membros) != len(set(membros)) or any(
+                PurePosixPath(p).name != p or '\\' in p for p in membros)):
+            raise ValueError('Pacote municipal com membros ambíguos ou inválidos: ' + registro['caminho'])
+        metadados = [p for p in membros if p.endswith('_metadados.json')]
+        if len(metadados) != 1:
+            raise ValueError('Manifesto municipal não unívoco: ' + registro['caminho'])
+        manifesto = json.loads(pacote.read(metadados[0]))
+        if not isinstance(manifesto, dict):
+            raise ValueError('Manifesto municipal inválido: ' + registro['caminho'])
+        base_arquivos = metadados[0].removesuffix('_metadados.json')
+        formato = manifesto.get('format')
+        if not isinstance(formato, str) or base_arquivos + '.' + formato not in membros:
+            raise ValueError('Camada do manifesto ausente do pacote: ' + registro['caminho'])
+    nomes = set()
+    comprovado = False
+    camadas = conn.execute('''
+        SELECT nome,metadados FROM geoprocessamento.camada_processada WHERE recurso_sessao_id=%s
+        UNION ALL
+        SELECT nome,metadados FROM geoprocessamento.camada_importada WHERE recurso_sessao_id=%s
+    ''', (recurso, recurso)).fetchall()
+    if len(camadas) != 1:
+        return None
+    for camada in camadas:
+        metadata = camada.get('metadados') or {}
+        if metadata.get('execucao_id') and str(metadata['execucao_id']) != str(registro['execucao_id']):
+            raise ValueError('Execução do pacote diverge da camada municipal: ' + registro['caminho'])
+        if metadata.get('base_arquivos') and metadata['base_arquivos'] != base_arquivos:
+            raise ValueError('Base do pacote diverge da camada municipal: ' + registro['caminho'])
+        if metadata.get('manifesto') is not None:
+            if metadata['manifesto'] != manifesto:
+                raise ValueError('Manifesto do pacote diverge do catálogo municipal: ' + registro['caminho'])
+            comprovado = True
+        if camada.get('nome'):
+            nomes.add(camada['nome'])
+    for companheiro in registros:
+        if (companheiro['execucao_id'] != registro['execucao_id']
+                or companheiro['recurso_origem'] != recurso
+                or (companheiro['validacao'] or {}).get('tipo') != 'metadados_municipais'
+                or companheiro['caminho'] not in originais):
+            continue
+        if json.loads(originais[companheiro['caminho']]) != manifesto:
+            raise ValueError('Manifesto do pacote diverge do relatório municipal: ' + registro['caminho'])
+        comprovado = True
+    if not comprovado or len(nomes) != 1:
+        return None
+    nome = nomes.pop()
+    if not isinstance(nome, str) or re.fullmatch(r'(?:camada_)?[a-f0-9-]{32,36}', nome, re.I):
+        return None
+    return 'Pacote ' + nome
+
+
 def planejar(root: Path, conn):
     """Ausências integrais são inventariadas; identidade de arquivos presentes é obrigatória.
 
     Não recupera, substitui nem exclui órfãos. Um conjunto parcialmente presente
     exige recuperação antes de migrar, assim como um arquivo sem identidade.
+    Produtos já legíveis sem vínculo são inventariados e mantidos integralmente
+    no local original; a preservação não cria identidade nem registro de catálogo.
     """
     registros = conn.execute('''
         SELECT a.id AS registro_id,a.caminho,a.componentes,a.validacao,a.recurso_origem,a.execucao_id,
@@ -100,6 +190,7 @@ def planejar(root: Path, conn):
     evidencias = {}
     pastas = {}
     pendencias = []
+    preservados = []
     for r in registros:
         caminho = r['caminho']
         caminhos_catalogados = {caminho, *(c['caminho'] for c in r['componentes'])}
@@ -122,7 +213,8 @@ def planejar(root: Path, conn):
             titulo = validacao['tipo']
         if not titulo and validacao.get('pacote_municipal'):
             titulo = r['parametros'].get('nome_saida') or r['parametros'].get('nome')
-            titulo = 'Pacote ' + titulo if titulo else None
+            titulo = ('Pacote ' + titulo if titulo else
+                      titulo_pacote_municipal(r, registros, originais, conn))
         if not titulo and PurePosixPath(caminho).suffix.lower() == '.gpkg':
             titulo = titulo_gpkg(root, caminho)
         recurso = r['recurso_origem']
@@ -220,9 +312,17 @@ def planejar(root: Path, conn):
     for parent, (escopo, identidade, titulo) in sorted(pastas.items()):
         from api.services.nomes_storage import reservar
         destinos_pastas[parent] = escopo + '/' + reservar(escopo, identidade, titulo, conn=conn)
-    for caminho in originais.keys() - evidencias.keys():
+    for caminho in sorted(originais.keys() - evidencias.keys()):
         parent = str(PurePosixPath(caminho).parent)
         nome = PurePosixPath(caminho).name
+        if nome_legivel_sem_vinculo(caminho):
+            preservados.append({
+                'caminho': caminho, 'sha256': base.assinatura(originais[caminho]),
+                'tamanho_bytes': len(originais[caminho]),
+                'motivo': 'nome_legivel_sem_vinculo_catalogado',
+                'acao': 'preservado_integralmente_no_caminho_original; requer_catalogacao',
+            })
+            continue
         internos = [p for p in pastas if caminho.startswith(p + '/revisoes/')]
         if internos:
             analise = max(internos, key=len)
@@ -234,7 +334,8 @@ def planejar(root: Path, conn):
         if parent not in pastas:
             raise ValueError('Arquivo sem vínculo verificável; plano bloqueado: ' + caminho)
         padrao = re.fullmatch(r'(.+?)(?:_[a-f0-9]{12,32})?\.(pdf|xlsx|zip)', nome, re.I)
-        if not padrao:
+        if (not padrao or re.fullmatch(r'[a-f0-9-]{8,}', padrao.group(1), re.I)
+                or not any(letra.isalpha() for letra in padrao.group(1))):
             raise ValueError('Arquivo sem nome/identidade verificáveis; plano bloqueado: ' + caminho)
         # Documentos possuem papel único dentro da mesma análise comprovada.
         papel = padrao.group(1) + '.' + padrao.group(2).lower()
@@ -285,7 +386,11 @@ def planejar(root: Path, conn):
                          + ', '.join(sorted(ausentes & set(mapa.values()))))
     for item in pendencias:
         print(json.dumps({'pendencia_preexistente': item}, ensure_ascii=False), file=sys.stderr)
-    return Plano(mapa, originais, preferidas, pendencias)
+    if {p['caminho'] for p in preservados} & set(mapa.values()):
+        raise ValueError('Destino coincide com arquivo sem vínculo preservado; plano bloqueado.')
+    for item in preservados:
+        print(json.dumps({'arquivo_sem_vinculo_preservado': item}, ensure_ascii=False), file=sys.stderr)
+    return Plano(mapa, originais, preferidas, pendencias, preservados)
 
 
 def consolidar_catalogo(conn, mapa):

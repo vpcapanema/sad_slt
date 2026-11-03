@@ -62,11 +62,11 @@ concluídas ou regularizadas aparecem no catálogo; registros ainda em execuçã
 continuam no histórico. Pacotes e relatórios privados mantêm a verificação de
 proprietário, com acesso de gestor/administrador.
 
-## Preparação local da nomenclatura por elemento
+## Migração da nomenclatura por elemento
 
 A mudança requer a migração
 `database/161_nomes_elementos_storage.sql`, registrada no aplicador de banco.
-A preparação local não aplica essa SQL nem altera o acervo de produção.
+A execução dos testes locais não aplica essa SQL nem altera o acervo de produção.
 
 O utilitário específico exige o código atualizado, a SQL 161 aplicada e a
 montagem oficial de escrita do Storage. Deve-se interromper os produtores antigos
@@ -82,8 +82,13 @@ substitui a parada das gravações.
 ```
 
 O planejamento verifica nomes e identidades a partir dos metadados existentes.
-Arquivos presentes sem associação verificável bloqueiam a aplicação, em vez de
-receberem nomes presumidos. Registros de catálogo cujos arquivos já estavam
+Arquivos presentes sem associação verificável e com nomes UUID/hash bloqueiam a
+aplicação, em vez de receberem nomes presumidos. Produtos sem vínculo que já
+possuem caminhos legíveis permanecem intactos, sem receber identidade ou reserva;
+seus caminhos, tamanhos e SHA-256 constam em `arquivos_sem_vinculo_preservados`
+no pré-voo e no manifesto. Seus JSONs e ZIPs não são interpretados nem reescritos.
+Pacotes municipais legados sem nome de saída exigem vínculo único de camada e
+concordância entre as evidências da mesma execução. Registros de catálogo cujos arquivos já estavam
 integralmente ausentes são inventariados como pendências preexistentes no
 pré-voo e no campo `pendencias_preexistentes` do manifesto; não são removidos,
 consolidados nem associados a substitutos por semelhança de nome. Conjuntos
@@ -102,12 +107,12 @@ planejamento com `scripts/migrar_destinos_storage.py`. Não se deve executar
 os dois migradores indiscriminadamente nem iniciar exclusões por padrões de nome.
 A migração deve usar a relação exata de origens e destinos conferida no plano.
 
-Validação local desta preparação: 334 testes aprovados e 16 integrações
+Validação focada inicial: 334 testes aprovados e 16 integrações
 bancárias opt-in não executadas, sem `SLT_TEST_CICLO_BANCO=1`. Inclui
 republicação A→B, reabertura do GeoPackage pelo job antigo, isolamento de
 homônimos, falhas de Storage/SQL/COMMIT e aplicação sintética da migração.
 Não comprova a aplicação da SQL 161, a disponibilidade dos bancos oficiais
-ou a migração do acervo real. Esses passos permanecem pendentes na VM.
+ou a migração do acervo real. Esses passos exigem conferência independente na VM.
 
 ## Transições anteriores e limpeza
 
