@@ -594,7 +594,8 @@ def visualizar_resultados_elegibilidade(request: Request, payload: ApresentacaoE
         opcoes = {'analise': 'favorabilidade'} if '/favorabilidade/' in request.url.path else {}
         modelo, _ = elegibilidade_relatorio.montar(payload.execucoes, payload.nomes, user.id, payload.revisados, **opcoes)
         elegibilidade_relatorio.salvar_nomes(payload.execucoes, modelo, user.id, **opcoes)
-        elegibilidade_relatorio.registrar_relatorios(payload.execucoes, modelo, user.id, **opcoes)
+        if opcoes:
+            elegibilidade_relatorio.registrar_relatorios(payload.execucoes, modelo, user.id, **opcoes)
         return modelo
     except FileNotFoundError as exc:
         raise HTTPException(404, str(exc)) from exc

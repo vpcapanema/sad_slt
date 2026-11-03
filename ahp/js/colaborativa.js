@@ -310,13 +310,21 @@
       return;
     }
     var duracao_ms = duracaoTotal();
+    var processo = global.ProcessFeedback.iniciarCadastro({
+      title: global.SLTColaborativaSimulacao ? "Simular envio da resposta" : "Enviar resposta do especialista",
+      tasks: ["Concluir salvamentos pendentes", "Enviar resposta"],
+    });
+    processo.tarefaAtual("Concluir salvamentos pendentes", "Aguardando os salvamentos já iniciados antes do envio definitivo.");
     submitFeedback("Enviando…", "info");
     clearTimeout(saveTimer);
     clearTimeout(metricsTimer);
     draftActive = false;
     el("btn-enviar-resposta").disabled = true;
     el("comparisonContent").inert = true;
-    saveQueue.then(function () { return global.SLTColaborativaApi.enviarResposta(token, {
+    saveQueue.then(function () {
+      processo.concluirTarefa("Concluir salvamentos pendentes");
+      processo.tarefaAtual("Enviar resposta", "Aguardando a confirmação do servidor. Não feche a página nem repita o envio.");
+      return global.SLTColaborativaApi.enviarResposta(token, {
       identificacao: acesso.identificacao,
       token_acesso: acesso.token_acesso,
       matriz_comparacao: matrix,
@@ -324,13 +332,18 @@
     }); })
       .then(function () {
         draftActive = false;
-        submitFeedback(global.SLTColaborativaSimulacao ? "Envio simulado com sucesso. Nenhuma resposta foi gravada." : "Resposta enviada com sucesso. Obrigado!", "success");
+        var mensagem = global.SLTColaborativaSimulacao ? "Envio simulado com sucesso. Nenhuma resposta foi gravada." : "Resposta enviada com sucesso. Obrigado!";
+        submitFeedback(mensagem, "success");
+        processo.concluirTarefa("Enviar resposta");
+        processo.sucesso({title: global.SLTColaborativaSimulacao ? "Envio simulado" : "Resposta enviada", message: mensagem});
       })
       .catch(function (err) {
         draftActive = true;
         el("comparisonContent").inert = false;
         el("btn-enviar-resposta").disabled = false;
         submitFeedback(err.message || String(err), "error");
+        processo.erro({title: "Resposta não enviada", message: err.message || String(err),
+          detail: "O preenchimento foi mantido. Confira o problema e tente enviar novamente."});
       });
   }
 

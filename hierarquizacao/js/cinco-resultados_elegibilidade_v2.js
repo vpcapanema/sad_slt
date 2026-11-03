@@ -196,8 +196,28 @@ export function criarResultados({avisar, aoOcupar}) {
   }
 
   async function apresentar() {
+    const processo = window.ProcessFeedback.iniciarCadastro({
+      title: 'Apresentar resultados da elegibilidade',
+      tasks: ['Conferir saída e salvar nomes', 'Apresentar resultados'],
+    });
+    processo.tarefaAtual('Conferir saída e salvar nomes',
+      'Validando a saída gravada e salvando os nomes revisados, sem repetir o cálculo nem gerar o PDF.');
+    try {
+      await apresentarModelo(processo);
+      processo.concluirTarefa('Apresentar resultados');
+      processo.sucesso({title: 'Resultados da elegibilidade disponíveis', message: node('status').textContent});
+    } catch (erro) {
+      processo.erro({title: 'Não foi possível apresentar os resultados', message: erro.message,
+        detail: 'A saída processada foi mantida. Tente carregar os resultados novamente, sem repetir o cálculo.'});
+      throw erro;
+    }
+  }
+
+  async function apresentarModelo(processo) {
     informar('Conferindo o resultado gravado e os nomes de apresentação…');
     modelo = await post(`${ROTA}/visualizar`, payload());
+    processo.concluirTarefa('Conferir saída e salvar nomes');
+    processo.tarefaAtual('Apresentar resultados', 'Preparando o gráfico, o mapa e as tabelas da análise.');
     for (const fonte of modelo.fontes) campos.get(fonte.id).value = fonte.nome;
     node('entrada').replaceChildren(...modelo.entradas.map((e, i) => new Option(e.nome, String(i))));
     indice = 0;

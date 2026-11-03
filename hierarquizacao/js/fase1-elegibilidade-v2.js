@@ -5,7 +5,7 @@ import {validarCamada, descritorOriginal} from '../../geoespacial/extracao-atrib
 import {escolherConfiguracao} from '../../geoespacial/extracao-atributos/lista-camadas.js';
 import {criarPrevia} from '../../geoespacial/extracao-atributos/previa.js?v=20261019-metadados';
 import {criarMapa} from '../../geoespacial/extracao-atributos/mapa.js';
-import {criarResultados} from './cinco-resultados_elegibilidade_v2.js?v=20261027-pasta-inicial';
+import {criarResultados} from './cinco-resultados_elegibilidade_v2.js?v=20261103-feedback';
 
 const papeis = {entrada:'Entrada', restricao:'Restrição', risco:'Risco'};
 const selecao = {entrada:[], restricao:[], risco:[]};
@@ -367,7 +367,7 @@ async function calcularElegibilidade() {
       processo.sucesso({title:'Camada de saída produzida',
         message:`${resultado.nome} gravada no storage e adicionada à bancada.`,
         detail:resultado.arquivo + (resultado.elegibilidade?.hierarquizacao
-          ? ` · Saída registrada na hierarquização ${resultado.elegibilidade.hierarquizacao}. O PDF será associado após confirmar os nomes.` : '')});
+          ? ` · Saída vinculada à hierarquização ${resultado.elegibilidade.hierarquizacao}. Confira os nomes para consultar os resultados; o PDF será gerado ao exportar ou registrar a fase.` : '')});
     }
     avisar(`${concluidas.length} camada(s) de saída produzida(s) e adicionada(s) à bancada: ${concluidas.join(', ')}.`, 'success');
   } catch (erro) {

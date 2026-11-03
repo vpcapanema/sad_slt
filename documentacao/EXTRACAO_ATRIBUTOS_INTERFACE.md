@@ -10,6 +10,15 @@ Página: `/restrict/geoespacial/extracao-atributos/` (prefixo `/sicard` na VM).
 - Alterações de visibilidade/recorte invalidam o resultado apresentado. As execuções já persistidas continuam no histórico.
 - Finalidades com campos indisponíveis são bloqueadas; em lotes heterogêneos, um campo pode existir apenas em parte das saídas.
 
+## Consulta dos resultados da Elegibilidade Territorial
+
+Na Fase 1, **Confirmar nomes e apresentar resultados** valida a saída processada,
+salva os nomes revisados e apresenta o painel, sem gerar o PDF ou a planilha.
+A geração desses documentos permanece nas ações de baixar o pacote e de
+registrar os resultados da fase. Assim, a consulta não aguarda a preparação
+cartográfica do relatório completo. A reabertura de uma análise com nomes já
+revisados segue a mesma regra, sem repetir o geoprocessamento.
+
 ## Logs de funcionamento no console
 
 A página registra por padrão em `console.info`, `console.warn` e `console.error`, com prefixo `[SICARD][Extração]`. Abra as ferramentas do navegador (F12 → Console) e filtre por esse prefixo. Os registros incluem ações, mudanças da composição, validação, HTTP (método/rota/status/duração), correlação de ação/requisição/job, suboperações reais, contadores, progresso recebido por SSE/polling, resultado, cancelamento, recuperação, upload e download.

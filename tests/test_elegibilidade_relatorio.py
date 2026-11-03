@@ -889,6 +889,32 @@ def test_processamento_real_alimenta_painel_e_pdf_sem_recalcular(monkeypatch):
         service.montar(['job'],nomes,'autor',True)
 
 
+def test_visualizar_elegibilidade_nao_aguarda_exportacao_de_relatorios(analise, monkeypatch):
+    from api.deps.auth import require_geospatial_access
+    from api.routers.extracao_atributos import router
+    app = FastAPI()
+    app.include_router(router)
+    app.dependency_overrides[require_geospatial_access] = lambda: SimpleNamespace(id='autor')
+    _, _, nomes = analise
+
+    def exportacao_indevida(*args, **kwargs):
+        pytest.fail('A consulta dos resultados não deve gerar PDF nem planilha no Storage.')
+
+    monkeypatch.setattr(service, 'registrar_relatorios', exportacao_indevida)
+    rota = '/extracao-atributos/elegibilidade/resultados'
+    with TestClient(app) as client:
+        resposta = client.post(rota+'/visualizar', json={
+            'execucoes': ['job-1', 'job-2'], 'nomes': nomes, 'revisados': True})
+        assert resposta.status_code == 200
+        modelo = resposta.json()
+        assert len(modelo['entradas']) == 2
+        assert all(entrada['linhas'] and entrada['geometrias']['features'] for entrada in modelo['entradas'])
+        assert 'relatorios_hierarquizacao' not in modelo
+        revisao = client.post(rota+'/preparar', json={'execucoes': ['job-1', 'job-2']}).json()
+        assert revisao['revisados'] is True
+        assert {fonte['id']: fonte['nome'] for fonte in revisao['fontes']} == nomes
+
+
 def test_rotas_exportacao_autenticadas_e_revisadas(analise):
     from api.deps.auth import require_geospatial_access
     from api.routers.extracao_atributos import router

@@ -111,6 +111,16 @@ completos, usando os modais de sucesso/parcial/erro já existentes.
 
 ## Verificação local
 
+A confirmação dos nomes na Elegibilidade Territorial acompanha a validação e
+persistência da revisão e, depois, a apresentação do painel. Não gera documentos
+durante a consulta. O envio do formulário público dos especialistas acompanha
+os salvamentos pendentes e a resposta definitiva do servidor. Ambos utilizam
+`ProcessFeedback.iniciarCadastro`, com término explícito de cada tarefa,
+sucesso somente após a resposta efetiva e erro que preserva os dados para nova
+tentativa. Não oferecem cancelamento de gravações já iniciadas nem estimam
+percentuais por tempo decorrido. A simulação do formulário identifica que
+nenhuma resposta foi gravada.
+
 `tests/test_feedback_hierarquia.py` cobre vínculos, nomes repetidos, callbacks
 aninhados/concorrentes, agregação, totais inválidos, término, erro, cancelamento,
 parcial, retenção e reconstrução SSE. As regressões de controle, extração,
