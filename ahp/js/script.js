@@ -721,7 +721,7 @@ const SAATY_STEPS = [
   { v: 5, label: "5", desc: "Médio" },
   { v: 7, label: "7", desc: "Bastante" },
   { v: 9, label: "9", desc: "Extremamente" },
-];
+].reverse();
 const SAATY_CENTER = 4;
 
 function escAhp(s) {
@@ -869,8 +869,8 @@ function buildSaatyPair(i, j, sourceCriteria) {
     '<div class="saaty-arrow"></div>' +
     '<div class="saaty-rail">' + ticks + '<div class="saaty-handle"></div></div>' +
     "</div>" +
-    '<div class="saaty-dir"><span><i class="fas fa-arrow-left"></i> Menos importante</span>' +
-    '<span>Mais importante <i class="fas fa-arrow-right"></i></span></div>' +
+    '<div class="saaty-dir"><span><i class="fas fa-arrow-left"></i> Mais importante</span>' +
+    '<span>Menos importante <i class="fas fa-arrow-right"></i></span></div>' +
     "</div>" +
     (isPublicForm ? "" : criteriaHtml) +
     '<div class="saaty-readout" id="readout_' + pid + '"></div>' +
@@ -918,6 +918,7 @@ function wireSaaty(pair) {
     idx = Math.max(0, Math.min(lastIdx, newIdx));
     handle.style.left = (idx / lastIdx) * 100 + "%";
     scale.setAttribute("aria-valuenow", idx);
+    SLTSaatySelectorColor.update(pair);
     input.value = SAATY_STEPS[idx].v;
     updateSaatyReadout(pair, idx);
     updateSaatyReciprocal(pair, idx);
@@ -987,6 +988,7 @@ function wireSaaty(pair) {
     idx = nearestSaatyIdx(initV);
     handle.style.left = (idx / lastIdx) * 100 + "%";
     scale.setAttribute("aria-valuenow", idx);
+    SLTSaatySelectorColor.update(pair);
     updateSaatyReadout(pair, idx);
     updateSaatyReciprocal(pair, idx);
   } else {
@@ -1011,7 +1013,7 @@ function updateSaatyReadout(pair, idx) {
   let mod = "eq";
   if (idx === SAATY_CENTER) {
     txt = "\u201C" + c1 + "\u201D tem igual importância que \u201C" + c2 + "\u201D (1)";
-  } else if (idx > SAATY_CENTER) {
+  } else if (step.v > 1) {
     txt = "\u201C" + c1 + "\u201D é " + step.desc.toLowerCase() + " mais importante que \u201C" + c2 + "\u201D (" + step.label + ")";
     mod = "pos";
   } else {
@@ -1043,7 +1045,7 @@ function updateSaatyReciprocal(pair, idx) {
       criteria[j] + " em relação a " + criteria[i] + " = " + formatSaatyValue(reciprocal);
   }
   box.classList.remove("is-updated", "is-positive", "is-negative", "is-equal");
-  box.classList.add(idx > SAATY_CENTER ? "is-negative" : idx < SAATY_CENTER ? "is-positive" : "is-equal");
+  box.classList.add(value > 1 ? "is-negative" : value < 1 ? "is-positive" : "is-equal");
   void box.offsetWidth;
   box.classList.add("is-updated");
 }

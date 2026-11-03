@@ -56,6 +56,13 @@ O julgamento AHP referencia diretamente essa matriz, independentemente da
 existência de uma hierarquização. Sem processo associado à matriz, o julgamento
 é avulso. Os critérios e as premissas não são obtidos por dependência da rodada.
 
+Nos formulários de comparação pareada, a régua apresenta, da esquerda para a
+direita, 9, 7, 5, 3, 1, 1/3, 1/5, 1/7 e 1/9. O primeiro critério é favorecido
+à esquerda e o segundo à direita. O par oposto recebe o recíproco automaticamente.
+Essa orientação aplica-se aos formulários públicos, modelos e simuladores;
+matrizes anteriormente registradas conservam seus valores, e sua reabertura
+reposiciona o seletor sem inverter os julgamentos existentes.
+
 A troca de matriz exige nova verificação dos critérios, da estrutura e das
 premissas. Pesos de outra matriz não são transferidos automaticamente. O reuso
 somente é admitido quando o conteúdo é equivalente e há confirmação explícita;

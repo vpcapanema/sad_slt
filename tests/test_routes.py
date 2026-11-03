@@ -385,7 +385,8 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
     assert 'class="saaty-scale"' in julgamentos_js
     assert 'class="saaty-reciprocal"' in julgamentos_js
     assert 'class="saaty-controller-title"' in julgamentos_js
-    assert 'handle.style.backgroundColor = colors[index]' in julgamentos_js
+    assert 'SLTSaatySelectorColor.update(pair)' in julgamentos_js
+    assert '/assets/js/saaty-selector-color.js' in central_html
     assert 'readout.className = "saaty-readout saaty-readout--"' in julgamentos_js
     assert 'class="saaty-auto-status"' in julgamentos_js
     assert "scheduleVisualValidation" in julgamentos_js

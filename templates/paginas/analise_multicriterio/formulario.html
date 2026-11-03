@@ -6,11 +6,11 @@
 {% block classes_body %}ahp-module-page ahp-colaborativa-page ami-public-page escala-revisada{% endblock %}
 {% block base_url %}<base href="/public/analise-multicriterio/formulario-comparacao-pareada/">{% endblock %}
 {% block estilos_pagina %}
-	<link rel="stylesheet" href="/assets/css/ahp-module.css?v=20261027-fundo-opaco">
+	<link rel="stylesheet" href="/assets/css/ahp-module.css?v=20261103-regua-invertida">
 	<link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
 	<link rel="stylesheet" href="/assets/css/analise-multicriterio.css?v=20260819-ui6">
 	<link rel="stylesheet" href="/assets/css/escala-tipografica.css">
-	<link rel="stylesheet" href="/assets/css/paginas/ahp-formulario-publico.css?v=20261030-icones-maiores">
+	<link rel="stylesheet" href="/assets/css/paginas/ahp-formulario-publico.css?v=20261103-regua-invertida">
 {% endblock %}
 
 {% block conteudo %}
@@ -89,13 +89,13 @@
 									<li class="collab-guia-intensidade collab-guia-intensidade--bastante"><span class="collab-guia-nome">Bastante</span><span class="collab-guia-valor">7</span><span class="collab-guia-significado">importância muito forte</span></li>
 									<li class="collab-guia-intensidade collab-guia-intensidade--extremamente"><span class="collab-guia-nome">Extremamente</span><span class="collab-guia-valor">9</span><span class="collab-guia-significado">importância extrema</span></li>
 								</ul>
-								<p class="collab-guia-inverso"><i class="fas fa-rotate" aria-hidden="true"></i><span>À <strong>esquerda do centro</strong>, os mesmos nomes valem o inverso (1/3, 1/5, 1/7 e 1/9): indicam que o <strong>outro critério</strong> é o mais importante.</span></p>
+								<p class="collab-guia-inverso"><i class="fas fa-rotate" aria-hidden="true"></i><span>À <strong>direita do centro</strong>, os mesmos nomes valem o inverso (1/3, 1/5, 1/7 e 1/9): indicam que o <strong>outro critério</strong> é o mais importante.</span></p>
 							</div>
 							<div class="collab-guia-passos-bloco">
 								<p class="collab-guia-subtitulo">Como atribuir a importância em cada card</p>
 								<ol class="collab-guia-passos">
 									<li><span class="collab-guia-passo-num" aria-hidden="true">1</span><div><strong>Compare os dois critérios</strong><p>O card mostra o <b>critério 1</b> e o <b>critério 2</b>. Decida qual deles é mais importante para o objetivo.</p></div></li>
-									<li><span class="collab-guia-passo-num" aria-hidden="true">2</span><div><strong>Mova o seletor</strong><p>Para a <b>direita</b>, se o critério 1 for o mais importante. Para a <b>esquerda</b>, se for o critério 2.</p></div></li>
+									<li><span class="collab-guia-passo-num" aria-hidden="true">2</span><div><strong>Mova o seletor</strong><p>Para a <b>esquerda</b>, se o critério 1 for o mais importante. Para a <b>direita</b>, se for o critério 2.</p></div></li>
 									<li><span class="collab-guia-passo-num" aria-hidden="true">3</span><div><strong>Defina a intensidade</strong><p>Quanto <b>mais longe do centro</b>, maior a importância. Se forem igualmente importantes, deixe em <b>Igual</b>.</p></div></li>
 								</ol>
 							</div>
@@ -112,9 +112,10 @@
 {% endblock %}
 
 {% block scripts_pagina %}
+	<script src="/assets/js/saaty-selector-color.js?v=20261103-1"></script>
 	<script src="/restrict/ahp/js/ahp-core.js?v=20261028-ajuda-consistencia"></script>
 	<script src="/restrict/ahp/js/colaborativa-api.js?v=20261027-modelo-pli"></script>
 	{% if modo_modelo %}<script src="/restrict/ahp/js/colaborativa-modelo.js?v=20261027-1"></script>{% else %}<script src="/restrict/ahp/js/colaborativa-simulacao.js?v=20261027-1"></script>{% endif %}
-	<script src="/restrict/ahp/js/script.js?v=20261028-icones-criterios"></script>
+	<script src="/restrict/ahp/js/script.js?v=20261103-regua-invertida"></script>
 	<script src="/restrict/ahp/js/colaborativa.js?v=20261103-feedback-envio"></script>
 {% endblock %}

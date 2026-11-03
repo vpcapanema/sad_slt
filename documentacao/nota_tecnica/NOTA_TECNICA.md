@@ -18,7 +18,7 @@
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Título**                 | Metodologia do Sistema de Hierarquização de Demandas — SICARD                                                                                                         |
 | **Número**                 | NT-SICARD-001/2026                                                                                                                                                       |
-| **Versão**                 | 1.78                                                                                                                                                                      |
+| **Versão**                 | 1.79                                                                                                                                                                      |
 | **Data de emissão**        | 03/11/2026                                                                                                                                                               |
 | **Classificação**         | Documento técnico-metodológico de entrega ao cliente                                                                                                                   |
 | **Sistema**                 | SICARD — Sistema Inteligente de Cadastro e Ranking de Demandas                                                                                                        |
@@ -112,6 +112,7 @@
 | 1.76    | 30/10/2026 | `[preencher]` | Explicitação do formulário-modelo como simulação dos sete critérios D1–D7 da matriz PLI v6 de blocos e dimensões, sem gravação ou aplicação de pesos, preservando o recorte da Fase 3 nos julgamentos reais. |
 | 1.77    | 02/11/2026 | `[preencher]` | Preservação das superfícies autônomas, camadas, cálculos e metadados históricos na exclusão da hierarquização de origem, com remoção apenas do vínculo relacional na mesma transação. |
 | 1.78    | 03/11/2026 | `[preencher]` | Nomes legíveis nos produtos permanentes do Storage, distinção de elementos homônimos por identidade e consolidação explícita das versões do mesmo elemento, com atualização das referências operacionais e preservação dos registros imutáveis de auditoria, sem alteração dos métodos de cálculo ou da homologação. |
+| 1.79    | 03/11/2026 | `[preencher]` | Inversão da correspondência entre posição da régua e razão de importância nos formulários de comparação pareada, com preservação da reciprocidade e das matrizes anteriormente registradas. |
 
 ---
 
@@ -1354,6 +1355,14 @@ preenchimento com prazo definido e lista nominal de especialistas convidados,
 identificados por endereço eletrônico. Cada convidado registra sua própria matriz de
 comparação, e o sistema somente aceita respostas cuja **razão de consistência (RC)**
 seja inferior a 0,10, garantindo a consistência lógica de cada julgamento individual.
+
+Nos formulários de comparação pareada, a régua apresenta, da esquerda para a
+direita, as razões 9, 7, 5, 3, 1, 1/3, 1/5, 1/7 e 1/9. O lado esquerdo expressa
+maior importância do primeiro critério em relação ao segundo; o lado direito
+expressa a preferência inversa. O centro conserva a igualdade, e a matriz recebe
+automaticamente o recíproco no sentido oposto. A inversão da posição da régua
+não transforma retroativamente as matrizes já registradas nem modifica o cálculo
+dos pesos ou da razão de consistência.
 
 Os julgamentos individuais são consolidados pelo método de **agregação de julgamentos
 individuais (AIJ)**: cada elemento da matriz consolidada é a **média geométrica** dos

@@ -397,12 +397,7 @@ body.ami-public-page {
 }
 
 .ami-public-page #collab-form-section .saaty-tick-desc {
-  display: inline-block;
   margin: 0 -0.25rem 0.8rem;
-  padding: 0.1rem 0.25rem;
-  border-radius: 999px;
-  white-space: nowrap;
-  transition: background-color 0.12s ease, box-shadow 0.12s ease;
 }
 
 /* Nome da intensidade selecionada: auréola e pílula na cor da barra naquele ponto. */
@@ -412,16 +407,6 @@ body.ami-public-page {
   color: var(--tick-texto);
   font-weight: 700;
 }
-
-.ami-public-page #collab-form-section .saaty-tick:nth-child(1) { --tick-cor: #7b1a1a; --tick-texto: #fff; --tick-halo: rgba(123, 26, 26, 0.35); }
-.ami-public-page #collab-form-section .saaty-tick:nth-child(2) { --tick-cor: #a52a22; --tick-texto: #fff; --tick-halo: rgba(165, 42, 34, 0.35); }
-.ami-public-page #collab-form-section .saaty-tick:nth-child(3) { --tick-cor: #b83c32; --tick-texto: #fff; --tick-halo: rgba(184, 60, 50, 0.35); }
-.ami-public-page #collab-form-section .saaty-tick:nth-child(4) { --tick-cor: #f4a7a0; --tick-texto: #5b1a14; --tick-halo: rgba(244, 167, 160, 0.7); }
-.ami-public-page #collab-form-section .saaty-tick:nth-child(5) { --tick-cor: #cbd5e1; --tick-texto: #0d3b66; --tick-halo: rgba(148, 163, 184, 0.6); }
-.ami-public-page #collab-form-section .saaty-tick:nth-child(6) { --tick-cor: #a9cdec; --tick-texto: #0d3b66; --tick-halo: rgba(169, 205, 236, 0.8); }
-.ami-public-page #collab-form-section .saaty-tick:nth-child(7) { --tick-cor: #3f7ab3; --tick-texto: #fff; --tick-halo: rgba(63, 122, 179, 0.35); }
-.ami-public-page #collab-form-section .saaty-tick:nth-child(8) { --tick-cor: #2f6fad; --tick-texto: #fff; --tick-halo: rgba(47, 111, 173, 0.35); }
-.ami-public-page #collab-form-section .saaty-tick:nth-child(9) { --tick-cor: #0d3b66; --tick-texto: #fff; --tick-halo: rgba(13, 59, 102, 0.35); }
 
 .ami-public-page #collab-form-section :is(.saaty-criteria, .saaty-dir) {
   margin-top: var(--ami-space-xs);
