@@ -28,4 +28,4 @@ def test_rota_deriva_excecao_da_sessao(monkeypatch,tipo,modulo,perfil):
     service=getattr(router,f"{tipo}_service")
     monkeypatch.setattr(service,f"atualizar_{tipo}",lambda *args,**kw:kw)
     result=getattr(router,f"atualizar_{tipo}")("COD",None,SimpleNamespace(id="USER",tipo_usuario=perfil))
-    assert result["status_livre_gestor"] is (perfil=="GESTOR")
+    assert result["status_livre_gestor"] is (perfil in {"GESTOR", "ADMIN"})

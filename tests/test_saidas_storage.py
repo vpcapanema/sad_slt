@@ -9,10 +9,10 @@ from shapely.geometry import Point
 from api.services import saidas_storage as saidas, storage_remoto, ciclo_vida_arquivos as ciclo
 
 
-def test_nome_gerado_data_local_uuid_completo_e_extensao():
-    ident = '12345678-1234-5678-1234-567812345678'
-    assert saidas.nome_gerado('.gpkg', quando=datetime(2026, 10, 24, 1, 2, 3, tzinfo=timezone.utc), referencia=ident) == '20261023_220203_12345678123456781234567812345678.gpkg'
-    assert saidas.nome_gerado() != saidas.nome_gerado()
+def test_nome_gerado_preserva_nome_do_elemento():
+    assert saidas.nome_gerado('.gpkg', nome='Índices sociais') == 'indices_sociais.gpkg'
+    with pytest.raises(ValueError):
+        saidas.nome_gerado(nome='')
 
 
 @pytest.mark.parametrize(('codigo', 'fase', 'exportacao', 'raiz'), [
@@ -29,7 +29,7 @@ def test_pasta_por_contexto_nome_data_e_identificador(codigo, fase, exportacao, 
         'Gerador territorial', 'Análise São Paulo', str(ident),
         quando=datetime(2026, 10, 20, 15, 30, tzinfo=timezone.utc),
         hierarquizacao=codigo, fase=fase, exportacao=exportacao)
-    assert pasta == f'{raiz}20261020T153000Z_analise_sao_paulo_{ident.hex}'
+    assert pasta == f'{raiz}analise_sao_paulo'
     assert saidas.validar(pasta + '/resultado.gpkg') == pasta + '/resultado.gpkg'
     assert saidas.pasta_analise('x', 'Mesmo nome', str(uuid4())) != saidas.pasta_analise('x', 'Mesmo nome', str(uuid4()))
 
@@ -48,10 +48,10 @@ def test_destinos_reconstroem_mesma_pasta_pelo_registro_persistido(monkeypatch):
                 'iniciado_em': datetime(2026, 10, 20, 15, 0, tzinfo=timezone.utc)}
     class Connection:
         def execute(self, sql, params):
-            assert params == (ident,)
+            self.existe = params == (ident,)
             return self
         def fetchone(self):
-            return registro
+            return registro if self.existe else None
     @contextmanager
     def conectar():
         yield Connection()
@@ -59,10 +59,10 @@ def test_destinos_reconstroem_mesma_pasta_pelo_registro_persistido(monkeypatch):
     paths = [saidas.destino(ident, grupo, nome) for grupo, nome in [
         ('camadas', 'camada.gpkg'), ('relatorios', 'metadados.json'), ('pacotes', 'camada.zip')]]
     assert len({str(PurePosixPath(path).parent) for path in paths}) == 1
-    assert all(path.startswith('saidas-geoespaciais/analises-avulsas/gerador-camadas-territoriais/20261020T150000Z_indices_sociais_') for path in paths)
+    assert all(path.startswith('saidas-geoespaciais/analises-avulsas/gerador-camadas-territoriais/indices_sociais/') for path in paths)
     registro['operacao'] = 'exportacao_direta'
     assert saidas.destino(ident, 'camadas', 'exportado.gpkg').startswith('saidas-geoespaciais/exportacoes/')
-    with pytest.raises(ValueError, match='não corresponde'):
+    with pytest.raises(ValueError, match='Execução não encontrada|não corresponde'):
         saidas.enviar_bytes(str(uuid4()), 'camadas', 'camada.gpkg', b'nao enviar', caminho=paths[0])
 
 
@@ -80,7 +80,7 @@ def test_migration_139_registrada_no_aplicador():
     from pathlib import Path
     script = Path('scripts/apply-database.ps1').read_text(encoding='utf-8')
     assert script.count('"139_centralizar_destinos_saidas_storage.sql"') == 2
-    assert "139: saidas por contexto; destinos legados preservados" in script
+    assert script.count('"161_nomes_elementos_storage.sql"') == 2
 
 
 def test_leitura_legada_continua_valida(remoto, storage_sintetico):
@@ -161,7 +161,11 @@ def test_recusa_destinos_fora_da_regra(caminho):
 def test_hash_divergente_remove_somente_novo_arquivo(remoto,monkeypatch):
     preserved=remoto/'preservar.gpkg'
     preserved.write_bytes(b'original')
-    monkeypatch.setattr(storage_remoto,'baixar',lambda caminho:b'truncado')
+    baixar = storage_remoto.baixar
+    def truncado(caminho):
+        baixar(caminho)
+        return b'truncado'
+    monkeypatch.setattr(storage_remoto,'baixar',truncado)
     with pytest.raises(ValueError,match='diverge'):
         saidas.enviar_bytes(str(uuid4()),'camadas','novo.gpkg',b'original')
     assert [p for p in remoto.rglob('*') if p.is_file()]==[preserved]
@@ -178,7 +182,11 @@ def test_companheiros_shapefile_mantem_nome_e_reabrem(remoto,monkeypatch,tmp_pat
     monkeypatch.setattr(ciclo,'finalizar',lambda *args:None)
     monkeypatch.setattr(ciclo,'registrar_uso',lambda *args:None)
     class Connection:
-        def execute(self,*args): pass
+        def execute(self, query, params):
+            self.ident = params[0]
+            return self
+        def fetchone(self):
+            return {'id': self.ident}
         def commit(self): pass
     @contextmanager
     def connection(): yield Connection()
@@ -281,11 +289,13 @@ def exportacao_selecionada(remoto, monkeypatch, storage_sintetico):
     inserts = []
     class Connection:
         def execute(self, sql, params=()):
+            self.ident = None
             if 'INSERT INTO geoprocessamento.arquivo_exportado' in sql:
                 inserts.append(params)
+                self.ident = params[0]
             return self
         def fetchone(self):
-            return {'adquirido': True}
+            return {'id': self.ident} if self.ident else {'adquirido': True}
         def commit(self):
             pass
     @contextmanager
@@ -322,7 +332,7 @@ def test_salvar_no_destino_escolhido_reabre_e_recusa_sobrescrita(exportacao_sele
     relative = 'saidas-geoespaciais/Projeto do usuário'
     result = asyncio.run(geo.salvar_camada('entrada', relative, f'Minha saída.{extensao}', 'auto', formato))
     nome = PurePosixPath(result['caminho']).name
-    assert re.fullmatch(r'\d{8}_\d{6}_[0-9a-f]{32}\.' + extensao, nome)
+    assert nome == f'Minha saída.{extensao}'
     assert inserts[0][3] == result['caminho']
     path = folder / nome
     before = {p.name: p.read_bytes() for p in folder.iterdir()}
@@ -335,11 +345,60 @@ def test_salvar_no_destino_escolhido_reabre_e_recusa_sobrescrita(exportacao_sele
         assert frame.valor.tolist() == [7]
         assert frame.crs.to_epsg() == 4326
         assert frame.geometry.iloc[0].equals_exact(geo._camadas['entrada'].geometry.iloc[0], 0)
-    monkeypatch.setattr(saidas, 'nome_gerado', lambda *args, **kwargs: PurePosixPath(nome).stem)
-    with pytest.raises(FileExistsError, match='outro nome'):
-        asyncio.run(geo.salvar_camada('entrada', relative, f'Minha saída.{extensao}', 'auto', formato))
-    assert {p.name: p.read_bytes() for p in folder.iterdir()} == before
-    assert len(inserts) == 1
+    asyncio.run(geo.salvar_camada('entrada', relative, f'Minha saída.{extensao}', 'auto', formato))
+    assert {p.name for p in folder.iterdir()} == set(before)
+    assert len(inserts) == 2
+
+
+def test_elementos_distintos_homonimos_nao_se_substituem(exportacao_selecionada):
+    geo, folder, _ = exportacao_selecionada
+    import asyncio
+    for recurso, valor in [('entrada-a', 1), ('entrada-b', 2)]:
+        geo._camadas[recurso] = gpd.GeoDataFrame({'valor': [valor]}, geometry=[Point(0, 0)], crs=4326)
+        geo._metadados[recurso] = {'tipo': 'vetorial'}
+        asyncio.run(geo.salvar_camada(recurso, 'saidas-geoespaciais/Projeto do usuário',
+                                     'Mesmo nome.gpkg', 'auto', 'gpkg'))
+    assert sorted(p.name for p in folder.iterdir()) == ['Mesmo nome.gpkg', 'Mesmo nome_2.gpkg']
+    assert gpd.read_file(folder / 'Mesmo nome.gpkg').valor.tolist() == [1]
+    assert gpd.read_file(folder / 'Mesmo nome_2.gpkg').valor.tolist() == [2]
+
+
+def test_homonimos_automaticos_na_mesma_execucao_tambem_sao_distintos(exportacao_selecionada, tmp_path):
+    token = ciclo.execucao_atual.set(str(uuid4()))
+    try:
+        caminhos = []
+        for recurso in ('elemento-a', 'elemento-b'):
+            path = tmp_path / recurso / 'Resumo.json'
+            path.parent.mkdir()
+            path.write_bytes(b'{"ok":true}')
+            caminhos.append(ciclo.registrar_exportacao(path, recurso, 'relatorio')['caminho'])
+    finally:
+        ciclo.execucao_atual.reset(token)
+    assert caminhos[0] != caminhos[1]
+    assert PurePosixPath(caminhos[0]).name == 'Resumo.json'
+    assert PurePosixPath(caminhos[1]).name == 'Resumo_2.json'
+
+
+def test_falha_shapefile_restaura_todos_componentes_anteriores(exportacao_selecionada, monkeypatch):
+    import asyncio
+    geo, folder, _ = exportacao_selecionada
+    geo._camadas['entrada'] = gpd.GeoDataFrame({'valor': [1]}, geometry=[Point(0, 0)], crs=4326)
+    geo._metadados['entrada'] = {'tipo': 'vetorial'}
+    def salvar():
+        return asyncio.run(geo.salvar_camada('entrada', 'saidas-geoespaciais/Projeto do usuário',
+                                             'Minha camada.shp', 'auto', 'shapefile'))
+    salvar()
+    anteriores = {p.name: p.read_bytes() for p in folder.iterdir()}
+    enviar = saidas._enviar_arquivo_bloqueado
+    def falhar(caminho, arquivo):
+        if caminho.endswith('.shx'):
+            raise RuntimeError('Componente interrompido')
+        return enviar(caminho, arquivo)
+    monkeypatch.setattr(saidas, '_enviar_arquivo_bloqueado', falhar)
+    geo._camadas['entrada'].loc[0, 'valor'] = 99
+    with pytest.raises(RuntimeError, match='interrompido'):
+        salvar()
+    assert {p.name: p.read_bytes() for p in folder.iterdir()} == anteriores
 
 
 def test_gravacoes_concorrentes_na_mesma_pasta_sao_recusadas(exportacao_selecionada, monkeypatch, tmp_path):
@@ -363,7 +422,7 @@ def test_relatorio_json_segue_destino_nome_e_catalogo(exportacao_selecionada):
                                      'saidas-geoespaciais/Projeto do usuário', 'Diagnóstico', 'entrada')
     import json
     nome = PurePosixPath(result['caminho']).name
-    assert re.fullmatch(r'\d{8}_\d{6}_[0-9a-f]{32}\.json', nome)
+    assert nome == 'Diagnóstico.json'
     assert json.loads((folder / nome).read_text(encoding='utf-8')) == {'valido': True, 'erros': []}
     assert inserts[0][5].obj['reaberto_json'] is True
 
@@ -396,7 +455,7 @@ def test_op03_completa_grava_reabre_e_reprocessa_pasta_selecionada(exportacao_se
                                  SimpleNamespace(id='teste'))
         source = result['camada']
         assert str(PurePosixPath(source['arquivo']).parent) == 'saidas-geoespaciais/Projeto do usuário'
-        assert re.fullmatch(r'\d{8}_\d{6}_[0-9a-f]{32}\.' + extensao, PurePosixPath(source['arquivo']).name)
+        assert PurePosixPath(source['arquivo']).name == f'Reprojeção.v{index}.{extensao}'
         assert source['geojson']['features'][0]['properties']['valor'] == 7
         assert source['geojson']['features'][0]['geometry']['coordinates'] == pytest.approx([-46, -23])
         reread = bancada.carregar_para_execucao(source['arquivo'], source['revisao'])

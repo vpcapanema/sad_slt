@@ -1,6 +1,6 @@
 """Integração opt-in: dados sintéticos em transação revertida; storage temporário.
 
-SLT_TEST_CICLO_BANCO=1 habilita no banco configurado após a migration 105.
+SLT_TEST_CICLO_BANCO=1 habilita no banco configurado após a migration 161.
 """
 from contextlib import contextmanager
 import os
@@ -45,8 +45,10 @@ def test_migration_139_preserva_predicado_legado_e_aceita_novos_destinos(legado_
                                           ('HIER-001', 'fase-2', False),
                                           ('HIER-001', 'fase-3', False),
                                           ('HIER-001', 'consolidado', False)]:
-            pasta = saidas_storage.pasta_analise('ferramenta', 'nome', str(uuid4()),
-                                               hierarquizacao=codigo, fase=fase, exportacao=exportacao)
+            raiz = (f'saidas-geoespaciais/hierarquizacoes/{codigo}/{fase}' if codigo else
+                    'saidas-geoespaciais/exportacoes' if exportacao else
+                    'saidas-geoespaciais/analises-avulsas/ferramenta')
+            pasta = f'{raiz}/nome_{uuid4().hex}'
             conn.execute('INSERT INTO sicard_destinos_teste(caminho) VALUES (%s)', (pasta + '/saida.gpkg',))
         for invalido in ['base-geoespacial/saida.gpkg', pasta + '/../saida.gpkg',
                          pasta.replace('consolidado', 'fase-4') + '/saida.gpkg']:

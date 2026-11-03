@@ -1,9 +1,29 @@
 # Saídas geoespaciais no Sicard Storage
 
-O destino oficial é `saidas-geoespaciais/execucoes/<uuid>/`. Cada execução contém
-`camadas/`, `relatorios/` e `pacotes/`, conforme os arquivos que produziu.
-Os nomes dos arquivos são legíveis e recebem um identificador para evitar colisões.
-A pasta da execução preserva sua identidade mesmo quando seu nome é alterado.
+Os produtos permanentes usam nomes legíveis dos elementos, organizados por
+contexto em `saidas-geoespaciais/hierarquizacoes`, `analises-avulsas` ou
+`exportacoes`. UUIDs continuam como identificadores internos de execuções,
+propriedade e rastreabilidade, não como nomes dos novos arquivos publicados.
+Os caminhos legados continuam aceitos durante a migração.
+
+O controle `geoprocessamento.nome_storage` associa cada nome físico à identidade
+do elemento. Uma publicação do mesmo elemento reutiliza seu destino; elementos
+distintos com títulos iguais recebem sufixos numéricos (`_2`, `_3`), sem
+sobrescrita por mera coincidência nominal. Os acompanhantes de Shapefile
+conservam o mesmo nome-base.
+
+Exemplos de destinos:
+
+```text
+saidas-geoespaciais/analises-avulsas/gerador-camadas-territoriais/indices_sociais/indices_sociais.gpkg
+saidas-geoespaciais/hierarquizacoes/HIER-001/fase-1/elegibilidade_territorial/Projetos_elegibilidade_territorial.gpkg
+saidas-geoespaciais/exportacoes/diagnostico/Diagnóstico.json
+```
+
+PDFs, planilhas e pacotes usam nomes como `Relatório de Elegibilidade
+Territorial.pdf`, `Resumo da Elegibilidade.xlsx` e `Relatório e Camadas.zip`.
+Revisões privadas mantêm hashes internos na pasta `revisoes`, para vincular
+usuário e resultado sem expor dados da conta nos nomes físicos.
 
 O banco mantém execuções, parâmetros, procedência, catálogo, hashes e referências.
 As geometrias de Plano, Programa e Projeto continuam em `demandas`, no mesmo
@@ -23,13 +43,73 @@ pela API do Storage e baixados novamente para conferir tamanho e SHA-256.
 Só então sua referência é confirmada no banco. Uma falha inequívoca de registro
 remove o novo arquivo; uma falha durante COMMIT conserva o arquivo para conciliação.
 
+Na republicação, o controle coordena bloqueios, transação SQL e arquivos
+operacionais: atualiza os caminhos, hashes, jobs persistidos, configurações e
+referências do resultado substituído. Pré-visualizações antigas são invalidadas.
+Falhas confirmadas antes da efetivação restauram os bytes anteriores e revertem
+as referências. Falha de limpeza posterior à confirmação é informada como tal;
+não se apresenta uma publicação já confirmada como se tivesse sido desfeita.
+Resultado indeterminado de COMMIT exige conciliação.
+
+A substituição é bloqueada quando alcança homologações/publicações protegidas,
+execuções ativas, agregações legadas opacas ou revisões posicionais incompatíveis.
+Não há isolamento adicional por proprietário no registro de nomes: permanecem
+as regras de acesso e a identidade do elemento do fluxo de origem.
+
 Os leitores recuperam arquivos pelo Storage. O visualizador organiza saídas por
 ferramenta, execução e camada, incluindo exportações. Resultados de execuções
 concluídas ou regularizadas aparecem no catálogo; registros ainda em execução
 continuam no histórico. Pacotes e relatórios privados mantêm a verificação de
 proprietário, com acesso de gestor/administrador.
 
-## Transição e limpeza
+## Preparação local da nomenclatura por elemento
+
+A mudança requer a migração
+`database/161_nomes_elementos_storage.sql`, registrada no aplicador de banco.
+A preparação local não aplica essa SQL nem altera o acervo de produção.
+
+O utilitário específico exige o código atualizado, a SQL 161 aplicada e a
+montagem oficial de escrita do Storage. Deve-se interromper os produtores antigos
+antes da aplicação; a opção de manutenção é uma confirmação operacional, não
+substitui a parada das gravações.
+
+```powershell
+# Somente planejamento; não altera arquivos do acervo.
+.venv\Scripts\python.exe -m scripts.migrar_nomes_storage
+
+# Executar apenas no ambiente autorizado e em manutenção.
+.venv\Scripts\python.exe -m scripts.migrar_nomes_storage --aplicar --manutencao
+```
+
+O planejamento verifica nomes e identidades a partir dos metadados existentes.
+Arquivos presentes sem associação verificável bloqueiam a aplicação, em vez de
+receberem nomes presumidos. Registros de catálogo cujos arquivos já estavam
+integralmente ausentes são inventariados como pendências preexistentes no
+pré-voo e no campo `pendencias_preexistentes` do manifesto; não são removidos,
+consolidados nem associados a substitutos por semelhança de nome. Conjuntos
+parcialmente ausentes continuam bloqueados. Versões do mesmo elemento são consolidadas pela data, com
+atualização das referências operacionais, caminhos e assinaturas; homônimos
+distintos não são consolidados. O procedimento contempla JSONs operacionais e
+referências em JSONs de pacotes ZIP, com manifesto e backups. Logs e registros
+imutáveis de auditoria são preservados.
+
+Conflitos de identidade e versões com datas empatadas e conteúdo divergente
+também bloqueiam a aplicação. O manifesto e os backups permitem conciliação;
+não existe comando automático de restauração depois do COMMIT.
+
+Layouts anteriores à organização por contexto podem exigir primeiro o
+planejamento com `scripts/migrar_destinos_storage.py`. Não se deve executar
+os dois migradores indiscriminadamente nem iniciar exclusões por padrões de nome.
+A migração deve usar a relação exata de origens e destinos conferida no plano.
+
+Validação local desta preparação: 334 testes aprovados e 16 integrações
+bancárias opt-in não executadas, sem `SLT_TEST_CICLO_BANCO=1`. Inclui
+republicação A→B, reabertura do GeoPackage pelo job antigo, isolamento de
+homônimos, falhas de Storage/SQL/COMMIT e aplicação sintética da migração.
+Não comprova a aplicação da SQL 161, a disponibilidade dos bancos oficiais
+ou a migração do acervo real. Esses passos permanecem pendentes na VM.
+
+## Transições anteriores e limpeza
 
 `123_saidas_geoespaciais_storage.sql` adiciona referências e mantém a compatibilidade
 necessária enquanto há servidores executando o código anterior.

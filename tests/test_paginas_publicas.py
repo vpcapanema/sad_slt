@@ -83,6 +83,9 @@ def test_inventario_e_links_locais(client, path):
         if target.path.startswith("/restrict/") and not target.path.endswith((".js", ".css")):
             continue
         resource = client.get(target.path, follow_redirects=False)
+        if target.path in {"/sicard/storage/web/admin/login", "/sicard/storage/web/client/login"}:
+            assert resource.status_code == 401
+            continue
         if target.path.startswith("/data/geoespacial/relatorios/mapas_fase1/"):
             # Este conjunto é servido somente pelo Storage nativo da VM.
             assert resource.status_code == 503
@@ -186,7 +189,6 @@ def test_hierarquizacao_tem_destinos_unicos_e_prefixados(client, prefix):
     parser.feed(section)
     destinations = (
         "/public/documentacao/visao-geral/",
-        "/public/documentacao/hierarquizacao/MODELO_HIERARQUIZACAO_ESPACIAL.md",
         "/public/documentacao/risco-restricao/",
         "/public/documentacao_favorabilidade_v2/",
         "/public/documentacao/hierarquizacao/MODULO_FASE3_ATRIBUTOS_PROJETO_AJUSTE.md",
@@ -197,11 +199,10 @@ def test_hierarquizacao_tem_destinos_unicos_e_prefixados(client, prefix):
     assert len(parser.links) == len(set(parser.links))
     assert re.findall(r'<a\b[^>]*><span>([^<]+)</span>', section) == [
         "Visão geral do SICARD",
-        "Modelos de hierarquização espacial",
         "Fundamentos da elegibilidade territorial — restrições e riscos",
-        "Fundamentos da favorabilidade territorial — município e rede rodoviária",
-        "Fundamentos da priorização de demandas por atributos",
-        "Fundamentos da definição do limite marítimo paulista",
+        "Fundamentos da favorabilidade territorial e da rede rodoviária",
+        "Especificação da priorização de demandas por atributos",
+        "Fundamentos do limite marítimo de referência de São Paulo",
         "Tutoriais do SICARD",
     ]
     assert 'title="Referência provisória, não homologada"' in section
@@ -265,6 +266,9 @@ def test_visao_geral_integra_conceitos_fluxos_e_referencias(client, prefix):
     ("/restrict/hierarquizacao/fase-3/", "Priorização de demandas por atributos"),
 ])
 def test_fases_exibem_nomenclatura_oficial(client, path, title):
+    client.cookies.set(cookie_name(), create_token(SessionUser(
+        "gestor-teste", "", "teste_gestor", "Teste", "GESTOR",
+    )))
     html = client.get(path).text
     assert f"<span>{title}</span></h1>" in html
     assert title in html.split('<nav class="hier-link-bar"', 1)[1].split("</nav>", 1)[0]

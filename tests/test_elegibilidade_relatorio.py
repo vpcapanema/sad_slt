@@ -433,8 +433,10 @@ def test_nova_analise_reune_camadas_pdf_zip_e_revisoes_sem_sobrescrever(analise,
     anteriores = dict(dados)
     service.registrar_relatorios(['job-1', 'job-2'], modelo, 'autor')
     _, novo_pacote = service.pacote(modelo, arquivos)
-    assert novo_pacote != pacote and modelo['relatorios_hierarquizacao'][0]['arquivo'] != pdf
-    assert all(dados[caminho] == conteudo for caminho, conteudo in anteriores.items())
+    assert novo_pacote == pacote and modelo['relatorios_hierarquizacao'][0]['arquivo'] == pdf
+    assert set(dados) == set(anteriores)
+    assert all(dados[caminho] == conteudo for caminho, conteudo in anteriores.items()
+               if caminho.lower().endswith('.gpkg'))
 
 
 def test_saida_alterada_impede_resultados_e_exportacao(analise):

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import tempfile
 import time
@@ -25,6 +26,7 @@ from api.services.geoprocessamento_engine import geoprocessamento_engine
 from api.services.session_service import SessionUser, cookie_name, create_token
 
 
+@pytest.mark.skipif(os.getenv('SLT_TEST_GEOPROCESSAMENTO_BANCO') != '1', reason='Integração opt-in com catálogo e storage reais')
 class GeoprocessamentoApiTest(unittest.TestCase):
     def setUp(self) -> None:
         self.persisted_before = {

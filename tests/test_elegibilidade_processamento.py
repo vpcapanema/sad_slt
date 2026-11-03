@@ -174,7 +174,7 @@ def test_saida_real_gpkg_nome_exato_null_geometrias_e_metadados(monkeypatch, cod
                                  'restricao': [{'id': 'app', 'nome': 'APP'}], 'risco': []}, controle)
     nome, conteudos, pasta = gravados[0]
     from hashlib import sha256
-    assert nome == resultado['nome'] == f'Projetos_elegibilidade_territorial_{sha256(entrada_id.encode()).hexdigest()[:12]}.gpkg'
+    assert nome == resultado['nome'] == 'Projetos_elegibilidade_territorial.gpkg'
     assert resultado['arquivo'] == f'{pasta}/{nome}'
     raiz = (f'saidas-geoespaciais/hierarquizacoes/{codigo}/fase-1/' if codigo else
             'saidas-geoespaciais/analises-avulsas/elegibilidade-territorial/')
@@ -244,7 +244,7 @@ def test_arquivo_persistido_reabre_com_descritor_real_da_bancada(storage_sinteti
     resultado = service.executar({'entrada': {'id': 'entrada', 'nome': 'Demandas'},
         'restricao': [], 'risco': [{'id': 'base', 'nome': 'Inundação'}]}, ControleProcessamento())
     assert resultado['feicoes'] == 1 and resultado['representacao'] == 'tiles'
-    assert resultado['arquivo'].rsplit('/', 1)[-1].startswith('Demandas_elegibilidade_territorial_')
+    assert resultado['arquivo'].rsplit('/', 1)[-1] == 'Demandas_elegibilidade_territorial.gpkg'
     assert resultado['id'] == f"storage:{resultado['arquivo']}::elegibilidade_territorial"
     assert len(resultado['bounds']) == 4
     assert {campo['nome'] for campo in resultado['campos']} == {'nome', 'ID_FEICAO', 'ri_inund', 'area_total_m2'}

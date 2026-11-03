@@ -275,7 +275,20 @@ deve-se consultar a situação de todas as demandas.
 
 Os arquivos permitem conferência e análise externa, não reimportação:
 editar Excel ou CSV não atualiza o sistema. Eventuais correções devem ocorrer
-na fonte, com nova execução e preservação do pacote anterior para comparação.
+na fonte, com nova execução. Os arquivos permanentes utilizam nomes legíveis
+dos elementos; os identificadores internos continuam disponíveis para distinguir
+as identidades, sem depender de coincidência de títulos. A nova publicação do
+mesmo elemento, no mesmo contexto, substitui seu resultado vigente. Elementos
+distintos com nomes iguais permanecem separados por sufixos numéricos.
+A consolidação do acervo existente exige migração explícita em manutenção,
+com atualização dos caminhos e assinaturas das referências operacionais,
+manifesto e conferência de integridade. Não se conserva uma versão anterior do
+produto como resultado consultável após a consolidação; registros imutáveis de
+auditoria não são reescritos como se descrevessem a nova execução. Essa política
+de armazenamento não altera as áreas calculadas, o índice ou a homologação.
+A republicação não ultrapassa as proteções de homologação e publicação:
+referências protegidas, execuções ativas e revisões incompatíveis bloqueiam a
+substituição, em vez de alterar silenciosamente um resultado protegido.
 Textos são tratados como dados, não fórmulas, nas planilhas; no CSV, recebem
 proteção quando iniciados por caracteres de fórmula.
 

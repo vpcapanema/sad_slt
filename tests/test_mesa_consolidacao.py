@@ -6,13 +6,21 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from api.server import app
+from api.services.session_service import SessionUser, cookie_name, create_token
 
 RAIZ = Path(__file__).resolve().parents[1]
 PAGINA = "/restrict/analise-multicriterio/mesa-consolidacao"
 
+def _client():
+    client = TestClient(app)
+    client.cookies.set(cookie_name(), create_token(SessionUser(
+        "gestor-teste", "gestor@example.org", "teste_gestor", "Teste", "GESTOR",
+    )))
+    return client
+
 
 def test_mesa_consolidacao_renderiza_e_referencia_assets_existentes() -> None:
-    resposta = TestClient(app).get(PAGINA)
+    resposta = _client().get(PAGINA)
     assert resposta.status_code == 200
     html = resposta.text
     for elemento in ("mesa-tabela-julgamentos", "mesa-barra", "mesa-tabela-respostas", "mesa-tabela-pesos",
@@ -24,13 +32,13 @@ def test_mesa_consolidacao_renderiza_e_referencia_assets_existentes() -> None:
 
 
 def test_mesa_consolidacao_demo_so_carrega_com_o_parametro() -> None:
-    resposta = TestClient(app).get(PAGINA, params={"demo": "1"})
+    resposta = _client().get(PAGINA, params={"demo": "1"})
     assert resposta.status_code == 200
     assert "mesa-consolidacao-demo.js" in resposta.text
 
 
 def test_central_de_respostas_atual_continua_servida_sem_alteracao() -> None:
-    resposta = TestClient(app).get("/restrict/analise-multicriterio/central-respostas")
+    resposta = _client().get("/restrict/analise-multicriterio/central-respostas")
     assert resposta.status_code == 200
     assert "analise-multicriterio-julgamentos.js" in resposta.text
     assert "mesa-consolidacao" not in resposta.text

@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from copy import deepcopy
 from uuid import UUID
+import os
 
 import pytest
 from api.exceptions import DemandaValidationError
@@ -16,8 +17,8 @@ RIDS = ['11111111-1111-1111-1111-111111111111','22222222-2222-2222-2222-22222222
 def test_convite_preserva_nome_em_criacao_e_edicao_parcial(monkeypatch):
     monkeypatch.setattr(service.matrizes_criterios, 'criar',
                         lambda nome, conteudo, *args: {'id':HID,'nome':nome,'conteudo':conteudo})
-    criteria = [{'criterio':'C1'},{'criterio':'C2'}]
-    current = {'id':'j1','status':'ativa','convites':[{'email':'p@example.com','nome':'Pessoa'}]}
+    criteria = [{'criterio':'C1', 'Etapa':'3'},{'criterio':'C2', 'Etapa':'3'}]
+    current = {'id':'j1','status':'ativa','convites':[{'email':'p@example.com','nome':'Pessoa'}], 'criterios': criteria}
     monkeypatch.setattr(service,'_carregar_hierarquizacao',lambda _id: {'id':HID,'dados_hierarquizacao':{'cabecalho_grupo':{'matriz_premissas_criterios':criteria}}})
     monkeypatch.setattr(service,'_ambiente_to_response',lambda row,**kw: row)
     monkeypatch.setattr(service.repo,'encerrar_ambientes_anteriores',lambda *args: None)
@@ -34,7 +35,7 @@ def test_convite_preserva_nome_em_criacao_e_edicao_parcial(monkeypatch):
 
 @pytest.fixture
 def analyses(monkeypatch):
-    monkeypatch.setattr(service.repo,'get_ambiente_by_id',lambda _id: {'criterios':[{'criterio':'A'},{'criterio':'B'}]})
+    monkeypatch.setattr(service.repo,'get_ambiente_by_id',lambda _id: {'criterios':[{'criterio':'A', 'Etapa':'3'},{'criterio':'B', 'Etapa':'3'}]})
     monkeypatch.setattr(service.repo,'list_respostas',lambda _id:[{'id':id,'nome_completo':id,'email':'p@example.com','status':'enviada','consistente':True,'razao_consistencia':0,'matriz_comparacao':[[1,v],[1/v,1]]} for id,v in zip(RIDS,[1,9])])
     monkeypatch.setattr(service.analise_repo,'insert_with_respostas',lambda data,answers:data)
     monkeypatch.setattr(service,'_analise_response',lambda data:data)
@@ -84,7 +85,7 @@ def test_exclusao_hierarquizacao_preserva_julgamento_da_matriz(monkeypatch):
 
 def test_homologacao_grava_vinculo_e_snapshot_juntos(monkeypatch):
     analysis={'id':'an1','ambiente_id':'j1','consistente':True,'matriz_consolidada':[[1,3],[1/3,1]],'pesos_consolidados':[.75,.25], 'lambda_max':2,'indice_consistencia':0,'indice_aleatorio':0,'razao_consistencia':0}
-    environment={'id':'j1','hierarquizacao_id':HID,'criterios':[{'criterio':'C1'},{'criterio':'C2'}]}
+    environment={'id':'j1','hierarquizacao_id':HID,'criterios':[{'criterio':'C1', 'Etapa':'3'},{'criterio':'C2', 'Etapa':'3'}]}
     monkeypatch.setattr(service.analise_repo,'get_by_id',lambda _id:dict(analysis))
     monkeypatch.setattr(service.analise_repo,'list_resposta_ids',lambda _id:RIDS)
     monkeypatch.setattr(service.repo,'get_ambiente_by_id',lambda _id:environment)
@@ -100,6 +101,7 @@ def test_homologacao_grava_vinculo_e_snapshot_juntos(monkeypatch):
     assert args[2]['comparacao_colaborativa']['pesos']['weights']==[.75,.25]
 
 
+@pytest.mark.skipif(os.getenv('SLT_TEST_MATRIZES_BANCO') != '1', reason='Integração opt-in com DDL e rollback')
 def test_migracao_matrizes_em_transacao_revertida():
     """DDL, backfill, FKs e imutabilidade, sem persistir mudanças no banco oficial."""
     from pathlib import Path

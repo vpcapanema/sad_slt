@@ -385,9 +385,20 @@ Os CSVs usam UTF-8 com BOM, separador ponto e vírgula e decimal vírgula.
 Percentuais são apresentados em 0–100, não como frações. O XLSX mantém tipos
 numéricos e os textos não são gravados como fórmulas. A exportação não é um
 formulário de reimportação: editar uma cópia não modifica o sistema. Eventuais
-correções devem ser feitas na fonte e gerar nova execução, preservando o pacote
-original para comparação. As estatísticas exploratórias da interface não
+correções devem ser feitas na fonte e gerar nova execução. Os nomes físicos dos
+produtos são legíveis; uma publicação do mesmo elemento no mesmo contexto
+substitui o resultado vigente. Elementos distintos de mesmo título permanecem
+separados por sufixos numéricos e identificadores internos. A consolidação do
+acervo anterior depende de migração explícita em manutenção, com manifesto,
+conferência de integridade e atualização das referências operacionais, sem
+reescrever registros imutáveis de auditoria. As versões substituídas deixam de
+ser produtos consultáveis após a consolidação; isso não modifica fórmulas,
+índices, pesos ou homologações. As estatísticas exploratórias da interface não
 são exportadas como se fossem resultados persistidos ou índices finais.
+
+A republicação respeita as proteções de homologação e publicação. Referências
+protegidas, execuções ativas, agregações legadas opacas e revisões incompatíveis
+bloqueiam a substituição, sem conversão automática de resultados protegidos.
 
 A tabela **Indices e Classes Agregados por Demanda** fica imediatamente abaixo
 da tabela por feicao, substituindo nesta pagina a consulta de indices oficiais

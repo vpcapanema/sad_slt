@@ -144,11 +144,32 @@ def commit_unless_atomic(conn: ConnectionDict) -> None:
 
 
 @contextmanager
-def atomic_connection() -> Generator[ConnectionDict, None, None]:
+def atomic_connection(connection: ConnectionDict | None = None) -> Generator[ConnectionDict, None, None]:
     """Confirma a unidade de trabalho apenas após todos os repositórios concluírem."""
     dsn = get_settings().slt_database_url
     if not dsn:
         raise DatabaseUnavailableError("SLT_DATABASE_URL não configurada.")
+    if connection is not None:
+        anterior = {key: getattr(_thread_connections, key, None)
+                    for key in ("connection", "dsn", "depth", "atomic")}
+        mesma = anterior["connection"] is connection
+        _thread_connections.connection, _thread_connections.dsn = connection, dsn
+        _thread_connections.depth, _thread_connections.atomic = 1, True
+        try:
+            yield connection
+            if not (mesma and anterior["atomic"]):
+                connection.commit()
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            for key, value in anterior.items():
+                if value is None:
+                    if hasattr(_thread_connections, key):
+                        delattr(_thread_connections, key)
+                else:
+                    setattr(_thread_connections, key, value)
+        return
     with _borrow(dsn) as conn:
         previous = getattr(_thread_connections, "atomic", False)
         _thread_connections.atomic = True

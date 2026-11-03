@@ -55,7 +55,8 @@ def test_salvar_preserva_escolha_sem_mudar_banco_e_isola_saida_usuario(armazenam
     config = service.salvar(['j'], 'autor', 'media')['configuracao']
     assert service.carregar([resultado], 'autor') == config
     assert service.carregar([resultado], 'outro') is None
-    assert service.carregar([{**resultado, 'sha256': 'nova'}], 'autor') is None
+    with pytest.raises(ValueError, match='não corresponde'):
+        service.carregar([{**resultado, 'sha256': 'nova'}], 'autor')
     assert service.valores_linha(linha, config) == {'grade': .5, 'rede': 0}
     antes = dict(arquivos)
     with pytest.raises(ValueError, match='único'):

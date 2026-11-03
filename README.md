@@ -664,13 +664,13 @@ saidas-geoespaciais/
   exportacoes/<exportacao>/
 ```
 
-Cada análise reúne camadas, relatórios, metadados e pacotes. O nome da pasta
-combina um título normalizado e o identificador único; execuções registradas no
-banco também incluem a data UTC de início. Na elegibilidade, o lote identifica
-a análise, e os arquivos de entrada recebem um sufixo próprio para evitar
-colisões de nomes. Somente entradas comprovadamente oriundas de uma hierarquização
-usam sua pasta de fase; entradas avulsas não ganham vínculo com uma rodada.
-PDFs e ZIPs recebem identificadores próprios para preservar versões anteriores.
+Cada análise reúne camadas, relatórios, metadados e pacotes. Os novos nomes de
+pastas e arquivos identificam os elementos, sem usar o UUID como nome físico.
+As identidades e os vínculos de propriedade permanecem internos no banco.
+Somente entradas comprovadamente oriundas de uma hierarquização usam sua pasta
+de fase; entradas avulsas não ganham vínculo com uma rodada. A nova publicação
+do mesmo elemento no mesmo contexto reutiliza seu destino; elementos distintos
+com títulos iguais recebem sufixos numéricos e não são substituídos.
 Revisões de nomes ficam em `revisoes/<hash_usuario>/` dentro da análise.
 Preparações de demandas ficam identificadas como `preparacao-demandas` no
 mesmo contexto territorial, sem modificar as fontes.
@@ -688,9 +688,20 @@ primária e só então exclui as origens conferidas e os diretórios vazios.
 Ele requer o código atualizado e a migração SQL 139 aplicada.
 Os manifestos e backups dos JSONs alterados ficam em
 `aplicacao/data/geoespacial/configuracoes/migracoes-storage/<identificador>/`.
-GeoPackages, PDFs e ZIPs preservam os bytes originais e sua auditoria histórica.
+Nessa reorganização anterior, GeoPackages, PDFs e ZIPs preservam os bytes
+originais e sua auditoria histórica.
 Relatórios e revisões de análises migradas usam a pasta física organizada,
 sem exigir a regravação dos metadados dos GeoPackages.
+
+A nomenclatura por elemento requer a migração SQL 161 e utiliza o utilitário
+específico `scripts/migrar_nomes_storage.py`. Sem argumentos, ele planeja;
+`--aplicar --manutencao` permite a aplicação somente com a montagem oficial e
+as gravações interrompidas. A consolidação mantém a versão mais recente do
+mesmo elemento e atualiza as referências operacionais; não funde elementos
+distintos nem reescreve logs imutáveis. Arquivos sem identidade verificável
+bloqueiam o procedimento. Consulte as condições, a ordem de implantação e os
+comandos em [Saídas no Storage](docs/geoespacial/saidas-storage.md).
+Essa migração não é executada automaticamente pelo deploy.
 
 Na VM, os diretórios de configurações compartilham o grupo do Storage
 (`1000`, diretórios `2770`). A publicação atômica dos JSONs aplica o grupo

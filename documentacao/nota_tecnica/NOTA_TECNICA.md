@@ -18,8 +18,8 @@
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Título**                 | Metodologia do Sistema de Hierarquização de Demandas — SICARD                                                                                                         |
 | **Número**                 | NT-SICARD-001/2026                                                                                                                                                       |
-| **Versão**                 | 1.77                                                                                                                                                                      |
-| **Data de emissão**        | 02/11/2026                                                                                                                                                               |
+| **Versão**                 | 1.78                                                                                                                                                                      |
+| **Data de emissão**        | 03/11/2026                                                                                                                                                               |
 | **Classificação**         | Documento técnico-metodológico de entrega ao cliente                                                                                                                   |
 | **Sistema**                 | SICARD — Sistema Inteligente de Cadastro e Ranking de Demandas                                                                                                        |
 | **Domínio de aplicação** | Logística e transportes. Concebido no âmbito do Plano de Logística Integrada do Estado de São Paulo (PLI-SP), aplica-se a qualquer objeto de demanda desse domínio. |
@@ -111,6 +111,7 @@
 | 1.75    | 29/10/2026 | `[preencher]` | Distinção dos estados Homologada e Publicada no ciclo das demandas e inclusão da despublicação auditável, preservando a homologação, os resultados e a situação sustentada por outras rodadas. |
 | 1.76    | 30/10/2026 | `[preencher]` | Explicitação do formulário-modelo como simulação dos sete critérios D1–D7 da matriz PLI v6 de blocos e dimensões, sem gravação ou aplicação de pesos, preservando o recorte da Fase 3 nos julgamentos reais. |
 | 1.77    | 02/11/2026 | `[preencher]` | Preservação das superfícies autônomas, camadas, cálculos e metadados históricos na exclusão da hierarquização de origem, com remoção apenas do vínculo relacional na mesma transação. |
+| 1.78    | 03/11/2026 | `[preencher]` | Nomes legíveis nos produtos permanentes do Storage, distinção de elementos homônimos por identidade e consolidação explícita das versões do mesmo elemento, com atualização das referências operacionais e preservação dos registros imutáveis de auditoria, sem alteração dos métodos de cálculo ou da homologação. |
 
 ---
 
@@ -656,6 +657,20 @@ Cada GeoPackage é incluído sem alteração de seu conteúdo binário. A compar
 do SHA-256 com a assinatura da produção impede a emissão sobre saída modificada.
 Não se repetem interseções na exportação; o pacote é persistido e conferido no
 storage antes do download. Lotes parcialmente concluídos são assim identificados.
+
+Os produtos permanentes do Storage utilizam os nomes dos elementos, mantendo
+os identificadores técnicos no controle interno. A publicação do mesmo elemento
+no mesmo contexto substitui o resultado vigente; elementos distintos com títulos
+iguais permanecem separados por sufixos numéricos. A consolidação de versões já
+existentes exige migração explícita em manutenção, com manifesto, conferência de
+integridade e atualização dos caminhos e assinaturas das referências operacionais.
+Após a consolidação, as versões substituídas não permanecem como produtos
+consultáveis para comparação. Os registros imutáveis de auditoria não são
+reescritos como evidência de uma execução posterior. Essa política de
+armazenamento não modifica geometrias, fórmulas, índices, pesos ou homologações.
+As proteções de homologação e publicação prevalecem sobre a substituição dos
+arquivos; referências protegidas, execuções ativas ou revisões incompatíveis
+impedem a republicação automática.
 
 Esta entrega produz a camada vetorial e seu relatório, sem classificação automática ou alteração
 de resultados anteriores da hierarquização. A apresentação de classificações e

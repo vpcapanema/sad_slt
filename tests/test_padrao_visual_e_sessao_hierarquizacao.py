@@ -55,7 +55,7 @@ def test_secoes_numeradas_em_medalhao(cliente, rota):
         esperados = [1, 2, 3, 4, 5]
         assert [int(numero) for numero in indices] == esperados
         if rota == "/restrict/hierarquizacao/fase-2/":
-            assert 'id="fv-sobreposicoes-title"' in html
+            assert 'id="fv-bancada-title"' in html
             assert 'id="fv-resultados-title"' in html
         return
     medalhoes = re.findall(
@@ -110,7 +110,7 @@ def test_homologacao_legada_direciona_para_saidas_do_storage(cliente):
 SUBSECOES_ESPERADAS = {
     "/restrict/hierarquizacao/fase-1/": ["Restrição", "Risco"],
     "/restrict/hierarquizacao/fase-2/": ["Favorabilidade territorial de grade", "Favorabilidade territorial de rede"],
-    "/restrict/hierarquizacao/fase-3/": ["1.1", "1.2", "3.1", "3.2", "4.1", "4.2", "5.1", "5.2"],
+    "/restrict/hierarquizacao/fase-3/": ["1.1", "1.2", "3.1", "3.2", "5.1", "5.2"],
     "/public/documentacao/favorabilidade/": ["1.1", "1.2", "2.1", "2.2"],
 }
 

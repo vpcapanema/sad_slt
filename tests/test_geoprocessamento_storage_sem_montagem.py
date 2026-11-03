@@ -38,7 +38,11 @@ def remoto(monkeypatch, execucoes_sinteticas):
 
     monkeypatch.setattr(storage_remoto, "listar", listar)
     monkeypatch.setattr(storage_remoto, "enviar_bytes", enviar)
-    monkeypatch.setattr(storage_remoto, "baixar", lambda path: files[path])
+    def baixar(path):
+        if path not in files:
+            raise FileNotFoundError(path)
+        return files[path]
+    monkeypatch.setattr(storage_remoto, "baixar", baixar)
     monkeypatch.setattr(storage_remoto, "criar_pasta", folders.add)
     monkeypatch.setattr(storage_remoto, "apagar_arquivo", lambda path: files.pop(path, None))
     monkeypatch.setattr(storage_remoto, "apagar_pasta", folders.remove)
@@ -47,6 +51,8 @@ def remoto(monkeypatch, execucoes_sinteticas):
         def execute(self, sql, params=()):
             queries.append((sql, params))
             self.row = {"adquirido": True} if "advisory" in sql else None
+            if "INSERT INTO geoprocessamento.arquivo_exportado" in sql:
+                self.row = {"id": params[0]}
             return self
 
         def fetchone(self):
@@ -100,7 +106,7 @@ def test_op03_grava_canonico_exporta_e_reabre_sem_montagem(remoto, monkeypatch, 
     )))
     import re
     path = result["arquivo_saida"]["caminho"]
-    assert re.fullmatch(r'saidas-geoespaciais/Teste/\d{8}_\d{6}_[0-9a-f]{32}\.' + ext, path)
+    assert path == f'saidas-geoespaciais/Teste/Resultado.{ext}'
     from api.services.arquivos_geoespaciais_memoria import ler_vetor
     components = {PurePosixPath(p).name: content for p, content in files.items()
                   if p.startswith("saidas-geoespaciais/Teste/")}

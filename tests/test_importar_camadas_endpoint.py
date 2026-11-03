@@ -138,6 +138,7 @@ def test_catalogo_projeto_com_montagem_preserva_pasta_de_dados(
 
 
 def test_portal_importa_asset_stac_no_catalogo(monkeypatch: MonkeyPatch) -> None:
+    from api.services.stac_transport import autorizar_asset
     async def obter(servico_id: str) -> dict:
         assert servico_id == "servico-stac"
         return {"id": servico_id, "tipo": "STAC", "url": "https://stac.exemplo.test"}
@@ -154,6 +155,8 @@ def test_portal_importa_asset_stac_no_catalogo(monkeypatch: MonkeyPatch) -> None
     response = _client().post("/api/geoespacial/catalogo/portal/stac/importar", json={
         "servico_id": "servico-stac", "url": "https://dados.exemplo.test/cena.tif",
         "titulo": "Cena de teste", "bbox": [-48, -24, -47, -23],
+        "autorizacao": autorizar_asset("servico-stac", "https://stac.exemplo.test",
+                                     "https://dados.exemplo.test/cena.tif"),
     })
 
     assert response.status_code == 200, response.text
@@ -203,6 +206,7 @@ def test_portal_stac_normaliza_fim_temporal_aberto(monkeypatch: MonkeyPatch) -> 
 
 
 def test_portal_stac_expoe_apenas_assets_geotiff(monkeypatch: MonkeyPatch) -> None:
+    from api.services.stac_transport import verificar_asset
     async def obter(servico_id: str) -> dict:
         assert servico_id == "servico-stac"
         return {"id": servico_id, "tipo": "STAC", "url": "https://stac.exemplo.test"}
@@ -239,7 +243,11 @@ def test_portal_stac_expoe_apenas_assets_geotiff(monkeypatch: MonkeyPatch) -> No
     })
 
     assert response.status_code == 200, response.text
-    assert response.json()[0]["assets"] == [{
+    assets = response.json()[0]["assets"]
+    ticket = assets[0].pop("autorizacao")
+    verificar_asset(ticket, "servico-stac", "https://stac.exemplo.test",
+                    "https://dados.exemplo.test/cena.tif")
+    assert assets == [{
         "chave": "visual", "titulo": "visual", "url": "https://dados.exemplo.test/cena.tif",
         "tipo": "image/tiff; application=geotiff",
     }]

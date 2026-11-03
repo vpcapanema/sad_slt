@@ -36,6 +36,7 @@ IGNORED_ROOTS = {
 # o script que fala com a VM, a doc que a descreve e registros/artefatos que
 # gravaram o diretorio da maquina que os gerou. Nenhum e codigo de aplicacao.
 INTENTIONAL_FIXTURES = {
+    Path("AGENTS.md"),  # Orientação local de acesso; não é caminho de runtime.
     # Captura versionada de assets para reproducao visual da auditoria.
     Path("outputs/fluxo-integrado-assets.json"),
     Path("tests/test_path_policy.py"),

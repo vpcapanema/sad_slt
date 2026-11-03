@@ -412,7 +412,7 @@ def test_previa_fase3_nao_persiste_resultado(monkeypatch):
     resultado = service.executar_fase_3("HIER-TESTE", payload, persistir=False)
 
     assert resultado.dados_hierarquizacao["objetos"][0]["hierarquizacao"]["fase_3"]["executada"] is True
-    assert row["dados_hierarquizacao"]["objetos"][0]["hierarquizacao"]["fase_3"]["executada"] is False
+    assert row["dados_hierarquizacao"]["objetos"][0]["hierarquizacao"]["fase_3"] == {"score_fase3": None}
 
 
 def test_salvar_previa_fase3_rejeita_hierarquizacao_alterada(monkeypatch):
@@ -534,6 +534,8 @@ def test_previa_sintese_nao_persiste_ranking(monkeypatch):
     dados = _dados([1, 2, 3], [{}, {}])
     for indice, objeto in enumerate(dados["objetos"], start=1):
         objeto["hierarquizacao"]["fase_2"]["score_fase2"] = 0.6 + indice / 10
+        objeto["hierarquizacao"]["fase_2"]["indice_favorabilidade_rede"] = 0.6 + indice / 10
+        objeto["hierarquizacao"]["fase_2"]["indice_favorabilidade_grade"] = 0.6 + indice / 10
         objeto["hierarquizacao"]["fase_3"]["score_fase3"] = 0.4 + indice / 10
     row = _db_row(dados)
     _mock_persistencia(monkeypatch, row)

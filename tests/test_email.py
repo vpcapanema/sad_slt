@@ -47,7 +47,7 @@ def client():
         yield cliente
 
 
-def autenticacao(perfil="GESTOR"):
+def autenticacao(perfil="ADMIN"):
     user = SessionUser("usuario-teste", "gestor@example.com", f"teste_{perfil}", "Teste", perfil)
     return {"Authorization": f"Bearer {create_token(user)}"}
 
@@ -78,9 +78,9 @@ def test_router_registrado_na_api_real():
     ("post", "/enviar", dados()),
 ])
 @pytest.mark.parametrize("perfil,status", [
-    (None, 401), ("VISUALIZADOR", 403), ("OPERADOR", 403), ("ANALISTA", 403),
+    (None, 401), ("VISUALIZADOR", 403), ("OPERADOR", 403), ("ANALISTA", 403), ("GESTOR", 403),
 ])
-def test_todos_endpoints_exigem_gestor_ou_admin(client, smtp, metodo, path, payload, perfil, status):
+def test_todos_endpoints_exigem_admin(client, smtp, metodo, path, payload, perfil, status):
     response = client.request(
         metodo, "/api/email" + path, json=payload,
         headers=autenticacao(perfil) if perfil else {},
@@ -90,7 +90,7 @@ def test_todos_endpoints_exigem_gestor_ou_admin(client, smtp, metodo, path, payl
     smtp[2].assert_not_called()
 
 
-@pytest.mark.parametrize("perfil", ["GESTOR", "ADMIN"])
+@pytest.mark.parametrize("perfil", ["ADMIN"])
 def test_envia_texto_html_com_remetente_fixo_e_tls(client, smtp, perfil, caplog):
     caplog.set_level("INFO", logger="api.services.email_service")
     response = client.post("/api/email/enviar", headers=autenticacao(perfil),

@@ -112,12 +112,13 @@ def test_api_exige_autenticacao_e_renderiza_fluxo():
     from fastapi.testclient import TestClient
     from api.server import app
     from api.deps.auth import require_authenticated
-    from api.services.session_service import SessionUser
+    from api.services.session_service import SessionUser, cookie_name, create_token
     client = TestClient(app)
     assert client.get('/api/ahp/superficies-criterios/catalogo').status_code == 401
     user = SessionUser(id='12345678-1234-1234-1234-123456789012',email='a@example.test',
                        username='teste_ANALISTA',nome='Teste',tipo_usuario='ANALISTA')
     app.dependency_overrides[require_authenticated] = lambda:user
+    client.cookies.set(cookie_name(), create_token(user))
     try:
         response = client.get('/restrict/geoespacial/gerador-superficies-favorabilidade/')
         assert response.status_code == 200

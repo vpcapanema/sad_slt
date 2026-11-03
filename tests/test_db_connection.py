@@ -78,3 +78,24 @@ def test_falha_em_lote_nao_confirma_updates_parciais(connection, monkeypatch):
             raise RuntimeError('falha')
     connection.commit.assert_not_called()
     connection.rollback.assert_called_once()
+
+
+def test_conexao_explicita_adia_commits_aninhados_e_restaura_contexto(connection):
+    antes = getattr(db._thread_connections, 'connection', None)
+    with db.atomic_connection(connection):
+        with db.get_connection() as nested:
+            assert nested is connection
+        with db.atomic_connection(connection):
+            connection.commit.assert_not_called()
+    connection.commit.assert_called_once()
+    assert getattr(db._thread_connections, 'connection', None) is antes
+
+
+def test_commit_falho_na_conexao_explicita_nao_e_mascarado(connection):
+    erro = RuntimeError('Falha explícita no COMMIT')
+    connection.commit.side_effect = erro
+    with pytest.raises(RuntimeError) as capturado:
+        with db.atomic_connection(connection):
+            pass
+    assert capturado.value is erro
+    connection.rollback.assert_called_once()

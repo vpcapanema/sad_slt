@@ -135,11 +135,11 @@ def test_recusa_normalizacao_de_homologada():
 def test_pagina_renderiza_no_harness_de_teste():
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
-    from api.deps.auth import require_admin
+    from api.deps.auth import require_analyst
     from api.routers.conciliacao_geoespacial import router
     app = FastAPI()
     app.include_router(router)
-    app.dependency_overrides[require_admin] = lambda: object()
+    app.dependency_overrides[require_analyst] = lambda: object()
     with TestClient(app) as client:
         response = client.get("/catalogo/conciliacao/pagina")
         assert response.status_code == 200

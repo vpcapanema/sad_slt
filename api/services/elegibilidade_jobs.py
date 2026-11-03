@@ -14,6 +14,7 @@ from api.services.controle_processamento import ControleProcessamento, Processam
 from api.services.elegibilidade_processamento import executar, nome_saida
 from api.services import storage_remoto
 from api.services.edicao_storage import bloquear_arquivo
+from api.services.republicacao_storage import bloquear_referencias
 
 _jobs = {}
 _lock = RLock()
@@ -45,6 +46,7 @@ def _registro(ident, dono, analise='elegibilidade'):
     return caminho, json.loads(dados)
 
 
+@bloquear_referencias()
 def _publicar(job, estado, *, forcar=False):
     job['estado'] = estado
     agora = monotonic()
@@ -93,10 +95,11 @@ def _obter(ident, dono, analise='elegibilidade'):
     return job
 
 
+@bloquear_referencias()
 def consultar(ident, dono, *, analise='elegibilidade'):
     with _lock:
         job = _jobs.get(ident)
-        if job:
+        if job and job['estado'].get('status') == 'executando':
             _obter(ident, dono, analise)
             return {'id': ident, **deepcopy(job['estado']), 'erro': job.get('erro'),
                     'resultado': deepcopy(job.get('resultado'))}

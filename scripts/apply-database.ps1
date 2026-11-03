@@ -281,7 +281,8 @@ $migrations = @(
     "155_versoes_parecer_complementacao.sql"
     "156_data_analise_parecer.sql",
     "157_status_homologada_publicada.sql",
-    "160_preservar_superficies_ao_excluir_hierarquizacao.sql"
+    "160_preservar_superficies_ao_excluir_hierarquizacao.sql",
+    "161_nomes_elementos_storage.sql"
 )
 
 if ($OnlyMigration) {
@@ -403,9 +404,12 @@ if (-not $OnlyMigration) {
             $migrations += "133_avaliacao_geometria_historico.sql"
             Write-Ok "Migração 133 pendente: avaliação informativa e origem histórica indeterminada."
         }
-        if (-not (Test-SchemaReady "SELECT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid=to_regclass('geoprocessamento.arquivo_resultado') AND conname='ck_arquivo_resultado_destino' AND obj_description(oid, 'pg_constraint')='139: saidas por contexto; destinos legados preservados');")) {
+        if (-not (Test-SchemaReady "SELECT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid=to_regclass('geoprocessamento.arquivo_resultado') AND conname='ck_arquivo_resultado_destino' AND (obj_description(oid, 'pg_constraint') LIKE '139:%' OR obj_description(oid, 'pg_constraint') LIKE '161:%'));")) {
             $migrations += "139_centralizar_destinos_saidas_storage.sql"
             Write-Ok "Migration 139 pendente: destinos de saida agrupados por contexto."
+        }
+        if (-not (Test-SchemaReady "SELECT to_regclass('geoprocessamento.nome_storage') IS NOT NULL AND EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid=to_regclass('geoprocessamento.arquivo_resultado') AND conname='ck_arquivo_resultado_destino' AND obj_description(oid, 'pg_constraint') LIKE '161:%');")) {
+            $migrations += "161_nomes_elementos_storage.sql"
         }
         if (-not (Test-SchemaReady "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='demandas' AND table_name='solicitacao_complementacao_demanda' AND column_name='categorias_salvas');")) {
             $migrations += "140_solicitacoes_complementacao_tipos.sql"

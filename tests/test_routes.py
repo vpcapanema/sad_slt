@@ -9,9 +9,19 @@ from api.server import app
 from api.services import demanda_service, storage_remoto
 from api.services.session_service import SessionUser, cookie_name, create_token
 
+def _client():
+    client = TestClient(app)
+    client.cookies.set(cookie_name(), create_token(SessionUser(
+        "admin-teste", "", "teste_admin", "Teste", "ADMIN",
+    )))
+    return client
+
 
 def test_retired_layer_registration_pages_are_gone() -> None:
     client = TestClient(app)
+    client.cookies.set(cookie_name(), create_token(SessionUser(
+        "analista-teste", "analista@example.org", "teste_analista", "Teste", "ANALISTA",
+    )))
     for route in (
         "/restrict/hierarquizacao/cadastro-upload-elegibilidade/",
         "/restrict/hierarquizacao/cadastro-upload-favorabilidade/",
@@ -69,7 +79,8 @@ def test_homologacao_ranking_publicacao_page_name_and_route() -> None:
     assert response.status_code == 200
     assert "<title>Homologação, Ranking e Publicação — SICARD</title>" in response.text
     assert "<span>Homologação, Ranking e Publicação</span></h1>" in response.text
-    assert 'id="ranking-gerenciar-publicacao" disabled' in response.text
+    assert 'id="ranking-hier-tbody"' in response.text
+    assert '/restrict/hierarquizacao/js/ranking-privado.js' in response.text
     assert 'data-requer-autenticacao="true"' in response.text
 
 
@@ -137,14 +148,14 @@ def test_canonical_pages_are_available() -> None:
 
 
 def test_archived_hierarquizacao_index_redirects_to_processes() -> None:
-    response = TestClient(app).get("/restrict/hierarquizacao/", follow_redirects=False)
+    response = _client().get("/restrict/hierarquizacao/", follow_redirects=False)
 
     assert response.status_code == 308
     assert response.headers["location"] == "/restrict/hierarquizacao/processos/"
 
 
 def test_multicriterio_centrais_preservam_modo_e_navegacao() -> None:
-    client = TestClient(app)
+    client = _client()
     for central, modo, titulo, outro_modo in (
         ("central-julgamentos", "espaco", "Central de julgamentos", "julgamentos"),
         ("central-respostas", "julgamentos", "Central de respostas", "espaco"),
@@ -167,7 +178,7 @@ def test_multicriterio_centrais_preservam_modo_e_navegacao() -> None:
 
 
 def test_multicriterio_rotas_antigas_redirecionam_preservando_prefixo_e_parametros() -> None:
-    client = TestClient(app)
+    client = _client()
     for prefix in ("", "/sicard"):
         for query, central in (
             ("?modo=espaco", "central-julgamentos"),
@@ -194,7 +205,7 @@ def test_multicriterio_rotas_antigas_redirecionam_preservando_prefixo_e_parametr
 
 def test_storage_login_links_redirect_to_configured_host(monkeypatch) -> None:
     monkeypatch.setattr(storage_remoto, "_config", lambda: ("https://storage.example/sicard/storage-api", "", "", True))
-    client = TestClient(app)
+    client = _client()
 
     for area in ("admin", "client"):
         path = f"/sicard/storage/web/{area}/login"
@@ -207,7 +218,7 @@ def test_storage_login_links_redirect_to_configured_host(monkeypatch) -> None:
 
 
 def test_indice_organiza_analise_multicriterio_no_mad_e_recursos_no_geoprocessamento() -> None:
-    client = TestClient(app)
+    client = _client()
     html = client.get("/restrict/").text
 
     assert "/restrict/analise-multicriterio/central-respostas" in html
@@ -222,9 +233,9 @@ def test_indice_organiza_analise_multicriterio_no_mad_e_recursos_no_geoprocessam
     assert "Documentação técnica" in trecho_geo
     assert "/public/documentacao_favorabilidade_v2/" in trecho_geo
     assert "/public/documentacao/risco-restricao/" in trecho_geo
-    assert trecho_mad.index("/restrict/hierarquizacao/processos/") < trecho_mad.index("/central-julgamentos") < trecho_mad.index("/central-respostas")
+    assert trecho_mad.index("/central-julgamentos") < trecho_mad.index("/central-respostas") < trecho_mad.index("/restrict/hierarquizacao/processos/")
     assert "Gestão de julgamentos AHP" in trecho_mad
-    assert "Respostas dos especialistas aos julgamentos AHP" in trecho_mad
+    assert "Gestão de Respostas" in trecho_mad
     assert "Apoio à decisão e hierarquização" in trecho_mad
     assert "/restrict/geoespacial/visualizador-bases-geoespaciais/" not in trecho_geo
     assert "/restrict/geoespacial/visualizador-camadas/" in trecho_geo
@@ -271,16 +282,16 @@ def test_indice_organiza_analise_multicriterio_no_mad_e_recursos_no_geoprocessam
     trecho_admin = html.split('id="group-administracao"', 1)[1].split("</section>", 1)[0]
     assert "Tabelas do banco de dados" in trecho_admin
     assert "Armazenamento de dados geoespaciais" in trecho_admin
-    assert "Organização das hierarquizações e julgamentos AHP" in trecho_mad
-    assert "Avaliação territorial e priorização" in trecho_mad
-    assert "Elegibilidade territorial" in trecho_mad
+    assert "Central de Julgamentos AHP" in trecho_mad
+    assert "Hierarquização de Demandas" in trecho_mad
+    assert "Elegibilidade Territorial" in trecho_mad
     assert "Favorabilidade territorial" in trecho_mad
-    assert "Priorização de demandas por atributos" in trecho_mad
+    assert "Priorização por atributos" in trecho_mad
 
 
 def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None:
-    html = TestClient(app).get("/restrict/analise-multicriterio/central-julgamentos").text
-    central_html = TestClient(app).get("/restrict/analise-multicriterio/central-respostas").text
+    html = _client().get("/restrict/analise-multicriterio/central-julgamentos").text
+    central_html = _client().get("/restrict/analise-multicriterio/central-respostas").text
     julgamentos_js = (
         __import__("pathlib").Path("assets/js/paginas/analise-multicriterio-julgamentos.js")
         .read_text(encoding="utf-8")
@@ -294,7 +305,7 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
     assert '/assets/css/mad-filter-standard.css?v=20260820-1' in html
     assert '<div class="ami-toolbar ami-panel">' not in html
     assert html.index('class="standard-section-action-row"') < html.index('id="ami-new"')
-    assert html.index('id="ami-new"') < html.index("Dados do ambiente colaborativo")
+    assert html.index('id="ami-new"') < html.index("Configuração do julgamento")
     assert html.index('id="ami-new"') < html.index('class="secao-dados-tabelas-colaborativas')
     assert "Central de julgamentos" in html
     assert 'class="col-select"' in html
@@ -315,10 +326,10 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
     assert "Promise.all([api(hierarquizacoesSourceUrl)" not in julgamentos_js
     assert 'dataset.source = hierarquizacoesSourceUrl' in julgamentos_js
     assert '(h.nome || "Sem nome") + " — " + (h.codigo || "Sem código")' in julgamentos_js
-    assert "hierarquizacao_id: selectedHierarchy.dataset.hierarquizacaoId" in julgamentos_js
+    assert "payload.matriz_id = matrixId" in julgamentos_js
     assert 'id="ami-interactive-analysis-component"' in html
     assert 'id="ami-criteria-matrix-summary"' in html
-    assert "cabecalho_grupo.matriz_premissas_criterios" in julgamentos_js
+    assert "criteriaMatrix = record ? record.conteudo : null" in julgamentos_js
     assert 'id="ami-pairwise-matrix-component"' in html
     assert 'id="ami-pairwise-form-component"' in html
     assert 'h.descricao || "Sem descrição"' not in julgamentos_js
@@ -332,7 +343,7 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
     assert 'id="ami-judgments-public-action"' in html
     assert 'id="ami-judgments-matrix-action"' in html
     assert 'id="ami-judgments-form-action"' in html
-    assert "Dados do ambiente colaborativo" in html
+    assert "Configuração do julgamento" in html
     assert "Dados das tabelas colaborativas" not in html
     assert 'id = "ami-judgments-view-action"' in julgamentos_js
     assert "viewSelectedEnvironment" in julgamentos_js
@@ -343,7 +354,7 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
     assert "function saveSelectedEnvironment()" in julgamentos_js
     assert 'method: "PATCH"' in julgamentos_js
     assert "Alterações salvas no banco com sucesso." in julgamentos_js
-    assert "hierarquizacao_id: selectedHierarchy.dataset.hierarquizacaoId" in julgamentos_js
+    assert "payload.hierarquizacao_id = selectedHierarchy.dataset.hierarquizacaoId" in julgamentos_js
     assert '$("ami-hierarchy").disabled = readonly' in julgamentos_js
     assert 'counter.id = "ami-pair-counter"' in julgamentos_js
     assert 'current + "/" + maximum' in julgamentos_js
@@ -464,8 +475,8 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
     headers = [
         "Situação",
         "ID Julgamento",
-        "ID Hierarquização",
-        "Hierarquização",
+        "ID Matriz / contexto",
+        "Matriz / contexto",
         "Participação",
         "Prazo para respostas",
         "Criado em",
@@ -511,18 +522,18 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
     assert 'type="datetime-local"' not in html
     assert 'type="datetime-local"' not in tabela_js
     assert 'id="ami-create-section"' in html
-    assert ">1</span>" in html and "Dados do ambiente colaborativo" in html
-    assert ">3</span><span>Simulação de comparação pareada" in html
+    assert ">1</span>" in html and "Configuração do julgamento" in html
+    assert "<span>Simulação de comparação pareada" in html
     assert 'scaleIndex.textContent = "3.1"' in julgamentos_js
-    assert ">3.2</span><span>Indicadores instantâneos" in html
-    assert '>3.3</span><span>Matriz de comparação pareada' in html
-    assert '>3.3</span><span>Formulário de comparação pareada' in html
-    assert ">2</span><span>Ambiente colaborativo" in html
-    assert ">2.1</span><span>Dados do ambiente colaborativo" in html
-    assert '>2.1.2</span><span id="ami-deadline-section-title">Data limite da coleta' in html
+    assert ">2</span><span>Indicadores instantâneos" in html
+    assert '>3</span><span>Matriz de comparação pareada' in html
+    assert '>3</span><span>Formulário de comparação pareada' in html
+    assert "<span>Convites e acompanhamento" in html
+    assert '<span id="ami-name-section-title">Nome do julgamento' in html
+    assert '>2</span><span id="ami-deadline-section-title">Data limite da coleta' in html
     assert 'id="ami-criteria-matrix-summary"' in html
-    assert ">2.2</span><span>Status do ambiente colaborativo" in html
-    assert ">2.3</span><span>Mensagem de email" in html
+    assert ">2</span><span>Monitoramento das atividades" in html
+    assert ">1</span><span>Mensagem de email" in html
     assert html.count("ami-config-field") == 4
     for field_id, help_id in (
         ("ami-deadline", "ami-deadline-help"),
@@ -580,7 +591,7 @@ def test_unhandled_database_error_is_returned_as_service_unavailable(monkeypatch
 
 
 def test_gestao_hierarquizacoes_adota_tabela_inicial_filtro_novo_e_visualizar() -> None:
-    html = TestClient(app).get("/restrict/hierarquizacao/processos/").text
+    html = _client().get("/restrict/hierarquizacao/processos/").text
     processos_js = __import__("pathlib").Path("hierarquizacao/js/processos.js").read_text(encoding="utf-8")
 
     assert 'id="hier-new"' in html
@@ -592,7 +603,7 @@ def test_gestao_hierarquizacoes_adota_tabela_inicial_filtro_novo_e_visualizar() 
     assert 'id="hier-filter-valor"' in html
     assert '/assets/css/table-standard.css' in html
     assert 'id="hier-agrupamento"' in html
-    assert 'id="hier-criteria-matrix"' in html
+    assert 'id="hier-matrix-picker"' in html
     assert 'id="hier-tipo"' not in html
     assert 'card-universo-da-hierarquizacao' not in html
     assert 'listarUniverso' not in processos_js
@@ -631,7 +642,7 @@ def test_indice_restrito_nao_deixa_vao_nos_modulos() -> None:
     import pathlib
     import re
 
-    html = TestClient(app).get("/restrict/").text
+    html = _client().get("/restrict/").text
     css = pathlib.Path("admin/index.css").read_text(encoding="utf-8")
 
     itens_por_linha = {
@@ -738,7 +749,7 @@ def test_paginas_descontinuadas_respondem_410() -> None:
     """
     from api.server import AHP_CLEAN_PAGES
 
-    client = TestClient(app)
+    client = _client()
 
     descontinuadas = ["/restrict/ahp/", "/public/ahp/colaborativa/", "/ahp/colaborativa.html", "/public/ahp/colaborativa.html"]
     descontinuadas += [f"/restrict/ahp/{nome}/" for nome in AHP_CLEAN_PAGES]

@@ -201,10 +201,22 @@ def test_api_rejeita_sem_sessao():
     assert FORMATOS_PACOTE==('zip','pdf_processamento','pdf_analitico'), 'componentes do pacote não são baixados avulsos'
 
 
-def test_indice_de_extracoes_e_o_destino_do_card_e_leva_a_nova_extracao():
+@pytest.fixture
+def cliente_paginas():
     from fastapi.testclient import TestClient
     from api.server import app
-    client=TestClient(app)
+    from api.services.session_service import SessionUser, cookie_name, create_token
+    client = TestClient(app)
+    client.cookies.set(cookie_name(), create_token(SessionUser(
+        "analista-teste", "analista@example.org", "teste_analista", "Teste", "ANALISTA",
+    )))
+    return client
+
+
+def test_indice_de_extracoes_e_o_destino_do_card_e_leva_a_nova_extracao(cliente_paginas):
+    from fastapi.testclient import TestClient
+    from api.server import app
+    client=cliente_paginas
     indice=client.get('/restrict/geoespacial/extracoes-atributos/')
     assert indice.status_code==200
     assert 'class="standard-section-action-row"' in indice.text and 'Nova extração' in indice.text
@@ -218,10 +230,10 @@ def test_indice_de_extracoes_e_o_destino_do_card_e_leva_a_nova_extracao():
     assert 'href="/restrict/geoespacial/visualizador-camadas/" class="geoespacial-module-card"' in central
 
 
-def test_visualizador_de_camadas_aponta_para_a_tabela_de_extracoes():
+def test_visualizador_de_camadas_aponta_para_a_tabela_de_extracoes(cliente_paginas):
     from fastapi.testclient import TestClient
     from api.server import app
-    pagina=TestClient(app).get('/restrict/geoespacial/visualizador-camadas/')
+    pagina=cliente_paginas.get('/restrict/geoespacial/visualizador-camadas/')
     assert pagina.status_code==200
     assert 'href="/restrict/geoespacial/extracoes-atributos/"' in pagina.text
     assert 'geoespacial-visualizador-camadas.js' in pagina.text

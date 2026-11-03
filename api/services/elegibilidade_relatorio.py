@@ -4,13 +4,13 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from decimal import Decimal, ROUND_HALF_UP
 from hashlib import sha256
+from api.services.republicacao_storage import publicacao, bloquear_referencias
 from io import BytesIO
 import json
 import math
 from numbers import Real
 from pathlib import PurePosixPath
 import re
-from uuid import uuid4
 from zipfile import ZipFile, ZIP_DEFLATED
 
 import geopandas as gpd
@@ -236,6 +236,7 @@ def preparar(identificadores: list[str], dono, *, analise: str = 'elegibilidade'
             'previstas': resultados[0].get('total_entradas', len(resultados))}
 
 
+@bloquear_referencias()
 def salvar_nomes(identificadores: list[str], modelo: dict, dono, *, analise: str = 'elegibilidade') -> None:
     nomes = {f['id']: f['nome'] for f in modelo['fontes']}
     for resultado in _selecionar(identificadores, dono, analise=analise):
@@ -275,6 +276,7 @@ def _nomes_demandas(resultado: dict, dono) -> dict[str, str]:
     return nomes
 
 
+@bloquear_referencias()
 def renomear_demanda(execucao: str, chave: str, nome: str, dono) -> dict:
     resultado = _selecionar([execucao], dono)[0]
     frame, _ = _ler(resultado)
@@ -298,6 +300,7 @@ def renomear_demanda(execucao: str, chave: str, nome: str, dono) -> dict:
     return {'execucao': execucao, 'chave': chave, 'nome': nome}
 
 
+@publicacao()
 def registrar_relatorios(identificadores: list[str], modelo: dict, dono, *, analise: str = 'elegibilidade') -> None:
     """Exporta documentos ao Storage; não altera a hierarquização."""
     fase = 1 if analise == 'elegibilidade' else 2
@@ -316,9 +319,10 @@ def registrar_relatorios(identificadores: list[str], modelo: dict, dono, *, anal
                    'concluidas': len(resultados),
                    'previstas': resultados[0].get('total_entradas', len(resultados))}
         dados = pdf(recorte)
-        caminho = f'{_pasta_resultados(resultados, analise=analise)}/Relatório de {_titulo_analise(analise)}_{uuid4().hex[:12]}.pdf'
+        caminho = saidas_storage.caminho_documento(
+            _pasta_resultados(resultados, analise=analise), f'Relatório de {_titulo_analise(analise)}.pdf')
         assinatura = sha256(dados).hexdigest()
-        storage_remoto.enviar_bytes(caminho, dados)
+        saidas_storage.enviar_conteudo(caminho, dados)
         if sha256(storage_remoto.baixar(caminho)).hexdigest() != assinatura:
             raise ValueError('O PDF no Storage diverge do relatório conferido. O vínculo não foi registrado.')
         documento = {'arquivo': caminho, 'sha256': assinatura, 'gerado_em': modelo['gerado_em'],
@@ -327,9 +331,10 @@ def registrar_relatorios(identificadores: list[str], modelo: dict, dono, *, anal
         if fase == 1:
             # O Resumo da Elegibilidade acompanha o PDF e a camada no relatório da Fase 1 da hierarquização.
             planilha = sintese.xlsx_resumo(recorte)
-            caminho_planilha = f'{_pasta_resultados(resultados, analise=analise)}/Resumo da Elegibilidade_{uuid4().hex[:12]}.xlsx'
+            caminho_planilha = saidas_storage.caminho_documento(
+                _pasta_resultados(resultados, analise=analise), 'Resumo da Elegibilidade.xlsx')
             assinatura_planilha = sha256(planilha).hexdigest()
-            storage_remoto.enviar_bytes(caminho_planilha, planilha)
+            saidas_storage.enviar_conteudo(caminho_planilha, planilha)
             if sha256(storage_remoto.baixar(caminho_planilha)).hexdigest() != assinatura_planilha:
                 raise ValueError('A planilha do resumo no Storage diverge da conferida. O vínculo não foi registrado.')
             registro = {**documento,
@@ -995,8 +1000,8 @@ def pacote(modelo: dict, arquivos: list[tuple[str, bytes]]) -> tuple[bytes, str]
             raise ValueError('O pacote não passou na conferência de integridade.')
     pasta = saidas_storage.pasta_exportacao(modelo['pasta_analise'])
     saidas_storage.validar(pasta + '/analise.json')
-    caminho = f'{pasta}/Relatório e Camadas_{uuid4().hex[:12]}.zip'
-    storage_remoto.enviar_bytes(caminho, dados)
+    caminho = saidas_storage.caminho_documento(pasta, 'Relatório e Camadas.zip')
+    saidas_storage.enviar_conteudo(caminho, dados)
     if sha256(storage_remoto.baixar(caminho)).digest() != sha256(dados).digest():
         raise ValueError('O pacote no storage diverge do conteúdo conferido.')
     return dados, caminho

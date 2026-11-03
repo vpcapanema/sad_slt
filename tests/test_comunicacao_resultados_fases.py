@@ -5,6 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from api.server import app
+from api.services.session_service import SessionUser, cookie_name, create_token
 
 
 @pytest.mark.parametrize(("fase", "raiz", "titulo", "prefixo"), [
@@ -12,7 +13,12 @@ from api.server import app
     (2, "ev-resultados", "Resultados da Favorabilidade Territorial", "ev-resultados"),
 ])
 def test_paginas_atuais_com_cinco_secoes_e_resultados_acessiveis(fase, raiz, titulo, prefixo):
-    resposta = TestClient(app).get(f"/restrict/hierarquizacao/fase-{fase}/")
+    cliente = TestClient(app)
+    cliente.cookies.set(cookie_name(), create_token(SessionUser(
+        id="00000000-0000-0000-0000-000000000010", email="gestor@example.org",
+        username="teste_gestor", nome="Gestor de teste", tipo_usuario="GESTOR",
+    )))
+    resposta = cliente.get(f"/restrict/hierarquizacao/fase-{fase}/")
     assert resposta.status_code == 200
     html = resposta.text
     assert re.findall(r'<span class="(?:ahp-subsection-num|ea-number)">(\d)</span>', html) == list("12345")

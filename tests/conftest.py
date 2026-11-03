@@ -9,6 +9,44 @@ import pytest
 
 
 @pytest.fixture(autouse=True)
+def nomes_storage_sinteticos(monkeypatch):
+    from api.services import nomes_storage, saidas_storage, republicacao_storage
+    reservas = {}
+    guard = Lock()
+
+    def reservar(escopo, identidade, nome, *, conn=None):
+        with guard:
+            chave = (escopo, identidade)
+            if chave not in reservas:
+                candidato, indice = nome, 2
+                ocupados = {v.casefold() for (p, _), v in reservas.items() if p == escopo}
+                while candidato.casefold() in ocupados:
+                    candidato = f'{Path(nome).stem}_{indice}{Path(nome).suffix}'
+                    indice += 1
+                reservas[chave] = candidato
+            return reservas[chave]
+
+    monkeypatch.setattr(nomes_storage, 'reservar', reservar)
+    @contextmanager
+    def bloqueio(caminho):
+        yield
+    monkeypatch.setattr(saidas_storage, 'bloquear_arquivo', bloqueio)
+    class BancoPublicacao:
+        def execute(self, *args, **kwargs):
+            return self
+        def fetchall(self):
+            return []
+    @contextmanager
+    def atomic_sintetico(conn=None):
+        yield conn if conn is not None else BancoPublicacao()
+        if conn is not None:
+            conn.commit()
+    monkeypatch.setattr(republicacao_storage, 'atomic_connection', atomic_sintetico)
+    monkeypatch.setattr(republicacao_storage, 'jsons_operacionais', lambda: iter(()))
+    return reservas
+
+
+@pytest.fixture(autouse=True)
 def sessoes_sinteticas(monkeypatch):
     """Tokens de testes usam registro e contas sintéticos, nunca bancos oficiais."""
     from api.services import session_service

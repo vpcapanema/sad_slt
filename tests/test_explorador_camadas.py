@@ -10,7 +10,7 @@ from api.server import app
 from api.services import explorador_camadas as explorer, storage_geoespacial as storage
 from api.services.session_service import SessionUser, create_token, cookie_name
 
-USER=SessionUser(id='00000000-0000-0000-0000-000000000021',email='teste@example.org',username='teste_operador',nome='Teste',tipo_usuario='OPERADOR')
+USER=SessionUser(id='00000000-0000-0000-0000-000000000021',email='teste@example.org',username='teste_analista',nome='Teste',tipo_usuario='ANALISTA')
 
 pytestmark = pytest.mark.usefixtures("storage_sintetico")
 

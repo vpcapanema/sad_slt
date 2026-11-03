@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from contextvars import ContextVar
+from contextlib import ExitStack
 import json
 import re
 import unicodedata
@@ -17,6 +18,7 @@ from psycopg.types.json import Jsonb
 
 from api.db.connection import get_connection
 from api.path_policy import project_path
+from api.services.republicacao_storage import publicacao, apos_confirmar
 
 execucao_atual: ContextVar[str | None] = ContextVar("execucao_arquivo", default=None)
 
@@ -36,6 +38,7 @@ def caminho_exportacao(nome: str, categoria: str) -> Path:
     return pasta / validated.name
 
 
+@publicacao()
 def registrar_exportacao(path: Path, recurso: str, tipo: str, *, pasta_saida: str | None = None,
                          conteudos: dict[str, bytes] | None = None) -> dict:
     if pasta_saida is None:
@@ -91,49 +94,61 @@ def _registrar_exportacao(path: Path, recurso: str, tipo: str, *, pasta_saida: s
     ident = str(uuid4())
     created = []
     # Um único prefixo mantém .shp, .shx, .dbf e .prj associados.
-    stem = saidas_storage.nome_gerado(referencia=ident)
+    from api.services.nomes_storage import reservar
+    stem = path.stem
+    bloqueios = ExitStack()
+    def liberar_bloqueios():
+        # A unidade externa restaura bytes e referências após o rollback do banco.
+        bloqueios.close()
     try:
         pasta_automatica = saidas_storage.pasta_execucao(execution) if not pasta_saida else None
         files = ([Path(name) for name in sorted(conteudos)] if conteudos is not None else
                  [component for component in sorted(path.parent.iterdir()) if component.is_file()])
-        if pasta_saida:
-            existing = {item['nome'].casefold() for item in storage_remoto.listar(pasta_saida, estrito=True)}
-            if any((stem + component.name[len(path.stem):]).casefold() in existing for component in files):
-                raise FileExistsError('Já existe uma saída com esse nome na pasta escolhida. Escolha outro nome.')
+        filename = reservar(pasta_saida or pasta_automatica, json.dumps([recurso, tipo, path.stem]), path.name)
+        stem = PurePosixPath(filename).stem
+        files = [component for component in files
+                 if component.name == path.name or component.name.startswith(path.stem + '.')]
         for component in files:
             if conteudos is not None or component.is_file():
                 if pasta_saida:
                     target = f'{pasta_saida}/{stem}{component.name[len(path.stem):]}'
-                    item = (saidas_storage.enviar_conteudo(target, conteudos[component.name]) if conteudos is not None
-                            else saidas_storage.enviar_exportacao(target, component))
+                    bloqueios.enter_context(saidas_storage.bloquear_arquivo(target))
+                    item = (saidas_storage._enviar_conteudo_bloqueado(target, conteudos[component.name]) if conteudos is not None
+                            else saidas_storage._enviar_arquivo_bloqueado(target, component))
                 else:
                     target = f'{pasta_automatica}/{stem}{component.name[len(path.stem):]}'
-                    item = (saidas_storage.enviar_bytes(execution, 'camadas', component.name, conteudos[component.name], caminho=target)
-                            if conteudos is not None else saidas_storage.enviar_arquivo(execution, 'camadas', component, caminho=target))
+                    saidas_storage.validar(target)
+                    saidas_storage._conferir_execucao(target, execution, 'camadas')
+                    bloqueios.enter_context(saidas_storage.bloquear_arquivo(target))
+                    item = (saidas_storage._enviar_conteudo_bloqueado(target, conteudos[component.name])
+                            if conteudos is not None else saidas_storage._enviar_arquivo_bloqueado(target, component))
                 item['nome'] = PurePosixPath(target).name
                 if component.name == path.name:
                     relative = item['caminho']
                 created.append(item)
         components = created
     except Exception as exc:
-        for item in created:
-            saidas_storage.remover(item['caminho'])
+        liberar_bloqueios()
         if own:
             finalizar(execution, erro=str(exc))
         raise
-    committing=False
     try:
         with get_connection() as conn:
-            conn.execute('''INSERT INTO geoprocessamento.arquivo_exportado
-                (id,execucao_id,recurso_origem,caminho,componentes,validacao) VALUES (%s,%s,%s,%s,%s,%s)''',
+            registro = conn.execute('''INSERT INTO geoprocessamento.arquivo_exportado
+                (id,execucao_id,recurso_origem,caminho,componentes,validacao) VALUES (%s,%s,%s,%s,%s,%s)
+                ON CONFLICT (caminho) DO UPDATE SET componentes=EXCLUDED.componentes,
+                    validacao=EXCLUDED.validacao,execucao_id=EXCLUDED.execucao_id
+                RETURNING id''',
                 (ident,execution,recurso,relative,Jsonb(components),Jsonb(validation)))
+            linha = registro.fetchone()
+            if not linha or not linha.get('id'):
+                raise RuntimeError('O banco não confirmou a identidade da saída registrada.')
+            ident = str(linha['id'])
             registrar_uso(conn,recurso,'entrada',str(execution))
-            committing=True
-            conn.commit()
     except Exception as exc:
-        if not committing:
-            for item in created:
-                saidas_storage.remover(item['caminho'])
+        liberar_bloqueios()
+        bloqueios.close()
+        bloqueios.close()
         if own:
             try:
                 finalizar(execution,erro=str(exc))
@@ -143,10 +158,12 @@ def _registrar_exportacao(path: Path, recurso: str, tipo: str, *, pasta_saida: s
     if own:
         finalizar(execution)
     if conteudos is None:
-        for component in list(path.parent.iterdir()):
-            if component.is_file():
-                component.unlink()
-        path.parent.rmdir()
+        def limpar():
+            for component in list(path.parent.iterdir()):
+                if component.is_file():
+                    component.unlink()
+            path.parent.rmdir()
+        apos_confirmar(limpar)
     return {'arquivo_exportado_id':ident,'execucao_id':execution,'caminho':relative,
             'destino':str(Path(relative).parent),'componentes':components}
 
@@ -192,9 +209,13 @@ def migrar_exportacao(ident: str, raiz_arquivos: Path | None = None) -> dict:
                 raise ValueError('Arquivo legado ausente ou divergente do hash registrado.')
             sources.append((item,source))
         name=Path(row['caminho']).stem
-        stem=apelido(name,60)+'_'+uuid4().hex[:12]
+        from api.services.nomes_storage import reservar
         try:
             pasta = saidas_storage.pasta_execucao(str(row['execucao_id']), conn=conn)
+            nome = reservar(pasta, 'exportacao:' + str(row['id']),
+                            apelido(row['validacao'].get('nome') or name, 60) + Path(row['caminho']).suffix,
+                            conn=conn)
+            stem = Path(nome).stem
             for item,source in sources:
                 destination=f"{pasta}/{stem}{source.name[len(name):]}"
                 record=saidas_storage.enviar_arquivo(str(row['execucao_id']),'camadas',source,caminho=destination)
@@ -383,6 +404,7 @@ def gravar(conn, camada_id: str, metadata: dict, *, frame=None, raster_bytes=Non
             Path((apelido(metadata.get('nome')) or 'saida') + extension))
     content = None
     remote_path = None
+    anterior = None
     try:
         if frame is not None:
             # Nome de geometria padronizado só no arquivo, sem mudar o objeto de entrada.
@@ -432,16 +454,20 @@ def gravar(conn, camada_id: str, metadata: dict, *, frame=None, raster_bytes=Non
             checksum = sha256(content).hexdigest()
             size = len(content)
             destino = caminho_destino or saidas_storage.destino(
-                execution, 'camadas', path.name, pasta=saidas_storage.pasta_execucao(execution, conn=conn))
+                execution, 'camadas', path.name, pasta=saidas_storage.pasta_execucao(execution, conn=conn),
+                elemento=camada_id, conn=conn)
+            anterior = saidas_storage._anterior(destino)
             with trabalho({path.name: content}):
-                uploaded = saidas_storage.enviar_bytes(execution, 'camadas', path.name, content, caminho=destino)
+                uploaded = saidas_storage.enviar_bytes(execution, 'camadas', path.name, content, caminho=destino, conn=conn)
                 remote_path = uploaded['caminho']
         else:
             checksum = digest(path)
             size = path.stat().st_size
             destino = caminho_destino or saidas_storage.destino(
-                execution, 'camadas', path.name, pasta=saidas_storage.pasta_execucao(execution, conn=conn))
-            uploaded = saidas_storage.enviar_arquivo(execution, 'camadas', path, caminho=destino)
+                execution, 'camadas', path.name, pasta=saidas_storage.pasta_execucao(execution, conn=conn),
+                elemento=camada_id, conn=conn)
+            anterior = saidas_storage._anterior(destino)
+            uploaded = saidas_storage.enviar_arquivo(execution, 'camadas', path, caminho=destino, conn=conn)
         relative = remote_path = uploaded['caminho']
         state='temporario' if execucao_atual.get() else 'resultado'
         conn.execute('''INSERT INTO geoprocessamento.arquivo_resultado
@@ -464,7 +490,7 @@ def gravar(conn, camada_id: str, metadata: dict, *, frame=None, raster_bytes=Non
         return {'id':ident,'caminho':relative,'sha256':checksum,'execucao_id':execution,'estado':state}
     except Exception:
         if remote_path:
-            saidas_storage.remover(remote_path)
+            saidas_storage.restaurar(remote_path, anterior)
         raise
     finally:
         if pasta is not None:
@@ -473,14 +499,9 @@ def gravar(conn, camada_id: str, metadata: dict, *, frame=None, raster_bytes=Non
 
 
 def gravar_e_confirmar(conn, camada_id, metadata, **kwargs):
-    """Confirma registro após validação; não apaga arquivo em commit ambíguo.
-
-    Em falha de conexão durante COMMIT, o banco pode já ter confirmado. O UUID
-    permanece para conciliação, evitando excluir um arquivo com registro válido.
-    """
-    result = gravar(conn, camada_id, metadata, **kwargs)
-    conn.commit()
-    return result
+    """Publica bytes e referências na mesma conexão; erros não são mascarados."""
+    with publicacao(conexao=conn):
+        return gravar(conn, camada_id, metadata, **kwargs)
 
 
 def regularizar(recurso_id: str, responsavel: str | None = None) -> dict:

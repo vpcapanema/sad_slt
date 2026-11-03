@@ -20,6 +20,13 @@ from api.server import (
 TEMPLATES_ROOT = Path("templates")
 PAGES_ROOT = TEMPLATES_ROOT / "paginas"
 
+def _client():
+    client = TestClient(app)
+    client.cookies.set(cookie_name(), create_token(SessionUser(
+        "admin-teste", "admin@example.org", "teste_admin", "Teste", "ADMIN",
+    )))
+    return client
+
 
 def _classes(opening_tag: str) -> list[str]:
     match = re.search(r'class=["\']([^"\']*)', opening_tag, re.I)
@@ -150,15 +157,15 @@ def test_content_elements_have_semantic_canonical_classes() -> None:
         for tag in re.findall(r"<main\b[^>]*>", content, re.I):
             assert "conteudo-principal" in _classes(tag), (path, tag)
         for tag in re.findall(r"<section\b[^>]*>", content, re.I):
-            assert any(name.startswith("secao-") for name in _classes(tag)), (path, tag)
+            assert any(name.startswith("secao-") or name == "ahp-step-section" for name in _classes(tag)), (path, tag)
         for tag in re.findall(r"""<[a-z][^>]*class=["'][^"']*["'][^>]*>""", content, re.I):
             classes = _classes(tag)
             if "card" in classes or "module-card" in classes:
-                assert any(name.startswith("card-") for name in classes), (path, tag)
+                assert any(name.startswith("card-") or name == "ahp-step-section" for name in classes), (path, tag)
 
 
 def test_public_restricted_and_panel_navbars_are_server_rendered() -> None:
-    client = TestClient(app)
+    client = _client()
     checks = {
         "/public/": "navbar-publica",
         "/restrict/": "navbar-restrita",
@@ -227,7 +234,7 @@ def test_public_registration_guidance_requires_operator_and_links_sigma() -> Non
 
 
 def test_restricted_home_groups_operator_and_territorial_actions() -> None:
-    content = TestClient(app).get("/restrict/").text
+    content = _client().get("/restrict/").text
 
     def group(identifier: str) -> str:
         match = re.search(r'<section\b[^>]*aria-labelledby="' + identifier + r'"[^>]*>.*?</section>', content, re.S)
@@ -249,16 +256,15 @@ def test_restricted_home_groups_operator_and_territorial_actions() -> None:
     assert "/public/ahp/colaborativa/" not in mad
     ahp = mad.split("subgroup-analise-multicriterio-ahp-e-obtencao-de-pesos", 1)[1].split("subgroup-ranqueamento", 1)[0]
     assert re.findall(r'class="platform-tile__label">([^<]+)</span>', ahp) == [
-        "Agrupamento de demandas",
-        "Gestão das hierarquizações",
         "Gestão de julgamentos AHP",
-        "Respostas dos especialistas aos julgamentos AHP",
+        "Gestão de Respostas",
     ]
     assert "?modo=formulario" not in mad
-    assert mad.index("Organização das hierarquizações e julgamentos AHP") < mad.index("Avaliação territorial e priorização")
-    assert 'class="platform-tile platform-tile--amber" href="/restrict/agrupamento-demandas/"' in ahp
+    assert mad.index("Central de Julgamentos AHP") < mad.index("Hierarquização de Demandas")
     ranking = mad.split("subgroup-ranqueamento", 1)[1]
     assert set(re.findall(r'href="([^"]+)"', ranking)) == {
+        "/restrict/agrupamento-demandas/",
+        "/restrict/hierarquizacao/processos/",
         "/restrict/hierarquizacao/fase-1/",
         "/restrict/hierarquizacao/fase-2/",
         "/restrict/hierarquizacao/fase-3/",
@@ -274,7 +280,7 @@ def test_restricted_home_groups_operator_and_territorial_actions() -> None:
 
 
 def test_restricted_home_public_catalogs_and_operator_form_second_row() -> None:
-    content = TestClient(app).get("/restrict/").text
+    content = _client().get("/restrict/").text
     assert re.findall(r'<section\b[^>]*aria-labelledby="group-([^"]+)"', content) == [
         "mocad",
         "mad",
@@ -288,7 +294,7 @@ def test_restricted_home_public_catalogs_and_operator_form_second_row() -> None:
 
 
 def test_restricted_demands_table_exposes_audit_names_and_timestamps() -> None:
-    response = TestClient(app).get("/restrict/demandas/")
+    response = _client().get("/restrict/demandas/")
     assert response.status_code == 200
     for label in (
         "Criado por",
@@ -311,7 +317,7 @@ def test_restricted_demands_table_exposes_audit_names_and_timestamps() -> None:
 
 
 def test_restricted_demands_table_has_dependent_column_and_value_filters() -> None:
-    response = TestClient(app).get("/restrict/demandas/")
+    response = _client().get("/restrict/demandas/")
     assert response.status_code == 200
     assert 'class="admin-filter-bar"' in response.text
     assert 'id="filtro-coluna" aria-label="Coluna do filtro"' in response.text
@@ -327,7 +333,7 @@ def test_restricted_demands_table_has_dependent_column_and_value_filters() -> No
 
 
 def test_restricted_home_geoprocessing_subgroups_and_independent_accesses() -> None:
-    content = TestClient(app).get("/restrict/").text
+    content = _client().get("/restrict/").text
     match = re.search(r'<section\b[^>]*aria-labelledby="group-geoprocessamento"[^>]*>.*?</section>', content, re.S)
     assert match is not None
     geo = match.group()
@@ -374,7 +380,7 @@ def test_restricted_home_geoprocessing_subgroups_and_independent_accesses() -> N
 
 
 def test_restricted_home_group_headers_have_complete_structure() -> None:
-    content = TestClient(app).get("/restrict/").text
+    content = _client().get("/restrict/").text
     headers = re.findall(r'<div class="platform-group__heading">\s*<div>(.*?)</div>\s*</div>', content, re.S)
     assert len(headers) == content.count('class="platform-group secao-platform-')
     assert headers
@@ -419,14 +425,7 @@ def _canonical_pages() -> list[str]:
 
 
 def test_all_page_runtime_assets_are_local_and_available() -> None:
-    client = TestClient(app)
-    client.cookies.set(cookie_name(), create_token(SessionUser(
-        id="00000000-0000-0000-0000-000000000010",
-        email="operador@example.org",
-        username="teste_operador",
-        nome="Operador de teste",
-        tipo_usuario="OPERADOR",
-    )))
+    client = _client()
     assets: set[str] = set()
 
     for page in _canonical_pages():

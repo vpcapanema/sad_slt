@@ -361,7 +361,6 @@ def executar(payload: dict, controle: ControleProcessamento, *, analise: str = '
     lote = str(payload.get('lote_id') or uuid4().hex)
     pasta = pasta_saida(lote, codigo, analise=analise)
     auditoria['pasta_analise'] = pasta
-    arquivo = f'{PurePosixPath(arquivo).stem}_{sha256(entrada_ref["id"].encode()).hexdigest()[:12]}.gpkg'
     controle.mensagem('Gravar GeoPackage em memória e reabrir para conferir integridade')
     conteudos = serializar(saida, auditoria, intersecoes, arquivo, analise=analise)
     controle.fase(3, 'Persistir saída conferida no storage', cancelavel=False)

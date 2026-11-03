@@ -212,7 +212,12 @@ def test_admin_can_download_original_with_original_name_and_bytes(monkeypatch):
         tipo_usuario="ADMIN",
     )
     try:
-        response = TestClient(app).get(
+        client = TestClient(app)
+        client.cookies.set(cookie_name(), create_token(SessionUser(
+            id="00000000-0000-0000-0000-000000000010", email="admin@example.org",
+            username="teste_admin", nome="Admin de teste", tipo_usuario="ADMIN",
+        )))
+        response = client.get(
             f"/api/admin/tabelas/demandas/projeto_geometria_historico/{arquivo_id}/download"
         )
     finally:

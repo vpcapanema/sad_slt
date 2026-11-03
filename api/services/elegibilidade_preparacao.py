@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from collections import Counter
 from datetime import datetime, timezone
-from uuid import uuid4
+from uuid import NAMESPACE_URL, uuid5
 
 from osgeo import ogr
 from api.services import analise_territorial_ogr as nativo
@@ -209,7 +209,8 @@ def _gravar_demanda(normalizada: nativo.Camada, auditoria: dict, ident: str, nom
     codigo = auditoria['origem'].get('hierarquizacao')
     fase = {'elegibilidade': 'fase-1', 'favorabilidade': 'fase-2'}[analise]
     pasta = saidas_storage.pasta_analise(
-        f'{analise}-territorial', 'preparacao-demandas', str(uuid4()),
+        f'{analise}-territorial', nome, str(uuid5(
+            NAMESPACE_URL, f'sicard:preparacao:{analise}:{ident}')),
         quando=datetime.now(timezone.utc), hierarquizacao=codigo, fase=fase if codigo else None)
     saidas_storage.garantir_pasta(pasta)
     exportacao = ciclo.registrar_exportacao_memoria(nome_arquivo, conteudos, ident, 'vetor', pasta_saida=pasta)

@@ -119,7 +119,7 @@ def test_envio_da_resposta_agenda_a_confirmacao_somente_quando_registrada(monkey
     monkeypatch.setattr(confirmacao, "notificar", lambda *args: chamadas.append(args))
     retorno = TestClient(app).post(
         "/api/ahp/comparacao-colaborativa/publico/tok/respostas",
-        json={"token_acesso": "012345", "identificacao": {"nome_completo": "Ana", "email": "a@x.gov.br", "instituicao": "Inst"},
+        json={"token_acesso": "x" * 43, "identificacao": {"nome_completo": "Ana", "email": "a@x.gov.br", "instituicao": "Inst"},
               "matriz_comparacao": [[1, 2], [0.5, 1]]},
     )
     assert retorno.status_code == (201 if sucesso else 422)

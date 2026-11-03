@@ -57,11 +57,15 @@ def listar(execucao_id: str | None = None) -> list[dict]:
 
 
 def registrar_documento(execucao: str, origem: str, arquivo: dict, *, validacao: dict | None = None):
+    from pathlib import PurePosixPath
+    validacao = {'nome': PurePosixPath(arquivo['caminho']).stem, **(validacao or {})}
     with get_connection() as conn:
         conn.execute('''INSERT INTO geoprocessamento.arquivo_exportado
             (id,execucao_id,recurso_origem,caminho,componentes,validacao)
-            VALUES (%s,%s,%s,%s,%s,%s)''',
-            (uuid4(),execucao,origem,arquivo['caminho'],Jsonb([arquivo]),Jsonb(validacao or {})))
+            VALUES (%s,%s,%s,%s,%s,%s)
+            ON CONFLICT (caminho) DO UPDATE SET componentes=EXCLUDED.componentes,
+                validacao=EXCLUDED.validacao,execucao_id=EXCLUDED.execucao_id''',
+            (uuid4(),execucao,origem,arquivo['caminho'],Jsonb([arquivo]),Jsonb(validacao)))
 
 
 def arquivos_execucao(execucao: str) -> list[dict]:

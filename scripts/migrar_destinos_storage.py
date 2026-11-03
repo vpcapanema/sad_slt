@@ -8,11 +8,11 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from hashlib import sha256
 import json
+from io import BytesIO
 import logging
 import os
 from pathlib import Path, PurePosixPath
 import re
-from urllib.parse import quote
 from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 import zipfile
 
@@ -25,6 +25,7 @@ from api.config import get_settings
 from api.storage_policy import raiz_escrita, publicar_arquivo
 from api.services import storage_remoto
 from api.services.saidas_storage import pasta_analise, pasta_execucao
+from api.services.remapeamento_storage import Remapeamento
 
 LOG = logging.getLogger(__name__)
 CONFIG = 'aplicacao/data/geoespacial/configuracoes'
@@ -34,57 +35,6 @@ ORGANIZADAS = {'hierarquizacoes', 'analises-avulsas', 'exportacoes'}
 
 def assinatura(data: bytes) -> str:
     return sha256(data).hexdigest()
-
-
-class Remapeamento:
-    def __init__(self, caminhos: dict[str, str], hashes: dict[str, str] | None = None,
-                 tamanhos: dict[str, int] | None = None):
-        self.tokens = {}
-        for origem, destino in caminhos.items():
-            for prefixo in ('', '/', 'storage:'):
-                for seguro in (None, '', '/'):
-                    antes, depois = prefixo + origem, prefixo + destino
-                    if seguro is not None:
-                        antes, depois = quote(antes, safe=seguro), quote(depois, safe=seguro)
-                    self.tokens[antes] = depois
-        alternativas = '|'.join(re.escape(s) for s in sorted(self.tokens, key=len, reverse=True))
-        self.pattern = re.compile(
-            r"(?<![\w./%+-])(?:" + alternativas
-            + r")(?=$|::|%3[Aa]%3[Aa]|%26|%3[Ff]|%23|[?&#\s\"'<>\]\)},;])"
-        ) if alternativas else None
-        self.hashes = hashes or {}
-        self.tamanhos = tamanhos or {}
-
-    def texto(self, texto: str) -> str:
-        if texto in self.hashes:
-            return self.hashes[texto]
-        return self.pattern.sub(lambda m: self.tokens[m.group()], texto) if self.pattern else texto
-
-    def valor(self, valor, *, revisao=False):
-        if isinstance(valor, str):
-            return self.texto(valor)
-        if isinstance(valor, list):
-            return [self.valor(v, revisao=revisao) for v in valor]
-        if isinstance(valor, dict):
-            # Estes valores identificam a análise original, não uma configuração reutilizável.
-            preservar = {'logs', 'elegibilidade'} | ({'nomes'} if revisao else set())
-            novo = {}
-            for k, v in valor.items():
-                chave = self.texto(k)
-                if chave in novo:
-                    raise ValueError('O remapeamento causaria colisão de chaves.')
-                novo[chave] = v if k in preservar else self.valor(v, revisao=revisao)
-            for campo in ('arquivo', 'caminho', 'storage_caminho'):
-                path = valor.get(campo)
-                if isinstance(path, str) and path in self.tamanhos:
-                    tamanho = self.tamanhos[path]
-                    for key in ('tamanho_bytes', 'tamanho'):
-                        if key in novo:
-                            novo[key] = tamanho
-                    if isinstance(novo.get('revisao'), str) and re.fullmatch(r'\d+-\d+', novo['revisao']):
-                        novo['revisao'] = novo['revisao'].rsplit('-', 1)[0] + '-' + str(tamanho)
-            return novo
-        return valor
 
 
 def caminho_fisico(root: Path, caminho: str) -> Path:
@@ -156,7 +106,7 @@ def destinos(root: Path, conn) -> tuple[dict[str, str], dict[str, bytes], dict[s
                     pastas[ident] = pasta_execucao(ident, conn=conn)
                 else:
                     LOG.warning('Execução sem registro preservada como análise legada: %s', ident)
-                    pastas[ident] = pasta_analise('geoprocessamento-legado', 'execucao-legada', ident)
+                    pastas[ident] = pasta_analise('geoprocessamento-legado', 'execucao-legada', ident, conn=conn)
             mapa[relativo] = pastas[ident] + '/' + p.name
             if p.suffix.lower() == '.gpkg' and p.name.startswith('demandas_normalizadas'):
                 normalizacoes[relativo] = metadados_gpkg(p, 'SICARD_NORMALIZACAO')
@@ -177,7 +127,7 @@ def destinos(root: Path, conn) -> tuple[dict[str, str], dict[str, bytes], dict[s
             ident = PurePosixPath(relativo).parts[2]
             pasta = pasta_analise('elegibilidade-territorial', 'preparacao-demandas', ident,
                                   quando=execucoes[ident]['iniciado_em'],
-                                  hierarquizacao=codigo, fase='fase-1')
+                                  hierarquizacao=codigo, fase='fase-1', conn=conn)
             prefixo = f'saidas-geoespaciais/execucoes/{ident}/'
             for origem in mapa:
                 if origem.startswith(prefixo):
@@ -207,7 +157,7 @@ def destinos(root: Path, conn) -> tuple[dict[str, str], dict[str, bytes], dict[s
         lote = next((r['lote_id'] for r in resultados if r.get('lote_id')), relativo)
         pasta = pasta_analise('elegibilidade-territorial', 'elegibilidade-territorial',
                              str(uuid5(NAMESPACE_URL, 'sicard:elegibilidade:' + lote)),
-                             hierarquizacao=codigo, fase='fase-1' if codigo else None)
+                             hierarquizacao=codigo, fase='fase-1' if codigo else None, conn=conn)
         mapa[relativo] = pasta + '/' + PurePosixPath(relativo).name
     por_hash = defaultdict(list)
     for relativo in elegiveis:
@@ -266,13 +216,13 @@ def destinos(root: Path, conn) -> tuple[dict[str, str], dict[str, bytes], dict[s
 
 
 def transformar_jsons(originais: dict[str, bytes], mapa: dict[str, str],
-                      preferidas: dict[str, bytes] | None = None):
+                      preferidas: dict[str, bytes] | None = None, *, ids=None):
     preferidas = preferidas or {}
     documentos = {}
     for p, data in originais.items():
         if p.endswith('.json'):
             documentos[p] = json.loads(preferidas.get(p, data))
-    resultado = dict(originais)
+    resultado = {p: preferidas.get(p, data) for p, data in originais.items()}
     for _ in range(len(documentos) + 2):
         hashes = defaultdict(set)
         for p, data in resultado.items():
@@ -282,13 +232,30 @@ def transformar_jsons(originais: dict[str, bytes], mapa: dict[str, str],
         if ambiguos:
             raise ValueError('Hashes de JSON duplicados exigem resolução por contexto.')
         remapear = Remapeamento(mapa, {h: next(iter(novos)) for h, novos in hashes.items()},
-                                {p: len(data) for p, data in resultado.items()})
+                                {p: len(data) for p, data in resultado.items()}, ids=ids)
         novos = dict(resultado)
         for p, documento in documentos.items():
             revisao = isinstance(documento, dict) and {'nomes', 'dono', 'sha256'} <= documento.keys()
             atualizado = remapear.valor(documento, revisao=revisao)
             novos[p] = (json.dumps(atualizado, ensure_ascii=False, indent=2, allow_nan=False).encode()
                          if atualizado != documento else preferidas.get(p, originais[p]))
+        for p, data in originais.items():
+            if not p.lower().endswith('.zip'):
+                continue
+            fonte = preferidas.get(p, data)
+            buffer = BytesIO()
+            mudou = False
+            with zipfile.ZipFile(BytesIO(fonte)) as entrada, zipfile.ZipFile(buffer, 'w') as saida:
+                for info in entrada.infolist():
+                    conteudo = entrada.read(info)
+                    if info.filename.lower().endswith('.json'):
+                        documento = json.loads(conteudo)
+                        novo = remapear.valor(documento)
+                        if novo != documento:
+                            conteudo = json.dumps(novo, ensure_ascii=False, allow_nan=False).encode()
+                            mudou = True
+                    saida.writestr(info, conteudo)
+            novos[p] = buffer.getvalue() if mudou else fonte
         if novos == resultado:
             return resultado, remapear
         resultado = novos
@@ -296,34 +263,13 @@ def transformar_jsons(originais: dict[str, bytes], mapa: dict[str, str],
 
 
 def colunas_operacionais(conn):
-    linhas = conn.execute("""
-        SELECT c.table_schema,c.table_name,c.column_name,c.data_type
-          FROM information_schema.columns c
-         WHERE c.table_schema IN ('geoprocessamento','hierarquizacao_demandas','ahp','geo')
-           AND (c.data_type IN ('json','jsonb','text','character varying') OR c.column_name='tamanho_bytes')
-           AND c.table_name !~ '(auditoria|audit|historico|(^|_)log($|_)|evento)'
-         ORDER BY c.table_schema,c.table_name,c.ordinal_position
-    """).fetchall()
-    pks = conn.execute("""
-        SELECT n.nspname AS esquema,t.relname AS tabela,a.attname AS coluna
-          FROM pg_index i JOIN pg_class t ON t.oid=i.indrelid
-          JOIN pg_namespace n ON n.oid=t.relnamespace
-          CROSS JOIN LATERAL unnest(i.indkey) WITH ORDINALITY AS k(num,ord)
-          JOIN pg_attribute a ON a.attrelid=t.oid AND a.attnum=k.num
-         WHERE i.indisprimary AND n.nspname IN ('geoprocessamento','hierarquizacao_demandas','ahp','geo')
-         ORDER BY n.nspname,t.relname,k.ord
-    """).fetchall()
-    chaves, tabelas = defaultdict(list), defaultdict(dict)
-    for p in pks:
-        chaves[(p['esquema'], p['tabela'])].append(p['coluna'])
-    for r in linhas:
-        tabela = (r['table_schema'], r['table_name'])
-        tabelas[tabela][r['column_name']] = r['data_type']
-    return tabelas, chaves
+    from api.services.catalogo_referencias_storage import colunas_operacionais as descobrir
+    return descobrir(conn)
 
 
 def adaptar(valor, tipo):
-    return (Jsonb(valor) if tipo == 'jsonb' else Json(valor)) if valor is not None and tipo in {'json','jsonb'} else valor
+    from api.services.catalogo_referencias_storage import adaptar as converter
+    return converter(valor, tipo)
 
 
 def alteracoes_banco(conn, remapear: Remapeamento, arquivos, mapa):
@@ -355,7 +301,7 @@ def alteracoes_banco(conn, remapear: Remapeamento, arquivos, mapa):
     return alteracoes
 
 
-def gravar(root: Path, relativo: str, dados: bytes, *, mtime_ns=None):
+def gravar(root: Path, relativo: str, dados: bytes, *, mtime_ns=None, exclusivo=False):
     destino = caminho_fisico(root, relativo)
     criadas = []
     pai = destino.parent
@@ -372,7 +318,10 @@ def gravar(root: Path, relativo: str, dados: bytes, *, mtime_ns=None):
             stream.write(dados)
             stream.flush()
             os.fsync(stream.fileno())
-        publicar_arquivo(tmp, destino)
+        if exclusivo:
+            os.link(tmp, destino)
+        else:
+            publicar_arquivo(tmp, destino)
         if mtime_ns is not None:
             os.utime(destino, ns=(mtime_ns, mtime_ns))
     finally:
@@ -380,6 +329,8 @@ def gravar(root: Path, relativo: str, dados: bytes, *, mtime_ns=None):
 
 
 def conferir_api(arquivos: dict[str, bytes]):
+    if not arquivos:
+        return
     original = storage_remoto._cliente
     with original() as cliente:
         @contextmanager
@@ -401,28 +352,59 @@ def conferir_api(arquivos: dict[str, bytes]):
             storage_remoto._cliente = original
 
 
-def executar(aplicar=False):
+def executar(aplicar=False, *, planejador=None, consolidar=None):
     cfg = get_settings()
     root = raiz_escrita()
     with psycopg.connect(cfg.slt_database_url, row_factory=dict_row, connect_timeout=5,
                          options='-c statement_timeout=30000 -c lock_timeout=5000') as conn:
         conn.execute("SELECT pg_advisory_xact_lock(hashtext('sicard:migrar-destinos-storage'))")
-        mapa, originais, preferidas = destinos(root, conn)
-        if not mapa:
+        plano = (planejador or destinos)(root, conn)
+        mapa, originais, preferidas = plano
+        pendencias = getattr(plano, 'pendencias_preexistentes', [])
+        preservados = {(p['tabela'], p['registro_id']) for p in pendencias
+                       if p['tabela'] in {'arquivo_exportado', 'arquivo_resultado'}}
+        def preservar_orfaos(alteracoes):
+            return [a for a in alteracoes if not (
+                a['tabela'][0] == 'geoprocessamento'
+                and (a['tabela'][1], str(a['chaves'].get('id'))) in preservados)]
+        if not mapa and not pendencias:
             print('Nenhuma origem legada pendente.')
+            if not aplicar:
+                conn.rollback()
             return
         for p in sorted((root / CONFIG).rglob('*.json')):
             relativo = p.relative_to(root).as_posix()
             if '/migracoes-storage/' not in relativo:
                 originais[relativo] = p.read_bytes()
-        arquivos, remapear = transformar_jsons(originais, mapa, preferidas)
-        existentes = {mapa[p] for p in preferidas}
-        if any(arquivos[p] != arquivos[mapa[p]] for p in preferidas):
+        if planejador:
+            bloqueados = set(originais) | set(mapa.values())
+            chaves = {'edicao-storage:' + p.casefold() for p in bloqueados}
+            chaves.update('saida-storage:' + str(PurePosixPath(p).parent).casefold() for p in bloqueados)
+            for chave in sorted(chaves):
+                registro = conn.execute(
+                    'SELECT pg_try_advisory_lock(hashtextextended(%s,0)) AS adquirido',
+                    (chave,)).fetchone()
+                if not registro or not registro['adquirido']:
+                    raise ValueError('Há um produtor ativo no acervo; suspenda-o antes da migração.')
+            for p, data in originais.items():
+                if caminho_fisico(root, p).read_bytes() != data:
+                    raise ValueError('O acervo mudou durante o planejamento: ' + p)
+        ids, exclusoes = consolidar(conn, mapa) if consolidar else ({}, [])
+        arquivos, remapear = transformar_jsons(originais, mapa, preferidas, ids=ids)
+        existentes = {mapa[p] for p in preferidas if p in mapa and mapa[p] in originais}
+        if any(arquivos[p] != arquivos[mapa[p]] for p in preferidas
+               if p in mapa and mapa[p] in originais):
             raise ValueError('O histórico vigente e o legado não convergiram para o mesmo resultado.')
-        alteracoes = alteracoes_banco(conn, remapear, arquivos, mapa)
+        alteracoes = preservar_orfaos(alteracoes_banco(conn, remapear, arquivos, mapa))
+        excluidos = {str(r['id']) for r in exclusoes}
+        alteracoes = [item for item in alteracoes if not (
+            item['tabela'] == ('geoprocessamento', 'arquivo_exportado')
+            and str(item['chaves'].get('id')) in excluidos)]
         configuracoes = {p: data for p, data in arquivos.items() if p not in mapa and data != originais[p]}
         print(json.dumps({'arquivos_a_mover': len(mapa), 'configuracoes_a_atualizar': len(configuracoes),
                           'registros_a_atualizar': len(alteracoes),
+                          'exportacoes_consolidadas': len(exclusoes),
+                          'pendencias_preexistentes': pendencias,
                           'destinos': dict((k, sum('/'+k+'/' in p for p in mapa.values()))
                                            for k in ('hierarquizacoes','analises-avulsas','exportacoes'))},
                          ensure_ascii=False))
@@ -432,6 +414,8 @@ def executar(aplicar=False):
         ident = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ') + '-' + uuid4().hex[:8]
         pasta = CONFIG + '/migracoes-storage/' + ident
         manifesto = {'id': ident, 'estado': 'preparando', 'mapa': mapa, 'banco': alteracoes,
+                      'pendencias_preexistentes': pendencias,
+                      'exportacoes_consolidadas': exclusoes, 'aliases_exportacoes': ids,
                       'arquivos': {p: {'sha256_antes': assinatura(originais[p]), 'sha256_depois': assinatura(data)}
                                    for p, data in arquivos.items() if p in mapa or p in configuracoes or p in existentes}}
         def registrar(estado):
@@ -447,12 +431,14 @@ def executar(aplicar=False):
                 backups[p] = backup
         manifesto['backups'] = backups
         registrar('copiando')
+        copiados = set()
         for origem, destino in mapa.items():
             fonte = caminho_fisico(root, origem)
             if assinatura(fonte.read_bytes()) != assinatura(originais[origem]):
                 raise ValueError('A origem mudou durante o planejamento: ' + origem)
-            if destino not in existentes:
-                gravar(root, destino, arquivos[origem], mtime_ns=fonte.stat().st_mtime_ns)
+            if destino not in existentes and destino not in copiados:
+                gravar(root, destino, arquivos[origem], mtime_ns=fonte.stat().st_mtime_ns, exclusivo=True)
+                copiados.add(destino)
         conferidos = {destino: arquivos[origem] for origem, destino in mapa.items() if destino not in existentes}
         conferir_api(conferidos)
         registrar('copias_conferidas_pela_api')
@@ -465,6 +451,11 @@ def executar(aplicar=False):
                 aplicadas.append(p)
             if configuracoes:
                 conferir_api(configuracoes)
+            for registro in exclusoes:
+                removido = conn.execute('DELETE FROM geoprocessamento.arquivo_exportado WHERE id=%s',
+                                       (registro['id'],))
+                if removido.rowcount != 1:
+                    raise ValueError('A consolidação não atingiu exatamente uma exportação.')
             for item in alteracoes:
                 cols = list(item['depois'])
                 query = sql.SQL('UPDATE {} SET {} WHERE {}').format(
@@ -475,7 +466,7 @@ def executar(aplicar=False):
                 resultado = conn.execute(query, valores + list(item['chaves'].values()))
                 if resultado.rowcount != 1:
                     raise ValueError('Atualização não atingiu exatamente uma chave primária.')
-            if alteracoes_banco(conn, remapear, arquivos, mapa):
+            if preservar_orfaos(alteracoes_banco(conn, remapear, arquivos, mapa)):
                 raise ValueError('Ainda há referências operacionais que exigem remapeamento.')
             conn.commit()
         except Exception:
@@ -510,6 +501,7 @@ def executar(aplicar=False):
         print(json.dumps({'estado': 'concluida', 'arquivos_movidos': len(mapa),
                           'leituras_api_validadas': len(conferidos) + len(configuracoes),
                           'registros_atualizados': len(alteracoes), 'pastas_vazias_removidas': len(removidas),
+                          'pendencias_preexistentes': len(pendencias),
                           'manifesto': pasta + '/manifesto.json'}, ensure_ascii=False))
 
 

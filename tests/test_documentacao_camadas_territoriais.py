@@ -25,9 +25,9 @@ def client():
     user = SessionUser(
         id="11111111-1111-1111-1111-111111111111",
         email="documentacao@local",
-        username="documentacao_OPERADOR",
+        username="documentacao_ANALISTA",
         nome="Documentação",
-        tipo_usuario="OPERADOR",
+        tipo_usuario="ANALISTA",
     )
     with TestClient(app) as session:
         session.cookies.set(cookie_name(), create_token(user))
@@ -38,10 +38,19 @@ def _matrix():
     return json.loads((CONFIG / "documentacao-camadas-territoriais.json").read_text(encoding="utf-8-sig"))
 
 
-@pytest.mark.parametrize("suffix", ["", "baixa-renda-2022.csv"])
+@pytest.mark.parametrize("headers", [{}, {"authorization": "Bearer invalid"}])
+def test_documentation_redirects_anonymous_to_login(headers):
+    with TestClient(app) as anonymous:
+        response = anonymous.get(PAGE, headers=headers, follow_redirects=False)
+        assert response.status_code == 303
+        assert "/public/login/" in response.headers["location"]
+
+
+@pytest.mark.parametrize("suffix", ["baixa-renda-2022.csv"])
 def test_documentation_and_download_require_session(suffix):
     with TestClient(app) as anonymous:
-        assert anonymous.get(PAGE + suffix).status_code == 401
+        response = anonymous.get(PAGE + suffix, follow_redirects=False)
+        assert response.status_code == (401 if suffix else 303)
         assert anonymous.get(PAGE + suffix, headers={"authorization": "Bearer invalid"}).status_code == 401
 
 

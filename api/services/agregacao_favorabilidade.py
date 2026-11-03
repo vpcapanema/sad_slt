@@ -6,6 +6,7 @@ import json
 import math
 
 from api.services import elegibilidade_relatorio as relatorios, storage_remoto
+from api.services.republicacao_storage import bloquear_referencias
 
 MEDIDAS = {'media', 'mediana', 'moda', 'amplitude', 'variancia', 'desvio', 'cv', 'iqr',
            'minimo', 'q1', 'q2', 'q3', 'maximo', 'percentil'}
@@ -60,8 +61,14 @@ def valores_linha(linha, config):
             for papel in ('grade', 'rede')}
 
 
-def _caminho(resultados, dono):
+def _caminho_legado(resultados, dono):
     identidade = json.dumps(sorted((r['arquivo'], r['sha256']) for r in resultados)).encode()
+    usuario = sha256(str(dono).encode()).hexdigest()
+    return f'aplicacao/data/geoespacial/configuracoes/favorabilidade-agregacao/{usuario}/{sha256(identidade).hexdigest()}.json'
+
+
+def _caminho(resultados, dono):
+    identidade = json.dumps(sorted(r['arquivo'] for r in resultados)).encode()
     usuario = sha256(str(dono).encode()).hexdigest()
     return f'aplicacao/data/geoespacial/configuracoes/favorabilidade-agregacao/{usuario}/{sha256(identidade).hexdigest()}.json'
 
@@ -73,12 +80,19 @@ def carregar(resultados, dono):
     try:
         salvo = json.loads(storage_remoto.baixar(_caminho(resultados, dono)))
     except FileNotFoundError:
-        return None
+        try:
+            salvo = json.loads(storage_remoto.baixar(_caminho_legado(resultados, dono)))
+        except FileNotFoundError:
+            return None
     if salvo.get('dono') != str(dono):
         raise ValueError('A medida salva não pertence ao responsável desta análise.')
+    if 'arquivos' in salvo and sorted((r['arquivo'], r['sha256']) for r in salvo['arquivos']) != sorted(
+            (r['arquivo'], r['sha256']) for r in resultados):
+        raise ValueError('A configuração de agregação não corresponde à saída atual.')
     return configurar(**salvo['configuracao'])
 
 
+@bloquear_referencias()
 def salvar(identificadores, dono, medida, percentil=None):
     config = configurar(medida, percentil)
     resultados = relatorios._selecionar(identificadores, dono, analise='favorabilidade')
@@ -86,6 +100,7 @@ def salvar(identificadores, dono, medida, percentil=None):
         for linha in relatorios.resumo_por_demanda(resultado, dono, analise='favorabilidade'):
             valores_linha(linha, config)
     dados = json.dumps({'dono': str(dono), 'configuracao': config,
+                        'arquivos': [{'arquivo': r['arquivo'], 'sha256': r['sha256']} for r in resultados],
                         'salvo_em': datetime.now(timezone.utc).isoformat()}, allow_nan=False).encode()
     caminho = _caminho(resultados, dono)
     storage_remoto.enviar_bytes(caminho, dados)

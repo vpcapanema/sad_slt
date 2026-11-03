@@ -18,6 +18,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from api.path_policy import project_path
+from api.services.republicacao_storage import bloquear_referencias
 
 PASTA = 'data/geoespacial/configuracoes/extracao-atributos'
 PAPEIS_ELEGIBILIDADE = {
@@ -237,6 +238,7 @@ def montar(nome: str, categorias: list[dict], user, entradas: list[dict] | None 
             'camadas_ignoradas': 0}
 
 
+@bloquear_referencias()
 def salvar(nome: str, categorias: list[dict], user, entradas: list[dict] | None = None,
            finalidades: list[dict] | None = None, **execucao) -> dict:
     migrar_legadas()

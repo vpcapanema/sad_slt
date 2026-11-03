@@ -251,8 +251,10 @@ def _salvar_saida(recurso_id, nome, origem, *, metadados, geometria_tipo, crs,
             conn.execute('''INSERT INTO geoprocessamento.execucao_arquivo
                 (id,operacao,status,finalizado_em,parametros)
                 VALUES (%s,%s,'concluido',now(),%s)''',
-                (execution,origem,_jsonb({'linhagem_original':metadados.get('linhagem')})))
-        destino=saidas_storage.destino(execution,'camadas',nome+('.gpkg' if gdf is not None else '.tif'))
+                (execution,origem,_jsonb({'linhagem_original':metadados.get('linhagem'), 'nome_saida': nome})))
+        destino=saidas_storage.destino(
+            execution,'camadas',(ciclo.apelido(nome) or 'saida')+('.gpkg' if gdf is not None else '.tif'),
+            elemento=recurso_id, conn=conn)
         row = conn.execute('''INSERT INTO geoprocessamento.camada_processada
             (recurso_sessao_id,nome,tipo,geometria_tipo,crs,formato,operacao_origem,linhagem,metadados,storage_caminho)
             VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id''',

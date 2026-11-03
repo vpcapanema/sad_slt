@@ -37,7 +37,11 @@ def storage_api(monkeypatch):
     monkeypatch.setattr(storage_remoto, 'criar_pasta', lambda path: None)
     monkeypatch.setattr(storage_remoto, 'apagar_pasta', lambda path: None)
     monkeypatch.setattr(storage_remoto, 'enviar_bytes', lambda path, data: files.update({path: data}))
-    monkeypatch.setattr(storage_remoto, 'baixar', lambda path: files[path])
+    def baixar(path):
+        if path not in files:
+            raise FileNotFoundError(path)
+        return files[path]
+    monkeypatch.setattr(storage_remoto, 'baixar', baixar)
     monkeypatch.setattr(storage_remoto, 'apagar_arquivo', lambda path: files.pop(path, None))
     yield files
     assert not any(path.startswith('temporarios-sicard/') for path in files)

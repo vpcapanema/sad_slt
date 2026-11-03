@@ -137,7 +137,7 @@ def test_envio_bytes_nao_materializa_arquivo(monkeypatch):
     upload = Mock()
     monkeypatch.setattr(storage_remoto, 'enviar_bytes', upload)
     monkeypatch.setattr(storage_remoto, 'baixar', lambda path: b'conteudo')
-    monkeypatch.setattr(saidas_storage, 'destino', lambda *args: 'saidas-geoespaciais/execucoes/00000000-0000-0000-0000-000000000001/relatorios/a.json')
+    monkeypatch.setattr(saidas_storage, 'destino', lambda *args, **kwargs: 'saidas-geoespaciais/execucoes/00000000-0000-0000-0000-000000000001/relatorios/a.json')
     result = saidas_storage.enviar_bytes('00000000-0000-0000-0000-000000000001', 'relatorios', 'a.json', b'conteudo')
     upload.assert_called_once_with(result['caminho'], b'conteudo')
     assert result['tamanho_bytes'] == 8
@@ -145,13 +145,21 @@ def test_envio_bytes_nao_materializa_arquivo(monkeypatch):
 
 def test_envio_corrompido_e_recusado(monkeypatch):
     monkeypatch.setattr(storage_remoto, 'enviar_bytes', Mock())
-    monkeypatch.setattr(storage_remoto, 'baixar', lambda path: b'errado')
+    consultas = iter((FileNotFoundError(), FileNotFoundError(), b'errado'))
+    def baixar(path):
+        resultado = next(consultas)
+        if isinstance(resultado, Exception):
+            raise resultado
+        return resultado
+    monkeypatch.setattr(storage_remoto, 'baixar', baixar)
     remove = Mock()
     monkeypatch.setattr(storage_remoto, 'apagar_arquivo', remove)
-    monkeypatch.setattr(saidas_storage, 'destino', lambda *args: 'saidas-geoespaciais/execucoes/00000000-0000-0000-0000-000000000001/relatorios/a.json')
+    monkeypatch.setattr(saidas_storage, 'destino', lambda *args, **kwargs: 'saidas-geoespaciais/execucoes/00000000-0000-0000-0000-000000000001/relatorios/a.json')
     with pytest.raises(ValueError, match='hash'):
         saidas_storage.enviar_bytes('00000000-0000-0000-0000-000000000001', 'relatorios', 'a.json', b'conteudo')
-    remove.assert_called_once()
+    assert remove.call_count == 2  # Restauração local e rollback da publicação.
+    for chamada in remove.call_args_list:
+        assert chamada.args == ('saidas-geoespaciais/execucoes/00000000-0000-0000-0000-000000000001/relatorios/a.json',)
 
 
 def test_fuse_grava_em_memoria_e_publica_no_flush(monkeypatch):

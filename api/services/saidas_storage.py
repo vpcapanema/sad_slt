@@ -2,48 +2,50 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime
 from hashlib import sha256
 import json
 from pathlib import Path, PurePosixPath
 import re
 from api.storage_policy import TemporaryDirectory
-from uuid import UUID, uuid4
-from zoneinfo import ZoneInfo
+from uuid import UUID
 
 from api.services import storage_remoto
+from api.services.edicao_storage import bloquear_arquivo
+from api.services.republicacao_storage import publicacao, antes_de_gravar, bloquear_referencias
 
 RAIZ = 'saidas-geoespaciais'
 GRUPOS = {'camadas', 'relatorios', 'pacotes'}
 
 
-def nome_gerado(extensao: str = '', *, quando: datetime | None = None, referencia=None) -> str:
-    """Nome físico da nova saída, independente do título descritivo da camada."""
-    instante = quando or datetime.now(timezone.utc)
-    data = instante.astimezone(ZoneInfo('America/Sao_Paulo')).strftime('%Y%m%d_%H%M%S')
-    ident = UUID(str(referencia)).hex if referencia is not None else uuid4().hex
-    return f'{data}_{ident}{extensao}'
+def nome_gerado(extensao: str = '', *, nome: str) -> str:
+    from api.services.ciclo_vida_arquivos import apelido
+    titulo = apelido(nome, 100)
+    if not titulo:
+        raise ValueError('Informe o nome do elemento de saída.')
+    return titulo + extensao
 
 
 def pasta_analise(ferramenta: str, nome: str, referencia: str, *,
                   quando: datetime | None = None, hierarquizacao: str | None = None,
-                  fase: str | None = None, exportacao: bool = False) -> str:
+                  fase: str | None = None, exportacao: bool = False, conn=None) -> str:
     from api.services.ciclo_vida_arquivos import apelido
     from api.services.pastas_storage import nome_valido
-    ident = UUID(str(referencia)).hex
+    from api.services.nomes_storage import reservar
+    ident = str(UUID(str(referencia)))
     titulo = apelido(nome, 60) or 'analise'
-    data = quando.astimezone(timezone.utc).strftime('%Y%m%dT%H%M%SZ_') if quando else ''
-    analise = f'{data}{titulo}_{ident}'
     if hierarquizacao:
         if fase not in {'fase-1', 'fase-2', 'fase-3', 'consolidado'}:
             raise ValueError('Informe a fase da hierarquização para salvar a análise.')
-        return pasta_exportacao(f'{RAIZ}/hierarquizacoes/{nome_valido(hierarquizacao)}/{fase}/{analise}')
-    if fase:
+        pai = pasta_exportacao(f'{RAIZ}/hierarquizacoes/{nome_valido(hierarquizacao)}/{fase}')
+    elif fase:
         raise ValueError('Uma fase exige o código da hierarquização.')
-    if exportacao:
-        return f'{RAIZ}/exportacoes/{analise}'
-    ferramenta = apelido(ferramenta, 60).replace('_', '-') or 'geoprocessamento'
-    return f'{RAIZ}/analises-avulsas/{ferramenta}/{analise}'
+    elif exportacao:
+        pai = f'{RAIZ}/exportacoes'
+    else:
+        ferramenta = apelido(ferramenta, 60).replace('_', '-') or 'geoprocessamento'
+        pai = f'{RAIZ}/analises-avulsas/{ferramenta}'
+    return f'{pai}/{reservar(pai, ident, titulo, conn=conn)}'
 
 
 def pasta_execucao(execucao: str, *, conn=None) -> str:
@@ -65,7 +67,7 @@ def pasta_execucao(execucao: str, *, conn=None) -> str:
                   'extracao_atributos': 'extracao-atributos'}.get(ferramenta, ferramenta)
     nome = parametros.get('nome_saida') or parametros.get('nome') or ferramenta
     return pasta_analise(ferramenta, nome, ident, quando=registro['iniciado_em'],
-                         exportacao=operacao == 'exportacao_direta')
+                         exportacao=operacao == 'exportacao_direta', conn=conn)
 
 
 def pasta_exportacao(caminho: str) -> str:
@@ -87,6 +89,12 @@ def validar_exportacao(caminho: str) -> str:
     pasta_exportacao(parent)
     nome_valido(name)
     return caminho
+
+
+def caminho_documento(pasta: str, nome: str) -> str:
+    from api.services.nomes_storage import reservar
+    pasta = pasta_exportacao(pasta)
+    return pasta + '/' + reservar(pasta, 'documento:' + nome, nome)
 
 
 def listar_pastas(caminho: str = RAIZ) -> dict:
@@ -137,22 +145,26 @@ def validar(caminho: str) -> str:
                   or (len(parts) == 4 and parts[1] == 'exportacoes')
                   or (len(parts) == 6 and parts[1] == 'hierarquizacoes'
                       and parts[3] in {'fase-1', 'fase-2', 'fase-3', 'consolidado'}))
-    if not organizada or not re.fullmatch(r'[a-z0-9_]+_[a-f0-9]{32}', parts[-2], re.I):
+    if not organizada or not re.fullmatch(r'[a-z0-9_]+', parts[-2], re.I):
         raise ValueError('Arquivo fora do destino oficial de saídas.')
     return str(path)
 
 
-def destino(execucao: str, grupo: str, nome: str, *, pasta: str | None = None) -> str:
+def destino(execucao: str, grupo: str, nome: str, *, pasta: str | None = None,
+            elemento: str | None = None, conn=None) -> str:
     if grupo not in GRUPOS:
         raise ValueError('Grupo de saída inválido.')
-    suffix = Path(nome).suffix.lower()
-    parent = pasta if pasta is not None else pasta_execucao(execucao)
-    path = validar(f'{parent}/{nome_gerado(suffix)}')
-    _conferir_execucao(path, execucao, grupo)
+    from api.services.pastas_storage import nome_valido
+    nome_valido(nome)
+    from api.services.nomes_storage import reservar
+    parent = pasta if pasta is not None else pasta_execucao(execucao, conn=conn)
+    _conferir_execucao(validar(f'{parent}/{nome}'), execucao, grupo, conn=conn)
+    nome = reservar(parent, json.dumps([str(execucao), grupo, elemento or nome]), nome, conn=conn)
+    path = validar(f'{parent}/{nome}')
     return path
 
 
-def _conferir_execucao(caminho: str, execucao: str, grupo: str) -> None:
+def _conferir_execucao(caminho: str, execucao: str, grupo: str, *, conn=None) -> None:
     if grupo not in GRUPOS:
         raise ValueError('Grupo de saída inválido.')
     parts = PurePosixPath(caminho).parts
@@ -160,11 +172,13 @@ def _conferir_execucao(caminho: str, execucao: str, grupo: str) -> None:
     if parts[1] == 'execucoes':
         corresponde = parts[2:4] == (str(ident), grupo)
     else:
-        corresponde = parts[-2].endswith('_' + ident.hex)
+        corresponde = (str(PurePosixPath(caminho).parent) == pasta_execucao(str(ident), conn=conn)
+                       or parts[-2].endswith('_' + ident.hex))
     if not corresponde:
         raise ValueError('O destino não corresponde à execução e ao grupo informados.')
 
 
+@bloquear_referencias()
 def conferir(caminho: str, checksum: str | None = None) -> bytes:
     data = storage_remoto.baixar(validar_exportacao(caminho))
     if checksum and sha256(data).hexdigest() != checksum:
@@ -173,9 +187,9 @@ def conferir(caminho: str, checksum: str | None = None) -> bytes:
 
 
 def enviar_arquivo(execucao: str, grupo: str, arquivo: Path, *, nome: str | None = None,
-                   caminho: str | None = None) -> dict:
-    path = validar(caminho) if caminho else destino(execucao, grupo, nome or arquivo.name)
-    _conferir_execucao(path, execucao, grupo)
+                   caminho: str | None = None, conn=None) -> dict:
+    path = validar(caminho) if caminho else destino(execucao, grupo, nome or arquivo.name, conn=conn)
+    _conferir_execucao(path, execucao, grupo, conn=conn)
     return _enviar_arquivo(path, arquivo)
 
 
@@ -184,44 +198,78 @@ def enviar_exportacao(caminho: str, arquivo: Path) -> dict:
     return _enviar_arquivo(path, arquivo)
 
 
+@publicacao()
 def _enviar_arquivo(path: str, arquivo: Path) -> dict:
+    with bloquear_arquivo(path):
+        return _enviar_arquivo_bloqueado(path, arquivo)
+
+
+@publicacao()
+def _enviar_arquivo_bloqueado(path: str, arquivo: Path) -> dict:
     with arquivo.open('rb') as stream:
         digest = sha256()
         for chunk in iter(lambda: stream.read(1024 * 1024), b''):
             digest.update(chunk)
         checksum = digest.hexdigest()
-    uploaded = False
+    antes_de_gravar(path, arquivo.read_bytes())
+    anterior = _anterior(path)
     try:
         storage_remoto.enviar(path, arquivo)
-        uploaded = True
         remote = conferir(path, checksum)
         if len(remote) != arquivo.stat().st_size:
             raise ValueError('O tamanho do arquivo enviado ao storage diverge do original.')
     except Exception:
-        if uploaded:
-            storage_remoto.apagar_arquivo(path)
+        restaurar(path, anterior)
         raise
     return {'caminho': path, 'sha256': checksum, 'tamanho_bytes': arquivo.stat().st_size}
 
 
-def enviar_bytes(execucao: str, grupo: str, nome: str, data: bytes, *, caminho: str | None = None) -> dict:
-    path = validar(caminho) if caminho else destino(execucao, grupo, nome)
-    _conferir_execucao(path, execucao, grupo)
+def enviar_bytes(execucao: str, grupo: str, nome: str, data: bytes, *, caminho: str | None = None, conn=None) -> dict:
+    path = validar(caminho) if caminho else destino(execucao, grupo, nome, conn=conn)
+    _conferir_execucao(path, execucao, grupo, conn=conn)
     return enviar_conteudo(path, data)
 
 
+@publicacao()
 def enviar_conteudo(caminho: str, data: bytes) -> dict:
     path = validar_exportacao(caminho)
+    with bloquear_arquivo(path):
+        return _enviar_conteudo_bloqueado(path, data)
+
+
+@publicacao()
+def _enviar_conteudo_bloqueado(path: str, data: bytes) -> dict:
     checksum = sha256(data).hexdigest()
+    antes_de_gravar(path, data)
+    anterior = _anterior(path)
     try:
         storage_remoto.enviar_bytes(path, data)
         remote = conferir(path, checksum)
         if len(remote) != len(data):
             raise ValueError('O tamanho do arquivo enviado diverge do original.')
     except Exception:
-        storage_remoto.apagar_arquivo(path)
+        restaurar(path, anterior)
         raise
     return {'caminho': path, 'sha256': checksum, 'tamanho_bytes': len(data)}
+
+
+def _anterior(path: str) -> bytes | None:
+    try:
+        return storage_remoto.baixar(path)
+    except FileNotFoundError:
+        return None
+
+
+def restaurar(path: str, anterior: bytes | None) -> None:
+    if anterior is None:
+        try:
+            storage_remoto.apagar_arquivo(path)
+        except FileNotFoundError:
+            pass
+    else:
+        storage_remoto.enviar_bytes(path, anterior)
+        if storage_remoto.baixar(path) != anterior:
+            raise RuntimeError('Não foi possível restaurar a saída anterior: ' + path)
 
 
 def enviar_json(execucao: str, nome: str, data: dict) -> dict:

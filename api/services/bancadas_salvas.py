@@ -7,6 +7,7 @@ from api import storage_policy as tempfile
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
 from api.path_policy import project_path
+from api.services.republicacao_storage import bloquear_referencias
 
 MAX_BYTES = 64 * 1024 * 1024
 
@@ -15,6 +16,7 @@ def pasta(usuario):
     path.mkdir(parents=True, exist_ok=True)
     return path
 
+@bloquear_referencias()
 def salvar(usuario, nome, snapshot):
     nome = str(nome).strip()
     if not nome or len(nome) > 200:
