@@ -18,9 +18,13 @@ from api.services import hierarquizacao_service as service
 
 @pytest.fixture(autouse=True)
 def matrizes_em_memoria(monkeypatch):
-    monkeypatch.setattr(service.matrizes_criterios, "criar",
-                        lambda nome, conteudo: {"id": "88888888-8888-8888-8888-888888888888",
-                                               "nome": nome, "conteudo": deepcopy(conteudo)})
+    monkeypatch.setattr(
+        service.matrizes_criterios, "criar",
+        lambda nome, conteudo: {
+            "id": "88888888-8888-8888-8888-888888888888",
+            "nome": nome, "conteudo": deepcopy(conteudo),
+        },
+    )
 
 
 @pytest.mark.parametrize("etapa2, etapa3", [
@@ -130,6 +134,7 @@ def test_registrar_saida_e_pdf_sem_perder_analises_ou_alterar_situacao(monkeypat
     dados_antes = deepcopy(row['dados_hierarquizacao'])
     _mock_persistencia(monkeypatch, row)
     locks = []
+
     def carregar(codigo, *, for_update=False):
         locks.append(for_update)
         return deepcopy(row)
@@ -172,7 +177,7 @@ def test_rodada_pode_executar_somente_fase_1(monkeypatch: pytest.MonkeyPatch) ->
             nome="Triagem territorial",
             grupo_demanda_id=grupo_id,
             fases_a_executar=[1],
-            matriz_premissas_criterios=[{"criterio":"C1","etapa":"Elegibilidade territorial"},{"criterio":"C2","etapa":"Elegibilidade territorial"}],
+            matriz_premissas_criterios=[{"criterio": "C1", "etapa": "Elegibilidade territorial"}, {"criterio": "C2", "etapa": "Elegibilidade territorial"}],
         )
     )
 
@@ -219,7 +224,7 @@ def test_criacao_usa_o_universo_do_agrupamento_salvo(monkeypatch: pytest.MonkeyP
             nome="Rodada do grupo salvo",
             grupo_demanda_id=grupo_demanda_id,
             fases_a_executar=[1],
-            matriz_premissas_criterios=[{"criterio":"C1","etapa":"Elegibilidade territorial"},{"criterio":"C2","etapa":"Elegibilidade territorial"}],
+            matriz_premissas_criterios=[{"criterio": "C1", "etapa": "Elegibilidade territorial"}, {"criterio": "C2", "etapa": "Elegibilidade territorial"}],
         )
     )
 
@@ -598,7 +603,7 @@ def test_excluir_hierarquizacao_sem_universo_nao_gera_transicao(
     assert capturado["transicao"] is None
 
 
-def test_repositorio_desvincula_configuracao_antes_de_excluir_hierarquizacao(
+def test_repositorio_desvincula_superficies_e_configuracao_antes_de_excluir_hierarquizacao(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     operacoes: list[object] = []
@@ -622,10 +627,15 @@ def test_repositorio_desvincula_configuracao_antes_de_excluir_hierarquizacao(
         def commit(self):
             operacoes.append("commit")
 
-    monkeypatch.setattr(service.repo, "get_connection", lambda: Connection())
+    monkeypatch.setattr(service.repo, "get_connection", Connection)
 
     assert service.repo.delete_by_codigo("HIER-TESTE") is True
-    assert len([item for item in operacoes if item == ("HIER-TESTE",)]) == 2
+    assert len([item for item in operacoes if item == ("HIER-TESTE",)]) == 3
+    assert "UPDATE geoprocessamento.superficie_criterios s" in operacoes[0].as_string()
+    assert "SET hierarquizacao_id = NULL" in operacoes[0].as_string()
+    assert "WHERE h.codigo = %s AND s.hierarquizacao_id = h.id" in operacoes[0].as_string()
+    assert "UPDATE ahp.config_multicriterio_portfolio c" in operacoes[2].as_string()
+    assert operacoes[4].as_string().startswith("DELETE FROM")
     assert operacoes[-1] == "commit"
 
 
@@ -637,6 +647,21 @@ def test_migration_cria_dominio_matriz_e_fk_sem_status_rascunho() -> None:
     assert migration.count("REFERENCES hierarquizacao_demandas.dom_status_hierarquizacao (codigo)") == 3
     assert "ALTER COLUMN status SET DEFAULT 'em_julgamento'" in migration
     assert "('rascunho'," not in migration
+
+
+def test_migration_preserva_superficies_ao_excluir_hierarquizacao() -> None:
+    migration = Path(
+        "database/160_preservar_superficies_ao_excluir_hierarquizacao.sql"
+    ).read_text(encoding="utf-8")
+
+    assert "ALTER COLUMN hierarquizacao_id DROP NOT NULL" in migration
+    assert "DROP CONSTRAINT IF EXISTS superficie_criterios_hierarquizacao_id_fkey" in migration
+    assert "REFERENCES hierarquizacao_demandas.hierarquizacao_portfolio(id)" in migration
+    assert "ON DELETE SET NULL" in migration
+    assert "ON DELETE CASCADE" not in migration
+    assert "DELETE FROM" not in migration
+    assert migration.startswith("BEGIN;")
+    assert migration.rstrip().endswith("COMMIT;")
 
 
 def test_atualizacao_valida_matriz_de_transicao_da_hierarquizacao(
@@ -819,8 +844,8 @@ def test_classificacao_fase1_cai_no_json_sem_banco() -> None:
     assert origem.startswith("classificacao_fase1.json@")
 
 
-@pytest.mark.parametrize("matrix", [None, [], {}, {"linhas":[{"criterio":"Único"}]}])
+@pytest.mark.parametrize("matrix", [None, [], {}, {"linhas": [{"criterio": "Único"}]}])
 def test_cadastro_exige_matriz_com_dois_criterios(matrix):
     from pydantic import ValidationError
     with pytest.raises(ValidationError):
-        HierarquizacaoCreateSchema(nome="Nova",grupo_demanda_id="9ccbb5b5-3d60-4f25-8f3f-bdef08a48e73",matriz_premissas_criterios=matrix)
+        HierarquizacaoCreateSchema(nome="Nova", grupo_demanda_id="9ccbb5b5-3d60-4f25-8f3f-bdef08a48e73", matriz_premissas_criterios=matrix)

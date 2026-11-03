@@ -92,12 +92,14 @@ def test_fase2_nao_calcula_novos_pesos_por_julgamento(monkeypatch, origem):
         service.calcular("superficie", {"operador": "ahp", **origem}, None)
 
 
-def test_excel_usa_somente_criterios_da_superficie():
-    row = {'id':'superficie','hierarquizacao_id':'hierarquia',
+@pytest.mark.parametrize('hierarquizacao_id', ['hierarquia', None])
+def test_excel_usa_somente_criterios_da_superficie(hierarquizacao_id):
+    row = {'id':'superficie','hierarquizacao_id':hierarquizacao_id,
            'criterios':[{'id':'c001','dimensao':'Social','criterio':'Atendimento',
                          'premissa':'Quanto maior...', 'variavel':'População','relacao':'positiva',
                          'campo_reescalonado':'pop_r'}]}
     book = load_workbook(io.BytesIO(service.matriz_excel(row)), data_only=True)
+    assert book['Vínculo']['B2'].value == hierarquizacao_id
     assert book['Comparação pareada'].cell(1,2).value == 'Atendimento'
     assert book['Comparação pareada'].cell(2,2).value == 1
     assert book['Vínculo'].cell(1,2).value == 'superficie'

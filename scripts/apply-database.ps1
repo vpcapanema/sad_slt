@@ -280,7 +280,8 @@ $migrations = @(
     "154_pendencias_registradas_nao_notificadas.sql",
     "155_versoes_parecer_complementacao.sql"
     "156_data_analise_parecer.sql",
-    "157_status_homologada_publicada.sql"
+    "157_status_homologada_publicada.sql",
+    "160_preservar_superficies_ao_excluir_hierarquizacao.sql"
 )
 
 if ($OnlyMigration) {

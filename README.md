@@ -1387,6 +1387,17 @@ build/integração; não substitua dados ou aplique migrations automaticamente
 para contornar uma falha. Deploy requer autorização do usuário; iniciar o
 servidor local não autoriza publicação.
 
+### Exclusão de hierarquizações com superfícies independentes
+
+O fluxo de exclusão desvincula as superfícies de critérios e a configuração
+de portfólio antes de remover a hierarquização, na mesma transação. As
+superfícies, camadas, cálculos e metadados históricos são preservados.
+Antes de publicar esse fluxo, aplicar o ajuste que permite o vínculo vazio:
+
+```powershell
+.\scripts\apply-database.ps1 -OnlyMigration 160_preservar_superficies_ao_excluir_hierarquizacao.sql
+```
+
 ### Correção do contrato de exportação do seed geoespacial
 
 A migração `136_corrigir_contrato_exportacao_seed.sql` corrige os parâmetros de

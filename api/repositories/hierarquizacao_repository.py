@@ -512,13 +512,13 @@ def _liberar_demandas_universo(conn: Any, transicao: dict[str, Any]) -> None:
     liberaveis = []
     for demanda_id in ids:
         restante = conn.execute(
-                        sql.SQL("""
+            sql.SQL("""
                                 SELECT 1
                                     FROM {hier_table} h
                                     JOIN demandas.grupos_demandas g ON g.id = h.grupo_demanda_id
                                  WHERE jsonb_path_exists(COALESCE(g.objetos, '[]'::jsonb), %s::jsonpath)
                                  LIMIT 1
-                        """).format(hier_table=_TABLE),
+            """).format(hier_table=_TABLE),
             (f'$[*] ? (@.id == "{demanda_id}")',),
         ).fetchone()
         if not restante:
@@ -540,6 +540,15 @@ def delete_by_codigo(
     """
     query = sql.SQL("DELETE FROM {table} WHERE codigo = %s RETURNING id").format(table=_TABLE)
     with get_connection() as conn:
+        conn.execute(
+            sql.SQL(
+                "UPDATE geoprocessamento.superficie_criterios s "
+                "SET hierarquizacao_id = NULL, atualizado_em = now() "
+                "FROM {table} h "
+                "WHERE h.codigo = %s AND s.hierarquizacao_id = h.id"
+            ).format(table=_TABLE),
+            (codigo,),
+        )
         # A configuração de portfólio guarda uma cópia independente dos
         # critérios/premissas da hierarquização. Ao remover a origem, preserve
         # essa configuração e desfaça somente o vínculo de procedência. Isso
@@ -570,11 +579,11 @@ def intersecoes_camada(camada_id: str, *, longitude: float, latitude: float) -> 
         return []
     frame, metadata = loaded
     spatial = _gdal_reproject(frame, 4326)
-    indices = spatial.sindex.query(Point(longitude,latitude), predicate='intersects')
-    return [{'camada_id':str(metadata['id']), 'camada_origem':metadata['nome'],
-             'versao':'', 'finalidade':(metadata.get('metadados') or {}).get('finalidade'),
-             'ordem':int(index), 'propriedades':camadas._json_safe(spatial.drop(columns=spatial.geometry.name).iloc[index].to_dict()),
-             'geometria':mapping(spatial.geometry.iloc[index])} for index in sorted(indices)]
+    indices = spatial.sindex.query(Point(longitude, latitude), predicate='intersects')
+    return [{'camada_id': str(metadata['id']), 'camada_origem': metadata['nome'],
+             'versao': '', 'finalidade': (metadata.get('metadados') or {}).get('finalidade'),
+             'ordem': int(index), 'propriedades': camadas._json_safe(spatial.drop(columns=spatial.geometry.name).iloc[index].to_dict()),
+             'geometria': mapping(spatial.geometry.iloc[index])} for index in sorted(indices)]
 
 
 def conjuntos_camada(camada_id: str) -> list[str]:
@@ -589,15 +598,15 @@ def camada_homologada(camada_id: str) -> dict[str, Any] | None:
     """Nome legado do contrato; resolve uma saída do catálogo no Storage."""
     from api.repositories.saidas_geoespaciais_repository import listar
     for row in listar():
-        if camada_id in {row['id'],str((row.get('metadados') or {}).get('id_banco',''))}:
-            return {**row,'versao':'','finalidade':(row.get('metadados') or {}).get('finalidade')}
+        if camada_id in {row['id'], str((row.get('metadados') or {}).get('id_banco', ''))}:
+            return {**row, 'versao': '', 'finalidade': (row.get('metadados') or {}).get('finalidade')}
     from api.repositories import camada_geoespacial_repository as camadas
     with get_connection() as conn:
-        found=camadas._find_layer(conn,camada_id)
-    if not found or found[0]!='processadas':
+        found = camadas._find_layer(conn, camada_id)
+    if not found or found[0] != 'processadas':
         return None
-    row=found[1]
-    return {**row,'id':str(row['id']),'versao':'','finalidade':(row.get('metadados') or {}).get('finalidade')}
+    row = found[1]
+    return {**row, 'id': str(row['id']), 'versao': '', 'finalidade': (row.get('metadados') or {}).get('finalidade')}
 
 
 def listar_pacotes_homologados(modulo: str) -> list[dict[str, Any]]:
@@ -649,9 +658,9 @@ def salvar_fatiamento_fase1(data: dict[str, Any]) -> dict[str, Any]:
 def raster_homologado(camada_id: str) -> dict[str, Any] | None:
     """Contrato de leitura legado, agora servido pelo arquivo no Storage."""
     from api.repositories.camada_geoespacial_repository import carregar_raster
-    loaded=carregar_raster(camada_id)
+    loaded = carregar_raster(camada_id)
     if not loaded:
         return None
-    content,metadata=loaded
-    return {**metadata,'id':str(metadata['id']),'versao':'','dados_geotiff':content,
-            'hash_conteudo':metadata.get('sha256'),'perfil':metadata.get('perfil',{})}
+    content, metadata = loaded
+    return {**metadata, 'id': str(metadata['id']), 'versao': '', 'dados_geotiff': content,
+            'hash_conteudo': metadata.get('sha256'), 'perfil': metadata.get('perfil', {})}

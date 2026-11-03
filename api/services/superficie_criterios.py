@@ -248,7 +248,8 @@ def calcular(ident, payload, user):
     camadas.salvar_vetor(recurso_id=resource, nome=row['nome'] + ' — índice',
                          origem='OP-SUPERFICIE-FAVORABILIDADE', gdf=frame,
                          metadados={'superficie_id': str(row['id']), 'criterios': criteria,
-                                    'hierarquizacao_id': str(row['hierarquizacao_id']), 'calculo': audit},
+                                    'hierarquizacao_id': str(row['hierarquizacao_id']) if row['hierarquizacao_id'] is not None else None,
+                                    'calculo': audit},
                          preservar_geometrias=True)
     with get_connection() as conn:
         conn.execute('''UPDATE geoprocessamento.superficie_criterios
@@ -296,7 +297,7 @@ def matriz_excel(row):
         sheet.append([c['criterio']] + [1 if i == j else None for j in range(len(criteria))])
     sheet = book.create_sheet('Vínculo')
     sheet.append(['Superfície', str(row['id'])])
-    sheet.append(['Hierarquização', str(row['hierarquizacao_id'])])
+    sheet.append(['Hierarquização', str(row['hierarquizacao_id']) if row['hierarquizacao_id'] is not None else None])
     stream = io.BytesIO()
     book.save(stream)
     return stream.getvalue()

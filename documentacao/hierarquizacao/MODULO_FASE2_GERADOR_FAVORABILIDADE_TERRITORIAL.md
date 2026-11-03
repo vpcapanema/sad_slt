@@ -27,6 +27,10 @@ superfícies vetoriais municipais ou por setores censitários de 2022, vinculada
 a uma hierarquização já cadastrada. Trata-se de uma página independente da
 bancada da Fase 2, sem alteração automática dos resultados ou da homologação.
 
+A exclusão da hierarquização de origem remove somente o vínculo relacional da
+superfície, na mesma transação. Preservam-se o registro da superfície, os
+critérios, as camadas, os cálculos e os metadados históricos dos produtos.
+
 O usuário seleciona variáveis do catálogo com levantamento territorial integral
 comprovado, associa uma das 12 dimensões do modelo oficial e declara a relação
 positiva ou negativa com a favorabilidade territorial. O nome do critério

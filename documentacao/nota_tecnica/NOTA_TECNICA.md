@@ -18,8 +18,8 @@
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Título**                 | Metodologia do Sistema de Hierarquização de Demandas — SICARD                                                                                                         |
 | **Número**                 | NT-SICARD-001/2026                                                                                                                                                       |
-| **Versão**                 | 1.76                                                                                                                                                                      |
-| **Data de emissão**        | 30/10/2026                                                                                                                                                               |
+| **Versão**                 | 1.77                                                                                                                                                                      |
+| **Data de emissão**        | 02/11/2026                                                                                                                                                               |
 | **Classificação**         | Documento técnico-metodológico de entrega ao cliente                                                                                                                   |
 | **Sistema**                 | SICARD — Sistema Inteligente de Cadastro e Ranking de Demandas                                                                                                        |
 | **Domínio de aplicação** | Logística e transportes. Concebido no âmbito do Plano de Logística Integrada do Estado de São Paulo (PLI-SP), aplica-se a qualquer objeto de demanda desse domínio. |
@@ -110,6 +110,7 @@
 | 1.74    | 29/10/2026 | `[preencher]` | Explicitação das condições não atendidas em frases declarativas e da conclusão geométrica; aplicação da paleta oficial ao status efetivamente registrado e inclusão das cores nas fontes versionadas, sem alteração dos critérios ou das fórmulas. |
 | 1.75    | 29/10/2026 | `[preencher]` | Distinção dos estados Homologada e Publicada no ciclo das demandas e inclusão da despublicação auditável, preservando a homologação, os resultados e a situação sustentada por outras rodadas. |
 | 1.76    | 30/10/2026 | `[preencher]` | Explicitação do formulário-modelo como simulação dos sete critérios D1–D7 da matriz PLI v6 de blocos e dimensões, sem gravação ou aplicação de pesos, preservando o recorte da Fase 3 nos julgamentos reais. |
+| 1.77    | 02/11/2026 | `[preencher]` | Preservação das superfícies autônomas, camadas, cálculos e metadados históricos na exclusão da hierarquização de origem, com remoção apenas do vínculo relacional na mesma transação. |
 
 ---
 
@@ -835,6 +836,10 @@ originais e reescalonados. Aplica-se exclusivamente transformação linear
 mínimo–máximo, com inversão dos critérios negativos; variáveis constantes são
 rejeitadas. Zero observado é válido; valores desconhecidos ou protegidos por
 sigilo não são convertidos em zero.
+
+A exclusão da hierarquização de origem remove somente o vínculo relacional,
+na mesma transação, preservando a superfície, seus critérios, camadas,
+cálculos e metadados históricos dos produtos.
 
 A composição utiliza média simples ou pesos explicitamente informados,
 correspondentes exatamente aos critérios salvos. Não se admite novo julgamento
