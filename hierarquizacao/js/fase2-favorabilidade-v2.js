@@ -37,12 +37,15 @@ const previa = criarPrevia(state, render, {
 });
 
 function avisar(mensagem, tipo='info') {
+  window.SICARDBrowserLogs?.log('validacao.feedback', {valido:tipo !== 'error'}, tipo);
   node('status').textContent = mensagem;
   node('status').dataset.error = String(tipo === 'error');
   feedback(mensagem, tipo);
 }
 async function ocupar(mensagem, acao) {
   if (state.busy) return;
+  const inicio = performance.now();
+  window.SICARDBrowserLogs?.log('bancada.inicio', {busy:true});
   state.busy = true;
   node('status').textContent = mensagem;
   node('status').dataset.error = 'false';
@@ -60,8 +63,10 @@ async function ocupar(mensagem, acao) {
       if (cancelado) throw new DOMException('Operação cancelada. A prévia e a bancada anteriores foram mantidas.', 'AbortError');
     }};
   };
-  try { await acao(iniciar); }
+  try { await acao(iniciar); window.SICARDBrowserLogs?.log('bancada.concluida', {duracao_ms:performance.now()-inicio}); }
   catch (erro) {
+    window.SICARDBrowserLogs?.log(erro.name === 'AbortError' ? 'bancada.cancelada' : 'bancada.falhou',
+      {duracao_ms:performance.now()-inicio}, erro.name === 'AbortError' ? 'warn' : 'error');
     if (erro.name === 'AbortError') {
       processo?.confirmarCancelamento(erro.message);
       processo?.fechar();
@@ -317,6 +322,7 @@ function atualizarBancada() {
 }
 async function calcularFavorabilidade() {
   if (state.busy) return;
+  window.SICARDBrowserLogs?.log('calculo.validacao_inicio');
   state.busy = true;
   controles();
   let processo, job, resultado, cancelado = false;
@@ -390,6 +396,7 @@ async function calcularFavorabilidade() {
     }
     avisar(`${concluidas.length} camada(s) de saída produzida(s) e adicionada(s) à bancada: ${concluidas.join(', ')}. Raster: média ponderada pela área e cobertura válida. Vetores: atributos originais preservados.`, 'success');
   } catch (erro) {
+    window.SICARDBrowserLogs?.log(erro.name === 'AbortError' ? 'calculo.cancelado' : 'calculo.falhou', {}, erro.name === 'AbortError' ? 'warn' : 'error');
     const persistida = resultado?.arquivo ? ` A saída já está gravada em ${resultado.arquivo}; abra esse arquivo na bancada, sem repetir o cálculo.` : '';
     const anteriores = concluidas.length ? ` Saídas anteriores mantidas: ${concluidas.join(', ')}.` : '';
     if (erro.name === 'AbortError') {

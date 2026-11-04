@@ -31,7 +31,7 @@ const resultados = criarResultados({avisar, aoOcupar:busy => { state.busy = busy
 
 async function resolverAdversidades(camadas) {
   if (!camadas.length) return [];
-  const response = await fetch(`${base.replace(/\/geoespacial$/, '')}/dominios/adversidades/camadas/resolver`, {
+  const response = await (window.SICARDBrowserLogs?.fetch || fetch)(`${base.replace(/\/geoespacial$/, '')}/dominios/adversidades/camadas/resolver`, {
     method:'POST', credentials:'same-origin', signal:AbortSignal.timeout(30000),
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({camadas:camadas.map(c => c.id)}),
@@ -54,12 +54,15 @@ function rotuloAdversidade(camada) {
 }
 
 function avisar(mensagem, tipo='info') {
+  window.SICARDBrowserLogs?.log('validacao.feedback', {valido:tipo !== 'error'}, tipo);
   node('status').textContent = mensagem;
   node('status').dataset.error = String(tipo === 'error');
   feedback(mensagem, tipo);
 }
 async function ocupar(mensagem, acao) {
   if (state.busy) return;
+  const inicio = performance.now();
+  window.SICARDBrowserLogs?.log('bancada.inicio', {busy:true});
   state.busy = true;
   node('status').textContent = mensagem;
   node('status').dataset.error = 'false';
@@ -80,8 +83,10 @@ async function ocupar(mensagem, acao) {
       },
     };
   };
-  try { await acao(iniciar); }
+  try { await acao(iniciar); window.SICARDBrowserLogs?.log('bancada.concluida', {duracao_ms:performance.now()-inicio}); }
   catch (erro) {
+    window.SICARDBrowserLogs?.log(erro.name === 'AbortError' ? 'bancada.cancelada' : 'bancada.falhou',
+      {duracao_ms:performance.now()-inicio}, erro.name === 'AbortError' ? 'warn' : 'error');
     if (erro.name === 'AbortError') {
       processo?.confirmarCancelamento(erro.message);
       processo?.fechar();
@@ -316,6 +321,7 @@ function conferirBancada() {
 }
 async function calcularElegibilidade() {
   if (state.busy) return;
+  window.SICARDBrowserLogs?.log('calculo.validacao_inicio');
   state.busy = true;
   controles();
   let processo, job, resultado;
@@ -334,6 +340,7 @@ async function calcularElegibilidade() {
       warning:'Cada base será intersectada separadamente com a entrada integral. As áreas serão somadas por feição, em m². Cada saída será gravada no storage e adicionada à bancada, sem alterar as fontes.',
       confirmLabel:'Executar elegibilidade',
     });
+    window.SICARDBrowserLogs?.log('calculo.confirmacao', {valido:confirmado});
     if (!confirmado) return;
     resultados.iniciar();
     const lote = crypto.randomUUID();
@@ -371,6 +378,7 @@ async function calcularElegibilidade() {
     }
     avisar(`${concluidas.length} camada(s) de saída produzida(s) e adicionada(s) à bancada: ${concluidas.join(', ')}.`, 'success');
   } catch (erro) {
+    window.SICARDBrowserLogs?.log(erro.name === 'AbortError' ? 'calculo.cancelado' : 'calculo.falhou', {}, erro.name === 'AbortError' ? 'warn' : 'error');
     const persistida = resultado?.arquivo ? ` A saída já está gravada em ${resultado.arquivo}; abra esse arquivo na bancada, sem repetir o cálculo.` : '';
     const anteriores = concluidas.length ? ` Saídas anteriores mantidas: ${concluidas.join(', ')}.` : '';
     if (erro.name === 'AbortError') {

@@ -228,7 +228,7 @@
           'Se houver algum vínculo, nenhum agrupamento desta seleção será excluído.',
         confirmLabel: 'Excluir', danger: true,
       }))) return;
-      const response = await fetch('/api/admin/tabelas/demandas/grupos_demandas', {method, credentials:'same-origin', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+      const response = await (window.SICARDBrowserLogs?.fetch || fetch)('/api/admin/tabelas/demandas/grupos_demandas', {method, credentials:'same-origin', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
       const result = await response.json();
       if (!response.ok) throw new Error(result.detail || 'Não foi possível concluir a operação.');
       if (method === 'DELETE' && (!Number.isInteger(result.removidos) || result.removidos < 0 || result.removidos > selecionados.length)) {
@@ -268,6 +268,7 @@
   }
 
   function erro(mensagem, destino = "#agrupamento-form-error") {
+    window.SICARDBrowserLogs?.log("validacao.agrupamento", { valido: false }, "error");
     const elemento = $(destino);
     if (!elemento) return;
     elemento.textContent = mensagem || "Não foi possível concluir a operação.";

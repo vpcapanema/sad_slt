@@ -517,6 +517,7 @@
     preencherModal("modal-matriz", `Matriz de critérios e premissas — ${codigo}`, matrizHtml(matrizAtual.matriz));
   }
   function erro(msg) {
+    window.SICARDBrowserLogs?.log("validacao.processo", { valido: false }, "error");
     Notify.warning("Cadastro da hierarquização", msg);
     const container = $("form-error");
     const texto = String(msg || "Erro na requisição.");

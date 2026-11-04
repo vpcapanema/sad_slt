@@ -13,7 +13,7 @@
     const E = global.SicardApiErro;
     const method = (options && options.method) || "GET";
     let res;
-    try { res = await fetch(path, { credentials: "same-origin", ...(options || {}) }); }
+    try { res = await (global.SICARDBrowserLogs?.fetch || fetch)(path, { credentials: "same-origin", ...(options || {}) }); }
     catch (e) { throw E ? E.deRede(e, { method, url: path }) : e; }
     if (!res.ok) {
       if (E) throw await E.deResposta(res, { method, url: path });

@@ -604,9 +604,8 @@ body.operador-home-page {
   text-align: center;
 }
 
-/* Coluna estreita (dois subcards dividem a largura de um módulo já span-4):
-   dois itens por linha em ambos, senão os rótulos ficam espremidos demais. */
-.subgroup-analise-multicriterio-ahp-e-obtencao-de-pesos .platform-grid { --itens-por-linha: 2; }
+/* A Central de Julgamentos mantém um acesso por linha em todas as telas. */
+.restrict-platform-groups .subgroup-analise-multicriterio-ahp-e-obtencao-de-pesos .platform-grid { --itens-por-linha: 1; }
 .subgroup-ranqueamento .platform-grid { --itens-por-linha: 2; }
 /* Acessos reorganizados dentro de cada subgrupo: duas colunas, com o
    último acesso ocupando a linha quando a quantidade é ímpar. */

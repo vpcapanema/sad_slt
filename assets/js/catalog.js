@@ -4,7 +4,7 @@
   async function loadCatalog(_basePath) {
     if (catalog) return catalog;
     const url = "/config/catalogo-slt.json";
-    const res = await fetch(url);
+    const res = await (window.SICARDBrowserLogs?.fetch || fetch)(url);
     if (!res.ok) throw new Error("Não foi possível carregar o catálogo SLT.");
     catalog = await res.json();
     return catalog;

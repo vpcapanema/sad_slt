@@ -98,7 +98,7 @@ def ambiente(monkeypatch, tmp_path):
         yield banco
 
     @contextmanager
-    def bloquear(path):
+    def bloquear(path, **kwargs):
         lock = locks.setdefault(path.casefold(), RLock())
         if not lock.acquire(blocking=False):
             raise ValueError('Publicação concorrente')

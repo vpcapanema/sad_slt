@@ -46,12 +46,17 @@ def _registro(ident, dono, analise='elegibilidade'):
     return caminho, json.loads(dados)
 
 
-@bloquear_referencias()
 def _publicar(job, estado, *, forcar=False):
     job['estado'] = estado
     agora = monotonic()
     if not forcar and estado['status'] == 'executando' and agora - job.get('publicado', float('-inf')) < 1:
         return
+    _persistir(job, estado)
+    job['publicado'] = agora
+
+
+@bloquear_referencias()
+def _persistir(job, estado):
     dados = {'id': job['id'], 'dono': job['dono'], **estado,
              'erro': job.get('erro'), 'resultado': job.get('resultado')}
     caminho = _caminho(job['id'], job['dono'], job.get('analise', 'elegibilidade'))
@@ -62,7 +67,6 @@ def _publicar(job, estado, *, forcar=False):
     except Exception:
         _log.exception('Não foi possível publicar o estado da execução %s', job['id'])
         raise
-    job['publicado'] = agora
 
 
 class _ControleCompartilhado(ControleProcessamento):
@@ -95,7 +99,6 @@ def _obter(ident, dono, analise='elegibilidade'):
     return job
 
 
-@bloquear_referencias()
 def consultar(ident, dono, *, analise='elegibilidade'):
     with _lock:
         job = _jobs.get(ident)
@@ -103,6 +106,11 @@ def consultar(ident, dono, *, analise='elegibilidade'):
             _obter(ident, dono, analise)
             return {'id': ident, **deepcopy(job['estado']), 'erro': job.get('erro'),
                     'resultado': deepcopy(job.get('resultado'))}
+    return _consultar_registro(ident, dono, analise)
+
+
+@bloquear_referencias()
+def _consultar_registro(ident, dono, analise):
     _, registro = _registro(ident, dono, analise)
     if registro.get('id') != ident or registro.get('dono') != str(dono):
         raise FileNotFoundError('Execução de elegibilidade não encontrada nesta sessão.')

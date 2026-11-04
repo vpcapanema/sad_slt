@@ -31,6 +31,7 @@ function seguro(dados={}){
  return out;
 }
 export function log(evento,dados={},nivel='info'){
+ if(window.SICARDBrowserLogs){window.SICARDBrowserLogs.log(evento,seguro(dados),nivel);return;}
  if(!ativo)return;
  const nome=/^[a-z][a-z0-9_.-]{0,70}$/.test(evento)?evento:'evento';
  const snapshot=Object.freeze({sessao,acao:acaoAtual,...seguro(dados)});
@@ -63,7 +64,7 @@ export function iniciarHttp(path,options={}){
  const metodo=String(options.method||'GET').toUpperCase(),rota=rotaSegura(path),requisicao=`r-${++sequencia}`,inicio=performance.now(),correlacao=acaoAtual;
  const polling=metodo==='GET'&&(/\/(execucoes|jobs)\/[^/?]+(?:\?.*)?$/.test(path));
  const key=metodo+' '+String(path).split(/[?#]/,1)[0];
- const emitir=verboso||!polling||!httpVistos.has(key);
+ const emitir=verboso||window.SICARDBrowserLogs?.status().verbose||!polling||!httpVistos.has(key);
  if(emitir)log('http.inicio',{metodo,rota,requisicao,acao:correlacao});
  return {
   concluir(status_http,data){

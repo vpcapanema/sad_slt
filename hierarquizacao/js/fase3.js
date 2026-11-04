@@ -366,6 +366,7 @@
   }
 
   function erro(error) {
+    window.SICARDBrowserLogs?.falha("erro.fase3", error);
     $("fase3-erro").textContent = error.message || error;
     $("fase3-erro").classList.remove("hidden");
   }
@@ -380,7 +381,7 @@
           document.querySelectorAll(".fase3-baixar-relatorio").forEach(button => { button.disabled = true; });
           try {
             const url = `/api/ahp/hierarquizacoes/${encodeURIComponent(selecionada.codigo)}/fases/3/relatorio.pdf`;
-            const resposta = await fetch(url, { credentials: "same-origin" });
+            const resposta = await (window.SICARDBrowserLogs?.fetch || fetch)(url, { credentials: "same-origin" });
             if (!resposta.ok) {
               if (window.SicardApiErro) throw await window.SicardApiErro.deResposta(resposta, { method: "GET", url });
               throw new Error(`Não foi possível gerar o relatório da Fase 3 (HTTP ${resposta.status}).`);

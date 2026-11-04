@@ -1,11 +1,13 @@
 """Substituição do arquivo original via SFTPGo, sem criar camada ou backup."""
 import json
 import math
+import sys
 from contextlib import contextmanager
 from pathlib import Path, PurePosixPath
 from api.storage_policy import TemporaryDirectory
 import time
 from uuid import uuid4
+from psycopg.pq import TransactionStatus
 
 from osgeo import gdal, ogr, osr
 
@@ -15,21 +17,37 @@ from api.db.connection import get_connection
 
 
 @contextmanager
-def bloquear_arquivo(caminho):
+def bloquear_arquivo(caminho, *, espera=0):
     # A chave é do arquivo, não da camada: um GeoPackage pode ter várias.
     key = 'edicao-storage:' + caminho.casefold()
     with get_connection() as conn:
-        row = conn.execute(
-            'SELECT pg_try_advisory_lock(hashtextextended(%s,0)) AS adquirido', (key,),
-        ).fetchone()
-        if row is None:
-            raise RuntimeError('O banco não confirmou o bloqueio de edição do arquivo.')
-        if not row['adquirido']:
-            raise ValueError('Outra edição está sendo gravada neste arquivo. Aguarde e reabra a camada.')
+        limite = time.monotonic() + espera
+        while True:
+            row = conn.execute(
+                'SELECT pg_try_advisory_lock(hashtextextended(%s,0)) AS adquirido', (key,),
+            ).fetchone()
+            if row is None:
+                raise RuntimeError('O banco não confirmou o bloqueio de edição do arquivo.')
+            if row['adquirido']:
+                break
+            restante = limite - time.monotonic()
+            if restante <= 0:
+                raise ValueError('Outra edição está sendo gravada neste arquivo. Aguarde e reabra a camada.')
+            time.sleep(min(.05, restante))
         try:
             yield
         finally:
-            conn.execute('SELECT pg_advisory_unlock(hashtextextended(%s,0))', (key,))
+            erro_original = sys.exc_info()[0] is not None
+            try:
+                # Rollback não libera locks de sessão, mas permite executar o unlock.
+                if conn.info.transaction_status == TransactionStatus.INERROR:
+                    conn.rollback()
+                conn.execute('SELECT pg_advisory_unlock(hashtextextended(%s,0))', (key,))
+            except BaseException:
+                # Uma sessão cujo unlock falhou nunca pode voltar ao pool.
+                conn.close()
+                if not erro_original:
+                    raise
 
 
 def gravar(source, frame, data, incluir_geojson=True):

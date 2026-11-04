@@ -161,7 +161,7 @@
   const tituloTipo = (tipo) => ({ plano: "plano", programa: "programa", projeto: "projeto" }[tipo] || "objeto");
 
   async function json(url) {
-    const resposta = await fetch(url, { credentials: "same-origin" });
+    const resposta = await (window.SICARDBrowserLogs?.fetch || fetch)(url, { credentials: "same-origin" });
     const corpo = await resposta.json().catch(() => null);
     if (!resposta.ok) throw new Error(corpo?.detail || `HTTP ${resposta.status}`);
     return corpo;

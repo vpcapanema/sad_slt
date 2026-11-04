@@ -25,7 +25,9 @@ def bloquear_referencias():
         yield
         return
     from api.services.saidas_storage import bloquear_arquivo
-    with bloquear_arquivo(CHAVE):
+    # Consultas e publicação de progresso disputam esta mesma chave global.
+    # Serializar a operação curta; rejeitar imediatamente abortava o cálculo.
+    with bloquear_arquivo(CHAVE, espera=30):
         token = _guardado.set(True)
         try:
             yield

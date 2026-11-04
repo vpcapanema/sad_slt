@@ -46,7 +46,7 @@
   function appUrl(area, path) { return (area === "public" ? "/public" : "/restrict") + path; }
   function escapeHtml(value) { var node = document.createElement("span"); node.textContent = value == null ? "" : String(value); return node.innerHTML.replace(/"/g, "&quot;"); }
   function api(url, options) {
-    return fetch(url, Object.assign({ credentials: "same-origin", headers: { "Content-Type": "application/json" } }, options || {})).then(async function (response) {
+    return (window.SICARDBrowserLogs?.fetch || fetch)(url, Object.assign({ credentials: "same-origin", headers: { "Content-Type": "application/json" } }, options || {})).then(async function (response) {
       var body = response.status === 204 ? null : await response.json();
       if (!response.ok) {
         var erro = new Error(window.SicardApiErro ? window.SicardApiErro.formatar(body, { status: response.status, method: (options && options.method) || "GET", url: url })
@@ -1292,7 +1292,7 @@
   }
   function loadSaatyScale() {
     var host = $("ami-saaty-scale-host"); if (host.dataset.loaded === "true") return Promise.resolve();
-    return fetch(appUrl("restrict", "/ahp/comparacao/"), { credentials: "same-origin" }).then(function (response) { if (!response.ok) throw new Error("Não foi possível carregar a escala de Saaty."); return response.text(); }).then(function (html) {
+    return (window.SICARDBrowserLogs?.fetch || fetch)(appUrl("restrict", "/ahp/comparacao/"), { credentials: "same-origin" }).then(function (response) { if (!response.ok) throw new Error("Não foi possível carregar a escala de Saaty."); return response.text(); }).then(function (html) {
       var source = new DOMParser().parseFromString(html, "text/html").querySelector("#saaty-scale-subcard"); if (!source) throw new Error("A subseção Escala de Intensidade de Importância não foi encontrada.");
       host.replaceChildren(source.cloneNode(true)); host.dataset.loaded = "true";
       var scaleIndex = host.querySelector(".ahp-subsection-num"); if (scaleIndex) { scaleIndex.textContent = "3.1"; if (modo === "espaco") scaleIndex.textContent = "1"; scaleIndex.classList.remove("ahp-subsection-num--roman"); }
@@ -1323,6 +1323,7 @@
     }
   }
   function feedback(message, isError) {
+    window.SICARDBrowserLogs?.log("validacao.feedback", { valido: !isError }, isError ? "error" : "info");
     var node = $("ami-judgments-feedback"); node.textContent = message || ""; node.classList.toggle("is-error", Boolean(isError));
     if (message) Notify[isError ? "error" : "info"]("Análise multicritério", message);
   }

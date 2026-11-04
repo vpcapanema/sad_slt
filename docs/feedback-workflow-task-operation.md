@@ -3,6 +3,10 @@
 Implementação local no modal `ProcessFeedbackSystem` existente. Não há outro
 modal de progresso nem outro canal de acompanhamento.
 
+O diagnóstico local no console das páginas de hierarquização e julgamentos é
+documentado em [Logs de navegador](logs-navegador.md). Ele não substitui os
+modais nem o acompanhamento e não registra o conteúdo das mensagens.
+
 ## Apresentação aprovada
 
 O corpo do acompanhamento mostra o ícone do fluxo e seu nome centralizados,

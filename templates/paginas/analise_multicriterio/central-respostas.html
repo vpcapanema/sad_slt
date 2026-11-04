@@ -1,4 +1,5 @@
 {% extends "bases/base_conteudo.html" %}
+{% block antes_conteudo %}<script src="/assets/js/browser-logs.js?v=20261104" data-sicard-log-page="{{ 'respostas' if modo_pagina == 'julgamentos' else 'julgamentos' }}"></script>{% endblock %}
 {% set subtitulo = "Análise Multicritério Interativa" %}
 {% set navegacao = "restrita" %}
 {% set bloco_modulo = "mad" %}

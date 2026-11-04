@@ -59,7 +59,7 @@
     });
   }
   async function request(url, options) {
-    const response = await fetch(url, { credentials: "same-origin", ...options });
+    const response = await (global.SICARDBrowserLogs?.fetch || fetch)(url, { credentials: "same-origin", ...options });
     if (!response.ok) {
       if (global.SicardApiErro) throw await global.SicardApiErro.deResposta(response, { method: options?.method || "GET", url });
       const body = await response.json().catch(() => null);

@@ -804,6 +804,7 @@
         }
 
         error(title, message, options = {}) {
+            window.SICARDBrowserLogs?.log("erro.notificacao", {}, "error");
             return this.show({ ...options, type: NotificationType.ERROR, title, message });
         }
 

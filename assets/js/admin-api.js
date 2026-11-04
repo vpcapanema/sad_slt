@@ -12,7 +12,7 @@
     const E = global.SicardApiErro;
     const method = (options && options.method) || "GET";
     let res;
-    try { res = await fetch(path, { credentials: "include", ...options }); }
+    try { res = await (global.SICARDBrowserLogs?.fetch || fetch)(path, { credentials: "include", ...options }); }
     catch (e) { throw E ? E.deRede(e, { method, url: path }) : e; }
     if (!res.ok) {
       const err = E ? await E.deResposta(res, { method, url: path }) : new Error(errorMessage(await res.json().catch(() => null)));

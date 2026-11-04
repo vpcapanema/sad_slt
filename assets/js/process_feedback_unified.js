@@ -972,6 +972,7 @@
 
         /* ── Erro ── */
         mostrarErro(data) {
+            window.SICARDBrowserLogs?.log("erro.processo", {}, "error");
             data = data || {};
             this._bind();
             this._setHeader('error', this.errorBox, typeof data === 'object' ? data : {}, 'Ação Executada');

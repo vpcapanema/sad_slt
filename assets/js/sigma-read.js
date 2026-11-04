@@ -3,7 +3,7 @@
   const CADASTRO_PESSOA_URL = "https://56.125.163.194/cadastro/pessoa/";
 
   async function apiGet(path) {
-    const res = await fetch(path);
+    const res = await (window.SICARDBrowserLogs?.fetch || fetch)(path);
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.detail || err.message || `HTTP ${res.status}`);
@@ -13,7 +13,7 @@
 
   async function checkApi() {
     try {
-      const res = await fetch("/api/health");
+      const res = await (window.SICARDBrowserLogs?.fetch || fetch)("/api/health");
       if (!res.ok) throw new Error("HTTP " + res.status);
       return true;
     } catch {

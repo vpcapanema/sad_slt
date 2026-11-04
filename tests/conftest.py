@@ -28,7 +28,7 @@ def nomes_storage_sinteticos(monkeypatch):
 
     monkeypatch.setattr(nomes_storage, 'reservar', reservar)
     @contextmanager
-    def bloqueio(caminho):
+    def bloqueio(caminho, **kwargs):
         yield
     monkeypatch.setattr(saidas_storage, 'bloquear_arquivo', bloqueio)
     class BancoPublicacao:
@@ -112,6 +112,7 @@ def storage_sintetico(monkeypatch):
     guard = Lock()
 
     class Connection:
+        info = type('Info', (), {'transaction_status': None})()
         def execute(self, sql, params):
             key = params[0]
             with guard:

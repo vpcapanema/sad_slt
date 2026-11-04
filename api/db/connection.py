@@ -129,7 +129,8 @@ def get_connection() -> Generator[ConnectionDict, None, None]:
                 yield conn
                 commit_unless_atomic(conn)
             except Exception:
-                conn.rollback()
+                if not conn.closed:
+                    conn.rollback()
                 raise
     except DatabaseUnavailableError:
         raise
