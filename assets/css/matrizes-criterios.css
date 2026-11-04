@@ -91,20 +91,72 @@
   cursor: pointer;
 }
 .matrix-details-dialog {
-  width: min(1100px, 94vw);
+  width: min(1050px, 96vw);
+  max-width: 96vw;
   max-height: 90vh;
   box-sizing: border-box;
   padding: 0;
-  border: 1px solid #374151;
-  border-radius: 8px;
-  color: var(--pli-deep);
+  overflow: hidden;
+  border: 0;
+  border-radius: 12px;
+  color: #212529;
+  background: #fff;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .3);
 }
-.matrix-details-dialog::backdrop { background: rgb(19 34 49 / 55%); }
-.matrix-details-dialog .json-modal-body { overflow: auto; max-height: 75vh; }
-.matrix-details-dialog dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: .4rem 1rem; }
+.matrix-details-dialog[open] { display: flex; flex-direction: column; }
+.matrix-details-dialog::backdrop { background: rgba(8, 30, 45, .7); }
+.matrix-details-dialog .json-modal-head {
+  position: static;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0;
+  padding: 1rem 1.2rem;
+  color: #fff;
+  background: var(--pli-deep, #003b5a);
+  border-radius: 12px 12px 0 0;
+}
+.matrix-details-dialog .json-modal-head h2 {
+  min-width: 0;
+  margin: 0;
+  color: #fff;
+  font: 700 1.05rem/1.5 "Montserrat", Verdana, sans-serif;
+}
+.matrix-details-dialog .json-modal-close {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  margin: 0;
+  padding: 0;
+  border: 1px solid #0d5078;
+  border-radius: 50%;
+  color: #1683c4;
+  background: #fff;
+  font-size: .9rem;
+  cursor: pointer;
+}
+.matrix-details-dialog .json-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 1rem;
+  font: 400 .72rem/1.5 "Roboto", Arial, sans-serif;
+}
+.matrix-details-dialog .json-modal-body > :first-child { margin-top: 0; }
+.matrix-details-dialog .json-modal-body > :last-child { margin-bottom: 0; }
+.matrix-details-dialog dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: .4rem 1rem; margin: 0 0 .75rem; }
 .matrix-details-dialog dd { margin: 0; overflow-wrap: anywhere; }
 .matrix-details-dialog dt { font-weight: 700; }
+.matrix-details-dialog .json-modal-body > p { margin: 0 0 .75rem; color: var(--pli-muted, #4b5563); }
+.matrix-details-dialog .json-modal-body > h3 { margin: 1.25rem 0 .5rem; color: var(--pli-deep, #003b5a); }
+.matrix-details-dialog .json-modal-body > div + p { margin-top: .75rem; }
 .matrix-details-dialog .matriz-table-wrap { overflow-x: auto; }
+.matrix-details-dialog .matriz-view-table td.matrix-col-text { text-align: left !important; }
 .ami-page #ami-collaborator-dimensions { margin-top: .5rem; }
 .ami-page #ami-collaborator-dimensions[hidden] { display: none; }
 .ami-page #ami-collaborator-dimensions legend,

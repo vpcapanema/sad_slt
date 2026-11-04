@@ -25,9 +25,15 @@
       const head = grid.createTHead().insertRow();
       headers.forEach(header => head.append(element("th", header)));
       const body = grid.createTBody();
+      const words = value => String(value ?? "").split(/\s+/).filter(word => /[\p{L}\p{N}]/u.test(word)).length;
+      const textColumns = headers.map((_, column) => values.some(valuesRow => words(valuesRow[column]) >= 3));
       values.forEach(valuesRow => {
         const row = body.insertRow();
-        valuesRow.forEach(value => row.append(element("td", value)));
+        valuesRow.forEach((value, column) => {
+          const cell = element("td", value);
+          if (textColumns[column]) cell.classList.add("matrix-col-text");
+          row.append(cell);
+        });
       });
       shell.append(grid); host.append(shell);
       return grid;
@@ -105,8 +111,11 @@
       select.value = id;
     }
     function summary(record) {
-      const filename = record.arquivo_nome || record.conteudo?.arquivo;
-      return (record.nome || "Matriz") + " · " + rows(record.conteudo).length + " critérios" + (filename ? " · " + filename : "") + ".";
+      const filename = String(record.arquivo_nome || record.conteudo?.arquivo || "").split(/[\\/]/).pop();
+      const name = record.nome || filename || "Matriz";
+      const stem = filename.replace(/\.[^.]+$/, "");
+      const showFile = filename && stem.trim().toLowerCase() !== String(name).trim().toLowerCase() && filename !== name;
+      return name + " · " + rows(record.conteudo).length + " critérios" + (showFile ? " · arquivo " + filename : "") + ".";
     }
     async function choose(id, fallback) {
       const token = ++version;

@@ -7,7 +7,7 @@
 {% block titulo %}{% if modo_pagina == 'espaco' %}Central de julgamentos{% elif modo_pagina == 'julgamentos' %}Central de respostas{% elif modo_pagina == 'formulario' %}Formulário dos especialistas{% else %}Gestão de julgamentos AHP{% endif %} — SICARD{% endblock %}
 {% block classes_body %}ahp-module-page ami-page feedback-proprio{% if modo_pagina in ['espaco', 'julgamentos'] %} ami-espaco-page{% endif %}{% if modo_pagina == 'julgamentos' %} sicard-standard-page{% endif %}{% endblock %}
 {% block estilos_pagina %}
-  <link rel="stylesheet" href="/assets/css/matrizes-criterios.css?v=20261028-binario">
+  <link rel="stylesheet" href="/assets/css/matrizes-criterios.css?v=20261104-alinhamento">
   <link rel="stylesheet" href="/assets/css/ahp-module.css?v=20261103-regua-invertida">
   <link rel="stylesheet" href="/assets/css/ahp-collab-analytics.css">
   <link rel="stylesheet" href="/assets/css/ahp-collab-explorer.css">
@@ -107,7 +107,7 @@
   <script src="/assets/js/api-erro.js?v=20261027"></script>
   <script src="/assets/js/paginas/ami-email.js?v=20261027-monitoramento-seletores"></script>
   <script src="/assets/js/matriz-criterios-arquivo.js?v=20261009"></script>
-  <script src="/assets/js/matrizes-criterios.js?v=20261028-ahp-fase3"></script>
+  <script src="/assets/js/matrizes-criterios.js?v=20261104-alinhamento"></script>
   <script src="/assets/js/saaty-selector-color.js?v=20261103-1"></script>
   <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20261103-regua-invertida"></script>
 {% endblock %}
