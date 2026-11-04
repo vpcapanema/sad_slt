@@ -1,4 +1,4 @@
-from contextlib import nullcontext
+from contextlib import nullcontext, contextmanager
 from hashlib import sha256
 import json
 from types import SimpleNamespace
@@ -33,6 +33,23 @@ def ambiente(monkeypatch):
 
 def iniciar():
     return jobs.iniciar({'entrada': {'id': 'entrada', 'nome': 'Demandas'}, 'lote_id': 'rodada'}, 'autor')
+
+
+def test_consulta_local_e_progresso_limitado_nao_disputam_lock_global(ambiente, monkeypatch):
+    from api.services import saidas_storage
+    inicial = iniciar()
+    adquiridos = []
+    @contextmanager
+    def bloquear(caminho, **kwargs):
+        adquiridos.append(caminho)
+        yield
+    monkeypatch.setattr(saidas_storage, 'bloquear_arquivo', bloquear)
+    assert jobs.consultar(inicial['id'], 'autor')['status'] == 'executando'
+    job = jobs._jobs[inicial['id']]
+    jobs._publicar(job, job['estado'])
+    assert adquiridos == []
+    jobs._publicar(job, job['estado'], forcar=True)
+    assert len(adquiridos) == 1
 
 
 def test_status_e_resultado_persistem_sem_memoria_do_worker(ambiente, monkeypatch):

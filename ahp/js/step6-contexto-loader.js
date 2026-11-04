@@ -112,7 +112,7 @@
       warnOnly: true,
       detail:
         rcNum != null
-          ? "RC = " + rcNum.toFixed(4) + (consistente ? " (consistente)" : " (inconsistente — revise Etapa 5)")
+          ? "RC = " + SLTAhp.formatMetric(rcNum) + (consistente ? " (consistente)" : " (inconsistente — revise Etapa 5)")
           : motor
             ? "Motor AHP indisponível"
             : "Será calculado ao processar esta etapa",

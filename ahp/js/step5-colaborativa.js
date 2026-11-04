@@ -49,7 +49,7 @@
           "</td><td>" +
           escapeHtml(r.instituicao) +
           "</td><td>" +
-          (r.razao_consistencia != null ? Number(r.razao_consistencia).toFixed(4) : "—") +
+          (r.razao_consistencia != null ? SLTAhp.formatMetric(Number(r.razao_consistencia)) : "—") +
           '</td><td><button type="button" class="btn btn-secondary btn-sm" data-resp-id="' +
           escapeHtml(r.id) +
           '">Usar esta matriz</button></td></tr>'
@@ -106,7 +106,7 @@
           "Consolidação concluída (" +
           cons.respostas_consolidadas +
           " resposta(s), RC = " +
-          Number(cons.razao_consistencia).toFixed(4) +
+          SLTAhp.formatMetric(Number(cons.razao_consistencia)) +
           ").";
         if (
           confirm(msg + "\n\nCarregar a matriz consolidada na comparação abaixo?")

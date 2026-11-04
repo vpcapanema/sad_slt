@@ -395,9 +395,9 @@ function displayResults(weights, lambdaMax, CI, CR, matrix) {
   }
   html += "</ul>";
   html += "<h3>Métricas de Consistência:</h3>";
-  html += `<p>λ máximo (lambda max): ${lambdaMax.toFixed(4)}</p>`;
-  html += `<p>Índice de Consistência (CI): ${CI.toFixed(4)}</p>`;
-  html += `<p>Razão de Consistência (CR): ${CR.toFixed(4)}</p>`;
+  html += `<p>λ máximo (lambda max): ${SLTAhp.formatMetric(lambdaMax)}</p>`;
+  html += `<p>Índice de Consistência (CI): ${SLTAhp.formatMetric(CI)}</p>`;
+  html += `<p>Razão de Consistência (CR): ${SLTAhp.formatMetric(CR)}</p>`;
   html += "<h3>Matriz de Comparação:</h3>";
   html += "<table><tr><th></th>";
   for (let i = 0; i < criteria.length; i++) {
@@ -473,9 +473,9 @@ function exportCSV() {
     csvContent += row + "\n";
   }
   csvContent += "\nMétricas de Consistência\n";
-  csvContent += "λ máximo," + exportData.lambdaMax.toFixed(4) + "\n";
-  csvContent += "CI," + exportData.CI.toFixed(4) + "\n";
-  csvContent += "CR," + exportData.CR.toFixed(4) + "\n";
+  csvContent += "λ máximo," + SLTAhp.formatMetric(exportData.lambdaMax) + "\n";
+  csvContent += "CI," + SLTAhp.formatMetric(exportData.CI) + "\n";
+  csvContent += "CR," + SLTAhp.formatMetric(exportData.CR) + "\n";
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -504,9 +504,9 @@ function exportXLSX() {
   }
   ws_data.push([]);
   ws_data.push(["Métricas de Consistência"]);
-  ws_data.push(["λ máximo", exportData.lambdaMax.toFixed(4)]);
-  ws_data.push(["CI", exportData.CI.toFixed(4)]);
-  ws_data.push(["CR", exportData.CR.toFixed(4)]);
+  ws_data.push(["λ máximo", SLTAhp.formatMetric(exportData.lambdaMax)]);
+  ws_data.push(["CI", SLTAhp.formatMetric(exportData.CI)]);
+  ws_data.push(["CR", SLTAhp.formatMetric(exportData.CR)]);
   let ws = XLSX.utils.aoa_to_sheet(ws_data);
   let wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Relatório AHP");
@@ -861,7 +861,7 @@ function buildSaatyPair(i, j, sourceCriteria) {
   });
   return (
     '<div class="saaty-pair" data-i="' + i + '" data-j="' + j + '">' +
-    (isPublicForm ? '<h3 class="saaty-pair-title">Comparação pareada de critérios</h3>' + criteriaHtml : "") +
+    (isPublicForm ? '<h3 class="saaty-pair-title">Critério referência: ' + escAhp(leftName) + '</h3>' + criteriaHtml : "") +
     '<div class="saaty-widget">' +
     '<div class="saaty-scale" data-pid="' + pid +
     '" tabindex="0" role="slider" aria-valuemin="0" aria-valuemax="8" aria-valuenow="4" aria-label="Comparação entre ' +
@@ -1094,9 +1094,9 @@ function updateLiveMetrics() {
   const rcEl = document.getElementById("metricRCValue");
   const icEl = document.getElementById("metricICValue");
   const lambdaEl = document.getElementById("metricLambdaValue");
-  if (rcEl) rcEl.textContent = res.CR.toFixed(4);
-  if (icEl) icEl.textContent = res.CI.toFixed(4);
-  if (lambdaEl) lambdaEl.textContent = res.lambdaMax.toFixed(4);
+  if (rcEl) rcEl.textContent = SLTAhp.formatMetric(res.CR);
+  if (icEl) icEl.textContent = SLTAhp.formatMetric(res.CI);
+  if (lambdaEl) lambdaEl.textContent = SLTAhp.formatMetric(res.lambdaMax);
 
   let state;
   if (isAllOnes(matrix)) {

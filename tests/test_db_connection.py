@@ -14,6 +14,7 @@ from api.repositories import demanda_repository, plano_repository, programa_repo
 @pytest.fixture
 def connection(monkeypatch):
     conn = Mock()
+    conn.closed = False
     @contextmanager
     def borrow(dsn):
         assert dsn == "teste"
@@ -46,6 +47,14 @@ def test_sucesso_confirma_transacao(connection):
     with db.get_connection() as conn:
         assert conn is connection
     connection.commit.assert_called_once()
+    connection.rollback.assert_not_called()
+
+
+def test_sessao_descartada_preserva_erro_original(connection):
+    connection.closed = True
+    with pytest.raises(ValueError, match='original'):
+        with db.get_connection():
+            raise ValueError('erro original')
     connection.rollback.assert_not_called()
 
 

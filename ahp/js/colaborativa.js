@@ -117,20 +117,20 @@
     if (!matrix) return;
     var res = SLTAhp.analyzeMatrix(matrix);
     latestCR = res.CR;
-    el("metricRCValue").textContent = res.CR.toFixed(4);
-    el("metricICValue").textContent = res.CI.toFixed(4);
-    el("metricLambdaValue").textContent = res.lambdaMax.toFixed(4);
+    el("metricRCValue").textContent = SLTAhp.formatMetric(res.CR);
+    el("metricICValue").textContent = SLTAhp.formatMetric(res.CI);
+    el("metricLambdaValue").textContent = SLTAhp.formatMetric(res.lambdaMax);
     el("liveMetrics").setAttribute("aria-busy", "false");
     var rcCard = el("metricRCValue").closest(".ahp-metric-card");
     rcCard.classList.toggle("is-success", res.CR > 0 && res.CR < 0.1);
     rcCard.classList.toggle("is-failure", res.CR >= 0.1);
-    el("collab-rc-status").textContent = res.CR === 0 ? "RC zero" : res.CR < 0.1 ? "Dentro do aceitável" : "Fora do aceitável";
+    el("collab-rc-status").textContent = res.CR < 0.1 ? "Adequada para envio" : "Inadequada para envio";
     var btn = el("btn-enviar-resposta");
     if (btn) btn.disabled = !draftActive || res.CR >= 0.1;
     submitFeedback(
       res.CR < 0.1
         ? "Matriz consistente (RC < 0,10). Você pode enviar."
-        : "RC = " + res.CR.toFixed(4) + " — ajuste as comparações (necessário RC < 0,10).",
+        : "RC = " + SLTAhp.formatMetric(res.CR) + " — ajuste as comparações (necessário RC < 0,10).",
       res.CR < 0.1 ? "success" : "error"
     );
     updateProgressHint(res.CR);
@@ -213,13 +213,7 @@
     if (!hint) return;
     var total = document.querySelectorAll(".saaty-pair").length;
     var touched = document.querySelectorAll("#comparisonContent .saaty-pair.is-auto-validated").length;
-    hint.innerHTML =
-      '<i class="fas fa-circle-check" aria-hidden="true"></i> ' +
-      "Pares confirmados: <strong>" + touched + "/" + total + "</strong>. " +
-      "Cada ajuste preenche automaticamente o valor inverso da comparação. " +
-      (cr == null ? "Atualizando os indicadores de consistência…" :
-        cr < 0.1 ? "A consistência está adequada para envio." : "Acompanhe o RC acima antes de enviar.");
-    hint.className = "ahp-collab-reciprocal-hint " + (cr == null ? "" : cr < 0.1 ? "is-ok" : "is-warn");
+    hint.textContent = "Pares confirmados: " + touched + "/" + total;
   }
 
   global.updateLiveMetrics = scheduleCollabMetrics;
@@ -275,13 +269,6 @@
         el("collab-form-section").classList.remove("is-hidden");
         stats.inicio_ms = Date.now(); draftActive = false;
         if (typeof generatePairwiseFormStep4 === "function") generatePairwiseFormStep4();
-        var content = el("comparisonContent");
-        if (content && !el("collab-reciprocal-hint")) {
-          content.insertAdjacentHTML(
-            "beforebegin",
-            '<div id="collab-reciprocal-hint" class="ahp-collab-reciprocal-hint" role="status" aria-live="polite"></div>'
-          );
-        }
         patchSaatyTracking();
         draftActive = true;
         updateCollabMetrics();

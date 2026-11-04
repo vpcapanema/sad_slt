@@ -3,7 +3,7 @@ import {base, json, post, esperar} from '../../geoespacial/extracao-atributos/ap
 import {escolherArquivo, identificarCamadas} from '../../geoespacial/extracao-atributos/explorador.js?v=20261020-saidas';
 import {validarCamada, descritorOriginal} from '../../geoespacial/extracao-atributos/camada-validada.js';
 import {escolherConfiguracao} from '../../geoespacial/extracao-atributos/lista-camadas.js';
-import {criarPrevia} from '../../geoespacial/extracao-atributos/previa.js?v=20261019-metadados';
+import {criarPrevia} from '../../geoespacial/extracao-atributos/previa.js?v=20261104-reuso-geometrias';
 import {criarMapa} from '../../geoespacial/extracao-atributos/mapa.js';
 import {criarResultados} from './cinco-resultados_elegibilidade_v2.js?v=20261103-feedback';
 

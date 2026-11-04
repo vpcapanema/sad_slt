@@ -9,7 +9,7 @@
   /* ── Helpers ────────────────────────────────────────────────────────────── */
 
   function fmt4(v) {
-    return isFinite(v) ? Number(v).toFixed(4) : "—";
+    return isFinite(v) ? SLTAhp.formatMetric(Number(v)) : "—";
   }
 
   function esc(s) {

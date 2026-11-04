@@ -62,6 +62,35 @@ concluídas ou regularizadas aparecem no catálogo; registros ainda em execuçã
 continuam no histórico. Pacotes e relatórios privados mantêm a verificação de
 proprietário, com acesso de gestor/administrador.
 
+## Concorrência e transferência para a bancada (04/11/2026)
+
+O bloqueio global das referências operacionais serializa consultas persistidas e
+publicações, com espera limitada a 30 segundos. A disputa breve por essa chave não
+deve ser confundida com edição concorrente do arquivo de entrada. Consultas de
+execuções ativas no próprio worker e atualizações de progresso descartadas pelo
+limitador de frequência não adquirem esse bloqueio. O bloqueio por arquivo continua
+rejeitando imediatamente gravações concorrentes.
+
+Os bloqueios de edição continuam sendo de sessão: commits de repositórios
+aninhados não os liberam. Em transação SQL abortada, o rollback precede o unlock;
+se a liberação falhar, a sessão é fechada e não retorna ao pool. O erro original
+é preservado. Sessões antigas com locks já vazados exigem reinício dos workers
+no procedimento normal de publicação; esta alteração não encerra sessões remotas.
+
+Elegibilidade e favorabilidade compartilham a prévia. Alterações apenas de estado
+ocupado ou de envio não recriam geometrias Leaflet nem camadas de tiles. Revisão,
+geometria, imagem, validação e descritor de tiles invalidam o reaproveitamento.
+Geometrias, arquivos de origem e regras de normalização permanecem inalterados.
+
+A reprodução sintética em `tests/test_previa_transferencia.py` executa o render
+real com adaptadores de mapa: um ciclo inicial/ocupado/enviado caiu de três para
+uma construção por camada (GeoJSON e tiles). É uma contagem de operações, não uma
+medição de latência de produção. `tests/test_storage_lock_lifecycle.py` reproduz
+concorrência entre sessões, locks aninhados, transação abortada e falha de unlock.
+Os bancos oficiais estavam inacessíveis por resolução DNS na validação local;
+não houve comprovação de desempenho remoto ou identificação do histórico SQL
+da execução específica informada.
+
 ## Migração da nomenclatura por elemento
 
 A mudança requer a migração

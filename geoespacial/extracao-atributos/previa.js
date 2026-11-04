@@ -10,6 +10,7 @@ export function criarPrevia(state, changed, {obterCamadas, aoMudarVisibilidade, 
   const host=node('preview'),mapaHost=node('preview-map'),dados=node('preview-data'),lista=node('preview-layers');
   let pacote=null,selecionada=null,mapa=null,desenho=null,atual=null;
   const camadasMapa=new Map(),visiveis=new Set();
+  let assinaturaMapa=[];
   let controles=[],botoes=[],niveis=[];
   const cores=['#1769aa','#b64d11','#247947','#854cb0','#b52c65','#087f8c'];
   const clonar=id=>document.getElementById(id).content.firstElementChild.cloneNode(true);
@@ -130,7 +131,12 @@ export function criarPrevia(state, changed, {obterCamadas, aoMudarVisibilidade, 
   }
   function render(){
     host.hidden=!pacote;$('#ea-layer-information').hidden=!pacote?.camadas.length;
-    if(!pacote){desenho?.remove();desenho=null;atual=null;camadasMapa.clear();visiveis.clear();niveis=[];selecionada=null;renderLista();renderDetalhes(null);node('preview-name').textContent='';node('preview-map-status').textContent='';state.previaVisiveis=new Set();return;}
+    if(!pacote){desenho?.remove();desenho=null;atual=null;assinaturaMapa=[];camadasMapa.clear();visiveis.clear();niveis=[];selecionada=null;renderLista();renderDetalhes(null);node('preview-name').textContent='';node('preview-map-status').textContent='';state.previaVisiveis=new Set();return;}
+    const assinatura=pacote.camadas.flatMap(c=>[c.chave,c.id,c.arquivo,c.nome,c.grupo,c.revisao,c.status_validacao,c.tiles_url,c.tiles_token,c.bounds,c.campos,c.geojson,c.geojson_resumido,c.imagem,c.metadados_local]);
+    // Busy e pendente mudam ao enviar à bancada, mas não mudam as geometrias.
+    if(desenho&&assinatura.length===assinaturaMapa.length&&assinatura.every((v,i)=>v===assinaturaMapa[i])){
+      atual=pacote;renderLista();renderDetalhes(pacote.camadas.find(c=>c.chave===selecionada)||pacote.camadas[0]);return;
+    }
     const anteriores=new Set(camadasMapa.keys()), ocultas=new Set([...anteriores].filter(id=>!visiveis.has(id)));
     if(!anteriores.size&&state.previaVisiveis?.size)for(const c of pacote.camadas)if(!state.previaVisiveis.has(c.chave))ocultas.add(c.chave);
     atual=pacote;
@@ -158,12 +164,13 @@ export function criarPrevia(state, changed, {obterCamadas, aoMudarVisibilidade, 
       const camada=item.tiles_url?camadaTiles(mapa,item,color):window.L.geoJSON(item.geojson,{
         style:{color,weight:3,fillOpacity:.18},pointToLayer:(_,latlng)=>window.L.circleMarker(latlng,{radius:5,color,fillOpacity:.8})});
       if(item.geojson_resumido)niveis.push({layer:item,camada,atual:item.geojson});
-      camada.on('click',()=>selecionarCamada(item));
+      camada.on('click',()=>selecionarCamada(pacote?.camadas.find(c=>c.chave===item.chave)));
       const grupo=window.L.featureGroup([camada]);
       if(item.imagem&&camada.getBounds().isValid())grupo.addLayer(window.L.imageOverlay(item.imagem,camada.getBounds(),{opacity:.8}));
       camadasMapa.set(item.chave,grupo);if(!ocultas.has(item.chave)){visiveis.add(item.chave);desenho.addLayer(grupo);}
     });
     atualizarDetalheMapa();
+    assinaturaMapa=assinatura;
     const limites=desenho.getBounds(),pacoteAtual=pacote;requestAnimationFrame(()=>{if(pacote!==pacoteAtual)return;mapa.invalidateSize();if(limites.isValid()&&pacote.camadas.some(c=>!anteriores.has(c.chave)))mapa.fitBounds(limites,{padding:[24,24],maxZoom:15,animate:false});});
     node('preview-name').textContent=`${pacote.camadas.filter(c=>c.grupo==='entrada').length} entrada(s) · ${pacote.camadas.filter(c=>c.grupo==='base').length} base(s)`;
     renderLista();renderDetalhes(pacote.camadas.find(c=>c.chave===selecionada)||pacote.camadas[0]);
@@ -243,7 +250,7 @@ export function criarPrevia(state, changed, {obterCamadas, aoMudarVisibilidade, 
       const layer=state.catalog.find(c=>c.id===base.id);if(!layer)continue;
       camadas.push({...layer,chave:`base:${layer.id}`,grupo:'base',categoriaId:base.category,arquivoOrigem:layer.arquivo_local?.nome||layer.arquivo,categoria:state.categories.find(c=>c.id===base.category)?.nome||base.category,pendente:!state.bancadaBases.some(b=>b.id===base.id),status_validacao:layer.erro?'invalida':layer.status_validacao||'pendente'});
     }
-    const assinatura=[state.editandoBases,state.undoPrevia,state.busy,...camadas.flatMap(c=>[c.chave,c.tiles_url,c.geojson,c.geojson_resumido,c.metadados_local,c.nome,c.categoriaId,c.categoria,c.pendente,c.erro,c.identificacao?.campo_id,c.identificacao?.categoria_demanda])];
+    const assinatura=[state.editandoBases,state.undoPrevia,state.busy,...camadas.flatMap(c=>[c.chave,c.id,c.arquivo,c.grupo,c.revisao,c.status_validacao,c.tiles_url,c.tiles_token,c.bounds,c.campos,c.imagem,c.geojson,c.geojson_resumido,c.metadados_local,c.nome,c.categoriaId,c.categoria,c.pendente,c.erro,c.identificacao?.campo_id,c.identificacao?.categoria_demanda])];
     if(assinatura.length===assinaturaAnterior.length&&assinatura.every((v,i)=>v===assinaturaAnterior[i])){sincronizarVisibilidade();return;}
     assinaturaAnterior=assinatura;
     pacote=camadas.length||state.undoPrevia?{camadas}:null;

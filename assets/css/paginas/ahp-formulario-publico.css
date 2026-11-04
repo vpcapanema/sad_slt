@@ -2,6 +2,95 @@
 body.ami-public-page {
   --ami-font-child: 12px;
   --ami-font-help: 11.5px;
+  /* Captura o token da Contextualização antes da escala local da seção 3. */
+  --collab-context-font-size: var(--ami-font-child);
+}
+
+.ami-public-page .collab-pairs-quadrant {
+  position: relative;
+  margin-top: 1rem;
+}
+
+.ami-public-page .collab-pairs-quadrant > #comparisonContent {
+  min-width: 0;
+}
+
+.ami-public-page .collab-rc-sidebar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 20;
+  --rc-base-width: 12rem;
+  --rc-scale: 0.9;
+  width: calc(var(--rc-base-width) * var(--rc-scale));
+  min-width: 0;
+  overflow-wrap: anywhere;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 4px 18px rgba(0, 34, 58, 0.3);
+  cursor: grab;
+  touch-action: none;
+}
+
+.ami-public-page #collab-rc-sticky {
+  box-sizing: border-box;
+  width: var(--rc-base-width);
+  zoom: var(--rc-scale);
+}
+
+.ami-public-page .collab-rc-resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 0 0 8px 0;
+  background: linear-gradient(135deg, transparent 55%, #00527d 56%, #00527d 62%, transparent 63%, transparent 72%, #00527d 73%, #00527d 79%, transparent 80%);
+  cursor: nwse-resize;
+  touch-action: none;
+}
+
+.ami-public-page .collab-rc-resize:focus-visible {
+  outline: 3px solid #83d9a5;
+  outline-offset: -3px;
+}
+
+.ami-public-page .collab-rc-sidebar[hidden],
+.ami-public-page .collab-pairs-quadrant:not(:has(.saaty-pair)) > .collab-rc-sidebar {
+  display: none;
+}
+
+.ami-public-page .collab-rc-sidebar.is-dragging {
+  cursor: grabbing;
+}
+
+.ami-public-page .collab-rc-sidebar:focus-visible {
+  outline: 3px solid #83d9a5;
+  outline-offset: 2px;
+}
+
+@media (max-width: 600px) {
+  .ami-public-page .collab-rc-sidebar {
+    --rc-base-width: 10rem;
+  }
+
+  .ami-public-page #collab-rc-sticky {
+    padding: 0.5rem;
+  }
+
+  .ami-public-page #collab-rc-sticky .ahp-metric-card__label,
+  .ami-public-page #collab-rc-sticky .ahp-metric-card__sub {
+    font-size: var(--ami-font-help);
+  }
+}
+
+.ami-public-page #collab-rc-sticky #collab-reciprocal-hint {
+  font-family: "Montserrat", Verdana, sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  color: #102a43;
 }
 
 .ami-public-page #collab-consistency-help[hidden] {
@@ -127,6 +216,13 @@ body.ami-public-page {
   --ami-font-help: 0.64rem;
 }
 
+.ami-public-page #collab-form-section .collab-pairwise-intro {
+  margin: 0 0 1rem;
+  font-size: var(--collab-context-font-size);
+  color: var(--pli-text);
+  line-height: 1.5;
+}
+
 .ami-public-page #collab-form-section .collab-comparison-subcard {
   min-width: 0;
   padding: 1rem;
@@ -231,7 +327,7 @@ body.ami-public-page {
   padding: 0.8rem 1rem;
   border-radius: 8px;
   background: #eaf3fa;
-  font-size: 1.1rem;
+  font-size: var(--collab-context-font-size);
   line-height: 1.5;
 }
 
@@ -303,7 +399,7 @@ body.ami-public-page {
 }
 
 .ami-public-page #collab-form-section .collab-guia-significado {
-  font-size: 0.95rem;
+  font-size: var(--collab-context-font-size);
   line-height: 1.3;
 }
 
@@ -315,7 +411,7 @@ body.ami-public-page {
   padding: 0.65rem 0.9rem;
   border-radius: 8px;
   background: #fff7e0;
-  font-size: 1rem;
+  font-size: var(--collab-context-font-size);
   line-height: 1.4;
 }
 
@@ -360,7 +456,7 @@ body.ami-public-page {
 
 .ami-public-page #collab-form-section .collab-guia-passos p {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--collab-context-font-size);
   line-height: 1.45;
 }
 
@@ -500,4 +596,44 @@ body.ami-public-page {
   .ami-public-page #collab-form-section .ahp-live-metrics {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+.ami-public-page .collab-pair-tabs button {
+  font-size: var(--ami-font-child);
+}
+.ami-public-page .collab-pairs-quadrant [hidden] {
+  display: none !important;
+}
+.ami-public-page .collab-readonly-matrix {
+  max-height: 65vh;
+  overflow: auto;
+}
+.ami-public-page .collab-readonly-matrix .matrix-table {
+  table-layout: auto;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.ami-public-page .collab-readonly-matrix :is(th, td) {
+  min-width: 7rem;
+  border-width: 0 1px 1px 0;
+}
+.ami-public-page .collab-readonly-matrix thead tr > :is(th, td),
+.ami-public-page .collab-readonly-matrix tbody tr > :is(th, td):first-child {
+  background: var(--pli-deep);
+  color: var(--pli-white);
+  max-width: 16rem;
+  overflow-wrap: normal;
+}
+.ami-public-page .collab-readonly-matrix thead tr > :is(th, td) {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+.ami-public-page .collab-readonly-matrix tbody tr > :is(th, td):first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+}
+.ami-public-page .collab-readonly-matrix thead tr > :is(th, td):first-child {
+  left: 0;
+  z-index: 3;
 }

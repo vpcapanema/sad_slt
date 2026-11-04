@@ -71,6 +71,30 @@ def test_shared_template_contract_is_complete() -> None:
     assert all(path.is_file() for path in expected)
 
 
+def test_formulario_pareado_secoes_guia_e_indicadores() -> None:
+    request = SimpleNamespace(url=SimpleNamespace(path="/teste/"), query_params={})
+    template = templates.env.get_template("paginas/analise_multicriterio/formulario.html")
+    for mode in (True, False):
+        html = template.render(request=request, modo_modelo=mode)
+        assert '>3.1</span><span>Entenda a escala antes de comparar' in html
+        assert html.index('id="collab-guia-titulo"') < html.index('id="collab-pairwise-title"')
+        section = html.split('aria-labelledby="collab-pairwise-title"', 1)[1]
+        assert re.search(r'<div class="info-card-content">\s*<p class="collab-pairwise-intro">', section)
+        assert 'id="collab-rc-sticky" class="ahp-metric-card"><span id="collab-reciprocal-hint" class="ahp-metric-card__sub"' in section
+        assert 'class="ahp-collab-reciprocal-hint' not in section
+        assert section.index('id="liveMetrics"') < section.index('class="collab-pairs-quadrant"')
+        assert 'collab-rc-drag' not in html
+        assert 'class="collab-rc-sidebar" tabindex="0"' in section
+        assert 'class="collab-rc-resize"' in section
+        assert 'Limites de 50% a 200%' in section
+        assert '<strong>critério 1 é a referência</strong>' in html
+        assert '1 significa igual importância' in html
+        assert '2, 4, 6 e 8 não estão disponíveis na barra' in html
+        assert 'aplicado automaticamente como recíproco' in html
+        ids = re.findall(r'\bid="([^"]+)"', html)
+        assert len(ids) == len(set(ids))
+
+
 def test_feedback_templates_load_fontawesome_icons() -> None:
     stylesheet_patterns = (
         r'(?:(?:/|\.{0,2}/)?assets/vendor/fontawesome/css/all\.min\.css(?:\?[^"\']*)?)',
@@ -139,7 +163,9 @@ def test_deprecated_ahp_templates_and_exclusive_scripts_are_archived() -> None:
     assert not runtime_pages.exists()
     assert len(list(archived_pages.glob("*.html"))) == 10
     assert len(list(archived_scripts.glob("ahp-*.js"))) == 12
-    assert not list(runtime_scripts.glob("ahp-*.js"))
+    assert {p.name for p in runtime_scripts.glob("ahp-*.js")} == {
+        "ahp-formulario-layout.js", "ahp-comparacao-abas.js"
+    }
 
 
 def test_templates_have_no_inline_css_or_javascript() -> None:

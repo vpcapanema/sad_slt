@@ -25,6 +25,38 @@ templates. `assets/js/template-base.js` concentra o comportamento global.
 Particularidades permanecem em CSS e JavaScript externos da própria página ou
 do módulo.
 
+### Comparação pareada
+
+O template `paginas/analise_multicriterio/formulario.html` atende ao modelo
+público, ao preenchimento por convite e à simulação aberta pela gestão
+(`?simulacao=1`). A seção Comparação pareada possui duas abas acessíveis:
+Formulário de comparação pareada (inicial) e Matriz de comparação pareada.
+Explicações, indicadores, confirmação dos pares e envio permanecem compartilhados;
+somente a representação dos pares alterna. Os cards não são recriados ao alternar.
+
+`assets/js/paginas/ahp-comparacao-abas.js` apresenta uma matriz somente leitura
+usando o mesmo modelo numérico de `buildLiveMatrix`, na ordem dos critérios,
+com diagonal unitária e valores recíprocos. O evento `saaty:change` atualiza
+os valores imediatamente. As células usam a mesma fonte de cores da régua
+(`SLTSaatySelectorColor.palette`), inclusive recíprocos e diagonal de igualdade.
+A confirmação visual após três segundos permanece somente nos cards do
+formulário, sem mudar as cores da matriz; os indicadores compartilhados
+continuam informando a consistência real.
+O indicador flutuante de RC mantém movimento e escala também sobre a matriz.
+Toda a primeira linha e toda a primeira coluna, incluindo o canto, usam
+fundo `#003b5a` e texto branco, independentemente da tag `th` ou `td`.
+O gerador usa `th` com escopo; a folha da página seleciona os dois eixos
+por posição. Os links da folha e do gerador têm versão de cache
+`20261104-matrix-headers`. A validação verifica todas as células, os `n+1`
+cabeçalhos de cada eixo, o contraste e a diagonal `#f5f5f5`.
+
+Esta representação segue o padrão AHP `matrix-table`, com cabeçalhos fixos
+e rolagem, não o padrão de tabela de registros: filtros, seletores de registros
+e paginação não se aplicam à matriz quadrada. Não há alteração de metodologia.
+Validação focada: `tests/test_templates.py` pela integração Testing e
+`node tests\test_pairwise_tabs.cjs` para o template real e JavaScript da aplicação,
+com APIs simuladas (sem banco ou gravação de respostas reais).
+
 ## Convenção semântica
 
 Os nomes canônicos descrevem a função do elemento, e não sua aparência ou sua

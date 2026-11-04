@@ -42,19 +42,19 @@
     var html = '<div class="ahp-live-metrics ' + tone + '" role="group" aria-label="Métricas de consistência AHP">';
     html +=
       '<div class="ahp-metric-card"><div class="ahp-metric-card__label">Lambda Máximo (λ<sub>max</sub>)</div><div class="ahp-metric-card__value">' +
-      (results.lambdaMax != null ? results.lambdaMax.toFixed(4) : "—") +
+      (results.lambdaMax != null ? SLTAhp.formatMetric(results.lambdaMax) : "—") +
       '</div><div class="ahp-metric-card__sub">' +
       (isConsistent ? "dentro do esperado" : "acima do ideal") +
       "</div></div>";
     html +=
       '<div class="ahp-metric-card"><div class="ahp-metric-card__label">Índice de Consistência (IC)</div><div class="ahp-metric-card__value">' +
-      (results.CI != null ? results.CI.toFixed(4) : "—") +
+      (results.CI != null ? SLTAhp.formatMetric(results.CI) : "—") +
       '</div><div class="ahp-metric-card__sub">' +
       (isConsistent ? "coerente" : "inconsistente") +
       "</div></div>";
     html +=
       '<div class="ahp-metric-card"><div class="ahp-metric-card__label">Razão de Consistência (RC)</div><div class="ahp-metric-card__value">' +
-      (results.CR != null ? results.CR.toFixed(4) : "—") +
+      (results.CR != null ? SLTAhp.formatMetric(results.CR) : "—") +
       '</div><div class="ahp-metric-card__sub">' +
       (isConsistent ? "RC &lt; 0,10" : "RC ≥ 0,10") +
       "</div></div>";
@@ -95,9 +95,9 @@
       ';text-align:left;">' +
       (opts.consistentHint ||
         (isConsistent
-          ? "A razão de consistência (RC = " + results.CR.toFixed(4) + ") ficou abaixo de 0,10 (10%)."
+          ? "A razão de consistência (RC = " + SLTAhp.formatMetric(results.CR) + ") ficou abaixo de 0,10 (10%)."
           : "A razão de consistência (RC = " +
-            results.CR.toFixed(4) +
+            SLTAhp.formatMetric(results.CR) +
             ") ficou em ou acima de 0,10 (10%). " +
             (opts.inconsistentHint ||
               "Revise os julgamentos antes de homologar a configuração."))) +

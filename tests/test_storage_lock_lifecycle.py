@@ -84,6 +84,25 @@ def test_locks_aninhados_sobrevivem_commit_e_liberam_contagem(banco):
     assert not locks
 
 
+@pytest.mark.parametrize('erro_corpo', [False, True])
+def test_unlock_falho_descarta_sessao_sem_mascarar_erro(banco, monkeypatch, erro_corpo):
+    locks, connections = banco
+    expected = ValueError if erro_corpo else RuntimeError
+    with pytest.raises(expected, match='original' if erro_corpo else 'unlock falhou'):
+        with storage.bloquear_arquivo('arquivo.gpkg'):
+            conn = connections[0]
+            execute = conn.execute
+            def falhar(sql, params):
+                if 'pg_advisory_unlock' in sql:
+                    raise RuntimeError('unlock falhou')
+                return execute(sql, params)
+            monkeypatch.setattr(conn, 'execute', falhar)
+            if erro_corpo:
+                raise ValueError('erro original')
+    assert connections[0].closed
+    assert not locks
+
+
 def test_arquivo_concorrente_continua_rejeitado(banco):
     errors = []
     def disputar():

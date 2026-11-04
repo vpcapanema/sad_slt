@@ -30,6 +30,12 @@
     return RI_BY_N[n] != null ? RI_BY_N[n] : 1.49;
   }
 
+  /** Mantém os valores calculados; remove apenas o sinal do zero na apresentação. */
+  function formatMetric(value) {
+    const formatted = value.toFixed(4);
+    return formatted === "-0.0000" ? "0.0000" : formatted;
+  }
+
   /** Vetor de prioridades por média geométrica das linhas, normalizado. */
   function priorityVector(matrix) {
     const n = matrix.length;
@@ -145,6 +151,7 @@
   global.SLTAhp = {
     RI_BY_N,
     randomIndex,
+    formatMetric,
     priorityVector,
     consistency,
     analyzeMatrix,
