@@ -289,6 +289,7 @@ def test_limites_exatos_sao_aceitos(client, smtp):
     ("send_message", smtplib.SMTPSenderRefused(550, b"resposta-privada", "sicard@example.com"),
      "remetente_recusado", 502),
     ("send_message", smtplib.SMTPDataError(554, b"resposta-privada"), "mensagem_recusada", 502),
+    ("send_message", smtplib.SMTPDataError(421, b"resposta-privada"), "limite_temporario", 502),
     ("send_message", smtplib.SMTPServerDisconnected("resposta-privada"), "resultado_indeterminado", 504),
     ("send_message", TimeoutError("resposta-privada"), "resultado_indeterminado", 504),
 ])

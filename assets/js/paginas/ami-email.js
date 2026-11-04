@@ -41,11 +41,13 @@
     return body;
   }
   function controles() {
-    const reenviar = registros.some(row => row.envio_status && row.envio_status !== "falha");
-    $("ami-open-mail").innerHTML = '<i class="fas fa-envelope c-btn__icon" aria-hidden="true"></i>' + (reenviar ? "Reenviar e-mails" : "Enviar e-mail");
+    const {pendentes, enviados} = situacao();
+    const rotulo = !enviados ? "Enviar e-mail" : pendentes.length ? "Enviar aos pendentes (" + pendentes.length + ")" : "Reenviar e-mails";
+    $("ami-open-mail").innerHTML = '<i class="fas fa-envelope c-btn__icon" aria-hidden="true"></i>' + rotulo;
     $("ami-open-mail").disabled = ocupado || !pronto || modo !== "view" || !contexto ||
       !contexto.url || contexto.julgamento.status !== "ativa" ||
       !(Date.parse(contexto.julgamento.valido_ate) >= Date.now()) || !contexto.destinatarios.length;
+    $("ami-monitor-send").disabled = $("ami-open-mail").disabled || !selecionados().length;
     $("ami-email-receipts").disabled = ocupado || !contexto || modo !== "view";
     $("ami-revoke-invitation").disabled = ocupado || !contexto || modo !== "view" || !contexto.destinatarios.length;
     $("ami-monitor-refresh").disabled = $("ami-email-receipts").disabled;
@@ -118,39 +120,84 @@
     document.querySelector(".ami-main").inert = valor;
     controles();
   }
-  async function enviar() {
-    if ($("ami-open-mail").disabled) return;
+  // Intervalo entre envios e esperas antes de repetir quando o provedor limita a taxa.
+  const INTERVALO_ENVIO_MS = 3000, ESPERAS_LIMITE_MS = [60000, 120000];
+  const aguardar = ms => new Promise(resolve => setTimeout(resolve, ms));
+  const limitadoPeloServidor = row => row.envio_status === "falha" &&
+    /limitou temporariamente|recusou a mensagem/i.test(row.detalhe || "");
+  function situacao() {
+    if (!contexto || !pronto) return {pendentes: [], enviados: 0};
+    const ultimo = new Map();
+    registros.forEach(row => {
+      const chave = row.destinatario.toLowerCase(), anterior = ultimo.get(chave);
+      const data = row => Date.parse(row.atualizado_em || row.criado_em || 0) || 0;
+      if (!anterior || data(row) >= data(anterior)) ultimo.set(chave, row);
+    });
+    const pendentes = contexto.destinatarios.filter(destinatario => {
+      const row = ultimo.get(destinatario.toLowerCase());
+      return !row || row.envio_status === "falha";
+    });
+    return {pendentes, enviados: contexto.destinatarios.length - pendentes.length};
+  }
+  // Destinatários salvos correspondentes às linhas marcadas na coluna de seletores.
+  function selecionados() {
+    if (!contexto) return [];
+    const marcados = new Set(monitorRows.filter(row => selected.has(rowKey(row))).map(row => row.destinatario.toLowerCase()));
+    return contexto.destinatarios.filter(destinatario => marcados.has(destinatario.toLowerCase()));
+  }
+  async function enviar(apenasSelecionados) {
+    const botao = apenasSelecionados ? $("ami-monitor-send") : $("ami-open-mail");
+    if (botao.disabled) return;
     const atual = contexto;
-    const reenvio = registros.some(row => row.envio_status && row.envio_status !== "falha");
+    const {pendentes, enviados} = situacao();
+    const somentePendentes = !apenasSelecionados && enviados > 0 && pendentes.length > 0;
+    const reenvio = !apenasSelecionados && enviados > 0 && !pendentes.length;
+    const lista = apenasSelecionados ? selecionados() : somentePendentes ? pendentes : atual.destinatarios;
     bloquear(true);
-    let processo, aceitos = 0, problemas = 0;
+    let processo, aceitos = 0, problemas = 0, interrompido = 0;
     try {
       if (!(await ProcessFeedback.confirmar({
-        title: reenvio ? "Reenviar e-mails aos colaboradores" : "Enviar e-mail aos colaboradores",
-        message: "Enviar a mensagem exibida para " + atual.destinatarios.length + " colaborador(es) salvo(s)?",
-        warning: reenvio ? "Será enviado um novo convite a cada colaborador salvo, inclusive a quem já recebeu. O histórico anterior será preservado." : "Envios individuais aos colaboradores salvos.",
+        title: apenasSelecionados ? "Enviar e-mail aos selecionados" : reenvio ? "Reenviar e-mails aos colaboradores" : somentePendentes ? "Enviar e-mail aos pendentes" : "Enviar e-mail aos colaboradores",
+        message: "Enviar a mensagem exibida para " + lista.length + " colaborador(es)" +
+          (apenasSelecionados ? " selecionado(s) no monitoramento?" : somentePendentes ? " que ainda não receberam o convite?" : " salvo(s)?"),
+        warning: apenasSelecionados ? "Cada selecionado receberá um novo convite, mesmo que já tenha recebido. A chave anterior dessa pessoa será invalidada; os demais colaboradores não são afetados."
+          : reenvio ? "Será enviado um novo convite a cada colaborador salvo, inclusive a quem já recebeu. O histórico anterior será preservado."
+          : somentePendentes ? "Quem já recebeu o convite não receberá outra mensagem e mantém sua chave individual."
+          : "Envios individuais aos colaboradores salvos.",
         confirmLabel: reenvio ? "Reenviar e-mails" : "Enviar e-mail"
       }))) return;
-      const reenvioId = reenvio ? crypto.randomUUID() : null;
-      processo = ProcessFeedback.iniciarCadastro({title: "Enviando convites por e-mail", tasks: atual.destinatarios});
-      for (const destinatario of atual.destinatarios) {
+      const reenvioId = apenasSelecionados || enviados > 0 ? crypto.randomUUID() : null;
+      processo = ProcessFeedback.iniciarCadastro({title: "Enviando convites por e-mail", tasks: lista});
+      for (let indice = 0; indice < lista.length; indice++) {
+        const destinatario = lista[indice];
+        if (indice) await aguardar(INTERVALO_ENVIO_MS);
         processo.tarefaAtual(destinatario);
-        const row = await request(url(atual.julgamento.id) + "/enviar", {
-          method: "POST", body: JSON.stringify({
-            destinatario, texto: atual.mensagem, versao: atual.julgamento.atualizadoEm,
-            reenvio_id: reenvioId
-          })
-        });
-        if (!row.id || !rotulosEnvio[row.envio_status]) throw new Error("O servidor não confirmou o estado do envio. Consulte o histórico antes de tentar novamente.");
+        let row;
+        for (let tentativa = 0; ; tentativa++) {
+          row = await request(url(atual.julgamento.id) + "/enviar", {
+            method: "POST", body: JSON.stringify({
+              destinatario, texto: atual.mensagem, versao: atual.julgamento.atualizadoEm,
+              reenvio_id: reenvioId
+            })
+          });
+          if (!row.id || !rotulosEnvio[row.envio_status]) throw new Error("O servidor não confirmou o estado do envio. Consulte o histórico antes de tentar novamente.");
+          registros = registros.filter(item => item.id !== row.id).concat(row);
+          render();
+          if (!limitadoPeloServidor(row) || tentativa >= ESPERAS_LIMITE_MS.length) break;
+          const espera = ESPERAS_LIMITE_MS[tentativa];
+          processo.tarefaAtual(destinatario, "O servidor de e-mail limitou os envios. Nova tentativa em " + espera / 1000 + " s.");
+          await aguardar(espera);
+        }
         if (row.envio_status === "aceito_smtp") aceitos++; else problemas++;
-        registros = registros.filter(item => item.id !== row.id).concat(row);
-        render();
         processo.concluirTarefa(destinatario);
+        if (limitadoPeloServidor(row)) { interrompido = lista.length - indice - 1; break; }
       }
-      const resumo = aceitos + " mensagem(ns) aceita(s) pelo servidor; " + problemas + " sem envio confirmado. Consulte os detalhes por destinatário.";
+      const resumo = aceitos + " mensagem(ns) aceita(s) pelo servidor; " + problemas + " sem envio confirmado." +
+        (interrompido ? " O servidor de e-mail continuou limitando os envios; " + interrompido + " colaborador(es) não foram tentados. Aguarde alguns minutos e use Enviar aos pendentes." : "") +
+        " Consulte os detalhes por destinatário.";
       $("ami-email-status").textContent = resumo;
       if (!aceitos && problemas) processo.erro({message: resumo});
-      else processo.sucesso({_status: problemas ? "partial" : "success", title: "Envio de convites", message: resumo});
+      else processo.sucesso({_status: problemas || interrompido ? "partial" : "success", title: "Envio de convites", message: resumo});
     } catch (error) {
       const message = "Envio interrompido. " + error.message + " Mensagens já aceitas não serão repetidas.";
       $("ami-email-status").textContent = message;
@@ -197,7 +244,8 @@
       render(); carregar(contexto);
     }
   };
-  $("ami-open-mail").addEventListener("click", enviar);
+  $("ami-open-mail").addEventListener("click", () => enviar(false));
+  $("ami-monitor-send").addEventListener("click", () => enviar(true));
   $("ami-revoke-invitation").addEventListener("click", async () => {
     const email = $("ami-email-preview-recipient").value;
     if (!contexto || ocupado || !contexto.destinatarios.includes(email)) return;

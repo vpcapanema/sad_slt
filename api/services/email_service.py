@@ -95,8 +95,20 @@ def _falha_smtp(exc: Exception, *, iniciou_envio: bool, usuario_id: str,
         codigo = "remetente_recusado"
         mensagem = "O servidor de email recusou o remetente configurado. Contate a administração."
     elif isinstance(exc, smtplib.SMTPDataError):
-        codigo = "mensagem_recusada"
-        mensagem = "O servidor de email recusou a mensagem. Verifique as políticas e cotas da conta."
+        smtp_codigo = getattr(exc, "smtp_code", None)
+        if isinstance(smtp_codigo, int) and 400 <= smtp_codigo < 500:
+            codigo = "limite_temporario"
+            mensagem = (
+                f"O servidor de email limitou temporariamente os envios (código {smtp_codigo}). "
+                "Aguarde alguns minutos e envie novamente aos pendentes."
+            )
+        else:
+            codigo = "mensagem_recusada"
+            mensagem = (
+                "O servidor de email recusou a mensagem"
+                + (f" (código {smtp_codigo})" if smtp_codigo else "")
+                + ". Verifique as políticas e cotas da conta."
+            )
     elif isinstance(exc, (smtplib.SMTPNotSupportedError, UnicodeError)):
         codigo = "smtp_incompativel"
         mensagem = "O servidor SMTP não suporta a segurança ou o endereço exigido para este envio."
@@ -109,8 +121,9 @@ def _falha_smtp(exc: Exception, *, iniciou_envio: bool, usuario_id: str,
     else:
         codigo = "conexao"
         mensagem = "Não foi possível estabelecer uma conexão segura com o servidor de email."
-    logger.error("Falha SMTP codigo=%s usuario=%s mensagem_id=%s tipo=%s",
-                 codigo, usuario_id, id_mensagem, type(exc).__name__)
+    smtp_codigo = getattr(exc, "smtp_code", None)
+    logger.error("Falha SMTP codigo=%s usuario=%s mensagem_id=%s tipo=%s smtp=%s",
+                 codigo, usuario_id, id_mensagem, type(exc).__name__, smtp_codigo)
     return FalhaEmail(codigo, mensagem)
 
 

@@ -229,6 +229,16 @@ O remetente exibe o nome **SICARD** e usa o endereço autorizado da configuraç�
 O retorno `aceito_smtp` inclui `id_mensagem` para correlação, mas **não comprova
 entrega à caixa de entrada**. Não há rastreamento de leitura ou de devoluções.
 
+Os convites dos julgamentos AHP são enviados um a um, com intervalo de 3 segundos.
+Não há limite de colaboradores no SICARD; o limite de taxa e as cotas são do
+provedor SMTP. Recusas temporárias (código 4xx) retornam `limite_temporario`, e o
+navegador repete o mesmo destinatário após 1 e 2 minutos; se a recusa persistir,
+o lote é interrompido e os demais ficam pendentes. Após um envio, o botão principal
+atende somente os pendentes (sem envio ou com falha), preservando a chave de quem
+já recebeu. O botão de envio da tabela de monitoramento envia a mesma mensagem
+apenas aos colaboradores selecionados, invalidando a chave anterior de cada um.
+O log registra o código numérico da recusa SMTP, nunca o texto da resposta.
+
 Para ativar, preencha no `.env` privado do SICARD as variáveis de email
 documentadas em `.env.example`, preservando as demais configurações:
 
