@@ -6,6 +6,7 @@ from email.headerregistry import Address
 from email.message import EmailMessage
 from email.utils import formatdate, make_msgid
 import logging
+import re
 import smtplib
 import ssl
 from hashlib import sha256
@@ -83,8 +84,20 @@ def _conexao(config: EmailSettings) -> Generator[smtplib.SMTP, None, None]:
             servidor.close()
 
 
+def _status_estendido(exc: Exception) -> str | None:
+    """Código SMTP estendido (RFC 3463, ex.: 5.4.5), sem o texto livre da resposta."""
+    resposta = getattr(exc, "smtp_error", b"")
+    if isinstance(resposta, bytes):
+        resposta = resposta.decode("ascii", "ignore")
+    achado = re.search(r"\b([245]\.\d{1,3}\.\d{1,3})\b", str(resposta or ""))
+    return achado.group(1) if achado else None
+
+
 def _falha_smtp(exc: Exception, *, iniciou_envio: bool, usuario_id: str,
                 id_mensagem: str | None = None) -> FalhaEmail:
+    smtp_codigo = getattr(exc, "smtp_code", None)
+    estendido = _status_estendido(exc)
+    referencia = " ".join(str(parte) for parte in (smtp_codigo, estendido) if parte)
     if isinstance(exc, smtplib.SMTPAuthenticationError):
         codigo = "autenticacao"
         mensagem = "O servidor de email recusou a autenticação do SICARD. Contate a administração."
@@ -95,18 +108,23 @@ def _falha_smtp(exc: Exception, *, iniciou_envio: bool, usuario_id: str,
         codigo = "remetente_recusado"
         mensagem = "O servidor de email recusou o remetente configurado. Contate a administração."
     elif isinstance(exc, smtplib.SMTPDataError):
-        smtp_codigo = getattr(exc, "smtp_code", None)
         if isinstance(smtp_codigo, int) and 400 <= smtp_codigo < 500:
             codigo = "limite_temporario"
             mensagem = (
-                f"O servidor de email limitou temporariamente os envios (código {smtp_codigo}). "
+                f"O servidor de email limitou temporariamente os envios (código {referencia}). "
                 "Aguarde alguns minutos e envie novamente aos pendentes."
+            )
+        elif estendido == "5.4.5":
+            codigo = "cota_diaria"
+            mensagem = (
+                f"A conta de email atingiu o limite diário de envio do provedor (código {referencia}). "
+                "Novos envios serão aceitos somente após a liberação da cota, em até 24 horas."
             )
         else:
             codigo = "mensagem_recusada"
             mensagem = (
                 "O servidor de email recusou a mensagem"
-                + (f" (código {smtp_codigo})" if smtp_codigo else "")
+                + (f" (código {referencia})" if referencia else "")
                 + ". Verifique as políticas e cotas da conta."
             )
     elif isinstance(exc, (smtplib.SMTPNotSupportedError, UnicodeError)):
@@ -121,9 +139,8 @@ def _falha_smtp(exc: Exception, *, iniciou_envio: bool, usuario_id: str,
     else:
         codigo = "conexao"
         mensagem = "Não foi possível estabelecer uma conexão segura com o servidor de email."
-    smtp_codigo = getattr(exc, "smtp_code", None)
-    logger.error("Falha SMTP codigo=%s usuario=%s mensagem_id=%s tipo=%s smtp=%s",
-                 codigo, usuario_id, id_mensagem, type(exc).__name__, smtp_codigo)
+    logger.error("Falha SMTP codigo=%s usuario=%s mensagem_id=%s tipo=%s smtp=%s estendido=%s",
+                 codigo, usuario_id, id_mensagem, type(exc).__name__, smtp_codigo, estendido)
     return FalhaEmail(codigo, mensagem)
 
 

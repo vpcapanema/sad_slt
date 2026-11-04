@@ -11,7 +11,7 @@ const assert = require('node:assert/strict');
       criterios:[{nome:'Critério A'},{nome:'Critério B'}],n_criterios:2,
       url_publica:'https://example.com/sicard/public/analise-multicriterio/formulario-comparacao-pareada/token-email/',
       convites:[{nome:'Ana',email:'ana@example.com'},{nome:'Bia',email:'bia@example.com'},{nome:'Cid',email:'cid@example.com'}]};
-    let rows=[], sends=[], limitar=0;
+    let rows=[], sends=[], limitar=0, recusarDefinitivo=new Set();
     page.on('pageerror',e=>errors.push(e.message));
     await page.route('**/api/**',async route=>{
       const req=route.request(), path=new URL(req.url()).pathname;
@@ -19,9 +19,11 @@ const assert = require('node:assert/strict');
         const p=req.postDataJSON(); sends.push({...p,t:Date.now()});
         const falhar = limitar>0 && p.destinatario==='cid@example.com';
         if(falhar) limitar--;
+        const definitivo = recusarDefinitivo.has(p.destinatario);
         const row={id:'mail-'+p.destinatario+'-'+(p.reenvio_id||'0'),destinatario:p.destinatario,criado_em:new Date().toISOString(),
-          envio_status:falhar?'falha':'aceito_smtp',entrega_status:'sem_confirmacao',leitura_status:'sem_confirmacao',
-          detalhe:falhar?'O servidor de email limitou temporariamente os envios (código 421). Aguarde alguns minutos e envie novamente aos pendentes.':'Aceito.'};
+          envio_status:falhar||definitivo?'falha':'aceito_smtp',entrega_status:'sem_confirmacao',leitura_status:'sem_confirmacao',
+          detalhe:definitivo?'A conta de email atingiu o limite diário de envio do provedor (código 550 5.4.5). Novos envios serão aceitos somente após a liberação da cota, em até 24 horas.'
+            :falhar?'O servidor de email limitou temporariamente os envios (código 421). Aguarde alguns minutos e envie novamente aos pendentes.':'Aceito.'};
         rows=rows.filter(r=>r.id!==row.id).concat(row);
         return route.fulfill({json:row});
       }
@@ -82,6 +84,18 @@ const assert = require('node:assert/strict');
     assert.equal(sends[6].destinatario,'cid@example.com');
     assert.equal(sends[5].reenvio_id,sends[6].reenvio_id);
     assert.match(await page.locator('#ami-email-status').innerText(),/1 mensagem\(ns\) aceita/);
+    await fecharStatus();
+
+    // 5) Recusa definitiva (cota diária): sem nova tentativa; o lote para e os demais ficam pendentes.
+    recusarDefinitivo=new Set(['ana@example.com']);
+    await page.locator('#ami-monitor-clear').click();
+    for (const email of ['ana@example.com','bia@example.com']) await page.locator('#ami-email-deliveries tr',{hasText:email}).first().locator('input[type="checkbox"]').check();
+    await page.locator('#ami-monitor-send').click(); await confirmar();
+    assert.equal(sends.length,8);
+    assert.equal(sends[7].destinatario,'ana@example.com');
+    const status=await page.locator('#ami-email-status').innerText();
+    assert.match(status,/limite diário/);
+    assert.match(status,/1 colaborador\(es\) não foram tentados/);
     assert.deepEqual(errors,[]);
     console.log('PASS: envio inicial com intervalo, envio aos selecionados, envio aos pendentes e nova tentativa após limite.');
   } finally { await browser.close(); }

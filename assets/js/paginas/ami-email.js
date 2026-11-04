@@ -124,7 +124,9 @@
   const INTERVALO_ENVIO_MS = 3000, ESPERAS_LIMITE_MS = [60000, 120000];
   const aguardar = ms => new Promise(resolve => setTimeout(resolve, ms));
   const limitadoPeloServidor = row => row.envio_status === "falha" &&
-    /limitou temporariamente|recusou a mensagem/i.test(row.detalhe || "");
+    /limitou temporariamente/i.test(row.detalhe || "");
+  const bloqueioDoServidor = row => row.envio_status === "falha" &&
+    /limitou temporariamente|limite diário|recusou a mensagem/i.test(row.detalhe || "");
   function situacao() {
     if (!contexto || !pronto) return {pendentes: [], enviados: 0};
     const ultimo = new Map();
@@ -154,7 +156,7 @@
     const reenvio = !apenasSelecionados && enviados > 0 && !pendentes.length;
     const lista = apenasSelecionados ? selecionados() : somentePendentes ? pendentes : atual.destinatarios;
     bloquear(true);
-    let processo, aceitos = 0, problemas = 0, interrompido = 0;
+    let processo, aceitos = 0, problemas = 0, interrompido = 0, motivo = "";
     try {
       if (!(await ProcessFeedback.confirmar({
         title: apenasSelecionados ? "Enviar e-mail aos selecionados" : reenvio ? "Reenviar e-mails aos colaboradores" : somentePendentes ? "Enviar e-mail aos pendentes" : "Enviar e-mail aos colaboradores",
@@ -190,10 +192,10 @@
         }
         if (row.envio_status === "aceito_smtp") aceitos++; else problemas++;
         processo.concluirTarefa(destinatario);
-        if (limitadoPeloServidor(row)) { interrompido = lista.length - indice - 1; break; }
+        if (bloqueioDoServidor(row)) { interrompido = lista.length - indice - 1; motivo = row.detalhe; break; }
       }
       const resumo = aceitos + " mensagem(ns) aceita(s) pelo servidor; " + problemas + " sem envio confirmado." +
-        (interrompido ? " O servidor de e-mail continuou limitando os envios; " + interrompido + " colaborador(es) não foram tentados. Aguarde alguns minutos e use Enviar aos pendentes." : "") +
+        (motivo ? " Envio interrompido: " + motivo + (interrompido ? " " + interrompido + " colaborador(es) não foram tentados e permanecem pendentes." : "") : "") +
         " Consulte os detalhes por destinatário.";
       $("ami-email-status").textContent = resumo;
       if (!aceitos && problemas) processo.erro({message: resumo});
