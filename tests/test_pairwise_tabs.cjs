@@ -10,6 +10,9 @@ const normalizeColor = color => {
   }
   return color.replace(/^rgba\((.+), 1\)$/, "rgb($1)").replace(/,\s*/g, ", ");
 };
+const HEADER_BACKGROUND = "rgb(232, 237, 242)";
+const HEADER_TEXT = "rgb(0, 59, 90)";
+const DIAGONAL_BACKGROUND = "rgb(207, 216, 224)";
 
 const render = mode => execFileSync(".venv\\Scripts\\python.exe", ["-c",
   "from api.server import templates; from types import SimpleNamespace; " +
@@ -22,8 +25,8 @@ const render = mode => execFileSync(".venv\\Scripts\\python.exe", ["-c",
   try {
     for (const mode of ["modelo", "convidado", "gestao-simulacao"]) {
       const html = render(mode === "modelo" ? "True" : "False");
-      assert(html.includes("ahp-formulario-publico.css?v=20261104-matrix-headers"));
-      assert(html.includes("ahp-comparacao-abas.js?v=20261104-matrix-headers"));
+      assert(html.includes("ahp-formulario-publico.css?v=20261104-matriz-destaques"));
+      assert(html.includes("ahp-comparacao-abas.js?v=20261104-matriz-contraste"));
       for (const width of [1440, 390, 844]) {
         const page = await browser.newPage({ viewport: { width, height: width === 844 ? 390 : 900 } });
         await page.route("**/*", route => {
@@ -110,15 +113,12 @@ const render = mode => execFileSync(".venv\\Scripts\\python.exe", ["-c",
             .reduce((sum, v, i) => sum + v * [.2126, .7152, .0722][i], 0);
           for (const cell of result.cells) {
             const label = `cell [${cell.i},${cell.j}]`;
-            assert.equal(normalizeColor(cell.background), cell.header ? "rgb(0, 59, 90)" :
-              normalizeColor(cell.expected.background), label);
-            assert.equal(normalizeColor(cell.text), cell.header ? "rgb(255, 255, 255)" :
-              normalizeColor(cell.expected.text), label);
-            if (cell.header) {
-              assert((luminance(cell.text) + .05) / (luminance(cell.background) + .05) >= 4.5, label);
-            } else if (cell.i === cell.j) {
-              assert.equal(cell.background, "rgb(245, 245, 245)", label);
-            }
+            const diagonal = !cell.header && cell.i === cell.j;
+            assert.equal(normalizeColor(cell.background), cell.header ? HEADER_BACKGROUND :
+              diagonal ? DIAGONAL_BACKGROUND : normalizeColor(cell.expected.background), label);
+            if (cell.header) assert.equal(normalizeColor(cell.text), HEADER_TEXT, label);
+            const [light, dark] = [luminance(cell.text), luminance(cell.background)].sort((a, b) => b - a);
+            assert((light + .05) / (dark + .05) >= 4.5, label);
           }
         };
         await checkAllCells();
@@ -141,11 +141,13 @@ const render = mode => execFileSync(".venv\\Scripts\\python.exe", ["-c",
           }));
         assert.equal(headerColors.length, 7);
         for (const header of headerColors) {
-          assert.equal(header.background, "rgb(0, 59, 90)");
-          assert.equal(header.text, "rgb(255, 255, 255)");
+          assert.equal(header.background, HEADER_BACKGROUND);
+          assert.equal(header.text, HEADER_TEXT);
           assert(!tickColors.includes(header.background));
         }
-        console.log(`Matrix palette mode=${mode} width=${width}: headers=${headerColors[0].background}, text=${headerColors[0].text}, diagonal=tick1=${tickColors[4]}`);
+        assert(!tickColors.includes(DIAGONAL_BACKGROUND));
+        assert.notEqual(DIAGONAL_BACKGROUND, HEADER_BACKGROUND);
+        console.log(`Matrix palette mode=${mode} width=${width}: headers=${headerColors[0].background}, text=${headerColors[0].text}, diagonal=${DIAGONAL_BACKGROUND}, neutral=${tickColors[4]}`);
         await slider.press("Home");
         for (let index = 0; index < 9; index++) {
           if (index) await slider.press("ArrowRight");
@@ -153,7 +155,7 @@ const render = mode => execFileSync(".venv\\Scripts\\python.exe", ["-c",
           assert.equal(await page.locator(".collab-matrix-second").first().evaluate(cell =>
             getComputedStyle(cell).backgroundColor), tickColors[8 - index]);
           for (const cell of await page.locator(".matrix-cell--diagonal").all()) {
-            assert.equal(await cell.evaluate(e => getComputedStyle(e).backgroundColor), tickColors[4]);
+            assert.equal(await cell.evaluate(e => getComputedStyle(e).backgroundColor), DIAGONAL_BACKGROUND);
           }
         }
         await slider.press("Home");

@@ -40,6 +40,19 @@
     if (className) element.className = className;
     return element;
   }
+  function luminance(color) {
+    var rgb = String(color).match(/[\d.]+/g).slice(0, 3).map(function (value) {
+      value = Number(value) / 255;
+      return value <= 0.03928 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2];
+  }
+  // Escolhe a fonte de maior contraste WCAG com o fundo da célula.
+  function readableText(background) {
+    var bg = luminance(background);
+    var light = 1.05 / (bg + 0.05), dark = (bg + 0.05) / (luminance("rgb(7,26,44)") + 0.05);
+    return light >= dark ? "#fff" : "#071a2c";
+  }
   function sync() {
     if (typeof buildLiveMatrix !== "function") return;
     var matrix = buildLiveMatrix();
@@ -86,13 +99,19 @@
         cell.textContent = formatSaatyValue(value);
         cell.className = i === j ? "matrix-cell--diagonal" :
           i < j ? "collab-matrix-first" : "collab-matrix-second";
+        cell.title = names[i] + " em relação a " + names[j] + " = " + formatSaatyValue(value);
+        if (i === j) {
+          // A diagonal tem cor própria de destaque, definida no CSS da matriz.
+          cell.style.backgroundColor = "";
+          cell.style.color = "";
+          return;
+        }
         var input = document.getElementById("pair_" + Math.min(i, j) + "_" + Math.max(i, j));
         var pair = input ? input.closest(".saaty-pair") : form.querySelector(".saaty-pair");
         var colors = SLTSaatySelectorColor.palette(pair);
         var color = colors[nearestSaatyIdx(value)];
         cell.style.backgroundColor = color.background;
-        cell.style.color = color.text;
-        cell.title = names[i] + " em relação a " + names[j] + " = " + formatSaatyValue(value);
+        cell.style.color = readableText(color.background);
       });
     });
   }

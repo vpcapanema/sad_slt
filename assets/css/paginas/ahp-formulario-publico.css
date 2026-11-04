@@ -606,21 +606,47 @@ body.ami-public-page {
 .ami-public-page .collab-readonly-matrix {
   max-height: 65vh;
   overflow: auto;
+  border: 1.48px solid #c9d6e2;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 3px 10px rgba(13, 59, 102, .07);
 }
 .ami-public-page .collab-readonly-matrix .matrix-table {
   table-layout: auto;
   border-collapse: separate;
   border-spacing: 0;
+  margin: 0;
+}
+.ami-public-page .collab-readonly-matrix caption {
+  padding: .45rem .6rem;
+  font-size: var(--ami-font-child, .7rem);
+  line-height: 1.4;
 }
 .ami-public-page .collab-readonly-matrix :is(th, td) {
-  min-width: 7rem;
+  min-width: 5.5rem;
+  height: 2.6rem;
+  padding: .3rem .4rem;
+  border-style: solid;
+  border-color: #dfe7ee;
   border-width: 0 1px 1px 0;
+  font-size: var(--ami-font-child, .7rem);
+  line-height: 1.2;
+}
+.ami-public-page .collab-readonly-matrix :is(tr > :last-child) { border-right-width: 0; }
+.ami-public-page .collab-readonly-matrix tbody tr:last-child > :is(th, td) { border-bottom-width: 0; }
+.ami-public-page .collab-readonly-matrix td.matrix-cell--diagonal {
+  background: #cfd8e0;
+  color: #0d3b66;
+  font-size: .8rem;
+  font-weight: 800;
 }
 .ami-public-page .collab-readonly-matrix thead tr > :is(th, td),
 .ami-public-page .collab-readonly-matrix tbody tr > :is(th, td):first-child {
-  background: var(--pli-deep);
-  color: var(--pli-white);
-  max-width: 16rem;
+  background: #e8edf2;
+  color: var(--pli-deep);
+  border-color: #cbd5df;
+  font-weight: 700;
+  max-width: 11rem;
   overflow-wrap: normal;
 }
 .ami-public-page .collab-readonly-matrix thead tr > :is(th, td) {
@@ -632,6 +658,7 @@ body.ami-public-page {
   position: sticky;
   left: 0;
   z-index: 1;
+  text-align: left;
 }
 .ami-public-page .collab-readonly-matrix thead tr > :is(th, td):first-child {
   left: 0;
