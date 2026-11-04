@@ -5,9 +5,9 @@ import {validarCamada} from '../../geoespacial/extracao-atributos/camada-validad
 import {escolherConfiguracao} from '../../geoespacial/extracao-atributos/lista-camadas.js';
 import {criarPrevia} from '../../geoespacial/extracao-atributos/previa.js?v=20261104-reuso-geometrias';
 import {criarMapa} from '../../geoespacial/extracao-atributos/mapa.js?v=20261027-favorabilidade-simbologia';
-import {criarResultados} from './elegibilidade-resultados.js?v=20261027-raster-area';
+import {criarResultados} from './elegibilidade-resultados.js?v=20261104-camadas-f2';
 import {criarConferencia} from './favorabilidade-conferencia.js?v=20261027-listas';
-import {tituloDemanda} from './nome-demanda.js?v=20261025-title-case';
+import {tituloDemanda} from './nome-demanda.js?v=20261104-camadas-f2';
 
 const PASTA_SUPERFICIES = 'superficies-indices/hierarquizacao/favorabilidade';
 const papeis = {entrada:'Entrada', grade:'Favorabilidade territorial de grade', rede:'Favorabilidade territorial de rede'};

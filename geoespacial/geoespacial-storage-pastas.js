@@ -32,10 +32,10 @@
         </header>
         <nav class="storage-pastas-trilha" aria-label="Caminho atual"></nav>
         <div class="storage-pastas-ferramentas" role="toolbar" aria-label="Ações de pasta">
-          <button type="button" class="storage-pastas-btn" data-acao="criar"><i class="fas fa-folder-plus" aria-hidden="true"></i><span>Criar pasta</span></button>
-          <button type="button" class="storage-pastas-btn" data-acao="renomear"><i class="fas fa-pen" aria-hidden="true"></i><span>Renomear</span></button>
-          <button type="button" class="storage-pastas-btn storage-pastas-perigo" data-acao="excluir"><i class="fas fa-trash-can" aria-hidden="true"></i><span>Excluir</span></button>
-          <button type="button" class="storage-pastas-btn storage-pastas-atualizar" data-acao="atualizar" title="Atualizar" aria-label="Atualizar"><i class="fas fa-rotate" aria-hidden="true"></i></button>
+          <button type="button" class="storage-pastas-btn" data-acao="criar" data-explorer-action="create" title="Criar pasta" aria-label="Criar pasta"><i class="fas fa-folder-plus" aria-hidden="true"></i></button>
+          <button type="button" class="storage-pastas-btn" data-acao="renomear" data-explorer-action="rename" title="Renomear" aria-label="Renomear"><i class="fas fa-pen" aria-hidden="true"></i></button>
+          <button type="button" class="storage-pastas-btn storage-pastas-perigo" data-acao="excluir" data-explorer-action="delete" title="Excluir" aria-label="Excluir"><i class="fas fa-trash-can" aria-hidden="true"></i></button>
+          <button type="button" class="storage-pastas-btn storage-pastas-atualizar" data-acao="atualizar" data-explorer-action="refresh" title="Atualizar" aria-label="Atualizar"><i class="fas fa-rotate" aria-hidden="true"></i></button>
         </div>
         <form class="storage-pastas-edicao" hidden></form>
         <div class="storage-pastas-lista" role="listbox" aria-label="Pastas" tabindex="0"></div>
@@ -54,6 +54,10 @@
 
   function escolher(opcoes = {}) {
     const dialog = montar();
+    let limparTexto=()=>{};
+    import('./extracao-atributos/explorador-overflow.js').then(({ativarTextoCompleto})=>{
+      if(dialog.isConnected)limparTexto=ativarTextoCompleto(dialog);
+    });
     const saida = opcoes.saida;
     const raiz = saida ? "saidas-geoespaciais" : "";
     const api = saida ? "/api/geoespacial/storage/saidas/pastas" : API;
@@ -171,7 +175,7 @@
     };
 
     return new Promise((resolver) => {
-      function encerrar(valor) { dialog.close(); dialog.remove(); resolver(valor); }
+      function encerrar(valor) { limparTexto();dialog.close(); dialog.remove(); resolver(valor); }
       dialog.addEventListener("click", (e) => {
         const acao = e.target.closest("[data-acao]")?.dataset.acao;
         if (!acao) return;

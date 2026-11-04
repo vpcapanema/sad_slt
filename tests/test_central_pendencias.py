@@ -97,7 +97,8 @@ def test_edicao_somente_campos_negocio_e_auditoria_servidor(central, monkeypatch
 
 
 @pytest.mark.parametrize("field,value", [
-    ("status", "atendida"), ("solicitado_por", str(uuid4())), ("atendido_em", "2026-10-29"),
+    # UUID fixo: ids de parametrização precisam ser estáveis entre descoberta e execução no VS Code.
+    ("status", "atendida"), ("solicitado_por", "6f1c2a4e-9d3b-4c7a-8e5f-0b2d4a6c8e10"), ("atendido_em", "2026-10-29"),
     ("demanda_tipo", "plano"), ("hierarquizacao_codigo", "H"), ("origem", "manual"),
     ("notificacao", {}), ("historico_edicoes", []),
 ])

@@ -1,6 +1,6 @@
 import {el} from '../../geoespacial/extracao-atributos/ui.js';
-import {controleCamadas} from './elegibilidade-controle-camadas.js?v=1';
-import {nomeSobreposicao, COR_DEMANDA, SITUACOES, ROTULOS, formatarPercentual} from './cinco-resultados_elegibilidade_v2-dados.js?v=trechos-origem';
+import {controleCamadas} from './elegibilidade-controle-camadas.js?v=20261104-camadas';
+import {nomeSobreposicao, COR_DEMANDA, SITUACOES, ROTULOS, formatarPercentual} from './cinco-resultados_elegibilidade_v2-dados.js?v=20261104-camadas';
 
 const TOPO = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}';
 const SATELITE = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
@@ -44,7 +44,9 @@ export function criarMapa({container, nota, aoSelecionar}) {
     const L = window.L;
     if (!L) throw new Error('O mapa Leaflet não foi carregado. Recarregue a página.');
     nota.textContent = 'Contorno azul-escuro tracejado: demanda. Cada cor identifica um trecho de sobreposição e se repete no gráfico e na lista.';
-    mapa = L.map(container, {scrollWheelZoom: false});
+    // Zoom pela roda do mouse centrado no cursor, como nas demais pré-visualizações da bancada; o Leaflet
+    // impede a rolagem da página enquanto o ponteiro está sobre o mapa e respeita minZoom/maxZoom.
+    mapa = L.map(container, {scrollWheelZoom: true, wheelDebounceTime: 40, wheelPxPerZoomLevel: 60, minZoom: 3, maxZoom: 19});
     for (const [nome, z] of [['ev2-superficies', 350], ['ev2-demandas', 420], ['ev2-recortes', 440], ['ev2-localizadores', 460]]) mapa.createPane(nome).style.zIndex = z;
     fundo = L.tileLayer(TOPO, {maxZoom: 19, attribution: 'Tiles © Esri'}).addTo(mapa);
     satelite = L.tileLayer(SATELITE, {maxZoom: 19, attribution: 'Tiles © Esri'});

@@ -5,7 +5,10 @@ const root=path.resolve(__dirname,'../..');
  const server=http.createServer((req,res)=>{
   if(req.url.endsWith('.js')||req.url.endsWith('.css')){
    res.setHeader('Content-Type',req.url.endsWith('.js')?'text/javascript; charset=utf-8':'text/css; charset=utf-8');
-   return res.end(fs.readFileSync(path.join(root,req.url.endsWith('.js')?'geoespacial':'assets/css',path.basename(req.url))));
+   const name=path.basename(req.url),folders=req.url.endsWith('.js')?['geoespacial','geoespacial/extracao-atributos']:['assets/css'];
+   const file=folders.map(folder=>path.join(root,folder,name)).find(candidate=>fs.existsSync(candidate));
+   if(!file){res.statusCode=404;return res.end();}
+   return res.end(fs.readFileSync(file));
   }
   res.setHeader('Content-Type','text/html; charset=utf-8');
   res.end(`<link rel="stylesheet" href="/geoprocessamento.css"><link rel="stylesheet" href="/storage-pastas.css">

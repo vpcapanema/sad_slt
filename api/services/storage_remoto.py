@@ -132,7 +132,7 @@ def listar(pasta: str, estrito: bool = False) -> list[dict[str, Any]]:
     if resposta.status_code != 200:
         raise StorageIndisponivel(f"Não foi possível ler {pasta} no storage: {_mensagem(resposta)}")
     return [{"nome": item.get("name"), "pasta": bool(int(item.get("mode") or 0) & _MODO_DIRETORIO),
-             "tamanho": int(item.get("size") or 0),
+             "tamanho": int(item["size"]) if item.get("size") is not None else None,
              "modificado": _instante(item.get("last_modified"))}
             for item in resposta.json() or []]
 
@@ -185,24 +185,43 @@ def baixar(caminho: str) -> bytes:
     return resposta.content
 
 
-def enviar_bytes(destino: str, dados: bytes) -> None:
-    """Envia conteúdo em memória, sem arquivo intermediário no disco."""
+def _enviar_com_substituicao(destino: str, conteudo) -> None:
+    """Envia `conteudo()` (bytes ou fluxo novo a cada chamada).
+
+    Arquivos legados, criados por outro dono no volume, não aceitam sobrescrita
+    ("Unable to write file"), embora a pasta aceite criar e remover entradas.
+    Nesse caso o arquivo antigo é removido e o envio repetido; como o conteúdo
+    novo substitui o antigo por inteiro, nada além do que seria sobrescrito se perde.
+    """
+    params = {"path": _absoluto(destino), "mkdir_parents": "true"}
     with _cliente() as cliente:
-        resposta = _pedir(cliente, "POST", "/user/files/upload",
-                          params={"path": _absoluto(destino), "mkdir_parents": "true"},
-                          content=dados)
+        resposta = _pedir(cliente, "POST", "/user/files/upload", params=params, content=conteudo())
+        if resposta.status_code not in (200, 201) and "Unable to write file" in _mensagem(resposta):
+            removido = _pedir(cliente, "DELETE", "/user/files", params={"path": _absoluto(destino)})
+            if removido.status_code in (200, 204):
+                resposta = _pedir(cliente, "POST", "/user/files/upload", params=params, content=conteudo())
     if resposta.status_code not in (200, 201):
         raise StorageIndisponivel(f"O storage recusou {Path(destino).name}: {_mensagem(resposta)}")
+
+
+def enviar_bytes(destino: str, dados: bytes) -> None:
+    """Envia conteúdo em memória, sem arquivo intermediário no disco."""
+    _enviar_com_substituicao(destino, lambda: dados)
 
 
 def enviar(destino: str, origem: Path) -> None:
     """Grava `origem` em `destino` (caminho do arquivo no storage), criando as pastas."""
-    with _cliente() as cliente, origem.open("rb") as fluxo:
-        resposta = _pedir(cliente, "POST", "/user/files/upload",
-                          params={"path": _absoluto(destino), "mkdir_parents": "true"},
-                          content=fluxo)
-    if resposta.status_code not in (200, 201):
-        raise StorageIndisponivel(f"O storage recusou {Path(destino).name}: {_mensagem(resposta)}")
+    abertos = []
+
+    def fluxo():
+        abertos.append(origem.open("rb"))
+        return abertos[-1]
+
+    try:
+        _enviar_com_substituicao(destino, fluxo)
+    finally:
+        for aberto in abertos:
+            aberto.close()
 
 
 def criar_pasta(caminho: str) -> None:

@@ -57,7 +57,7 @@ def zip_bytes(itens):
     ('a.geojson', b'invalido', 'GeoJSON'),
     ('a.geojson', b'{"type":"FeatureCollection","features":[]}', 'entre 1'),
     ('a.shp', b'a', 'em ZIP'),
-])
+], ids=['txt','zip-lixo','zip-caminho','zip-incompleto','geojson-invalido','geojson-vazio','shp-solto'])
 def test_arquivo_invalido_nao_produz_previa(nome,conteudo,trecho):
     antes=set(gdal.ReadDir('/vsimem') or [])
     with pytest.raises(ValueError,match=trecho):local.ler(conteudo,nome)

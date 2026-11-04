@@ -18,18 +18,21 @@ usuário. Ao delegar, transmitir esta regra e a referência aplicável.
 
 ## Execucao e acompanhamento dos testes
 
-- No VS Code, usar prioritariamente o painel **Testing** e a ferramenta
-   `runTests`, selecionando os arquivos ou casos que cobrem a alteracao.
+- No VS Code, executar os testes **sempre** pelo painel **Testing** e pela
+   ferramenta `runTests`, selecionando os arquivos ou casos que cobrem a alteracao.
    Antes do deploy, executar a suite completa de `tests` pela mesma integracao.
 - A descoberta do pytest deve apontar para `tests` em
-   `python.testing.pytestArgs`. Se a ferramenta nao encontrar testes, verificar
-   a descoberta e o interpretador `.venv` antes de recorrer ao terminal.
+   `python.testing.pytestArgs`, com o interpretador `.venv`. Se a ferramenta nao
+   encontrar ou nao executar testes (ids nao encontrados, descoberta
+   desatualizada), corrigir a causa e reexecutar pela extensao.
+- Ids de parametrizacao devem ser estaveis entre descoberta e execucao: nao usar
+   `uuid4()`, horario, bytes variaveis ou objetos sem `ids=` explicitos em
+   `@pytest.mark.parametrize`; um unico id instavel aborta toda a suite.
 - Para testes que dependem do banco, verificar a disponibilidade dos bancos
    oficiais e do tunel supervisionado antes de iniciar a execucao. Se houver
    espera por conexao, interromper, informar o bloqueio e diagnosticar a conexao;
    nao iniciar outra suite concorrente nem ignorar os testes para liberar deploy.
-- Usar pytest pelo terminal somente quando a integracao Testing nao estiver
-   disponivel ou nao conseguir executar os testes, informando o motivo.
+- Nao usar pytest pelo terminal como substituto da integracao Testing.
 - Suite com falhas, erros, interrupcao ou testes nao descobertos nao autoriza
    deploy. Nao confundir diagnosticos de lint com resultados do pytest.
 

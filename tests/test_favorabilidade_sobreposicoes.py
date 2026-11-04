@@ -65,7 +65,9 @@ def analise(monkeypatch):
     monkeypatch.setattr(service.storage_remoto, 'enviar_bytes', arquivos.__setitem__)
     monkeypatch.setattr(service.storage_remoto, 'mover', lambda a, b: arquivos.__setitem__(b, arquivos.pop(a)))
     monkeypatch.setattr(service.jobs, '_jobs', {})
-    return resultados, arquivos
+    service.limpar_cache_superficies()
+    yield resultados, arquivos
+    service.limpar_cache_superficies()
 
 
 def test_todas_entradas_demandas_e_feicoes_sem_agrupar_nomes(analise, monkeypatch):
@@ -388,6 +390,41 @@ def test_base_integral_atual_tem_origem_explicita_e_nao_altera_historico(analise
     with pytest.raises(ValueError, match='não pertence'):
         service.superficie_favorabilidade('job-1', 'arbitraria', 'autor')
     assert chamadas == ['g'], 'Fontes não vinculadas jamais são consultadas.'
+    assert dados['total'] == 2 and len(dados['extensao']) == 4
+    o, s, l, n = dados['extensao']
+    assert o < l and s < n
+
+
+def test_base_integral_recortada_a_vista_reutiliza_cache(analise, monkeypatch):
+    frame = gpd.GeoDataFrame({'nome': ['Perto', 'Longe'], 'fav_territorial': [20., 40.],
+                             'fav_territorial_dim': [.1, .9], 'fav_territorial_classe': ['Baixa', 'Alta']},
+                            geometry=[box(5000000, 7000000, 5000100, 7000100),
+                                      box(5100000, 7100000, 5100300, 7100300)], crs=5880)
+    chamadas = []
+    def carregar(ident):
+        chamadas.append(ident)
+        from tests.territorial_ogr_helpers import camada
+        return camada(frame), {}, None
+    monkeypatch.setattr(service.extracao_preparacao, 'carregar', carregar)
+    integral = service.superficie_favorabilidade('job-1', 'g', 'autor')
+    o, s, l, n = integral['extensao']
+    # Janela que cobre só parte da primeira feição: recorta e devolve uma única feature.
+    primeira = integral['geometrias']['features'][0]['geometry']['coordinates'][0]
+    xs, ys = [p[0] for p in primeira], [p[1] for p in primeira]
+    janela = [min(xs), min(ys), (min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2]
+    recortado = service.superficie_favorabilidade('job-1', 'g', 'autor', janela, .0001)
+    assert chamadas == ['g'], 'A fonte preparada é reutilizada entre vistas.'
+    assert [f['properties']['nome'] for f in recortado['geometrias']['features']] == ['Perto']
+    assert recortado['total'] == 2 and recortado['extensao'] == integral['extensao']
+    assert 'recortada à vista' in recortado['origem'] and 'recortada' not in integral['origem']
+    assert recortado['geometrias']['features'][0]['properties']['favorabilidade']['indice'] == .1
+    with pytest.raises(ValueError, match='inválida'):
+        service.superficie_favorabilidade('job-1', 'g', 'autor', [l, s, o, n])
+    with pytest.raises(ValueError, match='inválida'):
+        service.superficie_favorabilidade('job-1', 'g', 'autor', None, 1)
+    service.limpar_cache_superficies()
+    service.superficie_favorabilidade('job-1', 'g', 'autor', janela)
+    assert chamadas == ['g', 'g']
 
 
 def test_rota_base_integral_restrita_e_falhas_explicitas(analise, monkeypatch):
@@ -404,6 +441,8 @@ def test_rota_base_integral_restrita_e_falhas_explicitas(analise, monkeypatch):
         assert client.post(rota, json={'execucao':'job-1', 'base_id':'g'}).status_code == 404
         assert client.post(rota, json={'execucao':'job-1', 'base_id':'outra'}).status_code == 422
         assert client.post(rota, json={'execucao':'job-1'}).status_code == 422
+        assert client.post(rota, json={'execucao':'job-1', 'base_id':'g', 'bounds':[0, 0, 1]}).status_code == 422
+        assert client.post(rota, json={'execucao':'job-1', 'base_id':'g', 'tolerancia':.5}).status_code == 422
         app.dependency_overrides.clear()
         assert client.post(rota, json={'execucao':'job-1', 'base_id':'g'}).status_code in {401, 403}
 

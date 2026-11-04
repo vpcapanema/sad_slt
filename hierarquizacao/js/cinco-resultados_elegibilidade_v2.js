@@ -1,17 +1,17 @@
 import {instalarRegistro} from './registrar-resultados-fase.js?v=20261027-finalizacao';
 import {post, base} from '../../geoespacial/extracao-atributos/api.js';
 import {el} from '../../geoespacial/extracao-atributos/ui.js';
-import {conclusaoSobreposicao} from './elegibilidade-conclusao.js?v=1';
+import {conclusaoSobreposicao} from './elegibilidade-conclusao.js?v=20261104-camadas';
 import {escolherArquivo} from '../../geoespacial/extracao-atributos/explorador.js?v=20261020-saidas';
 import {
   nomeSobreposicao, CATEGORIAS, ROTULOS, FILTROS, ORDENS, SELECAO_VAZIA, caracterizarDemandas, demandasVisiveis, descreverSituacao,
   registrosDetalhados, registrosVisiveis, alternarSelecao, formatarHa, formatarPercentual,
-} from './cinco-resultados_elegibilidade_v2-dados.js?v=resumo';
-import {criarGrafico} from './cinco-resultados_elegibilidade_v2-grafico.js?v=trechos-origem';
-import {criarRosca} from './cinco-resultados_elegibilidade_v2-rosca.js?v=trechos-origem';
-import {criarMapa} from './cinco-resultados_elegibilidade_v2-mapa.js?v=trechos-origem';
-import {criarTabela} from './cinco-resultados_elegibilidade_v2-tabela.js?v=trechos-origem';
-import {criarResumo} from './cinco-resultados_elegibilidade_v2-resumo.js?v=resumo';
+} from './cinco-resultados_elegibilidade_v2-dados.js?v=20261104-camadas';
+import {criarGrafico} from './cinco-resultados_elegibilidade_v2-grafico.js?v=20261104-camadas';
+import {criarRosca} from './cinco-resultados_elegibilidade_v2-rosca.js?v=20261104-camadas';
+import {criarMapa} from './cinco-resultados_elegibilidade_v2-mapa.js?v=20261104-camadas';
+import {criarTabela} from './cinco-resultados_elegibilidade_v2-tabela.js?v=20261104-camadas';
+import {criarResumo} from './cinco-resultados_elegibilidade_v2-resumo.js?v=20261104-camadas';
 
 const ROTA = '/extracao-atributos/elegibilidade/resultados';
 const PAPEIS = {entrada: 'Entrada', restricao: 'Restrição', risco: 'Risco'};
@@ -313,6 +313,7 @@ export function criarResultados({avisar, aoOcupar}) {
       const codigo = document.getElementById('ev-hierarquizacao')?.value || modelo?.entradas?.[0]?.hierarquizacao || 'HIER-20261019-183457-93E7';
       const arquivo = await escolherArquivo({
         title: 'Selecionar análise de elegibilidade já realizada',
+        detalhesAnalise:true,
         raiz: 'saidas-geoespaciais', extensoes: ['gpkg'], validar: false, somenteReferencias: true,
         pastaInicial: `saidas-geoespaciais/hierarquizacoes/${codigo}/fase-1`,
       });

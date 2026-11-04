@@ -11,6 +11,8 @@ import math
 from numbers import Real
 from pathlib import PurePosixPath
 import re
+import threading
+from time import monotonic
 from zipfile import ZipFile, ZIP_DEFLATED
 
 import geopandas as gpd
@@ -532,44 +534,113 @@ def _favorabilidade(registro: dict, papel: str, mapa: dict[str, str]) -> dict:
             'classe': classe, 'estado_classe': 'ausente' if campo_classe not in mapa
             else 'nulo' if classe is None or not str(classe).strip() else 'valido'}
 
-def superficie_elegibilidade(identificador: str, base_id: str, dono, bounds: list[float], tolerancia: float = 0) -> dict:
-    resultado = _selecionar([identificador], dono)[0]
-    _ler(resultado)
-    base = next((c for c in resultado['elegibilidade']['campos'] if c['id'] == base_id), None)
-    if base is None:
-        raise ValueError('A superfície não pertence a esta análise.')
-    if (len(bounds) != 4 or not all(math.isfinite(v) for v in bounds)
-            or not -180 <= bounds[0] < bounds[2] <= 180 or not -90 <= bounds[1] < bounds[3] <= 90
-            or not math.isfinite(tolerancia) or not 0 <= tolerancia <= .1):
-        raise ValueError('Extensão ou resolução de visualização inválida.')
+# Camadas-base preparadas ficam residentes em RAM; limite conservador para o container.
+_SUPERFICIES_TTL = 600
+_SUPERFICIES_MAXIMO = 6
+_superficies_trava = threading.Lock()
+_superficies: dict[str, dict] = {}
+
+
+def limpar_cache_superficies() -> None:
+    with _superficies_trava:
+        _superficies.clear()
+
+
+def _superficie_preparada(base_id: str) -> dict:
+    """Fonte atual da superfície em EPSG:4326, validada e com envelopes, mantida em memória por alguns minutos.
+
+    A leitura do storage, a reprojeção e a validação são o custo dominante da exibição no mapa; sem este
+    cache, cada movimento do mapa repetia tudo para cada camada marcada.
+    """
+    agora = monotonic()
+    with _superficies_trava:
+        item = _superficies.get(base_id)
+        if item and item['expira'] > agora:
+            return item
     frame, _, _ = extracao_preparacao.carregar(base_id)
     if not isinstance(frame, nativo.Camada) or frame.crs is None:
         raise ValueError('A superfície não contém uma camada vetorial com CRS.')
     frame = nativo.reproject(frame, 4326)
-    oeste, sul, leste, norte = bounds
-    janela = ogr.CreateGeometryFromWkt(
-        f'POLYGON(({oeste} {sul},{leste} {sul},{leste} {norte},{oeste} {norte},{oeste} {sul}))')
     nomes = {c['nome'].casefold(): c['nome'] for c in frame.campos}
-    campo_nome = next((nomes[c] for c in ('nome', 'name', 'nm_mun', 'denominacao') if c in nomes), None)
-    features = []
+    campo_nome = next((nomes[c] for c in ('nome', 'name', 'nm_mun', 'denominacao', 'municipio') if c in nomes), None)
+    feicoes, vazias, tipos = [], 0, set()
+    extensao = [180.0, 90.0, -180.0, -90.0]
     for pos, (linha, geom) in enumerate(zip(frame.registros, frame.geometrias)):
         if geom is None or geom.IsEmpty():
+            vazias += 1
             continue
+        tipos.add(ogr.GT_Flatten(geom.GetGeometryType()))
         if not geom.IsValid():
             geom = geom.MakeValid()
         if geom is None or geom.IsEmpty() or not geom.IsValid():
             raise ValueError('A superfície atual contém geometria inválida.')
-        if not geom.Intersects(janela):
-            continue
-        geom = geom.Intersection(janela)
-        if geom is None:
-            raise ValueError('Não foi possível recortar a superfície atual.')
-        if geom.IsEmpty():
-            continue
-        if tolerancia:
-            geom = geom.SimplifyPreserveTopology(tolerancia)
-        features.append({'type': 'Feature', 'geometry': json.loads(geom.ExportToJson()), 'properties': {
-            'base_id': base_id, 'nome': texto(linha[campo_nome]) if campo_nome else f'Feição {pos + 1}'}})
+        oeste, leste, sul, norte = geom.GetEnvelope()
+        extensao = [min(extensao[0], oeste), min(extensao[1], sul), max(extensao[2], leste), max(extensao[3], norte)]
+        feicoes.append({'envelope': (oeste, sul, leste, norte), 'geometria': geom, 'posicao': pos,
+                        'registro': linha, 'nome': texto(linha[campo_nome]) if campo_nome else f'Feição {pos + 1}'})
+    item = {'feicoes': feicoes, 'campos': nomes, 'vazias': vazias, 'tipos': tipos,
+            'extensao': extensao if feicoes else None,
+            'expira': monotonic() + _SUPERFICIES_TTL, 'trava': threading.Lock()}
+    with _superficies_trava:
+        if len(_superficies) >= _SUPERFICIES_MAXIMO:
+            del _superficies[min(_superficies, key=lambda k: _superficies[k]['expira'])]
+        _superficies[base_id] = item
+    return item
+
+
+def _validar_vista(bounds: list[float] | None, tolerancia: float) -> None:
+    if bounds is not None and (len(bounds) != 4 or not all(math.isfinite(v) for v in bounds)
+                               or not -180 <= bounds[0] < bounds[2] <= 180 or not -90 <= bounds[1] < bounds[3] <= 90):
+        raise ValueError('Extensão ou resolução de visualização inválida.')
+    if not math.isfinite(tolerancia) or not 0 <= tolerancia <= .1:
+        raise ValueError('Extensão ou resolução de visualização inválida.')
+
+
+def _recortar_superficie(preparada: dict, bounds: list[float] | None, tolerancia: float, propriedades) -> list[dict]:
+    """Feições da superfície preparada dentro da vista, recortadas e simplificadas para exibição.
+
+    `bounds` ausente devolve a camada integral. `propriedades(feicao)` compõe as propriedades de cada feature.
+    """
+    janela = None
+    if bounds is not None:
+        oeste, sul, leste, norte = bounds
+        janela = ogr.CreateGeometryFromWkt(
+            f'POLYGON(({oeste} {sul},{leste} {sul},{leste} {norte},{oeste} {norte},{oeste} {sul}))')
+    features = []
+    # As geometrias em cache são compartilhadas entre requisições; a trava evita uso concorrente do mesmo objeto OGR.
+    with preparada['trava']:
+        for feicao in preparada['feicoes']:
+            (o, s, l, n), geom = feicao['envelope'], feicao['geometria']
+            if janela is None or (o >= oeste and l <= leste and s >= sul and n <= norte):
+                recorte = geom
+            elif l < oeste or o > leste or n < sul or s > norte:
+                continue
+            else:
+                recorte = geom.Intersection(janela)
+                if recorte is None:
+                    raise ValueError('Não foi possível recortar a superfície atual.')
+                if recorte.IsEmpty():
+                    continue
+            if tolerancia:
+                recorte = recorte.SimplifyPreserveTopology(tolerancia)
+                if recorte is None or recorte.IsEmpty():
+                    continue
+            features.append({'type': 'Feature', 'geometry': json.loads(recorte.ExportToJson()),
+                             'properties': propriedades(feicao)})
+    return features
+
+
+def superficie_elegibilidade(identificador: str, base_id: str, dono, bounds: list[float], tolerancia: float = 0) -> dict:
+    resultado = _selecionar([identificador], dono)[0]
+    base = next((c for c in resultado['elegibilidade']['campos'] if c['id'] == base_id), None)
+    if base is None:
+        raise ValueError('A superfície não pertence a esta análise.')
+    if bounds is None:
+        raise ValueError('Extensão ou resolução de visualização inválida.')
+    _validar_vista(bounds, tolerancia)
+    preparada = _superficie_preparada(base_id)
+    features = _recortar_superficie(preparada, bounds, tolerancia,
+                                    lambda f: {'base_id': base_id, 'nome': f['nome']})
     return {'base_id': base_id, 'papel': base['papel'],
             'origem': 'Fonte original atual; não é uma cópia histórica da rodada. Exibição recortada à vista do mapa.',
             'consultado_em': datetime.now(timezone.utc).isoformat(),
@@ -606,13 +677,16 @@ def atributos_feicao(identificador: str, base_id: str, posicao: int, dono) -> di
             'consultado_em': datetime.now(timezone.utc).isoformat()}
 
 
-def superficie_favorabilidade(identificador: str, base_id: str, dono) -> dict:
+def superficie_favorabilidade(identificador: str, base_id: str, dono,
+                              bounds: list[float] | None = None, tolerancia: float = 0) -> dict:
+    """Superfície vinculada à execução para o mapa; `bounds` recorta à vista e `tolerancia` simplifica a exibição."""
     resultado = _selecionar([identificador], dono, analise='favorabilidade')[0]
-    _, dados = _ler(resultado, analise='favorabilidade')
     base = next((c for c in resultado['favorabilidade']['campos'] if c['id'] == base_id), None)
     if base is None:
         raise ValueError('A superfície não pertence a esta análise.')
+    _validar_vista(bounds, tolerancia)
     if base.get('tipo') == 'raster':
+        _, dados = _ler(resultado, analise='favorabilidade')
         recortes = gpd.read_file(BytesIO(dados), layer='intersecoes', engine='pyogrio')
         recortes = recortes[recortes.base_id == base_id]
         mapa = next(b['campos'] for b in resultado['favorabilidade']['atributos_superficies'] if b['id'] == base_id)
@@ -625,29 +699,19 @@ def superficie_favorabilidade(identificador: str, base_id: str, dono) -> dict:
                         'base_id': base_id, 'nome': feicoes[r['feicao_id']]['nome'],
                         'favorabilidade': _favorabilidade(r, base['papel'], mapa)}}
                     for r, geom in zip(registros(recortes), geometrias.geometry)]}}
-    frame, _, _ = extracao_preparacao.carregar(base_id)
-    if not isinstance(frame, nativo.Camada) or frame.crs is None:
-        raise ValueError('A fonte atual não contém uma camada vetorial com CRS.')
-    for geom in frame.geometrias:
-        if geom is None or geom.IsEmpty():
-            raise ValueError('A superfície atual contém geometrias ausentes ou vazias.')
-        if ogr.GT_Flatten(geom.GetGeometryType()) not in (ogr.wkbPolygon, ogr.wkbMultiPolygon):
-            raise ValueError('A superfície atual deve conter apenas polígonos.')
-    mapa = {c['nome'].casefold(): c['nome'] for c in frame.campos}
-    campo_nome = next((mapa[c] for c in ('nome', 'name', 'nm_mun', 'municipio') if c in mapa), None)
-    geometrias = nativo.reproject(frame, 4326)
-    features = []
-    for pos, geom in enumerate(geometrias.geometrias):
-        if not geom.IsValid():
-            geom = geom.MakeValid()
-        if geom is None or geom.IsEmpty() or not geom.IsValid():
-            raise ValueError('A superfície atual contém geometria inválida sem reparação utilizável.')
-        valores = frame.registros[pos]
-        features.append({'type': 'Feature', 'geometry': json.loads(geom.ExportToJson()),
-                         'properties': {'base_id': base_id, 'posicao': pos,
-                                        'nome': texto(valores[campo_nome]) if campo_nome else f'Feição {pos + 1}',
-                                        'favorabilidade': _favorabilidade(valores, base['papel'], mapa)}})
-    return {'base_id': base_id, 'origem': 'Fonte original atual; não é uma cópia histórica da rodada.',
+    preparada = _superficie_preparada(base_id)
+    if preparada['vazias']:
+        raise ValueError('A superfície atual contém geometrias ausentes ou vazias.')
+    if preparada['tipos'] - {ogr.wkbPolygon, ogr.wkbMultiPolygon}:
+        raise ValueError('A superfície atual deve conter apenas polígonos.')
+    mapa, papel = preparada['campos'], base['papel']
+    features = _recortar_superficie(preparada, bounds, tolerancia, lambda f: {
+        'base_id': base_id, 'posicao': f['posicao'], 'nome': f['nome'],
+        'favorabilidade': _favorabilidade(f['registro'], papel, mapa)})
+    origem = 'Fonte original atual; não é uma cópia histórica da rodada.'
+    if bounds is not None:
+        origem += ' Exibição recortada à vista do mapa.'
+    return {'base_id': base_id, 'origem': origem, 'extensao': preparada['extensao'], 'total': len(preparada['feicoes']),
             'consultado_em': datetime.now(timezone.utc).isoformat(),
             'geometrias': {'type': 'FeatureCollection', 'features': features}}
 

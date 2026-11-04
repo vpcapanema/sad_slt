@@ -1,4 +1,4 @@
-import {nomeDemanda} from './nome-demanda.js?v=20261023-nomes';
+import {nomeDemanda} from './nome-demanda.js?v=20261104-camadas-f2';
 
 // Etapa de triagem: para cada demanda, informa se há restrição, risco ou se está livre de ambos.
 // “Com restrição e risco” é uma situação (as duas ocorrem), não um quarto conceito.

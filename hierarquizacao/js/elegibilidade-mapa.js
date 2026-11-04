@@ -1,6 +1,6 @@
 import {el} from '../../geoespacial/extracao-atributos/ui.js';
 import {post} from '../../geoespacial/extracao-atributos/api.js';
-import {nomeDemanda} from './nome-demanda.js?v=20261023-nomes';
+import {nomeDemanda} from './nome-demanda.js?v=20261104-camadas-f2';
 
 export const areaLegivel = valor => valor == null ? 'Sem interseção'
   : `${(valor < 10000 ? valor : valor < 1e6 ? valor/1e4 : valor/1e6).toLocaleString('pt-BR', {

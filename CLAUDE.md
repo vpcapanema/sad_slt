@@ -53,18 +53,18 @@ trata `_` como curinga e já apagou registro real neste projeto.
 
 Antes de declarar tarefa concluída, rodar os testes que cobrem a área alterada:
 
-No VS Code, priorizar o painel **Testing** e a ferramenta `runTests`, com
-selecao dos arquivos ou casos relevantes. Antes do deploy, executar a suite
-completa de `tests`. A descoberta em `python.testing.pytestArgs` deve apontar
-para `tests`, usando o interpretador `.venv`.
+No VS Code, executar os testes **sempre** pelo painel **Testing** e pela
+ferramenta `runTests`, com selecao dos arquivos ou casos relevantes. Antes do
+deploy, executar a suite completa de `tests` pela mesma integracao. A
+descoberta em `python.testing.pytestArgs` deve apontar para `tests`, usando o
+interpretador `.venv`.
 
 Verificar o tunel e os bancos oficiais antes dos testes que dependem de banco.
 Se a execucao ficar esperando conexao, interromper e diagnosticar o bloqueio;
 nao iniciar outra suite concorrente nem publicar com validacao incompleta.
 
-O comando abaixo e alternativa somente quando a integracao Testing estiver
-indisponivel ou nao conseguir executar os testes; informar esse motivo:
-
-```powershell
-.venv\Scripts\python.exe -m pytest tests -q
-```
+Nao usar pytest pelo terminal como substituto. Se a integracao nao executar os
+testes (ids nao encontrados, descoberta desatualizada, interpretador errado),
+corrigir a causa e reexecutar pela extensao. Ids de parametrizacao devem ser
+estaveis entre descoberta e execucao: nao usar `uuid4()`, horario, bytes
+variaveis ou objetos sem `ids=` explicitos em `@pytest.mark.parametrize`.

@@ -45,8 +45,12 @@ function modeloFixture() {
 (async () => {
   const python = path.join(root, '.venv', process.platform === 'win32' ? 'Scripts' : 'bin', process.platform === 'win32' ? 'python.exe' : 'python');
   const html = JSON.parse(execFileSync(python, ['-B', '-X', 'utf8', '-c', [
-    'import json', 'from fastapi.testclient import TestClient', 'from api.server import app',
-    `r = TestClient(app).get(${JSON.stringify(ROTA)})`, 'assert r.status_code == 200', 'print(json.dumps(r.text))',
+    // A guarda de sessão exige conta ativa no banco; a página não depende de contexto, então renderizamos o
+    // template pelo mesmo ambiente Jinja da aplicação.
+    'import json', 'from fastapi import Request', 'from api.server import templates',
+    `request = Request({"type": "http", "method": "GET", "path": ${JSON.stringify(ROTA)}, "headers": [], "query_string": b"", "scheme": "http", "server": ("127.0.0.1", 80), "root_path": ""})`,
+    'html = templates.get_template("paginas/hierarquizacao/fase1-elegibilidade-v2.html").render(request=request, access_read_only=False, access_module="hierarquizacao", access_profile="ADMIN")',
+    'print(json.dumps(html))',
   ].join('\n')], {cwd: root, encoding: 'utf8'}));
   const server = http.createServer((req, res) => {
     const nome = new URL(req.url, 'http://local').pathname;
@@ -96,6 +100,10 @@ function modeloFixture() {
     });
     const secao = page.locator('#cinco-resultados_elegibilidade_v2');
     await secao.locator('#ev2-conteudo').waitFor({state: 'visible'});
+    // O ProcessFeedback encerra a apresentação com um aviso modal de sucesso, fechado pelo usuário.
+    const sucessoOk = page.locator('#pfsStatusOverlay.pfs-active #pfsSuccessOk');
+    if (await sucessoOk.count()) await sucessoOk.click();
+    await page.locator('#pfsStatusOverlay.pfs-active').waitFor({state: 'detached', timeout: 5000}).catch(() => {});
     assert.match(await secao.locator('#ev2-nomes').textContent(), /Perigos físicos e geotécnicos · Inundação/);
     assert.match(await secao.locator('#ev2-nomes').textContent(), /Sem vínculo de adversidade registrado nesta saída/);
     assert.equal(await page.locator('#ev-resultados').count(), 0, 'A seção 5 antiga não pode estar no HTML ativo da página');

@@ -1,6 +1,8 @@
 import { el, feedback } from './ui.js';
 import { json } from './api.js';
 import {validarCamada} from './camada-validada.js';
+import {tamanhoLegivel, modificacaoLegivel} from './storage-metadados.js';
+import {ativarTextoCompleto,posicionarMenu} from './explorador-overflow.js';
 
 // O explorador abre as bases geoespaciais do storage do SICARD (SFTPGo). e as camadas cadastradas no banco.
 // Só escolhe camadas: pastas e arquivos são geridos no próprio storage ou no QGIS,
@@ -45,7 +47,7 @@ export async function identificarCamadas(files, {excluded=[], aoIdentificar, inc
   return camadas;
 }
 
-export function escolherArquivo({catalog=[],carregarCatalogo,excluded=[],title,acao=title,multiple=false,validar=true,somenteReferencias=false,prepararReferencias,original=false,host,onClose,raiz,pastaInicial=raiz||ROOT,extensoes,incluirRasters=false}) {
+export function escolherArquivo({catalog=[],carregarCatalogo,excluded=[],title,acao=title,multiple=false,validar=true,somenteReferencias=false,prepararReferencias,original=false,host,onClose,raiz,pastaInicial=raiz||ROOT,extensoes,incluirRasters=false,detalhesAnalise=false}) {
   return new Promise(resolve=>{
     const inline=Boolean(host?.isConnected);
     const dialog=el(inline?'section':'dialog',undefined,`ea-tool-dialog ea-storage-dialog${inline?' ea-storage-inline':''}`);
@@ -55,6 +57,7 @@ export function escolherArquivo({catalog=[],carregarCatalogo,excluded=[],title,a
     const windows=el('div',undefined,'ea-storage-window-controls');windows.append(...(inline?[close]:[minimize,maximize,close]));
     heading.id='ea-storage-title';dialog.setAttribute('aria-labelledby',heading.id);header.append(heading,windows);
     const toolbar=el('div',undefined,'ea-storage-toolbar'),up=icon('Subir um nível (Backspace)','fa-arrow-turn-up',()=>goUp());
+    up.dataset.explorerAction='up';
     const trail=el('nav',undefined,'ea-storage-path');trail.setAttribute('aria-label','Caminho da pasta');
     const search=el('input');search.type='search';search.name='ea-storage-filter';search.placeholder='Filtrar nesta pasta';search.setAttribute('aria-label','Filtrar pastas e camadas por nome');
     toolbar.append(up,trail,search);
@@ -64,26 +67,67 @@ export function escolherArquivo({catalog=[],carregarCatalogo,excluded=[],title,a
     const actions=el('div',undefined,'ea-storage-pane-toolbar');actions.setAttribute('role','toolbar');actions.setAttribute('aria-label','Ações do painel de camadas');
     const views=el('div',undefined,'ea-storage-view-menu');views.hidden=true;views.setAttribute('role','menu');
     // O botão mostra o ícone da visualização atual, como nos exploradores de arquivos.
-    const view=icon('Modo de visualização','fa-list',()=>{views.hidden=!views.hidden;view.setAttribute('aria-expanded',String(!views.hidden));});
+    const view=icon('Modo de visualização','fa-list',()=>{views.hidden=!views.hidden;view.setAttribute('aria-expanded',String(!views.hidden));posicionarMenu(views,view);});
+    view.dataset.explorerAction='view';
     view.append(fa('fa-caret-down'));view.setAttribute('aria-haspopup','menu');view.setAttribute('aria-expanded','false');
     for(const [value,label,simbolo] of VISOES){
       const option=button('',()=>{mode=value;views.hidden=true;view.setAttribute('aria-expanded','false');paintList();});
-      option.append(fa(simbolo),document.createTextNode(label));option.setAttribute('role','menuitemradio');option.dataset.view=value;views.append(option);
+      option.dataset.explorerAction=value;
+      const caixa=el('span',undefined,'explorer-menu-icon');caixa.append(fa(simbolo));
+      const check=fa('fa-check');check.classList.add('explorer-menu-check');
+      option.append(caixa,el('span',label,'explorer-menu-label'),check);option.setAttribute('role','menuitemradio');option.dataset.view=value;views.append(option);
     }
     const all=icon('Marcar todas as camadas visíveis','fa-square-check',()=>{if(loading)return;for(const file of visibleFiles)picks.set(file.id,file);paintList();});
     const clear=icon('Desmarcar todas','fa-square-minus',()=>{if(loading)return;picks.clear();paintList();});
+    all.dataset.explorerAction='select-all';clear.dataset.explorerAction='clear';
+    const retry=icon('Consultar tamanhos novamente','fa-rotate',()=>{
+      consultas.delete(current);falhas.delete(current);paintList();
+    });retry.hidden=true;
+    retry.dataset.explorerAction='retry';
     actions.append(view);
     if(multiple)actions.append(all);
-    actions.append(clear,views);
+    actions.append(clear,views,...(detalhesAnalise?[retry]:[]));
     pane.setAttribute('aria-label','Conteúdo da pasta');pane.append(actions,list);body.append(sidebar,pane);
     const confirmBar=el('div',undefined,'ea-storage-confirm'),selectionLabel=el('span','Nenhuma camada selecionada.');
     const confirm=button('Confirmar',()=>selectBatch(),'ea-btn ea-btn-primary ea-storage-confirm-button');confirm.disabled=true;
     confirmBar.append(selectionLabel,confirm);
     const status=el('p',undefined,'ea-storage-status');status.setAttribute('role','status');
     dialog.append(header,toolbar,body,confirmBar,status);
+    const realinharMenu=()=>posicionarMenu(views,view);
+    window.addEventListener('resize',realinharMenu);
+    window.addEventListener('scroll',realinharMenu,true);
+    const observarMenu=new ResizeObserver(realinharMenu);
+    observarMenu.observe(dialog);
+    const limparMenu=()=>{
+      window.removeEventListener('resize',realinharMenu);
+      window.removeEventListener('scroll',realinharMenu,true);
+      observarMenu.disconnect();
+    };
+    const limparTextoCompleto=ativarTextoCompleto(dialog);
     if(inline)host.replaceChildren(dialog);
     else{document.body.append(dialog);dialog.showModal();}
-    const cache=new Map(),pending=new Map(),expanded=new Set([ROOT]),roots=new Set();let current=ROOT,loading=false,browsing=false,navigation=0,closed=false,mode='list';
+    const cache=new Map(),pending=new Map(),expanded=new Set([ROOT]),roots=new Set();let current=ROOT,loading=false,browsing=false,navigation=0,closed=false,mode=detalhesAnalise?'details':'list';
+    const totais=new Map(),consultas=new Set(),falhas=new Set();
+    let ordenacao='Nome',sentido=1;
+    async function consultarTamanhos(path){
+      if(!detalhesAnalise||path===ROOT||path===BANK||consultas.has(path)||totais.has(path)||!cache.get(path)?.pastas.length)return;
+      consultas.add(path);
+      try{
+        let job=await json(`/storage/detalhes?caminho=${encodeURIComponent(path)}`,{method:'POST'});
+        while(!closed&&['pendente','executando'].includes(job.status)){
+          await new Promise(resolve=>setTimeout(resolve,1200));
+          if(closed)return;
+          job=await json(`/storage/detalhes/${encodeURIComponent(job.id)}`);
+        }
+        if(closed)return;
+        if(job.status!=='concluido')throw new Error(job.erro||'Não foi possível consultar os tamanhos das pastas.');
+        for(const [pasta,bytes] of Object.entries(job.resultado))totais.set(pasta,bytes);
+      }catch(error){
+        if(!closed){falhas.add(path);feedback(error.message,'error');}
+      }finally{
+        if(!closed&&current===path)paintList();
+      }
+    }
     if(raiz){
       roots.add(raiz);
       cache.set(ROOT,{caminho:ROOT,pai:null,pastas:[{caminho:raiz,nome:ROOT_NAMES[raiz]||raiz}],arquivos:[]});
@@ -99,7 +143,7 @@ export function escolherArquivo({catalog=[],carregarCatalogo,excluded=[],title,a
       close.disabled=loading&&!browsing;up.disabled=loading&&!browsing||current===ROOT||current===BANK;
       selectionLabel.textContent=picks.size?`${picks.size} camada(s): ${[...picks.values()].map(rotulo).join(', ')}`:'Nenhuma camada selecionada.';
     }
-    function finish(value=null){if(loading&&!browsing)return;closed=true;navigation++;if(!inline)dialog.close();dialog.remove();if(!value)onClose?.();resolve(value);}
+    function finish(value=null){if(loading&&!browsing)return;closed=true;navigation++;limparTextoCompleto();limparMenu();if(!inline)dialog.close();dialog.remove();if(!value)onClose?.();resolve(value);}
     dialog.addEventListener('cancel',event=>{event.preventDefault();finish();});
     // Sem isto, o segundo clique rápido seleciona o texto da linha.
     dialog.addEventListener('mousedown',event=>{if(event.detail>1&&!event.target.closest('input'))event.preventDefault();});
@@ -166,21 +210,70 @@ export function escolherArquivo({catalog=[],carregarCatalogo,excluded=[],title,a
       else{const already=picks.has(item.id);picks.clear();if(!already)picks.set(item.id,item);}
       list.querySelectorAll('.ea-storage-entry[data-file]').forEach(entry=>entry.setAttribute('aria-pressed',String(picks.has(entry.dataset.file))));
       controls();
+      if(detalhesAnalise&&mode==='details')paintList();
     }
     function paintList(){
+      dialog.dataset.explorerCompact=String(detalhesAnalise&&mode==='details');
       const data=cache.get(current);if(!data)return;
       const term=search.value.trim().toLocaleLowerCase('pt-BR');
       const folders=data.pastas,files=data.arquivos.filter(item=>!extensoes||extensoes.includes(partesDoNome(item).formato));
+      const detalhada=detalhesAnalise&&mode==='details';
+      retry.hidden=!detalhada||!falhas.has(current);
       list.replaceChildren();
       list.dataset.mode=mode;
+      list.classList.toggle('ea-storage-analysis-details',detalhesAnalise&&mode==='details');
       for(const option of views.children)option.setAttribute('aria-checked',String(option.dataset.view===mode));
       setIcon(view,`Modo de visualização: ${VISOES.find(v=>v[0]===mode)[1]}`,VISOES.find(v=>v[0]===mode)[2]);
-      if(mode==='details'){
-        const head=el('div',undefined,'ea-storage-details-head');head.append(el('span','Nome'),el('span','Tipo'),el('span','Caminho'));list.append(head);
+      let destino=list,seletores=[];
+      if(detalhada){
+        list.classList.add('standard-table-section');
+        const filtro=el('div',undefined,'admin-filter-bar');
+        const limpar=icon('Limpar filtro','fa-eraser',()=>{search.value='';paintList();});
+        limpar.dataset.explorerAction='filter-clear';
+        limpar.classList.add('admin-icon-btn');filtro.append(search,limpar);
+        list.append(filtro);
+        const table=el('table',undefined,'admin-table'),head=el('thead'),tr=el('tr'),th=el('th',undefined,'col-select'),todos=el('input');
+        todos.type='checkbox';todos.setAttribute('aria-label','Selecionar todos os arquivos filtrados');todos.disabled=!multiple;
+        todos.onchange=()=>{for(const item of seletores)if(todos.checked)picks.set(item.id,item);else picks.delete(item.id);paintList();};
+        th.append(todos);tr.append(th);
+        for(const label of ['Nome','Tipo','Tamanho','Última modificação','Caminho']){
+          const cell=el('th',label);cell.scope='col';cell.tabIndex=0;
+          cell.dataset.sort='off';cell.title=`Ordenar por ${label}`;
+          cell.setAttribute('aria-sort',label===ordenacao?(sentido===1?'ascending':'descending'):'none');
+          if(label===ordenacao){
+            const direction=el('span',sentido===1?'↑':'↓','explorer-sort-direction');
+            direction.setAttribute('aria-hidden','true');cell.prepend(direction);
+          }
+          const ordenar=()=>{sentido=ordenacao===label?-sentido:1;ordenacao=label;paintList();};
+          cell.onclick=ordenar;cell.onkeydown=event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();ordenar();}};
+          tr.append(cell);
+        }
+        head.append(tr);destino=el('tbody');table.append(head,destino);list.append(table);
+        filtro.append(actions);
+        actions.classList.add('standard-table-actions','admin-bulk-actions');
+        actions.querySelectorAll(':scope > button').forEach(b=>b.classList.add('admin-icon-btn'));
+      }else{
+        list.classList.remove('standard-table-section');
+        if(search.parentNode!==toolbar)toolbar.append(search);
+        toolbar.append(actions);
+        actions.classList.remove('standard-table-actions','admin-bulk-actions');
+      }
+      if(mode==='details'&&!detalhada){
+        const head=el('div',undefined,'ea-storage-details-head');head.append(el('span','Nome'),el('span','Tipo'));
+        if(detalhesAnalise)head.append(el('span','Tamanho'),el('span','Última modificação'));
+        head.append(el('span','Caminho'));
+        list.append(head);
       }
       let count=0;visibleFiles=[];
-      for(const item of [...folders.map(f=>({...f,folder:true})),...files]){
-        if(!(item.folder?item.nome:rotulo(item)).toLocaleLowerCase('pt-BR').includes(term))continue;
+      let itens=[...folders.map(f=>({...f,folder:true})),...files].filter(item=>(item.folder?item.nome:rotulo(item)).toLocaleLowerCase('pt-BR').includes(term));
+      if(detalhada){
+        const valor=item=>ordenacao==='Tamanho'?(item.folder?totais.get(item.caminho):item.tamanho_bytes)
+          :ordenacao==='Última modificação'?item.modificado_em
+          :ordenacao==='Caminho'?(item.caminho||item.arquivo)
+          :ordenacao==='Tipo'?(item.folder?'Pasta':'Arquivo'):(item.folder?item.nome:rotulo(item));
+        itens.sort((a,b)=>Number(b.folder||false)-Number(a.folder||false)||sentido*(typeof valor(a)==='number'&&typeof valor(b)==='number'?valor(a)-valor(b):String(valor(a)??'').localeCompare(String(valor(b)??''),'pt-BR')));
+      }
+      for(const item of itens){
         count++;
         let row;
         const name=el('span',undefined,'ea-storage-entry-title');
@@ -208,13 +301,38 @@ export function escolherArquivo({catalog=[],carregarCatalogo,excluded=[],title,a
           name.append(check,simbolo,nome);
         }
         row.append(name,el('small',item.folder?'Pasta':`${current===BANK?'Banco':(FORMATOS[partesDoNome(item).formato]||[,'Arquivo'])[1]} · ${item.geometria_tipo||(item.inventariar?'arquivo — camadas lidas ao confirmar':'vetor')}${excluded.includes(item.id)?' · já selecionada':''}`));
+        if(mode==='details'&&detalhesAnalise){
+          const tamanho=el('span',item.folder?(totais.has(item.caminho)?tamanhoLegivel(totais.get(item.caminho)):falhas.has(current)||current===ROOT?'Indisponível':'Carregando…'):tamanhoLegivel(item.tamanho_bytes),'ea-storage-entry-size');
+          tamanho.title=item.folder?'Total de bytes de todos os arquivos, incluindo subpastas e arquivos ocultos; consulta ao storage nesta abertura.':`${item.tamanho_bytes??'Tamanho indisponível'} bytes`;
+          row.append(tamanho,el('span',modificacaoLegivel(item.modificado_em)));
+        }
         if(mode==='details')row.append(el('span',item.caminho||item.arquivo,'ea-storage-entry-path'));
         if(item.folder){const seta=el('span',undefined,'ea-storage-entry-open');seta.append(fa('fa-chevron-right'));row.append(seta);}
-        list.append(row);
+        if(detalhada){
+          const tr=el('tr'),td=el('td',undefined,'col-select'),check=el('input');
+          check.type='checkbox';check.checked=!item.folder&&picks.has(item.id);
+          check.disabled=item.folder||excluded.includes(item.id);
+          check.setAttribute('aria-label',item.folder?`Pasta ${item.nome}`:`Selecionar ${rotulo(item)}`);
+          check.onchange=()=>toggleFile(item);
+          td.append(check);tr.append(td);
+          if(!check.disabled)seletores.push(item);
+          const nome=el('td');nome.append(row);tr.append(nome);
+          const extra=[...row.children].slice(1);
+          for(const child of extra){
+            if(child.classList.contains('ea-storage-entry-open')){child.remove();continue;}
+            const td=el('td');child.classList.add('explorer-cell-value');child.tabIndex=0;td.append(child);tr.append(td);
+          }
+          if(picks.has(item.id))tr.classList.add('is-selected');
+          destino.append(tr);
+        }else destino.append(row);
+      }
+      if(detalhada){
+        const geral=list.querySelector('thead input');geral.checked=seletores.length>0&&seletores.every(item=>picks.has(item.id));geral.indeterminate=seletores.some(item=>picks.has(item.id))&&!geral.checked;
       }
       if(!count)list.append(el('p',term?'Nenhum nome corresponde ao filtro.':incluirRasters?'Esta pasta não contém subpastas ou camadas geoespaciais.':'Esta pasta não contém subpastas ou camadas vetoriais.','ea-empty-small'));
-      status.textContent=`${folders.length} pasta(s) · ${files.length} ${files.some(f=>f.inventariar)?'arquivo(s) — as camadas serão lidas ao confirmar':'camada(s)'}. Clique numa pasta para abrir. ${multiple?'Clique nas camadas para marcar ou desmarcar; a seleção é mantida entre pastas.':'Clique numa camada para selecionar; duplo clique confirma.'}`;
+      status.textContent=`Clique numa pasta para abrir. ${multiple?'Clique nas camadas para marcar ou desmarcar; a seleção é mantida entre pastas.':'Clique numa camada para selecionar; duplo clique confirma.'}`;
       controls();
+      consultarTamanhos(current);
     }
     async function navigate(path){
       if((loading&&!browsing)||closed)return;

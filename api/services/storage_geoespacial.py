@@ -400,7 +400,7 @@ def navegar(caminho: str = "", detalhar: bool = True, *, incluir_rasters: bool =
         item_relativo = f"{relativo}/{nome}"
         sufixo = PurePosixPath(nome).suffix.lower()
         if item["pasta"]:
-            pastas.append({"nome": nome, "caminho": item_relativo})
+            pastas.append({"nome": nome, "caminho": item_relativo, "modificado_em": item.get("modificado")})
         elif incluir_rasters and sufixo in EXTENSOES_RASTER:
             arquivos.extend(_itens_do_arquivo(_resolver_listado(item_relativo, item), item_relativo))
         elif not detalhar and sufixo in EXTENSOES_VETOR | storage_pacotes.COMPACTADOS:

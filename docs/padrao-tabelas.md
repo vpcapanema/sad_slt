@@ -88,3 +88,13 @@ incluindo tela estreita. Reavaliar o zebrado após filtrar ou mudar de página.
 
 Este documento estabelece o padrão obrigatório; não afirma que todas as
 tabelas preexistentes já foram migradas. Ao trabalhar nelas, aplicar o padrão.
+
+## Exceção autorizada — exploradores (04/11/2026)
+
+Por solicitação expressa do usuário, somente as tabelas dos exploradores:
+mantêm **Caminho** como última coluna; centralizam os valores das demais
+colunas, exceto **Nome** e **Caminho**; reúnem ações e filtros em uma barra
+acima da tabela, sem duplicar botões abaixo; não exibem paginador nem contador.
+Todos os itens filtrados devem permanecer acessíveis por rolagem, sem recorte
+oculto por páginas. Seleção e ações existentes são preservadas.
+Esta exceção não altera o padrão das outras tabelas da aplicação.

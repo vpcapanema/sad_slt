@@ -217,15 +217,10 @@ def test_storage_login_links_redirect_to_configured_host(monkeypatch) -> None:
     assert client.get("/sicard/storage/web/other/login").status_code == 404
 
 
-def test_indice_organiza_analise_multicriterio_no_mad_e_recursos_no_geoprocessamento() -> None:
-    client = _client()
-    html = client.get("/restrict/").text
-
+def _assert_indice_conteudo(html: str, trecho_mad: str, trecho_geo: str) -> None:
     assert "/restrict/analise-multicriterio/central-respostas" in html
     assert "/restrict/analise-multicriterio/central-julgamentos" in html
     assert "/restrict/analise-multicriterio/?modo=formulario" not in html
-    trecho_mad = html.split('id="group-mad"', 1)[1].split('id="group-resultados"', 1)[0]
-    trecho_geo = html.split('id="group-geoprocessamento"', 1)[1].split('id="group-administracao"', 1)[0]
     assert "Hierarquização e Ranking" not in trecho_geo
     assert "Visualizador de camadas" in trecho_geo
     assert trecho_geo.index("Central de geoprocessamento") < trecho_geo.index("Visualizador de camadas") < trecho_geo.index("Bancada de geoprocessamento")
@@ -237,6 +232,9 @@ def test_indice_organiza_analise_multicriterio_no_mad_e_recursos_no_geoprocessam
     assert "Gestão de julgamentos AHP" in trecho_mad
     assert "Gestão de Respostas" in trecho_mad
     assert "Apoio à decisão e hierarquização" in trecho_mad
+
+
+def _assert_rotas_geoprocessamento(client, trecho_geo: str) -> None:
     assert "/restrict/geoespacial/visualizador-bases-geoespaciais/" not in trecho_geo
     assert "/restrict/geoespacial/visualizador-camadas/" in trecho_geo
     assert "/restrict/geoespacial/gerador-risco-restricao/" not in trecho_geo
@@ -250,6 +248,9 @@ def test_indice_organiza_analise_multicriterio_no_mad_e_recursos_no_geoprocessam
     assert client.get("/restrict/geoespacial/gerador-favorabilidade/").status_code == 410
     assert client.get("/restrict/geoespacial/configurador-ajuste/").status_code == 410
     assert client.get("/restrict/geoespacial/produtos/", follow_redirects=False).headers["location"] == "/restrict/geoespacial/visualizador-camadas/"
+
+
+def _assert_documentacao_publica_e_indice(client, html: str) -> None:
     # Documentação pública, servida direto (sem redirecionamento) e sem sessão.
     for rota in ("/public/documentacao/risco-restricao/", "/public/documentacao/favorabilidade/"):
         resposta = client.get(rota, follow_redirects=False)
@@ -262,20 +263,35 @@ def test_indice_organiza_analise_multicriterio_no_mad_e_recursos_no_geoprocessam
     assert "id=\"group-ahp-restrict\"" not in html, "grupo AHP foi descontinuado"
     assert "id=\"group-processo\"" not in html, "grupo PROCESSO foi descontinuado"
     assert html.count('<a class="platform-tile ') == html.count('target="_blank" rel="noopener noreferrer"')
-    index_css = __import__("pathlib").Path("admin/index.css").read_text(encoding="utf-8")
+
+
+def _assert_css_indice(html: str, trecho_mad: str) -> None:
+    index_css = (
+        __import__("pathlib").Path(__file__).resolve().parents[1] / "admin/index.css"
+    ).read_text(encoding="utf-8")
     # MAD absorveu o antigo card FASES como subcard "Ranqueamento", ao lado do
     # subcard "Análise Multicritério (AHP)": não há mais uma grade única para
-    # o card inteiro, e sim uma por subcard, cada um com borda própria.
+    # o card inteiro, e sim uma por subcard, cada um com borda própria. O subcard
+    # AHP mantém um acesso por linha (Central de Julgamentos) em todas as telas.
     bloco_ahp = index_css.split(".subgroup-analise-multicriterio-ahp-e-obtencao-de-pesos .platform-grid", 1)[1].split("}", 1)[0]
-    assert "--itens-por-linha: 2" in bloco_ahp
+    assert "--itens-por-linha: 1" in bloco_ahp
     bloco_ranqueamento = index_css.split(".subgroup-ranqueamento .platform-grid", 1)[1].split("}", 1)[0]
     assert "--itens-por-linha: 2" in bloco_ranqueamento
     bloco_geo = index_css.split(".secao-platform-geoprocessamento .platform-grid", 1)[1].split("}", 1)[0]
     assert "--itens-por-linha: 2" in bloco_geo
-    assert ".secao-platform-geoprocessamento { grid-column: 1 / -1; }" in index_css
+    assert re.search(
+        r"\.secao-platform-geoprocessamento\s*\{\s*grid-column:\s*1\s*/\s*-1;\s*\}",
+        index_css,
+    )
     assert ".secao-platform-documentacao-ranqueamento" not in index_css
-    assert ".secao-platform-administracao { grid-column: 1 / -1; }" in index_css
-    assert ".secao-platform-mad { grid-column: span 4; }" in index_css
+    assert re.search(
+        r"\.secao-platform-administracao\s*\{\s*grid-column:\s*1\s*/\s*-1;\s*\}",
+        index_css,
+    )
+    assert re.search(
+        r"\.secao-platform-mad\s*\{\s*grid-column:\s*span\s+4;\s*\}",
+        index_css,
+    )
     # ADMIN usa o mesmo desenho de subcards: tabelas do banco e storage.
     bloco_subcard = index_css.split(".secao-platform-administracao .platform-subgroup {", 1)[1].split("}", 1)[0]
     assert "border: 1px solid" in bloco_subcard
@@ -287,6 +303,18 @@ def test_indice_organiza_analise_multicriterio_no_mad_e_recursos_no_geoprocessam
     assert "Elegibilidade Territorial" in trecho_mad
     assert "Favorabilidade territorial" in trecho_mad
     assert "Priorização por atributos" in trecho_mad
+
+
+def test_indice_organiza_analise_multicriterio_no_mad_e_recursos_no_geoprocessamento() -> None:
+    client = _client()
+    html = client.get("/restrict/").text
+    trecho_mad = html.split('id="group-mad"', 1)[1].split('id="group-resultados"', 1)[0]
+    trecho_geo = html.split('id="group-geoprocessamento"', 1)[1].split('id="group-administracao"', 1)[0]
+
+    _assert_indice_conteudo(html, trecho_mad, trecho_geo)
+    _assert_rotas_geoprocessamento(client, trecho_geo)
+    _assert_documentacao_publica_e_indice(client, html)
+    _assert_css_indice(html, trecho_mad)
 
 
 def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None:

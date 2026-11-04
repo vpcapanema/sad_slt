@@ -153,7 +153,7 @@ def remoto(monkeypatch,tmp_path,execucoes_sinteticas):
 
 @pytest.mark.parametrize('caminho',['/saidas-geoespaciais/a','saidas-geoespaciais/../base-geoespacial/test.gpkg',
     'base-geoespacial/test.gpkg','saidas-geoespaciais/execucoes/invalido/camadas/test.gpkg',
-    f'saidas-geoespaciais/execucoes/{uuid4()}/outro/test.gpkg'])
+    'saidas-geoespaciais/execucoes/6f1c2a4e-9d3b-4c7a-8e5f-0b2d4a6c8e10/outro/test.gpkg'])
 def test_recusa_destinos_fora_da_regra(caminho):
     with pytest.raises(ValueError): saidas.validar(caminho)
 

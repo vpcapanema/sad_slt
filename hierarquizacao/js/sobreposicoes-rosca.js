@@ -1,5 +1,5 @@
 import {el} from '../../geoespacial/extracao-atributos/ui.js';
-import {tituloDemanda} from './nome-demanda.js?v=20261025-title-case';
+import {tituloDemanda} from './nome-demanda.js?v=20261104-camadas-f2';
 
 const ns = 'http://www.w3.org/2000/svg';
 let sequenciaRosca = 0;

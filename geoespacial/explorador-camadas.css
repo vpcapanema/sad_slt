@@ -37,7 +37,9 @@
 .geo-explorer-table .geo-explorer-name :is(span,small) { overflow-wrap:normal; }
 .geo-explorer-table .geo-explorer-name > small { margin:0; font-size:inherit; }
 .geo-explorer-table .geo-explorer-file-icon { width:16px; height:19px; }
-#explorer-filters { margin-top:12px; }
+#explorer-filters { margin-top:12px; height:auto; min-height:32px; flex-wrap:wrap; }
+#explorer-controls .admin-actions { display:flex; gap:6px; padding:0; margin:0; }
+.geo-explorer-table :is(th,td):is([data-field=nome],[data-field=arquivo]) { text-align:left; }
 .geo-explorer-page-size { display:flex; align-items:center; gap:8px; font-size:.72rem; color:#475569; grid-column:1; grid-row:1; white-space:nowrap; }
 .geo-explorer-page-size select { width:auto; flex:0 0 auto; height:34px; min-height:0; padding:4px 8px; border:1px solid var(--admin-border); border-radius:7px; background:#fff; font:inherit; }
 .geo-explorer-name { border:0; background:none; color:#116593; text-align:left; font:inherit; padding:0; display:flex; align-items:baseline; gap:8px; }
@@ -61,6 +63,18 @@
 #explorer-details dt { font-weight:700; color:#475569; }
 #explorer-details dd { margin:0; overflow-wrap:anywhere; }
 #explorer-details pre { white-space:pre-wrap; font-size:.8rem; margin:0; }
+/* Exploradores: valores compactos; o Notify revela o conteúdo completo. */
+.geo-explorer :is(.explorer-cell-value,.geo-explorer-primary > span,.geo-explorer-name > small),
+#explorer-details dd { display:block; min-width:0; max-width:320px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; overflow-wrap:normal; }
+.geo-explorer-table :is(th,td),.geo-explorer-table th :is(span,button) { white-space:nowrap !important; overflow:hidden; text-overflow:ellipsis; }
+.geo-explorer-table th span { display:inline !important; }
+.geo-explorer-table :is(th,td) { border-right:1px solid #374151; border-left:0; }
+.geo-explorer-table thead th { border-left:0; border-right:1px solid #fff; }
+.geo-explorer-table th .explorer-sort-direction { color:#fff; margin-right:6px; }
+.geo-explorer-table .geo-explorer-name { display:flex; min-width:0; max-width:320px; overflow:hidden; white-space:nowrap; }
+.geo-explorer-primary { flex:1; }
+.geo-explorer-icons .geo-explorer-primary { flex-direction:row; }
+#explorer-details pre { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 @media(max-width:650px) { .geo-explorer {padding:12px;} .geo-explorer-search {margin-left:0;width:100%;} .geo-explorer-search input {width:100%;} .geo-explorer-cards {grid-template-columns:1fr;} }
 @media(max-width:800px) {
   .geo-explorer-page-size { grid-row:1; justify-content:center; }
@@ -88,3 +102,6 @@
 .geo-explorer-icons .geo-explorer-primary { flex-direction:column; text-align:center; width:100%; }
 .geo-explorer-icons .geo-explorer-name > small { margin:0; }
 .geo-explorer-actions button:disabled { opacity:.4; cursor:default; }
+.geo-explorer :is(.geo-explorer-name,.geo-explorer-primary) { display:flex; flex-direction:row; min-width:0; max-width:320px; overflow:hidden; white-space:nowrap; }
+.geo-explorer .geo-explorer-name > small { margin:0; }
+.geo-explorer .geo-explorer-primary > span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }

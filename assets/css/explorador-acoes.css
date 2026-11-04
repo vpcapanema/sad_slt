@@ -1,0 +1,111 @@
+/* Paleta das ações de Julgamentos Realizados, restrita aos exploradores. */
+.ea-storage-dialog { --explorer-control-size:var(--ea-storage-controle); }
+.ea-storage-dialog[data-explorer-compact="true"] { --explorer-control-size:25px; }
+.storage-pastas-dialog { --explorer-control-size:32px; }
+.ea-storage-dialog input[name="ea-storage-filter"],
+.ea-storage-dialog .ea-storage-analysis-details .admin-filter-bar input[name="ea-storage-filter"],
+.storage-pastas-dialog .storage-pastas-edicao input {
+  box-sizing:border-box; height:var(--explorer-control-size); min-height:var(--explorer-control-size);
+}
+:is(.ea-storage-dialog,.storage-pastas-dialog) [data-explorer-action] { --explorer-action-color:#475569; }
+:is(.ea-storage-dialog,.storage-pastas-dialog) [data-explorer-action="view"] { --explorer-action-color:#6b21a8; }
+:is(.ea-storage-dialog,.storage-pastas-dialog) :is([data-explorer-action="select-all"],[data-explorer-action="create"]) { --explorer-action-color:#166534; }
+:is(.ea-storage-dialog,.storage-pastas-dialog) :is([data-explorer-action="clear"],[data-explorer-action="delete"]) { --explorer-action-color:#991b1b; }
+:is(.ea-storage-dialog,.storage-pastas-dialog) :is([data-explorer-action="retry"],[data-explorer-action="rename"]) { --explorer-action-color:#92400e; }
+:is(.ea-storage-dialog,.storage-pastas-dialog) [data-explorer-action="refresh"] { --explorer-action-color:#4338ca; }
+:is(.ea-storage-dialog,.storage-pastas-dialog) :is([data-explorer-action="list"],[data-explorer-action="filter-clear"]) { --explorer-action-color:#0f766e; }
+:is(.ea-storage-dialog,.storage-pastas-dialog) [data-explorer-action="details"] { --explorer-action-color:#1d4ed8; }
+:is(.ea-storage-dialog,.storage-pastas-dialog) [data-explorer-action="icons"] { --explorer-action-color:#9d174d; }
+:is(.ea-storage-dialog,.storage-pastas-dialog,.ea-storage-dialog .ea-storage-analysis-details .admin-filter-bar) button[data-explorer-action] {
+  box-sizing:border-box; position:relative; display:inline-flex; align-items:center;
+  justify-content:center; gap:8px; border:1px solid var(--explorer-action-color);
+  border-radius:4px; color:var(--explorer-action-color); background:#fff;
+  font-family:inherit; line-height:1.2; flex-shrink:0;
+}
+:is(.ea-storage-dialog,.storage-pastas-dialog) button[data-explorer-action] > i {
+  color:inherit; flex-shrink:0; line-height:1; font-size:14px;
+}
+.ea-storage-dialog .ea-storage-pane-toolbar > button[data-explorer-action],
+.ea-storage-dialog .ea-storage-analysis-details .admin-filter-bar .ea-storage-pane-toolbar > button[data-explorer-action],
+.ea-storage-dialog .ea-storage-symbol[data-explorer-action],
+.ea-storage-dialog .ea-storage-analysis-details .admin-filter-bar .ea-storage-symbol[data-explorer-action],
+.storage-pastas-dialog .storage-pastas-ferramentas button[data-explorer-action] {
+  width:var(--explorer-control-size); min-width:var(--explorer-control-size); max-width:var(--explorer-control-size);
+  height:var(--explorer-control-size); min-height:var(--explorer-control-size);
+  max-height:var(--explorer-control-size); padding:0; gap:0; flex:0 0 var(--explorer-control-size);
+}
+.ea-storage-dialog .ea-storage-symbol[data-explorer-action="view"] > .fa-caret-down {
+  position:absolute; right:0; bottom:0; font-size:4px;
+}
+:is(.ea-storage-dialog,.storage-pastas-dialog,.ea-storage-dialog .ea-storage-analysis-details .admin-filter-bar) button[data-explorer-action]:hover:not(:disabled) {
+  color:var(--explorer-action-color); border-color:var(--explorer-action-color);
+  background:#edf4f8; transform:none;
+}
+:is(.ea-storage-dialog,.storage-pastas-dialog) button[data-explorer-action]:focus-visible {
+  outline:2px solid var(--explorer-action-color); outline-offset:2px;
+}
+:is(.ea-storage-dialog,.storage-pastas-dialog) button[data-explorer-action]:disabled { opacity:.45; cursor:not-allowed; }
+.ea-storage-dialog .ea-storage-view-menu {
+  position:fixed; z-index:2; display:flex; flex-direction:column; padding:6px;
+  background:#fff; border:1px solid #bdcbd7; box-shadow:0 5px 15px #173e5833;
+  left:auto; right:0; gap:4px; border-radius:4px;
+  min-width:min(190px,calc(100vw - 48px)); max-width:calc(100vw - 48px);
+}
+/* Itens do menu de visualização. O :is() dos botões de ação herda a maior
+   especificidade da lista (a variante .admin-filter-bar); a mesma lista aqui,
+   mais .ea-storage-view-menu e [role], garante que o alinhamento à esquerda,
+   a largura total e o fundo transparente valham em todos os modos. */
+:is(.ea-storage-dialog,.ea-storage-dialog .ea-storage-analysis-details .admin-filter-bar) .ea-storage-view-menu button[data-explorer-action][role="menuitemradio"] {
+  justify-content:flex-start; width:100%; height:auto; min-height:var(--explorer-control-size);
+  padding:2px 0; white-space:nowrap; overflow:visible;
+  border:0; border-radius:0; background:transparent;
+  font-size:.8125rem;
+}
+:is(.ea-storage-dialog,.ea-storage-dialog .ea-storage-analysis-details .admin-filter-bar) .ea-storage-view-menu button[data-explorer-action][role="menuitemradio"]:is(:hover,[aria-checked="true"]) {
+  background:transparent; border:0;
+}
+.ea-storage-dialog .explorer-menu-icon {
+  color:var(--explorer-action-color);
+  box-sizing:border-box; display:inline-flex; align-items:center; justify-content:center;
+  width:var(--explorer-control-size); height:var(--explorer-control-size);
+  flex:0 0 var(--explorer-control-size); border:1px solid currentColor; border-radius:4px;
+  background:#fff;
+}
+.ea-storage-dialog .explorer-menu-icon i { color:inherit; font-size:14px; }
+.ea-storage-dialog .ea-storage-view-menu button:hover .explorer-menu-icon { background:#edf4f8; }
+.ea-storage-dialog .explorer-menu-label { color:var(--pli-text,#243447); }
+.ea-storage-dialog .ea-storage-view-menu button .explorer-menu-check {
+  color:#166534; font-size:14px; visibility:hidden;
+}
+.ea-storage-dialog .ea-storage-view-menu button[aria-checked="true"] .explorer-menu-check {
+  visibility:visible;
+}
+/* Standard scrollbar properties override WebKit pseudos in Chromium.
+   Leave them automatic there so the 3px geometry applies on both axes. */
+:root :is(.ea-storage-dialog,.storage-pastas-dialog,#explorer-details,.importar-storage-dialog),
+:root :is(.ea-storage-dialog,.storage-pastas-dialog,#explorer-details,.importar-storage-dialog) * {
+  scrollbar-width:thin; scrollbar-color:rgba(71,85,105,.18) transparent;
+}
+@supports selector(::-webkit-scrollbar) {
+  :root :is(.ea-storage-dialog,.storage-pastas-dialog,#explorer-details,.importar-storage-dialog),
+  :root :is(.ea-storage-dialog,.storage-pastas-dialog,#explorer-details,.importar-storage-dialog) * {
+    scrollbar-width:auto; scrollbar-color:auto;
+  }
+}
+:is(.ea-storage-dialog,.storage-pastas-dialog,#explorer-details,.importar-storage-dialog)::-webkit-scrollbar,
+:is(.ea-storage-dialog,.storage-pastas-dialog,#explorer-details,.importar-storage-dialog) *::-webkit-scrollbar {
+  width:3px; height:3px;
+}
+:is(.ea-storage-dialog,.storage-pastas-dialog,#explorer-details,.importar-storage-dialog)::-webkit-scrollbar-track,
+:is(.ea-storage-dialog,.storage-pastas-dialog,#explorer-details,.importar-storage-dialog) *::-webkit-scrollbar-track,
+:is(.ea-storage-dialog,.storage-pastas-dialog,#explorer-details,.importar-storage-dialog) *::-webkit-scrollbar-corner {
+  background:transparent;
+}
+:is(.ea-storage-dialog,.storage-pastas-dialog,#explorer-details,.importar-storage-dialog)::-webkit-scrollbar-thumb,
+:is(.ea-storage-dialog,.storage-pastas-dialog,#explorer-details,.importar-storage-dialog) *::-webkit-scrollbar-thumb {
+  background:rgba(71,85,105,.18); border-radius:3px;
+}
+:is(.ea-storage-dialog,.storage-pastas-dialog,#explorer-details,.importar-storage-dialog)::-webkit-scrollbar-thumb:hover,
+:is(.ea-storage-dialog,.storage-pastas-dialog,#explorer-details,.importar-storage-dialog) *::-webkit-scrollbar-thumb:hover {
+  background:rgba(71,85,105,.65);
+}

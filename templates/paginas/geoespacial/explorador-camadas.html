@@ -37,8 +37,6 @@
       <select id="explorer-filter-value" class="admin-filter-val" aria-label="Valor do filtro" disabled><option value="">— selecione a coluna —</option></select>
       <button id="explorer-inverter" class="admin-icon-btn admin-filter-inv" type="button" aria-label="Inverter seleção" title="Inverter seleção" aria-pressed="false"><i class="fa-solid fa-right-left" aria-hidden="true"></i></button>
       <button id="explorer-limpar" class="admin-icon-btn" type="button" aria-label="Limpar" title="Limpar filtros"><i class="fa-solid fa-filter-circle-xmark" aria-hidden="true"></i></button>
-    </div>
-    <div id="explorer-content" aria-busy="true"></div>
     <div id="explorer-controls" hidden>
       <div class="admin-actions" role="group" aria-label="Controles da tabela de camadas">
         <button class="admin-icon-btn reload" type="button" data-control="reload" title="Recarregar" aria-label="Recarregar"><i class="fa-solid fa-rotate-right" aria-hidden="true"></i></button>
@@ -46,12 +44,9 @@
         <button class="admin-icon-btn" type="button" data-control="map" title="Visualizar selecionado no mapa" aria-label="Visualizar selecionado no mapa" disabled><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i></button>
         <button class="admin-icon-btn" type="button" data-control="download" title="Baixar selecionado em ZIP" aria-label="Baixar selecionado em ZIP" disabled><i class="fa-solid fa-download" aria-hidden="true"></i></button>
       </div>
-      <div class="admin-table-footer">
-        <label class="geo-explorer-page-size">Registros por página <select id="explorer-page-size" aria-label="Registros por página"><option value="15">15</option><option value="30">30</option><option value="50">50</option><option value="100">100</option></select></label>
-        <nav id="explorer-pagination" class="admin-pagination" aria-label="Paginar camadas"></nav>
-        <p id="explorer-summary" class="admin-table-summary" aria-live="polite"></p>
-      </div>
     </div>
+    </div>
+    <div id="explorer-content" aria-busy="true"></div>
   </section>
   <dialog id="explorer-details" aria-labelledby="explorer-details-title"><header><h2 id="explorer-details-title">Metadados</h2><form method="dialog"><button aria-label="Fechar" title="Fechar"><i class="fa-solid fa-xmark"></i></button></form></header><div id="explorer-details-body"></div></dialog>
 </main>

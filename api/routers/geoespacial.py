@@ -1033,6 +1033,24 @@ def navegar_storage(caminho: str = "", detalhar: bool = True, incluir_rasters: b
     return resultado
 
 
+@router.post("/storage/detalhes")
+def iniciar_detalhes_storage(caminho: str = Query(...), user: SessionUser = Depends(require_geospatial_access)):
+    from api.services import storage_detalhes_jobs
+    try:
+        return storage_detalhes_jobs.iniciar(caminho, user.id)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@router.get("/storage/detalhes/{ident}")
+def obter_detalhes_storage(ident: str, user: SessionUser = Depends(require_geospatial_access)):
+    from api.services import storage_detalhes_jobs
+    try:
+        return storage_detalhes_jobs.obter(ident, user.id)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+
+
 @router.get("/storage/{raiz}/contagens")
 def obter_contagens_storage(raiz: str) -> dict[str, Any]:
     """Contagens recursivas para grupos recolhidos no visualizador."""

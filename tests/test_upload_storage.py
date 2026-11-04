@@ -174,6 +174,44 @@ class StorageRemotoTest(unittest.TestCase):
             with self.assertRaises(FileNotFoundError):
                 storage_remoto.listar("ausente", estrito=True)
 
+    def _responder_arquivo_legado(self, rejeitar_sempre=False):
+        removido = []
+
+        def responder(pedido):
+            if pedido.url.path.endswith("/user/token"):
+                return httpx.Response(200, json={"access_token": "tk"})
+            if pedido.method == "DELETE":
+                removido.append(True)
+                return httpx.Response(200, json={"message": "ok"})
+            if rejeitar_sempre or not removido:
+                return httpx.Response(500, json={"message": 'Unable to write file "/a/b.json"'})
+            return httpx.Response(201, json={"message": "ok"})
+        return responder
+
+    def _metodos(self):
+        return [p.method for p in self.pedidos if not p.url.path.endswith("/user/token")]
+
+    def test_arquivo_legado_nao_sobrescrevivel_e_removido_e_regravado(self):
+        with patch.object(storage_remoto, "_cliente", self._cliente(self._responder_arquivo_legado())):
+            storage_remoto.enviar_bytes("a/b.json", b"novo")
+        self.assertEqual(self._metodos(), ["POST", "DELETE", "POST"])
+        self.assertEqual(self.pedidos[-1].content, b"novo")
+
+    def test_arquivo_legado_enviado_de_disco_reabre_o_fluxo(self):
+        with tempfile.TemporaryDirectory() as pasta, \
+                patch.object(storage_remoto, "_cliente", self._cliente(self._responder_arquivo_legado())):
+            origem = Path(pasta) / "c.json"
+            origem.write_bytes(b"{}")
+            storage_remoto.enviar("a/b.json", origem)
+        self.assertEqual(self._metodos(), ["POST", "DELETE", "POST"])
+        self.assertEqual(self.pedidos[-1].content, b"{}")
+
+    def test_recusa_persistente_continua_sendo_erro(self):
+        with patch.object(storage_remoto, "_cliente",
+                          self._cliente(self._responder_arquivo_legado(rejeitar_sempre=True))):
+            with self.assertRaisesRegex(storage_remoto.StorageIndisponivel, "Unable to write file"):
+                storage_remoto.enviar_bytes("a/b.json", b"novo")
+
 
 if __name__ == "__main__":
     unittest.main()

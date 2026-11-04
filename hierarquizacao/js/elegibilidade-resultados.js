@@ -1,13 +1,13 @@
 import {instalarRegistro} from './registrar-resultados-fase.js?v=20261027-finalizacao';
 import {criarMapaElegibilidade, areaLegivel} from './elegibilidade-mapa.js?v=20261023-ogr-contexto';
-import {nomeDemanda} from './nome-demanda.js?v=20261023-nomes';
+import {nomeDemanda} from './nome-demanda.js?v=20261104-camadas-f2';
 import {post, base} from '../../geoespacial/extracao-atributos/api.js';
 import {el} from '../../geoespacial/extracao-atributos/ui.js';
 import {escolherArquivo} from '../../geoespacial/extracao-atributos/explorador.js?v=20261020-saidas';
 import {sobreposicoesDaAnalise, demandasDaAnalise, renderizarRoscaDemandas} from './sobreposicoes-rosca.js?v=20261023-contexto';
 import {indiceTexto, classeTexto, corClasse, compararIndices, compararDemandas, renderizarIndices} from './favorabilidade-indices.js?v=20261023-classes-ordem';
 import {renderizarAgregados} from './favorabilidade-estatisticas.js?v=20261027-raster-area';
-import {criarMapaFavorabilidade} from './favorabilidade-mapa.js?v=20261027-raster-area';
+import {criarMapaFavorabilidade} from './favorabilidade-mapa.js?v=20261104-camadas-f2';
 import {criarFiltroResultados, criarResumoResultados, paginarResultados} from './elegibilidade-tabelas.js?v=20261027-raster-area';
 
 const numero = valor => valor.toLocaleString('pt-BR', {
@@ -465,7 +465,9 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
     node('mapa').replaceChildren(); node('nota-mapa').textContent = ''; camadas = new Map(); recortes = [];
     const L = window.L;
     if (!L) throw new Error('O mapa Leaflet não foi carregado. Recarregue a página.');
-    mapa = L.map(node('mapa'),{scrollWheelZoom:false, zoomSnap:favorabilidade ? .25 : 1});
+    mapa = L.map(node('mapa'), favorabilidade
+      ? {scrollWheelZoom:true, wheelDebounceTime:40, wheelPxPerZoomLevel:60, minZoom:3, maxZoom:19, zoomSnap:.25}
+      : {scrollWheelZoom:false, zoomSnap:1});
     const fundo = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles © Esri'}).addTo(mapa);
     fundo.on('tileerror',() => { node('nota-mapa').textContent = 'O mapa-base está indisponível. As geometrias da análise continuam disponíveis.'; });
     if (!favorabilidade) for (const [nome,z] of [['ev-superficies',350],['ev-recortes',410],['ev-demandas',430],['ev-localizadores',450]]) mapa.createPane(nome).style.zIndex = z;
@@ -558,6 +560,7 @@ export function criarResultados({avisar, aoOcupar, analise='elegibilidade'}) {
     operar(async () => {
       const arquivo = await escolherArquivo({
         title:`Selecionar análise de ${analise} já realizada`,
+        detalhesAnalise:true,
         raiz:'saidas-geoespaciais', extensoes:['gpkg'], validar:false, somenteReferencias:true,
         pastaInicial: (() => {
           const codigo = document.getElementById(favorabilidade ? 'fv-hierarquizacao' : 'ev-hierarquizacao')?.value || modelo?.entradas?.[0]?.hierarquizacao || 'HIER-20261019-183457-93E7';

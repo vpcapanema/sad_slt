@@ -477,11 +477,12 @@ class ArquivoResultadosElegibilidade(BaseModel):
 class SuperficieResultadosFavorabilidade(BaseModel):
     execucao: str = Field(min_length=1)
     base_id: str = Field(min_length=1)
+    bounds: list[float] | None = Field(default=None, min_length=4, max_length=4)
+    tolerancia: float = Field(default=0, ge=0, le=.1)
 
 
 class SuperficieResultadosElegibilidade(SuperficieResultadosFavorabilidade):
     bounds: list[float] = Field(min_length=4, max_length=4)
-    tolerancia: float = Field(default=0, ge=0, le=.1)
 
 
 @router.post('/elegibilidade/resultados/superficie')
@@ -524,7 +525,8 @@ def superficie_resultados_favorabilidade(payload: SuperficieResultadosFavorabili
                                          user: SessionUser = Depends(require_geospatial_access)):
     from api.services import elegibilidade_relatorio
     try:
-        return elegibilidade_relatorio.superficie_favorabilidade(payload.execucao, payload.base_id, user.id)
+        return elegibilidade_relatorio.superficie_favorabilidade(
+            payload.execucao, payload.base_id, user.id, payload.bounds, payload.tolerancia)
     except FileNotFoundError as exc:
         raise HTTPException(404, str(exc)) from exc
     except ValueError as exc:

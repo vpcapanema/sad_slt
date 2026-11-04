@@ -1,4 +1,4 @@
-import {nomeDemanda} from './nome-demanda.js?v=20261023-nomes';
+import {nomeDemanda} from './nome-demanda.js?v=20261104-camadas-f2';
 import {el} from '../../geoespacial/extracao-atributos/ui.js';
 import {indiceTexto, classeTexto, compararIndices, compararDemandas, formatarIndice} from './favorabilidade-indices.js?v=20261023-classes-ordem';
 

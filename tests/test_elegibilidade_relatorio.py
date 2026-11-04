@@ -64,6 +64,7 @@ def analise(monkeypatch):
         return consultar_persistido(ident, dono)
     monkeypatch.setattr(service.jobs, '_jobs', {})
     monkeypatch.setattr(service.jobs, 'consultar', consultar)
+    service.limpar_cache_superficies()
     def baixar(caminho):
         if caminho not in dados:
             raise FileNotFoundError(caminho)
@@ -118,6 +119,12 @@ def test_superficie_contexto_vinculo_autoria_e_extensao(analise, monkeypatch):
     assert shape(dados['geometrias']['features'][0]['geometry']).bounds == tuple(bounds)
     assert fonte.equals(original)
     assert 'Fonte original atual' in dados['origem']
+    # Outra vista da mesma superfície reutiliza a fonte preparada em memória, sem reler o storage.
+    menor = service.superficie_elegibilidade('job-1','base-0','autor',[-47.9,-23.9,-46.1,-22.1])
+    assert shape(menor['geometrias']['features'][0]['geometry']).bounds == (-47.9,-23.9,-46.1,-22.1)
+    assert service.superficie_elegibilidade('job-1','base-0','autor',[-45,-21,-44,-20])['geometrias']['features'] == []
+    assert len(service.superficie_elegibilidade('job-1','base-0','autor',[-49,-25,-45,-21])['geometrias']['features']) == 1
+    assert shape(service.superficie_elegibilidade('job-1','base-0','autor',[-49,-25,-45,-21])['geometrias']['features'][0]['geometry']).bounds == (-48,-24,-46,-22)
     with pytest.raises(FileNotFoundError):
         service.superficie_elegibilidade('job-1','base-0','outro',bounds)
     with pytest.raises(ValueError, match='não pertence'):

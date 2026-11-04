@@ -1,5 +1,5 @@
 import {el} from '../../geoespacial/extracao-atributos/ui.js';
-import {resumoElegibilidade, formatarHa, formatarPercentual, formatarIndice} from './cinco-resultados_elegibilidade_v2-dados.js?v=resumo';
+import {resumoElegibilidade, formatarHa, formatarPercentual, formatarIndice} from './cinco-resultados_elegibilidade_v2-dados.js?v=20261104-camadas';
 
 const COLUNAS = ['Objeto de demanda', 'Camadas de risco', 'Área de sobreposição', 'Porcentagem sobreposta', 'Índice de risco ambiental e territorial'];
 

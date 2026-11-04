@@ -61,6 +61,10 @@
 .storage-pastas-lista:focus-visible { box-shadow: 0 0 0 2px #9fd1b5; }
 .storage-pastas-item { display: flex; align-items: center; gap: 9px; min-height: 34px; padding: 4px 6px 4px 9px; border-radius: 5px; cursor: pointer; user-select: none; }
 .storage-pastas-item span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.storage-pastas-item > span { border-right:1px solid #374151; border-left:0; padding-inline:8px; }
+.storage-pastas-destino strong { max-width:320px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.storage-pastas-trilha { flex-wrap:nowrap; overflow:auto; }
+.storage-pastas-trilha button { flex-shrink:0; max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .storage-pastas-item > i { width: 16px; color: #d19a2a; text-align: center; }
 .storage-pastas-item .fa-database { color: #26975e; }
 .storage-pastas-item:hover { background: #f1f7f3; }
