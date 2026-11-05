@@ -18,8 +18,9 @@
       if (value != null) metadata.append(element("dt", key), element("dd", value));
     });
     host.append(metadata, element("p", "Somente visualização. As intensidades de importância são recolhidas exclusivamente pelo formulário público; não são atribuídas neste quadro."));
-    function table(title, headers, values) {
+    function table(title, headers, values, labelText) {
       host.append(element("h3", title));
+      if (labelText && document.querySelector('.ami-main[data-modo="espaco"]')) host.append(element("p", labelText, "ami-table-label"));
       const shell = element("div", null, "matriz-table-wrap");
       const grid = element("table", null, "admin-table matriz-view-table ami-matrix");
       const head = grid.createTHead().insertRow();
@@ -40,14 +41,15 @@
     }
     const criteria = rows(record.conteudo);
     const keys = [...new Set(criteria.flatMap(row => Object.keys(row)))];
-    const premises = table("Critérios e premissas do arquivo", keys, criteria.map(row => keys.map(key => row[key] ?? "—")));
+    const premises = table("Critérios e premissas do arquivo", keys, criteria.map(row => keys.map(key => row[key] ?? "—")),
+      "Tabela dos critérios e premissas do arquivo");
     host.append(element("p", "A comparação pareada AHP contempla somente os critérios da Fase 3. As demais fases permanecem na tabela de premissas acima."));
     const names = phase3Rows(record.conteudo).map((row, index) => {
       const key = Object.keys(row).find(key => ["criterio", "nome", "name"].includes(key.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase()));
       return key ? row[key] : "Critério " + (index + 1);
     });
     const pairs = table("Estrutura de comparação pareada — sem julgamentos", ["Critério", ...names],
-      names.map(name => [name, ...names.map(() => "—")]));
+      names.map(name => [name, ...names.map(() => "—")]), "Matriz da estrutura de comparação pareada sem julgamentos");
     dialog.showModal();
     [premises, pairs].forEach(grid => global.SLTAnalysisTable(grid));
   }

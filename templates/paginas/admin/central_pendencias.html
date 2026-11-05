@@ -16,7 +16,7 @@
 <link rel="stylesheet" href="/assets/css/paginas/ami-report-tables.css">
 <link rel="stylesheet" href="/assets/css/paginas/ami-espaco-secoes.css">
 <link rel="stylesheet" href="/assets/css/paginas/sicard-standard-pages.css">
-<link rel="stylesheet" href="/assets/css/paginas/central-pendencias.css?v=20261029-detalhes-legiveis">
+<link rel="stylesheet" href="/assets/css/paginas/central-pendencias.css?v=20261105-contexto">
 {% endblock %}
 {% block conteudo %}
 <div id="admin-session-bar" class="admin-session-bar hidden"></div>
@@ -30,20 +30,18 @@
   <section class="card ahp-step-section ami-panel" aria-labelledby="pendencias-contexto-titulo">
     <div class="ahp-section-label"><i class="fa-solid fa-circle-info" aria-hidden="true"></i><span id="pendencias-contexto-titulo">Contextualização</span></div>
     <div class="ahp-section-body">
-      <article class="ahp-subcard">
-        <div class="ahp-subsection-title"><span class="ahp-subsection-num">1</span><h2>Cadastro e geometria</h2></div>
-        <p class="form-help">O solicitante corresponde ao representante do cadastro. O e-mail do representante é usado no envio; o destinatário registra o endereço efetivamente utilizado. A mensagem deste bloco é o texto do parecer da análise, acompanhado do PDF já gerado.</p>
-      </article>
-      <article class="ahp-subcard">
-        <div class="ahp-subsection-title"><span class="ahp-subsection-num">2</span><h2>Atributos da demanda</h2></div>
-        <p class="form-help">Somente demandas da fase 2 com atributos não preenchidos aparecem automaticamente. Registre a solicitação e salve a mensagem antes de abrir a prévia.</p>
-      </article>
+      <p class="form-help">Nas pendências de atributos da demanda, somente demandas da fase 3 da hierarquização com atributos não preenchidos aparecem automaticamente. Registre a solicitação e salve a mensagem antes de abrir a prévia.</p>
       <p class="form-help">Selecione uma solicitação e abra a prévia abaixo da tabela. Apenas “Enviar notificação” realiza o envio. Aceitação SMTP não confirma entrega; ausência de confirmação não significa que o e-mail não foi aberto. O cumprimento depende do atendimento da pendência, não do e-mail.</p>
       <a href="/restrict/complementacao/">Abrir atendimento das complementações</a>
+    </div>
   </section>
   <p id="pendencias-feedback" role="status" aria-live="polite">Carregando solicitações…</p>
-  {% for chave, rotulo in [("cadastro", "1. Cadastro e geometria"), ("atributos", "2. Atributos da demanda — somente fase 2")] %}
-  <section class="card ahp-step-section ami-panel standard-table-section" id="pendencias-{{ chave }}">
+  {% for chave, rotulo, titulo in [
+    ("cadastro", "Tabela de Pendências de Cadastro e Geometria", "Pendências Cadastrais e de Geometria"),
+    ("atributos", "Tabela de Pendências de Atributos da Demanda", "Pendências da Fase 3 da Hierarquização - Atributos de Demanda")
+  ] %}
+  <h2 class="pendencias-grupo-titulo" id="pendencias-{{ chave }}-titulo">{{ titulo }}</h2>
+  <section class="card ahp-step-section ami-panel standard-table-section" id="pendencias-{{ chave }}" aria-labelledby="pendencias-{{ chave }}-titulo">
     <div class="ahp-section-label ami-table-heading"><span><i class="fa-solid fa-table" aria-hidden="true"></i> {{ rotulo }}</span></div>
     <div class="ahp-section-body">
       <div class="ami-filtered-table">

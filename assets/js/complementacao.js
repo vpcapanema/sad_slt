@@ -64,14 +64,14 @@
     editor.classList.remove('hidden');
     grupos.forEach(grupo => document.querySelector(`#complementacao-${grupo}`).classList.add('hidden'));
     controles.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.complementacao === modo)));
-    document.querySelector('#complementacao-editor-titulo').textContent = `1.1 ${controles.find(button => button.dataset.complementacao === modo).textContent.trim()}`;
+    document.querySelector('#complementacao-editor-titulo').textContent = controles.find(button => button.dataset.complementacao === modo).textContent.trim();
     resumo.textContent = `${alvo.id} — ${alvo.nome}`;
     mensagem('Carregando…');
     try {
       const registro = await api(caminho(tipoAlvo, alvo.id));
       if (revisao !== versao) return;
       if (modo === 'cadastro') {
-        document.querySelector('#complementacao-editor-titulo').textContent = tipoAlvo === 'projeto' ? '1.1 Informa\u00e7\u00f5es do Projeto' : '1.1 Dados cadastrais';
+        document.querySelector('#complementacao-editor-titulo').textContent = tipoAlvo === 'projeto' ? 'Informa\u00e7\u00f5es do Projeto' : 'Dados cadastrais';
         document.querySelector('#complementacao-cadastro-campos').classList.toggle('complementacao-grid', tipoAlvo !== 'projeto');
         document.querySelector('#complementacao-cadastro-campos').innerHTML = tipoAlvo === 'projeto'
           ? SLTProjectForm.html(registro)
@@ -196,6 +196,15 @@
   const tamanhoPagina = document.querySelector('#complementacao-atributos-page-size');
   const paginacaoAtributos = document.querySelector('#complementacao-atributos-pagination');
   const tabelaAtributos = campos.querySelector('table');
+  const filtroPrefixo = 'complementacao-atributos-filtro';
+  const filtroColuna = document.getElementById(filtroPrefixo + '-coluna');
+  const filtroValor = document.getElementById(filtroPrefixo + '-valor');
+  const selecionarTodos = tabelaAtributos.querySelector('[data-atributos-selecionar-todos]');
+  const exportar = document.querySelector('#complementacao-atributos-exportar');
+  const textoCelula = (linha, indice) => {
+    const celula = linha.cells[indice];
+    return String(celula.querySelector('[data-atributo-coluna]')?.value ?? celula.textContent.trim());
+  };
   const filtroDemanda = document.querySelector('#complementacao-demanda');
   const conclusoes = document.querySelector('#complementacao-concluir-demandas');
   let administrador = false, demandaAtual = '';
@@ -204,7 +213,7 @@
   let hierarquiaAtual = '', revisaoAtributos = 0;
   const caminhoAtributos = codigo => `/api/complementacao/hierarquizacoes/${encodeURIComponent(codigo)}`;
   const ordenarAtributos = SLTTable.sorting(tabelaAtributos,
-    () => [...tabelaAtributos.tHead.rows[0].cells].map((_, indice) => linha => {
+    () => [...tabelaAtributos.tHead.rows[0].cells].map((celula, indice) => celula.classList.contains('col-select') ? null : linha => {
       const celula = linha.cells[indice];
       return celula.querySelector('input, select')?.value ?? celula.textContent.trim();
     }),
@@ -212,7 +221,10 @@
     () => !ocupado);
 
   function paginarAtributos() {
-    const linhas = ordenarAtributos(linhasAtributos);
+    const linhas = ordenarAtributos(linhasAtributos.filter(linha => SLTTable.matches(
+      filtroPrefixo,
+      textoCelula(linha, Number(filtroColuna.value || 1)) === (filtroValor.value === '__empty__' ? '' : filtroValor.value),
+      Boolean(filtroColuna.value && filtroValor.value))));
     const resultado = SLTTable.paginate(paginacaoAtributos.id, linhas, paginaAtributos, pagina => {
       paginaAtributos = pagina;
       paginarAtributos();
@@ -220,14 +232,58 @@
     paginaAtributos = resultado.page;
     const visiveis = new Set(resultado.rows);
     // Mantém os campos de todas as páginas no formulário para validar e salvar o lote inteiro.
-    linhas.forEach(linha => { linha.hidden = !visiveis.has(linha); });
-    tabelaAtributos.tBodies[0].replaceChildren(...linhas);
-    document.querySelector('#complementacao-atributos-summary').textContent =
-      `${resultado.rows.length} na página / ${linhas.length} no total`;
+    linhasAtributos.forEach(linha => { linha.hidden = !visiveis.has(linha); });
+    tabelaAtributos.tBodies[0].replaceChildren(...linhas, ...linhasAtributos.filter(linha => !linhas.includes(linha)));
+    const selecionados = linhasAtributos.filter(linha => linha.querySelector('[data-atributos-selecionar]').checked);
+    SLTTable.summary('complementacao-atributos-summary', selecionados.length, resultado.rows.length, linhas.length);
+    const marcados = resultado.rows.filter(linha => linha.querySelector('[data-atributos-selecionar]').checked).length;
+    selecionarTodos.checked = marcados > 0 && marcados === resultado.rows.length;
+    selecionarTodos.indeterminate = marcados > 0 && marcados < resultado.rows.length;
+    selecionarTodos.disabled = ocupado || !resultado.rows.length;
+    exportar.disabled = ocupado || !selecionados.length;
+    linhasAtributos.forEach(linha => linha.classList.toggle('is-selected', linha.querySelector('[data-atributos-selecionar]').checked));
     tamanhoPagina.disabled = ocupado;
     paginacaoAtributos.querySelectorAll('button').forEach(button => { button.disabled ||= ocupado; });
   }
 
+  function valoresFiltro() {
+    SLTTable.values(filtroValor, linhasAtributos, linha => textoCelula(linha, Number(filtroColuna.value || 1)));
+    filtroValor.disabled = !filtroColuna.value;
+  }
+  filtroColuna.addEventListener('change', () => {
+    filtroValor.value = '';
+    valoresFiltro();
+    paginaAtributos = 1;
+    paginarAtributos();
+  });
+  filtroValor.addEventListener('change', () => { paginaAtributos = 1; paginarAtributos(); });
+  SLTTable.bindFilter(filtroPrefixo, () => { paginaAtributos = 1; paginarAtributos(); }, () => {
+    filtroColuna.value = '';
+    filtroValor.value = '';
+    valoresFiltro();
+  });
+  selecionarTodos.addEventListener('change', () => {
+    linhasAtributos.filter(linha => !linha.hidden).forEach(linha => {
+      linha.querySelector('[data-atributos-selecionar]').checked = selecionarTodos.checked;
+    });
+    paginarAtributos();
+  });
+  tabelaAtributos.addEventListener('change', event => {
+    if (event.target.matches('[data-atributos-selecionar]')) paginarAtributos();
+  });
+  exportar.addEventListener('click', () => {
+    const quote = value => '"' + String(value).replace(/^[=+@-]/, "'$&").replace(/"/g, '""') + '"';
+    const indices = [...tabelaAtributos.tHead.rows[0].cells].map((_, indice) => indice).slice(1);
+    const rows = linhasAtributos.filter(linha => linha.querySelector('[data-atributos-selecionar]').checked);
+    const csv = [indices.map(i => tabelaAtributos.tHead.rows[0].cells[i].textContent.trim()),
+      ...rows.map(linha => indices.map(i => textoCelula(linha, i)))]
+      .map(row => row.map(quote).join(';')).join('\r\n');
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(new Blob(['\uFEFF', csv], {type: 'text/csv;charset=utf-8'}));
+    link.download = 'atributos-complementacao.csv';
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  });
   tamanhoPagina.addEventListener('change', () => {
     paginaAtributos = 1;
     paginarAtributos();
@@ -239,6 +295,9 @@
     const indice = ordenarAtributos(linhasAtributos).indexOf(linha);
     if (indice < 0) return;
     revelandoInvalido = true;
+    filtroColuna.value = '';
+    filtroValor.value = '';
+    valoresFiltro();
     paginaAtributos = Math.floor(indice / Number(tamanhoPagina.value)) + 1;
     paginarAtributos();
     setTimeout(() => { revelandoInvalido = false; }, 0);
@@ -272,6 +331,13 @@
   async function render(item) {
     await AtributosObjetos.render(item, {complementacao: true, colunas: item.colunas, dominios: item.dominios});
     linhasAtributos = [...tabelaAtributos.tBodies[0].rows];
+    filtroColuna.replaceChildren(new Option('— Coluna —', ''));
+    [...tabelaAtributos.tHead.rows[0].cells].slice(1).forEach((celula, indice) => {
+      filtroColuna.add(new Option(celula.textContent.trim(), String(indice + 1)));
+    });
+    filtroValor.value = '';
+    valoresFiltro();
+    SLTTable.inversion(document.getElementById(filtroPrefixo + '-inverter'), false);
     paginaAtributos = 1;
     SLTResumoFase.secao1(document.querySelector('#complementacao-resumo-hierarquizacao'), item, {mostrarDataCriacao: true});
     atual = item;
@@ -416,8 +482,8 @@
     await render(atual);
     mensagemAtributos('Edição cancelada. Os valores salvos foram preservados.');
   });
-  campos.addEventListener('input', () => { if (editando) alterado = true; });
-  campos.addEventListener('change', () => { if (editando) alterado = true; });
+  campos.addEventListener('input', event => { if (editando && event.target.matches('[data-atributo-coluna]')) alterado = true; });
+  campos.addEventListener('change', event => { if (editando && event.target.matches('[data-atributo-coluna]')) alterado = true; });
   recarregar.addEventListener('click', carregarAtributos);
   window.addEventListener('beforeunload', event => {
     if (alterado || ocupado) { event.preventDefault(); event.returnValue = ''; }

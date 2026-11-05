@@ -321,13 +321,39 @@ Aplicar `database/137_email_convites_colaborativos.sql` e
 `database/138_token_acesso_julgamento.sql` e `database/159_convites_individuais.sql`
 antes de usar este fluxo. A migração 159 desativa os códigos compartilhados antigos;
 é necessário reenviar convites individuais.
+Para o monitoramento por colaborador, aplicar também
+`database/162_monitoramento_emails_colaboradores.sql`.
 Os endpoints, todos no SICARD, são:
 
 - `GET /api/ahp/comparacao-colaborativa/ambientes/{id}/emails`: histórico;
+- `GET .../{id}/emails/monitoramento`: colaboradores salvos, disponibilidade da
+  resposta recebida e histórico de ambas as naturezas;
 - `POST .../{id}/emails/enviar`: `destinatario`, `texto` e `versao` (valor de
   `atualizadoEm` do julgamento); envia um convite salvo por requisição;
 - `POST .../{id}/emails/confirmacoes`: coleta os retornos por IMAP e atualiza o
   histórico, sem reenviar mensagens.
+- `POST .../{id}/emails/resposta/enviar`: `destinatario`; envia a confirmação de
+  uma resposta já recebida, usando o mesmo conteúdo e rastreamento do envio automático.
+
+O monitoramento apresenta uma linha por colaborador, com **E-mail convite** e
+**E-mail resposta**. Cada status abre o histórico de sua natureza, com entrega,
+leitura e detalhes. Tentativas legadas são preservadas, mas não duplicam colaboradores.
+Uma tentativa aceita não volta a “Não enviado” por causa de uma falha anterior.
+Falha de entrega não equivale a ausência de envio e não libera os botões.
+Os dois botões de envio aos selecionados exigem que **todos** estejam com
+“Não enviado” na coluna correspondente; a mesma condição é verificada no
+servidor sob bloqueio transacional. Convites usam `somente_nao_enviado: true`.
+Sem resposta recebida, a confirmação aparece como “Aguardando resposta”.
+Novas tentativas de comunicações fracassadas reutilizam o registro existente
+e preservam os detalhes anteriores. Reenvios explícitos da prévia mantêm o fluxo
+existente e ficam agrupados na mesma comunicação lógica do colaborador.
+
+Confirmações automáticas passam a persistir o identificador SMTP e solicitar
+DSN/MDN, compartilhando o histórico com os envios manuais. O monitoramento
+atualiza a cada 30 segundos enquanto estiver visível e ao retornar à janela;
+“Atualizar confirmações” coleta os retornos das duas naturezas sem reenviar.
+Confirmações anteriores à migração não tinham histórico persistido e não
+podem ter sua entrega ou leitura retroativamente inferidas.
 
 A chave usa 32 bytes aleatórios (256 bits), exclusiva de cada destinatário.
 Somente seu hash SHA-256 é armazenado em `ahp.convite_individual`; a chave em
@@ -548,6 +574,9 @@ Não confunda limitações do ambiente do agente com o estado do Codespace intei
 
 No Windows, a tarefa **SICARD: Iniciar servidor local** usa o ambiente Python
 local e acessa os bancos oficiais pelo gateway TLS da porta 443, sem túnel SSH.
+Erros de consulta SQL não indicam queda desse acesso: são erros internos da
+aplicação. O HTTP 503 de banco fica reservado às falhas de conexão/comunicação;
+erros de programação SQL seguem o tratamento de erro interno, com registro no log.
 A página inicial é aberta no Microsoft Edge, usando o perfil atual, após a
 verificação de prontidão do servidor; uma instância local saudável já existente
 é reutilizada. Se o Edge não for encontrado, a tarefa informa o endereço para

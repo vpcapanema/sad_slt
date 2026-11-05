@@ -1,5 +1,22 @@
 # SICARD — instruções do projeto
 
+## Credenciais de acesso para agentes
+
+Sempre que uma tarefa exigir login, em qualquer contexto de atuação neste
+projeto, consultar obrigatoriamente o arquivo local
+`R:\sad_slt\credencias_sigma_agentes.txt` (na raiz do workspace:
+`credencias_sigma_agentes.txt`) e utilizar automaticamente as credenciais
+adequadas ao sistema e ao perfil exigidos, pelo fluxo normal de autenticação.
+Não pedir ao usuário que faça login ou forneça novamente credenciais disponíveis.
+Utilizá-las somente no serviço ao qual se destinam.
+
+Esta regra também vale para subagentes. Ao delegar, informar somente o caminho,
+nunca os valores. Não copiar o conteúdo para código, documentação, mensagens,
+logs ou artefatos, nem versioná-lo. Reutilizar sessões válidas respeitando sua
+expiração; não criar cookies permanentes nem contornar controles de acesso.
+Se o arquivo não estiver disponível no ambiente de execução, inclusive em
+ambientes cloud, ou o login falhar, informar o bloqueio sem expor credenciais.
+
 ## Deploy: caminho único
 
 Publicar em produção usa o script correspondente ao ambiente. No Codespace,

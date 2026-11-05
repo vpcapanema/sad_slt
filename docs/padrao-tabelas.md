@@ -98,3 +98,13 @@ acima da tabela, sem duplicar botões abaixo; não exibem paginador nem contador
 Todos os itens filtrados devem permanecer acessíveis por rolagem, sem recorte
 oculto por páginas. Seleção e ações existentes são preservadas.
 Esta exceção não altera o padrão das outras tabelas da aplicação.
+
+## Complementação de dados da demanda
+
+A página de complementação reutiliza o hero, as seções e a escala tipográfica
+da Central de pendências. A tabela de atributos possui filtros por coluna e
+valor, inversão, seletores por página e exportação dos registros selecionados.
+Os campos das páginas não exibidas permanecem no formulário para preservar a
+validação e a gravação integral dos atributos. A identificação da demanda e os
+seletores permanecem fixos durante a rolagem horizontal; em telas estreitas,
+a identificação respeita o espaço restante após os seletores, sem cortar nomes.

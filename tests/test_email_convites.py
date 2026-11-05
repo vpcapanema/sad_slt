@@ -353,10 +353,15 @@ def test_reserva_sql_usando_versao_e_exclusividade(monkeypatch, cenario, adquiri
     resultado, novo = repo.reservar("ambiente", DEST, "hash", MID, "usuario", datetime.now(timezone.utc))
     assert novo is adquirido and resultado == row
     consultas = [call.args[0] for call in conn.execute.call_args_list]
-    assert "FOR SHARE" in consultas[0] and "atualizado_em=%s" in consultas[0]
-    assert "ON CONFLICT (ambiente_id,destinatario,conteudo_hash) DO NOTHING" in consultas[1]
+    assert "pg_advisory_xact_lock" in consultas[0]
+    assert "FOR SHARE" in consultas[1] and "atualizado_em=%s" in consultas[1]
+    assert "ON CONFLICT (ambiente_id,destinatario,conteudo_hash) DO NOTHING" in consultas[2]
     if cenario != "novo":
-        assert "envio_status='falha'" in consultas[2]
+        assert "envio_status='falha'" in consultas[3]
+        assert "'tentativa'" in consultas[3]
+        assert "UPDATE ahp.comparacao_colaborativa_email AS email" in consultas[3]
+        assert "to_jsonb(email) - 'eventos'" in consultas[3]
+        assert "to_jsonb(ahp." not in consultas[3]
 
 
 def test_evento_repetido_nao_duplica_e_atraso_nao_regride_entrega(monkeypatch):
@@ -377,6 +382,78 @@ def test_evento_repetido_nao_duplica_e_atraso_nao_regride_entrega(monkeypatch):
     assert len(params[2].obj) == 2
 
 
+@pytest.mark.parametrize("natureza", ["convite", "resposta"])
+@pytest.mark.parametrize("status", ["aceito_smtp", "enviando", "indeterminado"])
+def test_monitoramento_rejeita_envio_que_nao_esta_nao_enviado(monkeypatch, natureza, status):
+    from contextlib import contextmanager
+    conn = MagicMock()
+    conn.execute.return_value.fetchone.return_value = {"id": "enviado", "envio_status": status}
+    @contextmanager
+    def connection():
+        yield conn
+    monkeypatch.setattr(repo, "get_connection", connection)
+    reserva = MagicMock()
+    monkeypatch.setattr(repo, "reservar", reserva)
+    with pytest.raises(DemandaValidationError, match="Não enviado"):
+        repo.reservar_monitorado("ambiente", DEST, "hash", MID, "usuario",
+                                datetime.now(timezone.utc), natureza=natureza)
+    reserva.assert_not_called()
+    assert "pg_advisory_xact_lock" in conn.execute.call_args_list[0].args[0]
+    assert conn.execute.call_args.args[1] == ("ambiente", DEST, natureza)
+
+
+def test_monitoramento_reutiliza_comunicacao_fracassada(monkeypatch):
+    from contextlib import contextmanager
+    conn = MagicMock()
+    conn.execute.return_value.fetchone.side_effect = [None, {"conteudo_hash": "hash-anterior"}]
+    @contextmanager
+    def connection():
+        yield conn
+    monkeypatch.setattr(repo, "get_connection", connection)
+    reserva = MagicMock(return_value=({"id": "mesmo-email"}, True))
+    monkeypatch.setattr(repo, "reservar", reserva)
+    row, novo = repo.reservar_monitorado("ambiente", DEST, "novo-hash", MID, "usuario", datetime.now(timezone.utc))
+    assert novo and row["id"] == "mesmo-email"
+    assert reserva.call_args.args[2] == "hash-anterior"
+
+
+def test_automatico_nao_repete_confirmacao_aceita(monkeypatch):
+    from contextlib import contextmanager
+    conn = MagicMock()
+    row = {"id": "enviado", "envio_status": "aceito_smtp"}
+    conn.execute.return_value.fetchone.return_value = row
+    @contextmanager
+    def connection():
+        yield conn
+    monkeypatch.setattr(repo, "get_connection", connection)
+    reserva = MagicMock()
+    monkeypatch.setattr(repo, "reservar", reserva)
+    assert repo.reservar_monitorado("ambiente", DEST, "hash", MID, "sistema",
+                                   datetime.now(timezone.utc), natureza="resposta", rejeitar_enviado=False) == (row, False)
+    reserva.assert_not_called()
+
+
+def test_envio_seletivo_usa_reserva_monitorada(ambiente, smtp, registros, monkeypatch):
+    reservar = MagicMock(side_effect=repo.reservar)
+    monkeypatch.setattr(repo, "reservar_monitorado", reservar)
+    service.enviar(ambiente["id"], payload(ambiente, somente_nao_enviado=True), "analista")
+    reservar.assert_called_once()
+    smtp.assert_called_once()
+
+
+def test_monitoramento_inclui_nomes_e_disponibilidade_da_resposta(ambiente, registros, monkeypatch):
+    ambiente["convites"] = [{"nome": "Ana", "email": DEST}, {"nome": "Bia", "email": "bia@example.com"}]
+    monkeypatch.setattr(service.ambientes, "list_respostas", lambda _: [
+        {"email": DEST, "status": "enviada"}, {"email": "bia@example.com", "status": "em_preenchimento"}])
+    from api.routers.email_convites import monitoramento
+    result = monitoramento(ambiente["id"])
+    assert result["registros"] == registros
+    assert result["colaboradores"] == [
+        {"nome": "Ana", "email": DEST, "resposta_recebida": True},
+        {"nome": "Bia", "email": "bia@example.com", "resposta_recebida": False},
+    ]
+
+
 @pytest.mark.parametrize("perfil,status", [(None, 401), ("VISUALIZADOR", 403), ("OPERADOR", 403), ("ANALISTA", 200), ("GESTOR", 200), ("ADMIN", 200)])
 def test_permissoes_rotas_de_convites(ambiente, smtp, registros, perfil, status):
     app = FastAPI()
@@ -392,4 +469,6 @@ def test_permissoes_rotas_de_convites(ambiente, smtp, registros, perfil, status)
         assert response.status_code == status
         if perfil not in {"ANALISTA", "GESTOR", "ADMIN"}:
             assert client.post(base + "/confirmacoes", headers=headers).status_code == status
+            assert client.get(base + "/monitoramento", headers=headers).status_code == status
+            assert client.post(base + "/resposta/enviar", headers=headers, json={"destinatario": DEST}).status_code == status
             smtp.assert_not_called()

@@ -456,6 +456,36 @@ def test_pdf_e_da_analise_e_nao_das_anotacoes_internas(central, monkeypatch):
     assert result["leitura_status"] == "sem_confirmacao"
 
 
+    central.cadastro.update(representante_nome="Representante do cadastro",
+                            representante_email="representante@example.org")
+    monkeypatch.setattr(notification.analise_demanda_repository, "get_by_codigo",
+                        lambda code: {"demanda_tipo": "projeto", "parecer_texto": "Parecer da análise"})
+    pdf = b"%PDF-1.7\nParecer existente"
+    monkeypatch.setattr(notification.analise_demanda_repository, "get_pdf", lambda code: pdf)
+    monkeypatch.setattr(repo, "reservar_notificacao", lambda *a: central.pedido)
+    registrar = Mock()
+    monkeypatch.setattr(repo, "registrar_notificacao", registrar)
+    enviar = Mock(return_value=SimpleNamespace(
+        status="aceito_smtp", mensagem="Aceito",
+        confirmacao_entrega_solicitada=True, confirmacao_leitura_solicitada=True))
+    monkeypatch.setattr(notification.email_service, "enviar", enviar)
+
+    previa = router.previsualizar_notificacao(central.pedido["id"], central.user)
+    enviar.assert_not_called()
+    result = router.notificar_solicitacao(
+        central.pedido["id"], central.user,
+        router.NotificacaoConfirmacao(assinatura=previa["assinatura"]))
+
+    email = enviar.call_args.args[0]
+    assert str(email.destinatario) == central.cadastro["representante_email"]
+    assert email.texto == previa["texto"] == "Parecer da análise"
+    assert enviar.call_args.kwargs["anexo_pdf"] == ("parecer-analise-D.pdf", pdf)
+    assert result["destinatario"] == str(email.destinatario)
+    assert registrar.call_args.args[1]["destinatario"] == str(email.destinatario)
+    assert result["cadastro_no_envio"]["representante_nome"] == central.cadastro["representante_nome"]
+    assert result["cadastro_no_envio"]["representante_email"] == str(email.destinatario)
+
+
 def test_previa_nao_envia_e_revalida_conteudo(central, monkeypatch):
     analise = {"demanda_tipo": "projeto", "parecer_texto": "Parecer da análise"}
     monkeypatch.setattr(notification.analise_demanda_repository, "get_by_codigo", lambda code: analise)

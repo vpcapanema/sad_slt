@@ -32,7 +32,7 @@
   },
   "terminal.integrated.defaultProfile.linux": "Host do agente — PowerShell compartilhado",
   "sicardPreview.baseUrl": "http://127.0.0.1:8083",
-  "python.defaultInterpreterPath": "${workspaceFolder}/.venv",
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe",
   "python.terminal.useEnvFile": true,
   "python.terminal.activateEnvironment": true,
   "python.linting.pylintEnabled": false,

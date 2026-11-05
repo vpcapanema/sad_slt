@@ -1,0 +1,46 @@
+const {chromium} = require('playwright');
+const assert = require('node:assert/strict');
+(async () => {
+  const browser = await chromium.launch({channel:'msedge',headless:true});
+  try {
+    assert.ok(process.env.SICARD_BROWSER_SESSION,'Informe uma sessão de agente válida.');
+    const page = await browser.newPage({viewport:{width:1440,height:1000}});
+    await page.context().addCookies([{name:'slt_session',value:process.env.SICARD_BROWSER_SESSION,url:'http://127.0.0.1:8083'}]);
+    const errors=[];
+    page.on('pageerror',e=>errors.push(e.message));
+    const response=await page.request.get('http://127.0.0.1:8083/api/ahp/comparacao-colaborativa/ambientes');
+    assert.equal(response.status(),200);
+    const julgamento=(await response.json()).find(item=>item.convites?.length);
+    assert.ok(julgamento,'É necessário um julgamento com colaboradores para a verificação somente-leitura.');
+    const api=await page.request.get(`http://127.0.0.1:8083/api/ahp/comparacao-colaborativa/ambientes/${julgamento.id}/emails/monitoramento`);
+    assert.equal(api.status(),200);
+    const monitoramento=await api.json();
+    assert.equal(monitoramento.colaboradores.length,julgamento.convites.length);
+    assert.ok(monitoramento.registros.every(row=>['convite','resposta'].includes(row.natureza)));
+    await page.goto('http://127.0.0.1:8083/restrict/analise-multicriterio/central-julgamentos');
+    await page.locator(`[data-select-id="${julgamento.id}"]`).check();
+    await page.locator('#ami-judgments-view-action').click();
+    await page.waitForFunction(()=>document.getElementById('ami-email-status').textContent.includes('carregado'));
+    const linhas=page.locator('#ami-email-deliveries tr');
+    assert.equal(await linhas.count(),Math.min(15,monitoramento.colaboradores.length));
+    const nomes=await linhas.locator('td:nth-child(2)').allTextContents();
+    const emails=await linhas.locator('td:nth-child(3)').allTextContents();
+    assert.equal(new Set(emails).size,emails.length);
+    emails.forEach((email,index)=>assert.equal(nomes[index],monitoramento.colaboradores.find(c=>c.email===email).nome));
+    assert.equal(await page.locator('#ami-monitor-send').isDisabled(),true);
+    assert.equal(await page.locator('#ami-monitor-send-response').isDisabled(),true);
+    await linhas.first().locator('input[type=checkbox]').check();
+    const estados=await linhas.first().locator('.ami-cell-link').allTextContents();
+    if(estados[0]!=='Não enviado') assert.equal(await page.locator('#ami-monitor-send').isDisabled(),true);
+    assert.equal(await page.locator('#ami-monitor-send-response').isDisabled(),estados[1]!=='Não enviado');
+    await linhas.first().locator('.ami-cell-link').first().click();
+    assert.equal(await page.locator('#ami-email-history-modal').isVisible(),true);
+    assert.deepEqual(await page.locator('#ami-email-history-table th').allTextContents(),['','Entrega','Leitura','Detalhes']);
+    await page.locator('#ami-email-history-close').click();
+    await linhas.first().locator('.ami-cell-link').last().click();
+    assert.equal(await page.locator('#ami-email-history-title').innerText(),'E-mail resposta');
+    await page.locator('#ami-email-history-close').click();
+    assert.deepEqual(errors,[]);
+    console.log(`PASS: API e banco reais; ${monitoramento.colaboradores.length} colaboradores, ${monitoramento.registros.length} tentativas agrupadas; modais e bloqueios verificados. Nenhum e-mail enviado.`);
+  } finally { await browser.close(); }
+})().catch(error=>{console.error(error);process.exitCode=1;});

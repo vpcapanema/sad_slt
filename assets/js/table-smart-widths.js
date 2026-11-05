@@ -37,7 +37,12 @@
         const primary = compactAttributes ? cell.querySelector('.atributo-valor-normalizado, .objeto-codigo') : null;
         return Math.max(max, measure((primary || cell).textContent.trim(), cell));
       }, 0);
-      const dataWidth = prioritizeDemand ? content + 24 : Math.min(compactAttributes && index > 1 ? 160 : 320, content + 24);
+      const stickyIdentity = compactAttributes && header.classList.contains('col-objeto')
+        && headers[0].querySelector('input[type=checkbox]');
+      // Keep the sticky identity inside the viewport after the 44px selector and borders.
+      const contentLimit = stickyIdentity ? Math.min(320, Math.max(76, table.parentElement.clientWidth - 46))
+        : compactAttributes && index > 1 ? 160 : 320;
+      const dataWidth = prioritizeDemand ? content + 24 : Math.min(contentLimit, content + 24);
       return {preferred:Math.ceil(Math.max(76,full+32,dataWidth)), compact:Math.ceil(Math.max(76,titleWidth+32,dataWidth)), title, full, label};
     });
     if (prioritizeDemand) {

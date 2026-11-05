@@ -63,3 +63,4 @@ class ConviteEmailEnvioSchema(EmailTesteSchema):
     texto: str = Field(min_length=1, max_length=50000)
     versao: datetime
     reenvio_id: UUID | None = None
+    somente_nao_enviado: bool = False

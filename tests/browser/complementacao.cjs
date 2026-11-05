@@ -2,6 +2,7 @@ const {chromium} = require('playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs'), path = require('node:path');
 const pastaCapturas = path.join('outputs', `browser-complementacao-${process.pid}`);
+let authenticated = false;
 async function capturar(alvo, nome, opcoes = {}) {
   if (!process.env.SICARD_BROWSER_SCREENSHOTS) return;
   fs.mkdirSync(pastaCapturas, {recursive: true});
@@ -11,7 +12,20 @@ async function capturar(alvo, nome, opcoes = {}) {
 (async () => {
   const browser = await chromium.launch({channel: 'msedge', headless: true});
   try {
-    const page = await browser.newPage({viewport: {width: 1440, height: 1000}});
+    const context = await browser.newContext({viewport: {width: 1440, height: 1000}});
+    const page = await context.newPage();
+    const credentials = fs.readFileSync('credencias_sigma_agentes.txt', 'utf8');
+    const credential = label => {
+      const match = credentials.match(new RegExp('^' + label + '\\s*[:=]\\s*(.+)$', 'mi'));
+      if (!match) throw new Error('Campo de credencial local indisponível.');
+      return match[1].trim();
+    };
+    await page.goto('http://127.0.0.1:8083/public/login/?next=%2Frestrict%2Fcomplementacao%2F');
+    await page.locator('input[name=login]').fill(credential('Username'));
+    await page.locator('input[name=senha]').fill(credential('Senha inicial'));
+    await page.getByRole('button', {name: 'Entrar', exact: true}).click();
+    await page.locator('#complementacao-title').waitFor();
+    authenticated = true;
     const errors = [], requests = [];
     page.on('pageerror', error => errors.push(error.message));
     const rows = Array.from({length: 18}, (_, i) => ({id: `PRJ-${i + 1}`, nome: `Projeto teste ${i + 1}`, status: 'analise_aguardando_complementacao', criadoEm: '2026-10-14T12:00:00-03:00', criadoPorNome: 'Responsável', descricao: 'Descrição cadastral', representante: {nome: 'Representante'}, complementos: {}}));
@@ -91,15 +105,15 @@ async function capturar(alvo, nome, opcoes = {}) {
     assert.equal(await table.locator('tbody tr').count(), 18);
     await page.locator('#demandas-page-size').selectOption('15');
     assert.equal(await table.locator('th').count(), 22);
-    assert.equal(await page.getByRole('heading', {name: '1. Complementação de Dados Cadastrais e Geometria', exact: true}).isVisible(), true);
-    assert.equal(await page.getByRole('heading', {name: '2. Atributos da hierarquização — Fase 3', exact: true}).isVisible(), true);
+    assert.equal(await page.getByRole('heading', {name: 'Tabela de Complementação de Dados Cadastrais e Geometria', exact: true}).isVisible(), true);
+    assert.equal(await page.getByRole('heading', {name: 'Tabela de Complementação de Atributos da Demanda', exact: true}).isVisible(), true);
     assert.equal(await page.locator('[data-complementacao="atributos"]').count(), 0);
     await page.locator('#complementacao-hierarquizacao option[value="H1"]').waitFor({state: 'attached'});
     await page.locator('#complementacao-hierarquizacao').selectOption('H1');
     await campo('custo').waitFor({state: 'visible'});
     assert.equal(await campo('custo').isDisabled(), true);
     assert.equal(await page.locator('[data-atributos-tbody] tr').count(), 2);
-    assert.equal(await page.locator('[data-atributos-thead] th').count(), 10);
+    assert.equal(await page.locator('[data-atributos-thead] th').count(), 11);
     const legenda = page.locator('#complementacao-campos .atributos-legenda');
     assert.equal(await legenda.count(), 1);
     assert.match(await legenda.innerText(), /^Modo de consulta — campos cinza com borda tracejada bloqueados/);
@@ -141,7 +155,7 @@ async function capturar(alvo, nome, opcoes = {}) {
     await capturar(page.locator('#complementacao-form'), 'consulta-desktop.png');
     assert.equal(await legenda.evaluate(el => Boolean(el.compareDocumentPosition(document.querySelector('.atributos-table-shell')) & Node.DOCUMENT_POSITION_FOLLOWING)), true);
     assert.equal(await page.locator('#complementacao-atributos-status').innerText(), '');
-    assert.equal(await page.locator('#complementacao-atributos-summary').innerText(), '2 na página / 2 no total');
+    assert.equal(await page.locator('#complementacao-atributos-summary').innerText(), '0 selecionados / 2 na página / 2 no total');
     assert.equal(await page.locator('#complementacao-atributos-pagination span').innerText(), 'Página 1 de 1');
     assert.equal(await campo('cadastro:capex_estimado').inputValue(), '500,00');
     assert.equal(await campo('percentual').inputValue(), '12,5');
@@ -152,39 +166,28 @@ async function capturar(alvo, nome, opcoes = {}) {
     assert.equal(await page.locator('.atributo-valor-normalizado').first().isVisible(), false);
     assert.equal(await page.locator('#complementacao-demanda').isVisible(), true);
     const resumo = page.locator('#complementacao-resumo-hierarquizacao');
-    assert.equal(await page.getByRole('heading', {name: '2.1 Resumo da hierarquização', exact: true}).isVisible(), true);
-    assert.equal(await page.getByRole('heading', {name: '2.2 Critérios de atributo de demanda', exact: true}).isVisible(), true);
+    assert.equal(await page.getByRole('heading', {name: 'Resumo da hierarquização', exact: true}).isVisible(), true);
+    assert.equal(await page.getByRole('heading', {name: 'Critérios de atributo de demanda', exact: true}).isVisible(), true);
     assert.equal(await resumo.locator('.fase1-meta-card').count(), 4);
     assert.equal(await resumo.locator('.fase1-meta-card').last().innerText(), 'DATA DE CRIAÇÃO\n20/10/2026');
     assert.equal(await resumo.locator('.fase1-meta-card').evaluateAll(cards => new Set(cards.map(card => card.getBoundingClientRect().top)).size), 1);
-    const referencia = await browser.newPage({viewport: {width: 1440, height: 1000}});
+    const referencia = await page.context().newPage();
     await referencia.route('**/api/**', mockApi);
     await referencia.goto('http://127.0.0.1:8083/restrict/hierarquizacao/fase-3/');
     await referencia.evaluate(async h => {
       SLTResumoFase.secao1(document.querySelector('#fase-resumo'), h);
       await AtributosObjetos.render(h);
     }, salvos.get('H1'));
+    await referencia.goto('http://127.0.0.1:8083/restrict/central-pendencias/');
     const papeis = {
-      secao: ['#complementacao-atributos-titulo', '.secao-selecao-da-rodada .ahp-section-label span:not(.ahp-section-index-icon)'],
-      secaoCadastral: ['#complementacao-cadastral-titulo', '.secao-selecao-da-rodada .ahp-section-label span:not(.ahp-section-index-icon)'],
-      resumo: ['#complementacao-resumo-titulo', '.secao-selecao-da-rodada .ahp-subsection-title span:not(.cadastro-subsec-num)'],
-      criterios: ['#fase3-titulo-atributos', '.secao-selecao-da-rodada .ahp-subsection-title span:not(.cadastro-subsec-num)'],
-      rotulo: ['label[for="complementacao-hierarquizacao"]', '.secao-selecao-da-rodada label'],
-      selecao: ['#complementacao-hierarquizacao', '.atributo-valor-normalizado'],
-      ajuda: ['#complementacao-atributos > .admin-card-body > .field-help', '.step-intro'],
-      metadado: ['.fase1-meta-card small', '.fase1-meta-card small'],
-      valor: ['.fase1-meta-card strong', '.fase1-meta-card strong'],
-      lista: ['.fase1-objs-card > h4', '.fase1-objs-card > h4'],
-      nomeDemanda: ['.fase1-obj-link .nome', '.fase1-obj-link .nome'],
-      codigoDemanda: ['.fase1-obj-link .cod', '.fase1-obj-link .cod'],
-      cabecalho: ['[data-atributos-thead] .col-objeto', '[data-atributos-thead] .col-objeto'],
-      atributo: ['.col-atributo-linha', '.col-atributo-linha'],
-      unidade: ['.col-atributo-unidade', '.col-atributo-unidade'],
-      codigoTabela: ['[data-atributos-tbody] .objeto-codigo', '[data-atributos-tbody] .objeto-codigo'],
-      nomeTabela: ['[data-atributos-tbody] .objeto-nome', '[data-atributos-tbody] .objeto-nome'],
-      campo: ['.atributo-input', '.atributo-valor-normalizado'],
-      legenda: ['.atributos-legenda span', '.atributos-legenda span'],
-      mensagem: ['#complementacao-atributos-status', '.ahp-help-text'],
+      hero: ['.standard-page-hero__title', '.standard-page-hero__title'],
+      descricao: ['.standard-page-hero__description', '.standard-page-hero__description'],
+      secao: ['#complementacao-atributos-titulo', '#pendencias-cadastro .ahp-section-label'],
+      secaoCadastral: ['#complementacao-cadastral-titulo', '#pendencias-cadastro .ahp-section-label'],
+      contexto: ['[aria-labelledby="pendencias-contexto-titulo"] p', '[aria-labelledby="pendencias-contexto-titulo"] p'],
+      ajuda: ['#complementacao-atributos > .ahp-section-body > .field-help', '[aria-labelledby="pendencias-contexto-titulo"] .ahp-section-body > a'],
+      cabecalho: ['[data-atributos-thead] .col-objeto', '#pendencias-cadastro th'],
+      filtro: ['#filtro-coluna', '#pendencias-cadastro-filtro-coluna'],
     };
     const tipografia = async (alvo, indice) => alvo.evaluate(({papeis, indice}) => Object.fromEntries(
       Object.entries(papeis).map(([papel, seletores]) => {
@@ -192,11 +195,23 @@ async function capturar(alvo, nome, opcoes = {}) {
         if (!elemento) throw new Error(`Elemento ausente: ${papel}`);
         return [papel, getComputedStyle(elemento).fontSize];
       })), {papeis, indice});
-    const tamanhosReferencia = {
-      ...await tipografia(referencia, 1), secao: '13.3px', secaoCadastral: '13.3px', resumo: '12.7px', criterios: '12.7px',
-    };
+    const tamanhosReferencia = await tipografia(referencia, 1);
     assert.deepEqual(await tipografia(page, 0), tamanhosReferencia,
-      'Textos compartilhados seguem a Fase 3; títulos mantêm a escala própria da Complementação');
+      'Hero, seções, filtros e tabelas seguem a Central de pendências');
+    const dimensoes = (alvo, seletor) => alvo.locator(seletor).first().evaluate(element => {
+      const style = getComputedStyle(element);
+      return {height: style.height, padding: style.padding, font: style.font,
+        background: style.backgroundColor, borderRadius: style.borderRadius};
+    });
+    assert.deepEqual(await dimensoes(page, '#filtro-coluna'), await dimensoes(referencia, '#pendencias-cadastro-filtro-coluna'));
+    assert.deepEqual(await dimensoes(page, '#complementacao-cadastral .admin-filter-bar'),
+      await dimensoes(referencia, '#pendencias-cadastro .admin-filter-bar'));
+    const controle = (alvo, seletor) => alvo.locator(seletor).evaluate(element => {
+      const style = getComputedStyle(element);
+      return {height: style.height, width: style.width, borderRadius: style.borderRadius};
+    });
+    assert.deepEqual(await controle(page, '[data-complementacao="cadastro"]'),
+      await controle(referencia, '#pendencias-cadastro [data-open]'));
     const zoomCorpo = alvo => alvo.evaluate(() => getComputedStyle(document.body).zoom);
     assert.equal(await zoomCorpo(page), await zoomCorpo(referencia));
     assert.equal(await page.locator('#complementacao-atributos').evaluate(el => getComputedStyle(el).zoom), '1');
@@ -204,13 +219,15 @@ async function capturar(alvo, nome, opcoes = {}) {
     const fonte = elemento => elemento.evaluate(el => getComputedStyle(el).fontSize);
     const conferirTextosDinamicos = async seletor => {
       const foraDaEscala = await page.locator(seletor).evaluate(raiz => {
-        const permitidos = new Set([13.3, 12.7, 12, 11.7, 11.5, 10.7, 10.88]);
+        const permitidos = new Set([10.24, 10.88, 11.2, 11.52, 11.84, 12, 12.8, 13, 13.12, 14, 14.4, 16, 16.8, 17.6]);
         const walker = document.createTreeWalker(raiz, NodeFilter.SHOW_TEXT);
         const encontrados = [];
         while (walker.nextNode()) {
           const no = walker.currentNode, el = no.parentElement;
           if (!no.textContent.trim() || el.closest('script, style, template, option, .sr-only, [aria-hidden="true"]') || !el.checkVisibility()) continue;
           const tamanho = Number.parseFloat(getComputedStyle(el).fontSize);
+          if (el.closest('[data-compact-attributes="true"] th .smart-column-title')
+              && tamanho >= 10.24 && tamanho <= 11.52) continue;
           if (!permitidos.has(tamanho)) encontrados.push({texto: no.textContent.trim().slice(0, 90), classe: el.className, tamanho});
         }
         raiz.querySelectorAll('input:not([type="checkbox"]), select, textarea').forEach(el => {
@@ -238,6 +255,17 @@ async function capturar(alvo, nome, opcoes = {}) {
         await new Promise(requestAnimationFrame);
         return {
           scroll: el.scrollLeft,
+          inicio,
+          fim: [cabecalho.getBoundingClientRect().left, celula.getBoundingClientRect().left],
+          shell: el.getBoundingClientRect().left,
+          tableWidth: el.querySelector('table').getBoundingClientRect().width,
+          scrollWidth: el.scrollWidth,
+          shellWidth: el.clientWidth,
+          tableStyle: el.querySelector('table').getAttribute('style'),
+          left: getComputedStyle(celula).left,
+          position: getComputedStyle(celula).position,
+          selectorWidth: el.querySelector('th.col-select').getBoundingClientRect().width,
+          selectorMinWidth: getComputedStyle(el.querySelector('th.col-select')).minWidth,
           deslocamentoCabecalho: Math.abs(cabecalho.getBoundingClientRect().left - inicio[0]),
           deslocamentoCelula: Math.abs(celula.getBoundingClientRect().left - inicio[1]),
           deslocamentoAtributo: Math.abs(el.querySelector('td.col-atributo-valor').getBoundingClientRect().left - atributoInicio),
@@ -253,16 +281,17 @@ async function capturar(alvo, nome, opcoes = {}) {
       });
       assert.ok(resultado.scroll > 0);
       assert.ok(resultado.deslocamentoAtributo > 50, 'Atributos devem rolar horizontalmente');
-      assert.ok(resultado.deslocamentoCabecalho <= 1 && resultado.deslocamentoCelula <= 1, 'Identificação deve permanecer fixa');
+      assert.ok(resultado.deslocamentoCabecalho <= 1 && resultado.deslocamentoCelula <= 1,
+        `Identificação deve permanecer fixa: ${JSON.stringify(resultado)}`);
       assert.equal(resultado.cabeNoContêiner, true);
       assert.deepEqual(resultado.conteudos.map(item => item.texto), [nomeLongo, 'PRJ-1']);
       assert.ok(resultado.conteudos.every(item => item.semCorte), 'Nome completo e código não podem ser cortados');
       await shell.evaluate(el => { el.scrollLeft = 0; });
     };
     await conferirColunaFixa();
-    assert.equal(await fonte(table.locator('th').first()), '12.7px');
-    assert.equal(await fonte(table.locator('tbody td').first()), '12px');
-    assert.equal(await fonte(page.locator('#filtro-coluna')), '12px');
+    assert.equal(await fonte(table.locator('th').first()), await fonte(referencia.locator('#pendencias-cadastro th').first()));
+    assert.equal(await fonte(table.locator('tbody td').first()), await fonte(referencia.locator('#pendencias-cadastro td').first()));
+    assert.equal(await fonte(page.locator('#filtro-coluna')), await fonte(referencia.locator('#pendencias-cadastro-filtro-coluna')));
     await page.setViewportSize({width: 390, height: 844});
     assert.deepEqual(await tipografia(page, 0), tamanhosReferencia, 'Hierarquia tipográfica deve ser mantida no mobile');
     await conferirTextosDinamicos('#complementacao-cadastral');
@@ -290,11 +319,11 @@ async function capturar(alvo, nome, opcoes = {}) {
     await table.locator('tr[data-codigo="PRJ-1"] td').nth(3).click();
     await page.getByRole('button', {name: 'Dados cadastrais', exact: true}).click();
     await page.locator('#fld-nome').waitFor({state: 'visible'});
-    assert.equal(await page.getByRole('heading', {name: '1.1 Informações do Projeto', exact: true, level: 3}).isVisible(), true);
-    assert.equal(await fonte(page.locator('#complementacao-editor-titulo')), '12.7px');
-    assert.equal(await fonte(page.locator('#complementacao-cadastro .admin-info-subcard-title').first()), '12px');
-    assert.equal(await fonte(page.locator('#complementacao-cadastro label').first()), '12px');
-    assert.equal(await fonte(page.locator('#fld-nome')), '12px');
+    assert.equal(await page.getByRole('heading', {name: 'Informações do Projeto', exact: true, level: 3}).isVisible(), true);
+    assert.equal(await fonte(page.locator('#complementacao-editor-titulo')), '13px');
+    assert.equal(await fonte(page.locator('#complementacao-cadastro .admin-info-subcard-title').first()), '11.2px');
+    assert.equal(await fonte(page.locator('#complementacao-cadastro label').first()), '11.2px');
+    assert.equal(await fonte(page.locator('#fld-nome')), '11.2px');
     await conferirTextosDinamicos('#complementacao-editor');
     assert.equal(await page.locator('#complementacao-atributos').isVisible(), true);
     assert.equal(await campo('custo').isVisible(), true);
@@ -305,8 +334,8 @@ async function capturar(alvo, nome, opcoes = {}) {
     assert.equal(await page.locator('#complementacao-cadastro .admin-info-subcard-title').first().textContent(), 'Cadastro');
     await capturar(page, 'cadastro-desktop.png', {fullPage: true});
     await page.setViewportSize({width: 390, height: 844});
-    assert.equal(await fonte(page.locator('#complementacao-editor-titulo')), '12.7px');
-    assert.equal(await fonte(page.locator('#fld-nome')), '12px');
+    assert.equal(await fonte(page.locator('#complementacao-editor-titulo')), '13px');
+    assert.equal(await fonte(page.locator('#fld-nome')), '11.2px');
     await capturar(page, 'cadastro-mobile.png', {fullPage: true});
     await page.setViewportSize({width: 1440, height: 1000});
     for (const id of ['instituicao', 'cnpj', 'diretoria', 'plano', 'modal', 'tipologia', 'carteira', 'lat', 'lng', 'rep-nome', 'rep-email', 'rep-tel']) {
@@ -330,10 +359,10 @@ async function capturar(alvo, nome, opcoes = {}) {
     }
     await page.getByRole('button', {name: 'Geometria', exact: true}).click();
     await page.locator('#complementacao-arquivo').waitFor({state: 'visible'});
-    assert.equal(await page.getByRole('heading', {name: '1.1 Geometria', exact: true, level: 3}).isVisible(), true);
-    assert.equal(await fonte(page.locator('#complementacao-editor-titulo')), '12.7px');
-    assert.equal(await fonte(page.locator('#complementacao-geometria label')), '12px');
-    assert.equal(await fonte(page.locator('#complementacao-arquivo')), '12px');
+    assert.equal(await page.getByRole('heading', {name: 'Geometria', exact: true, level: 3}).isVisible(), true);
+    assert.equal(await fonte(page.locator('#complementacao-editor-titulo')), '13px');
+    assert.equal(await fonte(page.locator('#complementacao-geometria label')), '11.2px');
+    assert.equal(await fonte(page.locator('#complementacao-arquivo')), '11.2px');
     await conferirTextosDinamicos('#complementacao-editor');
     assert.equal(await page.locator('#complementacao-hierarquizacao').inputValue(), 'H1');
     assert.equal(await resumo.isVisible(), true);
@@ -442,9 +471,9 @@ async function capturar(alvo, nome, opcoes = {}) {
     await page.locator('[data-demandas-table="plano"] tbody tr td').nth(3).click();
     await page.getByRole('button', {name: 'Dados cadastrais', exact: true}).click();
     await page.locator('#cadastro-nome').waitFor({state: 'visible'});
-    assert.equal(await page.getByRole('heading', {name: '1.1 Dados cadastrais', exact: true, level: 3}).isVisible(), true);
-    assert.equal(await fonte(page.locator('#cadastro-nome')), '12px');
-    assert.equal(await fonte(page.locator('#complementacao-cadastro label').first()), '12px');
+    assert.equal(await page.getByRole('heading', {name: 'Dados cadastrais', exact: true, level: 3}).isVisible(), true);
+    assert.equal(await fonte(page.locator('#cadastro-nome')), '11.2px');
+    assert.equal(await fonte(page.locator('#complementacao-cadastro label').first()), '11.2px');
     assert.equal(await page.locator('#complementacao-atributos').isVisible(), true);
     await page.getByRole('tab', {name: 'Programa', exact: true}).click();
     await page.locator('#lista-vazia').waitFor({state: 'visible'});
@@ -462,7 +491,7 @@ async function capturar(alvo, nome, opcoes = {}) {
     // The same component's default mode, used by Fase 3, never renders attribute inputs.
     await page.evaluate(h => AtributosObjetos.render(h), salvos.get('H1'));
     assert.equal(await page.locator('#fase3-titulo-atributos').innerText(), 'Critérios de atributo de demanda');
-    assert.equal(await page.locator('[data-atributos-tbody] input, [data-atributos-tbody] select').count(), 0);
+    assert.equal(await page.locator('[data-atributos-tbody] input:not([type="checkbox"]), [data-atributos-tbody] select').count(), 0);
     assert.equal(await page.locator('[data-atributos-pesos]').isVisible(), true);
     assert.equal(await page.locator('.atributo-peso-numero').first().isEnabled(), true);
     await page.evaluate(h => SLTResumoFase.secao1(document.querySelector('#complementacao-resumo-hierarquizacao'), h), salvos.get('H1'));
@@ -486,12 +515,31 @@ async function capturar(alvo, nome, opcoes = {}) {
     await campo('custo', 'PAG-1').waitFor({state: 'visible'});
     await conferirEstadoVisual(false);
     assert.equal(await linhasVisiveis.count(), 15);
-    assert.equal(await contador.innerText(), '15 na página / 18 no total');
+    assert.equal(await contador.innerText(), '0 selecionados / 15 na página / 18 no total');
+    const colunaAtributos = page.locator('#complementacao-atributos-filtro-coluna');
+    const valorAtributos = page.locator('#complementacao-atributos-filtro-valor');
+    await colunaAtributos.selectOption('1');
+    await valorAtributos.selectOption(await valorAtributos.locator('option').nth(1).getAttribute('value'));
+    assert.equal(await linhasVisiveis.count(), 1);
+    await page.locator('#complementacao-atributos-filtro-inverter').click();
+    assert((await contador.innerText()).endsWith('17 no total'));
+    await page.locator('#complementacao-atributos-filtro-limpar').click();
+    const seletorAtributos = page.locator('[data-atributos-selecionar-todos]');
+    await seletorAtributos.check();
+    assert((await contador.innerText()).startsWith('15 selecionados'));
+    const downloadAtributos = page.waitForEvent('download');
+    await page.locator('#complementacao-atributos-exportar').click();
+    const download = await downloadAtributos;
+    assert.equal(download.suggestedFilename(), 'atributos-complementacao.csv');
+    const chunks = [];
+    for await (const chunk of await download.createReadStream()) chunks.push(chunk);
+    assert.equal(Buffer.concat(chunks).toString('utf8').split('\r\n').length, 16);
+    await seletorAtributos.uncheck();
     assert.equal(await paginador.getByRole('button', {name: 'Primeira página', exact: true}).isDisabled(), true);
     for (const tamanho of ['25', '35', '50', '100']) {
       await tamanhoAtributos.selectOption(tamanho);
       assert.equal(await linhasVisiveis.count(), 18);
-      assert.equal(await contador.innerText(), '18 na página / 18 no total');
+      assert.equal(await contador.innerText(), '0 selecionados / 18 na página / 18 no total');
     }
     await tamanhoAtributos.selectOption('15');
     await page.getByRole('button', {name: 'Editar atributos', exact: true}).click();
@@ -499,7 +547,7 @@ async function capturar(alvo, nome, opcoes = {}) {
     await campo('custo', 'PAG-1').fill('10000');
     await paginador.getByRole('button', {name: 'Última página', exact: true}).click();
     assert.equal(await linhasVisiveis.count(), 3);
-    assert.equal(await contador.innerText(), '3 na página / 18 no total');
+    assert.equal(await contador.innerText(), '0 selecionados / 3 na página / 18 no total');
     assert.equal(await paginador.getByRole('button', {name: 'Próxima página', exact: true}).isDisabled(), true);
     await campo('custo', 'PAG-18').fill('20000');
     await campo('distancia', 'PAG-18').fill('abc');
@@ -553,4 +601,4 @@ async function capturar(alvo, nome, opcoes = {}) {
     assert.deepEqual(errors, []);
     console.log('Tabela compartilhada: cadastro + matriz sem duplicação, gravação em lote, resumo com data e modal, independência das seções, cancelamento, persistência, erros e mobile; Fase 3 somente leitura com pesos editáveis.');
   } finally { await browser.close(); fs.rmSync(pastaCapturas, {recursive: true, force: true}); }
-})().catch(error => {console.error(error); process.exitCode = 1;});
+})().catch(error => {console.error(authenticated ? error : 'Falha de autenticação; detalhes omitidos para proteger credenciais.'); process.exitCode = 1;});

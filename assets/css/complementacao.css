@@ -22,13 +22,9 @@
   max-width: 100%; white-space: normal; overflow-wrap: anywhere;
 }
 .complementacao-page #complementacao-form { margin-top: 1rem; }
-.complementacao-page #complementacao-atributos { margin-top: 1.5rem; }
-.complementacao-page #complementacao-atributos-container { margin-top: 1rem; padding: 1rem; border: 1px solid var(--pli-border); border-radius: var(--pli-radius); }
-.complementacao-page #complementacao-atributos .standard-table-actions { margin-top: 1rem; }
+.complementacao-page #complementacao-atributos-container { margin-top: 1rem; min-width: 0; }
 .complementacao-page #complementacao-atributos select { width: 100%; max-width: 100%; }
 .complementacao-page #complementacao-atributos .demandas-page-size select { width: 76px; }
-.complementacao-page #complementacao-atributos .admin-table-footer :is(.demandas-page-size, .admin-pagination, .admin-pagination button) { font-size: 12px; }
-.complementacao-page #complementacao-atributos .admin-table-summary { font-size: 11.5px; }
 .complementacao-page #complementacao-atributos .atributo-input {
   box-sizing: border-box;
   border: 2px solid var(--pli-blue);
@@ -80,7 +76,7 @@
 }
 .complementacao-page .admin-table tr:has(.row-select:checked) { outline: 2px solid var(--pli-blue); outline-offset: -2px; }
 .complementacao-page .fase1-summary-meta { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.complementacao-page #complementacao-atributos .admin-card-body,
+.complementacao-page #complementacao-atributos .ahp-section-body,
 .complementacao-page #complementacao-atributos-container,
 .complementacao-page #complementacao-campos { min-width: 0; }
 @media(max-width:900px) {
@@ -92,4 +88,58 @@
   .complementacao-page .app-nav { justify-content: flex-start; }
   .complementacao-page .complementacao-controles .btn { width: 100%; }
   .complementacao-page .fase1-summary-meta { grid-template-columns: 1fr; }
+}
+
+/* The shared demand table keeps its hooks; only its page-level presentation changes. */
+.complementacao-page .ami-main #complementacao-cadastral > .ahp-section-body {
+  display: block;
+  padding-top: 0;
+}
+.complementacao-page .ami-main #complementacao-cadastral > .ahp-section-label {
+  margin-bottom: 12px;
+}
+.complementacao-page .ami-main .field-help {
+  font: 400 var(--ami-font-help)/1.4 Roboto, Arial, sans-serif;
+  margin: 0 0 8px;
+}
+.complementacao-page .ami-main .admin-tabs {
+  margin: 0 0 8px;
+}
+.complementacao-page .ami-main .admin-tab {
+  font: 600 var(--ami-font-child)/1.4 Roboto, Arial, sans-serif;
+}
+.complementacao-page .ami-main #complementacao-geometria > label {
+  font: 600 var(--ami-font-child)/1.4 Roboto, Arial, sans-serif;
+}
+.complementacao-page .ami-main :is(.fase1-meta-card small, .fase1-obj-link .cod) {
+  font-size: var(--ami-font-help);
+}
+.complementacao-page .ami-main :is(.fase1-meta-card strong, .fase1-objs-card > h4) {
+  font: 700 13px/1.4 Montserrat, Verdana, sans-serif;
+}
+.complementacao-page .ami-main .complementacao-controles {
+  margin: 0;
+}
+.complementacao-page .ami-main :is(#complementacao-resumo-titulo, h3:has(> #fase3-titulo-atributos)) {
+  color: var(--pli-deep);
+  font: 700 13px/1.4 Montserrat, Verdana, sans-serif;
+  margin: 0 0 12px;
+}
+.complementacao-page .ami-main :is(.atributos-table-shell, .componente-atributos-objetos) {
+  min-width: 0;
+  max-width: 100%;
+}
+@media (max-width: 600px) {
+  .complementacao-page .ami-main #complementacao-atributos > .ahp-section-label {
+    margin-inline: -1rem;
+  }
+}
+.complementacao-page .ami-main #complementacao-atributos .col-objeto {
+  left: 44px;
+}
+.complementacao-page .ami-main #complementacao-atributos .col-select {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: inherit;
 }

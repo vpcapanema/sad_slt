@@ -1,4 +1,16 @@
 .central-pendencias-page [hidden] { display: none !important; }
+.central-pendencias-page.sicard-standard-page.ami-page .ami-main [aria-labelledby="pendencias-contexto-titulo"] .form-help {
+  font-size: 1rem;
+}
+.central-pendencias-page .ami-main [aria-labelledby="pendencias-contexto-titulo"] .ahp-section-body > a {
+  font-size: var(--ami-font-help);
+}
+.central-pendencias-page .ami-main .pendencias-grupo-titulo {
+  margin: 2rem 0 .75rem;
+  color: var(--pli-deep);
+  font: 700 13px/1.4 Montserrat, Verdana, sans-serif;
+  text-align: center;
+}
 .central-pendencias-page .admin-filter-column-divider {
   flex: 0 0 1px;
   width: 1px;

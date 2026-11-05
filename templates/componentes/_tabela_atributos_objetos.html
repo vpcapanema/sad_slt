@@ -24,13 +24,20 @@
     <span>Modo de consulta — campos cinza com borda tracejada bloqueados. Use Editar atributos para complementar os valores.</span>
   </div>
   {% endif %}
+  {% if atributos_complementacao %}
+  <div class="ami-filtered-table">
+    {% with filtro_prefixo="complementacao-atributos-filtro", filtro_rotulo="Filtrar atributos das demandas" %}
+    {% include "componentes/filtro_tabela.html" %}
+    {% endwith %}
+  {% endif %}
   <div class="atributos-table-shell">
-    <table class="admin-table admin-table--atributos">
+    <table class="admin-table admin-table--atributos"{% if atributos_complementacao %} data-compact-attributes="true"{% endif %}>
       {% if fase3_ponderacao %}
       <caption class="atributos-subsecao-caption"><div class="ahp-subsection-title"><span class="cadastro-subsec-num">1.1</span><span id="fase3-titulo-tabela">Tabela de atributos de demanda</span></div></caption>
       {% endif %}
       <thead data-atributos-thead>
         <tr>
+          {% if atributos_complementacao %}<th scope="col" class="col-select"><input type="checkbox" data-atributos-selecionar-todos aria-label="Selecionar registros desta página"></th>{% endif %}
           <th scope="col" class="col-objeto">Objeto de demanda</th>
           {# demais <th> (estáticas + dinâmicas) injetados dinamicamente #}
         </tr>
@@ -40,6 +47,7 @@
       </tbody>
     </table>
   </div>
+  {% if atributos_complementacao %}</div>{% endif %}
 
   {% if not atributos_complementacao %}
   <div class="atributos-legenda" aria-hidden="true">
@@ -119,6 +127,7 @@
   {# Linha = identidade do objeto de demanda; as células de atributo são anexadas depois #}
   <template id="tpl-atributo-linha">
     <tr data-objeto-id="">
+      {% if atributos_complementacao %}<td class="col-select"><input type="checkbox" data-atributos-selecionar aria-label="Selecionar demanda"></td>{% endif %}
       <td class="col-objeto">
         <strong class="objeto-codigo"></strong>
         <small class="objeto-nome"></small>

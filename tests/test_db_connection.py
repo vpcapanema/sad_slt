@@ -32,6 +32,15 @@ def test_rollback_preserva_erro_de_processamento(connection, error):
     assert caught.value is error
     connection.rollback.assert_called_once()
     connection.commit.assert_not_called()
+    for sql_error in (psycopg.errors.UndefinedTable("referencia SQL invalida"),
+                      psycopg.errors.UniqueViolation("restricao violada")):
+        connection.reset_mock()
+        with pytest.raises(type(sql_error)) as caught:
+            with db.get_connection():
+                raise sql_error
+        assert caught.value is sql_error
+        connection.rollback.assert_called_once()
+        connection.commit.assert_not_called()
 
 
 def test_falha_postgres_continua_indisponibilidade(connection):

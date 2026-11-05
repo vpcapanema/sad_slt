@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="/assets/css/ahp-collab-rounds.css">
   <link rel="stylesheet" href="/assets/css/analise-multicriterio.css?v=20261029-escala-saaty2">
   <link rel="stylesheet" href="/assets/css/analise-multicriterio-tabela.css?v=20260831-larguras-colunas">
-  <link rel="stylesheet" href="/assets/css/central-respostas-layout.css?v=20260821-table-left-chart-right">
+  <link rel="stylesheet" href="/assets/css/central-respostas-layout.css?v=20261105-table-labels">
   <link rel="stylesheet" href="/assets/css/analise-multicriterio-modal.css?v=20260819-modal5">
   <link rel="stylesheet" href="/assets/css/mad-filter-standard.css?v=20260820-1">
   <link rel="stylesheet" href="/assets/css/page-title-standard.css?v=20260820-3">
@@ -22,7 +22,7 @@
   <link rel="stylesheet" href="/assets/css/paginas/ami-report-tables.css?v=20261020-paginacao">
   {% if modo_pagina in ['espaco', 'julgamentos'] %}
   <link rel="stylesheet" href="/assets/css/admin-table-controls.css?v=20261015-botoes-quadrados">
-  <link rel="stylesheet" href="/assets/css/paginas/ami-espaco-secoes.css?v=20261027-botoes-cinza-claro">
+  <link rel="stylesheet" href="/assets/css/paginas/ami-espaco-secoes.css?v=20261105-monitoramento">
   {% endif %}
   {% if modo_pagina == 'julgamentos' %}<link rel="stylesheet" href="/assets/css/paginas/sicard-standard-pages.css?v=20261027-1">{% endif %}
   {% if modo_pagina == 'julgamentos' %}<link rel="stylesheet" href="/assets/css/paginas/central-respostas-padrao.css?v=20261029-escala-saaty">{% endif %}
@@ -64,12 +64,14 @@
             <div class="ahp-section-body">
           <p class="form-help">Aceitação pelo servidor não confirma entrega. A confirmação de leitura depende do destinatário e do aplicativo de e-mail. Use “Atualizar confirmações” para consultar os retornos recebidos; ausência de confirmação não significa que a mensagem não foi lida.</p>
           <p id="ami-email-status" class="form-help" role="status" aria-live="polite"></p>
+          {% if modo_pagina == 'espaco' %}<p class="ami-table-label">Tabela do monitoramento das atividades</p>{% endif %}
           <div class="ami-filtered-table">
             {% set filtro_prefixo = "ami-monitor-filter" %}{% set filtro_rotulo = "Filtrar atividades dos colaboradores" %}{% include "componentes/filtro_tabela.html" %}
-          <div class="hier-table-shell ami-table-shell"><table id="ami-monitor-table" class="admin-table hier-register-table ami-table--database" aria-label="Envios e confirmações de e-mail"><thead><tr><th class="col-select" scope="col"><input type="checkbox" id="ami-monitor-select-all" aria-label="Selecionar todos os registros filtrados"></th><th>Destinatário</th><th>Registrado em</th><th>Envio</th><th>Entrega</th><th>Leitura</th><th>Detalhes</th></tr></thead><tbody id="ami-email-deliveries"></tbody></table></div></div>
+          <div class="hier-table-shell ami-table-shell"><table id="ami-monitor-table" class="admin-table hier-register-table ami-table--database" aria-label="Monitoramento por colaborador"><thead><tr><th class="col-select" scope="col"><input type="checkbox" id="ami-monitor-select-all" aria-label="Selecionar todos os registros filtrados"></th><th>Colaboradores</th><th>E-mail colaborador</th><th>Registrado em</th><th>E-mail convite</th><th>E-mail resposta</th></tr></thead><tbody id="ami-email-deliveries"></tbody></table></div></div>
           <div class="admin-bulk-actions ami-table-actions standard-table-actions" role="group" aria-label="Controles do monitoramento">
             <button type="button" class="admin-icon-btn" id="ami-monitor-refresh" title="Atualizar confirmações" aria-label="Atualizar confirmações" disabled><i class="fas fa-arrows-rotate" aria-hidden="true"></i></button>
-            <button type="button" class="admin-icon-btn" id="ami-monitor-send" title="Enviar e-mail aos selecionados" aria-label="Enviar e-mail aos selecionados" disabled><i class="fas fa-envelope" aria-hidden="true"></i></button>
+            <button type="button" class="admin-icon-btn" id="ami-monitor-send" title="Enviar e-mail de convite aos selecionados" aria-label="Enviar e-mail de convite aos selecionados" disabled><i class="fas fa-envelope" aria-hidden="true"></i></button>
+            <button type="button" class="admin-icon-btn" id="ami-monitor-send-response" title="Enviar e-mail de resposta aos selecionados" aria-label="Enviar e-mail de resposta aos selecionados" disabled><i class="fas fa-envelope-open-text" aria-hidden="true"></i></button>
             <button type="button" class="admin-icon-btn save" id="ami-monitor-export" title="Exportar registros selecionados" aria-label="Exportar registros selecionados" disabled><i class="fas fa-file-csv" aria-hidden="true"></i></button>
             <button type="button" class="admin-icon-btn cancel" id="ami-monitor-clear" title="Limpar seleção" aria-label="Limpar seleção" disabled><i class="fas fa-xmark" aria-hidden="true"></i></button>
           </div>
@@ -78,6 +80,23 @@
           </section>
         </div>
       </section>
+  </div>
+  <div class="json-modal-backdrop ami-data-modal is-hidden" id="ami-email-history-modal" role="dialog" aria-modal="true" aria-labelledby="ami-email-history-title">
+    <div class="json-modal ami-data-modal__card">
+      <header class="json-modal-head ami-data-modal__head"><h2 id="ami-email-history-title">Histórico de e-mail</h2><button type="button" class="json-modal-close" id="ami-email-history-close" aria-label="Fechar"><i class="fas fa-xmark" aria-hidden="true"></i></button></header>
+      <div class="json-modal-body ami-data-modal__content standard-table-section">
+        <p id="ami-email-history-context" class="form-help"></p>
+        <div class="ami-filtered-table">
+          {% set filtro_prefixo = "ami-email-history-filter" %}{% set filtro_rotulo = "Filtrar histórico de e-mail" %}{% include "componentes/filtro_tabela.html" %}
+          <div class="hier-table-shell ami-table-shell"><table id="ami-email-history-table" class="admin-table hier-register-table ami-table--database"><thead><tr><th class="col-select" scope="col"><input type="checkbox" id="ami-email-history-all" aria-label="Selecionar todo o histórico filtrado"></th><th>Entrega</th><th>Leitura</th><th>Detalhes</th></tr></thead><tbody id="ami-email-history-body"></tbody></table></div>
+        </div>
+        <div class="admin-bulk-actions ami-table-actions standard-table-actions" role="group" aria-label="Controles do histórico de e-mail">
+          <button type="button" class="admin-icon-btn save" id="ami-email-history-export" title="Exportar registros selecionados" aria-label="Exportar registros selecionados" disabled><i class="fas fa-file-csv" aria-hidden="true"></i></button>
+          <button type="button" class="admin-icon-btn cancel" id="ami-email-history-clear" title="Limpar seleção" aria-label="Limpar seleção" disabled><i class="fas fa-xmark" aria-hidden="true"></i></button>
+        </div>
+        <div class="admin-table-footer"><nav id="ami-email-history-pagination" class="admin-pagination" aria-label="Paginação do histórico de e-mail"></nav><p id="ami-email-history-count" class="admin-table-summary" aria-live="polite"></p></div>
+      </div>
+    </div>
   </div>
   <section class="card-ami-pairwise secao-ami-pairwise card ahp-step-section is-hidden" id="ami-pairwise-panel">
     <div class="ahp-section-label"><i class="fas fa-table-cells" aria-hidden="true"></i><span>Simulação de comparação pareada</span></div>
@@ -104,11 +123,11 @@
   <script src="/assets/js/analysis-table-controls.js?v=20261027-formulario-unificado"></script>
   <script src="/assets/js/admin-auth.js"></script>
   <script src="/assets/vendor/xlsx/xlsx-0.18.5.min.js"></script>
-  <script src="/assets/js/paginas/analise-multicriterio-tabela.js?v=20261028-matrizes-independentes"></script>
+  <script src="/assets/js/paginas/analise-multicriterio-tabela.js?v=20261105-table-labels"></script>
   <script src="/assets/js/api-erro.js?v=20261027"></script>
-  <script src="/assets/js/paginas/ami-email.js?v=20261104-recusa-definitiva"></script>
+  <script src="/assets/js/paginas/ami-email.js?v=20261105-monitoramento"></script>
   <script src="/assets/js/matriz-criterios-arquivo.js?v=20261009"></script>
-  <script src="/assets/js/matrizes-criterios.js?v=20261104-alinhamento"></script>
+  <script src="/assets/js/matrizes-criterios.js?v=20261105-table-labels"></script>
   <script src="/assets/js/saaty-selector-color.js?v=20261103-1"></script>
-  <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20261103-regua-invertida"></script>
+  <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20261105-table-labels"></script>
 {% endblock %}

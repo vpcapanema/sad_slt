@@ -101,6 +101,37 @@ const errors = [];
       await route.fulfill({ json: response });
     });
     await page.goto(base + '/restrict/central-pendencias/');
+    assert.deepEqual(await page.locator('.pendencias-grupo-titulo').allTextContents(), [
+      'Pendências Cadastrais e de Geometria',
+      'Pendências da Fase 3 da Hierarquização - Atributos de Demanda',
+    ]);
+    const contexto = page.locator('[aria-labelledby="pendencias-contexto-titulo"]');
+    assert.equal(await contexto.locator('.ahp-subsection-num, .ahp-subcard').count(), 0);
+    assert.equal(await contexto.locator('.ahp-section-body > p').count(), 2);
+    assert(!(await contexto.innerText()).includes('o solicitante corresponde ao representante'));
+    assert((await contexto.innerText()).includes('fase 3 da hierarquização'));
+    assert(!(await contexto.innerText()).includes('fase 2'));
+    assert.deepEqual(await contexto.locator('.ahp-section-body').evaluate(element => ({
+      paragraphs: [...element.querySelectorAll('p')].map(p => getComputedStyle(p).fontSize),
+      link: getComputedStyle(element.querySelector('a')).fontSize,
+    })), { paragraphs: ['16px', '16px'], link: '10.24px' });
+    assert.deepEqual(
+      (await page.locator('.standard-table-section .ahp-section-label').allTextContents()).map(text => text.trim()),
+      ['Tabela de Pendências de Cadastro e Geometria', 'Tabela de Pendências de Atributos da Demanda'],
+    );
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({ width, height: 1000 });
+      for (const title of await page.locator('.pendencias-grupo-titulo').all()) {
+        assert(await title.evaluate(element => {
+          const style = getComputedStyle(element);
+          const rect = element.getBoundingClientRect();
+          return style.textAlign === 'center'
+            && parseFloat(style.marginTop) > parseFloat(style.marginBottom)
+            && rect.left >= 0 && rect.right <= innerWidth;
+        }));
+      }
+    }
+    await page.setViewportSize({ width: 1440, height: 1000 });
     await page.waitForFunction(() => document.getElementById('pendencias-cadastro-count').textContent.includes('35 no total'));
     assert.deepEqual(await computed(page.locator('.admin-filter-bar').first()), reference);
     assert.deepEqual(await tableStyle(page.locator('#pendencias-cadastro th').nth(1)), headerReference);

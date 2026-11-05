@@ -568,7 +568,7 @@
         pesos: pesosIniciais(colunas, hierarquizacao.dados_hierarquizacao?.cabecalho_grupo?.configuracoes?.fase_3),
       };
       const titulo = document.getElementById("fase3-titulo-atributos");
-      if (titulo) titulo.textContent = `${opcoes.complementacao ? "2.2 " : ""}Critérios de atributo de demanda`;
+      if (titulo) titulo.textContent = "Critérios de atributo de demanda";
       montarTabela(raiz, objetos, colunas, opcoes);
       window.Fase3TableStandard?.(raiz.querySelector('table'));
       $("[data-atributos-pesos]", raiz).hidden = true;

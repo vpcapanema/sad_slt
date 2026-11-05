@@ -4,29 +4,48 @@
 {% set bloco_modulo = "mocad" %}
 {% set requer_autenticacao = true %}
 {% block titulo %}Complementação de dados da demanda — SICARD{% endblock %}
-{% block classes_body %}complementacao-page admin-data-page escala-revisada{% endblock %}
+{% block classes_body %}complementacao-page ahp-module-page ami-page ami-espaco-page sicard-standard-page feedback-proprio central-pendencias-page{% endblock %}
 {% block estilos_pagina %}
 <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
 <link rel="stylesheet" href="/assets/css/admin-analysis-layout.css">
-<link rel="stylesheet" href="/assets/css/complementacao.css?v=20261027-ciclos-independentes">
 <link rel="stylesheet" href="/assets/css/atributos-objetos.css">
 <link rel="stylesheet" href="/assets/css/fase1-execucao.css">
 <link rel="stylesheet" href="/assets/vendor/leaflet/leaflet.css">
-<link rel="stylesheet" href="/assets/css/escala-tipografica.css?v=20261020-textos-dinamicos">
-  <link rel="stylesheet" href="/assets/css/table-standard.css?v=20261015-fontes-ordem">
+<link rel="stylesheet" href="/assets/css/ahp-module.css">
+<link rel="stylesheet" href="/assets/css/analise-multicriterio.css">
+<link rel="stylesheet" href="/assets/css/analise-multicriterio-tabela.css">
+<link rel="stylesheet" href="/assets/css/page-title-standard.css">
+<link rel="stylesheet" href="/assets/css/table-standard.css">
+<link rel="stylesheet" href="/assets/css/admin-table-controls.css">
+<link rel="stylesheet" href="/assets/css/paginas/ami-report-tables.css">
+<link rel="stylesheet" href="/assets/css/paginas/ami-espaco-secoes.css">
+<link rel="stylesheet" href="/assets/css/paginas/sicard-standard-pages.css">
+<link rel="stylesheet" href="/assets/css/paginas/central-pendencias.css?v=20261105-contexto">
+<link rel="stylesheet" href="/assets/css/complementacao.css?v=20261105-padrao">
 {% endblock %}
 {% block conteudo %}
 <div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
-<main class="conteudo-principal app-main admin-main">
-  <section class="secao-complementacao-introducao card card-complementacao-introducao standard-page-hero" aria-labelledby="complementacao-title">
-    <h1 class="standard-page-hero__title" id="complementacao-title">Complementação de dados da demanda</h1>
-    <p class="standard-page-hero__description">Dois fluxos independentes: 1. Cadastro e geometria, para retomada da análise cadastral; 2. Atributos da hierarquização, para retomada da priorização na Fase 3.</p>
+<main class="conteudo-principal app-main ahp-main ami-main">
+  <section class="secao-complementacao-introducao card ahp-step-intro ami-hero card-complementacao-introducao standard-page-hero" aria-labelledby="complementacao-title">
+    <h1 class="standard-page-hero__title" id="complementacao-title"><i class="fa-solid fa-file-pen" aria-hidden="true"></i><span>Complementação de dados da demanda</span></h1>
+    <p class="ami-eyebrow standard-page-hero__eyebrow">Cadastro e análise de demandas</p>
+    <p class="standard-page-hero__description">Complemente dados cadastrais, geometria e atributos da demanda para retomar a análise e a hierarquização.</p>
   </section>
+  <section class="card ahp-step-section ami-panel" aria-labelledby="pendencias-contexto-titulo">
+    <div class="ahp-section-label"><i class="fa-solid fa-circle-info" aria-hidden="true"></i><span id="pendencias-contexto-titulo">Contextualização</span></div>
+    <div class="ahp-section-body">
+      <p class="form-help">Cadastro e geometria e atributos da hierarquização são fluxos independentes. Selecione uma demanda aguardando complementação para corrigir o cadastro ou enviar a geometria, permitindo a retomada da análise cadastral.</p>
+      <p class="form-help">Na fase 3 da hierarquização, complemente os atributos autorizados para retomar a priorização. Esse atendimento independe da análise cadastral e do recebimento de e-mail.</p>
+      <a href="/restrict/central-pendencias/">Abrir central de pendências</a>
+    </div>
+  </section>
+  <h2 class="pendencias-grupo-titulo">Pendências Cadastrais e de Geometria</h2>
   {% set modo_complementacao = true %}
   {% include "componentes/tabela_demandas.html" %}
   <div id="complementacao-pedidos" class="card card-complementacao-pedidos admin-card hidden" aria-live="polite"></div>
-  <section id="complementacao-editor" class="secao-complementacao-editor card-complementacao-editor card hidden" aria-labelledby="complementacao-editor-titulo">
-    <h3 id="complementacao-editor-titulo"></h3>
+  <section id="complementacao-editor" class="secao-complementacao-editor card-complementacao-editor card ahp-step-section ami-panel hidden" aria-labelledby="complementacao-editor-titulo">
+    <div class="ahp-section-label" role="heading" aria-level="3"><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i><span id="complementacao-editor-titulo"></span></div>
+    <div class="ahp-section-body">
     <p id="complementacao-resumo" class="field-help" aria-live="polite"></p>
     <form id="complementacao-cadastro" class="admin-dashboard-page hidden">
       <div id="complementacao-cadastro-campos"></div>
@@ -38,11 +57,13 @@
       <input type="file" id="complementacao-arquivo" accept=".zip,.gpkg,.kml,.kmz,.geojson,.json">
       <div class="btn-row"><button type="button" class="btn btn-primary" id="complementacao-enviar">Enviar/substituir geometria</button></div>
     </div>
+    </div>
   </section>
   <p id="complementacao-status" class="complementacao-status" aria-live="polite"></p>
-  <section id="complementacao-atributos" data-access-module="mad" class="secao-complementacao-atributos card-complementacao-atributos-principal card admin-card standard-table-section" aria-labelledby="complementacao-atributos-titulo">
-    <div class="admin-card-body">
-      <h2 id="complementacao-atributos-titulo">2. Atributos da hierarquização — Fase 3</h2>
+  <h2 class="pendencias-grupo-titulo" data-access-module="mad">Pendências da Fase 3 da Hierarquização - Atributos de Demanda</h2>
+  <section id="complementacao-atributos" data-access-module="mad" class="secao-complementacao-atributos card-complementacao-atributos-principal card ahp-step-section ami-panel standard-table-section" aria-labelledby="complementacao-atributos-titulo">
+    <div class="ahp-section-label ami-table-heading" role="heading" aria-level="2"><i class="fa-solid fa-table" aria-hidden="true"></i><span id="complementacao-atributos-titulo">Tabela de Complementação de Atributos da Demanda</span></div>
+    <div class="ahp-section-body">
       <p class="field-help">Este fluxo não depende da situação da análise cadastral nem do recebimento de e-mail. Preencha os grupos Cadastro e Dinâmicos da tabela 2 da Fase 3. Os atributos cadastrais também serão atualizados no cadastro oficial. Ao salvar o último valor válido, a conclusão e o status são atualizados automaticamente, respeitando pendências em outras rodadas. Risco é resultado da Fase 1 e não é preenchido manualmente.</p>
       <div id="complementacao-pedidos-atributos" aria-live="polite"></div>
       <div class="form-field">
@@ -57,11 +78,11 @@
       <button type="button" id="complementacao-atributos-recarregar" class="btn btn-secondary hidden">Tentar novamente</button>
       <div id="complementacao-atributos-container" class="card-complementacao-atributos hidden">
         <section class="secao-complementacao-resumo" aria-labelledby="complementacao-resumo-titulo">
-          <h3 id="complementacao-resumo-titulo">2.1 Resumo da hierarquização</h3>
+          <h3 id="complementacao-resumo-titulo"><i class="fa-solid fa-list" aria-hidden="true"></i> Resumo da hierarquização</h3>
           <div id="complementacao-resumo-hierarquizacao" class="hidden"></div>
         </section>
         <form id="complementacao-form" class="hidden">
-          <h3 id="fase3-titulo-atributos">2.2 Critérios atributo de objeto</h3>
+          <h3><i class="fa-solid fa-table" aria-hidden="true"></i> <span id="fase3-titulo-atributos">Critérios de atributo de demanda</span></h3>
           <p id="complementacao-atributos-resumo" class="field-help"></p>
           <div id="complementacao-campos">
             {% set atributos_complementacao = true %}
@@ -71,6 +92,7 @@
             <button type="button" class="admin-icon-btn edit" id="complementacao-atributos-editar" title="Editar atributos" aria-label="Editar atributos" disabled><i class="fas fa-pen" aria-hidden="true"></i></button>
             <button type="submit" class="admin-icon-btn save" id="complementacao-atributos-confirmar" title="Salvar atributos (não conclui a complementação)" aria-label="Salvar atributos" disabled><i class="fas fa-check" aria-hidden="true"></i></button>
             <button type="button" class="admin-icon-btn" id="complementacao-atributos-cancelar" title="Cancelar edição dos atributos" aria-label="Cancelar edição dos atributos" disabled><i class="fas fa-xmark" aria-hidden="true"></i></button>
+            <button type="button" class="admin-icon-btn export" id="complementacao-atributos-exportar" title="Exportar selecionados" aria-label="Exportar selecionados" disabled><i class="fas fa-file-export" aria-hidden="true"></i></button>
           </div>
           <div id="complementacao-concluir-demandas" aria-label="Conclusão individual das demandas"></div>
           <div class="admin-table-footer">
@@ -111,7 +133,7 @@
 <script src="/assets/js/objeto-detalhe.js"></script>
 <script src="/assets/js/resumo-fase.js?v=20261020-data-criacao"></script>
 <script src="/assets/js/input-masks.js?v=20261020-unidades"></script>
-<script src="/restrict/hierarquizacao/js/atributos-objetos.js?v=20261027-contrato-atributos"></script>
-<script src="/assets/js/complementacao.js?v=20261027-status-automatico"></script>
+<script src="/restrict/hierarquizacao/js/atributos-objetos.js?v=20261105-titulo"></script>
+<script src="/assets/js/complementacao.js?v=20261105-padrao"></script>
 <script src="/restrict/demandas.js?v=20261015-fontes-ordem"></script>
 {% endblock %}

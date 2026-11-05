@@ -324,6 +324,8 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
         __import__("pathlib").Path("assets/js/paginas/analise-multicriterio-julgamentos.js")
         .read_text(encoding="utf-8")
     )
+    modal_tables_js = __import__("pathlib").Path("assets/js/paginas/analise-multicriterio-tabela.js").read_text(encoding="utf-8")
+    matrix_details_js = __import__("pathlib").Path("assets/js/matrizes-criterios.js").read_text(encoding="utf-8")
 
     assert 'class="admin-table hier-register-table ami-table--database"' in html
     assert 'data-source-table="ahp.comparacao_colaborativa_ambiente"' in html
@@ -336,6 +338,23 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
     assert html.index('id="ami-new"') < html.index("Configuração do julgamento")
     assert html.index('id="ami-new"') < html.index('class="secao-dados-tabelas-colaborativas')
     assert "Central de julgamentos" in html
+    assert "Tabela do monitoramento das atividades" in html
+    assert "Tabela dos julgamentos realizados" in julgamentos_js
+    assert "Tabela da lista de colaboradores" in julgamentos_js
+    assert "Tabela dos julgadores" in julgamentos_js
+    assert "Tabela dos pesos de cada critério" in julgamentos_js
+    assert "Tabela da consolidação das respostas" in julgamentos_js
+    assert "Tabela dos índices de importância de Saaty por par de critérios" in julgamentos_js
+    assert "Matriz de comparação pareada do julgamento" in julgamentos_js
+    assert "Tabela dos pesos finais da análise " in julgamentos_js
+    assert "Matriz consolidada da análise " in julgamentos_js
+    assert "Matriz de comparação pareada da simulação" in julgamentos_js
+    assert "Matriz de comparação pareada consolidada" in modal_tables_js
+    assert "Tabela dos pesos consolidados do julgamento" in modal_tables_js
+    assert "Tabela dos colaboradores do julgamento" in modal_tables_js
+    assert "Tabela dos critérios e premissas do arquivo" in matrix_details_js
+    assert "Matriz da estrutura de comparação pareada sem julgamentos" in matrix_details_js
+    assert "Tabela do monitoramento das atividades" not in central_html
     assert 'class="col-select"' in html
     assert 'id="ami-select-all-rows"' in html
     assert 'Selecionar todos os registros filtrados' in html

@@ -335,6 +335,10 @@
   margin-bottom: var(--ami-espaco-texto);
 }
 
+.ami-page.ami-espaco-page .ami-main .ahp-section-body > p.ami-table-label {
+  margin: 0 0 4px;
+}
+
 /* Alternância por profundidade, apenas no fundo dos contêineres.
    Níveis 1/3: branco; níveis 2/4: azul-claro. Cabeçalhos preservados. */
 .ami-page.ami-espaco-page .ami-main .ahp-step-section {
@@ -511,7 +515,7 @@
 .ami-page.ami-espaco-page .ami-main :is(button, .btn, a.admin-icon-btn) > i {
   color: inherit;
 }
-.ami-page.ami-espaco-page #ami-judgments .ami-cell-link {
+.ami-page.ami-espaco-page :is(#ami-judgments, #ami-monitor-table) .ami-cell-link {
   border: 0 !important;
   box-shadow: none;
   background: transparent !important;
@@ -715,7 +719,8 @@
   min-width: 56rem;
   width: 100%;
 }
-.ami-page.ami-espaco-page #ami-monitor-table tbody td:is(:nth-child(2), :last-child):not([colspan]) {
+.ami-page.ami-espaco-page #ami-monitor-table tbody td:is(:nth-child(2), :nth-child(3)):not([colspan]),
+.ami-page.ami-espaco-page #ami-email-history-table tbody td:last-child:not([colspan]) {
   text-align: left;
 }
 .ami-page.ami-espaco-page #ami-monitor-refresh {

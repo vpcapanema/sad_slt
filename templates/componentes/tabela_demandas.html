@@ -1,7 +1,9 @@
-    <section class="card-tipo-tabs secao-tipo-tabs card admin-card standard-table-section"{% if modo_complementacao %} id="complementacao-cadastral" aria-labelledby="complementacao-cadastral-titulo"{% endif %}>
-      <div class="admin-card-body">
+    <section class="card-tipo-tabs secao-tipo-tabs card {% if modo_complementacao %}ahp-step-section ami-panel{% else %}admin-card{% endif %} standard-table-section"{% if modo_complementacao %} id="complementacao-cadastral" aria-labelledby="complementacao-cadastral-titulo"{% endif %}>
         {% if modo_complementacao %}
-        <h2 id="complementacao-cadastral-titulo">1. Complementação de Dados Cadastrais e Geometria</h2>
+        <div class="ahp-section-label ami-table-heading" role="heading" aria-level="2"><i class="fa-solid fa-table" aria-hidden="true"></i><span id="complementacao-cadastral-titulo">Tabela de Complementação de Dados Cadastrais e Geometria</span></div>
+        {% endif %}
+      <div class="{% if modo_complementacao %}ahp-section-body{% else %}admin-card-body{% endif %}">
+        {% if modo_complementacao %}
         <p class="field-help">Selecione uma demanda aguardando complementação para corrigir os dados cadastrais ou a geometria.</p>
         {% endif %}
         <div class="admin-tabs" id="tipo-tabs" role="tablist" aria-label="Tipo de demanda">
@@ -10,11 +12,12 @@
           <button type="button" class="admin-tab is-active" data-tipo="projeto" role="tab" aria-selected="true">Projeto</button>
         </div>
 
+        {% if modo_complementacao %}<div class="ami-filtered-table">{% endif %}
         {% set filtro_prefixo = "filtro" %}
         {% set filtro_rotulo = "Filtrar demandas" %}
         {% include "componentes/filtro_tabela.html" %}
 
-        <div class="admin-table-wrap">
+        <div class="admin-table-wrap" data-demandas-table-wrap="plano">
           <table class="admin-table" data-demandas-table="plano" hidden>
             <thead><tr>
               <th class="col-select" scope="col"><input type="checkbox" class="select-all" aria-label="Selecionar todos os planos"></th>
@@ -28,6 +31,8 @@
             </tr></thead>
             <tbody data-demandas-body="plano"></tbody>
           </table>
+        </div>
+        <div class="admin-table-wrap" data-demandas-table-wrap="programa" hidden>
           <table class="admin-table" data-demandas-table="programa" hidden>
             <thead><tr>
               <th class="col-select" scope="col"><input type="checkbox" class="select-all" aria-label="Selecionar todos os programas"></th>
@@ -42,6 +47,8 @@
             </tr></thead>
             <tbody data-demandas-body="programa"></tbody>
           </table>
+        </div>
+        <div class="admin-table-wrap" data-demandas-table-wrap="projeto" hidden>
           <table class="admin-table" data-demandas-table="projeto">
             <thead><tr>
               <th class="col-select" scope="col"><input type="checkbox" class="select-all" aria-label="Selecionar todos os projetos"></th>
@@ -60,6 +67,7 @@
 
 
         {% if modo_complementacao %}
+        </div>
         <div class="complementacao-controles standard-table-actions" role="group" aria-label="Tipo de complementação">
           <button type="button" class="admin-icon-btn" data-complementacao="cadastro" title="Dados cadastrais" aria-label="Dados cadastrais" disabled><i class="fa-solid fa-address-card" aria-hidden="true"></i><span class="sr-only">Dados cadastrais</span></button>
           <button type="button" class="admin-icon-btn" data-complementacao="geometria" title="Geometria" aria-label="Geometria" disabled><i class="fa-solid fa-draw-polygon" aria-hidden="true"></i><span class="sr-only">Geometria</span></button>

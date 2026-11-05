@@ -11,13 +11,16 @@ from __future__ import annotations
 
 import logging
 import re
+from hashlib import sha256
 from html import escape
 from typing import Any
+from uuid import uuid4
 
 from pydantic import ValidationError
 
 from api.exceptions import DatabaseUnavailableError, DemandaValidationError
 from api.repositories import comparacao_colaborativa_repository as repo
+from api.repositories import email_convites_repository as historico
 from api.schemas.email import EmailEnvioSchema
 from api.services import ahp_engine, email_service
 from api.services.comparacao_colaborativa_service import _criterio_nomes, _criterios_resposta, _dimensao
@@ -235,18 +238,57 @@ def montar(ambiente: dict[str, Any], resposta: dict[str, Any]) -> EmailEnvioSche
     )
 
 
+def enviar(ambiente_id: str, destinatario: str, usuario_id: str, *,
+           resposta_id: str | None = None, automatico: bool = False) -> dict[str, Any]:
+    config = email_service._config()
+    ambiente = repo.get_ambiente_by_id(ambiente_id)
+    if not ambiente:
+        raise DemandaValidationError("Julgamento não encontrado.", field="ambiente_id")
+    email = destinatario.strip().lower()
+    if not automatico and email not in {str(c["email"]).strip().lower() for c in ambiente["convites"]}:
+        raise DemandaValidationError("O destinatário não pertence aos colaboradores salvos.", field="destinatario")
+    respostas = [r for r in repo.list_respostas(ambiente_id)
+                 if r.get("status") == "enviada"
+                 and (str(r["id"]) == resposta_id if resposta_id else str(r["email"]).strip().lower() == email)]
+    if not respostas:
+        raise DemandaValidationError("Ainda não há resposta recebida deste colaborador.", field="destinatario")
+    resposta = respostas[0]
+    mensagem = montar(ambiente, resposta)
+    email = str(mensagem.destinatario).lower()
+    registro, novo = historico.reservar_monitorado(
+        ambiente_id, email, sha256(f"resposta:{ambiente_id}:{email}".encode()).hexdigest(),
+        f"<sicard.{uuid4().hex}@{str(config.remetente).rsplit('@', 1)[1]}>",
+        usuario_id, ambiente["atualizado_em"], natureza="resposta",
+        rejeitar_enviado=not automatico, validar_ativo=False,
+    )
+    if not novo:
+        return {**registro, "reutilizado": True}
+    try:
+        resultado = email_service.enviar(
+            mensagem, usuario_id=usuario_id, id_mensagem=registro["mensagem_id"], solicitar_confirmacoes=True,
+        )
+    except email_service.FalhaEmail as exc:
+        status = "indeterminado" if exc.codigo == "resultado_indeterminado" else "falha"
+        return historico.finalizar(str(registro["id"]), status, str(exc))
+    try:
+        return historico.finalizar(
+            str(registro["id"]), "aceito_smtp", resultado.mensagem,
+            dsn=resultado.confirmacao_entrega_solicitada, leitura=resultado.confirmacao_leitura_solicitada,
+        )
+    except (DatabaseUnavailableError, DemandaValidationError) as exc:
+        logger.error("SMTP aceitou confirmação; histórico indisponível registro=%s", registro["id"])
+        raise email_service.FalhaEmail(
+            "resultado_indeterminado",
+            "O SMTP aceitou a confirmação, mas o histórico não foi atualizado. Não reenvie; consulte as confirmações.",
+        ) from exc
+
+
 def notificar(ambiente_id: str, resposta_id: str) -> None:
     """Envia a confirmação; executada após a resposta HTTP e sem nunca propagar falhas."""
     try:
         email_service._config()  # sem SMTP habilitado, nem consulta o banco
-        ambiente = repo.get_ambiente_by_id(ambiente_id)
-        resposta = next((r for r in repo.list_respostas(ambiente_id) if str(r["id"]) == str(resposta_id)), None)
-        if not ambiente or not resposta or resposta.get("status") != "enviada":
-            logger.warning("Confirmação de resposta não enviada: registro indisponível resposta=%s", resposta_id)
-            return
-        mensagem = montar(ambiente, resposta)
-        email_service.enviar(mensagem, usuario_id="sistema")
-        logger.info("Confirmação de recebimento enviada resposta=%s", resposta_id)
+        registro = enviar(ambiente_id, "", "sistema", resposta_id=str(resposta_id), automatico=True)
+        logger.info("Confirmação de recebimento processada resposta=%s status=%s", resposta_id, registro["envio_status"])
     except email_service.FalhaEmail as exc:
         logger.warning("Confirmação de recebimento não enviada resposta=%s codigo=%s", resposta_id, exc.codigo)
     except (DatabaseUnavailableError, DemandaValidationError, ValidationError, ValueError, ArithmeticError) as exc:

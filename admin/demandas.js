@@ -491,6 +491,9 @@
     document.querySelectorAll("[data-demandas-table]").forEach((table) => {
       table.hidden = table.dataset.demandasTable !== tipo;
     });
+    document.querySelectorAll("[data-demandas-table-wrap]").forEach((wrap) => {
+      wrap.hidden = wrap.dataset.demandasTableWrap !== tipo;
+    });
     const checkbox = activeTable()?.querySelector(".select-all");
     if (!checkbox) return;
     const visible = paginatedRows();

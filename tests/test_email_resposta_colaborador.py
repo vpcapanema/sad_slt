@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import pytest
+from datetime import datetime, timezone
+from types import SimpleNamespace
 from fastapi.testclient import TestClient
 
 from api.schemas.comparacao_colaborativa import RespostaColaborativaResponseSchema
@@ -9,6 +11,8 @@ from api.server import app
 from api.services import comparacao_colaborativa_service as service
 from api.services import email_resposta_colaborador as confirmacao
 from api.services import email_service
+from api.schemas.email import EmailEnvioResultado
+from api.exceptions import DemandaValidationError
 
 CRITERIOS = [
     {"Critério": "Custo", "Dimensão": "Financeira", "Etapa": "Fase 3"},
@@ -20,7 +24,27 @@ AVISO = "podem não ser os pesos finais da análise"
 
 
 def _ambiente(convites):
-    return {"id": "amb-1", "nome": "Julgamento <Teste>", "criterios": CRITERIOS, "convites": convites}
+    return {"id": "amb-1", "nome": "Julgamento <Teste>", "criterios": CRITERIOS, "convites": convites,
+            "atualizado_em": datetime(2026, 11, 5, tzinfo=timezone.utc)}
+
+
+@pytest.fixture
+def rastreamento(monkeypatch):
+    rows = []
+    def reservar(*args, **kwargs):
+        if rows and rows[0]["envio_status"] != "falha":
+            if kwargs["rejeitar_enviado"]:
+                raise DemandaValidationError("O e-mail não está com status Não enviado.", field="destinatario")
+            return rows[0], False
+        row = {"id": "email-1", "mensagem_id": args[3], "envio_status": "enviando", "natureza": kwargs["natureza"]}
+        rows[:] = [row]
+        return row, True
+    def finalizar(ident, status, detalhe, **kwargs):
+        rows[0].update(envio_status=status, detalhe=detalhe, **kwargs)
+        return rows[0]
+    monkeypatch.setattr(confirmacao.historico, "reservar_monitorado", reservar)
+    monkeypatch.setattr(confirmacao.historico, "finalizar", finalizar)
+    return rows
 
 
 def _resposta(email="a@x.gov.br", matriz=MATRIZ, criterios=None):
@@ -71,18 +95,28 @@ def test_sem_aviso_quando_o_conjunto_de_criterios_e_exclusivo():
     assert AVISO not in mensagem.texto and AVISO not in mensagem.html
 
 
-def test_notificar_envia_a_confirmacao(monkeypatch):
+def test_notificar_envia_a_confirmacao(monkeypatch, rastreamento):
     enviados = []
-    monkeypatch.setattr(email_service, "_config", lambda **_: object())
+    monkeypatch.setattr(email_service, "_config", lambda **_: SimpleNamespace(remetente="sicard@example.com"))
     monkeypatch.setattr(confirmacao.repo, "get_ambiente_by_id", lambda _: _ambiente([{"email": "a@x.gov.br"}]))
     monkeypatch.setattr(confirmacao.repo, "list_respostas", lambda _: [_resposta()])
-    monkeypatch.setattr(email_service, "enviar", lambda dados, **kw: enviados.append(dados))
+    def enviar(dados, **kw):
+        enviados.append(dados)
+        assert kw["solicitar_confirmacoes"] is True
+        assert kw["id_mensagem"].startswith("<sicard.")
+        return EmailEnvioResultado(id_mensagem=kw["id_mensagem"], destinatario=str(dados.destinatario))
+    monkeypatch.setattr(email_service, "enviar", enviar)
     confirmacao.notificar("amb-1", "resp-1")
     assert len(enviados) == 1 and enviados[0].destinatario == "a@x.gov.br"
+    assert rastreamento[0]["envio_status"] == "aceito_smtp"
+    confirmacao.notificar("amb-1", "resp-1")
+    assert len(enviados) == 1
+    with pytest.raises(DemandaValidationError, match="Não enviado"):
+        confirmacao.enviar("amb-1", "a@x.gov.br", "analista")
 
 
-def test_notificar_nao_propaga_falha_de_envio(monkeypatch):
-    monkeypatch.setattr(email_service, "_config", lambda **_: object())
+def test_notificar_nao_propaga_falha_de_envio(monkeypatch, rastreamento):
+    monkeypatch.setattr(email_service, "_config", lambda **_: SimpleNamespace(remetente="sicard@example.com"))
     monkeypatch.setattr(confirmacao.repo, "get_ambiente_by_id", lambda _: _ambiente([{"email": "a@x.gov.br"}]))
     monkeypatch.setattr(confirmacao.repo, "list_respostas", lambda _: [_resposta()])
 
@@ -91,6 +125,32 @@ def test_notificar_nao_propaga_falha_de_envio(monkeypatch):
 
     monkeypatch.setattr(email_service, "enviar", falha)
     confirmacao.notificar("amb-1", "resp-1")
+    assert rastreamento[0]["envio_status"] == "falha"
+
+
+@pytest.mark.parametrize("status", ["em_preenchimento", "excluida"])
+def test_confirmacao_manual_exige_resposta_recebida(monkeypatch, rastreamento, status):
+    monkeypatch.setattr(email_service, "_config", lambda **_: SimpleNamespace(remetente="sicard@example.com"))
+    monkeypatch.setattr(confirmacao.repo, "get_ambiente_by_id", lambda _: _ambiente([{"email": "a@x.gov.br"}]))
+    monkeypatch.setattr(confirmacao.repo, "list_respostas", lambda _: [{**_resposta(), "status": status}])
+    with pytest.raises(DemandaValidationError, match="Ainda não há resposta"):
+        confirmacao.enviar("amb-1", "a@x.gov.br", "analista")
+    assert rastreamento == []
+
+
+def test_confirmacao_manual_usa_mesmo_conteudo_do_automatico(monkeypatch, rastreamento):
+    from unittest.mock import MagicMock
+    ambiente, resposta = _ambiente([{"email": "a@x.gov.br"}]), _resposta()
+    monkeypatch.setattr(email_service, "_config", lambda **_: SimpleNamespace(remetente="sicard@example.com"))
+    monkeypatch.setattr(confirmacao.repo, "get_ambiente_by_id", lambda _: ambiente)
+    monkeypatch.setattr(confirmacao.repo, "list_respostas", lambda _: [resposta])
+    smtp = MagicMock(return_value=EmailEnvioResultado(id_mensagem="<teste@example.com>", destinatario="a@x.gov.br"))
+    monkeypatch.setattr(email_service, "enviar", smtp)
+    enviado = confirmacao.enviar("amb-1", "a@x.gov.br", "analista")
+    assert enviado["natureza"] == "resposta" and enviado["envio_status"] == "aceito_smtp"
+    assert smtp.call_args.args[0] == confirmacao.montar(ambiente, resposta)
+    confirmacao.notificar("amb-1", "resp-1")
+    smtp.assert_called_once()
 
 
 def test_notificar_com_email_desabilitado_nao_consulta_o_banco(monkeypatch):

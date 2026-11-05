@@ -4,9 +4,12 @@
 
 As credenciais SIGMA destinadas aos agentes estão no arquivo local
 `R:\sad_slt\credencias_sigma_agentes.txt` (na raiz deste workspace:
-`credencias_sigma_agentes.txt`). Antes de pedir ao usuário que faça login para
-validar áreas restritas do SICARD, consultar esse arquivo e utilizar a conta
-adequada ao perfil exigido, pelo fluxo normal de autenticação.
+`credencias_sigma_agentes.txt`). Sempre que uma tarefa exigir login, em qualquer
+contexto de atuação neste projeto, o agente deve obrigatoriamente consultar esse
+arquivo e utilizar automaticamente as credenciais adequadas ao sistema e ao perfil
+exigidos, pelo fluxo normal de autenticação, sem pedir ao usuário que faça login
+ou forneça novamente as credenciais disponíveis. Utilizar essas credenciais
+somente no serviço ao qual se destinam, nunca em serviços externos não relacionados.
 
 Esta orientação vale também para subagentes; ao delegar validações autenticadas,
 informar o caminho, nunca os valores das credenciais. O arquivo é ignorado pelo
@@ -14,6 +17,12 @@ Git: não copiar seu conteúdo para código, documentação, mensagens, logs ou
 artefatos, nem versioná-lo. Reutilizar sessões válidas respeitando sua expiração;
 não criar cookies permanentes nem contornar controles de acesso. Se o arquivo
 estiver ausente ou o login falhar, informar o bloqueio sem expor credenciais.
+
+A regra aplica-se também ao Codex e a agentes em ambientes cloud. Nesses
+ambientes, consultar o arquivo na raiz do workspace, quando disponibilizado
+localmente de forma segura. Se o arquivo não estiver disponível, informar o
+bloqueio; não pressupor acesso ao caminho Windows nem versionar credenciais
+para disponibilizá-las remotamente.
 
 ## Antes de codificar: verificar os padrões existentes
 
