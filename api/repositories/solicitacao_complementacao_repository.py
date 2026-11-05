@@ -111,16 +111,24 @@ def registrar_notificacao(id, notificacao):
         conn.execute(f"UPDATE {TABLE} SET notificacao=%s WHERE id=%s", (Jsonb(resultado), id))
 
 
-def registrar_confirmacao(id, mensagem_id, tipo, fonte):
+def registrar_confirmacao(id, mensagem_id, tipo, fonte, *, ocorrido_em=None, detalhe="", origem_data=""):
     with get_connection() as conn:
         row = conn.execute(f"SELECT notificacao FROM {TABLE} WHERE id=%s FOR UPDATE", (id,)).fetchone()
         if not row or (row["notificacao"] or {}).get("id_mensagem") != mensagem_id:
             raise DemandaValidationError("A notificação mudou. Atualize antes de consultar as confirmações.", field="notificacao")
         notificacao = dict(row["notificacao"])
         eventos = list(notificacao.get("eventos") or [])
-        if any(e["fonte"] == fonte and e["tipo"] == tipo for e in eventos):
-            return
-        eventos.append({"tipo": tipo, "fonte": fonte, "coletado_em": datetime.now(timezone.utc).isoformat()})
+        existente = next((e for e in eventos if e["fonte"] == fonte and e["tipo"] == tipo), None)
+        metadados = {k: v for k, v in {
+            "ocorrido_em": ocorrido_em, "detalhe": detalhe, "origem_data": origem_data,
+        }.items() if v}
+        if existente is not None:
+            if all(existente.get(k) == v for k, v in metadados.items()):
+                return
+            existente.update(metadados)
+        else:
+            eventos.append({"tipo": tipo, "fonte": fonte, "coletado_em": datetime.now(timezone.utc).isoformat(),
+                            **metadados})
         prioridade = {"sem_confirmacao": 0, "adiada": 1, "confirmada": 2, "falha": 3}
         if tipo in prioridade and prioridade[tipo] > prioridade[notificacao.get("entrega_status", "sem_confirmacao")]:
             notificacao["entrega_status"] = tipo

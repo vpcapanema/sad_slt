@@ -1,12 +1,23 @@
 const {chromium} = require('playwright');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
 (async () => {
-  const browser = await chromium.launch({channel:'msedge',headless:true});
+  const browser = await chromium.launch({headless:true});
+  let authenticated=false;
   try {
     const page = await browser.newPage({viewport:{width:1280,height:900}});
-    if (process.env.SICARD_BROWSER_SESSION) await page.context().addCookies([
-      {name:'slt_session',value:process.env.SICARD_BROWSER_SESSION,url:'http://127.0.0.1:8083'}
-    ]);
+    const credentials = fs.readFileSync('credencias_sigma_agentes.txt','utf8');
+    const credential = label => {
+      const match = credentials.match(new RegExp('^' + label + '\\s*[:=]\\s*(.+)$','mi'));
+      if (!match) throw new Error('Credencial local indisponível.');
+      return match[1].trim();
+    };
+    await page.goto('http://127.0.0.1:8083/public/login/?next=%2Frestrict%2Fanalise-multicriterio%2Fcentral-julgamentos');
+    await page.locator('[name=login]').fill(credential('Username'));
+    await page.locator('[name=senha]').fill(credential('Senha inicial'));
+    await page.getByRole('button',{name:'Entrar',exact:true}).click();
+    await page.waitForURL('**/restrict/**');
+    authenticated=true;
     const env='39b5c763-d15a-460b-b58e-d65b57871c57', errors=[], sends=[], requests=[];
     const round={id:env,status:'ativa',token:'token-email',hierarquizacao_id:'h1',hierarquizacao_nome:'Análise de teste',
       hierarquizacao_codigo:'H1',atualizadoEm:'2026-10-19T12:00:00+00:00',valido_ate:'2035-12-31T23:59:59-03:00',
@@ -26,6 +37,7 @@ const assert = require('node:assert/strict');
     page.on('pageerror',e=>errors.push(e.message));
     await page.route('**/api/**',async route=>{
       const req=route.request(), path=new URL(req.url()).pathname;
+      if(path.startsWith('/api/auth/')) return route.fallback();
       requests.push(path);
       if(path.endsWith('/emails/monitoramento')){
         consultas++;
@@ -39,13 +51,11 @@ const assert = require('node:assert/strict');
         const p=req.postDataJSON(), natureza=path.endsWith('/resposta/enviar')?'resposta':'convite';
         sends.push({natureza,...p});
         const anterior=rows.find(r=>r.destinatario===p.destinatario && r.natureza===natureza);
-        const row=registro(anterior?.id || 'email-'+p.destinatario,p.destinatario,natureza,'aceito_smtp','Aceito pelo SMTP');
+        const row=registro(anterior?.id || 'email-'+p.destinatario,p.destinatario,natureza,'aceito_smtp','Aceito pelo servidor de envio');
         rows=rows.filter(r=>r.id!==row.id).concat(row);
         return route.fulfill({json:row});
       }
       if(path==='/api/ahp/comparacao-colaborativa/ambientes') return route.fulfill({json:[round]});
-      if(path==='/api/auth/me') return route.fulfill({json:{id:'u',nome:'Analista',tipo_usuario:'ANALISTA'}});
-      if(path==='/api/auth/session') return route.fulfill({json:{authenticated:true,user:{id:'u',tipo_usuario:'ANALISTA'}}});
       return route.fulfill({json:[]});
     });
     const navigation=await page.goto('http://127.0.0.1:8083/restrict/analise-multicriterio/central-julgamentos');
@@ -78,7 +88,7 @@ const assert = require('node:assert/strict');
     assert.equal(await convite.isDisabled(),true); assert.equal(await resposta.isDisabled(),true);
     assert.match(await linha('bia@example.com').innerText(),/Bia/);
     assert.equal(await linha('bia@example.com').count(),1);
-    assert.equal(await linha('bia@example.com').locator('.ami-cell-link').first().innerText(),'Aceito pelo servidor');
+    assert.equal(await linha('bia@example.com').locator('.ami-cell-link').first().innerText(),'Entregue');
 
     await marcar('ana@example.com');
     assert.equal(await convite.isEnabled(),true); assert.equal(await resposta.isDisabled(),true);
@@ -121,7 +131,7 @@ const assert = require('node:assert/strict');
     assert.match(await page.locator('#ami-email-history-body').innerText(),/Falha antiga do convite/);
     assert.doesNotMatch(await page.locator('#ami-email-history-body').innerText(),/Falha da confirmação/);
     await page.locator('#ami-email-history-filter-coluna').selectOption('0');
-    await page.locator('#ami-email-history-filter-valor').selectOption({label:'Confirmada'});
+    await page.locator('#ami-email-history-filter-valor').selectOption({label:'Data não informada'});
     assert.equal(await page.locator('#ami-email-history-body tr').count(),1);
     await page.locator('#ami-email-history-all').check();
     const download=page.waitForEvent('download'); await page.locator('#ami-email-history-export').click();
@@ -133,7 +143,7 @@ const assert = require('node:assert/strict');
     await linha('bia@example.com').locator('.ami-cell-link').last().click();
     assert.equal(await page.locator('#ami-email-history-title').innerText(),'E-mail resposta');
     assert.equal(await page.locator('#ami-email-history-body tr').count(),1);
-    assert.match(await page.locator('#ami-email-history-body').innerText(),/Aceito pelo SMTP/);
+    assert.match(await page.locator('#ami-email-history-body').innerText(),/Enviado\. Aceito pelo servidor de envio/);
     await page.locator('#ami-email-history-close').click();
 
     const antes=consultas;
@@ -144,7 +154,7 @@ const assert = require('node:assert/strict');
     await page.locator('#pfsStatusOverlay .pfs-box.pfs-active .pfs-close').click();
     assert.ok(consultas>antes);
     await linha('bia@example.com').locator('.ami-cell-link').last().click();
-    assert.match(await page.locator('#ami-email-history-body').innerText(),/Confirmada pelo aplicativo/);
+    assert.match(await page.locator('#ami-email-history-body').innerText(),/Data não informada/);
     await page.locator('#ami-email-history-close').click();
     assert.equal(sends.length,2,'Atualizar não reenvia mensagens');
     await page.setViewportSize({width:390,height:844});
@@ -153,5 +163,8 @@ const assert = require('node:assert/strict');
     assert.ok(await page.locator('#ami-email-history-close').isVisible());
     assert.deepEqual(errors,[]);
     console.log('PASS: agrupamento, dois envios, seleção estrita, históricos separados, filtros, exportação, atualização e mobile.');
+  } catch (error) {
+    console.error(authenticated ? error : 'Falha de autenticação; detalhes omitidos.');
+    process.exitCode=1;
   } finally { await browser.close(); }
-})().catch(error=>{console.error(error);process.exitCode=1;});
+})();

@@ -10,6 +10,9 @@ import logging
 import re
 import ssl
 from collections.abc import Callable
+from dataclasses import dataclass
+from datetime import timezone
+from email.utils import parsedate_to_datetime
 
 from api.repositories import email_convites_repository as repo
 from api.services.email_service import FalhaEmail, _config
@@ -24,7 +27,29 @@ def _destinatario(bloco: Message) -> str:
     return endereco.strip().lower() if separador and tipo.strip().lower() == "rfc822" else ""
 
 
-def interpretar(conteudo: bytes, mensagem_id: str, destinatario: str) -> list[str]:
+@dataclass(frozen=True)
+class ConfirmacaoEmail:
+    tipo: str
+    ocorrido_em: str | None
+    detalhe: str
+    origem_data: str
+
+
+def _data_confirmacao(valor: str) -> str | None:
+    if not valor:
+        return None
+    try:
+        instante = parsedate_to_datetime(valor)
+    except (ValueError, TypeError, OverflowError):
+        logger.warning("Relatório de email com data inválida; horário do evento não registrado")
+        return None
+    if instante.tzinfo is None:
+        logger.warning("Relatório de email sem fuso horário; horário do evento não registrado")
+        return None
+    return instante.astimezone(timezone.utc).isoformat()
+
+
+def interpretar_confirmacoes(conteudo: bytes, mensagem_id: str, destinatario: str) -> list[ConfirmacaoEmail]:
     mensagem = BytesParser(policy=policy.default).parsebytes(conteudo)
     if mensagem.get_content_type() != "multipart/report":
         return []
@@ -52,17 +77,26 @@ def interpretar(conteudo: bytes, mensagem_id: str, destinatario: str) -> list[st
             if tipo == "disposition-notification" and parte.get_content_type() == "message/disposition-notification":
                 disposicao = str(bloco.get("Disposition", "")).partition(";")[2].strip().split("/")[0]
                 if disposicao.lower() == "displayed":
-                    eventos.append("leitura")
+                    eventos.append(ConfirmacaoEmail(
+                        "leitura", _data_confirmacao(str(mensagem.get("Date") or "")),
+                        str(bloco.get("Disposition") or ""), "Date do relatório MDN"))
             elif tipo == "delivery-status" and parte.get_content_type() == "message/delivery-status":
                 acao = str(bloco.get("Action", "")).strip().lower()
                 status = str(bloco.get("Status", "")).strip()
-                if acao == "delivered" and status.startswith("2."):
-                    eventos.append("confirmada")
-                elif acao == "failed" and status.startswith("5."):
-                    eventos.append("falha")
-                elif acao == "delayed" and status.startswith("4."):
-                    eventos.append("adiada")
+                evento = ("confirmada" if acao == "delivered" and status.startswith("2.") else
+                          "falha" if acao == "failed" and status.startswith("5.") else
+                          "adiada" if acao == "delayed" and status.startswith("4.") else None)
+                if evento:
+                    eventos.append(ConfirmacaoEmail(
+                        evento, _data_confirmacao(str(bloco.get("Last-Attempt-Date") or "")),
+                        "; ".join(p for p in (f"Action: {acao}", f"Status: {status}",
+                                              str(bloco.get("Diagnostic-Code") or "")) if p),
+                        "Last-Attempt-Date do relatório DSN"))
     return list(dict.fromkeys(eventos))
+
+
+def interpretar(conteudo: bytes, mensagem_id: str, destinatario: str) -> list[str]:
+    return list(dict.fromkeys(evento.tipo for evento in interpretar_confirmacoes(conteudo, mensagem_id, destinatario)))
 
 
 def _exigir_ok(resposta: tuple) -> list:
@@ -76,8 +110,8 @@ def _aspas(valor: str) -> str:
     return '"' + valor.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
-def _coletar_registros(registros: list[dict], registrar_evento: Callable[[dict, str, str], None],
-                       *, usuario_id: str) -> int:
+def _coletar_registros(registros: list[dict], registrar_evento: Callable[[dict, ConfirmacaoEmail, str], None],
+                       *, usuario_id: str, interromper: Callable[[], bool] | None = None) -> int:
     config = _config()
     if not config.imap_habilitado or not config.imap_host or not config.imap_pasta:
         logger.warning("Consulta IMAP desativada ou incompleta usuario=%s", usuario_id)
@@ -94,6 +128,8 @@ def _coletar_registros(registros: list[dict], registrar_evento: Callable[[dict, 
         _exigir_ok(caixa.login(config.usuario, config.senha.get_secret_value()))
         _exigir_ok(caixa.select(_aspas(config.imap_pasta), readonly=True))
         for registro in registros:
+            if interromper and interromper():
+                break
             mensagem_id = registro["mensagem_id"]
             envelope = sha256(mensagem_id.encode()).hexdigest()
             dados = _exigir_ok(caixa.uid(
@@ -104,6 +140,8 @@ def _coletar_registros(registros: list[dict], registrar_evento: Callable[[dict, 
             if len(uids) > 100:
                 raise FalhaEmail("imap", "Há mais de 100 retornos para uma mensagem. A coleta requer revisão administrativa.")
             for uid in uids:
+                if interromper and interromper():
+                    break
                 metadados = _exigir_ok(caixa.uid("fetch", uid, "(RFC822.SIZE)"))
                 tamanho = re.search(rb"RFC822.SIZE (\d+)", b" ".join(x for x in metadados if isinstance(x, bytes)))
                 if not tamanho or int(tamanho[1]) > MAX_RELATORIO:
@@ -114,7 +152,7 @@ def _coletar_registros(registros: list[dict], registrar_evento: Callable[[dict, 
                     raise FalhaEmail("imap", "O servidor retornou um relatório incompleto ou maior que o permitido.")
                 conteudo = corpos[0]
                 consultados += 1
-                for evento in interpretar(conteudo, mensagem_id, registro["destinatario"]):
+                for evento in interpretar_confirmacoes(conteudo, mensagem_id, registro["destinatario"]):
                     registrar_evento(registro, evento, sha256(conteudo).hexdigest())
     except (imaplib.IMAP4.error, OSError, UnicodeError) as exc:
         logger.error("Consulta IMAP falhou usuario=%s tipo=%s", usuario_id, type(exc).__name__)
@@ -133,11 +171,25 @@ def _coletar_registros(registros: list[dict], registrar_evento: Callable[[dict, 
     return consultados
 
 
+def _registrar_confirmacao(registro: dict, evento: ConfirmacaoEmail, fonte: str) -> None:
+    repo.registrar_evento(
+        str(registro["id"]), evento.tipo, fonte, ocorrido_em=evento.ocorrido_em,
+        detalhe=evento.detalhe, origem_data=evento.origem_data,
+    )
+
+
+def coletar_automaticamente(interromper: Callable[[], bool]) -> int:
+    return _coletar_registros(
+        repo.listar_para_confirmacao(), _registrar_confirmacao,
+        usuario_id="coleta-automatica", interromper=interromper,
+    )
+
+
 def coletar(ambiente_id: str, *, usuario_id: str) -> dict:
     registros = [r for r in repo.listar(ambiente_id)
                  if r["envio_status"] in {"aceito_smtp", "indeterminado", "enviando"}]
     consultados = _coletar_registros(
-        registros, lambda r, evento, fonte: repo.registrar_evento(str(r["id"]), evento, fonte),
+        registros, _registrar_confirmacao,
         usuario_id=usuario_id,
     )
     return {"registros": repo.listar(ambiente_id), "relatorios_consultados": consultados}
@@ -152,7 +204,8 @@ def coletar_pendencia(pedido: dict, *, usuario_id: str) -> dict:
     registro = {"id": pedido["id"], "mensagem_id": mensagem_id, "destinatario": destinatario}
     consultados = _coletar_registros(
         [registro], lambda r, evento, fonte: solicitacoes.registrar_confirmacao(
-            r["id"], r["mensagem_id"], evento, fonte),
+            r["id"], r["mensagem_id"], evento.tipo, fonte, ocorrido_em=evento.ocorrido_em,
+            detalhe=evento.detalhe, origem_data=evento.origem_data),
         usuario_id=usuario_id,
     )
     return {"solicitacao": solicitacoes.obter(pedido["id"], interno=True),

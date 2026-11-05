@@ -66,6 +66,8 @@ class EmailSettings(BaseModel):
     imap_host: str = ""
     imap_porta: int = Field(default=993, ge=1, le=65535)
     imap_pasta: str = "INBOX"
+    confirmacoes_automaticas: bool = True
+    confirmacoes_intervalo: int = Field(default=30, ge=5, le=3600)
 
     def campos_ausentes(self) -> list[str]:
         valores = {
@@ -92,4 +94,6 @@ def get_email_settings() -> EmailSettings:
         "imap_host": os.getenv("SICARD_EMAIL_IMAP_HOST", "").strip(),
         "imap_porta": os.getenv("SICARD_EMAIL_IMAP_PORT", "993"),
         "imap_pasta": os.getenv("SICARD_EMAIL_IMAP_FOLDER", "INBOX").strip(),
+        "confirmacoes_automaticas": os.getenv("SICARD_EMAIL_CONFIRMATIONS_AUTO_ENABLED", "true"),
+        "confirmacoes_intervalo": os.getenv("SICARD_EMAIL_CONFIRMATIONS_INTERVAL_SECONDS", "30"),
     })

@@ -29,9 +29,10 @@ from api.middleware.subpath_rewrite import SubpathRewriteMiddleware
 from api.path_policy import project_path, relative_path
 from api.routers import api_router
 from api.services import storage_remoto
+from api.services.email_confirmacoes_automaticas import lifespan
 from api.services.session_service import SessionUser, cookie_name
 
-app = FastAPI(title="SLT — Apoio à Tomada de Decisão", version="1.1.0")
+app = FastAPI(title="SLT — Apoio à Tomada de Decisão", version="1.1.0", lifespan=lifespan)
 registrar_tratadores(app)
 templates = Jinja2Templates(directory=str(project_path("templates")))
 

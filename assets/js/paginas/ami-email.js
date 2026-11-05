@@ -2,9 +2,10 @@
   "use strict";
   const $ = id => document.getElementById(id);
   let contexto = null, registros = [], pronto = false, ocupado = false, modo = "create", pagina = 1;
-  const rotulosEnvio = {enviando: "Envio sem resultado final", aceito_smtp: "Aceito pelo servidor",
-    falha: "Não enviado", indeterminado: "Resultado indeterminado"};
-  const rotulosEntrega = {sem_confirmacao: "Sem confirmação", confirmada: "Confirmada", falha: "Devolvido", adiada: "Adiada"};
+  const rotulosEnvio = {enviando: "Na fila", aceito_smtp: "Enviado",
+    falha: "Não enviado", indeterminado: "Na fila"};
+  const rotulosEntrega = {sem_confirmacao: "Sem confirmação", confirmada: "Entregue", falha: "Devolvido",
+    adiada: "Recusado temporariamente pelo destinatário"};
   const url = id => "/api/ahp/comparacao-colaborativa/ambientes/" + encodeURIComponent(id) + "/emails";
   const filterColumn = $("ami-monitor-filter-coluna"), filterValue = $("ami-monitor-filter-valor");
   const historyModal = $("ami-email-history-modal"), historyColumn = $("ami-email-history-filter-coluna"),
@@ -23,18 +24,35 @@
   }
   function estado(row, tipo) {
     const tentativas = historico(row, tipo);
-    const atual = tentativas.find(item => item.envio_status === "aceito_smtp") ||
+    const atual = tentativas.find(item => item.leitura_status === "confirmada") ||
+      tentativas.find(item => item.entrega_status === "confirmada") ||
+      tentativas.find(item => item.envio_status === "aceito_smtp") ||
       tentativas.find(item => item.envio_status !== "falha") || tentativas[0];
+    if (atual?.leitura_status === "confirmada") return "Lido";
+    if (atual && atual.entrega_status !== "sem_confirmacao" && rotulosEntrega[atual.entrega_status]) {
+      return rotulosEntrega[atual.entrega_status];
+    }
     if (atual) return rotulosEnvio[atual.envio_status];
     return tipo === "resposta" && !row.resposta_recebida ? "Aguardando resposta" : "Não enviado";
+  }
+  function dataEvento(row, tipo) {
+    const datas = (row.eventos || []).filter(evento => evento.tipo === tipo && evento.ocorrido_em)
+      .map(evento => Date.parse(evento.ocorrido_em)).filter(Number.isFinite);
+    return datas.length ? new Date(Math.min(...datas)).toLocaleString("pt-BR") : "Data não informada";
   }
   function detalhes(row) {
     const aviso = row.envio_status === "aceito_smtp" && !row.dsn_solicitada
       ? " O servidor não oferece confirmação automática de entrega (DSN)." : "";
-    return [rotulosEntrega[row.entrega_status] || "Sem confirmação",
-      row.leitura_status === "confirmada" ? "Confirmada pelo aplicativo" : "Sem confirmação",
+    const retornos = (row.eventos || []).filter(evento => evento.tipo !== "tentativa").map(evento =>
+      [rotulosEntrega[evento.tipo] || (evento.tipo === "leitura" ? "Lido" : evento.tipo),
+        evento.detalhe, evento.origem_data,
+        evento.coletado_em ? "Consultado em " + new Date(evento.coletado_em).toLocaleString("pt-BR") : ""]
+        .filter(Boolean).join(" · ")).join(". ");
+    return [row.entrega_status === "confirmada" ? dataEvento(row, "confirmada") : rotulosEntrega[row.entrega_status] || "Sem confirmação",
+      row.leitura_status === "confirmada" ? dataEvento(row, "leitura") : "Sem confirmação",
       (row.criado_em ? new Date(row.criado_em).toLocaleString("pt-BR") + " · " : "") +
-        (rotulosEnvio[row.envio_status] || "Não enviado") + ". " + (row.detalhe || "") + aviso];
+        (rotulosEnvio[row.envio_status] || "Não enviado") + ". " + (row.detalhe || "") + aviso +
+        (retornos ? " " + retornos : "")];
   }
   function cells(row) {
     const datas = registros.filter(item => rowKey(item) === rowKey(row)).map(item => item.criado_em).filter(Boolean).sort();
@@ -224,7 +242,7 @@
     }
   }
   let carregando = false;
-  async function carregar(atual) {
+  async function carregar(atual, automatica = false) {
     carregando = true;
     try {
       const result = await request(url(atual.julgamento.id) + "/monitoramento");
@@ -232,12 +250,20 @@
       if (contexto !== atual) return;
       registros = result.registros; atual.colaboradores = result.colaboradores; pronto = true;
       $("ami-email-status").textContent = "Histórico de envios carregado.";
+      if (result.coleta_automatica) {
+        const coleta = result.coleta_automatica;
+        $("ami-email-status").textContent += coleta.erro
+          ? " " + coleta.erro
+          : coleta.ativa
+            ? " Confirmações consultadas automaticamente pelo servidor."
+            : " A coleta automática de confirmações está desativada.";
+      }
       render();
     } catch (error) {
       if (contexto !== atual) return;
       pronto = false; controles();
       $("ami-email-status").textContent = "Histórico indisponível. " + error.message;
-      Notify.error("E-mails do julgamento", error.message);
+      if (!automatica) Notify.error("E-mails do julgamento", error.message);
     } finally { carregando = false; }
   }
   function bloquear(valor) {
@@ -435,10 +461,10 @@
     exportar(rows.map(cells), headings, "monitoramento-colaboradores.csv");
   });
   function atualizarAutomaticamente() {
-    if (contexto && pronto && !ocupado && !carregando && modo === "view" &&
-        !document.hidden && !$("ami-email-draft-card").classList.contains("is-hidden")) carregar(contexto);
+    if (contexto && !ocupado && !carregando && modo === "view" &&
+        !document.hidden &&         !$("ami-email-draft-card").classList.contains("is-hidden")) carregar(contexto, true);
   }
-  setInterval(atualizarAutomaticamente, 30000);
+  setInterval(atualizarAutomaticamente, 5000);
   window.addEventListener("focus", atualizarAutomaticamente);
   document.addEventListener("visibilitychange", atualizarAutomaticamente);
 })();

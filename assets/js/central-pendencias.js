@@ -17,10 +17,12 @@
   const notified = row => row.notificacao?.status === 'aceito_smtp'
     || row.notificacao?.entrega_status === 'confirmada' || row.notificacao?.leitura_status === 'confirmada';
   const canCollect = row => Boolean(row?.id && ['aceito_smtp', 'indeterminado', 'enviando'].includes(row.notificacao?.status));
-  const receipt = value => ({ confirmada: 'Confirmada', falha: 'Falha', adiada: 'Adiada' })[value] || 'Sem confirmação';
+  const receipt = value => ({ confirmada: 'Entregue', falha: 'Devolvido',
+    adiada: 'Recusado temporariamente pelo destinatário' })[value] || 'Sem confirmação';
+  const reading = value => value === 'confirmada' ? 'Lido' : 'Sem confirmação';
   const notifyLabel = row => ({
-    enviando: 'Enviando', aceito_smtp: 'Aceito pelo SMTP', indeterminado: 'Resultado indeterminado',
-    erro: 'Falha no envio', sem_destinatario: 'Destinatário inválido',
+    enviando: 'Na fila', aceito_smtp: 'Enviado', indeterminado: 'Na fila',
+    erro: 'Não enviado', sem_destinatario: 'Destinatário inválido',
   })[row.notificacao?.status] || 'Não enviado';
   const fulfillment = row => row.cumprimento_status === 'cumprida' || row.status === 'atendida' ? 'Cumprida'
     : Object.keys(row.categorias_salvas || {}).length ? `Em atendimento (${row.categorias_atendidas ?? Object.keys(row.categorias_salvas).length}/${row.categorias.length} categorias salvas)`
@@ -228,7 +230,7 @@
         ['Status da notificação', notifyLabel(row)], ['Notificado por', notified(row) ? row.notificacao?.por_nome : ''],
         ['Notificado em', row.notificacao?.enviado_em ? date(row.notificacao.enviado_em) : ''],
         ['Destinatário', row.notificacao?.destinatario], ['Entrega', receipt(row.notificacao?.entrega_status)],
-        ['Abertura do e-mail', receipt(row.notificacao?.leitura_status)], ['Cumprimento da pendência', fulfillment(row)],
+        ['Abertura do e-mail', reading(row.notificacao?.leitura_status)], ['Cumprimento da pendência', fulfillment(row)],
         ['Atendimento concluído em', date(row.atendido_em)],
         ['Categorias preenchidas', Object.keys(row.categorias_salvas || {}).map(c => labels[c] || 'Categoria não identificada').join(', ') || 'Nenhuma'],
         ['Revisão', row.revisao], ['Última atualização', date(row.atualizado_em)],
@@ -324,7 +326,7 @@
       ['notificado_em', 'Notificado em', r => r.notificacao?.enviado_em ? date(r.notificacao.enviado_em) : ''],
       ['destinatario', 'Destinatário', r => r.notificacao?.destinatario || ''],
       ['entrega', 'Entrega do e-mail', r => receipt(r.notificacao?.entrega_status)],
-      ['leitura', 'Abertura do e-mail', r => receipt(r.notificacao?.leitura_status)],
+      ['leitura', 'Abertura do e-mail', r => reading(r.notificacao?.leitura_status)],
       ['parecer_pdf', 'Parecer técnico (PDF)', r => r.tem_parecer_pdf ? 'Ver parecer da análise' : 'Não gerado'],
       ['cumprimento', 'Cumprimento da pendência', fulfillment],
       ['cumprida_em', 'Cumprida em', r => r.atendido_em ? date(r.atendido_em) : ''],

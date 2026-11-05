@@ -1,9 +1,9 @@
 (function (global) {
   "use strict";
   const rotulos = {
-    aceito_smtp: "Aceito pelo servidor SMTP (não comprova entrega)",
-    erro: "Falha no envio", indeterminado: "Resultado do envio indeterminado",
-    enviando: "Envio em andamento", sem_destinatario: "Sem destinatário cadastrado",
+    aceito_smtp: "Enviado (não comprova entrega)",
+    erro: "Não enviado", indeterminado: "Na fila",
+    enviando: "Na fila", sem_destinatario: "Sem destinatário cadastrado",
   };
   async function solicitar(codigo, host, descricao) {
     host.hidden = false;

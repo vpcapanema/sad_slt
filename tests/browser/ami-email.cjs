@@ -1,10 +1,23 @@
 const {chromium} = require('playwright');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
 (async () => {
-  const browser = await chromium.launch({channel:'msedge',headless:true});
+  const browser = await chromium.launch({headless:true});
+  let authenticated=false;
   try {
     const page = await browser.newPage({viewport:{width:1280,height:900}});
-    if (process.env.SICARD_BROWSER_SESSION) await page.context().addCookies([{name:'slt_session',value:process.env.SICARD_BROWSER_SESSION,url:'http://127.0.0.1:8083'}]);
+    const credentials = fs.readFileSync('credencias_sigma_agentes.txt','utf8');
+    const credential = label => {
+      const match = credentials.match(new RegExp('^' + label + '\\s*[:=]\\s*(.+)$','mi'));
+      if (!match) throw new Error('Credencial local indisponível.');
+      return match[1].trim();
+    };
+    await page.goto('http://127.0.0.1:8083/public/login/?next=%2Frestrict%2Fanalise-multicriterio%2Fcentral-julgamentos');
+    await page.locator('[name=login]').fill(credential('Username'));
+    await page.locator('[name=senha]').fill(credential('Senha inicial'));
+    await page.getByRole('button',{name:'Entrar',exact:true}).click();
+    await page.waitForURL('**/restrict/**');
+    authenticated=true;
     const errors=[], env='39b5c763-d15a-460b-b58e-d65b57871c57';
     const round={
       id:env,status:'ativa',token:'token-email',hierarquizacao_id:'h1',hierarquizacao_nome:'Análise de teste',
@@ -17,6 +30,7 @@ const assert = require('node:assert/strict');
     page.on('pageerror',e=>errors.push(e.message));
     await page.route('**/api/**',async route=>{
       const req=route.request(), path=new URL(req.url()).pathname;
+      if(path.startsWith('/api/auth/')) return route.fallback();
       if(req.method()==='PATCH' && path.endsWith('/ambientes/'+env)){
         const data=req.postDataJSON();patches.push(data);
         Object.assign(round,data,{status:data.reabrir?'ativa':round.status});
@@ -31,7 +45,7 @@ const assert = require('node:assert/strict');
           criado_em:'2026-10-19T18:00:00Z',
           envio_status:payload.destinatario.startsWith('ana')?'aceito_smtp':'indeterminado',
           entrega_status:'sem_confirmacao',leitura_status:'sem_confirmacao',
-          dsn_solicitada:false,detalhe:payload.destinatario.startsWith('ana')?'Aceito pelo SMTP.':'Confira o recebimento antes de reenviar.'
+          dsn_solicitada:false,detalhe:payload.destinatario.startsWith('ana')?'Aceito pelo servidor de envio.':'Confira o recebimento antes de reenviar.'
         };
         rows=rows.filter(r=>r.id!==row.id).concat(row);
         return route.fulfill({json:row});
@@ -47,8 +61,6 @@ const assert = require('node:assert/strict');
         registros:rows,colaboradores:round.convites.map(c=>({...c,resposta_recebida:false}))
       }});
       if(path==='/api/ahp/comparacao-colaborativa/ambientes') return route.fulfill({json:[round]});
-      if(path==='/api/auth/me') return route.fulfill({json:{id:'u',nome:'Analista',tipo_usuario:'ANALISTA'}});
-      if(path==='/api/auth/session') return route.fulfill({json:{authenticated:true,user:{id:'u',tipo_usuario:'ANALISTA'}}});
       return route.fulfill({json:[]});
     });
     const currentUrl=round.url_publica;
@@ -137,7 +149,7 @@ const assert = require('node:assert/strict');
     assert.equal(sends[0].versao,round.atualizadoEm);
     assert.equal(sends[0].destinatario,'ana@example.com');
     assert.equal(sends[1].destinatario,'bia@example.com');
-    assert.match(await page.locator('#ami-email-deliveries').textContent(),/Resultado indeterminado/);
+    assert.match(await page.locator('#ami-email-deliveries').textContent(),/Na fila/);
     assert.match(await page.locator('#ami-email-deliveries').textContent(),/Aguardando resposta/);
     await page.locator('#pfsStatusOverlay .pfs-box.pfs-active .pfs-close').click();
     await page.locator('#ami-email-receipts').click();
@@ -146,14 +158,14 @@ const assert = require('node:assert/strict');
     assert.equal(sends.length,2);
     await page.locator('#pfsSuccessOk').click();
     await page.locator('#ami-email-deliveries tr', {hasText:'ana@example.com'}).locator('.ami-cell-link').first().click();
-    assert.match(await page.locator('#ami-email-history-body').textContent(),/Confirmada pelo aplicativo/);
+    assert.match(await page.locator('#ami-email-history-body').textContent(),/Data não informada/);
     await page.locator('#ami-email-history-close').click();
     await page.reload();
     await page.locator(`[data-select-id="${env}"]`).check();
     await page.locator('#ami-judgments-view-action').click();
     await page.waitForFunction(()=>!document.getElementById('ami-open-mail').disabled);
     await page.locator('#ami-email-deliveries tr', {hasText:'ana@example.com'}).locator('.ami-cell-link').first().click();
-    assert.match(await page.locator('#ami-email-history-body').textContent(),/Confirmada pelo aplicativo/);
+    assert.match(await page.locator('#ami-email-history-body').textContent(),/Data não informada/);
     await page.locator('#ami-email-history-close').click();
     assert.equal(sends.length,2);
     failCollection=true;
@@ -202,7 +214,7 @@ const assert = require('node:assert/strict');
       assert.ok(box.x>=controls.x-1 && box.x+box.width<=controls.x+controls.width+1,'Botão deve permanecer dentro da seção em tela estreita');
     }
     rows=[
-      {id:'aceito-ana',destinatario:'ana@example.com',envio_status:'aceito_smtp',entrega_status:'sem_confirmacao',leitura_status:'sem_confirmacao',criado_em:'2026-10-19T18:00:00Z',detalhe:'Aceito pelo SMTP.'},
+      {id:'aceito-ana',destinatario:'ana@example.com',envio_status:'aceito_smtp',entrega_status:'sem_confirmacao',leitura_status:'sem_confirmacao',criado_em:'2026-10-19T18:00:00Z',detalhe:'Aceito pelo servidor de envio.'},
       {id:'falha-bia',destinatario:'bia@example.com',envio_status:'falha',entrega_status:'sem_confirmacao',leitura_status:'sem_confirmacao',criado_em:'2026-10-19T18:00:03Z',detalhe:'O servidor de email recusou o destinatário. Confira o endereço informado.'}
     ];
     await page.reload();
@@ -237,7 +249,7 @@ const assert = require('node:assert/strict');
     await page.locator('#ami-email-history-pagination [aria-label="Próxima página"]').click();
     assert.equal(await page.locator('#ami-email-history-body input:checked').count(),3);
     await page.locator('#ami-email-history-filter-coluna').selectOption('0');
-    await page.locator('#ami-email-history-filter-valor').selectOption('Confirmada');
+    await page.locator('#ami-email-history-filter-valor').selectOption('Data não informada');
     assert.equal(await page.locator('#ami-email-history-body tr').count(),9);
     assert.match(await page.locator('#ami-email-history-pagination').innerText(),/Página 1 de 1/);
     await page.locator('#ami-email-history-close').click();
@@ -245,5 +257,8 @@ const assert = require('node:assert/strict');
     assert.equal(await page.locator('#ami-email-deliveries input:checked').count(),0);
     assert.deepEqual(errors,[]);
     console.log('PASS: mensagem exata, dois envios individuais, confirmação SICARD, trava, envio parcial, coleta, persistência na recarga e bloqueio em edição.');
+  } catch (error) {
+    console.error(authenticated ? error : 'Falha de autenticação; detalhes omitidos.');
+    process.exitCode=1;
   } finally { await browser.close(); }
-})().catch(error=>{console.error(error);process.exitCode=1;});
+})();

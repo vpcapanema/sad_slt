@@ -427,12 +427,41 @@ solicitação de leitura; ausência de confirmação não significa ausência de
 Não há pixel de rastreamento, nem uso da abertura do formulário como prova de
 leitura do email.
 
+No monitoramento, as colunas **E-mail convite** e **E-mail resposta** seguem o
+vocabulário usual dos provedores de envio: **Na fila** (envio em curso ou sem
+resultado final do transporte), **Enviado** (aceito pelo servidor SMTP do SICARD,
+sem comprovar entrega), **Recusado temporariamente pelo destinatário** (DSN 4.x.x),
+**Devolvido** (DSN 5.x.x), **Entregue** (DSN de entrega) e **Lido** (MDN). A coluna
+de resposta exibe **Aguardando resposta** enquanto o colaborador não responder. Um
+registro **Na fila** é resolvido pela coleta automática quando o retorno chegar;
+o diagnóstico técnico fica em **Detalhes**. No histórico,
+as colunas **Entrega** e **Leitura** mostram o horário informado no respectivo
+retorno: `Last-Attempt-Date` do DSN e `Date` do relatório MDN. O horário de consulta
+é registrado separadamente, nunca usado como se fosse o horário de entrega ou
+leitura. Retornos sem data válida mantêm a confirmação e exibem **Data não informada**.
+O diagnóstico técnico e a origem da data ficam em **Detalhes**. Uma nova coleta
+pode enriquecer registros antigos sem duplicar os eventos.
+
 Para coletar os retornos, habilite `SICARD_EMAIL_IMAP_ENABLED=true`, configure
 `SICARD_EMAIL_IMAP_HOST`, `SICARD_EMAIL_IMAP_PORT` (993) e
 `SICARD_EMAIL_IMAP_FOLDER` (INBOX). Usa a mesma conta e senha SMTP; o provedor
-precisa permitir IMAP. O botão **Atualizar confirmações** executa a coleta sob
-demanda, inclusive de retornos recebidos enquanto a página estava fechada.
-**Não existe coleta agendada em segundo plano.**
+precisa permitir IMAP. Com email e IMAP habilitados, o servidor inicia a coleta
+automática de convites e respostas, inclusive com todas as páginas fechadas.
+Cada ciclo consulta os envios sem confirmação final de entrega e leitura;
+devoluções definitivas deixam de ser consultadas. O intervalo entre ciclos é de
+30 segundos, configurável por `SICARD_EMAIL_CONFIRMATIONS_INTERVAL_SECONDS`
+(5 a 3600). A duração da consulta ao provedor soma-se a esse intervalo.
+`SICARD_EMAIL_CONFIRMATIONS_AUTO_ENABLED=false` desativa a rotina; o padrão é
+`true`. Alterações de configuração exigem reiniciar o servidor.
+
+Um bloqueio no PostgreSQL impede ciclos automáticos simultâneos entre processos
+e instâncias conectados ao mesmo banco. A rotina encerra junto com o servidor,
+registra falhas e tenta novamente no próximo ciclo, sem enviar nem reenviar
+mensagens. O monitoramento exibe falhas da coleta e consulta os registros a cada
+5 segundos enquanto visível, atualizando também o histórico aberto. O botão
+**Atualizar confirmações** permanece disponível para consulta sob demanda.
+Trata-se de consulta periódica, não de notificação instantânea: entrega e leitura
+só podem ser confirmadas quando o provedor disponibiliza o respectivo retorno.
 
 A consulta usa conexão TLS, seleção somente-leitura e `BODY.PEEK[]`: não marca
 mensagens como lidas, não move e não exclui. Busca apenas mensagens

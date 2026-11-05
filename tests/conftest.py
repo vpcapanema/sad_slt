@@ -84,6 +84,7 @@ def email_desabilitado(monkeypatch):
     # O .env local pode habilitar o SMTP; nenhum teste deve enviar email real.
     # Testes de email definem suas proprias variaveis depois desta fixture.
     monkeypatch.setenv("SICARD_EMAIL_ENABLED", "false")
+    monkeypatch.setenv("SICARD_EMAIL_CONFIRMATIONS_AUTO_ENABLED", "false")
 
 @pytest.fixture
 def execucoes_sinteticas(monkeypatch):

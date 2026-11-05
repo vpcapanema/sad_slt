@@ -235,6 +235,13 @@ def test_interpreta_mdn_apenas_displayed():
     assert recibos.interpretar(relatorio("disposition-notification"), MID, DEST) == ["leitura"]
     assert recibos.interpretar(relatorio("disposition-notification", disposicao="deleted"), MID, DEST) == []
     assert recibos.interpretar(relatorio("disposition-notification", disposicao="denied"), MID, DEST) == []
+    conteudo = relatorio("disposition-notification").replace(
+        b"MIME-Version: 1.0", b"Date: Thu, 05 Nov 2026 15:10:00 -0300\r\nMIME-Version: 1.0")
+    evento = recibos.interpretar_confirmacoes(conteudo, MID, DEST)[0]
+    assert evento.tipo == "leitura"
+    assert evento.ocorrido_em == "2026-11-05T18:10:00+00:00"
+    assert evento.origem_data == "Date do relatório MDN"
+    assert recibos.interpretar_confirmacoes(relatorio("disposition-notification"), MID, DEST)[0].ocorrido_em is None
 
 
 def test_dsn_com_envelope_original_sem_message_id_anexo():
@@ -243,6 +250,14 @@ def test_dsn_com_envelope_original_sem_message_id_anexo():
         ("Reporting-MTA: dns; mx.example.com\r\nOriginal-Envelope-Id: " + sha256(MID.encode()).hexdigest()).encode(),
     )
     assert recibos.interpretar(conteudo, MID, DEST) == ["confirmada"]
+    datado = conteudo.replace(b"Status: 2.0.0", b"Status: 2.0.0\r\nLast-Attempt-Date: Thu, 05 Nov 2026 15:00:00 -0300\r\nDiagnostic-Code: smtp; 250 delivered")
+    evento = recibos.interpretar_confirmacoes(datado, MID, DEST)[0]
+    assert evento.ocorrido_em == "2026-11-05T18:00:00+00:00"
+    assert evento.origem_data == "Last-Attempt-Date do relatório DSN"
+    assert "250 delivered" in evento.detalhe
+    for data in (b"invalida", b"Thu, 05 Nov 2026 15:00:00"):
+        invalido = datado.replace(b"Thu, 05 Nov 2026 15:00:00 -0300", data)
+        assert recibos.interpretar_confirmacoes(invalido, MID, DEST)[0].ocorrido_em is None
 
 
 @pytest.mark.parametrize("tipo", ["delivery-status", "disposition-notification"])
@@ -284,10 +299,55 @@ def test_coleta_so_relatorios_correlacionados_sem_marcar_lida(caixa):
     assert [c.args[0] for c in imap.uid.call_args_list] == ["search", "fetch", "fetch"]
     assert imap.uid.call_args_list[-1].args[-1] == "(BODY.PEEK[])"
     assert gravar.call_args.args[1] == "confirmada"
+    assert gravar.call_args.kwargs["ocorrido_em"] is None
+    assert gravar.call_args.kwargs["origem_data"] == "Last-Attempt-Date do relatório DSN"
     imap.store.assert_not_called()
     imap.expunge.assert_not_called()
     imap.close.assert_not_called()
     imap.logout.assert_called_once()
+
+
+def test_coleta_automatica_correlaciona_convite_e_resposta(caixa, registros, monkeypatch, smtp):
+    registros[0]["natureza"] = "convite"
+    registros.append({
+        **registros[0], "id": "resposta", "natureza": "resposta",
+        "mensagem_id": "<sicard.resposta@example.com>",
+    })
+    monkeypatch.setattr(repo, "listar_para_confirmacao", lambda: registros)
+    atual = {}
+
+    def uid(comando, *args):
+        if comando == "search":
+            atual["mensagem_id"] = args[5].strip('"')
+            return "OK", [b"42"]
+        conteudo = relatorio(mid=atual["mensagem_id"]).replace(
+            b"Status: 2.0.0",
+            b"Status: 2.0.0\r\nLast-Attempt-Date: Thu, 05 Nov 2026 15:00:00 -0300",
+        )
+        if args[1] == "(RFC822.SIZE)":
+            return "OK", [f"1 (UID 42 RFC822.SIZE {len(conteudo)})".encode()]
+        if args[1] == "(BODY.PEEK[])":
+            return "OK", [(b"1 (UID 42 BODY[])", conteudo), b")"]
+        raise AssertionError("Operação IMAP não autorizada")
+
+    caixa[0].uid.side_effect = uid
+    assert recibos.coletar_automaticamente(lambda: False) == 2
+    assert caixa[2].call_count == 2
+    assert {c.args[0] for c in caixa[2].call_args_list} == {registros[0]["id"], "resposta"}
+    assert all(c.kwargs["ocorrido_em"] == "2026-11-05T18:00:00+00:00"
+               for c in caixa[2].call_args_list)
+    caixa[0].store.assert_not_called()
+    caixa[0].expunge.assert_not_called()
+    smtp.assert_not_called()
+
+
+def test_coleta_automatica_interrompe_entre_registros(caixa, registros, monkeypatch, smtp):
+    registros.append({**registros[0], "id": "segundo"})
+    monkeypatch.setattr(repo, "listar_para_confirmacao", lambda: registros)
+    assert recibos.coletar_automaticamente(lambda: caixa[2].call_count > 0) == 1
+    assert caixa[2].call_count == 1
+    caixa[0].logout.assert_called_once()
+    smtp.assert_not_called()
 
 
 def test_mesma_coleta_imap_correlaciona_notificacao_de_pendencia(caixa, monkeypatch, smtp):
@@ -380,6 +440,16 @@ def test_evento_repetido_nao_duplica_e_atraso_nao_regride_entrega(monkeypatch):
     params = conn.execute.call_args.args[1]
     assert params[0] == "confirmada"
     assert len(params[2].obj) == 2
+    repo.registrar_evento("id", "confirmada", "hash", ocorrido_em="2026-11-05T18:00:00+00:00",
+                         detalhe="smtp; 250 delivered", origem_data="Last-Attempt-Date do relatório DSN")
+    eventos = conn.execute.call_args.args[1][2].obj
+    assert len(eventos) == 1
+    assert eventos[0]["ocorrido_em"] == "2026-11-05T18:00:00+00:00"
+    assert eventos[0]["detalhe"] == "smtp; 250 delivered"
+    conn.reset_mock()
+    repo.registrar_evento("id", "confirmada", "hash", ocorrido_em="2026-11-05T18:00:00+00:00",
+                         detalhe="smtp; 250 delivered", origem_data="Last-Attempt-Date do relatório DSN")
+    assert conn.execute.call_count == 1
 
 
 @pytest.mark.parametrize("natureza", ["convite", "resposta"])

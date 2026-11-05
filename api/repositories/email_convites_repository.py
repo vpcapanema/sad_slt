@@ -2,10 +2,13 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from collections.abc import Generator
+from contextlib import contextmanager
 from typing import Any
 from uuid import uuid4
 
 from psycopg.types.json import Jsonb
+from psycopg.pq import TransactionStatus
 
 from api.db.connection import get_connection
 from api.exceptions import DemandaValidationError
@@ -18,6 +21,42 @@ def listar(ambiente_id: str) -> list[dict[str, Any]]:
             (ambiente_id,),
         ).fetchall()
     return [dict(row) for row in rows]
+
+
+def listar_para_confirmacao() -> list[dict[str, Any]]:
+    with get_connection() as conn:
+        rows = conn.execute(
+            """SELECT * FROM ahp.comparacao_colaborativa_email
+               WHERE envio_status IN ('aceito_smtp', 'indeterminado', 'enviando')
+                 AND entrega_status <> 'falha'
+                 AND NOT (entrega_status = 'confirmada' AND leitura_status = 'confirmada')
+               ORDER BY criado_em, id"""
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
+@contextmanager
+def bloquear_coleta() -> Generator[bool, None, None]:
+    chave = "ahp-email:coleta-confirmacoes"
+    with get_connection() as conn:
+        row = conn.execute(
+            "SELECT pg_try_advisory_lock(hashtextextended(%s,0)) AS adquirido", (chave,),
+        ).fetchone()
+        if row is None:
+            raise RuntimeError("O banco não confirmou o bloqueio da coleta de emails.")
+        adquirido = bool(row["adquirido"])
+        try:
+            conn.commit()
+            yield adquirido
+        finally:
+            if adquirido:
+                try:
+                    if conn.info.transaction_status == TransactionStatus.INERROR:
+                        conn.rollback()
+                    conn.execute("SELECT pg_advisory_unlock(hashtextextended(%s,0))", (chave,))
+                except BaseException:
+                    conn.close()
+                    raise
 
 
 def reservar(ambiente_id: str, destinatario: str, conteudo_hash: str, mensagem_id: str,
@@ -117,7 +156,8 @@ def finalizar(ident: str, status: str, detalhe: str, *, dsn: bool = False,
     return dict(row)
 
 
-def registrar_evento(ident: str, tipo: str, fonte: str) -> None:
+def registrar_evento(ident: str, tipo: str, fonte: str, *, ocorrido_em: str | None = None,
+                    detalhe: str = "", origem_data: str = "") -> None:
     with get_connection() as conn:
         row = conn.execute(
             "SELECT * FROM ahp.comparacao_colaborativa_email WHERE id=%s FOR UPDATE", (ident,),
@@ -125,9 +165,17 @@ def registrar_evento(ident: str, tipo: str, fonte: str) -> None:
         if not row:
             raise DemandaValidationError("O histórico do envio não existe mais.", field="ambiente_id")
         eventos = list(row["eventos"])
-        if any(e["fonte"] == fonte and e["tipo"] == tipo for e in eventos):
-            return
-        eventos.append({"tipo": tipo, "fonte": fonte, "coletado_em": datetime.now(timezone.utc).isoformat()})
+        existente = next((e for e in eventos if e["fonte"] == fonte and e["tipo"] == tipo), None)
+        metadados = {k: v for k, v in {
+            "ocorrido_em": ocorrido_em, "detalhe": detalhe, "origem_data": origem_data,
+        }.items() if v}
+        if existente is not None:
+            if all(existente.get(k) == v for k, v in metadados.items()):
+                return
+            existente.update(metadados)
+        else:
+            eventos.append({"tipo": tipo, "fonte": fonte, "coletado_em": datetime.now(timezone.utc).isoformat(),
+                            **metadados})
         entrega = row["entrega_status"]
         prioridade = {"sem_confirmacao": 0, "adiada": 1, "confirmada": 2, "falha": 3}
         if tipo in prioridade and prioridade[tipo] > prioridade[entrega]:

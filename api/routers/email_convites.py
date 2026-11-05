@@ -45,6 +45,8 @@ def enviar(ambiente_id: UUID, dados: ConviteEmailEnvioSchema,
 
 @router.get("/{ambiente_id}/emails/monitoramento")
 def monitoramento(ambiente_id: UUID) -> dict:
+    from api.services import email_confirmacoes_automaticas
+
     try:
         ambiente = ambientes.get_ambiente_by_id(str(ambiente_id))
         if not ambiente:
@@ -53,6 +55,7 @@ def monitoramento(ambiente_id: UUID) -> dict:
                        if r.get("status") == "enviada"}
         return {
             "registros": repo.listar(str(ambiente_id)),
+            "coleta_automatica": email_confirmacoes_automaticas.estado(),
             "colaboradores": [
                 {"nome": c.get("nome") or "", "email": c["email"],
                  "resposta_recebida": str(c["email"]).strip().lower() in respondidos}

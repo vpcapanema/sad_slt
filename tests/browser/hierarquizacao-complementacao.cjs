@@ -214,9 +214,9 @@ const hierarquia = () => ({codigo: 'H1', nome: 'Rodada teste', status: 'em_julga
     await page.locator('#hier-complementacao-agora').click();
     await page.waitForFunction(() => document.querySelector('#hier-complementacao-resultado').textContent.includes('parcialmente realizado'));
     const retorno = await page.locator('#hier-complementacao-resultado').innerText();
-    assert.match(retorno, /Aceito pelo servidor SMTP \(não comprova entrega\)/);
-    assert.match(retorno, /D2 — Falha no envio: Servidor recusou/);
-    assert.match(retorno, /indeterminado/);
+    assert.match(retorno, /Enviado \(não comprova entrega\)/);
+    assert.match(retorno, /D2 — Não enviado: Servidor recusou/);
+    assert.match(retorno, /Na fila/);
     assert.match(retorno, /Sem destinatário cadastrado/);
     assert.equal(chamadas.filter(c => c.p.endsWith('/solicitar')).length, pedidosAntes + 1);
 

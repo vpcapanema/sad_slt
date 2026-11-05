@@ -285,7 +285,7 @@ const errors = [];
     await page.waitForFunction(() => document.getElementById('pendencias-feedback').textContent.includes('aceito_smtp'));
     await page.locator('#pfsSuccessClose').click();
     assert.equal(sends, 2);
-    assert((await page.locator('#pendencias-atributos tbody tr').filter({ hasText: 'D35' }).innerText()).includes('Aceito pelo SMTP'));
+    assert((await page.locator('#pendencias-atributos tbody tr').filter({ hasText: 'D35' }).innerText()).includes('Enviado'));
     assert.deepEqual(errors, []);
     console.log('Central: reference styles, filters, selection, CSV, pagination, responsive layout, editing, history, automatic pending candidates, creation without email and explicit notification verified with synthetic API responses. No real records or emails changed.');
   } finally { await browser.close(); }
