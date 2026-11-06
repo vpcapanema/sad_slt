@@ -21,12 +21,15 @@
       const shell = table.parentElement;
       const previousHost = shell.closest('.ami-report-table');
       if (previousHost) { previousHost.before(shell); previousHost.remove(); }
+      const label = shell.previousElementSibling;
+      const hasLabel = Boolean(label && label.matches('.sicard-table-label, .ami-table-label'));
       shell.before(host); host.append(shell);
       const filter = document.createElement('div');
       filter.className = 'admin-filter-bar'; filter.setAttribute('role', 'search');
       filter.innerHTML = '<span class="admin-filter-label">Filtro:</span><select aria-label="Coluna do filtro" id="' + prefix + '-coluna"><option value="">— Coluna —</option></select><select aria-label="Valor do filtro" id="' + prefix + '-valor"></select><button type="button" class="admin-icon-btn admin-filter-inv" id="' + prefix + '-inverter" aria-label="Inverter seleção" aria-pressed="false"><i class="fa-solid fa-right-left"></i></button><button type="button" class="admin-icon-btn" id="' + prefix + '-limpar" aria-label="Limpar filtros"><i class="fa-solid fa-filter-circle-xmark"></i></button>';
       const surface = document.createElement('div'); surface.className = 'ami-filtered-table';
       host.prepend(surface); surface.append(filter, shell);
+      if (hasLabel) surface.before(label);
       const controls = document.createElement('div'); controls.className = 'admin-actions standard-table-actions';
       controls.setAttribute('role','group'); controls.setAttribute('aria-label','Controles da tabela');
       controls.innerHTML = '<button type="button" class="admin-icon-btn save" title="Exportar selecionados" aria-label="Exportar selecionados"><i class="fas fa-file-csv" aria-hidden="true"></i></button><button type="button" class="admin-icon-btn cancel" title="Limpar seleção" aria-label="Limpar seleção"><i class="fas fa-xmark" aria-hidden="true"></i></button>';

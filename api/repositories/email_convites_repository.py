@@ -3,15 +3,32 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from collections.abc import Generator
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from typing import Any
 from uuid import uuid4
+import re
 
 from psycopg.types.json import Jsonb
 from psycopg.pq import TransactionStatus
 
 from api.db.connection import get_connection
 from api.exceptions import DemandaValidationError
+from api.services.email_status_catalogo import texto_explicacao
+
+_STATUS_DSN = re.compile(r"Status: (\d\.\d{1,3}\.\d{1,3})")
+
+
+def _explicar_eventos(eventos: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
+    """Acrescenta a explicação do catálogo a eventos antigos, gravados antes do catálogo existir."""
+    eventos = eventos or []
+    for evento in eventos:
+        detalhe = str(evento.get("detalhe") or "")
+        casamento = _STATUS_DSN.search(detalhe)
+        if casamento and "Relatório original:" not in detalhe:
+            explicacao = texto_explicacao(casamento.group(1), detalhe)
+            if explicacao:
+                evento["detalhe"] = f"{explicacao} Relatório original: {detalhe}"
+    return eventos
 
 
 def listar(ambiente_id: str) -> list[dict[str, Any]]:
@@ -20,7 +37,10 @@ def listar(ambiente_id: str) -> list[dict[str, Any]]:
             "SELECT * FROM ahp.comparacao_colaborativa_email WHERE ambiente_id=%s ORDER BY criado_em",
             (ambiente_id,),
         ).fetchall()
-    return [dict(row) for row in rows]
+    resultado = [dict(row) for row in rows]
+    for registro in resultado:
+        _explicar_eventos(registro.get("eventos"))
+    return resultado
 
 
 def listar_para_confirmacao() -> list[dict[str, Any]]:
@@ -38,15 +58,17 @@ def listar_para_confirmacao() -> list[dict[str, Any]]:
 @contextmanager
 def bloquear_coleta() -> Generator[bool, None, None]:
     chave = "ahp-email:coleta-confirmacoes"
-    with get_connection() as conn:
+    pilha = ExitStack()
+    try:
+        conn = pilha.enter_context(get_connection())
         row = conn.execute(
             "SELECT pg_try_advisory_lock(hashtextextended(%s,0)) AS adquirido", (chave,),
         ).fetchone()
         if row is None:
             raise RuntimeError("O banco não confirmou o bloqueio da coleta de emails.")
         adquirido = bool(row["adquirido"])
+        conn.commit()
         try:
-            conn.commit()
             yield adquirido
         finally:
             if adquirido:
@@ -57,6 +79,8 @@ def bloquear_coleta() -> Generator[bool, None, None]:
                 except BaseException:
                     conn.close()
                     raise
+    finally:
+        pilha.close()
 
 
 def reservar(ambiente_id: str, destinatario: str, conteudo_hash: str, mensagem_id: str,
@@ -108,10 +132,12 @@ def reservar(ambiente_id: str, destinatario: str, conteudo_hash: str, mensagem_i
         return dict(row), False
 
 
-def reservar_monitorado(ambiente_id: str, destinatario: str, conteudo_hash: str,
-                       mensagem_id: str, usuario_id: str, versao: datetime, *,
-                       natureza: str = "convite", rejeitar_enviado: bool = True,
-                       validar_ativo: bool = True) -> tuple[dict[str, Any], bool]:
+def reservar_monitorado(
+    ambiente_id: str, destinatario: str, conteudo_hash: str,
+    mensagem_id: str, usuario_id: str, versao: datetime, *,
+    natureza: str = "convite", rejeitar_enviado: bool = True,
+    validar_ativo: bool = True,
+) -> tuple[dict[str, Any], bool]:
     """Serializa envios manuais e automáticos da mesma comunicação."""
     with get_connection() as conn:
         conn.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))",
@@ -159,7 +185,7 @@ def finalizar(ident: str, status: str, detalhe: str, *, dsn: bool = False,
 
 
 def registrar_evento(ident: str, tipo: str, fonte: str, *, ocorrido_em: str | None = None,
-                    detalhe: str = "", origem_data: str = "") -> None:
+                     detalhe: str = "", origem_data: str = "") -> None:
     with get_connection() as conn:
         row = conn.execute(
             "SELECT * FROM ahp.comparacao_colaborativa_email WHERE id=%s FOR UPDATE", (ident,),

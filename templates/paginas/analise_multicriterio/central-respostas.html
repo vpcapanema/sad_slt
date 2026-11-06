@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="/assets/css/ahp-collab-analytics.css">
   <link rel="stylesheet" href="/assets/css/ahp-collab-explorer.css">
   <link rel="stylesheet" href="/assets/css/ahp-collab-rounds.css">
-  <link rel="stylesheet" href="/assets/css/analise-multicriterio.css?v=20261029-escala-saaty2">
+  <link rel="stylesheet" href="/assets/css/analise-multicriterio.css?v=20261106-regua-miniatura-7">
   <link rel="stylesheet" href="/assets/css/analise-multicriterio-tabela.css?v=20260831-larguras-colunas">
   <link rel="stylesheet" href="/assets/css/central-respostas-layout.css?v=20261105-table-labels">
   <link rel="stylesheet" href="/assets/css/analise-multicriterio-modal.css?v=20260819-modal5">
@@ -25,7 +25,7 @@
   <link rel="stylesheet" href="/assets/css/paginas/ami-espaco-secoes.css?v=20261105-monitoramento">
   {% endif %}
   {% if modo_pagina == 'julgamentos' %}<link rel="stylesheet" href="/assets/css/paginas/sicard-standard-pages.css?v=20261027-1">{% endif %}
-  {% if modo_pagina == 'julgamentos' %}<link rel="stylesheet" href="/assets/css/paginas/central-respostas-padrao.css?v=20261106-grafico-pares">{% endif %}
+  {% if modo_pagina == 'julgamentos' %}<link rel="stylesheet" href="/assets/css/paginas/central-respostas-padrao.css?v=20261106-regua-miniatura-7">{% endif %}
 {% endblock %}
 {% block conteudo %}
 {% set indicacao_processos = modo_pagina in ['espaco', 'julgamentos'] %}
@@ -98,6 +98,14 @@
       </div>
     </div>
   </div>
+  <div class="json-modal-backdrop ami-data-modal is-hidden" id="ami-email-detail-modal" role="dialog" aria-modal="true" aria-labelledby="ami-email-detail-title">
+    <div class="json-modal ami-data-modal__card">
+      <header class="json-modal-head ami-data-modal__head"><h2 id="ami-email-detail-title">Detalhes do envio</h2><button type="button" class="json-modal-close" id="ami-email-detail-close" aria-label="Fechar"><i class="fas fa-xmark" aria-hidden="true"></i></button></header>
+      <div class="json-modal-body ami-data-modal__content">
+        <p id="ami-email-detail-texto" class="ami-detail-message"></p>
+      </div>
+    </div>
+  </div>
   <section class="card-ami-pairwise secao-ami-pairwise card ahp-step-section is-hidden" id="ami-pairwise-panel">
     <div class="ahp-section-label"><i class="fas fa-table-cells" aria-hidden="true"></i><span>Simulação de comparação pareada</span></div>
     <div class="ahp-section-body">
@@ -120,7 +128,7 @@
 {% block scripts_pagina %}
   {% if modo_pagina == 'julgamentos' %}<script src="/assets/js/sicard-standard-layout.js?v=20261027-1"></script>{% endif %}
   <script src="/assets/js/table-standard.js?v=20261027-cabecalho-agrupado"></script>
-  <script src="/assets/js/analysis-table-controls.js?v=20261027-formulario-unificado"></script>
+  <script src="/assets/js/analysis-table-controls.js?v=20261106-rotulo-unico"></script>
   <script src="/assets/js/admin-auth.js"></script>
   <script src="/assets/vendor/xlsx/xlsx-0.18.5.min.js"></script>
   <script src="/assets/js/paginas/analise-multicriterio-tabela.js?v=20261105-table-labels"></script>
@@ -129,5 +137,5 @@
   <script src="/assets/js/matriz-criterios-arquivo.js?v=20261009"></script>
   <script src="/assets/js/matrizes-criterios.js?v=20261105-table-labels"></script>
   <script src="/assets/js/saaty-selector-color.js?v=20261103-1"></script>
-  <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20261106-grafico-pares"></script>
+  <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20261106-regua-miniatura"></script>
 {% endblock %}

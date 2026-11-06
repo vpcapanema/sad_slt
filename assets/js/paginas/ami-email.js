@@ -11,6 +11,8 @@
   const historyModal = $("ami-email-history-modal"), historyColumn = $("ami-email-history-filter-coluna"),
     historyValue = $("ami-email-history-filter-valor"), historySelected = new Set();
   let historyContext = null, historyPage = 1, historyFiltered = [], historyTrigger = null;
+  const detailModal = $("ami-email-detail-modal");
+  let detalheAberto = false, detalheTrigger = null;
   let monitorRows = [];
   const selected = new Set();
   let filteredRows = [], visibleCount = 0;
@@ -104,7 +106,16 @@
         renderHistorico();
       };
       cell.append(checkbox);
-      detalhes(row).forEach(value => { tr.insertCell().textContent = value; });
+      const valores = detalhes(row);
+      valores.slice(0, 2).forEach(value => { tr.insertCell().textContent = value; });
+      const detalheCell = tr.insertCell();
+      detalheCell.className = "ami-detail-cell"; detalheCell.textContent = valores[2];
+      detalheCell.tabIndex = 0; detalheCell.setAttribute("role", "button"); detalheCell.setAttribute("aria-haspopup", "dialog");
+      detalheCell.title = "Ver detalhes completos do envio";
+      detalheCell.onclick = () => abrirDetalhe(row, detalheCell);
+      detalheCell.onkeydown = event => {
+        if (event.key === "Enter" || event.key === " ") { event.preventDefault(); abrirDetalhe(row, detalheCell); }
+      };
     });
     if (!result.rows.length) {
       const cell = body.insertRow().insertCell(); cell.colSpan = 4; cell.className = "ami-empty";
@@ -130,6 +141,19 @@
     if (historyTrigger?.isConnected) historyTrigger.focus();
     historyTrigger = null;
   }
+  function abrirDetalhe(row, trigger) {
+    $("ami-email-detail-title").textContent = historyContext.tipo === "convite" ? "Detalhes do e-mail convite" : "Detalhes do e-mail resposta";
+    $("ami-email-detail-texto").textContent = detalhes(row)[2];
+    detalheTrigger = trigger; detalheAberto = true;
+    detailModal.classList.remove("is-hidden"); $("ami-email-detail-close").focus();
+  }
+  function fecharDetalhe() {
+    detailModal.classList.add("is-hidden"); detalheAberto = false;
+    if (detalheTrigger?.isConnected) detalheTrigger.focus();
+    detalheTrigger = null;
+  }
+  $("ami-email-detail-close").onclick = fecharDetalhe;
+  detailModal.onclick = event => { if (event.target === detailModal) fecharDetalhe(); };
   historyColumn.onchange = () => { historyValue.value = ""; historyPage = 1; renderHistorico(); };
   historyValue.onchange = () => { historyPage = 1; renderHistorico(); };
   SLTTable.bindFilter("ami-email-history-filter", () => { historyPage = 1; renderHistorico(); },
@@ -137,11 +161,22 @@
   $("ami-email-history-close").onclick = fecharHistorico;
   historyModal.onclick = event => { if (event.target === historyModal) fecharHistorico(); };
   document.addEventListener("keydown", event => {
-    if (!historyContext) return;
+    if (!historyContext || detalheAberto) return;
     if (event.key === "Escape") { event.preventDefault(); fecharHistorico(); }
     if (event.key === "Tab") {
       const items = Array.from(historyModal.querySelectorAll('button:not(:disabled), select:not(:disabled), input:not(:disabled)'))
         .filter(node => node.getClientRects().length);
+      const first = items[0], last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    }
+  });
+  // Registrado depois do listener do histórico: com o detalhe aberto, o Escape fecha só o detalhe.
+  document.addEventListener("keydown", event => {
+    if (!detalheAberto) return;
+    if (event.key === "Escape") { event.preventDefault(); fecharDetalhe(); }
+    if (event.key === "Tab") {
+      const items = Array.from(detailModal.querySelectorAll("button:not(:disabled)")).filter(node => node.getClientRects().length);
       const first = items[0], last = items[items.length - 1];
       if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
@@ -340,9 +375,9 @@
         processo.concluirTarefa(destinatario);
         if (bloqueioDoServidor(row)) { interrompido = lista.length - indice - 1; motivo = row.detalhe; break; }
       }
-      const resumo = aceitos + " mensagem(ns) aceita(s) pelo servidor; " + problemas + " sem envio confirmado." +
-        (motivo ? " Envio interrompido: " + motivo + (interrompido ? " " + interrompido + " colaborador(es) não foram tentados e permanecem pendentes." : "") : "") +
-        " Consulte os detalhes por destinatário.";
+      const linhas = [aceitos + " mensagem(ns) aceita(s) pelo servidor.", problemas + " sem envio confirmado."];
+      if (motivo) linhas.push("Envio interrompido: " + motivo + (interrompido ? " " + interrompido + " colaborador(es) não foram tentados e permanecem pendentes." : ""));
+      const resumo = linhas.join("\n") + "\n\nConsulte os detalhes por destinatário.";
       $("ami-email-status").textContent = resumo;
       if (!aceitos && problemas) processo.erro({message: resumo});
       else processo.sucesso({_status: problemas || interrompido ? "partial" : "success", title: "Envio de convites", message: resumo});

@@ -33,6 +33,23 @@
     const q = (sel, ctx) => (ctx || document).querySelector(sel);
     const esc = (s) => { if (s == null || s === '') return ''; const d = document.createElement('div'); d.textContent = String(s); return d.innerHTML; };
     const pfsText = (attr, text, ctx) => { const el = q(`[data-pfs="${attr}"]`, ctx); if (el) el.textContent = text == null ? '' : String(text); };
+    /* Quebra simples (\n) vira linha; linha em branco (\n\n) vira parágrafo separado. */
+    const pfsParagrafos = (attr, text, ctx) => {
+        const el = q(`[data-pfs="${attr}"]`, ctx);
+        if (!el) return;
+        el.replaceChildren();
+        String(text ?? '').split(/\n\s*\n/).forEach(bloco => {
+            const paragrafo = document.createElement('span');
+            paragrafo.className = 'pfs-result-paragraph';
+            bloco.split('\n').filter(linha => linha.trim()).forEach(linha => {
+                const span = document.createElement('span');
+                span.className = 'pfs-result-line';
+                span.textContent = linha;
+                paragrafo.appendChild(span);
+            });
+            if (paragrafo.childNodes.length) el.appendChild(paragrafo);
+        });
+    };
 
     const _STATUS_HTTP = {
         400: 'requisição inválida', 401: 'sessão ausente ou expirada', 403: 'acesso negado ao perfil atual',
@@ -952,7 +969,7 @@
             this._bind();
             this._setHeader('success', this.successBox, data, 'Ação Executada');
             pfsText('success-title', data.title || 'Operação Concluída!', this.successBox);
-            pfsText('success-message', data.message || data.msg || 'Seus dados foram processados com sucesso.', this.successBox);
+            pfsParagrafos('success-message', data.message || data.msg || 'Seus dados foram processados com sucesso.', this.successBox);
             this._fillSummary('pfsSuccessSummary', this._buildSummary(data));
             this._renderSubs('pfsSuccessSubprocesses', data.subprocesses || data.sub_processes || []);
             this._show(this.successBox, data);
@@ -964,7 +981,7 @@
             this._bind();
             this._setHeader('partial', this.partialBox, data, 'Ação Executada');
             pfsText('partial-title', data.title || 'Operação concluída parcialmente', this.partialBox);
-            pfsText('partial-message', data.message || data.msg || 'Existem ressalvas.', this.partialBox);
+            pfsParagrafos('partial-message', data.message || data.msg || 'Existem ressalvas.', this.partialBox);
             this._fillSummary('pfsPartialSummary', this._buildSummary(data));
             this._renderSubs('pfsPartialSubprocesses', data.subprocesses || data.sub_processes || []);
             this._show(this.partialBox, data);
@@ -981,7 +998,7 @@
 
             pfsText('error-title', n.title, this.errorBox);
             const technical = n.technical || [];
-            pfsText('error-message', n.message, this.errorBox);
+            pfsParagrafos('error-message', n.message, this.errorBox);
             pfsText('error-technical', technical.join('\n'), this.errorBox);
             q('[data-pfs="error-technical"]', this.errorBox).hidden = !technical.length;
 

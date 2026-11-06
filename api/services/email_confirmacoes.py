@@ -17,6 +17,7 @@ from email.utils import parsedate_to_datetime
 
 from api.repositories import email_convites_repository as repo
 from api.services.email_service import FalhaEmail, _config
+from api.services.email_status_catalogo import texto_explicacao
 
 logger = logging.getLogger(__name__)
 MAX_RELATORIO = 262144
@@ -97,10 +98,12 @@ def interpretar_confirmacoes(conteudo: bytes, mensagem_id: str, destinatario: st
                           "falha" if acao == "failed" and status.startswith("5.") else
                           "adiada" if acao == "delayed" and status.startswith("4.") else None)
                 if evento:
+                    bruto = "; ".join(p for p in (f"Action: {acao}", f"Status: {status}",
+                                                  str(bloco.get("Diagnostic-Code") or "")) if p)
+                    explicacao = texto_explicacao(status, bruto) if evento != "confirmada" else ""
                     eventos.append(ConfirmacaoEmail(
                         evento, _data_confirmacao(str(bloco.get("Last-Attempt-Date") or "")),
-                        "; ".join(p for p in (f"Action: {acao}", f"Status: {status}",
-                                              str(bloco.get("Diagnostic-Code") or "")) if p),
+                        f"{explicacao} Relatório original: {bruto}" if explicacao else bruto,
                         "Last-Attempt-Date do relatório DSN"))
     return list(dict.fromkeys(eventos))
 

@@ -723,6 +723,24 @@
 .ami-page.ami-espaco-page #ami-email-history-table tbody td:last-child:not([colspan]) {
   text-align: left;
 }
+.ami-page.ami-espaco-page #ami-email-history-table tbody td.ami-detail-cell {
+  cursor: pointer;
+}
+.ami-page.ami-espaco-page #ami-email-detail-texto.ami-detail-message {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+.ami-page.ami-espaco-page #ami-email-history-table tbody td.ami-detail-cell:hover {
+  color: var(--pli-blue);
+  text-decoration: underline;
+  text-underline-offset: .2rem;
+}
+.ami-page.ami-espaco-page #ami-email-history-table tbody td.ami-detail-cell:focus-visible {
+  outline: 2px solid var(--pli-blue);
+  outline-offset: -2px;
+}
 .ami-page.ami-espaco-page #ami-monitor-refresh {
   --ami-botao-cor: #0f766e;
   --ami-botao-borda: #0a4f49;

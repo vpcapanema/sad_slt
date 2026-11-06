@@ -113,26 +113,12 @@
    criterio 2 a direita (vermelho), 1 no centro. */
 .sicard-standard-page.ami-page #ami-analysis-workspace .ami-scale__fill.is-a { left: auto; right: 50%; border-radius: 3px 0 0 3px; }
 .sicard-standard-page.ami-page #ami-analysis-workspace .ami-scale__fill.is-b { right: auto; left: 50%; border-radius: 0 3px 3px 0; }
-.sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__ends {
-  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: .5rem; padding: 0 2.4rem 0 1.8rem;
-  font-size: .62rem; line-height: 1.3; color: var(--pli-deep);
-}
-.sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__ends > span { display: grid; min-width: 0; overflow-wrap: anywhere; }
-.sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__ends > span > small { font-size: .56rem; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; }
-.sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__ends > .is-a { text-align: left; }
-.sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__ends > .is-a > small { color: var(--pli-blue, #116593); }
-.sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__ends > .is-b { text-align: right; }
-.sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__ends > .is-b > small { color: #7a1620; }
 .sicard-standard-page.ami-page #ami-analysis-workspace .ami-fio-elo { margin: 0 0 8px; }
 .sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__bar:focus-visible { outline: 2px solid #123b56; outline-offset: 3px; }
 /* Full pair names above the bars, so text and quantitative scale do not compete. */
 .sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars { gap: 12px; }
-/* Pares em duas colunas (a primeira metade a esquerda), com uma so coluna quando o conteiner e estreito. */
-.sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 1.5rem; }
-.sicard-standard-page.ami-page #ami-analysis-workspace .ami-analysis-split > .ami-analysis-chart { container-type: inline-size; }
-@container (max-width: 20rem) {
-  .sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__grid { grid-template-columns: minmax(0, 1fr); }
-}
+/* Pares em duas colunas no canvas do grafico (a primeira metade a esquerda); a regua e reduzida, nao o canvas. */
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 1rem; }
 .sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__grid > .ami-pair-bars__row { margin-bottom: 12px; }
 .sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__row {
   grid-template-columns: minmax(0,1fr); gap: 8px;
@@ -159,4 +145,5 @@
   .sicard-standard-page.ami-page #ami-analysis-workspace .ami-kpis > div { min-width: 0; padding: .5rem; }
   .sicard-standard-page.ami-page #ami-analysis-workspace .ami-range-chart__row { grid-template-columns: minmax(0,1fr) minmax(0,1fr) 3rem; }
   .sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__row { grid-template-columns: minmax(0,1fr); }
+  .sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__grid { grid-template-columns: minmax(0,1fr); }
 }

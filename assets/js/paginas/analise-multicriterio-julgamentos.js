@@ -268,6 +268,17 @@
   }
   // `recorte` sao os pares da pagina corrente da tabela ao lado: o grafico
   // acompanha a paginacao, o filtro e a ordenacao da tabela.
+  // Degraus da escala de Saaty na ordem da regua do formulario: 9 a esquerda (CT 1), 1/9 a direita (CT 2).
+  var PASSOS_REGUA_SAATY = [9, 7, 5, 3, 1, 1 / 3, 1 / 5, 1 / 7, 1 / 9];
+  function passoRotulo(passo) { return passo >= 1 ? String(passo) : "1/" + Math.round(1 / passo); }
+  function indicePassoRegua(valor) {
+    var melhor = 4, diferenca = Infinity;
+    PASSOS_REGUA_SAATY.forEach(function (passo, indice) {
+      var distancia = Math.abs(Math.log(passo) - Math.log(Number(valor) || 1));
+      if (distancia < diferenca) { melhor = indice; diferenca = distancia; }
+    });
+    return melhor;
+  }
   function analysisPairBars(todosPares, destaque, recorte) {
     var cores = judgeColors(todosPares), pairs = recorte || paresDoJulgador(todosPares, destaque);
     if (!paresDoJulgador(todosPares, destaque).length) return '<p class="ami-empty">Sem respostas enviadas para o gr\u00e1fico.</p>';
@@ -280,21 +291,22 @@
       var trilhas = visiveis.map(function (julgador) {
         var ponto = (pair.pontos || []).filter(function (item) { return item.resposta_id === julgador.id; })[0];
         if (!ponto) return '';
-        var valor = Number(ponto.valor) || 1, passos = Math.min(8, Math.max(0, (valor >= 1 ? valor : 1 / valor) - 1));
-        var largura = passos / 8 * 50, rotulo = saatyLabel(ponto.valor), sentido = valor > 1.0005 ? "a" : valor < 0.9995 ? "b" : "";
-        var descricao = julgador.nome + ": " + rotulo + (sentido === "a" ? " (crit\u00e9rio 1, " + pair.criterio_a + ", mais importante)" : sentido === "b" ? " (crit\u00e9rio 2, " + pair.criterio_b + ", mais importante)" : " (igual import\u00e2ncia)");
-        var preenchimento = sentido ? '<span class="ami-scale__fill is-' + sentido + '" style="width:' + largura.toFixed(2) + '%"></span>' : '';
-        return '<div class="ami-pair-bars__line" data-judge="' + escapeHtml(julgador.id) + '" title="' + escapeHtml(descricao) + '" aria-label="' + escapeHtml(descricao) + '"><span class="ami-pair-bars__who">J' + (cores.lista.indexOf(julgador) + 1) + '</span><span class="ami-scale">' + preenchimento + '</span><b class="ami-pair-bars__value">' + rotulo + '</b></div>';
+        var valor = Number(ponto.valor) || 1, indice = indicePassoRegua(valor), rotulo = passoRotulo(PASSOS_REGUA_SAATY[indice]), sentido = valor > 1.0005 ? "a" : valor < 0.9995 ? "b" : "";
+        var descricao = julgador.nome + ": " + rotulo + (sentido === "a" ? " (CT 1, " + pair.criterio_a + ", mais importante)" : sentido === "b" ? " (CT 2, " + pair.criterio_b + ", mais importante)" : " (igual import\u00e2ncia)");
+        // Mesma marcacao da regua do formulario publico (.saaty-scale), em miniatura.
+        var graduacoes = PASSOS_REGUA_SAATY.map(function (passo, n) {
+          return '<span class="saaty-tick' + (n === indice ? ' is-selected' : '') + '" style="left:' + (n / 8 * 100).toFixed(2) + '%"><span class="saaty-tick-mark"></span><span class="ami-pair-bars__tick-val">' + (n === indice ? rotulo : passoRotulo(passo)) + '</span></span>';
+        }).join("");
+        var regua = '<div class="saaty-scale ami-pair-bars__ruler" aria-valuemin="0" aria-valuemax="8" aria-valuenow="' + indice + '"><div class="saaty-arrow"></div><div class="saaty-rail">' + graduacoes + '<div class="saaty-handle" style="left:' + (indice / 8 * 100).toFixed(2) + '%"></div></div></div>';
+        return '<div class="ami-pair-bars__line" data-judge="' + escapeHtml(julgador.id) + '" title="' + escapeHtml(descricao) + '" aria-label="' + escapeHtml(descricao) + '"><span class="ami-pair-bars__end is-a" aria-hidden="true">CT 1</span>' + regua + '<span class="ami-pair-bars__end is-b" aria-hidden="true">CT 2</span></div>';
       }).join("");
       var rotulo = pair.criterio_a + " \u00d7 " + pair.criterio_b, codigo = codigoPar(pair, todosPares);
-      // Nas pontas da barra vai o nome curto do criterio (apos a trilha de
-      // dimensoes); o nome completo, igual ao da tabela, fica no title.
-      var extremos = '<div class="ami-pair-bars__ends" aria-hidden="true"><span class="is-a" title="' + escapeHtml("Crit\u00e9rio 1: " + pair.criterio_a) + '"><small>Crit\u00e9rio 1</small>' + escapeHtml(nomeCurtoCriterio(pair.criterio_a)) + '</span><span class="is-b" title="' + escapeHtml("Crit\u00e9rio 2: " + pair.criterio_b) + '"><small>Crit\u00e9rio 2</small>' + escapeHtml(nomeCurtoCriterio(pair.criterio_b)) + '</span></div>';
-      return '<div class="ami-pair-bars__row" data-pair="' + pair.i + '-' + pair.j + '" role="button" tabindex="0" aria-label="' + escapeHtml("Selecionar " + codigo + ": " + rotulo) + '"><span class="ami-pair-bars__label" title="' + escapeHtml(codigo + " \u00b7 " + rotulo) + '">' + escapeHtml(codigo) + '</span>' + extremos + '<div class="ami-pair-bars__plot">' + trilhas + '</div></div>';
+      var cabecalho = visiveis.filter(function (julgador) { return (pair.pontos || []).some(function (item) { return item.resposta_id === julgador.id; }); }).map(function (julgador) { return '<span class="ami-pair-bars__tag">J' + (cores.lista.indexOf(julgador) + 1) + ' - ' + escapeHtml(codigo) + '</span>'; }).join("");
+      return '<div class="ami-pair-bars__row" data-pair="' + pair.i + '-' + pair.j + '" role="button" tabindex="0" aria-label="' + escapeHtml("Selecionar " + codigo + ": " + rotulo) + '"><div class="ami-pair-bars__head">' + cabecalho + '</div><div class="ami-pair-bars__plot">' + trilhas + '</div></div>';
     }).join("");
     var legenda = destaque ? '' : '<ul class="ami-pair-bars__legend">' + cores.lista.map(function (julgador, indice) { return '<li data-judge-open="' + escapeHtml(julgador.id) + '" role="button" tabindex="0" title="Ver somente este julgador"><strong>J' + (indice + 1) + '</strong><span class="ami-pair-bars__judge-name">' + escapeHtml(julgador.nome) + '</span></li>'; }).join("") + '</ul>';
     var escala = '<div class="ami-scale-key" aria-hidden="true"><span>9</span><span class="ami-scale"><i class="ami-scale__fill is-a" style="width:50%"></i><i class="ami-scale__fill is-b" style="width:50%"></i></span><span>1/9</span></div>';
-    return '<figure class="ami-pair-bars" data-selecionavel><div class="ami-pair-bars__grid">' + linhas + '</div>' + '<figcaption>' + legenda + escala + '<p>Escala de Saaty, de 9 a 1/9, centrada em 1 (igual import\u00e2ncia). Azul, \u00e0 esquerda: o crit\u00e9rio 1 do par \u00e9 mais importante; vermelho, \u00e0 direita: o crit\u00e9rio 2.</p></figcaption></figure>';
+    return '<figure class="ami-pair-bars" data-selecionavel><div class="ami-pair-bars__grid">' + linhas + '</div>' + '<figcaption>' + legenda + escala + '<p>Escala de Saaty, de 9 a 1/9, centrada em 1 (igual import\u00e2ncia). Azul, \u00e0 esquerda: o CT 1 do par \u00e9 mais importante; vermelho, \u00e0 direita: o CT 2.</p></figcaption></figure>';
   }
   function analysisRangeBars(items) {
     if (!items.length) return '<p class="ami-empty">Sem respostas enviadas para o gr\u00e1fico.</p>';
@@ -319,6 +331,7 @@
   // julgador: o mesmo par mantem o mesmo codigo em qualquer visao.
   function codigoPar(pair, todosPares) { return "Par " + (todosPares.indexOf(pair) + 1); }
   function nomeCurtoCriterio(nome) { var partes = String(nome || "").split(" \u2014 "); return partes[partes.length - 1].trim() || String(nome || ""); }
+  function celulaCriterio(nome) { return '<td class="ami-stats-table__name" title="' + escapeHtml(nome) + '">' + escapeHtml(nomeCurtoCriterio(nome)) + '</td>'; }
   function celulaCodigo(codigo) { return '<td class="ami-stats-table__codigo"><strong>' + escapeHtml(codigo) + '</strong></td>'; }
   function pairsTable(todosPares, destaque) {
     var cores = judgeColors(todosPares), pairs = paresDoJulgador(todosPares, destaque);
@@ -330,7 +343,7 @@
       cabecalho = ["Par de crit\u00e9rios", "\u00cdndice atribu\u00eddo"];
       corpo = pairs.map(function (pair) {
         var ponto = (pair.pontos || []).filter(function (item) { return item.resposta_id === destaque; })[0];
-        return '<tr data-pair="' + pair.i + '-' + pair.j + '">' + celulaCodigo(codigoPar(pair, todosPares)) + '<td class="ami-stats-table__name">' + escapeHtml(pair.criterio_a) + '</td><td class="ami-stats-table__name">' + escapeHtml(pair.criterio_b) + '</td><td><strong>' + (ponto ? saatyLabel(ponto.valor) : "\u2014") + '</strong></td></tr>';
+        return '<tr data-pair="' + pair.i + '-' + pair.j + '">' + celulaCodigo(codigoPar(pair, todosPares)) + celulaCriterio(pair.criterio_a) + celulaCriterio(pair.criterio_b) + '<td><strong>' + (ponto ? saatyLabel(ponto.valor) : "\u2014") + '</strong></td></tr>';
       });
     } else {
       cabecalho = ["Par de crit\u00e9rios"].concat(cores.lista.map(function (julgador) {
@@ -343,7 +356,7 @@
           var intensidade = desvioIntensidade(ponto.valor, pair.media_geometrica);
           return '<td class="ami-stats-table__valor' + (intensidade > 0.55 ? " is-forte" : "") + '" style="--ami-deviation-color:rgba(17,101,147,' + (intensidade * 0.8).toFixed(3) + ')" title="' + escapeHtml(julgador.nome + ": " + saatyLabel(ponto.valor) + " \u00b7 m\u00e9dia geom\u00e9trica do par " + fmtNumber(pair.media_geometrica)) + '">' + saatyLabel(ponto.valor) + '</td>';
         }).join("");
-        return '<tr data-pair="' + pair.i + '-' + pair.j + '">' + celulaCodigo(codigoPar(pair, todosPares)) + '<td class="ami-stats-table__name">' + escapeHtml(pair.criterio_a) + '</td><td class="ami-stats-table__name">' + escapeHtml(pair.criterio_b) + '</td>' + celulas + '<td>' + fmtNumber(pair.media) + '</td><td>' + saatyLabel(pair.mediana) + '</td><td>' + modaLabel(pair) + '</td></tr>';
+        return '<tr data-pair="' + pair.i + '-' + pair.j + '">' + celulaCodigo(codigoPar(pair, todosPares)) + celulaCriterio(pair.criterio_a) + celulaCriterio(pair.criterio_b) + celulas + '<td>' + fmtNumber(pair.media) + '</td><td>' + saatyLabel(pair.mediana) + '</td><td>' + modaLabel(pair) + '</td></tr>';
       });
     }
     var rodape = destaque ? "" : '<p class="ami-table-note"><span class="ami-table-note__escala">Marca na base da c\u00e9lula: afastamento da m\u00e9dia geom\u00e9trica do par <i></i><i></i><i></i><i></i></span></p>';
@@ -424,6 +437,14 @@
     if (chave != null) raiz.querySelectorAll('[data-' + atributo + '="' + chave + '"]').forEach(function (el) { el.classList.add(classe); });
     if (classe === "is-sel") raiz.querySelectorAll("[data-selecionavel]").forEach(function (el) { el.classList.toggle("has-sel", chave != null); });
   }
+  // Ao selecionar numa das visoes, a linha ou o cartao correspondente na outra
+  // e rolado para a area visivel do canvas.
+  function levarContraparteAVista(alvo, atributo, chave) {
+    var tabela = $("ami-analysis-pairs"), grafico = $("ami-analysis-pairs-chart");
+    var destino = tabela && tabela.contains(alvo) ? grafico : tabela;
+    var contraparte = destino && destino.querySelector('[data-' + atributo + '="' + chave + '"]');
+    if (contraparte) contraparte.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }
   function ligarSelecaoCruzada(raiz, atributo) {
     if (!raiz || raiz.dataset.selecaoCruzada) return;
     raiz.dataset.selecaoCruzada = atributo;
@@ -436,6 +457,7 @@
       var chave = alvo.dataset[atributo];
       selecaoCruzada[atributo] = selecaoCruzada[atributo] === chave ? null : chave;
       marcarCruzado(raiz, atributo, selecaoCruzada[atributo], "is-sel");
+      if (selecaoCruzada[atributo] != null) levarContraparteAVista(alvo, atributo, chave);
     });
     raiz.addEventListener("keydown", function (evento) {
       var alvo = alvoDe(evento);
@@ -1463,7 +1485,11 @@
   function addTableLabel(table, text) {
     if (!table) return;
     var container = table.closest(".ami-filtered-table") || table.closest(".matriz-table-wrap") || table.closest(".hier-table-shell") || table;
-    if (container.previousElementSibling && container.previousElementSibling.classList.contains("ami-table-label")) return;
+    var existing = container.previousElementSibling;
+    if (existing && existing.matches(".sicard-table-label, .ami-table-label")) {
+      existing.textContent = text;
+      return;
+    }
     var label = document.createElement("p");
     label.className = "ami-table-label";
     label.textContent = text;
