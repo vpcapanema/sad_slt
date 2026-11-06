@@ -232,7 +232,7 @@ def test_interpreta_dsn_sem_confundir_relay_com_entrega(acao, status, esperado):
 
 
 def test_interpreta_mdn_apenas_displayed():
-    assert recibos.interpretar(relatorio("disposition-notification"), MID, DEST) == ["leitura"]
+    assert recibos.interpretar(relatorio("disposition-notification"), MID, DEST) == ["leitura", "confirmada"]
     assert recibos.interpretar(relatorio("disposition-notification", disposicao="deleted"), MID, DEST) == []
     assert recibos.interpretar(relatorio("disposition-notification", disposicao="denied"), MID, DEST) == []
     conteudo = relatorio("disposition-notification").replace(
@@ -267,17 +267,31 @@ def test_retorno_precisa_message_id_e_destinatario_exatos(tipo):
     assert recibos.interpretar(b"Content-Type: text/plain\r\n\r\nEu li " + MID.encode(), MID, DEST) == []
 
 
+CABECALHO_RELATORIO = b"Content-Type: multipart/report; report-type=delivery-status; boundary=parte\r\n\r\n"
+
+
+def resposta_cabecalhos(*itens):
+    """Simula FETCH (UID RFC822.SIZE BODY.PEEK[HEADER.FIELDS (CONTENT-TYPE)]) para vários uids."""
+    saida = []
+    for uid, tamanho, cabecalho in itens:
+        saida.append((f"1 (UID {uid} RFC822.SIZE {tamanho} BODY[HEADER.FIELDS (CONTENT-TYPE)] {{{len(cabecalho)}}}".encode(), cabecalho))
+        saida.append(b")")
+    return saida
+
+
 @pytest.fixture
 def caixa(monkeypatch, smtp, registros):
-    registro = {"id": str(uuid4()), "mensagem_id": MID, "destinatario": DEST, "envio_status": "aceito_smtp"}
+    registro = {"id": str(uuid4()), "mensagem_id": MID, "destinatario": DEST, "envio_status": "aceito_smtp",
+                "criado_em": "2026-11-05T12:00:00+00:00"}
     registros.append(registro)
     imap = MagicMock()
     imap.login.return_value = ("OK", [])
     imap.select.return_value = ("OK", [b"1"])
+    imap.response.return_value = ("UIDVALIDITY", [])
     conteudo = relatorio()
     def uid(comando, *args):
         if comando == "search": return "OK", [b"42"]
-        if args[1] == "(RFC822.SIZE)": return "OK", [f"1 (UID 42 RFC822.SIZE {len(conteudo)})".encode()]
+        if args[1].startswith("(UID RFC822.SIZE"): return "OK", resposta_cabecalhos((42, len(conteudo), CABECALHO_RELATORIO))
         if args[1] == "(BODY.PEEK[])": return "OK", [(b"1 (UID 42 BODY[])", conteudo), b")"]
         raise AssertionError("Operação IMAP não autorizada")
     imap.uid.side_effect = uid
@@ -294,9 +308,10 @@ def test_coleta_so_relatorios_correlacionados_sem_marcar_lida(caixa):
     assert result["relatorios_consultados"] == 1
     imap.select.assert_called_once_with('"INBOX"', readonly=True)
     assert fabrica.call_args.kwargs["ssl_context"].check_hostname
-    search = imap.uid.call_args_list[0].args
-    assert search[0] == "search" and '"multipart/report"' in search and f'"{MID}"' in search
+    # Gmail não filtra Content-Type nem texto literal no SEARCH: a janela é por data e o filtro é local.
+    assert imap.uid.call_args_list[0].args == ("search", "SINCE", "04-Nov-2026")
     assert [c.args[0] for c in imap.uid.call_args_list] == ["search", "fetch", "fetch"]
+    assert imap.uid.call_args_list[1].args[1:] == ("42", "(UID RFC822.SIZE BODY.PEEK[HEADER.FIELDS (CONTENT-TYPE)])")
     assert imap.uid.call_args_list[-1].args[-1] == "(BODY.PEEK[])"
     assert gravar.call_args.args[1] == "confirmada"
     assert gravar.call_args.kwargs["ocorrido_em"] is None
@@ -307,6 +322,43 @@ def test_coleta_so_relatorios_correlacionados_sem_marcar_lida(caixa):
     imap.logout.assert_called_once()
 
 
+def test_coleta_sem_data_de_envio_varre_a_caixa_inteira(caixa, registros):
+    registros[0].pop("criado_em")
+    recibos.coletar(str(uuid4()), usuario_id="analista")
+    assert caixa[0].uid.call_args_list[0].args == ("search", "ALL")
+
+
+def test_coleta_ignora_mensagens_que_nao_sao_relatorios(caixa):
+    imap, _, gravar = caixa
+    conteudo = relatorio()
+    def uid(comando, *args):
+        if comando == "search": return "OK", [b"7 42 99"]
+        if args[1].startswith("(UID RFC822.SIZE"):
+            assert args[0] == "7,42,99"
+            return "OK", resposta_cabecalhos(
+                (7, 100, b"Content-Type: text/plain; charset=utf-8\r\n\r\n"),
+                (42, len(conteudo), CABECALHO_RELATORIO),
+                (99, 999999, CABECALHO_RELATORIO))
+        if args[1] == "(BODY.PEEK[])":
+            assert args[0] == b"42"
+            return "OK", [(b"1 (UID 42 BODY[])", conteudo), b")"]
+        raise AssertionError("Operação IMAP não autorizada")
+    imap.uid.side_effect = uid
+    assert recibos.coletar(str(uuid4()), usuario_id="analista")["relatorios_consultados"] == 1
+    assert gravar.call_count == 1
+    assert imap.uid.call_count == 3
+
+
+def test_relatorio_do_gmail_correlaciona_por_in_reply_to_e_x_original_message_id():
+    base = relatorio().replace(f"Message-ID: {MID}".encode(), b"Message-ID: <outro@example.com>")
+    assert recibos.interpretar(base, MID, DEST) == []
+    por_cabecalho = base.replace(b"MIME-Version: 1.0", f"In-Reply-To: {MID}\r\nMIME-Version: 1.0".encode())
+    assert recibos.interpretar(por_cabecalho, MID, DEST) == ["confirmada"]
+    por_bloco = base.replace(b"Reporting-MTA: dns; mx.example.com\r\n",
+                             f"Reporting-MTA: dns; mx.example.com\r\nX-Original-Message-ID: {MID}\r\n".encode())
+    assert recibos.interpretar(por_bloco, MID, DEST) == ["confirmada"]
+
+
 def test_coleta_automatica_correlaciona_convite_e_resposta(caixa, registros, monkeypatch, smtp):
     registros[0]["natureza"] = "convite"
     registros.append({
@@ -314,20 +366,21 @@ def test_coleta_automatica_correlaciona_convite_e_resposta(caixa, registros, mon
         "mensagem_id": "<sicard.resposta@example.com>",
     })
     monkeypatch.setattr(repo, "listar_para_confirmacao", lambda: registros)
-    atual = {}
+    # Um único relatório contendo os dois retornos; cada registro correlaciona só o seu.
+    relatorios = {
+        b"1": relatorio(mid=registros[0]["mensagem_id"]),
+        b"2": relatorio(mid="<sicard.resposta@example.com>"),
+    }
+    relatorios = {k: v.replace(b"Status: 2.0.0", b"Status: 2.0.0\r\nLast-Attempt-Date: Thu, 05 Nov 2026 15:00:00 -0300")
+                  for k, v in relatorios.items()}
 
     def uid(comando, *args):
         if comando == "search":
-            atual["mensagem_id"] = args[5].strip('"')
-            return "OK", [b"42"]
-        conteudo = relatorio(mid=atual["mensagem_id"]).replace(
-            b"Status: 2.0.0",
-            b"Status: 2.0.0\r\nLast-Attempt-Date: Thu, 05 Nov 2026 15:00:00 -0300",
-        )
-        if args[1] == "(RFC822.SIZE)":
-            return "OK", [f"1 (UID 42 RFC822.SIZE {len(conteudo)})".encode()]
+            return "OK", [b"1 2"]
+        if args[1].startswith("(UID RFC822.SIZE"):
+            return "OK", resposta_cabecalhos(*((k.decode(), len(v), CABECALHO_RELATORIO) for k, v in relatorios.items()))
         if args[1] == "(BODY.PEEK[])":
-            return "OK", [(b"1 (UID 42 BODY[])", conteudo), b")"]
+            return "OK", [(b"1 (UID " + args[0] + b" BODY[])", relatorios[args[0]]), b")"]
         raise AssertionError("Operação IMAP não autorizada")
 
     caixa[0].uid.side_effect = uid
@@ -342,8 +395,14 @@ def test_coleta_automatica_correlaciona_convite_e_resposta(caixa, registros, mon
 
 
 def test_coleta_automatica_interrompe_entre_registros(caixa, registros, monkeypatch, smtp):
-    registros.append({**registros[0], "id": "segundo"})
     monkeypatch.setattr(repo, "listar_para_confirmacao", lambda: registros)
+    conteudo = relatorio()
+    def uid(comando, *args):
+        if comando == "search": return "OK", [b"1 2"]
+        if args[1].startswith("(UID RFC822.SIZE"):
+            return "OK", resposta_cabecalhos((1, len(conteudo), CABECALHO_RELATORIO), (2, len(conteudo), CABECALHO_RELATORIO))
+        return "OK", [(b"1 (UID " + args[0] + b" BODY[])", conteudo), b")"]
+    caixa[0].uid.side_effect = uid
     assert recibos.coletar_automaticamente(lambda: caixa[2].call_count > 0) == 1
     assert caixa[2].call_count == 1
     caixa[0].logout.assert_called_once()
@@ -373,10 +432,19 @@ def test_coleta_expoe_erro_sem_reenviar(caixa, smtp, caplog):
 
 
 def test_relatorio_grande_nao_e_baixado(caixa):
-    caixa[0].uid.side_effect = [("OK", [b"42"]), ("OK", [b"1 (RFC822.SIZE 999999)"])]
-    with pytest.raises(email_service.FalhaEmail, match="256 KiB"):
-        recibos.coletar(str(uuid4()), usuario_id="analista")
+    caixa[0].uid.side_effect = [("OK", [b"42"]), ("OK", resposta_cabecalhos((42, 999999, CABECALHO_RELATORIO)))]
+    assert recibos.coletar(str(uuid4()), usuario_id="analista")["relatorios_consultados"] == 0
     assert caixa[0].uid.call_count == 2
+    caixa[2].assert_not_called()
+
+
+def test_relatorio_truncado_pelo_servidor_e_recusado(caixa):
+    caixa[0].uid.side_effect = [
+        ("OK", [b"42"]), ("OK", resposta_cabecalhos((42, 100, CABECALHO_RELATORIO))),
+        ("OK", [(b"1 (UID 42 BODY[])", b"x" * (recibos.MAX_RELATORIO + 1)), b")"]),
+    ]
+    with pytest.raises(email_service.FalhaEmail, match="incompleto ou maior"):
+        recibos.coletar(str(uuid4()), usuario_id="analista")
     caixa[2].assert_not_called()
 
 

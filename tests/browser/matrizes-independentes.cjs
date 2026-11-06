@@ -397,7 +397,7 @@ const uploadedContent = { linhas: [{ criterio: 'Acesso', dimensao: 'Social', Eta
     assert.equal(await page.locator('#ami-analysis-pairs-chart .ami-pair-bars__label').count(), 1, 'gráfico só com os pares do julgador');
     assert.equal(await page.locator('#ami-analysis-pairs-chart .ami-pair-bars__label').first().innerText(), 'Par 1');
     assert.match(await page.locator('#ami-pairs-judge-hint').textContent(), /1 par atribuído a este julgador de 2/);
-    assert.match(await page.locator('#ami-analysis-pairs-chart .ami-pane-title').textContent(), /Gráfico dos índices por par de critérios/);
+    assert.match(await page.locator('#ami-analysis-pairs-chart .ami-table-label, #ami-analysis-pairs-chart .ami-pane-title').first().textContent(), /Gráfico dos índices por par de critérios/);
     assert.match(await page.locator('#ami-analysis-matrix').textContent(), /Acesso/);
     assert.doesNotMatch(await page.locator('#ami-analysis-matrix').textContent(), /Custo/);
     await page.locator('#ami-pairs-judge').selectOption('');

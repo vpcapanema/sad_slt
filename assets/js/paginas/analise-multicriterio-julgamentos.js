@@ -261,30 +261,40 @@
     if (!julgadorId) return pairs;
     return pairs.filter(function (pair) { return (pair.pontos || []).some(function (ponto) { return String(ponto.resposta_id) === String(julgadorId); }); });
   }
-  function analysisPairBars(todosPares, destaque) {
-    var cores = judgeColors(todosPares), pairs = paresDoJulgador(todosPares, destaque);
-    var escolhido = destaque ? cores.lista.filter(function (j) { return j.id === destaque; })[0] : null;
-    var titulo = '<h4 class="ami-pane-title">Gr\u00e1fico dos \u00edndices por par de crit\u00e9rios' + (escolhido ? ' \u00b7 ' + escapeHtml(escolhido.nome) : '') + '</h4>';
-    if (!pairs.length) return titulo + '<p class="ami-empty">Sem respostas enviadas para o gr\u00e1fico.</p>';
+  // Titulo do grafico, fora do cartao, no mesmo padrao dos rotulos das tabelas.
+  function tituloGraficoPares(todosPares, destaque) {
+    var escolhido = destaque ? judgeColors(todosPares).lista.filter(function (j) { return j.id === destaque; })[0] : null;
+    return "Gr\u00e1fico dos \u00edndices por par de crit\u00e9rios" + (escolhido ? " \u00b7 " + escolhido.nome : "");
+  }
+  // `recorte` sao os pares da pagina corrente da tabela ao lado: o grafico
+  // acompanha a paginacao, o filtro e a ordenacao da tabela.
+  function analysisPairBars(todosPares, destaque, recorte) {
+    var cores = judgeColors(todosPares), pairs = recorte || paresDoJulgador(todosPares, destaque);
+    if (!paresDoJulgador(todosPares, destaque).length) return '<p class="ami-empty">Sem respostas enviadas para o gr\u00e1fico.</p>';
+    if (!pairs.length) return '<p class="ami-empty">Nenhum par nesta p\u00e1gina da tabela.</p>';
     var visiveis = destaque ? cores.lista.filter(function (j) { return j.id === destaque; }) : cores.lista;
-    // Escala de Saaty completa (1/9 ... 1 ... 9) centrada em 1: cada degrau da
-    // escala, para um lado ou para o outro, vale 1/8 da meia-largura da trilha.
+    // Mesma orientacao da regua do formulario publico: o criterio 1 do par fica
+    // a esquerda (9 ... 3), 1 no centro e o criterio 2 a direita (1/3 ... 1/9).
+    // Cada degrau da escala vale 1/8 da meia-largura da trilha.
     var linhas = pairs.map(function (pair) {
       var trilhas = visiveis.map(function (julgador) {
         var ponto = (pair.pontos || []).filter(function (item) { return item.resposta_id === julgador.id; })[0];
         if (!ponto) return '';
         var valor = Number(ponto.valor) || 1, passos = Math.min(8, Math.max(0, (valor >= 1 ? valor : 1 / valor) - 1));
         var largura = passos / 8 * 50, rotulo = saatyLabel(ponto.valor), sentido = valor > 1.0005 ? "a" : valor < 0.9995 ? "b" : "";
-        var descricao = julgador.nome + ": " + rotulo + (sentido === "a" ? " (" + pair.criterio_a + " mais importante)" : sentido === "b" ? " (" + pair.criterio_b + " mais importante)" : " (indiferen\u00e7a)");
+        var descricao = julgador.nome + ": " + rotulo + (sentido === "a" ? " (crit\u00e9rio 1, " + pair.criterio_a + ", mais importante)" : sentido === "b" ? " (crit\u00e9rio 2, " + pair.criterio_b + ", mais importante)" : " (igual import\u00e2ncia)");
         var preenchimento = sentido ? '<span class="ami-scale__fill is-' + sentido + '" style="width:' + largura.toFixed(2) + '%"></span>' : '';
         return '<div class="ami-pair-bars__line" data-judge="' + escapeHtml(julgador.id) + '" title="' + escapeHtml(descricao) + '" aria-label="' + escapeHtml(descricao) + '"><span class="ami-pair-bars__who">J' + (cores.lista.indexOf(julgador) + 1) + '</span><span class="ami-scale">' + preenchimento + '</span><b class="ami-pair-bars__value">' + rotulo + '</b></div>';
       }).join("");
       var rotulo = pair.criterio_a + " \u00d7 " + pair.criterio_b, codigo = codigoPar(pair, todosPares);
-      return '<div class="ami-pair-bars__row" data-pair="' + pair.i + '-' + pair.j + '" role="button" tabindex="0" aria-label="' + escapeHtml("Selecionar " + codigo + ": " + rotulo) + '"><span class="ami-pair-bars__label" title="' + escapeHtml(codigo + " \u00b7 " + rotulo) + '">' + escapeHtml(codigo) + '</span><div class="ami-pair-bars__plot">' + trilhas + '</div></div>';
+      // Nas pontas da barra vai o nome curto do criterio (apos a trilha de
+      // dimensoes); o nome completo, igual ao da tabela, fica no title.
+      var extremos = '<div class="ami-pair-bars__ends" aria-hidden="true"><span class="is-a" title="' + escapeHtml("Crit\u00e9rio 1: " + pair.criterio_a) + '"><small>Crit\u00e9rio 1</small>' + escapeHtml(nomeCurtoCriterio(pair.criterio_a)) + '</span><span class="is-b" title="' + escapeHtml("Crit\u00e9rio 2: " + pair.criterio_b) + '"><small>Crit\u00e9rio 2</small>' + escapeHtml(nomeCurtoCriterio(pair.criterio_b)) + '</span></div>';
+      return '<div class="ami-pair-bars__row" data-pair="' + pair.i + '-' + pair.j + '" role="button" tabindex="0" aria-label="' + escapeHtml("Selecionar " + codigo + ": " + rotulo) + '"><span class="ami-pair-bars__label" title="' + escapeHtml(codigo + " \u00b7 " + rotulo) + '">' + escapeHtml(codigo) + '</span>' + extremos + '<div class="ami-pair-bars__plot">' + trilhas + '</div></div>';
     }).join("");
     var legenda = destaque ? '' : '<ul class="ami-pair-bars__legend">' + cores.lista.map(function (julgador, indice) { return '<li data-judge-open="' + escapeHtml(julgador.id) + '" role="button" tabindex="0" title="Ver somente este julgador"><strong>J' + (indice + 1) + '</strong><span class="ami-pair-bars__judge-name">' + escapeHtml(julgador.nome) + '</span></li>'; }).join("") + '</ul>';
-    var escala = '<div class="ami-scale-key" aria-hidden="true"><span>1/9</span><span class="ami-scale"><i class="ami-scale__fill is-b" style="width:50%"></i><i class="ami-scale__fill is-a" style="width:50%"></i></span><span>9</span></div>';
-    return titulo + '<figure class="ami-pair-bars" data-selecionavel><div class="ami-pair-bars__grid">' + linhas + '</div>' + '<figcaption>' + legenda + escala + '<p>Escala de Saaty, de 1/9 a 9, centrada em 1 (indiferen\u00e7a). Azul: o primeiro crit\u00e9rio do par \u00e9 mais importante; vermelho: o segundo.</p></figcaption></figure>';
+    var escala = '<div class="ami-scale-key" aria-hidden="true"><span>9</span><span class="ami-scale"><i class="ami-scale__fill is-a" style="width:50%"></i><i class="ami-scale__fill is-b" style="width:50%"></i></span><span>1/9</span></div>';
+    return '<figure class="ami-pair-bars" data-selecionavel><div class="ami-pair-bars__grid">' + linhas + '</div>' + '<figcaption>' + legenda + escala + '<p>Escala de Saaty, de 9 a 1/9, centrada em 1 (igual import\u00e2ncia). Azul, \u00e0 esquerda: o crit\u00e9rio 1 do par \u00e9 mais importante; vermelho, \u00e0 direita: o crit\u00e9rio 2.</p></figcaption></figure>';
   }
   function analysisRangeBars(items) {
     if (!items.length) return '<p class="ami-empty">Sem respostas enviadas para o gr\u00e1fico.</p>';
@@ -308,6 +318,7 @@
   // O codigo identifica o par na tabela e no grafico e nao muda com o filtro de
   // julgador: o mesmo par mantem o mesmo codigo em qualquer visao.
   function codigoPar(pair, todosPares) { return "Par " + (todosPares.indexOf(pair) + 1); }
+  function nomeCurtoCriterio(nome) { var partes = String(nome || "").split(" \u2014 "); return partes[partes.length - 1].trim() || String(nome || ""); }
   function celulaCodigo(codigo) { return '<td class="ami-stats-table__codigo"><strong>' + escapeHtml(codigo) + '</strong></td>'; }
   function pairsTable(todosPares, destaque) {
     var cores = judgeColors(todosPares), pairs = paresDoJulgador(todosPares, destaque);
@@ -336,7 +347,7 @@
       });
     }
     var rodape = destaque ? "" : '<p class="ami-table-note"><span class="ami-table-note__escala">Marca na base da c\u00e9lula: afastamento da m\u00e9dia geom\u00e9trica do par <i></i><i></i><i></i><i></i></span></p>';
-    return '<table class="admin-table ami-stats-table ami-table--indices" data-grouped-headers="true"><thead><tr><th rowspan="2" scope="col">C\u00f3digo</th><th colspan="2" scope="colgroup">Par de critérios</th>' + cabecalho.slice(1).map(function (titulo) { return '<th rowspan="2" scope="col">' + titulo + '</th>'; }).join("") + '</tr><tr class="ami-pair-leaf-headers" hidden aria-hidden="true"><th scope="col">Critério 1</th><th scope="col">Critério 2</th></tr></thead><tbody>' + (corpo.join("") || '<tr><td colspan="' + (cabecalho.length + 2) + '">Sem respostas enviadas.</td></tr>') + '</tbody></table>' + rodape;
+    return '<table class="admin-table ami-stats-table ami-table--indices" data-grouped-headers="true"><thead><tr><th rowspan="2" scope="col">C\u00f3digo</th><th colspan="2" scope="colgroup">Par de critérios</th>' + cabecalho.slice(1).map(function (titulo) { return '<th rowspan="2" scope="col">' + titulo + '</th>'; }).join("") + '</tr><tr class="ami-pair-leaf-headers"><th scope="col">Critério 1</th><th scope="col">Critério 2</th></tr></thead><tbody>' + (corpo.join("") || '<tr><td colspan="' + (cabecalho.length + 2) + '">Sem respostas enviadas.</td></tr>') + '</tbody></table>' + rodape;
   }
   // A lista de julgadores vem das respostas enviadas daquele julgamento, e nao
   // de uma lista fixa: quem responde entra na lista sozinho.
@@ -358,10 +369,49 @@
       : julgadores.length + (julgadores.length === 1 ? " julgador com resposta enviada" : " julgadores com resposta enviada") + " \u00b7 " + pairs.length + (pairs.length === 1 ? " par de crit\u00e9rios" : " pares de crit\u00e9rios"));
     $("ami-analysis-pairs").innerHTML = pairsTable(pairs, selectedJudgeId);
     if (modo === "espaco") addTableLabel($("ami-analysis-pairs").querySelector("table"), "Tabela dos índices de importância de Saaty por par de critérios");
-    $("ami-analysis-pairs-chart").innerHTML = analysisPairBars(pairs, selectedJudgeId);
+    $("ami-analysis-pairs-chart").innerHTML = '<div class="ami-chart-stack"><p class="ami-table-label ami-chart-label">' + escapeHtml(tituloGraficoPares(pairs, selectedJudgeId)) + '</p>' +
+      '<div class="ami-chart-card" id="ami-analysis-pairs-plot"></div>' +
+      '<div class="admin-table-footer ami-chart-footer"><nav id="ami-pairs-chart-pagination" class="admin-pagination" aria-label="Paginar pares do gr\u00e1fico"></nav><p id="ami-pairs-chart-summary" class="admin-table-summary" aria-live="polite"></p></div></div>';
     SLTAnalysisTable($("ami-analysis-pairs").querySelector("table"));
+    ligarGraficoATabela(pairs, selectedJudgeId);
+    espelharRotuloDaTabela($("ami-analysis-pairs"), $("ami-analysis-pairs-chart").querySelector(".ami-chart-label"));
     renderFioDerivado(analysisWorkspace);
     ligarRealcePares();
+  }
+  // O titulo do grafico e um rotulo igual ao da tabela ao lado, inclusive no
+  // tamanho de fonte que table-labels.js ajusta depois de renderizar.
+  function espelharRotuloDaTabela(tabelaRaiz, rotulo) {
+    var host = tabelaRaiz && (tabelaRaiz.closest(".ami-report-table") || tabelaRaiz.parentElement);
+    if (!host || !rotulo) return;
+    function aplicar() {
+      var origem = host.querySelector(".sicard-table-label, .ami-table-label");
+      if (origem && origem !== rotulo) rotulo.style.fontSize = origem.style.fontSize || getComputedStyle(origem).fontSize;
+    }
+    aplicar();
+    new MutationObserver(aplicar).observe(host, { childList: true, subtree: true, attributes: true, attributeFilter: ["style"] });
+  }
+  // O grafico e uma segunda leitura da tabela: mostra os pares da pagina
+  // corrente, na mesma ordem, e o seu paginador e o da tabela movem a mesma
+  // pagina. O contador repete o da tabela.
+  function ligarGraficoATabela(pairs, destaque) {
+    var tabela = $("ami-analysis-pairs").querySelector("table"), estado = tabela && tabela.analysisControls;
+    if (!estado) return;
+    function desenhar() {
+      var corpo = tabela.tBodies[0], chaves = Array.prototype.map.call(corpo.rows, function (linha) { return linha.dataset.pair; }).filter(Boolean);
+      var recorte = chaves.map(function (chave) { return pairs.filter(function (pair) { return pair.i + "-" + pair.j === chave; })[0]; }).filter(Boolean);
+      var plot = $("ami-analysis-pairs-plot"), nav = $("ami-pairs-chart-pagination"), resumo = $("ami-pairs-chart-summary");
+      if (!plot || !nav || !resumo) return;
+      plot.innerHTML = analysisPairBars(pairs, destaque, recorte);
+      SLTTable.paginate(nav.id, estado.filtered || [], estado.page, function (pagina) { estado.page = pagina; estado.draw(); });
+      var selecionados = estado.rows.filter(function (linha) { return linha.querySelector("td:first-child input[type=checkbox]:checked"); }).length;
+      SLTTable.summary(resumo.id, selecionados, recorte.length, estado.rows.length);
+    }
+    if (!estado.graficoLigado) {
+      estado.graficoLigado = true;
+      var original = estado.draw;
+      estado.draw = function () { original(); desenhar(); };
+    }
+    desenhar();
   }
   // Selecao cruzada entre tabela e grafico: passar o cursor realca (is-hl) e
   // clicar fixa (is-sel) o mesmo par/criterio nos dois lados, e clicar de novo
@@ -566,7 +616,9 @@
   function renderConsolidatedMatrix(data) {
     var foco = matrizEmFoco(data), criterios = (foco ? foco.criterios : data.ambiente.criterios || []).map(criterionName);
     var caixa = $("ami-analysis-measure-box");
-    caixa.classList.toggle("is-hidden", !!selectedJudgeId);
+    // A medida fica sempre disponivel: com um julgador selecionado ela incide
+    // so sobre a resposta dele, e o resultado e a matriz desse julgador.
+    caixa.classList.remove("is-hidden");
     var seletor = $("ami-analysis-measure"), registrada = analysisMode === "edit" ? null : analiseRegistrada(data);
     var medidas = '<option value="geometrica">M\u00e9dia geom\u00e9trica dos \u00edndices</option><option value="aritmetica">M\u00e9dia aritm\u00e9tica dos \u00edndices</option><option value="mediana">Mediana dos \u00edndices</option>';
     seletor.innerHTML = (registrada ? '<option value="registrada">An\u00e1lise registrada \u2014 ' + escapeHtml(registrada.nome || registrada.codigo || "sem nome") + '</option>' : '') + medidas;
@@ -579,7 +631,7 @@
     $("ami-analysis-matrix-hint").innerHTML = !foco
       ? escapeHtml(motivoSemMatriz(data))
       : foco.origem === "julgador"
-        ? 'Matriz do julgador <strong>' + escapeHtml(foco.rotulo) + '</strong>, exatamente como ele a preencheu. Cada c\u00e9lula responde: quantas vezes o crit\u00e9rio da linha importa mais que o da coluna.'
+        ? 'Matriz do julgador <strong>' + escapeHtml(foco.rotulo) + '</strong>, selecionado na se\u00e7\u00e3o de \u00edndices por par, exatamente como ele a preencheu: a medida de tend\u00eancia central incide sobre uma \u00fanica resposta e devolve os pr\u00f3prios \u00edndices atribu\u00eddos. Cada c\u00e9lula responde: quantas vezes o crit\u00e9rio da linha importa mais que o da coluna. Escolha "Todos os julgadores" para agregar as respostas pela medida.'
         : foco.origem === "registrada"
           ? 'Matriz da an\u00e1lise registrada <strong>' + escapeHtml(foco.rotulo) + '</strong>. Para recalcular com todas as respostas enviadas, escolha uma medida de tend\u00eancia central.'
           : analysisMode !== "edit"
@@ -683,8 +735,10 @@
     $("ami-analysis-criteria").innerHTML = criterios.map(function (nome, indice) {
       return '<tr data-criterio="' + indice + '"><td class="ami-stats-table__codigo"><strong>CT' + (indice + 1) + '</strong></td><td class="ami-stats-table__name" title="' + escapeHtml(nome) + '">' + escapeHtml(nome) + '</td><td><strong>' + (pesos.length ? fmtNumber(pesos[indice]) : "\u2014") + '</strong></td></tr>';
     }).join("") || '<tr><td colspan="3" class="ami-empty">Sem respostas enviadas.</td></tr>';
-    $("ami-analysis-criteria-chart").innerHTML = pesos.length ? weightsDonut(criterios, pesos) : '<p class="ami-empty">Sem respostas enviadas.</p>';
+    $("ami-analysis-criteria-chart").innerHTML = '<div class="ami-chart-stack"><p class="ami-table-label ami-chart-label">Participa\u00e7\u00e3o de cada crit\u00e9rio nos pesos</p>' +
+      '<div class="ami-chart-card">' + (pesos.length ? weightsDonut(criterios, pesos) : '<p class="ami-empty">Sem respostas enviadas.</p>') + '</div></div>';
     SLTAnalysisTable($("ami-analysis-criteria").closest("table"));
+    espelharRotuloDaTabela($("ami-analysis-criteria").closest("table").parentElement, $("ami-analysis-criteria-chart").querySelector(".ami-chart-label"));
     ligarSelecaoCruzada($("ami-analysis-criteria-chart").parentElement, "criterio");
   }
   // Os pesos somam 100%, entao cabem numa rosca: cada fatia e um criterio,
@@ -701,7 +755,7 @@
     var legenda = criterios.map(function (nome, indice) {
       return '<li data-criterio="' + indice + '" role="button" tabindex="0" title="' + escapeHtml("CT" + (indice + 1) + " \u00b7 " + nome) + '"><span class="ami-donut-chart__swatch" style="background:' + cores[indice] + '"></span><span>CT' + (indice + 1) + '</span><strong>' + (Number(pesos[indice]) / total * 100).toFixed(1) + '%</strong></li>';
     }).join("");
-    return '<h4 class="ami-pane-title">Participa\u00e7\u00e3o de cada crit\u00e9rio nos pesos</h4><figure class="ami-donut-chart" data-selecionavel aria-label="Peso de cada crit\u00e9rio, identificado pelo c\u00f3digo CT"><div class="ami-donut-chart__plot"><svg viewBox="0 0 100 100" aria-hidden="false">' + fatias + '</svg><span><strong>100%</strong>' + criterios.length + ' crit\u00e9rios</span></div><figcaption><ul>' + legenda + '</ul></figcaption></figure>';
+    return '<figure class="ami-donut-chart" data-selecionavel aria-label="Peso de cada crit\u00e9rio, identificado pelo c\u00f3digo CT"><div class="ami-donut-chart__plot"><svg viewBox="0 0 100 100" aria-hidden="false">' + fatias + '</svg><span><strong>100%</strong>' + criterios.length + ' crit\u00e9rios</span></div><figcaption><ul>' + legenda + '</ul></figcaption></figure>';
   }
   // Tudo que deriva da matriz acompanha a selecao do julgador e da medida.
   function syncAnalysisCalculate() {

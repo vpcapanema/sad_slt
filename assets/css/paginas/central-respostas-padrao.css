@@ -61,13 +61,25 @@
 }
 .sicard-standard-page.ami-page #ami-analysis-workspace .ami-judge-filter__hint { font-size: .64rem !important; font-weight: 400 !important; }
 .sicard-standard-page.ami-page #ami-analysis-workspace .ami-report-table { display: grid; gap: 8px; min-width: 0; }
-.sicard-standard-page.ami-page #ami-analysis-workspace .ami-analysis-split > .ami-report-table { grid-column: 1; grid-row: 1; }
-.sicard-standard-page.ami-page #ami-analysis-workspace .ami-analysis-split > .ami-analysis-chart { grid-column: 2; grid-row: 1; }
-/* Cada grafico fica no seu proprio conteiner, afastado da tabela ao lado. */
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-analysis-split > .ami-report-table { grid-column: 1; grid-row: 1; align-self: stretch; }
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-analysis-split > .ami-analysis-chart { grid-column: 2; grid-row: 1; align-self: stretch; }
+/* Cada grafico fica no seu proprio conteiner, afastado da tabela ao lado. O
+   titulo fica fora do cartao, como o rotulo da tabela, e o cartao estica ate a
+   altura do bloco da tabela; o rodape (paginador e contador) repete o da tabela. */
 .sicard-standard-page.ami-page #ami-analysis-workspace .ami-analysis-split { column-gap: 2.25rem; }
 .sicard-standard-page.ami-page #ami-analysis-workspace .ami-analysis-split > .ami-analysis-chart {
-  padding: 1rem; border: 1px solid var(--pli-border); border-radius: 8px; background: #fff;
+  position: relative; min-height: 0; padding: 0; border: 0; background: transparent; overflow: visible;
 }
+/* A pilha do grafico e posicionada sobre a celula para nao ditar a altura da
+   linha: a altura vem da tabela, e o cartao rola por dentro se precisar. */
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-chart-stack {
+  position: absolute; inset: 0; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 8px; min-width: 0;
+}
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-chart-stack > .ami-table-label { margin: 0; }
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-chart-card {
+  min-height: 0; overflow: auto; padding: 1rem; border: 1px solid var(--pli-border); border-radius: 8px; background: #fff;
+}
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-chart-footer { margin: 0; }
 .sicard-standard-page.ami-page #ami-analysis-workspace :is(.ami-kpis, .ahp-live-metrics) { gap: 1rem; }
 .sicard-standard-page.ami-page #ami-analysis-workspace :is(.ami-kpis > div, .ahp-metric-card, .ami-metric-card) { text-align: center; }
 .sicard-standard-page.ami-page #ami-analysis-workspace .ami-metric-card__top { justify-content: center; }
@@ -88,8 +100,29 @@
 .sicard-standard-page.ami-page #ami-analysis-workspace .ami-consolidated-identification {
   margin: 0 0 8px; font: 600 .7rem/1.4 Roboto, Arial, sans-serif; color: var(--pli-deep);
 }
+/* No cartao estreito, o rodape do grafico empilha paginador e contador, como o
+   rodape das tabelas faz em telas estreitas. */
+@container (max-width: 40rem) {
+  .sicard-standard-page.ami-page #ami-analysis-workspace .ami-chart-footer { grid-template-columns: minmax(0, 1fr); }
+  .sicard-standard-page.ami-page #ami-analysis-workspace .ami-chart-footer > .admin-pagination { grid-column: 1; justify-self: center; }
+  .sicard-standard-page.ami-page #ami-analysis-workspace .ami-chart-footer > .admin-table-summary { grid-column: 1; grid-row: 2; }
+}
 .sicard-standard-page.ami-page #ami-analysis-workspace .ami-table--indices thead th[colspan="2"] { text-align: center; }
-.ami-table--indices .ami-pair-leaf-headers { display: none !important; }
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-table--indices .ami-pair-leaf-headers th { text-align: center; }
+/* Escala na orientacao do formulario publico: criterio 1 a esquerda (azul),
+   criterio 2 a direita (vermelho), 1 no centro. */
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-scale__fill.is-a { left: auto; right: 50%; border-radius: 3px 0 0 3px; }
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-scale__fill.is-b { right: auto; left: 50%; border-radius: 0 3px 3px 0; }
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__ends {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: .5rem; padding: 0 2.4rem 0 1.8rem;
+  font-size: .62rem; line-height: 1.3; color: var(--pli-deep);
+}
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__ends > span { display: grid; min-width: 0; overflow-wrap: anywhere; }
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__ends > span > small { font-size: .56rem; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; }
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__ends > .is-a { text-align: left; }
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__ends > .is-a > small { color: var(--pli-blue, #116593); }
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__ends > .is-b { text-align: right; }
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__ends > .is-b > small { color: #7a1620; }
 .sicard-standard-page.ami-page #ami-analysis-workspace .ami-fio-elo { margin: 0 0 8px; }
 .sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__bar:focus-visible { outline: 2px solid #123b56; outline-offset: 3px; }
 /* Full pair names above the bars, so text and quantitative scale do not compete. */
@@ -119,6 +152,8 @@
 .sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__judge-name { white-space: normal; overflow-wrap: anywhere; }
 @media (max-width: 720px) {
   .sicard-standard-page.ami-page #ami-analysis-workspace .ami-analysis-split > .ami-analysis-chart { grid-column: 1; grid-row: 2; }
+  .sicard-standard-page.ami-page #ami-analysis-workspace .ami-chart-stack { position: static; }
+  .sicard-standard-page.ami-page #ami-analysis-workspace .ami-chart-card { max-height: 70vh; }
   .sicard-standard-page.ami-page #ami-analysis-workspace :is(.ahp-collab-grid2, .ami-metric-grid) { grid-template-columns: minmax(0,1fr); }
   .sicard-standard-page.ami-page #ami-analysis-workspace .ami-kpis { grid-template-columns: repeat(3,minmax(0,1fr)); }
   .sicard-standard-page.ami-page #ami-analysis-workspace .ami-kpis > div { min-width: 0; padding: .5rem; }

@@ -464,15 +464,21 @@ Trata-se de consulta periódica, não de notificação instantânea: entrega e l
 só podem ser confirmadas quando o provedor disponibiliza o respectivo retorno.
 
 A consulta usa conexão TLS, seleção somente-leitura e `BODY.PEEK[]`: não marca
-mensagens como lidas, não move e não exclui. Busca apenas mensagens
-`multipart/report` contendo o Message-ID ou identificador de envelope de um
-envio desse julgamento. A interpretação exige correlação exata e destinatário
+mensagens como lidas, não move e não exclui. Como provedores como o Gmail não
+filtram `Content-Type` nem texto literal no `SEARCH`, a coleta lista as mensagens
+desde a véspera do envio pendente mais antigo (`SINCE`), identifica os
+`multipart/report` localmente pelo cabeçalho e correlaciona cada relatório ao
+envio pelo Message-ID (nas partes anexas, em `In-Reply-To`/`References`, em
+`Original-Message-ID`/`X-Original-Message-ID`) ou pelo identificador de envelope.
+A interpretação exige correlação exata e destinatário
 compatível: DSN `delivered` confirma entrega, `failed` registra devolução,
 `delayed` indica adiamento; `relayed`/`expanded` não comprovam entrega final.
 MDN `displayed` registra a confirmação informada pelo aplicativo — não prova
-que uma pessoa leu ou compreendeu o conteúdo. Respostas comuns não contam.
-Relatórios repetidos não duplicam eventos. Retornos acima de 256 KiB ou mais de
-100 retornos por envio interrompem a coleta com aviso, sem truncamento silencioso.
+que uma pessoa leu ou compreendeu o conteúdo — e, por comprovar o recebimento,
+também marca a entrega quando o provedor não emite DSN de sucesso (caso do
+Gmail). Respostas comuns não contam.
+Relatórios repetidos não duplicam eventos. Retornos acima de 256 KiB são
+ignorados com aviso em log, sem truncamento silencioso.
 Os relatórios brutos e demais emails da conta não são armazenados.
 
 ### Tabelas do Explorador de camadas

@@ -25,7 +25,7 @@
   <link rel="stylesheet" href="/assets/css/paginas/ami-espaco-secoes.css?v=20261105-monitoramento">
   {% endif %}
   {% if modo_pagina == 'julgamentos' %}<link rel="stylesheet" href="/assets/css/paginas/sicard-standard-pages.css?v=20261027-1">{% endif %}
-  {% if modo_pagina == 'julgamentos' %}<link rel="stylesheet" href="/assets/css/paginas/central-respostas-padrao.css?v=20261029-escala-saaty">{% endif %}
+  {% if modo_pagina == 'julgamentos' %}<link rel="stylesheet" href="/assets/css/paginas/central-respostas-padrao.css?v=20261106-grafico-pares">{% endif %}
 {% endblock %}
 {% block conteudo %}
 {% set indicacao_processos = modo_pagina in ['espaco', 'julgamentos'] %}
@@ -129,5 +129,5 @@
   <script src="/assets/js/matriz-criterios-arquivo.js?v=20261009"></script>
   <script src="/assets/js/matrizes-criterios.js?v=20261105-table-labels"></script>
   <script src="/assets/js/saaty-selector-color.js?v=20261103-1"></script>
-  <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20261105-table-labels"></script>
+  <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20261106-grafico-pares"></script>
 {% endblock %}

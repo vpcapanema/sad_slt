@@ -74,7 +74,7 @@ const BASE = process.env.SICARD_BROWSER_BASE_URL || 'http://127.0.0.1:8083';
  assert.equal(await page.locator('#ami-analysis-criteria tr.is-sel td').nth(1).innerText(),'CT1');
  await page.locator('#ami-analysis-criteria-chart li[data-criterio="0"]').click();
  assert.equal(await page.locator('#ami-analysis-criteria tr.is-sel').count(),0);
- assert.equal(await page.locator('#ami-analysis-measure-box').isVisible(),false);
+ assert.equal(await page.locator('#ami-analysis-measure-box').isVisible(),true,'a medida segue disponível com um julgador selecionado');
  await page.locator('#ami-pairs-judge').selectOption('');
  assert.equal(await page.locator('#ami-analysis-measure').inputValue(),'geometrica');
  await page.locator('#ami-analysis-measure').selectOption('registrada');
