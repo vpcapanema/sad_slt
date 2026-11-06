@@ -235,6 +235,15 @@ const fs = require('node:fs');
     await page.locator('#ami-email-deliveries tr', {hasText:'ana@example.com'}).locator('input[type="checkbox"]').check();
     assert.equal(await page.locator('#ami-monitor-send').isDisabled(),true);
     assert.equal(sends.length,5);
+    // Convite devolvido pelo servidor do destinatário volta a admitir envio aos selecionados.
+    rows=[{id:'devolvido-ana',destinatario:'ana@example.com',envio_status:'aceito_smtp',entrega_status:'falha',leitura_status:'sem_confirmacao',criado_em:'2026-10-19T18:00:00Z',detalhe:'Devolvido: caixa inexistente.'}];
+    await page.reload();
+    await page.locator(`[data-select-id="${env}"]`).check();
+    await page.locator('#ami-judgments-view-action').click();
+    await page.waitForFunction(()=>!document.getElementById('ami-open-mail').disabled);
+    assert.match(await page.locator('#ami-email-deliveries tr', {hasText:'ana@example.com'}).innerText(),/Devolvido/);
+    await page.locator('#ami-email-deliveries tr', {hasText:'ana@example.com'}).locator('input[type="checkbox"]').check();
+    assert.equal(await page.locator('#ami-monitor-send').isDisabled(),false,'Devolvido habilita o envio aos selecionados');
     rows=Array.from({length:18},(_,index)=>({id:'historico-'+index,destinatario:'ana@example.com',
       envio_status:'aceito_smtp',entrega_status:index%2?'confirmada':'sem_confirmacao'}));
     await page.reload();

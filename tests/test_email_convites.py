@@ -537,6 +537,7 @@ def test_monitoramento_rejeita_envio_que_nao_esta_nao_enviado(monkeypatch, natur
                                 datetime.now(timezone.utc), natureza=natureza)
     reserva.assert_not_called()
     assert "pg_advisory_xact_lock" in conn.execute.call_args_list[0].args[0]
+    assert "coalesce(entrega_status, '') <> 'falha'" in conn.execute.call_args.args[0]
     assert conn.execute.call_args.args[1] == ("ambiente", DEST, natureza)
 
 

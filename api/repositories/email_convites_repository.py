@@ -116,17 +116,19 @@ def reservar_monitorado(ambiente_id: str, destinatario: str, conteudo_hash: str,
     with get_connection() as conn:
         conn.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))",
                      (f"ahp-email:{ambiente_id}:{destinatario}:{natureza}",))
+        # Um convite devolvido pelo servidor do destinatário (entrega falha) não
+        # chegou: conta como pendente e admite novo envio pelo monitoramento.
         existente = conn.execute(
             """SELECT * FROM ahp.comparacao_colaborativa_email
                WHERE ambiente_id=%s AND lower(destinatario)=%s AND natureza=%s
-                 AND envio_status <> 'falha'
+                 AND envio_status <> 'falha' AND coalesce(entrega_status, '') <> 'falha'
                ORDER BY criado_em DESC LIMIT 1 FOR UPDATE""",
             (ambiente_id, destinatario, natureza),
         ).fetchone()
         if existente:
             if rejeitar_enviado:
                 raise DemandaValidationError(
-                    "O e-mail não está com status Não enviado. Atualize o monitoramento antes de continuar.",
+                    "O e-mail não está com status Não enviado nem Devolvido. Atualize o monitoramento antes de continuar.",
                     field="destinatario",
                 )
             return dict(existente), False

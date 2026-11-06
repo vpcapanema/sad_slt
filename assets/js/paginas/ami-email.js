@@ -168,6 +168,9 @@
     if (!response.ok) throw new Error(window.SicardApiErro ? window.SicardApiErro.formatar(body, { status: response.status, method: (options && options.method) || "GET", url: path }) : (Array.isArray(body.detail) ? body.detail.map(item => item.msg).join("; ") : body.detail || `Não foi possível concluir a operação (HTTP ${response.status}).`));
     return body;
   }
+  // Estados que admitem (re)envio pelo monitoramento: nunca enviado, ou enviado
+  // e devolvido pelo servidor do destinatário.
+  const REENVIAVEIS = new Set(["Não enviado", "Devolvido"]);
   function controles() {
     const {pendentes, enviados} = situacao();
     const rotulo = !enviados ? "Enviar e-mail" : pendentes.length ? "Enviar aos pendentes (" + pendentes.length + ")" : "Reenviar e-mails";
@@ -178,9 +181,9 @@
     const marcados = monitorRows.filter(row => selected.has(rowKey(row)));
     const baseBloqueada = ocupado || !pronto || modo !== "view" || !contexto || !marcados.length;
     $("ami-monitor-send").disabled = $("ami-open-mail").disabled || baseBloqueada ||
-      !marcados.every(row => estado(row, "convite") === "Não enviado");
+      !marcados.every(row => REENVIAVEIS.has(estado(row, "convite")));
     $("ami-monitor-send-response").disabled = baseBloqueada ||
-      !marcados.every(row => estado(row, "resposta") === "Não enviado");
+      !marcados.every(row => REENVIAVEIS.has(estado(row, "resposta")));
     $("ami-email-receipts").disabled = ocupado || !contexto || modo !== "view";
     $("ami-revoke-invitation").disabled = ocupado || !contexto || modo !== "view" || !contexto.destinatarios.length;
     $("ami-monitor-refresh").disabled = $("ami-email-receipts").disabled;
@@ -280,7 +283,7 @@
     /limitou temporariamente|limite diário|recusou a mensagem/i.test(row.detalhe || "");
   function situacao() {
     if (!contexto || !pronto) return {pendentes: [], enviados: 0};
-    const pendentes = contexto.destinatarios.filter(destinatario => estado({destinatario}, "convite") === "Não enviado");
+    const pendentes = contexto.destinatarios.filter(destinatario => REENVIAVEIS.has(estado({destinatario}, "convite")));
     return {pendentes, enviados: contexto.destinatarios.length - pendentes.length};
   }
   // Destinatários salvos correspondentes às linhas marcadas na coluna de seletores.
@@ -304,7 +307,7 @@
         title: apenasSelecionados ? "Enviar e-mail de convite aos selecionados" : reenvio ? "Reenviar e-mails aos colaboradores" : somentePendentes ? "Enviar e-mail aos pendentes" : "Enviar e-mail aos colaboradores",
         message: "Enviar a mensagem exibida para " + lista.length + " colaborador(es)" +
           (apenasSelecionados ? " selecionado(s) no monitoramento?" : somentePendentes ? " que ainda não receberam o convite?" : " salvo(s)?"),
-        warning: apenasSelecionados ? "Somente colaboradores com E-mail convite igual a Não enviado podem receber este envio. Os demais colaboradores não são afetados."
+        warning: apenasSelecionados ? "Somente colaboradores com E-mail convite igual a Não enviado ou Devolvido podem receber este envio. Os demais colaboradores não são afetados."
           : reenvio ? "Será enviado um novo convite a cada colaborador salvo, inclusive a quem já recebeu. O histórico anterior será preservado."
           : somentePendentes ? "Quem já recebeu o convite não receberá outra mensagem e mantém sua chave individual."
           : "Envios individuais aos colaboradores salvos.",
