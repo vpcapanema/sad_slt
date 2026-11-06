@@ -314,7 +314,25 @@
 .admin-data-table thead th.sortable:hover {
   background: color-mix(in srgb, var(--admin-deep) 82%, #ffffff);
 }
-/* Barra de filtro (fora e acima da tabela) */
+/* Filtro e tabela compartilham a mesma borda externa, sem espaço entre eles. */
+.admin-table-shell {
+  border: 1px solid #374151;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+.admin-table-shell > .admin-filter-bar {
+  margin: 0;
+  border: 0;
+  border-bottom: 1px solid #374151;
+  border-radius: 0;
+}
+.admin-table-shell > .admin-table-wrap {
+  border: 0;
+  border-radius: 0;
+}
+
+/* Barra de filtro (acima da tabela, no mesmo contêiner) */
 .admin-filter-bar {
   display: flex;
   align-items: center;
@@ -374,7 +392,7 @@
   background: #fff7e6;
 }
 .admin-data-table .col-select {
-  width: 46px;
+  width: 2.75rem;
   position: sticky;
   left: 0;
   z-index: 1;

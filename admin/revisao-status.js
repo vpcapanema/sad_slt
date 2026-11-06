@@ -330,9 +330,9 @@
         </header>
         <div class="status-proposta-grid">${renderStatusCards(camada, atualMap)}</div>
         <details class="status-revisao-detalhe">
-          <summary>Tabela comparativa</summary>
+          <summary>Mostrar tabela</summary>
           <div class="admin-table-wrap">
-            <table class="admin-table status-revisao-table">
+            <table class="admin-table status-revisao-table" data-table-title="comparativa da camada ${escapeHtml(camada.titulo)}">
               <thead>
                 <tr>
                   <th>Código</th>

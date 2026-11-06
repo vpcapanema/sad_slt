@@ -93,9 +93,9 @@ def test_preserva_texto_acrescenta_token_e_nao_repete_apos_recarga(ambiente, smt
     result = service.enviar(ambiente["id"], dados, "analista")
     assert result["envio_status"] == "aceito_smtp"
     texto = smtp.call_args.args[0].texto
-    assert texto.startswith(dados.texto + "\n\n")
+    assert texto.startswith(dados.texto.replace("/token-teste/\n", "/token-teste/?c=" + service.codigo_link("token-teste", DEST) + "\n") + "\n\n")
     assert "Chave individual do convite: " + "A" * 43 in texto
-    assert registros[0]["conteudo_hash"] == sha256((service.ASSUNTO + "\n" + dados.texto).encode()).hexdigest()
+    assert registros[0]["conteudo_hash"] == sha256((service.ASSUNTO + "\n" + texto.split("\n\nChave individual")[0]).encode()).hexdigest()
     assert smtp.call_args.kwargs["solicitar_confirmacoes"] is True
     assert smtp.call_args.kwargs["id_mensagem"] == registros[0]["mensagem_id"]
     assert "sicard." in registros[0]["mensagem_id"]
@@ -583,14 +583,46 @@ def test_envio_seletivo_usa_reserva_monitorada(ambiente, smtp, registros, monkey
 def test_monitoramento_inclui_nomes_e_disponibilidade_da_resposta(ambiente, registros, monkeypatch):
     ambiente["convites"] = [{"nome": "Ana", "email": DEST}, {"nome": "Bia", "email": "bia@example.com"}]
     monkeypatch.setattr(service.ambientes, "list_respostas", lambda _: [
-        {"email": DEST, "status": "enviada"}, {"email": "bia@example.com", "status": "em_preenchimento"}])
+        {"email": DEST, "status": "enviada", "iniciado_em": None},
+        {"email": "bia@example.com", "status": "em_preenchimento", "iniciado_em": datetime(2026, 11, 6, 19, 51, 11, tzinfo=timezone.utc)}])
     from api.routers.email_convites import monitoramento
     result = monitoramento(ambiente["id"])
     assert result["registros"] == registros
     assert result["colaboradores"] == [
-        {"nome": "Ana", "email": DEST, "resposta_recebida": True},
-        {"nome": "Bia", "email": "bia@example.com", "resposta_recebida": False},
+        {"nome": "Ana", "email": DEST, "resposta_recebida": True, "acesso_formulario_em": None, "clique_link_em": None},
+        {"nome": "Bia", "email": "bia@example.com", "resposta_recebida": False, "acesso_formulario_em": "2026-11-06T19:51:11+00:00", "clique_link_em": None},
     ]
+
+
+def test_monitoramento_informa_primeiro_clique_no_link(ambiente, registros, monkeypatch):
+    ambiente["convites"] = [{"nome": "Ana", "email": DEST}]
+    monkeypatch.setattr(service.ambientes, "list_respostas", lambda _: [])
+    registros.append({"natureza": "convite", "destinatario": DEST, "link_acessado_em": datetime(2026, 11, 6, 16, 51, tzinfo=timezone.utc)})
+    registros.append({"natureza": "convite", "destinatario": DEST, "link_acessado_em": None})
+    from api.routers.email_convites import monitoramento
+    assert monitoramento(ambiente["id"])["colaboradores"][0]["clique_link_em"] == "2026-11-06T16:51:00+00:00"
+
+
+def test_link_do_convite_recebe_codigo_sem_expor_o_email(ambiente, smtp, registros):
+    service.enviar(ambiente["id"], payload(ambiente), "analista")
+    codigo = service.codigo_link("token-teste", DEST)
+    texto = smtp.call_args.args[0].texto
+    assert f"/formulario-comparacao-pareada/token-teste/?c={codigo}\n" in texto
+    assert DEST not in texto
+    assert codigo != service.codigo_link("token-teste", "bia@example.com")
+
+
+def test_clique_registra_somente_codigo_do_destinatario(ambiente, monkeypatch):
+    ambiente["convites"] = [{"email": DEST}]
+    monkeypatch.setattr(service.ambientes, "get_ambiente_by_token", lambda _: ambiente)
+    registrar = MagicMock()
+    monkeypatch.setattr(service.repo, "registrar_clique", registrar)
+    service.registrar_clique_link("token-teste", "0" * 32)
+    service.registrar_clique_link("token-teste", "nao-hexadecimal")
+    registrar.assert_not_called()
+    service.registrar_clique_link("token-teste", service.codigo_link("token-teste", DEST))
+    registrar.assert_called_once_with(str(ambiente["id"]), DEST)
+
 
 
 @pytest.mark.parametrize("perfil,status", [(None, 401), ("VISUALIZADOR", 403), ("OPERADOR", 403), ("ANALISTA", 200), ("GESTOR", 200), ("ADMIN", 200)])

@@ -35,7 +35,8 @@
       return rotulosEntrega[atual.entrega_status];
     }
     if (atual) return rotulosEnvio[atual.envio_status];
-    return tipo === "resposta" && !row.resposta_recebida ? "Aguardando resposta" : "Não enviado";
+    if (tipo === "resposta" && !row.resposta_recebida) return "Aguardando resposta";
+    return "Não enviado";
   }
   function dataEvento(row, tipo) {
     const datas = (row.eventos || []).filter(evento => evento.tipo === tipo && evento.ocorrido_em)

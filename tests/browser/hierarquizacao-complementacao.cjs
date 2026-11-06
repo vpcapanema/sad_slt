@@ -222,18 +222,15 @@ const hierarquia = () => ({codigo: 'H1', nome: 'Rodada teste', status: 'em_julga
 
     await page.goto(base + rotas[2] + '?codigo=H1');
     await page.locator('#fase3-complementacao').waitFor();
-    await page.evaluate(() => { ProcessFeedback.confirmar = async () => true; });
+    const pedidosAntesDaNavegacao = chamadas.filter(c => c.p.endsWith('/solicitar')).length;
+    await page.route('**/restrict/central-pendencias/', route => route.fulfill({
+      contentType: 'text/html', body: '<h1>Central de pendências</h1>',
+    }));
     await page.locator('#fase3-solicitar-complementacao').click();
-    await page.waitForFunction(() => document.querySelector('#fase3-complementacao-resultado').textContent.includes('parcialmente realizado'));
-    assert.match(await page.locator('#fase3-complementacao-resultado').innerText(), /pedidos|Pedidos/);
-    assert.equal(chamadas.findLast(c => c.p.endsWith('/solicitar')).body.descricao,
-      'Complemente os atributos dos grupos Cadastro e Dinâmicos da tabela 2 para prosseguir com a hierarquização. O risco é obtido da Fase 1.');
-    falharPedido = true;
-    await page.locator('#fase3-solicitar-complementacao').click();
-    await page.waitForFunction(() => document.querySelector('#fase3-complementacao-resultado').textContent.includes('Não foi possível confirmar'));
-    assert.match(await page.locator('#fase3-complementacao-resultado').innerText(), /cadastro permanece salvo/);
+    await page.waitForURL(base + '/restrict/central-pendencias/');
+    assert.equal(chamadas.filter(c => c.p.endsWith('/solicitar')).length, pedidosAntesDaNavegacao);
     perfil = 'OPERADOR';
-    await page.reload();
+    await page.goto(base + rotas[2] + '?codigo=H1');
     await page.locator('#fase-hierarquizacao option[value="H1"]').waitFor({state: 'attached'});
     assert.equal(await page.locator('#fase3-complementacao').isVisible(), false);
     perfil = 'ANALISTA';

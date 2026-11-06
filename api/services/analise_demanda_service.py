@@ -763,6 +763,7 @@ def decidir(
         decisao=decisao,
         status_atual=status_atual,
         momento=momento,
+        geometria=_geometria_cadastro(tipo, codigo_demanda),
     )
     analise_demanda_repository.salvar_pdf(demanda_codigo=codigo_demanda, pdf=pdf)
 
@@ -789,6 +790,32 @@ def obter_pdf(codigo: str) -> tuple[str, bytes]:
 # ---------------------------------------------------------------------------
 # Relatório PDF
 # ---------------------------------------------------------------------------
+def _geometria_cadastro(tipo: str, codigo: str) -> dict[str, Any] | None:
+    from api.repositories import cadastro_geometria_repository
+    encontrados = cadastro_geometria_repository.listar(tipo, codigo)
+    return encontrados[0] if encontrados else None
+
+
+def _secao_mapa(estilos: dict, geometria: dict[str, Any] | None) -> list[Any]:
+    from io import BytesIO
+    from reportlab.platypus import Image, KeepTogether, Spacer
+    from api.services import extracao_atributos_relatorios as estilo
+    from api.services.analise_demanda_mapa import MAPA_RAZAO_ALTURA, mapa_demanda_png
+
+    titulo = estilo._p(estilos, 'Mapa de localização da demanda', 'h1')
+    features = (geometria or {}).get('geojson', {}).get('features') or []
+    if not features or not features[0].get('geometry'):
+        return [titulo, estilo._p(estilos, 'A geometria cadastrada da demanda não está disponível para o mapa.', 'nota')]
+    largura = estilo.LARGURA
+    png, aviso = mapa_demanda_png(geometria, largura / 72)
+    notas = [estilo._p(estilos, 'Mapa com a geometria cadastrada e o entorno. Datum, projeção, grade e escala '
+                                'estão indicados na própria figura.', 'nota')]
+    if aviso:
+        notas.append(estilo._p(estilos, aviso, 'nota'))
+    imagem = Image(BytesIO(png), width=largura, height=largura * MAPA_RAZAO_ALTURA)
+    return [KeepTogether([titulo, imagem, *notas]), Spacer(1, 6)]
+
+
 def gerar_pdf(
     *,
     demanda: dict[str, Any],
@@ -798,6 +825,7 @@ def gerar_pdf(
     decisao: str,
     status_atual: str,
     momento: datetime,
+    geometria: dict[str, Any] | None = None,
 ) -> bytes:
     try:
         from reportlab.lib import colors
@@ -849,8 +877,9 @@ def gerar_pdf(
             ("Situação da demanda", _rotulo_status(status_atual)),
             ("Emitido em", estilo.hora(momento.isoformat())),
         ]),
-        p("Análise e parecer técnico", "h1"),
     ]
+    fluxo.extend(_secao_mapa(e, geometria))
+    fluxo.append(p("Análise e parecer técnico", "h1"))
     liberado = all(respostas.get(c) is True for c in ELIMINATORIOS)
     resultado = calcular_resultado(respostas)
     complementacao = decisao == "complementacao"

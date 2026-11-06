@@ -2032,15 +2032,32 @@
       const btn = e.submitter;
       if (btn) btn.disabled = true;
       try {
-        await SLTDemandasApi.createPlano(payload);
-        showToast("Plano cadastrado com sucesso.");
-        setTimeout(() => (window.location.href = "/public/painel/"), 1500);
-      } catch (err) {
-        showToast(err.message || "Erro ao cadastrar plano.");
+        await registrarComFeedback({
+          titulo: "Cadastrando plano",
+          mensagemSucesso: "Plano cadastrado com sucesso.",
+          operacao: () => SLTDemandasApi.createPlano(payload),
+        });
       } finally {
         if (btn) btn.disabled = false;
       }
     });
+  }
+
+  async function registrarComFeedback({ titulo, mensagemSucesso, operacao }) {
+    const tarefa = "Aguardando confirmação do servidor";
+    const processo = ProcessFeedback.iniciarCadastro({
+      title: titulo,
+      tasks: [tarefa],
+      onSuccess: () => setTimeout(() => (window.location.href = "/public/painel/"), 1500),
+    });
+    processo.tarefaAtual(tarefa);
+    try {
+      await operacao();
+      processo.concluirTarefa(tarefa);
+      processo.sucesso({ title: titulo, message: mensagemSucesso });
+    } catch (err) {
+      processo.erro({ message: err.message, status: err.status, method: err.method, url: err.url, body: err.body });
+    }
   }
 
   async function initProgramaForm() {
@@ -2083,11 +2100,11 @@
       const btn = e.submitter;
       if (btn) btn.disabled = true;
       try {
-        await SLTDemandasApi.createPrograma(payload);
-        showToast("Programa cadastrado com sucesso.");
-        setTimeout(() => (window.location.href = "/public/painel/"), 1500);
-      } catch (err) {
-        showToast(err.message || "Erro ao cadastrar programa.");
+        await registrarComFeedback({
+          titulo: "Cadastrando programa",
+          mensagemSucesso: "Programa cadastrado com sucesso.",
+          operacao: () => SLTDemandasApi.createPrograma(payload),
+        });
       } finally {
         if (btn) btn.disabled = false;
       }
@@ -2153,14 +2170,11 @@
       const submitBtn = e.submitter || $("#form-cadastro").querySelector('[type="submit"]');
       if (submitBtn) submitBtn.disabled = true;
       try {
-        await SLTDemandasApi.createDemanda(demanda, SLTGeometria.getArquivoOriginal?.() || null);
-        showToast("Demanda registrada com sucesso.");
-        setTimeout(() => {
-          window.location.href = "/public/painel/";
-        }, 1500);
-      } catch (err) {
-        console.error(err);
-        showToast(err.message || "Erro ao registrar demanda.");
+        await registrarComFeedback({
+          titulo: "Registrando demanda",
+          mensagemSucesso: "Demanda registrada com sucesso.",
+          operacao: () => SLTDemandasApi.createDemanda(demanda, SLTGeometria.getArquivoOriginal?.() || null),
+        });
       } finally {
         if (submitBtn) submitBtn.disabled = false;
       }

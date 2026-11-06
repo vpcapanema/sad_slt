@@ -3522,3 +3522,11 @@ body.ami-espaco-page .admin-table-footer > #ami-emails-count {
   body .admin-table-footer > :is(.admin-table-summary, .agrupamento-section-footer),
   body.ami-espaco-page .admin-table-footer > #ami-emails-count { grid-column: 1; grid-row: 2; }
 }
+
+  /* Coluna de seletores: largura fixa de 44 px em todas as tabelas (padrão docs/padrao-tabelas.md). */
+  table :is(th, td).col-select {
+    box-sizing: border-box !important;
+    width: 2.75rem !important;
+    min-width: 2.75rem !important;
+    max-width: 2.75rem !important;
+  }

@@ -28,7 +28,7 @@ from api.deps.access_policy import module_for_path, read_only
 from api.middleware.subpath_rewrite import SubpathRewriteMiddleware
 from api.path_policy import project_path, relative_path
 from api.routers import api_router
-from api.services import storage_remoto
+from api.services import email_convites as convites_service, storage_remoto
 from api.services.email_confirmacoes_automaticas import lifespan
 from api.services.session_service import SessionUser, cookie_name
 
@@ -514,6 +514,9 @@ def redirecionar_formulario_multicriterio(request: Request, token: str) -> Respo
 
 @app.get("/public/analise-multicriterio/formulario-comparacao-pareada/{token}/", include_in_schema=False)
 def pagina_formulario_multicriterio(request: Request, token: str) -> Response:
+    codigo = request.query_params.get("c")
+    if codigo:
+        convites_service.registrar_clique_link(token, codigo)
     return render_page(request, "paginas/analise_multicriterio/formulario.html", token=token)
 
 

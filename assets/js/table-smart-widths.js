@@ -72,6 +72,7 @@
       const tolerance=Math.max(measure(spec.title.slice(-3),headers[i]),spec.full/Math.max(1,spec.title.length)*3);
       if(missing>0 && missing<=tolerance)widths[i]=Math.ceil(spec.full+32);
     });
+    headers.forEach((header, i) => { if (header.classList.contains('col-select')) widths[i] = 44; });
     const total=widths.reduce((a,b)=>a+b,0), extra=0;
     headers.forEach((header, i) => {
       if (specifications[i].hidden) return;
@@ -123,6 +124,7 @@
       columns.replaceChildren(...widths.map((width,i)=>{const col=document.createElement('col');col.style.width=(width+(i===0&&headers[i].querySelector('input')?0:extra))+'px';return col;}));
       table.querySelectorAll('thead th[colspan]').forEach(h=>{set(h,'white-space','normal');set(h,'overflow','visible');set(h,'text-overflow','clip');});
     }
+    table.querySelectorAll('th.col-select, td.col-select').forEach(cell => { ['width', 'min-width', 'max-width'].forEach(property => set(cell, property, '44px')); });
     set(table,'table-layout','fixed'); set(table,'width',Math.max(total,available)+'px'); set(table,'min-width','0'); set(table,'max-width','none');
     table.dataset.smartWidths = 'true';
     table.parentElement.style.overflowX = table.parentElement.scrollWidth > table.parentElement.clientWidth ? 'auto' : 'hidden';

@@ -403,26 +403,6 @@
       });
       podeSolicitarComplementacao = ['ADMIN', 'ANALISTA', 'GESTOR'].includes(usuario?.tipo_usuario);
       $("fase3-complementacao").hidden = true;
-      $("fase3-solicitar-complementacao").onclick = async () => {
-        const hierarquizacao = atual();
-        if (!hierarquizacao) { exigirHierarquizacao(); return; }
-        const descricao = $("fase3-complementacao-descricao").value.trim();
-        if (!descricao) {
-          $("fase3-complementacao-resultado").textContent = 'Informe a orientação aos responsáveis antes de solicitar.';
-          $("fase3-complementacao-descricao").focus();
-          return;
-        }
-        const button = $("fase3-solicitar-complementacao");
-        button.disabled = true;
-        try {
-          if (!await ProcessFeedback.confirmar({
-            title: 'Solicitar complementação de atributos',
-            message: `Registrar pedidos para as demandas com atributos faltantes na hierarquização ${hierarquizacao.codigo} e tentar o envio de e-mail aos responsáveis? Pedidos persistem mesmo se o e-mail falhar.`,
-            confirmLabel: 'Registrar e tentar envio', cancelLabel: 'Cancelar',
-          })) return;
-          await SLTComplementacaoHierarquizacao.solicitar(hierarquizacao.codigo, $("fase3-complementacao-resultado"), descricao);
-        } finally { button.disabled = false; }
-      };
       hierarquizacoes = await HierApi.listar();
       $("fase-hierarquizacao").innerHTML = '<option value="">Selecione…</option>' + hierarquizacoes
         .filter((item) => (item.dados_hierarquizacao?.cabecalho_grupo?.fases_a_executar || [1, 2, 3]).includes(3))

@@ -1,6 +1,8 @@
 """Envio explícito dos convites salvos de um julgamento."""
 from __future__ import annotations
 
+import logging
+import re
 from hashlib import sha256
 from uuid import uuid4
 
@@ -15,6 +17,37 @@ from api.services.comparacao_colaborativa_service import (
 )
 
 ASSUNTO = "Convite para preenchimento colaborativo AHP - SICARD"
+_CODIGO_LINK = re.compile(r"[0-9a-f]{32}")
+logger = logging.getLogger(__name__)
+
+
+def codigo_link(token: str, destinatario: str) -> str:
+    """Código público e estável do link de cada destinatário, sem expor o e-mail na URL."""
+    return sha256(f"{token}|{destinatario.strip().lower()}".encode()).hexdigest()[:32]
+
+
+def _marcar_links(texto: str, token: str, destinatario: str, caminhos: tuple[str, ...]) -> str:
+    codigo = codigo_link(token, destinatario)
+    for caminho in caminhos:
+        texto = re.sub(re.escape(caminho) + r"(?:\?c=[0-9a-f]{32})?", lambda _: f"{caminho}?c={codigo}", texto)
+    return texto
+
+
+def registrar_clique_link(token: str, codigo: str) -> None:
+    """Grava o primeiro acesso ao link do convite; falhas nunca interrompem a página pública."""
+    if not _CODIGO_LINK.fullmatch(codigo):
+        return
+    try:
+        ambiente = ambientes.get_ambiente_by_token(token)
+        if not ambiente:
+            return
+        for convite in ambiente["convites"]:
+            email = str(convite["email"]).strip().lower()
+            if codigo_link(token, email) == codigo:
+                repo.registrar_clique(str(ambiente["id"]), email)
+                return
+    except Exception:
+        logger.exception("Falha ao registrar o clique no link do convite")
 
 
 def enviar(ambiente_id: str, dados: ConviteEmailEnvioSchema, usuario_id: str) -> dict:
@@ -56,6 +89,7 @@ def enviar(ambiente_id: str, dados: ConviteEmailEnvioSchema, usuario_id: str) ->
         "Ela é revogável, exclusiva deste destinatário e válida dentro do prazo do julgamento. "
         "Um novo envio invalida a chave anterior."
     )
+    corpo = _marcar_links(corpo, ambiente["token"], destinatario, caminhos)
     texto = corpo
     if len(texto) + len(instrucoes.format(segredo="x" * 43)) > 50000:
         raise DemandaValidationError(

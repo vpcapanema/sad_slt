@@ -113,7 +113,8 @@ def atualizar(pedido, user=None):
                 "solicitacao_complementacao": pedido.get("descricao")}
         pdf = analise_service.gerar_pdf(demanda=cadastro, tipo=pedido["demanda_tipo"],
             respostas=fonte["respostas"], analise=nova, decisao="complementacao",
-            status_atual=cadastro["status"], momento=momento_local)
+            status_atual=cadastro["status"], momento=momento_local,
+            geometria=analise_service._geometria_cadastro(pedido["demanda_tipo"], pedido["demanda_codigo"]))
         numero = ultima["numero"] + 1 if ultima else 1
         conn.execute(f"""INSERT INTO {TABLE}
             (solicitacao_id,numero,origem,fonte_sha256,conteudo,pdf,pdf_sha256,gerado_por)

@@ -2,9 +2,10 @@
   "use strict";
 
   var LABEL_SELECTOR = ".sicard-table-label, .ami-table-label";
+  var FILTER_SELECTOR = ".admin-filter-bar";
   var WRAPPER_SELECTOR = [
     ".ami-filtered-table", ".ami-table-wrap", ".ami-pairwise-scroll", ".matriz-table-wrap",
-    ".hier-table-shell", ".collab-table-wrap", ".admin-table-wrap", ".ea-table-wrap",
+    ".hier-table-shell", ".collab-table-wrap", ".admin-table-shell", ".admin-table-wrap", ".ea-table-wrap",
     ".fase-table-wrap", ".table-scroll", ".table-wrap", ".geo-explorer-table-wrap",
     ".mlb-table", ".gp-operation-result-table", ".gerador-tabela-scroll"
   ].join(",");
@@ -64,8 +65,10 @@
       return article === "os" ? "dos" : article === "as" ? "das" : article === "o" ? "do" : "da";
     }
     var first = (text.match(/[\p{L}\p{N}]+/u) || [""])[0].toLocaleLowerCase("pt-BR");
+    var masculineA = /^(programa|sistema|tema|mapa|esquema|problema|diagrama|idioma|clima|poema|dia|artefato)$/i;
     var femininePlural = /^(áreas|demandas|camadas|respostas|pendências|configurações|operações|informações|ações|opções|hierarquizações|instituições|dimensões|regras|análises|matrizes|prioridades|categorias|atividades)$/i;
     var masculinePlural = /^(julgamentos|julgadores|índices|pesos|resultados|processos|dados|registros|colaboradores|critérios|indicadores|grupos|projetos|objetos|envios|convites|documentos|parâmetros|atributos|elementos|especialistas|municípios)$/i;
+    if (masculineA.test(first)) return "do";
     if (femininePlural.test(first) || /(?:ções|dades|agens)$/.test(first)) return "das";
     if (masculinePlural.test(first) || /(?:mentos|adores|ores)$/.test(first)) return "dos";
     if (/(?:ção|dade|agem|ência|ura|ização|oria|ia)$/.test(first) || /a$/.test(first)) return "da";
@@ -90,14 +93,40 @@
   }
 
   function tableContainer(table) {
+    var shell = table.closest(".admin-table-shell");
+    if (shell) return shell;
     var filters = table.closest(".ami-filtered-table");
     if (filters && filters.querySelectorAll("table").length === 1) return filters;
     return table.closest(WRAPPER_SELECTOR) || table;
   }
 
-  function existingLabel(container) {
-    var previous = container.previousElementSibling;
+  function blockAnchor(container) {
+    var anchor = container, previous = anchor.previousElementSibling;
+    while (previous && previous.matches(FILTER_SELECTOR)) {
+      anchor = previous;
+      previous = anchor.previousElementSibling;
+    }
+    while (anchor.parentElement && anchor.parentElement.tagName === "DETAILS") anchor = anchor.parentElement;
+    return anchor;
+  }
+
+  function existingLabel(anchor) {
+    var previous = anchor.previousElementSibling;
     return previous && previous.matches(LABEL_SELECTOR) ? previous : null;
+  }
+
+  function removeDuplicateLabels(label) {
+    var previous = label.previousElementSibling;
+    while (previous && previous.matches(LABEL_SELECTOR) && previous.textContent === label.textContent) {
+      previous.remove();
+      previous = label.previousElementSibling;
+    }
+  }
+
+  function tableOf(node) {
+    while (node && node.matches && node.matches(FILTER_SELECTOR)) node = node.nextElementSibling;
+    if (!node) return null;
+    return node.matches("table") ? node : node.querySelector("table");
   }
 
   function containingSection(table, label) {
@@ -131,13 +160,22 @@
 
   function labelTable(table) {
     if (!table || !table.isConnected || table.closest("template")) return;
-    var container = tableContainer(table), label = existingLabel(container);
+    var container = tableContainer(table), anchor = blockAnchor(container), label = existingLabel(anchor);
+    var stray = container.previousElementSibling;
+    if (anchor !== container && stray && stray.matches(LABEL_SELECTOR)) {
+      if (label) stray.remove();
+      else {
+        anchor.parentElement.insertBefore(stray, anchor);
+        label = stray;
+      }
+    }
     if (!label) {
       label = document.createElement("p");
       label.className = "sicard-table-label";
       label.textContent = labelText(table);
-      container.parentElement.insertBefore(label, container);
+      anchor.parentElement.insertBefore(label, anchor);
     }
+    removeDuplicateLabels(label);
     if (container.parentElement.classList.contains("ami-analysis-split") &&
         !container.parentElement.classList.contains("ami-analysis-split--table-labeled")) {
       container.parentElement.classList.add("ami-analysis-split--table-labeled");
@@ -151,13 +189,11 @@
     if (root.nodeType === 1 && root.matches("table")) labelTable(root);
     root.querySelectorAll("table").forEach(labelTable);
     if (root.nodeType === 1 && root.matches(LABEL_SELECTOR)) {
-      var container = root.nextElementSibling;
-      var table = container && (container.matches("table") ? container : container.querySelector("table"));
+      var table = tableOf(root.nextElementSibling);
       if (table) { syncVisibility(table, root); fitFont(table, root); }
     }
     root.querySelectorAll(LABEL_SELECTOR).forEach(function (label) {
-      var container = label.nextElementSibling;
-      var table = container && (container.matches("table") ? container : container.querySelector("table"));
+      var table = tableOf(label.nextElementSibling);
       if (table) { syncVisibility(table, label); fitFont(table, label); }
     });
   }

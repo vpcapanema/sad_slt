@@ -44,6 +44,9 @@
   border: 1px solid var(--pli-border);
   white-space: nowrap;
 }
+.ami-espaco-page .ahp-collab-table:has(#ami-email-list) :is(th, td):is(:nth-child(2), :nth-child(3)) {
+  text-align: left;
+}
 .ami-espaco-page .ahp-collab-table:has(#ami-email-list) th {
   padding: 0.5rem 0.6rem;
   background: var(--pli-deep, #003b5a);
@@ -505,39 +508,40 @@
 
 /* Inclusive nos estados hover, ativo e desabilitado: nenhum fundo colorido. */
 .ami-page.ami-espaco-page .ami-main :is(button, .btn, a.admin-icon-btn) {
-  color: var(--ami-botao-cor, #1683c4) !important;
+  color: var(--ami-botao-cor, #1683c4);
   border-color: var(--ami-botao-borda, #0d5078) !important;
-  background: #fff !important;
+  background: #fff;
 }
 .ami-page.ami-espaco-page .ami-main :is(button, .btn, a.admin-icon-btn):hover:not(:disabled):not(.is-disabled) {
-  background: #f4f4f4 !important;
+  background: #f4f4f4;
 }
 .ami-page.ami-espaco-page .ami-main :is(button, .btn, a.admin-icon-btn) > i {
   color: inherit;
 }
 .ami-page.ami-espaco-page :is(#ami-judgments, #ami-monitor-table) .ami-cell-link {
-  border: 0 !important;
+  border: 0;
   box-shadow: none;
-  background: transparent !important;
-  color: #123b56 !important;
+  background: transparent;
+  color: #123b56;
 }
 .ami-page.ami-espaco-page #ami-judgments .ami-cell-link[data-availability="available"] {
-  color: #166534 !important;
+  color: #166534;
 }
 .ami-page.ami-espaco-page #ami-judgments .ami-cell-link[data-availability="pending"] {
-  color: #991b1b !important;
+  color: #991b1b;
 }
 
 /* Botões com texto: padrão solicitado, independente dos botões de ícone. */
 .ami-page.ami-espaco-page .ami-main .btn:not(#ami-new):not(.admin-icon-btn) {
   position: relative;
-  color: #0b263b !important;
-  border: 2px solid #123b56 !important;
-  background: #e5e7eb !important;
+  --ami-botao-borda: #123b56;
+  color: #0b263b;
+  border: 2px solid #123b56;
+  background: #e5e7eb;
   font-weight: 700;
 }
 .ami-page.ami-espaco-page .ami-main .btn:not(#ami-new):not(.admin-icon-btn):hover:not(:disabled):not(.is-disabled) {
-  background: #d9dde3 !important;
+  background: #d9dde3;
 }
 .ami-page.ami-espaco-page .ami-main .btn:not(#ami-new):not(.admin-icon-btn):is(:disabled, .is-disabled, [aria-disabled="true"]) {
   opacity: 1;
@@ -553,9 +557,9 @@
 }
 .ami-page.ami-espaco-page .ami-main #ami-new,
 .ami-page.ami-espaco-page .ami-main #ami-new:hover:not(:disabled):not(.is-disabled) {
-  background: linear-gradient(135deg, var(--pli-blue), var(--pli-navy)) !important;
-  color: #fff !important;
-  border: 1px solid #fff !important;
+  background: linear-gradient(135deg, var(--pli-blue), var(--pli-navy));
+  color: #fff;
+  border: 1px solid #fff;
   border-radius: 6px;
   font-family: "Montserrat", sans-serif;
   font-size: 14px;

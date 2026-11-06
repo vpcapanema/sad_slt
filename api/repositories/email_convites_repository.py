@@ -2,11 +2,10 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from collections.abc import Generator
-from contextlib import ExitStack, contextmanager
 from typing import Any
 from uuid import uuid4
 import re
+import sys
 
 from psycopg.types.json import Jsonb
 from psycopg.pq import TransactionStatus
@@ -55,32 +54,52 @@ def listar_para_confirmacao() -> list[dict[str, Any]]:
     return [dict(row) for row in rows]
 
 
-@contextmanager
-def bloquear_coleta() -> Generator[bool, None, None]:
-    chave = "ahp-email:coleta-confirmacoes"
-    pilha = ExitStack()
-    try:
-        conn = pilha.enter_context(get_connection())
-        row = conn.execute(
-            "SELECT pg_try_advisory_lock(hashtextextended(%s,0)) AS adquirido", (chave,),
-        ).fetchone()
-        if row is None:
-            raise RuntimeError("O banco não confirmou o bloqueio da coleta de emails.")
-        adquirido = bool(row["adquirido"])
-        conn.commit()
+_CHAVE_COLETA = "ahp-email:coleta-confirmacoes"
+
+
+class _BloqueioColeta:
+    """Trava consultiva da coleta de confirmações; a conexão fica aberta enquanto o bloqueio existir."""
+
+    def __init__(self) -> None:
+        self._cm: Any = None
+        self._conn: Any = None
+        self._adquirido = False
+
+    def __enter__(self) -> bool:
+        self._cm = get_connection()
+        conn = self._cm.__enter__()
         try:
-            yield adquirido
-        finally:
-            if adquirido:
+            row = conn.execute(
+                "SELECT pg_try_advisory_lock(hashtextextended(%s,0)) AS adquirido", (_CHAVE_COLETA,),
+            ).fetchone()
+            if row is None:
+                raise RuntimeError("O banco não confirmou o bloqueio da coleta de emails.")
+            self._adquirido = bool(row["adquirido"])
+            conn.commit()
+        except BaseException:
+            self._cm.__exit__(*sys.exc_info())
+            raise
+        self._conn = conn
+        return self._adquirido
+
+    def __exit__(self, tipo: Any, valor: Any, tb: Any) -> bool:
+        conn = self._conn
+        try:
+            if self._adquirido:
                 try:
                     if conn.info.transaction_status == TransactionStatus.INERROR:
                         conn.rollback()
-                    conn.execute("SELECT pg_advisory_unlock(hashtextextended(%s,0))", (chave,))
+                    conn.execute("SELECT pg_advisory_unlock(hashtextextended(%s,0))", (_CHAVE_COLETA,))
                 except BaseException:
                     conn.close()
                     raise
-    finally:
-        pilha.close()
+        finally:
+            self._cm.__exit__(tipo, valor, tb)
+        return False
+
+
+def bloquear_coleta() -> _BloqueioColeta:
+    return _BloqueioColeta()
 
 
 def reservar(ambiente_id: str, destinatario: str, conteudo_hash: str, mensagem_id: str,
@@ -182,6 +201,19 @@ def finalizar(ident: str, status: str, detalhe: str, *, dsn: bool = False,
     if not row:
         raise DemandaValidationError("O histórico do envio foi removido durante a operação.", field="ambiente_id")
     return dict(row)
+
+
+def registrar_clique(ambiente_id: str, destinatario: str) -> None:
+    with get_connection() as conn:
+        conn.execute(
+            """UPDATE ahp.comparacao_colaborativa_email
+               SET link_acessado_em = COALESCE(link_acessado_em, now())
+               WHERE id = (SELECT id FROM ahp.comparacao_colaborativa_email
+                            WHERE ambiente_id=%s AND destinatario=%s
+                              AND natureza='convite' AND envio_status <> 'falha'
+                            ORDER BY criado_em DESC LIMIT 1)""",
+            (ambiente_id, destinatario),
+        )
 
 
 def registrar_evento(ident: str, tipo: str, fonte: str, *, ocorrido_em: str | None = None,

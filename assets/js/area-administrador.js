@@ -632,8 +632,9 @@
     table.append(tbody);
     wrap.append(table);
 
+    const shell = el("div", { class: "admin-table-shell" }, montarFiltro(), wrap);
     refs.host.innerHTML = "";
-    refs.host.append(montarFiltro(), wrap, montarAcoes(), el("div", {class: "admin-table-footer"}, montarPaginacao(), el("p", {class: "admin-table-summary", "aria-live": "polite"})));
+    refs.host.append(shell, montarAcoes(), el("div", {class: "admin-table-footer"}, montarPaginacao(), el("p", {class: "admin-table-summary", "aria-live": "polite"})));
     atualizarBotoes();
   }
 
