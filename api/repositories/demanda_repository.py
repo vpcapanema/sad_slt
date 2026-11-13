@@ -32,6 +32,7 @@ _SELECT_BASE = """
         d.instituicao_cnpj,
         d.instituicao_razao_social,
         d.instituicao_nome_fantasia,
+        d.representante_instituicao_id,
         d.sigma_pessoa_id,
         d.representante_nome,
         d.representante_email,
@@ -78,7 +79,7 @@ _INSERT_SQL = """
         instituicao_cnpj,
         instituicao_razao_social,
         instituicao_nome_fantasia,
-        sigma_pessoa_id,
+        representante_instituicao_id, sigma_pessoa_id,
         representante_nome,
         representante_email,
         representante_telefone,
@@ -115,7 +116,7 @@ _INSERT_SQL = """
         %(instituicao_cnpj)s,
         %(instituicao_razao_social)s,
         %(instituicao_nome_fantasia)s,
-        %(sigma_pessoa_id)s,
+        %(representante_instituicao_id)s, %(sigma_pessoa_id)s,
         %(representante_nome)s,
         %(representante_email)s,
         %(representante_telefone)s,
@@ -149,7 +150,7 @@ _INSERT_SQL = """
 
 def insert(row: dict[str, Any], *, arquivo_geometria: dict[str, Any] | None = None) -> dict[str, Any]:
     """Insere uma demanda e retorna a linha persistida."""
-    row = dict(row, criado_por=validar_autor(row.get("criado_por")))
+    row = dict({"representante_instituicao_id": None, **row}, criado_por=validar_autor(row.get("criado_por")))
     row = {
         "origem_sei_processo": None,
         "maturidade": None,
@@ -257,6 +258,7 @@ _UPDATE_ALLOWED = {
     "representante_nome": "representante_nome",
     "representante_email": "representante_email",
     "representante_telefone": "representante_telefone",
+    "representante_instituicao_id": "representante_instituicao_id",
     "sigma_pessoa_id": "sigma_pessoa_id",
     "atualizado_por": "atualizado_por",
     "diretoria_id": "diretoria_id",

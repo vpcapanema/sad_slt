@@ -867,8 +867,20 @@
     syncFieldFilledState($("#cnpj"));
   }
 
+  function representanteSelecionado(value) {
+    if (value?.startsWith("instituicao:")) {
+      const id = value.slice("instituicao:".length);
+      const item = SLTSigmaRead.findInstituicao(instituicoes, id);
+      return { item, pessoa_id: null, instituicao_id: id,
+        nome: item ? SLTSigmaRead.labelInstituicao(item) : "" };
+    }
+    const item = SLTSigmaRead.findPessoa(pessoas, value);
+    return { item, pessoa_id: value || null, instituicao_id: null,
+      nome: item ? SLTSigmaRead.labelPessoa(item) : "" };
+  }
+
   function onRepresentanteFieldChange(selectId, emailId, phoneId) {
-    const p = SLTSigmaRead.findPessoa(pessoas, $(selectId).value);
+    const { item: p } = representanteSelecionado($(selectId).value);
     $(emailId).value = p?.email || "";
     $(phoneId).value = SLTSigmaRead.formatTelefone(p?.telefone);
     syncFieldFilledState($(emailId));
@@ -880,13 +892,13 @@
   }
 
   function buildRepresentantePayload(selectId, emailId, phoneId) {
-    const pessoaId = $(selectId).value;
-    const p = SLTSigmaRead.findPessoa(pessoas, pessoaId);
+    const rep = representanteSelecionado($(selectId).value);
     return {
-      pessoa_id: pessoaId || null,
+      pessoa_id: rep.pessoa_id,
       representante: {
-        pessoa_id: pessoaId || null,
-        nome: p ? SLTSigmaRead.labelPessoa(p) : "",
+        pessoa_id: rep.pessoa_id,
+        instituicao_id: rep.instituicao_id,
+        nome: rep.nome,
         email: $(emailId).value.trim() || null,
         telefone: $(phoneId).value.trim() || null,
       },
@@ -922,12 +934,24 @@
       const el = $(sel);
       if (!el) return;
       el.disabled = false;
-      fillSelect(el, pessoas, "id", (p) => SLTSigmaRead.labelPessoa(p), placeholder);
+      const anterior = el.value;
+      fillSelect(el, [], "id", () => "", placeholder);
+      for (const [label, items, prefix, labelFn] of [
+        ["Representante legal — pessoa física", pessoas, "", SLTSigmaRead.labelPessoa],
+        ["Representante institucional", instituicoes, "instituicao:", SLTSigmaRead.labelInstituicao],
+      ]) {
+        const grupo = document.createElement("optgroup");
+        grupo.label = label;
+        fillSelect(grupo, items.map(item => ({ ...item, id: prefix + item.id })), "id", labelFn);
+        el.appendChild(grupo);
+      }
+      el.value = anterior;
+      syncFieldFilledState(el);
     });
   }
 
   const LISTAS_SIGMA = {
-    instituicoes: { seletores: ["#instituicao", "#pl-instituicao", "#pg-instituicao"], nome: "instituições" },
+    instituicoes: { seletores: ["#instituicao", "#pl-instituicao", "#pg-instituicao", "#representante", "#pl-representante", "#pg-representante"], nome: "instituições" },
     pessoas: { seletores: ["#representante", "#pl-representante", "#pg-representante"], nome: "representantes" },
   };
 
@@ -941,6 +965,7 @@
     if (lista === "instituicoes") {
       instituicoes = await SLTSigmaRead.listInstituicoes();
       fillInstituicaoSelects();
+      fillRepresentanteSelects();
     } else {
       pessoas = await SLTSigmaRead.listPessoas();
       fillRepresentanteSelects();
@@ -964,6 +989,7 @@
     botao.disabled = true;
     botao.classList.add("is-atualizando");
     try {
+      if (lista === "pessoas") await recarregarLista("instituicoes");
       const total = await recarregarLista(lista);
       showToast(`Lista atualizada: ${total} ${LISTAS_SIGMA[lista].nome}.`);
     } catch (erro) {
@@ -992,6 +1018,7 @@
     try {
       instituicoes = await SLTSigmaRead.listInstituicoes();
       fillInstituicaoSelects();
+      fillRepresentanteSelects();
       hint.textContent = "";
     } catch (err) {
       ["#instituicao", "#pl-instituicao", "#pg-instituicao"].forEach((sel) => {
@@ -1005,10 +1032,7 @@
       pessoas = await SLTSigmaRead.listPessoas();
       fillRepresentanteSelects();
     } catch (err) {
-      ["#representante", "#pl-representante", "#pg-representante"].forEach((sel) => {
-        const el = $(sel);
-        if (el) el.innerHTML = '<option value="">Não foi possível carregar representantes</option>';
-      });
+      fillRepresentanteSelects();
       hint.textContent = hint.textContent || "Não foi possível carregar os representantes. Tente novamente em instantes.";
     }
   }
@@ -1594,10 +1618,10 @@
     );
     setPgReviewText("pg-review-cnpj", $("#pg-cnpj")?.value || "—");
 
-    const pessoa = SLTSigmaRead.findPessoa(pessoas, $("#pg-representante")?.value);
+    const pessoa = representanteSelecionado($("#pg-representante")?.value);
     setPgReviewText(
       "pg-review-representante",
-      pessoa ? SLTSigmaRead.labelPessoa(pessoa) : "—"
+      pessoa.nome || "—"
     );
     setPgReviewText("pg-review-email", $("#pg-rep_email")?.value || "—");
     setPgReviewText("pg-review-telefone", $("#pg-rep_telefone")?.value || "—");
@@ -1651,7 +1675,7 @@
     const inst = SLTSigmaRead.findInstituicao(instituicoes, $("#instituicao").value);
     const geom = getGeometria();
     const coords = getCoordenadas();
-    const pessoa = SLTSigmaRead.findPessoa(pessoas, $("#representante").value);
+    const pessoa = representanteSelecionado($("#representante").value);
     const modal = cat.modais.find((m) => m.id === $("#modal").value);
     const tipologia = cat.tipologias.find((t) => t.id === $("#tipologia").value);
     const carteira = cat.carteiras.find((c) => c.id === $("#carteira").value);
@@ -1696,7 +1720,7 @@
     const proponenteRows = [
       reviewRow("Instituição interessada", escapeHtml(inst ? SLTSigmaRead.labelInstituicao(inst) : "—")),
       reviewRow("CNPJ", escapeHtml($("#cnpj").value || "—")),
-      reviewRow("Representante legal", escapeHtml(pessoa ? SLTSigmaRead.labelPessoa(pessoa) : "—")),
+      reviewRow("Representante legal", escapeHtml(pessoa.nome || "—")),
       reviewRow("E-mail", escapeHtml($("#rep_email").value || "—")),
       reviewRow("Telefone", escapeHtml($("#rep_telefone").value || "—")),
     ];
@@ -1783,8 +1807,7 @@
 
   function buildDemanda() {
     const plano = SLTCatalog.getPlano(getProjetoPlanoId());
-    const pessoaId = $("#representante").value;
-    const pessoa = SLTSigmaRead.findPessoa(pessoas, pessoaId);
+    const rep = buildRepresentantePayload("#representante", "#rep_email", "#rep_telefone");
     const geom = getGeometria();
     const coords = getCoordenadas();
     return {
@@ -1792,15 +1815,9 @@
       status: "analise_em_avaliacao",
       criadoEm: new Date().toISOString(),
       ...buildInstituicaoPayload("#instituicao", "#cnpj"),
-      pessoa_id: pessoaId || null,
+      ...rep,
       lat: coords?.lat ?? null,
       lng: coords?.lng ?? null,
-      representante: {
-        pessoa_id: pessoaId,
-        nome: pessoa ? SLTSigmaRead.labelPessoa(pessoa) : "",
-        email: $("#rep_email").value.trim(),
-        telefone: $("#rep_telefone").value.trim(),
-      },
       vinculo_institucional: isPjVinculoAtivo(),
       vinculo_tipo: isPjVinculoAtivo() ? getPjVinculoTipo() : null,
       diretoria_id: getProjetoDiretoriaId(),

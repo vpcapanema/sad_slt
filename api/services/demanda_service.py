@@ -26,7 +26,7 @@ from api.services.campos_demanda import (
     resolver_nomes_registros,
 )
 from api.services.hierarquia_outros import resolve_programa_pai_id
-from api.services.patch_helpers import apply_instituicao, apply_representante
+from api.services.patch_helpers import apply_instituicao, apply_representante, resolve_representante
 from api.services.reprovacao import validar_reprovacao
 from api.schemas.demanda import DemandaCreateSchema, DemandaResponseSchema, DemandaUpdateSchema, GeometriaSchema, RepresentanteSchema
 _ALLOWED_GEOM = frozenset({"Point", "LineString", "Polygon", "MultiPoint", "MultiLineString", "MultiPolygon"})
@@ -112,6 +112,7 @@ def _row_to_response(
         lng=float(row["longitude"]),
         representante=RepresentanteSchema(
             pessoa_id=str(row["sigma_pessoa_id"]) if row.get("sigma_pessoa_id") else None,
+            instituicao_id=str(row["representante_instituicao_id"]) if row.get("representante_instituicao_id") else None,
             nome=row.get("representante_nome_completo") or row.get("representante_nome") or "",
             email=row.get("representante_email"),
             telefone=row.get("representante_telefone"),
@@ -139,10 +140,7 @@ def _row_to_response(
 
 def _validate_payload(payload: DemandaCreateSchema) -> None:
     _parse_uuid(payload.instituicao_id, "instituicao_id")
-    pessoa_id = payload.pessoa_id or payload.representante.pessoa_id
-    if not pessoa_id:
-        raise DemandaValidationError("Representante legal é obrigatório.", field="pessoa_id")
-    _parse_uuid(pessoa_id, "pessoa_id")
+    resolve_representante(payload)
     if not (-90 <= payload.lat <= 90 and -180 <= payload.lng <= 180):
         raise DemandaValidationError("Coordenadas fora do intervalo válido.", field="lat")
 
@@ -151,7 +149,7 @@ def _build_persist_row(
     payload: DemandaCreateSchema, codigo: str, usuario_id: str
 ) -> dict[str, Any]:
     _validate_payload(payload)
-    pessoa_id = payload.pessoa_id or payload.representante.pessoa_id
+    pessoa_id, representante_instituicao_id = resolve_representante(payload)
     geom_tipo, geom_json = _geometria_to_geojson_str(
         payload.geometria.model_dump() if payload.geometria else None
     )
@@ -214,7 +212,8 @@ def _build_persist_row(
         "instituicao_cnpj": payload.instituicao_cnpj,
         "instituicao_razao_social": payload.instituicao_razao_social,
         "instituicao_nome_fantasia": payload.instituicao_nome_fantasia,
-        "sigma_pessoa_id": _parse_uuid(str(pessoa_id), "pessoa_id"),
+        "sigma_pessoa_id": pessoa_id,
+        "representante_instituicao_id": representante_instituicao_id,
         "representante_nome": (payload.representante.nome or "").strip(),
         "representante_email": payload.representante.email,
         "representante_telefone": payload.representante.telefone,
@@ -237,7 +236,7 @@ def _build_persist_row(
         "valor_global": payload.valor_global,
         "atributos_cadastrais": payload.atributos_cadastrais,
     }
-    normalizar_projeto(row, pessoa_id=str(pessoa_id), usuario_id=usuario_id)
+    normalizar_projeto(row, pessoa_id=pessoa_id, usuario_id=usuario_id)
     return demanda_repository.prepare_insert_params(row)
 
 

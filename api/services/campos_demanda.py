@@ -56,7 +56,7 @@ def aplicar_auditoria_usuario(
 ) -> dict[str, Any]:
     """Mantém o representante legal separado da conta que executou a ação."""
     autor = validar_autor(usuario_id)
-    pid = _pessoa_uuid(pessoa_id)
+    pid = _pessoa_uuid(pessoa_id) if pessoa_id else None
     row["sigma_pessoa_id"] = pid
     row["criado_por"] = autor
     row["atualizado_por"] = autor

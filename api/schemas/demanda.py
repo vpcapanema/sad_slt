@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 
 class RepresentanteSchema(BaseModel):
+    instituicao_id: str | None = None
     pessoa_id: str | None = None
     nome: str = ""
     email: str | None = None
@@ -102,6 +103,7 @@ class DemandaResponseSchema(BaseModel):
 
 
 class RepresentanteUpdateSchema(BaseModel):
+    instituicao_id: str | None = None
     pessoa_id: str | None = None
     nome: str | None = Field(None, max_length=200)
     email: str | None = Field(None, max_length=200)

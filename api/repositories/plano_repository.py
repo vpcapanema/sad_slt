@@ -26,6 +26,7 @@ _SELECT_BASE = """
         p.instituicao_razao_social,
         p.instituicao_nome_fantasia,
         p.instituicao_cnpj,
+        p.representante_instituicao_id,
         p.sigma_pessoa_id,
         p.representante_nome,
         p.representante_email,
@@ -65,7 +66,7 @@ _INSERT_SQL = """
         objetivo_estrategico, responsavel,
         sigma_instituicao_id, instituicao_nome, instituicao_razao_social,
         instituicao_nome_fantasia, instituicao_cnpj,
-        sigma_pessoa_id, representante_nome, representante_email, representante_telefone,
+        representante_instituicao_id, sigma_pessoa_id, representante_nome, representante_email, representante_telefone,
         vigencia_inicio, vigencia_fim,
         valor_global, atributos_cadastrais, maturidade, prazo_referencia_meses, base_estimativa_prazo,
         status, criado_por, atualizado_por
@@ -74,7 +75,7 @@ _INSERT_SQL = """
         %(objetivo_estrategico)s, %(responsavel)s,
         %(sigma_instituicao_id)s, %(instituicao_nome)s, %(instituicao_razao_social)s,
         %(instituicao_nome_fantasia)s, %(instituicao_cnpj)s,
-        %(sigma_pessoa_id)s, %(representante_nome)s, %(representante_email)s, %(representante_telefone)s,
+        %(representante_instituicao_id)s, %(sigma_pessoa_id)s, %(representante_nome)s, %(representante_email)s, %(representante_telefone)s,
         %(vigencia_inicio)s, %(vigencia_fim)s,
         %(valor_global)s, %(atributos_cadastrais)s, %(maturidade)s, %(prazo_referencia_meses)s, %(base_estimativa_prazo)s,
         %(status)s, %(criado_por)s, %(atualizado_por)s
@@ -121,7 +122,7 @@ def insert(
 
     Com ``arquivo_geometria`` (upload), a versão e o arquivo original vão para
     o histórico de geometrias na mesma transação."""
-    row = dict(row, criado_por=validar_autor(row.get("criado_por")))
+    row = dict({"representante_instituicao_id": None, **row}, criado_por=validar_autor(row.get("criado_por")))
     row = {
         "origem_sei_processo": None,
         "maturidade": None,
@@ -178,6 +179,7 @@ _UPDATE_ALLOWED = {
     "instituicao_cnpj": "instituicao_cnpj",
     "instituicao_razao_social": "instituicao_razao_social",
     "instituicao_nome_fantasia": "instituicao_nome_fantasia",
+    "representante_instituicao_id": "representante_instituicao_id",
     "sigma_pessoa_id": "sigma_pessoa_id",
     "representante_nome": "representante_nome",
     "representante_email": "representante_email",

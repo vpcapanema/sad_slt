@@ -28,7 +28,13 @@ def apply_representante(data: dict[str, Any], raw: dict[str, Any]) -> None:
     rep = raw.get("representante")
     if rep and isinstance(rep, dict):
         pessoa_id = pessoa_id or rep.get("pessoa_id")
+    if rep and isinstance(rep, dict) and rep.get("instituicao_id"):
+        if pessoa_id:
+            raise DemandaValidationError("Selecione apenas um representante.", field="representante")
+        data["representante_instituicao_id"] = parse_uuid(rep["instituicao_id"], "representante.instituicao_id")
+        data["sigma_pessoa_id"] = None
     if pessoa_id:
+        data["representante_instituicao_id"] = None
         data["sigma_pessoa_id"] = parse_uuid(str(pessoa_id), "pessoa_id")
         data["atualizado_por"] = data["sigma_pessoa_id"]
     if rep and isinstance(rep, dict):
@@ -38,3 +44,16 @@ def apply_representante(data: dict[str, Any], raw: dict[str, Any]) -> None:
             data["representante_email"] = rep["email"]
         if rep.get("telefone") is not None:
             data["representante_telefone"] = rep["telefone"]
+
+
+def resolve_representante(payload) -> tuple[str | None, str | None]:
+    pessoa_id = payload.pessoa_id or payload.representante.pessoa_id
+    instituicao_id = payload.representante.instituicao_id
+    if bool(pessoa_id) == bool(instituicao_id):
+        raise DemandaValidationError(
+            "Selecione uma pessoa física ou uma instituição representante.", field="representante"
+        )
+    return (
+        parse_uuid(pessoa_id, "pessoa_id") if pessoa_id else None,
+        parse_uuid(instituicao_id, "representante.instituicao_id") if instituicao_id else None,
+    )

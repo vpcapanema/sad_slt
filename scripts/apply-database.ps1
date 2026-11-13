@@ -282,7 +282,8 @@ $migrations = @(
     "156_data_analise_parecer.sql",
     "157_status_homologada_publicada.sql",
     "160_preservar_superficies_ao_excluir_hierarquizacao.sql",
-    "161_nomes_elementos_storage.sql"
+    "161_nomes_elementos_storage.sql",
+    "164_representante_institucional.sql"
 )
 
 if ($OnlyMigration) {

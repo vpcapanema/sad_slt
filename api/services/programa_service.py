@@ -21,7 +21,7 @@ from api.services.campos_demanda import (
 )
 from api.services.hierarquia_outros import resolve_plano_pai_id
 from api.services.demanda_service import geometria_desenhada_geojson
-from api.services.patch_helpers import apply_instituicao, apply_representante
+from api.services.patch_helpers import apply_instituicao, apply_representante, resolve_representante
 from api.services.reprovacao import validar_reprovacao
 from api.services.status_transicoes import validar_transicao_status
 from api.schemas.demanda import RepresentanteSchema
@@ -48,6 +48,7 @@ def _representante_from_row(row: dict[str, Any]) -> RepresentanteSchema | None:
         return None
     return RepresentanteSchema(
         pessoa_id=str(row["sigma_pessoa_id"]) if row.get("sigma_pessoa_id") else None,
+        instituicao_id=str(row["representante_instituicao_id"]) if row.get("representante_instituicao_id") else None,
         nome=row.get("representante_nome_completo") or row.get("representante_nome") or "",
         email=row.get("representante_email"),
         telefone=row.get("representante_telefone"),
@@ -103,13 +104,6 @@ def _row_to_response(
     )
 
 
-def _resolve_pessoa_id(payload: ProgramaCreateSchema) -> str:
-    pessoa_id = payload.pessoa_id or payload.representante.pessoa_id
-    if not pessoa_id:
-        raise DemandaValidationError("Representante legal é obrigatório.", field="pessoa_id")
-    return _parse_uuid(str(pessoa_id), "pessoa_id")
-
-
 def _resolve_instituicao_id(payload: ProgramaCreateSchema) -> str:
     if not payload.instituicao_id:
         raise DemandaValidationError("Instituição interessada é obrigatória.", field="instituicao_id")
@@ -139,7 +133,7 @@ def criar_programa(
     codigo = gerar_codigo_unico(
         lambda: gerar_codigo_programa(origem=origem), programa_repository.get_by_codigo
     )
-    pessoa_id = _resolve_pessoa_id(payload)
+    pessoa_id, representante_instituicao_id = resolve_representante(payload)
     instituicao_id = _resolve_instituicao_id(payload)
     if not (payload.representante.nome or "").strip():
         raise DemandaValidationError("Nome do representante legal é obrigatório.", field="representante.nome")
@@ -162,6 +156,7 @@ def criar_programa(
         "instituicao_nome_fantasia": payload.instituicao_nome_fantasia,
         "instituicao_cnpj": payload.instituicao_cnpj,
         "sigma_pessoa_id": pessoa_id,
+        "representante_instituicao_id": representante_instituicao_id,
         "representante_nome": (payload.representante.nome or "").strip(),
         "representante_email": payload.representante.email,
         "representante_telefone": payload.representante.telefone,

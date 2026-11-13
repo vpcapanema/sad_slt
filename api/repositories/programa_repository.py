@@ -40,6 +40,7 @@ _SELECT_BASE = """
         pg.instituicao_razao_social,
         pg.instituicao_nome_fantasia,
         pg.instituicao_cnpj,
+        pg.representante_instituicao_id,
         pg.sigma_pessoa_id,
         pg.representante_nome,
         pg.representante_email,
@@ -75,7 +76,7 @@ _INSERT_SQL = """
         prazo_referencia_meses, base_estimativa_prazo, vinculo_institucional,
         sigma_instituicao_id, instituicao_nome, instituicao_razao_social,
         instituicao_nome_fantasia, instituicao_cnpj,
-        sigma_pessoa_id, representante_nome, representante_email, representante_telefone,
+        representante_instituicao_id, sigma_pessoa_id, representante_nome, representante_email, representante_telefone,
         status, criado_por, atualizado_por
     ) VALUES (
         %(codigo)s, %(plano_id)s, %(nome)s, %(descricao)s, %(origem_sei_processo)s,
@@ -84,7 +85,7 @@ _INSERT_SQL = """
         %(prazo_referencia_meses)s, %(base_estimativa_prazo)s, %(vinculo_institucional)s,
         %(sigma_instituicao_id)s, %(instituicao_nome)s, %(instituicao_razao_social)s,
         %(instituicao_nome_fantasia)s, %(instituicao_cnpj)s,
-        %(sigma_pessoa_id)s, %(representante_nome)s, %(representante_email)s, %(representante_telefone)s,
+        %(representante_instituicao_id)s, %(sigma_pessoa_id)s, %(representante_nome)s, %(representante_email)s, %(representante_telefone)s,
         %(status)s, %(criado_por)s, %(atualizado_por)s
     )
     RETURNING id
@@ -129,7 +130,7 @@ def insert(
 
     Com ``arquivo_geometria`` (upload), a versão e o arquivo original vão para
     o histórico de geometrias na mesma transação."""
-    row = dict(row, criado_por=validar_autor(row.get("criado_por")))
+    row = dict({"representante_instituicao_id": None, **row}, criado_por=validar_autor(row.get("criado_por")))
     row = {
         "origem_sei_processo": None,
         "maturidade": None,
@@ -190,6 +191,7 @@ _UPDATE_ALLOWED = {
     "instituicao_cnpj": "instituicao_cnpj",
     "instituicao_razao_social": "instituicao_razao_social",
     "instituicao_nome_fantasia": "instituicao_nome_fantasia",
+    "representante_instituicao_id": "representante_instituicao_id",
     "sigma_pessoa_id": "sigma_pessoa_id",
     "representante_nome": "representante_nome",
     "representante_email": "representante_email",
