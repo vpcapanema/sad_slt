@@ -320,15 +320,20 @@
     updateBulkButtons();
   }
 
-  async function ensureRefs() {
-    if (complementacao) return;
-    await SLTCatalog.loadCatalog("../");
-    if (!refPlanos.length) {
-      refPlanos = (await SLTAdminApi.listPlanos()).filter((p) => p.id !== CODIGO_PLANO_OUTROS);
-    }
-    if (!refProgramas.length) {
-      refProgramas = (await SLTAdminApi.listProgramas()).filter((p) => p.id !== CODIGO_PROGRAMA_OUTROS);
-    }
+  let refsPromise;
+  function ensureRefs() {
+    if (complementacao) return Promise.resolve();
+    if (!refsPromise) refsPromise = Promise.all([
+      SLTCatalog.loadCatalog("../"),
+      cache.plano || SLTAdminApi.listPlanos(),
+      cache.programa || SLTAdminApi.listProgramas(),
+    ]).then(([, planos, programas]) => {
+      cache.plano = planos;
+      cache.programa = programas;
+      refPlanos = planos.filter(p => p.id !== CODIGO_PLANO_OUTROS);
+      refProgramas = programas.filter(p => p.id !== CODIGO_PROGRAMA_OUTROS);
+    }).catch(error => { refsPromise = null; throw error; });
+    return refsPromise;
   }
 
   function diretoriasOptions(selectedId) {
@@ -811,6 +816,9 @@
       cache[tipo] = null;
       refPlanos = [];
       refProgramas = [];
+      refsPromise = null;
+      cache.plano = null;
+      cache.programa = null;
       editMode = false;
       selected.clear();
       await loadTipo(tipo, true);
@@ -844,6 +852,9 @@
       cache[tipo] = null;
       refPlanos = [];
       refProgramas = [];
+      refsPromise = null;
+      cache.plano = null;
+      cache.programa = null;
       resetSelection();
       await loadTipo(tipo, true);
     } catch (err) {
@@ -874,12 +885,16 @@
       btn.classList.toggle("is-active", active);
       btn.setAttribute("aria-selected", String(active));
     });
-    if (forceReload || !cache[tipo]) {
-      cache[tipo] = await (complementacao ? complementacao.listar(tipo) : SLTAdminApi.listDemandasByTipo(tipo));
-    }
-    rows = cache[tipo];
+    const requestedTipo = novoTipo;
+    const [loadedRows] = await Promise.all([
+      !forceReload && cache[requestedTipo] ? cache[requestedTipo] :
+        (complementacao ? complementacao.listar(requestedTipo) : SLTAdminApi.listDemandasByTipo(requestedTipo, {incluirGeometria: false})),
+      ensureRefs(),
+    ]);
+    cache[requestedTipo] = loadedRows;
+    if (tipo !== requestedTipo) return;
+    rows = loadedRows;
     configureOriginColumns(tipo, rows);
-    await ensureRefs();
     fillColumnFilter();
     renderStatusLegend();
     renderTable();
@@ -914,7 +929,12 @@
     }
     const user = await SLTAdminAuth.requireAuth();
     if (!user) return;
-    await SLTAdminLabels.init("../");
+    await Promise.all([
+      SLTAdminLabels.init("../"),
+      ensureRefs(),
+      complementacao ? Promise.resolve() : SLTAdminApi.listDemandasByTipo("projeto", {incluirGeometria: false})
+        .then(items => { cache.projeto = items; }),
+    ]);
     renderStatusLegend();
     document.querySelectorAll("#tipo-tabs .admin-tab").forEach((btn) => {
       btn.addEventListener("click", () => {

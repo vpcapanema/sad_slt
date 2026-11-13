@@ -133,9 +133,9 @@ def _row_to_item(row: dict[str, Any]) -> PainelDemandaSchema:
     )
 
 
-def listar_demandas_painel(*, public_only: bool = False) -> list[PainelDemandaSchema]:
+def listar_demandas_painel(*, public_only: bool = False, incluir_geometria: bool = True) -> list[PainelDemandaSchema]:
     """Retorna todas as demandas, sanitizando dados pessoais no painel público."""
-    rows = painel_repository.list_all()
+    rows = painel_repository.list_all() if incluir_geometria else painel_repository.list_all(incluir_geometria=False)
     if public_only:
         from api.services.hierarquizacao_service import resultados_desatualizados
 

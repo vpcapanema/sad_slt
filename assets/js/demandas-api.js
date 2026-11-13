@@ -42,8 +42,12 @@
     return request("/api/demandas");
   }
 
-  async function listPainelDemandas() {
-    return request("/api/painel/demandas");
+  async function listPainelDemandas(options) {
+    return request("/api/painel/demandas" + (options?.incluirGeometria === false ? "?incluir_geometria=false" : ""));
+  }
+
+  async function listPainelGeometrias() {
+    return request("/api/painel/geometrias");
   }
 
   async function createPlano(payload) {
@@ -128,6 +132,7 @@
     createDemanda,
     listDemandas,
     listPainelDemandas,
+    listPainelGeometrias,
     createPlano,
     createPrograma,
     listPlanos,

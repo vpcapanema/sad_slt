@@ -26,8 +26,12 @@
     return request("/api/demandas/internas");
   }
 
-  async function listPainelDemandas() {
-    return request("/api/painel/demandas/internas");
+  async function listPainelDemandas(options) {
+    return request("/api/painel/demandas/internas" + (options?.incluirGeometria === false ? "?incluir_geometria=false" : ""));
+  }
+
+  async function listPainelGeometrias() {
+    return request("/api/painel/geometrias");
   }
 
   async function getDemanda(codigo) {
@@ -209,10 +213,10 @@
     });
   }
 
-  async function listDemandasByTipo(tipo) {
+  async function listDemandasByTipo(tipo, options) {
     if (tipo === "plano") return listPlanos();
     if (tipo === "programa") return listProgramas();
-    return listDemandas();
+    return options?.incluirGeometria === false ? request("/api/demandas/internas?incluir_geometria=false") : listDemandas();
   }
 
   async function updateDemandaByTipo(tipo, codigo, payload) {
@@ -231,6 +235,7 @@
     const qs = new URLSearchParams();
     if (params?.status) qs.set("status", params.status);
     if (params?.grupo) qs.set("grupo", params.grupo);
+    if (params?.incluirGeometria === false) qs.set("incluir_geometria", "false");
     const q = qs.toString();
     return request(`/api/ahp/objetos${q ? `?${q}` : ""}`);
   }
@@ -314,6 +319,7 @@
   global.SLTAdminApi = {
     listDemandas,
     listPainelDemandas,
+    listPainelGeometrias,
     getDemanda,
     updateDemanda,
     deleteDemanda,

@@ -13,7 +13,12 @@ from api.db.connection import get_connection, commit_unless_atomic
 from api.services.autoria_demanda import validar_autor
 from api.repositories import geometria_historico_repository
 
-_SELECT_BASE = """
+
+def _select_base(incluir_geometria: bool = True) -> str:
+    geometria = "ST_AsGeoJSON(ST_Transform(d.geometria,4326))::jsonb" if incluir_geometria else (
+        "jsonb_build_object('type', replace(ST_GeometryType(d.geometria), 'ST_', ''), 'coordinates', NULL)"
+    )
+    return f"""
     SELECT
         d.id,
         d.codigo,
@@ -53,7 +58,7 @@ _SELECT_BASE = """
         d.geometria_tipo,
         CASE
             WHEN d.geometria IS NULL THEN NULL
-            ELSE ST_AsGeoJSON(ST_Transform(d.geometria,4326))::jsonb
+            ELSE {geometria}
         END AS geometria_geojson,
         d.classificacao,
         d.complementos,
@@ -69,6 +74,8 @@ _SELECT_BASE = """
     FROM demandas.projeto d
     LEFT JOIN demandas.programa pg ON pg.id = d.programa_id
 """
+
+_SELECT_BASE = _select_base()
 
 _INSERT_SQL = """
     INSERT INTO demandas.projeto (
@@ -190,9 +197,9 @@ def insert(row: dict[str, Any], *, arquivo_geometria: dict[str, Any] | None = No
         return found
 
 
-def list_all() -> list[dict[str, Any]]:
+def list_all(*, incluir_geometria: bool = True) -> list[dict[str, Any]]:
     """Lista todas as demandas ordenadas da mais recente para a mais antiga."""
-    query = _SELECT_BASE + " ORDER BY d.criado_em DESC"
+    query = _select_base(incluir_geometria) + " ORDER BY d.criado_em DESC"
     with get_connection() as conn:
         return list(conn.execute(query).fetchall())
 

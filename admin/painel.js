@@ -99,7 +99,7 @@
 
   function coordsItem(item) {
     if (item.lat != null && item.lng != null) return { lat: item.lat, lng: item.lng };
-    if (item.geometria?.tipo === "Point") {
+    if (item.geometria?.tipo === "Point" && item.geometria.coordinates) {
       const [lng, lat] = item.geometria.coordinates;
       return { lat, lng };
     }
@@ -725,16 +725,23 @@
 
     const user = await SLTAdminAuth.requireAuth();
     if (!user) return;
-    await SLTAdminLabels.init("../");
-
+    const geometriasPromise = SLTAdminApi.listPainelGeometrias().then(data => ({data}), error => ({error}));
     [painelItems, objetos] = await Promise.all([
-      SLTAdminApi.listPainelDemandas(),
-      SLTAdminApi.listObjetosAhp(),
+      SLTAdminApi.listPainelDemandas({incluirGeometria: false}),
+      SLTAdminApi.listObjetosAhp({incluirGeometria: false}),
+      SLTAdminLabels.init("../"),
     ]);
 
     buildEntries();
     initRecordOrder();
     renderEntriesList();
+    // A lista e os detalhes ficam disponiveis sem esperar as coordenadas do mapa.
+    const geometries = await geometriasPromise;
+    if (geometries.error) throw geometries.error;
+    for (const entry of entries) {
+      const geo = geometries.data[entry.kind === "objeto" ? entry.data.demanda_codigo : entry.id];
+      entry.data.geometria = geo ? {tipo: geo.type, coordinates: geo.coordinates} : null;
+    }
     buildMapLayers();
     document.querySelector("#map-painel .painel-map-loading")?.remove();
   }

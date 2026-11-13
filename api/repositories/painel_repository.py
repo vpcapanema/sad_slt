@@ -148,12 +148,36 @@ _PROJETOS_SQL = """
 """
 
 
-def list_all() -> list[dict[str, Any]]:
+def _sem_coordenadas(query: str, alias: str) -> str:
+    return query.replace(
+        f"ST_AsGeoJSON(ST_Transform({alias}.geometria,4326))::jsonb",
+        f"jsonb_build_object('type', replace(ST_GeometryType({alias}.geometria), 'ST_', ''), 'coordinates', NULL)",
+    )
+
+
+def geometrias_json() -> str:
+    """GeoJSON exato, serializado no banco sem reconstruir coordenadas em Python.
+
+    Mesma abrangencia do painel publico existente; nenhum atributo cadastral.
+    """
+    query = """
+        SELECT COALESCE(json_object_agg(codigo, ST_AsGeoJSON(ST_Transform(geometria,4326))::json), '{}'::json)::text AS dados
+        FROM (
+            SELECT codigo, geometria FROM demandas.plano
+            UNION ALL SELECT codigo, geometria FROM demandas.programa
+            UNION ALL SELECT codigo, geometria FROM demandas.projeto
+        ) s WHERE geometria IS NOT NULL
+    """
+    with get_connection() as conn:
+        return conn.execute(query).fetchone()["dados"]
+
+
+def list_all(*, incluir_geometria: bool = True) -> list[dict[str, Any]]:
     """Lista planos, programas e projetos com geometria para o mapa."""
     with get_connection() as conn:
-        planos = list(conn.execute(_PLANOS_SQL).fetchall())
-        programas = list(conn.execute(_PROGRAMAS_SQL).fetchall())
-        projetos = list(conn.execute(_PROJETOS_SQL).fetchall())
+        planos = list(conn.execute(_PLANOS_SQL if incluir_geometria else _sem_coordenadas(_PLANOS_SQL, "p")).fetchall())
+        programas = list(conn.execute(_PROGRAMAS_SQL if incluir_geometria else _sem_coordenadas(_PROGRAMAS_SQL, "pg")).fetchall())
+        projetos = list(conn.execute(_PROJETOS_SQL if incluir_geometria else _sem_coordenadas(_PROJETOS_SQL, "d")).fetchall())
         resultados = conn.execute("""
             SELECT h.codigo, h.nome, h.status, h.tipo_demanda_id, h.atualizado_em,
                    h.matriz_id, h.ranking, h.dados_hierarquizacao,

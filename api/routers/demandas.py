@@ -62,9 +62,10 @@ def listar_demandas() -> list[DemandaResponseSchema]:
 
 @router.get("/internas", response_model=list[DemandaResponseSchema])
 def listar_demandas_internas(
+    incluir_geometria: bool = True,
     _user: SessionUser = Depends(require_authenticated),
 ) -> list[DemandaResponseSchema]:
-    return demanda_service.listar_demandas(incluir_auditoria=True)
+    return demanda_service.listar_demandas(incluir_auditoria=True, incluir_geometria=incluir_geometria)
 
 
 @router.get("/internas/{codigo}", response_model=DemandaResponseSchema)

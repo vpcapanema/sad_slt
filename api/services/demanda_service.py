@@ -276,8 +276,8 @@ def criar_demanda(
     return _row_to_response(row, incluir_auditoria=True)
 
 
-def listar_demandas(*, incluir_auditoria: bool = False) -> list[DemandaResponseSchema]:
-    rows = demanda_repository.list_all()
+def listar_demandas(*, incluir_auditoria: bool = False, incluir_geometria: bool = True) -> list[DemandaResponseSchema]:
+    rows = demanda_repository.list_all() if incluir_geometria else demanda_repository.list_all(incluir_geometria=False)
     if incluir_auditoria:
         rows = resolver_nomes_registros(rows)
     return [

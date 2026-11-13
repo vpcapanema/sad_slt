@@ -18,7 +18,12 @@ from api.db.connection import get_connection
 AHP_STATUSES = ("analise_aprovada", "hierarq_em_andamento", "hierarq_aguardando_complementacao", "hierarq_finalizada",
                 "hierarq_homologada", "hierarq_publicada")
 
-_SELECT_BASE = """
+
+def _select_base(incluir_geometria: bool = True) -> str:
+    geometria = "ST_AsGeoJSON(ST_Transform(o.geometria,4326))::jsonb" if incluir_geometria else (
+        "jsonb_build_object('type', replace(ST_GeometryType(o.geometria), 'ST_', ''), 'coordinates', NULL)"
+    )
+    return f"""
     SELECT
         o.id,
         o.codigo,
@@ -38,7 +43,7 @@ _SELECT_BASE = """
         o.geometria_tipo,
         CASE
             WHEN o.geometria IS NULL THEN NULL
-            ELSE ST_AsGeoJSON(ST_Transform(o.geometria,4326))::jsonb
+            ELSE {geometria}
         END AS geometria_geojson,
         o.aprovado_em,
         o.aprovado_por,
@@ -49,9 +54,12 @@ _SELECT_BASE = """
 """
 
 
-def list_all(*, status: str | None = None, grupo: str | None = None) -> list[dict[str, Any]]:
+_SELECT_BASE = _select_base()
+
+
+def list_all(*, status: str | None = None, grupo: str | None = None, incluir_geometria: bool = True) -> list[dict[str, Any]]:
     """Lista projetos do universo AHP. Sem status, retorna as fases de hierarquização."""
-    query = _SELECT_BASE + " WHERE 1=1"
+    query = _select_base(incluir_geometria) + " WHERE 1=1"
     params: list[Any] = []
     if status:
         query += " AND o.status = %s"

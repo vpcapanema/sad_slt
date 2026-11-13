@@ -14,12 +14,13 @@ router = APIRouter(prefix="/ahp/objetos", tags=["ahp"])
 
 @router.get("", response_model=list[ObjetoAhpResponseSchema])
 def listar_objetos(
+    incluir_geometria: bool = True,
     status: str | None = Query(None, description="Filtrar por status (ex.: elegivel_ahp)"),
     grupo: str | None = Query(None, description="Filtrar por grupo_comparacao"),
     _user: SessionUser = Depends(require_authenticated),
 ) -> list[ObjetoAhpResponseSchema]:
     try:
-        return objeto_ahp_service.listar_objetos(status=status, grupo=grupo)
+        return objeto_ahp_service.listar_objetos(status=status, grupo=grupo, incluir_geometria=incluir_geometria)
     except DatabaseUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 

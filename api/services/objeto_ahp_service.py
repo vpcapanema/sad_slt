@@ -101,8 +101,11 @@ def aprovar_demanda(
     return _row_to_response(updated)
 
 
-def listar_objetos(*, status: str | None = None, grupo: str | None = None) -> list[ObjetoAhpResponseSchema]:
-    rows = objeto_ahp_repository.list_all(status=status, grupo=grupo)
+def listar_objetos(*, status: str | None = None, grupo: str | None = None, incluir_geometria: bool = True) -> list[ObjetoAhpResponseSchema]:
+    if incluir_geometria:
+        rows = objeto_ahp_repository.list_all(status=status, grupo=grupo)
+    else:
+        rows = objeto_ahp_repository.list_all(status=status, grupo=grupo, incluir_geometria=False)
     return [_row_to_response(row) for row in rows]
 
 

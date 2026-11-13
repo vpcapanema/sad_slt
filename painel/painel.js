@@ -46,7 +46,7 @@
 
   function coordsItem(d) {
     if (d.lat != null && d.lng != null) return { lat: d.lat, lng: d.lng };
-    if (d.geometria?.tipo === "Point") {
+    if (d.geometria?.tipo === "Point" && d.geometria.coordinates) {
       const [lng, lat] = d.geometria.coordinates;
       return { lat, lng };
     }
@@ -600,8 +600,9 @@
     });
     bindLegendLayoutRefresh();
 
+    const geometriasPromise = SLTDemandasApi.listPainelGeometrias().then(data => ({data}), error => ({error}));
     try {
-      items = await SLTDemandasApi.listPainelDemandas();
+      items = await SLTDemandasApi.listPainelDemandas({incluirGeometria: false});
       if (!Array.isArray(items)) throw new Error("Resposta inválida do painel.");
     } catch (err) {
       console.error(err);
@@ -615,12 +616,22 @@
 
     initRecordOrder();
     renderSidebar();
-    buildMapLayers();
     $("layers-container").setAttribute("aria-busy", "false");
     $("painel-load-status").textContent = items.length
       ? ""
       : "Consulta concluída: nenhum registro retornado pelo servidor.";
     $("painel-load-status").hidden = items.length > 0;
+    const geometries = await geometriasPromise;
+    if (geometries.error) {
+      $("painel-load-status").hidden = false;
+      $("painel-load-status").textContent = "As demandas foram carregadas, mas as geometrias falharam. Atualize a página para tentar novamente.";
+      return;
+    }
+    for (const item of items) {
+      const geo = geometries.data[item.id];
+      item.geometria = geo ? {tipo: geo.type, coordinates: geo.coordinates} : null;
+    }
+    buildMapLayers();
     document.querySelector("#map-painel .painel-map-loading")?.remove();
   }
 
