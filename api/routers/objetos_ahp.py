@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
 
 from api.responses import model_json_response
+from api.repositories import geometria_listagem_repository
 from api.deps.auth import require_analyst, require_authenticated
 from api.exceptions import DatabaseUnavailableError, DemandaNotFoundError, DemandaValidationError
 from api.schemas.objeto_ahp import ObjetoAhpResponseSchema, ObjetoAhpUpdateSchema
@@ -22,8 +23,9 @@ def listar_objetos(
     _user: SessionUser = Depends(require_authenticated),
 ) -> Response:
     try:
-        items = objeto_ahp_service.listar_objetos(status=status, grupo=grupo, incluir_geometria=incluir_geometria)
-        return model_json_response(items, list[ObjetoAhpResponseSchema])
+        items = objeto_ahp_service.listar_objetos(status=status, grupo=grupo, incluir_geometria=False)
+        geometrias = geometria_listagem_repository.por_codigos([item.codigo for item in items]) if incluir_geometria else None
+        return model_json_response(items, list[ObjetoAhpResponseSchema], geometrias=geometrias, codigo_field="codigo")
     except DatabaseUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 

@@ -6,6 +6,7 @@ from fastapi.responses import Response
 from pydantic import ValidationError
 
 from api.responses import model_json_response
+from api.repositories import geometria_listagem_repository
 from api.deps.auth import require_analyst, require_authenticated, require_gestor, require_operator
 from api.exceptions import DatabaseUnavailableError, DemandaNotFoundError, DemandaValidationError
 from api.schemas.demanda import DemandaCreateSchema, DemandaResponseSchema, DemandaUpdateSchema
@@ -57,8 +58,9 @@ async def criar_demanda_com_arquivo_geometria(
 def listar_demandas() -> Response:
     """Lista somente demandas cuja publicação foi autorizada pelo status."""
     try:
-        items = [item for item in demanda_service.listar_demandas() if item.status in {"hierarq_ranqueada", "hierarq_publicada"}]
-        return model_json_response(items, list[DemandaResponseSchema])
+        items = [item for item in demanda_service.listar_demandas(incluir_geometria=False) if item.status in {"hierarq_ranqueada", "hierarq_publicada"}]
+        geometrias = geometria_listagem_repository.por_codigos([item.id for item in items])
+        return model_json_response(items, list[DemandaResponseSchema], geometrias=geometrias, codigo_field="id")
     except DatabaseUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
@@ -68,8 +70,9 @@ def listar_demandas_internas(
     incluir_geometria: bool = True,
     _user: SessionUser = Depends(require_authenticated),
 ) -> Response:
-    items = demanda_service.listar_demandas(incluir_auditoria=True, incluir_geometria=incluir_geometria)
-    return model_json_response(items, list[DemandaResponseSchema])
+    items = demanda_service.listar_demandas(incluir_auditoria=True, incluir_geometria=False)
+    geometrias = geometria_listagem_repository.por_codigos([item.id for item in items]) if incluir_geometria else None
+    return model_json_response(items, list[DemandaResponseSchema], geometrias=geometrias, codigo_field="id")
 
 
 @router.get("/internas/{codigo}", response_model=DemandaResponseSchema)

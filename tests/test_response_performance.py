@@ -26,6 +26,12 @@ def test_json_direto_preserva_contrato_e_coordenadas():
     # A resposta direta continua removendo campos fora do contrato.
     raw = {**item.model_dump(), "campo_interno": "nao publicar"}
     assert "campo_interno" not in json.loads(model_json_response([raw], list[PainelDemandaSchema]).body)[0]
+    geo = json.dumps(item.geometria.model_dump())
+    light = item.model_copy(update={"geometria": None})
+    direct = model_json_response([light], list[PainelDemandaSchema], geometrias={"P-1": geo})
+    assert json.loads(direct.body) == jsonable_encoder([item], by_alias=True)
+    missing = model_json_response([light], list[PainelDemandaSchema], geometrias={})
+    assert json.loads(missing.body)[0]["geometria"] is None
 
 
 def test_sessao_reutilizada_so_na_mesma_requisicao(monkeypatch):
