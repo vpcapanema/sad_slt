@@ -118,7 +118,7 @@ async def protect_restricted_pages(request: Request, call_next):
             if module == "admin" and profile != "ADMIN":
                 return JSONResponse(status_code=403, content={"detail": "O bloco Admin é exclusivo do Administrador."})
             if profile == "OPERADOR" and path.rstrip("/") not in {
-                "/restrict", "/restrict/operador", "/restrict/complementacao",
+                "/restrict", "/restrict/operador", "/restrict/complementacao", "/restrict/demanda",
             }:
                 return JSONResponse(status_code=403, content={"detail": "Acesso limitado ao cadastro e à complementação das suas demandas."})
     return await call_next(request)

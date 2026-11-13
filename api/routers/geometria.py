@@ -38,7 +38,7 @@ def api_geometria_parse(file: UploadFile = File(...)):
 
 
 from fastapi import Depends, Form
-from api.deps.auth import require_operator
+from api.deps.auth import require_demand_analyst
 from api.services.session_service import SessionUser
 from api.services.conferencia_geometria import conferir, emitir_confirmacao, validar_confirmacao
 from api.services.substituicao_geometria import substituir, TIPOS
@@ -46,7 +46,7 @@ from api.services.arquivo_geometria import receber_arquivo_geometria
 from api.schemas.demanda import GeometriaSchema
 
 @router.post("/geometria/conferir/{tipo}/{codigo}")
-async def conferir_geometria(tipo: str,codigo: str,file: UploadFile=File(...),user: SessionUser=Depends(require_operator)):
+async def conferir_geometria(tipo: str,codigo: str,file: UploadFile=File(...),user: SessionUser=Depends(require_demand_analyst)):
     if tipo not in TIPOS:raise HTTPException(422,"Tipo de demanda inválido.")
     content=await file.read(MAX_GEOMETRIA_UPLOAD_BYTES+1)
     if len(content)>MAX_GEOMETRIA_UPLOAD_BYTES:raise HTTPException(413,"Arquivo maior que 50 MB.")
@@ -56,7 +56,7 @@ async def conferir_geometria(tipo: str,codigo: str,file: UploadFile=File(...),us
     return result
 
 @router.post("/geometria/substituir/{tipo}/{codigo}")
-async def substituir_geometria(tipo: str,codigo: str,confirmacao: str=Form(...),file: UploadFile=File(...),user: SessionUser=Depends(require_operator)):
+async def substituir_geometria(tipo: str,codigo: str,confirmacao: str=Form(...),file: UploadFile=File(...),user: SessionUser=Depends(require_demand_analyst)):
     content=await file.read(MAX_GEOMETRIA_UPLOAD_BYTES+1)
     if len(content)>MAX_GEOMETRIA_UPLOAD_BYTES:raise HTTPException(413,"Arquivo maior que 50 MB.")
     validar_confirmacao(confirmacao,content,user.id,tipo,codigo)

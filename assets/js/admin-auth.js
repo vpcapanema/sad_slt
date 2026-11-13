@@ -12,6 +12,7 @@
     read: new Set(Object.keys(TIPO_LABELS)),
     operate: new Set(["OPERADOR", "ANALISTA", "GESTOR", "ADMIN"]),
     analyze: new Set(["ANALISTA", "GESTOR", "ADMIN"]),
+    analyzeDemand: new Set(["ANALISTA"]),
     manage: new Set(["GESTOR", "ADMIN"]),
     administer: new Set(["ADMIN"]),
   };

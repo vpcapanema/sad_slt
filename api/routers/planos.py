@@ -4,7 +4,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from pydantic import ValidationError
 
-from api.deps.auth import require_analyst, require_authenticated, require_gestor, require_operator
+from api.deps.auth import require_demand_analyst, require_authenticated, require_gestor, require_operator
 from api.exceptions import DatabaseUnavailableError, DemandaNotFoundError, DemandaValidationError
 from api.schemas.objeto_ahp import AprovarDemandaSchema, ReprovarDemandaSchema
 from api.schemas.plano import PlanoCreateSchema, PlanoResponseSchema, PlanoUpdateSchema
@@ -104,7 +104,7 @@ def obter_plano(codigo: str) -> PlanoResponseSchema:
 def aprovar_plano(
     codigo: str,
     body: AprovarDemandaSchema | None = None,
-    user: SessionUser = Depends(require_analyst),
+    user: SessionUser = Depends(require_demand_analyst),
 ) -> PlanoResponseSchema:
     """Promove o plano ao universo AHP (transição de status in-place)."""
     motivo = body.motivo if body else None
@@ -123,7 +123,7 @@ def aprovar_plano(
 def reprovar_plano(
     codigo: str,
     body: ReprovarDemandaSchema,
-    user: SessionUser = Depends(require_analyst),
+    user: SessionUser = Depends(require_demand_analyst),
 ) -> PlanoResponseSchema:
     """Reprova um plano em análise mediante justificativa obrigatória."""
     try:
@@ -144,7 +144,7 @@ def reprovar_plano(
 def atualizar_plano(
     codigo: str,
     body: PlanoUpdateSchema,
-    user: SessionUser = Depends(require_operator),
+    user: SessionUser = Depends(require_demand_analyst),
 ) -> PlanoResponseSchema:
     """Atualiza um plano existente."""
     try:

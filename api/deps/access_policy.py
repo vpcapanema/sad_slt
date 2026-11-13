@@ -76,6 +76,14 @@ def require_module_policy(
         raise HTTPException(403, f"Seu perfil tem somente visualização neste módulo ({module.upper()}).")
     if profile != "OPERADOR":
         return
+    # A análise é consultável por todos os perfis autenticados. Suas gravações
+    # continuam exclusivas do Analista nas dependências das rotas.
+    if request.method in SAFE_METHODS and (
+        path.startswith("/api/analise/")
+        or any(path.rstrip("/") == prefix or path.startswith(prefix + "/")
+               for prefix in ("/api/demandas/internas", "/api/planos/internas", "/api/programas/internas"))
+    ):
+        return
     if path == "/api/painel/demandas/internas" or "/internas" in path:
         raise HTTPException(403, "Utilize a complementação solicitada das suas demandas.")
     if module == "mocad":

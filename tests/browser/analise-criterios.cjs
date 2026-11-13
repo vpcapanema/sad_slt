@@ -6,7 +6,7 @@ const cut=(a,b)=>source.slice(source.indexOf(a),source.indexOf(b));
 await page.setContent('<div id="criterios-grid"></div><section class="analise-geometria">Geometria</section><div id="analise-resultado"></div><textarea id="fld-parecer"></textarea>');
 await page.addScriptTag({content:`
 const $=s=>document.querySelector(s), escapeHtml=s=>String(s??'');
-const record={id:'ATUAL'}; const reportarErroAnalise=m=>{throw Error(m)};
+const SLTAdminAuth={can:()=>true}; const record={id:'ATUAL'}; const reportarErroAnalise=m=>{throw Error(m)};
 const SLTAdminApi={listPlanos:async()=>[{id:'PLANO',nome:'Plano teste'}],listProgramas:async()=>[],listDemandas:async()=>[{id:'ATUAL',nome:'Atual'},{id:'OUTRA',nome:'Outra demanda'}],saveAnaliseCriterios:async(id,p)=>{window.saved=p;return {parecer_texto:'Parecer'}}};
 ${cut('  function criterioRowHtml','  function collectAvaliacaoGeometria')}
 ${cut('  const pesosCriterios','  function renderAnalise')}

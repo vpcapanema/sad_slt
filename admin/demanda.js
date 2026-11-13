@@ -146,7 +146,7 @@
   }
 
   function actionsHtml(d, { withApprove, withReject }) {
-    const canAnalyze = SLTAdminAuth.can("analyze");
+    const canAnalyze = SLTAdminAuth.can("analyzeDemand");
     const decisionFields = canAnalyze && (withApprove || withReject)
       ? `
       <div class="form-field span-2">
@@ -173,7 +173,7 @@
         <a href="/restrict/demandas/" class="btn btn-secondary">Voltar à lista</a>
         ${withReject && canAnalyze ? '<button type="button" class="btn btn-danger" id="btn-reprovar">Reprovar demanda</button>' : ""}
         ${withApprove && canAnalyze ? '<button type="button" class="btn btn-primary" id="btn-aprovar">Aprovar demanda</button>' : ""}
-        ${SLTAdminAuth.can("operate") ? '<button type="button" class="btn btn-primary" id="btn-salvar">Salvar alterações</button>' : ""}
+        ${SLTAdminAuth.can("analyzeDemand") ? '<button type="button" class="btn btn-primary" id="btn-salvar">Salvar alterações</button>' : ""}
       </div>`;
   }
 
@@ -244,7 +244,7 @@
             <div class="admin-info-fields">
               ${campos}
               ${
-                SLTAdminAuth.can("operate")
+                SLTAdminAuth.can("analyzeDemand")
                   ? `<div class="admin-dashboard-actions" id="info-edit-actions">
                 <button type="button" class="btn btn-secondary" id="btn-editar">Editar</button>
                 <button type="button" class="btn btn-primary" id="btn-salvar" hidden>Salvar alterações</button>
@@ -312,7 +312,7 @@
   }
 
   function parecerSectionHtml() {
-    const canAnalyze = SLTAdminAuth.can("analyze");
+    const canAnalyze = SLTAdminAuth.can("analyzeDemand");
     return `
       <section id="sec-parecer" class="admin-analise-subcard admin-dashboard-section">
         <h3>Parecer técnico</h3>
@@ -330,7 +330,7 @@
           </div>
           <div class="form-field span-2" id="wrap-complemento" hidden>
             <label for="fld-parecer-complemento">Complementação do parecer — justificativa obrigatória para reprovar</label>
-            <textarea id="fld-parecer-complemento" rows="4" maxlength="5000" placeholder="Texto adicional do avaliador — não substitui o parecer gerado."></textarea>
+            <textarea id="fld-parecer-complemento" rows="4" maxlength="5000"${canAnalyze ? "" : " readonly"} placeholder="Texto adicional do avaliador — não substitui o parecer gerado."></textarea>
           </div>
           ${
             canAnalyze
@@ -346,7 +346,7 @@
   }
 
   function analiseActionsHtml(d, { withDecisions }) {
-    const canAnalyze = SLTAdminAuth.can("analyze");
+    const canAnalyze = SLTAdminAuth.can("analyzeDemand");
     const decisionButtons =
       withDecisions && canAnalyze
         ? DECISOES.map(
@@ -518,23 +518,27 @@
       geometriaSaveRevision += 1;
       document.querySelectorAll('[name="geometria-adequada"]').forEach(input => { input.disabled = true; });
       try {
-        await geometriaSaveQueue;
-        const payload = {...collectAvaliacaoGeometria(), confirmada: true};
-        const atualizada = await SLTAdminApi.saveAnaliseAvaliacaoGeometria(codigo, payload);
-        if (record?.id !== codigo) return;
-        grid.dataset.confirmada = String(atualizada.avaliacao_geometria?.confirmada === true);
-        renderResumoAvaliacaoGeometria(collectAvaliacaoGeometria());
-        if (atualizada.parecer_texto) $("#fld-parecer").value = atualizada.parecer_texto;
-        $("#geometria-avaliacao-salvamento").textContent = "Aprovação da geometria salva.";
-      } catch (err) {
-        reportarErroAnalise(err.message, "Aprovar geometria");
+        await executarAcaoComFeedback({
+          titulo: "Aprovar geometria", mensagem: "Aprovação da geometria salva.",
+          salvar: async () => {
+            await geometriaSaveQueue;
+            return SLTAdminApi.saveAnaliseAvaliacaoGeometria(codigo, {...collectAvaliacaoGeometria(), confirmada: true});
+          },
+          atualizar: async (atualizada) => {
+            if (record?.id !== codigo) return;
+            grid.dataset.confirmada = String(atualizada.avaliacao_geometria?.confirmada === true);
+            renderResumoAvaliacaoGeometria(collectAvaliacaoGeometria());
+            if (atualizada.parecer_texto) $("#fld-parecer").value = atualizada.parecer_texto;
+            $("#geometria-avaliacao-salvamento").textContent = "Aprovação da geometria salva.";
+          },
+        });
       } finally {
         aprovar.disabled = !editavel;
         grid.querySelectorAll('input').forEach(input => { input.disabled = !editavel; });
       }
     };
-    $("#btn-geometria").disabled = !editavel || !SLTAdminAuth.can("operate");
-    $("#arquivo-nova-geometria").disabled = !editavel || !SLTAdminAuth.can("operate");
+    $("#btn-geometria").disabled = !editavel || !SLTAdminAuth.can("analyzeDemand");
+    $("#arquivo-nova-geometria").disabled = !editavel || !SLTAdminAuth.can("analyzeDemand");
     const observacao = $("#fld-avaliacao-geometria-observacao");
     if (observacao) {
       observacao.value = avaliacao.observacao || "";
@@ -545,7 +549,7 @@
     const status = $("#geometria-avaliacao-salvamento");
     if (status) {
       if (!editavel) {
-        status.textContent = "Avaliação somente para consulta: a demanda já saiu da etapa de análise.";
+        status.textContent = "Avaliação somente para consulta: exige perfil Analista e demanda em análise.";
       } else if (avaliacao.avaliada_em) {
         const autor = avaliacao.avaliada_por ? ` por ${avaliacao.avaliada_por}` : "";
         status.textContent = `Último salvamento: ${formatGeometryDate(avaliacao.avaliada_em)}${autor}.`;
@@ -561,6 +565,7 @@
   }
 
   function onAvaliacaoGeometriaChange() {
+    if (!SLTAdminAuth.can("analyzeDemand")) return;
     const payload = collectAvaliacaoGeometria();
     renderResumoAvaliacaoGeometria(payload);
     const status = $("#geometria-avaliacao-salvamento");
@@ -690,7 +695,7 @@
   }
 
   function renderAnalise(data) {
-    const editavel = SLTAdminAuth.can("analyze") && canApprove(record?.status);
+    const editavel = SLTAdminAuth.can("analyzeDemand") && canApprove(record?.status);
     const grid = $("#criterios-grid");
     if (grid) {
       grid.innerHTML = (data.criterios || [])
@@ -699,8 +704,8 @@
       if (!editavel) {
         grid.insertAdjacentHTML(
           "beforeend",
-          `<div class="form-field span-2"><span class="field-help">${!SLTAdminAuth.can("analyze")
-            ? "A edição dos critérios exige perfil Analista ou Gestor."
+          `<div class="form-field span-2"><span class="field-help">${!SLTAdminAuth.can("analyzeDemand")
+            ? "A edição dos critérios exige perfil Analista."
             : `A edição dos critérios exige status Em avaliação. Status atual: ${escapeHtml(record?.status || "não informado")}.`}</span></div>`,
         );
       }
@@ -709,6 +714,7 @@
       });
     }
 
+    if (grid && !$("#criterios-salvamento")) grid.insertAdjacentHTML("afterend", '<p id="criterios-salvamento" role="status" aria-live="polite"></p>');
     const duplicidade = grid?.querySelector('[data-campo="criterio_nao_duplicidade"]');
     if (duplicidade) duplicidade.insertAdjacentHTML("beforeend", `<div id="demanda-duplicada-wrap" hidden>
       <label for="demanda-duplicada">Demanda já cadastrada *</label>
@@ -742,6 +748,9 @@
   }
 
   async function onCriterioChange() {
+    if (!SLTAdminAuth.can("analyzeDemand")) return;
+    const aviso = $("#criterios-salvamento");
+    if (aviso) aviso.textContent = "Salvando critérios…";
     atualizarVisibilidadeCriterios();
     const respostas = collectCriterios();
     renderResultado(computeResultado(respostas));
@@ -751,8 +760,14 @@
       const parecer = $("#fld-parecer");
       if (record.id === codigo && parecer && atualizada.parecer_texto) parecer.value = atualizada.parecer_texto;
     });
-    try { await gravacaoCriterios; }
-    catch (err) { reportarErroAnalise(err.message, "Critérios de análise"); }
+    const gravacaoAtual = gravacaoCriterios;
+    try {
+      await gravacaoAtual;
+      if (record.id === codigo && gravacaoAtual === gravacaoCriterios && aviso) aviso.textContent = "Critérios salvos.";
+    } catch (err) {
+      if (record.id === codigo && aviso) aviso.textContent = "Não foi possível salvar os critérios.";
+      reportarErroAnalise(err.message, "Critérios de análise");
+    }
   }
 
   function atualizarBotaoReprovar() {
@@ -781,18 +796,54 @@
     else wrap.setAttribute("hidden", "");
   }
 
+  let acaoAnaliseEmCurso = false;
+
+  async function executarAcaoComFeedback({ titulo, mensagem, salvar, atualizar }) {
+    if (acaoAnaliseEmCurso || !SLTAdminAuth.can("analyzeDemand")) return;
+    acaoAnaliseEmCurso = true;
+    const gravar = "Aguardando confirmação do servidor";
+    const recarregar = "Atualizar os dados apresentados";
+    const processo = ProcessFeedback.iniciarCadastro({
+      title: titulo, tasks: atualizar ? [gravar, recarregar] : [gravar],
+    });
+    try {
+      processo.tarefaAtual(gravar);
+      const resultado = await salvar();
+      processo.concluirTarefa(gravar);
+      if (atualizar) {
+        processo.tarefaAtual(recarregar);
+        try {
+          await atualizar(resultado);
+          processo.concluirTarefa(recarregar);
+        } catch (err) {
+          processo.sucesso({ _status: "partial", title: "Gravação concluída",
+            message: mensagem + " Não foi possível concluir a atualização da tela ou o download: " + err.message });
+          return;
+        }
+      }
+      processo.sucesso({ title: titulo, message: mensagem });
+    } catch (err) {
+      processo.erro({ message: err.message, status: err.status, method: err.method, url: err.url, body: err.body });
+    } finally {
+      acaoAnaliseEmCurso = false;
+    }
+  }
+
   async function saveComplemento() {
+    if (!SLTAdminAuth.can("analyzeDemand")) return;
     const campo = $("#fld-parecer-complemento");
     if (!campo) return;
     const texto = campo.value.trim();
-    try {
-      await SLTAdminApi.saveAnaliseComplemento(record.id, texto || null);
-      complementoSalvo = texto;
-      SLTAdminUi.showToast("Complementação do parecer salva.");
-      fecharComplemento();
-    } catch (err) {
-      reportarErroAnalise(err.message, "Complementação do parecer");
-    }
+    const codigo = record.id;
+    await executarAcaoComFeedback({
+      titulo: "Complementação do parecer", mensagem: "Complementação do parecer salva.",
+      salvar: () => SLTAdminApi.saveAnaliseComplemento(codigo, texto || null),
+      atualizar: async () => {
+        if (record.id !== codigo) return;
+        complementoSalvo = texto;
+        fecharComplemento();
+      },
+    });
   }
 
   async function downloadParecer(codigo) {
@@ -820,6 +871,7 @@
   }
 
   async function alterarSituacao(acaoId) {
+    if (!SLTAdminAuth.can("analyzeDemand")) return;
     const acao = SITUACOES.find((item) => item.id === acaoId);
     if (!acao || !record) return;
     let pedido = {};
@@ -842,39 +894,24 @@
     });
     if (!ok) return;
 
-    try {
-      await salvarGeometriaAntesDaAcao();
-      await SLTAdminApi.alterarSituacaoAnalise(record.id, acao.id, pedido);
-      try {
+    const codigo = record.id, tipoAtual = tipo;
+    await executarAcaoComFeedback({
+      titulo: acao.label,
+      mensagem: somenteAtributos ? "Solicitação de atributos registrada." : `A demanda passou para «${acao.statusLabel}».`,
+      salvar: async () => {
+        await salvarGeometriaAntesDaAcao();
+        await SLTAdminApi.alterarSituacaoAnalise(codigo, acao.id, pedido);
+      },
+      atualizar: async () => {
         await refreshLists();
-        renderPage(await API[tipo].get(record.id));
-      } catch (err) {
-        if (window.StatusFeedback) {
-          window.StatusFeedback.parcial({
-            actionTitle: acao.label,
-            title: somenteAtributos ? "Solicitação registrada, tela desatualizada" : "Status alterado, tela desatualizada",
-            message: somenteAtributos ? `Solicitação registrada, mas a tela não foi atualizada: ${err.message}` : `A demanda passou para «${acao.statusLabel}», mas a tela não foi atualizada: ${err.message}`,
-          });
-        } else {
-          SLTAdminUi.showToast(`Status alterado, mas a tela não foi atualizada: ${err.message}`, true);
-        }
-        return;
-      }
-      if (window.StatusFeedback) {
-        window.StatusFeedback.sucesso({
-          actionTitle: acao.label,
-          title: somenteAtributos ? "Solicitação registrada" : "Status atualizado",
-          message: somenteAtributos ? "Solicitação de atributos registrada." : `A demanda passou para «${acao.statusLabel}».`,
-        });
-      } else {
-        SLTAdminUi.showToast(somenteAtributos ? "Solicitação de atributos registrada." : `Demanda atualizada para «${acao.statusLabel}».`);
-      }
-    } catch (err) {
-      reportarErroAnalise(err.message, acao.label);
-    }
+        const atualizada = await API[tipoAtual].get(codigo);
+        if (record.id === codigo) renderPage(atualizada);
+      },
+    });
   }
 
   async function decideRecord(decisaoId) {
+    if (!SLTAdminAuth.can("analyzeDemand")) return;
     const decisao = DECISOES.find((item) => item.id === decisaoId);
     if (!decisao) return;
 
@@ -908,12 +945,7 @@
         campo?.focus();
         return;
       }
-      try {
-        await SLTAdminApi.saveAnaliseComplemento(record.id, texto);
-      } catch (err) {
-        reportarErroAnalise(err.message, "Complementação do parecer");
-        return;
-      }
+
     }
 
     const ok = await SLTAdminUi.showConfirm({
@@ -925,25 +957,25 @@
     });
     if (!ok) return;
 
-    try {
-      await salvarGeometriaAntesDaAcao();
-      await gravacaoCriterios;
-      await SLTAdminApi.saveAnaliseCriterios(record.id, collectCriterios());
-      await SLTAdminApi.decidirAnalise(record.id, decisao.id);
-      SLTAdminUi.showToast("Decisão registrada. Baixando o parecer em PDF…");
-      try {
-        await downloadParecer(record.id);
-      } catch (err) {
-        reportarErroAnalise(
-          `Decisão registrada, mas o download do parecer falhou: ${err.message}`,
-          decisao.label,
-        );
-      }
-      await refreshLists();
-      renderPage(await API[tipo].get(record.id));
-    } catch (err) {
-      reportarErroAnalise(err.message, `Decisão «${decisao.label}» não registrada`);
-    }
+    const codigo = record.id, tipoAtual = tipo;
+    const criterios = collectCriterios();
+    const complemento = $("#fld-parecer-complemento")?.value.trim() || null;
+    await executarAcaoComFeedback({
+      titulo: decisao.label, mensagem: "Decisão registrada e parecer gerado.",
+      salvar: async () => {
+        await salvarGeometriaAntesDaAcao();
+        await gravacaoCriterios;
+        if (decisao.requerComplemento) await SLTAdminApi.saveAnaliseComplemento(codigo, complemento);
+        await SLTAdminApi.saveAnaliseCriterios(codigo, criterios);
+        await SLTAdminApi.decidirAnalise(codigo, decisao.id);
+      },
+      atualizar: async () => {
+        await refreshLists();
+        const atualizada = await API[tipoAtual].get(codigo);
+        if (record.id === codigo) renderPage(atualizada);
+        await downloadParecer(codigo);
+      },
+    });
   }
 
   function bindAnalise(d) {
@@ -1066,7 +1098,7 @@
               <span class="field-help">Cadastrado em ${escapeHtml(formatDate(d.criadoEm))}.</span>
             </div>
           </div>
-            ${SLTAdminAuth.can("operate") ? `<div class="admin-dashboard-actions" id="info-edit-actions">
+            ${SLTAdminAuth.can("analyzeDemand") ? `<div class="admin-dashboard-actions" id="info-edit-actions">
               <button type="button" class="btn btn-secondary" id="btn-editar">Editar</button>
               <button type="button" class="btn btn-primary" id="btn-salvar" hidden>Salvar alterações</button>
               <button type="button" class="btn btn-secondary" id="btn-cancelar-edicao" hidden>Cancelar</button>
@@ -1165,7 +1197,7 @@
               <span class="field-help">Cadastrado em ${escapeHtml(formatDate(d.criadoEm))}.</span>
             </div>
           </div>
-            ${SLTAdminAuth.can("operate") ? `<div class="admin-dashboard-actions" id="info-edit-actions">
+            ${SLTAdminAuth.can("analyzeDemand") ? `<div class="admin-dashboard-actions" id="info-edit-actions">
               <button type="button" class="btn btn-secondary" id="btn-editar">Editar</button>
               <button type="button" class="btn btn-primary" id="btn-salvar" hidden>Salvar alterações</button>
               <button type="button" class="btn btn-secondary" id="btn-cancelar-edicao" hidden>Cancelar</button>
@@ -1233,6 +1265,7 @@
 
   /** Alterna o card de informações entre visualização e edição. */
   function setInfoEditMode(ligado) {
+    ligado = ligado && SLTAdminAuth.can("analyzeDemand");
     const sec = $("#sec-info");
     if (!sec) return;
     sec.querySelectorAll("input, select, textarea").forEach((campo) => {
@@ -1461,6 +1494,7 @@
   }
 
   async function uploadReplacementGeometry(event) {
+    if (!SLTAdminAuth.can("analyzeDemand")) return;
     const file = event.target.files?.[0];
     if (!file) return;
     if (JSON.stringify(collectPayload()) !== JSON.stringify(originalFormPayload)) {
@@ -1591,6 +1625,7 @@
   }
 
   async function saveRecord() {
+    if (!SLTAdminAuth.can("analyzeDemand")) return;
     try {
       const current = collectPayload();
       const changes = Object.fromEntries(Object.entries(current).filter(
@@ -1601,16 +1636,22 @@
         setInfoEditMode(false);
         return;
       }
-      const updated = await API[tipo].update(record.id, changes);
-      SLTAdminUi.showToast("Alterações salvas.");
-      await refreshLists();
-      renderPage(updated);
+      const codigo = record.id, tipoAtual = tipo;
+      await executarAcaoComFeedback({
+        titulo: "Salvar alterações", mensagem: "Alterações salvas.",
+        salvar: () => API[tipoAtual].update(codigo, changes),
+        atualizar: async (updated) => {
+          await refreshLists();
+          if (record.id === codigo) renderPage(updated);
+        },
+      });
     } catch (err) {
       SLTAdminUi.showToast(err.message, true);
     }
   }
 
   async function approveRecord() {
+    if (!SLTAdminAuth.can("analyzeDemand")) return;
     const ok = await SLTAdminUi.showConfirm({
       title: "Aprovar demanda",
       message:
@@ -1621,16 +1662,22 @@
     if (!ok) return;
     try {
       const motivo = $("#fld-motivo-aprov")?.value.trim() || null;
-      const updated = await API[tipo].aprovar(record.id, { motivo });
-      SLTAdminUi.showToast("Demanda aprovada.");
-      await refreshLists();
-      renderPage(updated);
+      const codigo = record.id, tipoAtual = tipo;
+      await executarAcaoComFeedback({
+        titulo: "Aprovar demanda", mensagem: "Demanda aprovada.",
+        salvar: () => API[tipoAtual].aprovar(codigo, { motivo }),
+        atualizar: async (updated) => {
+          await refreshLists();
+          if (record.id === codigo) renderPage(updated);
+        },
+      });
     } catch (err) {
       SLTAdminUi.showToast(err.message, true);
     }
   }
 
   async function rejectRecord() {
+    if (!SLTAdminAuth.can("analyzeDemand")) return;
     const field = $("#fld-justificativa-reprov");
     const justificativa = field?.value.trim() || "";
     if (!justificativa) {
@@ -1647,10 +1694,15 @@
     });
     if (!ok) return;
     try {
-      const updated = await API[tipo].reprovar(record.id, { justificativa });
-      SLTAdminUi.showToast("Demanda reprovada.");
-      await refreshLists();
-      renderPage(updated);
+      const codigo = record.id, tipoAtual = tipo;
+      await executarAcaoComFeedback({
+        titulo: "Reprovar demanda", mensagem: "Demanda reprovada.",
+        salvar: () => API[tipoAtual].reprovar(codigo, { justificativa }),
+        atualizar: async (updated) => {
+          await refreshLists();
+          if (record.id === codigo) renderPage(updated);
+        },
+      });
     } catch (err) {
       SLTAdminUi.showToast(err.message, true);
     }

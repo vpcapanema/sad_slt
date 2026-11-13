@@ -81,6 +81,13 @@ def require_analyst(
     return _require_profiles(user, _ANALYZE_PROFILES, "realizar análise ou aprovação")
 
 
+def require_demand_analyst(
+    user: SessionUser = Depends(require_authenticated),
+) -> SessionUser:
+    """Análise de demandas é exclusiva do perfil Analista, sem herança."""
+    return _require_profiles(user, frozenset({"ANALISTA"}), "analisar ou alterar demandas cadastradas; exige perfil Analista")
+
+
 def require_admin(
     user: SessionUser = Depends(require_authenticated),
 ) -> SessionUser:

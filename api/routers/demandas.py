@@ -7,7 +7,7 @@ from pydantic import ValidationError
 
 from api.responses import model_json_response
 from api.repositories import geometria_listagem_repository
-from api.deps.auth import require_analyst, require_authenticated, require_gestor, require_operator
+from api.deps.auth import require_demand_analyst, require_authenticated, require_gestor, require_operator
 from api.exceptions import DatabaseUnavailableError, DemandaNotFoundError, DemandaValidationError
 from api.schemas.demanda import DemandaCreateSchema, DemandaResponseSchema, DemandaUpdateSchema
 from api.schemas.objeto_ahp import AprovarDemandaSchema, ObjetoAhpResponseSchema, ReprovarDemandaSchema
@@ -101,7 +101,7 @@ def obter_demanda(codigo: str) -> DemandaResponseSchema:
 def aprovar_demanda(
     codigo: str,
     body: AprovarDemandaSchema | None = None,
-    user: SessionUser = Depends(require_analyst),
+    user: SessionUser = Depends(require_demand_analyst),
 ) -> ObjetoAhpResponseSchema:
     """Aprova demanda e insere objeto em ahp.objeto_ahp (única fonte do módulo AHP)."""
     motivo = body.motivo if body else None
@@ -124,7 +124,7 @@ def aprovar_demanda(
 def reprovar_demanda(
     codigo: str,
     body: ReprovarDemandaSchema,
-    user: SessionUser = Depends(require_analyst),
+    user: SessionUser = Depends(require_demand_analyst),
 ) -> DemandaResponseSchema:
     """Reprova uma demanda em análise mediante justificativa obrigatória."""
     try:
@@ -145,7 +145,7 @@ def reprovar_demanda(
 def atualizar_demanda(
     codigo: str,
     body: DemandaUpdateSchema,
-    user: SessionUser = Depends(require_operator),
+    user: SessionUser = Depends(require_demand_analyst),
 ) -> DemandaResponseSchema:
     """Atualiza uma demanda existente."""
     try:

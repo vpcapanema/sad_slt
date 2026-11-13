@@ -5,7 +5,7 @@ from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 
-from api.deps.auth import require_analyst, require_authenticated
+from api.deps.auth import require_demand_analyst, require_authenticated
 from api.exceptions import DatabaseUnavailableError, DemandaNotFoundError, DemandaValidationError
 from api.schemas.analise_demanda import (
     AnaliseDemandaResponseSchema,
@@ -48,7 +48,7 @@ def obter_analise(
 def salvar_criterios(
     codigo: str,
     body: CriteriosAnaliseSchema,
-    user: SessionUser = Depends(require_analyst),
+    user: SessionUser = Depends(require_demand_analyst),
 ) -> AnaliseDemandaResponseSchema:
     """Grava as cinco respostas, recalcula o resultado e regenera o parecer."""
     try:
@@ -61,7 +61,7 @@ def salvar_criterios(
 def salvar_avaliacao_geometria(
     codigo: str,
     body: AvaliacaoGeometriaSchema,
-    user: SessionUser = Depends(require_analyst),
+    user: SessionUser = Depends(require_demand_analyst),
 ) -> AnaliseDemandaResponseSchema:
     """Grava a avaliação informativa da geometria, sem alterar o resultado."""
     try:
@@ -86,7 +86,7 @@ def obter_historico_geometria(
 def salvar_complemento(
     codigo: str,
     body: ComplementoParecerSchema,
-    user: SessionUser = Depends(require_analyst),
+    user: SessionUser = Depends(require_demand_analyst),
 ) -> AnaliseDemandaResponseSchema:
     """Grava a complementação do parecer (adicional ao texto gerado)."""
     try:
@@ -99,7 +99,7 @@ def salvar_complemento(
 def alterar_situacao(
     codigo: str,
     body: SituacaoAnaliseSchema,
-    user: SessionUser = Depends(require_analyst),
+    user: SessionUser = Depends(require_demand_analyst),
 ) -> SituacaoAnaliseResponseSchema:
     """Muda o status intermediário da análise, sem decisão final nem PDF."""
     try:
@@ -120,7 +120,7 @@ def alterar_situacao(
 def decidir(
     codigo: str,
     body: DecisaoAnaliseSchema,
-    user: SessionUser = Depends(require_analyst),
+    user: SessionUser = Depends(require_demand_analyst),
 ) -> DecisaoAnaliseResponseSchema:
     """Aplica a transição de status, gera o parecer em PDF e o persiste."""
     try:

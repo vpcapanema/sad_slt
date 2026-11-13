@@ -4,7 +4,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from pydantic import ValidationError
 
-from api.deps.auth import require_analyst, require_authenticated, require_gestor, require_operator
+from api.deps.auth import require_demand_analyst, require_authenticated, require_gestor, require_operator
 from api.exceptions import DatabaseUnavailableError, DemandaNotFoundError, DemandaValidationError
 from api.schemas.objeto_ahp import AprovarDemandaSchema, ReprovarDemandaSchema
 from api.schemas.programa import ProgramaCreateSchema, ProgramaResponseSchema, ProgramaUpdateSchema
@@ -104,7 +104,7 @@ def obter_programa(codigo: str) -> ProgramaResponseSchema:
 def aprovar_programa(
     codigo: str,
     body: AprovarDemandaSchema | None = None,
-    user: SessionUser = Depends(require_analyst),
+    user: SessionUser = Depends(require_demand_analyst),
 ) -> ProgramaResponseSchema:
     """Promove o programa ao universo AHP (transição de status in-place)."""
     motivo = body.motivo if body else None
@@ -123,7 +123,7 @@ def aprovar_programa(
 def reprovar_programa(
     codigo: str,
     body: ReprovarDemandaSchema,
-    user: SessionUser = Depends(require_analyst),
+    user: SessionUser = Depends(require_demand_analyst),
 ) -> ProgramaResponseSchema:
     """Reprova um programa em análise mediante justificativa obrigatória."""
     try:
@@ -144,7 +144,7 @@ def reprovar_programa(
 def atualizar_programa(
     codigo: str,
     body: ProgramaUpdateSchema,
-    user: SessionUser = Depends(require_operator),
+    user: SessionUser = Depends(require_demand_analyst),
 ) -> ProgramaResponseSchema:
     """Atualiza um programa existente."""
     try:

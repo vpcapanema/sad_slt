@@ -24,6 +24,9 @@ const assert = require('node:assert/strict');
       await page.addStyleTag({ url: `http://sicard.test/assets/css/${file}` });
     }
     await page.addScriptTag({ url: 'http://sicard.test/assets/js/status-colors.js' });
+    await page.addStyleTag({path: 'assets/css/process_feedback_system.css'});
+    await page.addScriptTag({path: 'assets/js/notification_system.js'});
+    await page.addScriptTag({path: 'assets/js/process_feedback_unified.js'});
     await page.addScriptTag({ content: `
       const $ = s => document.querySelector(s);
       const record = {id: 'COD', status: 'analise_em_avaliacao'};
@@ -41,6 +44,7 @@ const assert = require('node:assert/strict');
       ${section}
       ${criterion}
       ${geometry}
+      ${source.slice(source.indexOf('  let acaoAnaliseEmCurso'), source.indexOf('  async function saveComplemento'))}
       document.querySelector('main').innerHTML = analiseSectionHtml(record);
       $('#criterios-grid').innerHTML = criterioRowHtml({campo: 'clareza', rotulo: 'Clareza', pergunta: 'O objeto da demanda está claramente descrito?', resposta: true}, true);
       document.querySelector(".analise-geometria").hidden = false;
@@ -91,6 +95,8 @@ const assert = require('node:assert/strict');
     await page.getByRole('button', { name: 'Aprovar geometria', exact: true }).click();
     await page.locator('#geometria-confirmada').waitFor({ state: 'visible' });
     assert.equal(await page.evaluate(() => saved.at(-1).confirmada), true);
+    await page.locator('#pfsSuccessBox.pfs-active').waitFor();
+    await page.evaluate(() => StatusFeedback.fechar());
     assert.equal(await visible('#btn-aprovar-geometria'), false);
     await page.evaluate(() => renderAvaliacaoGeometria({avaliacao_geometria: saved.at(-1)}, true));
     assert.equal(await visible('#geometria-confirmada'), true);

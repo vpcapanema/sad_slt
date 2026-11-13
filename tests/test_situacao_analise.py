@@ -18,7 +18,7 @@ def test_botoes_de_situacao_usam_o_bloco_de_acoes_e_o_feedback():
     assert "Suspender análise" in ADMIN_DEMANDA_JS
     assert "Solicitar complementação" in ADMIN_DEMANDA_JS
     assert "Retomar análise" in ADMIN_DEMANDA_JS
-    assert "StatusFeedback.sucesso" in ADMIN_DEMANDA_JS
+    assert "executarAcaoComFeedback" in ADMIN_DEMANDA_JS
     assert "StatusFeedback.erro" in ADMIN_DEMANDA_JS
 
 

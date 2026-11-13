@@ -52,9 +52,9 @@ def test_admin_block_has_server_guard(profile):
 
 
 @pytest.mark.parametrize("path", [
-    "/restrict/demandas/", "/restrict/demanda/", "/restrict/geoespacial/",
+    "/restrict/demandas/", "/restrict/geoespacial/",
     "/restrict/hierarquizacao/processos/", "/restrict/revisao-status/",
-    "/api/demandas/internas", "/api/painel/demandas/internas", "/api/complementacao/objetos",
+    "/api/painel/demandas/internas", "/api/complementacao/objetos",
 ])
 def test_operator_cannot_browse_other_internal_modules(path):
     assert client("OPERADOR").get(path).status_code == 403
