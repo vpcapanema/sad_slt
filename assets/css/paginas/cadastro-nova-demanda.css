@@ -98,15 +98,6 @@
   padding-top: 1rem;
 }
 
-/* Plano, seção 4: cada subseção distribui seus três campos em uma linha. */
-.cadastro-page #form-plano > .card-4-vigencia-e-recursos .form-subsection > .form-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.cadastro-page #form-plano > .card-4-vigencia-e-recursos .form-subsection > .form-grid > .full {
-  grid-column: auto;
-}
-
 /* Programa e projeto seguem o fluxo aberto do plano: sem navegação por etapas. */
 .cadastro-page #form-cadastro .btn-prev,
 .cadastro-page #form-cadastro .btn-next,
@@ -139,7 +130,7 @@
   grid-column: 1 / -1;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 1100px) {
   .cadastro-page .tipo-form:not(.hidden),
   .cadastro-page #form-cadastro:has(> .step-panel[data-step="2"].hidden) {
     grid-template-columns: 1fr;
@@ -150,9 +141,6 @@
     grid-column: 1;
   }
 
-  .cadastro-page #form-plano > .card-4-vigencia-e-recursos .form-subsection > .form-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 .classificacao-demanda-etapa {
@@ -655,5 +643,212 @@
 @media (max-width: 720px) {
   .tipo-demandante-selector {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Ritmo do formulario: rotulo, controle e ajuda com medidas compartilhadas. */
+.cadastro-page {
+  --cadastro-field-gap: 0.375rem;
+  --cadastro-row-gap: 1rem;
+  --cadastro-control-height: 2.25rem;
+}
+
+.cadastro-page .cadastro-section-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cadastro-row-gap);
+  min-width: 0;
+}
+
+.cadastro-page .cadastro-section-body > .step-intro,
+.cadastro-page .cadastro-section-body > .field-help,
+.cadastro-page .classificacao-demanda-etapa {
+  margin: 0;
+}
+
+.cadastro-page .form-subsection {
+  margin: 0;
+  padding-bottom: var(--cadastro-row-gap);
+}
+
+.cadastro-page .form-subsection:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.cadastro-page .form-subsection > h3 {
+  margin: 0 0 0.75rem;
+  line-height: 1.4;
+}
+
+.cadastro-page .form-subsection > .step-intro {
+  margin: 0 0 var(--cadastro-row-gap);
+}
+
+.cadastro-page .form-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--cadastro-row-gap);
+  align-items: start;
+}
+
+.cadastro-page .form-grid > div,
+.cadastro-page .proponente-grupo,
+.cadastro-page .campo-com-acao {
+  min-width: 0;
+}
+
+.cadastro-page .form-grid > div:has(> label[for]),
+.cadastro-page .proponente-grupo--instituicao,
+.cadastro-page .proponente-cnpj,
+.cadastro-page .abrangencia-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cadastro-field-gap);
+}
+
+.cadastro-page .form-grid > div > label,
+.cadastro-page .proponente-grupo > label,
+.cadastro-page .proponente-cnpj > label,
+.cadastro-page .abrangencia-field > label {
+  margin: 0;
+  line-height: 1.5;
+  overflow-wrap: break-word;
+  text-wrap: pretty;
+}
+
+.cadastro-page :is(input[type="text"], input[type="email"], input[type="number"],
+  input[type="search"], input[type="date"], select:not([multiple]):not([size])) {
+  box-sizing: border-box;
+  height: var(--cadastro-control-height);
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+}
+
+.cadastro-page textarea {
+  display: block;
+  box-sizing: border-box;
+  min-height: 5.5rem;
+  min-width: 0;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.cadastro-page .field-help,
+.cadastro-page .form-field-block .field-help,
+.cadastro-page .field-help-row {
+  margin: 0;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.cadastro-page .proponente-fields {
+  gap: var(--cadastro-row-gap);
+}
+
+.cadastro-page .proponente-cnpj {
+  margin-top: calc(var(--cadastro-row-gap) - var(--cadastro-field-gap));
+}
+
+.cadastro-page .campo-com-acao {
+  align-items: stretch;
+  gap: var(--cadastro-field-gap);
+}
+
+.cadastro-page .btn-atualizar-lista {
+  width: var(--cadastro-control-height);
+  height: var(--cadastro-control-height);
+  border-radius: 6px;
+}
+
+.cadastro-page [data-representante-tipos] {
+  display: grid;
+  gap: var(--cadastro-field-gap);
+}
+
+.cadastro-page [data-representante-tipos] > label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.cadastro-page [data-representante-tipos] input {
+  flex: 0 0 auto;
+  margin: 0.2rem 0 0;
+}
+
+.cadastro-page .cadastro-section-label {
+  line-height: 1.4;
+}
+
+/* O ultimo campo isolado aproveita a linha, em vez de comprimir sua ajuda. */
+.cadastro-page .form-grid:not(:has(> .full)) > .form-field-block:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
+/* Subgrid alinha cada linha real, sem alturas fixas ou medicoes via JavaScript. */
+@supports (grid-template-rows: subgrid) {
+  .cadastro-page .form-grid {
+    row-gap: 0;
+  }
+
+  .cadastro-page .form-grid > div {
+    grid-row: span 3;
+    margin-bottom: var(--cadastro-row-gap);
+  }
+
+  .cadastro-page .form-grid > div:has(> label[for]):has(> input, > select, > textarea) {
+    display: grid;
+    grid-template-rows: subgrid;
+    row-gap: 0;
+    align-items: start;
+  }
+
+  .cadastro-page .form-grid > div > label[for] {
+    grid-row: 1;
+  }
+
+  .cadastro-page .form-grid > div:has(> input, > select, > textarea) > label[for] {
+    margin-bottom: var(--cadastro-field-gap);
+  }
+
+  .cadastro-page .form-grid > div > :is(input, select, textarea) {
+    grid-row: 2;
+  }
+
+  .cadastro-page .form-grid > div > :is(.field-help, .field-help-row) {
+    grid-row: 3;
+    margin-top: var(--cadastro-field-gap);
+  }
+}
+
+@media (max-width: 600px) {
+  .cadastro-page .form-grid,
+  .cadastro-page .geometry-source-options {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cadastro-page .cadastro-section-body {
+    padding: 1rem;
+  }
+
+  .cadastro-page .cadastro-section-label {
+    padding-inline: 1rem;
+  }
+}
+
+.cadastro-page #cadastro-load-hint:empty {
+  display: none;
+}
+
+.cadastro-page .tipo-demanda-selector {
+  margin: 0;
+}
+
+@media (min-width: 901px) {
+  body.cadastro-page:not(.layout-with-sidebar) .app-header .app-header-brand {
+    flex: 1 1 auto;
   }
 }
