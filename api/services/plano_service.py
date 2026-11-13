@@ -94,6 +94,7 @@ def _row_to_response(
         vigencia_fim=_iso(row.get("vigencia_fim")),
         valor_global=float(valor) if valor is not None else None,
         unidades_espaciais=list(row.get("unidades_espaciais") or []),
+        dados_origem=row.get("dados_origem"),
         atributos_cadastrais=mesclar_atributos_nativos(row),
     )
 
@@ -146,6 +147,7 @@ def criar_plano(
         "vigencia_inicio": payload.vigencia_inicio or None,
         "vigencia_fim": payload.vigencia_fim or None,
         "valor_global": payload.valor_global,
+        "dados_origem": payload.dados_origem,
         "atributos_cadastrais": payload.atributos_cadastrais,
         "status": status_sei or STATUS_INICIAL_DEMANDA,
     }

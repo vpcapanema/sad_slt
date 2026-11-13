@@ -100,6 +100,7 @@ def _row_to_response(
         pessoa_id=str(row["sigma_pessoa_id"]) if row.get("sigma_pessoa_id") else None,
         representante=rep,
         unidades_espaciais=list(row.get("unidades_espaciais") or []),
+        dados_origem=row.get("dados_origem"),
         atributos_cadastrais=mesclar_atributos_nativos(row),
     )
 
@@ -148,6 +149,7 @@ def criar_programa(
         "orgao_responsavel": payload.orgao_responsavel,
         "justificativa": payload.justificativa,
         "valor_global": payload.valor_global,
+        "dados_origem": payload.dados_origem,
         "atributos_cadastrais": payload.atributos_cadastrais,
         "vinculo_institucional": bool(payload.vinculo_institucional),
         "sigma_instituicao_id": instituicao_id,

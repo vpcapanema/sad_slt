@@ -38,6 +38,7 @@ class ProgramaCreateSchema(BaseModel):
     geometria: GeometriaSchema | None = Field(
         None, description="Geometria desenhada em tela; quando ausente, usa-se a união das unidades espaciais"
     )
+    dados_origem: dict[str, Any] | None = None
     atributos_cadastrais: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -82,6 +83,7 @@ class ProgramaResponseSchema(BaseModel):
     pessoa_id: str | None = None
     representante: RepresentanteSchema | None = None
     unidades_espaciais: list[str] = Field(default_factory=list)
+    dados_origem: dict[str, Any] | None = None
     atributos_cadastrais: dict[str, Any] = Field(default_factory=dict)
 
 

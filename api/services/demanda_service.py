@@ -134,6 +134,7 @@ def _row_to_response(
         vigencia_inicio=_iso_date(row.get("vigencia_inicio")),
         vigencia_fim=_iso_date(row.get("vigencia_fim")),
         valor_global=float(row["valor_global"]) if row.get("valor_global") is not None else None,
+        dados_origem=row.get("dados_origem"),
         atributos_cadastrais=mesclar_atributos_nativos(row),
     )
 
@@ -234,6 +235,7 @@ def _build_persist_row(
         "vigencia_inicio": (payload.vigencia_inicio or None),
         "vigencia_fim": (payload.vigencia_fim or None),
         "valor_global": payload.valor_global,
+        "dados_origem": payload.dados_origem,
         "atributos_cadastrais": payload.atributos_cadastrais,
     }
     normalizar_projeto(row, pessoa_id=pessoa_id, usuario_id=usuario_id)

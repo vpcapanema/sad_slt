@@ -27,7 +27,7 @@ _SELECT_BASE = """
         pg.orgao_responsavel,
         pg.justificativa,
         pg.valor_global,
-        pg.atributos_cadastrais,
+        pg.dados_origem, pg.atributos_cadastrais,
         pg.maturidade,
         pg.capex_estimado,
         pg.base_estimativa_capex,
@@ -72,7 +72,7 @@ _INSERT_SQL = """
     INSERT INTO demandas.programa (
         codigo, plano_id, nome, descricao, origem_sei_processo,
         objetivo, publico_alvo, orgao_responsavel, justificativa,
-        valor_global, atributos_cadastrais, maturidade, capex_estimado, base_estimativa_capex,
+        valor_global, dados_origem, atributos_cadastrais, maturidade, capex_estimado, base_estimativa_capex,
         prazo_referencia_meses, base_estimativa_prazo, vinculo_institucional,
         sigma_instituicao_id, instituicao_nome, instituicao_razao_social,
         instituicao_nome_fantasia, instituicao_cnpj,
@@ -81,7 +81,7 @@ _INSERT_SQL = """
     ) VALUES (
         %(codigo)s, %(plano_id)s, %(nome)s, %(descricao)s, %(origem_sei_processo)s,
         %(objetivo)s, %(publico_alvo)s, %(orgao_responsavel)s, %(justificativa)s,
-        %(valor_global)s, %(atributos_cadastrais)s, %(maturidade)s, %(capex_estimado)s, %(base_estimativa_capex)s,
+        %(valor_global)s, %(dados_origem)s, %(atributos_cadastrais)s, %(maturidade)s, %(capex_estimado)s, %(base_estimativa_capex)s,
         %(prazo_referencia_meses)s, %(base_estimativa_prazo)s, %(vinculo_institucional)s,
         %(sigma_instituicao_id)s, %(instituicao_nome)s, %(instituicao_razao_social)s,
         %(instituicao_nome_fantasia)s, %(instituicao_cnpj)s,
@@ -139,6 +139,7 @@ def insert(
         "prazo_referencia_meses": None,
         "base_estimativa_prazo": None,
         **row,
+        "dados_origem": Jsonb(row["dados_origem"]) if row.get("dados_origem") is not None else None,
         "atributos_cadastrais": Jsonb(row.get("atributos_cadastrais") or {}),
     }
     with get_connection() as conn:

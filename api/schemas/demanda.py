@@ -53,6 +53,7 @@ class DemandaCreateSchema(BaseModel):
     vigencia_inicio: str | None = None
     vigencia_fim: str | None = None
     valor_global: float | None = None
+    dados_origem: dict[str, Any] | None = None
     atributos_cadastrais: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -99,6 +100,7 @@ class DemandaResponseSchema(BaseModel):
     vigencia_inicio: str | None = None
     vigencia_fim: str | None = None
     valor_global: float | None = None
+    dados_origem: dict[str, Any] | None = None
     atributos_cadastrais: dict[str, Any] = Field(default_factory=dict)
 
 

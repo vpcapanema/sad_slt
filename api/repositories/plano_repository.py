@@ -34,7 +34,7 @@ _SELECT_BASE = """
         p.vigencia_inicio,
         p.vigencia_fim,
         p.valor_global,
-        p.atributos_cadastrais,
+        p.dados_origem, p.atributos_cadastrais,
         p.maturidade,
         p.prazo_referencia_meses,
         p.base_estimativa_prazo,
@@ -68,7 +68,7 @@ _INSERT_SQL = """
         instituicao_nome_fantasia, instituicao_cnpj,
         representante_instituicao_id, sigma_pessoa_id, representante_nome, representante_email, representante_telefone,
         vigencia_inicio, vigencia_fim,
-        valor_global, atributos_cadastrais, maturidade, prazo_referencia_meses, base_estimativa_prazo,
+        valor_global, dados_origem, atributos_cadastrais, maturidade, prazo_referencia_meses, base_estimativa_prazo,
         status, criado_por, atualizado_por
     ) VALUES (
         %(codigo)s, %(diretoria_id)s, %(nome)s, %(descricao)s, %(origem_sei_processo)s,
@@ -77,7 +77,7 @@ _INSERT_SQL = """
         %(instituicao_nome_fantasia)s, %(instituicao_cnpj)s,
         %(representante_instituicao_id)s, %(sigma_pessoa_id)s, %(representante_nome)s, %(representante_email)s, %(representante_telefone)s,
         %(vigencia_inicio)s, %(vigencia_fim)s,
-        %(valor_global)s, %(atributos_cadastrais)s, %(maturidade)s, %(prazo_referencia_meses)s, %(base_estimativa_prazo)s,
+        %(valor_global)s, %(dados_origem)s, %(atributos_cadastrais)s, %(maturidade)s, %(prazo_referencia_meses)s, %(base_estimativa_prazo)s,
         %(status)s, %(criado_por)s, %(atualizado_por)s
     )
     RETURNING id
@@ -129,6 +129,7 @@ def insert(
         "prazo_referencia_meses": None,
         "base_estimativa_prazo": None,
         **row,
+        "dados_origem": Jsonb(row["dados_origem"]) if row.get("dados_origem") is not None else None,
         "atributos_cadastrais": Jsonb(row.get("atributos_cadastrais") or {}),
     }
     with get_connection() as conn:

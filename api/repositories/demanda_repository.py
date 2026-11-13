@@ -60,7 +60,7 @@ _SELECT_BASE = """
         d.vigencia_inicio,
         d.vigencia_fim,
         d.valor_global
-        ,d.atributos_cadastrais
+        ,d.dados_origem, d.atributos_cadastrais
         ,d.maturidade
         ,d.capex_estimado
         ,d.base_estimativa_capex
@@ -100,7 +100,7 @@ _INSERT_SQL = """
         vigencia_inicio,
         vigencia_fim,
         valor_global,
-        atributos_cadastrais,
+        dados_origem, atributos_cadastrais,
         maturidade,
         capex_estimado,
         base_estimativa_capex,
@@ -136,7 +136,7 @@ _INSERT_SQL = """
         %(vigencia_inicio)s,
         %(vigencia_fim)s,
         %(valor_global)s,
-        %(atributos_cadastrais)s,
+        %(dados_origem)s, %(atributos_cadastrais)s,
         %(maturidade)s,
         %(capex_estimado)s,
         %(base_estimativa_capex)s,
@@ -152,6 +152,7 @@ def insert(row: dict[str, Any], *, arquivo_geometria: dict[str, Any] | None = No
     """Insere uma demanda e retorna a linha persistida."""
     row = dict({"representante_instituicao_id": None, **row}, criado_por=validar_autor(row.get("criado_por")))
     row = {
+        "dados_origem": None,
         "origem_sei_processo": None,
         "maturidade": None,
         "capex_estimado": None,
@@ -239,7 +240,7 @@ def reprovar(codigo: str, *, reprovado_por: str | None, justificativa: str) -> d
 def prepare_insert_params(data: dict[str, Any]) -> dict[str, Any]:
     """Normaliza dict de persistência para parâmetros psycopg."""
     params = dict(data)
-    for key in ("classificacao", "complementos", "atributos_cadastrais"):
+    for key in ("classificacao", "complementos", "atributos_cadastrais", "dados_origem"):
         val = params.get(key)
         params[key] = Jsonb(val) if val is not None else None
     geo = params.get("geometria_geojson")
