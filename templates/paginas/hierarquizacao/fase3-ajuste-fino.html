@@ -6,7 +6,7 @@
 
 {% block titulo %}Priorização de demandas por atributos{% endblock %}
 {% set fase_ativa = 3 %}
-{% block classes_body %}ahp-module-page feedback-proprio escala-revisada fases-padrao-agrupamento ami-page ami-espaco-page sicard-standard-page fase3-standard-page{% endblock %}
+{% block classes_body %}table-layout-repair ahp-module-page feedback-proprio escala-revisada fases-padrao-agrupamento ami-page ami-espaco-page sicard-standard-page fase3-standard-page{% endblock %}
 {% block base_url %}<base href="/restrict/hierarquizacao/">{% endblock %}
 
 {% block estilos_pagina %}
@@ -48,7 +48,7 @@
   <div id="fase3-resultados-aviso" class="ahp-info-note hidden" role="status" aria-live="polite" aria-atomic="true"></div>
   <section hidden data-fase3-progressiva class="secao-criterios-de-atributos card ahp-step-section card-criterios-de-atributos"><div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">2</span><i class="fas fa-table" aria-hidden="true"></i><span id="fase3-titulo-atributos">Critérios de atributo de demanda</span></div><div class="ahp-section-body">{% set fase3_ponderacao = true %}{% include "componentes/_tabela_atributos_objetos.html" %}</div></section>
   <section id="fase3-regras-vazios" hidden class="secao-regras-para-atributos-vazios card ahp-step-section card-regras-para-atributos-vazios"><div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">3</span><i class="fas fa-triangle-exclamation" aria-hidden="true"></i><span>Regras para atributos vazios</span></div><div class="ahp-section-body">
-    <div class="ahp-subsection-title"><span class="cadastro-subsec-num">3.1</span><span>Atributos ausentes ou inválidos</span></div>
+    <div class="ahp-subsection-title"><span class="cadastro-subsec-num">3.1</span><span id="fase3-ausentes-titulo">Atributos ausentes ou inválidos</span></div>
     <div id="fase3-atributos-ausentes" class="fase-table-wrap fase3-ausentes-wrap fase3-tabela-secao" aria-live="polite"></div>
     <div class="ahp-subcard info-card"><div class="ahp-subsection-title"><span class="cadastro-subsec-num">3.2</span><i class="fas fa-sliders" aria-hidden="true"></i><span>Política de tratamento</span></div><div class="fase-grid-2">
       <input id="fase3-modo-pesos" type="hidden" value="normalizados">

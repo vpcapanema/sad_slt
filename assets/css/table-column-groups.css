@@ -5,6 +5,7 @@
   gap: 6px;
   margin-left: auto;
 }
+.cg-botoes[hidden] { display: none !important; }
 
 .cg-botao {
   height: 28px;
@@ -38,5 +39,5 @@
 }
 
 .cg-linha-grupo th.cg-vazio {
-  background: transparent;
+  background: var(--pli-deep, #123b56);
 }

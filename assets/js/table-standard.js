@@ -46,7 +46,7 @@
   }
   function headers(table) {
     const grid=[];
-    [...(table.tHead?.rows || [])].forEach((row,r)=>{
+    [...(table.tHead?.rows || [])].filter(row => !row.classList.contains('cg-linha-grupo')).forEach((row,r)=>{
       grid[r] ||= []; let col=0;
       [...row.cells].forEach(cell=>{
         while(grid[r][col])col++;

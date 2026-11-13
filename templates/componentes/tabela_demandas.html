@@ -12,13 +12,14 @@
           <button type="button" class="admin-tab is-active" data-tipo="projeto" role="tab" aria-selected="true">Projeto</button>
         </div>
 
-        {% if modo_complementacao %}<div class="ami-filtered-table">{% endif %}
+        {% if not modo_complementacao %}<h3 id="demandas-tabela-titulo">Demandas cadastradas</h3>{% endif %}
+        <div class="ami-filtered-table">
         {% set filtro_prefixo = "filtro" %}
         {% set filtro_rotulo = "Filtrar demandas" %}
         {% include "componentes/filtro_tabela.html" %}
 
         <div class="admin-table-wrap" data-demandas-table-wrap="plano">
-          <table class="admin-table" data-demandas-table="plano" hidden>
+          <table class="admin-table" data-table-heading="{{ 'complementacao-cadastral-titulo' if modo_complementacao else 'demandas-tabela-titulo' }}" data-demandas-table="plano" hidden>
             <thead><tr>
               <th class="col-select" scope="col"><input type="checkbox" class="select-all" aria-label="Selecionar todos os planos"></th>
               <th scope="col">Status</th><th scope="col">Processo SEI</th><th scope="col">Código</th><th scope="col">Plano</th>
@@ -33,7 +34,7 @@
           </table>
         </div>
         <div class="admin-table-wrap" data-demandas-table-wrap="programa" hidden>
-          <table class="admin-table" data-demandas-table="programa" hidden>
+          <table class="admin-table" data-table-heading="{{ 'complementacao-cadastral-titulo' if modo_complementacao else 'demandas-tabela-titulo' }}" data-demandas-table="programa" hidden>
             <thead><tr>
               <th class="col-select" scope="col"><input type="checkbox" class="select-all" aria-label="Selecionar todos os programas"></th>
               <th scope="col">Status</th><th scope="col">Processo SEI</th><th scope="col">Código</th><th scope="col">Programa</th>
@@ -49,7 +50,7 @@
           </table>
         </div>
         <div class="admin-table-wrap" data-demandas-table-wrap="projeto" hidden>
-          <table class="admin-table" data-demandas-table="projeto">
+          <table class="admin-table" data-table-heading="{{ 'complementacao-cadastral-titulo' if modo_complementacao else 'demandas-tabela-titulo' }}" data-demandas-table="projeto">
             <thead><tr>
               <th class="col-select" scope="col"><input type="checkbox" class="select-all" aria-label="Selecionar todos os projetos"></th>
               <th scope="col">Status</th><th scope="col">Processo SEI</th><th scope="col">Código</th><th scope="col">Projeto</th>
@@ -66,8 +67,8 @@
         </div>
 
 
-        {% if modo_complementacao %}
         </div>
+        {% if modo_complementacao %}
         <div class="complementacao-controles standard-table-actions" role="group" aria-label="Tipo de complementação">
           <button type="button" class="admin-icon-btn" data-complementacao="cadastro" title="Dados cadastrais" aria-label="Dados cadastrais" disabled><i class="fa-solid fa-address-card" aria-hidden="true"></i><span class="sr-only">Dados cadastrais</span></button>
           <button type="button" class="admin-icon-btn" data-complementacao="geometria" title="Geometria" aria-label="Geometria" disabled><i class="fa-solid fa-draw-polygon" aria-hidden="true"></i><span class="sr-only">Geometria</span></button>

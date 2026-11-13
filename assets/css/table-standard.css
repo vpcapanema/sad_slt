@@ -1,4 +1,57 @@
 /* Shared table layout, enabled only on explicitly marked tables. */
+/* One surface for filters and data; titles belong outside this surface. */
+body.table-layout-repair .ami-filtered-table {
+  min-width: 0;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+body.table-layout-repair .ami-filtered-table > .admin-filter-bar {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  min-height: 32px;
+  margin: 0 !important;
+  padding: 1px 8px;
+  border: 0;
+  border-bottom: 1px solid #cbd5e1;
+  border-radius: 0;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+body.table-layout-repair .ami-filtered-table > .admin-filter-bar :is(select, .filter-value-input) {
+  flex: 1 1 140px;
+  width: auto;
+  min-width: 90px;
+  height: 25px;
+  min-height: 25px;
+  padding: 2px 6px;
+  font-size: .74rem;
+}
+body.table-layout-repair .ami-filtered-table > .admin-filter-bar .admin-icon-btn {
+  flex: 0 0 25px;
+  width: 25px;
+  min-width: 25px;
+  height: 25px;
+  min-height: 25px;
+  padding: 0;
+  border-radius: 50%;
+}
+body.table-layout-repair .cg-botoes { flex: 0 0 auto; flex-wrap: nowrap; }
+body.table-layout-repair .cg-botao { height: 25px; }
+body.table-layout-repair .ami-filtered-table > :is(.admin-table-wrap, .hier-table-shell, .atributos-table-shell, .fase-table-wrap) {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+}
+body.table-layout-repair table.admin-table tbody tr[data-table-stripe="odd"] > td { background: #fff !important; }
+body.table-layout-repair table.admin-table tbody tr[data-table-stripe="even"] > td { background: #edf4f8 !important; }
+body.table-layout-repair table.admin-table tbody tr:is(.is-selected, :has(> td:first-child input:checked)) > td { background: #dbeafe !important; }
+body.table-layout-repair table.admin-table thead :is(th.col-select, th.cg-vazio) { background: var(--pli-deep, #123b56) !important; opacity: 1; }
+body.table-layout-repair table.admin-table tbody td.col-select { opacity: 1; }
 .admin-filter-bar {
   display: flex;
   align-items: center;

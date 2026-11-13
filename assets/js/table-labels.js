@@ -160,6 +160,21 @@
 
   function labelTable(table) {
     if (!table || !table.isConnected || table.closest("template")) return;
+    // An authored heading is the title; do not add another title below its filters.
+    var authored = table.dataset.tableHeading && document.getElementById(table.dataset.tableHeading);
+    var report = table.closest('.ami-report-table');
+    authored = authored || (report && report.querySelector(':scope > .fase3-titulo-tabela-simples'));
+    if (authored) {
+      var surface = table.closest('.ami-filtered-table') || tableContainer(table);
+      surface.querySelectorAll(LABEL_SELECTOR).forEach(function (label) { label.remove(); });
+      var preceding = surface.previousElementSibling;
+      while (preceding && preceding.matches(LABEL_SELECTOR)) {
+        var previous = preceding.previousElementSibling;
+        preceding.remove(); preceding = previous;
+      }
+      if (authored.id) table.setAttribute('aria-labelledby', authored.id);
+      return;
+    }
     var container = tableContainer(table), anchor = blockAnchor(container), label = existingLabel(anchor);
     var stray = container.previousElementSibling;
     if (anchor !== container && stray && stray.matches(LABEL_SELECTOR)) {

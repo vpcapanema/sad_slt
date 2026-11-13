@@ -48,7 +48,7 @@
         : '<span class="fase-status fase-status--ok">Nenhuma pendência na tabela 2</span>';
       return `<tr><td><strong>${esc(objeto.nome)}</strong><small>${esc(objeto.codigo)}</small></td><td>${ausentes}</td></tr>`;
     }).join("");
-    host.innerHTML = `<table class="fase-table fase3-ausentes-table"><caption class="atributos-subsecao-caption"><div class="ahp-subsection-title"><span class="ahp-subsection-num">1</span><i class="fas fa-triangle-exclamation" aria-hidden="true"></i><span>Pendências da tabela 2 por demanda</span></div></caption><thead><tr><th>Demanda</th><th>Atributos ausentes ou inválidos</th></tr></thead><tbody>${linhas || '<tr><td colspan="2">A rodada não possui objetos.</td></tr>'}</tbody></table>`;
+    host.innerHTML = `<table class="fase-table fase3-ausentes-table" data-table-heading="fase3-ausentes-titulo"><thead><tr><th>Demanda</th><th>Atributos ausentes ou inválidos</th></tr></thead><tbody>${linhas || '<tr><td colspan="2">A rodada não possui objetos.</td></tr>'}</tbody></table>`;
   }
 
   function indicesObjeto(objeto, incluirPrioridade = true) {

@@ -11,9 +11,10 @@
       const headers = SLTTable.headers(table);
       const existingSelection = body.id === 'ami-analysis-responses' || Boolean(body.querySelector('td:first-child input[type="checkbox"]'));
       const selectHeader = existingSelection ? headers[0] : document.createElement('th');
-      if (!existingSelection) { selectHeader.dataset.reportSelector = 'true'; table.tHead.rows[0].prepend(selectHeader); }
+      const headingRows = [...table.tHead.rows].filter(row => !row.classList.contains('cg-linha-grupo'));
+      if (!existingSelection) { selectHeader.dataset.reportSelector = 'true'; headingRows[0].prepend(selectHeader); }
       selectHeader.classList.add('col-select');
-      selectHeader.rowSpan = table.tHead.rows.length;
+      selectHeader.rowSpan = headingRows.length;
       const selectAll = document.createElement('input'); selectAll.type = 'checkbox';
       selectAll.setAttribute('aria-label','Selecionar todos os registros filtrados'); selectHeader.replaceChildren(selectAll);
       const prefix = 'analysis-table-' + (++sequence), host = document.createElement('div');

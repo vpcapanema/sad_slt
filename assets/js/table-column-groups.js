@@ -105,7 +105,7 @@
   }
 
   function barraDe(tabela) {
-    var contorno = tabela.closest(".admin-table-shell, .ami-filtered-table, .hier-table-shell, .ea-table-wrap, .matriz-table-wrap, .admin-table-wrap") || tabela.parentElement;
+    var contorno = tabela.closest(".ami-filtered-table, .admin-table-shell") || tabela.closest(".hier-table-shell, .ea-table-wrap, .matriz-table-wrap, .admin-table-wrap") || tabela.parentElement;
     var barras = contorno.querySelectorAll(".admin-filter-bar");
     for (var i = 0; i < barras.length; i++) {
       if (!barras[i].contains(tabela)) return barras[i];
@@ -177,6 +177,10 @@
     }
     if (!tabela.dataset.cgId) tabela.dataset.cgId = "cg" + (++contador);
     garantirBotoes(tabela, estado, conjunto);
+    if (estado.botoes) {
+      var hidden = tabela.hidden || Boolean(tabela.closest('[hidden]'));
+      if (estado.botoes.hidden !== hidden) estado.botoes.hidden = hidden;
+    }
 
     var grupos = celulas(linha).map(function (cell) { return grupoDaColuna(conjunto, cell); });
     var visivel = grupos.map(function (grupo) { return !grupo || grupo.principal || !estado.ocultos.has(grupo.id); });
@@ -224,7 +228,7 @@
         celula.className = "cg-grupo";
         celula.dataset.grupo = atual.id;
       } else {
-        celula.style.setProperty("background", "transparent", "important");
+        celula.style.setProperty("background", "var(--pli-deep, #123b56)", "important");
         celula.className = "cg-vazio";
         var abaixo = linha.cells[visiveis[posicao]];
         if (abaixo && abaixo.classList.contains("col-select")) {
@@ -235,6 +239,7 @@
       posicao = fim + 1;
     }
     tabela.tHead.insertBefore(faixa, tabela.tHead.firstChild);
+    window.SLTTableFit?.();
   }
 
   function varrer() {

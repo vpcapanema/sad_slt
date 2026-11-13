@@ -7,16 +7,17 @@
   function measure(text, cell) {
     const css = getComputedStyle(cell);
     context.font = `${css.fontWeight} ${css.fontSize} ${css.fontFamily}`;
-    return context.measureText(css.textTransform === 'uppercase' ? text.toLocaleUpperCase('pt-BR') : text).width;
+    return context.measureText(css.textTransform === 'uppercase' ? text.toLocaleUpperCase('pt-BR') : text).width
+      + Math.max(0, text.length - 1) * (parseFloat(css.letterSpacing) || 0);
   }
   function fit(table) {
     if (!table.getBoundingClientRect().width || !table.tHead?.rows.length) return;
-    const headers = window.SLTTable?.headers ? SLTTable.headers(table) : [...table.tHead.rows[0].cells];
+    const headers = window.SLTTable?.headers ? SLTTable.headers(table) : [...[...table.tHead.rows].filter(row => !row.classList.contains('cg-linha-grupo')).at(-1).cells];
     if (headers.some(h => h.colSpan !== 1)) return;
     const prioritizeDemand = table.dataset.rankingOrder === 'true' || table.classList.contains('fase3-sintese-table');
     const rows = [...table.tBodies].flatMap(body => [...body.rows]).filter(row => row.cells.length === headers.length && [...row.cells].every(c => c.colSpan === 1));
     const specifications = headers.map((header, index) => {
-      if (header.hidden) return {preferred:0, compact:0, hidden:true};
+      if (header.hidden || getComputedStyle(header).display === 'none') return {preferred:0, compact:0, hidden:true};
       const selected = index === 0 && header.querySelector('input[type=checkbox]');
       if (selected) return {preferred:44, compact:44};
       let label = header.querySelector(':scope > .smart-column-title');
@@ -81,20 +82,8 @@
       if (!selected) {
         const {label,title,full}=specifications[i], room=width-32;
         const lines=[];
-        const adaptiveTitle = compactAttributes && header.classList.contains('col-atributo');
-        if (adaptiveTitle) {
-          const words = title.split(/\s+/);
-          let best = full, split = 0;
-          for (let k = 1; k < words.length; k++) {
-            const widest = Math.max(measure(words.slice(0, k).join(' '), header), measure(words.slice(k).join(' '), header));
-            if (widest < best) { best = widest; split = k; }
-          }
-          if (split) lines.push(words.slice(0, split).join(' '), words.slice(split).join(' '));
-          else lines.push(title);
-          const baseSize = parseFloat(getComputedStyle(header).fontSize);
-          set(label, 'font-size', Math.max(1, Math.min(13, baseSize * Math.max(1, room - 2) / Math.max(1, best))) + 'px');
-          set(label, 'line-height', '1.15');
-        } else if(title.length>10 && full>room){
+        label.style.removeProperty('font-size');
+        if(title.length>10 && full>room){
           const words=title.split(/\s+/);
           let split=1,best=Infinity;
           for(let k=1;k<words.length;k++){const a=measure(words.slice(0,k).join(' '),header),b=measure(words.slice(k).join(' '),header);if(Math.max(a,b)<best){best=Math.max(a,b);split=k;}}
@@ -105,10 +94,7 @@
         label.style.display='inline-block';label.style.maxWidth='100%';label.style.textAlign=lines.length>1?'justify':'center';
         set(label,'white-space','normal');set(label,'overflow-wrap','normal');
         [...label.children].forEach(line => { set(line, 'white-space', 'nowrap'); });
-        if (adaptiveTitle) {
-          label.style.textAlign = 'center';
-          [...label.children].forEach(line => { line.style.whiteSpace = 'nowrap'; });
-        }
+
       }
       for (const cell of [header, ...rows.map(row=>row.cells[i])]) {
         set(cell,'width', width+'px'); set(cell,'min-width','0'); set(cell,'max-width','none');
@@ -118,15 +104,17 @@
       set(header,'overflow-wrap','normal'); set(header,'height','32px'); set(header,'min-height','32px');
       set(header,'padding-top','8px'); set(header,'padding-bottom','8px');
     });
-    if(table.dataset.groupedHeaders==='true'){
+    if(table.dataset.groupedHeaders==='true' || table.dataset.cgId){
       let columns=table.querySelector('colgroup[data-smart-columns]');
       if(!columns){columns=document.createElement('colgroup');columns.dataset.smartColumns='true';table.prepend(columns);}
-      columns.replaceChildren(...widths.map((width,i)=>{const col=document.createElement('col');col.style.width=(width+(i===0&&headers[i].querySelector('input')?0:extra))+'px';return col;}));
+      columns.replaceChildren(...widths.map((width,i)=>{const col=document.createElement('col');col.style.width=(width+(i===0&&headers[i].querySelector('input')?0:extra))+'px';if(specifications[i].hidden)col.style.display='none';return col;}));
       table.querySelectorAll('thead th[colspan]').forEach(h=>{set(h,'white-space','normal');set(h,'overflow','visible');set(h,'text-overflow','clip');});
     }
     table.querySelectorAll('th.col-select, td.col-select').forEach(cell => { ['width', 'min-width', 'max-width'].forEach(property => set(cell, property, '44px')); });
     set(table,'table-layout','fixed'); set(table,'width',Math.max(total,available)+'px'); set(table,'min-width','0'); set(table,'max-width','none');
     table.dataset.smartWidths = 'true';
+    let stripe = 0;
+    rows.forEach(row => { if (!row.hidden && getComputedStyle(row).display !== 'none') row.dataset.tableStripe = (++stripe % 2) ? 'odd' : 'even'; });
     table.parentElement.style.overflowX = table.parentElement.scrollWidth > table.parentElement.clientWidth ? 'auto' : 'hidden';
   }
   let scheduled = false;
