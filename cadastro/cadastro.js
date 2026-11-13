@@ -543,7 +543,7 @@
         return false;
       }
       if (!$("#pg-representante").value) {
-        showToast("Selecione o representante legal.");
+        showToast("Selecione o representante.");
         return false;
       }
       return true;
@@ -793,7 +793,7 @@
         return false;
       }
       if (!$("#representante").value) {
-        showToast("Selecione o representante legal.");
+        showToast("Selecione o representante.");
         return false;
       }
       const planoId = getProjetoPlanoId();
@@ -928,25 +928,44 @@
     });
   }
 
+  function fillRepresentanteSelect(selectId) {
+    const el = document.getElementById(selectId);
+    const grupo = document.querySelector(`[data-representante-tipos="${selectId}"]`);
+    const tipo = grupo?.querySelector("input:checked")?.dataset.representanteTipo;
+    const anterior = el.value;
+    const institucional = tipo === "instituicao";
+    const items = institucional ? instituicoes : pessoas;
+    const labelFn = institucional ? SLTSigmaRead.labelInstituicao : SLTSigmaRead.labelPessoa;
+    fillSelect(el, tipo ? items : [], "id", labelFn,
+      institucional ? "Selecione a institui\u00e7\u00e3o representante\u2026" : "Selecione o representante legal\u2026");
+    if (institucional) {
+      [...el.options].forEach(option => { if (option.value) option.value = "instituicao:" + option.value; });
+    }
+    el.value = anterior;
+    el.disabled = !tipo;
+    document.getElementById(selectId + "-seletor").classList.toggle("hidden", !tipo);
+    syncFieldFilledState(el);
+  }
+
   function fillRepresentanteSelects() {
-    const placeholder = "Selecione o representante legal…";
-    ["#representante", "#pl-representante", "#pg-representante"].forEach((sel) => {
-      const el = $(sel);
-      if (!el) return;
-      el.disabled = false;
-      const anterior = el.value;
-      fillSelect(el, [], "id", () => "", placeholder);
-      for (const [label, items, prefix, labelFn] of [
-        ["Representante legal — pessoa física", pessoas, "", SLTSigmaRead.labelPessoa],
-        ["Representante institucional", instituicoes, "instituicao:", SLTSigmaRead.labelInstituicao],
-      ]) {
-        const grupo = document.createElement("optgroup");
-        grupo.label = label;
-        fillSelect(grupo, items.map(item => ({ ...item, id: prefix + item.id })), "id", labelFn);
-        el.appendChild(grupo);
-      }
-      el.value = anterior;
-      syncFieldFilledState(el);
+    ["representante", "pl-representante", "pg-representante"].forEach(fillRepresentanteSelect);
+  }
+
+  function initRepresentanteTipos() {
+    $$('[data-representante-tipos]').forEach(grupo => {
+      grupo.querySelectorAll('input[type="checkbox"]').forEach(opcao => {
+        opcao.addEventListener("change", () => {
+          if (opcao.checked) {
+            grupo.querySelectorAll('input[type="checkbox"]').forEach(outro => {
+              if (outro !== opcao) outro.checked = false;
+            });
+          }
+          const el = document.getElementById(grupo.dataset.representanteTipos);
+          el.value = "";
+          fillRepresentanteSelect(el.id);
+          el.dispatchEvent(new Event("change", { bubbles: true }));
+        });
+      });
     });
   }
 
@@ -1720,7 +1739,7 @@
     const proponenteRows = [
       reviewRow("Instituição interessada", escapeHtml(inst ? SLTSigmaRead.labelInstituicao(inst) : "—")),
       reviewRow("CNPJ", escapeHtml($("#cnpj").value || "—")),
-      reviewRow("Representante legal", escapeHtml(pessoa.nome || "—")),
+      reviewRow("Representante", escapeHtml(pessoa.nome || "—")),
       reviewRow("E-mail", escapeHtml($("#rep_email").value || "—")),
       reviewRow("Telefone", escapeHtml($("#rep_telefone").value || "—")),
     ];
@@ -1969,7 +1988,7 @@
     } else if (!$("#pl-instituicao").value) {
       erro = "Selecione a instituição interessada.";
     } else if (!$("#pl-representante").value) {
-      erro = "Selecione o representante legal.";
+      erro = "Selecione o representante.";
     } else if (!plAbr.getSelectedIds().length) {
       erro = "Selecione ao menos uma unidade de abrangência.";
     }
@@ -2133,6 +2152,7 @@
     initCurrencyInput("#prj-capex");
     initCurrencyInput("#pg-capex");
     initCurrencyInput("#pl-valor");
+    initRepresentanteTipos();
     await loadSigmaCadastros();
 
     await SLTCatalog.loadCatalog("../");
@@ -2453,6 +2473,14 @@
       null;
     removerAvisoSigma(repSel);
     if (pessoa) {
+      const campoRep = $(repSel);
+      if (!campoRep.value) {
+        const grupo = document.querySelector(`[data-representante-tipos="${campoRep.id}"]`);
+        grupo.querySelectorAll("input").forEach(opcao => {
+          opcao.checked = opcao.dataset.representanteTipo === "pessoa";
+        });
+        fillRepresentanteSelect(campoRep.id);
+      }
       if (definirCampoSugerido(repSel, pessoa.id)) preenchidos += 1;
     } else if (nomeRepresentante) {
       avisarNaoEncontrado(repSel, "pessoa", campos.representante_nome);

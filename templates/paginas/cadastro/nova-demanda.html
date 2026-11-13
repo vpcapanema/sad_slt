@@ -191,8 +191,12 @@
             <div class="proponente-grupo proponente-grupo--representante">
               <div class="form-grid">
                 <div class="form-field-block full">
-                  <label for="representante">Representante legal <span class="req">*</span></label>
-                  <div class="campo-com-acao">
+                  <label id="representante-label" for="representante">Representante <span class="req">*</span></label>
+                  <div role="group" aria-labelledby="representante-label" data-representante-tipos="representante">
+                    <label class="spatial-ack-label"><input type="checkbox" data-representante-tipo="pessoa" aria-controls="representante-seletor"> Pessoa Física - Representante Legal</label>
+                    <label class="spatial-ack-label"><input type="checkbox" data-representante-tipo="instituicao" aria-controls="representante-seletor"> Pessoa Jurídica - Representante Institucional</label>
+                  </div>
+                  <div id="representante-seletor" class="campo-com-acao hidden">
                     <select id="representante" name="representante" required disabled>
                       <option value="">Carregando representantes…</option>
                     </select>
@@ -471,8 +475,12 @@
           <div class="proponente-grupo proponente-grupo--representante">
             <div class="form-grid">
               <div class="form-field-block full">
-                <label for="pl-representante">Representante legal <span class="req">*</span></label>
-                <div class="campo-com-acao">
+                <label id="pl-representante-label" for="pl-representante">Representante <span class="req">*</span></label>
+                  <div role="group" aria-labelledby="pl-representante-label" data-representante-tipos="pl-representante">
+                    <label class="spatial-ack-label"><input type="checkbox" data-representante-tipo="pessoa" aria-controls="pl-representante-seletor"> Pessoa Física - Representante Legal</label>
+                    <label class="spatial-ack-label"><input type="checkbox" data-representante-tipo="instituicao" aria-controls="pl-representante-seletor"> Pessoa Jurídica - Representante Institucional</label>
+                  </div>
+                <div id="pl-representante-seletor" class="campo-com-acao hidden">
                   <select id="pl-representante" required disabled>
                     <option value="">Carregando representantes…</option>
                   </select>
@@ -631,8 +639,12 @@
           <div class="proponente-grupo proponente-grupo--representante">
             <div class="form-grid">
               <div class="form-field-block full">
-                <label for="pg-representante">Representante legal <span class="req">*</span></label>
-                <div class="campo-com-acao">
+                <label id="pg-representante-label" for="pg-representante">Representante <span class="req">*</span></label>
+                  <div role="group" aria-labelledby="pg-representante-label" data-representante-tipos="pg-representante">
+                    <label class="spatial-ack-label"><input type="checkbox" data-representante-tipo="pessoa" aria-controls="pg-representante-seletor"> Pessoa Física - Representante Legal</label>
+                    <label class="spatial-ack-label"><input type="checkbox" data-representante-tipo="instituicao" aria-controls="pg-representante-seletor"> Pessoa Jurídica - Representante Institucional</label>
+                  </div>
+                <div id="pg-representante-seletor" class="campo-com-acao hidden">
                   <select id="pg-representante" required disabled>
                     <option value="">Carregando representantes…</option>
                   </select>
@@ -744,7 +756,7 @@
                   <span class="review-value" id="pg-review-cnpj">—</span>
                 </div>
                 <div class="review-row">
-                  <span class="review-label">Representante legal</span>
+                  <span class="review-label">Representante</span>
                   <span class="review-value" id="pg-review-representante">—</span>
                 </div>
                 <div class="review-row">
