@@ -136,6 +136,7 @@
 .painel-hierarquizacao-resultados dl { margin: 0.5rem 0; }
 .painel-hierarquizacao-resultados dt { font-weight: 600; }
 .painel-hierarquizacao-resultados dd { margin: 0 0 0.4rem; }
+.dados-origem-details dd { white-space: pre-wrap; }
 
 /* Nível 1 — tipo (PLANO | PROGRAMA | PROJETOS) */
 .demandas-tree > .layer-group--tipo > .layer-group-header-row--tipo {

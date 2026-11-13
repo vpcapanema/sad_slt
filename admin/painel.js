@@ -79,7 +79,7 @@
       entries.push({
         kind: "objeto",
         id: o.codigo,
-        data: cadastro ? {...o, status: cadastro.status, hierarquizacoes: cadastro.hierarquizacoes} : o,
+        data: cadastro ? {...o, status: cadastro.status, hierarquizacoes: cadastro.hierarquizacoes, dados_origem: cadastro.dados_origem} : o,
         sortAt: o.statusAtualizadoEm || o.aprovadoEm || "",
       });
     });
@@ -307,6 +307,7 @@
     pop.querySelector(".painel-detail-kicker").textContent = kickerText(entry);
     pop.querySelector(".painel-detail-title").textContent = entry.data.nome;
     pop.querySelector(".painel-detail-body").innerHTML = detailHtml(entry)
+      + SLTDadosOrigem.details(entry.data.dados_origem)
       + SLTGroupedSidebar.resultadosHierarquizacaoHtml(entry.data.hierarquizacoes);
     pop.classList.remove("hidden");
     openEntry = entry;

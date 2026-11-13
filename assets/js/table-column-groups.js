@@ -56,6 +56,7 @@
   ];
 
   var estados = new WeakMap();
+  var conjuntosDemanda = new WeakMap();
   var regras = new Map();
   var contador = 0;
   var estiloEl = null;
@@ -85,11 +86,23 @@
     var linha = linhaCabecalho(tabela);
     if (!linha) return null;
     var textos = celulas(linha).map(function (cell) { return normalizar(cell.textContent); });
-    return CONJUNTOS.find(function (conjunto) {
+    var base = CONJUNTOS.find(function (conjunto) {
       return conjunto.assinatura.every(function (nome) {
         return textos.some(function (texto) { return mesmoTitulo(texto, nome); });
       });
     }) || null;
+    if (!tabela.dataset.demandasTable) return base;
+    var temOrigem = Boolean(linha.querySelector('[data-column-group="origem"]'));
+    if (!temOrigem) return base;
+    var cached = conjuntosDemanda.get(tabela);
+    if (cached && cached.base === base) return cached.conjunto;
+    var principal = grupo('principal', 'Cadastro', [], PRINCIPAL, true);
+    principal.fallback = true;
+    var origem = grupo('origem', 'Dados de origem', [], '#0f766e');
+    origem.visivelInicialmente = true;
+    var conjunto = {grupos: [...(base ? base.grupos : [principal]), origem]};
+    conjuntosDemanda.set(tabela, {base:base, conjunto:conjunto});
+    return conjunto;
   }
 
   function mesmoGrupo(a, b) {
@@ -98,10 +111,12 @@
   }
 
   function grupoDaColuna(conjunto, celula) {
+    if (celula.dataset.columnGroup) return conjunto.grupos.find(g => g.id === celula.dataset.columnGroup) || null;
+    if (celula.classList.contains('col-select')) return null;
     var texto = normalizar(celula.textContent);
     return conjunto.grupos.find(function (grupo) {
       return grupo.colunas.some(function (nome) { return mesmoTitulo(texto, nome); });
-    }) || null;
+    }) || conjunto.grupos.find(g => g.fallback) || null;
   }
 
   function barraDe(tabela) {
@@ -167,9 +182,10 @@
 
     var estado = estados.get(tabela);
     if (!estado || estado.conjunto !== conjunto) {
+      if (estado?.botoes) estado.botoes.remove();
       estado = {
         conjunto: conjunto,
-        ocultos: new Set(conjunto.grupos.filter(function (grupo) { return !grupo.principal; }).map(function (grupo) { return grupo.id; })),
+        ocultos: new Set(conjunto.grupos.filter(function (grupo) { return !grupo.principal && !grupo.visivelInicialmente; }).map(function (grupo) { return grupo.id; })),
         chave: "",
         botoes: null
       };

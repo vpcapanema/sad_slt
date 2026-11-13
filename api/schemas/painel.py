@@ -40,6 +40,7 @@ class PainelDemandaSchema(BaseModel):
     criadoEm: str
     nome: str
     descricao: str | None = None
+    dados_origem: dict[str, Any] | None = None
     geometria: GeometriaSchema | None = None
     lat: float | None = None
     lng: float | None = None

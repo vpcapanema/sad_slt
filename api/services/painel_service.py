@@ -103,6 +103,7 @@ def _row_to_item(row: dict[str, Any]) -> PainelDemandaSchema:
         criadoEm=_iso(row.get("criado_em")) or "",
         nome=row["nome"],
         descricao=row.get("descricao"),
+        dados_origem=row.get("dados_origem"),
         geometria=_geometria_from_row(row),
         lat=float(lat) if lat is not None else None,
         lng=float(lng) if lng is not None else None,
@@ -153,6 +154,7 @@ def listar_demandas_painel(*, public_only: bool = False) -> list[PainelDemandaSc
                     h for h in row.get("hierarquizacoes") or [] if visibilidade[h["codigo"]]
                 ],
                 "sigma_pessoa_id": None,
+                "dados_origem": None,
                 "representante_nome": None,
                 "representante_email": None,
                 "representante_telefone": None,

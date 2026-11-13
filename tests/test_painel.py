@@ -1,6 +1,17 @@
 from __future__ import annotations
 
 from api.services import painel_service
+import pytest
+
+
+@pytest.mark.parametrize("tipo", ["plano", "programa", "projeto"])
+def test_dados_origem_apenas_no_painel_interno(monkeypatch, tipo):
+    origem = {"campos": {"Codigo": "001", "Nome": "Original"}, "arquivo": "fonte.csv"}
+    row = {**_row("TESTE", "analise_em_avaliacao"), "tipo": tipo, "dados_origem": origem}
+    monkeypatch.setattr(painel_service.painel_repository, "list_all", lambda: [row])
+    assert painel_service.listar_demandas_painel(public_only=False)[0].dados_origem == origem
+    assert painel_service.listar_demandas_painel(public_only=True)[0].dados_origem is None
+    assert row["dados_origem"] == origem
 
 
 def _row(codigo: str, status: str) -> dict:

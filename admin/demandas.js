@@ -190,6 +190,29 @@
     return (value.textContent || "").replace(/\s+/g, " ").trim();
   }
 
+  const originalColumns = Object.fromEntries(Object.entries(COLUMNS).map(([kind, columns]) => [kind, [...columns]]));
+  function configureOriginColumns(kind, data) {
+    const originFields = SLTDadosOrigem.columns(data);
+    COLUMNS[kind] = [...originalColumns[kind], ...originFields.map(field => ({
+      label: 'Origem — ' + field.label,
+      value: row => {
+        const value = SLTDadosOrigem.escape(SLTDadosOrigem.text(SLTDadosOrigem.value(row.dados_origem, field)));
+        return `<span title="${value}">${value}</span>`;
+      },
+    }))];
+    const table = document.querySelector(`[data-demandas-table="${kind}"]`);
+    const heading = [...table.tHead.rows].find(row => !row.classList.contains('cg-linha-grupo'));
+    heading.querySelectorAll('[data-origin-key]').forEach(cell => cell.remove());
+    originFields.forEach(field => {
+      const cell = document.createElement('th');
+      cell.scope = 'col';
+      cell.textContent = field.label;
+      cell.dataset.originKey = field.key;
+      cell.dataset.columnGroup = 'origem';
+      heading.append(cell);
+    });
+  }
+
   function fillColumnFilter() {
     SLTTable.inversion($("#filtro-inverter"), false);
     const columnSelect = $("#filtro-coluna");
@@ -855,6 +878,7 @@
       cache[tipo] = await (complementacao ? complementacao.listar(tipo) : SLTAdminApi.listDemandasByTipo(tipo));
     }
     rows = cache[tipo];
+    configureOriginColumns(tipo, rows);
     await ensureRefs();
     fillColumnFilter();
     renderStatusLegend();
