@@ -30,8 +30,13 @@ def get_optional_session(
     slt_session: str | None = Cookie(default=None, alias=cookie_name()),
 ) -> SessionUser | None:
     token = slt_session or request.headers.get("authorization", "").removeprefix("Bearer ").strip()
+    cached = getattr(request.state, "validated_session", None)
+    if cached is not None and cached[0] == token:
+        return cached[1]
     try:
-        return parse_token(token or None)
+        user = parse_token(token or None)
+        request.state.validated_session = (token, user)
+        return user
     except DatabaseUnavailableError as exc:
         raise HTTPException(503, "Serviço de sessão temporariamente indisponível.") from exc
 

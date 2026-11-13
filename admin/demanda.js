@@ -664,7 +664,7 @@
     select.disabled = true;
     try {
       if (!demandasDuplicidade) demandasDuplicidade = (await Promise.all([
-        SLTAdminApi.listPlanos(), SLTAdminApi.listProgramas(), SLTAdminApi.listDemandas()
+        SLTAdminApi.listPlanos(), SLTAdminApi.listProgramas(), SLTAdminApi.listDemandas({incluirGeometria: false})
       ])).flat();
       if (!select.isConnected) return;
       select.innerHTML = '<option value="">Selecione uma demanda</option>' + demandasDuplicidade.filter(d => d.id !== record.id)
@@ -1451,7 +1451,7 @@
 
   async function refreshLists() {
     const [projeto, programa, plano] = await Promise.all([
-      SLTAdminApi.listDemandas().catch(() => []),
+      SLTAdminApi.listDemandas({incluirGeometria: false}).catch(() => []),
       SLTAdminApi.listProgramas().catch(() => []),
       SLTAdminApi.listPlanos().catch(() => []),
     ]);

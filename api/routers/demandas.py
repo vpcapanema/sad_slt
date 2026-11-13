@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi.responses import Response
 from pydantic import ValidationError
 
+from api.responses import model_json_response
 from api.deps.auth import require_analyst, require_authenticated, require_gestor, require_operator
 from api.exceptions import DatabaseUnavailableError, DemandaNotFoundError, DemandaValidationError
 from api.schemas.demanda import DemandaCreateSchema, DemandaResponseSchema, DemandaUpdateSchema
@@ -52,10 +54,11 @@ async def criar_demanda_com_arquivo_geometria(
 
 
 @router.get("", response_model=list[DemandaResponseSchema])
-def listar_demandas() -> list[DemandaResponseSchema]:
+def listar_demandas() -> Response:
     """Lista somente demandas cuja publicação foi autorizada pelo status."""
     try:
-        return [item for item in demanda_service.listar_demandas() if item.status in {"hierarq_ranqueada", "hierarq_publicada"}]
+        items = [item for item in demanda_service.listar_demandas() if item.status in {"hierarq_ranqueada", "hierarq_publicada"}]
+        return model_json_response(items, list[DemandaResponseSchema])
     except DatabaseUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
@@ -64,8 +67,9 @@ def listar_demandas() -> list[DemandaResponseSchema]:
 def listar_demandas_internas(
     incluir_geometria: bool = True,
     _user: SessionUser = Depends(require_authenticated),
-) -> list[DemandaResponseSchema]:
-    return demanda_service.listar_demandas(incluir_auditoria=True, incluir_geometria=incluir_geometria)
+) -> Response:
+    items = demanda_service.listar_demandas(incluir_auditoria=True, incluir_geometria=incluir_geometria)
+    return model_json_response(items, list[DemandaResponseSchema])
 
 
 @router.get("/internas/{codigo}", response_model=DemandaResponseSchema)

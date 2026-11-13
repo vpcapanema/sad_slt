@@ -17,6 +17,7 @@ import os
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.gzip import GZipMiddleware
+from starlette.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -98,7 +99,7 @@ async def protect_restricted_pages(request: Request, call_next):
     )
     if page or path.rstrip("/") == "/public/cadastro/nova-demanda":
         try:
-            user = get_optional_session(request, request.cookies.get(cookie_name()))
+            user = await run_in_threadpool(get_optional_session, request, request.cookies.get(cookie_name()))
         except HTTPException as exc:
             return JSONResponse({"detail": exc.detail}, status_code=exc.status_code,
                                 headers={"Cache-Control": "no-store"})

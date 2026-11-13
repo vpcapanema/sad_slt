@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import Response
 
+from api.responses import model_json_response
 from api.deps.auth import require_analyst, require_authenticated
 from api.exceptions import DatabaseUnavailableError, DemandaNotFoundError, DemandaValidationError
 from api.schemas.objeto_ahp import ObjetoAhpResponseSchema, ObjetoAhpUpdateSchema
@@ -18,9 +20,10 @@ def listar_objetos(
     status: str | None = Query(None, description="Filtrar por status (ex.: elegivel_ahp)"),
     grupo: str | None = Query(None, description="Filtrar por grupo_comparacao"),
     _user: SessionUser = Depends(require_authenticated),
-) -> list[ObjetoAhpResponseSchema]:
+) -> Response:
     try:
-        return objeto_ahp_service.listar_objetos(status=status, grupo=grupo, incluir_geometria=incluir_geometria)
+        items = objeto_ahp_service.listar_objetos(status=status, grupo=grupo, incluir_geometria=incluir_geometria)
+        return model_json_response(items, list[ObjetoAhpResponseSchema])
     except DatabaseUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 

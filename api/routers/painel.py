@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 from api.repositories import painel_repository
 
+from api.responses import model_json_response
 from api.deps.auth import require_authenticated, require_operator
 from api.exceptions import DatabaseUnavailableError
 from api.schemas.painel import EstatisticasOperadorSchema, PainelDemandaSchema
@@ -15,10 +16,11 @@ router = APIRouter(prefix="/painel", tags=["painel"])
 
 
 @router.get("/demandas", response_model=list[PainelDemandaSchema])
-def listar_demandas_painel(incluir_geometria: bool = True) -> list[PainelDemandaSchema]:
+def listar_demandas_painel(incluir_geometria: bool = True) -> Response:
     """Lista todas as demandas do painel, sem dados pessoais no detalhamento."""
     try:
-        return painel_service.listar_demandas_painel(public_only=True, incluir_geometria=incluir_geometria)
+        items = painel_service.listar_demandas_painel(public_only=True, incluir_geometria=incluir_geometria)
+        return model_json_response(items, list[PainelDemandaSchema])
     except DatabaseUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
@@ -27,10 +29,11 @@ def listar_demandas_painel(incluir_geometria: bool = True) -> list[PainelDemanda
 def listar_demandas_painel_interno(
     incluir_geometria: bool = True,
     _user=Depends(require_authenticated),
-) -> list[PainelDemandaSchema]:
+) -> Response:
     """Lista interna completa para os operadores autenticados."""
     try:
-        return painel_service.listar_demandas_painel(public_only=False, incluir_geometria=incluir_geometria)
+        items = painel_service.listar_demandas_painel(public_only=False, incluir_geometria=incluir_geometria)
+        return model_json_response(items, list[PainelDemandaSchema])
     except DatabaseUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 

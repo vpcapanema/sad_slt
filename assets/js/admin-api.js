@@ -22,8 +22,8 @@
     return res.json().catch(() => null);
   }
 
-  async function listDemandas() {
-    return request("/api/demandas/internas");
+  async function listDemandas(options) {
+    return request("/api/demandas/internas" + (options?.incluirGeometria === false ? "?incluir_geometria=false" : ""));
   }
 
   async function listPainelDemandas(options) {
@@ -216,7 +216,7 @@
   async function listDemandasByTipo(tipo, options) {
     if (tipo === "plano") return listPlanos();
     if (tipo === "programa") return listProgramas();
-    return options?.incluirGeometria === false ? request("/api/demandas/internas?incluir_geometria=false") : listDemandas();
+    return listDemandas(options);
   }
 
   async function updateDemandaByTipo(tipo, codigo, payload) {

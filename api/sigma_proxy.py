@@ -6,6 +6,7 @@ import os
 from typing import Any
 
 import httpx
+from starlette.concurrency import run_in_threadpool
 
 from api.exceptions import DatabaseUnavailableError
 from api.repositories import sigma_cadastro_repository
@@ -45,7 +46,7 @@ async def fetch_instituicoes() -> list[dict[str, Any]]:
                     return items
                 page += 1
     except (httpx.HTTPError, ValueError, TypeError) as exc:
-        return _db_fallback("instituicoes", exc)
+        return await run_in_threadpool(_db_fallback, "instituicoes", exc)
 
 
 def _normalize_pessoas(body: Any) -> list[dict[str, Any]] | None:
@@ -91,7 +92,7 @@ async def fetch_pessoas_sigma() -> list[dict[str, Any]]:
                     return parsed
         raise httpx.HTTPError("Nenhum endpoint de pessoas disponivel no SIGMA")
     except (httpx.HTTPError, ValueError, TypeError) as exc:
-        return _db_fallback("pessoas", exc)
+        return await run_in_threadpool(_db_fallback, "pessoas", exc)
 
 
 async def login_usuario(payload: dict[str, Any]) -> dict[str, Any]:

@@ -3,10 +3,10 @@ const countStatuses = (items, statuses) =>
 
       async function loadThemedStats() {
         const [demandas, planos, programas, objetos] = await Promise.all([
-          SLTAdminApi.listDemandas(),
+          SLTAdminApi.listDemandas({incluirGeometria: false}),
           SLTAdminApi.listPlanos().catch(() => []),
           SLTAdminApi.listProgramas().catch(() => []),
-          SLTAdminApi.listObjetosAhp().catch(() => []),
+          SLTAdminApi.listObjetosAhp({incluirGeometria: false}).catch(() => []),
         ]);
         const all = [...planos, ...programas, ...demandas, ...objetos];
         const setValue = (id, value) => {

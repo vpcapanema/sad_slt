@@ -465,7 +465,7 @@ def _pode_editar(
 
 def _cadastros() -> dict[str, dict[str, Any]]:
     return {str(d["codigo"]): d for repo in (plano_repository, programa_repository, demanda_repository)
-            for d in repo.list_all()}
+            for d in (repo.list_all(incluir_geometria=False) if repo is demanda_repository else repo.list_all())}
 
 
 def _acesso(cab: dict[str, Any], user: SessionUser, pessoa_id: str | None,
