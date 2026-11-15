@@ -29,6 +29,28 @@ const { chromium } = require('playwright');
     await page.waitForTimeout(100);
     assert.equal(await page.evaluate(() => window.labelMutations), finalCount);
     assert(finalCount < 20);
+    const matrixPage = await browser.newPage();
+    await matrixPage.setContent('<section><h2>Comparações</h2>' + '<span>Critério</span>'.repeat(100) +
+      '<table><tbody>' + ('<tr>' + '<td>1</td>'.repeat(7) + '</tr>').repeat(7) + '</tbody></table></section>');
+    await matrixPage.addScriptTag({ path: path.resolve('assets', 'js', 'table-labels.js') });
+    await matrixPage.evaluate(() => document.fonts.ready);
+    const cost = await matrixPage.evaluate(async () => {
+      const original = window.getComputedStyle;
+      let reads = 0;
+      window.getComputedStyle = function (...args) { reads++; return original.apply(this, args); };
+      document.querySelectorAll('td').forEach(cell => {
+        cell.textContent = '3';
+        cell.className = 'updated';
+      });
+      await new Promise(resolve => setTimeout(resolve, 50));
+      window.getComputedStyle = original;
+      return { reads, nodes: document.querySelectorAll('*').length };
+    });
+    assert(cost.reads < cost.nodes * 8, 'Uma atualização da matriz deve medir o bloco poucas vezes: ' + JSON.stringify(cost));
+    console.log('Matrix style reads per update:', cost.reads);
+    assert.equal(await matrixPage.locator('.sicard-table-label').count(), 1);
+    assert.equal(await matrixPage.locator('.sicard-table-label').isVisible(), true);
+    await matrixPage.close();
     console.log('Table labels: visibility, split layout and observer stabilization verified.');
   } finally {
     await browser.close();

@@ -216,17 +216,28 @@
   function start() {
     scan(document);
     var observer = new MutationObserver(function (records) {
+      // Uma renderização pode alterar centenas de células do mesmo bloco.
+      // Meça a hierarquia tipográfica uma vez por raiz, não por mutação.
+      var roots = new Set();
       records.forEach(function (record) {
         if (record.type === "attributes" && record.target.nodeType === 1) {
           var changedTable = record.target.matches("table") ? record.target : record.target.closest("table");
-          if (changedTable) labelTable(changedTable);
-          else scan(record.target);
+          roots.add(changedTable || record.target);
         }
         if (record.target.nodeType === 1) {
           var section = record.target.closest("dialog, [role=dialog], section, article, .card, .ahp-subcard, details");
-          if (section) scan(section);
+          if (section) roots.add(section);
         }
-        record.addedNodes.forEach(function (node) { if (node.nodeType === 1) scan(node); });
+        record.addedNodes.forEach(function (node) { if (node.nodeType === 1) roots.add(node); });
+      });
+      roots.forEach(function (root) {
+        if (!root.isConnected) return;
+        var parent = root.parentElement;
+        while (parent) {
+          if (roots.has(parent)) return;
+          parent = parent.parentElement;
+        }
+        scan(root);
       });
     });
     observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["hidden", "class"] });
