@@ -2,7 +2,7 @@
   <div class="conteudo-cabecalho app-header-inner">
     <a href="/public/" class="marca-sicard app-header-brand" title="Página inicial">
       <span class="moldura-simbolo app-header-icon-frame" aria-hidden="true">
-        <img src="/assets/img/brand/sicard-simbolo.png" alt="" class="simbolo-sicard app-header-icon">
+        <img src="{{ simbolo_sicard | default('/assets/img/brand/sicard-simbolo.png') }}" alt="" class="simbolo-sicard app-header-icon">
       </span>
       <span class="identificacao-sistema app-brand">
         <span class="nome-sistema app-brand-title">SICARD</span>

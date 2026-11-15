@@ -1,4 +1,8 @@
 {% extends "bases/base_conteudo.html" %}
+{# Scripts preservam a ordem e executam antes de DOMContentLoaded, sem bloquear o HTML.
+   O símbolo reduzido atende ao cabeçalho mobile em alta densidade; original preservado. #}
+{% set scripts_defer = true %}
+{% set simbolo_sicard = "/assets/img/brand/sicard-simbolo-384.png" %}
 {% set subtitulo = "Matriz de comparação pareada AHP" %}
 {% set navegacao = "publica" %}
 {% set requer_autenticacao = false %}
@@ -7,7 +11,6 @@
 {% block base_url %}<base href="/public/analise-multicriterio/formulario-comparacao-pareada/">{% endblock %}
 {% block estilos_pagina %}
 	<link rel="stylesheet" href="/assets/css/ahp-module.css?v=20261103-regua-invertida">
-	<link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
 	<link rel="stylesheet" href="/assets/css/analise-multicriterio.css?v=20260819-ui6">
 	<link rel="stylesheet" href="/assets/css/escala-tipografica.css">
 	<link rel="stylesheet" href="/assets/css/paginas/ahp-formulario-publico.css?v=20261104-matriz-destaques">
@@ -130,12 +133,12 @@
 {% endblock %}
 
 {% block scripts_pagina %}
-	<script src="/assets/js/saaty-selector-color.js?v=20261104-paleta"></script>
-	<script src="/restrict/ahp/js/ahp-core.js?v=20261104-zero-formatado"></script>
-	<script src="/restrict/ahp/js/colaborativa-api.js?v=20261027-modelo-pli"></script>
-	{% if modo_modelo %}<script src="/restrict/ahp/js/colaborativa-modelo.js?v=20261027-1"></script>{% else %}<script src="/restrict/ahp/js/colaborativa-simulacao.js?v=20261027-1"></script>{% endif %}
-	<script src="/restrict/ahp/js/script.js?v=20261104-zero-formatado"></script>
-	<script src="/restrict/ahp/js/colaborativa.js?v=20261104-zero-formatado"></script>
-	<script src="/assets/js/paginas/ahp-comparacao-abas.js?v=20261104-matriz-contraste"></script>
-	<script src="/assets/js/paginas/ahp-formulario-layout.js?v=20261104-card-default-90"></script>
+	<script defer src="/assets/js/saaty-selector-color.js?v=20261104-paleta"></script>
+	<script defer src="/restrict/ahp/js/ahp-core.js?v=20261104-zero-formatado"></script>
+	<script defer src="/restrict/ahp/js/colaborativa-api.js?v=20261027-modelo-pli"></script>
+	{% if modo_modelo %}<script defer src="/restrict/ahp/js/colaborativa-modelo.js?v=20261027-1"></script>{% else %}<script defer src="/restrict/ahp/js/colaborativa-simulacao.js?v=20261027-1"></script>{% endif %}
+	<script defer src="/restrict/ahp/js/script.js?v=20261104-zero-formatado"></script>
+	<script defer src="/restrict/ahp/js/colaborativa.js?v=20261104-zero-formatado"></script>
+	<script defer src="/assets/js/paginas/ahp-comparacao-abas.js?v=20261104-matriz-contraste"></script>
+	<script defer src="/assets/js/paginas/ahp-formulario-layout.js?v=20261104-card-default-90"></script>
 {% endblock %}

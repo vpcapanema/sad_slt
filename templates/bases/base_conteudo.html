@@ -6,7 +6,7 @@
   {% block base_url %}{% endblock %}
   <meta name="description" content="{% block descricao %}SICARD — Sistema Inteligente de Cadastro e Ranking de Demandas.{% endblock %}">
   <title>{% block titulo %}SICARD{% endblock %}</title>
-  <link rel="icon" href="/assets/img/brand/sicard-simbolo.png" type="image/png">
+  <link rel="icon" href="{{ simbolo_sicard | default('/assets/img/brand/sicard-simbolo.png') }}" type="image/png">
   <link rel="stylesheet" href="/assets/css/app.css?v=20261106-col-select">
   <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
   <link rel="stylesheet" href="/assets/css/template-conteudo.css">
@@ -27,14 +27,14 @@
 
   {% include "componentes/footer.html" %}
 
-  <script src="/assets/js/notification_system.js"></script>
-  <script src="/assets/js/process_feedback_unified.js?v=20261027-relatorio-erro"></script>
+  <script{% if scripts_defer %} defer{% endif %} src="/assets/js/notification_system.js"></script>
+  <script{% if scripts_defer %} defer{% endif %} src="/assets/js/process_feedback_unified.js?v=20261027-relatorio-erro"></script>
   {% block scripts_pagina %}{% endblock %}
-  <script src="/assets/js/table-sort.js?v=20261027-cabecalho-agrupado"></script>
-  <script src="/assets/js/template-base.js"></script>
-  <script src="/assets/js/ahp-process-monitor.js"></script>
-  <script src="/assets/js/table-smart-widths.js?v=20261106-seletor-44"></script>
-  <script src="/assets/js/table-labels.js?v=20261106-titulo-shell2"></script>
-  <script src="/assets/js/table-column-groups.js?v=20261106-cg-vazio-44"></script>
+  <script{% if scripts_defer %} defer{% endif %} src="/assets/js/table-sort.js?v=20261027-cabecalho-agrupado"></script>
+  <script{% if scripts_defer %} defer{% endif %} src="/assets/js/template-base.js"></script>
+  <script{% if scripts_defer %} defer{% endif %} src="/assets/js/ahp-process-monitor.js"></script>
+  <script{% if scripts_defer %} defer{% endif %} src="/assets/js/table-smart-widths.js?v=20261106-seletor-44"></script>
+  <script{% if scripts_defer %} defer{% endif %} src="/assets/js/table-labels.js?v=20261106-titulo-shell2"></script>
+  <script{% if scripts_defer %} defer{% endif %} src="/assets/js/table-column-groups.js?v=20261106-cg-vazio-44"></script>
 </body>
 </html>
