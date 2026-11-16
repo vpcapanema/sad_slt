@@ -26,6 +26,7 @@ from api.services.complementacao_atributos_service import solicitar_hierarquizac
 from api.matriz_colunas import extrair_colunas
 from api.repositories import hierarquizacao_repository, sigma_usuario_repository, demanda_repository, plano_repository, programa_repository, dominio_repository, analise_demanda_repository
 from api.services.session_service import SessionUser
+from api.services import autorizacao as authz
 from api.services import demanda_service, plano_service, programa_service
 from api.services.campos_demanda import resolver_nomes_registros, mesclar_atributos_nativos
 from api.schemas.demanda import DemandaUpdateSchema
@@ -74,14 +75,18 @@ class ParecerRevisao(NotificacaoConfirmacao):
 
 
 def _perfil_central(user):
-    if user.tipo_usuario.strip().upper() not in {"ANALISTA", "GESTOR", "ADMIN"}:
-        raise HTTPException(403, "A central é exclusiva dos perfis de análise e gestão.")
+    if not _visao_ampla(user):
+        authz.negar(user, 'consultar a central de pendências', ('mocad.visualizar', 'mad.visualizar'))
+
+
+def _visao_ampla(user):
+    return (authz.permite(user, 'area_restrita.visualizar') or
+            authz.permite(user, 'mocad.visualizar', escopo='todos') or
+            authz.permite(user, 'mad.visualizar', escopo='todos'))
 
 
 def _pode_gerir_pedido(pedido, user):
-    from api.deps.access_policy import read_only
-    modulo = "mad" if "atributos_objeto" in pedido["categorias"] else "mocad"
-    return not read_only(user.tipo_usuario.strip().upper(), modulo)
+    return authz.permite(user, 'mad.operar' if 'atributos_objeto' in pedido['categorias'] else 'mocad.solicitar_complementacao')
 
 
 def _pedido_central(id, user, *, editar=False, lock=False):
@@ -90,7 +95,8 @@ def _pedido_central(id, user, *, editar=False, lock=False):
     if not pedido:
         raise HTTPException(404, "Solicitação não encontrada.")
     if editar and not _pode_gerir_pedido(pedido, user):
-        raise HTTPException(403, "Seu perfil tem somente visualização neste módulo.")
+        codigo = 'mad.operar' if 'atributos_objeto' in pedido['categorias'] else 'mocad.solicitar_complementacao'
+        authz.negar(user, 'gerenciar esta solicitação de complementação', (codigo,))
     if editar and "revisao" not in pedido:
         raise HTTPException(409, "A edição depende da aplicação da migração 153 no banco.")
     return pedido
@@ -256,7 +262,7 @@ def criar_solicitacao(body: SolicitacaoCriacao, user: SessionUser = Depends(requ
     if atributos != bool(body.hierarquizacao_codigo):
         raise HTTPException(422, "Selecione uma hierarquização somente para atributos.")
     if not _pode_gerir_pedido({"categorias": categorias}, user):
-        raise HTTPException(403, "Seu perfil tem somente visualização neste módulo.")
+        authz.negar(user, 'criar esta solicitação de complementação', ('mad.operar' if atributos else 'mocad.solicitar_complementacao',))
     with atomic_connection() as conn:
         if body.hierarquizacao_codigo:
             hierarquizacao_repository.get_by_codigo(body.hierarquizacao_codigo, for_update=True)
@@ -386,7 +392,7 @@ def confirmar_notificacao(solicitacao_id: UUID, user: SessionUser = Depends(requ
 def _visivel(demanda: dict, user: SessionUser, pessoa_id: str | None) -> bool:
     if demanda.get("status") != STATUS_COMPLEMENTACAO:
         return False
-    return user.tipo_usuario.strip().upper() in {"ANALISTA", "GESTOR", "ADMIN"} or _pode_editar(
+    return _visao_ampla(user) or _pode_editar(
         {}, pessoa_id=pessoa_id, usuario_id=str(user.id), demanda=demanda
     )
 
@@ -416,16 +422,13 @@ def concluir_solicitacao(solicitacao_id: UUID, user: SessionUser = Depends(requi
     if not pedido:
         raise HTTPException(404, 'Solicitação não encontrada.')
     if "atributos_objeto" in pedido["categorias"]:
-        if user.tipo_usuario.strip().upper() in {"OPERADOR", "ANALISTA"}:
-            raise HTTPException(403, "Seu perfil não pode concluir complementações de atributos do MAD.")
+        authz.exigir(user, 'solicitacao.cumprir', acao='cumprir esta solicitação de atributos')
         concluir_atributos(pedido["hierarquizacao_codigo"], pedido["demanda_codigo"], user)
         return solicitacoes.obter(solicitacao_id)
-    if user.tipo_usuario.strip().upper() == "GESTOR":
-        raise HTTPException(403, "Seu perfil tem somente visualização no MOCAD.")
+    authz.exigir(user, 'solicitacao.cumprir', acao='cumprir esta solicitação')
     tipo, codigo = pedido['demanda_tipo'], pedido['demanda_codigo']
     cadastro = CADASTROS[tipo][0].get_by_codigo(codigo)
     if not cadastro or not (
-        user.tipo_usuario.strip().upper() in {'ADMIN','GESTOR','ANALISTA'} or
         _pode_editar({}, pessoa_id=_pessoa_id(user), usuario_id=str(user.id), demanda=cadastro)):
         raise HTTPException(403, 'Solicitação indisponível para este usuário.')
     with atomic_connection() as conn:
@@ -473,13 +476,13 @@ def _acesso(cab: dict[str, Any], user: SessionUser, pessoa_id: str | None,
     # Não utiliza a cópia histórica do agrupamento como fonte de autorização.
     demanda = cadastros.get(str(cab.get("codigo")))
     return bool(demanda and (
-        user.tipo_usuario.strip().upper() in {"ADMIN", "GESTOR", "ANALISTA"}
+        _visao_ampla(user)
         or _pode_editar({}, pessoa_id=pessoa_id, usuario_id=str(user.id), demanda=demanda)
     ))
 
 
 def _pode_listar(item: dict[str, Any], user: SessionUser) -> bool:
-    return item["pode_editar"]
+    return _visao_ampla(user) or item["pode_editar"]
 
 
 def _matriz(row: dict[str, Any]) -> Any:

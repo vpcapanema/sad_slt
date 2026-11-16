@@ -146,7 +146,7 @@ def test_cadastro_continua_protegido_e_legado_retornado(client):
 
 
 @pytest.mark.parametrize("profile, expected", [
-    ("VISUALIZADOR", 403),
+    ("VISUALIZADOR", 200),
     ("OPERADOR", 200),
     ("ANALISTA", 200),
     ("GESTOR", 200),

@@ -242,6 +242,6 @@ def test_regra_de_quem_pode_reverter():
     row = {"homologado_por": "u-1"}
     assert not pode(row, Usuario("u-1", "GESTOR"))
     assert pode(row, Usuario("u-2", "GESTOR"))
-    assert pode(row, Usuario("u-1", "ADMIN"))
+    assert not pode(row, Usuario("u-1", "ADMIN"))
     assert not pode(row, Usuario("u-3", "OPERADOR"))
     assert pode({"homologado_por": None}, Usuario("u-1", "GESTOR"))

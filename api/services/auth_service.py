@@ -13,6 +13,7 @@ from api.exceptions import AuthError, DatabaseUnavailableError
 from api.repositories import auditoria_repository, sigma_usuario_repository
 from api.services.session_service import SIGMA_PROFILES, SessionUser, create_token, profile_from_username
 from api.sigma_password import verify_password
+from api.services.autorizacao import vincular
 
 logger = logging.getLogger(__name__)
 
@@ -232,6 +233,7 @@ async def login_usuario(
                     user_agent=user_agent,
                 )
                 raise AuthError("Credenciais inválidas.")
+            user = vincular(user)
             token = create_token(user, permanecer_conectado=permanecer_conectado)
             _audit_auth(
                 mensagem="Login admin realizado com sucesso (API SIGMA)",
@@ -325,6 +327,7 @@ def authenticate_usuario(
         tipo_usuario=profile,
     )
 
+    user = vincular(user)
     token = create_token(user, permanecer_conectado=permanecer_conectado)
     _audit_auth(
         mensagem="Login admin realizado com sucesso",

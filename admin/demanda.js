@@ -565,7 +565,7 @@
   }
 
   function onAvaliacaoGeometriaChange() {
-    if (!SLTAdminAuth.can("analyzeDemand")) return;
+    if (!SLTAdminAuth.ensure("analyzeDemand", "analisar ou alterar demandas")) return;
     const payload = collectAvaliacaoGeometria();
     renderResumoAvaliacaoGeometria(payload);
     const status = $("#geometria-avaliacao-salvamento");
@@ -748,7 +748,7 @@
   }
 
   async function onCriterioChange() {
-    if (!SLTAdminAuth.can("analyzeDemand")) return;
+    if (!SLTAdminAuth.ensure("analyzeDemand", "analisar ou alterar demandas")) return;
     const aviso = $("#criterios-salvamento");
     if (aviso) aviso.textContent = "Salvando critérios…";
     atualizarVisibilidadeCriterios();
@@ -799,7 +799,7 @@
   let acaoAnaliseEmCurso = false;
 
   async function executarAcaoComFeedback({ titulo, mensagem, salvar, atualizar }) {
-    if (acaoAnaliseEmCurso || !SLTAdminAuth.can("analyzeDemand")) return;
+    if (!SLTAdminAuth.ensure("analyzeDemand", "analisar ou alterar demandas") || acaoAnaliseEmCurso) return;
     acaoAnaliseEmCurso = true;
     const gravar = "Aguardando confirmação do servidor";
     const recarregar = "Atualizar os dados apresentados";
@@ -830,7 +830,7 @@
   }
 
   async function saveComplemento() {
-    if (!SLTAdminAuth.can("analyzeDemand")) return;
+    if (!SLTAdminAuth.ensure("analyzeDemand", "analisar ou alterar demandas")) return;
     const campo = $("#fld-parecer-complemento");
     if (!campo) return;
     const texto = campo.value.trim();
@@ -871,7 +871,7 @@
   }
 
   async function alterarSituacao(acaoId) {
-    if (!SLTAdminAuth.can("analyzeDemand")) return;
+    if (!SLTAdminAuth.ensure("analyzeDemand", "analisar ou alterar demandas")) return;
     const acao = SITUACOES.find((item) => item.id === acaoId);
     if (!acao || !record) return;
     let pedido = {};
@@ -911,7 +911,7 @@
   }
 
   async function decideRecord(decisaoId) {
-    if (!SLTAdminAuth.can("analyzeDemand")) return;
+    if (!SLTAdminAuth.ensure("analyzeDemand", "analisar ou alterar demandas")) return;
     const decisao = DECISOES.find((item) => item.id === decisaoId);
     if (!decisao) return;
 
@@ -1494,7 +1494,7 @@
   }
 
   async function uploadReplacementGeometry(event) {
-    if (!SLTAdminAuth.can("analyzeDemand")) return;
+    if (!SLTAdminAuth.ensure("analyzeDemand", "analisar ou alterar demandas")) return;
     const file = event.target.files?.[0];
     if (!file) return;
     if (JSON.stringify(collectPayload()) !== JSON.stringify(originalFormPayload)) {
@@ -1625,7 +1625,7 @@
   }
 
   async function saveRecord() {
-    if (!SLTAdminAuth.can("analyzeDemand")) return;
+    if (!SLTAdminAuth.ensure("analyzeDemand", "analisar ou alterar demandas")) return;
     try {
       const current = collectPayload();
       const changes = Object.fromEntries(Object.entries(current).filter(
@@ -1651,7 +1651,7 @@
   }
 
   async function approveRecord() {
-    if (!SLTAdminAuth.can("analyzeDemand")) return;
+    if (!SLTAdminAuth.ensure("analyzeDemand", "analisar ou alterar demandas")) return;
     const ok = await SLTAdminUi.showConfirm({
       title: "Aprovar demanda",
       message:
@@ -1677,7 +1677,7 @@
   }
 
   async function rejectRecord() {
-    if (!SLTAdminAuth.can("analyzeDemand")) return;
+    if (!SLTAdminAuth.ensure("analyzeDemand", "analisar ou alterar demandas")) return;
     const field = $("#fld-justificativa-reprov");
     const justificativa = field?.value.trim() || "";
     if (!justificativa) {

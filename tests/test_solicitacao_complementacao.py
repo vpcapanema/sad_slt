@@ -102,6 +102,8 @@ def test_patch_nao_pode_criar_fila_por_status_nem_sair_com_pedido_aberto(fluxo):
 
 def test_conclusao_exige_todos_os_tipos_salvos_e_preserva_historico(fluxo,monkeypatch):
     p=service.solicitar('D', categorias=['dados_cadastrais','geometria'],descricao='Motivo',user=fluxo.user)
+    fluxo.user.tipo_usuario = 'OPERADOR'
+    fluxo.demanda['criado_por'] = fluxo.user.id
     monkeypatch.setattr(router,'atomic_connection',lambda: nullcontext(None))
     monkeypatch.setattr(router,'bloquear',lambda *args: fluxo.demanda)
     monkeypatch.setattr(router,'_pessoa_id',lambda user: None)
@@ -135,6 +137,7 @@ def test_conclusao_atributos_revalida_pendencias_e_aceita_zero(fluxo,monkeypatch
     fluxo.user.tipo_usuario = 'GESTOR'
     fluxo.demanda.update(status='hierarq_em_andamento', criado_por=fluxo.user.id)
     p=service.solicitar('D',categorias=['atributos_objeto'],descricao='Preencher custo',user=fluxo.user,hierarquizacao_codigo='H')
+    fluxo.user.tipo_usuario = 'OPERADOR'
     p['categorias_salvas']={'atributos_objeto': {}}
     cab={'codigo':'D','tipo_demanda':'projeto','atributos_fase3': {'custo': {'valor_bruto':None}}}
     h={'codigo':'H','dados_hierarquizacao': {'objetos': [{'cabecalho_objeto':cab}]}}

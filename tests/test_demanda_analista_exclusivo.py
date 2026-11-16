@@ -53,7 +53,7 @@ def test_analista_chega_ao_servico(monkeypatch, method, path, body):
     assert response.status_code == 418
 
 
-@pytest.mark.parametrize('profile', ['VISUALIZADOR', 'OPERADOR', 'ANALISTA', 'GESTOR', 'ADMIN'])
+@pytest.mark.parametrize('profile', ['VISUALIZADOR', 'ANALISTA', 'GESTOR', 'ADMIN'])
 def test_todos_autenticados_consultam(monkeypatch, profile):
     monkeypatch.setattr(service, 'obter_analise', lambda codigo: {'demanda_codigo': codigo, 'demanda_tipo': 'projeto'})
     response = client_for(profile).get('/api/analise/TESTE')
@@ -64,7 +64,7 @@ def test_todos_autenticados_consultam(monkeypatch, profile):
 @pytest.mark.parametrize('profile', ['VISUALIZADOR', 'OPERADOR', 'ANALISTA', 'GESTOR', 'ADMIN'])
 def test_pagina_acessivel_e_feedback_carregado(profile):
     response = client_for(profile).get('/restrict/demanda/')
-    assert response.status_code == 200
+    assert response.status_code == (403 if profile == 'OPERADOR' else 200)
     assert 'process_feedback_unified.js' in response.text
     assert 'process_feedback_system.css' in response.text
 

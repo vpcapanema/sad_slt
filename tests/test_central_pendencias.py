@@ -18,7 +18,7 @@ from api.server import app
 
 @pytest.fixture
 def central(monkeypatch):
-    user = SimpleNamespace(id=uuid4(), nome="Responsável", tipo_usuario="ADMIN")
+    user = SimpleNamespace(id=uuid4(), nome="Responsável", tipo_usuario="ANALISTA")
     pedido = dict(id=uuid4(), demanda_tipo="projeto", demanda_codigo="D",
                   categorias=["dados_cadastrais"], descricao="Motivo público",
                   status="registrada", hierarquizacao_codigo=None, revisao=0,
@@ -43,7 +43,7 @@ def central(monkeypatch):
 
 
 @pytest.mark.parametrize("profile,categoria,allowed", [
-    ("ADMIN", "dados_cadastrais", True), ("ADMIN", "atributos_objeto", True),
+    ("ADMIN", "dados_cadastrais", False), ("ADMIN", "atributos_objeto", False),
     ("ANALISTA", "dados_cadastrais", True), ("ANALISTA", "geometria", True),
     ("ANALISTA", "atributos_objeto", False),
     ("GESTOR", "dados_cadastrais", False), ("GESTOR", "geometria", False),
@@ -157,6 +157,7 @@ def test_email_usa_mensagem_externa_sem_parecer_tecnico(central, monkeypatch, ca
 
 
 def test_notificar_exige_mensagem_salva(central):
+    central.user.tipo_usuario = 'GESTOR'
     central.pedido["categorias"] = ["atributos_objeto"]
     central.pedido["mensagem_gestor"] = " "
     with pytest.raises(HTTPException) as exc:
@@ -176,7 +177,7 @@ def test_notificacao_reservada_nao_reenvia(central, monkeypatch):
 
 @pytest.mark.parametrize("profile,expected", [
     ("ADMIN", 200), ("ANALISTA", 200), ("GESTOR", 200),
-    ("OPERADOR", 403), ("VISUALIZADOR", 403),
+    ("OPERADOR", 403), ("VISUALIZADOR", 200),
 ])
 def test_paginas_e_api_exigem_perfil_da_central(central, profile, expected):
     user = SessionUser(str(central.user.id), "teste@example.org", f"teste_{profile}", "Teste", profile)
@@ -241,6 +242,7 @@ def adicionar(automaticos, codigo="D", status="hierarq_em_andamento", tipo="proj
 
 @pytest.mark.parametrize("tipo", ["projeto", "programa", "plano"])
 def test_fase2_sem_pedido_aparece_automaticamente(automaticos, tipo):
+    automaticos.central.user.tipo_usuario = 'GESTOR'
     adicionar(automaticos, tipo=tipo)
     rows = router.central_solicitacoes(automaticos.central.user)
     assert len(rows) == 1
@@ -347,6 +349,7 @@ def criacao(automaticos, **changes):
 
 
 def test_criar_pedido_pela_central_sem_envio_automatico(automaticos, monkeypatch):
+    automaticos.central.user.tipo_usuario = 'GESTOR'
     cadastro = adicionar(automaticos)
     monkeypatch.setattr(router.hierarquizacao_repository, "get_by_codigo", lambda *a, **kw: automaticos.hierarquia)
     monkeypatch.setattr(router, "bloquear", lambda *a: cadastro)
@@ -376,6 +379,7 @@ def test_criacao_respeita_perfil_e_modulo(automaticos, profile, categorias, h):
 
 
 def test_criar_revalida_pendencias_e_rejeita_pedido_existente(automaticos, monkeypatch):
+    automaticos.central.user.tipo_usuario = 'GESTOR'
     cadastro = adicionar(automaticos)
     monkeypatch.setattr(router.hierarquizacao_repository, "get_by_codigo", lambda *a, **kw: automaticos.hierarquia)
     monkeypatch.setattr(router, "bloquear", lambda *a: cadastro)

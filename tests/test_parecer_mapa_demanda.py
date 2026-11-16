@@ -68,7 +68,7 @@ def emitir_documento(monkeypatch):
         pdf = service.gerar_pdf(
             demanda={"codigo": "P-TESTE", "nome": "Área de teste", "status": "analise"}, tipo=tipo,
             respostas=dict.fromkeys(service._CAMPOS_CRITERIO, True), analise=analise, decisao="aprovada",
-            status_atual="analise", momento=datetime(2026, 10, 29, 19, 30, tzinfo=timezone.utc),
+            status_atual="analise_em_avaliacao", momento=datetime(2026, 10, 29, 19, 30, tzinfo=timezone.utc),
             geometria=geometria)
         return PdfReader(BytesIO(pdf))
 

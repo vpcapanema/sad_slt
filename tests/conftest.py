@@ -57,6 +57,8 @@ def sessoes_sinteticas(monkeypatch):
         sessions[sid] = {"user": user.id, "expires": expires, "revoked": False}
         accounts[user.id] = {
             "id": user.id, "username": user.username, "ativo": True,
+            "tipo_usuario": user.tipo_usuario,
+            "pessoa_id": user.pessoa_id,
             "nome_pessoa": user.nome, "email_institucional": user.email,
         }
 
@@ -77,6 +79,30 @@ def sessoes_sinteticas(monkeypatch):
     monkeypatch.setattr(session_repository, "revoke_user", revoke_user)
     monkeypatch.setattr(sigma_usuario_repository, "find_active_by_id", lambda uid: accounts.get(uid))
     return sessions, accounts
+
+
+@pytest.fixture(autouse=True)
+def politicas_sinteticas(monkeypatch):
+    """Espelha concessões locais sintéticas; testes não consultam a política oficial."""
+    from api.repositories import usuario_politica_repository
+    from uuid import uuid5, NAMESPACE_OID
+    politicas = {
+        'ADMIN': {'area_restrita.visualizar': 'todos', 'administracao.configurar': 'todos', 'administracao.manter': 'todos'},
+        'GESTOR': {k: 'todos' for k in ('mad.visualizar','mad.operar','mocad.visualizar','mocad.reverter_status_inline','ferramentas.visualizar','ferramentas.operar')},
+        'ANALISTA': {k: 'todos' for k in ('mocad.visualizar','mocad.analisar','mocad.cadastrar_demanda','mocad.cadastrar_lote','mocad.solicitar_complementacao','mocad.excluir','mad.visualizar','operador.visualizar','ferramentas.visualizar','ferramentas.operar')},
+        'OPERADOR': {k: 'proprios' for k in ('mocad.visualizar','mocad.cadastrar_demanda','operador.visualizar','operador.executar_acoes','solicitacao.cumprir')},
+        'VISUALIZADOR': {'area_restrita.visualizar': 'todos'},
+    }
+
+    def carregar(user):
+        perfil = str(getattr(user, 'tipo_usuario', '')).upper()
+        if perfil not in politicas:
+            return None
+        return dict(codigo=str(uuid5(NAMESPACE_OID, perfil)), sigla=perfil, nome=perfil,
+                    permissoes=dict(politicas[perfil]))
+
+    monkeypatch.setattr(usuario_politica_repository, 'carregar', carregar)
+    return politicas
 
 
 @pytest.fixture(autouse=True)

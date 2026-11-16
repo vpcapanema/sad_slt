@@ -203,7 +203,7 @@ def test_falha_no_insert_nao_persiste_mudanca_do_status(monkeypatch):
 def notificacao(monkeypatch):
     row, oficial, pedidos, emails = hierarquia(), cadastro(), [], []
     oficial["status"] = STATUS_HIERARQUIZACAO_COMPLEMENTACAO
-    usuario = SimpleNamespace(id="usuario", nome="Analista", tipo_usuario="ANALISTA")
+    usuario = SimpleNamespace(id="usuario", nome="Gestor", tipo_usuario="GESTOR")
     monkeypatch.setattr(service, "atomic_connection", lambda: nullcontext(Mock()))
     monkeypatch.setattr(service, "bloquear", lambda *args: oficial)
     monkeypatch.setattr(service.hierarquizacao_repository, "get_by_codigo", lambda *a, **kw: row)

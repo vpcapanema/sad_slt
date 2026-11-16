@@ -158,6 +158,7 @@ def test_a03_perfil_atual_desativacao_e_sem_fail_open(sessoes_sinteticas, monkey
     client = client_for(auth.router, "ADMIN")
     sessions, accounts = sessoes_sinteticas
     accounts["fixture"]["username"] = "fixture_visualizador"
+    accounts["fixture"]["tipo_usuario"] = "VISUALIZADOR"
     assert client.get("/api/auth/me").json()["tipo_usuario"] == "VISUALIZADOR"
     if estado_ativo is None:
         accounts["fixture"].pop("ativo")

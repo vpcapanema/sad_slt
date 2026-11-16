@@ -41,7 +41,7 @@ def test_api_permissoes_e_conflito(storage):
         client.cookies.set(cookie_name(),create_token(SessionUser(id='00000000-0000-0000-0000-000000000010',email='teste@example.org',username='teste_'+profile.lower(),nome='Teste',tipo_usuario=profile)))
     login('VISUALIZADOR')
     assert client.post('/extracao-atributos/pastas',json=payload).status_code==403
-    login('OPERADOR')
+    login('ANALISTA')
     assert client.post('/extracao-atributos/pastas',json=payload).status_code==201
     assert client.post('/extracao-atributos/pastas',json=payload).status_code==409
     assert client.post('/extracao-atributos/pastas',json={'caminho':'outputs/inexistente','nome':'Nova'}).status_code==404

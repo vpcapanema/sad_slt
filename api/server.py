@@ -26,7 +26,8 @@ from fastapi.templating import Jinja2Templates
 from api.error_handlers import registrar_tratadores
 from api.exceptions import DatabaseUnavailableError
 from api.deps.auth import get_optional_session, require_admin, require_geospatial_access, require_operator
-from api.deps.access_policy import module_for_path, read_only
+from api.deps.access_policy import module_for_path, read_only, page_allowed
+from api.services import autorizacao as authz
 from api.middleware.subpath_rewrite import SubpathRewriteMiddleware
 from api.path_policy import project_path, relative_path
 from api.routers import api_router
@@ -50,9 +51,14 @@ def render_page(request: Request, template_name: str, **context: object) -> Resp
     """Renderiza uma página pelo contrato comum de templates da aplicação."""
     user = getattr(request.state, "access_user", None)
     module = module_for_path(request.url.path)
-    context["access_read_only"] = bool(user and read_only(user.tipo_usuario.strip().upper(), module))
+    context["access_read_only"] = read_only(user, module)
+    if module == 'mocad' and user and not authz.permite(user, 'mocad.analisar'):
+        context['access_read_only'] = not (request.url.path.rstrip('/') == '/restrict/demandas' and authz.permite(user, 'mocad.reverter_status_inline'))
     context["access_module"] = module or ""
     context["access_profile"] = user.tipo_usuario.strip().upper() if user else ""
+    context['access_policy'] = {'modulo': module or '', 'permissoes': authz.concessoes(user),
+                                'perfil_nome': (user.perfil_nome or user.tipo_usuario) if user else ''}
+    context['can_page'] = lambda path: page_allowed(user, path)
     return templates.TemplateResponse(
         request=request,
         name=template_name,
@@ -119,16 +125,11 @@ async def protect_restricted_pages(request: Request, call_next):
                 status_code=303, headers={"Cache-Control": "no-store"},
             )
         if page and user:
-            profile = user.tipo_usuario.strip().upper()
-            module = module_for_path(path)
-            if path.rstrip("/") in {"/restrict/central-pendencias", "/restrict/solicitacao-complementacao"} and profile not in {"ANALISTA", "GESTOR", "ADMIN"}:
-                return JSONResponse(status_code=403, content={"detail": "A central é exclusiva dos perfis de análise e gestão."})
-            if module == "admin" and profile != "ADMIN":
-                return JSONResponse(status_code=403, content={"detail": "O bloco Admin é exclusivo do Administrador."})
-            if profile == "OPERADOR" and path.rstrip("/") not in {
-                "/restrict", "/restrict/operador", "/restrict/complementacao", "/restrict/demanda",
-            }:
-                return JSONResponse(status_code=403, content={"detail": "Acesso limitado ao cadastro e à complementação das suas demandas."})
+            if not page_allowed(user, path):
+                response = render_page(request, 'paginas/admin/acesso-negado.html',
+                    acesso_negado='Seu perfil no SICARD não possui permissão para acessar esta página. Utilize os módulos autorizados no seu menu.')
+                response.status_code = 403
+                return response
     return await call_next(request)
 
 
@@ -234,7 +235,8 @@ def pagina_publica_cadastro(
                 headers={"Cache-Control": "no-store"},
             )
         try:
-            require_operator(user)
+            if not page_allowed(user, request.url.path):
+                authz.negar(user, 'acessar o formulário de cadastro', ('mocad.cadastrar_demanda',))
         except HTTPException as exc:
             if exc.status_code != 403:
                 raise
@@ -337,7 +339,7 @@ def pagina_inicial_restrita(
     request: Request,
     user: SessionUser | None = Depends(get_optional_session),
 ) -> Response:
-    if user and user.tipo_usuario.strip().upper() == "OPERADOR":
+    if user and authz.permite(user, 'operador.executar_acoes'):
         return render_page(request, "paginas/admin/operador.html")
     return render_page(request, "paginas/admin/index.html")
 
@@ -355,8 +357,6 @@ def pagina_inicial_operador(
             status_code=303,
             headers={"Cache-Control": "no-store"},
         )
-    if user.tipo_usuario.strip().upper() != "OPERADOR":
-        raise HTTPException(status_code=403, detail="Esta página exige perfil Operador.")
     return render_page(request, "paginas/admin/operador.html")
 
 

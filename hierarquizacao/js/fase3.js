@@ -401,7 +401,7 @@
           }
         };
       });
-      podeSolicitarComplementacao = ['ADMIN', 'ANALISTA', 'GESTOR'].includes(usuario?.tipo_usuario);
+      podeSolicitarComplementacao = Boolean(usuario?.permissoes?.['mad.operar']);
       $("fase3-complementacao").hidden = true;
       hierarquizacoes = await HierApi.listar();
       $("fase-hierarquizacao").innerHTML = '<option value="">Selecione…</option>' + hierarquizacoes

@@ -41,7 +41,7 @@
     ("atributos", "Tabela de Pendências de Atributos da Demanda", "Pendências da Fase 3 da Hierarquização - Atributos de Demanda")
   ] %}
   <h2 class="pendencias-grupo-titulo" id="pendencias-{{ chave }}-titulo">{{ titulo }}</h2>
-  <section class="card ahp-step-section ami-panel standard-table-section" id="pendencias-{{ chave }}" aria-labelledby="pendencias-{{ chave }}-titulo">
+  <section class="card ahp-step-section ami-panel standard-table-section" data-access-module="{{ 'mad' if chave == 'atributos' else 'mocad' }}" id="pendencias-{{ chave }}" aria-labelledby="pendencias-{{ chave }}-titulo">
     <div class="ahp-section-label ami-table-heading"><span><i class="fa-solid fa-table" aria-hidden="true"></i> {{ rotulo }}</span></div>
     <div class="ahp-section-body">
       <div class="ami-filtered-table">

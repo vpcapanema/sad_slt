@@ -14,7 +14,7 @@ from api.services import storage_geoespacial as storage
 from api.services import storage_remoto
 
 
-OPERADOR = SimpleNamespace(id='teste', tipo_usuario='OPERADOR')
+OPERADOR = SimpleNamespace(id='teste', tipo_usuario='ANALISTA')
 
 
 def _revisao(path):

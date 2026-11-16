@@ -26,12 +26,11 @@
     return String(window.SLTAdminAuth?.currentUser?.tipo_usuario || "").toUpperCase();
   }
   function gestor() {
-    return ["ADMIN", "GESTOR"].includes(perfil());
+    return window.SLTAdminAuth.can('mad.operar');
   }
   function podeReverter(item) {
     const usuario = window.SLTAdminAuth?.currentUser;
-    if (perfil() === "ADMIN") return true;
-    return perfil() === "GESTOR" && (!item.homologadoPor || String(item.homologadoPor) !== String(usuario?.id));
+    return window.SLTAdminAuth.can('mad.operar') && (!item.homologadoPor || String(item.homologadoPor) !== String(usuario?.id));
   }
   async function executarAcao(item, {confirmacao, tarefa, executar, sucesso}) {
     if (!await window.ProcessFeedback.confirmar(confirmacao)) return;

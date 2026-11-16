@@ -2370,12 +2370,10 @@ def sincronizar_composicao(codigo: str) -> HierarquizacaoResponseSchema:
 
 
 def pode_reverter_homologacao(row: dict[str, Any], user: Any) -> bool:
-    """ADMIN sempre; GESTOR somente se não for quem homologou."""
-    perfil = (user.tipo_usuario or "").strip().upper()
-    if perfil == "ADMIN":
-        return True
+    """Operação MAD autorizada e separação entre homologador e revisor."""
+    from api.services.autorizacao import permite
     homologou = str(row["homologado_por"]) if row.get("homologado_por") else None
-    return perfil == "GESTOR" and homologou != str(user.id)
+    return permite(user, 'mad.operar') and homologou != str(user.id)
 
 
 def reverter_homologacao(codigo: str, user: Any) -> HierarquizacaoResponseSchema:
@@ -2383,5 +2381,5 @@ def reverter_homologacao(codigo: str, user: Any) -> HierarquizacaoResponseSchema
     if row.get("status") != "homologada":
         raise DemandaValidationError("Só é possível reverter uma hierarquização homologada.", field="status")
     if not pode_reverter_homologacao(row, user):
-        raise PermissionError("A homologação só pode ser revertida por outro gestor ou por um administrador.")
+        raise PermissionError("A homologação exige permissão de operação do MAD e um responsável diferente de quem homologou.")
     return _response(repo.reverter_homologacao(codigo, _uuid(user.id)) or row)

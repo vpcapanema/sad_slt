@@ -135,7 +135,8 @@ def _notificar(pedido: dict, destinatario: str | None, nome_hierarquia: str, use
 
 
 def solicitar_hierarquizacao(codigo: str, *, descricao: str, user: SessionUser) -> dict:
-    if user.tipo_usuario.strip().upper() not in {"ANALISTA", "GESTOR", "ADMIN"}:
+    from api.services.autorizacao import permite
+    if not permite(user, 'mad.operar'):
         raise DemandaValidationError("Seu perfil não permite solicitar atributos de hierarquização.", field="usuario")
     if not descricao or not descricao.strip():
         raise DemandaValidationError("Informe o motivo da solicitação.", field="descricao")

@@ -115,11 +115,11 @@ def test_endpoints_exigem_conferencia_do_mesmo_arquivo_antes_do_processamento(mo
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
     from api.routers import geometria as router
-    from api.deps.auth import require_operator
+    from api.deps.auth import require_demand_analyst
     from api.services.session_service import SessionUser
     app=FastAPI();app.include_router(router.router)
     user=SessionUser(id='00000000-0000-0000-0000-000000000010',email='teste@example.org',username='teste',nome='Teste',tipo_usuario='ANALISTA')
-    app.dependency_overrides[require_operator]=lambda:user
+    app.dependency_overrides[require_demand_analyst]=lambda:user
     monkeypatch.setattr(router,'conferir',lambda geom:{'permitido':True,'situacao':'marinha','mensagem':'Confirma?'})
     calls=[]
     monkeypatch.setattr(router,'substituir',lambda *args:(calls.append(args),{'codigo':'COD','tipo':tipo})[1])

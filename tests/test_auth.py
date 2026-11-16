@@ -139,7 +139,7 @@ def test_email_is_rejected_as_login() -> None:
         raise AssertionError("Login por e-mail deveria ser rejeitado")
 
 
-def test_token_profile_comes_from_username_not_payload() -> None:
+def test_token_profile_comes_from_local_policy_not_username() -> None:
     token = create_token(
         SessionUser(
             id="operador-1",
@@ -153,7 +153,7 @@ def test_token_profile_comes_from_username_not_payload() -> None:
         client.cookies.set(cookie_name(), token)
         response = client.get("/api/auth/me")
     assert response.status_code == 200
-    assert response.json()["tipo_usuario"] == "OPERADOR"
+    assert response.json()["tipo_usuario"] == "GESTOR"
 
 
 def _user(profile: str) -> SessionUser:
@@ -167,7 +167,7 @@ def _user(profile: str) -> SessionUser:
 
 
 def test_operator_permission_matrix() -> None:
-    for profile in ("OPERADOR", "ANALISTA", "GESTOR", "ADMIN"):
+    for profile in ("OPERADOR", "ANALISTA", "GESTOR"):
         assert require_operator(_user(profile)).tipo_usuario == profile
     try:
         require_operator(_user("VISUALIZADOR"))
@@ -178,9 +178,9 @@ def test_operator_permission_matrix() -> None:
 
 
 def test_analyst_permission_matrix() -> None:
-    for profile in ("ANALISTA", "GESTOR", "ADMIN"):
+    for profile in ("ANALISTA", "GESTOR"):
         assert require_analyst(_user(profile)).tipo_usuario == profile
-    for profile in ("VISUALIZADOR", "OPERADOR"):
+    for profile in ("VISUALIZADOR", "OPERADOR", "ADMIN"):
         try:
             require_analyst(_user(profile))
         except HTTPException as exc:
@@ -213,7 +213,7 @@ def test_viewer_cannot_register_demand() -> None:
 
 
 def test_operator_profiles_pass_demand_registration_authorization() -> None:
-    for profile in ("OPERADOR", "ANALISTA", "ADMIN"):
+    for profile in ("OPERADOR", "ANALISTA"):
         client = TestClient(app)
         client.cookies.set(cookie_name(), create_token(_user(profile)))
         for route in ("/api/demandas", "/api/demandas/com-arquivo-geometria", "/api/planos", "/api/programas"):
@@ -243,13 +243,10 @@ def test_demand_form_requires_operator_profile() -> None:
         client = TestClient(app)
         client.cookies.set(cookie_name(), create_token(_user(profile)))
         response = client.get("/public/cadastro/nova-demanda/")
-        assert response.status_code == (403 if profile == "VISUALIZADOR" else 200)
-        if profile == "VISUALIZADOR":
-            assert "Seu perfil não permite cadastrar demandas" in response.text
-            assert "https://56.125.163.194/cadastro/sigma" in response.text
-            assert 'id="form-cadastro"' not in response.text
-        else:
-            assert 'data-requer-autenticacao="true"' in response.text
+        assert response.status_code == 200
+        assert 'data-requer-autenticacao="true"' in response.text
+        if profile in ('VISUALIZADOR','GESTOR','ADMIN'):
+            assert 'id="access-mode-notice"' in response.text
 
 
 def test_auth_redirect_rejects_different_host() -> None:

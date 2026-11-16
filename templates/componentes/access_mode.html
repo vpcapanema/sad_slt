@@ -1,9 +1,9 @@
 {% if access_read_only %}
 <p id="access-mode-notice" class="pfs-current" role="status" aria-live="polite">
   <strong>Somente visualização — {{ access_module|upper }}.</strong>
-  Seu perfil permite consultar este módulo, mas não alterar dados. Os controles de alteração estão desativados.
+  Seu perfil permite consultar este módulo. Ações sem permissão são identificadas e informadas pelo sistema de feedback.
 </p>
 {% endif %}
-{% if access_profile in ["ANALISTA", "GESTOR", "OPERADOR"] %}
-<script src="/assets/js/access-mode.js" data-access-profile="{{ access_profile }}" data-access-module="{{ access_module }}"></script>
+{% if access_profile %}
+<script id="sicard-access-policy" src="/assets/js/access-mode.js" data-policy="{{ access_policy | default({}) | tojson | forceescape }}" data-access-profile="{{ access_profile }}" data-access-module="{{ access_module }}"></script>
 {% endif %}

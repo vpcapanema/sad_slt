@@ -133,7 +133,7 @@ def test_despublicacao_rejeita_rodada_nao_publicada(armazenamento):
         service.despublicar_hierarquizacao("H1", despublicado_por="gestor")
 
 
-@pytest.mark.parametrize("perfil,esperado", [("ANALISTA", 403), ("GESTOR", 200), ("ADMIN", 200)])
+@pytest.mark.parametrize("perfil,esperado", [("ANALISTA", 403), ("GESTOR", 200), ("ADMIN", 403)])
 def test_api_despublicacao_exige_gestor(armazenamento, perfil, esperado):
     service.publicar_hierarquizacao("H1", publicado_por="gestor")
     cliente = TestClient(app)
@@ -172,7 +172,7 @@ def test_publico_expoe_somente_rodadas_publicadas_mantem_interno_e_cadastro(arma
                "nome": "Demanda", "criado_em": "", "representante_nome": "Privado",
                "representante_email": "pessoal@example.test"}
 
-    def linhas():
+    def linhas(**kwargs):
         return [{**demanda, "hierarquizacoes": [painel_rodada(armazenamento), painel_rodada(privada)]}]
 
     monkeypatch.setattr(painel_service.painel_repository, "list_all", linhas)
@@ -233,7 +233,7 @@ def test_assinatura_nao_depende_de_nome_cadastral_e_nao_inventa_posicao():
     assert painel_service._resultado_individual(h).posicao is None
 
 
-@pytest.mark.parametrize("perfil,esperado", [(None, 401), ("OPERADOR", 403), ("ANALISTA", 403), ("VISUALIZADOR", 403), ("GESTOR", 200), ("ADMIN", 200)])
+@pytest.mark.parametrize("perfil,esperado", [(None, 401), ("OPERADOR", 403), ("ANALISTA", 403), ("VISUALIZADOR", 403), ("GESTOR", 200), ("ADMIN", 403)])
 def test_api_publicacao_perfis(monkeypatch, perfil, esperado):
     chamadas = []
 

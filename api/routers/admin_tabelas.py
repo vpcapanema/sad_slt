@@ -26,6 +26,7 @@ from api.path_policy import project_path
 from api.repositories import sigma_usuario_repository
 from api.services.session_service import SessionUser
 from api.services import usuarios_sigma_automaticos
+from api.services import autorizacao as authz
 
 router = APIRouter(prefix="/admin", tags=["admin-tabelas"])
 logger = logging.getLogger(__name__)
@@ -40,6 +41,7 @@ def estado_sincronizacao_usuarios(
 
 # Esquemas liberados para a área do administrador.
 ESQUEMAS_PERMITIDOS: tuple[str, ...] = (
+    "usuarios",
     "ahp",
     "auditoria",
     "demandas",
@@ -417,6 +419,7 @@ def obter_tabela(
                         usuarios_nomes = {}
             payload = {
                 "esquema": esquema,
+                "pode_editar": authz.tabela_tecnica_editavel(esquema, tabela) and authz.permite(_user, 'administracao.configurar'),
                 "tabela": tabela,
                 "dominio": esquema == "dominios" or tabela.startswith("dom_"),
                 "chave_primaria": chave,

@@ -80,7 +80,7 @@
         switch (n.status) {
             case 400: case 422: return `Corrija o dado indicado na mensagem${campo} e repita${acao}.`;
             case 401: return `Sua sessão expirou. Entre novamente no sistema e repita${acao}.`;
-            case 403: return 'Seu perfil não tem permissão para esta ação. Solicite a liberação a um administrador do SICARD.';
+            case 403: return 'Seu perfil no SICARD não possui a permissão necessária. Solicite a verificação do perfil ao responsável pelos acessos.';
             case 404: return 'O registro pode ter sido excluído ou alterado. Recarregue a página para atualizar os dados e tente de novo.';
             case 409: return `O registro foi alterado por outra operação. Recarregue a página, confira os dados e repita${acao}.`;
             case 413: return 'Reduza o tamanho do arquivo ou divida o envio em partes menores.';
@@ -1752,4 +1752,25 @@
     window.StatusFeedbackSystem = StatusFeedbackSystem;
     window.ConfirmFeedbackSystem = ConfirmFeedbackSystem;
     window.CredentialFeedbackSystem = CredentialFeedbackSystem;
+    // Toda resposta 403 fica explícita, inclusive quando o chamador ignora o erro.
+    // Preserva a resposta original e deixa o tratamento local concluir antes do aviso.
+    if (typeof window.fetch === 'function' && !window.fetch.__sicardPermissionFeedback) {
+        const originalFetch = window.fetch;
+        const guardedFetch = async function (...args) {
+            const response = await originalFetch.apply(this, args);
+            if (response.status === 403) {
+                const body = await response.clone().json().catch(() => ({}));
+                const message = typeof body.detail === 'string' ? body.detail : (body.message || 'Ação não autorizada. Seu perfil no SICARD não possui a permissão necessária.');
+                setTimeout(() => {
+                    const data = {title:'Ação não autorizada', message, status:403,
+                        solution:'Solicite a verificação do perfil e das permissões ao responsável pelos acessos.'};
+                    if (_progressSystem && !_progressSystem._finalizado) _progressSystem.erro(data);
+                    else _statusSystem.mostrarErro(data);
+                }, 0);
+            }
+            return response;
+        };
+        guardedFetch.__sicardPermissionFeedback = true;
+        window.fetch = guardedFetch;
+    }
 })();

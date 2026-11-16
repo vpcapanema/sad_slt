@@ -91,6 +91,7 @@ class ProgramaUpdateSchema(BaseModel):
     """Campos editáveis pelo administrador."""
 
     status: str | None = None
+    justificativa_status: str | None = Field(None, max_length=2000)
     nome: str | None = Field(None, min_length=1, max_length=200)
     origem_sei_processo: str | None = Field(None, max_length=50)
     descricao: str | None = None

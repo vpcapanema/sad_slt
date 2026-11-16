@@ -103,14 +103,14 @@ def test_configuracao_padrao_e_limites(monkeypatch):
             get_usuarios_sync_settings()
 
 
-@pytest.mark.parametrize('perfil,status', [(None, 401), ('VISUALIZADOR', 403), ('ADMIN', 200)])
-def test_estado_exclusivo_do_administrador(sincronizacao, perfil, status):
+@pytest.mark.parametrize('perfil,status', [(None, 401), ('VISUALIZADOR', 200), ('ADMIN', 200)])
+def test_estado_consultavel_conforme_politica(sincronizacao, perfil, status):
     app = FastAPI()
-    app.include_router(router)
+    app.include_router(router, prefix='/api')
     if perfil:
         app.dependency_overrides[require_authenticated] = lambda: SessionUser(
             id='teste', email='teste@example.com', username='teste', nome='Teste', tipo_usuario=perfil)
-    response = TestClient(app).get('/admin/usuarios/sincronizacao')
+    response = TestClient(app).get('/api/admin/usuarios/sincronizacao')
     assert response.status_code == status
     if status == 200:
         assert response.headers['cache-control'] == 'no-store'

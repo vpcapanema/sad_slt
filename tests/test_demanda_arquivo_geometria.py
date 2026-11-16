@@ -26,7 +26,7 @@ def _payload(coordinates=(-46.6, -23.5)):
         "instituicao_id": "00000000-0000-0000-0000-000000000001",
         "lat": coordinates[1],
         "lng": coordinates[0],
-        "representante": {"nome": "Representante de teste"},
+        "representante": {"nome": "Representante de teste", "pessoa_id": "00000000-0000-0000-0000-000000000020"},
         "diretoria_id": "DIR-PLAN",
         "plano_id": "PLANO-OUTROS",
         "nome": "Projeto de teste de upload",
@@ -57,6 +57,7 @@ def _operator_client():
         username="teste_operador",
         nome="Operador de teste",
         tipo_usuario="OPERADOR",
+        pessoa_id="00000000-0000-0000-0000-000000000020",
     )))
     return client
 

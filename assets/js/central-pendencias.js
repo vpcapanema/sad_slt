@@ -170,6 +170,8 @@
       get('solicitacao-mensagem').value = row.mensagem_gestor || '';
       get('solicitacao-mensagem').closest('.form-field').hidden = !row.categorias.includes('atributos_objeto');
       const attributes = row.categorias.includes('atributos_objeto');
+      form.dataset.accessModule = attributes ? 'mad' : 'mocad';
+      window.SICARDAccess?.scan(form);
       document.querySelectorAll('[data-attributes-section]').forEach(section => { section.hidden = !attributes && Boolean(row.id); });
       get('solicitacao-cadastro-parecer').hidden = attributes;
       get('solicitacao-abrir-analise').href = '/restrict/demanda/?' + new URLSearchParams({ tipo: row.demanda_tipo, id: row.demanda_codigo });

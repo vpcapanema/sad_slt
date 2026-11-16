@@ -28,6 +28,10 @@ class SessionUser:
     nome: str
     tipo_usuario: str
     session_id: str | None = None
+    permissoes: dict[str, str] | None = None
+    perfil_codigo: str | None = None
+    perfil_nome: str | None = None
+    pessoa_id: str | None = None
 
 
 def profile_from_username(username: str) -> str | None:
@@ -109,21 +113,30 @@ def parse_token(token: str | None) -> SessionUser | None:
         session_repository.revoke_user(str(sub))
         return None
     username = str(account.get("username") or "").strip()
-    profile = profile_from_username(username)
-    if not profile:
-        return None
-
-    return SessionUser(
+    from api.services.autorizacao import vincular
+    from api.exceptions import AuthError
+    user = SessionUser(
         id=str(sub),
         email=str(account.get("email_institucional") or ""),
         username=username,
         nome=str(account.get("nome_pessoa") or username),
-        tipo_usuario=profile,
+        tipo_usuario=str(account.get('tipo_usuario') or ''),
         session_id=sid,
+        pessoa_id=str(account['pessoa_id']) if account.get('pessoa_id') else None,
     )
+    try:
+        user = vincular(user)
+    except AuthError:
+        return None
+    # Uma alteração de perfil na origem não pode manter privilégios antigos
+    # durante o intervalo até a próxima sincronização.
+    if account.get('tipo_usuario') and account['tipo_usuario'] != user.tipo_usuario:
+        return None
+    return user
 
 
 def is_gestor(user: SessionUser | None) -> bool:
     if not user:
         return False
-    return user.tipo_usuario.strip().upper() in {"GESTOR", "ADMIN"}
+    from api.services.autorizacao import permite
+    return permite(user, 'mad.operar')

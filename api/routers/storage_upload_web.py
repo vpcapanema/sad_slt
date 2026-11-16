@@ -10,9 +10,8 @@ from api.services import storage_upload_web as service
 from api.services.session_service import SessionUser
 
 def require_storage_upload(user: SessionUser = Depends(require_authenticated)):
-    if user.tipo_usuario.strip().upper() not in {'ANALISTA', 'GESTOR', 'ADMIN'}:
-        raise HTTPException(403, 'Seu perfil SICARD não tem permissão para enviar camadas de base. O envio exige perfil Analista, Gestor ou Admin.')
-    return user
+    from api.services.autorizacao import exigir
+    return exigir(user, 'ferramentas.operar', acao='enviar camadas de base')
 
 
 router = APIRouter(prefix='/storage-upload', dependencies=[Depends(require_storage_upload)])

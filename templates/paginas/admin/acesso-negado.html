@@ -1,0 +1,15 @@
+{% extends "bases/base_conteudo.html" %}
+{% set navegacao = "restrita" %}
+{% set requer_autenticacao = true %}
+{% block titulo %}Acesso não autorizado — SICARD{% endblock %}
+{% block conteudo %}
+<main class="conteudo-principal app-main admin-main">
+<section class="secao-acesso-negado card-acesso-negado card standard-page-hero">
+<h1 class="standard-page-hero__title">Acesso não autorizado</h1>
+<p id="access-denied-message" class="standard-page-hero__description" role="alert">{{ acesso_negado | default('Seu perfil não possui permissão para acessar esta página.') }}</p>
+<a class="btn btn-secondary" href="/restrict/">Voltar à área restrita</a>
+</section></main>
+{% endblock %}
+{% block scripts_pagina %}
+<script src="/assets/js/acesso-negado.js"></script>
+{% endblock %}

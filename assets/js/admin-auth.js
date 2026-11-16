@@ -8,40 +8,28 @@
     VISUALIZADOR: "Visualizador",
     ADMIN: "Administrador",
   };
-  const PERMISSIONS = {
-    read: new Set(Object.keys(TIPO_LABELS)),
-    operate: new Set(["OPERADOR", "ANALISTA", "GESTOR", "ADMIN"]),
-    analyze: new Set(["ANALISTA", "GESTOR", "ADMIN"]),
-    analyzeDemand: new Set(["ANALISTA"]),
-    manage: new Set(["GESTOR", "ADMIN"]),
-    administer: new Set(["ADMIN"]),
-  };
   let currentUser = null;
 
   function can(permission, user = currentUser) {
-    const profile = String(user?.tipo_usuario || "").toUpperCase();
-    if (permission !== "read" && permission !== "administer" &&
-        document.getElementById("access-mode-notice")) return false;
-    return Boolean(PERMISSIONS[permission]?.has(profile));
+    return Boolean(global.SICARDAccess?.can(permission, user || undefined));
+  }
+
+  function ensure(permission, action = 'executar esta ação') {
+    if (can(permission)) return true;
+    if (global.SICARDAccess) global.SICARDAccess.denied(action);
+    else if (global.StatusFeedback) global.StatusFeedback.erro({title:'Ação não autorizada',
+      message:`Seu perfil no SICARD não possui permissão para ${action}.`, status:403});
+    else global.alert(`Ação não autorizada: ${action}. Seu perfil não possui a permissão necessária.`);
+    return false;
   }
 
   function applyPermissions(root = document) {
     root.querySelectorAll("[data-permission]").forEach((element) => {
       const allowed = can(element.dataset.permission);
-      if (element.dataset.permission === "administer") {
+      if (["administer", "viewAdmin"].includes(element.dataset.permission)) {
         element.hidden = !allowed;
-      } else {
-        element.hidden = false;
-        if (!allowed) {
-          element.setAttribute("aria-disabled", "true");
-          element.title = "Seu perfil permite somente visualização desta ação.";
-          element.addEventListener("click", (event) => {
-            event.preventDefault();
-            event.stopImmediatePropagation();
-          }, { capture: true });
-        }
-      }
-      if ("disabled" in element) element.disabled = !allowed;
+      } else { element.hidden = false; }
+      global.SICARDAccess?.scan(element);
     });
   }
 
@@ -56,7 +44,13 @@
 
   async function fetchMe() {
     const res = await fetch("/api/auth/me", { credentials: "include" });
-    if (!res.ok) return null;
+    if (res.status === 401) return null;
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      const message = body.detail || body.message || 'Não foi possível verificar seu acesso ao SICARD.';
+      global.StatusFeedback?.erro({title:'Não foi possível verificar o acesso', message, status:res.status});
+      throw new Error(message);
+    }
     return res.json();
   }
 
@@ -72,6 +66,7 @@
     if (!el || !user) return;
 
     currentUser = user;
+    global.SICARDAccess?.setUser(user);
     document.documentElement.dataset.userProfile = String(
       user.tipo_usuario || "",
     ).toLowerCase();
@@ -109,6 +104,8 @@
       location.replace(loginUrl());
       return null;
     }
+    currentUser = user;
+    global.SICARDAccess?.setUser(user);
     const bar = document.getElementById(SESSION_BAR_ID);
     if (bar) {
       renderSessionBar(user);
@@ -146,9 +143,15 @@
     renderSessionBar,
     loginUrl,
     can,
+    ensure,
     applyPermissions,
     get currentUser() {
       return currentUser;
     },
   };
+  global.addEventListener('focus', async () => {
+    if (!currentUser) return;
+    const user = await fetchMe().catch(() => null);
+    if (user) renderSessionBar(user);
+  });
 })(window);

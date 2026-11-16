@@ -392,12 +392,12 @@
     try {
       const usuario = SLTAdminAuth.currentUser || await SLTAdminAuth.fetchMe();
       if (!usuario) throw new Error('Sessão indisponível. Entre novamente para consultar suas demandas autorizadas.');
-      if (usuario.tipo_usuario === 'OPERADOR') {
+      if (usuario.permissoes?.['solicitacao.cumprir']) {
         select.innerHTML = '<option value="">Não disponível para o perfil Operador</option>';
         mensagemAtributos('O operador preenche somente complementações de cadastro e geometria das próprias demandas.');
         return;
       }
-      administrador = usuario.tipo_usuario === 'ADMIN';
+      administrador = Boolean(usuario.permissoes?.['mad.operar']);
       itens = await api('/api/complementacao/objetos');
       const hierarquizacoes = [...new Map(itens.map(item => [item.hierarquizacao_codigo, item])).values()];
       document.querySelector('#complementacao-seletor-label').textContent = administrador ? 'Hierarquização' : 'Demanda autorizada';

@@ -311,7 +311,8 @@ $migrations = @(
     "164_representante_institucional.sql",
     "166_politica_usuarios_sicard.sql",
     "167_referenciar_perfis_sigma.sql",
-    "168_nomes_usuario_perfil.sql"
+    "168_nomes_usuario_perfil.sql",
+    "169_permissoes_operacao_sicard.sql"
 )
 
 if ($OnlyMigration) {
@@ -504,6 +505,12 @@ if (-not $OnlyMigration -and "167_referenciar_perfis_sigma.sql" -notin $migratio
 if (-not $OnlyMigration -and "168_nomes_usuario_perfil.sql" -notin $migrations) {
     if (-not (Test-SchemaReady "SELECT count(*)=3 FROM information_schema.columns WHERE table_schema='usuarios' AND table_name='usuario_perfil' AND column_name IN ('sigma_user_name','sigma_nome_completo','perfil_nome');")) {
         $migrations += "168_nomes_usuario_perfil.sql"
+    }
+}
+
+if (-not $OnlyMigration -and "169_permissoes_operacao_sicard.sql" -notin $migrations) {
+    if (-not (Test-SchemaReady "SELECT to_regclass('usuarios.permissao') IS NOT NULL AND EXISTS (SELECT 1 FROM usuarios.permissao WHERE codigo='mocad.excluir') AND EXISTS (SELECT 1 FROM usuarios.permissao WHERE codigo='ferramentas.operar');")) {
+        $migrations += "169_permissoes_operacao_sicard.sql"
     }
 }
 

@@ -76,6 +76,8 @@ def client(frame, monkeypatch):
     app.dependency_overrides[require_geospatial_access] = lambda: SimpleNamespace(id='teste')
     try:
         with TestClient(app) as connection:
+            from api.services.session_service import SessionUser, cookie_name, create_token
+            connection.cookies.set(cookie_name(),create_token(SessionUser('teste','','teste_analista','Teste','ANALISTA')))
             yield connection
     finally:
         app.dependency_overrides.clear()

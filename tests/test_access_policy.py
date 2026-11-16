@@ -54,14 +54,13 @@ def test_admin_block_has_server_guard(profile):
 @pytest.mark.parametrize("path", [
     "/restrict/demandas/", "/restrict/geoespacial/",
     "/restrict/hierarquizacao/processos/", "/restrict/revisao-status/",
-    "/api/painel/demandas/internas", "/api/complementacao/objetos",
+    "/api/painel/demandas/internas",
 ])
 def test_operator_cannot_browse_other_internal_modules(path):
     assert client("OPERADOR").get(path).status_code == 403
 
 
 @pytest.mark.parametrize("profile,path", [
-    ("GESTOR", "/restrict/demandas/"),
     ("GESTOR", "/restrict/demanda/"),
     ("GESTOR", "/restrict/sei-documentos/"),
     ("GESTOR", "/public/cadastro/nova-demanda/"),
@@ -77,7 +76,7 @@ def test_read_only_page_has_context_and_accessible_control_script(profile, path)
 
 
 @pytest.mark.parametrize("profile,path", [
-    ("ADMIN", "/restrict/demandas/"),
+    ("GESTOR", "/restrict/demandas/"),
     ("GESTOR", "/restrict/hierarquizacao/processos/"),
     ("ANALISTA", "/restrict/demandas/"),
     ("ANALISTA", "/restrict/geoespacial/"),
@@ -127,7 +126,6 @@ def test_operator_complement_requires_current_ownership_and_open_request(monkeyp
 
 
 @pytest.mark.parametrize("profile,categories", [
-    ("OPERADOR", ["atributos_objeto"]),
     ("ANALISTA", ["atributos_objeto"]),
     ("GESTOR", ["geometria"]),
 ])
@@ -141,7 +139,7 @@ def test_conclusion_dispatch_cannot_bypass_module_policy(monkeypatch, profile, c
 
 @pytest.mark.parametrize("profile", ["GESTOR", "ADMIN"])
 def test_mad_control_allowed_to_managers_and_admin_before_body_validation(profile):
-    assert client(profile).post("/api/agrupamentos-demandas", json={}).status_code == 422
+    assert client(profile).post("/api/agrupamentos-demandas", json={}).status_code == (422 if profile == 'GESTOR' else 403)
 
 
 def test_public_token_flow_keeps_its_own_validation():
@@ -156,7 +154,7 @@ def test_tools_are_not_confused_with_mad_prefix():
 
 @pytest.mark.parametrize("profile", ["ANALISTA", "GESTOR", "ADMIN"])
 def test_tools_accept_normal_control_for_internal_profiles(profile):
-    assert client(profile).post("/api/ahp/superficies-criterios", json={}).status_code == 422
+    assert client(profile).post("/api/ahp/superficies-criterios", json={}).status_code == (403 if profile == 'ADMIN' else 422)
 
 
 @pytest.mark.parametrize("profile", ["ANALISTA", "GESTOR", "OPERADOR"])

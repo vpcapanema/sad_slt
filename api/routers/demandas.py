@@ -6,6 +6,8 @@ from fastapi.responses import Response
 from pydantic import ValidationError
 
 from api.responses import model_json_response
+from api.services import autorizacao as authz
+from api.services.cadastro_autorizado import atualizar as atualizar_autorizado
 from api.repositories import geometria_listagem_repository
 from api.deps.auth import require_demand_analyst, require_authenticated, require_gestor, require_operator
 from api.exceptions import DatabaseUnavailableError, DemandaNotFoundError, DemandaValidationError
@@ -24,6 +26,7 @@ def criar_demanda(
     user: SessionUser = Depends(require_operator),
 ) -> DemandaResponseSchema:
     """Cria uma nova demanda de projeto."""
+    authz.exigir_criacao(user, body)
     try:
         return demanda_service.criar_demanda(body, usuario_id=user.id)
     except DemandaValidationError as exc:
@@ -43,6 +46,7 @@ async def criar_demanda_com_arquivo_geometria(
         body = DemandaCreateSchema.model_validate_json(payload)
     except ValidationError as exc:
         raise HTTPException(status_code=422, detail=exc.errors()) from exc
+    authz.exigir_criacao(user, body)
     arquivo = await receber_arquivo_geometria(arquivo_geometria, body.geometria)
     try:
         return demanda_service.criar_demanda(
@@ -70,7 +74,7 @@ def listar_demandas_internas(
     incluir_geometria: bool = True,
     _user: SessionUser = Depends(require_authenticated),
 ) -> Response:
-    items = demanda_service.listar_demandas(incluir_auditoria=True, incluir_geometria=False)
+    items = authz.filtrar_cadastros(_user, demanda_service.listar_demandas(incluir_auditoria=True, incluir_geometria=False))
     geometrias = geometria_listagem_repository.por_codigos([item.id for item in items]) if incluir_geometria else None
     return model_json_response(items, list[DemandaResponseSchema], geometrias=geometrias, codigo_field="id")
 
@@ -80,7 +84,9 @@ def obter_demanda_interna(
     codigo: str,
     _user: SessionUser = Depends(require_authenticated),
 ) -> DemandaResponseSchema:
-    return demanda_service.obter_demanda(codigo, incluir_auditoria=True)
+    item = demanda_service.obter_demanda(codigo, incluir_auditoria=True)
+    authz.exigir_cadastro(_user, item)
+    return item
 
 
 @router.get("/{codigo}", response_model=DemandaResponseSchema)
@@ -145,14 +151,11 @@ def reprovar_demanda(
 def atualizar_demanda(
     codigo: str,
     body: DemandaUpdateSchema,
-    user: SessionUser = Depends(require_demand_analyst),
+    user: SessionUser = Depends(require_authenticated),
 ) -> DemandaResponseSchema:
     """Atualiza uma demanda existente."""
     try:
-        return demanda_service.atualizar_demanda(
-            codigo, body, usuario_id=user.id,
-            status_livre_gestor=user.tipo_usuario.strip().upper() in {"GESTOR", "ADMIN"},
-        )
+        return atualizar_autorizado('projeto', codigo, body, user)
     except DemandaNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except DemandaValidationError as exc:

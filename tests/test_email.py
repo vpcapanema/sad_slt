@@ -81,6 +81,8 @@ def test_router_registrado_na_api_real():
     (None, 401), ("VISUALIZADOR", 403), ("OPERADOR", 403), ("ANALISTA", 403), ("GESTOR", 403),
 ])
 def test_todos_endpoints_exigem_admin(client, smtp, metodo, path, payload, perfil, status):
+    if perfil == 'VISUALIZADOR' and metodo == 'get':
+        status = 200
     response = client.request(
         metodo, "/api/email" + path, json=payload,
         headers=autenticacao(perfil) if perfil else {},

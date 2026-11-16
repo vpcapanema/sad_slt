@@ -22,6 +22,9 @@ def _user_schema(user: SessionUser) -> SessionUserSchema:
         username=user.username,
         nome=nome,
         tipo_usuario=user.tipo_usuario,
+        perfil_codigo=user.perfil_codigo,
+        perfil_nome=user.perfil_nome,
+        permissoes=user.permissoes or {},
     )
 
 

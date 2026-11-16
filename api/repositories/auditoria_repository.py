@@ -6,7 +6,7 @@ from uuid import UUID
 
 from psycopg.types.json import Jsonb
 
-from api.db.connection import get_connection
+from api.db.connection import get_connection, commit_unless_atomic
 
 
 def registrar(
@@ -64,4 +64,4 @@ def registrar(
 
     with get_connection() as conn:
         conn.execute(sql, params)
-        conn.commit()
+        commit_unless_atomic(conn)

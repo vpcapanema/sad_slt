@@ -187,11 +187,11 @@
   }
 
   function controlesGrupos() {
-    const admin = SLTAdminAuth.can('administer');
+    const admin = SLTAdminAuth.can('mad.operar');
     const botao = (acao, icone, texto, desabilitado = false) => `<button type="button" class="admin-icon-btn ${acao}" data-grupo-acao="${acao}" title="${escapar(texto)}" aria-label="${escapar(texto)}"${desabilitado || ocupado ? ' disabled' : ''}><i class="fa-solid ${icone}" aria-hidden="true"></i></button>`;
     $('#grupos-controles').innerHTML = grupoEditando
       ? botao('save', 'fa-check', 'Salvar alterações') + botao('cancel', 'fa-xmark', 'Cancelar')
-      : botao('edit-group', 'fa-pen-to-square', 'Editar grupo', gruposSelecionados.size !== 1 || !SLTAdminAuth.can('operate')) + botao('reload', 'fa-rotate-right', 'Recarregar') + botao('edit', 'fa-pen', admin ? 'Editar selecionado' : 'Editar selecionado (Administrador)', !admin || gruposSelecionados.size !== 1) + botao('delete', 'fa-trash', admin ? 'Excluir selecionados' : 'Excluir selecionados (Administrador)', !admin || !gruposSelecionados.size);
+      : botao('edit-group', 'fa-pen-to-square', 'Editar grupo', gruposSelecionados.size !== 1 || !SLTAdminAuth.can('operate')) + botao('reload', 'fa-rotate-right', 'Recarregar') + botao('edit', 'fa-pen', 'Editar selecionado — operação do MAD', !admin || gruposSelecionados.size !== 1) + botao('delete', 'fa-trash', 'Excluir selecionados — operação do MAD', !admin || !gruposSelecionados.size);
     $('#grupos-selecao').textContent = resumoTabela(gruposSelecionados.size, recorte(gruposFiltrados(), paginaGrupos).length, grupos.length);
     const todos = $('#grupos-selecionar-todos'), lista = recorte(gruposFiltrados(), paginaGrupos);
     paginar('grupos', gruposFiltrados(), paginaGrupos, p => { paginaGrupos = p; gruposSelecionados.clear(); renderGrupos(); }, ocupado || Boolean(grupoEditando));
@@ -207,7 +207,7 @@
     if (acao === 'edit-group' && gruposSelecionados.size === 1) { await editarGrupo([...gruposSelecionados][0]); return; }
     if (acao === 'reload') { gruposSelecionados.clear(); await carregarGrupos(); return; }
     if (acao === 'cancel') { grupoEditando = null; renderGrupos(); return; }
-    if (!SLTAdminAuth.can('administer')) return;
+    if (!SLTAdminAuth.can('mad.operar')) { window.SICARDAccess?.denied('alterar agrupamentos'); return; }
     if (acao === 'edit' && gruposSelecionados.size === 1) { grupoEditando = [...gruposSelecionados][0]; renderGrupos(); $('#grupo-nome-edicao').focus(); return; }
     let body, method, selecionados = [];
     if (acao === 'save' && grupoEditando) {

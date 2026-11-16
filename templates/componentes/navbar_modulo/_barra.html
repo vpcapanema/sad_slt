@@ -33,18 +33,20 @@
 <a class="app-nav-bloco" href="/restrict/"><i class="fa-solid fa-house" aria-hidden="true"></i> Início do bloco</a>
 {% for item in itens %}
   {% if item.itens is defined %}
-    {% set grupo = namespace(ativo=false) %}
-    {% for filho in item.itens %}{% if _ativo(filho) | trim %}{% set grupo.ativo = true %}{% endif %}{% endfor %}
+    {% set grupo = namespace(ativo=false, visivel=false) %}
+    {% for filho in item.itens if can_page is not defined or can_page(filho.href) %}{% set grupo.visivel = true %}{% if _ativo(filho) | trim %}{% set grupo.ativo = true %}{% endif %}{% endfor %}
+  {% if grupo.visivel %}
   <div class="app-nav-group app-nav-grupo-modulo{% if grupo.ativo %} active{% endif %}">
     <button type="button" class="app-nav-grupo-botao" aria-haspopup="true" aria-expanded="false">{{ item.texto }}<span class="app-nav-caret" aria-hidden="true">▾</span></button>
     <div class="app-nav-submenu" aria-label="{{ item.texto }}">
-    {% for filho in item.itens %}
+    {% for filho in item.itens if can_page is not defined or can_page(filho.href) %}
       <a href="{{ filho.href }}"{% if _ativo(filho) | trim %} class="active" aria-current="page"{% endif %}>{{ filho.texto }}</a>
     {% endfor %}
     </div>
   </div>
+  {% endif %}
   {% else %}
-  <a href="{{ item.href }}"{% if _ativo(item) | trim %} class="active" aria-current="page"{% endif %}>{{ item.texto }}</a>
+  {% if can_page is not defined or can_page(item.href) %}<a href="{{ item.href }}"{% if _ativo(item) | trim %} class="active" aria-current="page"{% endif %}>{{ item.texto }}</a>{% endif %}
   {% endif %}
 {% endfor %}
 {% endmacro %}

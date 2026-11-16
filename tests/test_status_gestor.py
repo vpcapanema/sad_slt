@@ -2,6 +2,7 @@ import importlib
 from types import SimpleNamespace
 import pytest
 from api.exceptions import DemandaValidationError
+from fastapi import HTTPException
 
 @pytest.mark.parametrize("tipo", ["demanda", "plano", "programa"])
 def test_gestor_altera_status_do_dominio_sem_matriz(monkeypatch, tipo):
@@ -23,9 +24,11 @@ def test_gestor_altera_status_do_dominio_sem_matriz(monkeypatch, tipo):
 
 @pytest.mark.parametrize("tipo,modulo", [("demanda","demandas"),("plano","planos"),("programa","programas")])
 @pytest.mark.parametrize("perfil", ["GESTOR","ANALISTA","ADMIN","OPERADOR"])
-def test_rota_deriva_excecao_da_sessao(monkeypatch,tipo,modulo,perfil):
+def test_nome_do_perfil_sem_concessao_nao_autoriza_status(monkeypatch,tipo,modulo,perfil):
     router=importlib.import_module(f"api.routers.{modulo}")
     service=getattr(router,f"{tipo}_service")
     monkeypatch.setattr(service,f"atualizar_{tipo}",lambda *args,**kw:kw)
-    result=getattr(router,f"atualizar_{tipo}")("COD",None,SimpleNamespace(id="USER",tipo_usuario=perfil))
-    assert result["status_livre_gestor"] is (perfil in {"GESTOR", "ADMIN"})
+    schema = getattr(importlib.import_module(f"api.schemas.{tipo}"), f"{tipo.title()}UpdateSchema")
+    with pytest.raises(HTTPException) as exc:
+        getattr(router,f"atualizar_{tipo}")("COD",schema(status='analise_aprovada', justificativa_status='Decisão motivada'),SimpleNamespace(id="USER",tipo_usuario=perfil,permissoes={}))
+    assert exc.value.status_code == 403

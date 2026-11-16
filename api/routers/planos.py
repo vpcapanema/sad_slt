@@ -5,6 +5,8 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from pydantic import ValidationError
 
 from api.deps.auth import require_demand_analyst, require_authenticated, require_gestor, require_operator
+from api.services import autorizacao as authz
+from api.services.cadastro_autorizado import atualizar as atualizar_autorizado
 from api.exceptions import DatabaseUnavailableError, DemandaNotFoundError, DemandaValidationError
 from api.schemas.objeto_ahp import AprovarDemandaSchema, ReprovarDemandaSchema
 from api.schemas.plano import PlanoCreateSchema, PlanoResponseSchema, PlanoUpdateSchema
@@ -24,6 +26,7 @@ def criar_plano(
     user: SessionUser = Depends(require_operator),
 ) -> PlanoResponseSchema:
     """Cadastra um novo plano (nível 1)."""
+    authz.exigir_criacao(user, body)
     try:
         return plano_service.criar_plano(body, usuario_id=user.id)
     except DemandaValidationError as exc:
@@ -43,6 +46,7 @@ async def criar_plano_com_arquivo_geometria(
         body = PlanoCreateSchema.model_validate_json(payload)
     except ValidationError as exc:
         raise HTTPException(status_code=422, detail=exc.errors()) from exc
+    authz.exigir_criacao(user, body)
     arquivo = await receber_arquivo_geometria(arquivo_geometria, body.geometria)
     try:
         return plano_service.criar_plano(body, usuario_id=user.id, arquivo_geometria=arquivo)
@@ -75,7 +79,7 @@ def listar_planos_vinculaveis() -> list[OpcaoVinculacaoSchema]:
 def listar_planos_internos(
     _user: SessionUser = Depends(require_authenticated),
 ) -> list[PlanoResponseSchema]:
-    return plano_service.listar_planos(incluir_auditoria=True)
+    return authz.filtrar_cadastros(_user, plano_service.listar_planos(incluir_auditoria=True))
 
 
 @router.get("/internas/{codigo}", response_model=PlanoResponseSchema)
@@ -83,7 +87,9 @@ def obter_plano_interno(
     codigo: str,
     _user: SessionUser = Depends(require_authenticated),
 ) -> PlanoResponseSchema:
-    return plano_service.obter_plano(codigo, incluir_auditoria=True)
+    item = plano_service.obter_plano(codigo, incluir_auditoria=True)
+    authz.exigir_cadastro(_user, item)
+    return item
 
 
 @router.get("/{codigo}", response_model=PlanoResponseSchema)
@@ -144,14 +150,11 @@ def reprovar_plano(
 def atualizar_plano(
     codigo: str,
     body: PlanoUpdateSchema,
-    user: SessionUser = Depends(require_demand_analyst),
+    user: SessionUser = Depends(require_authenticated),
 ) -> PlanoResponseSchema:
     """Atualiza um plano existente."""
     try:
-        return plano_service.atualizar_plano(
-            codigo, body, usuario_id=user.id,
-            status_livre_gestor=user.tipo_usuario.strip().upper() in {"GESTOR", "ADMIN"},
-        )
+        return atualizar_autorizado('plano', codigo, body, user)
     except DemandaNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except DemandaValidationError as exc:

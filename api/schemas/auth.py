@@ -16,6 +16,9 @@ class SessionUserSchema(BaseModel):
     username: str
     nome: str
     tipo_usuario: str
+    perfil_codigo: str | None = None
+    perfil_nome: str | None = None
+    permissoes: dict[str, str] = Field(default_factory=dict)
 
 
 class LoginResponseSchema(BaseModel):

@@ -18,7 +18,7 @@ def app():
     web.sessoes.clear()
 
 
-@pytest.mark.parametrize('perfil', ['VISUALIZADOR', 'OPERADOR'])
+@pytest.mark.parametrize('perfil', ['VISUALIZADOR', 'OPERADOR', 'ADMIN'])
 def test_perfil_sicard_impede_login_storage(app, monkeypatch, perfil):
     app.dependency_overrides[require_authenticated] = lambda: SimpleNamespace(id='u', tipo_usuario=perfil)
 
@@ -29,10 +29,11 @@ def test_perfil_sicard_impede_login_storage(app, monkeypatch, perfil):
     with TestClient(app) as c:
         r = c.post('/storage-upload/sessoes')
         assert r.status_code == 403
-        assert 'Analista, Gestor ou Admin' in r.json()['detail']
+        assert 'enviar camadas de base' in r.json()['detail']
+        assert r.headers['X-SICARD-Permission-Denied'] == 'true'
 
 
-@pytest.mark.parametrize('perfil', ['ANALISTA', 'GESTOR', 'ADMIN'])
+@pytest.mark.parametrize('perfil', ['ANALISTA', 'GESTOR'])
 def test_perfil_sicard_elegivel(app, monkeypatch, perfil):
     app.dependency_overrides[require_authenticated] = lambda: SimpleNamespace(id='u', tipo_usuario=perfil)
 
@@ -71,7 +72,7 @@ def test_proxy_encaminha_bytes_e_so_registra_sucesso(app):
         assert c.post(raiz + 'web/client/file?path=/base-geoespacial/../segredo', content=b'').status_code == 400
         assert c.get(raiz + 'web/admin/users').status_code == 403
         assert c.get(raiz + 'web/client/file?path=/base-geoespacial/a.html').status_code == 403
-        app.dependency_overrides[require_authenticated] = lambda: SimpleNamespace(id='outro', tipo_usuario='ADMIN')
+        app.dependency_overrides[require_authenticated] = lambda: SimpleNamespace(id='outro', tipo_usuario='ANALISTA')
         assert c.get('/storage-upload/sessoes/s/resultado').status_code == 404
 
 

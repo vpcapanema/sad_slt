@@ -7,9 +7,7 @@ from fastapi import Cookie, Depends, HTTPException, Request
 from api.services.session_service import SessionUser, cookie_name, is_gestor, parse_token
 from api.exceptions import DatabaseUnavailableError
 
-_OPERATE_PROFILES = frozenset({"OPERADOR", "ANALISTA", "GESTOR", "ADMIN"})
-# ADMIN é perfil elevado: herda as capacidades de análise.
-_ANALYZE_PROFILES = frozenset({"ANALISTA", "GESTOR", "ADMIN"})
+from api.services import autorizacao as authz
 
 
 def _client_ip(request: Request) -> str | None:
@@ -48,9 +46,8 @@ def require_gestor(
     user = get_optional_session(request, slt_session)
     if not user:
         raise HTTPException(status_code=401, detail="Sessão inválida ou expirada. Faça login.")
-    if not is_gestor(user):
-        raise HTTPException(status_code=403, detail="Esta ação exige perfil Gestor.")
-    return user
+    from api.deps.access_policy import authorize_request
+    return authorize_request(request, user)
 
 
 def require_authenticated(
@@ -63,50 +60,52 @@ def require_authenticated(
     return user
 
 
-def _require_profiles(user: SessionUser, allowed: frozenset[str], action: str) -> SessionUser:
-    if user.tipo_usuario.strip().upper() not in allowed:
-        raise HTTPException(status_code=403, detail=f"Seu perfil não permite {action}.")
-    return user
+def _route_or_permission(user, request, *codes):
+    if request is not None:
+        from api.deps.access_policy import authorize_request
+        return authorize_request(request, user)
+    return authz.exigir(user, *codes)
 
 
 def require_operator(
     user: SessionUser = Depends(require_authenticated),
+    request: Request = None,
 ) -> SessionUser:
-    return _require_profiles(user, _OPERATE_PROFILES, "executar esta operação")
+    return _route_or_permission(user, request, 'mocad.cadastrar_demanda', 'mad.operar', 'operador.executar_acoes')
 
 
 def require_analyst(
     user: SessionUser = Depends(require_authenticated),
+    request: Request = None,
 ) -> SessionUser:
-    return _require_profiles(user, _ANALYZE_PROFILES, "realizar análise ou aprovação")
+    return _route_or_permission(user, request, 'mocad.analisar', 'mad.operar', 'ferramentas.operar')
 
 
 def require_demand_analyst(
     user: SessionUser = Depends(require_authenticated),
 ) -> SessionUser:
     """Análise de demandas é exclusiva do perfil Analista, sem herança."""
-    return _require_profiles(user, frozenset({"ANALISTA"}), "analisar ou alterar demandas cadastradas; exige perfil Analista")
+    return authz.exigir(user, 'mocad.analisar', acao='analisar ou alterar demandas cadastradas')
 
 
 def require_admin(
     user: SessionUser = Depends(require_authenticated),
+    request: Request = None,
 ) -> SessionUser:
-    return _require_profiles(user, frozenset({"ADMIN"}), "acessar a área do administrador")
+    if request is not None and request.url.path.startswith(('/api/admin/', '/api/email/')):
+        return _route_or_permission(user, request, 'administracao.configurar', 'administracao.manter')
+    return authz.exigir(user, 'administracao.configurar', 'administracao.manter', acao='administrar o sistema')
 
 
 def require_geospatial_access(
     request: Request,
     user: SessionUser = Depends(require_authenticated),
 ) -> SessionUser:
-    if "/extracao-atributos/storage-upload/" in request.url.path:
-        if user.tipo_usuario.strip().upper() not in _ANALYZE_PROFILES:
-            raise HTTPException(403, detail="Seu perfil SICARD não tem permissão para enviar camadas de base. O envio exige perfil Analista, Gestor ou Admin.")
-        return user
-    if request.method == "GET":
-        return user
-    if "/homologar" in request.url.path:
-        return _require_profiles(user, frozenset({"ANALISTA", "GESTOR", "ADMIN"}), "homologar produtos geoespaciais")
-    return _require_profiles(user, _OPERATE_PROFILES, "executar operações geoespaciais")
+    from api.deps.access_policy import authorize_request, consultation
+    if not request.url.path.startswith('/api/'):
+        codes = ('area_restrita.visualizar', 'ferramentas.visualizar') if consultation(request.url.path, request.method) else ('ferramentas.operar',)
+        return authz.exigir(user, *codes, acao='acessar as ferramentas geoespaciais')
+    return authorize_request(request, user)
 
 
 def get_request_meta(request: Request) -> dict[str, str | None]:

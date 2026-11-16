@@ -134,7 +134,6 @@ PARTES_SHAPEFILE = ('.dbf', '.shx', '.cpg', '.prj', '.shp')
 INDICES_SHAPEFILE = ('.qix', '.sbn', '.sbx')
 REVISAO_OBSOLETA = 'O arquivo mudou desde a abertura. Reabra antes de salvar ou executar.'
 LIMITE_INT32 = (-2 ** 31, 2 ** 31 - 1)
-PERFIS_EDICAO = frozenset({'OPERADOR', 'ANALISTA', 'GESTOR', 'ADMIN'})
 
 
 def _revisao(caminho):
@@ -507,8 +506,8 @@ def gravar_incremental(ident, revisao, edicoes, excluidos, user):
     envolvidas numa cópia do próprio arquivo, preservando CRS, geometrias e as
     demais camadas de um GeoPackage.
     """
-    perfil = str(getattr(user, 'tipo_usuario', '') or '').strip().upper()
-    if perfil not in PERFIS_EDICAO:
+    from api.services.autorizacao import permite
+    if not permite(user, 'ferramentas.operar'):
         raise PermissionError('Seu perfil não permite editar arquivos do storage.')
     edicoes, excluidos = _validar_pedido(edicoes, excluidos)
     caminho, camada = storage.separar_id(ident)
@@ -713,8 +712,8 @@ def _aplicar_geometrias(ds, layer, driver, geometrias, atributos, excluidos, nov
 
 def gravar_geometrias(ident, revisao, edicoes, excluidos, novas, user):
     """Edita geometrias e atributos pontuais sem materializar a camada em GeoJSON."""
-    perfil = str(getattr(user, 'tipo_usuario', '') or '').strip().upper()
-    if perfil not in PERFIS_EDICAO:
+    from api.services.autorizacao import permite
+    if not permite(user, 'ferramentas.operar'):
         raise PermissionError('Seu perfil não permite editar arquivos do storage.')
     geometrias, atributos, excluidos, novas = _validar_edicoes_geometria(edicoes, excluidos, novas)
     caminho, camada = storage.separar_id(ident)

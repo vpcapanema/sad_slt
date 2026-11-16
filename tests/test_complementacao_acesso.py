@@ -316,9 +316,9 @@ def test_autoria_ou_representacao(owner,person,allowed):
     ('OPERADOR',True,'em_complementacao',True),
     ('OPERADOR',False,'em_complementacao',False),
     ('OPERADOR',True,'complementada',True),
-    ('GESTOR',False,'em_complementacao',False),
+    ('GESTOR',False,'em_complementacao',True),
     ('GESTOR',True,'complementada',True),
-    ('ADMIN',False,'em_complementacao',False),
+    ('ADMIN',False,'em_complementacao',True),
     ('ADMIN',True,'complementada',True),
 ])
 def test_listagem(profile,owned,state,allowed):

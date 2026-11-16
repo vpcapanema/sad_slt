@@ -5,6 +5,8 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from pydantic import ValidationError
 
 from api.deps.auth import require_demand_analyst, require_authenticated, require_gestor, require_operator
+from api.services import autorizacao as authz
+from api.services.cadastro_autorizado import atualizar as atualizar_autorizado
 from api.exceptions import DatabaseUnavailableError, DemandaNotFoundError, DemandaValidationError
 from api.schemas.objeto_ahp import AprovarDemandaSchema, ReprovarDemandaSchema
 from api.schemas.programa import ProgramaCreateSchema, ProgramaResponseSchema, ProgramaUpdateSchema
@@ -24,6 +26,7 @@ def criar_programa(
     user: SessionUser = Depends(require_operator),
 ) -> ProgramaResponseSchema:
     """Cadastra um novo programa (nível 2)."""
+    authz.exigir_criacao(user, body)
     try:
         return programa_service.criar_programa(body, usuario_id=user.id)
     except DemandaValidationError as exc:
@@ -43,6 +46,7 @@ async def criar_programa_com_arquivo_geometria(
         body = ProgramaCreateSchema.model_validate_json(payload)
     except ValidationError as exc:
         raise HTTPException(status_code=422, detail=exc.errors()) from exc
+    authz.exigir_criacao(user, body)
     arquivo = await receber_arquivo_geometria(arquivo_geometria, body.geometria)
     try:
         return programa_service.criar_programa(body, usuario_id=user.id, arquivo_geometria=arquivo)
@@ -75,7 +79,7 @@ def listar_programas_vinculaveis() -> list[OpcaoVinculacaoSchema]:
 def listar_programas_internos(
     _user: SessionUser = Depends(require_authenticated),
 ) -> list[ProgramaResponseSchema]:
-    return programa_service.listar_programas(incluir_auditoria=True)
+    return authz.filtrar_cadastros(_user, programa_service.listar_programas(incluir_auditoria=True))
 
 
 @router.get("/internas/{codigo}", response_model=ProgramaResponseSchema)
@@ -83,7 +87,9 @@ def obter_programa_interno(
     codigo: str,
     _user: SessionUser = Depends(require_authenticated),
 ) -> ProgramaResponseSchema:
-    return programa_service.obter_programa(codigo, incluir_auditoria=True)
+    item = programa_service.obter_programa(codigo, incluir_auditoria=True)
+    authz.exigir_cadastro(_user, item)
+    return item
 
 
 @router.get("/{codigo}", response_model=ProgramaResponseSchema)
@@ -144,14 +150,11 @@ def reprovar_programa(
 def atualizar_programa(
     codigo: str,
     body: ProgramaUpdateSchema,
-    user: SessionUser = Depends(require_demand_analyst),
+    user: SessionUser = Depends(require_authenticated),
 ) -> ProgramaResponseSchema:
     """Atualiza um programa existente."""
     try:
-        return programa_service.atualizar_programa(
-            codigo, body, usuario_id=user.id,
-            status_livre_gestor=user.tipo_usuario.strip().upper() in {"GESTOR", "ADMIN"},
-        )
+        return atualizar_autorizado('programa', codigo, body, user)
     except DemandaNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except DemandaValidationError as exc:

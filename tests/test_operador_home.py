@@ -38,10 +38,11 @@ def test_operator_home_requires_login_and_preserves_destination() -> None:
     assert parse_qs(location.query)["next"] == ["/restrict/operador/"]
 
 
-def test_operator_home_is_limited_to_operator_profile() -> None:
+def test_operator_home_allows_read_only_demonstration() -> None:
     response = _client("VISUALIZADOR").get("/restrict/operador/")
 
-    assert response.status_code == 403
+    assert response.status_code == 200
+    assert 'data-access-profile="VISUALIZADOR"' in response.text
 
 
 def test_operator_home_contains_only_requested_groups_in_order() -> None:

@@ -358,6 +358,7 @@
         if (f.inverter) q.set("filtro_inverter", "true");
       }
       const data = await jsonFetch(`${API}/tabelas/${state.esquema}/${state.tabela}?${q}`);
+      refs.host.dataset.policyReadonly = String(!data.pode_editar);
       if (revisao !== revisaoTabela) return false;
       if (state.pagina > data.paginas) { state.pagina = data.paginas; return carregarTabela(notificar); }
       Object.assign(state, {
@@ -374,6 +375,7 @@
         explicacaoAdversidade,
       ].filter(Boolean).join(" · ");
       renderTabela();
+      window.SICARDAccess?.scan(refs.host);
       return true;
     } catch (error) {
       if (revisao !== revisaoTabela) return false;

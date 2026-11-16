@@ -625,8 +625,8 @@ def test_clique_registra_somente_codigo_do_destinatario(ambiente, monkeypatch):
 
 
 
-@pytest.mark.parametrize("perfil,status", [(None, 401), ("VISUALIZADOR", 403), ("OPERADOR", 403), ("ANALISTA", 200), ("GESTOR", 200), ("ADMIN", 200)])
-def test_permissoes_rotas_de_convites(ambiente, smtp, registros, perfil, status):
+@pytest.mark.parametrize("perfil,leitura,escrita", [(None,401,401), ("VISUALIZADOR",200,403), ("OPERADOR",403,403), ("ANALISTA",200,403), ("GESTOR",200,200), ("ADMIN",200,403)])
+def test_permissoes_rotas_de_convites(ambiente, smtp, registros, perfil, leitura, escrita):
     app = FastAPI()
     app.include_router(router, prefix="/api")
     headers = {}
@@ -635,11 +635,11 @@ def test_permissoes_rotas_de_convites(ambiente, smtp, registros, perfil, status)
         headers = {"Authorization": f"Bearer {create_token(user)}"}
     with TestClient(app) as client:
         base = f"/api/ahp/comparacao-colaborativa/ambientes/{ambiente['id']}/emails"
-        assert client.get(base, headers=headers).status_code == status
+        assert client.get(base, headers=headers).status_code == leitura
         response = client.post(base + "/enviar", headers=headers, json=payload(ambiente).model_dump(mode="json"))
-        assert response.status_code == status
-        if perfil not in {"ANALISTA", "GESTOR", "ADMIN"}:
-            assert client.post(base + "/confirmacoes", headers=headers).status_code == status
-            assert client.get(base + "/monitoramento", headers=headers).status_code == status
-            assert client.post(base + "/resposta/enviar", headers=headers, json={"destinatario": DEST}).status_code == status
+        assert response.status_code == escrita
+        if escrita != 200:
+            assert client.post(base + "/confirmacoes", headers=headers).status_code == escrita
+            assert client.get(base + "/monitoramento", headers=headers).status_code == leitura
+            assert client.post(base + "/resposta/enviar", headers=headers, json={"destinatario": DEST}).status_code == escrita
             smtp.assert_not_called()

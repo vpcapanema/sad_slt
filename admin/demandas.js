@@ -308,10 +308,10 @@
       return;
     }
     const hasSel = selected.size > 0;
-    $("#btn-bulk-edit").disabled = !hasSel || editMode;
+    $("#btn-bulk-edit").disabled = !hasSel || editMode || !SLTAdminAuth.can('editDemandTable');
     $("#btn-bulk-cancel").disabled = !editMode;
-    $("#btn-bulk-save").disabled = !editMode || !hasSel;
-    $("#btn-bulk-delete").disabled = !hasSel || editMode;
+    $("#btn-bulk-save").disabled = !editMode || !hasSel || !SLTAdminAuth.can('editDemandTable');
+    $("#btn-bulk-delete").disabled = !hasSel || editMode || !SLTAdminAuth.can('deleteDemand');
   }
 
   function resetSelection() {
@@ -408,7 +408,7 @@
 
   function wrapSelect(field, innerHtml, narrow) {
     const narrowCls = narrow ? " cell-select--narrow" : "";
-    return `<div class="cell-edit-wrap"><select class="cell-select${narrowCls}" data-edit-field="${field}">${innerHtml}</select></div>`;
+    return `<div class="cell-edit-wrap"><select class="cell-select${narrowCls}" data-permission="${field === 'status' ? 'revertStatus' : 'editDemand'}" data-edit-field="${field}">${innerHtml}</select></div>`;
   }
 
   function renderClassificacaoEdit(d) {
@@ -494,7 +494,7 @@
         return wrapSelect("pessoa_id", `<option value="">—</option>${pessoasOptions(d.instituicao_id, pessoaId)}`);
       }
       case "status":
-        return wrapSelect("status", statusOptions(d.status), true);
+        return '<div>' + wrapSelect("status", statusOptions(d.status), true) + '</div><div><input type="text" class="ami-inline-input" data-permission="revertStatus" data-edit-field="justificativa_status" aria-label="Justificativa da reversão de status" placeholder="Justificativa da reversão" minlength="5" maxlength="2000"></div>';
       case "classificacao":
         return renderClassificacaoEdit(d);
       case "complementos":
@@ -505,7 +505,7 @@
   }
 
   function renderCell(col, d) {
-    if (editMode && selected.has(d.id) && col.editable) {
+    if (editMode && selected.has(d.id) && col.editable && SLTAdminAuth.can(col.editable === 'status' ? 'revertStatus' : 'editDemand')) {
       return renderEditableCell(col.editable, d);
     }
     return col.value(d);
@@ -784,9 +784,11 @@
   function collectChangedPayload(tr, d) {
     const atual = collectPayload(tr, d);
     const inicial = tr.initialEditPayload || {};
-    return Object.fromEntries(Object.entries(atual).filter(([campo, valor]) =>
+    const alterados = Object.fromEntries(Object.entries(atual).filter(([campo, valor]) =>
       JSON.stringify(valor) !== JSON.stringify(inicial[campo])
     ));
+    if ('status' in alterados) alterados.justificativa_status = val(tr, 'justificativa_status').trim();
+    return alterados;
   }
 
   function deleteConfirmMessage() {
@@ -801,6 +803,7 @@
   }
 
   async function saveSelected() {
+    if (!SLTAdminAuth.can('editDemandTable')) { window.SICARDAccess?.denied('editar demandas'); return; }
     const codigos = [...selected];
     if (!codigos.length) return;
     $("#btn-bulk-save").disabled = true;
@@ -810,6 +813,10 @@
         const d = rows.find((r) => r.id === codigo);
         if (!tr || !d) continue;
         const payload = collectChangedPayload(tr, d);
+        if ('status' in payload && payload.justificativa_status.length < 5) {
+          StatusFeedback.erro({title:'Justificativa necessária', message:'Informe uma justificativa com pelo menos 5 caracteres para reverter o status.', status:422});
+          return;
+        }
         if (Object.keys(payload).length) await SLTAdminApi.updateDemandaByTipo(tipo, codigo, payload);
       }
       SLTAdminUi.showToast("Alterações salvas.");
@@ -830,6 +837,7 @@
   }
 
   async function deleteSelected() {
+    if (!SLTAdminAuth.can('deleteDemand')) { window.SICARDAccess?.denied('excluir demandas'); return; }
     const codigos = [...selected].filter((id) => id !== CODIGO_PLANO_OUTROS && id !== CODIGO_PROGRAMA_OUTROS);
     if (!codigos.length) {
       SLTAdminUi.showToast("Nenhum registro válido para excluir.", true);
@@ -865,6 +873,7 @@
   }
 
   function enterEditMode() {
+    if (!SLTAdminAuth.can('editDemandTable')) { window.SICARDAccess?.denied('editar demandas'); return; }
     if (!selected.size) return;
     editMode = true;
     renderTable();

@@ -12,11 +12,14 @@ const source = fs.readFileSync("assets/js/access-mode.js", "utf8");
 function scenario(profile, module) {
   let observer;
   const events = {};
+  const feedback = [];
+  const grants = {GESTOR:{'mad.operar':'todos'}, ANALISTA:{'mocad.analisar':'todos'}, OPERADOR:{}, VISUALIZADOR:{}};
   function element(id, text, read = false, scopedModule = null) {
     const attrs = {};
     return {
       id, title: "", textContent: text, dataset: {}, disabled: false,
       closest(selector) {
+        if (selector.startsWith('button,input')) return this;
         if (selector === "[data-access-module]") return scopedModule
           ? {dataset: {accessModule: scopedModule}, querySelector: () => ({id: "local-notice"})}
           : null;
@@ -27,6 +30,7 @@ function scenario(profile, module) {
       hasAttribute: key => key in attrs,
       getAttribute: key => attrs[key] || null,
       setAttribute: (key, value) => { attrs[key] = value; },
+      removeAttribute: key => { delete attrs[key]; },
       querySelectorAll: () => [],
     };
   }
@@ -36,7 +40,7 @@ function scenario(profile, module) {
   const nested = element("save", "Salvar", false, module === "mocad" ? "mad" : "mocad");
   const items = [write, view, filter, nested];
   const document = {
-    currentScript: {dataset: {accessProfile: profile, accessModule: module}},
+    currentScript: {dataset: {accessProfile: profile, accessModule: module, policy: JSON.stringify({permissoes:grants[profile],perfil_nome:profile})}},
     readyState: "complete", body: {},
     querySelector: () => null, getElementById: () => null,
     querySelectorAll: selector => selector === "[data-access-module]:not(script)" ? [] : items,
@@ -44,38 +48,39 @@ function scenario(profile, module) {
   };
   vm.runInNewContext(source, {
     document,
+    window: {StatusFeedback:{erro:data=>feedback.push(data)}},
     MutationObserver: class {
       constructor(callback) { observer = callback; }
       observe() {}
     },
   });
-  return {write, view, filter, nested, observer, events};
+  return {write, view, filter, nested, observer, events, feedback};
 }
 for (const [profile, module] of [["ANALISTA", "mad"], ["GESTOR", "mocad"]]) {
   const state = scenario(profile, module);
-  assert.equal(state.write.disabled, true);
+  assert.equal(state.write.disabled, false);
   assert.equal(state.write.getAttribute("aria-disabled"), "true");
-  assert.equal(state.write.getAttribute("aria-describedby"), "access-mode-notice");
-  assert.match(state.write.title, /Somente visualização/);
+  assert.match(state.write.title, /Ação não autorizada/);
   assert.equal(state.view.disabled, false);
   assert.equal(state.filter.disabled, false);
   assert.equal(state.nested.disabled, false);
   state.write.disabled = false;
   state.write.matches = selector => selector.startsWith("button,");
   state.observer([{type: "attributes", target: state.write}]);
-  assert.equal(state.write.disabled, true);
+  assert.equal(state.write.getAttribute('aria-disabled'), 'true');
   const added = scenario(profile, module).write;
   added.disabled = false;
   added.matches = selector => selector.startsWith("button,");
   state.observer([{type: "childList", addedNodes: [added]}]);
-  assert.equal(added.disabled, true);
+  assert.equal(added.getAttribute('aria-disabled'), 'true');
   let prevented = false;
   state.events.submit({target: state.write, preventDefault() {prevented = true;}, stopImmediatePropagation() {}});
   assert.equal(prevented, true);
+  assert.match(state.feedback[0].message, /não possui a permissão necessária/);
 }
 assert.equal(scenario("GESTOR", "mad").write.disabled, false);
 assert.equal(scenario("ANALISTA", "mocad").write.disabled, false);
-assert.equal(scenario("OPERADOR", "mad").write.disabled, true);
+assert.equal(scenario("OPERADOR", "mad").write.getAttribute('aria-disabled'), 'true');
 """
     result = subprocess.run(["node", "-e", script], capture_output=True, text=True, check=False)
     assert result.returncode == 0, result.stderr

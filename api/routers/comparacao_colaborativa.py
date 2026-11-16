@@ -95,7 +95,8 @@ def _base_url(request: Request) -> str:
 
 
 def _gestao(user: SessionUser) -> bool:
-    return user.tipo_usuario in {"GESTOR", "ADMIN"}
+    from api.services.autorizacao import permite
+    return permite(user, 'mad.operar')
 
 
 @router.get("/ambientes", response_model=list[AmbienteColaborativoResponseSchema])
