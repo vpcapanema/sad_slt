@@ -25,9 +25,18 @@ from api.deps.auth import require_admin
 from api.path_policy import project_path
 from api.repositories import sigma_usuario_repository
 from api.services.session_service import SessionUser
+from api.services import usuarios_sigma_automaticos
 
 router = APIRouter(prefix="/admin", tags=["admin-tabelas"])
 logger = logging.getLogger(__name__)
+
+
+@router.get("/usuarios/sincronizacao")
+def estado_sincronizacao_usuarios(
+    response: Response, _user: SessionUser = Depends(require_admin),
+) -> dict[str, object]:
+    response.headers["Cache-Control"] = "no-store"
+    return usuarios_sigma_automaticos.estado()
 
 # Esquemas liberados para a área do administrador.
 ESQUEMAS_PERMITIDOS: tuple[str, ...] = (

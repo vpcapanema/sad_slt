@@ -101,6 +101,23 @@ function Test-SchemaReady([string]$Query) {
     return $false
 }
 
+function Invoke-SigmaPolicyMigration {
+    $python = Join-Path $Root ".venv\Scripts\python.exe"
+    $previousDsn = $env:SLT_DATABASE_URL
+    try {
+        if (-not $env:SLT_DATABASE_URL) {
+            $encodedUser = [Uri]::EscapeDataString($DbUser)
+            $encodedPassword = [Uri]::EscapeDataString($DbPass)
+            $env:SLT_DATABASE_URL = "postgresql://${encodedUser}:${encodedPassword}@${HostAddr}:${Port}/${DbName}"
+        }
+        & $python (Join-Path $Root "scripts\sincronizar_usuarios_sigma.py") --migrar
+        if ($LASTEXITCODE -ne 0) { throw "Falha ao aplicar migration 167 e sincronizar usuarios SIGMA" }
+    } finally {
+        if ($null -ne $previousDsn) { $env:SLT_DATABASE_URL = $previousDsn }
+        else { Remove-Item Env:SLT_DATABASE_URL -ErrorAction SilentlyContinue }
+    }
+}
+
 function Invoke-DockerPsqlFile {
     param(
         [string]$ContainerName,
@@ -109,6 +126,10 @@ function Invoke-DockerPsqlFile {
         [string]$User
     )
 
+    if ((Split-Path -Leaf $FilePath) -eq "167_referenciar_perfis_sigma.sql") {
+        Invoke-SigmaPolicyMigration
+        return
+    }
     Get-Content -Raw -Encoding UTF8 $FilePath | docker exec -i $ContainerName psql -U $User -d $Database -v ON_ERROR_STOP=1
     if ($LASTEXITCODE -ne 0) { throw "docker psql falhou ($FilePath)" }
 }
@@ -119,6 +140,10 @@ function Invoke-PsqlFile {
         [string]$FilePath
     )
 
+    if ((Split-Path -Leaf $FilePath) -eq "167_referenciar_perfis_sigma.sql") {
+        Invoke-SigmaPolicyMigration
+        return
+    }
     $prev = $env:PGPASSWORD
     $env:PGPASSWORD = $DbPass
     try {
@@ -283,7 +308,9 @@ $migrations = @(
     "157_status_homologada_publicada.sql",
     "160_preservar_superficies_ao_excluir_hierarquizacao.sql",
     "161_nomes_elementos_storage.sql",
-    "164_representante_institucional.sql"
+    "164_representante_institucional.sql",
+    "166_politica_usuarios_sicard.sql",
+    "167_referenciar_perfis_sigma.sql"
 )
 
 if ($OnlyMigration) {
@@ -461,6 +488,18 @@ if (-not $OnlyMigration) {
     }
 }
 
+if (-not $OnlyMigration -and "166_politica_usuarios_sicard.sql" -notin $migrations) {
+    if (-not (Test-SchemaReady "SELECT to_regclass('usuarios.perfil') IS NOT NULL AND to_regclass('usuarios.permissao') IS NOT NULL AND to_regclass('usuarios.perfil_permissao') IS NOT NULL AND to_regclass('usuarios.usuario_perfil') IS NOT NULL;")) {
+        $migrations += "166_politica_usuarios_sicard.sql"
+    }
+}
+
+if (-not $OnlyMigration -and "167_referenciar_perfis_sigma.sql" -notin $migrations) {
+    if (-not (Test-SchemaReady "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='usuarios' AND table_name='perfil' AND column_name='codigo' AND data_type='uuid') AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='usuarios' AND table_name='usuario_perfil' AND column_name='sigma_sincronizado_em');")) {
+        $migrations += "167_referenciar_perfis_sigma.sql"
+    }
+}
+
 if (-not $OnlyMigration -and "153_central_pendencias.sql" -notin $migrations) {
     if (-not (Test-SchemaReady "SELECT count(*)=6 FROM information_schema.columns WHERE table_schema='demandas' AND table_name='solicitacao_complementacao_demanda' AND column_name IN ('parecer_tecnico','mensagem_gestor','revisao','atualizado_por','atualizado_em','historico_edicoes');")) {
         $migrations += "153_central_pendencias.sql"
@@ -491,6 +530,10 @@ SELECT EXISTS (
 
 function Invoke-PsycopgFile {
     param([string]$FilePath)
+    if ((Split-Path -Leaf $FilePath) -eq "167_referenciar_perfis_sigma.sql") {
+        Invoke-SigmaPolicyMigration
+        return
+    }
     $env:SLT_MIGRATION_FILE = $FilePath
     $python = Join-Path $Root ".venv\Scripts\python.exe"
     & $python -c 'import os, pathlib, psycopg; sql=pathlib.Path(os.environ[''SLT_MIGRATION_FILE'']).read_text(encoding=''utf-8-sig''); c=psycopg.connect(os.environ[''SLT_DATABASE_URL'']); c.execute(sql); c.commit(); c.close()'

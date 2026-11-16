@@ -50,6 +50,20 @@ def get_settings() -> Settings:
     )
 
 
+class UsuariosSyncSettings(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    habilitado: bool = True
+    intervalo: int = Field(default=60, ge=10, le=3600)
+
+
+def get_usuarios_sync_settings() -> UsuariosSyncSettings:
+    return UsuariosSyncSettings.model_validate({
+        "habilitado": os.getenv("SICARD_USUARIOS_SYNC_ENABLED", "true"),
+        "intervalo": os.getenv("SICARD_USUARIOS_SYNC_INTERVAL_SECONDS", "60"),
+    })
+
+
 class EmailSettings(BaseModel):
     model_config = ConfigDict(frozen=True)
 

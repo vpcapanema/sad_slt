@@ -86,6 +86,12 @@ def email_desabilitado(monkeypatch):
     monkeypatch.setenv("SICARD_EMAIL_ENABLED", "false")
     monkeypatch.setenv("SICARD_EMAIL_CONFIRMATIONS_AUTO_ENABLED", "false")
 
+
+@pytest.fixture(autouse=True)
+def sincronizacao_usuarios_desabilitada(monkeypatch):
+    # Testes HTTP não devem iniciar conciliação dos bancos oficiais.
+    monkeypatch.setenv("SICARD_USUARIOS_SYNC_ENABLED", "false")
+
 @pytest.fixture
 def execucoes_sinteticas(monkeypatch):
     from datetime import datetime, timezone

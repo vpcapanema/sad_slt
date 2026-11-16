@@ -11,6 +11,7 @@ from api.storage_policy import configurar_temporarios
 configurar_temporarios()
 
 from urllib.parse import quote, urlencode
+from contextlib import asynccontextmanager
 import json
 import os
 
@@ -30,8 +31,15 @@ from api.middleware.subpath_rewrite import SubpathRewriteMiddleware
 from api.path_policy import project_path, relative_path
 from api.routers import api_router
 from api.services import email_convites as convites_service, storage_remoto
-from api.services.email_confirmacoes_automaticas import lifespan
+from api.services.email_confirmacoes_automaticas import lifespan as email_lifespan
+from api.services.usuarios_sigma_automaticos import lifespan as usuarios_lifespan
 from api.services.session_service import SessionUser, cookie_name
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    async with email_lifespan(app), usuarios_lifespan(app):
+        yield
+
 
 app = FastAPI(title="SLT — Apoio à Tomada de Decisão", version="1.1.0", lifespan=lifespan)
 registrar_tratadores(app)
