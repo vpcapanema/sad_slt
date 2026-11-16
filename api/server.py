@@ -266,6 +266,11 @@ def pagina_visao_geral_sicard(request: Request) -> Response:
     return render_page(request, "paginas/documentacao/visao-geral.html")
 
 
+@app.get("/public/documentacao/processo-hierarquizacao/", include_in_schema=False)
+def pagina_processo_hierarquizacao(request: Request) -> Response:
+    return render_page(request, "paginas/documentacao/processo-hierarquizacao.html")
+
+
 @app.get("/public/documentacao/tutoriais/", include_in_schema=False)
 def pagina_tutoriais_publicos(request: Request) -> Response:
     from api.services.tutoriais_publicos import catalogo

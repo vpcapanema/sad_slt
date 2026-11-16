@@ -7,7 +7,7 @@
 {% block classes_body %}module-index-page documentation-home visao-geral-page{% endblock %}
 {% block estilos_pagina %}
 <link rel="stylesheet" href="/public/cadastro/index.css?v=20261022-cards-hover-pressionado">
-<link rel="stylesheet" href="/assets/css/visao-geral.css?v=20261022-2">
+<link rel="stylesheet" href="/assets/css/visao-geral.css?v=20261116-leitura">
 {% endblock %}
 
 {# Fontes: README.md; documentacao/geral/README_REORGANIZACAO_PLATAFORMA.md
@@ -34,7 +34,7 @@
     <p class="module-eyebrow">Conceitos e funcionamento</p>
     <h1>Visão geral do SICARD</h1>
     <p>Um percurso pelo Sistema Inteligente de Cadastro e Ranking de Demandas: por que existe, como organiza a informação e como conecta cadastro, análise, hierarquização e acompanhamento.</p>
-    <p class="visao-revisao">Versão 1.1 · Revisão em <time datetime="2026-10-22">22/10/2026</time></p>
+    <p class="visao-revisao">Versão 1.2 · Revisão em <time datetime="2026-11-16">16/11/2026</time></p>
   </header>
 
   <div class="visao-layout">
@@ -54,8 +54,8 @@
       <section class="secao-apresentacao visao-section" id="apresentacao" aria-labelledby="apresentacao-titulo">
         <p class="module-eyebrow">Finalidade</p>
         <h2 id="apresentacao-titulo">O SICARD em poucas palavras</h2>
-        <p>O SICARD é uma aplicação de apoio à decisão no domínio de logística e transportes. Reúne o cadastro de planos, programas e projetos, a análise das informações apresentadas, a avaliação multicritério e territorial e o acompanhamento dos objetos de demanda.</p>
-        <p>Para a Subsecretaria de Logística e Transporte (SLT), essa organização conecta a proposta cadastrada à informação utilizada na avaliação. Para operadores, analistas e gestores, oferece um ambiente de trabalho compartilhado; para o público, disponibiliza as informações selecionadas para publicação.</p>
+        <p>O SICARD integra o cadastro, a análise, a hierarquização e o acompanhamento de planos, programas e projetos, denominados objetos de demanda. Sua finalidade é organizar informações que subsidiem a alocação de recursos e esforços públicos, tendo como referência a melhoria das condições de vida da população.</p>
+        <p>Na aplicação voltada à Subsecretaria de Logística e Transporte (SLT), o sistema relaciona as propostas às informações necessárias à avaliação e mantém a continuidade de seus registros. Operadores, analistas e gestores compartilham esse acervo conforme suas atribuições, enquanto a consulta pública apresenta as informações selecionadas para divulgação. Essa articulação entre participantes, dados e avaliações constitui a base de funcionamento do SICARD.</p>
         <figure class="visao-diagrama" aria-labelledby="contexto-legenda">
           <div class="visao-centro"><strong>SICARD</strong><span>Cadastro, análise, hierarquização e acompanhamento</span></div>
           <ul class="visao-mapa">
@@ -71,7 +71,7 @@
       <section class="secao-origem visao-section" id="origem" aria-labelledby="origem-titulo">
         <p class="module-eyebrow">Da necessidade à organização atual</p>
         <h2 id="origem-titulo">Origem e evolução</h2>
-        <p>A concepção do SICARD está vinculada ao Plano de Logística Integrada do Estado de São Paulo (PLI-SP). Seu ponto de partida é um problema de planejamento: organizar propostas heterogêneas e compará-las de maneira explícita, considerando condições territoriais, características próprias e diferentes estágios de maturidade.</p>
+        <p>A concepção do SICARD está vinculada ao Plano de Logística e Investimentos do Estado de São Paulo (PLI-SP 2050). Seu ponto de partida é um problema de planejamento: organizar propostas heterogêneas e compará-las de maneira explícita, considerando condições territoriais, características próprias e diferentes estágios de maturidade.</p>
         <p>Uma lista de propostas, isoladamente, não explica quais informações sustentam cada avaliação. O desenho do sistema conecta o registro do objeto de demanda, a qualificação de seus dados e a construção dos critérios utilizados para estabelecer prioridades.</p>
         <p>A evolução conceitual se expressa na organização atual: o cadastro dá identidade e continuidade ao registro; a análise qualifica a informação; o apoio à decisão articula critérios, julgamentos e dados espaciais; a transparência permite acompanhar o conteúdo publicado. O objeto de demanda é o elo entre essas atividades.</p>
         <p>A metodologia também separa perguntas diferentes: onde existem restrições ou riscos, quais condições territoriais favorecem a avaliação e quais atributos próprios distinguem os objetos de demanda. Essa separação fundamenta as três fases, independentes e combináveis, do motor de hierarquização.</p>
@@ -91,7 +91,8 @@
 
       <section class="secao-modulos visao-section" id="modulos" aria-labelledby="modulos-titulo">
         <h2 id="modulos-titulo">Organização do sistema</h2>
-        <p>O sistema se organiza em três blocos funcionais correlacionados: MOCAD, MAD e Transparência e acompanhamento. O geoprocessamento é uma abordagem transversal de apoio, crucial para viabilizar as análises espacialmente explícitas do SICARD. Suas ferramentas atuam de maneira diferenciada em todas as etapas do processo.</p>
+        <p>O funcionamento do sistema se organiza em três blocos complementares: MOCAD, MAD e Transparência e acompanhamento. O primeiro estrutura e qualifica os registros; o segundo utiliza essas informações na avaliação das demandas; o terceiro disponibiliza os resultados selecionados para consulta pública.</p>
+        <p>O geoprocessamento constitui uma abordagem transversal de apoio em todas as etapas do processo. Suas ferramentas viabilizam análises espacialmente explícitas, nas quais a localização e as relações territoriais integram a interpretação dos dados e dos objetos de demanda.</p>
         <figure class="visao-diagrama" aria-labelledby="modulos-legenda">
           <ul class="visao-mapa visao-mapa--modulos">
             <li><strong>MOCAD</strong><span>Módulo de Cadastro e Análise de Demandas: registro, consulta, complementação e análise dos objetos de demanda.</span></li>
@@ -104,7 +105,7 @@
 
       <section class="secao-participantes visao-section" id="participantes" aria-labelledby="participantes-titulo">
         <h2 id="participantes-titulo">Participantes e responsabilidades</h2>
-        <p>A consulta pública é aberta. As atividades operacionais utilizam autenticação e permissões associadas aos perfis. O perfil identifica uma responsabilidade; cada operação verifica a autorização correspondente.</p>
+        <p>A atuação dos participantes acompanha as responsabilidades de cada etapa. A consulta pública é aberta, enquanto o cadastro, a análise e a gestão utilizam autenticação e permissões específicas. Os perfis organizam essas atribuições, e a autorização de cada operação determina quais atividades o participante pode executar.</p>
         <div class="visao-tabela">
           <table>
             <caption>Papéis no SICARD</caption>
@@ -123,7 +124,7 @@
 
       <section class="secao-trajetoria visao-section" id="trajetoria" aria-labelledby="trajetoria-titulo">
         <h2 id="trajetoria-titulo">Trajetória do objeto de demanda</h2>
-        <p>O ciclo de vida organiza o acompanhamento do registro. Cadastro e análise, hierarquização e execução são etapas desse ciclo, distintas das fases metodológicas utilizadas dentro de uma avaliação.</p>
+        <p>O ciclo de vida organiza a continuidade do objeto de demanda desde seu registro até o acompanhamento de sua implementação. Cadastro e análise qualificam as informações; a hierarquização avalia a prioridade relativa; e a execução constitui uma etapa posterior de realização da proposta. Essas etapas do ciclo de vida são distintas das fases metodológicas aplicadas dentro de uma hierarquização.</p>
         <figure class="visao-diagrama" aria-labelledby="trajetoria-legenda">
           <ol class="visao-fluxo">
             <li><strong>Registrar</strong><span>O operador identifica o objeto de demanda e informa seus dados e vínculos.</span></li>
@@ -141,14 +142,16 @@
       <section class="secao-hierarquizacao visao-section" id="hierarquizacao" aria-labelledby="hierarquizacao-titulo">
         <h2 id="hierarquizacao-titulo">Como funciona a hierarquização</h2>
         <p>Hierarquizar é avaliar e ordenar um conjunto definido de objetos de demanda. A <strong>rodada de hierarquização</strong> relaciona o universo, as configurações, as fases selecionadas e os resultados. Assim, uma posição pode ser interpretada junto das condições que a produziram.</p>
+        <p>A <a href="/public/documentacao/processo-hierarquizacao/">documentação conceitual do processo de hierarquização</a> aprofunda a elegibilidade, a favorabilidade, a prioridade e a síntese do ranking, complementando esta visão geral do sistema.</p>
         <h3>Critérios e julgamentos AHP</h3>
         <p>O critério explicita o aspecto avaliado; a premissa fundamenta seu sentido; a variável e a métrica permitem observá-lo. No AHP — Método de Análise Hierárquica — comparações pareadas expressam a importância relativa entre critérios. As matrizes produzem pesos e indicadores de consistência.</p>
         <p>Nos julgamentos colaborativos, participantes convidados registram suas comparações. A consolidação reúne os julgamentos para análise; a homologação formaliza a configuração que poderá ser utilizada na avaliação. Os pesos representam importância, enquanto os atributos e indicadores descrevem o desempenho de cada objeto de demanda.</p>
-        <h3>Três perguntas, três fases</h3>
+        <h3>Organização da avaliação em três fases</h3>
+        <p>A avaliação distingue as condições de elegibilidade, a favorabilidade do contexto e a prioridade de implementação. Cada componente possui critérios e resultados próprios, cuja integração permite interpretar a contribuição das características territoriais e dos atributos de cada objeto para a ordenação final.</p>
         <dl class="visao-definicoes">
-          <div><dt>Fase 1 — Elegibilidade territorial</dt><dd>Quais restrições e riscos se sobrepõem à localização do objeto de demanda? A preparação e as interseções fornecem evidências para a leitura da elegibilidade.</dd></div>
-          <div><dt>Fase 2 — Favorabilidade territorial — município e rede rodoviária</dt><dd>Quais condições territoriais e da rede caracterizam a localização? Os produtos espaciais preservam a unidade de análise e os atributos das camadas utilizadas.</dd></div>
-          <div><dt>Fase 3 — Priorização de demandas por atributos</dt><dd>Como as características próprias do objeto de demanda, como prazo e maturidade, influenciam a prioridade? A avaliação considera pesos, regras de normalização e completude.</dd></div>
+          <div><dt>Fase 1 — Elegibilidade territorial</dt><dd>Identifica as restrições eliminatórias e qualifica a elegibilidade dos objetos não eliminados segundo sua exposição espacial aos riscos ambientais e territoriais considerados.</dd></div>
+          <div><dt>Fase 2 — Favorabilidade territorial — município e rede rodoviária</dt><dd>Relaciona as demandas aos índices de contexto calculados por município e por trecho rodoviário. A medida de agregação escolhida pelo usuário determina como os valores interceptados são representados no resultado de cada demanda.</dd></div>
+          <div><dt>Fase 3 — Priorização de demandas por atributos</dt><dd>Avalia indicadores e atributos próprios, incorpora a elegibilidade territorial e sintetiza esse resultado com as favorabilidades territorial e de rede. O Índice Geral de Priorização fundamenta o ranking de demandas.</dd></div>
         </dl>
         <figure class="visao-diagrama" aria-labelledby="rodada-legenda">
           <ol class="visao-fluxo">
@@ -159,7 +162,7 @@
           </ol>
           <figcaption id="rodada-legenda">4. Fluxo de uma hierarquização. As fases são independentes e combináveis: não é obrigatório executar a Fase 1, depois a 2 e depois a 3. A síntese considera as fases e regras selecionadas na rodada.</figcaption>
         </figure>
-        <p>Na bancada atual, as Fases 1 e 2 produzem interseções e consultas aos atributos das camadas. Na Fase 2, os índices e classes são preservados por fragmento; as estatísticas exploratórias apoiam sua leitura. A síntese e a homologação dos resultados registrados possuem comandos e decisões próprios.</p>
+        <p>Nas duas primeiras fases, as relações espaciais associam os objetos de demanda às condições representadas nas camadas. A Fase 2 preserva os índices e as classes de origem e registra a medida de agregação selecionada. A síntese integra os resultados calculados; a homologação e a publicação formalizam e divulgam a versão correspondente.</p>
       </section>
 
       <section class="secao-dados visao-section" id="dados" aria-labelledby="dados-titulo">
@@ -205,7 +208,7 @@
 
       <section class="secao-referencias visao-section" id="referencias" aria-labelledby="referencias-titulo">
         <h2 id="referencias-titulo">Aprofundar e aprender</h2>
-        <p>Esta visão geral conecta o sistema. Os fundamentos detalham a metodologia; o glossário define os termos; os tutoriais mostram a operação.</p>
+        <p>Esta visão geral apresenta a organização do SICARD e a relação entre seus principais fluxos. A documentação conceitual da hierarquização aprofunda as fases, os índices e suas interpretações; o glossário reúne as definições; e os tutoriais tratam da operação das ferramentas.</p>
         <div class="module-link-list">
           <a href="/public/documentacao/glossario/"><span>Glossário técnico-conceitual</span><i class="fa-solid fa-book-open" aria-hidden="true"></i></a>
           <a href="/public/documentacao/tutoriais/"><span>Tutoriais do SICARD</span><i class="fa-solid fa-circle-play" aria-hidden="true"></i></a>

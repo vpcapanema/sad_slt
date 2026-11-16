@@ -24,6 +24,7 @@ PAGES = (
     "/public/login/",
     "/public/documentacao/",
     "/public/documentacao/visao-geral/",
+    "/public/documentacao/processo-hierarquizacao/",
     "/public/documentacao/glossario/",
     "/public/documentacao/tutoriais/",
     "/public/documentacao/risco-restricao/",
@@ -94,6 +95,25 @@ def test_inventario_e_links_locais(client, path):
         assert resource.status_code in {
             200, 301, 302, 303, 307, 308
         }, (path, value)
+
+
+@pytest.mark.parametrize("prefix", ["", "/sicard"])
+def test_documentacao_conceitual_publica_e_navegavel(client, prefix):
+    headers = {"X-Forwarded-Prefix": prefix} if prefix else {}
+    path = "/public/documentacao/processo-hierarquizacao/"
+    home = client.get("/public/documentacao/", headers=headers)
+    assert f'href="{prefix}{path}"' in home.text
+    response = client.get(path, headers=headers)
+    assert response.status_code == 200
+    assert 'data-requer-autenticacao="true"' not in response.text
+    parser = Links()
+    parser.feed(response.text)
+    assert parser.h1 == 1
+    for fragment in re.findall(r'href="#([^"]+)"', response.text):
+        assert f'id="{fragment}"' in response.text
+    for destination in ("visao-geral/", "risco-restricao/", "glossario/"):
+        assert f'href="{prefix}/public/documentacao/{destination}"' in response.text
+    assert f'href="{prefix}/public/documentacao_favorabilidade_v2/"' in response.text
 
 
 @pytest.mark.parametrize("slug", ["diretorias", "planos", "frentes-pli", "eixos-pef"])
@@ -189,6 +209,7 @@ def test_hierarquizacao_tem_destinos_unicos_e_prefixados(client, prefix):
     parser.feed(section)
     destinations = (
         "/public/documentacao/visao-geral/",
+        "/public/documentacao/processo-hierarquizacao/",
         "/public/documentacao/risco-restricao/",
         "/public/documentacao_favorabilidade_v2/",
         "/public/documentacao/hierarquizacao/MODULO_FASE3_ATRIBUTOS_PROJETO_AJUSTE.md",
@@ -199,6 +220,7 @@ def test_hierarquizacao_tem_destinos_unicos_e_prefixados(client, prefix):
     assert len(parser.links) == len(set(parser.links))
     assert re.findall(r'<a\b[^>]*><span>([^<]+)</span>', section) == [
         "Visão geral do SICARD",
+        "Fundamentos da Hierarquização e Ranking",
         "Fundamentos da elegibilidade territorial — restrições e riscos",
         "Fundamentos da favorabilidade territorial e da rede rodoviária",
         "Especificação da priorização de demandas por atributos",

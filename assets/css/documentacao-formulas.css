@@ -1,0 +1,10 @@
+/* Base visual compartilhada das fórmulas da documentação. A tipografia do
+   texto explicativo acompanha o padrão de leitura da página que a utiliza. */
+.doc-formula {
+  margin: .9rem 0;
+  padding: .8rem 1rem;
+  border: 1px solid var(--pli-border, #d8dee4);
+  border-radius: .5rem;
+  background: #f7f9fa;
+  text-align: center;
+}

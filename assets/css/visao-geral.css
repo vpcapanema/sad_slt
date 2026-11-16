@@ -3,6 +3,12 @@
   text-align: left;
 }
 
+.visao-geral-page .visao-hero h1 {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
 .visao-geral-page main p {
   text-align: justify;
 }
@@ -10,6 +16,12 @@
 .visao-geral-page .visao-hero > a {
   color: inherit;
   text-underline-offset: .2em;
+}
+
+.visao-geral-page .visao-hero > p:not(.module-eyebrow, .visao-revisao) {
+  max-width: none;
+  margin: .75rem 0 1.25rem;
+  line-height: 1.75;
 }
 
 .visao-geral-page .visao-hero .visao-revisao {
@@ -83,15 +95,18 @@
 }
 
 .visao-geral-page .visao-section h3 {
-  margin: 1.5rem 0 .65rem;
+  margin: 1.75rem 0 .75rem;
   color: var(--pli-deep);
-  font-size: 1rem;
+  font-size: 1.05rem;
+  line-height: 1.45;
 }
 
-.visao-geral-page .visao-section > p {
-  max-width: 90ch;
-  margin: .75rem 0;
+.visao-geral-page .visao-section p:not(.module-eyebrow) {
+  width: 100%;
+  max-width: none;
+  margin: 0 0 1.25rem;
   line-height: 1.75;
+  text-align: justify;
 }
 
 .visao-geral-page .visao-diagrama {
@@ -135,7 +150,11 @@
   border: 1px solid #b2c4d1;
   border-radius: 6px;
   background: white;
-  line-height: 1.6;
+  line-height: 1.75;
+}
+
+.visao-geral-page :is(.visao-mapa, .visao-fluxo) li > span {
+  text-align: justify;
 }
 
 .visao-geral-page :is(.visao-mapa, .visao-fluxo) strong {
@@ -159,7 +178,8 @@
   margin-top: 1rem;
   color: var(--pli-text);
   font-size: .85rem;
-  line-height: 1.6;
+  line-height: 1.75;
+  text-align: justify;
 }
 
 .visao-geral-page .visao-definicoes {
@@ -178,8 +198,9 @@
 
 .visao-geral-page .visao-definicoes dd {
   margin: .5rem 0 0;
-  max-width: 90ch;
-  line-height: 1.7;
+  max-width: none;
+  line-height: 1.75;
+  text-align: justify;
 }
 
 .visao-geral-page .visao-tabela {

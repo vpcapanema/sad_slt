@@ -1,0 +1,291 @@
+{% extends "bases/base_conteudo.html" %}
+{% set subtitulo = "Documentação do sistema" %}
+{% set navegacao = "publica" %}
+{% set requer_autenticacao = false %}
+{% block titulo %}Fundamentos da Hierarquização e Ranking — SICARD{% endblock %}
+{% block descricao %}Fundamentos conceituais da hierarquização no SICARD: elegibilidade territorial, favorabilidade, prioridade, índices, ranking, homologação e publicação.{% endblock %}
+{% block classes_body %}module-index-page documentation-home visao-geral-page hierarquizacao-conceitual-page{% endblock %}
+{% block estilos_pagina %}
+<link rel="stylesheet" href="/public/cadastro/index.css?v=20261022-cards-hover-pressionado">
+<link rel="stylesheet" href="/assets/css/visao-geral.css?v=20261116-leitura">
+<link rel="stylesheet" href="/assets/css/documentacao-formulas.css?v=20261116-1">
+<link rel="stylesheet" href="/assets/css/documentacao-hierarquizacao.css?v=20261116-2">
+{% endblock %}
+
+{% set capitulos = [
+  ("introducao", "Introdução e contextualização"),
+  ("apresentacao", "Finalidade e objeto de estudo"),
+  ("fundamentos", "Critérios, índices e escolhas"),
+  ("fase-1", "Fase 1 — Elegibilidade territorial"),
+  ("fase-2", "Fase 2 — Favorabilidade territorial"),
+  ("fase-3", "Fase 3 — Priorização por atributos"),
+  ("homologacao", "Homologação, ranking e publicação"),
+  ("interpretacao", "Como compreender os resultados"),
+  ("referencias", "Fundamentos e aplicações")
+] %}
+
+{% block conteudo %}
+<main class="conteudo-principal app-main module-index" id="processo-hierarquizacao">
+  <header class="module-hero visao-hero">
+    <a href="/public/documentacao/">← Documentação do sistema</a>
+    <p class="module-eyebrow">Documentação conceitual · Apoio à decisão</p>
+    <h1>Fundamentos da Hierarquização e Ranking</h1>
+    <p>Da elegibilidade à prioridade de implementação: o significado das três fases, dos índices e das escolhas que fundamentam o ranking dos objetos de demanda.</p>
+    <p class="visao-revisao">Versão 1.1 · Revisão em <time datetime="2026-11-16">16/11/2026</time></p>
+  </header>
+
+  <div class="visao-layout">
+    <aside class="visao-indice">
+      <nav aria-label="Nesta página">
+        <h2>Nesta página</h2>
+        <a class="visao-pular" href="#hierarquizacao-conteudo">Ir para o conteúdo</a>
+        <ol>
+          {% for id, titulo in capitulos %}
+          <li><a href="#{{ id }}">{{ titulo }}</a></li>
+          {% endfor %}
+        </ol>
+      </nav>
+    </aside>
+
+    <div class="visao-conteudo" id="hierarquizacao-conteudo" tabindex="-1">
+      <section class="secao-introducao visao-section" id="introducao" aria-labelledby="introducao-titulo">
+        <p class="module-eyebrow">Contexto da decisão</p>
+        <h2 id="introducao-titulo">Introdução e contextualização</h2>
+        <p>As necessidades da população se expressam em propostas de intervenção que disputam recursos, capacidade institucional e condições de implementação. A existência de uma demanda, por si só, não determina sua precedência: a escolha entre propostas exige considerar as necessidades que pretendem atender, os benefícios coletivos esperados e os fatores que favorecem ou limitam sua realização.</p>
+        <p>Essa comparação envolve objetos heterogêneos. Planos, programas e projetos podem apresentar diferentes abrangências, características, estágios de maturidade e relações com o território. Uma proposta pode estar inserida em um contexto favorável e, ainda assim, apresentar impedimentos ou condições próprias que afetem sua implementação. A avaliação precisa reconhecer essas diferenças e estabelecer critérios explícitos para interpretá-las dentro de um mesmo propósito decisório.</p>
+        <p>A hierarquização organiza essa análise ao distinguir a elegibilidade, a favorabilidade e a prioridade de implementação dos objetos de demanda. Os índices sintetizam os resultados segundo regras identificáveis, e o ranking apresenta sua ordenação relativa no universo avaliado. O significado dessa ordenação depende dos critérios, das fontes de informação e das escolhas de cálculo que a fundamentam.</p>
+        <p>No SICARD, essa estrutura orienta a avaliação das propostas e a formação de prioridades vinculadas à melhoria das condições de vida da população. Sua compreensão requer explicitar a finalidade do processo, o objeto e o fenômeno de estudo e a contribuição de cada fase. Esses fundamentos estabelecem a base para interpretar os índices e os resultados apresentados nas seções seguintes.</p>
+      </section>
+
+      <section class="secao-apresentacao visao-section" id="apresentacao" aria-labelledby="apresentacao-titulo">
+        <p class="module-eyebrow">Finalidade social</p>
+        <h2 id="apresentacao-titulo">Finalidade e objeto de estudo</h2>
+        <p>O SICARD é um <strong>sistema de apoio à decisão</strong> que hierarquiza objetos de demanda — planos, programas e projetos — por meio de índices, subsidiando a escolha de quais implementar e em que ordem. Sua finalidade é orientar a alocação de recursos e esforços públicos para contribuir com a melhoria das condições de vida da população.</p>
+        <p>Seu <strong>objeto de estudo</strong> são as demandas, suas características e suas relações com o território, a sociedade e a economia. O <strong>fenômeno de estudo</strong> compreende a elegibilidade, a favorabilidade e a prioridade desses objetos quanto à sua implementação. A natureza das propostas e os objetivos da avaliação delimitam os critérios pertinentes; o processo pode ser aplicado a demandas de diferentes origens e setores.</p>
+        <p>Cada componente desse fenômeno é trabalhado individualmente em uma fase específica. A <strong>Fase 1 — Elegibilidade Territorial</strong> identifica restrições eliminatórias e avalia os riscos classificatórios. A <strong>Fase 2 — Favorabilidade Territorial</strong> caracteriza o contexto territorial, social, econômico e da rede associado à implementação. A <strong>Fase 3 — Priorização por Atributos</strong> avalia indicadores e atributos dos objetos de demanda, incorpora a elegibilidade e integra os resultados de favorabilidade na síntese final.</p>
+        <p>Essas avaliações integram o <strong>processo de hierarquização</strong>, entendido como o fluxo de tarefas de filtragem, avaliação e ordenação dos objetos de demanda. Os índices expressam os resultados em escala adimensional de zero a um, com valores maiores indicando maior expressão da característica avaliada. A síntese realizada na Fase 3 produz o <strong>Índice Geral de Priorização</strong>, que fundamenta o <strong>ranking de demandas</strong>: o ordenamento sistematizado que apresenta a sequência sugerida para implementação.</p>
+        <figure class="visao-diagrama" aria-labelledby="fluxo-legenda">
+          <ol class="visao-fluxo">
+            <li><strong>Elegibilidade territorial</strong><span>Identifica impedimentos e gradua a exposição espacial aos riscos.</span></li>
+            <li><strong>Favorabilidade territorial</strong><span>Relaciona as demandas às condições municipais e da rede.</span></li>
+            <li><strong>Prioridade e síntese</strong><span>Avalia atributos, integra os resultados e define o ranking.</span></li>
+            <li><strong>Homologação e publicação</strong><span>Formaliza a versão dos resultados e permite sua divulgação.</span></li>
+          </ol>
+          <figcaption id="fluxo-legenda">O percurso conceitual de uma avaliação completa. As três fases têm finalidades próprias; a homologação e a publicação formalizam e divulgam seus resultados.</figcaption>
+        </figure>
+        <p>A interpretação desse ordenamento depende das escolhas que fundamentam a avaliação. A definição dos critérios, das medidas e dos pesos estabelece a relação entre as características observadas e a prioridade atribuída aos objetos de demanda.</p>
+      </section>
+
+      <section class="secao-fundamentos visao-section" id="fundamentos" aria-labelledby="fundamentos-titulo">
+        <h2 id="fundamentos-titulo">Critérios, índices e escolhas</h2>
+        <p>A hierarquização compara um conjunto definido de objetos de demanda em uma <strong>rodada de avaliação</strong>. O universo de objetos, os dados de referência, as premissas, os critérios e as regras de cálculo constituem o contexto comum dessa comparação. A posição de uma demanda deve ser lida junto desse contexto.</p>
+        <dl class="visao-definicoes">
+          <div><dt>Premissa</dt><dd>Explicita por que uma característica é relevante e em que sentido ela contribui para o objetivo da avaliação.</dd></div>
+          <div><dt>Critério</dt><dd>Identifica o aspecto segundo o qual os objetos ou seus contextos serão avaliados.</dd></div>
+          <div><dt>Indicador, atributo e métrica</dt><dd>Os indicadores e atributos descrevem características observáveis. A métrica estabelece como essas características são medidas ou expressas, com sua unidade, referência e abrangência.</dd></div>
+          <div><dt>Normalização</dt><dd>Converte medidas para uma escala comum. A orientação da escala acompanha a natureza do índice: valores maiores expressam maior elegibilidade, favorabilidade ou prioridade.</dd></div>
+          <div><dt>Peso</dt><dd>Expressa a importância relativa de um critério ou resultado na composição. Um peso elevado amplia sua influência, sem alterar o desempenho originalmente observado.</dd></div>
+          <div><dt>Agregação</dt><dd>Reúne vários valores em uma medida de síntese. A escolha entre média, moda, dispersão ou outra medida altera a pergunta respondida pelo resultado.</dd></div>
+        </dl>
+        <p>O procedimento de agregação determina o aspecto sintetizado pelo resultado. A média representa o nível médio dos valores; o máximo destaca a condição mais elevada; e o desvio-padrão descreve a heterogeneidade do conjunto. A identificação da medida, dos pesos e das fontes é, portanto, parte da interpretação dos índices e do ranking.</p>
+        <p>Esse processo tem início com a <strong>avaliação da elegibilidade territorial</strong>, na qual são identificadas as restrições que impedem o prosseguimento dos objetos de demanda e, para os não eliminados, é calculado o grau de elegibilidade em função da exposição espacial aos riscos considerados.</p>
+      </section>
+
+      <section class="secao-fase-1 visao-section" id="fase-1" aria-labelledby="fase-1-titulo">
+        <p class="module-eyebrow">Condições territoriais para implementação</p>
+        <h2 id="fase-1-titulo">Fase 1 — Elegibilidade Territorial</h2>
+        <p>A elegibilidade territorial estabelece as condições de admissibilidade dos objetos de demanda no processo de hierarquização. A análise distingue os impedimentos que excluem uma proposta das condições de risco que permitem graduar sua elegibilidade. Essa distinção antecede a comparação dos demais resultados e se fundamenta nas relações espaciais entre a área de intervenção e as camadas analisadas.</p>
+        <h3>1. Identificação do índice</h3>
+        <p>A fase produz o <strong>Índice de Elegibilidade Territorial (I<sub>ET</sub>)</strong>, calculado para os objetos de demanda que não apresentam restrições eliminatórias.</p>
+        <h3>2. Significado e alcance</h3>
+        <p>Expressa o grau de elegibilidade territorial do objeto de demanda para implementação, considerando sua exposição espacial aos riscos ambientais e territoriais analisados. As <strong>restrições têm caráter eliminatório</strong>; os <strong>riscos têm caráter classificatório</strong> para os objetos não eliminados.</p>
+        <p>A avaliação é <strong>espacialmente explícita</strong>: a exposição resulta da relação entre a localização e a extensão da área da demanda e as condições representadas nas camadas geoespaciais. A presença regional de um risco não implica exposição de toda proposta situada nessa região; é a interseção espacial que caracteriza a área efetivamente exposta.</p>
+        <h3>3. Interpretação</h3>
+        <p>É adimensional e varia de <strong>0 a 1</strong>. Quanto mais próximo de zero, menor a elegibilidade territorial; quanto mais próximo de um, maior a elegibilidade territorial. O índice representa a exposição espacial segundo as camadas consideradas e as hipóteses da avaliação.</p>
+        <p><strong>Eliminação por restrição, índice igual a zero e ausência de dados são situações distintas.</strong> Um índice igual a um indica ausência de sobreposição de área com os riscos analisados, desde que existam dados suficientes para essa conclusão. Um índice igual a zero corresponde à exposição integral a todas as camadas de risco do universo considerado. A condição eliminatória é verificada separadamente e não pode ser compensada por resultados favoráveis nos demais critérios.</p>
+        <h3>4. Método de cálculo</h3>
+        <p>É calculado por análise espacialmente explícita, a partir da <strong>inversão da escala da média aritmética</strong> das proporções da área de cada objeto de demanda que intersectam os territórios geradores de risco representados nas camadas geoespaciais analisadas.</p>
+        <p>Todas as camadas têm igual importância, e assume-se distribuição homogênea da condição de risco nas áreas mapeadas. Camadas distintas contribuem separadamente, mesmo quando atingem a mesma porção da demanda. Dentro de uma mesma camada, a área coincidente é contada uma única vez, evitando duplicação da mesma condição.</p>
+        <p>A média considera todas as camadas do universo de análise; aquelas sem interseção contribuem com zero. O número de camadas é <strong>comum às demandas comparadas</strong> e não corresponde apenas às camadas que interceptam cada objeto. A ausência de informação não é convertida automaticamente em ausência de exposição.</p>
+        <p>As restrições são verificadas previamente e têm caráter eliminatório. A proporção de área é a medida de exposição adotada; diferenças de intensidade ou gravidade entre riscos não recebem pesos adicionais nessa formulação.</p>
+        <h3>5. Formulação matemática</h3>
+        <div class="doc-formula hier-equacao">
+          <math xmlns="http://www.w3.org/1998/Math/MathML" display="block" aria-label="Índice de elegibilidade territorial igual a um menos a soma, de i igual a um até N, da área de interseção dividida por N vezes a área da demanda">
+            <mrow><msub><mi>I</mi><mtext>ET</mtext></msub><mo>(</mo><mi>D</mi><mo>)</mo><mo>=</mo><mn>1</mn><mo>−</mo><munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>N</mi></munderover><mfrac><mrow><mi>A</mi><mo>(</mo><mi>D</mi><mo>∩</mo><msub><mi>R</mi><mi>i</mi></msub><mo>)</mo></mrow><mrow><mi>N</mi><mo>·</mo><mi>A</mi><mo>(</mo><mi>D</mi><mo>)</mo></mrow></mfrac></mrow>
+          </math>
+          <p>A normalização está incorporada ao somatório. A operação <strong>1 −</strong> inverte o sentido da escala para expressar elegibilidade.</p>
+        </div>
+        <dl class="visao-definicoes">
+          <div><dt>D e A(D)</dt><dd>Geometria do objeto de demanda e sua área total, respectivamente.</dd></div>
+          <div><dt>R<sub>i</sub> e A(D ∩ R<sub>i</sub>)</dt><dd>Conjunto das áreas de risco da camada i e área de interseção da demanda com essa camada, sem duplicação de área dentro dela.</dd></div>
+          <div><dt>N</dt><dd>Número total de camadas de risco consideradas, comum às demandas comparadas. O cálculo exige N &gt; 0 e A(D) &gt; 0.</dd></div>
+        </dl>
+        <figure class="visao-diagrama" aria-labelledby="exemplo-elegibilidade">
+          <div class="visao-centro"><strong>Uma demanda, quatro camadas de risco</strong><span>Proporções de área exposta: 0,40 · 0,20 · 0 · 0</span></div>
+          <p>A exposição média é (0,40 + 0,20 + 0 + 0) ÷ 4 = 0,15. O Índice de Elegibilidade Territorial é <strong>1 − 0,15 = 0,85</strong>. Se as duas primeiras camadas atingirem parcialmente a mesma área, ambas continuam contribuindo, pois representam condições de risco distintas.</p>
+          <figcaption id="exemplo-elegibilidade">Exemplo hipotético para uma demanda sem restrição. A mesma regra e o mesmo conjunto de camadas devem ser utilizados na comparação.</figcaption>
+        </figure>
+        <h3>6. Integração com os demais índices</h3>
+        <p>O Índice de Elegibilidade Territorial integra o <strong>Índice de Prioridade da Fase 3</strong> e, por essa via, contribui para o <strong>Índice Geral de Priorização</strong>.</p>
+        <p>A qualificação da elegibilidade fornece a referência territorial inicial da avaliação. A análise prossegue com a caracterização dos contextos associados à implementação, incorporando os indicadores municipais e da rede que constituem a favorabilidade.</p>
+      </section>
+
+      <section class="secao-fase-2 visao-section" id="fase-2" aria-labelledby="fase-2-titulo">
+        <p class="module-eyebrow">Contextos associados à implementação</p>
+        <h2 id="fase-2-titulo">Fase 2 — Favorabilidade Territorial</h2>
+        <p>A favorabilidade territorial avalia as condições de contexto que influenciam a implementação e a relevância das intervenções. Para esse fim, utiliza indicadores calculados em duas unidades espaciais: municípios e trechos rodoviários. Sua associação às demandas permite caracterizar cada proposta segundo o contexto socioeconômico do território e as condições da rede, preservando a interpretação própria de cada resultado.</p>
+        <h3>1. Identificação dos índices</h3>
+        <p>São obtidos o <strong>Índice de Favorabilidade Territorial (I<sub>FT</sub>)</strong> e o <strong>Índice de Favorabilidade de Rede (I<sub>FR</sub>)</strong>. Os dois resultados são associados separadamente a cada objeto de demanda, conforme a unidade espacial dos indicadores de origem.</p>
+        <h3>2. Significado e alcance</h3>
+        <p>Expressam a favorabilidade dos contextos territorial e da rede associados à implementação dos objetos de demanda, segundo as premissas e os critérios adotados. Esses critérios podem representar necessidades de intervenção, condições de implementação, oportunidades e outros aspectos pertinentes aos objetivos da avaliação.</p>
+        <dl class="visao-definicoes">
+          <div><dt>Favorabilidade territorial — município</dt><dd>Os critérios e suas métricas são calculados por município. A superfície territorial associa a cada unidade municipal seu índice, reunindo aspectos sociais, econômicos e territoriais pertinentes à avaliação.</dd></div>
+          <div><dt>Favorabilidade de rede — trecho rodoviário</dt><dd>Os critérios e suas métricas são calculados por trecho rodoviário. O índice representa as condições observadas nessa unidade da rede, como necessidades, desempenho e oportunidades de integração.</dd></div>
+        </dl>
+        <p>Essa separação corresponde às <strong>unidades espaciais de avaliação</strong>. A natureza de um critério decorre de sua premissa: um indicador elevado de vulnerabilidade pode expressar maior necessidade de intervenção, enquanto outro critério pode representar uma condição favorável à sua realização. A interpretação do índice depende da combinação dessas premissas.</p>
+        <h3>3. Interpretação</h3>
+        <p>Os índices das superfícies são adimensionais e variam de <strong>0 a 1</strong>. Valores maiores representam maior favorabilidade segundo os critérios que os compõem. Os dois resultados mantêm interpretações próprias: um se refere ao contexto municipal; o outro, aos trechos rodoviários.</p>
+        <p>Ao reunir os valores interceptados por uma demanda, a <strong>medida escolhida pelo usuário determina o significado da síntese</strong>. Uma média descreve uma condição média; a moda destaca o valor mais frequente; o desvio-padrão expressa heterogeneidade. A leitura do resultado deve identificar essa escolha, sua escala e suas consequências.</p>
+        <p>Ausência de interseção, ausência de dados e favorabilidade igual a zero são situações distintas. Quando a cobertura dos dados é parcial, o resultado representa somente a parcela efetivamente avaliada.</p>
+        <h3>4. Método de cálculo</h3>
+        <p>A análise é espacialmente explícita e relaciona a geometria de cada objeto de demanda às superfícies de favorabilidade previamente preparadas. A preparação dessas superfícies compreende a medição, a normalização e a composição dos critérios nas respectivas unidades espaciais. A Fase 2 utiliza os índices já representados nas superfícies para obter os resultados por demanda.</p>
+        <p>Para superfícies vetoriais, são identificados os municípios e trechos interceptados, preservando seus índices. Quando existem vários valores para a mesma demanda, aplica-se a <strong>medida de agregação selecionada pelo usuário</strong>, separadamente para território e rede. Cada combinação entre demanda e feição contribui uma vez; nessa agregação, os valores não são ponderados pela área de interseção.</p>
+        <dl class="visao-definicoes">
+          <div><dt>Média, mediana e moda</dt><dd>A média considera todos os valores e é sensível aos extremos; a mediana representa a posição central e é menos sensível a eles; a moda identifica o valor mais frequente e pode não produzir uma resposta única. São escolhas com efeitos distintos sobre a representação da demanda.</dd></div>
+          <div><dt>Mínimo, máximo, quartis e percentis</dt><dd>Destacam posições na distribuição. O mínimo evidencia o menor índice; o máximo, o maior; os quartis e percentis selecionam posições intermediárias. O máximo pode destacar uma pequena ocorrência de valor elevado, sem representar a condição do conjunto.</dd></div>
+          <div><dt>Amplitude, variância, desvio-padrão e outras medidas de dispersão</dt><dd>Descrevem diferenças entre os valores. Uma dispersão pequena pode ocorrer tanto entre índices baixos quanto entre índices altos. O coeficiente de variação expressa dispersão relativa em percentual e é indefinido quando a média é zero.</dd></div>
+        </dl>
+        <p>A <strong>seleção da medida de agregação é uma escolha metodológica do usuário</strong>. Essa escolha determina o aspecto representado e pode alterar a escala do resultado: o coeficiente de variação, por exemplo, é expresso em percentual e pode ultrapassar 100%. Valores elevados de dispersão indicam heterogeneidade, enquanto valores elevados de média indicam um nível médio mais alto dos índices. Essas diferenças devem ser consideradas ao interpretar sua contribuição à síntese final.</p>
+        <p>Para superfícies raster, utiliza-se a média dos índices das células válidas, <strong>ponderada pela área efetivamente intersectada</strong>. Uma célula que atinge uma pequena faixa da demanda contribui menos que outra com maior área de interseção. Essa regra é própria da extração raster e permanece distinta da medida selecionada para vetores.</p>
+        <p>Zero é um valor válido. Áreas sem dados são excluídas da média raster, e a cobertura válida acompanha o resultado. Sem área válida, o índice permanece não informado. As classes originais das superfícies continuam sendo referências de sua classificação; a agregação de valores não cria automaticamente uma nova classe.</p>
+        <h3>5. Formulação matemática</h3>
+        <p>Para superfícies vetoriais, a equação geral representa o operador de agregação escolhido pelo usuário:</p>
+        <div class="doc-formula hier-equacao">
+          <math xmlns="http://www.w3.org/1998/Math/MathML" display="block" aria-label="Índice de favorabilidade territorial da demanda igual à agregação escolhida dos índices dos municípios interceptados">
+            <mrow><msub><mi>I</mi><mtext>FT</mtext></msub><mo>(</mo><mi>D</mi><mo>)</mo><mo>=</mo><mi>G</mi><mo>(</mo><mo>[</mo><msub><mi>F</mi><mtext>T</mtext></msub><mo>(</mo><mi>m</mi><mo>)</mo><mo>:</mo><mi>m</mi><mo>∈</mo><msub><mi>M</mi><mi>D</mi></msub><mo>]</mo><mo>)</mo></mrow>
+          </math>
+          <math xmlns="http://www.w3.org/1998/Math/MathML" display="block" aria-label="Índice de favorabilidade de rede da demanda igual à agregação escolhida dos índices dos trechos interceptados">
+            <mrow><msub><mi>I</mi><mtext>FR</mtext></msub><mo>(</mo><mi>D</mi><mo>)</mo><mo>=</mo><mi>G</mi><mo>(</mo><mo>[</mo><msub><mi>F</mi><mtext>R</mtext></msub><mo>(</mo><mi>t</mi><mo>)</mo><mo>:</mo><mi>t</mi><mo>∈</mo><msub><mi>T</mi><mi>D</mi></msub><mo>]</mo><mo>)</mo></mrow>
+          </math>
+          <p>G é a medida escolhida. M<sub>D</sub> e T<sub>D</sub> reúnem os municípios e trechos interceptados, respectivamente; F<sub>T</sub>(m) e F<sub>R</sub>(t) são seus índices originais. Consideram-se os valores válidos, mantendo as ocorrências de cada feição.</p>
+        </div>
+        <p>Para superfícies raster, a expressão é:</p>
+        <div class="doc-formula hier-equacao">
+          <math xmlns="http://www.w3.org/1998/Math/MathML" display="block" aria-label="Favorabilidade raster igual à soma dos índices vezes suas áreas de interseção dividida pela soma das áreas válidas">
+            <mrow><msub><mi>I</mi><mtext>F</mtext></msub><mo>(</mo><mi>D</mi><mo>)</mo><mo>=</mo><mfrac><mrow><munder><mo>∑</mo><mrow><mi>j</mi><mo>∈</mo><msub><mi>V</mi><mi>D</mi></msub></mrow></munder><msub><mi>f</mi><mi>j</mi></msub><mo>·</mo><mi>A</mi><mo>(</mo><mi>D</mi><mo>∩</mo><msub><mi>C</mi><mi>j</mi></msub><mo>)</mo></mrow><mrow><munder><mo>∑</mo><mrow><mi>j</mi><mo>∈</mo><msub><mi>V</mi><mi>D</mi></msub></mrow></munder><mi>A</mi><mo>(</mo><mi>D</mi><mo>∩</mo><msub><mi>C</mi><mi>j</mi></msub><mo>)</mo></mrow></mfrac></mrow>
+          </math>
+          <p>f<sub>j</sub> é o índice da célula C<sub>j</sub>. V<sub>D</sub> reúne somente células válidas com área positiva de interseção. O denominador representa a área coberta por dados válidos.</p>
+        </div>
+        <figure class="visao-diagrama" aria-labelledby="exemplo-agregacao">
+          <div class="visao-centro"><strong>Efeito da medida de agregação</strong><span>Índices interceptados: 0,20 · 0,20 · 0,80</span></div>
+        <p>Para esse conjunto, a média é <strong>0,40</strong>; a mediana e a moda são <strong>0,20</strong>; e o máximo é <strong>0,80</strong>. O desvio-padrão populacional é aproximadamente <strong>0,283</strong> e expressa a dispersão dos valores. Cada medida sintetiza uma propriedade distinta da mesma distribuição.</p>
+          <figcaption id="exemplo-agregacao">Exemplo hipotético de agregação vetorial sem ponderação por área. A escolha deve refletir a pergunta da avaliação e permanecer identificada nos resultados.</figcaption>
+        </figure>
+        <h3>6. Integração com os demais índices</h3>
+        <p>O Índice de Favorabilidade Territorial e o Índice de Favorabilidade de Rede participam diretamente da composição do <strong>Índice Geral de Priorização</strong>, calculado na Fase 3. A medida de agregação escolhida determina os valores e as interpretações incorporados à síntese.</p>
+        <p>Com a elegibilidade e a favorabilidade caracterizadas, a avaliação passa a considerar os fatores que distinguem os próprios objetos de demanda. Essa integração permite relacionar as condições de contexto às características de cada proposta na determinação da prioridade.</p>
+      </section>
+
+      <section class="secao-fase-3 visao-section" id="fase-3" aria-labelledby="fase-3-titulo">
+        <p class="module-eyebrow">Características dos objetos e síntese dos resultados</p>
+        <h2 id="fase-3-titulo">Fase 3 — Priorização por Atributos</h2>
+        <p>A priorização por atributos avalia as características específicas que diferenciam os objetos de demanda e sua contribuição para os objetivos da decisão. A fase compreende duas operações relacionadas: o cálculo do Índice de Prioridade, a partir dos atributos e da elegibilidade territorial, e a síntese desse resultado com os índices de favorabilidade. Essa composição estabelece a base numérica do ranking de implementação.</p>
+        <h3>1. Identificação dos índices</h3>
+        <p>A fase produz dois resultados complementares: o <strong>Índice de Prioridade (I<sub>P</sub>)</strong>, referente à avaliação por atributos e elegibilidade, e o <strong>Índice Geral de Priorização (I<sub>GP</sub>)</strong>, referente à síntese final.</p>
+        <h3>2. Significado e alcance</h3>
+        <p>O <strong>Índice de Prioridade</strong> expressa o desempenho do objeto de demanda segundo seus indicadores e atributos, incorporando a elegibilidade territorial obtida na Fase 1. Características como maturidade, prazo ou outras previstas na avaliação ajudam a distinguir objetos inseridos em contextos territoriais semelhantes.</p>
+        <p>O <strong>Índice Geral de Priorização</strong> sintetiza esse resultado com os índices de favorabilidade territorial e de rede obtidos na Fase 2, fundamentando o ranking de demandas. Dessa forma, os resultados das três fases participam da avaliação final, com funções próprias.</p>
+        <h3>3. Interpretação</h3>
+        <p>Com entradas normalizadas e pesos não negativos cuja soma é um, os índices são adimensionais e permanecem entre <strong>0 e 1</strong>. Valores próximos de zero indicam menor prioridade, e valores próximos de um indicam maior prioridade, segundo os critérios e objetivos da decisão.</p>
+        <p>A prioridade é relativa ao conjunto de demandas e às regras da avaliação. Uma posição elevada expressa o resultado da comparação naquele contexto. Ausência de informações suficientes para calcular o índice permanece distinta de prioridade igual a zero.</p>
+        <p>A coerência da síntese depende também da interpretação dos resultados agregados na Fase 2. Quando a escolha representa dispersão ou utiliza outra escala, essa característica precisa ser reconhecida na leitura de sua contribuição ao resultado geral.</p>
+        <h3>4. Método de cálculo</h3>
+        <p>O cálculo compreende a normalização dos critérios, sua ponderação e a síntese dos resultados. A normalização converte indicadores e atributos para escalas comparáveis entre zero e um, respeitando a relação de cada critério com a prioridade. Critérios em que valores menores são preferíveis têm sua orientação invertida; categorias e escalas ordinais utilizam correspondências explícitas.</p>
+        <p>Os valores normalizados são combinados por ponderação, incluindo o Índice de Elegibilidade Territorial. Os pesos podem ser informados manualmente ou obtidos de julgamento AHP associado à hierarquização. O AHP expressa importância relativa por comparações entre critérios e destina-se aos critérios próprios da Fase 3; a elegibilidade é herdada da Fase 1.</p>
+        <p>Na ponderação manual, os pesos podem ser definidos para o conjunto dos critérios ou separadamente por grupos. No segundo caso, os pesos são normalizados dentro de cada grupo e os grupos presentes têm participação equivalente no cálculo final. A escolha entre essas formas altera a influência relativa dos critérios.</p>
+        <p>Valores ausentes ou inválidos são tratados conforme a política definida e a completude mínima exigida. A avaliação pode renormalizar os pesos dos valores disponíveis, bloquear o cálculo ou adotar valores de referência explicitamente definidos. A ausência de critérios obrigatórios impede o cálculo, independentemente da política escolhida.</p>
+        <p>Após a obtenção do Índice de Prioridade, realiza-se a síntese com os dois índices de favorabilidade, por média simples ou ponderada. O resultado é o Índice Geral de Priorização, utilizado para ordenar as demandas do maior para o menor valor.</p>
+        <h3>5. Formulação matemática</h3>
+        <p>A composição básica do Índice de Prioridade é:</p>
+        <div class="doc-formula hier-equacao">
+          <math xmlns="http://www.w3.org/1998/Math/MathML" display="block" aria-label="Índice de prioridade igual à soma dos valores normalizados dos critérios multiplicados pelos pesos efetivamente aplicados">
+            <mrow><msub><mi>I</mi><mtext>P</mtext></msub><mo>(</mo><mi>D</mi><mo>)</mo><mo>=</mo><munder><mo>∑</mo><mrow><mi>k</mi><mo>∈</mo><msub><mi>K</mi><mi>D</mi></msub></mrow></munder><msub><mover><mi>w</mi><mo>~</mo></mover><mi>k</mi></msub><mo>·</mo><msub><mi>z</mi><mi>k</mi></msub><mo>(</mo><mi>D</mi><mo>)</mo></mrow>
+          </math>
+          <p>z<sub>k</sub>(D) é o valor normalizado do critério k, e w̃<sub>k</sub> é seu peso efetivamente aplicado. K<sub>D</sub> reúne os critérios considerados após o tratamento das ausências e a verificação das condições de cálculo. Os pesos aplicados somam um.</p>
+        </div>
+        <p>O Índice de Elegibilidade Territorial participa como um desses critérios, preservando sua escala. A síntese final é expressa por:</p>
+        <div class="doc-formula hier-equacao">
+          <math xmlns="http://www.w3.org/1998/Math/MathML" display="block" aria-label="Índice geral de priorização igual a alfa vezes a favorabilidade territorial mais beta vezes a favorabilidade de rede mais gama vezes o índice de prioridade">
+            <mtable columnalign="right left" rowspacing=".35em">
+              <mtr><mtd><msub><mi>I</mi><mtext>GP</mtext></msub><mo>(</mo><mi>D</mi><mo>)</mo></mtd><mtd><mo>=</mo><mi>α</mi><mo>·</mo><msub><mi>I</mi><mtext>FT</mtext></msub><mo>(</mo><mi>D</mi><mo>)</mo></mtd></mtr>
+              <mtr><mtd></mtd><mtd><mo>+</mo><mi>β</mi><mo>·</mo><msub><mi>I</mi><mtext>FR</mtext></msub><mo>(</mo><mi>D</mi><mo>)</mo></mtd></mtr>
+              <mtr><mtd></mtd><mtd><mo>+</mo><mi>γ</mi><mo>·</mo><msub><mi>I</mi><mtext>P</mtext></msub><mo>(</mo><mi>D</mi><mo>)</mo></mtd></mtr>
+            </mtable>
+          </math>
+          <p>α, β e γ são pesos não negativos e <strong>α + β + γ = 1</strong>. Na média simples, cada peso é igual a 1/3.</p>
+        </div>
+        <p>Na composição apresentada, a <strong>elegibilidade participa da síntese por meio do Índice de Prioridade</strong>, enquanto os dois índices de favorabilidade participam diretamente. Essa estrutura mantém identificada a contribuição de cada fase no resultado geral.</p>
+        <figure class="visao-diagrama" aria-labelledby="exemplo-sintese">
+          <div class="visao-centro"><strong>Dos critérios ao resultado geral</strong><span>Elegibilidade → Índice de Prioridade → síntese com as duas favorabilidades</span></div>
+          <p>Considere uma demanda com elegibilidade 0,85 e outros dois critérios normalizados iguais a 0,60 e 0,90. Com pesos 0,25, 0,35 e 0,40, seu Índice de Prioridade é <strong>0,7825</strong>. Se a favorabilidade territorial for 0,70 e a de rede, 0,50, a síntese por média simples resulta em <strong>(0,70 + 0,50 + 0,7825) ÷ 3 ≈ 0,6608</strong>.</p>
+          <figcaption id="exemplo-sintese">Exemplo hipotético com dados completos e índices comparáveis entre zero e um. A posição no ranking só pode ser estabelecida após comparar esse resultado com os demais objetos da rodada.</figcaption>
+        </figure>
+        <h3>6. Integração com o ranking</h3>
+        <p>O <strong>Índice de Prioridade</strong> integra o <strong>Índice Geral de Priorização</strong>. Este último fundamenta o ranking final, em ordem decrescente de valor.</p>
+        <p>O cálculo do ranking conclui a síntese numérica da avaliação. A continuidade do processo exige a conferência dos resultados e a identificação da versão que será formalizada e, posteriormente, disponibilizada para acompanhamento público.</p>
+      </section>
+
+      <section class="secao-homologacao visao-section" id="homologacao" aria-labelledby="homologacao-titulo">
+        <p class="module-eyebrow">Formalização e transparência dos resultados</p>
+        <h2 id="homologacao-titulo">Homologação, Ranking e Publicação</h2>
+        <p>A homologação e a publicação conferem continuidade institucional aos resultados da avaliação. A primeira formaliza a versão concluída da hierarquização; a segunda estabelece sua disponibilidade para consulta pública. O ranking e a representação territorial permitem examinar essa versão, mantendo o vínculo entre as posições atribuídas e as condições que fundamentaram o cálculo.</p>
+        <h3>1. Índice de referência</h3>
+        <p>O <strong>Índice Geral de Priorização</strong> constitui a referência para a ordenação, acompanhado dos índices que participaram de sua composição. A etapa utiliza os resultados calculados nas fases anteriores e não produz um novo índice.</p>
+        <h3>2. Significado e alcance</h3>
+        <p>A <strong>homologação</strong> formaliza os resultados de uma versão da hierarquização. A apresentação do <strong>ranking</strong> permite consultar a ordem sugerida para implementação e a distribuição territorial das demandas. A <strong>publicação</strong> disponibiliza os resultados homologados para consulta pública, promovendo transparência e acompanhamento.</p>
+        <h3>3. Interpretação dos resultados</h3>
+        <dl class="visao-definicoes">
+          <div><dt>Ranking calculado</dt><dd>Ordenação obtida pela síntese dos resultados, ainda sujeita à conferência e à homologação.</dd></div>
+          <div><dt>Ranking homologado</dt><dd>Versão dos resultados formalmente reconhecida como concluída na hierarquização.</dd></div>
+          <div><dt>Ranking publicado</dt><dd>Versão homologada disponibilizada para consulta pública.</dd></div>
+        </dl>
+        <p>O cálculo não implica homologação, e a homologação não implica publicação automática. A conclusão da hierarquização identifica o encerramento dessa avaliação; sua leitura permanece vinculada às demandas, aos critérios e à versão dos resultados.</p>
+        <h3>4. Formalização e divulgação</h3>
+        <p>São conferidos os índices, a classificação resultante, a composição do grupo e a atualidade dos resultados. A homologação exige ranking calculado e ausência de pendências ou resultados desatualizados. Ao homologar, a hierarquização é concluída e o recálculo das fases fica bloqueado.</p>
+        <p>A publicação é uma ação posterior e específica, vinculada à versão homologada. Quando necessária, a reversão da homologação permite retomar os cálculos e revoga a publicação daquela versão. A retirada da publicação pode ocorrer preservando a homologação e os resultados calculados.</p>
+        <h3>5. Regra de ordenamento</h3>
+        <p>O ranking conserva a <strong>ordenação decrescente do Índice Geral de Priorização</strong>. A homologação e a publicação preservam os valores e as posições da versão reconhecida, sem nova equação ou recálculo dos índices.</p>
+        <h3>6. Relação com os índices da avaliação</h3>
+        <p>Esta etapa formaliza, apresenta e divulga os resultados da hierarquização, preservando os índices produzidos na avaliação.</p>
+        <p>A formalização mantém identificada a versão utilizada. Para compreender o que o ranking comunica, é necessário observar também seu universo de comparação, a qualidade dos dados e as escolhas que determinaram o resultado.</p>
+      </section>
+
+      <section class="secao-interpretacao visao-section" id="interpretacao" aria-labelledby="interpretacao-titulo">
+        <h2 id="interpretacao-titulo">Como compreender os resultados</h2>
+        <p>O índice expressa uma avaliação numérica; a posição expressa a relação desse resultado com os demais objetos avaliados. Duas rodadas podem produzir posições distintas para a mesma demanda porque mudaram o universo, os dados, os critérios, a medida de agregação ou os pesos.</p>
+        <dl class="visao-definicoes">
+          <div><dt>Comparação dentro de um contexto comum</dt><dd>Os objetos comparados devem ser interpretados segundo o mesmo propósito de avaliação e regras identificadas. Uma posição isolada não informa quais necessidades, atributos e condições sustentaram sua prioridade.</dd></div>
+          <div><dt>Zero e ausência</dt><dd>Zero pode ser uma observação válida ou o resultado legítimo de um cálculo. Ausência de informação, cobertura insuficiente e impedimento por restrição precisam permanecer identificáveis.</dd></div>
+          <div><dt>Escala e significado</dt><dd>A normalização torna as escalas comparáveis, mas não substitui a definição do critério. Medidas de nível, frequência, posição e dispersão respondem a perguntas diferentes, mesmo quando produzem valores numericamente próximos.</dd></div>
+          <div><dt>Escolhas e efeitos</dt><dd>Alterar uma premissa, um peso ou uma agregação pode alterar o resultado e a ordenação. Conhecer essas escolhas permite compreender a contribuição de cada fase e discutir a prioridade sugerida.</dd></div>
+          <div><dt>Finalidade social</dt><dd>A leitura integrada dos resultados deve permanecer relacionada aos objetivos da decisão e às necessidades da população. Elegibilidade, favorabilidade e prioridade qualificam a implementação das propostas dentro desse propósito.</dd></div>
+        </dl>
+        <p>Os exemplos de aplicação permitem observar como essas ideias se materializam em critérios e dados concretos. Eles complementam a interpretação do processo sem transformar uma configuração particular em regra universal para todas as demandas.</p>
+      </section>
+
+      <section class="secao-referencias visao-section" id="referencias" aria-labelledby="referencias-titulo">
+        <h2 id="referencias-titulo">Fundamentos e aplicações</h2>
+        <p>Esta página apresenta o processo de hierarquização. A visão geral situa esse processo no conjunto do SICARD; os estudos a seguir aprofundam a fundamentação e apresentam aplicações com camadas, critérios e contextos específicos.</p>
+        <div class="module-link-list">
+          <a href="/public/documentacao/visao-geral/"><span>Visão geral do SICARD — contexto e organização do sistema</span><i class="fa-solid fa-book-open" aria-hidden="true"></i></a>
+          <a href="/public/documentacao/risco-restricao/"><span>Elegibilidade territorial — fundamentos e aplicação de restrições e riscos</span><i class="fa-solid fa-map" aria-hidden="true"></i></a>
+          <a href="/public/documentacao_favorabilidade_v2/"><span>Favorabilidade territorial e de rede — critérios e exemplos por município e trecho rodoviário</span><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i></a>
+          <a href="/public/documentacao/glossario/"><span>Glossário técnico-conceitual — termos e definições do SICARD</span><i class="fa-solid fa-book-open" aria-hidden="true"></i></a>
+        </div>
+        <p>Os estudos de favorabilidade identificam o contexto dos dados e o caráter das configurações apresentadas, incluindo resultados de referência ainda não homologados. Seus exemplos ajudam a compreender a metodologia, preservando essa condição.</p>
+        <a class="visao-topo" href="#processo-hierarquizacao">Voltar ao início da página ↑</a>
+      </section>
+    </div>
+  </div>
+</main>
+{% endblock %}
