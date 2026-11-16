@@ -310,7 +310,8 @@ $migrations = @(
     "161_nomes_elementos_storage.sql",
     "164_representante_institucional.sql",
     "166_politica_usuarios_sicard.sql",
-    "167_referenciar_perfis_sigma.sql"
+    "167_referenciar_perfis_sigma.sql",
+    "168_nomes_usuario_perfil.sql"
 )
 
 if ($OnlyMigration) {
@@ -497,6 +498,12 @@ if (-not $OnlyMigration -and "166_politica_usuarios_sicard.sql" -notin $migratio
 if (-not $OnlyMigration -and "167_referenciar_perfis_sigma.sql" -notin $migrations) {
     if (-not (Test-SchemaReady "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='usuarios' AND table_name='perfil' AND column_name='codigo' AND data_type='uuid') AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='usuarios' AND table_name='usuario_perfil' AND column_name='sigma_sincronizado_em');")) {
         $migrations += "167_referenciar_perfis_sigma.sql"
+    }
+}
+
+if (-not $OnlyMigration -and "168_nomes_usuario_perfil.sql" -notin $migrations) {
+    if (-not (Test-SchemaReady "SELECT count(*)=3 FROM information_schema.columns WHERE table_schema='usuarios' AND table_name='usuario_perfil' AND column_name IN ('sigma_user_name','sigma_nome_completo','perfil_nome');")) {
+        $migrations += "168_nomes_usuario_perfil.sql"
     }
 }
 

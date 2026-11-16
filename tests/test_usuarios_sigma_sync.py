@@ -10,7 +10,8 @@ from api.services import usuarios_sigma_sync as sync
 @pytest.fixture
 def origem():
     perfis = [dict(id=uuid4(), nome=nome, ativo=True) for nome in sorted(sync.PERFIS)]
-    usuarios = [dict(id=uuid4(), tipo_usuario='OPERADOR', ativo=True, username='exemplo_ADMIN')]
+    usuarios = [dict(id=uuid4(), tipo_usuario='OPERADOR', ativo=True,
+                    username='exemplo_ADMIN', nome_completo='Pessoa de Teste')]
     return perfis, usuarios
 
 
@@ -20,7 +21,18 @@ def test_vinculo_usa_tipo_sigma_e_uuid_do_papel_sem_inferir_username(origem):
     papel = next(p for p in perfis if p['nome'] == 'OPERADOR')
     assert vinculo['perfil_codigo'] == str(papel['id'])
     assert vinculo['sigma_usuario_id'] == str(usuarios[0]['id'])
-    assert set(vinculo) == {'perfil_codigo', 'sigma_usuario_id', 'sigma_ativo'}
+    assert vinculo['sigma_user_name'] == 'exemplo_ADMIN'
+    assert vinculo['sigma_nome_completo'] == 'Pessoa de Teste'
+    assert set(vinculo) == {'perfil_codigo', 'sigma_usuario_id', 'sigma_ativo',
+                            'sigma_user_name', 'sigma_nome_completo'}
+
+
+def test_nome_completo_nulo_nao_e_substituido_pelo_username(origem):
+    perfis, usuarios = origem
+    usuarios[0]['nome_completo'] = None
+    vinculo = sync.validar_origem(perfis, usuarios)[0]
+    assert vinculo['sigma_nome_completo'] is None
+    assert vinculo['sigma_user_name'] == usuarios[0]['username']
 
 
 def test_usuario_inativo_tambem_e_listado(origem):

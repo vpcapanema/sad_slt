@@ -17,7 +17,7 @@ from api.services.usuarios_sigma_sync import sincronizar
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--migrar', action='store_true', help='Aplicar a migration 167 antes de sincronizar.')
+    parser.add_argument('--migrar', action='store_true', help='Aplicar as migrations 167/168 antes de sincronizar.')
     parser.add_argument('--simular', action='store_true', help='Validar e reverter toda a transação.')
     args = parser.parse_args()
     try:
