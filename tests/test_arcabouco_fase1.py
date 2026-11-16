@@ -1,14 +1,15 @@
-"""O arcabouço teórico-conceitual é a fonte da classificação da Fase 1.
+"""Coerência entre os exemplos sugeridos e o repertório de referência da Fase 1.
 
-Página: /public/documentacao/risco-restricao/, seções 2 e 3.
-A categoria é da CAMADA oficial — sete de restrição, treze de risco — e tudo que
-classifica a Fase 1 precisa dizer o mesmo que ela.
+Os exemplos não constituem classificação universal ou certificação do órgão
+publicador. A revisão editorial preserva as categorias do repertório existente;
+alterar a documentação não deve reclassificar silenciosamente os dados operacionais.
 """
 from __future__ import annotations
 
 import json
 import re
 import unicodedata
+from html import unescape
 from pathlib import Path
 
 import pytest
@@ -61,62 +62,43 @@ def _sem_acento(valor: str) -> str:
     )
 
 
-def _camadas_da_secao_2() -> dict[str, str]:
-    """Categoria por camada, lida da TABELA da seção 2.
-
-    A seção 2 é a regra: é ela que declara, para cada camada oficial, a categoria
-    adotada, a fonte e o fundamento do enquadramento. A seção 3 repete a mesma
-    classificação em forma de lista, e `test_secoes_2_e_3_concordam` garante que
-    não se soltem uma da outra.
-    """
+def _camadas_sugeridas() -> dict[str, str]:
+    """Categoria sugerida de cada exemplo, sem inferir obrigação normativa."""
     html = PAGINA.read_text(encoding="utf-8")
-    secao = html.split("Camadas de restrição e risco", 1)[1].split("Reclassificação operacional", 1)[0]
-    limpa = lambda texto: _sem_acento(re.sub(r"<[^>]*>", "", texto))
-    # A primeira célula traz o nome e, abaixo, o órgão que publica o dado; a
-    # segunda traz a categoria. As duas colunas seguintes são fundamento e a
-    # norma que o sustenta, e não participam da classificação.
     return {
-        limpa(nome): limpa(categoria)
+        _sem_acento(unescape(nome)): categoria
         for nome, categoria in re.findall(
-            r"<tr>\s*<td><strong>(.*?)</strong>.*?</td>\s*<td>(.*?)</td>",
-            secao,
-            re.S,
+            r'data-camada="([^"]+)" data-categoria="(risco|restricao)"', html
         )
-    }
-
-
-def _camadas_da_secao_3() -> dict[str, str]:
-    html = PAGINA.read_text(encoding="utf-8")
-    depois = html.split("Camadas classificadas como restrição", 1)[1]
-    bloco_restricao, bloco_risco = depois.split("Camadas classificadas como risco", 1)
-    itens = lambda t: [_sem_acento(x) for x in re.findall(r"<li[^>]*>\s*([^<]+?)\s*</li>", t)]
-    return {
-        **{nome: "restricao" for nome in itens(bloco_restricao)},
-        **{nome: "risco" for nome in itens(bloco_risco)},
     }
 
 
 def _classificacao_esperada() -> dict[str, str]:
     esperado: dict[str, str] = {}
-    for camada, categoria in _camadas_da_secao_2().items():
+    for camada, categoria in _camadas_sugeridas().items():
         for criterio in CAMADA_PARA_CRITERIO[camada]:
             esperado[criterio] = categoria
     return esperado
 
 
-def test_secoes_2_e_3_concordam() -> None:
-    """A tabela da seção 2 e as listas da seção 3 não podem se soltar."""
-    secao2, secao3 = _camadas_da_secao_2(), _camadas_da_secao_3()
-    assert set(secao2) == set(secao3), (
-        f"só na seção 2: {sorted(set(secao2) - set(secao3))}; "
-        f"só na seção 3: {sorted(set(secao3) - set(secao2))}"
-    )
-    divergentes = {n: (secao2[n], secao3[n]) for n in secao2 if secao2[n] != secao3[n]}
-    assert not divergentes, f"categoria diverge entre as seções: {divergentes}"
+def test_exemplos_explicam_sugestao_fundamento_e_limites() -> None:
+    html = PAGINA.read_text(encoding="utf-8")
+    exemplos = re.findall(r'<tr[^>]*data-camada=.*?</tr>', html, re.S)
+    assert len(exemplos) == 20
+    for exemplo in exemplos:
+        celulas = re.findall(r'<td\b[^>]*>(.*?)</td>', exemplo, re.S)
+        assert len(celulas) == 5
+        assert '<a href=' in celulas[1]  # Publicador do dado.
+        assert re.search(r'<strong>(Risco|Restrição)</strong>', celulas[2])
+        assert 'Condições e limites:' in celulas[3]
+        assert '<a href=' in celulas[4]  # Referência do enquadramento.
+    assert "sugestões metodológicas" in html
+    assert "não certificada pelo órgão" in html
+    assert "não pressupõe que todos sejam produzidos automaticamente pelo sistema" in html
 
 
 def test_pagina_declara_sete_restricoes_e_treze_riscos() -> None:
-    camadas = _camadas_da_secao_2()
+    camadas = _camadas_sugeridas()
     assert sum(1 for c in camadas.values() if c == "restricao") == 7
     assert sum(1 for c in camadas.values() if c == "risco") == 13
 
@@ -131,7 +113,7 @@ def test_pagina_declara_sete_restricoes_e_treze_riscos() -> None:
 
 
 def test_todas_as_camadas_da_pagina_tem_criterio_mapeado() -> None:
-    faltando = set(_camadas_da_secao_2()) - set(CAMADA_PARA_CRITERIO)
+    faltando = set(_camadas_sugeridas()) - set(CAMADA_PARA_CRITERIO)
     assert not faltando, f"camada sem criterio_id: {sorted(faltando)}"
 
 

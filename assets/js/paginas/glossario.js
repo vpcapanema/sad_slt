@@ -8,7 +8,7 @@
   const entries = Array.from(document.querySelectorAll(".glossario-entrada"), (element) => ({
     element,
     text: normalize(element.textContent),
-    index: document.querySelector(`[data-indice-termo="${element.id}"]`),
+    indices: document.querySelectorAll(`[data-indice-termo="${element.id}"]`),
   }));
   const groups = Array.from(document.querySelectorAll(".glossario-grupo"));
   const count = document.getElementById("glossario-contagem");
@@ -17,10 +17,10 @@
   function filter() {
     const words = normalize(input.value).trim().split(/\s+/).filter(Boolean);
     let visible = 0;
-    entries.forEach(({ element, text, index }) => {
+    entries.forEach(({ element, text, indices }) => {
       const matches = words.every((word) => text.includes(word));
       element.hidden = !matches;
-      if (index) index.hidden = !matches;
+      indices.forEach(index => { index.hidden = !matches; });
       if (matches) visible += 1;
     });
     groups.forEach((group) => {
@@ -28,15 +28,17 @@
       const index = document.querySelector(`[data-indice-grupo="${group.id}"]`);
       if (index) index.hidden = group.hidden;
     });
-    count.textContent = `${visible} de ${entries.length} termos`;
+    count.textContent = `${visible} de ${entries.length} ${form.dataset.unidade || "termos"}`;
     empty.hidden = visible !== 0;
+    document.dispatchEvent(new CustomEvent('glossario:filtrado'));
   }
 
   function revealFragment() {
     let id;
     try { id = decodeURIComponent(window.location.hash.slice(1)); } catch { return; }
     const target = document.getElementById(id);
-    if (!target || !target.closest("#glossario-conteudo")) return;
+    const content = document.getElementById(input.getAttribute("aria-controls"));
+    if (!target || !content?.contains(target)) return;
     if (target.hidden || target.closest("[hidden]")) {
       input.value = "";
       filter();

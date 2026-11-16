@@ -1,28 +1,57 @@
-/* A capa, o sumário, as seções e os exemplos reutilizam visao-geral.css.
-   Esta folha acrescenta apenas a apresentação das expressões matemáticas. */
-.hierarquizacao-conceitual-page .hier-equacao {
-  overflow-x: auto;
+﻿/* Estrutura, capa, índice e painéis reutilizam glossario.css e page-title-standard.css.
+   Complementos para texto corrido, exemplos e expressões matemáticas. */
+.hierarquizacao-conceitual-page .standard-page-hero__title span,
+.risco-restricao-page .standard-page-hero__title span {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
-
-.hierarquizacao-conceitual-page .hier-equacao math {
+.hier-topico, .hier-definicoes dt {
+  margin: 0;
+  color: var(--pli-deep);
+  font: inherit;
+  font-weight: 700;
+}
+.hier-texto p {
+  width: 100%;
+  max-width: none;
+  margin: 0 0 1rem;
+  text-align: justify;
+  line-height: 1.7;
+}
+.hier-topico + p, .hier-definicoes dd { margin: .45rem 0 1rem; }
+.hier-texto > :last-child { margin-bottom: 0; }
+.hier-definicoes { margin: 1rem 0; }
+.hier-definicoes > div + div { border-top: 1px solid #e6ebef; padding-top: 1.25rem; }
+.hier-definicoes dd { text-align: justify; line-height: 1.7; }
+.hier-exemplo, .hier-equacao {
+  margin: 1.25rem 0;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--pli-border);
+  border-radius: var(--pli-radius);
+  background: #eaf1f5;
+}
+.hier-exemplo-titulo { margin-bottom: .45rem; color: var(--pli-deep); }
+.hier-exemplo-titulo span { display: block; margin-top: .45rem; color: var(--pli-text); }
+.hier-exemplo figcaption { color: var(--pli-muted); font-size: .875rem; line-height: 1.7; text-align: justify; }
+.hier-fluxo { margin: 0 0 1rem; padding-left: 1.25rem; }
+.hier-fluxo li + li { margin-top: 1rem; }
+.hier-fluxo strong { color: var(--pli-deep); }
+.hier-fluxo span { display: block; }
+.hier-equacao { overflow-x: auto; }
+.hier-equacao math {
   width: max-content;
   min-width: 100%;
-  margin: .5rem 0;
+  margin: .5rem 0 1rem;
   color: var(--pli-deep);
   font-size: 1.1rem;
 }
-
-.hierarquizacao-conceitual-page .visao-section > ul {
-  padding-left: 1.5rem;
-  line-height: 1.75;
+.hier-referencias { display: grid; gap: .5rem; margin-bottom: 1rem; }
+.hier-referencias i { display: none; }
+.hier-texto :is(p, dd, li, a) { overflow-wrap: anywhere; }
+@media (max-width: 800px) {
+  .hier-exemplo, .hier-equacao { padding: 1rem; }
 }
-
-.hierarquizacao-conceitual-page .visao-section > ul > li + li {
-  margin-top: .5rem;
-}
-
 @media print {
-  .hierarquizacao-conceitual-page .hier-equacao {
-    break-inside: avoid;
-  }
+  .hier-texto { break-inside: auto; }
+  .hier-exemplo, .hier-equacao { break-inside: avoid; }
 }

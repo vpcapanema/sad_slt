@@ -383,7 +383,7 @@ def test_restricted_home_geoprocessing_subgroups_and_independent_accesses() -> N
             "Transparência, procedimentos e rastreabilidade das camadas territoriais",
         ],
         "documentacao-tecnica": [
-            "Fundamentos da elegibilidade territorial — restrições e riscos",
+            "Risco e restrição — fundamentos para classificação",
             "Fundamentos da favorabilidade territorial e da rede rodoviária",
             "Fundamentos do limite marítimo de referência de São Paulo",
             "Glossário técnico-conceitual",

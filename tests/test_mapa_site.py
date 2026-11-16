@@ -104,7 +104,7 @@ def test_menu_remove_acessos_retirados_e_usa_nomes_da_documentacao():
 def test_fundamentos_de_risco_e_restricao_tem_titulo_coerente_com_menu():
     response = TestClient(app).get("/public/documentacao/risco-restricao/")
     assert response.status_code == 200
-    assert "Fundamentos da elegibilidade territorial — restrições e riscos" in response.text
+    assert "Risco e restrição — fundamentos para classificação" in response.text
     assert "Arcabouço Teórico-Conceitual de Risco e Restrição" not in response.text
 
 

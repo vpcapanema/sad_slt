@@ -200,34 +200,52 @@ def test_alias_preserva_query_e_prefixo(client, source, destination):
 
 
 @pytest.mark.parametrize("prefix", ["", "/sicard"])
-def test_hierarquizacao_tem_destinos_unicos_e_prefixados(client, prefix):
+@pytest.mark.parametrize("category, title, destinations, labels", [
+    (
+        "conceitual", "Referencial conceitual",
+        (
+            "/public/documentacao/visao-geral/",
+            "/public/documentacao/processo-hierarquizacao/",
+            "/public/documentacao/glossario/",
+            "/public/documentacao/risco-restricao/",
+        ),
+        (
+            "Visão geral do SICARD",
+            "Fundamentos da Hierarquização e Ranking",
+            "Glossário técnico-conceitual",
+            "Risco e restrição — fundamentos para classificação",
+        ),
+    ),
+    (
+        "tecnico", "Referencial técnico",
+        (
+            "/public/documentacao_favorabilidade_v2/",
+            "/public/documentacao/hierarquizacao/MODULO_FASE3_ATRIBUTOS_PROJETO_AJUSTE.md",
+            "/public/documentacao/limite-maritimo/",
+            "/public/documentacao/tutoriais/",
+        ),
+        (
+            "Fundamentos da favorabilidade territorial e da rede rodoviária",
+            "Especificação da priorização de demandas por atributos",
+            "Fundamentos do limite marítimo de referência de São Paulo",
+            "Tutoriais do SICARD",
+        ),
+    ),
+])
+def test_referenciais_tem_destinos_unicos_e_prefixados(client, prefix, category, title, destinations, labels):
     headers = {"X-Forwarded-Prefix": prefix} if prefix else {}
     response = client.get("/public/documentacao/", headers=headers)
     assert response.status_code == 200
-    section = response.text.split('class="secao-metodologia-hierarquizacao', 1)[1].split("</section>", 1)[0]
+    section = response.text.split(f'class="secao-referencial-{category}', 1)[1].split("</section>", 1)[0]
+    assert f'>{title}</h2>' in section
+    assert 'module-eyebrow' not in section
     parser = Links()
     parser.feed(section)
-    destinations = (
-        "/public/documentacao/visao-geral/",
-        "/public/documentacao/processo-hierarquizacao/",
-        "/public/documentacao/risco-restricao/",
-        "/public/documentacao_favorabilidade_v2/",
-        "/public/documentacao/hierarquizacao/MODULO_FASE3_ATRIBUTOS_PROJETO_AJUSTE.md",
-        "/public/documentacao/limite-maritimo/",
-        "/public/documentacao/tutoriais/",
-    )
     assert parser.links == [prefix + destination for destination in destinations]
     assert len(parser.links) == len(set(parser.links))
-    assert re.findall(r'<a\b[^>]*><span>([^<]+)</span>', section) == [
-        "Visão geral do SICARD",
-        "Fundamentos da Hierarquização e Ranking",
-        "Fundamentos da elegibilidade territorial — restrições e riscos",
-        "Fundamentos da favorabilidade territorial e da rede rodoviária",
-        "Especificação da priorização de demandas por atributos",
-        "Fundamentos do limite marítimo de referência de São Paulo",
-        "Tutoriais do SICARD",
-    ]
-    assert 'title="Referência provisória, não homologada"' in section
+    assert re.findall(r'<a\b[^>]*><span>([^<]+)</span>', section) == list(labels)
+    if category == "tecnico":
+        assert 'title="Referência provisória, não homologada"' in section
     for destination in destinations:
         # O proxy retira o prefixo antes de encaminhar a requisicao ao backend.
         assert client.get(destination, headers=headers).status_code == 200, destination

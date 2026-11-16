@@ -48,6 +48,10 @@
 .glossario-referencias li { margin-bottom: .5rem; }
 .glossario-sem-resultados { padding: 1.5rem; background: white; border: 1px solid var(--pli-border); border-radius: var(--pli-radius); }
 .glossario [hidden] { display: none !important; }
+@media (max-width: 1200px) {
+  .pagina-glossario .app-header-inner,
+  .pagina-glossario .app-nav { flex-wrap: wrap; }
+}
 @media (max-width: 800px) {
   .glossario { padding-top: 1.25rem; }
   .glossario-layout { grid-template-columns: minmax(0, 1fr); gap: 1.25rem; }

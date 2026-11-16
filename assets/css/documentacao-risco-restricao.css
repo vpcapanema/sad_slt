@@ -1,0 +1,43 @@
+/* Superfície e controles seguem o padrão compartilhado das tabelas. */
+.risco-tabela { padding: 1.25rem 1.5rem; min-width: 0; }
+.risco-tabela .risco-tabela-scroll { overflow-x: auto; }
+.risco-tabela table { width: 100%; min-width: 900px; border-collapse: collapse; table-layout: fixed; }
+.risco-tabela table th { height: 32px; padding: .5rem .6rem; background: var(--pli-deep); color: white; text-align: center; }
+.risco-tabela table th:nth-child(2) { width: 23%; }
+.risco-tabela table th:nth-child(3) { width: 13%; }
+.risco-tabela table th:nth-child(4) { width: 42%; }
+.risco-tabela table th:nth-child(5) { width: 22%; }
+.risco-tabela table :is(th, td).col-select { width: 44px; min-width: 44px; max-width: 44px; text-align: center; }
+.risco-tabela table tr { padding: 0; }
+.risco-tabela.standard-table-section table td {
+  padding: .55rem; border: 1px solid var(--pli-border); vertical-align: top;
+  white-space: normal; max-width: none; overflow: visible; text-overflow: clip; line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.risco-tabela table p { margin: 0 0 .75rem; }
+.risco-tabela table p:last-child { margin-bottom: 0; }
+.risco-tabela table a { color: #123b56; font: inherit; text-decoration: underline; }
+.risco-tabela .admin-filter-bar { font: 400 .74rem/1.2 Roboto, Arial, sans-serif; }
+.risco-tabela .admin-filter-bar :is(select, button, .admin-filter-label) { font: inherit; }
+.risco-tabela .admin-filter-bar select { border-color: var(--pli-border); border-radius: 4px; }
+.risco-tabela .standard-table-actions { margin: 8px 0 0; gap: 8px; }
+.risco-tabela .standard-table-actions .admin-icon-btn {
+  width: 2.115rem; min-width: 2.115rem; height: 2.115rem; font-size: .9rem;
+  border: 1px solid #14532d; color: #166534; background: white;
+}
+.risco-tabela .admin-table-footer { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; padding-top: 6px; }
+.risco-tabela .admin-pagination { grid-column: 2; margin: 0; gap: 8px; }
+.risco-tabela .admin-pagination button { border-radius: 0; }
+.risco-tabela .admin-table-summary { align-self: center; margin: 0; padding: 0; border: 0; font-size: .64rem; }
+@media (max-width: 800px) {
+  .risco-tabela { padding: 1rem; }
+  .risco-tabela .admin-table-footer { grid-template-columns: minmax(0, 1fr); }
+  .risco-tabela .admin-pagination { grid-column: 1; }
+  .risco-tabela .admin-table-summary { text-align: center; }
+}
+@media print {
+  .risco-tabela :is(.admin-filter-bar, .standard-table-actions, .admin-table-footer, .col-select) { display: none; }
+  .risco-tabela table { min-width: 0; }
+  .risco-tabela .risco-tabela-scroll { overflow: visible; }
+  .risco-tabela tr { break-inside: avoid; }
+}

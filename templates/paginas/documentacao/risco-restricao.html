@@ -2,443 +2,381 @@
 {% set subtitulo = "Documentação do sistema" %}
 {% set navegacao = "publica" %}
 {% set requer_autenticacao = false %}
-
-{% block titulo %}Fundamentos da elegibilidade territorial — restrições e riscos — SICARD{% endblock %}
-{% block descricao %}Fundamentos conceituais de risco e restrição que orientam a triagem territorial da elegibilidade no SICARD.{% endblock %}
-{% block classes_body %}gerador-page biblioteca-risco-page{% endblock %}
-
+{% block titulo %}Risco e restrição — fundamentos para classificação — SICARD{% endblock %}
+{% block descricao %}Referencial teórico-conceitual e procedimento proposto para identificar, justificar e revisar a classificação de condições territoriais como risco ou restrição, com exemplos sugestivos e registros para auditoria.{% endblock %}
+{% block classes_body %}pagina-glossario risco-restricao-page table-layout-repair{% endblock %}
 {% block estilos_pagina %}
-  <link rel="stylesheet" href="/assets/css/gerador-insumos.css" />
+<link rel="stylesheet" href="/assets/css/glossario.css?v=20261116-responsivo">
+<link rel="stylesheet" href="/assets/css/page-title-standard.css?v=20260820-3">
+<link rel="stylesheet" href="/assets/css/documentacao-hierarquizacao.css?v=20261116-referenciais">
+<link rel="stylesheet" href="/assets/css/admin-table-controls.css">
+<link rel="stylesheet" href="/assets/css/table-standard.css">
+<link rel="stylesheet" href="/assets/css/documentacao-risco-restricao.css?v=20261116-publicacao">
 {% endblock %}
+
+{% set capitulos = [
+  ("contexto", "Finalidade e alcance", [("finalidade", "A decisão que antecede o índice")]),
+  ("conceitos", "Risco, restrição e evidência", [("conceito-risco", "Risco e exposição"), ("conceito-restricao", "Restrição e impedimento"), ("incerteza", "Ausência de informação")]),
+  ("criterios", "Critérios de enquadramento", [("efeito", "Consequência para a decisão"), ("fundamento", "Fundamento e aplicabilidade"), ("espaco", "Representação espacial")]),
+  ("procedimento", "Procedimento proposto", [("procedimento-alcance", "Organização e registros"), ("etapa-1", "1. Delimitar o contexto"), ("etapa-2", "2. Identificar as condições"), ("etapa-3", "3. Verificar as evidências"), ("etapa-4", "4. Explicitar o efeito"), ("etapa-5", "5. Propor a classificação"), ("etapa-6", "6. Submeter à revisão"), ("etapa-7", "7. Consolidar uma versão"), ("etapa-8", "8. Monitorar e revisar")]),
+  ("exemplos", "Exemplos de classificação sugerida", [("alcance-exemplos", "Como interpretar os exemplos"), ("exemplo-1", "Áreas contaminadas"), ("exemplo-2", "Área sob embargo ambiental estadual registrada no SIGAM"), ("exemplo-3", "Área sob embargo ambiental federal ativo"), ("exemplo-4", "Manguezal oficialmente mapeado"), ("exemplo-5", "Território quilombola oficialmente delimitado"), ("exemplo-6", "Terra Indígena oficialmente delimitada"), ("exemplo-7", "Unidade de Conservação de Proteção Integral"), ("exemplo-8", "Área oficial de influência sobre o patrimônio espeleológico"), ("exemplo-9", "Área suscetível a inundação, enxurrada ou alagamento"), ("exemplo-10", "Área suscetível a escorregamento, erosão ou movimento de massa"), ("exemplo-11", "Área de Proteção e Recuperação dos Mananciais do Alto Juquery"), ("exemplo-12", "Área de Proteção e Recuperação dos Mananciais do Alto Tietê Cabeceiras"), ("exemplo-13", "Área de Proteção e Recuperação dos Mananciais da Billings"), ("exemplo-14", "Área de Proteção e Recuperação dos Mananciais da Guarapiranga"), ("exemplo-15", "Área contaminada cadastrada pela CETESB"), ("exemplo-16", "Assentamento rural no Estado de São Paulo"), ("exemplo-17", "Bem tombado ou área envoltória oficial do CONDEPHAAT"), ("exemplo-18", "Bem tombado federal identificado pelo IPHAN"), ("exemplo-19", "Sítio arqueológico oficialmente cadastrado"), ("exemplo-20", "Unidade de Conservação de Uso Sustentável")]),
+  ("rastreabilidade", "Registro, transparência e auditoria", [("ficha", "Registro mínimo da decisão"), ("revisao", "Histórico e revisão")]),
+  ("referencias", "Referências e continuidade", [("referencias-conceituais", "Bases conceituais e fontes"), ("continuidade", "Relação com a hierarquização")])
+] %}
 
 {% block conteudo %}
-<main class="conteudo-principal gerador-main">
-      <section class="secao-biblioteca-canonica-de-risco-e-restricao gerador-section gerador-intro">
-        <div class="gerador-section__body">
-          <div class="gerador-breadcrumb">
-            <a href="/public/">Início</a> ›
-            <a href="/public/documentacao/">Documentação</a> › Fundamentos da elegibilidade territorial
-          </div>
-          <h1 class="gerador-title">
-            Fundamentos da elegibilidade territorial — restrições e riscos
-          </h1>
-          <p class="gerador-subtitle">
-            Arcabouço teórico-conceitual no qual o sistema se alicerça para
-            firmar suposições e decisões sobre risco e restrição na triagem
-            territorial da Elegibilidade territorial, reunindo os fundamentos que orientam a
-            graduação de condições incertas e a aplicação de impedimentos
-            formais.
-          </p>
-        </div>
-      </section>
-      <section class="secao-risco-e-restricao gerador-section">
-        <header class="gerador-section__header">
-          <span class="gerador-section__number">1</span>
-          <div class="gerador-section__heading">
-            <h2>Risco e restrição</h2>
-            <p>
-              Fundamentos teóricos que sustentam a distinção entre condição
-              incerta (risco) e condição impeditiva (restrição).
-            </p>
-          </div>
-        </header>
-        <div class="gerador-section__body">
-          <div class="fase1-theory-text">
-            <p>
-              Os conceitos de risco e restrição são empregados de forma
-              complementar no planejamento estratégico da infraestrutura de
-              transportes. O risco é utilizado para graduar condições incertas,
-              enquanto a restrição é utilizada para excluir alternativas
-              incompatíveis com condições impeditivas.
-            </p>
-            <p>
-              Em projetos de infraestrutura de transportes, o risco é associado
-              às incertezas capazes de alterar prazo, custo, demanda, desempenho
-              ou viabilidade, especialmente quando são considerados processos
-              longos e interfaces institucionais complexas (<a
-                href="https://doi.org/10.1016/j.retrec.2015.04.007"
-                target="_blank"
-                rel="noopener"
-                >Miller e Szimba, 2015</a
-              >). Sob uma perspectiva ambiental e territorial, o risco também é
-              compreendido como resultado da interação entre uma ocorrência
-              potencialmente danosa, os elementos expostos e a predisposição
-              desses elementos a sofrer efeitos adversos (<a
-                href="https://www.ipcc.ch/report/ar6/wg1/chapter/chapter-1/"
-                target="_blank"
-                rel="noopener"
-                >IPCC, 2021</a
-              >). Quando essa formulação é aplicada às redes de transporte, são
-              combinadas a probabilidade e a intensidade da ameaça, a exposição
-              dos ativos e a sensibilidade da infraestrutura às condições
-              incidentes (<a
-                href="https://doi.org/10.1038/s41467-019-10442-3"
-                target="_blank"
-                rel="noopener"
-                >Koks et al., 2019</a
-              >).
-            </p>
-            <p>
-              A restrição, em contraste, é definida na avaliação multicritério
-              espacial como o critério pelo qual determinadas áreas são
-              retiradas do conjunto de alternativas admissíveis antes da
-              ponderação dos fatores graduais (<a
-                href="https://onlinelibrary.wiley.com/doi/10.1111/gean.70004"
-                target="_blank"
-                rel="noopener"
-                >Zhao et al., 2025</a
-              >). Sua representação é realizada por regra booleana não
-              compensatória: uma vez confirmada a condição impeditiva,
-              resultados favoráveis obtidos nos demais critérios não podem
-              anulá-la (<a
-                href="https://doi.org/10.1016/j.jag.2006.01.003"
-                target="_blank"
-                rel="noopener"
-                >Malczewski, 2006</a
-              >). No planejamento de corredores rodoviários, essa regra é
-              materializada pela retirada das áreas incompatíveis da superfície
-              de decisão antes da comparação dos traçados, permanecendo os
-              demais fatores representados como custos ou resistências graduais
-              (<a
-                href="https://doi.org/10.1016/S1361-9209(99)00002-4"
-                target="_blank"
-                rel="noopener"
-                >Li et al., 1999</a
-              >).
-            </p>
-            <p>
-              Com base nessas formulações, condições incertas são avaliadas
-              separadamente dos impedimentos formais. Alternativas incompatíveis
-              podem ser eliminadas antes da alocação de recursos, e os riscos
-              remanescentes podem ser comparados durante a formação da carteira.
-            </p>
-            <p>
-              Para assegurar coerência conceitual e operacional, o sistema adota
-              exclusivamente duas classes: o risco, tratado como condição
-              incerta e abordado de forma gradual e condicionante por meio do
-              índice de risco calculado; e a restrição, tratada como condição
-              impeditiva e decidida por regra booleana não compensatória. Não
-              são admitidas classes intermediárias, de modo que toda a triagem
-              territorial da Elegibilidade territorial se organiza unicamente nessas duas
-              categorias.
-            </p>
-          </div>
-          <div class="fase1-concept-grid">
-            <article class="card-risco fase1-concept fase1-concept--risk">
-              <div>
-                <h3>Risco</h3>
-                <p>
-                  Efeito potencial de uma condição incerta sobre os objetivos do
-                  empreendimento, determinado pela ocorrência territorial, pela
-                  exposição e pela sensibilidade dos elementos afetados. Sua
-                  intensidade é graduada para representar possíveis alterações
-                  de prazo, custo, desempenho, viabilidade ou sustentabilidade.
-                </p>
-              </div>
-            </article>
-            <article class="card-restricao fase1-concept fase1-concept--restriction">
-              <div>
-                <h3>Restrição</h3>
-                <p>
-                  Condição territorial impeditiva, confirmada por regra
-                  aplicável e sobreposição espacial. Sua aplicação é binária e
-                  não compensatória: a alternativa incompatível é excluída antes
-                  da ponderação dos critérios de risco.
-                </p>
-              </div>
-            </article>
-          </div>
-        </div>
-      </section>
-      <section class="secao-camadas-de-restricao-e-risco gerador-section">
-        <header class="gerador-section__header">
-          <span class="gerador-section__number">2</span>
-          <div class="gerador-section__heading">
-            <h2>Camadas de restrição e risco</h2>
-            <p>
-              Camadas oficiais utilizadas para gerar as superfícies espaciais de
-              restrição e de risco na triagem territorial da Elegibilidade territorial.
-            </p>
-          </div>
-        </header>
-        <div class="gerador-section__body">
-          <div class="fase1-theory-text">
-            <p>
-              As superfícies de restrição e de risco são construídas
-              exclusivamente a partir das camadas relacionadas a seguir, todas
-              provenientes de bases oficiais. As camadas de restrição
-              correspondem a condições impeditivas verificáveis; as camadas de
-              risco correspondem a condições incertas passíveis de graduação. A
-              tabela apresenta, para cada camada, o órgão que publica o dado, a
-              categoria adotada, o fundamento resumido do enquadramento e a norma
-              ou referência técnica em que esse fundamento se apoia. As duas
-              fontes são distintas e propositalmente separadas: uma responde por
-              onde a geometria é obtida, a outra pelo que sustenta a
-              classificação.
-            </p>
-          </div>
-          <div class="fase1-canonical-table-wrap">
-            <table class="fase1-canonical-table fase1-canonical-table--compact">
-              <thead>
-                <tr>
-                  <th>Camada/fonte</th>
-                  <th>Categoria</th>
-                  <th>Fundamento</th>
-                  <th>Fonte</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><strong>Áreas contaminadas</strong>
-                    (<a href="https://datageo.ambiente.sp.gov.br/app/?ctx=DATAGEO" target="_blank" rel="noopener">DataGEO</a>, 2026)</td>
-                  <td><span class="fase1-classification fase1-classification--restriction">Restrição</span></td>
-                  <td>
-                    A CETESB restringe o uso de áreas contaminadas quando há riscos à
-                    saúde humana ou ao meio ambiente, mantendo tais restrições enquanto
-                    não forem comprovadas condições seguras para o uso pretendido. Em
-                    projetos de logística e infraestrutura, essa condição gera incertezas
-                    quanto à viabilidade e aos prazos de implantação, que podem depender
-                    de medidas de intervenção e de posterior manifestação da CETESB.
-                    Esses condicionantes tornam tais áreas menos favoráveis à execução e
-                    operação dos empreendimentos, justificando sua classificação como
-                    áreas de restrição.
-                  </td>
-                  <td><a href="https://www.al.sp.gov.br/repositorio/legislacao/lei/2009/lei-13577-08.07.2009.html" target="_blank" rel="noopener">Proteção da qualidade do solo e gerenciamento de áreas contaminadas (Lei Estadual nº 13.577, 2009)</a></td>
-                </tr>
-                <tr>
-                  <td><strong>Área sob embargo ambiental estadual registrada no SIGAM</strong><br><small><a href="https://sigam.ambiente.sp.gov.br/sigam3/" target="_blank" rel="noopener">SIGAM/SEMIL — Sistema Integrado de Gestão Ambiental</a></small></td>
-                  <td><span class="fase1-classification fase1-classification--restriction">Restrição</span></td>
-                  <td>Ato de fiscalização que suspende a atividade na área autuada. A obra não avança sobre o polígono antes do desembargo, decisão administrativa que corre fora do licenciamento.</td>
-                  <td><a href="https://www.al.sp.gov.br/repositorio/legislacao/decreto/1976/decreto-8468-08.09.1976.html" target="_blank" rel="noopener">Regulamento da prevenção e controle da poluição do meio ambiente em São Paulo (Decreto Estadual nº 8.468, 1976)</a></td>
-                </tr>
-                <tr>
-                  <td><strong>Área sob embargo ambiental federal ativo</strong><br><small><a href="https://servicos.ibama.gov.br/ctf/publico/areasembargadas/" target="_blank" rel="noopener">IBAMA — consulta pública de áreas embargadas</a></small></td>
-                  <td><span class="fase1-classification fase1-classification--restriction">Restrição</span></td>
-                  <td>Mesma natureza do embargo estadual, aplicado pelo IBAMA no local da infração. O impedimento é jurídico e anterior a qualquer análise ambiental do empreendimento.</td>
-                  <td><a href="https://www.planalto.gov.br/ccivil_03/leis/l9605.htm" target="_blank" rel="noopener">Sanções penais e administrativas por condutas lesivas ao meio ambiente (Lei nº 9.605, 1998)</a></td>
-                </tr>
-                <tr>
-                  <td><strong>Manguezal oficialmente mapeado</strong><br><small><a href="https://datageo.ambiente.sp.gov.br/geoportal/catalog/search/search.page" target="_blank" rel="noopener">DataGEO — catálogo de metadados</a></small></td>
-                  <td><span class="fase1-classification fase1-classification--restriction">Restrição</span></td>
-                  <td>Manguezal é Área de Preservação Permanente em toda a sua extensão. A supressão só é admitida em hipóteses restritas de utilidade pública, somando vedação legal e licenciamento de alta complexidade.</td>
-                  <td><a href="https://www.planalto.gov.br/ccivil_03/_ato2011-2014/2012/lei/l12651.htm" target="_blank" rel="noopener">Código Florestal — proteção da vegetação nativa (Lei nº 12.651, 2012)</a></td>
-                </tr>
-                <tr>
-                  <td><strong>Território quilombola oficialmente delimitado</strong><br><small><a href="https://certificacao.incra.gov.br/csv_shp/export_shp.py" target="_blank" rel="noopener">INCRA — acervo fundiário, download de shapefiles</a></small></td>
-                  <td><span class="fase1-classification fase1-classification--restriction">Restrição</span></td>
-                  <td>Território de comunidade tradicional com perímetro reconhecido pelo poder público. A intervenção exige consulta e anuência próprias, cujo prazo e resultado não estão sob controle do empreendedor.</td>
-                  <td><a href="https://www.planalto.gov.br/ccivil_03/decreto/2003/d4887.htm" target="_blank" rel="noopener">Identificação, delimitação e titulação de territórios quilombolas (Decreto nº 4.887, 2003)</a></td>
-                </tr>
-                <tr>
-                  <td><strong>Terra Indígena oficialmente delimitada</strong><br><small><a href="https://geoserver.funai.gov.br/" target="_blank" rel="noopener">FUNAI — geoserver de terras indígenas</a></small></td>
-                  <td><span class="fase1-classification fase1-classification--restriction">Restrição</span></td>
-                  <td>Terra de ocupação tradicional indígena com perímetro oficialmente delimitado. A intervenção depende de manifestação da FUNAI e de autorização federal de base constitucional, não de condicionante de licença.</td>
-                  <td><a href="https://www.planalto.gov.br/ccivil_03/leis/lcp/lcp140.htm" target="_blank" rel="noopener">Cooperação federativa no licenciamento ambiental (Lei Complementar nº 140, 2011)</a></td>
-                </tr>
-                <tr>
-                  <td><strong>Unidade de Conservação de Proteção Integral</strong><br><small><a href="https://cnuc.mma.gov.br/" target="_blank" rel="noopener">CNUC/MMA — Cadastro Nacional de Unidades de Conservação</a></small></td>
-                  <td><span class="fase1-classification fase1-classification--restriction">Restrição</span></td>
-                  <td>Unidade cujo objetivo legal é preservar a natureza, admitindo apenas uso indireto dos recursos. Implantar infraestrutura contraria a finalidade da categoria e depende de instrumento excepcional. Abrange as três esferas — federal, estadual e municipal —, porque o grupo é definido pela lei do SNUC e não pelo órgão gestor.</td>
-                  <td><a href="https://www.planalto.gov.br/ccivil_03/leis/l9985.htm" target="_blank" rel="noopener">Sistema Nacional de Unidades de Conservação da Natureza (Lei nº 9.985, 2000)</a></td>
-                </tr>
-                <tr>
-                  <td><strong>Área oficial de influência sobre o patrimônio espeleológico</strong><br><small><a href="https://www.gov.br/icmbio/pt-br/assuntos/centros-de-pesquisa/cecav/" target="_blank" rel="noopener">CECAV/ICMBio — base de cavidades naturais</a></small></td>
-                  <td><span class="fase1-classification fase1-classification--risk">Risco</span></td>
-                  <td>Área de influência de cavidade natural publicada pelo órgão federal. Exige estudo espeleológico e pode impor medidas de proteção ou ajuste de traçado, sem vedar a obra.</td>
-                  <td><a href="https://www.planalto.gov.br/ccivil_03/_ato2019-2022/2022/decreto/d10935.htm" target="_blank" rel="noopener">Proteção do patrimônio espeleológico (Decreto nº 10.935, 2022)</a></td>
-                </tr>
-                <tr>
-                  <td><strong>Área suscetível a inundação, enxurrada ou alagamento</strong><br><small><a href="https://geosgb.sgb.gov.br/" target="_blank" rel="noopener">GeoSGB — cartas de suscetibilidade do Serviço Geológico do Brasil</a></small></td>
-                  <td><span class="fase1-classification fase1-classification--risk">Risco</span></td>
-                  <td>Mancha que indica onde a água tende a se acumular ou transbordar. Não impede a obra: cobra soluções de drenagem, cotas de projeto e manutenção ao longo da vida útil.</td>
-                  <td><a href="https://geosgb.sgb.gov.br/" target="_blank" rel="noopener">Cartas de suscetibilidade a movimentos gravitacionais de massa e inundações (SGB/CPRM)</a></td>
-                </tr>
-                <tr>
-                  <td><strong>Área suscetível a escorregamento, erosão ou movimento de massa</strong><br><small><a href="https://geosgb.sgb.gov.br/" target="_blank" rel="noopener">GeoSGB — cartas de suscetibilidade do Serviço Geológico do Brasil</a></small></td>
-                  <td><span class="fase1-classification fase1-classification--risk">Risco</span></td>
-                  <td>Carta que indica onde o terreno tende a ceder ou ser carreado. Remete a soluções geotécnicas e monitoramento, com efeito sobre custo e prazo, não sobre a viabilidade.</td>
-                  <td><a href="https://geosgb.sgb.gov.br/" target="_blank" rel="noopener">Cartas de suscetibilidade a movimentos gravitacionais de massa e inundações (SGB/CPRM)</a></td>
-                </tr>
-                <tr>
-                  <td><strong>Área de Proteção e Recuperação dos Mananciais do Alto Juquery</strong><br><small><a href="https://datageo.ambiente.sp.gov.br/geoportal/catalog/search/search.page" target="_blank" rel="noopener">DataGEO — catálogo de metadados</a></small></td>
-                  <td><span class="fase1-classification fase1-classification--risk">Risco</span></td>
-                  <td>Perímetro geral da área de proteção de manancial. A lei divide a APRM em subáreas com regras distintas, e a geometria disponível não permite saber qual delas incide — condiciona o traçado sem comprovar vedação.</td>
-                  <td><a href="https://www.al.sp.gov.br/repositorio/legislacao/lei/1997/lei-9866-28.11.1997.html" target="_blank" rel="noopener">Proteção e recuperação das bacias hidrográficas dos mananciais de interesse regional (Lei Estadual nº 9.866, 1997)</a></td>
-                </tr>
-                <tr>
-                  <td><strong>Área de Proteção e Recuperação dos Mananciais do Alto Tietê Cabeceiras</strong><br><small><a href="https://datageo.ambiente.sp.gov.br/geoportal/catalog/search/search.page" target="_blank" rel="noopener">DataGEO — catálogo de metadados</a></small></td>
-                  <td><span class="fase1-classification fase1-classification--risk">Risco</span></td>
-                  <td>Perímetro geral da área de proteção de manancial. A lei divide a APRM em subáreas com regras distintas, e a geometria disponível não permite saber qual delas incide — condiciona o traçado sem comprovar vedação.</td>
-                  <td><a href="https://www.al.sp.gov.br/repositorio/legislacao/lei/1997/lei-9866-28.11.1997.html" target="_blank" rel="noopener">Proteção e recuperação das bacias hidrográficas dos mananciais de interesse regional (Lei Estadual nº 9.866, 1997)</a></td>
-                </tr>
-                <tr>
-                  <td><strong>Área de Proteção e Recuperação dos Mananciais da Billings</strong><br><small><a href="https://datageo.ambiente.sp.gov.br/geoportal/catalog/search/search.page" target="_blank" rel="noopener">DataGEO — catálogo de metadados</a></small></td>
-                  <td><span class="fase1-classification fase1-classification--risk">Risco</span></td>
-                  <td>Perímetro geral da área de proteção de manancial. A lei divide a APRM em subáreas com regras distintas, e a geometria disponível não permite saber qual delas incide — condiciona o traçado sem comprovar vedação.</td>
-                  <td><a href="https://www.al.sp.gov.br/repositorio/legislacao/lei/1997/lei-9866-28.11.1997.html" target="_blank" rel="noopener">Proteção e recuperação das bacias hidrográficas dos mananciais de interesse regional (Lei Estadual nº 9.866, 1997)</a></td>
-                </tr>
-                <tr>
-                  <td><strong>Área de Proteção e Recuperação dos Mananciais da Guarapiranga</strong><br><small><a href="https://datageo.ambiente.sp.gov.br/geoportal/catalog/search/search.page" target="_blank" rel="noopener">DataGEO — catálogo de metadados</a></small></td>
-                  <td><span class="fase1-classification fase1-classification--risk">Risco</span></td>
-                  <td>Perímetro geral da área de proteção de manancial. A lei divide a APRM em subáreas com regras distintas, e a geometria disponível não permite saber qual delas incide — condiciona o traçado sem comprovar vedação.</td>
-                  <td><a href="https://www.al.sp.gov.br/repositorio/legislacao/lei/1997/lei-9866-28.11.1997.html" target="_blank" rel="noopener">Proteção e recuperação das bacias hidrográficas dos mananciais de interesse regional (Lei Estadual nº 9.866, 1997)</a></td>
-                </tr>
-                <tr>
-                  <td><strong>Área contaminada cadastrada pela CETESB</strong><br><small><a href="https://cetesb.sp.gov.br/areas-contaminadas/relacao-de-areas-contaminadas/" target="_blank" rel="noopener">CETESB — relação de áreas contaminadas e reabilitadas</a></small></td>
-                  <td><span class="fase1-classification fase1-classification--risk">Risco</span></td>
-                  <td>Área com contaminação declarada no cadastro estadual. Exige investigação, gerenciamento do solo e da água subterrânea e proteção de quem trabalha no local — tudo previsto e licenciável.</td>
-                  <td><a href="https://www.al.sp.gov.br/repositorio/legislacao/decreto/2013/decreto-59263-05.06.2013.html" target="_blank" rel="noopener">Regulamento da proteção da qualidade do solo e do gerenciamento de áreas contaminadas (Decreto Estadual nº 59.263, 2013)</a></td>
-                </tr>
-                <tr>
-                  <td><strong>Assentamento rural no Estado de São Paulo</strong><br><small><a href="https://certificacao.incra.gov.br/csv_shp/export_shp.py" target="_blank" rel="noopener">INCRA — acervo fundiário, download de shapefiles</a></small></td>
-                  <td><span class="fase1-classification fase1-classification--risk">Risco</span></td>
-                  <td>Perímetro de assentamento de reforma agrária. A interferência abre negociação fundiária, eventual reassentamento e anuência do órgão gestor, com efeito sobre prazo e custo.</td>
-                  <td><a href="https://portal.iphan.gov.br/uploads/ckfinder/arquivos/portaria_interministerial_60_2015.pdf" target="_blank" rel="noopener">Manifestação de FUNAI, Palmares, IPHAN e Ministério da Saúde no licenciamento (Portaria Interministerial nº 60, 2015)</a></td>
-                </tr>
-                <tr>
-                  <td><strong>Bem tombado ou área envoltória oficial do CONDEPHAAT</strong><br><small><a href="https://datageo.ambiente.sp.gov.br/geoportal/catalog/search/search.page" target="_blank" rel="noopener">DataGEO — catálogo de metadados</a></small></td>
-                  <td><span class="fase1-classification fase1-classification--risk">Risco</span></td>
-                  <td>Bem protegido por tombamento estadual, com a faixa de entorno definida no próprio ato de proteção. A intervenção depende de autorização do conselho, que analisa o projeto concreto e pode deferi-la com condicionantes.</td>
-                  <td><a href="https://www.planalto.gov.br/ccivil_03/decreto-lei/del0025.htm" target="_blank" rel="noopener">Organização da proteção do patrimônio histórico e artístico nacional (Decreto-Lei nº 25, 1937)</a></td>
-                </tr>
-                <tr>
-                  <td><strong>Bem tombado federal identificado pelo IPHAN</strong><br><small><a href="https://sicg.iphan.gov.br/" target="_blank" rel="noopener">IPHAN — SICG, Sistema Integrado de Conhecimento e Gestão</a></small></td>
-                  <td><span class="fase1-classification fase1-classification--risk">Risco</span></td>
-                  <td>Bem protegido por tombamento federal. Como no caso estadual, a autorização é examinada caso a caso, e a ausência de faixa de entorno publicada não é tratada como impedimento.</td>
-                  <td><a href="https://www.planalto.gov.br/ccivil_03/decreto-lei/del0025.htm" target="_blank" rel="noopener">Organização da proteção do patrimônio histórico e artístico nacional (Decreto-Lei nº 25, 1937)</a></td>
-                </tr>
-                <tr>
-                  <td><strong>Sítio arqueológico oficialmente cadastrado</strong><br><small><a href="https://sicg.iphan.gov.br/" target="_blank" rel="noopener">IPHAN — SICG, Sistema Integrado de Conhecimento e Gestão</a></small></td>
-                  <td><span class="fase1-classification fase1-classification--risk">Risco</span></td>
-                  <td>Sítio registrado no inventário nacional. A obra exige pesquisa, eventual resgate do material e acompanhamento durante a execução — procedimentos previstos e de prazo estimável.</td>
-                  <td><a href="https://www.planalto.gov.br/ccivil_03/leis/1950-1969/l3924.htm" target="_blank" rel="noopener">Monumentos arqueológicos e pré-históricos (Lei nº 3.924, 1961)</a></td>
-                </tr>
-                <tr>
-                  <td><strong>Unidade de Conservação de Uso Sustentável</strong><br><small><a href="https://cnuc.mma.gov.br/" target="_blank" rel="noopener">CNUC/MMA — Cadastro Nacional de Unidades de Conservação</a></small></td>
-                  <td><span class="fase1-classification fase1-classification--risk">Risco</span></td>
-                  <td>Unidade que admite uso direto dos recursos, conforme a categoria e o zoneamento. A intervenção é possível mediante anuência do gestor e adequação ao plano de manejo. Abrange as três esferas — federal, estadual e municipal —, porque o grupo é definido pela lei do SNUC e não pelo órgão gestor.</td>
-                  <td><a href="https://www.planalto.gov.br/ccivil_03/leis/l9985.htm" target="_blank" rel="noopener">Sistema Nacional de Unidades de Conservação da Natureza (Lei nº 9.985, 2000)</a></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <p class="fase1-calculation-note">
-            <strong>Como a geometria é usada:</strong> a Elegibilidade territorial lê apenas o
-            perímetro oficial publicado por cada órgão. Não são criadas faixas de
-            entorno, zonas de amortecimento ou raios de influência — o que não
-            estiver desenhado na camada oficial não é considerado. Essa regra vale
-            para todas as camadas da tabela.
-          </p>
-          <p class="fase1-canonical-note">
-            Fonte: <code>config/geoespacial/biblioteca_criterios_risco_restricao.json</code>.
-            São sete camadas de restrição e treze camadas de risco, totalizando
-            vinte camadas oficiais.
-          </p>
-        </div>
-      </section>
-      <section class="secao-conceito-de-restricao-e-risco gerador-section">
-        <header class="gerador-section__header">
-          <span class="gerador-section__number">3</span>
-          <div class="gerador-section__heading">
-            <h2>Reclassificação operacional das camadas</h2>
-            <p>
-              Definição conceitual adotada por este arcabouço e implementada no
-              sistema: os critérios das bases oficiais são reduzidos a apenas
-              duas categorias operacionais.
-            </p>
-          </div>
-        </header>
-        <div class="gerador-section__body">
-          <div class="fase1-theory-text">
-            <p>
-              A triagem começa pela interseção espacial entre a geometria da
-              demanda e as feições oficiais. Sobrepor-se a uma feição sensível
-              não implica, por si só, inviabilidade: sinaliza que o território
-              exige atenção — comparação de alternativas, estudo específico,
-              autorização ou medida de controle. O que define o tratamento de
-              cada feição não é a sua mera presença, mas o tipo de consequência
-              que ela impõe ao empreendimento.
-            </p>
-            <p>
-              Nas bases oficiais, esses geradores chegam rotulados por naturezas
-              diversas — ambiental, técnica, institucional, fundiária,
-              patrimonial, de prazo e licenciamento e jurídica. Para o uso
-              espacial da Elegibilidade territorial, este arcabouço reduz essa diversidade a apenas
-              duas categorias operacionais, definidas pelo efeito de cada feição
-              sobre a obra e não pelo rótulo de origem. Trata-se de uma decisão
-              conceitual desta metodologia, que o sistema apenas implementa e
-              aplica na triagem.
-            </p>
-            <p>
-              O critério da reclassificação é o grau de complexidade que cada
-              feição impõe ao licenciamento ambiental e à liberação jurídica da
-              obra sobre ela. A feição é enquadrada como <strong>risco</strong>
-              quando sua incidência tende a aumentar prazos, custos, estudos,
-              anuências ou medidas de controle, mas o licenciamento permanece
-              administrável: passa a compor a camada de risco e é ponderada
-              de forma gradual. Havendo interseção, mas faltando atributos que
-              decidam o enquadramento, a feição permanece como risco até análise
-              competente. É enquadrada como <strong>restrição</strong> quando os
-              atributos associados à camada reúnem, de forma combinada, duas
-              dimensões — entraves jurídicos à liberação da obra e alta
-              complexidade de licenciamento ambiental. É a associação dessas
-              duas condições que tende a representar prazos de liberação muito
-              longos e obstáculos substantivos à autorização da obra sobre ela:
-              a feição passa a compor a camada de restrição e barra o objeto
-              na triagem, sem seguir para a avaliação agregada de risco.
-            </p>
-          </div>
-          <div class="fase1-classification-section">
-            <h3>Camadas classificadas como restrição</h3>
-            <p>
-              Camadas cujos atributos associam, de forma combinada, entraves
-              jurídicos à liberação da obra e alta complexidade de licenciamento
-              ambiental, tratadas como impedimento na triagem territorial da
-              Elegibilidade territorial.
-            </p>
+<main class="conteudo-principal glossario" id="risco-restricao">
+  <a class="glossario-voltar" href="/public/documentacao/">← Documentação do sistema</a>
+  <header class="cabecalho-glossario standard-page-hero">
+    <h1 class="standard-page-hero__title"><i class="fa-solid fa-book-open" aria-hidden="true"></i><span>Risco e restrição — fundamentos para classificação</span></h1>
+    <p class="standard-page-hero__eyebrow">Referencial teórico-conceitual · Apoio à decisão</p>
+    <p class="standard-page-hero__description">Conceitos, critérios e um procedimento proposto para fundamentar escolhas de classificação, com justificativas verificáveis e exemplos de caráter sugestivo.</p>
+  </header>
+  <div class="glossario-layout">
+    <aside class="barra-lateral-glossario" aria-label="Consulta aos fundamentos de risco e restrição">
+      <form class="glossario-busca" role="search" id="glossario-busca" data-unidade="tópicos" hidden>
+        <label for="glossario-termo">Buscar nesta página</label>
+        <input type="search" id="glossario-termo" placeholder="Ex.: impedimento, evidência, auditoria…" autocomplete="off" aria-controls="risco-restricao-conteudo">
+        <button type="reset">Limpar busca</button>
+        <p id="glossario-contagem" role="status" aria-live="polite"></p>
+      </form>
+      <details class="glossario-indice" open>
+        <summary>Índice de conteúdo</summary>
+        <nav aria-label="Seções e tópicos">
+          {% for id, titulo, topicos in capitulos %}
+          <div class="glossario-indice-grupo" data-indice-grupo="{{ id }}">
+            <a class="glossario-indice-titulo" href="#{{ id }}">{{ titulo }}</a>
             <ul>
-              <li>Áreas contaminadas</li>
-              <li>Área sob embargo ambiental estadual registrada no SIGAM</li>
-              <li>Área sob embargo ambiental federal ativo</li>
-              <li>Manguezal oficialmente mapeado</li>
-              <li>Território quilombola oficialmente delimitado</li>
-              <li>Terra Indígena oficialmente delimitada</li>
-              <li>Unidade de Conservação de Proteção Integral</li>
+              {% for topico_id, topico_titulo in topicos %}
+              <li data-indice-termo="{{ topico_id }}"><a href="#{{ topico_id }}">{{ topico_titulo }}</a></li>
+              {% endfor %}
             </ul>
           </div>
-          <div class="fase1-classification-section">
-            <h3>Camadas classificadas como risco</h3>
-            <p>
-              Camadas cuja incidência representa complexidade administrável de
-              licenciamento — prazos, estudos, anuências ou medidas de controle
-              — passível de graduação.
-            </p>
-            <ul>
-              <li>Área oficial de influência sobre o patrimônio espeleológico</li>
-              <li>Área suscetível a inundação, enxurrada ou alagamento</li>
-              <li>Área suscetível a escorregamento, erosão ou movimento de massa</li>
-              <li>Área de Proteção e Recuperação dos Mananciais do Alto Juquery</li>
-              <li>Área de Proteção e Recuperação dos Mananciais do Alto Tietê Cabeceiras</li>
-              <li>Área de Proteção e Recuperação dos Mananciais da Billings</li>
-              <li>Área de Proteção e Recuperação dos Mananciais da Guarapiranga</li>
-              <li>Área contaminada cadastrada pela CETESB</li>
-              <li>Assentamento rural no Estado de São Paulo</li>
-              <li>Bem tombado ou área envoltória oficial do CONDEPHAAT</li>
-              <li>Bem tombado federal identificado pelo IPHAN</li>
-              <li>Sítio arqueológico oficialmente cadastrado</li>
-              <li>Unidade de Conservação de Uso Sustentável</li>
-            </ul>
-          </div>
-          <p class="fase1-calculation-note">
-            A classificação é uma triagem para hierarquização e não substitui a
-            Licença Prévia, a análise da CETESB, autorizações setoriais ou
-            manifestações dos órgãos competentes. A restrição nunca é inferida
-            pela simples ausência de informação na camada.
-          </p>
+          {% endfor %}
+        </nav>
+      </details>
+    </aside>
+    <div class="glossario-conteudo" id="risco-restricao-conteudo" tabindex="-1">
+      <p class="glossario-sem-resultados" id="glossario-sem-resultados" hidden>Nenhum tópico encontrado. Tente outra palavra ou limpe a busca.</p>
+      <section class="secao-contexto glossario-grupo" id="contexto" aria-labelledby="contexto-titulo">
+        <h2 id="contexto-titulo">Finalidade e alcance</h2>
+        <div class="glossario-entrada hier-texto" id="finalidade" tabindex="-1">
+          <p>A classificação de uma condição territorial como risco ou restrição estabelece consequências distintas para os objetos de demanda. Uma restrição pode retirar uma proposta do conjunto avaliado; um risco pode reduzir sua elegibilidade sem excluí-la automaticamente. Por isso, o enquadramento precisa de fundamento explícito, evidência suficiente e relação demonstrável com a implementação pretendida.</p>
+          <p>Esta página reúne um <strong>arcabouço teórico-conceitual para apoiar essa decisão</strong> e propõe uma sequência de análise, registro e revisão. Seu objeto é a escolha do tratamento dado às condições ambientais e territoriais, anterior à aplicação das regras de avaliação. O cálculo e a interpretação do Índice de Elegibilidade Territorial são apresentados nos <a href="/public/documentacao/processo-hierarquizacao/#fase-1">Fundamentos da Hierarquização e Ranking</a>.</p>
+          <p><strong>As classificações dos exemplos são sugestões metodológicas.</strong> Elas explicitam possíveis razões para considerar uma condição como risco ou restrição, dentro de um contexto de triagem. A origem oficial do dado informa sua procedência; a categoria atribuída nesta página expressa uma interpretação proposta, que precisa ser examinada à luz do objeto, do território, das normas e das evidências aplicáveis.</p>
+          <p>A qualidade dessa escolha importa para a finalidade social da hierarquização. Excluir uma proposta sem justificativa suficiente pode afastar uma intervenção relevante; minimizar um impedimento ou uma condição de risco pode comprometer pessoas, comunidades, recursos públicos e o ambiente. A fundamentação e a possibilidade de revisão tornam essas consequências discutíveis e verificáveis.</p>
         </div>
       </section>
-    </main>
-{% endblock %}
+      <section class="secao-conceitos glossario-grupo" id="conceitos" aria-labelledby="conceitos-titulo">
+        <h2 id="conceitos-titulo">Risco, restrição e evidência</h2>
+        <div class="glossario-entrada hier-texto" id="conceito-risco" tabindex="-1">
+          <h3 class="hier-topico">Risco: condição com efeito potencial sobre a implementação</h3>
+          <p>O risco se relaciona à possibilidade de consequências adversas para os objetivos da intervenção e para os sistemas humanos ou ambientais afetados. No campo dos riscos climáticos, o <a href="https://www.ipcc.ch/report/ar6/wg2/chapter/annex-ii/" target="_blank" rel="noopener">IPCC</a> o descreve a partir da interação entre ameaças, exposição e vulnerabilidade. Essa formulação ajuda a distinguir a ocorrência de uma condição territorial dos efeitos que ela pode produzir sobre pessoas, atividades e infraestrutura.</p>
+          <p>No tratamento classificatório da Fase 1, o risco permite graduar a elegibilidade segundo a exposição espacial às condições selecionadas. A extensão de área exposta é uma medida adotada pelo modelo; ela não equivale, por si só, à probabilidade de um evento, à sua gravidade ou a uma avaliação completa de danos. A classificação precisa indicar quais efeitos potenciais justificam considerar aquela condição.</p>
+        </div>
+        <div class="glossario-entrada hier-texto" id="conceito-restricao" tabindex="-1">
+          <h3 class="hier-topico">Restrição: condição impeditiva no contexto da avaliação</h3>
+          <p>A restrição estabelece uma condição de inadmissibilidade para a continuidade da proposta no processo de hierarquização. Seu efeito é <strong>eliminatório e não compensatório</strong>: resultados favoráveis em outros critérios não anulam o impedimento reconhecido. A distinção entre admissibilidade e avaliação de desempenho integra a discussão da <a href="https://doi.org/10.1080/13658810600661508" target="_blank" rel="noopener">análise multicritério espacial</a>.</p>
+          <p>O fundamento pode ser uma vedação normativa aplicável, um ato administrativo vigente, uma incompatibilidade técnica demonstrada ou uma regra metodológica de exclusão expressamente adotada para a avaliação. Cada fundamento exige registro próprio. Uma escolha de evitar áreas sensíveis na triagem deve ser identificada como decisão metodológica; uma afirmação de impedimento legal exige indicar o dispositivo ou ato e demonstrar sua aplicabilidade.</p>
+          <p><strong>Maior complexidade, custo ou prazo não bastam, isoladamente, para comprovar uma restrição.</strong> A questão decisiva é se há uma razão fundamentada para impedir o prosseguimento da proposta naquele contexto, e qual é o alcance dessa razão.</p>
+        </div>
+        <div class="glossario-entrada hier-texto" id="incerteza" tabindex="-1">
+          <h3 class="hier-topico">Ausência de informação: limite da conclusão</h3>
+          <p>Falta de dado não demonstra ausência de risco nem existência de impedimento. Quando as evidências não permitem concluir, devem ser registrados a lacuna, seu efeito sobre a análise e a informação necessária para resolvê-la. A necessidade de complementação é uma condição da análise, sem constituir uma terceira classe de risco ou restrição.</p>
+          <p>Se for adotado algum tratamento provisório por precaução, sua justificativa, seu alcance e sua condição de revisão precisam estar explícitos. Classificar automaticamente toda dúvida como risco pode ocultar impedimentos; convertê-la automaticamente em restrição pode produzir exclusões sem fundamento suficiente.</p>
+        </div>
+      </section>
+      <section class="secao-criterios glossario-grupo" id="criterios" aria-labelledby="criterios-titulo">
+        <h2 id="criterios-titulo">Critérios de enquadramento</h2>
+        <div class="glossario-entrada hier-texto" id="efeito" tabindex="-1">
+          <h3 class="hier-topico">Qual consequência a condição produz?</h3>
+          <p>A análise começa pela consequência da condição para a implementação. Se ela introduz efeitos potenciais que precisam ser considerados, a hipótese é de tratamento como risco. Se fundamenta uma regra de inadmissibilidade, a hipótese é de restrição. A natureza temática — ambiental, social, fundiária, patrimonial, técnica ou jurídica — ajuda a organizar a análise, mas não determina a categoria.</p>
+          <p>A exigência de estudo, consulta ou autorização indica uma obrigação a examinar. Ela não garante a viabilidade da intervenção nem demonstra, por si só, um impedimento absoluto. É necessário identificar a regra aplicável, o resultado das verificações e a consequência adotada para a hierarquização.</p>
+        </div>
+        <div class="glossario-entrada hier-texto" id="fundamento" tabindex="-1">
+          <h3 class="hier-topico">Qual evidência sustenta a interpretação?</h3>
+          <p>O fundamento deve relacionar uma evidência identificável à conclusão: o que o documento, estudo ou norma estabelece; a qual área, atividade e período se aplica; e por que isso justifica o tratamento proposto. É necessário distinguir a <strong>fonte do dado geoespacial</strong> da <strong>referência que sustenta o enquadramento</strong>. Uma base oficial pode localizar um fenômeno sem declarar que toda proposta sobreposta a ele é inadmissível.</p>
+          <p>Regras diferentes podem incidir dentro do mesmo tema ou perímetro. Havendo essa heterogeneidade, ela deve ser explicitada antes de atribuir uma categoria única à camada. A regra escolhida precisa ter escopo reconhecível e ser aplicada de forma consistente aos objetos comparados.</p>
+        </div>
+        <div class="glossario-entrada hier-texto" id="espaco" tabindex="-1">
+          <h3 class="hier-topico">O que a representação espacial permite concluir?</h3>
+          <p>A avaliação é espacialmente explícita: depende da relação entre a localização e a extensão da demanda e as condições representadas nas camadas analisadas. Devem ser conhecidos o significado das feições, a escala, a cobertura, a data e os atributos necessários para interpretar a sobreposição. Interseção espacial é evidência de incidência, cuja consequência depende da regra de classificação.</p>
+          <p>Uma carta de suscetibilidade, por exemplo, representa a propensão a processos e exige atenção aos limites de uso descritos pelo <a href="https://www.sgb.gov.br/saiba-mais-cartas-de-suscetibilidade" target="_blank" rel="noopener">Serviço Geológico do Brasil</a>. Um perímetro geral de proteção não descreve necessariamente todas as regras de seu zoneamento interno. Esses limites precisam acompanhar a conclusão.</p>
+          <p>As sugestões desta página tomam como referência as feições publicadas pelos órgãos responsáveis. Eventuais faixas, áreas de influência ou zonas de proteção adicionais exigem fundamento e delimitação identificados. A ausência de uma geometria na base consultada limita a análise; ela não elimina uma obrigação aplicável fora da representação disponível.</p>
+        </div>
+      </section>
+      <section class="secao-procedimento glossario-grupo" id="procedimento" aria-labelledby="procedimento-titulo">
+        <h2 id="procedimento-titulo">Procedimento proposto para classificar</h2>
+        <div class="glossario-entrada hier-texto" id="procedimento-alcance" tabindex="-1">
+          <p>Propõe-se um percurso de oito etapas que relaciona a definição do contexto à análise das evidências, à justificativa do enquadramento e à revisão das escolhas. Cada etapa indica um registro esperado para permitir a reconstrução da decisão. O resultado é uma classificação fundamentada e identificada por versão, vinculada às condições em que foi produzida.</p>
+        </div>
+        <div class="glossario-entrada hier-texto" id="etapa-1" tabindex="-1">
+          <h3 class="hier-topico">1. Delimitar o contexto da decisão</h3>
+          <p>Definir a finalidade da avaliação, a natureza das intervenções, a abrangência territorial, o horizonte temporal e o conjunto de objetos comparados. Explicitar o que será entendido como continuidade, exclusão e necessidade de complementação nesse contexto.</p>
+          <p><strong>Registro esperado:</strong> escopo da avaliação e condições de admissibilidade que orientarão a análise das camadas.</p>
+        </div>
+        <div class="glossario-entrada hier-texto" id="etapa-2" tabindex="-1">
+          <h3 class="hier-topico">2. Identificar as condições e suas fontes</h3>
+          <p>Relacionar as condições ambientais e territoriais relevantes, as pessoas ou sistemas potencialmente afetados e as bases capazes de representá-las. Descrever o fenômeno antes de atribuir sua categoria e distinguir fontes complementares de registros duplicados.</p>
+          <p><strong>Registro esperado:</strong> inventário de condições, fontes, responsáveis pela publicação, datas, abrangência e limitações conhecidas.</p>
+        </div>
+        <div class="glossario-entrada hier-texto" id="etapa-3" tabindex="-1">
+          <h3 class="hier-topico">3. Verificar a suficiência e a aplicabilidade das evidências</h3>
+          <p>Examinar metadados, atributos, estudos, atos administrativos e referências normativas. Verificar se estão atualizados e se sustentam uma conclusão para a intervenção e o território considerados. Quando necessário, solicitar esclarecimento ao responsável pela informação ou avaliação especializada.</p>
+          <p><strong>Registro esperado:</strong> evidências consultadas, pontos confirmados, lacunas e diligências necessárias.</p>
+        </div>
+        <div class="glossario-entrada hier-texto" id="etapa-4" tabindex="-1">
+          <h3 class="hier-topico">4. Explicitar o efeito sobre a implementação</h3>
+          <p>Descrever como a condição pode afetar segurança, direitos, ambiente, custo, prazo, desempenho ou compatibilidade da proposta. Identificar se existe impedimento demonstrado ou se a condição demanda avaliação e tratamento de efeitos potenciais. Examinar alternativas de localização e eventuais requisitos de adequação.</p>
+          <p><strong>Registro esperado:</strong> relação entre a condição, a evidência e a consequência decisória, incluindo hipóteses e limites.</p>
+        </div>
+        <div class="glossario-entrada hier-texto" id="etapa-5" tabindex="-1">
+          <h3 class="hier-topico">5. Propor e justificar a classificação</h3>
+          <p>Formular a proposta de risco ou restrição e declarar seu fundamento. Definir a unidade de aplicação, o alcance espacial e temporal e os atributos que identificam a condição. Se a exclusão for uma escolha metodológica, explicitar a finalidade e as consequências dessa escolha; se for atribuída a uma obrigação, demonstrar a incidência da regra.</p>
+          <p><strong>Registro esperado:</strong> proposta de enquadramento acompanhada de regra de aplicação, justificativa e tratamento das situações não conclusivas.</p>
+        </div>
+        <div class="glossario-entrada hier-texto" id="etapa-6" tabindex="-1">
+          <h3 class="hier-topico">6. Submeter a proposta à revisão</h3>
+          <p>Revisar a coerência entre evidência, justificativa e consequência, envolvendo as competências pertinentes. Examinar casos representativos, possíveis exclusões indevidas, condições omitidas e duplicações. Identificar divergências e registrar a decisão sobre elas.</p>
+          <p><strong>Registro esperado:</strong> manifestação de revisão, responsáveis, data e conclusão sobre a proposta, com eventuais ajustes.</p>
+        </div>
+        <div class="glossario-entrada hier-texto" id="etapa-7" tabindex="-1">
+          <h3 class="hier-topico">7. Consolidar e identificar uma versão</h3>
+          <p>Consolidar as classificações aceitas e associá-las às fontes e regras utilizadas na avaliação. Identificar a versão, a data de referência, os responsáveis e os objetos aos quais ela se aplica. Tornar acessíveis os fundamentos necessários para compreender as consequências do enquadramento.</p>
+          <p><strong>Registro esperado:</strong> conjunto versionado de decisões, com evidências e regras rastreáveis, que possa ser relacionado aos resultados da hierarquização.</p>
+        </div>
+        <div class="glossario-entrada hier-texto" id="etapa-8" tabindex="-1">
+          <h3 class="hier-topico">8. Monitorar mudanças e revisar quando necessário</h3>
+          <p>Reavaliar o enquadramento diante de novas evidências, atualização das bases, alteração normativa, mudança do objeto ou revisão de um ato administrativo. Identificar os resultados afetados e preservar a versão anterior e o motivo da alteração.</p>
+          <p><strong>Registro esperado:</strong> histórico de mudanças e avaliação de seus efeitos sobre as demandas e os resultados já produzidos. Essas etapas orientam a organização da decisão e de seus registros; sua descrição não pressupõe que todos sejam produzidos automaticamente pelo sistema.</p>
+        </div>
+      </section>
+      <section class="secao-exemplos glossario-grupo" id="exemplos" aria-labelledby="exemplos-titulo">
+        <h2 id="exemplos-titulo">Exemplos de classificação sugerida</h2>
+        <div class="glossario-entrada hier-texto" id="alcance-exemplos" tabindex="-1">
+          <p>Os exemplos a seguir retomam vinte camadas oficiais do repertório de referência, com sugestões de enquadramento, razões e verificações necessárias. O conjunto reúne <strong>sete camadas de restrição e treze camadas de risco</strong> na classificação sugerida. Essa distribuição descreve o repertório apresentado; não estabelece uma composição obrigatória para toda avaliação.</p>
+          <p><strong>A categoria é sugerida por este referencial, e não certificada pelo órgão que publica a camada.</strong> As referências ajudam a examinar cada fundamento e não substituem a demonstração de sua aplicabilidade. O enquadramento depende do contexto e da decisão metodológica registrada. Os exemplos de restrição por salvaguarda precisam ser reconhecidos como escolhas da triagem, sem serem confundidos com proibições legais universais.</p>
+          <p>As condições de aplicação explicitadas abaixo são parte da justificativa. Elas devem ser verificadas antes de utilizar a sugestão na avaliação. Em particular, a interdição de uso de uma área contaminada e sua simples presença em um cadastro representam informações distintas.</p>
+        </div>
+                <div class="risco-tabela standard-table-section" id="tabela-exemplos">
+          <div class="ami-filtered-table">
+            {% set filtro_prefixo = "risco-filtro" %}
+            {% set filtro_rotulo = "Filtrar exemplos de classificação sugerida" %}
+            {% include "componentes/filtro_tabela.html" %}
+            <div class="hier-table-shell risco-tabela-scroll" tabindex="0" role="region" aria-label="Exemplos de classificação sugerida, com rolagem horizontal">
+              <table class="admin-table" id="risco-exemplos">
+                <thead><tr><th class="col-select" scope="col"><input type="checkbox" id="risco-selecionar-todos" aria-label="Selecionar todos os exemplos filtrados"></th><th scope="col">Camada/fonte</th><th scope="col">Categoria</th><th scope="col">Fundamento</th><th scope="col">Fonte</th></tr></thead>
+                <tbody>
+              <tr class="glossario-entrada" id="exemplo-1" tabindex="-1" data-camada="Áreas contaminadas" data-categoria="restricao">
+                <td class="col-select"><input type="checkbox" aria-label="Selecionar Áreas contaminadas" data-selecionar-exemplo></td>
+                <td><strong>Áreas contaminadas</strong><p><a href="https://datageo.ambiente.sp.gov.br/geoportal/catalog/search/search.page" target="_blank" rel="noopener">DataGEO — consultar metadados e situação de uso informada pelo órgão responsável</a>.</p></td>
+                <td><strong>Restrição</strong></td>
+                <td><p>Sugere-se restrição quando há interdição ou limitação de uso documentada e incompatível com a intervenção proposta. O fundamento é o impedimento aplicável ao uso, e não a mera presença de contaminação.</p><p><strong>Condições e limites:</strong> Verificar o ato, os usos atingidos e sua situação atual. Se a camada informa apenas o cadastro de contaminação, a hipótese de restrição não está comprovada; deve-se distingui-la do exemplo de cadastro da CETESB apresentado adiante.</p></td>
+                <td><a href="https://www.al.sp.gov.br/repositorio/legislacao/lei/2009/lei-13577-08.07.2009.html" target="_blank" rel="noopener">Proteção da qualidade do solo e gerenciamento de áreas contaminadas (Lei Estadual nº 13.577, 2009)</a>.</td>
+              </tr>
+              <tr class="glossario-entrada" id="exemplo-2" tabindex="-1" data-camada="Área sob embargo ambiental estadual registrada no SIGAM" data-categoria="restricao">
+                <td class="col-select"><input type="checkbox" aria-label="Selecionar Área sob embargo ambiental estadual registrada no SIGAM" data-selecionar-exemplo></td>
+                <td><strong>Área sob embargo ambiental estadual registrada no SIGAM</strong><p><a href="https://sigam.ambiente.sp.gov.br/sigam3/" target="_blank" rel="noopener">SIGAM/SEMIL — Sistema Integrado de Gestão Ambiental</a>.</p></td>
+                <td><strong>Restrição</strong></td>
+                <td><p>Sugere-se restrição quando um embargo estadual vigente alcança a atividade ou a área da intervenção e impede sua continuidade. O tratamento eliminatório decorre do alcance do ato administrativo.</p><p><strong>Condições e limites:</strong> Conferir o termo de embargo, as atividades abrangidas, o perímetro e eventual desembargo. A ocorrência de uma autuação, isoladamente, não demonstra que toda intervenção no imóvel esteja impedida.</p></td>
+                <td><a href="https://www.al.sp.gov.br/repositorio/legislacao/decreto/1976/decreto-8468-08.09.1976.html" target="_blank" rel="noopener">Regulamento da prevenção e controle da poluição do meio ambiente em São Paulo (Decreto Estadual nº 8.468, 1976)</a>.</td>
+              </tr>
+              <tr class="glossario-entrada" id="exemplo-3" tabindex="-1" data-camada="Área sob embargo ambiental federal ativo" data-categoria="restricao">
+                <td class="col-select"><input type="checkbox" aria-label="Selecionar Área sob embargo ambiental federal ativo" data-selecionar-exemplo></td>
+                <td><strong>Área sob embargo ambiental federal ativo</strong><p><a href="https://servicos.ibama.gov.br/ctf/publico/areasembargadas/" target="_blank" rel="noopener">IBAMA — consulta pública de áreas embargadas</a>.</p></td>
+                <td><strong>Restrição</strong></td>
+                <td><p>Sugere-se restrição quando o embargo federal está ativo e incide sobre a atividade proposta. A medida precisa ser reconhecida no contexto específico antes de produzir efeito eliminatório.</p><p><strong>Condições e limites:</strong> Consultar a situação do embargo e o respectivo termo. Registrar a autoridade responsável, a abrangência da suspensão e as condições de sua revisão.</p></td>
+                <td><a href="https://www.gov.br/ibama/pt-br/assuntos/processo-sancionador-ambiental/medidas-administrativas" target="_blank" rel="noopener">IBAMA — medidas administrativas e embargo</a>.</td>
+              </tr>
+              <tr class="glossario-entrada" id="exemplo-4" tabindex="-1" data-camada="Manguezal oficialmente mapeado" data-categoria="restricao">
+                <td class="col-select"><input type="checkbox" aria-label="Selecionar Manguezal oficialmente mapeado" data-selecionar-exemplo></td>
+                <td><strong>Manguezal oficialmente mapeado</strong><p><a href="https://datageo.ambiente.sp.gov.br/geoportal/catalog/search/search.page" target="_blank" rel="noopener">DataGEO — catálogo de metadados</a>.</p></td>
+                <td><strong>Restrição</strong></td>
+                <td><p>Sugere-se restrição como escolha metodológica de evitar a intervenção direta em ecossistema especialmente protegido. O regime de proteção das Áreas de Preservação Permanente fundamenta essa cautela.</p><p><strong>Condições e limites:</strong> O Código Florestal prevê hipóteses de intervenção em APP. A escolha de excluir manguezais nesta triagem deve ser justificada como regra da avaliação, sem apresentá-la como proibição absoluta de toda e qualquer intervenção.</p></td>
+                <td><a href="https://www.planalto.gov.br/ccivil_03/_ato2011-2014/2012/lei/l12651.htm" target="_blank" rel="noopener">Código Florestal — proteção da vegetação nativa (Lei nº 12.651, 2012)</a>.</td>
+              </tr>
+              <tr class="glossario-entrada" id="exemplo-5" tabindex="-1" data-camada="Território quilombola oficialmente delimitado" data-categoria="restricao">
+                <td class="col-select"><input type="checkbox" aria-label="Selecionar Território quilombola oficialmente delimitado" data-selecionar-exemplo></td>
+                <td><strong>Território quilombola oficialmente delimitado</strong><p><a href="https://acervofundiario.incra.gov.br/Conversao01/faces/index.xhtml" target="_blank" rel="noopener">INCRA — acervo fundiário, download de shapefiles</a>.</p></td>
+                <td><strong>Restrição</strong></td>
+                <td><p>Sugere-se restrição como regra de salvaguarda territorial e social na comparação de alternativas, considerando os direitos da comunidade e a necessidade de examinar a compatibilidade da intervenção.</p><p><strong>Condições e limites:</strong> A delimitação oficial e o Decreto nº 4.887/2003 não demonstram, sozinhos, uma vedação universal a projetos. Documentar os direitos incidentes, as consultas cabíveis e a razão para adotar a exclusão na avaliação.</p></td>
+                <td><a href="https://www.planalto.gov.br/ccivil_03/decreto/2003/d4887.htm" target="_blank" rel="noopener">Identificação, delimitação e titulação de territórios quilombolas (Decreto nº 4.887, 2003)</a>.</td>
+              </tr>
+              <tr class="glossario-entrada" id="exemplo-6" tabindex="-1" data-camada="Terra Indígena oficialmente delimitada" data-categoria="restricao">
+                <td class="col-select"><input type="checkbox" aria-label="Selecionar Terra Indígena oficialmente delimitada" data-selecionar-exemplo></td>
+                <td><strong>Terra Indígena oficialmente delimitada</strong><p><a href="https://geoserver.funai.gov.br/" target="_blank" rel="noopener">FUNAI — geoserver de terras indígenas</a>.</p></td>
+                <td><strong>Restrição</strong></td>
+                <td><p>Sugere-se restrição como regra de salvaguarda dos direitos territoriais indígenas e de prevenção de intervenções incompatíveis com o território e seus usos.</p><p><strong>Condições e limites:</strong> Examinar a situação territorial, o tipo de intervenção e os requisitos aplicáveis com base no art. 231 da Constituição. A categoria sugerida é uma escolha para a triagem, e não uma conclusão automática sobre a autorização de qualquer projeto.</p></td>
+                <td><a href="https://portal.stf.jus.br/constituicao-supremo/artigo.asp?abrirArtigo=231&amp;abrirBase=CF" target="_blank" rel="noopener">Constituição Federal, art. 231 — direitos territoriais indígenas</a>.</td>
+              </tr>
+              <tr class="glossario-entrada" id="exemplo-7" tabindex="-1" data-camada="Unidade de Conservação de Proteção Integral" data-categoria="restricao">
+                <td class="col-select"><input type="checkbox" aria-label="Selecionar Unidade de Conservação de Proteção Integral" data-selecionar-exemplo></td>
+                <td><strong>Unidade de Conservação de Proteção Integral</strong><p><a href="https://cnuc.mma.gov.br/" target="_blank" rel="noopener">CNUC/MMA — Cadastro Nacional de Unidades de Conservação</a>.</p></td>
+                <td><strong>Restrição</strong></td>
+                <td><p>Sugere-se restrição como escolha de evitar intervenções potencialmente incompatíveis com os objetivos de preservação da unidade. A finalidade de proteção integral oferece o fundamento geral da sugestão.</p><p><strong>Condições e limites:</strong> Conferir a categoria, o ato de criação, o plano de manejo e o uso proposto. O enquadramento metodológico não substitui a análise de compatibilidade da unidade específica nem transforma todo tipo de infraestrutura em vedação universal.</p></td>
+                <td><a href="https://www.planalto.gov.br/ccivil_03/leis/l9985.htm" target="_blank" rel="noopener">Sistema Nacional de Unidades de Conservação da Natureza (Lei nº 9.985, 2000)</a>.</td>
+              </tr>
+              <tr class="glossario-entrada" id="exemplo-8" tabindex="-1" data-camada="Área oficial de influência sobre o patrimônio espeleológico" data-categoria="risco">
+                <td class="col-select"><input type="checkbox" aria-label="Selecionar Área oficial de influência sobre o patrimônio espeleológico" data-selecionar-exemplo></td>
+                <td><strong>Área oficial de influência sobre o patrimônio espeleológico</strong><p><a href="https://www.gov.br/icmbio/pt-br/assuntos/centros-de-pesquisa/cavernas/" target="_blank" rel="noopener">ICMBio/CECAV — consultar dados e estudos do patrimônio espeleológico</a>.</p></td>
+                <td><strong>Risco</strong></td>
+                <td><p>Sugere-se risco para representar a necessidade de avaliação especializada dos efeitos da intervenção sobre cavidades e seu patrimônio associado.</p><p><strong>Condições e limites:</strong> Examinar os estudos, o regime de proteção e a delimitação da área de influência. O cadastro de pontos de cavidades não equivale à delimitação dessa área, que precisa de fonte própria. A categoria de risco não assegura autorização: uma incompatibilidade comprovada pode justificar regra impeditiva específica, devidamente documentada.</p></td>
+                <td><a href="https://www.gov.br/icmbio/pt-br/assuntos/centros-de-pesquisa/cavernas/orientacoes-e-procedimentos/legislacaoespelo" target="_blank" rel="noopener">ICMBio/CECAV — legislação espeleológica e instrumentos de proteção</a>.</td>
+              </tr>
+              <tr class="glossario-entrada" id="exemplo-9" tabindex="-1" data-camada="Área suscetível a inundação, enxurrada ou alagamento" data-categoria="risco">
+                <td class="col-select"><input type="checkbox" aria-label="Selecionar Área suscetível a inundação, enxurrada ou alagamento" data-selecionar-exemplo></td>
+                <td><strong>Área suscetível a inundação, enxurrada ou alagamento</strong><p><a href="https://geosgb.sgb.gov.br/" target="_blank" rel="noopener">GeoSGB — cartas de suscetibilidade do Serviço Geológico do Brasil</a>.</p></td>
+                <td><strong>Risco</strong></td>
+                <td><p>Sugere-se risco porque a suscetibilidade hidrológica sinaliza condições que podem afetar a segurança, a implantação e a operação. A carta auxilia a seleção de áreas para estudos mais detalhados.</p><p><strong>Condições e limites:</strong> Suscetibilidade não é probabilidade de dano nem diagnóstico de risco completo. Respeitar a escala da carta, examinar exposição e vulnerabilidade e verificar se existem impedimentos específicos ao uso.</p></td>
+                <td><a href="https://www.sgb.gov.br/saiba-mais-cartas-de-suscetibilidade" target="_blank" rel="noopener">SGB — finalidade, escala e limites das cartas de suscetibilidade</a>.</td>
+              </tr>
+              <tr class="glossario-entrada" id="exemplo-10" tabindex="-1" data-camada="Área suscetível a escorregamento, erosão ou movimento de massa" data-categoria="risco">
+                <td class="col-select"><input type="checkbox" aria-label="Selecionar Área suscetível a escorregamento, erosão ou movimento de massa" data-selecionar-exemplo></td>
+                <td><strong>Área suscetível a escorregamento, erosão ou movimento de massa</strong><p><a href="https://geosgb.sgb.gov.br/" target="_blank" rel="noopener">GeoSGB — cartas de suscetibilidade do Serviço Geológico do Brasil</a>.</p></td>
+                <td><strong>Risco</strong></td>
+                <td><p>Sugere-se risco porque a propensão a processos geológicos pode aumentar a necessidade de investigação, adequação técnica e medidas de proteção.</p><p><strong>Condições e limites:</strong> A carta não comprova estabilidade do terreno nem garante viabilidade. Estudos locais podem identificar condições mais severas ou impedimentos que o levantamento regional não permite concluir.</p></td>
+                <td><a href="https://www.sgb.gov.br/saiba-mais-cartas-de-suscetibilidade" target="_blank" rel="noopener">SGB — finalidade, escala e limites das cartas de suscetibilidade</a>.</td>
+              </tr>
+              <tr class="glossario-entrada" id="exemplo-11" tabindex="-1" data-camada="Área de Proteção e Recuperação dos Mananciais do Alto Juquery" data-categoria="risco">
+                <td class="col-select"><input type="checkbox" aria-label="Selecionar Área de Proteção e Recuperação dos Mananciais do Alto Juquery" data-selecionar-exemplo></td>
+                <td><strong>Área de Proteção e Recuperação dos Mananciais do Alto Juquery</strong><p><a href="https://datageo.ambiente.sp.gov.br/geoportal/catalog/search/search.page" target="_blank" rel="noopener">DataGEO — catálogo de metadados</a>.</p></td>
+                <td><strong>Risco</strong></td>
+                <td><p>Sugere-se risco para o perímetro geral da APRM como sinal de condicionantes de proteção dos mananciais que precisam ser examinados na avaliação da intervenção.</p><p><strong>Condições e limites:</strong> Consultar a legislação específica, o zoneamento e a subárea incidente. O perímetro geral não permite atribuir a mesma permissibilidade a todas as parcelas; uma vedação demonstrada exige enquadramento próprio.</p></td>
+                <td><a href="https://www.al.sp.gov.br/repositorio/legislacao/lei/1997/lei-9866-28.11.1997.html" target="_blank" rel="noopener">Proteção e recuperação das bacias hidrográficas dos mananciais de interesse regional (Lei Estadual nº 9.866, 1997)</a>.</td>
+              </tr>
+              <tr class="glossario-entrada" id="exemplo-12" tabindex="-1" data-camada="Área de Proteção e Recuperação dos Mananciais do Alto Tietê Cabeceiras" data-categoria="risco">
+                <td class="col-select"><input type="checkbox" aria-label="Selecionar Área de Proteção e Recuperação dos Mananciais do Alto Tietê Cabeceiras" data-selecionar-exemplo></td>
+                <td><strong>Área de Proteção e Recuperação dos Mananciais do Alto Tietê Cabeceiras</strong><p><a href="https://datageo.ambiente.sp.gov.br/geoportal/catalog/search/search.page" target="_blank" rel="noopener">DataGEO — catálogo de metadados</a>.</p></td>
+                <td><strong>Risco</strong></td>
+                <td><p>Sugere-se risco para o perímetro geral da APRM como sinal de condicionantes de proteção dos mananciais que precisam ser examinados na avaliação da intervenção.</p><p><strong>Condições e limites:</strong> Consultar a legislação específica, o zoneamento e a subárea incidente. O perímetro geral não permite atribuir a mesma permissibilidade a todas as parcelas; uma vedação demonstrada exige enquadramento próprio.</p></td>
+                <td><a href="https://www.al.sp.gov.br/repositorio/legislacao/lei/1997/lei-9866-28.11.1997.html" target="_blank" rel="noopener">Proteção e recuperação das bacias hidrográficas dos mananciais de interesse regional (Lei Estadual nº 9.866, 1997)</a>.</td>
+              </tr>
+              <tr class="glossario-entrada" id="exemplo-13" tabindex="-1" data-camada="Área de Proteção e Recuperação dos Mananciais da Billings" data-categoria="risco">
+                <td class="col-select"><input type="checkbox" aria-label="Selecionar Área de Proteção e Recuperação dos Mananciais da Billings" data-selecionar-exemplo></td>
+                <td><strong>Área de Proteção e Recuperação dos Mananciais da Billings</strong><p><a href="https://datageo.ambiente.sp.gov.br/geoportal/catalog/search/search.page" target="_blank" rel="noopener">DataGEO — catálogo de metadados</a>.</p></td>
+                <td><strong>Risco</strong></td>
+                <td><p>Sugere-se risco para o perímetro geral da APRM como sinal de condicionantes de proteção dos mananciais que precisam ser examinados na avaliação da intervenção.</p><p><strong>Condições e limites:</strong> Consultar a legislação específica, o zoneamento e a subárea incidente. O perímetro geral não permite atribuir a mesma permissibilidade a todas as parcelas; uma vedação demonstrada exige enquadramento próprio.</p></td>
+                <td><a href="https://www.al.sp.gov.br/repositorio/legislacao/lei/1997/lei-9866-28.11.1997.html" target="_blank" rel="noopener">Proteção e recuperação das bacias hidrográficas dos mananciais de interesse regional (Lei Estadual nº 9.866, 1997)</a>.</td>
+              </tr>
+              <tr class="glossario-entrada" id="exemplo-14" tabindex="-1" data-camada="Área de Proteção e Recuperação dos Mananciais da Guarapiranga" data-categoria="risco">
+                <td class="col-select"><input type="checkbox" aria-label="Selecionar Área de Proteção e Recuperação dos Mananciais da Guarapiranga" data-selecionar-exemplo></td>
+                <td><strong>Área de Proteção e Recuperação dos Mananciais da Guarapiranga</strong><p><a href="https://datageo.ambiente.sp.gov.br/geoportal/catalog/search/search.page" target="_blank" rel="noopener">DataGEO — catálogo de metadados</a>.</p></td>
+                <td><strong>Risco</strong></td>
+                <td><p>Sugere-se risco para o perímetro geral da APRM como sinal de condicionantes de proteção dos mananciais que precisam ser examinados na avaliação da intervenção.</p><p><strong>Condições e limites:</strong> Consultar a legislação específica, o zoneamento e a subárea incidente. O perímetro geral não permite atribuir a mesma permissibilidade a todas as parcelas; uma vedação demonstrada exige enquadramento próprio.</p></td>
+                <td><a href="https://www.al.sp.gov.br/repositorio/legislacao/lei/1997/lei-9866-28.11.1997.html" target="_blank" rel="noopener">Proteção e recuperação das bacias hidrográficas dos mananciais de interesse regional (Lei Estadual nº 9.866, 1997)</a>.</td>
+              </tr>
+              <tr class="glossario-entrada" id="exemplo-15" tabindex="-1" data-camada="Área contaminada cadastrada pela CETESB" data-categoria="risco">
+                <td class="col-select"><input type="checkbox" aria-label="Selecionar Área contaminada cadastrada pela CETESB" data-selecionar-exemplo></td>
+                <td><strong>Área contaminada cadastrada pela CETESB</strong><p><a href="https://cetesb.sp.gov.br/areas-contaminadas/relacao-de-areas-contaminadas/" target="_blank" rel="noopener">CETESB — relação de áreas contaminadas e reabilitadas</a>.</p></td>
+                <td><strong>Risco</strong></td>
+                <td><p>Sugere-se risco quando o cadastro informa uma condição de contaminação que demanda avaliação de compatibilidade do uso, investigação ou gerenciamento, sem demonstrar um impedimento específico à proposta.</p><p><strong>Condições e limites:</strong> Verificar a classificação atual da área, o uso declarado e as limitações existentes. Diferenciar cadastro de contaminação e interdição; evitar duplicar a mesma ocorrência em fontes distintas.</p></td>
+                <td><a href="https://www.al.sp.gov.br/repositorio/legislacao/decreto/2013/decreto-59263-05.06.2013.html" target="_blank" rel="noopener">Regulamento da proteção da qualidade do solo e do gerenciamento de áreas contaminadas (Decreto Estadual nº 59.263, 2013)</a>.</td>
+              </tr>
+              <tr class="glossario-entrada" id="exemplo-16" tabindex="-1" data-camada="Assentamento rural no Estado de São Paulo" data-categoria="risco">
+                <td class="col-select"><input type="checkbox" aria-label="Selecionar Assentamento rural no Estado de São Paulo" data-selecionar-exemplo></td>
+                <td><strong>Assentamento rural no Estado de São Paulo</strong><p><a href="https://acervofundiario.incra.gov.br/Conversao01/faces/index.xhtml" target="_blank" rel="noopener">INCRA — acervo fundiário, download de shapefiles</a>.</p></td>
+                <td><strong>Risco</strong></td>
+                <td><p>Sugere-se risco para reconhecer possíveis interferências sobre a organização territorial, a produção e as condições de vida das famílias, além das necessidades de articulação fundiária e institucional.</p><p><strong>Condições e limites:</strong> A presença do assentamento não torna uma intervenção automaticamente incompatível: ela pode, inclusive, atender às suas necessidades. Avaliar finalidade, beneficiários, impactos e requisitos aplicáveis; a página do INCRA fundamenta esse contexto, sem definir autorização para um projeto concreto.</p></td>
+                <td><a href="https://www.gov.br/incra/pt-br/assuntos/reforma-agraria/infraestrutura" target="_blank" rel="noopener">INCRA — infraestrutura e desenvolvimento dos assentamentos</a>.</td>
+              </tr>
+              <tr class="glossario-entrada" id="exemplo-17" tabindex="-1" data-camada="Bem tombado ou área envoltória oficial do CONDEPHAAT" data-categoria="risco">
+                <td class="col-select"><input type="checkbox" aria-label="Selecionar Bem tombado ou área envoltória oficial do CONDEPHAAT" data-selecionar-exemplo></td>
+                <td><strong>Bem tombado ou área envoltória oficial do CONDEPHAAT</strong><p><a href="https://datageo.ambiente.sp.gov.br/geoportal/catalog/search/search.page" target="_blank" rel="noopener">DataGEO — catálogo de metadados</a>.</p></td>
+                <td><strong>Risco</strong></td>
+                <td><p>Sugere-se risco para registrar a necessidade de verificar compatibilidade com as diretrizes de preservação e obter as manifestações exigíveis para a intervenção.</p><p><strong>Condições e limites:</strong> Consultar o ato estadual de tombamento, a área envoltória e as orientações do CONDEPHAAT. Proteção patrimonial e proibição de uma intervenção específica não são equivalentes; uma vedação comprovada deve ser tratada conforme seu alcance.</p></td>
+                <td><a href="https://www.cultura.sp.gov.br/sec_cultura/CONDEPHAAT/Solicita%C3%A7%C3%B5es/Perguntas_Frequentes" target="_blank" rel="noopener">CONDEPHAAT — preservação, áreas envoltórias e autorização de intervenções</a>.</td>
+              </tr>
+              <tr class="glossario-entrada" id="exemplo-18" tabindex="-1" data-camada="Bem tombado federal identificado pelo IPHAN" data-categoria="risco">
+                <td class="col-select"><input type="checkbox" aria-label="Selecionar Bem tombado federal identificado pelo IPHAN" data-selecionar-exemplo></td>
+                <td><strong>Bem tombado federal identificado pelo IPHAN</strong><p><a href="https://sicg.iphan.gov.br/" target="_blank" rel="noopener">IPHAN — SICG, Sistema Integrado de Conhecimento e Gestão</a>.</p></td>
+                <td><strong>Risco</strong></td>
+                <td><p>Sugere-se risco para representar as exigências de preservação e a análise da intervenção pelo IPHAN, cujo resultado depende das características do bem e da proposta.</p><p><strong>Condições e limites:</strong> Conferir o ato de proteção e as regras de intervenção e entorno. A possibilidade de apresentar um pedido não garante sua aprovação nem afasta eventual impedimento específico.</p></td>
+                <td><a href="https://www.gov.br/iphan/pt-br/servicos/autorizacoes-e-fiscalizacoes/autorizacoes" target="_blank" rel="noopener">IPHAN — consulta e autorização de intervenções em bens protegidos</a>.</td>
+              </tr>
+              <tr class="glossario-entrada" id="exemplo-19" tabindex="-1" data-camada="Sítio arqueológico oficialmente cadastrado" data-categoria="risco">
+                <td class="col-select"><input type="checkbox" aria-label="Selecionar Sítio arqueológico oficialmente cadastrado" data-selecionar-exemplo></td>
+                <td><strong>Sítio arqueológico oficialmente cadastrado</strong><p><a href="https://sicg.iphan.gov.br/" target="_blank" rel="noopener">IPHAN — SICG, Sistema Integrado de Conhecimento e Gestão</a>.</p></td>
+                <td><strong>Risco</strong></td>
+                <td><p>Sugere-se risco para reconhecer a necessidade de avaliação dos efeitos sobre o patrimônio arqueológico e das medidas de preservação aplicáveis.</p><p><strong>Condições e limites:</strong> A existência de procedimentos de pesquisa ou acompanhamento não garante autorização ou prazo previsível. Examinar os requisitos do IPHAN e eventuais incompatibilidades concretas com a intervenção.</p></td>
+                <td><a href="https://www.planalto.gov.br/ccivil_03/leis/1950-1969/l3924.htm" target="_blank" rel="noopener">Monumentos arqueológicos e pré-históricos (Lei nº 3.924, 1961)</a>.</td>
+              </tr>
+              <tr class="glossario-entrada" id="exemplo-20" tabindex="-1" data-camada="Unidade de Conservação de Uso Sustentável" data-categoria="risco">
+                <td class="col-select"><input type="checkbox" aria-label="Selecionar Unidade de Conservação de Uso Sustentável" data-selecionar-exemplo></td>
+                <td><strong>Unidade de Conservação de Uso Sustentável</strong><p><a href="https://cnuc.mma.gov.br/" target="_blank" rel="noopener">CNUC/MMA — Cadastro Nacional de Unidades de Conservação</a>.</p></td>
+                <td><strong>Risco</strong></td>
+                <td><p>Sugere-se risco para representar condicionantes de conservação e de compatibilidade do uso, cuja incidência depende da categoria da unidade e de seu ordenamento.</p><p><strong>Condições e limites:</strong> Uso sustentável não significa autorização genérica para empreendimentos. Conferir ato de criação, zoneamento, plano de manejo e manifestações aplicáveis; identificar eventuais áreas ou usos efetivamente vedados.</p></td>
+                <td><a href="https://www.planalto.gov.br/ccivil_03/leis/l9985.htm" target="_blank" rel="noopener">Sistema Nacional de Unidades de Conservação da Natureza (Lei nº 9.985, 2000)</a>.</td>
+              </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="admin-bulk-actions standard-table-actions">
+            <button type="button" class="admin-icon-btn" id="risco-exportar" disabled title="Exportar exemplos selecionados em CSV" aria-label="Exportar exemplos selecionados em CSV"><i class="fa-solid fa-file-csv" aria-hidden="true"></i></button>
+          </div>
+          <div class="admin-table-footer">
+            <nav class="admin-pagination" id="risco-paginacao" aria-label="Paginação dos exemplos"></nav>
+            <p class="admin-table-summary" id="risco-contagem" aria-live="polite"></p>
+          </div>
+        </div>
 
+
+
+
+
+
+
+      </section>
+      <section class="secao-rastreabilidade glossario-grupo" id="rastreabilidade" aria-labelledby="rastreabilidade-titulo">
+        <h2 id="rastreabilidade-titulo">Registro, transparência e auditoria</h2>
+        <div class="glossario-entrada hier-texto" id="ficha" tabindex="-1">
+          <h3 class="hier-topico">Registro mínimo da decisão de classificação</h3>
+          <p>A auditoria requer reconstruir o caminho entre a informação disponível, a interpretação adotada e o efeito produzido sobre os objetos de demanda. Para isso, propõe-se manter um registro por decisão de enquadramento, com os seguintes elementos relacionados entre si.</p>
+          <dl class="hier-definicoes">
+            <div><dt>Identificação e contexto</dt><dd>Condição analisada, camada ou recorte, finalidade da avaliação, intervenções abrangidas e período de referência.</dd></div>
+            <div><dt>Procedência e versão do dado</dt><dd>Órgão responsável, endereço de acesso, data de consulta e referência, versão, abrangência, escala, atributos utilizados e limitações relevantes.</dd></div>
+            <div><dt>Evidência e fundamento</dt><dd>Documento, dispositivo, ato ou estudo consultado; conteúdo que sustenta a conclusão; alcance da sua aplicação e distinção entre obrigação e escolha metodológica.</dd></div>
+            <div><dt>Regra de enquadramento e consequência</dt><dd>Categoria proposta e aceita, condições para aplicá-la, incidência espacial considerada e efeito classificatório ou eliminatório. Identificação das hipóteses e dos casos não conclusivos.</dd></div>
+            <div><dt>Responsabilidade e revisão</dt><dd>Autores da proposta, responsáveis pela revisão e decisão, respectivas datas, divergências e razões dos ajustes.</dd></div>
+            <div><dt>Vínculo com a avaliação</dt><dd>Versão das regras utilizada, rodada de hierarquização, objetos atingidos e resultados afetados. Evidências que permitam verificar por que a regra incidiu em cada caso.</dd></div>
+          </dl>
+          <p>A transparência exige tornar compreensíveis o fundamento e a consequência da decisão, observadas as condições de acesso às informações. Relacionar apenas nomes de camadas ou referências bibliográficas não permite verificar como ocorreu o enquadramento.</p>
+        </div>
+        <div class="glossario-entrada hier-texto" id="revisao" tabindex="-1">
+          <h3 class="hier-topico">Histórico de mudanças e verificação dos efeitos</h3>
+          <p>Cada revisão deve permitir identificar a classificação anterior, a nova classificação, o motivo, a evidência que mudou e quem decidiu. A análise dos efeitos deve apontar quais objetos passaram a ser incluídos, excluídos ou avaliados de outra forma e quais resultados precisam ser revistos.</p>
+          <p>Preservar esse histórico permite discutir a decisão com base nas informações disponíveis em cada momento. A revisão de uma classificação deve permanecer distinguível da atualização do dado, da alteração da geometria da demanda e do recálculo dos índices, pois essas mudanças podem produzir consequências diferentes.</p>
+        </div>
+      </section>
+      <section class="secao-referencias glossario-grupo" id="referencias" aria-labelledby="referencias-titulo">
+        <h2 id="referencias-titulo">Referências e continuidade</h2>
+        <div class="glossario-entrada hier-texto" id="referencias-conceituais" tabindex="-1">
+          <h3 class="hier-topico">Bases conceituais e fontes</h3>
+          <p>O referencial articula conceitos de risco, análise multicritério espacial e interpretação de evidências territoriais. O procedimento de oito etapas é uma <strong>proposta de organização metodológica apresentada nesta documentação</strong>. As fontes fundamentam conceitos e verificações específicas; não atribuem automaticamente as categorias sugeridas aos exemplos.</p>
+          <div class="hier-referencias">
+            <a href="https://www.ipcc.ch/report/ar6/wg2/chapter/annex-ii/" target="_blank" rel="noopener">IPCC (2022) — glossário: risco, exposição e vulnerabilidade</a>
+            <a href="https://doi.org/10.1080/13658810600661508" target="_blank" rel="noopener">Malczewski (2006) — GIS-based multicriteria decision analysis: a survey of the literature</a>
+            <a href="https://www.sgb.gov.br/saiba-mais-cartas-de-suscetibilidade" target="_blank" rel="noopener">Serviço Geológico do Brasil — finalidade e limites das cartas de suscetibilidade</a>
+          </div>
+          <p>As fontes de dados e as referências de cada exemplo estão identificadas junto ao seu enquadramento. A revisão de um caso exige consultar o conteúdo aplicável e sua situação atual, além dos respectivos metadados e atos específicos.</p>
+        </div>
+        <div class="glossario-entrada hier-texto" id="continuidade" tabindex="-1">
+          <h3 class="hier-topico">Relação com o processo de hierarquização</h3>
+          <p>A classificação estabelece quais condições serão tratadas como eliminatórias e quais participarão da avaliação da exposição aos riscos. Uma vez fundamentadas e identificadas as regras, a Fase 1 aplica os tratamentos correspondentes aos objetos de demanda. A leitura do índice deve conservar a ligação com esse conjunto de escolhas.</p>
+          <div class="hier-referencias">
+            <a href="/public/documentacao/processo-hierarquizacao/#fase-1">Elegibilidade territorial — significado, cálculo e integração do índice</a>
+            <a href="/public/documentacao/glossario/">Glossário técnico-conceitual — termos do SICARD</a>
+          </div>
+          <p class="glossario-referencias">Revisão conceitual em <time datetime="2026-11-16">16/11/2026</time>.</p>
+          <a class="glossario-voltar" href="#risco-restricao">Voltar ao início ↑</a>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+{% endblock %}
 {% block scripts_pagina %}
+<script src="/assets/js/table-standard.js" defer></script>
+<script src="/assets/js/paginas/glossario.js?v=20261116-tabela" defer></script>
+<script src="/assets/js/paginas/documentacao-risco-restricao.js?v=20261116-publicacao" defer></script>
 {% endblock %}
