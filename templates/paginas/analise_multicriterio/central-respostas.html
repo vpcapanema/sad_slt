@@ -52,7 +52,7 @@
             <div class="ahp-section-body">
           <p class="step-intro ami-email-instrucao"><i class="fas fa-circle-info" aria-hidden="true"></i><span>Confira a mensagem abaixo e envie o convite pelo SICARD aos colaboradores salvos. Cada pessoa recebe um e-mail individual, com o link persistente e os critérios deste julgamento.</span></p>
           <label class="c-form-group">Prévia do convite por colaborador<select id="ami-email-preview-recipient" class="c-form-control"></select></label>
-          <div class="c-form-group"><label for="ami-email-template" class="c-form-label"><i class="fas fa-envelope-open-text"></i> Mensagem aos colaboradores</label><div id="ami-email-template" class="c-form-control collab-email-template" role="textbox" aria-readonly="true" tabindex="0"></div>
+          <div class="c-form-group"><span id="ami-email-template-label" class="c-form-label"><i class="fas fa-envelope-open-text"></i> Mensagem aos colaboradores</span><div id="ami-email-template" class="c-form-control collab-email-template" role="textbox" aria-labelledby="ami-email-template-label" aria-readonly="true" tabindex="0"></div>
           <p class="form-help" id="ami-email-link-row"><i class="fas fa-link"></i> Link persistente do formulário: <a id="ami-email-form-link" href="#" target="_blank" rel="noopener"></a></p>
           </div>
           <div class="ahp-form-actions" id="ami-email-actions" role="group" aria-label="Controles da mensagem de e-mail"><button type="button" class="btn btn-secondary" id="ami-copy-email-link"><i class="fas fa-copy c-btn__icon" aria-hidden="true"></i>Copiar link</button><button type="button" class="btn btn-secondary" id="ami-open-mail" disabled><i class="fas fa-envelope c-btn__icon" aria-hidden="true"></i>Enviar e-mail</button><button type="button" class="btn btn-secondary" id="ami-email-receipts" disabled><i class="fas fa-arrows-rotate c-btn__icon" aria-hidden="true"></i>Atualizar confirmações</button><button type="button" class="btn btn-secondary" id="ami-revoke-invitation" disabled><i class="fas fa-ban c-btn__icon" aria-hidden="true"></i>Revogar convite selecionado</button></div>
@@ -135,7 +135,7 @@
   <script src="/assets/js/api-erro.js?v=20261027"></script>
   <script src="/assets/js/paginas/ami-email.js?v=20261106-sem-clique-status"></script>
   <script src="/assets/js/matriz-criterios-arquivo.js?v=20261009"></script>
-  <script src="/assets/js/matrizes-criterios.js?v=20261105-table-labels"></script>
+  <script src="/assets/js/matrizes-criterios.js?v=20261117-form-identifiers"></script>
   <script src="/assets/js/saaty-selector-color.js?v=20261103-1"></script>
   <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20261106-regua-miniatura"></script>
 {% endblock %}

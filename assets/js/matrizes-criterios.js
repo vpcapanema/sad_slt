@@ -90,6 +90,9 @@
     const details = find("details"), upload = find("upload"), modes = [...container.querySelectorAll("[data-matrix-mode]")];
     const group = "matrix-source-" + (++sequence);
     modes.forEach(radio => { radio.name = group; });
+    [select, name, file].forEach((control, index) => {
+      if (!control.id) control.id = group + "-" + ["select", "name", "file"][index];
+    });
     let records = [], current = null, preview = null, parsedFile = null, version = 0, busy = false, disabled = false, catalogLoaded = false;
     function sync() {
       container.querySelectorAll("input, select, button").forEach(control => {
