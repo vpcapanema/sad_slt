@@ -199,7 +199,7 @@ def test_teste_conexao_autentica_sem_enviar(client, smtp):
     smtp[0].close.assert_called_once()
 
 
-def test_senha_aplicativo_transmitida_pelos_desafios_login(client, smtp, monkeypatch):
+def test_credencial_basic_transmitida_pelos_desafios_login(client, smtp, monkeypatch):
     import base64
 
     usuario = "sicard@example.com"
@@ -207,7 +207,7 @@ def test_senha_aplicativo_transmitida_pelos_desafios_login(client, smtp, monkeyp
     monkeypatch.setenv("SICARD_SMTP_USER", usuario)
     monkeypatch.setenv("SICARD_SMTP_PASSWORD", senha)
     servidor = SMTP_REAL()
-    servidor.esmtp_features = {"auth": "LOGIN XOAUTH2"}
+    servidor.esmtp_features = {"auth": "LOGIN"}
     servidor.ehlo_resp = b"OK"
     comandos = MagicMock(side_effect=[
         (334, base64.b64encode(b"Username:")),
