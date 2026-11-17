@@ -304,22 +304,13 @@ def pagina_documentacao_favorabilidade(request: Request) -> Response:
 
 @app.get("/documentacao_favorabilidade_v2/", include_in_schema=False)
 @app.get("/public/documentacao_favorabilidade_v2/", name="documentacao_favorabilidade_v2", include_in_schema=False)
-def pagina_documentacao_favorabilidade_v2() -> Response:
-    """Relatório de favorabilidade territorial e da rede, preservando seus mapas."""
-    import re
-    from urllib.parse import urljoin
+def pagina_documentacao_favorabilidade_v2(request: Request) -> Response:
+    """Relatório existente no padrão público da documentação do sistema."""
+    from api.services.documentacao_favorabilidade_v2 import montar_contexto
 
-    pasta = "/public/documentacao/saidas_modelos/claude_fable5_1/"
-    html = project_path("documentacao/saidas_modelos/claude_fable5_1/index.html").read_text(encoding="utf-8")
-
-    def recurso(match: re.Match) -> str:
-        atributo, aspas, valor = match.groups()
-        if valor.startswith(("#", "/", "http:", "https:", "data:", "mailto:")):
-            return match.group(0)
-        return f"{atributo}={aspas}{urljoin(pasta, valor)}{aspas}"
-
-    html = re.sub(r"(src|href)=([\"'])(.*?)\2", recurso, html)
-    return Response(html, media_type="text/html", headers={"Cache-Control": "no-store"})
+    response = render_page(request, "paginas/documentacao/favorabilidade-v2.html", **montar_contexto())
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @app.get("/public/documentacao/limite-maritimo/", include_in_schema=False)

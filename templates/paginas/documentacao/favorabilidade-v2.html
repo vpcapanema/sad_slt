@@ -1,0 +1,61 @@
+{% extends "bases/base_conteudo.html" %}
+{% set subtitulo = "Documentação do sistema" %}
+{% set navegacao = "publica" %}
+{% set requer_autenticacao = false %}
+{% block titulo %}Fundamentos da favorabilidade territorial e da rede rodoviária — SICARD{% endblock %}
+{% block descricao %}Avaliação da matriz de critérios e premissas, cálculo dos critérios e superfícies de favorabilidade por município e subtrecho rodoviário.{% endblock %}
+{% block classes_body %}pagina-glossario favorabilidade-v2-page table-layout-repair{% endblock %}
+{% block estilos_pagina %}
+<link rel="stylesheet" href="/assets/css/glossario.css?v=20261116-responsivo">
+<link rel="stylesheet" href="/assets/css/page-title-standard.css?v=20260820-3">
+<link rel="stylesheet" href="/assets/css/documentacao-hierarquizacao.css?v=20261116-referenciais">
+<link rel="stylesheet" href="/assets/css/admin-table-controls.css">
+<link rel="stylesheet" href="/assets/css/analise-multicriterio-tabela.css">
+<link rel="stylesheet" href="/assets/css/table-standard.css">
+<link rel="stylesheet" href="/assets/css/paginas/ami-report-tables.css">
+<link rel="stylesheet" href="/assets/css/paginas/ami-espaco-secoes.css">
+<link rel="stylesheet" href="/assets/css/paginas/sicard-standard-pages.css">
+<link rel="stylesheet" href="/assets/css/documentacao-favorabilidade-v2.css?v=20261117-padrao">
+{% endblock %}
+{% block conteudo %}
+<main class="conteudo-principal glossario" id="favorabilidade-v2">
+  <a class="glossario-voltar" href="/public/documentacao/">← Documentação do sistema</a>
+  <header class="cabecalho-glossario standard-page-hero">
+    <h1 class="standard-page-hero__title"><i class="fa-solid fa-book-atlas" aria-hidden="true"></i><span>Fundamentos da favorabilidade territorial e da rede rodoviária</span></h1>
+    <p class="standard-page-hero__eyebrow">Referencial técnico · Apoio à decisão</p>
+    <p class="standard-page-hero__description">{{ relatorio_introducao | default('') | safe }}</p>
+  </header>
+  <div class="glossario-layout">
+    <aside class="barra-lateral-glossario" aria-label="Consulta aos fundamentos da favorabilidade">
+      <form class="glossario-busca" role="search" id="glossario-busca" data-unidade="tópicos" hidden>
+        <label for="glossario-termo">Buscar nesta página</label>
+        <input type="search" id="glossario-termo" placeholder="Ex.: município, critério, subtrecho…" autocomplete="off" aria-controls="favorabilidade-conteudo">
+        <button type="reset">Limpar busca</button>
+        <p id="glossario-contagem" role="status" aria-live="polite"></p>
+      </form>
+      <details class="glossario-indice" open>
+        <summary>Índice de conteúdo</summary>
+        <nav aria-label="Seções do relatório">
+          {% for capitulo in capitulos_favorabilidade | default([]) %}
+          <div class="glossario-indice-grupo" data-indice-grupo="{{ capitulo.id }}" data-indice-termo="{{ capitulo.id }}-texto">
+            <a class="glossario-indice-titulo" href="#{{ capitulo.id }}">{{ capitulo.numero }}. {{ capitulo.titulo }}</a>
+          </div>
+          {% endfor %}
+        </nav>
+      </details>
+      <div class="favorabilidade-resumo">{{ relatorio_resumo | default('') | safe }}</div>
+    </aside>
+    <div class="glossario-conteudo" id="favorabilidade-conteudo" tabindex="-1">
+      <p class="glossario-sem-resultados" id="glossario-sem-resultados" hidden>Nenhum tópico encontrado. Tente outra palavra ou limpe a busca.</p>
+      {{ relatorio_conteudo | default('') | safe }}
+      <p class="glossario-referencias">{{ relatorio_observacao | default('') }}</p>
+    </div>
+  </div>
+</main>
+{% endblock %}
+{% block scripts_pagina %}
+<script src="/assets/js/table-standard.js" defer></script>
+<script src="/assets/js/analysis-table-controls.js" defer></script>
+<script src="/assets/js/paginas/glossario.js?v=20261116-tabela" defer></script>
+<script src="/assets/js/paginas/documentacao-favorabilidade-v2.js" defer></script>
+{% endblock %}

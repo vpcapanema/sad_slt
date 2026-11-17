@@ -1,0 +1,54 @@
+/* Capa, navegação, índice e painéis usam os mesmos componentes do glossário. */
+.favorabilidade-v2-page .standard-page-hero__title span { min-width: 0; overflow-wrap: anywhere; }
+.favorabilidade-resumo { padding: 1rem 1.15rem; border-top: 1px solid var(--pli-border); color: var(--pli-muted); font-size: .8rem; }
+.favorabilidade-resumo strong { display: block; color: var(--pli-deep); }
+.favorabilidade-v2-page .hint { margin: 0; padding: 1rem 1.5rem 0; color: var(--pli-muted); font-size: .875rem; }
+.favorabilidade-v2-page .hier-texto :is(h3, h4) { color: var(--pli-deep); font: inherit; font-weight: 700; margin: 1.25rem 0 .5rem; }
+.favorabilidade-v2-page .hier-texto :is(ul, ol) { padding-left: 1.5rem; margin: .5rem 0 1rem; line-height: 1.7; }
+.favorabilidade-v2-page .hier-texto li + li { margin-top: .5rem; }
+.favorabilidade-v2-page .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); gap: 1rem; margin: 1rem 0; }
+.fav-stat { padding: 1rem; border: 1px solid var(--pli-border); border-radius: var(--pli-radius); background: #eaf1f5; }
+.fav-stat strong { display: block; color: var(--pli-deep); font-size: 1.35rem; }
+.fav-stat span { color: var(--pli-muted); font-size: .8rem; }
+.fav-note, .fav-ok { margin: 1rem 0; padding: 1rem; border-left: 4px solid var(--pli-blue); background: #eaf1f5; border-radius: 0 var(--pli-radius) var(--pli-radius) 0; line-height: 1.7; }
+.fav-ok { border-color: var(--pli-green); }
+.favorabilidade-v2-page .maps { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 1rem; margin: 1rem 0; }
+.favorabilidade-v2-page figure { min-width: 0; margin: 0; border: 1px solid var(--pli-border); border-radius: var(--pli-radius); overflow: hidden; background: white; }
+.favorabilidade-v2-page figure img { display: block; width: 100%; height: auto; }
+.favorabilidade-v2-page figcaption { padding: 1rem; border-top: 1px solid var(--pli-border); color: var(--pli-muted); font-size: .875rem; line-height: 1.7; }
+.favorabilidade-v2-page figcaption b { display: block; color: var(--pli-deep); }
+.favorabilidade-v2-page .crit { padding: 1.25rem 0; border-bottom: 1px solid var(--pli-border); }
+.favorabilidade-v2-page .crit:last-child { border-bottom: 0; }
+.favorabilidade-v2-page .crit .head { display: flex; align-items: baseline; flex-wrap: wrap; gap: .75rem; }
+.favorabilidade-v2-page .crit .head h3 { margin: 0; }
+.favorabilidade-v2-page .crit .code { color: var(--pli-blue); font-weight: 700; }
+.favorabilidade-v2-page .two { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 1.25rem; align-items: start; }
+.favorabilidade-v2-page .two > * { min-width: 0; }
+.favorabilidade-v2-page .meta { display: grid; grid-template-columns: minmax(0, max-content) minmax(0, 1fr); gap: .35rem .75rem; margin: .75rem 0; font-size: .875rem; line-height: 1.7; }
+.favorabilidade-v2-page .meta dt { color: var(--pli-muted); font-weight: 700; }
+.favorabilidade-v2-page .meta dd { margin: 0; min-width: 0; }
+.favorabilidade-v2-page .eq small { display: block; color: var(--pli-muted); font-size: .8rem; line-height: 1.7; }
+.favorabilidade-v2-page .tag { display: inline-block; padding: .15rem .45rem; border-radius: var(--pli-radius); font-size: .75rem; font-weight: 700; background: #eaf1f5; color: var(--pli-deep); }
+.favorabilidade-v2-page .tag:is(.calc, .novo) { color: #166534; background: #edf8f0; }
+.favorabilidade-v2-page .tag:is(.pend, .rem) { color: var(--pli-muted); background: var(--pli-bg); }
+.favorabilidade-v2-page .tag.rem { text-decoration: line-through; }
+.favorabilidade-v2-page .tag.rede { background: var(--pli-deep); color: white; }
+.favorabilidade-v2-page .tag.terr { background: var(--pli-green); color: var(--pli-deep); }
+.favorabilidade-v2-page .legend { display: flex; flex-wrap: wrap; gap: .75rem; margin: .5rem 0; color: var(--pli-muted); font-size: .8rem; }
+.favorabilidade-v2-page .scroll { max-width: 100%; overflow: auto; }
+.favorabilidade-v2-page .fav-table-theme { min-width: 0; background: transparent; }
+.favorabilidade-v2-page .fav-table-theme .ami-main { width: 100%; margin: 0; padding: 0; }
+.favorabilidade-v2-page .fav-table-theme .admin-table tbody td {
+  white-space: normal; max-width: none; overflow: visible; text-overflow: clip;
+  vertical-align: top; line-height: 1.5;
+}
+.favorabilidade-v2-page .admin-table .v { font-variant-numeric: tabular-nums; text-align: center; }
+.fav-heat-value { display: inline-block; min-width: 3rem; padding: .2rem .35rem; border-radius: 3px; }
+@media (max-width: 980px) {
+  .favorabilidade-v2-page .two { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 800px) {
+  .favorabilidade-v2-page .hint { padding-inline: 1rem; }
+  .favorabilidade-v2-page .meta { grid-template-columns: minmax(0, 1fr); }
+  .favorabilidade-v2-page .meta dd { margin-bottom: .5rem; }
+}
