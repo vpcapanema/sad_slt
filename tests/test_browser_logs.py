@@ -37,6 +37,10 @@ function setup(page = "fase1", search = "", stored = null, blocked = false) {
     const safe = messages.at(-1).args[1];
     assert.equal(safe.rota, "/api/ahp/hierarquizacoes/:ref");
     assert(Object.isFrozen(safe));
+    logger.log("erro.processo", {status: "erro", origem: "interface", codigo: "smtp_autenticacao", message: secret}, "error");
+    assert.equal(messages.at(-1).args[1].codigo, "smtp_autenticacao");
+    logger.log("erro.processo", {codigo: secret}, "error");
+    assert(!JSON.stringify(messages).includes(secret));
     let called = 0;
     const originalResponse = {status: 422, ok: false, json() { throw Error("Body must not be read"); }};
     const options = {method: "POST", headers: {Authorization: secret}, body: secret};

@@ -989,11 +989,15 @@
 
         /* ── Erro ── */
         mostrarErro(data) {
-            window.SICARDBrowserLogs?.log("erro.processo", {}, "error");
             data = data || {};
             this._bind();
             this._setHeader('error', this.errorBox, typeof data === 'object' ? data : {}, 'Ação Executada');
             const n = this._normalize(data);
+            window.SICARDBrowserLogs?.log("erro.processo", {
+                status: "erro", origem: "interface", codigo: data.codigo,
+                ...(n.status ? { status_http: n.status } : {}),
+                ...(n.endpoint ? { rota: n.endpoint } : {})
+            }, "error");
             this._lastErrorData = n;
 
             pfsText('error-title', n.title, this.errorBox);

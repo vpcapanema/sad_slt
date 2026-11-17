@@ -22,6 +22,7 @@
     erro: ["Error", "TypeError", "AbortError", "TimeoutError", "SyntaxError", "QuotaExceededError", "outro"],
     status: ["pendente", "executando", "concluido", "parcial", "erro", "cancelado"],
     origem: ["polling", "sse", "interface", "http"],
+    codigo: ["smtp_autenticacao", "envio_email"],
     controle: ["button", "input", "select", "textarea", "form", "a", "outro"],
   };
   const controls = new Set(("ev-run fv-run fase-hierarquizacao fase3-ausentes fase3-executar fase3-salvar fase3-sintetizar " +

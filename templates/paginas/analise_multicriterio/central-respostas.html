@@ -1,5 +1,5 @@
 {% extends "bases/base_conteudo.html" %}
-{% block antes_conteudo %}<script src="/assets/js/browser-logs.js?v=20261104" data-sicard-log-page="{{ 'respostas' if modo_pagina == 'julgamentos' else 'julgamentos' }}"></script>{% endblock %}
+{% block antes_conteudo %}<script src="/assets/js/browser-logs.js?v=20261117-diagnostico" data-sicard-log-page="{{ 'respostas' if modo_pagina == 'julgamentos' else 'julgamentos' }}"></script>{% endblock %}
 {% set subtitulo = "Análise Multicritério Interativa" %}
 {% set navegacao = "restrita" %}
 {% set bloco_modulo = "mad" %}
@@ -133,7 +133,7 @@
   <script src="/assets/vendor/xlsx/xlsx-0.18.5.min.js"></script>
   <script src="/assets/js/paginas/analise-multicriterio-tabela.js?v=20261105-table-labels"></script>
   <script src="/assets/js/api-erro.js?v=20261027"></script>
-  <script src="/assets/js/paginas/ami-email.js?v=20261106-sem-clique-status"></script>
+  <script src="/assets/js/paginas/ami-email.js?v=20261117-falha-smtp"></script>
   <script src="/assets/js/matriz-criterios-arquivo.js?v=20261009"></script>
   <script src="/assets/js/matrizes-criterios.js?v=20261117-form-identifiers"></script>
   <script src="/assets/js/saaty-selector-color.js?v=20261103-1"></script>

@@ -315,8 +315,10 @@
   const aguardar = ms => new Promise(resolve => setTimeout(resolve, ms));
   const limitadoPeloServidor = row => row.envio_status === "falha" &&
     /limitou temporariamente/i.test(row.detalhe || "");
+  const autenticacaoRecusada = row => row.envio_status === "falha" &&
+    /recusou a autentica/i.test(row.detalhe || "");
   const bloqueioDoServidor = row => row.envio_status === "falha" &&
-    /limitou temporariamente|limite diário|recusou a mensagem/i.test(row.detalhe || "");
+    /limitou temporariamente|limite diário|recusou a mensagem|recusou a autentica/i.test(row.detalhe || "");
   function situacao() {
     if (!contexto || !pronto) return {pendentes: [], enviados: 0};
     const pendentes = contexto.destinatarios.filter(destinatario => REENVIAVEIS.has(estado({destinatario}, "convite")));
@@ -338,6 +340,8 @@
     const lista = apenasSelecionados ? selecionados() : somentePendentes ? pendentes : atual.destinatarios;
     bloquear(true);
     let processo, aceitos = 0, problemas = 0, interrompido = 0, motivo = "";
+    let codigo = "envio_email";
+    const detalhes = [];
     try {
       if (!(await ProcessFeedback.confirmar({
         title: apenasSelecionados ? "Enviar e-mail de convite aos selecionados" : reenvio ? "Reenviar e-mails aos colaboradores" : somentePendentes ? "Enviar e-mail aos pendentes" : "Enviar e-mail aos colaboradores",
@@ -373,14 +377,17 @@
           await aguardar(espera);
         }
         if (row.envio_status === "aceito_smtp") aceitos++; else problemas++;
+        if (row.envio_status !== "aceito_smtp" && row.detalhe) detalhes.push(row.detalhe);
+        if (autenticacaoRecusada(row)) codigo = "smtp_autenticacao";
         processo.concluirTarefa(destinatario);
         if (bloqueioDoServidor(row)) { interrompido = lista.length - indice - 1; motivo = row.detalhe; break; }
       }
       const linhas = [aceitos + " mensagem(ns) aceita(s) pelo servidor.", problemas + " sem envio confirmado."];
+      if (!motivo) linhas.push(...new Set(detalhes));
       if (motivo) linhas.push("Envio interrompido: " + motivo + (interrompido ? " " + interrompido + " colaborador(es) não foram tentados e permanecem pendentes." : ""));
       const resumo = linhas.join("\n") + "\n\nConsulte os detalhes por destinatário.";
       $("ami-email-status").textContent = resumo;
-      if (!aceitos && problemas) processo.erro({message: resumo});
+      if (!aceitos && problemas) processo.erro({message: resumo, codigo});
       else processo.sucesso({_status: problemas || interrompido ? "partial" : "success", title: "Envio de convites", message: resumo});
     } catch (error) {
       const message = "Envio interrompido. " + error.message + " Mensagens já aceitas não serão repetidas.";
@@ -428,6 +435,8 @@
       }))) return;
       processo = ProcessFeedback.iniciarCadastro({title: "Enviando confirmações de resposta", tasks: lista});
       let problemas = 0, interrompidos = 0;
+      let codigo = "envio_email";
+      const detalhes = [];
       for (let index = 0; index < lista.length; index++) {
         if (index) await aguardar(INTERVALO_ENVIO_MS);
         const destinatario = lista[index]; processo.tarefaAtual(destinatario);
@@ -437,12 +446,15 @@
         if (!row.id || !rotulosEnvio[row.envio_status]) throw new Error("O servidor não confirmou o estado do envio. Atualize o monitoramento antes de tentar novamente.");
         registros = registros.filter(item => item.id !== row.id).concat(row); render();
         if (row.envio_status === "aceito_smtp") aceitos++; else problemas++;
+        if (row.envio_status !== "aceito_smtp" && row.detalhe) detalhes.push(row.detalhe);
+        if (autenticacaoRecusada(row)) codigo = "smtp_autenticacao";
         processo.concluirTarefa(destinatario);
         if (bloqueioDoServidor(row)) { interrompidos = lista.length - index - 1; break; }
       }
-      const message = aceitos + " confirmação(ões) aceita(s) pelo servidor; " + problemas + " sem envio confirmado; " + interrompidos + " não tentada(s). Consulte os detalhes por colaborador.";
+      const message = aceitos + " confirmação(ões) aceita(s) pelo servidor; " + problemas + " sem envio confirmado; " + interrompidos + " não tentada(s). Consulte os detalhes por colaborador." +
+        (detalhes.length ? "\n" + [...new Set(detalhes)].join("\n") : "");
       $("ami-email-status").textContent = message;
-      if (!aceitos && problemas) processo.erro({message});
+      if (!aceitos && problemas) processo.erro({message, codigo});
       else processo.sucesso({_status: problemas || interrompidos ? "partial" : "success", title: "Confirmações de resposta", message});
     } catch (error) {
       if (processo && aceitos) processo.sucesso({_status: "partial", title: "Envio interrompido", message: error.message});
