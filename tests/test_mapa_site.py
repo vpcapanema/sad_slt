@@ -92,7 +92,7 @@ def test_menu_remove_acessos_retirados_e_usa_nomes_da_documentacao():
         "/public/documentacao/risco-restricao/",
         "/public/documentacao_favorabilidade_v2/",
         "/public/documentacao/limite-maritimo/",
-        "/public/documentacao/hierarquizacao/MODULO_FASE3_ATRIBUTOS_PROJETO_AJUSTE.md",
+        "/public/documentacao/priorizacao-atributos/",
     ):
         assert f'<span>{paginas[rota]}</span>' in documentacao
     for arquivo in ("index.html", "visao-geral.html"):

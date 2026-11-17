@@ -1,0 +1,6 @@
+[data-documentacao-tabelas] .doc-table-theme { min-width: 0; background: transparent; }
+[data-documentacao-tabelas] .doc-table-theme .ami-main { width: 100%; margin: 0; padding: 0; }
+[data-documentacao-tabelas] .doc-table-theme .ami-main .standard-table-section .admin-table tbody td {
+  white-space: normal; max-width: none; overflow: visible; text-overflow: clip;
+  vertical-align: top; line-height: 1.5;
+}

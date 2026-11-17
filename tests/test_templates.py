@@ -387,7 +387,7 @@ def test_restricted_home_geoprocessing_subgroups_and_independent_accesses() -> N
             "Fundamentos da favorabilidade territorial e da rede rodoviária",
             "Fundamentos do limite marítimo de referência de São Paulo",
             "Glossário técnico-conceitual",
-            "Especificação da priorização de demandas por atributos",
+            "Fundamentos da priorização de implementação por atributos",
         ],
     }
     index_css = Path("admin/index.css").read_text(encoding="utf-8")

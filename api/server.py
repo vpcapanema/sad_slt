@@ -320,6 +320,14 @@ def pagina_documentacao_limite_maritimo(request: Request) -> Response:
     return render_page(request, "paginas/documentacao/limite-maritimo.html", **montar_contexto())
 
 
+@app.get("/public/documentacao/priorizacao-atributos/", include_in_schema=False)
+def pagina_documentacao_priorizacao(request: Request) -> Response:
+    """Fundamentos da Fase 3, baseados no fluxo e no cálculo atuais."""
+    from api.services.documentacao_priorizacao import montar_contexto
+
+    return render_page(request, "paginas/documentacao/priorizacao-atributos.html", **montar_contexto())
+
+
 @app.get("/public/transparencia/", include_in_schema=False)
 def pagina_transparencia_publica(request: Request) -> Response:
     return render_page(request, "paginas/transparencia/index.html")
@@ -644,11 +652,9 @@ GEOSPATIAL_RETIRED_PAGES = frozenset({
 })
 
 HIERARQUIZACAO_DOCUMENTS = {
-    "ESPINHA_DORSAL_SISTEMA_HIERARQUIZACAO.md",
     "MODELO_HIERARQUIZACAO_ESPACIAL.md",
     "MODULO_FASE1_GERADOR_RESTRICAO_RISCO.md",
     "MODULO_FASE2_GERADOR_FAVORABILIDADE_TERRITORIAL.md",
-    "MODULO_FASE3_ATRIBUTOS_PROJETO_AJUSTE.md",
 }
 
 
@@ -705,8 +711,10 @@ def pagina_geoespacial(request: Request, pagina: str) -> Response:
 
 @app.get("/documentos/hierarquizacao/{documento}", include_in_schema=False)
 @app.get("/public/documentacao/hierarquizacao/{documento}", include_in_schema=False)
-def documento_hierarquizacao(documento: str) -> FileResponse:
+def documento_hierarquizacao(documento: str) -> Response:
     """Expõe apenas as especificações metodológicas explicitamente autorizadas."""
+    if documento == "ESPINHA_DORSAL_SISTEMA_HIERARQUIZACAO.md":
+        return RedirectResponse("/public/documentacao/processo-hierarquizacao/", status_code=308)
     if documento not in HIERARQUIZACAO_DOCUMENTS:
         from fastapi import HTTPException
 

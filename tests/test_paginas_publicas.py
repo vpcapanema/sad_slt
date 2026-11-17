@@ -30,6 +30,7 @@ PAGES = (
     "/public/documentacao/risco-restricao/",
     "/public/documentacao/favorabilidade/",
     "/public/documentacao/limite-maritimo/",
+    "/public/documentacao/priorizacao-atributos/",
     "/public/documentacao_favorabilidade_v2/",
     "/public/analise-multicriterio/formulario-comparacao-pareada/convite-teste/",
     "/public/documentacao/saidas_modelos/index.html",
@@ -220,13 +221,13 @@ def test_alias_preserva_query_e_prefixo(client, source, destination):
         "tecnico", "Referencial técnico",
         (
             "/public/documentacao_favorabilidade_v2/",
-            "/public/documentacao/hierarquizacao/MODULO_FASE3_ATRIBUTOS_PROJETO_AJUSTE.md",
+            "/public/documentacao/priorizacao-atributos/",
             "/public/documentacao/limite-maritimo/",
             "/public/documentacao/tutoriais/",
         ),
         (
             "Fundamentos da favorabilidade territorial e da rede rodoviária",
-            "Especificação da priorização de demandas por atributos",
+            "Fundamentos da priorização de implementação por atributos",
             "Fundamentos do limite marítimo de referência de São Paulo",
             "Tutoriais do SICARD",
         ),
@@ -293,7 +294,7 @@ def test_visao_geral_integra_conceitos_fluxos_e_referencias(client, prefix):
         "Projeto", "Programa", "Plano", "SIGMA-PLI",
     ):
         assert term in html
-    assert prefix + "/public/documentacao/hierarquizacao/ESPINHA_DORSAL_SISTEMA_HIERARQUIZACAO.md" in html
+    assert prefix + "/public/documentacao/processo-hierarquizacao/" in html
     for fragment in ("objeto-demanda", "status"):
         glossary = client.get("/public/documentacao/glossario/", headers=headers).text
         assert f'id="{fragment}"' in glossary
@@ -366,11 +367,9 @@ def test_tutoriais_publicos_conectados_ao_manifesto(client, monkeypatch, prefix)
 
 
 @pytest.mark.parametrize("document", [
-    "ESPINHA_DORSAL_SISTEMA_HIERARQUIZACAO.md",
     "MODELO_HIERARQUIZACAO_ESPACIAL.md",
     "MODULO_FASE1_GERADOR_RESTRICAO_RISCO.md",
     "MODULO_FASE2_GERADOR_FAVORABILIDADE_TERRITORIAL.md",
-    "MODULO_FASE3_ATRIBUTOS_PROJETO_AJUSTE.md",
 ])
 def test_documentos_publicos_preservam_conteudo_e_lista_autorizada(client, document):
     legacy = client.get("/documentos/hierarquizacao/" + document)

@@ -15,6 +15,7 @@
 <link rel="stylesheet" href="/assets/css/paginas/ami-report-tables.css">
 <link rel="stylesheet" href="/assets/css/paginas/ami-espaco-secoes.css">
 <link rel="stylesheet" href="/assets/css/paginas/sicard-standard-pages.css">
+<link rel="stylesheet" href="/assets/css/documentacao-tabelas.css?v=20261117">
 <link rel="stylesheet" href="/assets/css/documentacao-favorabilidade-v2.css?v=20261117-padrao">
 {% endblock %}
 {% block conteudo %}
@@ -45,7 +46,7 @@
       </details>
       <div class="favorabilidade-resumo">{{ relatorio_resumo | default('') | safe }}</div>
     </aside>
-    <div class="glossario-conteudo" id="favorabilidade-conteudo" tabindex="-1">
+    <div class="glossario-conteudo" id="favorabilidade-conteudo" data-documentacao-tabelas tabindex="-1">
       <p class="glossario-sem-resultados" id="glossario-sem-resultados" hidden>Nenhum tópico encontrado. Tente outra palavra ou limpe a busca.</p>
       {{ relatorio_conteudo | default('') | safe }}
       <p class="glossario-referencias">{{ relatorio_observacao | default('') }}</p>
@@ -57,5 +58,5 @@
 <script src="/assets/js/table-standard.js" defer></script>
 <script src="/assets/js/analysis-table-controls.js" defer></script>
 <script src="/assets/js/paginas/glossario.js?v=20261116-tabela" defer></script>
-<script src="/assets/js/paginas/documentacao-favorabilidade-v2.js" defer></script>
+<script src="/assets/js/documentacao-tabelas.js" defer></script>
 {% endblock %}

@@ -36,12 +36,6 @@
 .favorabilidade-v2-page .tag.terr { background: var(--pli-green); color: var(--pli-deep); }
 .favorabilidade-v2-page .legend { display: flex; flex-wrap: wrap; gap: .75rem; margin: .5rem 0; color: var(--pli-muted); font-size: .8rem; }
 .favorabilidade-v2-page .scroll { max-width: 100%; overflow: auto; }
-.favorabilidade-v2-page .fav-table-theme { min-width: 0; background: transparent; }
-.favorabilidade-v2-page .fav-table-theme .ami-main { width: 100%; margin: 0; padding: 0; }
-.favorabilidade-v2-page .fav-table-theme .admin-table tbody td {
-  white-space: normal; max-width: none; overflow: visible; text-overflow: clip;
-  vertical-align: top; line-height: 1.5;
-}
 .favorabilidade-v2-page .admin-table .v { font-variant-numeric: tabular-nums; text-align: center; }
 .fav-heat-value { display: inline-block; min-width: 3rem; padding: .2rem .35rem; border-radius: 3px; }
 @media (max-width: 980px) {

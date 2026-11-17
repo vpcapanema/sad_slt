@@ -1,0 +1,8 @@
+.priorizacao-atributos-page .standard-page-hero__title span { min-width: 0; overflow-wrap: anywhere; }
+.priorizacao-figura { margin: 1.25rem 0; border: 1px solid var(--pli-border); border-radius: var(--pli-radius); overflow: hidden; background: white; }
+.priorizacao-figura img { display: block; width: 100%; height: auto; }
+.priorizacao-figura figcaption { padding: 1rem; border-top: 1px solid var(--pli-border); color: var(--pli-muted); font-size: .875rem; line-height: 1.7; text-align: justify; }
+.priorizacao-passos, .priorizacao-referencias { margin: 1rem 0; padding-left: 1.5rem; line-height: 1.7; }
+.priorizacao-passos li + li, .priorizacao-referencias li + li { margin-top: .75rem; }
+.priorizacao-atributos-page .hier-table-shell { max-width: 100%; overflow: auto; }
+.priorizacao-atributos-page .hier-equacao figcaption { color: var(--pli-muted); font-size: .875rem; line-height: 1.7; }

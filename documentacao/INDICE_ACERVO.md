@@ -26,9 +26,9 @@ uma entrada por referencia, sem repetir os fundamentos das Fases 1 e 2:
 | Favorabilidade de grade e da rede: V2, provisoria e nao homologada | `/public/documentacao_favorabilidade_v2/` |
 | Limite maritimo | `/public/documentacao/limite-maritimo/` |
 | Relatorios exploratorios dos modelos | `/public/documentacao/saidas_modelos/index.html` |
-| Visao geral | `/public/documentacao/hierarquizacao/ESPINHA_DORSAL_SISTEMA_HIERARQUIZACAO.md` |
+| Visao geral | `/public/documentacao/processo-hierarquizacao/` |
 | Modelo espacial | `/public/documentacao/hierarquizacao/MODELO_HIERARQUIZACAO_ESPACIAL.md` |
-| Priorizacao por atributos | `/public/documentacao/hierarquizacao/MODULO_FASE3_ATRIBUTOS_PROJETO_AJUSTE.md` |
+| Priorizacao por atributos | `/public/documentacao/priorizacao-atributos/` |
 | Tutoriais SICARD (catalogo; midias aguardando publicacao) | `/public/documentacao/tutoriais/` |
 
 As especificacoes metodologicas passam pelo controller com a mesma lista
