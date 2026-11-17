@@ -182,7 +182,7 @@ def _carregar_relatorio(caixa: imaplib.IMAP4, validade: str, uid: bytes) -> byte
     if validade and chave in _cache_relatorios:
         _cache_relatorios.move_to_end(chave)
         return _cache_relatorios[chave]
-    partes = _exigir_ok(caixa.uid("fetch", uid, "(BODY.PEEK[])"))
+    partes = _exigir_ok(caixa.uid("fetch", uid.decode("ascii"), "(BODY.PEEK[])"))
     corpos = [p[1] for p in partes if isinstance(p, tuple) and len(p) == 2 and isinstance(p[1], bytes)]
     if len(corpos) != 1 or len(corpos[0]) > MAX_RELATORIO:
         raise FalhaEmail("imap", "O servidor retornou um relatório incompleto ou maior que o permitido.")

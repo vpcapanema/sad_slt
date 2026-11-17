@@ -1,34 +1,9 @@
-{% extends "bases/base_conteudo.html" %}
+{% extends "bases/base_referencia_cadastro.html" %}
 {% set subtitulo = "PLI-SP 2050 e PEF-SP 2050" %}
-{% set navegacao = "publica" %}
-{% set requer_autenticacao = false %}
-
+{% set titulo_catalogo = "Como escolher o plano" %}
+{% set icone_catalogo = "fa-map" %}
+{% set descricao_catalogo = "Compare o escopo, os objetivos e os critérios de enquadramento do PLI-SP e do PEF-SP. A escolha deve refletir o contexto estratégico da demanda, e não apenas o modo de transporte predominante." %}
 {% block titulo %}Planos PLI-SP e PEF-SP{% endblock %}
-{% block classes_body %}ref-page{% endblock %}
-{% block base_url %}<base href="/public/cadastro/">{% endblock %}
-
-{% block estilos_pagina %}
-  <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
-{% endblock %}
-
-{% block conteudo %}
-<main class="conteudo-principal app-main ref-main">
-    <section class="card-catalogo-planos secao-catalogo-planos card ref-alert ref-card">
-      <h1 class="pli-section-label">
-        <i class="fas fa-circle-info" aria-hidden="true"></i>
-        <span class="pli-section-title">Como escolher o plano</span>
-      </h1>
-      <div class="ref-card-body">
-        <p class="step-intro">
-          Compare o escopo, os objetivos e os critérios de enquadramento do PLI-SP e do PEF-SP. A escolha deve refletir o contexto estratégico da demanda, e não apenas o modo de transporte predominante.
-        </p>
-      </div>
-    </section>
-    <div id="conteudo" aria-live="polite"><noscript>Ative o JavaScript para consultar as referências.</noscript></div>
-  </main>
-{% endblock %}
-
-{% block scripts_pagina %}
-  <script src="/public/cadastro/referencia-render.js"></script>
-  <script src="/assets/js/paginas/cadastro-catalogo-planos-inline-1.js"></script>
+{% block inicializar_catalogo %}
+<script src="/assets/js/paginas/cadastro-catalogo-planos-inline-1.js"></script>
 {% endblock %}

@@ -72,7 +72,13 @@ def _conexao(config: EmailSettings) -> Generator[smtplib.SMTP, None, None]:
             codigo, resposta = servidor.ehlo()
             if codigo != 250:
                 raise smtplib.SMTPHeloError(codigo, resposta)
-        servidor.login(config.usuario, config.senha.get_secret_value())
+        # Aguarda os desafios AUTH do servidor antes de transmitir as credenciais.
+        # Senhas de aplicativo usam o mesmo protocolo SMTP de usuario/senha.
+        codigo, resposta = servidor.login(
+            config.usuario, config.senha.get_secret_value(), initial_response_ok=False,
+        )
+        if codigo not in (235, 503):
+            raise smtplib.SMTPAuthenticationError(codigo, resposta)
         yield servidor
     finally:
         # Uma falha no QUIT não desfaz a aceitação anterior do DATA.
@@ -100,7 +106,11 @@ def _falha_smtp(exc: Exception, *, iniciou_envio: bool, usuario_id: str,
     referencia = " ".join(str(parte) for parte in (smtp_codigo, estendido) if parte)
     if isinstance(exc, smtplib.SMTPAuthenticationError):
         codigo = "autenticacao"
-        mensagem = "O servidor de email recusou a autenticação do SICARD. Contate a administração."
+        mensagem = (
+            "O servidor de email recusou a autenticação do SICARD"
+            + (f" (código {referencia})" if referencia else "")
+            + ". Verifique a credencial de aplicativo e a autorização SMTP da conta."
+        )
     elif isinstance(exc, smtplib.SMTPRecipientsRefused):
         codigo = "destinatario_recusado"
         mensagem = "O servidor de email recusou o destinatário. Confira o endereço informado."

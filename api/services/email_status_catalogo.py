@@ -501,6 +501,8 @@ def texto_explicacao(status: str, diagnostico: str = "") -> str:
     if codigo not in CODIGOS:
         return ""
     explicacao = explicar_status(codigo)
+    if explicacao is None:
+        return ""
     motivo = _motivo_google(codigo, diagnostico)
     complemento = f" Motivo informado pelo Gmail: {motivo}" if motivo else ""
     return f"{explicacao['codigo']} · {explicacao['titulo']}. {explicacao['descricao']}{complemento} Ação: {explicacao['acao']}"

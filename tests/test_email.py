@@ -12,6 +12,8 @@ from api.routers.email import router
 from api.services import email_service
 from api.services.session_service import SessionUser, create_token
 
+SMTP_REAL = smtplib.SMTP
+
 
 @pytest.fixture(autouse=True)
 def smtp(monkeypatch):
@@ -31,6 +33,7 @@ def smtp(monkeypatch):
     servidor = MagicMock(spec=smtplib.SMTP)
     servidor.ehlo.return_value = (250, b"OK")
     servidor.noop.return_value = (250, b"OK")
+    servidor.login.return_value = (235, b"Authenticated")
     servidor.send_message.return_value = {}
     fabrica = MagicMock(return_value=servidor)
     fabrica_ssl = MagicMock(return_value=servidor)
@@ -109,7 +112,9 @@ def test_envia_texto_html_com_remetente_fixo_e_tls(client, smtp, perfil, caplog)
     contexto = servidor.starttls.call_args.kwargs["context"]
     assert contexto.check_hostname
     assert contexto.verify_mode == ssl.CERT_REQUIRED
-    servidor.login.assert_called_once_with("usuario-smtp", "segredo-sintetico")
+    servidor.login.assert_called_once_with(
+        "usuario-smtp", "segredo-sintetico", initial_response_ok=False,
+    )
     assert [call[0] for call in servidor.mock_calls] == [
         "ehlo", "starttls", "ehlo", "login", "send_message", "quit", "close",
     ]
@@ -190,6 +195,58 @@ def test_teste_conexao_autentica_sem_enviar(client, smtp):
     assert response.status_code == 200
     assert response.json()["status"] == "conectado"
     smtp[0].noop.assert_called_once()
+    smtp[0].send_message.assert_not_called()
+    smtp[0].close.assert_called_once()
+
+
+def test_senha_aplicativo_transmitida_pelos_desafios_login(client, smtp, monkeypatch):
+    import base64
+
+    usuario = "sicard@example.com"
+    senha = "senha-sintetica-#123"
+    monkeypatch.setenv("SICARD_SMTP_USER", usuario)
+    monkeypatch.setenv("SICARD_SMTP_PASSWORD", senha)
+    servidor = SMTP_REAL()
+    servidor.esmtp_features = {"auth": "LOGIN XOAUTH2"}
+    servidor.ehlo_resp = b"OK"
+    comandos = MagicMock(side_effect=[
+        (334, base64.b64encode(b"Username:")),
+        (334, base64.b64encode(b"Password:")),
+        (235, b"Authenticated"),
+    ])
+    monkeypatch.setattr(servidor, "docmd", comandos)
+    monkeypatch.setattr(servidor, "ehlo", MagicMock(return_value=(250, b"OK")))
+    monkeypatch.setattr(servidor, "starttls", MagicMock())
+    monkeypatch.setattr(servidor, "noop", MagicMock(return_value=(250, b"OK")))
+    monkeypatch.setattr(servidor, "quit", MagicMock())
+    smtp[1].return_value = servidor
+
+    response = client.post("/api/email/teste-conexao", headers=autenticacao())
+
+    assert response.status_code == 200
+    assert comandos.call_args_list[0].args == ("AUTH", "LOGIN")
+    assert base64.b64decode(comandos.call_args_list[1].args[0]).decode() == usuario
+    assert base64.b64decode(comandos.call_args_list[2].args[0]).decode() == senha
+    assert comandos.call_count == 3
+
+
+def test_recusa_autenticacao_informa_codigo_sem_expor_resposta(client, smtp, caplog):
+    smtp[0].login.side_effect = smtplib.SMTPAuthenticationError(
+        535, b"5.7.139 resposta-privada segredo-sintetico",
+    )
+    response = client.post("/api/email/enviar", headers=autenticacao(), json=dados())
+    assert response.status_code == 502
+    assert "535 5.7.139" in response.json()["detail"]
+    assert "resposta-privada" not in response.text + caplog.text
+    assert "segredo-sintetico" not in response.text + caplog.text
+    smtp[0].send_message.assert_not_called()
+
+
+def test_resposta_inesperada_na_autenticacao_impede_envio(client, smtp):
+    smtp[0].login.return_value = (454, b"4.7.0 unavailable")
+    response = client.post("/api/email/enviar", headers=autenticacao(), json=dados())
+    assert response.status_code == 502
+    assert response.headers["x-sicard-email-error"] == "autenticacao"
     smtp[0].send_message.assert_not_called()
     smtp[0].close.assert_called_once()
 

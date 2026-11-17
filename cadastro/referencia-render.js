@@ -37,40 +37,35 @@
     return `<ul class="${cls || "ref-list"}">${items.map((i) => `<li>${esc(i)}</li>`).join("")}</ul>`;
   }
 
-  function sectionLabel(title, icon, extraClass) {
-    const cls = ["pli-section-label", extraClass].filter(Boolean).join(" ");
-    return `<div class="${cls}"><i class="fas ${icon}" aria-hidden="true"></i><span class="pli-section-title">${title}</span></div>`;
+  function sectionLabel(title, icon, extraClass, level = "h2") {
+    const cls = ["ref-heading", extraClass].filter(Boolean).join(" ");
+    return `<${level} class="${cls}"><i class="fas ${icon}" aria-hidden="true"></i><span>${title}</span></${level}>`;
   }
 
   function entityHeader(title, icon, opts) {
     const badge = opts?.badge;
     const meta = opts?.meta;
-    let hdr = `<div class="pli-section-label"><i class="fas ${icon}" aria-hidden="true"></i><span class="pli-section-title">${esc(title)}</span>`;
+    let hdr = `<h2 class="ref-heading"><i class="fas ${icon}" aria-hidden="true"></i><span>${esc(title)}</span>`;
     if (badge) hdr += `<span class="badge">${esc(badge)}</span>`;
-    hdr += "</div>";
+    hdr += "</h2>";
     if (meta) hdr += `<p class="ref-entity-badge-meta">${meta}</p>`;
     return hdr;
   }
 
   function blockSection(title, icon, bodyHtml, extraBlockClass) {
     const blockCls = ["ref-block", extraBlockClass].filter(Boolean).join(" ");
-    return `<section class="${blockCls}">${sectionLabel(title, icon, "pli-section-label--sub")}<div class="ref-block-inner">${bodyHtml}</div></section>`;
+    return `<section class="${blockCls}">${sectionLabel(title, icon, "hier-topico", "h3")}<div class="ref-block-inner">${bodyHtml}</div></section>`;
   }
 
   function introCard(title, icon, bodyHtml, extraClass) {
-    const cls = ["ref-intro", "card", "ref-card", extraClass].filter(Boolean).join(" ");
-    return `<article class="${cls}">${sectionLabel(title, icon)}<div class="ref-card-body">${bodyHtml}</div></article>`;
-  }
-
-  function tocCard(title, icon, itemsHtml, extraClass) {
-    const cls = ["ref-toc", "card", "ref-card", extraClass].filter(Boolean).join(" ");
-    return `<nav class="${cls}" aria-label="Índice">${sectionLabel(title, icon)}<div class="ref-card-body"><ol>${itemsHtml}</ol></div></nav>`;
+    const cls = ["ref-intro", "ref-card", "glossario-grupo", extraClass].filter(Boolean).join(" ");
+    return `<article class="${cls}">${sectionLabel(title, icon)}<div class="ref-card-body glossario-entrada hier-texto">${bodyHtml}</div></article>`;
   }
 
   function entityCard(id, headerHtml, bodyHtml, extraClass) {
-    const cls = ["ref-entity", "card", "ref-card", extraClass].filter(Boolean).join(" ");
+    const cls = ["ref-entity", "ref-card", "glossario-grupo", extraClass].filter(Boolean).join(" ");
     const idAttr = id ? ` id="${esc(id)}"` : "";
-    return `<article class="${cls}"${idAttr}>${headerHtml}<div class="ref-card-body">${bodyHtml}</div></article>`;
+    return `<article class="${cls}"${idAttr}>${headerHtml}<div class="ref-card-body glossario-entrada hier-texto">${bodyHtml}</div></article>`;
   }
 
   function fontesHtml(fontes) {
@@ -88,13 +83,6 @@
       "fa-circle-info",
       `<p class="step-intro">Leia os critérios de cada diretoria e escolha onde a demanda se encaixa.</p>`,
       "ref-intro-short"
-    );
-
-    html += tocCard(
-      "Índice — Diretorias",
-      "fa-list",
-      ref.diretorias.map((d) => `<li><a href="#${esc(d.id)}">${esc(d.nome_oficial)}</a></li>`).join(""),
-      "ref-toc-compact"
     );
 
     ref.diretorias.forEach((d) => {
@@ -154,12 +142,6 @@
       container.innerHTML = html;
       return;
     }
-
-    html += tocCard(
-      "Índice — Planos",
-      "fa-list",
-      planos.map((p) => `<li><a href="#${esc(p.id)}">${esc(p.sigla)}</a></li>`).join("")
-    );
 
     planos.forEach((p) => {
       const dir = ref.diretorias.find((d) => d.id === p.diretoria_id);
@@ -245,21 +227,15 @@
       esc(c.intro_pli.titulo),
       "fa-tags",
       `<p class="ref-lead">${esc(c.intro_pli.sintese)}</p>
-      <p class="field-help"><strong>Critério de escolha:</strong> ${esc(c.intro_pli.criterio_escolha)}</p>
+      ${blockSection("Critério de escolha", "fa-circle-check", `<p>${esc(c.intro_pli.criterio_escolha)}</p>`)}
       ${fontesHtml(c.intro_pli.fontes)}`
-    );
-
-    html += tocCard(
-      "Índice — 6 frentes PLI",
-      "fa-list",
-      c.frentes_pli.map((f) => `<li><a href="#${esc(f.id)}">${esc(f.nome)}</a></li>`).join("")
     );
 
     c.frentes_pli.forEach((f) => {
       html += entityCard(
         f.id,
         entityHeader(f.nome, "fa-tags", { badge: f.id }),
-        `<p class="ref-lead"><strong>Definição oficial PLI:</strong> ${esc(f.descricao_oficial)}</p>
+        `${blockSection("Definição oficial PLI", "fa-circle-info", `<p>${esc(f.descricao_oficial)}</p>`)}
         ${entityBlocks(f)}
         <div class="btn-row">
           <a class="btn btn-primary" href="${cadastroUrl({ plano: "PLANO-PLI", diretoria: "DIR-PLAN", frente: f.id, step: "3" })}">Usar ${esc(f.id)} no cadastro</a>
@@ -281,12 +257,6 @@
       ${fontesHtml(c.intro_pef.fontes)}`
     );
 
-    html += tocCard(
-      "Índice — 7 eixos PEF",
-      "fa-list",
-      c.eixos_pef.map((e) => `<li><a href="#${esc(e.id)}">${esc(e.nome)}</a></li>`).join("")
-    );
-
     c.eixos_pef.forEach((e) => {
       html += entityCard(
         e.id,
@@ -299,9 +269,9 @@
       );
 
       if (e.id === "EIXO-PEF-02") {
-        html += `<section class="card ref-tic-section ref-card" id="corredores-tic">
+        html += `<section class="ref-tic-section ref-card glossario-grupo" id="corredores-tic">
           ${sectionLabel("Corredores TIC (subnível opcional)", "fa-train-subway")}
-          <div class="ref-card-body">
+          <div class="ref-card-body glossario-entrada hier-texto">
             <p class="hint">Quando o eixo é Trens Intercidades, o demandante pode especificar o corredor TIC se a geometria e o escopo do projeto permitirem identificá-lo.</p>
             <div class="ref-subgrid">`;
         c.corredores_tic.forEach((tic) => {
@@ -322,13 +292,77 @@
     container.innerHTML = html;
   }
 
+  function montarIndice(container) {
+    const indice = document.getElementById("catalogo-indice");
+    if (!indice) return;
+    const sumario = document.createElement("details");
+    sumario.className = "glossario-indice";
+    sumario.open = true;
+    const titulo = document.createElement("summary");
+    titulo.textContent = "Índice de conteúdo";
+    const nav = document.createElement("nav");
+    nav.setAttribute("aria-label", "Seções e subseções das referências");
+    sumario.append(titulo, nav);
+
+    const idUnico = (base) => {
+      let id = base;
+      for (let numero = 2; document.getElementById(id); numero += 1) id = `${base}-${numero}`;
+      return id;
+    };
+    const slug = (texto) => texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    const textoTitulo = (heading) => heading.querySelector("span:not(.badge)")?.textContent.trim()
+      || heading.textContent.trim();
+    const link = (heading, target, principal = false) => {
+      const a = document.createElement("a");
+      a.href = `#${target.id}`;
+      a.textContent = textoTitulo(heading);
+      if (principal) a.className = "glossario-indice-titulo";
+      return a;
+    };
+
+    container.querySelectorAll(".glossario-grupo").forEach(card => {
+      const heading = card.querySelector("h2");
+      if (!heading) return;
+      if (!card.id) card.id = idUnico(slug(textoTitulo(heading)));
+      const grupo = document.createElement("div");
+      grupo.className = "glossario-indice-grupo";
+      grupo.append(link(heading, card, true));
+      const lista = document.createElement("ul");
+      let ultimoTopico = null;
+      card.querySelectorAll("h3, h4").forEach(subtitulo => {
+        const alvo = subtitulo.closest(".ref-subcard, .ref-block") || subtitulo;
+        if (!alvo.id) alvo.id = idUnico(`${card.id}-${slug(textoTitulo(subtitulo))}`);
+        const item = document.createElement("li");
+        item.append(link(subtitulo, alvo));
+        if (subtitulo.tagName === "H4" && ultimoTopico) {
+          let sublista = ultimoTopico.querySelector("ul");
+          if (!sublista) { sublista = document.createElement("ul"); ultimoTopico.append(sublista); }
+          sublista.append(item);
+        } else {
+          lista.append(item);
+          if (subtitulo.tagName === "H3") ultimoTopico = item;
+        }
+      });
+      if (lista.children.length) grupo.append(lista);
+      nav.append(grupo);
+    });
+    indice.replaceChildren(sumario);
+    indice.hidden = !nav.children.length;
+    document.getElementById("catalogo-layout")?.classList.toggle("glossario-layout", !indice.hidden);
+  }
+
   async function iniciarPagina(renderizar) {
     const container = document.getElementById("conteudo");
     container.setAttribute("aria-busy", "true");
     container.textContent = "Carregando referências…";
+    document.getElementById("catalogo-indice")?.replaceChildren();
+    if (document.getElementById("catalogo-indice")) document.getElementById("catalogo-indice").hidden = true;
+    document.getElementById("catalogo-layout")?.classList.remove("glossario-layout");
     try {
       await loadReferencia("../");
       renderizar(container);
+      montarIndice(container);
       const hash = location.hash.replace("#", "");
       if (hash) document.getElementById(hash)?.scrollIntoView({ behavior: "smooth" });
     } catch (error) {

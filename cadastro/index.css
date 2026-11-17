@@ -330,6 +330,11 @@
   margin: auto auto 0;
 }
 
+.platform-home .module-hero .sicard-resumo p,
+.platform-home .module-card p {
+  text-align: justify;
+}
+
 .module-card-title-number {
   display: inline-flex;
   width: 36px;

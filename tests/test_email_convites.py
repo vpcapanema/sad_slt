@@ -340,7 +340,7 @@ def test_coleta_ignora_mensagens_que_nao_sao_relatorios(caixa):
                 (42, len(conteudo), CABECALHO_RELATORIO),
                 (99, 999999, CABECALHO_RELATORIO))
         if args[1] == "(BODY.PEEK[])":
-            assert args[0] == b"42"
+            assert args[0] == "42"
             return "OK", [(b"1 (UID 42 BODY[])", conteudo), b")"]
         raise AssertionError("Operação IMAP não autorizada")
     imap.uid.side_effect = uid
@@ -380,7 +380,8 @@ def test_coleta_automatica_correlaciona_convite_e_resposta(caixa, registros, mon
         if args[1].startswith("(UID RFC822.SIZE"):
             return "OK", resposta_cabecalhos(*((k.decode(), len(v), CABECALHO_RELATORIO) for k, v in relatorios.items()))
         if args[1] == "(BODY.PEEK[])":
-            return "OK", [(b"1 (UID " + args[0] + b" BODY[])", relatorios[args[0]]), b")"]
+            uid_bytes = args[0].encode("ascii")
+            return "OK", [(b"1 (UID " + uid_bytes + b" BODY[])", relatorios[uid_bytes]), b")"]
         raise AssertionError("Operação IMAP não autorizada")
 
     caixa[0].uid.side_effect = uid
@@ -401,7 +402,7 @@ def test_coleta_automatica_interrompe_entre_registros(caixa, registros, monkeypa
         if comando == "search": return "OK", [b"1 2"]
         if args[1].startswith("(UID RFC822.SIZE"):
             return "OK", resposta_cabecalhos((1, len(conteudo), CABECALHO_RELATORIO), (2, len(conteudo), CABECALHO_RELATORIO))
-        return "OK", [(b"1 (UID " + args[0] + b" BODY[])", conteudo), b")"]
+        return "OK", [(b"1 (UID " + args[0].encode("ascii") + b" BODY[])", conteudo), b")"]
     caixa[0].uid.side_effect = uid
     assert recibos.coletar_automaticamente(lambda: caixa[2].call_count > 0) == 1
     assert caixa[2].call_count == 1

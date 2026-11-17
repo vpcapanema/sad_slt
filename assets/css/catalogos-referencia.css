@@ -1,0 +1,35 @@
+/* Os catálogos reutilizam a capa, o índice e os painéis da documentação pública. */
+.catalogo-referencia-page .standard-page-hero__title span { min-width: 0; overflow-wrap: anywhere; }
+.catalogo-referencia-page .standard-page-hero__description { text-align: justify !important; }
+.catalogo-referencia-page .ref-heading { display: flex; align-items: center; gap: .55rem; flex-wrap: wrap; }
+.catalogo-referencia-page .ref-heading > span:first-of-type { flex: 1; min-width: 0; }
+.catalogo-referencia-page .ref-heading .badge { margin-left: auto; background: white; color: var(--pli-deep); border: 1px solid var(--pli-border); }
+.catalogo-referencia-page .ref-entity-badge-meta { margin: 0; padding: .75rem 1.5rem 0; color: var(--pli-muted); font-size: .875rem; text-align: justify; }
+.catalogo-referencia-page :is(.step-intro, .ref-lead) { font-size: inherit; color: var(--pli-text); }
+.catalogo-referencia-page .ref-block { margin: 1.25rem 0 0; }
+.catalogo-referencia-page .ref-block:first-child { margin-top: 0; }
+.catalogo-referencia-page .ref-block h3 { display: flex; align-items: baseline; gap: .5rem; font-size: 1rem; }
+.catalogo-referencia-page .ref-block-inner { padding-top: .65rem; }
+.catalogo-referencia-page :is(.ref-guide-yes, .ref-guide-no) { margin-left: 0; margin-right: 0; padding: 0; background: transparent; }
+.catalogo-referencia-page :is(.ref-list, .ref-fontes-list) { font-size: inherit; line-height: 1.7; }
+.catalogo-referencia-page :is(.ref-list, .ref-fontes-list) li { text-align: justify; }
+.catalogo-referencia-page :is(.ref-list, .ref-fontes-list) li + li { margin-top: .5rem; }
+.catalogo-referencia-page .ref-meta { margin: 1rem 0; font-size: inherit; line-height: 1.7; }
+.catalogo-referencia-page .ref-meta :is(dt, dd) { font-size: inherit; }
+.catalogo-referencia-page .ref-meta dd { text-align: justify; }
+.catalogo-referencia-page .ref-subcard { background: #eaf1f5; border-radius: var(--pli-radius); padding: 1.25rem; }
+.catalogo-referencia-page .ref-subcard h4 { font-size: 1rem; }
+.catalogo-referencia-page .ref-subcard p { font-size: inherit; line-height: 1.7; margin-bottom: .75rem; }
+.catalogo-referencia-page .ref-subcard > :last-child { margin-bottom: 0; }
+.catalogo-referencia-page :is(.field-help, .hint) { font-size: .875rem; line-height: 1.7; }
+.catalogo-referencia-page .btn-row { flex-wrap: wrap; margin-top: 1.25rem; }
+.catalogo-referencia-page .btn-row a { white-space: normal; text-align: center; }
+.catalogo-referencia-page .glossario-indice ul ul { padding: .25rem 0 .25rem .75rem; }
+.catalogo-referencia-page :is(.ref-block, .ref-subcard)[id] { scroll-margin-top: 1rem; }
+@media (max-width: 800px) {
+  .catalogo-referencia-page .ref-entity-badge-meta { padding-left: 1rem; padding-right: 1rem; }
+  .catalogo-referencia-page .ref-meta { grid-template-columns: minmax(0, 1fr); gap: .25rem; }
+  .catalogo-referencia-page .ref-meta dd + dt { margin-top: .6rem; }
+  .catalogo-referencia-page .ref-heading > span:first-of-type { flex-basis: calc(100% - 2rem); }
+  .catalogo-referencia-page .ref-heading .badge { margin-left: 1.55rem; }
+}

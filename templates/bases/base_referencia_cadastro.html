@@ -1,0 +1,27 @@
+{% extends "bases/base_conteudo.html" %}
+{% set navegacao = "publica" %}
+{% set requer_autenticacao = false %}
+{% block classes_body %}pagina-glossario catalogo-referencia-page{% endblock %}
+{% block estilos_pagina %}
+{% for css in ['glossario', 'page-title-standard', 'documentacao-hierarquizacao', 'catalogos-referencia'] %}
+<link rel="stylesheet" href="/assets/css/{{ css }}.css?v=20261117-indice-completo">
+{% endfor %}
+{% endblock %}
+{% block conteudo %}
+<main class="conteudo-principal glossario ref-main">
+  <a class="glossario-voltar" href="/public/cadastro/">← Cadastro de demandas</a>
+  <header class="cabecalho-glossario standard-page-hero" aria-labelledby="catalogo-titulo">
+    <h1 class="standard-page-hero__title" id="catalogo-titulo"><i class="fa-solid {{ icone_catalogo }}" aria-hidden="true"></i><span>{{ titulo_catalogo }}</span></h1>
+    <p class="standard-page-hero__eyebrow">Referências para classificar a demanda</p>
+    <p class="standard-page-hero__description">{{ descricao_catalogo }}</p>
+  </header>
+  <div id="catalogo-layout">
+    <aside class="barra-lateral-glossario" id="catalogo-indice" aria-label="Índice das referências de classificação" hidden></aside>
+    <div id="conteudo" aria-live="polite" class="glossario-conteudo"><noscript>Ative o JavaScript para consultar as referências.</noscript></div>
+  </div>
+</main>
+{% endblock %}
+{% block scripts_pagina %}
+<script src="/public/cadastro/referencia-render.js?v=20261117-indice-completo"></script>
+{% block inicializar_catalogo %}{% endblock %}
+{% endblock %}

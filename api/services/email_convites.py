@@ -29,7 +29,7 @@ def codigo_link(token: str, destinatario: str) -> str:
 def _marcar_links(texto: str, token: str, destinatario: str, caminhos: tuple[str, ...]) -> str:
     codigo = codigo_link(token, destinatario)
     for caminho in caminhos:
-        texto = re.sub(re.escape(caminho) + r"(?:\?c=[0-9a-f]{32})?", lambda _: f"{caminho}?c={codigo}", texto)
+        texto = re.sub(re.escape(caminho) + r"(?:\?c=[0-9a-f]{32})?", lambda _, caminho=caminho: f"{caminho}?c={codigo}", texto)
     return texto
 
 

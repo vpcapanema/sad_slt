@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 from multiprocessing import get_context
 from threading import RLock
 from time import monotonic
+from typing import Any
 from uuid import uuid4
 from copy import deepcopy
 from api.services.feedback_hierarquia import Hierarquia
@@ -86,9 +87,11 @@ def iniciar(conteudo, nome, dono, original=False):
         if len(_jobs) >= 24 or sum(j['dono'] == str(dono) and j['status'] in ('pendente', 'executando') for j in _jobs.values()) >= 2:
             raise ValueError('Há validações em andamento. Aguarde a conclusão antes de enviar outro arquivo.')
         ident = uuid4().hex
-        job = dict(id=ident, dono=str(dono), criado=monotonic(), solicitado=False,
-                   status='pendente', cancelavel=True, percentual=None, progresso_tarefa=None,
-                   etapas=[], etapa='Aguardando validação do arquivo')
+        job: dict[str, Any] = dict(
+            id=ident, dono=str(dono), criado=monotonic(), solicitado=False,
+            status='pendente', cancelavel=True, percentual=None, progresso_tarefa=None,
+            etapas=[], etapa='Aguardando validação do arquivo',
+        )
         tree = Hierarquia("Validar arquivo", ident)
         tree.task("validacao", "Inspecionar arquivo enviado")
         tree.iniciar("validacao", "Ler e validar conteúdo", "validar")
@@ -142,7 +145,8 @@ def _executar(ident, conteudo, nome, original=False):
             _jobs[ident].update(status='erro', cancelavel=False, erro='A validação foi interrompida pelo servidor. Envie o arquivo novamente.')
     finally:
         if iniciado:
-            if processo.is_alive(): processo.terminate()
+            if processo.is_alive():
+                processo.terminate()
             processo.join()
             processo.close()
         enviar.close(); receber.close()

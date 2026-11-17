@@ -50,7 +50,7 @@ def _mistura(cor: tuple[int, int, int], intensidade: float) -> str:
     """Cor da célula: a cor da direção misturada ao branco conforme a intensidade."""
     intensidade = max(0.0, min(1.0, intensidade))
     canais = [round(255 + (c - 255) * intensidade) for c in cor]
-    return "#{:02x}{:02x}{:02x}".format(*canais)
+    return f"#{canais[0]:02x}{canais[1]:02x}{canais[2]:02x}"
 
 
 def _celula_matriz(valor: float) -> tuple[str, str]:
