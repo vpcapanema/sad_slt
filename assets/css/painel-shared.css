@@ -95,7 +95,7 @@ body.painel-dashboard-page {
     var(--pin-halo-light, rgba(255, 255, 255, 0.08)) 68%,
     transparent 100%
   );
-  animation: painel-halo-gradient-pulse 2.2s ease-out infinite;
+  animation: none;
 }
 
 .painel-pin-halo--delay {
@@ -138,7 +138,7 @@ body.painel-dashboard-page {
   border-radius: 2px;
   clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
   top: var(--head-y, 22px);
-  animation: painel-halo-gradient-pulse-exec 2.2s ease-out infinite;
+  animation: none;
 }
 
 .painel-pin--fase-execucao .painel-pin-halo--delay {

@@ -515,14 +515,69 @@
     return `<a class="demanda-row-action" href="${href}" target="_blank" rel="noopener noreferrer" title="${label}" aria-label="${label}"${extra || ""}><i class="fa-solid ${icon}" aria-hidden="true"></i></a>`;
   }
 
+  function modalActionButton(icon, label, codigo) {
+    return `<button type="button" class="demanda-row-action" data-read-control data-demand-action="parecer-modal" data-codigo="${escapeHtml(codigo)}" title="${label}" aria-label="${label}"><i class="fa-solid ${icon}" aria-hidden="true"></i></button>`;
+  }
+
   function renderActions(d) {
     const params = `tipo=${encodeURIComponent(tipo)}&id=${encodeURIComponent(d.id)}`;
     return `<div class="demanda-row-actions" role="group" aria-label="Ações para ${escapeHtml(d.id)}">
       ${actionButton(`/restrict/painel/?${params}`, "fa-map-location-dot", "Ver no painel")}
-      ${actionButton(`/restrict/demanda/?${params}#sec-geometria-historico`, "fa-draw-polygon", "Ver geometria")}
-      ${actionButton(`/restrict/demanda/?${params}#sec-parecer`, "fa-file-signature", "Ver parecer técnico")}
+      ${actionButton(`/restrict/geoespacial/visualizador-camadas/?camada=${encodeURIComponent(`cadastro:${tipo}:${d.id}`)}`, "fa-draw-polygon", "Ver geometria")}
+      ${modalActionButton("fa-file-signature", "Ver parecer técnico", d.id)}
       ${actionButton(`/api/analise/${encodeURIComponent(d.id)}/parecer.pdf`, "fa-file-pdf", "Ver PDF do parecer técnico", ' data-demand-action="parecer-pdf"')}
     </div>`;
+  }
+
+  function respostaAnalise(value) {
+    if (value === true) return '<span class="demanda-analise-resposta is-sim"><i class="fa-solid fa-check" aria-hidden="true"></i> Sim</span>';
+    if (value === false) return '<span class="demanda-analise-resposta is-nao"><i class="fa-solid fa-xmark" aria-hidden="true"></i> Não</span>';
+    return '<span class="demanda-analise-resposta is-pendente">Não respondido</span>';
+  }
+
+  function textoGeometria(value) {
+    return { atende: "Atende", ajuste: "Requer ajuste", nao_se_aplica: "Não se aplica" }[value] || "Não avaliado";
+  }
+
+  function renderParecerModal(data) {
+    const geometria = data.avaliacao_geometria || {};
+    const criterios = (data.criterios || []).map((criterio) => `
+      <li class="demanda-analise-criterio">
+        <div><strong>${escapeHtml(criterio.rotulo)}</strong><span>${escapeHtml(criterio.pergunta)}</span></div>
+        ${respostaAnalise(criterio.resposta)}
+      </li>`).join("") || '<li class="demanda-analise-vazio">Nenhum critério registrado.</li>';
+    const resultado = data.resultado === "aprovado" ? "Aprovado" : data.resultado === "reprovado" ? "Reprovado" : "Pendente";
+    const decisao = { aprovada: "Aprovada", ressalvas: "Aprovada com ressalvas", reprovada: "Reprovada" }[data.decisao] || "Não registrada";
+    const geometriaItens = [
+      ["Delimitação da intervenção", geometria.delimitacao_intervencao],
+      ["Correspondência entre local e dimensões", geometria.correspondencia_local_dimensoes],
+      ["Área de influência direta", geometria.area_influencia_direta],
+      ["Precisão da localização", geometria.precisao_localizacao],
+    ].map(([label, value]) => `<div><dt>${label}</dt><dd>${escapeHtml(textoGeometria(value))}</dd></div>`).join("");
+    return `
+      <article class="demanda-analise-modal" aria-label="Análise da demanda ${escapeHtml(data.demanda_codigo)}">
+        <header class="demanda-analise-resumo">
+          <div><span>Demanda</span><strong>${escapeHtml(data.demanda_nome || data.demanda_codigo)}</strong><small>${escapeHtml(data.demanda_codigo)}</small></div>
+          <div><span>Resultado</span><strong>${resultado}</strong><small>${data.respondidos || 0} de ${data.total_criterios || 0} critérios respondidos</small></div>
+          <div><span>Decisão</span><strong>${decisao}</strong><small>${escapeHtml(data.avaliador_nome || "Avaliador não registrado")}</small></div>
+        </header>
+        <section><h4>Critérios de análise</h4><ol class="demanda-analise-criterios">${criterios}</ol></section>
+        <section><h4>Avaliação da geometria</h4><dl class="demanda-analise-geometria">${geometriaItens}</dl>${geometria.observacao ? `<p class="demanda-analise-observacao"><strong>Observação:</strong> ${escapeHtml(geometria.observacao)}</p>` : ""}</section>
+        <section><h4>Parecer técnico</h4><div class="demanda-analise-parecer">${escapeHtml(data.parecer_texto || "O parecer técnico ainda não foi gerado.")}</div>${data.parecer_complemento ? `<div class="demanda-analise-complemento"><strong>Complementação do parecer</strong><p>${escapeHtml(data.parecer_complemento)}</p></div>` : ""}</section>
+      </article>`;
+  }
+
+  async function abrirParecerModal(codigo) {
+    const modal = SLTAdminUi.openModal("Análise da demanda", '<p class="demanda-analise-carregando"><i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i> Carregando análise…</p>');
+    modal.querySelector(".admin-modal").classList.add("demanda-analise-modal-shell");
+    try {
+      const data = await SLTAdminApi.getAnalise(codigo);
+      const body = modal.querySelector(".admin-modal-body");
+      if (body) body.innerHTML = renderParecerModal(data);
+    } catch (error) {
+      SLTAdminUi.closeModal();
+      SLTAdminUi.showToast(error.message, true);
+    }
   }
 
   function activeTable() {
@@ -702,6 +757,13 @@
           preview?.close();
           SLTAdminUi.showToast(error.message, true);
         }
+      });
+    });
+
+    tbody.querySelectorAll('[data-demand-action="parecer-modal"]').forEach((button) => {
+      button.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        abrirParecerModal(button.dataset.codigo);
       });
     });
 

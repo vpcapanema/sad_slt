@@ -733,6 +733,13 @@
     ]);
 
     buildEntries();
+    const requested = new URLSearchParams(location.search);
+    const requestedKind = requested.get("tipo");
+    const requestedId = requested.get("id");
+    const requestedEntry = requestedKind && requestedId
+      ? findEntry(requestedKind, requestedId) || entries.find((entry) => entry.data.demanda_codigo === requestedId)
+      : null;
+    if (requestedEntry) entries = [requestedEntry];
     initRecordOrder();
     renderEntriesList();
     // A lista e os detalhes ficam disponiveis sem esperar as coordenadas do mapa.
@@ -744,12 +751,6 @@
     }
     buildMapLayers();
     document.querySelector("#map-painel .painel-map-loading")?.remove();
-    const requested = new URLSearchParams(location.search);
-    const requestedKind = requested.get("tipo");
-    const requestedId = requested.get("id");
-    const requestedEntry = requestedKind && requestedId
-      ? findEntry(requestedKind, requestedId) || entries.find((entry) => entry.data.demanda_codigo === requestedId)
-      : null;
     if (requestedEntry) {
       openDetail(requestedEntry.kind, requestedEntry.id, {});
       focusMapOnItem(requestedEntry.kind, requestedEntry.id);
