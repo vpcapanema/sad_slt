@@ -1,0 +1,29 @@
+.secao-tipo-tabs .admin-table :is(th, td).col-select {
+  position: sticky; left: 0; z-index: 3;
+  width: 2.75rem; min-width: 2.75rem; max-width: 2.75rem;
+  padding-inline: 0; text-align: center;
+}
+.secao-tipo-tabs .admin-table th.col-select { z-index: 5; }
+.secao-tipo-tabs .admin-table :is(th, td).col-actions {
+  position: sticky; left: 2.75rem; z-index: 3;
+  width: 9.5rem; min-width: 9.5rem; max-width: 9.5rem;
+  padding-inline: .3rem; text-align: center;
+}
+.secao-tipo-tabs .admin-table th.col-actions { z-index: 5; background: var(--pli-deep, #123b56); }
+.secao-tipo-tabs .admin-table tbody tr[data-table-stripe="odd"] > :is(td.col-actions, td.col-select) { background: #fff !important; }
+.secao-tipo-tabs .admin-table tbody tr[data-table-stripe="even"] > :is(td.col-actions, td.col-select) { background: #edf4f8 !important; }
+.secao-tipo-tabs .admin-table tbody tr:is(.is-selected, :has(> td:first-child input:checked)) > :is(td.col-actions, td.col-select) { background: #dbeafe !important; }
+.demanda-row-actions {
+  display: inline-flex; flex-flow: row nowrap; align-items: center;
+  justify-content: center; gap: .25rem; white-space: nowrap;
+}
+.demanda-row-action {
+  display: inline-flex; flex: 0 0 1.85rem; align-items: center; justify-content: center;
+  width: 1.85rem; height: 1.85rem; min-width: 1.85rem; padding: 0;
+  border: 1px solid #45667b; border-radius: .3rem; color: #123b56;
+  background: #f8fafc; text-decoration: none; cursor: pointer;
+}
+.demanda-row-action:hover, .demanda-row-action:focus-visible {
+  color: #fff; background: #17628b; border-color: #123b56;
+}
+.demanda-row-action:focus-visible { outline: 2px solid #1683c4; outline-offset: 1px; }

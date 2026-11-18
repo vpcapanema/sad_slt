@@ -22,6 +22,7 @@
           <table class="admin-table" data-table-heading="{{ 'complementacao-cadastral-titulo' if modo_complementacao else 'demandas-tabela-titulo' }}" data-demandas-table="plano" hidden>
             <thead><tr>
               <th class="col-select" scope="col"><input type="checkbox" class="select-all" aria-label="Selecionar todos os planos"></th>
+              {% if not modo_complementacao %}<th class="col-actions" scope="col">Ações</th>{% endif %}
               <th scope="col">Status</th><th scope="col">Processo SEI</th><th scope="col">Código</th><th scope="col">Plano</th>
               <th scope="col">Diretoria</th><th scope="col">Instituição</th><th scope="col">Representante</th>
               <th scope="col">Objetivo estratégico</th><th scope="col">Vigência</th><th scope="col">Valor global</th>
@@ -37,6 +38,7 @@
           <table class="admin-table" data-table-heading="{{ 'complementacao-cadastral-titulo' if modo_complementacao else 'demandas-tabela-titulo' }}" data-demandas-table="programa" hidden>
             <thead><tr>
               <th class="col-select" scope="col"><input type="checkbox" class="select-all" aria-label="Selecionar todos os programas"></th>
+              {% if not modo_complementacao %}<th class="col-actions" scope="col">Ações</th>{% endif %}
               <th scope="col">Status</th><th scope="col">Processo SEI</th><th scope="col">Código</th><th scope="col">Programa</th>
               <th scope="col">Plano vinculado</th><th scope="col">Vínculo institucional</th><th scope="col">Diretoria</th>
               <th scope="col">Instituição</th><th scope="col">Representante</th><th scope="col">Órgão responsável</th>
@@ -53,6 +55,7 @@
           <table class="admin-table" data-table-heading="{{ 'complementacao-cadastral-titulo' if modo_complementacao else 'demandas-tabela-titulo' }}" data-demandas-table="projeto">
             <thead><tr>
               <th class="col-select" scope="col"><input type="checkbox" class="select-all" aria-label="Selecionar todos os projetos"></th>
+              {% if not modo_complementacao %}<th class="col-actions" scope="col">Ações</th>{% endif %}
               <th scope="col">Status</th><th scope="col">Processo SEI</th><th scope="col">Código</th><th scope="col">Projeto</th>
               <th scope="col">Diretoria</th><th scope="col">Plano estratégico</th><th scope="col">Vínculo institucional</th>
               <th scope="col">Programa vinculado</th><th scope="col">Instituição</th><th scope="col">Representante</th>

@@ -274,7 +274,7 @@
             <span class="field-help">Carregando critérios…</span>
           </div>
         </div>
-        <section class="analise-criterio analise-geometria" hidden style="display:none" aria-labelledby="geometria-avaliacao-titulo">
+        <section id="sec-geometria" class="analise-criterio analise-geometria" hidden style="display:none" aria-labelledby="geometria-avaliacao-titulo">
           <span class="analise-criterio-rotulo" id="geometria-avaliacao-titulo">Geometria</span>
           <span class="field-help" id="geometria-pergunta">A geometria apresentada é suficientemente adequada para representar o objeto da demanda?</span>
           <div id="geometria-criterios-grid"></div>
@@ -298,7 +298,7 @@
           </div>
           <p class="analise-geometria-salvamento" id="geometria-avaliacao-salvamento" role="status"></p>
         </section>
-        <section class="analise-geometria-historico" aria-labelledby="geometria-historico-titulo">
+        <section id="sec-geometria-historico" class="analise-geometria-historico" aria-labelledby="geometria-historico-titulo">
           <h4 id="geometria-historico-titulo">Histórico de versões da geometria</h4>
           <p class="field-help">
             O histórico informa as versões registradas no sistema. Geometrias anteriores sem registro
@@ -1714,6 +1714,7 @@
     if (id) {
       const t = urlTipo && lists[urlTipo] ? urlTipo : findTipoOf(id);
       await selectRecord(t, id, { updateUrl: false });
+      if (location.hash) requestAnimationFrame(() => document.querySelector(location.hash)?.scrollIntoView({ block: "start" }));
       return;
     }
     record = null;

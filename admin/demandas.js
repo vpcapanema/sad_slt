@@ -511,6 +511,20 @@
     return col.value(d);
   }
 
+  function actionButton(href, icon, label, extra) {
+    return `<a class="demanda-row-action" href="${href}" title="${label}" aria-label="${label}"${extra || ""}><i class="fa-solid ${icon}" aria-hidden="true"></i></a>`;
+  }
+
+  function renderActions(d) {
+    const params = `tipo=${encodeURIComponent(tipo)}&id=${encodeURIComponent(d.id)}`;
+    return `<div class="demanda-row-actions" role="group" aria-label="Ações para ${escapeHtml(d.id)}">
+      ${actionButton(`/restrict/painel/?${params}`, "fa-map-location-dot", "Ver no painel")}
+      ${actionButton(`/restrict/demanda/?${params}#sec-geometria-historico`, "fa-draw-polygon", "Ver geometria")}
+      ${actionButton(`/restrict/demanda/?${params}#sec-parecer`, "fa-file-signature", "Ver parecer técnico")}
+      ${actionButton(`/api/analise/${encodeURIComponent(d.id)}/parecer.pdf`, "fa-file-pdf", "Ver PDF do parecer técnico", ' data-demand-action="parecer-pdf"')}
+    </div>`;
+  }
+
   function activeTable() {
     return document.querySelector('[data-demandas-table="' + tipo + '"]');
   }
@@ -634,6 +648,7 @@
         return `
         <tr data-codigo="${escapeHtml(d.id)}" data-status="${escapeHtml(d.status || "")}" class="${(editing + gestor).trim()}">
           <td class="col-select">${cb}</td>
+          ${complementacao ? "" : `<td class="col-actions">${renderActions(d)}</td>`}
           ${cols
             .map((c) => {
               const isEditableCell = editMode && selected.has(d.id) && c.editable;
@@ -655,6 +670,37 @@
         }
         updateBulkButtons();
         renderHead();
+      });
+    });
+
+    tbody.querySelectorAll('[data-demand-action="parecer-pdf"]').forEach((link) => {
+      link.addEventListener("click", async (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        const preview = window.open("", "_blank");
+        if (preview) preview.opener = null;
+        try {
+          const response = await fetch(link.href, { credentials: "same-origin" });
+          if (!response.ok) {
+            let detail = "O PDF do parecer técnico ainda não está disponível para esta demanda.";
+            try {
+              const body = await response.json();
+              if (typeof body.detail === "string") detail = body.detail;
+            } catch (_) { /* resposta sem JSON */ }
+            throw new Error(detail);
+          }
+          const url = URL.createObjectURL(await response.blob());
+          if (preview) {
+            preview.location = url;
+            setTimeout(() => URL.revokeObjectURL(url), 60000);
+          } else {
+            URL.revokeObjectURL(url);
+            throw new Error("O navegador bloqueou a abertura do PDF. Autorize pop-ups para o SICARD e tente novamente.");
+          }
+        } catch (error) {
+          preview?.close();
+          SLTAdminUi.showToast(error.message, true);
+        }
       });
     });
 
@@ -934,7 +980,7 @@
       input.addEventListener("input", () => { currentPage = 1; resetSelection(); renderTable(); });
     }
     for (const kind of ['plano','programa','projeto']) {
-      ordenadores[kind] = SLTTable.sorting(document.querySelector(`[data-demandas-table="${kind}"]`), () => [null, ...COLUMNS[kind].map(column => row => columnDisplayValue(column,row))], () => { currentPage=1; resetSelection(); renderTable(); }, () => !editMode);
+      ordenadores[kind] = SLTTable.sorting(document.querySelector(`[data-demandas-table="${kind}"]`), () => [null, ...(complementacao ? [] : [null]), ...COLUMNS[kind].map(column => row => columnDisplayValue(column,row))], () => { currentPage=1; resetSelection(); renderTable(); }, () => !editMode);
     }
     const user = await SLTAdminAuth.requireAuth();
     if (!user) return;

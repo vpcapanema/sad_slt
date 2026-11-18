@@ -744,6 +744,17 @@
     }
     buildMapLayers();
     document.querySelector("#map-painel .painel-map-loading")?.remove();
+    const requested = new URLSearchParams(location.search);
+    const requestedKind = requested.get("tipo");
+    const requestedId = requested.get("id");
+    const requestedEntry = requestedKind && requestedId
+      ? findEntry(requestedKind, requestedId) || entries.find((entry) => entry.data.demanda_codigo === requestedId)
+      : null;
+    if (requestedEntry) {
+      openDetail(requestedEntry.kind, requestedEntry.id, {});
+      focusMapOnItem(requestedEntry.kind, requestedEntry.id);
+      document.querySelector(`.layer-group--record[data-record-id="${CSS.escape(requestedEntry.id)}"]`)?.scrollIntoView({ block: "nearest" });
+    }
   }
 
   init().catch((err) => {
