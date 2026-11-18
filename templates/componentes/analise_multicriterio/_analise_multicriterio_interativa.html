@@ -32,6 +32,11 @@
               <label for="ami-emails">E-mail<input id="ami-emails" class="c-form-control" type="email" maxlength="320" autocomplete="email" placeholder="nome@dominio.com" aria-required="true" aria-describedby="ami-collaborator-help"></label>
               <button type="button" class="ahp-collab-add-btn" id="ami-add-emails" aria-label="Adicionar colaborador" title="Adicionar colaborador"><i class="fas fa-plus" aria-hidden="true"></i></button>
             </div>
+            <div class="ami-collaborator-import">
+              <input id="ami-collaborator-file" type="file" accept=".xlsx,.xls,.csv,.tsv,.txt,.json" hidden>
+              <button type="button" class="btn btn-secondary" id="ami-import-collaborators"><i class="fas fa-file-import" aria-hidden="true"></i> Importar lista de colaboradores</button>
+              <small class="form-help">Use um arquivo XLSX, XLS, CSV, TSV, TXT ou JSON com uma coluna para o nome e outra para o e-mail.</small>
+            </div>
             <fieldset id="ami-collaborator-dimensions" class="matrix-source-option">
               <legend>Dimensões atribuídas ao colaborador</legend>
               <small class="form-help"><i class="fas fa-info-circle" aria-hidden="true"></i> Selecione uma ou mais dimensões entre os critérios da Fase 3. Critérios espaciais da Fase 2 não entram no julgamento AHP.</small>
@@ -42,7 +47,7 @@
         </div>
         <section id="ami-collaborator-list-section" class="ahp-subcard ami-collaborator-section" aria-labelledby="ami-list-section-title" hidden>
           <div class="ahp-subsection-title"><span class="ahp-subsection-num">5</span><span id="ami-list-section-title">Lista de colaboradores</span></div>
-          <div class="c-form-group ami-config-list" id="ami-collaborator-table"><small class="form-help"><i class="fas fa-info-circle"></i> Confira os colaboradores adicionados e selecione registros quando precisar removê-los. <span id="ami-emails-feedback" role="status" aria-live="polite"></span></small><div class="ami-filtered-table">{% set filtro_prefixo = "ami-emails-filter" %}{% set filtro_rotulo = "Filtrar colaboradores" %}{% include "componentes/filtro_tabela.html" %}<div class="ahp-collab-table-wrap"><table class="ahp-collab-table"><thead><tr><th class="ahp-collab-chk-col"><input type="checkbox" id="ami-select-all" title="Selecionar todos" aria-label="Selecionar todos"></th><th>Colaboradores</th><th>E-mail colaborador</th><th>Data limite</th></tr></thead><tbody id="ami-email-list"><tr><td colspan="4" class="ami-empty">Nenhum colaborador adicionado.</td></tr></tbody></table></div></div><div class="admin-actions ami-collaborator-controls" role="group" aria-label="Controles da lista de colaboradores">
+          <div class="c-form-group ami-config-list" id="ami-collaborator-table"><small class="form-help"><i class="fas fa-info-circle"></i> Confira os colaboradores adicionados e selecione registros quando precisar removê-los. <span id="ami-emails-feedback" role="status" aria-live="polite"></span></small><div class="ami-filtered-table">{% set filtro_prefixo = "ami-emails-filter" %}{% set filtro_rotulo = "Filtrar colaboradores" %}{% include "componentes/filtro_tabela.html" %}<div class="ahp-collab-table-wrap"><table class="ahp-collab-table"><thead><tr><th class="ahp-collab-chk-col"><input type="checkbox" id="ami-select-all" title="Selecionar todos" aria-label="Selecionar todos"></th><th>Colaboradores</th><th>E-mail colaborador</th><th>Data limite</th><th>Dimensões atribuídas ao colaborador</th></tr></thead><tbody id="ami-email-list"><tr><td colspan="5" class="ami-empty">Nenhum colaborador adicionado.</td></tr></tbody></table></div></div><div class="admin-actions ami-collaborator-controls" role="group" aria-label="Controles da lista de colaboradores">
 <button type="button" class="admin-icon-btn save" id="ami-confirm-emails" title="Confirmar lista de colaboradores" aria-label="Confirmar lista de colaboradores"><i class="fas fa-check" aria-hidden="true"></i></button>
 <button type="button" class="admin-icon-btn edit" id="ami-edit-emails" title="Editar colaboradores" aria-label="Editar colaboradores"><i class="fas fa-pen" aria-hidden="true"></i></button>
 <button type="button" class="admin-icon-btn cancel" id="ami-cancel-emails" title="Cancelar edição da lista" aria-label="Cancelar edição da lista"><i class="fas fa-xmark" aria-hidden="true"></i></button>
@@ -56,3 +61,16 @@
     </div>
   </div>
 </section>
+
+<div class="ami-import-modal" id="ami-import-modal" hidden>
+  <section class="ami-import-modal__card" role="dialog" aria-modal="true" aria-labelledby="ami-import-title" aria-describedby="ami-import-description">
+    <div class="ami-import-modal__head"><div><h2 id="ami-import-title">Prévia da lista de colaboradores</h2><p id="ami-import-description">Confira os dados e atribua ao menos uma dimensão com dois critérios a cada colaborador.</p></div><button type="button" id="ami-import-close" aria-label="Fechar prévia" title="Fechar prévia"><i class="fas fa-xmark" aria-hidden="true"></i></button></div>
+    <p class="ami-feedback" id="ami-import-feedback" role="status" aria-live="polite"></p>
+    <div class="ami-import-preview">
+      <div class="admin-filter-bar" aria-label="Filtros da prévia"><label class="admin-filter-label" for="ami-import-search">Filtrar colaboradores</label><input id="ami-import-search" type="search" placeholder="Nome ou e-mail"><button type="button" id="ami-import-clear" title="Limpar filtro" aria-label="Limpar filtro"><i class="fas fa-eraser" aria-hidden="true"></i></button></div>
+      <div class="ami-import-table-wrap"><table class="ahp-collab-table"><thead><tr><th class="ahp-collab-chk-col"><input type="checkbox" id="ami-import-select-all" checked title="Selecionar todos" aria-label="Selecionar todos os colaboradores importados"></th><th>Nome do colaborador</th><th>E-mail válido</th><th>Dimensões atribuídas ao colaborador</th></tr></thead><tbody id="ami-import-list"></tbody></table></div>
+    </div>
+    <div class="admin-actions ami-collaborator-controls" role="group" aria-label="Controles da prévia de importação"><button type="button" class="admin-icon-btn save" id="ami-import-confirm" title="Confirmar importação" aria-label="Confirmar importação"><i class="fas fa-check" aria-hidden="true"></i></button><button type="button" class="admin-icon-btn cancel" id="ami-import-cancel" title="Cancelar importação" aria-label="Cancelar importação"><i class="fas fa-xmark" aria-hidden="true"></i></button></div>
+    <div class="admin-table-footer"><nav id="ami-import-pagination" class="admin-pagination" aria-label="Paginar prévia"></nav><p id="ami-import-count" class="admin-table-summary" aria-live="polite"></p></div>
+  </section>
+</div>

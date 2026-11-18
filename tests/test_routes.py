@@ -338,6 +338,14 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
     assert html.index('id="ami-new"') < html.index("Configuração do julgamento")
     assert html.index('id="ami-new"') < html.index('class="secao-dados-tabelas-colaborativas')
     assert "Central de julgamentos" in html
+    assert 'id="ami-import-collaborators"' in html
+    assert 'id="ami-collaborator-file"' in html
+    assert 'accept=".xlsx,.xls,.csv,.tsv,.txt,.json"' in html
+    assert 'id="ami-import-modal"' in html
+    assert 'id="ami-import-list"' in html
+    assert 'id="ami-collaborator-dimensions"' in html
+    assert "readCollaboratorFile" in julgamentos_js
+    assert "confirmCollaboratorImport" in julgamentos_js
     assert "Tabela do monitoramento das atividades" in html
     assert "Tabela dos julgamentos realizados" in julgamentos_js
     assert "Tabela da lista de colaboradores" in julgamentos_js

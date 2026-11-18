@@ -634,6 +634,44 @@
   font-size: var(--ami-font-child, 0.7rem);
   font-weight: 400;
 }
+.ami-page.ami-espaco-page .ami-collaborator-import {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.ami-page.ami-espaco-page .ami-collaborator-import .form-help { margin: 0; }
+.ami-import-modal[hidden] { display: none; }
+.ami-import-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1600;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(19, 34, 49, 0.58);
+}
+.ami-import-modal__card {
+  width: min(1120px, 96vw);
+  max-height: 92vh;
+  overflow: auto;
+  padding: 1rem;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: var(--pli-shadow);
+}
+.ami-import-modal__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.ami-import-modal__head h2 { margin: 0; color: var(--pli-deep); font-size: 1.1rem; }
+.ami-import-modal__head p { margin: 0.35rem 0 0; color: var(--pli-muted); }
+.ami-import-modal__head > button { border: 0; background: transparent; color: var(--pli-muted); font-size: 1.35rem; cursor: pointer; }
+.ami-import-preview { overflow: hidden; border: 1px solid #374151; border-radius: 8px; }
+.ami-import-preview .admin-filter-bar { border: 0; border-bottom: 1px solid #374151; border-radius: 0; }
+.ami-import-table-wrap { overflow: auto; }
+.ami-import-table-wrap table { width: 100%; min-width: 760px; }
+.ami-import-table-wrap td:last-child { min-width: 280px; }
+.ami-import-dimensions { display: flex; flex-wrap: wrap; gap: 0.35rem 0.75rem; }
+.ami-import-dimensions label { display: inline-flex; align-items: center; gap: 0.25rem; font-weight: 400; }
 @media (max-width: 600px) {
   .ami-page.ami-espaco-page .ami-registration-grid {
     grid-template-columns: minmax(0, 1fr);
