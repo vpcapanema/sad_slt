@@ -53,7 +53,7 @@ const base = process.env.SICARD_BASE_URL || 'http://127.0.0.1:8084';
       assert.equal(await table.locator('th[data-origin-key]:visible').count(),fields.length);
       const sample=sources[kind].find(r=>r.dados_origem?.campos?.COD_pSICARD);
       if(sample){
-        const label=await page.locator('#filtro-coluna option').evaluateAll(es=>es.find(e=>e.textContent==='Origem — COD_pSICARD')?.value);
+        const label=await page.locator('#filtro-coluna option').evaluateAll(es=>es.find(e=>e.textContent==='Origem — Código no pSICARD')?.value);
         await page.locator('#filtro-coluna').selectOption(label);
         await page.locator('#filtro-valor').fill(String(sample.dados_origem.campos.COD_pSICARD));
         assert(await table.locator('tbody tr[data-codigo="'+sample.id+'"]').count());

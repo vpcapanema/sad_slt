@@ -17,4 +17,6 @@ assert.equal(ui.details(null),'');
 assert(!ui.details(a).includes('<script>'));
 assert(ui.details(a).includes('&lt;script&gt;'));
 assert(ui.details(a).includes('Arquivo de origem'));
+const renamed = ui.columns([{dados_origem:{campos:{COD_pSICARD:'1',COD_rede:'2','Código do D14':'3','Identificador da ficha (.docx)':'4',Nome:'N',Programa:'P'}}}]).map(f=>f.label);
+assert.deepEqual(Array.from(renamed), ['Código da ficha de origem','Código da rede','Código no D14','Código no pSICARD','Nome na fonte de origem','Programa na fonte de origem']);
 console.log('PASS original values, heterogeneous and nested fields, missing values and HTML escaping');

@@ -567,13 +567,74 @@
       </article>`;
   }
 
+  async function modalParaCanvas(elemento) {
+    await document.fonts?.ready;
+    if (!window.html2canvas) throw new Error("O renderizador visual do PDF não está disponível.");
+    return window.html2canvas(elemento, {
+      scale: 2,
+      backgroundColor: "#ffffff",
+      useCORS: true,
+      allowTaint: false,
+      logging: false,
+      width: elemento.scrollWidth,
+      height: elemento.scrollHeight,
+      windowWidth: Math.max(document.documentElement.clientWidth, elemento.scrollWidth),
+    });
+  }
+
+  async function exportarModalAnalisePdf(modal, codigo) {
+    if (!window.jspdf?.jsPDF) throw new Error("O gerador de PDF não está disponível.");
+    const conteudo = modal.querySelector(".demanda-analise-modal");
+    if (!conteudo) throw new Error("A análise ainda não terminou de carregar.");
+    const canvas = await modalParaCanvas(conteudo);
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
+    const margem = 10;
+    const larguraPagina = pdf.internal.pageSize.getWidth();
+    const alturaPagina = pdf.internal.pageSize.getHeight();
+    const larguraUtil = larguraPagina - margem * 2;
+    const alturaUtil = alturaPagina - margem * 2;
+    const alturaFatia = Math.max(1, Math.floor(canvas.width * alturaUtil / larguraUtil));
+    let topo = 0;
+    let pagina = 0;
+    while (topo < canvas.height) {
+      const altura = Math.min(alturaFatia, canvas.height - topo);
+      const fatia = document.createElement("canvas");
+      fatia.width = canvas.width;
+      fatia.height = altura;
+      fatia.getContext("2d").drawImage(canvas, 0, topo, canvas.width, altura, 0, 0, canvas.width, altura);
+      if (pagina++) pdf.addPage();
+      const alturaMm = altura * larguraUtil / canvas.width;
+      pdf.addImage(fatia.toDataURL("image/png"), "PNG", margem, margem, larguraUtil, alturaMm, undefined, "FAST");
+      topo += altura;
+    }
+    const nome = String(codigo || "demanda").replace(/[^A-Za-z0-9._-]+/g, "-");
+    pdf.save(`analise-tecnica-${nome}.pdf`);
+  }
+
   async function abrirParecerModal(codigo) {
-    const modal = SLTAdminUi.openModal("Análise da demanda", '<p class="demanda-analise-carregando"><i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i> Carregando análise…</p>');
+    const modal = SLTAdminUi.openModal("Análise da demanda", '<p class="demanda-analise-carregando"><i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i> Carregando análise…</p>', '<button type="button" class="btn btn-primary" data-read-control data-exportar-analise-pdf disabled><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Exportar para PDF</button>');
     modal.querySelector(".admin-modal").classList.add("demanda-analise-modal-shell");
+    const exportar = modal.querySelector("[data-exportar-analise-pdf]");
+    exportar.addEventListener("click", async () => {
+      exportar.disabled = true;
+      const rotulo = exportar.innerHTML;
+      exportar.innerHTML = '<i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i> Gerando PDF…';
+      try {
+        await exportarModalAnalisePdf(modal, codigo);
+        SLTAdminUi.showToast("PDF da análise disponibilizado para download.");
+      } catch (error) {
+        SLTAdminUi.showToast(error.message, true);
+      } finally {
+        exportar.innerHTML = rotulo;
+        exportar.disabled = false;
+      }
+    });
     try {
       const data = await SLTAdminApi.getAnalise(codigo);
       const body = modal.querySelector(".admin-modal-body");
       if (body) body.innerHTML = renderParecerModal(data);
+      exportar.disabled = false;
     } catch (error) {
       SLTAdminUi.closeModal();
       SLTAdminUi.showToast(error.message, true);

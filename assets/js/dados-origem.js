@@ -5,6 +5,14 @@
     '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
   }[c]));
   const metadataLabels = {arquivo:'Arquivo de origem', versao_estrutura:'Versão da estrutura'};
+  const sourceLabels = {
+    COD_pSICARD: 'Código no pSICARD',
+    COD_rede: 'Código da rede',
+    'Código do D14': 'Código no D14',
+    'Identificador da ficha (.docx)': 'Código da ficha de origem',
+    Nome: 'Nome na fonte de origem',
+    Programa: 'Programa na fonte de origem',
+  };
   function fields(origin) {
     if (!origin || typeof origin !== 'object' || Array.isArray(origin)) return [];
     const result = [];
@@ -15,9 +23,9 @@
     }
     Object.entries(origin).forEach(([key,value]) => {
       visit(value, [key], key === 'campos' && value && typeof value === 'object' && !Array.isArray(value)
-        ? [] : [metadataLabels[key] || key]);
+        ? [] : [metadataLabels[key] || sourceLabels[key] || key]);
     });
-    return result;
+    return result.map(field => ({...field, label: sourceLabels[field.label] || field.label}));
   }
   function value(origin, field) {
     let current = origin;
