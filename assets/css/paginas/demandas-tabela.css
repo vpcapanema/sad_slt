@@ -10,6 +10,18 @@
   padding-inline: .3rem; text-align: center;
 }
 .secao-tipo-tabs .admin-table th.col-actions { z-index: 5; background: var(--pli-deep, #123b56); }
+.secao-tipo-tabs .admin-table :is(th, td):is(.col-select, .col-actions, .col-status) {
+  overflow: visible !important;
+  text-overflow: clip !important;
+  white-space: nowrap !important;
+}
+.secao-tipo-tabs .admin-table :is(th, td).col-status {
+  max-width: none;
+}
+.secao-tipo-tabs .admin-table td.col-status > * {
+  max-width: none;
+  white-space: nowrap;
+}
 .secao-tipo-tabs .admin-table tbody tr[data-table-stripe="odd"] > :is(td.col-actions, td.col-select) { background: #fff !important; }
 .secao-tipo-tabs .admin-table tbody tr[data-table-stripe="even"] > :is(td.col-actions, td.col-select) { background: #edf4f8 !important; }
 .secao-tipo-tabs .admin-table tbody tr:is(.is-selected, :has(> td:first-child input:checked)) > :is(td.col-actions, td.col-select) { background: #dbeafe !important; }

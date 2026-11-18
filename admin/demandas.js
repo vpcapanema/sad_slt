@@ -512,7 +512,7 @@
   }
 
   function actionButton(href, icon, label, extra) {
-    return `<a class="demanda-row-action" href="${href}" title="${label}" aria-label="${label}"${extra || ""}><i class="fa-solid ${icon}" aria-hidden="true"></i></a>`;
+    return `<a class="demanda-row-action" href="${href}" target="_blank" rel="noopener noreferrer" title="${label}" aria-label="${label}"${extra || ""}><i class="fa-solid ${icon}" aria-hidden="true"></i></a>`;
   }
 
   function renderActions(d) {
@@ -652,7 +652,8 @@
           ${cols
             .map((c) => {
               const isEditableCell = editMode && selected.has(d.id) && c.editable;
-              return `<td${isEditableCell ? ' class="cell-editable"' : ""}>${renderCell(c, d)}</td>`;
+              const classes = [isEditableCell ? "cell-editable" : "", c.label === "Status" ? "col-status" : ""].filter(Boolean).join(" ");
+              return `<td${classes ? ` class="${classes}"` : ""}>${renderCell(c, d)}</td>`;
             })
             .join("")}
         </tr>`;

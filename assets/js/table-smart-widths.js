@@ -33,10 +33,13 @@
         titleWidth = words.length > 1 ? Math.min(...words.slice(1).map((_, i) => Math.max(measure(words.slice(0, i+1).join(' '), header), measure(words.slice(i+1).join(' '), header)))) : full;
       }
       const compactAttributes = table.dataset.compactAttributes === 'true';
+      const neverClip = header.classList.contains('col-actions') || header.classList.contains('col-status');
       const content = rows.reduce((max, row) => {
         const cell = row.cells[index];
         const primary = compactAttributes ? cell.querySelector('.atributo-valor-normalizado, .objeto-codigo') : null;
-        return Math.max(max, measure((primary || cell).textContent.trim(), cell));
+        const measured = measure((primary || cell).textContent.trim(), cell);
+        const rendered = neverClip ? Math.max(cell.scrollWidth, cell.firstElementChild?.scrollWidth || 0) : 0;
+        return Math.max(max, measured, rendered);
       }, 0);
       const stickyIdentity = compactAttributes && header.classList.contains('col-objeto')
         && headers[0].querySelector('input[type=checkbox]');
@@ -44,7 +47,9 @@
       const contentLimit = stickyIdentity ? Math.min(320, Math.max(76, table.parentElement.clientWidth - 46))
         : compactAttributes && index > 1 ? 160 : 320;
       const dataWidth = prioritizeDemand ? content + 24 : Math.min(contentLimit, content + 24);
-      return {preferred:Math.ceil(Math.max(76,full+32,dataWidth)), compact:Math.ceil(Math.max(76,titleWidth+32,dataWidth)), title, full, label};
+      const requiredDataWidth = neverClip ? content + 24 : dataWidth;
+      const required = Math.ceil(Math.max(76, full + 32, requiredDataWidth, header.classList.contains('col-actions') ? 152 : 0));
+      return {preferred:required, compact:neverClip ? required : Math.ceil(Math.max(76,titleWidth+32,dataWidth)), title, full, label};
     });
     if (prioritizeDemand) {
       const host = table.closest('.ami-report-table');
