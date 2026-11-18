@@ -153,3 +153,21 @@ def baixar_parecer_pdf(
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{nome_arquivo}"'},
     )
+
+
+@router.get("/{codigo}/relatorio.pdf")
+def baixar_relatorio_atual_pdf(
+    codigo: str,
+    _user: SessionUser = Depends(require_authenticated),
+) -> Response:
+    """Gera e baixa a versão institucional da análise exibida no modal."""
+    try:
+        codigo_demanda, pdf = analise_demanda_service.gerar_relatorio_atual_pdf(codigo)
+    except (DemandaNotFoundError, DemandaValidationError, DatabaseUnavailableError) as exc:
+        raise _erro_http(exc) from exc
+    nome_arquivo = f"analise-tecnica-{codigo_demanda}.pdf"
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{nome_arquivo}"'},
+    )

@@ -136,17 +136,20 @@ def mapa_demanda_png(geometria: dict[str, Any], largura_pol: float, mapa_base: b
 
     metros_no_terreno = (x1 - x0) * math.cos(math.radians(latitude_centro))
     metros_impressos = _EIXO[2] * largura_pol * _METROS_POR_POLEGADA
-    nome = (geometria.get('nome') or '').strip()
     rotulo_tipo = (geometria.get('tipo') or '').capitalize()
-    titulo = f"Mapa de localização — {rotulo_tipo} {geometria.get('codigo', '')}: {nome}"
-    fig.text(_EIXO[0], 0.955, titulo[:110], fontsize=9.5, fontweight='bold', ha='left', va='center')
+    # O nome completo já aparece na identificação do relatório. Repeti-lo aqui
+    # fazia o título disputar largura com a escala em demandas de nome longo.
+    titulo = f"Mapa — {rotulo_tipo} {geometria.get('codigo', '')}"
+    fig.text(_EIXO[0], 0.955, titulo, fontsize=9.5, fontweight='bold', ha='left', va='center')
     fig.text(_EIXO[0] + _EIXO[2], 0.955, f"Escala numérica {_escala_numerica(metros_no_terreno, metros_impressos)}",
              fontsize=8, ha='right', va='center')
     crs_arquivo = geometria.get('crs_arquivo')
     datum = f"{CRS.from_user_input(crs_arquivo).name} ({crs_arquivo})" if crs_arquivo else 'não informado'
-    fig.text(_EIXO[0], 0.012,
-             f"Datum de origem: {datum} · Projeção de exibição: WGS 84 / Pseudo-Mercator (EPSG:3857) · "
-             "Grade em graus decimais (EPSG:4326)", fontsize=6.5, ha='left', va='bottom', color='#3c4650')
+    fig.text(_EIXO[0], 0.032,
+             f"Datum de origem: {datum} · Exibição: WGS 84 / Pseudo-Mercator (EPSG:3857)",
+             fontsize=6.5, ha='left', va='bottom', color='#3c4650')
+    fig.text(_EIXO[0], 0.012, "Grade em graus decimais (EPSG:4326)",
+             fontsize=6.5, ha='left', va='bottom', color='#3c4650')
 
     buffer = BytesIO()
     fig.savefig(buffer, format='png', dpi=200)

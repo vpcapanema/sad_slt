@@ -787,6 +787,46 @@ def obter_pdf(codigo: str) -> tuple[str, bytes]:
     return demanda["codigo"], pdf
 
 
+def gerar_relatorio_atual_pdf(codigo: str) -> tuple[str, bytes]:
+    """Gera o relatório da análise no estado atual, sem exigir decisão final.
+
+    Diferentemente de :func:`obter_pdf`, esta emissão não depende de um parecer
+    oficial previamente persistido. Ela é usada pela visualização das demandas e
+    preserva o mesmo padrão institucional dos pareceres definitivos.
+    """
+    tipo, demanda = _localizar_demanda(codigo)
+    analise = analise_demanda_repository.get_by_codigo(demanda["codigo"]) or {}
+    respostas = _respostas(analise)
+    momento = _momento_analise(analise)
+    if momento is None:
+        atualizado = analise.get("atualizado_em")
+        if isinstance(atualizado, datetime):
+            momento = atualizado if atualizado.tzinfo else atualizado.replace(tzinfo=FUSO_ANALISE)
+        elif atualizado:
+            momento = datetime.fromisoformat(str(atualizado))
+            if momento.tzinfo is None:
+                momento = momento.replace(tzinfo=FUSO_ANALISE)
+        else:
+            momento = datetime.now(FUSO_ANALISE)
+    momento = momento.astimezone(FUSO_ANALISE)
+    decisao = analise.get("decisao") or (
+        "complementacao"
+        if demanda.get("status") == "analise_aguardando_complementacao"
+        else ""
+    )
+    pdf = gerar_pdf(
+        demanda=demanda,
+        tipo=tipo,
+        respostas=respostas,
+        analise=analise,
+        decisao=decisao,
+        status_atual=demanda.get("status") or "",
+        momento=momento,
+        geometria=_geometria_cadastro(tipo, demanda["codigo"]),
+    )
+    return demanda["codigo"], pdf
+
+
 # ---------------------------------------------------------------------------
 # Relatório PDF
 # ---------------------------------------------------------------------------

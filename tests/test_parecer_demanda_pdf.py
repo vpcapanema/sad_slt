@@ -55,6 +55,26 @@ def emitir(documento):
     return PdfReader(BytesIO(service.gerar_pdf(**{k: v for k, v in documento.items() if not k.startswith("_")})))
 
 
+def test_relatorio_atual_reutiliza_documento_institucional_sem_exigir_pdf_persistido(documento, monkeypatch):
+    demanda = documento["demanda"]
+    analise = documento["analise"] | {"decisao": None}
+    monkeypatch.setattr(service, "_localizar_demanda", lambda _codigo: (documento["tipo"], demanda))
+    monkeypatch.setattr(service.analise_demanda_repository, "get_by_codigo", lambda _codigo: analise)
+    monkeypatch.setattr(service, "_geometria_cadastro", lambda *_args: None)
+    monkeypatch.setattr(service, "_rotulo_status", lambda _: "Aguardando complementação")
+
+    codigo, pdf = service.gerar_relatorio_atual_pdf(demanda["codigo"])
+    leitor = PdfReader(BytesIO(pdf))
+    conteudo = texto(leitor)
+
+    assert codigo == demanda["codigo"]
+    assert conteudo.startswith("SICARD")
+    assert "Sistema Inteligente de Cadastro e Ranking de Demandas" in conteudo
+    assert "Parecer técnico de admissibilidade" in conteudo
+    assert "COMPLEMENTAÇÃO NECESSÁRIA" in conteudo
+    assert all(f"Página {i}" in pagina.extract_text() for i, pagina in enumerate(leitor.pages, 1))
+
+
 def texto(leitor):
     return " ".join(" ".join(p.extract_text() for p in leitor.pages).split())
 

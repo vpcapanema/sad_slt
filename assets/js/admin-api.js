@@ -137,6 +137,23 @@
     return res.blob();
   }
 
+  /** Gera o relatório institucional da análise no estado atual. */
+  async function fetchAnaliseRelatorioPdf(codigo) {
+    const res = await fetch(analisePath(codigo, "/relatorio.pdf"), {
+      credentials: "include",
+    });
+    if (res.status === 401) {
+      const err = new Error("Sessão expirada.");
+      err.code = "UNAUTHORIZED";
+      throw err;
+    }
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      throw new Error(errorMessage(body));
+    }
+    return res.blob();
+  }
+
   async function listPlanos() {
     return request("/api/planos/internas");
   }
@@ -333,6 +350,7 @@
     alterarSituacaoAnalise,
     decidirAnalise,
     fetchAnaliseParecerPdf,
+    fetchAnaliseRelatorioPdf,
     listPlanos,
     getPlano,
     updatePlano,
