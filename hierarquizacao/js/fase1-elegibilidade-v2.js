@@ -5,7 +5,7 @@ import {validarCamada, descritorOriginal} from '../../geoespacial/extracao-atrib
 import {escolherConfiguracao} from '../../geoespacial/extracao-atributos/lista-camadas.js';
 import {criarPrevia} from '../../geoespacial/extracao-atributos/previa.js?v=20261104-reuso-geometrias';
 import {criarMapa} from '../../geoespacial/extracao-atributos/mapa.js';
-import {criarResultados} from './cinco-resultados_elegibilidade_v2.js?v=20261119-navegacao-leitura';
+import {criarResultados} from './cinco-resultados_elegibilidade_v2.js?v=20261119-destino-fase1';
 
 const papeis = {entrada:'Entrada', restricao:'Restrição', risco:'Risco'};
 const selecao = {entrada:[], restricao:[], risco:[]};
@@ -365,7 +365,7 @@ async function calcularElegibilidade() {
         restricao:conjunto.restricao.map(referencia), risco:conjunto.risco.map(referencia)});
       if (cancelado) await post(`${rota}/${job.id}/cancelar`, {});
       resultado = await esperar(job, id => `${rota}/${id}`);
-      resultados.adicionar(job.id);
+      resultados.adicionar(job.id, resultado);
       const win = $('#ea-workbench-frame').contentWindow;
       win.gpArquivos.adicionar({...resultado, categoria:'Elegibilidade territorial'}, {estiloPreparado:true});
       mapa.assertReady([resultado.id]);

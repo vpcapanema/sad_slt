@@ -47,7 +47,7 @@ export async function identificarCamadas(files, {excluded=[], aoIdentificar, inc
   return camadas;
 }
 
-export function escolherArquivo({catalog=[],carregarCatalogo,excluded=[],title,acao=title,multiple=false,validar=true,somenteReferencias=false,prepararReferencias,original=false,host,onClose,raiz,pastaInicial=raiz||ROOT,extensoes,incluirRasters=false,detalhesAnalise=false}) {
+export function escolherArquivo({catalog=[],carregarCatalogo,excluded=[],title,acao=title,multiple=false,validar=true,somenteReferencias=false,prepararReferencias,original=false,host,onClose,raiz,pastaInicial=raiz||ROOT,pastasAlternativas=[],extensoes,incluirRasters=false,detalhesAnalise=false}) {
   return new Promise(resolve=>{
     const inline=Boolean(host?.isConnected);
     const dialog=el(inline?'section':'dialog',undefined,`ea-tool-dialog ea-storage-dialog${inline?' ea-storage-inline':''}`);
@@ -335,7 +335,7 @@ export function escolherArquivo({catalog=[],carregarCatalogo,excluded=[],title,a
       controls();
       consultarTamanhos(current);
     }
-    async function navigate(path){
+    async function navigate(path, alternativas=[]){
       if((loading&&!browsing)||closed)return;
       const request=++navigation;
       loading=true;browsing=true;controls();status.textContent='';
@@ -354,7 +354,14 @@ export function escolherArquivo({catalog=[],carregarCatalogo,excluded=[],title,a
           trail.append(crumb);
         }
         liberar();paintTree();paintList();list.scrollTop=0;
-      }catch(error){liberar();if(!closed&&request===navigation){status.textContent=error.message;window.Notify.error('Storage',`Não foi possível abrir a pasta: ${error.message}`);}}finally{if(!closed&&request===navigation){loading=false;browsing=false;controls();}}
+      }catch(error){
+        liberar();
+        if(!closed&&request===navigation){
+          if(error.status===404&&alternativas.length) return navigate(alternativas[0], alternativas.slice(1));
+          status.textContent=error.message;
+          window.Notify.error('Storage',`Não foi possível abrir a pasta: ${error.message}`);
+        }
+      }finally{if(!closed&&request===navigation){loading=false;browsing=false;controls();}}
     }
     async function selectBatch(){
       if(loading||!picks.size)return;
@@ -413,6 +420,6 @@ export function escolherArquivo({catalog=[],carregarCatalogo,excluded=[],title,a
       processo.concluirTarefa(CARREGAR,'Camadas carregadas');processo.fechar();finish(multiple?unique:unique[0]);
     }
     search.addEventListener('input',()=>{if(!loading)paintList();});
-    paintTree();navigate(pastaInicial);
+    paintTree();navigate(pastaInicial,pastasAlternativas);
   });
 }

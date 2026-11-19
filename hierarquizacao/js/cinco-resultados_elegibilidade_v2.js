@@ -2,7 +2,7 @@ import {instalarRegistro} from './registrar-resultados-fase.js?v=20261027-finali
 import {post, base} from '../../geoespacial/extracao-atributos/api.js';
 import {el} from '../../geoespacial/extracao-atributos/ui.js';
 import {conclusaoSobreposicao} from './elegibilidade-conclusao.js?v=20261104-camadas';
-import {escolherArquivo} from '../../geoespacial/extracao-atributos/explorador.js?v=20261119-navegacao-leitura';
+import {escolherArquivo} from '../../geoespacial/extracao-atributos/explorador.js?v=20261119-destino-fase1';
 import {
   nomeSobreposicao, CATEGORIAS, ROTULOS, FILTROS, ORDENS, SELECAO_VAZIA, caracterizarDemandas, demandasVisiveis, descreverSituacao,
   registrosDetalhados, registrosVisiveis, alternarSelecao, formatarHa, formatarPercentual,
@@ -26,6 +26,8 @@ export function criarResultados({avisar, aoOcupar}) {
   const formulario = node('aliases'), campos = new Map();
   let execucoes = [], pendentes = [], modelo = null, indice = 0;
   let ocupado = false, externo = false, gerandoPacote = false;
+  const pastasDeSaida = new Map();
+  const raizSaidas = 'saidas-geoespaciais';
   let fichas = [], registros = [], selecao = SELECAO_VAZIA;
 
   const informar = mensagem => { node('status').textContent = mensagem; };
@@ -311,14 +313,24 @@ export function criarResultados({avisar, aoOcupar}) {
   node('abrir').onclick = event => {
     event.preventDefault();
     operar(async () => {
+      const codigo = document.getElementById('ev-hierarquizacao')?.value || '';
+      const pastaPadrao = codigo
+        ? `${raizSaidas}/hierarquizacoes/${codigo}/fase-1`
+        : `${raizSaidas}/analises-avulsas/elegibilidade-territorial`;
+      const pastaVinculada = codigo ? `${pastaPadrao}/elegibilidade_territorial` : null;
+      const pastas = [...new Set([pastasDeSaida.get(codigo), pastaVinculada, pastaPadrao, raizSaidas].filter(Boolean))];
       const arquivo = await escolherArquivo({
         title: 'Selecionar análise de elegibilidade já realizada',
         detalhesAnalise:true,
-        raiz: 'saidas-geoespaciais', extensoes: ['gpkg'], validar: false, somenteReferencias: true,
+        raiz: raizSaidas, pastaInicial: pastas[0], pastasAlternativas: pastas.slice(1),
+        extensoes: ['gpkg'], validar: false, somenteReferencias: true,
       });
       if (!arquivo) return;
       informar('Lendo e conferindo o resultado da análise selecionada no storage…');
       const dados = await post(`${ROTA}/abrir`, {arquivo: arquivo.arquivo});
+      const pasta = arquivo.arquivo.slice(0, arquivo.arquivo.lastIndexOf('/'));
+      const vinculo = /^saidas-geoespaciais\/hierarquizacoes\/([^/]+)\/fase-1\//.exec(arquivo.arquivo);
+      pastasDeSaida.set(vinculo?.[1] || '', pasta);
       await selecionarExecucoes(dados.execucoes, dados);
     });
   };
@@ -333,7 +345,12 @@ export function criarResultados({avisar, aoOcupar}) {
   return {
     atualizar(busy) { externo = busy; controles(); },
     iniciar() { pendentes = []; },
-    adicionar(ident) { pendentes.push(ident); },
+    adicionar(ident, resultado) {
+      pendentes.push(ident);
+      if (resultado?.pasta_analise) {
+        pastasDeSaida.set(resultado.elegibilidade?.hierarquizacao || '', resultado.pasta_analise);
+      }
+    },
     async finalizar() {
       if (!pendentes.length) return;
       const identificadores = [...pendentes]; pendentes = [];
