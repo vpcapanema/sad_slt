@@ -159,8 +159,9 @@ export function criarResultados({avisar, aoOcupar}) {
     node('relatorios').hidden = !modelo;
     node('abrir').setAttribute('aria-disabled', String(bloqueado));
     raiz.querySelectorAll('input,button,select').forEach(c => { c.disabled = bloqueado; });
+    node('download').disabled = !modelo;
+    node('download').setAttribute('aria-busy', String(gerandoPacote));
     if (bloqueado) return;
-    node('download').disabled = !modelo || gerandoPacote;
     controleRegistro(modelo);
     node('limpar').disabled = !selecao.chave; node('enquadrar').disabled = !selecao.chave;
     const limites = tabela.limites();
@@ -324,7 +325,7 @@ export function criarResultados({avisar, aoOcupar}) {
     });
   };
   node('download').onclick = async () => {
-    if (gerandoPacote || ocupado || externo || !modelo) return;
+    if (gerandoPacote || !modelo) return;
     gerandoPacote = true; controles();
     try { await exportarPacote(); }
     catch (erro) { informar(erro.message); avisar(erro.message, 'error'); }
