@@ -174,7 +174,7 @@ def enviar(dados: EmailEnvioSchema, *, usuario_id: str, id_mensagem: str | None 
     remetente = str(config.remetente)
     id_mensagem = id_mensagem or make_msgid(domain=remetente.rsplit("@", 1)[1])
     mensagem = EmailMessage()
-    mensagem["From"] = Address(display_name="PLI-SICARD", addr_spec=remetente)
+    mensagem["From"] = Address(display_name=dados.alias_remetente, addr_spec=remetente)
     mensagem["To"] = str(dados.destinatario)
     mensagem["Subject"] = dados.assunto
     mensagem["Message-ID"] = id_mensagem

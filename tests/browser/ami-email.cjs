@@ -24,12 +24,15 @@ const fs = require('node:fs');
       hierarquizacao_codigo:'H1',atualizadoEm:'2026-10-19T12:00:00+00:00',
       valido_ate:'2035-12-31T23:59:59-03:00',criterios:[{nome:'Critério A'},{nome:'Critério B'}],
       n_criterios:2,url_publica:'https://example.com/sicard/public/analise-multicriterio/formulario-comparacao-pareada/token-email/',
+      email_remetente_alias:'SICARD-PLI',email_assunto:'Convite institucional',email_config_persistida:true,
+      email_mensagem:'Olá, colaborador(a)!\n\nCritérios a comparar (2):\n1. Critério A\n2. Critério B\n\nhttps://example.com/sicard/public/analise-multicriterio/formulario-comparacao-pareada/token-email/\n\nEquipe SICARD/SLT',
       convites:[{nome:'Ana',email:'ana@example.com'},{nome:'Bia',email:'bia@example.com'}]
     };
     let rows=[], sends=[], patches=[], collections=0, pendingRelease, failCollection=false;
     page.on('pageerror',e=>errors.push(e.message));
     await page.route('**/api/**',async route=>{
       const req=route.request(), path=new URL(req.url()).pathname;
+      if(path==='/api/auth/me') return route.fulfill({json:{id:'gestor-teste',username:'gestor.teste',nome:'Gestor de teste',tipo_usuario:'GESTOR',perfil_nome:'Gestor',permissoes:{'area_restrita.visualizar':true,'mad.visualizar':true,'mad.operar':true}}});
       if(path.startsWith('/api/auth/')) return route.fallback();
       if(req.method()==='PATCH' && path.endsWith('/ambientes/'+env)){
         const data=req.postDataJSON();patches.push(data);
@@ -71,6 +74,7 @@ const fs = require('node:fs');
       '/sicard/public/analise-multicriterio/formulario-comparacao-pareada/token-email/'
     ]){
       round.url_publica=publicUrl;
+      round.email_mensagem=round.email_mensagem.replace(/https?:\/\/[^\s]+|\/sicard\/public\/[^\s]+/,new URL(publicUrl,'http://127.0.0.1:8083').href);
       await page.goto('http://127.0.0.1:8083/restrict/analise-multicriterio/central-julgamentos');
       await page.locator(`[data-select-id="${env}"]`).check();
       await page.locator('#ami-judgments-view-action').click();
@@ -81,12 +85,27 @@ const fs = require('node:fs');
     }
     assert.equal(sends.length,0);
     round.url_publica=currentUrl;
+    round.email_mensagem=round.email_mensagem.replace(/https?:\/\/[^\s]+/,currentUrl);
     await page.goto('http://127.0.0.1:8083/restrict/analise-multicriterio/central-julgamentos');
     await page.locator(`[data-select-id="${env}"]`).check();
     await page.locator('#ami-judgments-view-action').click();
     await page.waitForFunction(()=>!document.getElementById('ami-open-mail').disabled);
     assert.match(await page.locator('#ami-email-draft-card > .ahp-section-label').textContent(),/Convites e acompanhamento/);
     assert.equal(await page.locator('#ami-email-draft-card .ahp-subsection-title').count(),2);
+    assert.equal(await page.locator('#ami-email-sender-alias').inputValue(),'SICARD-PLI');
+    assert.equal(await page.locator('#ami-email-subject').inputValue(),'Convite institucional');
+    assert.equal(await page.locator('#ami-email-preview-button').innerText(),'Acessar formulário colaborativo');
+    await page.locator('#ami-email-sender-alias').fill('Equipe PLI');
+    await page.locator('#ami-email-subject').fill('Assunto alterado');
+    await page.locator('#ami-email-template').fill((await page.locator('#ami-email-template').inputValue()).replace('Olá, colaborador(a)!','Mensagem persistida.'));
+    assert.equal(await page.locator('#ami-save-email-config').isDisabled(),false);
+    await page.locator('#ami-save-email-config').click();
+    await page.waitForFunction(()=>document.getElementById('ami-save-email-config').disabled);
+    assert.equal(patches.length,1);
+    assert.equal(patches[0].email_remetente_alias,'Equipe PLI');
+    assert.equal(patches[0].email_assunto,'Assunto alterado');
+    assert.match(patches[0].email_mensagem,/Mensagem persistida/);
+    patches=[];
     assert.equal(await page.locator('#ami-create-status .ami-status-card').count(),3);
     const statusBox=await page.locator('#ami-create-status').boundingBox();
     const formBox=await page.locator('#ami-interactive-analysis-component').boundingBox();
@@ -146,8 +165,8 @@ const fs = require('node:fs');
     pendingRelease();
     await page.waitForFunction(()=>!document.querySelector('.ami-main').inert);
     assert.equal(sends.length,2);
-    assert.equal(sends[0].texto,texto);
-    assert.equal(sends[1].texto,texto);
+    assert.equal(Object.hasOwn(sends[0],'texto'),false);
+    assert.equal(Object.hasOwn(sends[1],'texto'),false);
     assert.equal(sends[0].versao,round.atualizadoEm);
     assert.equal(sends[0].destinatario,'ana@example.com');
     assert.equal(sends[1].destinatario,'bia@example.com');

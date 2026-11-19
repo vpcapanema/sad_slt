@@ -2,6 +2,8 @@
   "use strict";
   const $ = id => document.getElementById(id);
   let contexto = null, registros = [], pronto = false, ocupado = false, modo = "create", pagina = 1;
+  let configuracaoOriginal = null, configuracaoAlterada = false;
+  const aliasInput = $("ami-email-sender-alias"), assuntoInput = $("ami-email-subject"), mensagemInput = $("ami-email-template");
   const rotulosEnvio = {enviando: "Na fila", aceito_smtp: "Enviado",
     falha: "Não enviado", indeterminado: "Na fila"};
   const rotulosEntrega = {sem_confirmacao: "Sem confirmação", confirmada: "Entregue", falha: "Devolvido",
@@ -204,6 +206,57 @@
     if (!response.ok) throw new Error(window.SicardApiErro ? window.SicardApiErro.formatar(body, { status: response.status, method: (options && options.method) || "GET", url: path }) : (Array.isArray(body.detail) ? body.detail.map(item => item.msg).join("; ") : body.detail || `Não foi possível concluir a operação (HTTP ${response.status}).`));
     return body;
   }
+  function configuracaoAtual() {
+    return {
+      email_remetente_alias: aliasInput.value.trim(),
+      email_assunto: assuntoInput.value.trim(),
+      email_mensagem: mensagemInput.value
+    };
+  }
+  function atualizarPreviaInstitucional() {
+    const config = configuracaoAtual(), urlAtual = contexto?.url || "";
+    const linhas = config.email_mensagem.split(/\r?\n/).filter(linha => linha.trim() !== urlAtual);
+    $("ami-email-preview-message").textContent = linhas.join("\n");
+    $("ami-email-preview-button").href = urlAtual || "#";
+    mensagemInput.dataset.message = config.email_mensagem;
+  }
+  function marcarConfiguracaoAlterada() {
+    const atual = configuracaoAtual();
+    configuracaoAlterada = !configuracaoOriginal || Object.keys(atual).some(chave => atual[chave] !== configuracaoOriginal[chave]);
+    atualizarPreviaInstitucional(); controles();
+  }
+  async function salvarConfiguracao(silencioso = false) {
+    if (!contexto) return false;
+    const config = configuracaoAtual();
+    if (!config.email_remetente_alias || !config.email_assunto || !config.email_mensagem.trim()) {
+      Notify.error("Mensagem de e-mail", "Preencha o alias do remetente, o assunto e a mensagem.");
+      return false;
+    }
+    if (!contexto.url || !config.email_mensagem.includes(contexto.url)) {
+      Notify.error("Mensagem de e-mail", "A mensagem deve manter o link persistente deste julgamento.");
+      return false;
+    }
+    const anterior = ocupado; bloquear(true);
+    try {
+      const updated = await request("/api/ahp/comparacao-colaborativa/ambientes/" + encodeURIComponent(contexto.julgamento.id), {
+        method: "PATCH", body: JSON.stringify(config)
+      });
+      Object.assign(contexto.julgamento, updated);
+      contexto.mensagem = updated.email_mensagem;
+      configuracaoOriginal = {
+        email_remetente_alias: updated.email_remetente_alias,
+        email_assunto: updated.email_assunto,
+        email_mensagem: updated.email_mensagem
+      };
+      configuracaoAlterada = false;
+      $("ami-email-status").textContent = "Alias, assunto e mensagem salvos no julgamento.";
+      if (!silencioso) Notify.success("Mensagem de e-mail", "Configuração salva e ligada ao serviço de envio.");
+      return true;
+    } catch (error) {
+      Notify.error("Mensagem de e-mail", error.message);
+      return false;
+    } finally { bloquear(anterior); }
+  }
   // Estados que admitem (re)envio pelo monitoramento: nunca enviado, ou enviado
   // e devolvido pelo servidor do destinatário.
   const REENVIAVEIS = new Set(["Não enviado", "Devolvido"]);
@@ -214,6 +267,10 @@
     $("ami-open-mail").disabled = ocupado || !pronto || modo !== "view" || !contexto ||
       !contexto.url || contexto.julgamento.status !== "ativa" ||
       !(Date.parse(contexto.julgamento.valido_ate) >= Date.now()) || !contexto.destinatarios.length;
+    const editavel = !ocupado && contexto && contexto.julgamento.status === "ativa" &&
+      Date.parse(contexto.julgamento.valido_ate) >= Date.now();
+    aliasInput.disabled = assuntoInput.disabled = mensagemInput.disabled = !editavel;
+    $("ami-save-email-config").disabled = !editavel || !configuracaoAlterada;
     const marcados = monitorRows.filter(row => selected.has(rowKey(row)));
     const baseBloqueada = ocupado || !pronto || modo !== "view" || !contexto || !marcados.length;
     $("ami-monitor-send").disabled = $("ami-open-mail").disabled || baseBloqueada ||
@@ -343,10 +400,20 @@
     const marcados = new Set(monitorRows.filter(row => selected.has(rowKey(row))).map(row => row.destinatario.toLowerCase()));
     return contexto.destinatarios.filter(destinatario => marcados.has(destinatario.toLowerCase()));
   }
+  async function garantirConfiguracaoPersistida(atual) {
+    // Mantém o recorte deste fluxo testável isoladamente e, na página real,
+    // impede qualquer envio com uma configuração apenas local.
+    if (typeof salvarConfiguracao !== "function") return true;
+    if (configuracaoAlterada || !atual.julgamento.email_config_persistida) {
+      return salvarConfiguracao(true);
+    }
+    return true;
+  }
   async function enviar(apenasSelecionados) {
     const botao = apenasSelecionados ? $("ami-monitor-send") : $("ami-open-mail");
     if (botao.disabled) return;
     const atual = contexto;
+    if (!(await garantirConfiguracaoPersistida(atual))) return;
     const {pendentes, enviados} = situacao();
     const somentePendentes = !apenasSelecionados && enviados > 0 && pendentes.length > 0;
     const reenvio = !apenasSelecionados && enviados > 0 && !pendentes.length;
@@ -376,7 +443,7 @@
         for (let tentativa = 0; ; tentativa++) {
           row = await request(url(atual.julgamento.id) + "/enviar", {
             method: "POST", body: JSON.stringify({
-              destinatario, texto: atual.mensagem, versao: atual.julgamento.atualizadoEm,
+              destinatario, versao: atual.julgamento.atualizadoEm,
               reenvio_id: apenasSelecionados ? null : reenvioId,
               somente_nao_enviado: apenasSelecionados
             })
@@ -480,6 +547,13 @@
     modo(value) { modo = value; controles(); },
     mostrar(julgamento, mensagem, link) {
       contexto = {julgamento, mensagem, url: link, destinatarios: (julgamento.convites || []).map(c => typeof c === "string" ? c : c.email)};
+      configuracaoOriginal = {
+        email_remetente_alias: julgamento.email_remetente_alias || "SICARD-PLI",
+        email_assunto: julgamento.email_assunto || "Convite para preenchimento colaborativo AHP - PLI - SICARD",
+        email_mensagem: mensagem
+      };
+      configuracaoAlterada = false;
+      atualizarPreviaInstitucional();
       registros = []; pronto = false; pagina = 1;
       selected.clear(); monitorRows = []; filteredRows = []; visibleCount = 0;
       fecharHistorico();
@@ -491,6 +565,8 @@
       render(); carregar(contexto);
     }
   };
+  [aliasInput, assuntoInput, mensagemInput].forEach(input => input.addEventListener("input", marcarConfiguracaoAlterada));
+  $("ami-save-email-config").addEventListener("click", () => salvarConfiguracao(false));
   $("ami-open-mail").addEventListener("click", () => enviar(false));
   $("ami-monitor-send").addEventListener("click", () => enviar(true));
   $("ami-monitor-send-response").addEventListener("click", enviarResposta);

@@ -5,7 +5,17 @@ from datetime import datetime
 from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+
+EMAIL_REMETENTE_ALIAS_PADRAO = "SICARD-PLI"
+EMAIL_ASSUNTO_PADRAO = "Convite para preenchimento colaborativo AHP - PLI - SICARD"
+
+
+def _validar_cabecalho_email(valor: object) -> object:
+    if isinstance(valor, str) and any(ord(char) < 32 or ord(char) == 127 for char in valor):
+        raise ValueError("O campo não pode conter caracteres de controle.")
+    return valor
 
 
 class ConviteColaborativoSchema(BaseModel):
@@ -42,6 +52,14 @@ class AmbienteColaborativoUpdateSchema(BaseModel):
     arquivo_matriz_nome: str | None = Field(None, max_length=255)
     convites: list[ConviteColaborativoSchema] | None = Field(None, min_length=1)
     valido_ate: datetime | None = None
+    email_remetente_alias: str | None = Field(None, min_length=1, max_length=200)
+    email_assunto: str | None = Field(None, min_length=1, max_length=200)
+    email_mensagem: str | None = Field(None, min_length=1, max_length=50000)
+
+    @field_validator("email_remetente_alias", "email_assunto", mode="before")
+    @classmethod
+    def validar_cabecalhos_email(cls, valor: object) -> object:
+        return _validar_cabecalho_email(valor)
 
 
 class ConsolidacaoColaborativaSchema(BaseModel):
@@ -87,6 +105,10 @@ class AmbienteColaborativoResponseSchema(BaseModel):
     total_analises: int = 0
     analise_homologada_id: str | None = None
     consolidacao: ConsolidacaoColaborativaSchema | None = None
+    email_remetente_alias: str = EMAIL_REMETENTE_ALIAS_PADRAO
+    email_assunto: str = EMAIL_ASSUNTO_PADRAO
+    email_mensagem: str
+    email_config_persistida: bool = False
 
 
 class AmbientePublicoSchema(BaseModel):

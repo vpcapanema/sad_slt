@@ -518,6 +518,11 @@ def pagina_demonstracao_comparacao_pareada(request: Request) -> Response:
     return render_page(request, "paginas/analise_multicriterio/formulario.html", modo_modelo=True)
 
 
+@app.get("/public/analise-multicriterio/copiar-chave/", include_in_schema=False)
+def pagina_copiar_chave_convite(request: Request) -> Response:
+    return render_page(request, "paginas/analise_multicriterio/copiar-chave.html")
+
+
 @app.get("/public/analise-multicriterio/{token}/", include_in_schema=False)
 def redirecionar_formulario_multicriterio(request: Request, token: str) -> Response:
     destination = f"/public/analise-multicriterio/formulario-comparacao-pareada/{quote(token, safe='')}/"

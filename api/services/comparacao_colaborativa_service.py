@@ -35,6 +35,8 @@ from api.schemas.comparacao_colaborativa import (
     RespostaColaborativaProgressoSchema,
     RespostaColaborativaResponseSchema,
     RespostaColaborativaUpdateSchema,
+    EMAIL_ASSUNTO_PADRAO,
+    EMAIL_REMETENTE_ALIAS_PADRAO,
 )
 from api.services import ahp_engine, superficie_ahp, matrizes_criterios
 
@@ -155,6 +157,36 @@ def _criterio_nomes(criterios: list[dict[str, Any]]) -> list[str]:
     return nomes
 
 
+def _mensagem_email_padrao(row: dict[str, Any], *, base_url: str = "") -> str:
+    """Corpo inicial persistível, comum a todos os colaboradores do julgamento."""
+    token = quote(str(row["token"]), safe="")
+    link = f"{base_url.rstrip('/')}/public/analise-multicriterio/formulario-comparacao-pareada/{token}/"
+    prazo = row.get("valido_ate")
+    if isinstance(prazo, str):
+        try:
+            prazo = datetime.fromisoformat(prazo.replace("Z", "+00:00"))
+        except ValueError:
+            pass
+    prazo_rotulo = prazo.astimezone(_TZ_SP).strftime("%d/%m/%Y") if isinstance(prazo, datetime) else str(prazo or "")
+    origem = row.get("hierarquizacao_nome") or row.get("config_nome")
+    convite = (
+        f'Você foi convidado(a) a preencher a matriz de comparação pareada da análise "{origem}" no SICARD.'
+        if origem else "Você foi convidado(a) a preencher uma matriz de comparação pareada AHP no SICARD."
+    )
+    linhas = ["Olá, colaborador(a)!", "", convite]
+    criterios = _criterio_nomes(row.get("criterios") or [])
+    if criterios:
+        linhas.extend(["", f"Critérios a comparar ({len(criterios)}):"])
+        linhas.extend(f"{indice}. {nome}" for indice, nome in enumerate(criterios, 1))
+    linhas.extend([
+        "", f"Acesse o formulário colaborativo pelo botão abaixo até {prazo_rotulo}:" if prazo_rotulo
+        else "Acesse o formulário colaborativo pelo botão abaixo:", link, "",
+        "Atenção: para enviar a resposta, a consistência (RC) deve ser menor que 0,10.",
+        "", "Atenciosamente,", "Equipe SICARD/SLT",
+    ])
+    return "\n".join(linhas)
+
+
 def _dimensao(criterio: dict[str, Any]) -> str:
     for key, value in criterio.items():
         normalizado = unicodedata.normalize("NFKD", str(key)).encode("ascii", "ignore").decode("ascii").strip().casefold()
@@ -258,6 +290,10 @@ def _ambiente_to_response(row: dict[str, Any], *, base_url: str = "", gestao: bo
         total_analises=int(row.get("total_analises") or 0),
         analise_homologada_id=str(row["analise_homologada_id"]) if row.get("analise_homologada_id") else None,
         consolidacao=_consolidacao_from_row(row),
+        email_remetente_alias=row.get("email_remetente_alias") or EMAIL_REMETENTE_ALIAS_PADRAO,
+        email_assunto=row.get("email_assunto") or EMAIL_ASSUNTO_PADRAO,
+        email_mensagem=row.get("email_mensagem") or _mensagem_email_padrao(row, base_url=base_url),
+        email_config_persistida=bool(row.get("email_mensagem")),
     )
 
 
@@ -364,29 +400,31 @@ def criar_ambiente(
             'hierarquizacao_id': str(payload.hierarquizacao_id), 'criterios': criterios,
         })
 
-    row = repo.insert_ambiente(
-        {
-            "matriz_id": matriz["id"],
-            "nome": (payload.nome or "").strip() or "Julgamento " + (hierarq.get("nome", "") if hierarq else (config or {}).get("nome", "AHP")),
-            "hierarquizacao_id": str(payload.hierarquizacao_id) if payload.superficie_id else None,
-            "hierarquizacao_codigo": hierarq.get("codigo", "") if payload.superficie_id else None,
-            "config_tipo": None,
-            "config_id": None,
-            "config_avulsa_id": None,
-            "config_portfolio_id": None,
-            "config_codigo": config.get("codigo") if config else None,
-            "config_nome": config.get("nome") if config else None,
-            "criterios": criterios,
-            "n_criterios": len(nomes_criterios),
-            "arquivo_excel_matriz_criterios_premissas": arquivo_superficie if payload.superficie_id else (None if hierarq else _arquivo_matriz(payload.arquivo_matriz_base64)),
-            "arquivo_matriz_nome": "matriz_fase2.xlsx" if payload.superficie_id else matriz.get("arquivo_nome"),
-            "token": token,
-            "token_acesso": None,
-            "convites": convites,
-            "valido_ate": valido_ate,
-            "status": "ativa",
-        }
-    )
+    ambiente_data = {
+        "matriz_id": matriz["id"],
+        "nome": (payload.nome or "").strip() or "Julgamento " + (hierarq.get("nome", "") if hierarq else (config or {}).get("nome", "AHP")),
+        "hierarquizacao_id": str(payload.hierarquizacao_id) if payload.superficie_id else None,
+        "hierarquizacao_codigo": hierarq.get("codigo", "") if payload.superficie_id else None,
+        "config_tipo": None,
+        "config_id": None,
+        "config_avulsa_id": None,
+        "config_portfolio_id": None,
+        "config_codigo": config.get("codigo") if config else None,
+        "config_nome": config.get("nome") if config else None,
+        "criterios": criterios,
+        "n_criterios": len(nomes_criterios),
+        "arquivo_excel_matriz_criterios_premissas": arquivo_superficie if payload.superficie_id else (None if hierarq else _arquivo_matriz(payload.arquivo_matriz_base64)),
+        "arquivo_matriz_nome": "matriz_fase2.xlsx" if payload.superficie_id else matriz.get("arquivo_nome"),
+        "token": token,
+        "token_acesso": None,
+        "convites": convites,
+        "valido_ate": valido_ate,
+        "status": "ativa",
+        "email_remetente_alias": EMAIL_REMETENTE_ALIAS_PADRAO,
+        "email_assunto": EMAIL_ASSUNTO_PADRAO,
+    }
+    ambiente_data["email_mensagem"] = _mensagem_email_padrao(ambiente_data, base_url=base_url)
+    row = repo.insert_ambiente(ambiente_data)
     row["matriz_nome"] = matriz["nome"]
     if hierarq:
         row["hierarquizacao_nome"] = hierarq.get("nome")
@@ -453,6 +491,26 @@ def atualizar_ambiente(
         if not payload.nome.strip():
             raise DemandaValidationError("Informe o nome do julgamento.", field="nome")
         data["nome"] = payload.nome.strip()
+    if payload.email_remetente_alias is not None:
+        alias = payload.email_remetente_alias.strip()
+        if not alias:
+            raise DemandaValidationError("Informe o alias do remetente.", field="email_remetente_alias")
+        data["email_remetente_alias"] = alias
+    if payload.email_assunto is not None:
+        assunto = payload.email_assunto.strip()
+        if not assunto:
+            raise DemandaValidationError("Informe o assunto do e-mail.", field="email_assunto")
+        data["email_assunto"] = assunto
+    if payload.email_mensagem is not None:
+        if not payload.email_mensagem.strip():
+            raise DemandaValidationError("Informe a mensagem enviada aos colaboradores.", field="email_mensagem")
+        caminhos = (
+            f"/public/analise-multicriterio/formulario-comparacao-pareada/{atual['token']}/",
+            f"/public/analise-multicriterio/{atual['token']}/",
+        )
+        if not any(caminho in payload.email_mensagem for caminho in caminhos):
+            raise DemandaValidationError("A mensagem deve manter o link persistente deste julgamento.", field="email_mensagem")
+        data["email_mensagem"] = payload.email_mensagem
     if atual.get("matriz_id"):
         if payload.matriz_id is not None and str(payload.matriz_id) != str(atual["matriz_id"]):
             raise DemandaValidationError(

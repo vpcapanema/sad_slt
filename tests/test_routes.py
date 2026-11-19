@@ -50,6 +50,13 @@ def test_active_specialist_form_is_public_and_legacy_html_is_not_served() -> Non
     assert client.get("/legados/templates/paginas/ahp/colaborativa.html").status_code == 404
 
 
+def test_copy_invitation_key_page_is_public_and_keeps_key_in_fragment() -> None:
+    response = TestClient(app).get("/public/analise-multicriterio/copiar-chave/", follow_redirects=False)
+    assert response.status_code == 200
+    assert 'id="ami-copy-key-button"' in response.text
+    assert 'data-requer-autenticacao="true"' not in response.text
+
+
 def test_legacy_specialist_form_redirect_preserves_token_query_and_prefix() -> None:
     client = TestClient(app)
     for prefix in ("", "/sicard"):

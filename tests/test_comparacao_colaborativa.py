@@ -191,6 +191,31 @@ def test_resposta_administrativa_nao_expoe_chave_individual():
     assert "012345" not in resposta.url_publica
 
 
+def test_alias_assunto_e_mensagem_do_convite_persistem_no_julgamento(monkeypatch):
+    atual = _ambiente_row(status="ativa")
+    monkeypatch.setattr(repo, "get_ambiente_by_id", lambda _: dict(atual))
+    monkeypatch.setattr(repo, "list_respostas", lambda _: [])
+    capturado = {}
+    monkeypatch.setattr(repo, "update_ambiente", lambda _, data: capturado.update(data) or {**atual, **data})
+    resposta = service.atualizar_ambiente(
+        AMBIENTE_ID,
+        AmbienteColaborativoUpdateSchema(
+            email_remetente_alias="SICARD-PLI Editado",
+            email_assunto="Assunto editado",
+            email_mensagem="Mensagem editada\n/public/analise-multicriterio/formulario-comparacao-pareada/tok-abc/",
+        ),
+    )
+    assert capturado == {
+        "email_remetente_alias": "SICARD-PLI Editado",
+        "email_assunto": "Assunto editado",
+        "email_mensagem": "Mensagem editada\n/public/analise-multicriterio/formulario-comparacao-pareada/tok-abc/",
+    }
+    assert resposta.email_remetente_alias == "SICARD-PLI Editado"
+    assert resposta.email_assunto == "Assunto editado"
+    assert resposta.email_mensagem.startswith("Mensagem editada")
+    assert resposta.email_config_persistida is True
+
+
 @pytest.mark.parametrize("status", ["encerrada", "consolidada"])
 def test_reabre_julgamento_com_prazo_futuro_preservando_respostas(monkeypatch, status):
     atual = _ambiente_row(status=status, total_respostas=1)

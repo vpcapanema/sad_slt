@@ -312,7 +312,8 @@ $migrations = @(
     "166_politica_usuarios_sicard.sql",
     "167_referenciar_perfis_sigma.sql",
     "168_nomes_usuario_perfil.sql",
-    "169_permissoes_operacao_sicard.sql"
+    "169_permissoes_operacao_sicard.sql",
+    "170_configuracao_email_convite.sql"
 )
 
 if ($OnlyMigration) {

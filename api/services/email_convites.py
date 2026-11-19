@@ -5,6 +5,7 @@ import logging
 import re
 from hashlib import sha256
 from html import escape
+from urllib.parse import quote
 from uuid import uuid4
 
 from api.exceptions import DatabaseUnavailableError, DemandaValidationError
@@ -12,12 +13,13 @@ from api.repositories import comparacao_colaborativa_repository as ambientes
 from api.repositories import email_convites_repository as repo
 from api.repositories import convite_individual_repository
 from api.schemas.email import ConviteEmailEnvioSchema, EmailEnvioSchema
+from api.schemas.comparacao_colaborativa import EMAIL_ASSUNTO_PADRAO, EMAIL_REMETENTE_ALIAS_PADRAO
 from api.services import email_service
 from api.services.comparacao_colaborativa_service import (
-    _validar_ambiente_ativo, _criterios_convidado, _criterio_nomes,
+    _validar_ambiente_ativo,
 )
 
-ASSUNTO = "Convite para preenchimento colaborativo AHP - PLI - SICARD"
+ASSUNTO = EMAIL_ASSUNTO_PADRAO
 _CODIGO_LINK = re.compile(r"[0-9a-f]{32}")
 logger = logging.getLogger(__name__)
 
@@ -32,6 +34,10 @@ def _html_convite(texto: str, segredo: str, caminhos: tuple[str, ...]) -> str:
     if indice_link is None:
         raise DemandaValidationError("A mensagem não contém o link deste julgamento.", field="texto")
     link = linhas[indice_link].strip()
+    prefixo_publico = link.split("/public/analise-multicriterio/", 1)[0]
+    link_copiar_chave = (
+        f"{prefixo_publico}/public/analise-multicriterio/copiar-chave/#{quote(segredo, safe='')}"
+    )
     linhas_sem_link = linhas[:indice_link] + linhas[indice_link + 1:]
     blocos = "".join(
         f'<p style="margin:0 0 10px;font-family:Arial,Helvetica,sans-serif;font-size:14px;'
@@ -62,10 +68,14 @@ def _html_convite(texto: str, segredo: str, caminhos: tuple[str, ...]) -> str:
         '<div style="padding:13px 14px;border:1px solid #9fb4c3;border-left:5px solid #00507a;'
         'background:#f3f7fa;font-family:Consolas,Monaco,monospace;font-size:16px;line-height:1.5;'
         f'letter-spacing:.03em;color:#12303f;word-break:break-all;user-select:all;">{chave}</div>'
+        '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:12px 0 0;">'
+        '<tr><td align="center" style="border-radius:5px;background:#ffffff;border:1px solid #00507a;">'
+        f'<a href="{escape(link_copiar_chave, quote=True)}" target="_blank" style="display:inline-block;padding:10px 16px;'
+        'font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:bold;color:#00507a;'
+        'text-decoration:none;border-radius:5px;">Copiar chave</a></td></tr></table>'
         '<p style="margin:8px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;'
-        'color:#516878;">Selecione a chave acima e use Copiar. No computador, use Ctrl+C; no celular, '
-        'pressione e segure. Por segurança, aplicativos de e-mail não permitem que um botão copie texto '
-        'diretamente para a área de transferência.</p>'
+        'color:#516878;">O botão abre uma página segura do SICARD e copia a chave sem enviá-la ao servidor. '
+        'Se preferir, selecione a chave acima e use Copiar.</p>'
         '<p style="margin:20px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;'
         'color:#516878;">A chave é exclusiva deste destinatário, revogável e válida dentro do prazo do '
         'julgamento. Um novo envio invalida a chave anterior. Não compartilhe.</p>'
@@ -118,23 +128,14 @@ def enviar(ambiente_id: str, dados: ConviteEmailEnvioSchema, usuario_id: str) ->
         f"/public/analise-multicriterio/formulario-comparacao-pareada/{ambiente['token']}/",
         f"/public/analise-multicriterio/{ambiente['token']}/",
     )
-    if not any(caminho in dados.texto for caminho in caminhos):
+    corpo = ambiente.get("email_mensagem")
+    if not corpo or not corpo.strip():
+        raise DemandaValidationError("Salve a mensagem do convite antes de enviar.", field="email_mensagem")
+    if not any(caminho in corpo for caminho in caminhos):
         raise DemandaValidationError("A mensagem não contém o link deste julgamento.", field="texto")
     config = email_service._config()
-    convite = next(c for c in ambiente["convites"] if c["email"].strip().lower() == destinatario)
-    corpo = dados.texto
-    if convite.get("dimensoes") is not None:
-        criterios = _criterio_nomes(_criterios_convidado(ambiente, destinatario))
-        link = next(linha.strip() for linha in dados.texto.splitlines() if any(caminho in linha for caminho in caminhos))
-        corpo = (
-            f"Olá, {convite.get('nome') or 'colaborador(a)'}!\n\n"
-            "Você foi convidado(a) a preencher a comparação pareada AHP no SICARD.\n"
-            f"Dimensões atribuídas: {', '.join(convite['dimensoes'])}.\n\n"
-            "Critérios a comparar:\n" + "\n".join(f"{i + 1}. {nome}" for i, nome in enumerate(criterios))
-            + f"\n\nPrazo: {ambiente['valido_ate'].isoformat()}.\n"
-            f"Acesse o formulário: {link}\n"
-            "Para enviar a resposta, a consistência (RC) deve ser menor que 0,10."
-        )
+    assunto = ambiente.get("email_assunto") or EMAIL_ASSUNTO_PADRAO
+    alias_remetente = ambiente.get("email_remetente_alias") or EMAIL_REMETENTE_ALIAS_PADRAO
     instrucoes = (
         "\n\nChave individual do convite: {segredo}\n"
         "Informe seu e-mail convidado e esta chave no formulário. Não compartilhe a chave. "
@@ -148,7 +149,7 @@ def enviar(ambiente_id: str, dados: ConviteEmailEnvioSchema, usuario_id: str) ->
             "Reduza a mensagem para que o texto, incluindo a chave individual e suas instruções, tenha até 50.000 caracteres.",
             field="texto",
         )
-    identidade = ASSUNTO + "\n" + texto
+    identidade = alias_remetente + "\n" + assunto + "\n" + texto
     if dados.reenvio_id:
         identidade += "\nReenvio: " + str(dados.reenvio_id)
     resumo = sha256(identidade.encode()).hexdigest()
@@ -164,7 +165,8 @@ def enviar(ambiente_id: str, dados: ConviteEmailEnvioSchema, usuario_id: str) ->
         texto += instrucoes.format(segredo=segredo)
         mensagem = EmailEnvioSchema(
             destinatario=dados.destinatario,
-            assunto=ASSUNTO,
+            alias_remetente=alias_remetente,
+            assunto=assunto,
             texto=texto,
             html=_html_convite(corpo, segredo, caminhos),
         )

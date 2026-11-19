@@ -22,11 +22,12 @@ class EmailTesteSchema(BaseModel):
 
 
 class EmailEnvioSchema(EmailTesteSchema):
+    alias_remetente: str = Field(default="PLI-SICARD", min_length=1, max_length=200)
     assunto: str = Field(min_length=1, max_length=200)
     texto: str = Field(min_length=1, max_length=50000)
     html: str | None = Field(default=None, min_length=1, max_length=100000)
 
-    @field_validator("assunto", mode="before")
+    @field_validator("alias_remetente", "assunto", mode="before")
     @classmethod
     def validar_assunto(cls, valor: object) -> object:
         if isinstance(valor, str) and any(ord(char) < 32 or ord(char) == 127 for char in valor):
@@ -60,7 +61,6 @@ class EmailConexaoResultado(BaseModel):
 
 
 class ConviteEmailEnvioSchema(EmailTesteSchema):
-    texto: str = Field(min_length=1, max_length=50000)
     versao: datetime
     reenvio_id: UUID | None = None
     somente_nao_enviado: bool = False

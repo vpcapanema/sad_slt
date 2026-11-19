@@ -1141,11 +1141,11 @@
     recipient.replaceChildren();
     (judgment.convites || []).forEach(function (invite) { recipient.add(new Option((invite.nome || invite.email) + " · " + invite.email, invite.email)); });
     if (Array.from(recipient.options).some(function (option) { return option.value === previous; })) recipient.value = previous;
-    recipient.onchange = function () { renderEmailDraft(judgment); };
-    var invite = (judgment.convites || []).find(function (c) { return c.email === recipient.value; });
-    var card = $("ami-email-draft-card"), messageBox = $("ami-email-template"), link = $("ami-email-form-link"), url = persistentPublicUrl(judgment), lines = invitationLines(judgment, invite), message = lines.join("\n");
-    messageBox.dataset.message = message; messageBox.textContent = "";
-    lines.forEach(function (line, index) { if (line === url && url) { var anchor = document.createElement("a"); anchor.href = url; anchor.target = "_blank"; anchor.rel = "noopener"; anchor.textContent = url; messageBox.appendChild(anchor); } else { messageBox.appendChild(document.createTextNode(line)); } if (index < lines.length - 1) messageBox.appendChild(document.createTextNode("\n")); });
+    var card = $("ami-email-draft-card"), messageBox = $("ami-email-template"), link = $("ami-email-form-link"), url = persistentPublicUrl(judgment);
+    var message = judgment.email_mensagem || invitationLines(judgment, null).join("\n");
+    messageBox.value = message; messageBox.dataset.message = message;
+    $("ami-email-sender-alias").value = judgment.email_remetente_alias || "SICARD-PLI";
+    $("ami-email-subject").value = judgment.email_assunto || "Convite para preenchimento colaborativo AHP - PLI - SICARD";
     link.href = url || "#"; link.textContent = url || "Link indisponível"; card.classList.remove("is-hidden");
     SICARDEmailConvites.mostrar(judgment, message, url);
   }

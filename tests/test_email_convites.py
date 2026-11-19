@@ -27,6 +27,9 @@ def ambiente(monkeypatch):
         "status": "ativa", "valido_ate": datetime.now(timezone.utc) + timedelta(days=2),
         "convites": [{"email": DEST}], "token": "token-teste", "token_acesso": "012345",
         "criterios": [{"criterio": "Custo", "Etapa": "Fase 3"}, {"criterio": "Prazo", "Etapa": "Fase 3"}],
+        "email_remetente_alias": "SICARD-PLI",
+        "email_assunto": "Convite para preenchimento colaborativo AHP - PLI - SICARD",
+        "email_mensagem": "Olá!\nhttps://example.com/sicard/public/analise-multicriterio/formulario-comparacao-pareada/token-teste/\nEquipe SICARD",
     }
     monkeypatch.setattr(service.ambientes, "get_ambiente_by_id", lambda _: row)
     return row
@@ -70,20 +73,20 @@ def registros(monkeypatch):
 
 def payload(ambiente, **extras):
     return ConviteEmailEnvioSchema.model_validate({
-        "destinatario": DEST, "texto": "Olá!\nhttps://example.com/sicard/public/analise-multicriterio/formulario-comparacao-pareada/token-teste/\nEquipe SICARD",
-        "versao": ambiente["atualizado_em"], **extras,
+        "destinatario": DEST, "versao": ambiente["atualizado_em"], **extras,
     })
 
 
-def test_convite_individual_inclui_somente_dimensoes_atribuidas(ambiente, smtp, registros):
+def test_convite_preserva_mensagem_persistida_sem_recompor_por_dimensao(ambiente, smtp, registros):
     ambiente["convites"] = [{"email": DEST, "nome": "Ana", "dimensoes": ["Social"]}]
     ambiente["criterios"] = [{"criterio": "Custo", "dimensao": "Financeira", "Etapa": "Fase 3"},
                             {"criterio": "Acesso", "dimensao": "Social", "Etapa": "Fase 3"},
                             {"criterio": "Equidade", "dimensao": "Social", "Etapa": "Fase 3"}]
-    service.enviar(ambiente["id"], payload(ambiente, texto=payload(ambiente).texto + "\nCusto"), "analista")
+    ambiente["email_mensagem"] += "\nTexto editado pelo usuário."
+    service.enviar(ambiente["id"], payload(ambiente), "analista")
     texto = smtp.call_args.args[0].texto
-    assert "Acesso" in texto and "Equidade" in texto
-    assert "Custo" not in texto and "Financeira" not in texto
+    assert "Texto editado pelo usuário." in texto
+    assert "Acesso" not in texto and "Equidade" not in texto and "Financeira" not in texto
     assert "https://example.com/sicard/public/" in texto
     assert "A" * 43 in texto and "012345" not in texto
 
@@ -94,13 +97,15 @@ def test_preserva_texto_acrescenta_token_e_nao_repete_apos_recarga(ambiente, smt
     assert result["envio_status"] == "aceito_smtp"
     texto = smtp.call_args.args[0].texto
     html = smtp.call_args.args[0].html
-    assert texto.startswith(dados.texto.replace("/token-teste/\n", "/token-teste/?c=" + service.codigo_link("token-teste", DEST) + "\n") + "\n\n")
+    assert texto.startswith(ambiente["email_mensagem"].replace("/token-teste/\n", "/token-teste/?c=" + service.codigo_link("token-teste", DEST) + "\n") + "\n\n")
     assert "Chave individual do convite: " + "A" * 43 in texto
     assert "Acessar formulário colaborativo" in html
+    assert "Copiar chave" in html
     assert "A" * 43 in html
+    assert "/public/analise-multicriterio/copiar-chave/#" + "A" * 43 in html
     assert "/token-teste/?c=" + service.codigo_link("token-teste", DEST) in html
     assert ">https://example.com/" not in html
-    assert registros[0]["conteudo_hash"] == sha256((service.ASSUNTO + "\n" + texto.split("\n\nChave individual")[0]).encode()).hexdigest()
+    assert registros[0]["conteudo_hash"] == sha256(("SICARD-PLI\n" + service.ASSUNTO + "\n" + texto.split("\n\nChave individual")[0]).encode()).hexdigest()
     assert smtp.call_args.kwargs["solicitar_confirmacoes"] is True
     assert smtp.call_args.kwargs["id_mensagem"] == registros[0]["mensagem_id"]
     assert "sicard." in registros[0]["mensagem_id"]
@@ -111,6 +116,17 @@ def test_preserva_texto_acrescenta_token_e_nao_repete_apos_recarga(ambiente, smt
 def test_convite_usa_assunto_institucional_pli_sicard(ambiente, smtp, registros):
     service.enviar(ambiente["id"], payload(ambiente), "analista")
     assert smtp.call_args.args[0].assunto == "Convite para preenchimento colaborativo AHP - PLI - SICARD"
+    assert smtp.call_args.args[0].alias_remetente == "SICARD-PLI"
+
+
+def test_convite_usa_alias_assunto_e_mensagem_editados(ambiente, smtp, registros):
+    ambiente.update(email_remetente_alias="Equipe PLI", email_assunto="Assunto editado")
+    ambiente["email_mensagem"] = ambiente["email_mensagem"].replace("Olá!", "Mensagem editada exatamente aqui.")
+    service.enviar(ambiente["id"], payload(ambiente), "analista")
+    enviado = smtp.call_args.args[0]
+    assert enviado.alias_remetente == "Equipe PLI"
+    assert enviado.assunto == "Assunto editado"
+    assert enviado.texto.startswith("Mensagem editada exatamente aqui.")
 
 
 def test_reenvio_explicito_preserva_historico_e_idempotencia(ambiente, smtp, monkeypatch):
@@ -138,8 +154,8 @@ def test_reenvio_explicito_preserva_historico_e_idempotencia(ambiente, smtp, mon
 
 
 def test_convite_com_link_antigo_continua_valido(ambiente, smtp, registros):
-    dados = payload(ambiente, texto="https://example.com/sicard/public/analise-multicriterio/token-teste/")
-    assert service.enviar(ambiente["id"], dados, "analista")["envio_status"] == "aceito_smtp"
+    ambiente["email_mensagem"] = "https://example.com/sicard/public/analise-multicriterio/token-teste/"
+    assert service.enviar(ambiente["id"], payload(ambiente), "analista")["envio_status"] == "aceito_smtp"
     smtp.assert_called_once()
 
 
@@ -164,10 +180,9 @@ def test_falha_ao_persistir_token_nao_envia(ambiente, smtp, registros, monkeypat
 
 
 def test_texto_com_token_acima_do_limite_nao_reserva_envio(ambiente, smtp, registros):
-    dados = payload(ambiente)
-    texto = dados.texto + "x" * (50000 - len(dados.texto))
+    ambiente["email_mensagem"] += "x" * (50000 - len(ambiente["email_mensagem"]))
     with pytest.raises(DemandaValidationError, match="Reduza a mensagem"):
-        service.enviar(ambiente["id"], payload(ambiente, texto=texto), "analista")
+        service.enviar(ambiente["id"], payload(ambiente), "analista")
     smtp.assert_not_called()
     assert registros == []
 
@@ -177,7 +192,7 @@ def test_nao_envia_convite_invalido(ambiente, smtp, registros, alteracao):
     extras = {}
     if alteracao == "destinatario": extras["destinatario"] = "fora@example.com"
     if alteracao == "versao": extras["versao"] = ambiente["atualizado_em"] - timedelta(seconds=1)
-    if alteracao == "texto": extras["texto"] = "sem link do julgamento"
+    if alteracao == "texto": ambiente["email_mensagem"] = "sem link do julgamento"
     if alteracao == "encerrado": ambiente["status"] = "encerrada"
     if alteracao == "expirado": ambiente["valido_ate"] = datetime.now(timezone.utc) - timedelta(days=1)
     with pytest.raises(DemandaValidationError):
