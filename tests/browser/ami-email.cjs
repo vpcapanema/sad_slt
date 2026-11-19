@@ -120,9 +120,16 @@ const fs = require('node:fs');
     assert.equal(await page.locator('#ami-email-editor-link').getAttribute('href'),currentUrl);
     assert.equal(await page.locator('#ami-email-editor-link').innerText(),currentUrl);
     assert.equal(await page.locator('#ami-email-editor-link').evaluate(element=>element.tagName),'A');
+    assert.deepEqual(await page.locator('#ami-email-editor-link').evaluate(element=>{
+      const style=getComputedStyle(element);return {border:style.borderTopWidth,background:style.backgroundColor,padding:style.paddingTop};
+    }),{border:'0px',background:'rgba(0, 0, 0, 0)',padding:'0px'},'O link é apenas texto clicável, sem bloco visual');
     assert.equal(await page.locator('#ami-email-template, #ami-email-template-after').evaluateAll((inputs,url)=>
       inputs.every(input=>!input.readOnly && !input.value.includes(url)),currentUrl),true,
       'Somente o link persistente fica fora dos campos editáveis');
+    const messageOverflow=await page.locator('#ami-email-template, #ami-email-template-after').evaluateAll(inputs=>
+      inputs.map(input=>({overflow:getComputedStyle(input).overflowY,scroll:input.scrollHeight,client:input.clientHeight,height:input.style.height})));
+    assert.equal(messageOverflow.every(item=>item.overflow==='hidden' && item.scroll<=item.client+1),true,
+      'A mensagem inteira fica visível sem barra de rolagem interna: '+JSON.stringify(messageOverflow));
     assert.equal(await page.locator('#ami-email-preview-button').getAttribute('href'),currentUrl);
     assert.match(await page.locator('#ami-email-preview-help').innerText(),/prévia institucional usada pelo serviço de envio/i);
     const previewFonts=await page.evaluate(()=>{

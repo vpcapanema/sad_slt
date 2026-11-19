@@ -218,6 +218,12 @@
       email_mensagem: antes + link + depois
     };
   }
+  function ajustarAlturaMensagem() {
+    [mensagemInput, mensagemAfterInput].forEach(input => {
+      input.style.height = "0px";
+      input.style.height = input.scrollHeight + "px";
+    });
+  }
   function definirMensagemProtegida(texto, link) {
     const mensagem = String(texto || ""), url = String(link || "");
     let inicio = url ? mensagem.indexOf(url) : -1;
@@ -236,6 +242,8 @@
     mensagemLink.textContent = url || "Link do formulário indisponível";
     mensagemLink.setAttribute("aria-disabled", url ? "false" : "true");
     mensagemInput.dataset.message = inicio >= 0 ? mensagemInput.value + url + mensagemAfterInput.value : mensagem;
+    ajustarAlturaMensagem();
+    requestAnimationFrame(ajustarAlturaMensagem);
   }
   function mensagemPersonalizada(texto) {
     let mensagem = String(texto || "").replaceAll("Equipe SICARD/SLT", "Equipe SICARD-PLI");
@@ -253,6 +261,7 @@
     mensagemInput.dataset.message = config.email_mensagem;
   }
   function marcarConfiguracaoAlterada() {
+    ajustarAlturaMensagem();
     const atual = configuracaoAtual();
     configuracaoAlterada = !configuracaoOriginal || Object.keys(atual).some(chave => atual[chave] !== configuracaoOriginal[chave]);
     atualizarPreviaInstitucional(); controles();
