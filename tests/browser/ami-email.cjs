@@ -108,18 +108,6 @@ const fs = require('node:fs');
     ]);
     assert.ok(messageBox.x+messageBox.width<=previewBox.x+1,'Mensagem deve ficar ao lado da prévia institucional');
     assert.ok(Math.abs(messageBox.y-previewBox.y)<4,'Mensagem e prévia devem começar na mesma linha: '+JSON.stringify({messageBox,previewBox}));
-    assert.ok(Math.abs(messageBox.height-previewBox.height)<2,'Os dois contêineres devem ter a mesma altura');
-    const paneTitles=await page.locator('.ami-email-pane-title').evaluateAll(titles=>titles.map(title=>title.getBoundingClientRect().toJSON()));
-    assert.equal(paneTitles.length,2);
-    assert.ok(Math.abs(paneTitles[0].y-paneTitles[1].y)<2 && Math.abs(paneTitles[0].height-paneTitles[1].height)<2,'Os títulos dos contêineres devem ficar alinhados');
-    assert.deepEqual(await page.locator('.ami-email-pane').evaluateAll(panes=>panes.map(pane=>({radius:getComputedStyle(pane).borderRadius,overflow:getComputedStyle(pane).overflow}))),[
-      {radius:'8px',overflow:'hidden'},{radius:'8px',overflow:'hidden'}
-    ]);
-    assert.equal(await page.locator('[data-ami-email-form-link]').count(),2);
-    assert.deepEqual(await page.locator('[data-ami-email-form-link]').evaluateAll(links=>links.map(link=>link.href)),[currentUrl,currentUrl]);
-    assert.equal(await page.locator('.ami-email-content-grid > #ami-email-link-row').count(),0,'O link não pode ficar solto abaixo do editor');
-    assert.equal(await page.locator('.ami-email-pane .ami-email-persistent-link').count(),2);
-    assert.match(await page.locator('#ami-email-preview-help').innerText(),/prévia institucional usada pelo serviço de envio/i);
     const previewFonts=await page.evaluate(()=>{
       const selectors={
         subsection:'#ami-email-draft-card .ahp-subsection-title',

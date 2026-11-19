@@ -1141,13 +1141,12 @@
     recipient.replaceChildren();
     (judgment.convites || []).forEach(function (invite) { recipient.add(new Option((invite.nome || invite.email) + " · " + invite.email, invite.email)); });
     if (Array.from(recipient.options).some(function (option) { return option.value === previous; })) recipient.value = previous;
-    var card = $("ami-email-draft-card"), messageBox = $("ami-email-template"), links = card.querySelectorAll("[data-ami-email-form-link]"), url = persistentPublicUrl(judgment);
+    var card = $("ami-email-draft-card"), messageBox = $("ami-email-template"), link = $("ami-email-form-link"), url = persistentPublicUrl(judgment);
     var message = judgment.email_mensagem || invitationLines(judgment, null).join("\n");
     messageBox.value = message; messageBox.dataset.message = message;
     $("ami-email-sender-alias").value = judgment.email_remetente_alias || "SICARD-PLI";
     $("ami-email-subject").value = judgment.email_assunto || "Convite para preenchimento colaborativo AHP - PLI - SICARD";
-    links.forEach(function (link) { link.href = url || "#"; link.textContent = url || "Link indisponível"; });
-    card.classList.remove("is-hidden");
+    link.href = url || "#"; link.textContent = url || "Link indisponível"; card.classList.remove("is-hidden");
     SICARDEmailConvites.mostrar(judgment, message, url);
   }
   function renderDraftEmails() {
