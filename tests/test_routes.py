@@ -462,7 +462,9 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
     assert "Atualizar confirmações" in html
     assert "Abrir aplicativo de e-mail" not in html
     assert "/assets/js/paginas/ami-email.js" in html
-    assert 'id="ami-email-form-link"' in html
+    assert 'id="ami-email-form-link"' not in html
+    assert 'id="ami-email-template"' in html
+    assert 'id="ami-email-preview-button"' in html
     assert "judgment.url_publica" in julgamentos_js
     assert "renderEmailDraft(judgment);" in julgamentos_js
     assert 'api/ahp/comparacao-colaborativa/ambientes' in julgamentos_js

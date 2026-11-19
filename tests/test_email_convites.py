@@ -29,7 +29,7 @@ def ambiente(monkeypatch):
         "criterios": [{"criterio": "Custo", "Etapa": "Fase 3"}, {"criterio": "Prazo", "Etapa": "Fase 3"}],
         "email_remetente_alias": "SICARD-PLI",
         "email_assunto": "Convite para preenchimento colaborativo AHP - PLI - SICARD",
-        "email_mensagem": "Olá!\nhttps://example.com/sicard/public/analise-multicriterio/formulario-comparacao-pareada/token-teste/\nEquipe SICARD",
+        "email_mensagem": "Olá, colaborador(a)!\nhttps://example.com/sicard/public/analise-multicriterio/formulario-comparacao-pareada/token-teste/\nEquipe SICARD-PLI",
     }
     monkeypatch.setattr(service.ambientes, "get_ambiente_by_id", lambda _: row)
     return row
@@ -121,12 +121,38 @@ def test_convite_usa_assunto_institucional_pli_sicard(ambiente, smtp, registros)
 
 def test_convite_usa_alias_assunto_e_mensagem_editados(ambiente, smtp, registros):
     ambiente.update(email_remetente_alias="Equipe PLI", email_assunto="Assunto editado")
-    ambiente["email_mensagem"] = ambiente["email_mensagem"].replace("Olá!", "Mensagem editada exatamente aqui.")
+    ambiente["email_mensagem"] = ambiente["email_mensagem"].replace("Olá, colaborador(a)!", "Mensagem editada exatamente aqui.")
     service.enviar(ambiente["id"], payload(ambiente), "analista")
     enviado = smtp.call_args.args[0]
     assert enviado.alias_remetente == "Equipe PLI"
     assert enviado.assunto == "Assunto editado"
     assert enviado.texto.startswith("Mensagem editada exatamente aqui.")
+
+
+@pytest.mark.parametrize(("nome", "cumprimento"), [
+    ("Ana", "Olá, Ana!"),
+    ("Maria Clara Souza", "Olá, Maria Clara!"),
+    (None, "Olá, colaborador(a)!"),
+])
+def test_convite_personaliza_cumprimento_com_ate_dois_nomes(
+    ambiente, smtp, registros, nome, cumprimento,
+):
+    ambiente["convites"] = [{"email": DEST, "nome": nome}]
+    service.enviar(ambiente["id"], payload(ambiente), "analista")
+    enviado = smtp.call_args.args[0]
+    assert enviado.texto.startswith(cumprimento)
+    assert cumprimento in enviado.html
+
+
+def test_convite_substitui_assinatura_antiga_antes_do_envio(ambiente, smtp, registros):
+    ambiente["email_mensagem"] = ambiente["email_mensagem"].replace(
+        "Equipe SICARD-PLI", "Equipe SICARD/SLT",
+    )
+    service.enviar(ambiente["id"], payload(ambiente), "analista")
+    texto = smtp.call_args.args[0].texto
+    assert "Equipe SICARD-PLI" in texto
+    assert "Equipe SICARD/SLT" not in texto
+    assert "Equipe SICARD-PLI" in smtp.call_args.args[0].html
 
 
 def test_reenvio_explicito_preserva_historico_e_idempotencia(ambiente, smtp, monkeypatch):

@@ -213,9 +213,17 @@
       email_mensagem: mensagemInput.value
     };
   }
+  function mensagemPersonalizada(texto) {
+    let mensagem = String(texto || "").replaceAll("Equipe SICARD/SLT", "Equipe SICARD-PLI");
+    const email = $("ami-email-preview-recipient").value;
+    const convite = contexto?.julgamento?.convites?.find(item => String(item.email || "").toLowerCase() === email.toLowerCase());
+    const partesNome = String(convite?.nome || "").trim().split(/\s+/).filter(Boolean);
+    if (partesNome.length) mensagem = mensagem.replace(/Olá,\s*colaborador\(a\)!/i, "Olá, " + partesNome.slice(0, 2).join(" ") + "!");
+    return mensagem;
+  }
   function atualizarPreviaInstitucional() {
     const config = configuracaoAtual(), urlAtual = contexto?.url || "";
-    const linhas = config.email_mensagem.split(/\r?\n/).filter(linha => linha.trim() !== urlAtual);
+    const linhas = mensagemPersonalizada(config.email_mensagem).split(/\r?\n/).filter(linha => linha.trim() !== urlAtual);
     $("ami-email-preview-message").textContent = linhas.join("\n");
     $("ami-email-preview-button").href = urlAtual || "#";
     mensagemInput.dataset.message = config.email_mensagem;
@@ -576,6 +584,7 @@
     }
   };
   [aliasInput, assuntoInput, mensagemInput].forEach(input => input.addEventListener("input", marcarConfiguracaoAlterada));
+  $("ami-email-preview-recipient").addEventListener("change", atualizarPreviaInstitucional);
   $("ami-save-email-config").addEventListener("click", () => salvarConfiguracao(false));
   $("ami-open-mail").addEventListener("click", () => enviar(false));
   $("ami-monitor-send").addEventListener("click", () => enviar(true));

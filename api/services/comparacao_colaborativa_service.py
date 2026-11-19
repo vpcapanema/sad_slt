@@ -182,7 +182,7 @@ def _mensagem_email_padrao(row: dict[str, Any], *, base_url: str = "") -> str:
         "", f"Acesse o formulário colaborativo pelo botão abaixo até {prazo_rotulo}:" if prazo_rotulo
         else "Acesse o formulário colaborativo pelo botão abaixo:", link, "",
         "Atenção: para enviar a resposta, a consistência (RC) deve ser menor que 0,10.",
-        "", "Atenciosamente,", "Equipe SICARD/SLT",
+        "", "Atenciosamente,", "Equipe SICARD-PLI",
     ])
     return "\n".join(linhas)
 

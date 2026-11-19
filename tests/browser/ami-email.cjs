@@ -25,7 +25,7 @@ const fs = require('node:fs');
       valido_ate:'2035-12-31T23:59:59-03:00',criterios:[{nome:'Critério A'},{nome:'Critério B'}],
       n_criterios:2,url_publica:'https://example.com/sicard/public/analise-multicriterio/formulario-comparacao-pareada/token-email/',
       email_remetente_alias:'SICARD-PLI',email_assunto:'Convite institucional',email_config_persistida:true,
-      email_mensagem:'Olá, colaborador(a)!\n\nCritérios a comparar (2):\n1. Critério A\n2. Critério B\n\nhttps://example.com/sicard/public/analise-multicriterio/formulario-comparacao-pareada/token-email/\n\nEquipe SICARD/SLT',
+      email_mensagem:'Olá, colaborador(a)!\n\nCritérios a comparar (2):\n1. Critério A\n2. Critério B\n\nhttps://example.com/sicard/public/analise-multicriterio/formulario-comparacao-pareada/token-email/\n\nEquipe SICARD-PLI',
       convites:[{nome:'Ana',email:'ana@example.com'},{nome:'Bia',email:'bia@example.com'}]
     };
     let rows=[], sends=[], patches=[], collections=0, pendingRelease, failCollection=false;
@@ -81,7 +81,7 @@ const fs = require('node:fs');
       await page.locator('#ami-judgments-view-action').click();
       await page.waitForFunction(()=>!document.getElementById('ami-open-mail').disabled);
       const resolvedUrl=new URL(publicUrl,'http://127.0.0.1:8083').href;
-      assert.equal(await page.locator('#ami-email-form-link').getAttribute('href'),resolvedUrl);
+      assert.equal(await page.locator('#ami-email-preview-button').getAttribute('href'),resolvedUrl);
       assert.ok((await page.locator('#ami-email-template').getAttribute('data-message')).includes(resolvedUrl));
     }
     assert.equal(sends.length,0);
@@ -114,9 +114,9 @@ const fs = require('node:fs');
     assert.deepEqual(geometry.editorStyle,geometry.previewStyle,'O arredondamento e o fundo devem repetir o contêiner de edição');
     assert.deepEqual(geometry.messageLabelStyle,geometry.previewLabelStyle,'Os títulos devem preservar o mesmo padrão visual existente');
     assert.equal(geometry.previewStyle.radius,'6px');
-    assert.equal(await page.locator('[data-ami-email-form-link]').count(),2);
-    assert.deepEqual(await page.locator('[data-ami-email-form-link]').evaluateAll(links=>links.map(link=>link.href)),[currentUrl,currentUrl]);
-    assert.equal(await page.locator('.ami-email-content-grid > #ami-email-link-row').count(),0,'O link não pode ficar solto abaixo do editor');
+    assert.equal(await page.locator('[data-ami-email-form-link], #ami-email-link-row').count(),0,'O link não deve ser duplicado fora do corpo da mensagem');
+    assert.ok((await page.locator('#ami-email-template').inputValue()).includes(currentUrl));
+    assert.equal(await page.locator('#ami-email-preview-button').getAttribute('href'),currentUrl);
     assert.match(await page.locator('#ami-email-preview-help').innerText(),/prévia institucional usada pelo serviço de envio/i);
     const previewFonts=await page.evaluate(()=>{
       const selectors={
@@ -138,6 +138,11 @@ const fs = require('node:fs');
     for(const key of ['previewBody','previewMessage','previewStrong','previewCode','previewButton']){
       assert.equal(previewFonts[key].fontSize,previewFonts.fieldText.fontSize,'A prévia deve respeitar a escala tipográfica compacta da Central');
     }
+    assert.match(await page.locator('#ami-email-preview-message').innerText(),/Olá, Ana!/);
+    assert.match(await page.locator('#ami-email-preview-message').innerText(),/Equipe SICARD-PLI/);
+    await page.locator('#ami-email-preview-recipient').selectOption('bia@example.com');
+    assert.match(await page.locator('#ami-email-preview-message').innerText(),/Olá, Bia!/);
+    await page.locator('#ami-email-preview-recipient').selectOption('ana@example.com');
     assert.equal(await page.locator('#ami-email-preview-button').innerText(),'Acessar formulário colaborativo');
     await page.locator('#ami-email-sender-alias').fill('Equipe PLI');
     await page.locator('#ami-email-subject').fill('Assunto alterado');

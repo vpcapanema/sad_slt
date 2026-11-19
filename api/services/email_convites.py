@@ -24,6 +24,19 @@ _CODIGO_LINK = re.compile(r"[0-9a-f]{32}")
 logger = logging.getLogger(__name__)
 
 
+def _personalizar_mensagem(texto: str, nome: str | None) -> str:
+    """Aplica somente os dados individuais que não pertencem ao texto-base persistido."""
+    mensagem = texto.replace("Equipe SICARD/SLT", "Equipe SICARD-PLI")
+    partes_nome = str(nome or "").strip().split()
+    if partes_nome:
+        cumprimento = " ".join(partes_nome[:2])
+        mensagem = re.sub(
+            r"Olá,\s*colaborador\(a\)!", f"Olá, {cumprimento}!", mensagem,
+            count=1, flags=re.IGNORECASE,
+        )
+    return mensagem
+
+
 def _html_convite(texto: str, segredo: str, caminhos: tuple[str, ...]) -> str:
     """Versão institucional do convite; o texto puro continua como alternativa."""
     linhas = texto.splitlines()
@@ -120,8 +133,9 @@ def enviar(ambiente_id: str, dados: ConviteEmailEnvioSchema, usuario_id: str) ->
     if ambiente["atualizado_em"] != dados.versao:
         raise DemandaValidationError("O julgamento mudou. Reabra o registro antes de enviar.", field="versao")
     destinatario = str(dados.destinatario).lower()
-    autorizados = {str(c["email"]).strip().lower() for c in ambiente["convites"]}
-    if destinatario not in autorizados:
+    convites = {str(c["email"]).strip().lower(): c for c in ambiente["convites"]}
+    convite = convites.get(destinatario)
+    if convite is None:
         raise DemandaValidationError("O destinatário não pertence aos colaboradores salvos.", field="destinatario")
     # O servidor acrescenta o codigo persistido, nunca um codigo fornecido pelo cliente.
     caminhos = (
@@ -131,6 +145,7 @@ def enviar(ambiente_id: str, dados: ConviteEmailEnvioSchema, usuario_id: str) ->
     corpo = ambiente.get("email_mensagem")
     if not corpo or not corpo.strip():
         raise DemandaValidationError("Salve a mensagem do convite antes de enviar.", field="email_mensagem")
+    corpo = _personalizar_mensagem(corpo, convite.get("nome"))
     if not any(caminho in corpo for caminho in caminhos):
         raise DemandaValidationError("A mensagem não contém o link deste julgamento.", field="texto")
     config = email_service._config()

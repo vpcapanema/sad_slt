@@ -424,7 +424,7 @@
     linhas.push("Atenção: para enviar a resposta, a consistência (RC) deve ser menor que 0,10.");
     linhas.push("");
     linhas.push("Atenciosamente,");
-    linhas.push("Equipe SICARD/SLT");
+    linhas.push("Equipe SICARD-PLI");
     return linhas;
   }
 
