@@ -191,6 +191,18 @@ def test_resposta_administrativa_nao_expoe_chave_individual():
     assert "012345" not in resposta.url_publica
 
 
+def test_resposta_de_consulta_nao_expoe_configuracao_do_convite():
+    row = _ambiente_row(
+        email_remetente_alias="Alias privado",
+        email_assunto="Assunto privado",
+        email_mensagem="Mensagem privada com /public/analise-multicriterio/tok-abc/",
+    )
+    resposta = service._ambiente_to_response(row, gestao=False)
+    assert resposta.email_mensagem == ""
+    assert resposta.email_config_persistida is False
+    assert resposta.token == "" and resposta.convites == [] and resposta.url_publica == ""
+
+
 def test_alias_assunto_e_mensagem_do_convite_persistem_no_julgamento(monkeypatch):
     atual = _ambiente_row(status="ativa")
     monkeypatch.setattr(repo, "get_ambiente_by_id", lambda _: dict(atual))

@@ -290,10 +290,10 @@ def _ambiente_to_response(row: dict[str, Any], *, base_url: str = "", gestao: bo
         total_analises=int(row.get("total_analises") or 0),
         analise_homologada_id=str(row["analise_homologada_id"]) if row.get("analise_homologada_id") else None,
         consolidacao=_consolidacao_from_row(row),
-        email_remetente_alias=row.get("email_remetente_alias") or EMAIL_REMETENTE_ALIAS_PADRAO,
-        email_assunto=row.get("email_assunto") or EMAIL_ASSUNTO_PADRAO,
-        email_mensagem=row.get("email_mensagem") or _mensagem_email_padrao(row, base_url=base_url),
-        email_config_persistida=bool(row.get("email_mensagem")),
+        email_remetente_alias=(row.get("email_remetente_alias") or EMAIL_REMETENTE_ALIAS_PADRAO) if gestao else EMAIL_REMETENTE_ALIAS_PADRAO,
+        email_assunto=(row.get("email_assunto") or EMAIL_ASSUNTO_PADRAO) if gestao else EMAIL_ASSUNTO_PADRAO,
+        email_mensagem=(row.get("email_mensagem") or _mensagem_email_padrao(row, base_url=base_url)) if gestao else "",
+        email_config_persistida=bool(row.get("email_mensagem")) if gestao else False,
     )
 
 
