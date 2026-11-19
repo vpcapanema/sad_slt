@@ -58,7 +58,9 @@ const fs = require('node:fs');
         return route.fulfill({json:{registros:rows,relatorios_consultados:2}});
       }
       if(path.endsWith('/emails/monitoramento')) return route.fulfill({json:{
-        registros:rows,colaboradores:round.convites.map(c=>({...c,resposta_recebida:false}))
+        registros:rows,confirmacoes_configuradas:true,
+        colaboradores:round.convites.map(c=>({...c,resposta_recebida:false,
+          etapa_codigo:'convite_enviado',etapa_rotulo:'Convite enviado'}))
       }});
       if(path==='/api/ahp/comparacao-colaborativa/ambientes') return route.fulfill({json:[round]});
       return route.fulfill({json:[]});

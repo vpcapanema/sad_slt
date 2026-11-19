@@ -93,8 +93,13 @@ def test_preserva_texto_acrescenta_token_e_nao_repete_apos_recarga(ambiente, smt
     result = service.enviar(ambiente["id"], dados, "analista")
     assert result["envio_status"] == "aceito_smtp"
     texto = smtp.call_args.args[0].texto
+    html = smtp.call_args.args[0].html
     assert texto.startswith(dados.texto.replace("/token-teste/\n", "/token-teste/?c=" + service.codigo_link("token-teste", DEST) + "\n") + "\n\n")
     assert "Chave individual do convite: " + "A" * 43 in texto
+    assert "Acessar formulário colaborativo" in html
+    assert "A" * 43 in html
+    assert "/token-teste/?c=" + service.codigo_link("token-teste", DEST) in html
+    assert ">https://example.com/" not in html
     assert registros[0]["conteudo_hash"] == sha256((service.ASSUNTO + "\n" + texto.split("\n\nChave individual")[0]).encode()).hexdigest()
     assert smtp.call_args.kwargs["solicitar_confirmacoes"] is True
     assert smtp.call_args.kwargs["id_mensagem"] == registros[0]["mensagem_id"]
@@ -588,15 +593,22 @@ def test_envio_seletivo_usa_reserva_monitorada(ambiente, smtp, registros, monkey
 
 def test_monitoramento_inclui_nomes_e_disponibilidade_da_resposta(ambiente, registros, monkeypatch):
     ambiente["convites"] = [{"nome": "Ana", "email": DEST}, {"nome": "Bia", "email": "bia@example.com"}]
+    enviado = datetime(2026, 11, 6, 20, 1, 12, tzinfo=timezone.utc)
     monkeypatch.setattr(service.ambientes, "list_respostas", lambda _: [
-        {"email": DEST, "status": "enviada", "iniciado_em": None},
+        {"email": DEST, "status": "enviada", "iniciado_em": None, "enviado_em": enviado},
         {"email": "bia@example.com", "status": "em_preenchimento", "iniciado_em": datetime(2026, 11, 6, 19, 51, 11, tzinfo=timezone.utc)}])
     from api.routers.email_convites import monitoramento
     result = monitoramento(ambiente["id"])
     assert result["registros"] == registros
     assert result["colaboradores"] == [
-        {"nome": "Ana", "email": DEST, "resposta_recebida": True, "acesso_formulario_em": None, "clique_link_em": None},
-        {"nome": "Bia", "email": "bia@example.com", "resposta_recebida": False, "acesso_formulario_em": "2026-11-06T19:51:11+00:00", "clique_link_em": None},
+        {"nome": "Ana", "email": DEST, "resposta_recebida": True, "acesso_formulario_em": None,
+         "resposta_enviada_em": "2026-11-06T20:01:12+00:00", "clique_link_em": None,
+         "etapa_codigo": "resposta_enviada", "etapa_rotulo": "Resposta enviada",
+         "etapa_atualizada_em": "2026-11-06T20:01:12+00:00"},
+        {"nome": "Bia", "email": "bia@example.com", "resposta_recebida": False,
+         "acesso_formulario_em": "2026-11-06T19:51:11+00:00", "resposta_enviada_em": None,
+         "clique_link_em": None, "etapa_codigo": "em_preenchimento", "etapa_rotulo": "Em preenchimento",
+         "etapa_atualizada_em": "2026-11-06T19:51:11+00:00"},
     ]
 
 
@@ -606,7 +618,37 @@ def test_monitoramento_informa_primeiro_clique_no_link(ambiente, registros, monk
     registros.append({"natureza": "convite", "destinatario": DEST, "link_acessado_em": datetime(2026, 11, 6, 16, 51, tzinfo=timezone.utc)})
     registros.append({"natureza": "convite", "destinatario": DEST, "link_acessado_em": None})
     from api.routers.email_convites import monitoramento
-    assert monitoramento(ambiente["id"])["colaboradores"][0]["clique_link_em"] == "2026-11-06T16:51:00+00:00"
+    colaborador = monitoramento(ambiente["id"])["colaboradores"][0]
+    assert colaborador["clique_link_em"] == "2026-11-06T16:51:00+00:00"
+    assert colaborador["etapa_codigo"] == "link_acessado"
+    assert colaborador["etapa_rotulo"] == "Link acessado"
+
+
+def test_monitoramento_avanca_convite_clique_preenchimento_e_resposta():
+    from api.routers.email_convites import _monitorar_colaborador
+    convite = {"nome": "Ana", "email": DEST}
+    enviado = datetime(2026, 11, 6, 16, 40, tzinfo=timezone.utc)
+    clique = datetime(2026, 11, 6, 16, 51, tzinfo=timezone.utc)
+    registros = [{"natureza": "convite", "destinatario": DEST,
+                  "envio_status": "aceito_smtp", "criado_em": enviado}]
+    assert _monitorar_colaborador(convite, {}, {}, [])["etapa_codigo"] == "convite_nao_enviado"
+    assert _monitorar_colaborador(convite, {}, {}, registros)["etapa_codigo"] == "convite_enviado"
+    assert _monitorar_colaborador(convite, {}, {DEST: clique}, registros)["etapa_codigo"] == "link_acessado"
+    preenchimento = {DEST: {"status": "em_preenchimento", "iniciado_em": clique}}
+    assert _monitorar_colaborador(convite, preenchimento, {DEST: clique}, registros)["etapa_codigo"] == "em_preenchimento"
+    preenchimento[DEST].update(status="enviada", enviado_em=enviado)
+    assert _monitorar_colaborador(convite, preenchimento, {DEST: clique}, registros)["etapa_codigo"] == "resposta_enviada"
+
+
+def test_confirmacoes_desativadas_nao_retornam_502(ambiente, registros, monkeypatch):
+    from api.routers import email_convites as router_service
+    monkeypatch.setattr(router_service, "get_email_settings", lambda: EmailSettings())
+    resultado = router_service.coletar(
+        ambiente["id"], SessionUser("id", "", "analista", "Analista", "ANALISTA")
+    )
+    assert resultado["configurado"] is False
+    assert resultado["relatorios_consultados"] == 0
+    assert resultado["registros"] == registros
 
 
 def test_link_do_convite_recebe_codigo_sem_expor_o_email(ambiente, smtp, registros):

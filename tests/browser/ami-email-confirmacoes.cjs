@@ -42,7 +42,8 @@ const {chromium} = require('playwright');
         return route.fulfill({status: 503, json: {detail: 'Falha sintética de conexão.'}});
       }
       return route.fulfill({json: {registros: rows, coleta_automatica: coletaAutomatica,
-        colaboradores: [{nome: 'Teste', email, resposta_recebida: true}]}});
+        confirmacoes_configuradas: true, colaboradores: [{nome: 'Teste', email,
+          resposta_recebida: true, etapa_codigo: 'resposta_enviada', etapa_rotulo: 'Resposta enviada'}]}});
     });
     const carregar = async () => {
       await page.evaluate(({env, email}) => {

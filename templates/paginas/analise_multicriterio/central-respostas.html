@@ -62,12 +62,12 @@
           <section class="secao-ami-monitoring ahp-subcard ami-monitoring-section standard-table-section">
             <div class="ahp-subsection-title"><span class="ahp-subsection-num">2</span><span>Monitoramento das atividades</span></div>
             <div class="ahp-section-body">
-          <p class="form-help">Aceitação pelo servidor não confirma entrega. A confirmação de leitura depende do destinatário e do aplicativo de e-mail. Use “Atualizar confirmações” para consultar os retornos recebidos; ausência de confirmação não significa que a mensagem não foi lida.</p>
+          <p class="form-help">A etapa da colaboração avança automaticamente quando o convite é enviado, o link é acessado, o preenchimento começa e a resposta é enviada. Aceitação pelo servidor não confirma entrega; entrega e leitura dependem dos retornos externos do provedor de e-mail.</p>
           <p id="ami-email-status" class="form-help" role="status" aria-live="polite"></p>
           {% if modo_pagina == 'espaco' %}<p class="ami-table-label">Tabela do monitoramento das atividades</p>{% endif %}
           <div class="ami-filtered-table">
             {% set filtro_prefixo = "ami-monitor-filter" %}{% set filtro_rotulo = "Filtrar atividades dos colaboradores" %}{% include "componentes/filtro_tabela.html" %}
-          <div class="hier-table-shell ami-table-shell"><table id="ami-monitor-table" class="admin-table hier-register-table ami-table--database" aria-label="Monitoramento por colaborador"><thead><tr><th class="col-select" scope="col"><input type="checkbox" id="ami-monitor-select-all" aria-label="Selecionar todos os registros filtrados"></th><th>Colaboradores</th><th>E-mail colaborador</th><th>Registrado em</th><th>E-mail convite</th><th>E-mail resposta</th></tr></thead><tbody id="ami-email-deliveries"></tbody></table></div></div>
+          <div class="hier-table-shell ami-table-shell"><table id="ami-monitor-table" class="admin-table hier-register-table ami-table--database" aria-label="Monitoramento por colaborador"><thead><tr><th class="col-select" scope="col"><input type="checkbox" id="ami-monitor-select-all" aria-label="Selecionar todos os registros filtrados"></th><th>Colaboradores</th><th>E-mail colaborador</th><th>Registrado em</th><th>Etapa da colaboração</th><th>E-mail convite</th><th>E-mail resposta</th></tr></thead><tbody id="ami-email-deliveries"></tbody></table></div></div>
           <div class="admin-bulk-actions ami-table-actions standard-table-actions" role="group" aria-label="Controles do monitoramento">
             <button type="button" class="admin-icon-btn" id="ami-monitor-refresh" title="Atualizar confirmações" aria-label="Atualizar confirmações" disabled><i class="fas fa-arrows-rotate" aria-hidden="true"></i></button>
             <button type="button" class="admin-icon-btn" id="ami-monitor-send" title="Enviar e-mail de convite aos selecionados" aria-label="Enviar e-mail de convite aos selecionados" disabled><i class="fas fa-envelope" aria-hidden="true"></i></button>
@@ -133,7 +133,7 @@
   <script src="/assets/vendor/xlsx/xlsx-0.18.5.min.js"></script>
   <script src="/assets/js/paginas/analise-multicriterio-tabela.js?v=20261105-table-labels"></script>
   <script src="/assets/js/api-erro.js?v=20261027"></script>
-  <script src="/assets/js/paginas/ami-email.js?v=20261117-falha-smtp"></script>
+  <script src="/assets/js/paginas/ami-email.js?v=20261119-etapas-colaboracao"></script>
   <script src="/assets/js/matriz-criterios-arquivo.js?v=20261009"></script>
   <script src="/assets/js/matrizes-criterios.js?v=20261117-form-identifiers"></script>
   <script src="/assets/js/saaty-selector-color.js?v=20261103-1"></script>

@@ -41,7 +41,10 @@ const fs = require('node:fs');
       requests.push(path);
       if(path.endsWith('/emails/monitoramento')){
         consultas++;
-        return route.fulfill({json:{registros:rows,colaboradores:round.convites.map(c=>({...c,resposta_recebida:c.nome!=='Ana'}))}});
+        return route.fulfill({json:{registros:rows,confirmacoes_configuradas:true,
+          colaboradores:round.convites.map(c=>({...c,resposta_recebida:c.nome!=='Ana',
+            etapa_codigo:c.nome!=='Ana'?'resposta_enviada':'convite_nao_enviado',
+            etapa_rotulo:c.nome!=='Ana'?'Resposta enviada':'Convite não enviado'}))}});
       }
       if(path.endsWith('/emails/confirmacoes')){
         rows=rows.map(r=>r.envio_status==='aceito_smtp'?{...r,entrega_status:'confirmada',leitura_status:'confirmada'}:r);
@@ -83,7 +86,7 @@ const fs = require('node:fs');
       await page.locator('#pfsStatusOverlay .pfs-box.pfs-active .pfs-close').click();
     };
     assert.deepEqual(await page.locator('#ami-monitor-table th').allTextContents(),
-      ['','Colaboradores','E-mail colaborador','Registrado em','E-mail convite','E-mail resposta']);
+      ['','Colaboradores','E-mail colaborador','Registrado em','Etapa da colaboração','E-mail convite','E-mail resposta']);
     assert.match(await page.locator('#ami-collaborator-table thead').innerText(),/E-MAIL COLABORADOR/i);
     assert.equal(await convite.isDisabled(),true); assert.equal(await resposta.isDisabled(),true);
     assert.match(await linha('bia@example.com').innerText(),/Bia/);
@@ -91,6 +94,8 @@ const fs = require('node:fs');
     assert.equal(await linha('bia@example.com').locator('.ami-cell-link').first().innerText(),'Entregue');
 
     await marcar('ana@example.com');
+    await page.waitForFunction(() => !document.getElementById('ami-monitor-send').disabled &&
+      document.getElementById('ami-monitor-send-response').disabled);
     assert.equal(await convite.isEnabled(),true); assert.equal(await resposta.isDisabled(),true);
     await marcar('bia@example.com');
     assert.equal(await convite.isDisabled(),true); assert.equal(await resposta.isDisabled(),true);
