@@ -108,6 +108,23 @@ const fs = require('node:fs');
     ]);
     assert.ok(messageBox.x+messageBox.width<=previewBox.x+1,'Mensagem deve ficar ao lado da prévia institucional');
     assert.ok(Math.abs(messageBox.y-previewBox.y)<4,'Mensagem e prévia devem começar na mesma linha: '+JSON.stringify({messageBox,previewBox}));
+    const previewFonts=await page.evaluate(()=>{
+      const selectors={
+        subsection:'#ami-email-draft-card .ahp-subsection-title',
+        previewTitle:'.ami-email-preview-title',previewBody:'.ami-email-preview-body',
+        previewMessage:'#ami-email-preview-message',previewStrong:'.ami-email-preview-body strong',
+        previewCode:'#ami-email-preview-token',previewButton:'#ami-email-preview-button',
+        fieldLabel:'#ami-email-template-label',fieldText:'#ami-email-template'
+      };
+      return Object.fromEntries(Object.entries(selectors).map(([name,selector])=>{
+        const style=getComputedStyle(document.querySelector(selector));
+        return [name,{fontFamily:style.fontFamily,fontSize:style.fontSize,fontWeight:style.fontWeight,lineHeight:style.lineHeight,letterSpacing:style.letterSpacing}];
+      }));
+    });
+    assert.deepEqual(previewFonts.previewTitle,previewFonts.subsection,'O cabeçalho da prévia deve repetir a tipografia computada das subseções da Central');
+    for(const key of ['previewBody','previewMessage','previewStrong','previewCode','previewButton']){
+      assert.equal(previewFonts[key].fontSize,previewFonts.fieldText.fontSize,'A prévia deve respeitar a escala tipográfica compacta da Central');
+    }
     assert.equal(await page.locator('#ami-email-preview-button').innerText(),'Acessar formulário colaborativo');
     await page.locator('#ami-email-sender-alias').fill('Equipe PLI');
     await page.locator('#ami-email-subject').fill('Assunto alterado');
