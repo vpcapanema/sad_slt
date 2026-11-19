@@ -16,6 +16,8 @@
   var pairTimers = new Map();
   var saveQueue = Promise.resolve();
   var editVersion = 0;
+  var consistencyDiagnosis = null;
+  var consistencyHelpReturnFocus = null;
 
   function bloquearIdentificacao(bloqueado) {
     ["colab-nome", "colab-inst", "colab-email", "colab-token", "btn-liberar-form"].forEach(function (id) {
@@ -134,7 +136,7 @@
       res.CR < 0.1 ? "success" : "error"
     );
     updateProgressHint(res.CR);
-    renderConsistencyHelp(matrix, res.CR);
+    updateConsistencyHelp(matrix, res.CR);
     if (draftActive) {
       var version = editVersion;
       el("collab-save-feedback").textContent = "Alterações aguardando salvamento…";
@@ -149,7 +151,8 @@
     clearTimeout(saveTimer);
     editVersion++;
     latestCR = null;
-    el("collab-consistency-help").hidden = true;
+    el("collab-consistency-help-button").hidden = true;
+    consistencyDiagnosis = null;
     el("liveMetrics").setAttribute("aria-busy", "true");
     el("collab-rc-status").textContent = "Atualizando…";
     el("btn-enviar-resposta").disabled = true;
@@ -158,54 +161,172 @@
     metricsTimer = setTimeout(updateCollabMetrics, 1000);
   }
 
-  function renderConsistencyHelp(matrix, cr) {
-    var box = el("collab-consistency-help");
-    box.replaceChildren();
-    box.hidden = true;
+  function formatSaatyValue(value) {
+    if (Math.abs(value - 1) < 1e-8) return "1 (igual importância)";
+    if (value < 1) return "1/" + Math.round(1 / value);
+    return String(Math.round(value));
+  }
+
+  function importanceIntensity(value) {
+    var dominant = value < 1 ? 1 / value : value;
+    if (dominant < 2) return "levemente";
+    if (dominant < 4) return "moderadamente";
+    if (dominant < 6) return "fortemente";
+    if (dominant < 8) return "muito fortemente";
+    return "extremamente";
+  }
+
+  function describeJudgment(matrix, first, second, names) {
+    var value = matrix[first][second];
+    if (Math.abs(value - 1) < 1e-8) {
+      return "“" + names[first] + "” e “" + names[second] + "” têm igual importância";
+    }
+    var preferred = value > 1 ? first : second;
+    var other = value > 1 ? second : first;
+    return "“" + names[preferred] + "” foi considerado " + importanceIntensity(value) +
+      " mais importante que “" + names[other] + "”";
+  }
+
+  function findPriorityCycle(matrix, answered) {
+    function answeredPair(a, b) {
+      return answered.has(Math.min(a, b) + "_" + Math.max(a, b));
+    }
+    function hasPriority(a, b) {
+      return matrix[a][b] > 1 + 1e-8;
+    }
+    for (var a = 0; a < matrix.length; a++) {
+      for (var b = a + 1; b < matrix.length; b++) {
+        for (var c = b + 1; c < matrix.length; c++) {
+          if (!answeredPair(a, b) || !answeredPair(b, c) || !answeredPair(a, c)) continue;
+          if (hasPriority(a, b) && hasPriority(b, c) && hasPriority(c, a)) return { first: a, second: b, third: c };
+          if (hasPriority(b, a) && hasPriority(a, c) && hasPriority(c, b)) return { first: b, second: a, third: c };
+        }
+      }
+    }
+    return null;
+  }
+
+  function strongestTriad(matrix, review, answered) {
+    var best = null;
+    for (var k = 0; k < matrix.length; k++) {
+      if (k === review.i || k === review.j) continue;
+      var first = Math.min(review.i, k) + "_" + Math.max(review.i, k);
+      var second = Math.min(k, review.j) + "_" + Math.max(k, review.j);
+      if (!answered.has(first) || !answered.has(second)) continue;
+      var indirect = matrix[review.i][k] * matrix[k][review.j];
+      if (!isFinite(indirect) || indirect <= 0) continue;
+      var directLog = Math.log(matrix[review.i][review.j]);
+      var indirectLog = Math.log(indirect);
+      var directionConflict = directLog * indirectLog < 0 ||
+        (Math.abs(directLog) < 1e-8) !== (Math.abs(indirectLog) < 1e-8);
+      var contradiction = Math.abs(directLog - indirectLog);
+      if (!best || (directionConflict && !best.directionConflict) ||
+        (directionConflict === best.directionConflict && contradiction > best.contradiction)) {
+        best = { k: k, indirect: indirect, contradiction: contradiction, directionConflict: directionConflict };
+      }
+    }
+    return best;
+  }
+
+  function updateConsistencyHelp(matrix, cr) {
+    var button = el("collab-consistency-help-button");
+    button.hidden = true;
+    consistencyDiagnosis = null;
     var answered = new Set(Object.keys(stats.pares).filter(function (key) { return stats.pares[key] > 0; }));
     var total = matrix.length * (matrix.length - 1) / 2;
     var count = 0;
     for (var i = 0; i < matrix.length; i++) {
       for (var j = i + 1; j < matrix.length; j++) if (answered.has(i + "_" + j)) count++;
     }
-    if (!total || count / total <= 0.7 || cr < 0.1) return;
-    box.hidden = false;
-    var intro = document.createElement("p");
-    intro.textContent = "Ajuda de consistência — " + count + "/" + total + " pares respondidos. " +
-      (count < total ? "Diagnóstico provisório: os pares não respondidos ainda usam igualdade e podem alterar o RC. " : "") +
-      "Revise os pares abaixo, preservando seu julgamento sobre os critérios. Nenhuma resposta será alterada automaticamente.";
-    box.appendChild(intro);
+    if (!total || count / total < 0.6 || cr < 0.1) return;
     var reviews = SLTAhp.consistencyReviews(matrix, answered);
-    if (!reviews.length) {
-      var empty = document.createElement("p");
-      empty.textContent = "Não foi identificada uma melhoria isolada entre os pares avaliados. Complete os pares restantes e reveja o conjunto das comparações.";
-      box.appendChild(empty);
-      return;
+    consistencyDiagnosis = { matrix: matrix.map(function (row) { return row.slice(); }), cr: cr,
+      answered: answered, count: count, total: total, reviews: reviews };
+    button.hidden = false;
+  }
+
+  function closeConsistencyHelp() {
+    var modal = el("collab-consistency-modal");
+    if (modal.hidden) return;
+    modal.hidden = true;
+    if (consistencyHelpReturnFocus) consistencyHelpReturnFocus.focus();
+  }
+
+  function openConsistencyHelp() {
+    if (!consistencyDiagnosis) return;
+    var diagnosis = consistencyDiagnosis;
+    var names = normalizeCriteriaNames(meta.criterios);
+    var list = el("collab-consistency-pairs");
+    list.replaceChildren();
+    el("collab-consistency-modal-summary").textContent =
+      "Foram confirmados " + diagnosis.count + " de " + diagnosis.total + " pares (" +
+      Math.round(100 * diagnosis.count / diagnosis.total) + "%) e a RC atual é " +
+      SLTAhp.formatMetric(diagnosis.cr) + ". O diagnóstico é orientativo e não altera suas respostas.";
+    if (!diagnosis.reviews.length) {
+      var empty = document.createElement("li");
+      empty.textContent = "Nenhum par isolado explica suficientemente a inconsistência. Complete os pares restantes e reveja o conjunto das comparações.";
+      list.appendChild(empty);
     }
-    var list = document.createElement("ol");
-    reviews.forEach(function (review) {
+    diagnosis.reviews.forEach(function (review) {
       var item = document.createElement("li"), link = document.createElement("a");
-      var pair = el("pair_" + review.i + "_" + review.j).closest(".saaty-pair");
-      var names = normalizeCriteriaNames(meta.criterios);
-      pair.id = "collab-review-" + review.i + "-" + review.j;
-      link.href = "#" + pair.id;
+      var input = el("pair_" + review.i + "_" + review.j);
+      var pair = input && input.closest(".saaty-pair");
+      if (pair) pair.id = "collab-review-" + review.i + "-" + review.j;
+      link.href = pair ? "#" + pair.id : "#";
       link.textContent = names[review.i] + " × " + names[review.j];
       link.addEventListener("click", function (event) {
         event.preventDefault();
+        if (!pair) return;
+        closeConsistencyHelp();
         pair.scrollIntoView({ behavior: "smooth", block: "center" });
         pair.querySelector(".saaty-scale").focus({ preventScroll: true });
       });
-      item.appendChild(link);
-      item.appendChild(document.createTextNode(
-        " — revisão prioritária; potencial de redução do RC em simulação isolada."
+      item.append(link, document.createTextNode(
+        " — valor atual: " + formatSaatyValue(review.currentValue) +
+        "; valor a reavaliar na simulação: " + formatSaatyValue(review.suggestedValue) +
+        ". RC projetada isoladamente: " + SLTAhp.formatMetric(review.projectedCR) + "."
       ));
       list.appendChild(item);
     });
-    box.appendChild(list);
-    var note = document.createElement("p");
-    note.textContent = "As prioridades consideram até oito pares com maior desvio e simulam valores da escala. " +
-      "Não há garantia de atingir RC < 0,10 com uma única revisão. Reavalie a ajuda após cada ajuste.";
-    box.appendChild(note);
+    var cycle = findPriorityCycle(diagnosis.matrix, diagnosis.answered);
+    var primary = null, triad = null;
+    diagnosis.reviews.some(function (review) {
+      var candidate = strongestTriad(diagnosis.matrix, review, diagnosis.answered);
+      if (!candidate) return false;
+      primary = review;
+      triad = candidate;
+      return true;
+    });
+    if (!primary) primary = diagnosis.reviews[0];
+    if (cycle) {
+      el("collab-consistency-why").textContent =
+        "Suas respostas indicam a seguinte linha de raciocínio: “" + names[cycle.first] +
+        "” deve ter prioridade sobre “" + names[cycle.second] + "”, e “" + names[cycle.second] +
+        "” deve ter prioridade sobre “" + names[cycle.third] + "”. Portanto, seria lógico esperar que “" +
+        names[cycle.first] + "” também tivesse prioridade sobre “" + names[cycle.third] +
+        "”. Contudo, na comparação direta entre “" + names[cycle.first] + "” e “" + names[cycle.third] +
+        "”, você indicou o contrário. Isso significa que os três julgamentos não podem ser verdadeiros simultaneamente dentro da mesma lógica de priorização.";
+    } else if (primary && triad) {
+      el("collab-consistency-why").textContent =
+        "Suas respostas indicam a seguinte linha de raciocínio: " +
+        describeJudgment(diagnosis.matrix, primary.i, triad.k, names) + ", e " +
+        describeJudgment(diagnosis.matrix, triad.k, primary.j, names) + ". Contudo, na comparação direta, você informou que " +
+        describeJudgment(diagnosis.matrix, primary.i, primary.j, names) +
+        ". Embora a ordem geral não esteja invertida, as intensidades desses três julgamentos não são compatíveis entre si dentro da mesma lógica de priorização.";
+    } else if (primary) {
+      el("collab-consistency-why").textContent =
+        "Suas respostas indicam que " + describeJudgment(diagnosis.matrix, primary.i, primary.j, names) +
+        ". Contudo, esse julgamento destoa das demais comparações feitas com “" + names[primary.i] +
+        "” e “" + names[primary.j] + "”. Isso significa que as respostas não sustentam simultaneamente a mesma lógica de priorização.";
+    } else {
+      el("collab-consistency-why").textContent =
+        "A RC reúne as relações entre todos os critérios. Neste momento, as intensidades informadas formam proporções que não podem ser mantidas simultaneamente de modo coerente.";
+    }
+    el("collab-consistency-tip").textContent =
+      "Pense novamente na ordem desses três critérios para o objetivo desta análise e altere apenas a comparação que não representa sua avaliação real. Ajuste um par por vez e aguarde o recálculo da RC.";
+    consistencyHelpReturnFocus = document.activeElement;
+    el("collab-consistency-modal").hidden = false;
+    el("collab-consistency-modal-close").focus();
   }
 
   function updateProgressHint(cr) {
@@ -354,5 +475,13 @@
       });
     el("btn-liberar-form").addEventListener("click", liberarFormulario);
     el("btn-enviar-resposta").addEventListener("click", enviarResposta);
+    el("collab-consistency-help-button").addEventListener("click", openConsistencyHelp);
+    el("collab-consistency-modal-close").addEventListener("click", closeConsistencyHelp);
+    el("collab-consistency-modal").addEventListener("click", function (event) {
+      if (event.target === event.currentTarget) closeConsistencyHelp();
+    });
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape" && !el("collab-consistency-modal").hidden) closeConsistencyHelp();
+    });
   });
 })(window);

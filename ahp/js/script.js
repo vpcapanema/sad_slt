@@ -885,23 +885,22 @@ function buildSaatyPair(i, j, sourceCriteria) {
 }
 
 function initSaatySliders() {
-  // Largura única para todas as setas: cobre o par de critérios mais largo
-  // (ou um mínimo que comporte as 9 graduações da escala).
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d");
-  const fam = getComputedStyle(document.body).fontFamily || "sans-serif";
-  ctx.font = "700 16px " + fam;
-  let maxPair = 0;
-  for (let i = 0; i < criteria.length - 1; i++) {
-    for (let j = i + 1; j < criteria.length; j++) {
-      const w = ctx.measureText(criteria[i]).width + ctx.measureText(criteria[j]).width;
-      if (w > maxPair) maxPair = w;
-    }
-  }
-  const width = Math.max(Math.round(maxPair + 120), 740);
-  document.documentElement.style.setProperty("--saaty-w", width + "px");
-
+  // Cada régua ocupa a largura real do card; a apresentação se ajusta ao mobile.
   document.querySelectorAll(".saaty-pair").forEach(wireSaaty);
+
+  function fitSaatyScales() {
+    document.querySelectorAll(".saaty-widget").forEach(widget => {
+      const available = widget.getBoundingClientRect().width;
+      const ratio = Math.max(0.68, Math.min(1, available / 600));
+      widget.style.setProperty("--saaty-fit", ratio.toFixed(3));
+    });
+  }
+  fitSaatyScales();
+  if (window.__saatyFitObserver) window.__saatyFitObserver.disconnect();
+  if (typeof ResizeObserver === "function") {
+    window.__saatyFitObserver = new ResizeObserver(fitSaatyScales);
+    document.querySelectorAll(".saaty-widget").forEach(widget => window.__saatyFitObserver.observe(widget));
+  }
 }
 
 function wireSaaty(pair) {

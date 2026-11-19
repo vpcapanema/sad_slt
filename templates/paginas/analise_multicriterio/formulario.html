@@ -13,7 +13,7 @@
 	<link rel="stylesheet" href="/assets/css/ahp-module.css?v=20261103-regua-invertida">
 	<link rel="stylesheet" href="/assets/css/analise-multicriterio.css?v=20260819-ui6">
 	<link rel="stylesheet" href="/assets/css/escala-tipografica.css">
-	<link rel="stylesheet" href="/assets/css/paginas/ahp-formulario-publico.css?v=20261104-matriz-destaques">
+	<link rel="stylesheet" href="/assets/css/paginas/ahp-formulario-publico.css?v=20261118-ajuda-consistencia-60">
 {% endblock %}
 
 {% block conteudo %}
@@ -84,9 +84,9 @@
 							<div class="collab-guia-passos-bloco">
 								<p class="collab-guia-subtitulo">Como atribuir a importância em cada card</p>
 								<ol class="collab-guia-passos">
-									<li><span class="collab-guia-passo-num" aria-hidden="true">1</span><div><strong>Identifique a referência</strong><p>Leia o título e os nomes marcados como <b>critério 1</b> e <b>critério 2</b>. Decida qual deles é mais importante para o objetivo, ou se têm igual importância.</p></div></li>
-									<li><span class="collab-guia-passo-num" aria-hidden="true">2</span><div><strong>Escolha o lado e a intensidade</strong><p>Mova o seletor para a <b>esquerda</b> para favorecer o critério 1, ou para a <b>direita</b> para favorecer o critério 2. Quanto mais longe do centro, mais intensa é a preferência pelo critério favorecido. Para igualdade, mantenha <b>Igual (1)</b>.</p></div></li>
-									<li><span class="collab-guia-passo-num" aria-hidden="true">3</span><div><strong>Confira a leitura e o valor oposto</strong><p>A frase abaixo da barra explica sua escolha. O <b>valor oposto</b> compara o critério 2 com o critério 1 e é aplicado automaticamente como recíproco: se a escolha é 3, o oposto é 1/3; se é 1/3, o oposto é 3. Não é necessário preencher essa comparação novamente.</p></div></li>
+									<li><div class="collab-guia-passo-cabecalho"><span class="collab-guia-passo-num" aria-hidden="true">1</span><strong>Identifique a referência</strong></div><p>Leia o título e os nomes marcados como <b>critério 1</b> e <b>critério 2</b>. Decida qual deles é mais importante para o objetivo, ou se têm igual importância.</p></li>
+									<li><div class="collab-guia-passo-cabecalho"><span class="collab-guia-passo-num" aria-hidden="true">2</span><strong>Escolha o lado e a intensidade</strong></div><p>Mova o seletor para a <b>esquerda</b> para favorecer o critério 1, ou para a <b>direita</b> para favorecer o critério 2. Quanto mais longe do centro, mais intensa é a preferência pelo critério favorecido. Para igualdade, mantenha <b>Igual (1)</b>.</p></li>
+									<li><div class="collab-guia-passo-cabecalho"><span class="collab-guia-passo-num" aria-hidden="true">3</span><strong>Confira a leitura e o valor oposto</strong></div><p>A frase abaixo da barra explica sua escolha. O <b>valor oposto</b> compara o critério 2 com o critério 1 e é aplicado automaticamente como recíproco: se a escolha é 3, o oposto é 1/3; se é 1/3, o oposto é 3. Não é necessário preencher essa comparação novamente.</p></li>
 								</ol>
 							</div>
 						</section>
@@ -103,23 +103,25 @@
 								<div class="ahp-metric-card"><div class="ahp-metric-card__label">Índice de consistência (IC)</div><div class="ahp-metric-card__value" id="metricICValue">—</div></div>
 								<div class="ahp-metric-card"><div class="ahp-metric-card__label">Razão de consistência (RC)</div><div class="ahp-metric-card__value" id="metricRCValue">—</div><div id="collab-rc-status" class="ahp-metric-card__sub" role="status">RC zero</div></div>
 							</div>
-							<div id="collab-consistency-help" class="ahp-recommendation" role="status" aria-live="polite" hidden></div>
 						</section>
 						<div class="ami-tabs collab-pair-tabs" role="tablist" aria-label="Representação das comparações pareadas">
 							<button type="button" id="collab-tab-form" class="is-active" role="tab" aria-selected="true" aria-controls="collab-panel-form">Formulário de comparação pareada</button>
 							<button type="button" id="collab-tab-matrix" role="tab" aria-selected="false" aria-controls="collab-panel-matrix" tabindex="-1">Matriz de comparação pareada</button>
 						</div>
-						<p id="collab-matrix-legend" class="collab-pairwise-intro">Na matriz, cada valor compara o critério da linha com o da coluna. A diagonal é 1; as duas metades são recíprocas. Cada célula usa a cor do seu valor na régua da escala de Saaty, inclusive os valores inversos e a igualdade. As cores não indicam validação. A matriz é somente leitura: faça ajustes na aba formulário.</p>
 						<div class="collab-pairs-quadrant">
 							<aside class="collab-rc-sidebar" tabindex="0" aria-label="Consistência das comparações. Arraste ou use as setas para mover; Home restaura a posição." title="Arraste para mover; use as setas pelo teclado">
 								<div id="collab-rc-sticky" class="ahp-metric-card"><span id="collab-reciprocal-hint" class="ahp-metric-card__sub" role="status" aria-live="polite"></span></div>
+								<button type="button" id="collab-consistency-help-button" class="collab-consistency-help-button" aria-label="Pedir ajuda ao sistema" title="Pedir ajuda ao sistema" hidden><i class="fas fa-circle-question" aria-hidden="true"></i></button>
 								<button type="button" class="collab-rc-resize" aria-label="Redimensionar indicador de consistência" aria-description="Use as setas para aumentar ou diminuir; Home restaura 100%. Limites de 50% a 200%, conforme o espaço disponível." title="Arraste o canto para redimensionar; setas ajustam e Home restaura 100%"></button>
 							</aside>
 							<div id="collab-panel-form" role="tabpanel" aria-labelledby="collab-tab-form">
+								<p id="collab-form-legend" class="collab-pairwise-intro">No formulário, cada card apresenta um par de critérios. Mova o seletor pela escala para indicar qual critério é mais importante e com qual intensidade. A frase exibida abaixo da régua confirma a escolha, e o valor da comparação no sentido oposto é calculado automaticamente. Revise todos os cards antes de enviar a resposta.</p>
 								<div id="comparisonContent" class="ahp-comparison-content"></div>
 							</div>
 							<div id="collab-panel-matrix" role="tabpanel" aria-labelledby="collab-tab-matrix" hidden>
-								<div id="collab-matrix-wrap" class="matrix-table-wrap collab-readonly-matrix" tabindex="0" role="region" aria-label="Matriz de comparação pareada, somente leitura" aria-describedby="collab-matrix-legend"></div>
+								<h3 id="collab-matrix-title" class="collab-matrix-title">Matriz da comparação pareada — valores da linha em relação à coluna</h3>
+								<p id="collab-matrix-legend" class="collab-pairwise-intro">Cada célula apresenta a importância do critério da linha em relação ao critério da coluna. A diagonal permanece igual a 1 e as duas metades são recíprocas. As cores correspondem aos valores da escala de Saaty e não representam validação. Esta matriz é somente para conferência; faça qualquer ajuste na aba formulário.</p>
+								<div id="collab-matrix-wrap" class="matrix-table-wrap collab-readonly-matrix" tabindex="0" role="region" aria-labelledby="collab-matrix-title" aria-describedby="collab-matrix-legend"></div>
 							</div>
 						</div>
 					</div>
@@ -130,15 +132,26 @@
 			</div>
 		</section>
 </main>
+	<div id="collab-consistency-modal" class="ahp-coerencia-modal-overlay ahp-modal--warning" hidden>
+		<section class="ahp-coerencia-modal card" role="dialog" aria-modal="true" aria-labelledby="collab-consistency-modal-title" aria-describedby="collab-consistency-modal-summary">
+			<header class="ahp-coerencia-modal__head"><i class="fas fa-circle-question" aria-hidden="true"></i><h2 id="collab-consistency-modal-title">Ajuda de consistência AHP</h2><button type="button" id="collab-consistency-modal-close" class="collab-consistency-modal-close" aria-label="Fechar ajuda"><i class="fas fa-xmark" aria-hidden="true"></i></button></header>
+			<div class="ahp-coerencia-modal__body">
+				<p id="collab-consistency-modal-summary" class="ahp-coerencia-modal__intro"></p>
+				<section aria-labelledby="collab-consistency-pairs-title"><h3 id="collab-consistency-pairs-title">Pares que merecem revisão</h3><ol id="collab-consistency-pairs" class="ahp-coerencia-modal__list"></ol></section>
+				<section class="collab-consistency-explanation" aria-labelledby="collab-consistency-why-title"><h3 id="collab-consistency-why-title">Por que há inconsistência?</h3><p id="collab-consistency-why"></p></section>
+				<section class="collab-consistency-explanation" aria-labelledby="collab-consistency-tip-title"><h3 id="collab-consistency-tip-title">Como resolver</h3><p id="collab-consistency-tip"></p></section>
+			</div>
+		</section>
+	</div>
 {% endblock %}
 
 {% block scripts_pagina %}
 	<script defer src="/assets/js/saaty-selector-color.js?v=20261104-paleta"></script>
-	<script defer src="/restrict/ahp/js/ahp-core.js?v=20261104-zero-formatado"></script>
+	<script defer src="/restrict/ahp/js/ahp-core.js?v=20261118-ajuda-consistencia-60"></script>
 	<script defer src="/restrict/ahp/js/colaborativa-api.js?v=20261027-modelo-pli"></script>
 	{% if modo_modelo %}<script defer src="/restrict/ahp/js/colaborativa-modelo.js?v=20261027-1"></script>{% else %}<script defer src="/restrict/ahp/js/colaborativa-simulacao.js?v=20261027-1"></script>{% endif %}
-	<script defer src="/restrict/ahp/js/script.js?v=20261104-zero-formatado"></script>
-	<script defer src="/restrict/ahp/js/colaborativa.js?v=20261104-zero-formatado"></script>
-	<script defer src="/assets/js/paginas/ahp-comparacao-abas.js?v=20261104-matriz-contraste"></script>
+	<script defer src="/restrict/ahp/js/script.js?v=20261118-regua-mobile-inteira"></script>
+	<script defer src="/restrict/ahp/js/colaborativa.js?v=20261118-ajuda-consistencia-60"></script>
+	<script defer src="/assets/js/paginas/ahp-comparacao-abas.js?v=20261118-ajuda-consistencia-modal"></script>
 	<script defer src="/assets/js/paginas/ahp-formulario-layout.js?v=20261104-card-default-90"></script>
 {% endblock %}

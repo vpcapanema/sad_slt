@@ -7,7 +7,7 @@ const BASE = process.env.SICARD_BROWSER_BASE_URL || 'http://127.0.0.1:8083';
   try {
     const page = await browser.newPage();
     const errors = [];
-    page.on('pageerror', error => errors.push(error.message));
+    page.on('pageerror', error => errors.push(error.stack || error.message));
     const names = ['Custo', 'Prazo', 'Benefício', 'Acesso', 'Segurança'];
     const initial = names.map((_, i) => names.map((_, j) => i === j ? 1 : 1));
     await page.route('**/api/**', route => {
@@ -24,7 +24,7 @@ const BASE = process.env.SICARD_BROWSER_BASE_URL || 'http://127.0.0.1:8083';
     await page.locator('#colab-nome').fill('Ana');
     await page.locator('#colab-inst').fill('Instituição');
     await page.locator('#colab-email').fill('ana@example.com');
-    await page.locator('#colab-token').fill('012345');
+    await page.locator('#colab-token').fill('0123456789012345678901234567890123456789012');
     await page.locator('#btn-liberar-form').click();
     await page.locator('#collab-form-section').waitFor({ state: 'visible' });
     const icons = {
@@ -73,23 +73,36 @@ const BASE = process.env.SICARD_BROWSER_BASE_URL || 'http://127.0.0.1:8083';
     assert.equal(await labels.evaluateAll(elements => elements.every(el => el.scrollWidth <= el.clientWidth + 1)), true, 'Ícones não cortam os nomes em tela estreita');
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.clock.install();
-    const help = page.locator('#collab-consistency-help');
+    const help = page.locator('#collab-consistency-help-button');
+    const modal = page.locator('#collab-consistency-modal');
     const scales = page.locator('#comparisonContent .saaty-scale');
     assert.equal(await help.isVisible(), false, 'Initial equality is not an answer');
-    for (let i = 0; i < 7; i++) await scales.nth(i).press(i === 3 ? 'Home' : 'ArrowRight');
+    for (let i = 0; i < 5; i++) await scales.nth(i).press(i === 0 ? 'ArrowLeft' : (i === 3 ? 'Home' : 'ArrowRight'));
     await page.clock.runFor(1100);
-    assert.equal(await help.isVisible(), false, 'Exactly 7/10 answered must not display help');
-    await scales.nth(7).press('ArrowRight');
+    assert.equal(await help.isVisible(), false, 'Below 60% must not display help');
+    await scales.nth(5).press('ArrowLeft');
     await page.clock.runFor(1100);
     assert.equal(await help.isVisible(), true);
-    assert.match(await help.textContent(), /8\/10.*provisório/);
-    assert.ok(await help.locator('li a').count() > 0);
+    assert.equal(await help.getAttribute('title'), 'Pedir ajuda ao sistema');
+    assert.equal(await help.locator('i.fa-circle-question').count(), 1);
     const before = await page.evaluate(() => JSON.stringify(buildLiveMatrix()));
-    await help.locator('li a').first().click();
+    await help.click();
+    assert.equal(await modal.isVisible(), true);
+    assert.match(await page.locator('#collab-consistency-modal-summary').textContent(), /6 de 10 pares \(60%\).*não altera/);
+    assert.ok(await page.locator('#collab-consistency-pairs li a').count() > 0);
+    assert.match(await page.locator('#collab-consistency-why').textContent(), /^Suas respostas indicam a seguinte linha de raciocínio:/);
+    assert.match(await page.locator('#collab-consistency-why').textContent(), /Portanto, seria lógico esperar que/);
+    assert.match(await page.locator('#collab-consistency-why').textContent(), /você indicou o contrário/);
+    assert.doesNotMatch(await page.locator('#collab-consistency-why').textContent(), /Critério de referência/);
+    assert.doesNotMatch(await page.locator('#collab-consistency-why').textContent(), /relação próxima de \d+/);
+    assert.match(await page.locator('#collab-consistency-tip').textContent(), /Pense novamente na ordem desses três critérios/i);
+    assert.equal(await page.evaluate(() => JSON.stringify(buildLiveMatrix())), before);
+    await page.locator('#collab-consistency-pairs li a').first().click();
     assert.equal(await page.evaluate(() => document.activeElement.classList.contains('saaty-scale')), true);
     assert.equal(await page.evaluate(() => JSON.stringify(buildLiveMatrix())), before);
-    assert.equal(await help.evaluate(el => getComputedStyle(el).fontSize),
-      await page.locator('#collab-save-feedback').evaluate(el => getComputedStyle(el).fontSize));
+    await help.click();
+    await page.keyboard.press('Escape');
+    assert.equal(await modal.isVisible(), false, 'Escape closes help');
     for (let i = 0; i < 10; i++) {
       await scales.nth(i).press('Home');
       for (let k = 0; k < 4; k++) await scales.nth(i).press('ArrowRight');
@@ -97,7 +110,7 @@ const BASE = process.env.SICARD_BROWSER_BASE_URL || 'http://127.0.0.1:8083';
     await page.clock.runFor(1100);
     assert.equal(await help.isVisible(), false, 'Hide after consistency is restored');
     assert.deepEqual(errors, []);
-    console.log('PASS: ícones semânticos automáticos, nomes preservados, fonte local, tela estreita, HTML escapado e ajuda de consistência sem alterar respostas.');
+    console.log('PASS: ícones semânticos, tela estreita e ajuda de consistência em modal a partir de 60%, sem alterar respostas.');
   } finally {
     await browser.close();
   }

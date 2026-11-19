@@ -16,7 +16,7 @@ from api.services.comparacao_colaborativa_service import (
     _validar_ambiente_ativo, _criterios_convidado, _criterio_nomes,
 )
 
-ASSUNTO = "Convite para preenchimento colaborativo AHP - SICARD"
+ASSUNTO = "Convite para preenchimento colaborativo AHP - PLI - SICARD"
 _CODIGO_LINK = re.compile(r"[0-9a-f]{32}")
 logger = logging.getLogger(__name__)
 

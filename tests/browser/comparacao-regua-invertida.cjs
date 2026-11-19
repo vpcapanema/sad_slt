@@ -93,6 +93,90 @@ async function checkColor(page) {
       console.log('PASS formulário ' + (suffix || 'modelo') + ': nove posições, cálculo, recíprocos e reabertura.');
     }
 
+    await page.setViewportSize({width: 320, height: 800});
+    await page.goto(base + '/public/analise-multicriterio/formulario-comparacao-pareada/');
+    await page.evaluate(() => {
+      criteria = ['Critério ambiental com nome extenso', 'Critério social com nome extenso'];
+      generatePairwiseFormStep4();
+      document.getElementById('collab-form-section').classList.remove('is-hidden');
+    });
+    const mobile = await page.locator('.saaty-widget').first().evaluate(widget => {
+      const scale = widget.querySelector('.saaty-scale').getBoundingClientRect();
+      const card = widget.closest('.saaty-pair').getBoundingClientRect();
+      const ticks = [...widget.querySelectorAll('.saaty-tick')].map(tick => tick.getBoundingClientRect());
+      const labels = [...widget.querySelectorAll('.saaty-tick-desc')].map(label => label.getBoundingClientRect());
+      return {
+        scaleLeft: scale.left, scaleRight: scale.right, cardLeft: card.left, cardRight: card.right,
+        overflow: widget.scrollWidth - widget.clientWidth,
+        firstLeft: ticks[0].left, lastRight: ticks[ticks.length - 1].right,
+        fit: getComputedStyle(widget).getPropertyValue('--saaty-fit').trim(),
+        labelFont: parseFloat(getComputedStyle(widget.querySelector('.saaty-tick-desc')).fontSize),
+        handleWidth: widget.querySelector('.saaty-handle').getBoundingClientRect().width,
+        tickColor: getComputedStyle(widget.querySelector('.saaty-tick-mark')).backgroundColor,
+        tickLayer: Number(getComputedStyle(widget.querySelector('.saaty-tick')).zIndex),
+        arrowLayer: Number(getComputedStyle(widget.querySelector('.saaty-arrow')).zIndex),
+        firstLabel: labels[0], secondLabel: labels[1], penultimateLabel: labels[labels.length - 2], lastLabel: labels[labels.length - 1],
+      };
+    });
+    assert.ok(mobile.scaleLeft >= mobile.cardLeft && mobile.scaleRight <= mobile.cardRight,
+      'A escala inteira deve caber dentro do card mobile');
+    assert.ok(mobile.firstLeft >= mobile.cardLeft && mobile.lastRight <= mobile.cardRight,
+      'As duas extremidades da escala devem permanecer visíveis');
+    assert.ok(mobile.overflow <= 1, 'A régua mobile não deve exigir rolagem horizontal');
+    assert.ok(Number(mobile.fit) < 1, 'O JavaScript deve reduzir proporcionalmente a régua no mobile');
+    const textAlignment = await page.locator('.collab-guia-resumo').evaluate(element => getComputedStyle(element).textAlign);
+    assert.equal(textAlignment, 'justify', 'Parágrafos de texto corrido devem permanecer justificados no mobile');
+    const participationSteps = await page.locator('.secao-collab-scope-steps li').evaluateAll(elements =>
+      elements.map(element => getComputedStyle(element).textAlign));
+    assert.equal(participationSteps.length, 6, 'O passo a passo da participação deve manter seis opções');
+    assert.ok(participationSteps.every(alignment => alignment === 'justify'),
+      'Os textos das seis opções do passo a passo devem ficar justificados');
+    const guideCards = await page.locator('.collab-guia-passos li').evaluateAll(cards => cards.map(card => {
+      const header = card.querySelector('.collab-guia-passo-cabecalho');
+      const number = card.querySelector('.collab-guia-passo-num').getBoundingClientRect();
+      const title = header.querySelector('strong').getBoundingClientRect();
+      const text = card.querySelector('p').getBoundingClientRect();
+      const style = getComputedStyle(card);
+      return {
+        centerDifference: Math.abs((number.top + number.height / 2) - (title.top + title.height / 2)),
+        textAlignment: getComputedStyle(card.querySelector('p')).textAlign,
+        rightGap: card.getBoundingClientRect().right - text.right - parseFloat(style.paddingRight),
+      };
+    }));
+    assert.ok(guideCards.every(card => card.centerDifference < 1),
+      'A bolinha deve ficar centralizada verticalmente em relação ao título do card');
+    assert.ok(guideCards.every(card => card.textAlignment === 'justify' && Math.abs(card.rightGap) < 2),
+      'O texto explicativo deve ser justificado e ocupar toda a largura útil do card');
+    const tabIntroSpacing = await page.locator('#collab-panel-form > .collab-pairwise-intro').evaluate(element => {
+      const style = getComputedStyle(element);
+      return {top: parseFloat(style.marginTop), bottom: parseFloat(style.marginBottom)};
+    });
+    assert.ok(tabIntroSpacing.top >= tabIntroSpacing.bottom,
+      'O texto abaixo das abas deve ter folga superior igual ou maior que a inferior');
+    assert.match(await page.locator('#collab-form-legend').textContent(), /cada card apresenta um par de critérios/i,
+      'A orientação da aba formulário deve explicar a realidade dos cards');
+    await page.locator('#collab-tab-matrix').click();
+    assert.equal(await page.locator('#collab-form-legend').isVisible(), false,
+      'A orientação do formulário não deve aparecer na aba matriz');
+    assert.equal(await page.locator('#collab-matrix-title').isVisible(), true);
+    assert.equal(await page.locator('#collab-matrix-title').evaluate(element => getComputedStyle(element).textAlign), 'left');
+    assert.equal(await page.locator('#collab-matrix-wrap caption').count(), 0,
+      'O título da matriz não deve permanecer dentro do contêiner da tabela');
+    assert.equal(await page.locator('#collab-matrix-title').evaluate(element =>
+      element.nextElementSibling.nextElementSibling.id), 'collab-matrix-wrap',
+      'Título e explicação devem ficar acima e fora do contêiner da matriz');
+    await page.locator('#collab-tab-form').click();
+    assert.ok(mobile.labelFont < 8.96 && mobile.handleWidth < 22,
+      'Textos e seletor devem acompanhar proporcionalmente a largura mobile');
+    assert.equal(mobile.tickColor, 'rgb(0, 0, 0)', 'Os tiques da régua devem ser pretos');
+    assert.ok(mobile.tickLayer < mobile.arrowLayer, 'Os tiques devem ficar atrás da barra colorida');
+    assert.ok(mobile.firstLabel.height < mobile.firstLabel.width && mobile.lastLabel.height < mobile.lastLabel.width,
+      'Os dois rótulos Extremamente devem permanecer horizontais');
+    const overlaps = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+    assert.ok(!overlaps(mobile.firstLabel, mobile.secondLabel) && !overlaps(mobile.penultimateLabel, mobile.lastLabel),
+      'Os rótulos Extremamente não devem se sobrepor aos vizinhos');
+    console.log('PASS mobile 320px: régua completa, extremos visíveis e sem rolagem horizontal.');
+
     const source = fs.readFileSync(path.join(__dirname, '..', '..', 'assets', 'js', 'paginas', 'analise-multicriterio-julgamentos.js'), 'utf8');
     const start = source.indexOf('  var FORM_SAATY_STEPS =');
     const end = source.indexOf('  function renderPairwise(', start);

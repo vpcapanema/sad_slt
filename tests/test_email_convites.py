@@ -103,6 +103,11 @@ def test_preserva_texto_acrescenta_token_e_nao_repete_apos_recarga(ambiente, smt
     smtp.assert_called_once()
 
 
+def test_convite_usa_assunto_institucional_pli_sicard(ambiente, smtp, registros):
+    service.enviar(ambiente["id"], payload(ambiente), "analista")
+    assert smtp.call_args.args[0].assunto == "Convite para preenchimento colaborativo AHP - PLI - SICARD"
+
+
 def test_reenvio_explicito_preserva_historico_e_idempotencia(ambiente, smtp, monkeypatch):
     rows = {}
     def reservar(ambiente_id, destinatario, resumo, mensagem_id, usuario_id, versao):

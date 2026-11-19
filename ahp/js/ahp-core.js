@@ -89,7 +89,7 @@
         if (answeredPairs.has(i + "_" + j)) pairs.push({ i, j });
       }
     }
-    if (!total || pairs.length / total <= 0.7) return [];
+    if (!total || pairs.length / total < 0.6) return [];
     const current = analyzeMatrix(matrix);
     if (current.CR < 0.1) return [];
     pairs.forEach(pair => {
@@ -101,12 +101,22 @@
     return pairs.sort((a, b) => b.deviation - a.deviation).slice(0, 8).map(pair => {
       const trial = matrix.map(row => row.slice());
       let bestCR = current.CR;
+      let bestValue = matrix[pair.i][pair.j];
       values.forEach(value => {
         trial[pair.i][pair.j] = value;
         trial[pair.j][pair.i] = 1 / value;
-        bestCR = Math.min(bestCR, analyzeMatrix(trial).CR);
+        const trialCR = analyzeMatrix(trial).CR;
+        if (trialCR < bestCR) {
+          bestCR = trialCR;
+          bestValue = value;
+        }
       });
-      return { i: pair.i, j: pair.j, projectedCR: bestCR, improvement: current.CR - bestCR };
+      return {
+        i: pair.i, j: pair.j,
+        currentValue: matrix[pair.i][pair.j], suggestedValue: bestValue,
+        deviation: pair.deviation, projectedCR: bestCR,
+        improvement: current.CR - bestCR,
+      };
     }).filter(pair => pair.improvement > 1e-8)
       .sort((a, b) => b.improvement - a.improvement).slice(0, 3);
   }

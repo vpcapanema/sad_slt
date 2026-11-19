@@ -120,7 +120,7 @@ def test_envia_texto_html_com_remetente_fixo_e_tls(client, smtp, perfil, caplog)
     ]
     call = servidor.send_message.call_args
     mensagem = call.args[0]
-    assert str(mensagem["From"]) == "SICARD <sicard@example.com>"
+    assert str(mensagem["From"]) == "PLI-SICARD <sicard@example.com>"
     assert str(mensagem["Reply-To"]) == "suporte@example.com"
     assert mensagem["Message-ID"] == body["id_mensagem"]
     assert mensagem["Subject"] == "Atualização da demanda"

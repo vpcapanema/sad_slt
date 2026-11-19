@@ -63,7 +63,6 @@
       namesKey = key;
       cells = [];
       var table = node("table", undefined, "matrix-table");
-      table.appendChild(node("caption", "Comparação pareada — valores da linha em relação à coluna"));
       var head = node("thead"), row = node("tr");
       var corner = node("th", "Linha / Coluna", "matrix-head");
       corner.scope = "col";
@@ -118,8 +117,9 @@
   form.addEventListener("saaty:change", sync);
   window.addEventListener("resize", sync);
   new MutationObserver(sync).observe(form, { childList: true, subtree: true, attributes: true, attributeFilter: ["class"] });
-  document.getElementById("collab-consistency-help").addEventListener("click", function (event) {
-    if (event.target.closest("a")) activate(tabs[0], false);
+  var consistencyModal = document.getElementById("collab-consistency-modal");
+  if (consistencyModal) consistencyModal.addEventListener("click", function (event) {
+    if (event.target.closest("#collab-consistency-pairs a")) activate(tabs[0], false);
   }, true);
   sync();
 })();
