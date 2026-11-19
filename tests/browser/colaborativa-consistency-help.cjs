@@ -197,6 +197,34 @@ const BASE = process.env.SICARD_BROWSER_BASE_URL || 'http://127.0.0.1:8083';
     assert.equal(await modal.isVisible(), false, 'Escape closes help');
     assert.equal(await page.locator('#collab-form-section .saaty-pair.is-consistency-review').count(), 0,
       'Fechar a ajuda remove o destaque temporário');
+
+    await help.click();
+    const projections = modal.locator('.collab-consistency-review-field:last-child input');
+    const originalProjections = await projections.evaluateAll(inputs => inputs.map(input => input.value));
+    await page.locator('#collab-consistency-modal-close').click();
+    assert.equal(await modal.isVisible(), false, 'O botão X fecha a ajuda');
+    const browserTime = await page.evaluate(() => Date.now());
+    await page.clock.pauseAt(browserTime + 1000);
+    await scales.first().press('ArrowRight');
+    const editedMatrix = await page.evaluate(() => buildLiveMatrix());
+    const updatedDiagnosis = await page.evaluate(matrix => {
+      const answered = new Set(['0_1', '0_2', '0_3', '0_4', '1_2', '1_3']);
+      return {
+        rc: SLTAhp.formatMetric(SLTAhp.analyzeMatrix(matrix).CR),
+        projections: SLTAhp.consistencyReviews(matrix, answered).map(review => SLTAhp.formatMetric(review.projectedCR)),
+      };
+    }, editedMatrix);
+    assert.notEqual(updatedDiagnosis.rc, liveDiagnosis.rc);
+    assert.equal(await page.locator('#liveMetrics').getAttribute('aria-busy'), 'true');
+    await help.click();
+    assert.equal(await modal.isVisible(), true, 'A ajuda reabre antes do recálculo agendado dos indicadores');
+    assert.ok((await page.locator('#collab-consistency-modal-summary').textContent()).includes(updatedDiagnosis.rc));
+    assert.notDeepEqual(updatedDiagnosis.projections, originalProjections);
+    assert.deepEqual(await projections.evaluateAll(inputs => inputs.map(input => input.value)), updatedDiagnosis.projections,
+      'A reabertura substitui as projeções anteriores pelas da matriz atual');
+    assert.deepEqual(await page.evaluate(() => buildLiveMatrix()), editedMatrix);
+    await page.locator('#collab-consistency-modal-close').click();
+
     for (let i = 0; i < 10; i++) {
       await scales.nth(i).press('Home');
       for (let k = 0; k < 4; k++) await scales.nth(i).press('ArrowRight');

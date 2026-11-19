@@ -16,7 +16,6 @@
   var pairTimers = new Map();
   var saveQueue = Promise.resolve();
   var editVersion = 0;
-  var consistencyDiagnosis = null;
   var consistencyHelpReturnFocus = null;
   var consistencyWindowDrag = null;
 
@@ -137,7 +136,7 @@
       res.CR < 0.1 ? "success" : "error"
     );
     updateProgressHint(res.CR);
-    updateConsistencyHelp(matrix, res.CR);
+    el("collab-consistency-help-button").hidden = !consistencyHelpState(matrix, res.CR);
     if (draftActive) {
       var version = editVersion;
       el("collab-save-feedback").textContent = "Alterações aguardando salvamento…";
@@ -152,8 +151,6 @@
     clearTimeout(saveTimer);
     editVersion++;
     latestCR = null;
-    el("collab-consistency-help-button").hidden = true;
-    consistencyDiagnosis = null;
     el("liveMetrics").setAttribute("aria-busy", "true");
     el("collab-rc-status").textContent = "Atualizando…";
     el("btn-enviar-resposta").disabled = true;
@@ -343,21 +340,16 @@
     return best;
   }
 
-  function updateConsistencyHelp(matrix, cr) {
-    var button = el("collab-consistency-help-button");
-    button.hidden = true;
-    consistencyDiagnosis = null;
+  function consistencyHelpState(matrix, cr) {
+    if (cr < 0.1) return null;
     var answered = new Set(Object.keys(stats.pares).filter(function (key) { return stats.pares[key] > 0; }));
     var total = matrix.length * (matrix.length - 1) / 2;
     var count = 0;
     for (var i = 0; i < matrix.length; i++) {
       for (var j = i + 1; j < matrix.length; j++) if (answered.has(i + "_" + j)) count++;
     }
-    if (!total || count / total < 0.6 || cr < 0.1) return;
-    var reviews = SLTAhp.consistencyReviews(matrix, answered);
-    consistencyDiagnosis = { matrix: matrix.map(function (row) { return row.slice(); }), cr: cr,
-      answered: answered, count: count, total: total, reviews: reviews };
-    button.hidden = false;
+    if (!total || count / total < 0.6) return null;
+    return { matrix: matrix, cr: cr, answered: answered, count: count, total: total };
   }
 
   function closeConsistencyHelp() {
@@ -442,12 +434,14 @@
   }
 
   function openConsistencyHelp() {
-    if (typeof buildLiveMatrix === "function" && typeof SLTAhp !== "undefined") {
-      var currentMatrix = buildLiveMatrix();
-      if (currentMatrix) updateConsistencyHelp(currentMatrix, SLTAhp.analyzeMatrix(currentMatrix).CR);
+    var matrix = buildLiveMatrix();
+    if (!matrix) return;
+    var diagnosis = consistencyHelpState(matrix, SLTAhp.analyzeMatrix(matrix).CR);
+    if (!diagnosis) {
+      el("collab-consistency-help-button").hidden = true;
+      return;
     }
-    if (!consistencyDiagnosis) return;
-    var diagnosis = consistencyDiagnosis;
+    diagnosis.reviews = SLTAhp.consistencyReviews(matrix, diagnosis.answered);
     var names = normalizeCriteriaNames(meta.criterios);
     var list = el("collab-consistency-pairs");
     list.replaceChildren();
