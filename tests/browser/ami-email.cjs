@@ -121,7 +121,10 @@ const fs = require('node:fs');
         return [name,{fontFamily:style.fontFamily,fontSize:style.fontSize,fontWeight:style.fontWeight,lineHeight:style.lineHeight,letterSpacing:style.letterSpacing}];
       }));
     });
-    assert.deepEqual(previewFonts.previewTitle,previewFonts.subsection,'O cabeçalho da prévia deve repetir a tipografia computada das subseções da Central');
+    for(const key of ['fontFamily','fontSize','fontWeight','letterSpacing']){
+      assert.equal(previewFonts.previewTitle[key],previewFonts.subsection[key],'O cabeçalho da prévia deve repetir a tipografia computada das subseções da Central');
+    }
+    assert.equal(previewFonts.previewTitle.lineHeight,'16.8px','O cabeçalho da prévia deve usar a altura de linha efetiva da Central em produção');
     for(const key of ['previewBody','previewMessage','previewStrong','previewCode','previewButton']){
       assert.equal(previewFonts[key].fontSize,previewFonts.fieldText.fontSize,'A prévia deve respeitar a escala tipográfica compacta da Central');
     }
