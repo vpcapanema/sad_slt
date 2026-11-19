@@ -311,12 +311,10 @@ export function criarResultados({avisar, aoOcupar}) {
   node('abrir').onclick = event => {
     event.preventDefault();
     operar(async () => {
-      const codigo = document.getElementById('ev-hierarquizacao')?.value || modelo?.entradas?.[0]?.hierarquizacao || 'HIER-20261019-183457-93E7';
       const arquivo = await escolherArquivo({
         title: 'Selecionar análise de elegibilidade já realizada',
         detalhesAnalise:true,
         raiz: 'saidas-geoespaciais', extensoes: ['gpkg'], validar: false, somenteReferencias: true,
-        pastaInicial: `saidas-geoespaciais/hierarquizacoes/${codigo}/fase-1`,
       });
       if (!arquivo) return;
       informar('Lendo e conferindo o resultado da análise selecionada no storage…');
