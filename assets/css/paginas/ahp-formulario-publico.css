@@ -144,6 +144,11 @@ body.ami-public-page {
 }
 
 .ami-public-page #collab-consistency-modal .ahp-coerencia-modal {
+  --consistency-font-title: 1rem;
+  --consistency-font-section: 0.875rem;
+  --consistency-font-lead: 0.8125rem;
+  --consistency-font-body: 0.78125rem;
+  --consistency-font-detail: 0.71875rem;
   width: min(100%, 680px);
 }
 
@@ -151,7 +156,19 @@ body.ami-public-page {
   flex: 1;
   margin: 0;
   color: inherit;
-  font: inherit;
+  font-family: inherit;
+  font-size: var(--consistency-font-title);
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: inherit;
+}
+
+.ami-public-page #collab-consistency-modal .ahp-coerencia-modal__intro {
+  font-size: var(--consistency-font-lead);
+}
+
+.ami-public-page #collab-consistency-modal .ahp-coerencia-modal__list {
+  font-size: var(--consistency-font-body);
 }
 
 .ami-public-page .collab-consistency-modal-close {
@@ -170,7 +187,7 @@ body.ami-public-page {
 
 .ami-public-page #collab-consistency-modal h3 {
   margin: 1rem 0 0.45rem;
-  font-size: 0.9rem;
+  font-size: var(--consistency-font-section);
   color: #003b5a;
 }
 
@@ -182,7 +199,73 @@ body.ami-public-page {
 
 .ami-public-page .collab-consistency-explanation p {
   margin: 0;
+  font-size: var(--consistency-font-body);
   line-height: 1.6;
+}
+
+.ami-public-page .collab-consistency-narrative {
+  display: grid;
+  gap: 0.8rem;
+  padding: 1rem;
+  border-left: 4px solid #f2b705;
+  border-radius: 0 6px 6px 0;
+  background: #fffaf0;
+}
+
+.ami-public-page .collab-consistency-narrative > * {
+  margin: 0;
+}
+
+.ami-public-page .collab-consistency-narrative__intro {
+  font-size: var(--consistency-font-lead);
+  font-weight: 700;
+  color: #003b5a;
+}
+
+.ami-public-page .collab-consistency-narrative__steps,
+.ami-public-page .collab-consistency-narrative__explanations {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.ami-public-page .collab-consistency-narrative__steps {
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+.ami-public-page .collab-consistency-narrative__steps li {
+  padding-left: 0.25rem;
+  font-size: var(--consistency-font-body);
+  font-weight: 600;
+  line-height: 1.55;
+}
+
+.ami-public-page .collab-consistency-narrative__contrast {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.75rem;
+  font-size: var(--consistency-font-detail);
+  border: 1px solid #f0c36d;
+  border-radius: 5px;
+  background: #fff;
+}
+
+.ami-public-page .collab-consistency-explanation p.collab-consistency-narrative__line {
+  margin: 0;
+  font-size: inherit;
+  line-height: 1.55;
+}
+
+.ami-public-page .collab-consistency-narrative strong {
+  font-size: inherit;
+  font-weight: 700;
+  color: #003b5a;
+}
+
+.ami-public-page .collab-consistency-explanation p.collab-consistency-narrative__conclusion {
+  font-size: var(--consistency-font-body);
+  font-weight: 700;
+  color: #7a4e00;
 }
 
 @media (max-width: 600px) {

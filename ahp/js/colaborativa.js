@@ -169,10 +169,10 @@
 
   function importanceIntensity(value) {
     var dominant = value < 1 ? 1 / value : value;
-    if (dominant < 2) return "levemente";
-    if (dominant < 4) return "moderadamente";
-    if (dominant < 6) return "fortemente";
-    if (dominant < 8) return "muito fortemente";
+    if (dominant < 2) return "igual";
+    if (dominant < 4) return "pouco";
+    if (dominant < 6) return "médio";
+    if (dominant < 8) return "bastante";
     return "extremamente";
   }
 
@@ -185,6 +185,120 @@
     var other = value > 1 ? second : first;
     return "“" + names[preferred] + "” foi considerado " + importanceIntensity(value) +
       " mais importante que “" + names[other] + "”";
+  }
+
+  function describeFromLeft(matrix, left, right, names) {
+    var value = matrix[left][right];
+    if (Math.abs(value - 1) < 1e-8) {
+      return "“" + names[left] + "” tem igual importância que “" + names[right] + "”";
+    }
+    return "“" + names[left] + "” é " + importanceIntensity(value) +
+      (value > 1 ? " mais" : " menos") + " importante que “" + names[right] + "”";
+  }
+
+  function describeExpectedRelation(value, first, second, names) {
+    if (Math.abs(value - 1) < 1e-8) {
+      return "“" + names[first] + "” e “" + names[second] + "” tivessem importância semelhante";
+    }
+    var preferred = value > 1 ? first : second;
+    var other = value > 1 ? second : first;
+    return "“" + names[preferred] + "” fosse, em nível " + importanceIntensity(value) +
+      ", mais importante que “" + names[other] + "”";
+  }
+
+  function appendCriterion(parent, name) {
+    var strong = document.createElement("strong");
+    strong.textContent = name;
+    parent.append(document.createTextNode("“"), strong, document.createTextNode("”"));
+  }
+
+  function appendJudgmentFromLeft(parent, matrix, left, right, names) {
+    var value = matrix[left][right];
+    appendCriterion(parent, names[left]);
+    if (Math.abs(value - 1) < 1e-8) {
+      parent.append(document.createTextNode(" tem igual importância que "));
+    } else {
+      parent.append(document.createTextNode(" é " + importanceIntensity(value) +
+        (value > 1 ? " mais" : " menos") + " importante que "));
+    }
+    appendCriterion(parent, names[right]);
+  }
+
+  function appendExpectedRelation(parent, value, first, second, names) {
+    if (Math.abs(value - 1) < 1e-8) {
+      appendCriterion(parent, names[first]);
+      parent.append(document.createTextNode(" e "));
+      appendCriterion(parent, names[second]);
+      parent.append(document.createTextNode(" tivessem importância semelhante"));
+      return;
+    }
+    var preferred = value > 1 ? first : second;
+    var other = value > 1 ? second : first;
+    appendCriterion(parent, names[preferred]);
+    parent.append(document.createTextNode(" fosse, em nível " + importanceIntensity(value) +
+      ", mais importante que "));
+    appendCriterion(parent, names[other]);
+  }
+
+  function renderConsistencyNarrative(container, matrix, names, reviews, answered) {
+    var triads = [], triadKeys = new Set(), pairKeys = new Set();
+    reviews.forEach(function (review) {
+      var evidence = strongestTriad(matrix, review, answered);
+      if (!evidence) return;
+      var indexes = [review.i, review.j, evidence.k].sort(function (a, b) { return a - b; });
+      var triadKey = indexes.join("_");
+      if (!triadKeys.has(triadKey)) {
+        triadKeys.add(triadKey);
+        triads.push(indexes);
+      }
+      [[indexes[0], indexes[1]], [indexes[0], indexes[2]], [indexes[1], indexes[2]]]
+        .forEach(function (pair) { pairKeys.add(pair[0] + "_" + pair[1]); });
+    });
+    if (!triads.length) return false;
+    var intro = document.createElement("p");
+    intro.className = "collab-consistency-narrative__intro";
+    intro.textContent = "Suas respostas indicam a seguinte linha de raciocínio:";
+    var steps = document.createElement("ol");
+    steps.className = "collab-consistency-narrative__steps";
+    Array.from(pairKeys).map(function (key) { return key.split("_").map(Number); })
+      .sort(function (a, b) { return a[0] - b[0] || a[1] - b[1]; })
+      .forEach(function (pair) {
+        var item = document.createElement("li");
+        appendJudgmentFromLeft(item, matrix, pair[0], pair[1], names);
+        item.append(document.createTextNode("."));
+        steps.appendChild(item);
+      });
+    var explanations = document.createElement("div");
+    explanations.className = "collab-consistency-narrative__explanations";
+    triads.forEach(function (indexes) {
+      var left = indexes[0], second = indexes[1], third = indexes[2];
+      var expected = matrix[second][left] * matrix[left][third];
+      var explanation = document.createElement("div");
+      explanation.className = "collab-consistency-narrative__contrast";
+      var expectationLine = document.createElement("p");
+      expectationLine.className = "collab-consistency-narrative__line";
+      expectationLine.append(document.createTextNode("Pelos julgamentos envolvendo "));
+      appendCriterion(expectationLine, names[left]);
+      expectationLine.append(document.createTextNode(", seria lógico esperar que "));
+      appendExpectedRelation(expectationLine, expected, second, third, names);
+      expectationLine.append(document.createTextNode("."));
+      var contrastLine = document.createElement("p");
+      contrastLine.className = "collab-consistency-narrative__line";
+      contrastLine.append(document.createTextNode("Contudo, na comparação entre "));
+      appendCriterion(contrastLine, names[second]);
+      contrastLine.append(document.createTextNode(" e "));
+      appendCriterion(contrastLine, names[third]);
+      contrastLine.append(document.createTextNode(", você definiu que "));
+      appendJudgmentFromLeft(contrastLine, matrix, second, third, names);
+      contrastLine.append(document.createTextNode("."));
+      explanation.append(expectationLine, contrastLine);
+      explanations.appendChild(explanation);
+    });
+    var conclusion = document.createElement("p");
+    conclusion.className = "collab-consistency-narrative__conclusion";
+    conclusion.textContent = "Isso significa que os julgamentos destacados não podem ser verdadeiros simultaneamente, considerando a mesma lógica de priorização.";
+    container.replaceChildren(intro, steps, explanations, conclusion);
+    return true;
   }
 
   function findPriorityCycle(matrix, answered) {
@@ -288,7 +402,6 @@
       ));
       list.appendChild(item);
     });
-    var cycle = findPriorityCycle(diagnosis.matrix, diagnosis.answered);
     var primary = null, triad = null;
     diagnosis.reviews.some(function (review) {
       var candidate = strongestTriad(diagnosis.matrix, review, diagnosis.answered);
@@ -298,21 +411,9 @@
       return true;
     });
     if (!primary) primary = diagnosis.reviews[0];
-    if (cycle) {
-      el("collab-consistency-why").textContent =
-        "Suas respostas indicam a seguinte linha de raciocínio: “" + names[cycle.first] +
-        "” deve ter prioridade sobre “" + names[cycle.second] + "”, e “" + names[cycle.second] +
-        "” deve ter prioridade sobre “" + names[cycle.third] + "”. Portanto, seria lógico esperar que “" +
-        names[cycle.first] + "” também tivesse prioridade sobre “" + names[cycle.third] +
-        "”. Contudo, na comparação direta entre “" + names[cycle.first] + "” e “" + names[cycle.third] +
-        "”, você indicou o contrário. Isso significa que os três julgamentos não podem ser verdadeiros simultaneamente dentro da mesma lógica de priorização.";
-    } else if (primary && triad) {
-      el("collab-consistency-why").textContent =
-        "Suas respostas indicam a seguinte linha de raciocínio: " +
-        describeJudgment(diagnosis.matrix, primary.i, triad.k, names) + ", e " +
-        describeJudgment(diagnosis.matrix, triad.k, primary.j, names) + ". Contudo, na comparação direta, você informou que " +
-        describeJudgment(diagnosis.matrix, primary.i, primary.j, names) +
-        ". Embora a ordem geral não esteja invertida, as intensidades desses três julgamentos não são compatíveis entre si dentro da mesma lógica de priorização.";
+    if (renderConsistencyNarrative(el("collab-consistency-why"), diagnosis.matrix, names,
+      diagnosis.reviews, diagnosis.answered)) {
+      // Lista todos os pares que participam das inconsistências diagnosticadas.
     } else if (primary) {
       el("collab-consistency-why").textContent =
         "Suas respostas indicam que " + describeJudgment(diagnosis.matrix, primary.i, primary.j, names) +
@@ -323,7 +424,7 @@
         "A RC reúne as relações entre todos os critérios. Neste momento, as intensidades informadas formam proporções que não podem ser mantidas simultaneamente de modo coerente.";
     }
     el("collab-consistency-tip").textContent =
-      "Pense novamente na ordem desses três critérios para o objetivo desta análise e altere apenas a comparação que não representa sua avaliação real. Ajuste um par por vez e aguarde o recálculo da RC.";
+      "Pense novamente na ordem dos critérios destacados para o objetivo desta análise e altere apenas as comparações que não representam sua avaliação real. Ajuste um par por vez e aguarde o recálculo da RC.";
     consistencyHelpReturnFocus = document.activeElement;
     el("collab-consistency-modal").hidden = false;
     el("collab-consistency-modal-close").focus();

@@ -91,11 +91,32 @@ const BASE = process.env.SICARD_BROWSER_BASE_URL || 'http://127.0.0.1:8083';
     assert.match(await page.locator('#collab-consistency-modal-summary').textContent(), /6 de 10 pares \(60%\).*não altera/);
     assert.ok(await page.locator('#collab-consistency-pairs li a').count() > 0);
     assert.match(await page.locator('#collab-consistency-why').textContent(), /^Suas respostas indicam a seguinte linha de raciocínio:/);
-    assert.match(await page.locator('#collab-consistency-why').textContent(), /Portanto, seria lógico esperar que/);
-    assert.match(await page.locator('#collab-consistency-why').textContent(), /você indicou o contrário/);
+    assert.ok(await page.locator('#collab-consistency-why .collab-consistency-narrative__steps li').count() >= 3,
+      'Lists every pair involved, not a fixed two-item example');
+    assert.match(await page.locator('#collab-consistency-why').textContent(), /seria lógico esperar que/i);
+    assert.match(await page.locator('#collab-consistency-why').textContent(), /pouco|médio|bastante|extremamente|igual importância/i);
+    assert.ok(await page.locator('#collab-consistency-why .collab-consistency-narrative__contrast').count() >= 1);
+    assert.ok(await page.locator('#collab-consistency-why .collab-consistency-narrative__contrast').first().locator('strong').count() >= 5,
+      'Criterion names are bold inside the white explanation box');
+    assert.equal(await page.locator('#collab-consistency-why .collab-consistency-narrative__contrast').first().locator('.collab-consistency-narrative__line').count(), 2,
+      'Each new argument starts in its own text block');
     assert.doesNotMatch(await page.locator('#collab-consistency-why').textContent(), /Critério de referência/);
     assert.doesNotMatch(await page.locator('#collab-consistency-why').textContent(), /relação próxima de \d+/);
-    assert.match(await page.locator('#collab-consistency-tip').textContent(), /Pense novamente na ordem desses três critérios/i);
+    assert.match(await page.locator('#collab-consistency-tip').textContent(), /Pense novamente na ordem dos critérios destacados/i);
+    const fontSizes = await page.evaluate(() => {
+      const size = selector => parseFloat(getComputedStyle(document.querySelector(selector)).fontSize);
+      return {
+        title: size('#collab-consistency-modal-title'),
+        section: size('#collab-consistency-why-title'),
+        lead: size('.collab-consistency-narrative__intro'),
+        step: size('.collab-consistency-narrative__steps li'),
+        whiteBox: size('.collab-consistency-narrative__contrast'),
+      };
+    });
+    assert.ok(fontSizes.title > fontSizes.section, 'Modal title is larger than section titles');
+    assert.ok(fontSizes.section > fontSizes.lead, 'Section title is larger than its lead text');
+    assert.ok(fontSizes.lead >= fontSizes.step, 'Lead text is not smaller than the reasoning items');
+    assert.ok(fontSizes.step > fontSizes.whiteBox, 'White-box explanation is the smallest nested text level');
     assert.equal(await page.evaluate(() => JSON.stringify(buildLiveMatrix())), before);
     await page.locator('#collab-consistency-pairs li a').first().click();
     assert.equal(await page.evaluate(() => document.activeElement.classList.contains('saaty-scale')), true);
