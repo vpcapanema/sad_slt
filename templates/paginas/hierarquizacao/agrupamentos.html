@@ -81,7 +81,9 @@
             <div class="ahp-subsection-title"><span class="ahp-subsection-num">2.2</span><span>Tabela de demandas do universo</span></div>
             {% set filtro_prefixo = "universo-filtro" %}
             {% set filtro_rotulo = "Filtrar demandas do universo" %}
+            {% with filtro_selecionar_tudo = true %}
             {% include "componentes/filtro_tabela.html" %}
+            {% endwith %}
             <div class="admin-table-wrap">
               <table class="admin-table hier-universo-table"><thead id="agrupamento-head"></thead><tbody id="agrupamento-rows"><tr><td>Selecione o tipo de demanda.</td></tr></tbody></table>
             </div>
@@ -135,5 +137,5 @@
   <script src="/assets/vendor/leaflet/leaflet.js" crossorigin=""></script>
   <script src="/restrict/hierarquizacao/js/hier-api.js?v=20261015-edicao"></script>
   <script src="/restrict/hierarquizacao/js/demandas-grupo.js?v=20261004-1"></script>
-  <script src="/assets/js/paginas/agrupamentos-demandas.js?v=20261027-complementacao"></script>
+  <script src="/assets/js/paginas/agrupamentos-demandas.js?v=20261119-selecionar-universo"></script>
 {% endblock %}

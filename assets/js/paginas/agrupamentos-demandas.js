@@ -329,8 +329,10 @@
   function renderDemandas() {
     const tbody = $("#agrupamento-rows");
     const head = $("#agrupamento-head");
+    const selecionarTudo = $("#universo-filtro-selecionar-tudo");
     const tipo = $("#agrupamento-tipo").value;
     if (!tipo) {
+      selecionarTudo.disabled = true;
       head.innerHTML = "";
       tbody.innerHTML = '<tr><td>Selecione o tipo de demanda.</td></tr>';
       $("#agrupamento-contagem").textContent = resumoTabela(0, 0, 0);
@@ -340,6 +342,7 @@
       return;
     }
     const lista = filtrados();
+    selecionarTudo.disabled = lista.length === 0;
     const totalPaginas = Math.max(1, Math.ceil(lista.length / POR_PAGINA));
     pagina = Math.max(1, Math.min(pagina, totalPaginas));
     const inicio = (pagina - 1) * POR_PAGINA;
@@ -431,6 +434,12 @@
 
   function iniciar() {
     bindFiltroDemandas('universo-filtro', () => universo.filter(elegivel), SELECIONADOS, renderDemandas);
+    $('#universo-filtro-selecionar-tudo').onclick = () => {
+      const resultados = filtrados();
+      SELECIONADOS.clear();
+      resultados.forEach(item => SELECIONADOS.add(String(item.id)));
+      renderDemandas();
+    };
     bindFiltroDemandas('composicao-filtro', () => [...membrosGrupo.values()], membrosSelecionados, renderComposicao);
     $('#agrupamento-nome').oninput = renderComposicao;
     $('#grupo-adicionar').onclick = () => {
