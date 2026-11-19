@@ -13,7 +13,7 @@
 	<link rel="stylesheet" href="/assets/css/ahp-module.css?v=20261103-regua-invertida">
 	<link rel="stylesheet" href="/assets/css/analise-multicriterio.css?v=20260819-ui6">
 	<link rel="stylesheet" href="/assets/css/escala-tipografica.css">
-	<link rel="stylesheet" href="/assets/css/paginas/ahp-formulario-publico.css?v=20261118-blocos-criterios-modal">
+	<link rel="stylesheet" href="/assets/css/paginas/ahp-formulario-publico.css?v=20261119-janela-consistencia">
 {% endblock %}
 
 {% block conteudo %}
@@ -133,8 +133,8 @@
 		</section>
 </main>
 	<div id="collab-consistency-modal" class="ahp-coerencia-modal-overlay ahp-modal--warning" hidden>
-		<section class="ahp-coerencia-modal card" role="dialog" aria-modal="true" aria-labelledby="collab-consistency-modal-title" aria-describedby="collab-consistency-modal-summary">
-			<header class="ahp-coerencia-modal__head"><i class="fas fa-circle-question" aria-hidden="true"></i><h2 id="collab-consistency-modal-title">Ajuda de consistência AHP</h2><button type="button" id="collab-consistency-modal-close" class="collab-consistency-modal-close" aria-label="Fechar ajuda"><i class="fas fa-xmark" aria-hidden="true"></i></button></header>
+		<section class="ahp-coerencia-modal card" role="dialog" aria-labelledby="collab-consistency-modal-title" aria-describedby="collab-consistency-modal-summary">
+			<header class="ahp-coerencia-modal__head" id="collab-consistency-modal-drag-handle"><i class="fas fa-circle-question" aria-hidden="true"></i><h2 id="collab-consistency-modal-title">Ajuda de consistência AHP</h2><div class="collab-consistency-window-controls" role="group" aria-label="Controles da janela de ajuda"><button type="button" id="collab-consistency-modal-minimize" class="collab-consistency-window-button" aria-label="Minimizar ajuda" title="Minimizar"><i class="fas fa-window-minimize" aria-hidden="true"></i></button><button type="button" id="collab-consistency-modal-maximize" class="collab-consistency-window-button" aria-label="Maximizar ajuda" title="Maximizar"><i class="fas fa-window-maximize" aria-hidden="true"></i></button><button type="button" id="collab-consistency-modal-close" class="collab-consistency-window-button collab-consistency-modal-close" aria-label="Fechar ajuda" title="Fechar"><i class="fas fa-xmark" aria-hidden="true"></i></button></div></header>
 			<div class="ahp-coerencia-modal__body">
 				<p id="collab-consistency-modal-summary" class="ahp-coerencia-modal__intro"></p>
 				<section aria-labelledby="collab-consistency-pairs-title"><h3 id="collab-consistency-pairs-title">Pares que merecem revisão</h3><ol id="collab-consistency-pairs" class="ahp-coerencia-modal__list"></ol></section>
@@ -151,7 +151,7 @@
 	<script defer src="/restrict/ahp/js/colaborativa-api.js?v=20261027-modelo-pli"></script>
 	{% if modo_modelo %}<script defer src="/restrict/ahp/js/colaborativa-modelo.js?v=20261027-1"></script>{% else %}<script defer src="/restrict/ahp/js/colaborativa-simulacao.js?v=20261027-1"></script>{% endif %}
 	<script defer src="/restrict/ahp/js/script.js?v=20261118-regua-mobile-inteira"></script>
-	<script defer src="/restrict/ahp/js/colaborativa.js?v=20261118-blocos-criterios-modal"></script>
+	<script defer src="/restrict/ahp/js/colaborativa.js?v=20261119-janela-consistencia"></script>
 	<script defer src="/assets/js/paginas/ahp-comparacao-abas.js?v=20261118-ajuda-consistencia-modal"></script>
 	<script defer src="/assets/js/paginas/ahp-formulario-layout.js?v=20261104-card-default-90"></script>
 {% endblock %}

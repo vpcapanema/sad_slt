@@ -88,8 +88,36 @@ const BASE = process.env.SICARD_BROWSER_BASE_URL || 'http://127.0.0.1:8083';
     const before = await page.evaluate(() => JSON.stringify(buildLiveMatrix()));
     await help.click();
     assert.equal(await modal.isVisible(), true);
+    const panel = modal.locator('.ahp-coerencia-modal');
+    assert.equal(await panel.getAttribute('aria-modal'), null, 'A ajuda é uma janela não modal');
+    assert.deepEqual(await page.evaluate(() => ({
+      overlayPointerEvents: getComputedStyle(document.querySelector('#collab-consistency-modal')).pointerEvents,
+      panelPointerEvents: getComputedStyle(document.querySelector('#collab-consistency-modal .ahp-coerencia-modal')).pointerEvents,
+      overlayBackground: getComputedStyle(document.querySelector('#collab-consistency-modal')).backgroundColor,
+      pageOverflow: getComputedStyle(document.documentElement).overflow,
+    })), {
+      overlayPointerEvents: 'none',
+      panelPointerEvents: 'auto',
+      overlayBackground: 'rgba(0, 0, 0, 0)',
+      pageOverflow: 'visible',
+    }, 'A janela não bloqueia nem escurece a página');
+    assert.equal(await page.locator('.collab-consistency-window-controls button').count(), 3);
     assert.match(await page.locator('#collab-consistency-modal-summary').textContent(), /6 de 10 pares \(60%\).*não altera/);
     assert.ok(await page.locator('#collab-consistency-pairs li a').count() > 0);
+    const firstReview = page.locator('#collab-consistency-pairs li').first();
+    assert.equal(await firstReview.evaluate(element => getComputedStyle(element).display), 'list-item',
+      'A lista mantém a numeração visível');
+    assert.equal(await firstReview.locator('.collab-consistency-review-field').count(), 3);
+    assert.equal(await firstReview.locator('.collab-consistency-review-field strong').count(), 3);
+    assert.equal(await firstReview.locator('input[readonly]').count(), 3);
+    assert.deepEqual(await firstReview.locator('.collab-consistency-review-field strong').allTextContents(), [
+      'Valor atual:',
+      'Valor sugerido:',
+      'RC projetada após alterar somente este par:',
+    ]);
+    assert.equal(await firstReview.locator('input').evaluateAll(inputs => inputs.every(input => input.value.length > 0)), true);
+    assert.match(await firstReview.locator('.collab-consistency-review-status').textContent(),
+      /O valor sugerido é o ajuste isolado que mais reduz a RC.*limite aceitável de 0,10/s);
     assert.match(await page.locator('#collab-consistency-why').textContent(), /^Suas respostas indicam a seguinte linha de raciocínio:/);
     assert.ok(await page.locator('#collab-consistency-why .collab-consistency-narrative__steps li').count() >= 3,
       'Lists every pair involved, not a fixed two-item example');
@@ -118,12 +146,44 @@ const BASE = process.env.SICARD_BROWSER_BASE_URL || 'http://127.0.0.1:8083';
     assert.ok(fontSizes.lead >= fontSizes.step, 'Lead text is not smaller than the reasoning items');
     assert.ok(fontSizes.step > fontSizes.whiteBox, 'White-box explanation is the smallest nested text level');
     assert.equal(await page.evaluate(() => JSON.stringify(buildLiveMatrix())), before);
+    const dragHandle = page.locator('#collab-consistency-modal-drag-handle');
+    const beforeDrag = await panel.boundingBox();
+    await dragHandle.hover({ position: { x: 120, y: 20 } });
+    await page.mouse.down();
+    await page.mouse.move(beforeDrag.x + 220, beforeDrag.y + 20);
+    await page.mouse.up();
+    const afterDrag = await panel.boundingBox();
+    assert.notEqual(Math.round(afterDrag.x), Math.round(beforeDrag.x), 'A janela pode ser arrastada pelo cabeçalho');
+    const minimize = page.locator('#collab-consistency-modal-minimize');
+    const maximize = page.locator('#collab-consistency-modal-maximize');
+    await minimize.click();
+    assert.equal(await panel.evaluate(element => element.classList.contains('is-minimized')), true);
+    assert.equal(await page.locator('#collab-consistency-modal .ahp-coerencia-modal__body').isVisible(), false);
+    assert.equal(await minimize.getAttribute('aria-label'), 'Restaurar ajuda');
+    await minimize.click();
+    assert.equal(await page.locator('#collab-consistency-modal .ahp-coerencia-modal__body').isVisible(), true);
+    await maximize.click();
+    assert.equal(await panel.evaluate(element => element.classList.contains('is-maximized')), true);
+    assert.equal(await maximize.getAttribute('aria-label'), 'Restaurar ajuda');
+    await maximize.click();
+    assert.equal(await panel.evaluate(element => element.classList.contains('is-maximized')), false);
     await page.locator('#collab-consistency-pairs li a').first().click();
+    await page.clock.runFor(1000);
+    assert.equal(await modal.isVisible(), true, 'O link mantém a janela aberta');
+    assert.equal(await page.locator('#collab-form-section .saaty-pair.is-consistency-review').count(), 1,
+      'Somente o par selecionado recebe o destaque vermelho');
+    assert.equal(await page.locator('#collab-form-section .saaty-pair.is-consistency-review').evaluate(element =>
+      getComputedStyle(element).borderTopColor), 'rgb(185, 28, 28)', 'O par recebe borda vermelha');
+    const reviewedPairBox = await page.locator('#collab-form-section .saaty-pair.is-consistency-review').boundingBox();
+    const reviewedPairCenter = reviewedPairBox.y + reviewedPairBox.height / 2;
+    assert.ok(Math.abs(reviewedPairCenter - 450) < 12,
+      `O par selecionado é centralizado verticalmente na tela (${reviewedPairCenter})`);
     assert.equal(await page.evaluate(() => document.activeElement.classList.contains('saaty-scale')), true);
     assert.equal(await page.evaluate(() => JSON.stringify(buildLiveMatrix())), before);
-    await help.click();
     await page.keyboard.press('Escape');
     assert.equal(await modal.isVisible(), false, 'Escape closes help');
+    assert.equal(await page.locator('#collab-form-section .saaty-pair.is-consistency-review').count(), 0,
+      'Fechar a ajuda remove o destaque temporário');
     for (let i = 0; i < 10; i++) {
       await scales.nth(i).press('Home');
       for (let k = 0; k < 4; k++) await scales.nth(i).press('ArrowRight');

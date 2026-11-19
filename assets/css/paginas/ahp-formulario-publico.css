@@ -143,13 +143,63 @@ body.ami-public-page {
   display: none;
 }
 
+.ami-public-page #collab-consistency-modal {
+  display: block;
+  padding: 0;
+  background: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  pointer-events: none;
+}
+
 .ami-public-page #collab-consistency-modal .ahp-coerencia-modal {
   --consistency-font-title: 1rem;
   --consistency-font-section: 0.875rem;
   --consistency-font-lead: 0.8125rem;
   --consistency-font-body: 0.78125rem;
   --consistency-font-detail: 0.71875rem;
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  z-index: 10051;
   width: min(100%, 680px);
+  max-width: calc(100vw - 1.5rem);
+  max-height: calc(100dvh - 1.5rem);
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+}
+
+.ami-public-page #collab-consistency-modal .ahp-coerencia-modal.is-positioned {
+  transform: none;
+}
+
+.ami-public-page #collab-consistency-modal .ahp-coerencia-modal.is-maximized {
+  inset: .75rem !important;
+  width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  transform: none;
+  border-radius: var(--pli-radius);
+}
+
+.ami-public-page #collab-consistency-modal .ahp-coerencia-modal.is-minimized {
+  width: min(28rem, calc(100vw - 1.5rem));
+  height: auto;
+}
+
+.ami-public-page #collab-consistency-modal .ahp-coerencia-modal.is-minimized > .ahp-coerencia-modal__body {
+  display: none;
+}
+
+.ami-public-page #collab-consistency-modal .ahp-coerencia-modal__head {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.ami-public-page #collab-consistency-modal .ahp-coerencia-modal.is-dragging .ahp-coerencia-modal__head {
+  cursor: grabbing;
 }
 
 .ami-public-page #collab-consistency-modal .ahp-coerencia-modal__head h2 {
@@ -171,7 +221,13 @@ body.ami-public-page {
   font-size: var(--consistency-font-body);
 }
 
-.ami-public-page .collab-consistency-modal-close {
+.ami-public-page .collab-consistency-window-controls {
+  display: flex;
+  flex: 0 0 auto;
+  gap: .35rem;
+}
+
+.ami-public-page .collab-consistency-window-button {
   display: grid;
   flex: 0 0 auto;
   place-items: center;
@@ -185,6 +241,15 @@ body.ami-public-page {
   cursor: pointer;
 }
 
+.ami-public-page .collab-consistency-window-button:hover {
+  background: rgba(255, 255, 255, .16);
+}
+
+.ami-public-page .collab-consistency-window-button i {
+  color: inherit;
+  font-size: .85rem;
+}
+
 .ami-public-page #collab-consistency-modal h3 {
   margin: 1rem 0 0.45rem;
   font-size: var(--consistency-font-section);
@@ -195,6 +260,67 @@ body.ami-public-page {
   text-align: justify;
   text-justify: inter-word;
   hyphens: auto;
+}
+
+.ami-public-page .collab-consistency-review-item {
+  display: list-item;
+  padding: .65rem 0;
+}
+
+.ami-public-page .collab-consistency-review-item > a {
+  display: block;
+  color: #003b5a;
+  font-weight: 700;
+}
+
+.ami-public-page .collab-consistency-review-values {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .65rem;
+  margin-top: .65rem;
+}
+
+.ami-public-page .collab-consistency-review-field {
+  display: grid;
+  gap: .3rem;
+  min-width: 0;
+}
+
+.ami-public-page .collab-consistency-review-field strong {
+  color: #003b5a;
+  font-size: var(--consistency-font-detail);
+}
+
+.ami-public-page .collab-consistency-review-field input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 2rem;
+  padding: .35rem .5rem;
+  border: 1px solid #9fb4c3;
+  border-radius: 5px;
+  background: #fff;
+  color: #12303f;
+  font: 700 var(--consistency-font-body)/1.3 Roboto, Arial, sans-serif;
+}
+
+.ami-public-page .collab-consistency-review-status {
+  margin: .65rem 0 0;
+  padding: .55rem .65rem;
+  border-left: 4px solid #b45309;
+  background: #fff;
+  color: #6b4700;
+  font-size: var(--consistency-font-detail);
+  line-height: 1.5;
+}
+
+.ami-public-page .collab-consistency-review-status.is-acceptable {
+  border-left-color: #15803d;
+  color: #166534;
+}
+
+.ami-public-page #collab-form-section .saaty-pair.is-consistency-review {
+  border: 2px solid #b91c1c;
+  box-shadow: 0 0 0 3px rgba(185, 28, 28, .2), 0 5px 16px rgba(185, 28, 28, .16);
 }
 
 .ami-public-page .collab-consistency-explanation p {
@@ -275,6 +401,14 @@ body.ami-public-page {
 
   .ami-public-page #collab-consistency-modal .ahp-coerencia-modal__body {
     padding: 1rem;
+  }
+
+  .ami-public-page .collab-consistency-review-values {
+    grid-template-columns: 1fr;
+  }
+
+  .ami-public-page #collab-consistency-modal .ahp-coerencia-modal.is-maximized {
+    inset: .3rem !important;
   }
 }
 

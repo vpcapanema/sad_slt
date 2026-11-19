@@ -18,6 +18,7 @@
   var editVersion = 0;
   var consistencyDiagnosis = null;
   var consistencyHelpReturnFocus = null;
+  var consistencyWindowDrag = null;
 
   function bloquearIdentificacao(bloqueado) {
     ["colab-nome", "colab-inst", "colab-email", "colab-token", "btn-liberar-form"].forEach(function (id) {
@@ -363,7 +364,81 @@
     var modal = el("collab-consistency-modal");
     if (modal.hidden) return;
     modal.hidden = true;
+    document.querySelectorAll("#collab-form-section .saaty-pair.is-consistency-review").forEach(function (pair) {
+      pair.classList.remove("is-consistency-review");
+    });
     if (consistencyHelpReturnFocus) consistencyHelpReturnFocus.focus();
+  }
+
+  function consistencyWindow() {
+    return el("collab-consistency-modal").querySelector(".ahp-coerencia-modal");
+  }
+
+  function setWindowControl(id, active, activeLabel, inactiveLabel, activeIcon, inactiveIcon) {
+    var button = el(id);
+    var icon = button.querySelector("i");
+    button.setAttribute("aria-pressed", active ? "true" : "false");
+    button.setAttribute("aria-label", active ? activeLabel : inactiveLabel);
+    button.title = (active ? activeLabel : inactiveLabel).replace(" ajuda", "");
+    icon.className = "fas " + (active ? activeIcon : inactiveIcon);
+  }
+
+  function keepConsistencyWindowInView() {
+    var panel = consistencyWindow();
+    if (!panel.classList.contains("is-positioned") || panel.classList.contains("is-maximized")) return;
+    var rect = panel.getBoundingClientRect();
+    var gutter = 12;
+    var left = Math.min(Math.max(gutter, rect.left), Math.max(gutter, global.innerWidth - rect.width - gutter));
+    var top = Math.min(Math.max(gutter, rect.top), Math.max(gutter, global.innerHeight - rect.height - gutter));
+    panel.style.left = left + "px";
+    panel.style.top = top + "px";
+  }
+
+  function positionConsistencyWindow() {
+    var panel = consistencyWindow();
+    if (panel.classList.contains("is-positioned")) {
+      keepConsistencyWindowInView();
+      return;
+    }
+    var rect = panel.getBoundingClientRect();
+    panel.style.left = Math.max(12, rect.left) + "px";
+    panel.style.top = Math.max(12, rect.top) + "px";
+    panel.classList.add("is-positioned");
+  }
+
+  function minimizeConsistencyWindow(active) {
+    var panel = consistencyWindow();
+    if (active) maximizeConsistencyWindow(false);
+    panel.classList.toggle("is-minimized", active);
+    setWindowControl("collab-consistency-modal-minimize", active,
+      "Restaurar ajuda", "Minimizar ajuda", "fa-window-restore", "fa-window-minimize");
+    global.requestAnimationFrame(keepConsistencyWindowInView);
+  }
+
+  function maximizeConsistencyWindow(active) {
+    var panel = consistencyWindow();
+    if (active) {
+      panel.classList.remove("is-minimized");
+      setWindowControl("collab-consistency-modal-minimize", false,
+        "Restaurar ajuda", "Minimizar ajuda", "fa-window-restore", "fa-window-minimize");
+    }
+    panel.classList.toggle("is-maximized", active);
+    setWindowControl("collab-consistency-modal-maximize", active,
+      "Restaurar ajuda", "Maximizar ajuda", "fa-window-restore", "fa-window-maximize");
+  }
+
+  function consistencyReviewField(label, value) {
+    var field = document.createElement("label");
+    field.className = "collab-consistency-review-field";
+    var name = document.createElement("strong");
+    var input = document.createElement("input");
+    name.textContent = label;
+    input.type = "text";
+    input.readOnly = true;
+    input.value = value;
+    input.setAttribute("aria-label", label);
+    field.append(name, input);
+    return field;
   }
 
   function openConsistencyHelp() {
@@ -383,23 +458,35 @@
     }
     diagnosis.reviews.forEach(function (review) {
       var item = document.createElement("li"), link = document.createElement("a");
+      var values = document.createElement("div"), status = document.createElement("p");
       var input = el("pair_" + review.i + "_" + review.j);
       var pair = input && input.closest(".saaty-pair");
+      var projectedAcceptable = review.projectedCR < 0.1;
+      item.className = "collab-consistency-review-item";
+      values.className = "collab-consistency-review-values";
+      status.className = "collab-consistency-review-status" + (projectedAcceptable ? " is-acceptable" : "");
       if (pair) pair.id = "collab-review-" + review.i + "-" + review.j;
       link.href = pair ? "#" + pair.id : "#";
       link.textContent = names[review.i] + " × " + names[review.j];
       link.addEventListener("click", function (event) {
         event.preventDefault();
         if (!pair) return;
-        closeConsistencyHelp();
-        pair.scrollIntoView({ behavior: "smooth", block: "center" });
+        document.querySelectorAll("#collab-form-section .saaty-pair.is-consistency-review").forEach(function (candidate) {
+          candidate.classList.remove("is-consistency-review");
+        });
+        pair.classList.add("is-consistency-review");
+        pair.scrollIntoView({ behavior: "auto", block: "center" });
         pair.querySelector(".saaty-scale").focus({ preventScroll: true });
       });
-      item.append(link, document.createTextNode(
-        " — valor atual: " + formatSaatyValue(review.currentValue) +
-        "; valor a reavaliar na simulação: " + formatSaatyValue(review.suggestedValue) +
-        ". RC projetada isoladamente: " + SLTAhp.formatMetric(review.projectedCR) + "."
-      ));
+      values.append(
+        consistencyReviewField("Valor atual:", formatSaatyValue(review.currentValue)),
+        consistencyReviewField("Valor sugerido:", formatSaatyValue(review.suggestedValue)),
+        consistencyReviewField("RC projetada após alterar somente este par:", SLTAhp.formatMetric(review.projectedCR))
+      );
+      status.textContent = projectedAcceptable ?
+        "O valor sugerido é o ajuste isolado que mais reduz a RC e, nesta simulação, deixa o resultado dentro do limite aceitável de 0,10." :
+        "O valor sugerido é o ajuste isolado que mais reduz a RC. Nesta simulação, porém, ela ainda fica acima do limite aceitável de 0,10; outros pares também precisarão ser revistos.";
+      item.append(link, values, status);
       list.appendChild(item);
     });
     var primary = null, triad = null;
@@ -427,6 +514,7 @@
       "Pense novamente na ordem dos critérios destacados para o objetivo desta análise e altere apenas as comparações que não representam sua avaliação real. Ajuste um par por vez e aguarde o recálculo da RC.";
     consistencyHelpReturnFocus = document.activeElement;
     el("collab-consistency-modal").hidden = false;
+    positionConsistencyWindow();
     el("collab-consistency-modal-close").focus();
   }
 
@@ -578,9 +666,48 @@
     el("btn-enviar-resposta").addEventListener("click", enviarResposta);
     el("collab-consistency-help-button").addEventListener("click", openConsistencyHelp);
     el("collab-consistency-modal-close").addEventListener("click", closeConsistencyHelp);
-    el("collab-consistency-modal").addEventListener("click", function (event) {
-      if (event.target === event.currentTarget) closeConsistencyHelp();
+    el("collab-consistency-modal-minimize").addEventListener("click", function () {
+      var panel = consistencyWindow();
+      minimizeConsistencyWindow(!panel.classList.contains("is-minimized"));
     });
+    el("collab-consistency-modal-maximize").addEventListener("click", function () {
+      var panel = consistencyWindow();
+      maximizeConsistencyWindow(!panel.classList.contains("is-maximized"));
+    });
+    var dragHandle = el("collab-consistency-modal-drag-handle");
+    dragHandle.addEventListener("pointerdown", function (event) {
+      var panel = consistencyWindow();
+      if (event.button !== 0 || event.target.closest("button") || panel.classList.contains("is-maximized")) return;
+      positionConsistencyWindow();
+      var rect = panel.getBoundingClientRect();
+      consistencyWindowDrag = { pointerId: event.pointerId, x: event.clientX, y: event.clientY,
+        left: rect.left, top: rect.top };
+      panel.classList.add("is-dragging");
+      dragHandle.setPointerCapture(event.pointerId);
+      event.preventDefault();
+    });
+    dragHandle.addEventListener("pointermove", function (event) {
+      if (!consistencyWindowDrag || event.pointerId !== consistencyWindowDrag.pointerId) return;
+      var panel = consistencyWindow();
+      var gutter = 12;
+      var left = consistencyWindowDrag.left + event.clientX - consistencyWindowDrag.x;
+      var top = consistencyWindowDrag.top + event.clientY - consistencyWindowDrag.y;
+      left = Math.min(Math.max(gutter, left), Math.max(gutter, global.innerWidth - panel.offsetWidth - gutter));
+      top = Math.min(Math.max(gutter, top), Math.max(gutter, global.innerHeight - panel.offsetHeight - gutter));
+      panel.style.left = left + "px";
+      panel.style.top = top + "px";
+    });
+    function stopConsistencyWindowDrag(event) {
+      if (!consistencyWindowDrag || event.pointerId !== consistencyWindowDrag.pointerId) return;
+      consistencyWindowDrag = null;
+      consistencyWindow().classList.remove("is-dragging");
+      if (dragHandle.hasPointerCapture(event.pointerId)) dragHandle.releasePointerCapture(event.pointerId);
+    }
+    dragHandle.addEventListener("pointerup", stopConsistencyWindowDrag);
+    dragHandle.addEventListener("pointercancel", stopConsistencyWindowDrag);
+    global.addEventListener("resize", keepConsistencyWindowInView);
+    minimizeConsistencyWindow(false);
+    maximizeConsistencyWindow(false);
     document.addEventListener("keydown", function (event) {
       if (event.key === "Escape" && !el("collab-consistency-modal").hidden) closeConsistencyHelp();
     });
