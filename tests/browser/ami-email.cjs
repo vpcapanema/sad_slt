@@ -60,6 +60,7 @@ const fs = require('node:fs');
           leitura_status:r.destinatario.startsWith('ana')?'confirmada':'sem_confirmacao'}));
         return route.fulfill({json:{registros:rows,relatorios_consultados:2}});
       }
+      if(path.endsWith('/emails/configuracao')) return route.fulfill({json:{conta_autenticacao:'conta-servico@example.com'}});
       if(path.endsWith('/emails/monitoramento')) return route.fulfill({json:{
         registros:rows,confirmacoes_configuradas:true,
         colaboradores:round.convites.map(c=>({...c,resposta_recebida:false,
@@ -93,7 +94,20 @@ const fs = require('node:fs');
     assert.match(await page.locator('#ami-email-draft-card > .ahp-section-label').textContent(),/Convites e acompanhamento/);
     assert.equal(await page.locator('#ami-email-draft-card .ahp-subsection-title').count(),2);
     assert.equal(await page.locator('#ami-email-sender-alias').inputValue(),'SICARD-PLI');
+    assert.equal(await page.locator('#ami-email-sender-address').inputValue(),'conta-servico@example.com');
+    assert.equal(await page.locator('#ami-email-sender-address').getAttribute('readonly'),'');
     assert.equal(await page.locator('#ami-email-subject').inputValue(),'Convite institucional');
+    assert.deepEqual(await page.locator('.ami-email-header-fields input').evaluateAll(inputs=>inputs.map(input=>input.id)),[
+      'ami-email-sender-address','ami-email-sender-alias','ami-email-subject'
+    ]);
+    const headerBoxes=await page.locator('.ami-email-header-fields input').evaluateAll(inputs=>inputs.map(input=>input.getBoundingClientRect().toJSON()));
+    assert.ok(Math.max(...headerBoxes.map(box=>box.y))-Math.min(...headerBoxes.map(box=>box.y))<2,'Remetente, alias e assunto devem ficar na mesma linha');
+    const [messageBox,previewBox]=await page.locator('.ami-email-content-grid').evaluate(grid=>[
+      grid.querySelector('.ami-email-message-field').getBoundingClientRect().toJSON(),
+      grid.querySelector('#ami-email-institutional-preview').getBoundingClientRect().toJSON()
+    ]);
+    assert.ok(messageBox.x+messageBox.width<=previewBox.x+1,'Mensagem deve ficar ao lado da prévia institucional');
+    assert.ok(Math.abs(messageBox.y-previewBox.y)<4,'Mensagem e prévia devem começar na mesma linha: '+JSON.stringify({messageBox,previewBox}));
     assert.equal(await page.locator('#ami-email-preview-button').innerText(),'Acessar formulário colaborativo');
     await page.locator('#ami-email-sender-alias').fill('Equipe PLI');
     await page.locator('#ami-email-subject').fill('Assunto alterado');

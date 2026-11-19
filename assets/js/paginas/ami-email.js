@@ -375,6 +375,15 @@
       if (!automatica) Notify.error("E-mails do julgamento", error.message);
     } finally { carregando = false; }
   }
+  async function carregarRemetente(atual) {
+    try {
+      const result = await request(url(atual.julgamento.id) + "/configuracao");
+      if (contexto !== atual) return;
+      $("ami-email-sender-address").value = result.conta_autenticacao || "Conta de envio não configurada";
+    } catch (_error) {
+      if (contexto === atual) $("ami-email-sender-address").value = "Conta de envio indisponível";
+    }
+  }
   function bloquear(valor) {
     ocupado = valor;
     document.querySelector(".ami-main").inert = valor;
@@ -547,6 +556,7 @@
     modo(value) { modo = value; controles(); },
     mostrar(julgamento, mensagem, link) {
       contexto = {julgamento, mensagem, url: link, destinatarios: (julgamento.convites || []).map(c => typeof c === "string" ? c : c.email)};
+      $("ami-email-sender-address").value = "Carregando conta do serviço…";
       configuracaoOriginal = {
         email_remetente_alias: julgamento.email_remetente_alias || "SICARD-PLI",
         email_assunto: julgamento.email_assunto || "Convite para preenchimento colaborativo AHP - PLI - SICARD",
@@ -562,7 +572,7 @@
       $("ami-email-status").textContent = "Carregando histórico de envios…";
       $("ami-email-status-count").textContent = "";
       $("ami-email-status-pagination").replaceChildren();
-      render(); carregar(contexto);
+      render(); carregar(contexto); carregarRemetente(contexto);
     }
   };
   [aliasInput, assuntoInput, mensagemInput].forEach(input => input.addEventListener("input", marcarConfiguracaoAlterada));

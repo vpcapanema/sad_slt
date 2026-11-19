@@ -197,7 +197,7 @@
 }
 .ami-espaco-page .ami-email-header-fields {
   display: grid;
-  grid-template-columns: minmax(12rem, .65fr) minmax(18rem, 1.35fr);
+  grid-template-columns: minmax(13rem, .9fr) minmax(11rem, .7fr) minmax(18rem, 1.4fr);
   gap: var(--ami-space-md, 1rem);
 }
 .ami-espaco-page .ami-email-header-fields .c-form-group {
@@ -210,9 +210,19 @@
   resize: vertical;
   line-height: 1.55;
 }
+.ami-espaco-page .ami-email-content-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--ami-space-md, 1rem);
+  align-items: stretch;
+}
+.ami-espaco-page .ami-email-message-field {
+  min-width: 0;
+  margin-bottom: 0;
+}
 .ami-espaco-page .ami-email-institutional-preview {
-  max-width: 40rem;
-  margin: var(--ami-space-md, 1rem) auto 0;
+  min-width: 0;
+  margin: 0;
   border: 1px solid #d5dee6;
   background: #fff;
 }
@@ -257,7 +267,8 @@
   align-self: flex-start;
 }
 @media (max-width: 700px) {
-  .ami-espaco-page .ami-email-header-fields {
+  .ami-espaco-page .ami-email-header-fields,
+  .ami-espaco-page .ami-email-content-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 }

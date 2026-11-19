@@ -627,6 +627,17 @@ def test_monitoramento_inclui_nomes_e_disponibilidade_da_resposta(ambiente, regi
     ]
 
 
+def test_configuracao_expoe_somente_conta_de_autenticacao_real_do_servico(ambiente, registros, monkeypatch):
+    from api.routers import email_convites as router_service
+    monkeypatch.setattr(router_service, "get_email_settings", lambda: EmailSettings(
+        habilitado=True, usuario="conta-autenticacao@example.com",
+        remetente="endereco-from-diferente@example.com",
+    ))
+    resultado = router_service.configuracao_remetente(ambiente["id"])
+    assert resultado == {"conta_autenticacao": "conta-autenticacao@example.com"}
+    assert "senha" not in resultado and "remetente" not in resultado
+
+
 def test_monitoramento_informa_primeiro_clique_no_link(ambiente, registros, monkeypatch):
     ambiente["convites"] = [{"nome": "Ana", "email": DEST}]
     monkeypatch.setattr(service.ambientes, "list_respostas", lambda _: [])

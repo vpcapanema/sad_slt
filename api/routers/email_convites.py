@@ -31,6 +31,18 @@ def listar(ambiente_id: UUID) -> list[dict]:
         raise HTTPException(503, detail=str(exc)) from exc
 
 
+@router.get("/{ambiente_id}/emails/configuracao")
+def configuracao_remetente(ambiente_id: UUID) -> dict:
+    """Expõe somente a conta usada pelo backend para autenticação SMTP."""
+    try:
+        if not ambientes.get_ambiente_by_id(str(ambiente_id)):
+            raise HTTPException(404, "Julgamento não encontrado.")
+        config = get_email_settings()
+        return {"conta_autenticacao": config.usuario}
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(503, detail=str(exc)) from exc
+
+
 @router.post("/{ambiente_id}/emails/enviar")
 def enviar(ambiente_id: UUID, dados: ConviteEmailEnvioSchema,
            user: SessionUser = Depends(require_analyst)) -> dict:
