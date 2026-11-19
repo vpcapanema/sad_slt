@@ -97,6 +97,8 @@ const fs = require('node:fs');
     assert.equal(await page.locator('#ami-email-sender-address').inputValue(),'conta-servico@example.com');
     assert.equal(await page.locator('#ami-email-sender-address').getAttribute('readonly'),'');
     assert.equal(await page.locator('#ami-email-subject').inputValue(),'Convite institucional');
+    assert.deepEqual(await page.locator('#ami-email-list').locator('xpath=ancestor::table').locator('th').allTextContents(),
+      ['', 'Colaboradores', 'E-mail colaborador', 'Data limite']);
     assert.deepEqual(await page.locator('.ami-email-header-fields input').evaluateAll(inputs=>inputs.map(input=>input.id)),[
       'ami-email-sender-address','ami-email-sender-alias','ami-email-subject'
     ]);
@@ -115,7 +117,12 @@ const fs = require('node:fs');
     assert.deepEqual(geometry.messageLabelStyle,geometry.previewLabelStyle,'Os títulos devem preservar o mesmo padrão visual existente');
     assert.equal(geometry.previewStyle.radius,'6px');
     assert.equal(await page.locator('[data-ami-email-form-link], #ami-email-link-row').count(),0,'O link não deve ser duplicado fora do corpo da mensagem');
-    assert.ok((await page.locator('#ami-email-template').inputValue()).includes(currentUrl));
+    assert.equal(await page.locator('#ami-email-editor-link').getAttribute('href'),currentUrl);
+    assert.equal(await page.locator('#ami-email-editor-link').innerText(),currentUrl);
+    assert.equal(await page.locator('#ami-email-editor-link').evaluate(element=>element.tagName),'A');
+    assert.equal(await page.locator('#ami-email-template, #ami-email-template-after').evaluateAll((inputs,url)=>
+      inputs.every(input=>!input.readOnly && !input.value.includes(url)),currentUrl),true,
+      'Somente o link persistente fica fora dos campos editáveis');
     assert.equal(await page.locator('#ami-email-preview-button').getAttribute('href'),currentUrl);
     assert.match(await page.locator('#ami-email-preview-help').innerText(),/prévia institucional usada pelo serviço de envio/i);
     const previewFonts=await page.evaluate(()=>{
@@ -154,6 +161,7 @@ const fs = require('node:fs');
     assert.equal(patches[0].email_remetente_alias,'Equipe PLI');
     assert.equal(patches[0].email_assunto,'Assunto alterado');
     assert.match(patches[0].email_mensagem,/Mensagem persistida/);
+    assert.equal(patches[0].email_mensagem.split(currentUrl).length-1,1,'O link protegido é recomposto uma única vez');
     patches=[];
     assert.equal(await page.locator('#ami-create-status .ami-status-card').count(),3);
     const statusBox=await page.locator('#ami-create-status').boundingBox();

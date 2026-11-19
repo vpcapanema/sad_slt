@@ -238,8 +238,27 @@
 }
 .ami-espaco-page .ami-email-editor-container .collab-email-template {
   flex: 1 1 auto;
+  min-height: 6rem;
   border: 0;
   border-radius: 0;
+}
+.ami-espaco-page .ami-email-protected-link {
+  display: block;
+  flex: 0 0 auto;
+  margin: 0 .65rem;
+  padding: .55rem .75rem;
+  border: 1px solid #9fb4c3;
+  border-left: 5px solid #00507a;
+  border-radius: 5px;
+  background: #f3f7fa;
+  color: #123b56;
+  font: 600 var(--ami-font-child, .7rem)/1.45 Roboto, Arial, sans-serif;
+  overflow-wrap: anywhere;
+  text-decoration: underline;
+}
+.ami-espaco-page .ami-email-protected-link:focus-visible {
+  outline: 2px solid #f2b705;
+  outline-offset: 2px;
 }
 .ami-espaco-page .ami-email-editor-container > .form-help {
   margin: .5rem .65rem 0;

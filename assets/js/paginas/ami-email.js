@@ -3,7 +3,9 @@
   const $ = id => document.getElementById(id);
   let contexto = null, registros = [], pronto = false, ocupado = false, modo = "create", pagina = 1;
   let configuracaoOriginal = null, configuracaoAlterada = false;
-  const aliasInput = $("ami-email-sender-alias"), assuntoInput = $("ami-email-subject"), mensagemInput = $("ami-email-template");
+  const aliasInput = $("ami-email-sender-alias"), assuntoInput = $("ami-email-subject"),
+    mensagemInput = $("ami-email-template"), mensagemAfterInput = $("ami-email-template-after"),
+    mensagemLink = $("ami-email-editor-link");
   const rotulosEnvio = {enviando: "Na fila", aceito_smtp: "Enviado",
     falha: "Não enviado", indeterminado: "Na fila"};
   const rotulosEntrega = {sem_confirmacao: "Sem confirmação", confirmada: "Entregue", falha: "Devolvido",
@@ -207,11 +209,33 @@
     return body;
   }
   function configuracaoAtual() {
+    const link = contexto?.url || "";
+    const antes = link ? mensagemInput.value.split(link).join("") : mensagemInput.value;
+    const depois = link ? mensagemAfterInput.value.split(link).join("") : mensagemAfterInput.value;
     return {
       email_remetente_alias: aliasInput.value.trim(),
       email_assunto: assuntoInput.value.trim(),
-      email_mensagem: mensagemInput.value
+      email_mensagem: antes + link + depois
     };
+  }
+  function definirMensagemProtegida(texto, link) {
+    const mensagem = String(texto || ""), url = String(link || "");
+    let inicio = url ? mensagem.indexOf(url) : -1;
+    let tamanho = url.length;
+    if (inicio < 0 && url) {
+      const pattern = /(?:https?:\/\/[^\s/]+)?(?:\/[^\s/]+)*\/public\/analise-multicriterio\/(?:formulario-comparacao-pareada\/)?[^/\s]+\/?/;
+      const encontrado = mensagem.match(pattern);
+      if (encontrado) {
+        inicio = encontrado.index;
+        tamanho = encontrado[0].length;
+      }
+    }
+    mensagemInput.value = inicio >= 0 ? mensagem.slice(0, inicio) : mensagem;
+    mensagemAfterInput.value = inicio >= 0 ? mensagem.slice(inicio + tamanho) : "";
+    mensagemLink.href = url || "#";
+    mensagemLink.textContent = url || "Link do formulário indisponível";
+    mensagemLink.setAttribute("aria-disabled", url ? "false" : "true");
+    mensagemInput.dataset.message = inicio >= 0 ? mensagemInput.value + url + mensagemAfterInput.value : mensagem;
   }
   function mensagemPersonalizada(texto) {
     let mensagem = String(texto || "").replaceAll("Equipe SICARD/SLT", "Equipe SICARD-PLI");
@@ -240,6 +264,10 @@
       Notify.error("Mensagem de e-mail", "Preencha o alias do remetente, o assunto e a mensagem.");
       return false;
     }
+    if (config.email_mensagem.length > 50000) {
+      Notify.error("Mensagem de e-mail", "A mensagem completa deve ter no máximo 50.000 caracteres.");
+      return false;
+    }
     if (!contexto.url || !config.email_mensagem.includes(contexto.url)) {
       Notify.error("Mensagem de e-mail", "A mensagem deve manter o link persistente deste julgamento.");
       return false;
@@ -256,6 +284,7 @@
         email_assunto: updated.email_assunto,
         email_mensagem: updated.email_mensagem
       };
+      definirMensagemProtegida(updated.email_mensagem, contexto.url);
       configuracaoAlterada = false;
       $("ami-email-status").textContent = "Alias, assunto e mensagem salvos no julgamento.";
       if (!silencioso) Notify.success("Mensagem de e-mail", "Configuração salva e ligada ao serviço de envio.");
@@ -564,6 +593,7 @@
     modo(value) { modo = value; controles(); },
     mostrar(julgamento, mensagem, link) {
       contexto = {julgamento, mensagem, url: link, destinatarios: (julgamento.convites || []).map(c => typeof c === "string" ? c : c.email)};
+      definirMensagemProtegida(mensagem, link);
       $("ami-email-sender-address").value = "Carregando conta do serviço…";
       configuracaoOriginal = {
         email_remetente_alias: julgamento.email_remetente_alias || "SICARD-PLI",
@@ -583,7 +613,7 @@
       render(); carregar(contexto); carregarRemetente(contexto);
     }
   };
-  [aliasInput, assuntoInput, mensagemInput].forEach(input => input.addEventListener("input", marcarConfiguracaoAlterada));
+  [aliasInput, assuntoInput, mensagemInput, mensagemAfterInput].forEach(input => input.addEventListener("input", marcarConfiguracaoAlterada));
   $("ami-email-preview-recipient").addEventListener("change", atualizarPreviaInstitucional);
   $("ami-save-email-config").addEventListener("click", () => salvarConfiguracao(false));
   $("ami-open-mail").addEventListener("click", () => enviar(false));

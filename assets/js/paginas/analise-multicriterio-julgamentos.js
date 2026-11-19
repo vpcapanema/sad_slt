@@ -1141,9 +1141,8 @@
     recipient.replaceChildren();
     (judgment.convites || []).forEach(function (invite) { recipient.add(new Option((invite.nome || invite.email) + " · " + invite.email, invite.email)); });
     if (Array.from(recipient.options).some(function (option) { return option.value === previous; })) recipient.value = previous;
-    var card = $("ami-email-draft-card"), messageBox = $("ami-email-template"), url = persistentPublicUrl(judgment);
+    var card = $("ami-email-draft-card"), url = persistentPublicUrl(judgment);
     var message = judgment.email_mensagem || invitationLines(judgment, null).join("\n");
-    messageBox.value = message; messageBox.dataset.message = message;
     $("ami-email-sender-alias").value = judgment.email_remetente_alias || "SICARD-PLI";
     $("ami-email-subject").value = judgment.email_assunto || "Convite para preenchimento colaborativo AHP - PLI - SICARD";
     card.classList.remove("is-hidden");
@@ -1159,7 +1158,7 @@
     rows = sortDrafts(rows.filter(function (row) { return SLTTable.matches('ami-emails-filter', draftValue(row, column) === value, Boolean(column && value)); }));
     var result = SLTTable.paginate('ami-emails-pagination', rows, draftPage, function (page) { draftPage = page; renderDraftEmails(); });
     draftPage = result.page; draftVisibleCount = result.rows.length;
-    $("ami-email-list").innerHTML = result.rows.length ? result.rows.map(function (row) { var convite = row.item, index = row.index; return '<tr><td class="ahp-collab-chk-col"><input type="checkbox" data-draft-index="' + index + '" aria-label="Selecionar ' + escapeHtml(convite.email) + '"></td><td>' + escapeHtml(convite.nome || "Colaborador " + (index + 1)) + '</td><td>' + escapeHtml(convite.email) + '</td><td>' + escapeHtml(formatDeadline()) + '</td><td>' + escapeHtml((convite.dimensoes || []).join(" · ") || "Matriz integral (legado/superfície)") + '</td></tr>'; }).join("") : '<tr><td colspan="5" class="ami-empty">Nenhum colaborador encontrado.</td></tr>';
+    $("ami-email-list").innerHTML = result.rows.length ? result.rows.map(function (row) { var convite = row.item, index = row.index; return '<tr><td class="ahp-collab-chk-col"><input type="checkbox" data-draft-index="' + index + '" aria-label="Selecionar ' + escapeHtml(convite.email) + '"></td><td>' + escapeHtml(convite.nome || "Colaborador " + (index + 1)) + '</td><td>' + escapeHtml(convite.email) + '</td><td>' + escapeHtml(formatDeadline()) + '</td></tr>'; }).join("") : '<tr><td colspan="4" class="ami-empty">Nenhum colaborador encontrado.</td></tr>';
     $("ami-select-all").checked = false;
     $("ami-delete-emails").disabled = true;
     $("ami-email-list").querySelectorAll("[data-draft-index]").forEach(function (checkbox) { checkbox.addEventListener("change", updateDraftControls); });
@@ -1178,19 +1177,6 @@
           input.addEventListener("input", function () { draftEmails[index][key] = input.value; });
           row.cells[column + 1].replaceChildren(input);
         });
-        if (draftEmails[index].dimensoes && !activeSurfaceId) {
-          var fieldset = document.createElement("div");
-          Array.from(new Set(phase3Rows(criteriaMatrix).map(criterionDimension).filter(Boolean))).forEach(function (dimension) {
-            var label = document.createElement("label"), box = document.createElement("input");
-            box.type = "checkbox"; box.checked = draftEmails[index].dimensoes.includes(dimension);
-            box.setAttribute("aria-label", dimension + " para " + draftEmails[index].email);
-            box.addEventListener("change", function () {
-              draftEmails[index].dimensoes = box.checked ? draftEmails[index].dimensoes.concat(dimension) : draftEmails[index].dimensoes.filter(function (d) { return d !== dimension; });
-            });
-            label.append(box, document.createTextNode(dimension)); fieldset.append(label);
-          });
-          row.cells[4].replaceChildren(fieldset);
-        }
       });
     }
     updateDraftControls();
@@ -1804,13 +1790,12 @@
     });
     ["ami-analysis-rc", "ami-analysis-exclude-inconsistent"].forEach(function (id) { $(id).addEventListener("change", function () { if (analysisWorkspace) renderFioDerivado(analysisWorkspace); }); });
     $("ami-analysis-calculate").addEventListener("click", consolidarRespostas);
-    $("ami-email-list").closest("table").tHead.rows[0].appendChild(Object.assign(document.createElement("th"), {textContent: "Dimensões atribuídas"}));
-    [['nome','Colaboradores'],['email','Email'],['prazo','Data limite'],['dimensoes','Dimensões atribuídas']].forEach(function (entry) { $('ami-emails-filter-coluna').add(new Option(entry[1],entry[0])); });
+    [['nome','Colaboradores'],['email','Email'],['prazo','Data limite']].forEach(function (entry) { $('ami-emails-filter-coluna').add(new Option(entry[1],entry[0])); });
     function filterDrafts() { draftPage = 1; renderDraftEmails(); }
     $('ami-emails-filter-coluna').onchange = function () { $('ami-emails-filter-valor').value = ''; filterDrafts(); };
     $('ami-emails-filter-valor').onchange = filterDrafts;
     SLTTable.bindFilter('ami-emails-filter', filterDrafts, function () { $('ami-emails-filter-coluna').value = ''; $('ami-emails-filter-valor').value = ''; });
-    sortDrafts = SLTTable.sorting($('ami-email-list').closest('table'), function () { return [null].concat(['nome','email','prazo','dimensoes'].map(function (key) { return function (row) { return draftValue(row,key); }; })); }, filterDrafts);
+    sortDrafts = SLTTable.sorting($('ami-email-list').closest('table'), function () { return [null].concat(['nome','email','prazo'].map(function (key) { return function (row) { return draftValue(row,key); }; })); }, filterDrafts);
     renderDraftEmails();
   });
 })();

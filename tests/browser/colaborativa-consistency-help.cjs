@@ -116,6 +116,19 @@ const BASE = process.env.SICARD_BROWSER_BASE_URL || 'http://127.0.0.1:8083';
       'RC projetada após alterar somente este par:',
     ]);
     assert.equal(await firstReview.locator('input').evaluateAll(inputs => inputs.every(input => input.value.length > 0)), true);
+    const liveDiagnosis = await page.evaluate(() => {
+      const matrix = buildLiveMatrix();
+      const href = document.querySelector('#collab-consistency-pairs li a').getAttribute('href');
+      const [, first, second] = href.match(/collab-review-(\d+)-(\d+)/).map(Number);
+      return {
+        rc: SLTAhp.formatMetric(SLTAhp.analyzeMatrix(matrix).CR),
+        current: matrix[first][second] < 1 ? '1/' + Math.round(1 / matrix[first][second]) :
+          Math.abs(matrix[first][second] - 1) < 1e-8 ? '1 (igual importância)' : String(Math.round(matrix[first][second]))
+      };
+    });
+    assert.match(await page.locator('#collab-consistency-modal-summary').textContent(), new RegExp(liveDiagnosis.rc));
+    assert.equal(await firstReview.locator('input').first().inputValue(), liveDiagnosis.current,
+      'O valor atual e a RC são recalculados da matriz completa no clique');
     assert.match(await firstReview.locator('.collab-consistency-review-status').textContent(),
       /O valor sugerido é o ajuste isolado que mais reduz a RC.*limite aceitável de 0,10/s);
     assert.match(await page.locator('#collab-consistency-why').textContent(), /^Suas respostas indicam a seguinte linha de raciocínio:/);

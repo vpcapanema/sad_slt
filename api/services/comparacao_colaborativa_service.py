@@ -7,6 +7,7 @@ import secrets
 import unicodedata
 import base64
 import binascii
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -157,10 +158,31 @@ def _criterio_nomes(criterios: list[dict[str, Any]]) -> list[str]:
     return nomes
 
 
+def _link_publico(row: dict[str, Any], *, base_url: str = "") -> str:
+    token = quote(str(row["token"]), safe="")
+    return f"{base_url.rstrip('/')}/public/analise-multicriterio/formulario-comparacao-pareada/{token}/"
+
+
+def _proteger_link_publico(row: dict[str, Any], mensagem: str, *, base_url: str = "") -> str:
+    """Normaliza o único trecho imutável da mensagem para o link canônico do julgamento."""
+    token = quote(str(row["token"]), safe="")
+    caminhos = (
+        f"/public/analise-multicriterio/formulario-comparacao-pareada/{token}/",
+        f"/public/analise-multicriterio/{token}/",
+    )
+    for caminho in caminhos:
+        padrao = re.compile(rf"(?:https?://)?[^\s]*{re.escape(caminho)}")
+        normalizada, quantidade = padrao.subn(_link_publico(row, base_url=base_url), mensagem)
+        if quantidade:
+            return normalizada
+    raise DemandaValidationError(
+        "A mensagem deve manter o link persistente deste julgamento.", field="email_mensagem"
+    )
+
+
 def _mensagem_email_padrao(row: dict[str, Any], *, base_url: str = "") -> str:
     """Corpo inicial persistível, comum a todos os colaboradores do julgamento."""
-    token = quote(str(row["token"]), safe="")
-    link = f"{base_url.rstrip('/')}/public/analise-multicriterio/formulario-comparacao-pareada/{token}/"
+    link = _link_publico(row, base_url=base_url)
     prazo = row.get("valido_ate")
     if isinstance(prazo, str):
         try:
@@ -504,13 +526,9 @@ def atualizar_ambiente(
     if payload.email_mensagem is not None:
         if not payload.email_mensagem.strip():
             raise DemandaValidationError("Informe a mensagem enviada aos colaboradores.", field="email_mensagem")
-        caminhos = (
-            f"/public/analise-multicriterio/formulario-comparacao-pareada/{atual['token']}/",
-            f"/public/analise-multicriterio/{atual['token']}/",
+        data["email_mensagem"] = _proteger_link_publico(
+            atual, payload.email_mensagem, base_url=base_url
         )
-        if not any(caminho in payload.email_mensagem for caminho in caminhos):
-            raise DemandaValidationError("A mensagem deve manter o link persistente deste julgamento.", field="email_mensagem")
-        data["email_mensagem"] = payload.email_mensagem
     if atual.get("matriz_id"):
         if payload.matriz_id is not None and str(payload.matriz_id) != str(atual["matriz_id"]):
             raise DemandaValidationError(

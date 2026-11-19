@@ -51,7 +51,9 @@ const fs = require('node:fs');
     assert.equal(await page.locator('#ami-email-list tr').count(), 2);
     assert.match(await page.locator('#ami-email-list').textContent(), /Ana Silva/);
     assert.match(await page.locator('#ami-email-list').textContent(), /ana@example.com/);
-    assert.match(await page.locator('#ami-email-list').textContent(), /Ambiental/);
+    assert.doesNotMatch(await page.locator('#ami-email-list').textContent(), /Ambiental/);
+    assert.deepEqual(await page.locator('#ami-email-list').locator('xpath=ancestor::table').locator('th').allTextContents(),
+      ['', 'Colaboradores', 'E-mail colaborador', 'Data limite']);
     assert.deepEqual(errors, []);
     console.log('Importação de colaboradores com prévia e dimensões OK.');
   } finally { await browser.close(); }

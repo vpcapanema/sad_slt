@@ -442,6 +442,10 @@
   }
 
   function openConsistencyHelp() {
+    if (typeof buildLiveMatrix === "function" && typeof SLTAhp !== "undefined") {
+      var currentMatrix = buildLiveMatrix();
+      if (currentMatrix) updateConsistencyHelp(currentMatrix, SLTAhp.analyzeMatrix(currentMatrix).CR);
+    }
     if (!consistencyDiagnosis) return;
     var diagnosis = consistencyDiagnosis;
     var names = normalizeCriteriaNames(meta.criterios);

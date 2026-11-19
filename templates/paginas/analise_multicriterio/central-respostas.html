@@ -22,7 +22,7 @@
   <link rel="stylesheet" href="/assets/css/paginas/ami-report-tables.css?v=20261020-paginacao">
   {% if modo_pagina in ['espaco', 'julgamentos'] %}
   <link rel="stylesheet" href="/assets/css/admin-table-controls.css?v=20261015-botoes-quadrados">
-  <link rel="stylesheet" href="/assets/css/paginas/ami-espaco-secoes.css?v=20261118-importar-colaboradores">
+  <link rel="stylesheet" href="/assets/css/paginas/ami-espaco-secoes.css?v=20261119-link-protegido">
   {% endif %}
   {% if modo_pagina == 'julgamentos' %}<link rel="stylesheet" href="/assets/css/paginas/sicard-standard-pages.css?v=20261027-1">{% endif %}
   {% if modo_pagina == 'julgamentos' %}<link rel="stylesheet" href="/assets/css/paginas/central-respostas-padrao.css?v=20261106-regua-miniatura-7">{% endif %}
@@ -59,8 +59,10 @@
           </div>
           <div class="ami-email-content-grid">
             <div class="c-form-group ami-email-message-field"><label id="ami-email-template-label" class="c-form-label" for="ami-email-template"><i class="fas fa-envelope-open-text"></i> Mensagem aos colaboradores</label>
-              <div class="ami-email-editor-container"><textarea id="ami-email-template" class="c-form-control collab-email-template" maxlength="50000" aria-describedby="ami-email-message-help"></textarea>
-                <p class="form-help" id="ami-email-message-help">Este é o corpo persistido e usado pelo serviço de envio. A chave individual é acrescentada somente no momento do envio.</p>
+              <div class="ami-email-editor-container"><textarea id="ami-email-template" class="c-form-control collab-email-template ami-email-message-part" maxlength="50000" aria-label="Mensagem antes do link do formulário" aria-describedby="ami-email-message-help"></textarea>
+                <a id="ami-email-editor-link" class="ami-email-protected-link" href="#" target="_blank" rel="noopener" aria-label="Abrir formulário público do julgamento">Carregando link do formulário…</a>
+                <textarea id="ami-email-template-after" class="c-form-control collab-email-template ami-email-message-part" maxlength="50000" aria-label="Mensagem depois do link do formulário" aria-describedby="ami-email-message-help"></textarea>
+                <p class="form-help" id="ami-email-message-help">Todo o texto pode ser editado. O link do formulário é persistido, clicável e protegido contra alteração. A chave individual é acrescentada somente no momento do envio.</p>
               </div>
             </div>
             <div class="c-form-group ami-email-preview-field"><div class="c-form-label" id="ami-email-preview-field-label"><i class="fas fa-eye" aria-hidden="true"></i> Prévia institucional do convite</div>
@@ -148,9 +150,9 @@
   <script src="/assets/vendor/xlsx/xlsx-0.18.5.min.js"></script>
   <script src="/assets/js/paginas/analise-multicriterio-tabela.js?v=20261105-table-labels"></script>
   <script src="/assets/js/api-erro.js?v=20261027"></script>
-  <script src="/assets/js/paginas/ami-email.js?v=20261119-etapas-colaboracao"></script>
+  <script src="/assets/js/paginas/ami-email.js?v=20261119-link-protegido"></script>
   <script src="/assets/js/matriz-criterios-arquivo.js?v=20261009"></script>
   <script src="/assets/js/matrizes-criterios.js?v=20261117-form-identifiers"></script>
   <script src="/assets/js/saaty-selector-color.js?v=20261103-1"></script>
-  <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20261118-importar-colaboradores"></script>
+  <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20261119-colaboradores-sem-dimensoes"></script>
 {% endblock %}

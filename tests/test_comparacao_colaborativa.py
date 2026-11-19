@@ -228,6 +228,32 @@ def test_alias_assunto_e_mensagem_do_convite_persistem_no_julgamento(monkeypatch
     assert resposta.email_config_persistida is True
 
 
+def test_link_do_formulario_e_normalizado_pelo_backend_e_nao_pode_ser_alterado(monkeypatch):
+    atual = _ambiente_row(status="ativa")
+    monkeypatch.setattr(repo, "get_ambiente_by_id", lambda _: dict(atual))
+    monkeypatch.setattr(repo, "list_respostas", lambda _: [])
+    capturado = {}
+    monkeypatch.setattr(repo, "update_ambiente", lambda _, data: capturado.update(data) or {**atual, **data})
+
+    service.atualizar_ambiente(
+        AMBIENTE_ID,
+        AmbienteColaborativoUpdateSchema(
+            email_mensagem=(
+                "Texto editável\n"
+                "https://endereco-incorreto.example/public/analise-multicriterio/"
+                "formulario-comparacao-pareada/tok-abc/\nAssinatura editável"
+            )
+        ),
+        base_url="https://sicard.example/sicard",
+    )
+
+    assert capturado["email_mensagem"] == (
+        "Texto editável\n"
+        "https://sicard.example/sicard/public/analise-multicriterio/"
+        "formulario-comparacao-pareada/tok-abc/\nAssinatura editável"
+    )
+
+
 @pytest.mark.parametrize("status", ["encerrada", "consolidada"])
 def test_reabre_julgamento_com_prazo_futuro_preservando_respostas(monkeypatch, status):
     atual = _ambiente_row(status=status, total_respostas=1)
