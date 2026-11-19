@@ -1,0 +1,51 @@
+.pesquisa-experiencia-page { background: #f3f7f9; }
+.pesquisa-experiencia { width: min(860px, calc(100% - 2rem)); margin: 2rem auto 3rem; color: #183443; }
+.pesquisa-cabecalho { padding: 2rem; border-radius: 16px 16px 0 0; background: linear-gradient(135deg, #063b53, #0c6274); color: #fff; }
+.pesquisa-cabecalho h1 { margin: .25rem 0 .65rem; color: #fff; font-size: clamp(1.7rem, 4vw, 2.5rem); }
+.pesquisa-cabecalho p { max-width: 700px; margin: 0; line-height: 1.55; }
+.pesquisa-cabecalho .pesquisa-selo { font: 700 .75rem/1.2 Montserrat, Arial, sans-serif; letter-spacing: .08em; text-transform: uppercase; color: #bceaf0; }
+.pesquisa-formulario { padding: 1.5rem 2rem 2rem; border: 1px solid #d7e2e7; border-top: 0; border-radius: 0 0 16px 16px; background: #fff; box-shadow: 0 12px 30px rgb(25 60 75 / 9%); }
+.pesquisa-bloco { margin: 0; padding: 1.4rem 0; border: 0; border-bottom: 1px solid #e3ebef; }
+.pesquisa-bloco h2 { margin: 0 0 1rem; font-size: 1.2rem; color: #063b53; }
+.pesquisa-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.pesquisa-formulario label { display: grid; gap: .42rem; margin: 0 0 1rem; font-weight: 650; }
+.pesquisa-formulario :is(input[type=text], select, textarea) { box-sizing: border-box; width: 100%; padding: .72rem .8rem; border: 1px solid #9fb4be; border-radius: 7px; background: #fff; color: #183443; font: inherit; }
+.pesquisa-formulario :is(input, select, textarea):focus { outline: 3px solid rgb(17 126 146 / 20%); border-color: #117e92; }
+.opcional { font-weight: 400; font-size: .8rem; color: #5c717b; }
+.escala-ajuda { margin: -.35rem 0 1.2rem; color: #506771; }
+.pergunta-escala { margin: 0; padding: 1rem 0; border: 0; border-top: 1px solid #edf2f4; }
+.pergunta-escala legend { width: 100%; padding: 0 0 .8rem; font-weight: 650; }
+.pergunta-escala legend span { color: #117e92; }
+.escala-opcoes { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: .3rem; }
+.escala-opcoes, .escala-extremos { width: min(100%, 360px); margin-inline: auto; }
+.escala-opcoes label { display: grid; place-items: center; margin: 0; cursor: pointer; }
+.escala-opcoes label:nth-child(1) { --nota-fundo: #9f2941; --nota-texto: #fff; }
+.escala-opcoes label:nth-child(2) { --nota-fundo: #c96c7c; }
+.escala-opcoes label:nth-child(3) { --nota-fundo: #f5cdd4; }
+.escala-opcoes label:nth-child(4) { --nota-fundo: #e2e8ee; }
+.escala-opcoes label:nth-child(5) { --nota-fundo: #c6ead9; }
+.escala-opcoes label:nth-child(6) { --nota-fundo: #71bd9d; }
+.escala-opcoes label:nth-child(7) { --nota-fundo: #12664d; --nota-texto: #fff; }
+.escala-opcoes input { position: absolute; opacity: 0; }
+.escala-opcoes span { display: grid; box-sizing: border-box; width: min(100%, 44px); aspect-ratio: 1; place-items: center; border: 1px solid #637580; border-radius: 50%; background: #fff; color: #15232d; }
+.escala-opcoes label:nth-child(4) span,
+.escala-opcoes label:hover span,
+.escala-opcoes input:is(:checked, :focus-visible) + span { background: var(--nota-fundo); color: var(--nota-texto, #15232d); }
+.escala-opcoes input:checked + span { box-shadow: 0 0 0 2px #fff, 0 0 0 4px #193746; font-weight: 750; }
+.escala-opcoes input:focus-visible + span { outline: 3px solid #f5b841; outline-offset: 2px; }
+.escala-extremos { display: grid; grid-template-columns: 1fr auto 1fr; gap: .35rem; margin-top: .55rem; color: #506771; font-size: .72rem; }
+.escala-extremos span:last-child { text-align: right; }
+.campo-armadilha { position: absolute !important; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+.pesquisa-enviar { margin-top: 1.4rem; padding: .82rem 1.25rem; border: 0; border-radius: 7px; background: #07566a; color: #fff; font: 700 .95rem/1 Montserrat, Arial, sans-serif; cursor: pointer; }
+.pesquisa-enviar:hover { background: #063f50; }
+.pesquisa-enviar:disabled { opacity: .65; cursor: wait; }
+.pesquisa-status { margin-top: 1rem; }
+.pesquisa-status--erro { padding: .8rem 1rem; border-left: 4px solid #a32424; background: #fff0f0; color: #7d1717; }
+.pesquisa-sucesso { padding: 3rem 2rem; border: 1px solid #bed7ca; border-radius: 16px; background: #fff; text-align: center; box-shadow: 0 12px 30px rgb(25 60 75 / 9%); }
+.pesquisa-sucesso i { font-size: 2.5rem; color: #198754; }
+.pesquisa-sucesso h2 { margin: .8rem 0 .4rem; color: #07566a; }
+@media (max-width: 620px) {
+  .pesquisa-experiencia { width: min(100% - 1rem, 860px); margin-top: .5rem; }
+  .pesquisa-cabecalho, .pesquisa-formulario { padding-inline: 1rem; }
+  .pesquisa-grid { grid-template-columns: 1fr; gap: 0; }
+}

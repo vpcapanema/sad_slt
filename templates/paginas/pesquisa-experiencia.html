@@ -1,0 +1,89 @@
+{% extends "bases/base_conteudo.html" %}
+{% set subtitulo = "Pesquisa de experiência" %}
+{% set navegacao = "publica" %}
+{% set requer_autenticacao = false %}
+{% set scripts_defer = true %}
+
+{% block titulo %}Pesquisa de experiência — SICARD{% endblock %}
+{% block descricao %}Pesquisa de experiência dos usuários do SICARD.{% endblock %}
+{% block classes_body %}pesquisa-experiencia-page{% endblock %}
+
+{% block estilos_pagina %}
+  <link rel="stylesheet" href="/assets/css/pesquisa-experiencia.css?v=20261119-3">
+{% endblock %}
+
+{% block conteudo %}
+<main class="pesquisa-experiencia" id="conteudo-principal">
+  <header class="pesquisa-cabecalho">
+    <p class="pesquisa-selo">Sua experiência ajuda a melhorar o SICARD</p>
+    <h1>Pesquisa de experiência</h1>
+    <p>Responda às perguntas considerando sua experiência geral com o sistema. A pesquisa é anônima e leva cerca de três minutos.</p>
+  </header>
+
+  <form id="pesquisa-form" class="pesquisa-formulario" novalidate>
+    <section class="pesquisa-bloco" aria-labelledby="sobre-voce-titulo">
+      <h2 id="sobre-voce-titulo">Sobre seu uso do sistema</h2>
+      <div class="pesquisa-grid">
+        <label>Seu perfil de uso <span aria-hidden="true">*</span>
+          <select name="perfil" required>
+            <option value="">Selecione</option>
+            <option value="tecnico">Técnico</option>
+            <option value="gestor">Gestor</option>
+            <option value="administrativo">Administrativo</option>
+            <option value="usuario_eventual">Usuário eventual</option>
+            <option value="outro">Outro</option>
+          </select>
+        </label>
+        <label>Com que frequência utiliza o SICARD? <span aria-hidden="true">*</span>
+          <select name="frequencia_uso" required>
+            <option value="">Selecione</option>
+            <option value="primeiro_acesso">Este é meu primeiro acesso</option>
+            <option value="raramente">Raramente</option>
+            <option value="mensalmente">Mensalmente</option>
+            <option value="semanalmente">Semanalmente</option>
+            <option value="diariamente">Diariamente</option>
+          </select>
+        </label>
+      </div>
+      <label>Qual funcionalidade você mais utiliza? <span class="opcional">Opcional</span>
+        <input type="text" name="funcionalidade_mais_utilizada" maxlength="200">
+      </label>
+    </section>
+
+    <section class="pesquisa-bloco" aria-labelledby="avaliacao-titulo">
+      <h2 id="avaliacao-titulo">Avalie as afirmações</h2>
+      <p class="escala-ajuda">1 — Discordo totalmente · 2 — Discordo · 3 — Discordo um pouco · 4 — Neutro (nem concordo nem discordo) · 5 — Concordo um pouco · 6 — Concordo · 7 — Concordo totalmente.</p>
+      <div id="perguntas-avaliacao" class="perguntas-avaliacao"></div>
+    </section>
+
+    <section class="pesquisa-bloco" aria-labelledby="comentarios-titulo">
+      <h2 id="comentarios-titulo">Conte-nos mais</h2>
+      <label>Qual é a principal dificuldade que você encontra? <span class="opcional">Opcional</span>
+        <textarea name="principal_dificuldade" rows="3" maxlength="2000"></textarea>
+      </label>
+      <label>O que deveria ser melhorado primeiro? <span class="opcional">Opcional</span>
+        <textarea name="melhoria_prioritaria" rows="3" maxlength="2000"></textarea>
+      </label>
+      <label>Deixe aqui outras críticas, sugestões ou elogios <span class="opcional">Opcional</span>
+        <textarea name="criticas_sugestoes_elogios" rows="4" maxlength="3000" placeholder="Escreva livremente sobre sua experiência com o SICARD."></textarea>
+      </label>
+      <label class="campo-armadilha" aria-hidden="true">Não preencha este campo
+        <input type="text" name="website" tabindex="-1" autocomplete="off">
+      </label>
+    </section>
+
+    <div id="pesquisa-status" class="pesquisa-status" role="status" aria-live="polite"></div>
+    <button class="pesquisa-enviar" type="submit">Enviar avaliação</button>
+  </form>
+
+  <section id="pesquisa-sucesso" class="pesquisa-sucesso" hidden tabindex="-1">
+    <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+    <h2>Obrigado pela sua contribuição</h2>
+    <p>Sua avaliação foi registrada e ajudará a orientar as próximas melhorias do SICARD.</p>
+  </section>
+</main>
+{% endblock %}
+
+{% block scripts_pagina %}
+  <script defer src="/assets/js/pesquisa-experiencia.js?v=20261119-2"></script>
+{% endblock %}

@@ -333,6 +333,11 @@ def pagina_transparencia_publica(request: Request) -> Response:
     return render_page(request, "paginas/transparencia/index.html")
 
 
+@app.get("/public/pesquisa-experiencia/", include_in_schema=False)
+def pagina_pesquisa_experiencia(request: Request) -> Response:
+    return render_page(request, "paginas/pesquisa-experiencia.html")
+
+
 @app.get("/public/login/", include_in_schema=False)
 def pagina_login_publico(request: Request) -> Response:
     return render_page(request, "paginas/admin/login.html")

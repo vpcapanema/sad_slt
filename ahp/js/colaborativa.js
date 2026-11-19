@@ -86,11 +86,13 @@
         clearTimeout(pairTimers.get(pair));
         pair.classList.remove("is-auto-validated");
         pair.classList.add("is-auto-editing");
+        refreshConsistencyHelp();
         pairTimers.set(pair, setTimeout(function () {
           pairTimers.delete(pair);
           pair.classList.remove("is-auto-editing");
           pair.classList.add("is-auto-validated");
           updateProgressHint(latestCR);
+          refreshConsistencyHelp();
         }, 3000));
       });
     });
@@ -136,7 +138,7 @@
       res.CR < 0.1 ? "success" : "error"
     );
     updateProgressHint(res.CR);
-    el("collab-consistency-help-button").hidden = !consistencyHelpState(matrix, res.CR);
+    refreshConsistencyHelp(matrix);
     if (draftActive) {
       var version = editVersion;
       el("collab-save-feedback").textContent = "Alterações aguardando salvamento…";
@@ -340,16 +342,31 @@
     return best;
   }
 
-  function consistencyHelpState(matrix, cr) {
-    if (cr < 0.1) return null;
-    var answered = new Set(Object.keys(stats.pares).filter(function (key) { return stats.pares[key] > 0; }));
+  function refreshConsistencyHelp(matrix) {
+    matrix = matrix || buildLiveMatrix();
+    el("collab-consistency-help-button").hidden = !matrix || !consistencyHelpState(matrix);
+  }
+
+  function consistencyHelpState(matrix) {
+    var answered = new Set(Array.from(document.querySelectorAll(
+      "#comparisonContent .saaty-pair.is-auto-validated .saaty-scale"
+    ), function (scale) { return scale.dataset.pid; }));
     var total = matrix.length * (matrix.length - 1) / 2;
-    var count = 0;
+    var pairs = [];
     for (var i = 0; i < matrix.length; i++) {
-      for (var j = i + 1; j < matrix.length; j++) if (answered.has(i + "_" + j)) count++;
+      for (var j = i + 1; j < matrix.length; j++) if (answered.has(i + "_" + j)) pairs.push([i, j]);
     }
+    var count = pairs.length;
     if (!total || count / total < 0.6) return null;
-    return { matrix: matrix, cr: cr, answered: answered, count: count, total: total };
+    var sampleScore = null;
+    if (count < total) {
+      sampleScore = function (values) {
+        return SLTAhp.validatedConsistency(values, pairs);
+      };
+    }
+    var cr = sampleScore ? sampleScore(matrix) : SLTAhp.analyzeMatrix(matrix).CR;
+    if (cr == null || cr < 0.1) return null;
+    return { matrix: matrix, cr: cr, answered: answered, count: count, total: total, sampleScore: sampleScore };
   }
 
   function closeConsistencyHelp() {
@@ -436,33 +453,35 @@
   function openConsistencyHelp() {
     var matrix = buildLiveMatrix();
     if (!matrix) return;
-    var diagnosis = consistencyHelpState(matrix, SLTAhp.analyzeMatrix(matrix).CR);
+    var diagnosis = consistencyHelpState(matrix);
     if (!diagnosis) {
       el("collab-consistency-help-button").hidden = true;
       return;
     }
-    diagnosis.reviews = SLTAhp.consistencyReviews(matrix, diagnosis.answered);
+    var plan = SLTAhp.consistencyPlan(matrix, diagnosis.answered, diagnosis.sampleScore);
+    diagnosis.reviews = plan ? plan.changes : [];
     var names = normalizeCriteriaNames(meta.criterios);
     var list = el("collab-consistency-pairs");
     list.replaceChildren();
     el("collab-consistency-modal-summary").textContent =
       "Foram confirmados " + diagnosis.count + " de " + diagnosis.total + " pares (" +
-      Math.round(100 * diagnosis.count / diagnosis.total) + "%) e a RC atual é " +
-      SLTAhp.formatMetric(diagnosis.cr) + ". O diagnóstico é orientativo e não altera suas respostas.";
+      Math.round(100 * diagnosis.count / diagnosis.total) + "%). " +
+      (diagnosis.sampleScore ? "A RC estimada do conjunto validado é " : "A RC global é ") +
+      SLTAhp.formatMetric(diagnosis.cr) + ". " + (plan ?
+        "RC projetada com todos os ajustes abaixo: " + SLTAhp.formatMetric(plan.projectedCR) +
+        ". Os valores formam uma única proposta." : "Nenhum plano satisfatório pôde ser calculado.");
     if (!diagnosis.reviews.length) {
       var empty = document.createElement("li");
-      empty.textContent = "Nenhum par isolado explica suficientemente a inconsistência. Complete os pares restantes e reveja o conjunto das comparações.";
+      empty.textContent = "Revise os julgamentos confirmados e recalcule.";
       list.appendChild(empty);
     }
     diagnosis.reviews.forEach(function (review) {
       var item = document.createElement("li"), link = document.createElement("a");
-      var values = document.createElement("div"), status = document.createElement("p");
+      var values = document.createElement("div");
       var input = el("pair_" + review.i + "_" + review.j);
       var pair = input && input.closest(".saaty-pair");
-      var projectedAcceptable = review.projectedCR < 0.1;
       item.className = "collab-consistency-review-item";
       values.className = "collab-consistency-review-values";
-      status.className = "collab-consistency-review-status" + (projectedAcceptable ? " is-acceptable" : "");
       if (pair) pair.id = "collab-review-" + review.i + "-" + review.j;
       link.href = pair ? "#" + pair.id : "#";
       link.textContent = names[review.i] + " × " + names[review.j];
@@ -478,13 +497,9 @@
       });
       values.append(
         consistencyReviewField("Valor atual:", formatSaatyValue(review.currentValue)),
-        consistencyReviewField("Valor sugerido:", formatSaatyValue(review.suggestedValue)),
-        consistencyReviewField("RC projetada após alterar somente este par:", SLTAhp.formatMetric(review.projectedCR))
+        consistencyReviewField("Valor sugerido:", formatSaatyValue(review.suggestedValue))
       );
-      status.textContent = projectedAcceptable ?
-        "O valor sugerido é o ajuste isolado que mais reduz a RC e, nesta simulação, deixa o resultado dentro do limite aceitável de 0,10." :
-        "O valor sugerido é o ajuste isolado que mais reduz a RC. Nesta simulação, porém, ela ainda fica acima do limite aceitável de 0,10; outros pares também precisarão ser revistos.";
-      item.append(link, values, status);
+      item.append(link, values);
       list.appendChild(item);
     });
     var primary = null, triad = null;
@@ -509,7 +524,7 @@
         "A RC reúne as relações entre todos os critérios. Neste momento, as intensidades informadas formam proporções que não podem ser mantidas simultaneamente de modo coerente.";
     }
     el("collab-consistency-tip").textContent =
-      "Pense novamente na ordem dos critérios destacados para o objetivo desta análise e altere apenas as comparações que não representam sua avaliação real. Ajuste um par por vez e aguarde o recálculo da RC.";
+      "Revise se a proposta representa sua avaliação. Para reproduzir a RC projetada, aplique todos os valores sugeridos e aguarde a validação visual dos pares.";
     consistencyHelpReturnFocus = document.activeElement;
     el("collab-consistency-modal").hidden = false;
     positionConsistencyWindow();

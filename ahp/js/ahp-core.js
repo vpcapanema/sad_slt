@@ -81,7 +81,97 @@
     return analyzeMatrix(matrix);
   }
 
-  function consistencyReviews(matrix, answeredPairs) {
+  function validatedConsistency(matrix, pairs) {
+    const indices = [...new Set(pairs.flat())].sort((a, b) => a - b);
+    if (indices.length < 3 || pairs.length < indices.length) return null;
+    const n = indices.length;
+    const positions = new Map(indices.map((index, position) => [index, position]));
+    const system = Array.from({ length: n }, () => Array(n + 1).fill(0));
+    const observed = new Set();
+    for (const [first, second] of pairs) {
+      const i = positions.get(first), j = positions.get(second);
+      const log = Math.log(matrix[first][second]);
+      system[i][i]++;
+      system[j][j]++;
+      system[i][j]--;
+      system[j][i]--;
+      system[i][n] += log;
+      system[j][n] -= log;
+      observed.add(i + "_" + j);
+    }
+    // Fix one log-weight as the reference. A disconnected graph has no single RC.
+    for (let i = 1; i < n; i++) {
+      const pivot = system[i][i];
+      if (pivot < 1e-10) return null;
+      for (let column = i; column <= n; column++) system[i][column] /= pivot;
+      for (let row = 1; row < n; row++) {
+        if (row === i) continue;
+        const factor = system[row][i];
+        for (let column = i; column <= n; column++) system[row][column] -= factor * system[i][column];
+      }
+    }
+    const weights = system.map((row, i) => i === 0 ? 0 : row[n]);
+    const completed = indices.map((first, i) => indices.map((second, j) => {
+      if (i === j) return 1;
+      const key = Math.min(i, j) + "_" + Math.max(i, j);
+      return observed.has(key) ? matrix[first][second] : Math.exp(weights[i] - weights[j]);
+    }));
+    return analyzeMatrix(completed).CR;
+  }
+
+  function consistencyPlan(matrix, answered, sampleScore) {
+    const score = sampleScore || (values => analyzeMatrix(values).CR);
+    const trial = matrix.map(row => row.slice());
+    const pairs = Array.from(answered, key => key.split("_").map(Number));
+    const allowed = [1 / 9, 1 / 7, 1 / 5, 1 / 3, 1, 3, 5, 7, 9];
+    const set = (i, j, value) => {
+      trial[i][j] = value;
+      trial[j][i] = 1 / value;
+    };
+    let rc = score(trial);
+    if (rc == null || !Number.isFinite(rc)) return null;
+    for (let step = 0; step < pairs.length && rc >= 0.1; step++) {
+      let best = null;
+      let bestRC = rc;
+      for (const [i, j] of pairs) {
+        const current = trial[i][j];
+        for (const value of allowed) {
+          if (value === current) continue;
+          set(i, j, value);
+          const candidateRC = score(trial);
+          if (candidateRC != null && candidateRC < bestRC - 1e-10) {
+            best = [i, j, value];
+            bestRC = candidateRC;
+          }
+        }
+        set(i, j, current);
+      }
+      if (!best) break;
+      set(...best);
+      rc = bestRC;
+    }
+    // A matriz de igualdade é um ponto factível quando a busca local trava.
+    if (rc >= 0.1) {
+      for (const [i, j] of pairs) set(i, j, 1);
+    }
+    // Preserve todo julgamento original que puder voltar sem perder consistência.
+    for (const [i, j] of pairs) {
+      const value = trial[i][j];
+      if (value === matrix[i][j]) continue;
+      set(i, j, matrix[i][j]);
+      const restoredRC = score(trial);
+      if (restoredRC == null || !(restoredRC < 0.1)) set(i, j, value);
+    }
+    rc = score(trial);
+    if (rc == null || !(rc < 0.1)) return null;
+    return {
+      projectedCR: rc,
+      changes: pairs.filter(([i, j]) => trial[i][j] !== matrix[i][j])
+        .map(([i, j]) => ({ i, j, currentValue: matrix[i][j], suggestedValue: trial[i][j] })),
+    };
+  }
+
+  function consistencyReviews(matrix, answeredPairs, sampleScore, onlySolutions = false) {
     const n = matrix.length, total = n * (n - 1) / 2;
     const pairs = [];
     for (let i = 0; i < n; i++) {
@@ -90,23 +180,25 @@
       }
     }
     if (!total || pairs.length / total < 0.6) return [];
-    const current = analyzeMatrix(matrix);
+    const current = sampleScore ? { CR: sampleScore(matrix) } : analyzeMatrix(matrix);
+    if (current.CR == null) return [];
     if (current.CR < 0.1) return [];
-    pairs.forEach(pair => {
+    if (!sampleScore) pairs.forEach(pair => {
       pair.deviation = Math.abs(Math.log(matrix[pair.i][pair.j]) -
         Math.log(current.weights[pair.i] / current.weights[pair.j]));
     });
     const values = [1 / 9, 1 / 7, 1 / 5, 1 / 3, 1, 3, 5, 7, 9];
     // Limit simulations to the largest residuals to keep large forms responsive.
-    return pairs.sort((a, b) => b.deviation - a.deviation).slice(0, 8).map(pair => {
+    const candidates = sampleScore || onlySolutions ? pairs : pairs.sort((a, b) => b.deviation - a.deviation).slice(0, 8);
+    return candidates.map(pair => {
       const trial = matrix.map(row => row.slice());
       let bestCR = current.CR;
       let bestValue = matrix[pair.i][pair.j];
       values.forEach(value => {
         trial[pair.i][pair.j] = value;
         trial[pair.j][pair.i] = 1 / value;
-        const trialCR = analyzeMatrix(trial).CR;
-        if (trialCR < bestCR) {
+        const trialCR = sampleScore ? sampleScore(trial) : analyzeMatrix(trial).CR;
+        if (trialCR != null && trialCR < bestCR) {
           bestCR = trialCR;
           bestValue = value;
         }
@@ -117,7 +209,7 @@
         deviation: pair.deviation, projectedCR: bestCR,
         improvement: current.CR - bestCR,
       };
-    }).filter(pair => pair.improvement > 1e-8)
+    }).filter(pair => onlySolutions ? pair.projectedCR < 0.1 : pair.improvement > 1e-8)
       .sort((a, b) => b.improvement - a.improvement).slice(0, 3);
   }
 
@@ -167,6 +259,8 @@
     analyzeMatrix,
     calculateAHP,
     consistencyReviews,
+    consistencyPlan,
+    validatedConsistency,
     synthesize,
     matrixFromUpper,
   };

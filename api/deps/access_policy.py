@@ -62,6 +62,8 @@ def page_allowed(user, path):
 
 
 def _public(path, method):
+    if path == '/api/pesquisa-experiencia/respostas' and method == 'POST':
+        return True
     if path.startswith(('/api/auth/', '/api/health', '/api/ahp/comparacao-colaborativa/publico/')):
         return True
     if method not in SAFE_METHODS:
