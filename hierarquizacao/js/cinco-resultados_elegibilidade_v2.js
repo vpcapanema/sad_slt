@@ -2,7 +2,7 @@ import {instalarRegistro} from './registrar-resultados-fase.js?v=20261027-finali
 import {post, base} from '../../geoespacial/extracao-atributos/api.js';
 import {el} from '../../geoespacial/extracao-atributos/ui.js';
 import {conclusaoSobreposicao} from './elegibilidade-conclusao.js?v=20261104-camadas';
-import {escolherArquivo} from '../../geoespacial/extracao-atributos/explorador.js?v=20261020-saidas';
+import {escolherArquivo} from '../../geoespacial/extracao-atributos/explorador.js?v=20261119-navegacao-leitura';
 import {
   nomeSobreposicao, CATEGORIAS, ROTULOS, FILTROS, ORDENS, SELECAO_VAZIA, caracterizarDemandas, demandasVisiveis, descreverSituacao,
   registrosDetalhados, registrosVisiveis, alternarSelecao, formatarHa, formatarPercentual,

@@ -51,6 +51,7 @@ export function escolherArquivo({catalog=[],carregarCatalogo,excluded=[],title,a
   return new Promise(resolve=>{
     const inline=Boolean(host?.isConnected);
     const dialog=el(inline?'section':'dialog',undefined,`ea-tool-dialog ea-storage-dialog${inline?' ea-storage-inline':''}`);
+    if (!validar && somenteReferencias) dialog.setAttribute('data-read-control', '');
     const header=el('header'),heading=el('h2',title),close=icon('Fechar','fa-xmark',()=>finish());
     const minimize=icon('Minimizar','fa-window-minimize',()=>{const small=dialog.classList.toggle('is-minimized');setIcon(minimize,small?'Restaurar':'Minimizar',small?'fa-window-restore':'fa-window-minimize');});
     const maximize=icon('Maximizar','fa-window-maximize',()=>{dialog.classList.remove('is-minimized');setIcon(minimize,'Minimizar','fa-window-minimize');const full=dialog.classList.toggle('is-maximized');setIcon(maximize,full?'Restaurar tamanho':'Maximizar',full?'fa-window-restore':'fa-window-maximize');});
