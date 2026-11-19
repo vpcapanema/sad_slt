@@ -121,14 +121,6 @@
     if (!matrix) return;
     var res = SLTAhp.analyzeMatrix(matrix);
     latestCR = res.CR;
-    el("metricRCValue").textContent = SLTAhp.formatMetric(res.CR);
-    el("metricICValue").textContent = SLTAhp.formatMetric(res.CI);
-    el("metricLambdaValue").textContent = SLTAhp.formatMetric(res.lambdaMax);
-    el("liveMetrics").setAttribute("aria-busy", "false");
-    var rcCard = el("metricRCValue").closest(".ahp-metric-card");
-    rcCard.classList.toggle("is-success", res.CR > 0 && res.CR < 0.1);
-    rcCard.classList.toggle("is-failure", res.CR >= 0.1);
-    el("collab-rc-status").textContent = res.CR < 0.1 ? "Adequada para envio" : "Inadequada para envio";
     var btn = el("btn-enviar-resposta");
     if (btn) btn.disabled = !draftActive || res.CR >= 0.1;
     submitFeedback(
@@ -344,10 +336,21 @@
 
   function refreshConsistencyHelp(matrix) {
     matrix = matrix || buildLiveMatrix();
-    el("collab-consistency-help-button").hidden = !matrix || !consistencyHelpState(matrix);
+    var state = matrix && validatedConsistencyState(matrix);
+    var metrics = state && state.metrics;
+    el("metricRCValue").textContent = metrics ? SLTAhp.formatMetric(metrics.CR) : "—";
+    el("metricICValue").textContent = metrics ? SLTAhp.formatMetric(metrics.CI) : "—";
+    el("metricLambdaValue").textContent = metrics ? SLTAhp.formatMetric(metrics.lambdaMax) : "—";
+    el("liveMetrics").setAttribute("aria-busy", "false");
+    var rcCard = el("metricRCValue").closest(".ahp-metric-card");
+    rcCard.classList.toggle("is-success", Boolean(metrics && metrics.CR < 0.1));
+    rcCard.classList.toggle("is-failure", Boolean(metrics && metrics.CR >= 0.1));
+    el("collab-rc-status").textContent = !metrics ? "Aguardando comparações validadas suficientes" :
+      state.sampleScore ? "RC estimada dos pares validados" : "RC da matriz completa";
+    el("collab-consistency-help-button").hidden = !metrics || metrics.CR < 0.1;
   }
 
-  function consistencyHelpState(matrix) {
+  function validatedConsistencyState(matrix) {
     var answered = new Set(Array.from(document.querySelectorAll(
       "#comparisonContent .saaty-pair.is-auto-validated .saaty-scale"
     ), function (scale) { return scale.dataset.pid; }));
@@ -364,9 +367,9 @@
         return SLTAhp.validatedConsistency(values, pairs);
       };
     }
-    var cr = sampleScore ? sampleScore(matrix) : SLTAhp.analyzeMatrix(matrix).CR;
-    if (cr == null || cr < 0.1) return null;
-    return { matrix: matrix, cr: cr, answered: answered, count: count, total: total, sampleScore: sampleScore };
+    var metrics = sampleScore ? SLTAhp.validatedMetrics(matrix, pairs) : SLTAhp.analyzeMatrix(matrix);
+    if (!metrics) return null;
+    return { matrix: matrix, metrics: metrics, cr: metrics.CR, answered: answered, count: count, total: total, sampleScore: sampleScore };
   }
 
   function closeConsistencyHelp() {
@@ -453,8 +456,8 @@
   function openConsistencyHelp() {
     var matrix = buildLiveMatrix();
     if (!matrix) return;
-    var diagnosis = consistencyHelpState(matrix);
-    if (!diagnosis) {
+    var diagnosis = validatedConsistencyState(matrix);
+    if (!diagnosis || diagnosis.cr < 0.1) {
       el("collab-consistency-help-button").hidden = true;
       return;
     }

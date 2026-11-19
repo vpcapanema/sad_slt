@@ -81,7 +81,7 @@
     return analyzeMatrix(matrix);
   }
 
-  function validatedConsistency(matrix, pairs) {
+  function validatedMetrics(matrix, pairs) {
     const indices = [...new Set(pairs.flat())].sort((a, b) => a - b);
     if (indices.length < 3 || pairs.length < indices.length) return null;
     const n = indices.length;
@@ -116,7 +116,11 @@
       const key = Math.min(i, j) + "_" + Math.max(i, j);
       return observed.has(key) ? matrix[first][second] : Math.exp(weights[i] - weights[j]);
     }));
-    return analyzeMatrix(completed).CR;
+    return analyzeMatrix(completed);
+  }
+
+  function validatedConsistency(matrix, pairs) {
+    return validatedMetrics(matrix, pairs)?.CR ?? null;
   }
 
   function consistencyPlan(matrix, answered, sampleScore) {
@@ -261,6 +265,7 @@
     consistencyReviews,
     consistencyPlan,
     validatedConsistency,
+    validatedMetrics,
     synthesize,
     matrixFromUpper,
   };
