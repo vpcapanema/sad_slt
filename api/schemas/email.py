@@ -64,3 +64,7 @@ class ConviteEmailEnvioSchema(EmailTesteSchema):
     versao: datetime
     reenvio_id: UUID | None = None
     somente_nao_enviado: bool = False
+
+
+class RespostaEmailEnvioSchema(EmailTesteSchema):
+    reenvio_id: UUID | None = None

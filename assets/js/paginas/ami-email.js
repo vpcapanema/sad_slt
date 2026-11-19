@@ -303,8 +303,7 @@
       return false;
     } finally { bloquear(anterior); }
   }
-  // Estados que admitem (re)envio pelo monitoramento: nunca enviado, ou enviado
-  // e devolvido pelo servidor do destinatário.
+  // Estados usados para identificar pendentes no envio geral de convites.
   const REENVIAVEIS = new Set(["Não enviado", "Devolvido"]);
   function controles() {
     const {pendentes, enviados} = situacao();
@@ -319,10 +318,9 @@
     $("ami-save-email-config").disabled = !editavel || !configuracaoAlterada;
     const marcados = monitorRows.filter(row => selected.has(rowKey(row)));
     const baseBloqueada = ocupado || !pronto || modo !== "view" || !contexto || !marcados.length;
-    $("ami-monitor-send").disabled = $("ami-open-mail").disabled || baseBloqueada ||
-      !marcados.every(row => REENVIAVEIS.has(estado(row, "convite")));
+    $("ami-monitor-send").disabled = $("ami-open-mail").disabled || baseBloqueada;
     $("ami-monitor-send-response").disabled = baseBloqueada ||
-      !marcados.every(row => REENVIAVEIS.has(estado(row, "resposta")));
+      !marcados.every(row => row.resposta_recebida);
     $("ami-email-receipts").disabled = ocupado || !contexto || modo !== "view" || !contexto.confirmacoesConfiguradas;
     $("ami-revoke-invitation").disabled = ocupado || !contexto || modo !== "view" || !contexto.destinatarios.length;
     $("ami-monitor-refresh").disabled = $("ami-email-receipts").disabled;
@@ -482,7 +480,7 @@
         title: apenasSelecionados ? "Enviar e-mail de convite aos selecionados" : reenvio ? "Reenviar e-mails aos colaboradores" : somentePendentes ? "Enviar e-mail aos pendentes" : "Enviar e-mail aos colaboradores",
         message: "Enviar a mensagem exibida para " + lista.length + " colaborador(es)" +
           (apenasSelecionados ? " selecionado(s) no monitoramento?" : somentePendentes ? " que ainda não receberam o convite?" : " salvo(s)?"),
-        warning: apenasSelecionados ? "Somente colaboradores com E-mail convite igual a Não enviado ou Devolvido podem receber este envio. Os demais colaboradores não são afetados."
+        warning: apenasSelecionados ? "Os selecionados receberão um novo convite. A chave individual anterior de cada destinatário será substituída."
           : reenvio ? "Será enviado um novo convite a cada colaborador salvo, inclusive a quem já recebeu. O histórico anterior será preservado."
           : somentePendentes ? "Quem já recebeu o convite não receberá outra mensagem e mantém sua chave individual."
           : "Envios individuais aos colaboradores salvos.",
@@ -499,8 +497,7 @@
           row = await request(url(atual.julgamento.id) + "/enviar", {
             method: "POST", body: JSON.stringify({
               destinatario, versao: atual.julgamento.atualizadoEm,
-              reenvio_id: apenasSelecionados ? null : reenvioId,
-              somente_nao_enviado: apenasSelecionados
+              reenvio_id: reenvioId
             })
           });
           if (!row.id || !rotulosEnvio[row.envio_status]) throw new Error("O servidor não confirmou o estado do envio. Consulte o histórico antes de tentar novamente.");
@@ -565,9 +562,10 @@
       if (!(await ProcessFeedback.confirmar({
         title: "Enviar e-mail de resposta aos selecionados",
         message: "Enviar a confirmação de recebimento da resposta para " + lista.length + " colaborador(es) selecionado(s)?",
-        warning: "Somente confirmações com status Não enviado serão enviadas. Os convites e os envios automáticos não serão alterados.",
+        warning: "Os selecionados receberão a confirmação, mesmo que já tenham recebido uma anteriormente.",
         confirmLabel: "Enviar e-mail de resposta"
       }))) return;
+      const reenvioId = crypto.randomUUID();
       processo = ProcessFeedback.iniciarCadastro({title: "Enviando confirmações de resposta", tasks: lista});
       let problemas = 0, interrompidos = 0;
       let codigo = "envio_email";
@@ -576,7 +574,7 @@
         if (index) await aguardar(INTERVALO_ENVIO_MS);
         const destinatario = lista[index]; processo.tarefaAtual(destinatario);
         const row = await request(url(atual.julgamento.id) + "/resposta/enviar", {
-          method: "POST", body: JSON.stringify({destinatario})
+          method: "POST", body: JSON.stringify({destinatario, reenvio_id: reenvioId})
         });
         if (!row.id || !rotulosEnvio[row.envio_status]) throw new Error("O servidor não confirmou o estado do envio. Atualize o monitoramento antes de tentar novamente.");
         registros = registros.filter(item => item.id !== row.id).concat(row); render();

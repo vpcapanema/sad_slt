@@ -10,7 +10,7 @@ from api.exceptions import DatabaseUnavailableError, DemandaValidationError
 from api.repositories import comparacao_colaborativa_repository as ambientes
 from api.repositories import email_convites_repository as repo
 from api.routers.email import _erro, _nao_armazenar
-from api.schemas.email import ConviteEmailEnvioSchema, EmailTesteSchema
+from api.schemas.email import ConviteEmailEnvioSchema, RespostaEmailEnvioSchema
 from api.services import email_confirmacoes, email_convites, email_resposta_colaborador
 from api.services.email_service import FalhaEmail
 from api.services.session_service import SessionUser
@@ -132,10 +132,12 @@ def monitoramento(ambiente_id: UUID) -> dict:
 
 
 @router.post("/{ambiente_id}/emails/resposta/enviar")
-def enviar_resposta(ambiente_id: UUID, dados: EmailTesteSchema,
+def enviar_resposta(ambiente_id: UUID, dados: RespostaEmailEnvioSchema,
                     user: SessionUser = Depends(require_analyst)) -> dict:
     try:
-        return email_resposta_colaborador.enviar(str(ambiente_id), str(dados.destinatario), user.id)
+        return email_resposta_colaborador.enviar(
+            str(ambiente_id), str(dados.destinatario), user.id, reenvio_id=dados.reenvio_id
+        )
     except FalhaEmail as exc:
         raise _erro(exc) from exc
     except DemandaValidationError as exc:

@@ -23,6 +23,7 @@ const fs = require('node:fs');
       hierarquizacao_codigo:'H1',atualizadoEm:'2026-10-19T12:00:00+00:00',valido_ate:'2035-12-31T23:59:59-03:00',
       criterios:[{nome:'Critério A'},{nome:'Critério B'}],n_criterios:2,
       url_publica:'https://example.com/sicard/public/analise-multicriterio/formulario-comparacao-pareada/token-email/',
+      email_config_persistida:true,
       convites:[{nome:'Ana',email:'ana@example.com'},{nome:'Bia',email:'bia@example.com'},{nome:'Cid',email:'cid@example.com'}]};
     const registro=(id,email,natureza,status,detalhe)=>({id,destinatario:email,natureza,envio_status:status,detalhe,
       criado_em:'2026-11-05T12:00:00Z',entrega_status:'sem_confirmacao',leitura_status:'sem_confirmacao',eventos:[]});
@@ -37,6 +38,7 @@ const fs = require('node:fs');
     page.on('pageerror',e=>errors.push(e.message));
     await page.route('**/api/**',async route=>{
       const req=route.request(), path=new URL(req.url()).pathname;
+      if(path==='/api/auth/me') return route.fulfill({json:{id:'gestor-teste',username:'gestor.teste',nome:'Gestor de teste',tipo_usuario:'GESTOR',perfil_nome:'Gestor',permissoes:{'area_restrita.visualizar':true,'mad.visualizar':true,'mad.operar':true}}});
       if(path.startsWith('/api/auth/')) return route.fallback();
       requests.push(path);
       if(path.endsWith('/emails/monitoramento')){
@@ -53,9 +55,8 @@ const fs = require('node:fs');
       if(path.endsWith('/emails/enviar') || path.endsWith('/emails/resposta/enviar')){
         const p=req.postDataJSON(), natureza=path.endsWith('/resposta/enviar')?'resposta':'convite';
         sends.push({natureza,...p});
-        const anterior=rows.find(r=>r.destinatario===p.destinatario && r.natureza===natureza);
-        const row=registro(anterior?.id || 'email-'+p.destinatario,p.destinatario,natureza,'aceito_smtp','Aceito pelo servidor de envio');
-        rows=rows.filter(r=>r.id!==row.id).concat(row);
+        const row=registro('envio-'+sends.length,p.destinatario,natureza,'aceito_smtp','Aceito pelo servidor de envio');
+        rows=rows.concat(row);
         return route.fulfill({json:row});
       }
       if(path==='/api/ahp/comparacao-colaborativa/ambientes') return route.fulfill({json:[round]});
@@ -98,27 +99,32 @@ const fs = require('node:fs');
       document.getElementById('ami-monitor-send-response').disabled);
     assert.equal(await convite.isEnabled(),true); assert.equal(await resposta.isDisabled(),true);
     await marcar('bia@example.com');
-    assert.equal(await convite.isDisabled(),true); assert.equal(await resposta.isDisabled(),true);
-    await limpar(); await marcar('bia@example.com');
-    assert.equal(await convite.isDisabled(),true); assert.equal(await resposta.isEnabled(),true);
-    await resposta.click(); await confirmar();
-    assert.deepEqual(sends,[{natureza:'resposta',destinatario:'bia@example.com'}]);
-    assert.equal(await resposta.isDisabled(),true);
-
-    await limpar(); await marcar('cid@example.com');
     assert.equal(await convite.isEnabled(),true); assert.equal(await resposta.isDisabled(),true);
+    await limpar(); await marcar('bia@example.com');
+    assert.equal(await convite.isEnabled(),true); assert.equal(await resposta.isEnabled(),true);
     await convite.click(); await confirmar();
-    assert.equal(sends.length,2); assert.equal(sends[1].natureza,'convite');
-    assert.equal(sends[1].somente_nao_enviado,true); assert.equal(sends[1].reenvio_id,null);
-    assert.equal(sends[1].destinatario,'cid@example.com');
-    assert.equal(await convite.isDisabled(),true);
+    assert.equal(sends.length,1);
+    assert.equal(sends[0].natureza,'convite');
+    assert.equal(sends[0].destinatario,'bia@example.com');
+    assert.ok(sends[0].reenvio_id);
+    assert.notEqual(sends[0].somente_nao_enviado,true);
+    assert.equal(await convite.isEnabled(),true);
+
+    await marcar('cid@example.com');
+    assert.equal(await resposta.isEnabled(),true, 'Confirmação já enviada não bloqueia o reenvio');
+    await resposta.click(); await confirmar();
+    assert.deepEqual(sends.slice(1).map(({natureza,destinatario})=>[natureza,destinatario]),
+      [['resposta','bia@example.com'],['resposta','cid@example.com']]);
+    assert.ok(sends[1].reenvio_id);
+    assert.equal(sends[1].reenvio_id,sends[2].reenvio_id);
+    assert.equal(await resposta.isEnabled(),true);
     assert.equal(await page.locator('#ami-email-deliveries tr').count(),3);
 
     await linha('bia@example.com').locator('.ami-cell-link').first().click();
     const modal=page.locator('#ami-email-history-modal');
     assert.equal(await modal.isVisible(),true);
     assert.deepEqual(await page.locator('#ami-email-history-table th').allTextContents(),['','Entrega','Leitura','Detalhes']);
-    assert.equal(await page.locator('#ami-email-history-body tr').count(),2);
+    assert.equal(await page.locator('#ami-email-history-body tr').count(),3);
     const estilos=await page.evaluate(()=>{
       const style=selector=>{
         const c=getComputedStyle(document.querySelector(selector));
@@ -147,7 +153,7 @@ const fs = require('node:fs');
     assert.equal(await modal.isVisible(),false);
     await linha('bia@example.com').locator('.ami-cell-link').last().click();
     assert.equal(await page.locator('#ami-email-history-title').innerText(),'E-mail resposta');
-    assert.equal(await page.locator('#ami-email-history-body tr').count(),1);
+    assert.equal(await page.locator('#ami-email-history-body tr').count(),2);
     assert.match(await page.locator('#ami-email-history-body').innerText(),/Enviado\. Aceito pelo servidor de envio/);
     await page.locator('#ami-email-history-close').click();
 
@@ -161,7 +167,7 @@ const fs = require('node:fs');
     await linha('bia@example.com').locator('.ami-cell-link').last().click();
     assert.match(await page.locator('#ami-email-history-body').innerText(),/Data não informada/);
     await page.locator('#ami-email-history-close').click();
-    assert.equal(sends.length,2,'Atualizar não reenvia mensagens');
+    assert.equal(sends.length,3,'Atualizar não reenvia mensagens');
     await page.setViewportSize({width:390,height:844});
     await linha('cid@example.com').locator('.ami-cell-link').last().click();
     assert.equal(await modal.isVisible(),true);

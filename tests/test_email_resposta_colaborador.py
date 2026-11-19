@@ -4,6 +4,7 @@ from __future__ import annotations
 import pytest
 from datetime import datetime, timezone
 from types import SimpleNamespace
+from uuid import uuid4
 from fastapi.testclient import TestClient
 
 from api.schemas.comparacao_colaborativa import RespostaColaborativaResponseSchema
@@ -134,8 +135,53 @@ def test_confirmacao_manual_exige_resposta_recebida(monkeypatch, rastreamento, s
     monkeypatch.setattr(confirmacao.repo, "get_ambiente_by_id", lambda _: _ambiente([{"email": "a@x.gov.br"}]))
     monkeypatch.setattr(confirmacao.repo, "list_respostas", lambda _: [{**_resposta(), "status": status}])
     with pytest.raises(DemandaValidationError, match="Ainda não há resposta"):
-        confirmacao.enviar("amb-1", "a@x.gov.br", "analista")
+        confirmacao.enviar("amb-1", "a@x.gov.br", "analista", reenvio_id=uuid4())
     assert rastreamento == []
+
+
+def test_reenvios_manuais_preservam_historico_e_nao_duplicam_a_mesma_operacao(monkeypatch, rastreamento):
+    ambiente = _ambiente([{"email": "a@x.gov.br"}])
+    monkeypatch.setattr(email_service, "_config", lambda **_: SimpleNamespace(remetente="sicard@example.com"))
+    monkeypatch.setattr(confirmacao.repo, "get_ambiente_by_id", lambda _: ambiente)
+    monkeypatch.setattr(confirmacao.repo, "list_respostas", lambda _: [_resposta()])
+    reenvios = {}
+    chamadas_smtp = []
+
+    def reservar(_ambiente, _email, conteudo_hash, mensagem_id, *_args, **opcoes):
+        assert opcoes == {"natureza": "resposta", "validar_ativo": False}
+        if conteudo_hash in reenvios:
+            return reenvios[conteudo_hash], False
+        registro = {"id": mensagem_id, "mensagem_id": mensagem_id}
+        reenvios[conteudo_hash] = registro
+        return registro, True
+
+    finalizar_original = confirmacao.historico.finalizar
+
+    def finalizar(ident, status, detalhe, **opcoes):
+        for registro in reenvios.values():
+            if registro["id"] == ident:
+                registro.update(envio_status=status, detalhe=detalhe, **opcoes)
+                return registro
+        return finalizar_original(ident, status, detalhe, **opcoes)
+
+    def enviar_smtp(dados, *, id_mensagem, **_opcoes):
+        chamadas_smtp.append(id_mensagem)
+        return EmailEnvioResultado(id_mensagem=id_mensagem, destinatario=str(dados.destinatario))
+
+    monkeypatch.setattr(confirmacao.historico, "reservar", reservar)
+    monkeypatch.setattr(confirmacao.historico, "finalizar", finalizar)
+    monkeypatch.setattr(email_service, "enviar", enviar_smtp)
+
+    confirmacao.notificar("amb-1", "resp-1")
+    operacao = uuid4()
+    primeiro = confirmacao.enviar("amb-1", "a@x.gov.br", "analista", reenvio_id=operacao)
+    repetido = confirmacao.enviar("amb-1", "a@x.gov.br", "analista", reenvio_id=operacao)
+    segundo = confirmacao.enviar("amb-1", "a@x.gov.br", "analista", reenvio_id=uuid4())
+
+    assert repetido == {**primeiro, "reutilizado": True}
+    assert chamadas_smtp == [rastreamento[0]["mensagem_id"], primeiro["mensagem_id"], segundo["mensagem_id"]]
+    assert len(set(chamadas_smtp)) == 3
+    assert len(reenvios) == 2 and rastreamento[0]["envio_status"] == "aceito_smtp"
 
 
 def test_confirmacao_manual_usa_mesmo_conteudo_do_automatico(monkeypatch, rastreamento):

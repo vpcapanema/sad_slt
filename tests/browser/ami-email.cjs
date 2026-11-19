@@ -324,7 +324,7 @@ const fs = require('node:fs');
     await page.locator('#pfsStatusOverlay .pfs-box.pfs-active .pfs-close').click();
     assert.equal(await page.locator('#ami-monitor-send').isDisabled(),true);
     await page.locator('#ami-email-deliveries tr', {hasText:'ana@example.com'}).locator('input[type="checkbox"]').check();
-    assert.equal(await page.locator('#ami-monitor-send').isDisabled(),true);
+    assert.equal(await page.locator('#ami-monitor-send').isEnabled(),true,'Convite aceito pelo SMTP admite reenvio seletivo');
     assert.equal(sends.length,5);
     // Convite devolvido pelo servidor do destinatário volta a admitir envio aos selecionados.
     rows=[{id:'devolvido-ana',destinatario:'ana@example.com',envio_status:'aceito_smtp',entrega_status:'falha',leitura_status:'sem_confirmacao',criado_em:'2026-10-19T18:00:00Z',detalhe:'Devolvido: caixa inexistente.'}];

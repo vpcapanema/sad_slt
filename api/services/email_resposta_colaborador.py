@@ -14,7 +14,7 @@ import re
 from hashlib import sha256
 from html import escape
 from typing import Any
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from pydantic import ValidationError
 
@@ -239,7 +239,8 @@ def montar(ambiente: dict[str, Any], resposta: dict[str, Any]) -> EmailEnvioSche
 
 
 def enviar(ambiente_id: str, destinatario: str, usuario_id: str, *,
-           resposta_id: str | None = None, automatico: bool = False) -> dict[str, Any]:
+           resposta_id: str | None = None, automatico: bool = False,
+           reenvio_id: UUID | None = None) -> dict[str, Any]:
     config = email_service._config()
     ambiente = repo.get_ambiente_by_id(ambiente_id)
     if not ambiente:
@@ -255,12 +256,20 @@ def enviar(ambiente_id: str, destinatario: str, usuario_id: str, *,
     resposta = respostas[0]
     mensagem = montar(ambiente, resposta)
     email = str(mensagem.destinatario).lower()
-    registro, novo = historico.reservar_monitorado(
-        ambiente_id, email, sha256(f"resposta:{ambiente_id}:{email}".encode()).hexdigest(),
+    identidade = f"resposta:{ambiente_id}:{email}"
+    if reenvio_id is not None:
+        identidade += f":reenvio:{reenvio_id}"
+    reserva = (
+        ambiente_id, email, sha256(identidade.encode()).hexdigest(),
         f"<sicard.{uuid4().hex}@{str(config.remetente).rsplit('@', 1)[1]}>",
-        usuario_id, ambiente["atualizado_em"], natureza="resposta",
-        rejeitar_enviado=not automatico, validar_ativo=False,
+        usuario_id, ambiente["atualizado_em"],
     )
+    if reenvio_id is not None:
+        registro, novo = historico.reservar(*reserva, natureza="resposta", validar_ativo=False)
+    else:
+        registro, novo = historico.reservar_monitorado(
+            *reserva, natureza="resposta", rejeitar_enviado=not automatico, validar_ativo=False,
+        )
     if not novo:
         return {**registro, "reutilizado": True}
     try:
