@@ -216,15 +216,48 @@
   gap: var(--ami-space-md, 1rem);
   align-items: stretch;
 }
-.ami-espaco-page .ami-email-message-field {
+.ami-espaco-page :is(.ami-email-message-field, .ami-email-preview-field) {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
+  height: 100%;
   margin-bottom: 0;
 }
+.ami-espaco-page :is(.ami-email-message-field, .ami-email-preview-field) > .c-form-label {
+  flex: 0 0 auto;
+}
+.ami-espaco-page .ami-email-editor-container {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid #d5dee6;
+  border-radius: 6px;
+  background: #fff;
+  overflow: hidden;
+}
+.ami-espaco-page .ami-email-editor-container .collab-email-template {
+  flex: 1 1 auto;
+  border: 0;
+  border-radius: 0;
+}
+.ami-espaco-page .ami-email-editor-container > .form-help {
+  margin: .5rem .65rem 0;
+}
+.ami-espaco-page .ami-email-editor-container > .form-help:last-child {
+  margin-bottom: .65rem;
+}
 .ami-espaco-page .ami-email-institutional-preview {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
   min-width: 0;
+  min-height: 0;
   margin: 0;
   border: 1px solid #d5dee6;
+  border-radius: 6px;
   background: #fff;
+  overflow: hidden;
 }
 .ami-espaco-page .ami-email-preview-title {
   box-sizing: border-box;
@@ -239,11 +272,15 @@
 }
 .ami-espaco-page .ami-email-preview-body {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   align-items: stretch;
   gap: .75rem;
   padding: 1rem;
   font: 400 var(--ami-font-child, .7rem)/1.55 Roboto, Arial, sans-serif;
+}
+.ami-espaco-page .ami-email-preview-body > .form-help {
+  margin: 0;
 }
 .ami-espaco-page #ami-email-preview-message {
   white-space: pre-wrap;

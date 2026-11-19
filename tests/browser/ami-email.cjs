@@ -102,12 +102,22 @@ const fs = require('node:fs');
     ]);
     const headerBoxes=await page.locator('.ami-email-header-fields input').evaluateAll(inputs=>inputs.map(input=>input.getBoundingClientRect().toJSON()));
     assert.ok(Math.max(...headerBoxes.map(box=>box.y))-Math.min(...headerBoxes.map(box=>box.y))<2,'Remetente, alias e assunto devem ficar na mesma linha');
-    const [messageBox,previewBox]=await page.locator('.ami-email-content-grid').evaluate(grid=>[
-      grid.querySelector('.ami-email-message-field').getBoundingClientRect().toJSON(),
-      grid.querySelector('#ami-email-institutional-preview').getBoundingClientRect().toJSON()
-    ]);
-    assert.ok(messageBox.x+messageBox.width<=previewBox.x+1,'Mensagem deve ficar ao lado da prévia institucional');
-    assert.ok(Math.abs(messageBox.y-previewBox.y)<4,'Mensagem e prévia devem começar na mesma linha: '+JSON.stringify({messageBox,previewBox}));
+    const geometry=await page.locator('.ami-email-content-grid').evaluate(grid=>{
+      const box=selector=>grid.querySelector(selector).getBoundingClientRect().toJSON();
+      const style=selector=>{const computed=getComputedStyle(grid.querySelector(selector));return {radius:computed.borderRadius,background:computed.backgroundColor};};
+      return {messageField:box('.ami-email-message-field'),previewField:box('.ami-email-preview-field'),editor:box('.ami-email-editor-container'),preview:box('#ami-email-institutional-preview'),messageLabel:box('#ami-email-template-label'),previewLabel:box('#ami-email-preview-field-label'),editorStyle:style('.ami-email-editor-container'),previewStyle:style('#ami-email-institutional-preview'),messageLabelStyle:style('#ami-email-template-label'),previewLabelStyle:style('#ami-email-preview-field-label')};
+    });
+    assert.ok(geometry.messageField.x+geometry.messageField.width<=geometry.previewField.x+1,'Mensagem deve ficar ao lado da prévia institucional');
+    assert.ok(Math.abs(geometry.messageField.height-geometry.previewField.height)<2,'As duas colunas devem ter a mesma altura');
+    assert.ok(Math.abs(geometry.editor.y-geometry.preview.y)<2 && Math.abs(geometry.editor.height-geometry.preview.height)<2,'Os dois contêineres devem começar juntos e ter a mesma altura');
+    assert.ok(Math.abs(geometry.messageLabel.y-geometry.previewLabel.y)<2 && Math.abs(geometry.messageLabel.height-geometry.previewLabel.height)<2,'Os títulos externos devem ficar alinhados');
+    assert.deepEqual(geometry.editorStyle,geometry.previewStyle,'O arredondamento e o fundo devem repetir o contêiner de edição');
+    assert.deepEqual(geometry.messageLabelStyle,geometry.previewLabelStyle,'Os títulos devem preservar o mesmo padrão visual existente');
+    assert.equal(geometry.previewStyle.radius,'6px');
+    assert.equal(await page.locator('[data-ami-email-form-link]').count(),2);
+    assert.deepEqual(await page.locator('[data-ami-email-form-link]').evaluateAll(links=>links.map(link=>link.href)),[currentUrl,currentUrl]);
+    assert.equal(await page.locator('.ami-email-content-grid > #ami-email-link-row').count(),0,'O link não pode ficar solto abaixo do editor');
+    assert.match(await page.locator('#ami-email-preview-help').innerText(),/prévia institucional usada pelo serviço de envio/i);
     const previewFonts=await page.evaluate(()=>{
       const selectors={
         subsection:'#ami-email-draft-card .ahp-subsection-title',
