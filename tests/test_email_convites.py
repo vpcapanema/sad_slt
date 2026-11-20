@@ -1,3 +1,4 @@
+from base64 import urlsafe_b64encode
 from datetime import datetime, timedelta, timezone
 from hashlib import sha256
 from unittest.mock import MagicMock
@@ -21,7 +22,21 @@ DEST = "destino@example.com"
 
 @pytest.fixture
 def ambiente(monkeypatch):
-    monkeypatch.setattr(service.convite_individual_repository, "emitir", lambda *a: "A" * 43)
+    monkeypatch.setenv("SICARD_CONVITE_ENVELOPE_KEY", urlsafe_b64encode(bytes(32)).decode().rstrip("="))
+    monkeypatch.setattr(service.secrets, "token_urlsafe", lambda _: "A" * 43)
+    registros_individuais = {}
+
+    def obter(ambiente_id, email, _versao):
+        return registros_individuais.get((ambiente_id, email))
+
+    def registrar(ambiente_id, email, _versao, segredo_hash, envelope):
+        return registros_individuais.setdefault((ambiente_id, email), {
+            "segredo_hash": segredo_hash, "envelope_cifrado": envelope,
+            "revogado_em": None,
+        })
+
+    monkeypatch.setattr(service.convite_individual_repository, "obter", obter)
+    monkeypatch.setattr(service.convite_individual_repository, "registrar", registrar)
     row = {
         "id": str(uuid4()), "atualizado_em": datetime.now(timezone.utc),
         "status": "ativa", "valido_ate": datetime.now(timezone.utc) + timedelta(days=2),
@@ -100,9 +115,9 @@ def test_preserva_texto_acrescenta_token_e_nao_repete_apos_recarga(ambiente, smt
     assert texto.startswith(ambiente["email_mensagem"].replace("/token-teste/\n", "/token-teste/?c=" + service.codigo_link("token-teste", DEST) + "\n") + "\n\n")
     assert "Chave individual do convite: " + "A" * 43 in texto
     assert "Acessar formulário colaborativo" in html
-    assert "Copiar chave" in html
+    assert "Copiar no seu aplicativo" in html
     assert "A" * 43 in html
-    assert "/public/analise-multicriterio/copiar-chave/#" + "A" * 43 in html
+    assert "copiar-chave" not in html
     assert "/token-teste/?c=" + service.codigo_link("token-teste", DEST) in html
     assert ">https://example.com/" not in html
     assert registros[0]["conteudo_hash"] == sha256(("SICARD-PLI\n" + service.ASSUNTO + "\n" + texto.split("\n\nChave individual")[0]).encode()).hexdigest()
@@ -170,13 +185,18 @@ def test_reenvio_explicito_preserva_historico_e_idempotencia(ambiente, smtp, mon
     monkeypatch.setattr(repo, 'reservar', reservar)
     monkeypatch.setattr(repo, 'finalizar', finalizar)
     original = service.enviar(ambiente['id'], payload(ambiente), 'analista')
+    ambiente["email_assunto"] = "Assunto novo que não vale para reenvio"
+    ambiente["email_remetente_alias"] = "Remetente novo"
+    ambiente["email_mensagem"] = ""
+    prazo = ambiente["valido_ate"]
     resend = payload(ambiente, reenvio_id=str(uuid4()))
     novo = service.enviar(ambiente['id'], resend, 'analista')
     assert original['id'] != novo['id']
+    assert ambiente["valido_ate"] == prazo
     assert len(rows) == 2
     assert service.enviar(ambiente['id'], resend, 'analista')['reutilizado']
     assert smtp.call_count == 2
-    assert smtp.call_args_list[0].args[0].texto == smtp.call_args_list[1].args[0].texto
+    assert smtp.call_args_list[0].args[0] == smtp.call_args_list[1].args[0]
 
 
 def test_convite_com_link_antigo_continua_valido(ambiente, smtp, registros):
@@ -185,19 +205,49 @@ def test_convite_com_link_antigo_continua_valido(ambiente, smtp, registros):
     smtp.assert_called_once()
 
 
-def test_legado_emite_convite_individual_antes_de_enviar(ambiente, smtp, registros, monkeypatch):
-    ambiente["token_acesso"] = None
-    garantir = MagicMock(return_value="A" * 43)
-    monkeypatch.setattr(service.convite_individual_repository, "emitir", garantir)
+@pytest.mark.parametrize("extras", [{}, {"reenvio_id": uuid4()}, {"somente_nao_enviado": True}])
+def test_legado_hash_only_preserva_chave_sem_enviar(ambiente, smtp, registros, monkeypatch, extras):
+    original = {"segredo_hash": sha256(("A" * 43).encode()).hexdigest(),
+                "envelope_cifrado": None, "revogado_em": None}
+    monkeypatch.setattr(service.convite_individual_repository, "obter", MagicMock(return_value=original))
+    registrar = MagicMock()
+    monkeypatch.setattr(service.convite_individual_repository, "registrar", registrar)
+    with pytest.raises(DemandaValidationError, match="Convite antigo"):
+        service.enviar(ambiente["id"], payload(ambiente, **extras), "analista")
+    registrar.assert_not_called()
+    smtp.assert_not_called()
+    assert not registros
+
+
+@pytest.mark.parametrize("alteracao", ["revogado", "corrompido", "outro_destinatario", "hash_incompativel"])
+def test_nao_reenvia_envelope_invalido(ambiente, smtp, registros, monkeypatch, alteracao):
     service.enviar(ambiente["id"], payload(ambiente), "analista")
-    garantir.assert_called_once()
-    assert garantir.call_args.args[1] == DEST
-    assert "Chave individual do convite: " + "A" * 43 in smtp.call_args.args[0].texto
+    row = service.convite_individual_repository.obter(ambiente["id"], DEST, ambiente["atualizado_em"])
+    if alteracao == "revogado":
+        row["revogado_em"] = datetime.now(timezone.utc)
+    elif alteracao == "corrompido":
+        row["envelope_cifrado"] = row["envelope_cifrado"][:-1]
+    elif alteracao == "outro_destinatario":
+        outro = "outra@example.com"
+        mensagem = service._preparar_convite(ambiente, ambiente["convites"][0], outro, "A" * 43)
+        row["envelope_cifrado"] = service.convite_envelope.cifrar(ambiente["id"], outro, mensagem)
+    else:
+        row["segredo_hash"] = "0" * 64
+    with pytest.raises(DemandaValidationError, match="foi revogado|recuperar a mensagem original"):
+        service.enviar(ambiente["id"], payload(ambiente, reenvio_id=uuid4()), "analista")
+    smtp.assert_called_once()
+
+
+def test_sem_chave_configurada_nao_envia_nem_reserva(ambiente, smtp, registros, monkeypatch):
+    monkeypatch.delenv("SICARD_CONVITE_ENVELOPE_KEY")
+    with pytest.raises(DemandaValidationError, match="configuração da proteção"):
+        service.enviar(ambiente["id"], payload(ambiente), "analista")
+    smtp.assert_not_called()
+    assert not registros
 
 
 def test_falha_ao_persistir_token_nao_envia(ambiente, smtp, registros, monkeypatch):
-    ambiente["token_acesso"] = None
-    monkeypatch.setattr(service.convite_individual_repository, "emitir",
+    monkeypatch.setattr(service.convite_individual_repository, "registrar",
                         MagicMock(side_effect=DatabaseUnavailableError("indisponivel")))
     with pytest.raises(DatabaseUnavailableError):
         service.enviar(ambiente["id"], payload(ambiente), "analista")
@@ -632,6 +682,52 @@ def test_envio_seletivo_usa_reserva_monitorada(ambiente, smtp, registros, monkey
     smtp.assert_called_once()
 
 
+def test_reenvio_monitorado_apos_recusa_preserva_chave_e_envelope(ambiente, smtp, registros, monkeypatch):
+    def reservar_monitorado(*args):
+        # Simula reserva de uma nova tentativa para o mesmo registro que falhou.
+        assert registros[0]["envio_status"] == "falha"
+        registros[0]["envio_status"] = "enviando"
+        return registros[0], True
+
+    monkeypatch.setattr(repo, "reservar_monitorado", reservar_monitorado)
+    smtp.side_effect = [
+        email_service.FalhaEmail("destinatario_recusado", "Falha informada"),
+        smtp.return_value,
+    ]
+    primeiro = service.enviar(ambiente["id"], payload(ambiente), "analista")
+    assert primeiro["envio_status"] == "falha"
+    antes = service.convite_individual_repository.obter(ambiente["id"], DEST, ambiente["atualizado_em"]).copy()
+    assert ("A" * 43).encode() not in antes["envelope_cifrado"]
+    monkeypatch.setattr(service.secrets, "token_urlsafe", lambda _: pytest.fail("reenvio gerou nova chave"))
+    ambiente["email_mensagem"] = "mudou desde a primeira tentativa"
+    segundo = service.enviar(ambiente["id"], payload(ambiente, somente_nao_enviado=True), "analista")
+    assert segundo["envio_status"] == "aceito_smtp"
+    assert service.convite_individual_repository.obter(ambiente["id"], DEST, ambiente["atualizado_em"]) == antes
+    assert smtp.call_args_list[0].args[0] == smtp.call_args_list[1].args[0]
+
+
+def test_rota_distingue_legado_indisponivel_de_configuracao_global(ambiente, smtp, registros, monkeypatch):
+    app = FastAPI()
+    app.include_router(router, prefix="/api")
+    user = SessionUser("id", "", "teste_gestor", "Teste", "GESTOR")
+    headers = {"Authorization": f"Bearer {create_token(user)}"}
+    legado = {"segredo_hash": "0" * 64, "envelope_cifrado": None, "revogado_em": None}
+    ambiente["convites"].append({"email": "nova@example.com"})
+    obter = service.convite_individual_repository.obter
+    monkeypatch.setattr(service.convite_individual_repository, "obter",
+                        lambda a, email, v: legado if email == DEST else obter(a, email, v))
+    with TestClient(app) as client:
+        endpoint = f"/api/ahp/comparacao-colaborativa/ambientes/{ambiente['id']}/emails/enviar"
+        dados = payload(ambiente).model_dump(mode="json")
+        response = client.post(endpoint, headers=headers, json=dados)
+        assert response.status_code == 422
+        assert response.headers["X-SICARD-Email-Error"] == "convite_original_indisponivel"
+        assert "Convite antigo" in response.json()["detail"]
+        response = client.post(endpoint, headers=headers, json={**dados, "destinatario": "nova@example.com"})
+        assert response.status_code == 200
+    assert smtp.call_count == 1
+
+
 def test_monitoramento_inclui_nomes_e_disponibilidade_da_resposta(ambiente, registros, monkeypatch):
     ambiente["convites"] = [{"nome": "Ana", "email": DEST}, {"nome": "Bia", "email": "bia@example.com"}]
     enviado = datetime(2026, 11, 6, 20, 1, 12, tzinfo=timezone.utc)
@@ -726,7 +822,8 @@ def test_clique_registra_somente_codigo_do_destinatario(ambiente, monkeypatch):
 
 
 @pytest.mark.parametrize("perfil,leitura,escrita", [(None,401,401), ("VISUALIZADOR",200,403), ("OPERADOR",403,403), ("ANALISTA",200,403), ("GESTOR",200,200), ("ADMIN",200,403)])
-def test_permissoes_rotas_de_convites(ambiente, smtp, registros, perfil, leitura, escrita):
+def test_permissoes_rotas_de_convites(ambiente, smtp, registros, monkeypatch, perfil, leitura, escrita):
+    monkeypatch.setattr(service.ambientes, "list_respostas", lambda _: [])
     app = FastAPI()
     app.include_router(router, prefix="/api")
     headers = {}

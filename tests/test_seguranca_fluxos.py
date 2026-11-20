@@ -378,16 +378,23 @@ def test_a01_publico_nao_depende_da_sessao_sigma_do_navegador(ambiente, monkeypa
     assert client.get("/restrict/").status_code == 503
 
 
-def test_a01_emissao_persiste_hash_nao_segredo(monkeypatch):
+def test_a01_emissao_persiste_hash_e_envelope_sem_reativar_convite(monkeypatch):
     import hashlib
     context = MagicMock()
-    context.__enter__.return_value.execute.return_value.fetchone.return_value = {"ambiente_id": ID}
+    secret_hash = hashlib.sha256(KEY_A.encode()).hexdigest()
+    envelope = b"envelope-cifrado-sintetico"
+    conn = context.__enter__.return_value
+    row = {"segredo_hash": secret_hash, "envelope_cifrado": envelope, "revogado_em": None}
+    conn.execute.return_value.fetchone.return_value = row
     monkeypatch.setattr(convite_individual_repository, "get_connection", lambda: context)
-    secret = convite_individual_repository.emitir(ID, "a@example.org", datetime.now(timezone.utc))
-    query, params = context.__enter__.return_value.execute.call_args.args
-    assert len(secret) == 43 and secret not in params
-    assert hashlib.sha256(secret.encode()).hexdigest() in params
-    assert "ON CONFLICT" in query and "revogado_em = NULL" in query
+    assert convite_individual_repository.registrar(
+        ID, "a@example.org", datetime.now(timezone.utc), secret_hash, envelope,
+    ) == row
+    query, params = conn.execute.call_args_list[0].args
+    assert KEY_A not in params
+    assert secret_hash in params and envelope in params
+    assert "ON CONFLICT (ambiente_id, email) DO NOTHING" in query
+    assert "DO UPDATE" not in query
 
 
 def test_a02_projeto_resolve_pai_sem_metadados_administrativos_no_cliente(monkeypatch):

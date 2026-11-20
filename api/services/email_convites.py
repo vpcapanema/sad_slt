@@ -3,10 +3,12 @@ from __future__ import annotations
 
 import logging
 import re
+import secrets
 from hashlib import sha256
 from html import escape
-from urllib.parse import quote
 from uuid import uuid4
+
+from cryptography.exceptions import InvalidTag
 
 from api.exceptions import DatabaseUnavailableError, DemandaValidationError
 from api.repositories import comparacao_colaborativa_repository as ambientes
@@ -14,7 +16,7 @@ from api.repositories import email_convites_repository as repo
 from api.repositories import convite_individual_repository
 from api.schemas.email import ConviteEmailEnvioSchema, EmailEnvioSchema
 from api.schemas.comparacao_colaborativa import EMAIL_ASSUNTO_PADRAO, EMAIL_REMETENTE_ALIAS_PADRAO
-from api.services import email_service
+from api.services import convite_envelope, email_service
 from api.services.comparacao_colaborativa_service import (
     _validar_ambiente_ativo,
 )
@@ -47,10 +49,6 @@ def _html_convite(texto: str, segredo: str, caminhos: tuple[str, ...]) -> str:
     if indice_link is None:
         raise DemandaValidationError("A mensagem não contém o link deste julgamento.", field="texto")
     link = linhas[indice_link].strip()
-    prefixo_publico = link.split("/public/analise-multicriterio/", 1)[0]
-    link_copiar_chave = (
-        f"{prefixo_publico}/public/analise-multicriterio/copiar-chave/#{quote(segredo, safe='')}"
-    )
     linhas_sem_link = linhas[:indice_link] + linhas[indice_link + 1:]
     blocos = "".join(
         f'<p style="margin:0 0 10px;font-family:Arial,Helvetica,sans-serif;font-size:14px;'
@@ -81,17 +79,11 @@ def _html_convite(texto: str, segredo: str, caminhos: tuple[str, ...]) -> str:
         '<div style="padding:13px 14px;border:1px solid #9fb4c3;border-left:5px solid #00507a;'
         'background:#f3f7fa;font-family:Consolas,Monaco,monospace;font-size:16px;line-height:1.5;'
         f'letter-spacing:.03em;color:#12303f;word-break:break-all;user-select:all;">{chave}</div>'
-        '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:12px 0 0;">'
-        '<tr><td align="center" style="border-radius:5px;background:#ffffff;border:1px solid #00507a;">'
-        f'<a href="{escape(link_copiar_chave, quote=True)}" target="_blank" style="display:inline-block;padding:10px 16px;'
-        'font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:bold;color:#00507a;'
-        'text-decoration:none;border-radius:5px;">Copiar chave</a></td></tr></table>'
         '<p style="margin:8px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;'
-        'color:#516878;">O botão abre uma página segura do SICARD e copia a chave sem enviá-la ao servidor. '
-        'Se preferir, selecione a chave acima e use Copiar.</p>'
+        'color:#516878;">Selecione a chave acima e use Copiar no seu aplicativo de e-mail.</p>'
         '<p style="margin:20px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;'
         'color:#516878;">A chave é exclusiva deste destinatário, revogável e válida dentro do prazo do '
-        'julgamento. Um novo envio invalida a chave anterior. Não compartilhe.</p>'
+        'convite. Não compartilhe.</p>'
         '</td></tr></table></td></tr></table></body></html>'
     )
 
@@ -125,6 +117,74 @@ def registrar_clique_link(token: str, codigo: str) -> None:
         logger.exception("Falha ao registrar o clique no link do convite")
 
 
+class ConviteOriginalIndisponivel(DemandaValidationError):
+    """Falha específica do destinatário; outros convites do lote podem prosseguir."""
+
+
+def _mensagem_original(ambiente_id: str, email: str, row: dict) -> dict:
+    if row["revogado_em"]:
+        raise ConviteOriginalIndisponivel("O convite individual foi revogado.", field="convite")
+    if not row["envelope_cifrado"]:
+        raise ConviteOriginalIndisponivel(
+            "Convite antigo: a mensagem original não foi armazenada para reenvio. "
+            "Se ainda for válida, encaminhe o e-mail original para preservar a chave. A chave não foi alterada.",
+            field="convite",
+        )
+    try:
+        dados = convite_envelope.abrir(ambiente_id, email, row["envelope_cifrado"])
+        segredo = dados["segredo"]
+        if not secrets.compare_digest(row["segredo_hash"], sha256(segredo.encode()).hexdigest()):
+            raise ValueError("Envelope não corresponde ao convite.")
+        mensagem = EmailEnvioSchema.model_validate(dados["mensagem"])
+        if str(mensagem.destinatario).lower() != email:
+            raise ValueError("Destinatário do envelope inválido.")
+        if not isinstance(dados["identidade"], str):
+            raise ValueError("Envelope inválido.")
+        return dados
+    except (InvalidTag, ValueError, TypeError, AttributeError, KeyError):
+        raise ConviteOriginalIndisponivel(
+            "Não foi possível recuperar a mensagem original. A chave anterior não foi alterada.",
+            field="convite",
+        ) from None
+
+
+def _preparar_convite(ambiente: dict, convite: dict, destinatario: str, segredo: str) -> dict:
+    # O servidor acrescenta o codigo persistido, nunca um codigo fornecido pelo cliente.
+    caminhos = (
+        f"/public/analise-multicriterio/formulario-comparacao-pareada/{ambiente['token']}/",
+        f"/public/analise-multicriterio/{ambiente['token']}/",
+    )
+    corpo = ambiente.get("email_mensagem")
+    if not corpo or not corpo.strip():
+        raise DemandaValidationError("Salve a mensagem do convite antes de enviar.", field="email_mensagem")
+    corpo = _personalizar_mensagem(corpo, convite.get("nome"))
+    if not any(caminho in corpo for caminho in caminhos):
+        raise DemandaValidationError("A mensagem não contém o link deste julgamento.", field="texto")
+    assunto = ambiente.get("email_assunto") or EMAIL_ASSUNTO_PADRAO
+    alias_remetente = ambiente.get("email_remetente_alias") or EMAIL_REMETENTE_ALIAS_PADRAO
+    instrucoes = (
+        "\n\nChave individual do convite: {segredo}\n"
+        "Informe seu e-mail convidado e esta chave no formulário. Não compartilhe a chave. "
+        "Ela é revogável, exclusiva deste destinatário e válida dentro do prazo do convite."
+    )
+    corpo = _marcar_links(corpo, ambiente["token"], destinatario, caminhos)
+    texto = corpo
+    if len(texto) + len(instrucoes.format(segredo="x" * 43)) > 50000:
+        raise DemandaValidationError(
+            "Reduza a mensagem para que o texto, incluindo a chave individual e suas instruções, tenha até 50.000 caracteres.",
+            field="texto",
+        )
+    identidade = alias_remetente + "\n" + assunto + "\n" + texto
+    mensagem = EmailEnvioSchema(
+        destinatario=destinatario,
+        alias_remetente=alias_remetente,
+        assunto=assunto,
+        texto=texto + instrucoes.format(segredo=segredo),
+        html=_html_convite(corpo, segredo, caminhos),
+    )
+    return {"segredo": segredo, "identidade": identidade, "mensagem": mensagem.model_dump(mode="json")}
+
+
 def enviar(ambiente_id: str, dados: ConviteEmailEnvioSchema, usuario_id: str) -> dict:
     ambiente = ambientes.get_ambiente_by_id(ambiente_id)
     if not ambiente:
@@ -137,34 +197,18 @@ def enviar(ambiente_id: str, dados: ConviteEmailEnvioSchema, usuario_id: str) ->
     convite = convites.get(destinatario)
     if convite is None:
         raise DemandaValidationError("O destinatário não pertence aos colaboradores salvos.", field="destinatario")
-    # O servidor acrescenta o codigo persistido, nunca um codigo fornecido pelo cliente.
-    caminhos = (
-        f"/public/analise-multicriterio/formulario-comparacao-pareada/{ambiente['token']}/",
-        f"/public/analise-multicriterio/{ambiente['token']}/",
-    )
-    corpo = ambiente.get("email_mensagem")
-    if not corpo or not corpo.strip():
-        raise DemandaValidationError("Salve a mensagem do convite antes de enviar.", field="email_mensagem")
-    corpo = _personalizar_mensagem(corpo, convite.get("nome"))
-    if not any(caminho in corpo for caminho in caminhos):
-        raise DemandaValidationError("A mensagem não contém o link deste julgamento.", field="texto")
+    original = convite_individual_repository.obter(ambiente_id, destinatario, dados.versao)
+    if original:
+        envelope = _mensagem_original(ambiente_id, destinatario, original)
+        cifrado = None
+    else:
+        try:
+            envelope = _preparar_convite(ambiente, convite, str(dados.destinatario), secrets.token_urlsafe(32))
+        except ValueError:
+            raise DemandaValidationError("O conteúdo do convite não atende aos limites de envio.", field="texto") from None
+        cifrado = convite_envelope.cifrar(ambiente_id, destinatario, envelope)
     config = email_service._config()
-    assunto = ambiente.get("email_assunto") or EMAIL_ASSUNTO_PADRAO
-    alias_remetente = ambiente.get("email_remetente_alias") or EMAIL_REMETENTE_ALIAS_PADRAO
-    instrucoes = (
-        "\n\nChave individual do convite: {segredo}\n"
-        "Informe seu e-mail convidado e esta chave no formulário. Não compartilhe a chave. "
-        "Ela é revogável, exclusiva deste destinatário e válida dentro do prazo do julgamento. "
-        "Um novo envio invalida a chave anterior."
-    )
-    corpo = _marcar_links(corpo, ambiente["token"], destinatario, caminhos)
-    texto = corpo
-    if len(texto) + len(instrucoes.format(segredo="x" * 43)) > 50000:
-        raise DemandaValidationError(
-            "Reduza a mensagem para que o texto, incluindo a chave individual e suas instruções, tenha até 50.000 caracteres.",
-            field="texto",
-        )
-    identidade = alias_remetente + "\n" + assunto + "\n" + texto
+    identidade = envelope["identidade"]
     if dados.reenvio_id:
         identidade += "\nReenvio: " + str(dados.reenvio_id)
     resumo = sha256(identidade.encode()).hexdigest()
@@ -176,15 +220,21 @@ def enviar(ambiente_id: str, dados: ConviteEmailEnvioSchema, usuario_id: str) ->
     if not novo:
         return {**registro, "reutilizado": True}
     try:
-        segredo = convite_individual_repository.emitir(ambiente_id, destinatario, dados.versao)
-        texto += instrucoes.format(segredo=segredo)
-        mensagem = EmailEnvioSchema(
-            destinatario=dados.destinatario,
-            alias_remetente=alias_remetente,
-            assunto=assunto,
-            texto=texto,
-            html=_html_convite(corpo, segredo, caminhos),
-        )
+        if cifrado is not None:
+            original = convite_individual_repository.registrar(
+                ambiente_id, destinatario, dados.versao,
+                sha256(envelope["segredo"].encode()).hexdigest(), cifrado,
+            )
+            if not original:
+                raise DemandaValidationError("O convite mudou. Reabra o julgamento.", field="convite")
+            envelope = _mensagem_original(ambiente_id, destinatario, original)
+        else:
+            # Confirma novamente a validade vigente depois da reserva.
+            original = convite_individual_repository.obter(ambiente_id, destinatario, dados.versao)
+            if not original:
+                raise DemandaValidationError("O convite mudou. Reabra o julgamento.", field="convite")
+            envelope = _mensagem_original(ambiente_id, destinatario, original)
+        mensagem = EmailEnvioSchema.model_validate(envelope["mensagem"])
         resultado = email_service.enviar(
             mensagem,
             usuario_id=usuario_id, id_mensagem=registro["mensagem_id"], solicitar_confirmacoes=True,
