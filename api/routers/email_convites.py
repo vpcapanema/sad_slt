@@ -50,6 +50,10 @@ def enviar(ambiente_id: UUID, dados: ConviteEmailEnvioSchema,
         return email_convites.enviar(str(ambiente_id), dados, user.id)
     except FalhaEmail as exc:
         raise _erro(exc) from exc
+    except email_convites.ConviteOriginalIndisponivel as exc:
+        raise HTTPException(422, detail=str(exc), headers={
+            "Cache-Control": "no-store", "X-SICARD-Email-Error": "convite_original_indisponivel",
+        }) from exc
     except DemandaValidationError as exc:
         raise HTTPException(422, detail=str(exc)) from exc
     except DatabaseUnavailableError as exc:

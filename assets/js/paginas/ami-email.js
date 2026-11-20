@@ -205,7 +205,11 @@
     let body;
     try { body = await response.json(); }
     catch (_) { throw new Error("O servidor retornou uma resposta inválida. Consulte o histórico antes de tentar enviar novamente."); }
-    if (!response.ok) throw new Error(window.SicardApiErro ? window.SicardApiErro.formatar(body, { status: response.status, method: (options && options.method) || "GET", url: path }) : (Array.isArray(body.detail) ? body.detail.map(item => item.msg).join("; ") : body.detail || `Não foi possível concluir a operação (HTTP ${response.status}).`));
+    if (!response.ok) {
+      const erro = new Error(window.SicardApiErro ? window.SicardApiErro.formatar(body, { status: response.status, method: (options && options.method) || "GET", url: path }) : (Array.isArray(body.detail) ? body.detail.map(item => item.msg).join("; ") : body.detail || `Não foi possível concluir a operação (HTTP ${response.status}).`));
+      erro.codigoEmail = response.headers.get("X-SICARD-Email-Error");
+      throw erro;
+    }
     return body;
   }
   function configuracaoAtual() {
@@ -478,10 +482,10 @@
     try {
       if (!(await ProcessFeedback.confirmar({
         title: apenasSelecionados ? "Enviar e-mail de convite aos selecionados" : reenvio ? "Reenviar e-mails aos colaboradores" : somentePendentes ? "Enviar e-mail aos pendentes" : "Enviar e-mail aos colaboradores",
-        message: "Enviar a mensagem exibida para " + lista.length + " colaborador(es)" +
+        message: (reenvio ? "Reenviar a mensagem original para " : apenasSelecionados ? "Enviar e-mail para " : "Enviar a mensagem exibida para ") + lista.length + " colaborador(es)" +
           (apenasSelecionados ? " selecionado(s) no monitoramento?" : somentePendentes ? " que ainda não receberam o convite?" : " salvo(s)?"),
-        warning: apenasSelecionados ? "Os selecionados receberão um novo convite. A chave individual anterior de cada destinatário será substituída."
-          : reenvio ? "Será enviado um novo convite a cada colaborador salvo, inclusive a quem já recebeu. O histórico anterior será preservado."
+        warning: apenasSelecionados ? "Nos reenvios, a mensagem e a chave originais serão preservadas."
+          : reenvio ? "A mensagem e a chave originais serão preservadas nos reenvios, assim como o histórico."
           : somentePendentes ? "Quem já recebeu o convite não receberá outra mensagem e mantém sua chave individual."
           : "Envios individuais aos colaboradores salvos.",
         confirmLabel: reenvio ? "Reenviar e-mails" : "Enviar e-mail"
@@ -494,12 +498,21 @@
         processo.tarefaAtual(destinatario);
         let row;
         for (let tentativa = 0; ; tentativa++) {
-          row = await request(url(atual.julgamento.id) + "/enviar", {
-            method: "POST", body: JSON.stringify({
-              destinatario, versao: atual.julgamento.atualizadoEm,
-              reenvio_id: reenvioId
-            })
-          });
+          try {
+            row = await request(url(atual.julgamento.id) + "/enviar", {
+              method: "POST", body: JSON.stringify({
+                destinatario, versao: atual.julgamento.atualizadoEm,
+                reenvio_id: reenvioId
+              })
+            });
+          } catch (error) {
+            if (error.codigoEmail !== "convite_original_indisponivel") throw error;
+            row = null;
+            problemas++;
+            detalhes.push(destinatario + ": " + error.message);
+            processo.concluirTarefa(destinatario);
+            break;
+          }
           if (!row.id || !rotulosEnvio[row.envio_status]) throw new Error("O servidor não confirmou o estado do envio. Consulte o histórico antes de tentar novamente.");
           registros = registros.filter(item => item.id !== row.id).concat(row);
           render();
@@ -508,6 +521,7 @@
           processo.tarefaAtual(destinatario, "O servidor de e-mail limitou os envios. Nova tentativa em " + espera / 1000 + " s.");
           await aguardar(espera);
         }
+        if (!row) continue;
         if (row.envio_status === "aceito_smtp") aceitos++; else problemas++;
         if (row.envio_status !== "aceito_smtp" && row.detalhe) detalhes.push(row.detalhe);
         if (autenticacaoRecusada(row)) codigo = "smtp_autenticacao";
@@ -631,7 +645,7 @@
     if (!contexto || ocupado || !contexto.destinatarios.includes(email)) return;
     if (!(await ProcessFeedback.confirmar({
       title: "Revogar convite individual", message: "Revogar o acesso de " + email + "?",
-      warning: "A resposta registrada será preservada. Um novo envio será necessário para liberar o acesso novamente.",
+      warning: "A resposta registrada será preservada. O reenvio não restaura uma chave revogada.",
       confirmLabel: "Revogar convite"
     }))) return;
     bloquear(true);
