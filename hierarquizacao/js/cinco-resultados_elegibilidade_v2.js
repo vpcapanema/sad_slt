@@ -1,5 +1,6 @@
-import {instalarRegistro} from './registrar-resultados-fase.js?v=20261027-finalizacao';
-import {post, base} from '../../geoespacial/extracao-atributos/api.js';
+import {instalarRegistro} from './registrar-resultados-fase.js?v=20261123-feedback-pacote';
+import {post} from '../../geoespacial/extracao-atributos/api.js';
+import {exportarPacoteAnalise} from './exportar-pacote-analise.js';
 import {el} from '../../geoespacial/extracao-atributos/ui.js';
 import {conclusaoSobreposicao} from './elegibilidade-conclusao.js?v=20261104-camadas';
 import {escolherArquivo} from '../../geoespacial/extracao-atributos/explorador.js?v=20261119-destino-fase1';
@@ -267,27 +268,6 @@ export function criarResultados({avisar, aoOcupar}) {
     catch (erro) { node('tentar').hidden = false; throw erro; }
   }
 
-  const exportarPacote = async () => {
-    informar('Gerando o relatório, as tabelas e o pacote com todas as demandas no storage…');
-    const resposta = await fetch(`${base}${ROTA}/pacote`, {method: 'POST', credentials: 'same-origin',
-      headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload())});
-    if (!resposta.ok) {
-      const E = window.SicardApiErro;
-      if (E) { const err = await E.deResposta(resposta, {method: 'POST', url: `${base}${ROTA}/pacote`}); err.message = `Falha ao gerar o pacote: ${err.message}. As camadas foram mantidas.`; throw err; }
-      const texto = await resposta.text();
-      let erro;
-      try { erro = JSON.parse(texto).detail; }
-      catch { throw new Error(`Não foi possível gerar o pacote (HTTP ${resposta.status}). As camadas foram mantidas.`); }
-      throw new Error(typeof erro === 'string' ? erro : 'O servidor recusou os dados do relatório.');
-    }
-    if (!resposta.headers.get('content-type')?.includes('application/zip')) throw new Error('O servidor não retornou um pacote ZIP.');
-    const url = URL.createObjectURL(await resposta.blob()), link = el('a');
-    link.href = url; link.download = 'Relatório e Camadas.zip'; document.body.append(link); link.click(); link.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 30000);
-    informar('Pacote gravado no storage. Download do relatório, das tabelas e das camadas iniciado.');
-    avisar('Relatório completo, tabelas e camadas disponíveis no pacote.', 'success');
-  };
-
   formulario.onsubmit = event => { event.preventDefault(); if (formulario.reportValidity()) operar(apresentar); };
   node('editar').onclick = () => { formulario.hidden = false; formulario.scrollIntoView({block: 'nearest'}); };
   node('revisados').onchange = () => { if (!node('revisados').checked) invalidar(); };
@@ -337,8 +317,7 @@ export function criarResultados({avisar, aoOcupar}) {
   node('download').onclick = async () => {
     if (gerandoPacote || !modelo) return;
     gerandoPacote = true; controles();
-    try { await exportarPacote(); }
-    catch (erro) { informar(erro.message); avisar(erro.message, 'error'); }
+    try { await exportarPacoteAnalise(ROTA, payload(), informar); }
     finally { gerandoPacote = false; controles(); }
   };
 
