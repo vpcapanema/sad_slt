@@ -220,11 +220,14 @@ def enviar(ambiente_id: str, dados: ConviteEmailEnvioSchema, usuario_id: str) ->
     if dados.reenvio_id:
         identidade += "\nReenvio: " + str(dados.reenvio_id)
     resumo = sha256(identidade.encode()).hexdigest()
-    reservar = repo.reservar_monitorado if dados.somente_nao_enviado else repo.reservar
-    registro, novo = reservar(
+    reserva = (
         ambiente_id, destinatario, resumo, f"<sicard.{uuid4().hex}@{str(config.remetente).rsplit('@', 1)[1]}>",
         usuario_id, dados.versao,
     )
+    if dados.somente_nao_enviado:
+        registro, novo = repo.reservar_monitorado(*reserva, rejeitar_enviado=False)
+    else:
+        registro, novo = repo.reservar(*reserva)
     if not novo:
         return {**registro, "reutilizado": True}
     try:

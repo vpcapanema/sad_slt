@@ -6,8 +6,8 @@
   const aliasInput = $("ami-email-sender-alias"), assuntoInput = $("ami-email-subject"),
     mensagemInput = $("ami-email-template"), mensagemAfterInput = $("ami-email-template-after"),
     mensagemLink = $("ami-email-editor-link");
-  const rotulosEnvio = {enviando: "Na fila", aceito_smtp: "Enviado",
-    falha: "Não enviado", indeterminado: "Na fila"};
+  const rotulosEnvio = {enviando: "Envio sem confirmação", aceito_smtp: "Enviado",
+    falha: "Não enviado", indeterminado: "Resultado indeterminado"};
   const rotulosEntrega = {sem_confirmacao: "Sem confirmação", confirmada: "Entregue", falha: "Devolvido",
     adiada: "Recusado temporariamente pelo destinatário"};
   const url = id => "/api/ahp/comparacao-colaborativa/ambientes/" + encodeURIComponent(id) + "/emails";
@@ -200,15 +200,25 @@
   async function request(path, options) {
     const response = await fetch(path, Object.assign({
       credentials: "same-origin", headers: {"Content-Type": "application/json"}
-    }, options));
+    }, options)).catch(() => {
+      throw Object.assign(new Error("A conexão com o SICARD foi interrompida."), {interrupcaoApi: true});
+    });
     if (response.status === 204) return null;
+    const codigoEmail = response.headers.get("X-SICARD-Email-Error");
+    const interrupcaoApi = !codigoEmail && [502, 503, 504].includes(response.status);
+    const mensagemInterrupcao = "O SICARD ficou temporariamente indisponível (HTTP " + response.status + ").";
     let body;
     try { body = await response.json(); }
-    catch (_) { throw new Error("O servidor retornou uma resposta inválida. Consulte o histórico antes de tentar enviar novamente."); }
+    catch (_) {
+      const mensagem = interrupcaoApi ? mensagemInterrupcao :
+        "O SICARD retornou um formato inesperado (HTTP " + response.status + "). Consulte o histórico do envio.";
+      throw Object.assign(new Error(mensagem), {interrupcaoApi});
+    }
     if (!response.ok) {
-      const erro = new Error(window.SicardApiErro ? window.SicardApiErro.formatar(body, { status: response.status, method: (options && options.method) || "GET", url: path }) : (Array.isArray(body.detail) ? body.detail.map(item => item.msg).join("; ") : body.detail || `Não foi possível concluir a operação (HTTP ${response.status}).`));
-      erro.codigoEmail = response.headers.get("X-SICARD-Email-Error");
-      throw erro;
+      const mensagem = interrupcaoApi ? mensagemInterrupcao :
+        window.SicardApiErro ? window.SicardApiErro.formatar(body, {status: response.status, method: options?.method || "GET", url: path}) :
+          (Array.isArray(body?.detail) ? body.detail.map(item => item.msg).join("; ") : body?.detail || `Não foi possível concluir a operação (HTTP ${response.status}).`);
+      throw Object.assign(new Error(mensagem), {codigoEmail, interrupcaoApi});
     }
     return body;
   }
@@ -319,19 +329,21 @@
   // Estados usados para identificar pendentes no envio geral de convites.
   const REENVIAVEIS = new Set(["Não enviado", "Devolvido"]);
   function controles() {
-    const {pendentes, enviados} = situacao();
-    const rotulo = !enviados ? "Enviar e-mail" : pendentes.length ? "Enviar aos pendentes (" + pendentes.length + ")" : "Reenviar e-mails";
+    const {pendentes, enviados, incertos} = situacao();
+    const rotulo = pendentes.length && (enviados || incertos) ? "Enviar aos pendentes (" + pendentes.length + ")" :
+      incertos ? "Envio geral indisponível" : enviados ? "Reenviar e-mails" : "Enviar e-mail";
     $("ami-open-mail").innerHTML = '<i class="fas fa-envelope c-btn__icon" aria-hidden="true"></i>' + rotulo;
-    $("ami-open-mail").disabled = ocupado || !pronto || modo !== "view" || !contexto ||
+    const bloqueiaConvites = ocupado || !pronto || modo !== "view" || !contexto ||
       !contexto.url || contexto.julgamento.status !== "ativa" ||
       !(Date.parse(contexto.julgamento.valido_ate) >= Date.now()) || !contexto.destinatarios.length;
+    $("ami-open-mail").disabled = bloqueiaConvites || Boolean(incertos && !pendentes.length);
     const editavel = !ocupado && contexto && contexto.julgamento.status === "ativa" &&
       Date.parse(contexto.julgamento.valido_ate) >= Date.now();
     aliasInput.disabled = assuntoInput.disabled = mensagemInput.disabled = !editavel;
     $("ami-save-email-config").disabled = !editavel || !configuracaoAlterada;
     const marcados = monitorRows.filter(row => selected.has(rowKey(row)));
     const baseBloqueada = ocupado || !pronto || modo !== "view" || !contexto || !marcados.length;
-    $("ami-monitor-send").disabled = $("ami-open-mail").disabled || baseBloqueada;
+    $("ami-monitor-send").disabled = bloqueiaConvites || baseBloqueada;
     $("ami-monitor-send-response").disabled = baseBloqueada ||
       !marcados.every(row => row.resposta_recebida);
     $("ami-email-receipts").disabled = ocupado || !contexto || modo !== "view" || !contexto.confirmacoesConfiguradas;
@@ -448,6 +460,7 @@
   }
   // Intervalo entre envios e esperas antes de repetir quando o provedor limita a taxa.
   const INTERVALO_ENVIO_MS = 3000, ESPERAS_LIMITE_MS = [60000, 120000];
+  const ESPERAS_API_MS = [5000, 10000, 20000, 30000];
   const aguardar = ms => new Promise(resolve => setTimeout(resolve, ms));
   const limitadoPeloServidor = row => row.envio_status === "falha" &&
     /limitou temporariamente/i.test(row.detalhe || "");
@@ -456,9 +469,15 @@
   const bloqueioDoServidor = row => row.envio_status === "falha" &&
     /limitou temporariamente|limite diário|recusou a mensagem|recusou a autentica/i.test(row.detalhe || "");
   function situacao() {
-    if (!contexto || !pronto) return {pendentes: [], enviados: 0};
-    const pendentes = contexto.destinatarios.filter(destinatario => REENVIAVEIS.has(estado({destinatario}, "convite")));
-    return {pendentes, enviados: contexto.destinatarios.length - pendentes.length};
+    const pendentes = [];
+    let enviados = 0, incertos = 0;
+    for (const destinatario of pronto && contexto ? contexto.destinatarios : []) {
+      const status = estado({destinatario}, "convite");
+      if (REENVIAVEIS.has(status)) pendentes.push(destinatario);
+      else if (["Enviado", "Entregue", "Lido", rotulosEntrega.adiada].includes(status)) enviados++;
+      else incertos++;
+    }
+    return {pendentes, enviados, incertos};
   }
   // Destinatários salvos correspondentes às linhas marcadas na coluna de seletores.
   function selecionados() {
@@ -475,45 +494,60 @@
     }
     return true;
   }
+  async function solicitarEnvioConvite(atual, dados, processo) {
+    const rota = url(atual.julgamento.id) + "/enviar";
+    const opcoes = {method: "POST", body: JSON.stringify(dados)};
+    for (let tentativa = 0; ; tentativa++) {
+      try {
+        return await request(rota, opcoes);
+      } catch (erro) {
+        const espera = ESPERAS_API_MS[tentativa];
+        if (!erro.interrupcaoApi || !espera) throw erro;
+        processo.tarefaAtual(dados.destinatario,
+          erro.message + " Retomando automaticamente em " + espera / 1000 + " s.");
+        await aguardar(espera);
+      }
+    }
+  }
   async function enviar(apenasSelecionados) {
     const botao = apenasSelecionados ? $("ami-monitor-send") : $("ami-open-mail");
     if (botao.disabled) return;
     const atual = contexto;
     if (!(await garantirConfiguracaoPersistida(atual))) return;
-    const {pendentes, enviados} = situacao();
-    const somentePendentes = !apenasSelecionados && enviados > 0 && pendentes.length > 0;
-    const reenvio = !apenasSelecionados && enviados > 0 && !pendentes.length;
-    const lista = apenasSelecionados ? selecionados() : somentePendentes ? pendentes : atual.destinatarios;
+    const {pendentes, enviados, incertos} = situacao();
+    const reenvio = !apenasSelecionados && enviados > 0 && !incertos && !pendentes.length;
+    const somentePendentes = !apenasSelecionados && !reenvio;
+    const lista = apenasSelecionados ? selecionados() : reenvio ? atual.destinatarios : pendentes;
+    if (!lista.length) return;
     bloquear(true);
-    let processo, aceitos = 0, problemas = 0, interrompido = 0, motivo = "";
+    let processo, aceitos = 0, problemas = 0, interrompido = 0, motivo = "", iniciados = 0;
     let codigo = "envio_email";
     const detalhes = [];
     try {
       if (!(await ProcessFeedback.confirmar({
-        title: apenasSelecionados ? "Enviar e-mail de convite aos selecionados" : reenvio ? "Reenviar e-mails aos colaboradores" : somentePendentes ? "Enviar e-mail aos pendentes" : "Enviar e-mail aos colaboradores",
+        title: apenasSelecionados ? "Enviar e-mail de convite aos selecionados" : reenvio ? "Reenviar e-mails aos colaboradores" : enviados || incertos ? "Enviar e-mail aos pendentes" : "Enviar e-mail aos colaboradores",
         message: (reenvio ? "Reenviar a mensagem original para " : apenasSelecionados ? "Enviar e-mail para " : "Enviar a mensagem exibida para ") + lista.length + " colaborador(es)" +
-          (apenasSelecionados ? " selecionado(s) no monitoramento?" : somentePendentes ? " que ainda não receberam o convite?" : " salvo(s)?"),
+          (apenasSelecionados ? " selecionado(s) no monitoramento?" : somentePendentes && (enviados || incertos) ? " com envio pendente?" : " salvo(s)?"),
         warning: apenasSelecionados ? "Nos reenvios, a mensagem e a chave originais serão preservadas."
           : reenvio ? "A mensagem e a chave originais serão preservadas nos reenvios, assim como o histórico."
-          : somentePendentes ? "Quem já recebeu o convite não receberá outra mensagem e mantém sua chave individual."
+          : enviados || incertos ? "Convites já aceitos ou com resultado indeterminado são preservados."
           : "Envios individuais aos colaboradores salvos.",
         confirmLabel: reenvio ? "Reenviar e-mails" : "Enviar e-mail"
       }))) return;
-      const reenvioId = apenasSelecionados || enviados > 0 ? crypto.randomUUID() : null;
+      const reenvioId = crypto.randomUUID();
       processo = ProcessFeedback.iniciarCadastro({title: "Enviando convites por e-mail", tasks: lista});
       for (let indice = 0; indice < lista.length; indice++) {
         const destinatario = lista[indice];
         if (indice) await aguardar(INTERVALO_ENVIO_MS);
+        iniciados++;
         processo.tarefaAtual(destinatario);
         let row;
         for (let tentativa = 0; ; tentativa++) {
           try {
-            row = await request(url(atual.julgamento.id) + "/enviar", {
-              method: "POST", body: JSON.stringify({
-                destinatario, versao: atual.julgamento.atualizadoEm,
-                reenvio_id: reenvioId
-              })
-            });
+            row = await solicitarEnvioConvite(atual, {
+              destinatario, versao: atual.julgamento.atualizadoEm,
+              reenvio_id: reenvioId, somente_nao_enviado: somentePendentes
+            }, processo);
           } catch (error) {
             if (error.codigoEmail !== "convite_original_indisponivel") throw error;
             row = null;
@@ -522,7 +556,7 @@
             processo.concluirTarefa(destinatario);
             break;
           }
-          if (!row.id || !rotulosEnvio[row.envio_status]) throw new Error("O servidor não confirmou o estado do envio. Consulte o histórico antes de tentar novamente.");
+          if (!row?.id || !rotulosEnvio[row.envio_status]) throw new Error("O servidor não confirmou o estado do envio. Consulte o histórico antes de tentar novamente.");
           registros = registros.filter(item => item.id !== row.id).concat(row);
           render();
           if (!limitadoPeloServidor(row) || tentativa >= ESPERAS_LIMITE_MS.length) break;
@@ -532,7 +566,9 @@
         }
         if (!row) continue;
         if (row.envio_status === "aceito_smtp") aceitos++; else problemas++;
-        if (row.envio_status !== "aceito_smtp" && row.detalhe) detalhes.push(row.detalhe);
+        if (row.envio_status !== "aceito_smtp") {
+          detalhes.push(row.detalhe || "O envio de " + destinatario + " ficou sem confirmação. Consulte o histórico antes de reenviar a esse destinatário.");
+        }
         if (autenticacaoRecusada(row)) codigo = "smtp_autenticacao";
         processo.concluirTarefa(destinatario);
         if (bloqueioDoServidor(row)) { interrompido = lista.length - indice - 1; motivo = row.detalhe; break; }
@@ -545,7 +581,11 @@
       if (!aceitos && problemas) processo.erro({message: resumo, codigo});
       else processo.sucesso({_status: problemas || interrompido ? "partial" : "success", title: "Envio de convites", message: resumo});
     } catch (error) {
-      const message = "Envio interrompido. " + error.message + " Mensagens já aceitas não serão repetidas.";
+      const message = "Envio interrompido. " + error.message + "\n\n" +
+        aceitos + " convite(s) com aceite confirmado nesta operação. " +
+        (lista.length - iniciados) + " destinatário(s) ainda sem tentativa nesta operação. " +
+        (error.interrupcaoApi ? "Quando o SICARD voltar, atualize o monitoramento e use Enviar aos pendentes. " : "") +
+        "Consulte o histórico para verificar a última tentativa.";
       $("ami-email-status").textContent = message;
       if (processo) {
         if (aceitos) processo.sucesso({_status: "partial", title: "Parte dos convites foi aceita", message});

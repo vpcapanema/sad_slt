@@ -14,6 +14,8 @@ services:
     # memória deste processo. Não aumentar workers sem uma trava compartilhada.
     command: ["sh", "-c", "exec uvicorn api.server:app --host 0.0.0.0 --port 8080 --workers 1"]
     restart: unless-stopped
+    # Permite finalizar a comunicação SMTP e gravar seu resultado na troca do container.
+    stop_grace_period: 90s
     env_file:
       - .env
     environment:

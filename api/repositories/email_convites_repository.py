@@ -180,6 +180,7 @@ def reservar_monitorado(
         anterior = conn.execute(
             """SELECT conteudo_hash FROM ahp.comparacao_colaborativa_email
                WHERE ambiente_id=%s AND lower(destinatario)=%s AND natureza=%s
+                 AND envio_status='falha'
                ORDER BY criado_em DESC LIMIT 1""", (ambiente_id, destinatario, natureza),
         ).fetchone()
         # A nova tentativa reutiliza o registro da comunicação que falhou.

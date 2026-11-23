@@ -707,15 +707,26 @@ def test_automatico_nao_repete_confirmacao_aceita(monkeypatch):
 
 
 def test_envio_seletivo_usa_reserva_monitorada(ambiente, smtp, registros, monkeypatch):
-    reservar = MagicMock(side_effect=repo.reservar)
+    reservar = MagicMock(side_effect=lambda *args, **kwargs: repo.reservar(*args))
     monkeypatch.setattr(repo, "reservar_monitorado", reservar)
     service.enviar(ambiente["id"], payload(ambiente, somente_nao_enviado=True), "analista")
     reservar.assert_called_once()
+    assert reservar.call_args.kwargs == {"rejeitar_enviado": False}
     smtp.assert_called_once()
 
 
+@pytest.mark.parametrize("status", ["aceito_smtp", "enviando", "indeterminado"])
+def test_retomada_de_convite_preserva_envio_registrado(ambiente, smtp, registros, monkeypatch, status):
+    registro = {"id": "existente", "envio_status": status}
+    reservar = MagicMock(return_value=(registro, False))
+    monkeypatch.setattr(repo, "reservar_monitorado", reservar)
+    resposta = service.enviar(ambiente["id"], payload(ambiente, somente_nao_enviado=True), "analista")
+    assert resposta == {**registro, "reutilizado": True}
+    smtp.assert_not_called()
+
+
 def test_reenvio_monitorado_apos_recusa_preserva_chave_e_envelope(ambiente, smtp, registros, monkeypatch):
-    def reservar_monitorado(*args):
+    def reservar_monitorado(*args, **kwargs):
         # Simula reserva de uma nova tentativa para o mesmo registro que falhou.
         assert registros[0]["envio_status"] == "falha"
         registros[0]["envio_status"] = "enviando"
