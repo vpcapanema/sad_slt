@@ -719,16 +719,28 @@
 }
 .ami-page.ami-espaco-page #ami-import-modal .ami-data-modal__content > * { margin: 0; }
 #ami-import-feedback:empty { display: none; }
-.ami-import-scope-values { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px; }
-.ami-import-scope-chip {
-  max-width: 100%;
-  padding: 3px 6px;
-  border: 1px solid var(--pli-border);
-  border-radius: 4px;
-  font: inherit;
-  cursor: pointer;
+.ami-page #ami-import-modal th.ami-import-scope {
+  position: relative;
+  padding-inline: 7px 25px;
+  text-align: center;
 }
-.ami-import-scope-select { width: 100%; min-width: 0; font: inherit; }
+.ami-page #ami-import-modal td.ami-import-scope {
+  padding-inline: 0;
+  text-align: center;
+  vertical-align: middle;
+  line-height: 0;
+}
+.ami-page #ami-import-modal .ami-import-scope input {
+  margin: 0;
+  vertical-align: middle;
+  accent-color: var(--pli-deep);
+}
+.ami-page #ami-import-modal th.ami-import-scope input {
+  position: absolute;
+  inset-inline-end: 7px;
+  top: 50%;
+  transform: translateY(-50%);
+}
 @media (max-width: 600px) {
   .ami-page.ami-espaco-page .ami-registration-grid {
     grid-template-columns: minmax(0, 1fr);

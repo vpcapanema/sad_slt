@@ -11,7 +11,8 @@ const base = process.env.SICARD_TEST_URL || 'http://127.0.0.1:8083';
     {etapa: 'Fase 3', criterio: 'C1', dimensao: 'Ambiental'},
     {etapa: 'Fase 3', criterio: 'C2', dimensao: 'Ambiental'},
     {etapa: 'Fase 3', criterio: 'C3', dimensao: 'Social'},
-    {etapa: 'Fase 2', criterio: 'C4', dimensao: 'Espacial'},
+    {etapa: 'Fase 3', criterio: 'C4', dimensao: 'Viabilidade institucional e financeira'},
+    {etapa: 'Fase 2', criterio: 'C5', dimensao: 'Espacial'},
   ]}};
   let payload;
   let autenticado = false;
@@ -48,9 +49,9 @@ const base = process.env.SICARD_TEST_URL || 'http://127.0.0.1:8083';
     });
     const modal = page.locator('#ami-import-modal');
     await modal.waitFor({state: 'visible'});
-    assert.deepEqual(await modal.locator('th').allTextContents(), ['', 'Nome do colaborador', 'E-mail', 'Grupos de critérios']);
+    assert.deepEqual(await modal.locator('th').allTextContents(), ['', 'Nome do colaborador', 'E-mail', 'Todos']);
     assert.equal(await page.locator('#ami-import-list tr').count(), 3);
-    assert.deepEqual(await page.locator('[data-import-scope]').first().locator('option').allTextContents(), ['Adicionar grupo', 'Todos']);
+    assert.equal(await modal.locator('tbody [data-import-scope-row]:checked').count(), 3);
     await page.locator('#ami-import-filter-coluna').selectOption('email');
     await page.locator('#ami-import-filter-valor').selectOption('bia@example.com');
     assert.equal(await page.locator('#ami-import-list tr').count(), 1);
@@ -67,8 +68,10 @@ const base = process.env.SICARD_TEST_URL || 'http://127.0.0.1:8083';
     });
     await modal.waitFor({state: 'visible'});
     assert.equal(await page.locator('#ami-import-list tr').count(), 15);
+    await modal.getByRole('checkbox', {name: 'Atribuir todos os grupos a todos os colaboradores filtrados'}).uncheck();
     await page.locator('#ami-import-pagination').getByRole('button', {name: 'Próxima página'}).click();
     assert.match(await page.locator('#ami-import-list').innerText(), /Pessoa 16/);
+    assert.equal(await modal.locator('tbody [data-import-scope-row]:checked').count(), 0);
     await page.locator('#ami-import-cancel').click();
     assert.equal(await page.locator('#ami-email-list tr').count(), 2);
 
@@ -81,30 +84,38 @@ const base = process.env.SICARD_TEST_URL || 'http://127.0.0.1:8083';
       ['Gestor', 'ana@example.com', 'Outra grafia de Ana'],
       ['Analista', 'carla@example.com', '  CARLA   DOS REIS '],
       ['Analista', 'debora@example.com', 'DÉBORA NUNES'],
+      ['Analista', 'elisa@example.com', 'Elisa Ramos'],
     ]), 'Colaboradores');
     await page.locator('#ami-collaborator-file').setInputFiles({
       name: 'colaboradores.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       buffer: Buffer.from(XLSX.write(workbook, {bookType: 'xlsx', type: 'array'})),
     });
     await modal.waitFor({state: 'visible'});
-    const registrarGrupo = async (email, grupo) => {
-      const line = page.locator('#ami-import-list tr').filter({hasText: email});
-      await line.locator('select').selectOption({label: grupo});
-      return line;
-    };
-    const carla = await registrarGrupo('carla@example.com', 'Social');
-    assert.equal(await carla.getByRole('button', {name: /Remover Social/}).count(), 1);
+    const groups = ['Ambiental', 'Social', 'Viabilidade institucional e financeira'];
+    const headers = (await modal.locator('th').allTextContents()).map(text => text.trim().replace(/\s+/g, ' '));
+    assert.deepEqual(headers, ['', 'Nome do colaborador', 'E-mail', ...groups, 'Todos']);
+    const scope = (email, group) => modal.locator('tbody tr').filter({hasText: email}).getByRole('checkbox', {name: new RegExp('^'+group+' ·')});
+    const bulk = group => modal.getByRole('checkbox', {name: `Atribuir ${group} a todos os colaboradores filtrados`});
+    assert.equal(await modal.locator('tbody [data-import-scope-row]:checked').count(), 0);
+    await scope('carla@example.com', 'Social').check();
     await page.locator('#ami-import-confirm').click();
     assert.match(await page.locator('#ami-import-feedback').innerText(), /ao menos dois critérios para Carla dos Reis/);
-    await registrarGrupo('carla@example.com', 'Ambiental');
-    await carla.getByRole('button', {name: /Remover Social/}).click();
-    await registrarGrupo('carla@example.com', 'Social');
-    assert.equal(await carla.getByRole('button', {name: /Remover/}).count(), 2);
-    await registrarGrupo('debora@example.com', 'Ambiental');
-    const debora = await registrarGrupo('debora@example.com', 'Todos');
-    assert.equal(await debora.getByRole('button', {name: /Remover/}).count(), 0);
-    assert.equal(await debora.locator('.ami-import-scope-values').textContent(), 'Todos');
-    assert.equal(await carla.locator('select option').filter({hasText: 'Espacial'}).count(), 0);
+    await page.locator('#ami-import-filter-coluna').selectOption('email');
+    await page.locator('#ami-import-filter-valor').selectOption('carla@example.com');
+    await bulk('Ambiental').check();
+    await page.locator('#ami-import-filter-limpar').click();
+    assert.equal(await scope('carla@example.com', 'Ambiental').isChecked(), true);
+    assert.equal(await scope('debora@example.com', 'Ambiental').isChecked(), false);
+    assert.equal(await bulk('Ambiental').evaluate(box => box.indeterminate), true);
+    assert.equal(await scope('carla@example.com', 'Todos os grupos').evaluate(box => box.indeterminate), true);
+    await scope('debora@example.com', 'Todos os grupos').check();
+    for (const group of groups) assert.equal(await scope('debora@example.com', group).isChecked(), true);
+    await scope('debora@example.com', 'Social').uncheck();
+    assert.equal(await scope('debora@example.com', 'Todos os grupos').evaluate(box => box.indeterminate), true);
+    await scope('debora@example.com', 'Social').check();
+    assert.equal(await scope('debora@example.com', 'Todos os grupos').isChecked(), true);
+    for (const group of groups) await scope('elisa@example.com', group).check();
+    assert.equal(await scope('elisa@example.com', 'Todos os grupos').isChecked(), true);
 
     const comparar = await page.evaluate(() => {
       const style = selector => getComputedStyle(document.querySelector(selector));
@@ -128,10 +139,23 @@ const base = process.env.SICARD_TEST_URL || 'http://127.0.0.1:8083';
     assert.equal(comparar.filters[0], comparar.filters[1]);
     await page.setViewportSize({width: 390, height: 844});
     assert.equal(await modal.locator('.ami-data-modal__card').evaluate(el => el.getBoundingClientRect().right <= innerWidth + 1), true);
+    await page.waitForFunction(() => {
+      const shell = document.querySelector('#ami-import-modal .ami-table-shell');
+      return shell.scrollWidth > shell.clientWidth && getComputedStyle(shell).overflowX === 'auto';
+    });
     await page.setViewportSize({width: 1440, height: 1000});
+    assert.equal(await modal.locator('tbody .ami-import-scope input').evaluateAll(boxes => boxes.every(box => {
+      const input = box.getBoundingClientRect(), cell = box.parentElement.getBoundingClientRect();
+      return Math.abs(input.left + input.width / 2 - cell.left - cell.width / 2) <= 1 &&
+        Math.abs(input.top + input.height / 2 - cell.top - cell.height / 2) <= 1;
+    })), true);
+    assert.equal(await modal.locator('thead .ami-import-scope input').evaluateAll(boxes => boxes.every(box => {
+      const input = box.getBoundingClientRect(), title = box.parentElement.querySelector('.smart-column-title').getBoundingClientRect();
+      return input.left >= title.right;
+    })), true);
     await page.locator('#ami-import-confirm').click();
     await modal.waitFor({state: 'hidden'});
-    assert.equal(await page.locator('#ami-email-list tr').count(), 4);
+    assert.equal(await page.locator('#ami-email-list tr').count(), 5);
 
     await page.locator('#ami-collaborator-file').setInputFiles({
       name: 'incompleto.csv', mimeType: 'text/csv',
@@ -158,9 +182,12 @@ const base = process.env.SICARD_TEST_URL || 'http://127.0.0.1:8083';
     assert.deepEqual(payload.convites.find(item => item.email === 'debora@example.com'), {
       nome: 'Débora Nunes', email: 'debora@example.com',
     });
+    assert.deepEqual(payload.convites.find(item => item.email === 'elisa@example.com'), {
+      nome: 'Elisa Ramos', email: 'elisa@example.com',
+    });
     assert.deepEqual(errors, []);
     assert.deepEqual(escritas, []);
-    console.log('Importação CSV/XLSX, padrão visual, grupos adicionáveis, Todos, nomes normalizados e payload do julgamento verificados.');
+    console.log('Importação CSV/XLSX, colunas por grupo, atribuição em lote, Todos, padrão visual e envio verificados.');
   } finally {
     if (autenticado) await page.request.post(base + '/api/auth/logout').catch(() => {});
     await browser.close();

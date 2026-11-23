@@ -8,7 +8,7 @@
   var draftEmails = [];
   var draftEditing = true, draftSnapshot = [];
   var draftPage = 1, draftVisibleCount = 0, sortDrafts = function (rows) { return rows; };
-  var importedCollaborators = [], importPage = 1, sortImport;
+  var importedCollaborators = [], importGroups = [], importPage = 1, sortImport;
   var pairwiseMatrices = {};
   var pairwiseConfigured = {};
   var pairwiseMode = null;
@@ -1243,7 +1243,7 @@
     if (column === 'nome') return row.item.nome || 'Colaborador ' + (row.index + 1);
     if (column === 'email') return row.item.email;
     if (column === 'prazo') return formatDeadline();
-    if (column === 'dimensoes') return row.item.dimensoes?.join(" · ") || "Todos";
+    if (column === 'dimensoes') return row.item.dimensoes ? row.item.dimensoes.join(" · ") || "Sem atribuição" : "Todos";
     return '';
   }
   function updateDraftControls() {
@@ -1334,60 +1334,83 @@
     importedCollaborators = []; importPage = 1; $("ami-collaborator-file").value = "";
     $("ami-import-collaborators").focus();
   }
-  function renderImportScope(cell, row, groups) {
-    var item = row.item;
-    var assigned = item.dimensoes || [];
-    var selection = document.createElement("div");
-    selection.className = "ami-import-scope-values";
-    if (!assigned.length) selection.textContent = "Todos";
-    var select = document.createElement("select");
-    select.className = "c-form-control ami-import-scope-select";
-    select.dataset.importScope = row.index;
-    select.setAttribute("aria-label", "Adicionar grupo de critérios para " + item.nome);
-    select.add(new Option("Adicionar grupo", ""));
-    select.add(new Option("Todos", "todos"));
-    var options = Array.from(groups.keys());
-    options.forEach(function (dimension, index) {
-      if (!assigned.includes(dimension)) select.add(new Option(dimension, String(index)));
-    });
-    function update(dimensions) {
-      item.dimensoes = dimensions.length ? dimensions : null;
-      $("ami-import-feedback").textContent = "";
-      renderImportedCollaborators();
-      ($("ami-import-list").querySelector('[data-import-scope="' + row.index + '"]') || $("ami-import-filter-coluna")).focus();
+  function importScopeChecked(item, group) {
+    return item.dimensoes === null || item.dimensoes.includes(group);
+  }
+  function setImportScope(item, column, checked) {
+    if (column === importGroups.length) {
+      item.dimensoes = checked ? null : [];
+      return;
     }
-    assigned.forEach(function (dimension) {
-      var button = document.createElement("button");
-      button.type = "button";
-      button.className = "ami-import-scope-chip";
-      button.textContent = dimension + " ×";
-      button.setAttribute("aria-label", "Remover " + dimension + " de " + item.nome);
-      button.addEventListener("click", function () { update(assigned.filter(function (value) { return value !== dimension; })); });
-      selection.append(button);
+    var assigned = importGroups.filter(function (group, index) {
+      return index === column ? checked : importScopeChecked(item, group);
     });
-    select.addEventListener("change", function () {
-      if (select.value) update(select.value === "todos" ? [] : assigned.concat(options[Number(select.value)]));
+    item.dimensoes = assigned.length === importGroups.length ? null : assigned;
+  }
+  function importRows() {
+    return importedCollaborators.map(function (item, index) { return { item: item, index: index }; });
+  }
+  function renderImportHeaders() {
+    var header = $("ami-import-headers");
+    header.querySelectorAll(".ami-import-scope").forEach(function (cell) { cell.remove(); });
+    importGroups.concat("Todos").forEach(function (name, column) {
+      var cell = document.createElement("th"), box = document.createElement("input");
+      cell.scope = "col";
+      cell.className = "ami-import-scope";
+      box.type = "checkbox";
+      box.dataset.importScopeColumn = column;
+      var label = column === importGroups.length ? "Atribuir todos os grupos" : "Atribuir " + name;
+      box.setAttribute("aria-label", label + " a todos os colaboradores filtrados");
+      box.addEventListener("change", function () {
+        filteredImportRows(importRows()).forEach(function (row) { setImportScope(row.item, column, box.checked); });
+        $("ami-import-feedback").textContent = "";
+        renderImportedCollaborators();
+      });
+      cell.append(name, box);
+      header.append(cell);
     });
-    cell.replaceChildren(selection, select);
   }
   function filteredImportRows(rows) {
     var column = $("ami-import-filter-coluna").value, value = $("ami-import-filter-valor").value;
     return rows.filter(function (row) { return SLTTable.matches("ami-import-filter", draftValue(row, column) === value, Boolean(column && value)); });
   }
   function renderImportedCollaborators() {
-    var rows = importedCollaborators.map(function (item, index) { return { item: item, index: index }; });
+    var rows = importRows(), scopeColumns = importGroups.concat("Todos");
     var column = $("ami-import-filter-coluna").value, valueSelect = $("ami-import-filter-valor");
     SLTTable.values(valueSelect, rows, function (row) { return draftValue(row, column); });
     valueSelect.disabled = !column;
     var filtered = sortImport(filteredImportRows(rows));
     var result = SLTTable.paginate("ami-import-pagination", filtered, importPage, function (page) { importPage = page; renderImportedCollaborators(); });
     importPage = result.page;
-    var groups = activeSurfaceId ? new Map() : dimensionGroups();
     $("ami-import-list").innerHTML = result.rows.map(function (row) {
       var item = row.item;
-      return '<tr><td class="col-select"><input type="checkbox" data-import-select="' + row.index + '" ' + (item.selected ? "checked" : "") + ' aria-label="Selecionar ' + escapeHtml(item.nome + " · " + item.email) + '"></td><td>' + escapeHtml(item.nome) + '</td><td>' + escapeHtml(item.email) + '</td><td class="ami-import-scope"></td></tr>';
-    }).join("") || '<tr><td colspan="4" class="ami-empty">Nenhum colaborador encontrado.</td></tr>';
-    $("ami-import-list").querySelectorAll(".ami-import-scope").forEach(function (cell, index) { renderImportScope(cell, result.rows[index], groups); });
+      var scopes = scopeColumns.map(function (name, column) {
+        var checked = importScopeChecked(item, importGroups[column]);
+        var label = column === importGroups.length ? "Todos os grupos" : name;
+        return '<td class="ami-import-scope"><input type="checkbox" data-import-scope-row="' + row.index + '" data-import-scope-column="' + column + '"' + (checked ? ' checked' : '') + ' aria-label="' + escapeHtml(label + " · " + item.nome + " · " + item.email) + '"></td>';
+      }).join("");
+      return '<tr><td class="col-select"><input type="checkbox" data-import-select="' + row.index + '" ' + (item.selected ? "checked" : "") + ' aria-label="Selecionar ' + escapeHtml(item.nome + " · " + item.email) + '"></td><td>' + escapeHtml(item.nome) + '</td><td>' + escapeHtml(item.email) + '</td>' + scopes + '</tr>';
+    }).join("") || '<tr><td colspan="' + (3 + scopeColumns.length) + '" class="ami-empty">Nenhum colaborador encontrado.</td></tr>';
+    $("ami-import-list").querySelectorAll("[data-import-scope-row]").forEach(function (box) {
+      var row = Number(box.dataset.importScopeRow), column = Number(box.dataset.importScopeColumn);
+      var item = importedCollaborators[row];
+      box.indeterminate = column === importGroups.length && Boolean(item.dimensoes?.length);
+      box.onchange = function () {
+        setImportScope(item, column, box.checked);
+        $("ami-import-feedback").textContent = "";
+        renderImportedCollaborators();
+        var replacement = $("ami-import-list").querySelector('[data-import-scope-row="' + row + '"][data-import-scope-column="' + column + '"]');
+        (replacement || $("ami-import-filter-coluna")).focus({preventScroll: Boolean(replacement)});
+      };
+    });
+    $("ami-import-headers").querySelectorAll("[data-import-scope-column]").forEach(function (box) {
+      var column = Number(box.dataset.importScopeColumn), group = importGroups[column];
+      box.checked = filtered.length > 0 && filtered.every(function (row) { return importScopeChecked(row.item, group); });
+      box.indeterminate = !box.checked && filtered.some(function (row) {
+        return importScopeChecked(row.item, group) || (column === importGroups.length && Boolean(row.item.dimensoes?.length));
+      });
+      box.disabled = !filtered.length;
+    });
     $("ami-import-list").querySelectorAll("[data-import-select]").forEach(function (box) { box.onchange = function () { importedCollaborators[Number(box.dataset.importSelect)].selected = box.checked; renderImportedCollaborators(); }; });
     var selectedCount = importedCollaborators.filter(function (item) { return item.selected; }).length;
     $("ami-import-select-all").checked = filtered.length > 0 && filtered.every(function (row) { return row.item.selected; });
@@ -1810,6 +1833,9 @@
       var file = this.files && this.files[0]; if (!file) return;
       try {
         importedCollaborators = await readCollaboratorFile(file);
+        importGroups = activeSurfaceId ? [] : Array.from(dimensionGroups().keys());
+        importedCollaborators.forEach(function (item) { item.dimensoes = importGroups.length ? [] : null; });
+        renderImportHeaders();
         resetImportFilters();
         $("ami-import-feedback").textContent = "";
         $("ami-import-modal").hidden = false;
@@ -1833,11 +1859,11 @@
     $("ami-import-filter-valor").onchange = filterImport;
     SLTTable.bindFilter("ami-import-filter", filterImport, resetImportFilters);
     sortImport = SLTTable.sorting($("ami-import-list").closest("table"), function () {
-      return [null].concat(importColumns.map(function (entry) { return function (row) { return draftValue(row, entry[0]); }; }));
+      return [null, function (row) { return draftValue(row, "nome"); }, function (row) { return draftValue(row, "email"); }];
     }, filterImport);
     $("ami-import-select-all").addEventListener("change", function () {
       var checked = this.checked;
-      filteredImportRows(importedCollaborators.map(function (item, index) { return { item: item, index: index }; }))
+      filteredImportRows(importRows())
         .forEach(function (row) { row.item.selected = checked; });
       renderImportedCollaborators();
     });
