@@ -9,8 +9,6 @@
   var stats = { inicio_ms: null, duracao_anterior_ms: 0, pares: {} };
   var draftActive = false;
   var saveTimer = null;
-  var metricsTimer = null;
-  var latestCR = null;
   var acesso = null;
   var verificando = false;
   var pairTimers = new Map();
@@ -84,14 +82,18 @@
         if (!draftActive) return;
         trackPair(pair.querySelector(".saaty-scale").dataset.pid);
         clearTimeout(pairTimers.get(pair));
+        var wasValidated = pair.classList.contains("is-auto-validated");
         pair.classList.remove("is-auto-validated");
         pair.classList.add("is-auto-editing");
-        refreshConsistencyHelp();
+        if (wasValidated) {
+          updateProgressHint();
+          refreshConsistencyHelp();
+        }
         pairTimers.set(pair, setTimeout(function () {
           pairTimers.delete(pair);
           pair.classList.remove("is-auto-editing");
           pair.classList.add("is-auto-validated");
-          updateProgressHint(latestCR);
+          updateProgressHint();
           refreshConsistencyHelp();
         }, 3000));
       });
@@ -114,43 +116,37 @@
   }
 
   function updateCollabMetrics() {
-    clearTimeout(metricsTimer);
-    metricsTimer = null;
-    if (typeof buildLiveMatrix !== "function" || typeof SLTAhp === "undefined") return;
+    if (!draftActive || typeof buildLiveMatrix !== "function" || typeof SLTAhp === "undefined") return;
     var matrix = buildLiveMatrix();
     if (!matrix) return;
     var res = SLTAhp.analyzeMatrix(matrix);
-    latestCR = res.CR;
+    var complete = matrix.every(function (row, i) {
+      return row.every(function (value, j) {
+        return j <= i || value !== 1 || stats.pares[i + "_" + j] > 0;
+      });
+    });
+    var consistent = res.CR < 0.1;
+    el("metricLambdaValue").textContent = SLTAhp.formatMetric(res.lambdaMax);
+    el("metricICValue").textContent = SLTAhp.formatMetric(res.CI);
+    el("metricRCValue").textContent = SLTAhp.formatMetric(res.CR);
+    var rcCard = el("metricRCValue").closest(".ahp-metric-card");
+    rcCard.classList.toggle("is-success", consistent);
+    rcCard.classList.toggle("is-failure", !consistent);
+    var rcStatus = el("collab-rc-status");
+    var status = complete ? "RC da matriz completa" : "RC provisória";
+    if (rcStatus.textContent !== status) rcStatus.textContent = status;
     var btn = el("btn-enviar-resposta");
-    if (btn) btn.disabled = !draftActive || res.CR >= 0.1;
+    if (btn) btn.disabled = !consistent;
     submitFeedback(
-      res.CR < 0.1
+      consistent
         ? "Matriz consistente (RC < 0,10). Você pode enviar."
         : "RC = " + SLTAhp.formatMetric(res.CR) + " — ajuste as comparações (necessário RC < 0,10).",
-      res.CR < 0.1 ? "success" : "error"
+      consistent ? "success" : "error"
     );
-    updateProgressHint(res.CR);
-    refreshConsistencyHelp(matrix);
-    if (draftActive) {
-      var version = editVersion;
-      el("collab-save-feedback").textContent = "Alterações aguardando salvamento…";
-      clearTimeout(saveTimer);
-      saveTimer = setTimeout(function () { queueProgress(matrix, version); }, 600);
-    }
-  }
-
-  function scheduleCollabMetrics() {
-    if (!draftActive) return;
-    clearTimeout(metricsTimer);
     clearTimeout(saveTimer);
-    editVersion++;
-    latestCR = null;
-    el("liveMetrics").setAttribute("aria-busy", "true");
-    el("collab-rc-status").textContent = "Atualizando…";
-    el("btn-enviar-resposta").disabled = true;
+    var version = ++editVersion;
     el("collab-save-feedback").textContent = "Alterações aguardando salvamento…";
-    submitFeedback("Atualizando os indicadores de consistência…", "info");
-    metricsTimer = setTimeout(updateCollabMetrics, 1000);
+    saveTimer = setTimeout(function () { queueProgress(matrix, version); }, 1600);
   }
 
   function formatSaatyValue(value) {
@@ -334,20 +330,10 @@
     return best;
   }
 
-  function refreshConsistencyHelp(matrix) {
-    matrix = matrix || buildLiveMatrix();
+  function refreshConsistencyHelp() {
+    var matrix = buildLiveMatrix();
     var state = matrix && validatedConsistencyState(matrix);
-    var metrics = state && state.metrics;
-    el("metricRCValue").textContent = metrics ? SLTAhp.formatMetric(metrics.CR) : "—";
-    el("metricICValue").textContent = metrics ? SLTAhp.formatMetric(metrics.CI) : "—";
-    el("metricLambdaValue").textContent = metrics ? SLTAhp.formatMetric(metrics.lambdaMax) : "—";
-    el("liveMetrics").setAttribute("aria-busy", "false");
-    var rcCard = el("metricRCValue").closest(".ahp-metric-card");
-    rcCard.classList.toggle("is-success", Boolean(metrics && metrics.CR < 0.1));
-    rcCard.classList.toggle("is-failure", Boolean(metrics && metrics.CR >= 0.1));
-    el("collab-rc-status").textContent = !metrics ? "Aguardando comparações validadas suficientes" :
-      state.sampleScore ? "RC estimada dos pares validados" : "RC da matriz completa";
-    el("collab-consistency-help-button").hidden = !metrics || metrics.CR < 0.1;
+    el("collab-consistency-help-button").hidden = !state || state.cr < 0.1;
   }
 
   function validatedConsistencyState(matrix) {
@@ -369,7 +355,7 @@
     }
     var metrics = sampleScore ? SLTAhp.validatedMetrics(matrix, pairs) : SLTAhp.analyzeMatrix(matrix);
     if (!metrics) return null;
-    return { matrix: matrix, metrics: metrics, cr: metrics.CR, answered: answered, count: count, total: total, sampleScore: sampleScore };
+    return { matrix: matrix, cr: metrics.CR, answered: answered, count: count, total: total, sampleScore: sampleScore };
   }
 
   function closeConsistencyHelp() {
@@ -534,7 +520,7 @@
     el("collab-consistency-modal-close").focus();
   }
 
-  function updateProgressHint(cr) {
+  function updateProgressHint() {
     var hint = el("collab-reciprocal-hint");
     if (!hint) return;
     var total = document.querySelectorAll(".saaty-pair").length;
@@ -542,7 +528,7 @@
     hint.textContent = "Pares confirmados: " + touched + "/" + total;
   }
 
-  global.updateLiveMetrics = scheduleCollabMetrics;
+  global.updateLiveMetrics = updateCollabMetrics;
 
   function liberarFormulario() {
     if (verificando || draftActive) return;
@@ -597,6 +583,7 @@
         if (typeof generatePairwiseFormStep4 === "function") generatePairwiseFormStep4();
         patchSaatyTracking();
         draftActive = true;
+        updateProgressHint();
         updateCollabMetrics();
       })
       .catch(function (err) {
@@ -630,7 +617,6 @@
     processo.tarefaAtual("Concluir salvamentos pendentes", "Aguardando os salvamentos já iniciados antes do envio definitivo.");
     submitFeedback("Enviando…", "info");
     clearTimeout(saveTimer);
-    clearTimeout(metricsTimer);
     draftActive = false;
     el("btn-enviar-resposta").disabled = true;
     el("comparisonContent").inert = true;

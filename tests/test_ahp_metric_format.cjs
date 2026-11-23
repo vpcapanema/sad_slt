@@ -30,7 +30,7 @@ const html = execFileSync(".venv\\Scripts\\python.exe", ["-c",
 ], { encoding: "utf8", env: { ...process.env, PYTHONIOENCODING: "utf-8" } });
 
 (async () => {
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ channel: 'msedge' });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     await page.route("**/*", route => {
@@ -55,6 +55,31 @@ const html = execFileSync(".venv\\Scripts\\python.exe", ["-c",
       document.getElementById("btn-liberar-form").click();
     });
     await page.waitForFunction(() => document.querySelector(".saaty-pair"));
+    await page.clock.install();
+    await page.clock.pauseAt(await page.evaluate(() => Date.now()));
+    const scales = page.locator("#comparisonContent .saaty-scale");
+    const instantMetrics = async (status) => {
+      const expected = await page.evaluate(() => {
+        const result = SLTAhp.analyzeMatrix(buildLiveMatrix());
+        return [result.lambdaMax, result.CI, result.CR].map(SLTAhp.formatMetric);
+      });
+      assert.deepEqual(await page.locator("#liveMetrics .ahp-metric-card__value").allTextContents(), expected);
+      assert.equal(await page.locator("#collab-rc-sticky .ahp-metric-card__value").textContent(), expected[2]);
+      assert.equal(await page.locator("#collab-rc-status").textContent(), status);
+      assert.equal(await page.locator(".saaty-pair.is-auto-validated").count(), 0);
+      return expected[2];
+    };
+    const initial = await instantMetrics("RC provisória");
+    await scales.first().press("ArrowLeft");
+    const first = await instantMetrics("RC provisória");
+    assert.notEqual(first, initial);
+    await scales.first().press("ArrowLeft");
+    assert.notEqual(await instantMetrics("RC provisória"), first);
+    await scales.nth(1).press("ArrowRight");
+    await instantMetrics("RC provisória");
+    await scales.nth(2).press("Home");
+    await instantMetrics("RC da matriz completa");
+    await page.clock.resume();
     await page.evaluate(() => {
       window.buildLiveMatrix = () => [[1, 1, 1 / 4], [1, 1, 1 / 4], [4, 4, 1]];
       window.updateLiveMetrics();
