@@ -10,11 +10,11 @@
 {% block classes_body %}pesquisa-experiencia-page{% endblock %}
 
 {% block estilos_pagina %}
-  <link rel="stylesheet" href="/assets/css/pesquisa-experiencia.css?v=20261119-3">
+  <link rel="stylesheet" href="/assets/css/pesquisa-experiencia.css?v=20261123-largura-ahp">
 {% endblock %}
 
 {% block conteudo %}
-<main class="pesquisa-experiencia" id="conteudo-principal">
+<main class="pesquisa-experiencia{% if pesquisa_ahp %} pesquisa-experiencia--ahp{% endif %}" id="conteudo-principal">
   <header class="pesquisa-cabecalho">
     <p class="pesquisa-selo">Sua experiência ajuda a melhorar o SICARD</p>
     <h1>{{ subtitulo }}</h1>
@@ -59,7 +59,7 @@
 
     <section class="pesquisa-bloco" aria-labelledby="avaliacao-titulo">
       <h2 id="avaliacao-titulo">Avalie as afirmações</h2>
-      <p class="escala-ajuda">1 — Discordo totalmente · 2 — Discordo · 3 — Discordo um pouco · 4 — Neutro (nem concordo nem discordo) · 5 — Concordo um pouco · 6 — Concordo · 7 — Concordo totalmente.</p>
+      <p class="escala-ajuda">1 — Discordo totalmente · 2 — Discordo · 3 — Discordo um pouco · 4 — Neutro{% if not pesquisa_ahp %} (nem concordo nem discordo){% endif %} · 5 — Concordo um pouco · 6 — Concordo · 7 — Concordo totalmente.</p>
       <div id="perguntas-avaliacao" class="perguntas-avaliacao"></div>
     </section>
 

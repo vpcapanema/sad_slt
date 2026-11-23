@@ -1,8 +1,10 @@
 .pesquisa-experiencia-page { background: #f3f7f9; }
-.pesquisa-experiencia { width: min(860px, calc(100% - 2rem)); margin: 2rem auto 3rem; color: #183443; }
+.pesquisa-experiencia { width: min(var(--pesquisa-largura, 860px), calc(100% - 2rem)); margin: 2rem auto 3rem; color: #183443; }
+.pesquisa-experiencia--ahp { --pesquisa-largura: 1280px; }
 .pesquisa-cabecalho { padding: 2rem; border-radius: 16px 16px 0 0; background: linear-gradient(135deg, #063b53, #0c6274); color: #fff; }
 .pesquisa-cabecalho h1 { margin: .25rem 0 .65rem; color: #fff; font-size: clamp(1.7rem, 4vw, 2.5rem); }
 .pesquisa-cabecalho p { max-width: 700px; margin: 0; line-height: 1.55; }
+.pesquisa-experiencia--ahp .pesquisa-cabecalho p { max-width: none; }
 .pesquisa-cabecalho .pesquisa-selo { font: 700 .75rem/1.2 Montserrat, Arial, sans-serif; letter-spacing: .08em; text-transform: uppercase; color: #bceaf0; }
 .pesquisa-formulario { padding: 1.5rem 2rem 2rem; border: 1px solid #d7e2e7; border-top: 0; border-radius: 0 0 16px 16px; background: #fff; box-shadow: 0 12px 30px rgb(25 60 75 / 9%); }
 .pesquisa-bloco { margin: 0; padding: 1.4rem 0; border: 0; border-bottom: 1px solid #e3ebef; }
@@ -45,7 +47,7 @@
 .pesquisa-sucesso i { font-size: 2.5rem; color: #198754; }
 .pesquisa-sucesso h2 { margin: .8rem 0 .4rem; color: #07566a; }
 @media (max-width: 620px) {
-  .pesquisa-experiencia { width: min(100% - 1rem, 860px); margin-top: .5rem; }
+  .pesquisa-experiencia { width: calc(100% - 1rem); margin-top: .5rem; }
   .pesquisa-cabecalho, .pesquisa-formulario { padding-inline: 1rem; }
   .pesquisa-grid { grid-template-columns: 1fr; gap: 0; }
 }
