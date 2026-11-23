@@ -144,6 +144,38 @@ def test_convite_usa_alias_assunto_e_mensagem_editados(ambiente, smtp, registros
     assert enviado.texto.startswith("Mensagem editada exatamente aqui.")
 
 
+@pytest.mark.parametrize("legado", [False, True])
+def test_convite_padrao_introduz_o_pli_e_usa_o_recorte_do_destinatario(ambiente, smtp, registros, legado):
+    from api.services import comparacao_colaborativa_service as julgamentos
+
+    base = "https://example.com/sicard"
+    ambiente.update(
+        matriz_nome="Matriz_Criterios_Premissas_PLI-SP_2050_D1-D7",
+        convites=[{"email": DEST, "nome": "Ana Silva", "dimensoes": ["Capacidade de entrega"]}],
+        criterios=[
+            {"Critério": "D1 · Eficiência logística", "Dimensão": "Mérito e resultados", "Etapa": "Fase 3"},
+            {"Critério": "D6 · Viabilidade institucional e financeira", "Dimensão": "Capacidade de entrega", "Etapa": "Fase 3"},
+            {"Critério": "D7 · Riscos", "Dimensão": "Capacidade de entrega", "Etapa": "Fase 3"},
+        ],
+    )
+    ambiente["email_mensagem"] = (
+        julgamentos._mensagem_email_legada(ambiente, julgamentos._link_publico(ambiente, base_url=base), "22/11/2026", None)
+        if legado else julgamentos._mensagem_email_padrao(ambiente, base_url=base)
+    )
+    service.enviar(ambiente["id"], payload(ambiente), "analista")
+    enviado = smtp.call_args.args[0]
+    intro, orientacao, lista, *_ = enviado.texto.split("\n\n")[1:]
+    assert intro.startswith("O PLI-SP 2050 orienta o planejamento")
+    ordem = [intro.index(trecho) for trecho in ("muitas demandas", "recursos disponíveis", "estabelecer prioridades", "O SICARD apoia", "Método de Análise Hierárquica (AHP)")]
+    assert ordem == sorted(ordem)
+    assert "1 comparação entre os 2 critérios" in orientacao
+    assert "D6 · Viabilidade" in lista and "D7 · Riscos" in lista
+    assert "D1" not in lista
+    assert enviado.texto.startswith("Olá, Ana Silva!")
+    assert "22/11/2026" not in enviado.texto
+    assert "horário de Brasília" in enviado.html
+
+
 @pytest.mark.parametrize(("nome", "cumprimento"), [
     ("Ana", "Olá, Ana!"),
     ("Maria Clara Souza", "Olá, Maria Clara!"),

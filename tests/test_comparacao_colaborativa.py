@@ -149,6 +149,36 @@ def test_contexto_publico_descreve_objetivo_por_tipo(monkeypatch, tipo_id, deman
     assert "token_acesso" not in contexto
 
 
+def test_contextualizacao_exibe_premissas_e_pares_apenas_do_convite_validado(monkeypatch):
+    row = _ambiente_row(
+        matriz_id=HIERARQUIZACAO_ID,
+        matriz_nome="Matriz PLI-SP 2050",
+        convites=[{"email": "a@x.gov.br", "dimensoes": ["Capacidade de entrega"]}],
+        criterios=[
+            {"Critério": "D1 · Eficiência logística", "Dimensão": "Mérito e resultados", "Etapa": "Fase 3", "Premissa": "Alívio de gargalos."},
+            {"Critério": "D6 · Viabilidade", "Dimensão": "Capacidade de entrega", "Etapa": "Fase 3", "Premissa": "Menor esforço fiscal aumenta a prioridade."},
+            {"Critério": "D7 · Riscos", "Dimensão": "Capacidade de entrega", "Etapa": "Fase 3", "Premissa": "Riscos de entrega maiores reduzem a prioridade."},
+        ],
+    )
+    monkeypatch.setattr(repo, "get_ambiente_by_token", lambda _: row)
+    client = TestClient(app)
+    caminho = "/api/ahp/comparacao-colaborativa/publico/tok-abc"
+    publico = client.get(caminho).json()
+    contexto = publico["contextualizacao"]
+    assert contexto["introducao"].startswith("O PLI-SP 2050 reúne demandas")
+    assert contexto["exemplos"] == [] and contexto["orientacao"] == ""
+    assert publico["criterios"] == []
+    acesso = client.post(caminho + "/acesso", json={"email": "a@x.gov.br", "token_acesso": KEY})
+    assert acesso.status_code == 200, acesso.text
+    personalizado = acesso.json()["contextualizacao"]
+    assert personalizado["introducao"] == contexto["introducao"]
+    assert "2 critérios em 1 par." in personalizado["orientacao"]
+    assert personalizado["exemplos"] == [
+        "D6 · Viabilidade — Menor esforço fiscal aumenta a prioridade.",
+        "D7 · Riscos — Riscos de entrega maiores reduzem a prioridade.",
+    ]
+
+
 def _client_autenticado(perfil: str = "GESTOR") -> TestClient:
     client = TestClient(app)
     user = SessionUser(

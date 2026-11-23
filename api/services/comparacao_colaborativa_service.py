@@ -40,7 +40,7 @@ from api.schemas.comparacao_colaborativa import (
     EMAIL_ASSUNTO_PADRAO,
     EMAIL_REMETENTE_ALIAS_PADRAO,
 )
-from api.services import ahp_engine, superficie_ahp, matrizes_criterios
+from api.services import ahp_engine, contexto_julgamento_ahp, superficie_ahp, matrizes_criterios
 
 logger = logging.getLogger(__name__)
 
@@ -181,17 +181,41 @@ def _proteger_link_publico(row: dict[str, Any], mensagem: str, *, base_url: str 
     )
 
 
-def _mensagem_email_padrao(row: dict[str, Any], *, base_url: str = "") -> str:
-    """Corpo inicial persistível, comum a todos os colaboradores do julgamento."""
-    link = _link_publico(row, base_url=base_url)
+def _prazo_email(row: dict[str, Any], formato: str) -> str:
     prazo = row.get("valido_ate")
     if isinstance(prazo, str):
         try:
             prazo = datetime.fromisoformat(prazo.replace("Z", "+00:00"))
         except ValueError:
             pass
-    prazo_rotulo = prazo.astimezone(_TZ_SP).strftime("%d/%m/%Y") if isinstance(prazo, datetime) else str(prazo or "")
-    origem = row.get("hierarquizacao_nome") or row.get("config_nome")
+    if isinstance(prazo, datetime) and prazo.tzinfo is None:
+        prazo = prazo.replace(tzinfo=timezone.utc)
+    return prazo.astimezone(_TZ_SP).strftime(formato) if isinstance(prazo, datetime) else str(prazo or "")
+
+
+def _mensagem_email_padrao(
+    row: dict[str, Any], *, base_url: str = "", criterios: list[dict] | None = None,
+) -> str:
+    nomes = _criterio_nomes(row.get("criterios") or []) if criterios is None else _criterio_nomes(criterios)
+    exemplos = _criterio_nomes(row.get("criterios") or [])
+    prazo = _prazo_email(row, "%d/%m/%Y, às %Hh%M, horário de Brasília")
+    linhas = ["Olá, colaborador(a)!", "", contexto_julgamento_ahp.abertura_convite(row, exemplos), "",
+              contexto_julgamento_ahp.orientacao_convite(row, len(nomes))]
+    if nomes:
+        linhas.extend(["", f"Critérios a comparar ({len(nomes)}):"])
+        linhas.extend(f"{indice}. {nome}" for indice, nome in enumerate(nomes, 1))
+    linhas.extend([
+        "", f"Acesse o formulário colaborativo pelo botão abaixo até {prazo}:" if prazo
+        else "Acesse o formulário colaborativo pelo botão abaixo:",
+        "Para entrar, use o e-mail que recebeu este convite e a chave individual.",
+        "Antes de enviar, complete todos os pares e confira se a Razão de Consistência (RC) está abaixo de 0,10.",
+        _link_publico(row, base_url=base_url), "", "Atenciosamente,", "Equipe SICARD-PLI",
+    ])
+    return "\n".join(linhas)
+
+
+def _mensagem_email_legada(row: dict[str, Any], link: str, prazo_rotulo: str, origem: str | None) -> str:
+    """Reconhece o modelo anterior completo, preservando os textos editados."""
     convite = (
         f'Você foi convidado(a) a preencher a matriz de comparação pareada da análise "{origem}" no SICARD.'
         if origem else "Você foi convidado(a) a preencher uma matriz de comparação pareada AHP no SICARD."
@@ -208,6 +232,23 @@ def _mensagem_email_padrao(row: dict[str, Any], *, base_url: str = "") -> str:
         "", "Atenciosamente,", "Equipe SICARD-PLI",
     ])
     return "\n".join(linhas)
+
+
+def base_mensagem_padrao(row: dict[str, Any]) -> str | None:
+    """Identifica modelos do sistema e recupera a origem do link persistido."""
+    mensagem = (row.get("email_mensagem") or "").replace("\r\n", "\n").strip()
+    caminho = _link_publico(row)
+    link = next((linha for linha in mensagem.splitlines() if linha.endswith(caminho)), None)
+    if link is None:
+        return None
+    base = link[:-len(caminho)]
+    if mensagem == _mensagem_email_padrao(row, base_url=base):
+        return base
+    prazo_legado = re.search(r"(?m)^Acesse o formulário colaborativo pelo botão abaixo até (\d{2}/\d{2}/\d{4}):$", mensagem)
+    origem_legada = re.search(r'(?m)^Você foi convidado\(a\) a preencher a matriz de comparação pareada da análise "([^\n]+)" no SICARD\.$', mensagem)
+    prazo = prazo_legado.group(1) if prazo_legado else ""
+    origem = origem_legada.group(1) if origem_legada else None
+    return base if mensagem == _mensagem_email_legada(row, link, prazo, origem) else None
 
 
 def _dimensao(criterio: dict[str, Any]) -> str:
@@ -281,6 +322,8 @@ def _consolidacao_from_row(row: dict[str, Any]) -> ConsolidacaoColaborativaSchem
 def _ambiente_to_response(row: dict[str, Any], *, base_url: str = "", gestao: bool = False) -> AmbienteColaborativoResponseSchema:
     token = row["token"]
     url = f"{base_url.rstrip('/')}/public/analise-multicriterio/formulario-comparacao-pareada/{quote(str(token), safe='')}/"
+    salva = row.get("email_mensagem")
+    texto_padrao = gestao and (not salva or base_mensagem_padrao(row) is not None)
     return AmbienteColaborativoResponseSchema(
         matriz_id=str(row["matriz_id"]) if row.get("matriz_id") else None,
         matriz_nome=row.get("matriz_nome"),
@@ -315,7 +358,8 @@ def _ambiente_to_response(row: dict[str, Any], *, base_url: str = "", gestao: bo
         consolidacao=_consolidacao_from_row(row),
         email_remetente_alias=(row.get("email_remetente_alias") or EMAIL_REMETENTE_ALIAS_PADRAO) if gestao else EMAIL_REMETENTE_ALIAS_PADRAO,
         email_assunto=(row.get("email_assunto") or EMAIL_ASSUNTO_PADRAO) if gestao else EMAIL_ASSUNTO_PADRAO,
-        email_mensagem=(row.get("email_mensagem") or _mensagem_email_padrao(row, base_url=base_url)) if gestao else "",
+        email_mensagem=(_mensagem_email_padrao(row, base_url=base_url) if texto_padrao else salva) if gestao else "",
+        email_texto_padrao=texto_padrao,
         email_config_persistida=bool(row.get("email_mensagem")) if gestao else False,
     )
 
@@ -446,9 +490,10 @@ def criar_ambiente(
         "email_remetente_alias": EMAIL_REMETENTE_ALIAS_PADRAO,
         "email_assunto": EMAIL_ASSUNTO_PADRAO,
     }
-    ambiente_data["email_mensagem"] = _mensagem_email_padrao(ambiente_data, base_url=base_url)
+    contexto_matriz = {"matriz_nome": matriz["nome"], "matriz_contexto": matriz.get("conteudo") if isinstance(matriz.get("conteudo"), dict) else {}}
+    ambiente_data["email_mensagem"] = _mensagem_email_padrao({**ambiente_data, **contexto_matriz}, base_url=base_url)
     row = repo.insert_ambiente(ambiente_data)
-    row["matriz_nome"] = matriz["nome"]
+    row.update(contexto_matriz)
     if hierarq:
         row["hierarquizacao_nome"] = hierarq.get("nome")
     return _ambiente_to_response(row, base_url=base_url, gestao=True)
@@ -722,9 +767,18 @@ def atualizar_ambiente(
         if any(str(outro["id"]) != str(ambiente_id) and outro.get("status") == "ativa" and mesma_origem(outro)
                for outro in repo.list_ambientes()):
             raise DemandaValidationError("Já existe outro julgamento aberto para esta origem. Encerre-o antes de reabrir este julgamento.", field="status")
+    mensagem_recebida = data.get("email_mensagem")
+    if mensagem_recebida is None:
+        base_padrao = base_mensagem_padrao(atual) if {"valido_ate", "nome", "criterios"} & data.keys() else None
+    else:
+        base_padrao = base_mensagem_padrao({**atual, "email_mensagem": mensagem_recebida})
+    if base_padrao is not None:
+        data["email_mensagem"] = _mensagem_email_padrao({**atual, **data}, base_url=base_url or base_padrao)
     atualizado = repo.update_ambiente(ambiente_id, data)
     if not atualizado:
         raise DemandaValidationError("Julgamento não encontrado.", field="julgamento_id")
+    atualizado.setdefault("matriz_nome", atual.get("matriz_nome"))
+    atualizado.setdefault("matriz_contexto", atual.get("matriz_contexto"))
     if "convites" in data:
         novos = {c["email"].strip().lower(): c for c in data["convites"]}
         for anterior in atual.get("convites") or []:
@@ -789,6 +843,9 @@ def obter_modelo_formulario_pli() -> dict[str, Any]:
         ),
         "criterios": criterios,
         "dimensoes": dimensoes,
+        "contextualizacao": contexto_julgamento_ahp.contextualizacao_formulario(
+            {"matriz_nome": "PLI-SP 2050"}, [{"criterio": nome} for nome in criterios]
+        ),
         "valido_ate": None,
         "status": "ativa",
         "email_autorizado": True,
@@ -808,13 +865,13 @@ def obter_ambiente_publico(
         _validar_email_token(row, email, token_acesso)
     criterios_snapshot = row.get("criterios") or []
     if not autorizado:
-        criterios = []
+        criterios_atribuidos = []
     elif criterios_snapshot:
-        criterios = _criterio_nomes(_criterios_convidado(row, email))
+        criterios_atribuidos = _criterios_convidado(row, email)
     else:
         hierarq = _carregar_hierarquizacao(row["hierarquizacao_id"])
-        criterios_lista = _criterios_from_hierarquizacao(hierarq)
-        criterios = _criterio_nomes(criterios_lista)
+        criterios_atribuidos = _criterios_from_hierarquizacao(hierarq)
+    criterios = _criterio_nomes(criterios_atribuidos)
 
     valido_ate = row.get("valido_ate")
     if isinstance(valido_ate, datetime) and valido_ate.tzinfo is None:
@@ -825,12 +882,14 @@ def obter_ambiente_publico(
         status = "encerrada"
 
     if row.get("matriz_id"):
-        matriz = matrizes_criterios.obter(row["matriz_id"])
+        matriz = row.get("matriz_nome")
+        objetivo = (row.get("matriz_contexto") or {}).get("objetivo")
         return AmbientePublicoSchema(
-            token=token, escopo=matriz["nome"],
-            objetivo="Avaliar a importância relativa dos critérios da matriz de critérios e premissas.",
+            token=token, escopo=matriz,
+            objetivo=objetivo if isinstance(objetivo, str) and objetivo.strip() else "Avaliar a importância relativa dos critérios da matriz de critérios e premissas.",
             criterios=criterios, valido_ate=_iso(valido_ate) or "", status=status,
             email_autorizado=autorizado,
+            contextualizacao=contexto_julgamento_ahp.contextualizacao_formulario(row, criterios_atribuidos),
         )
     # Contexto dos registros anteriores à migração.
     try:
@@ -857,6 +916,9 @@ def obter_ambiente_publico(
         valido_ate=_iso(valido_ate) or "",
         status=status,
         email_autorizado=autorizado,
+        contextualizacao=contexto_julgamento_ahp.contextualizacao_formulario(
+            {**row, "hierarquizacao_nome": escopo}, criterios_atribuidos,
+        ),
     )
 
 

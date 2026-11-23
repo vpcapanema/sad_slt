@@ -11,6 +11,14 @@ from api.db.connection import get_connection, commit_unless_atomic
 from api.exceptions import DemandaValidationError
 
 
+_CAMPOS_MATRIZ = """
+    m.nome AS matriz_nome,
+    CASE WHEN jsonb_typeof(m.conteudo) = 'object'
+         THEN m.conteudo - ARRAY['linhas', 'rows', 'criterios', 'dados', 'arquivo', 'aba']
+    END AS matriz_contexto
+"""
+
+
 def garantir_token_acesso(ambiente_id: str, versao: datetime, candidato: str) -> str:
     raise DemandaValidationError(
         "Códigos compartilhados foram desativados. Envie convites individuais por destinatário.",
@@ -52,8 +60,8 @@ def _get_ambiente(query: str, params: tuple[Any, ...]) -> dict[str, Any] | None:
 
 def get_ambiente_by_token(token: str) -> dict[str, Any] | None:
     return _get_ambiente(
-        """
-        SELECT a.*, (SELECT nome FROM ahp.matriz_criterios_premissas WHERE id=a.matriz_id) AS matriz_nome,
+        f"""
+        SELECT a.*, {_CAMPOS_MATRIZ},
                (SELECT COUNT(*)::int
                   FROM ahp.comparacao_colaborativa_resposta r
                  WHERE r.ambiente_id = a.id AND r.status = 'enviada') AS total_respostas
@@ -61,6 +69,7 @@ def get_ambiente_by_token(token: str) -> dict[str, Any] | None:
                ,(SELECT COUNT(*)::int FROM ahp.comparacao_colaborativa_resposta r WHERE r.ambiente_id=a.id AND r.status='enviada' AND r.consistente) AS respostas_consistentes
                ,(SELECT COUNT(*)::int FROM ahp.comparacao_colaborativa_analise an WHERE an.ambiente_id=a.id) AS total_analises
           FROM ahp.comparacao_colaborativa_ambiente a
+          LEFT JOIN ahp.matriz_criterios_premissas m ON m.id = a.matriz_id
          WHERE a.token = %s
         """,
         (token,),
@@ -69,12 +78,13 @@ def get_ambiente_by_token(token: str) -> dict[str, Any] | None:
 
 def get_ambiente_by_hierarquizacao(hierarquizacao_id: Any) -> dict[str, Any] | None:
     return _get_ambiente(
-        """
-        SELECT a.*, (SELECT nome FROM ahp.matriz_criterios_premissas WHERE id=a.matriz_id) AS matriz_nome,
+        f"""
+        SELECT a.*, {_CAMPOS_MATRIZ},
                (SELECT COUNT(*)::int
                   FROM ahp.comparacao_colaborativa_resposta r
                  WHERE r.ambiente_id = a.id AND r.status = 'enviada') AS total_respostas
           FROM ahp.comparacao_colaborativa_ambiente a
+          LEFT JOIN ahp.matriz_criterios_premissas m ON m.id = a.matriz_id
          WHERE a.matriz_id = (SELECT matriz_id FROM hierarquizacao_demandas.hierarquizacao_portfolio WHERE id=%s)
          ORDER BY a.criado_em DESC
          LIMIT 1
@@ -85,12 +95,13 @@ def get_ambiente_by_hierarquizacao(hierarquizacao_id: Any) -> dict[str, Any] | N
 
 def get_ambiente_by_id(ambiente_id: str) -> dict[str, Any] | None:
     return _get_ambiente(
-        """
-        SELECT a.*, (SELECT nome FROM ahp.matriz_criterios_premissas WHERE id=a.matriz_id) AS matriz_nome,
+        f"""
+        SELECT a.*, {_CAMPOS_MATRIZ},
                (SELECT COUNT(*)::int
                   FROM ahp.comparacao_colaborativa_resposta r
                  WHERE r.ambiente_id = a.id AND r.status = 'enviada') AS total_respostas
           FROM ahp.comparacao_colaborativa_ambiente a
+          LEFT JOIN ahp.matriz_criterios_premissas m ON m.id = a.matriz_id
          WHERE a.id = %s
         """,
         (ambiente_id,),
@@ -99,12 +110,13 @@ def get_ambiente_by_id(ambiente_id: str) -> dict[str, Any] | None:
 
 def get_active_ambiente_by_config(config_tipo: str, config_id: Any) -> dict[str, Any] | None:
     return _get_ambiente(
-        """
-        SELECT a.*, (SELECT nome FROM ahp.matriz_criterios_premissas WHERE id=a.matriz_id) AS matriz_nome,
+        f"""
+        SELECT a.*, {_CAMPOS_MATRIZ},
                (SELECT COUNT(*)::int
                   FROM ahp.comparacao_colaborativa_resposta r
                  WHERE r.ambiente_id = a.id AND r.status = 'enviada') AS total_respostas
           FROM ahp.comparacao_colaborativa_ambiente a
+          LEFT JOIN ahp.matriz_criterios_premissas m ON m.id = a.matriz_id
          WHERE a.config_tipo = %s AND a.config_id = %s AND a.status = 'ativa'
          ORDER BY a.criado_em DESC
          LIMIT 1
@@ -114,8 +126,8 @@ def get_active_ambiente_by_config(config_tipo: str, config_id: Any) -> dict[str,
 
 
 def list_ambientes() -> list[dict[str, Any]]:
-    query = """
-        SELECT a.*, (SELECT nome FROM ahp.matriz_criterios_premissas WHERE id=a.matriz_id) AS matriz_nome,
+    query = f"""
+        SELECT a.*, {_CAMPOS_MATRIZ},
                COALESCE(a.config_nome, h.nome) AS hierarquizacao_nome,
                (SELECT COUNT(*)::int
                   FROM ahp.comparacao_colaborativa_resposta r
@@ -124,6 +136,7 @@ def list_ambientes() -> list[dict[str, Any]]:
                (SELECT COUNT(*)::int FROM ahp.comparacao_colaborativa_resposta r WHERE r.ambiente_id=a.id AND r.status='enviada' AND r.consistente) AS respostas_consistentes,
                (SELECT COUNT(*)::int FROM ahp.comparacao_colaborativa_analise an WHERE an.ambiente_id=a.id) AS total_analises
           FROM ahp.comparacao_colaborativa_ambiente a
+          LEFT JOIN ahp.matriz_criterios_premissas m ON m.id = a.matriz_id
           LEFT JOIN hierarquizacao_demandas.hierarquizacao_portfolio h
             ON h.id = a.hierarquizacao_id
          ORDER BY a.criado_em DESC
@@ -166,18 +179,19 @@ def delete_ambiente(ambiente_id: str) -> bool:
 
 
 def list_ambientes_by_hierarquizacao(hierarquizacao_id: Any) -> list[dict[str, Any]]:
-    query = """
-        SELECT a.*,
+    query = f"""
+        SELECT a.*, {_CAMPOS_MATRIZ},
                (SELECT COUNT(*)::int
                   FROM ahp.comparacao_colaborativa_resposta r
                  WHERE r.ambiente_id = a.id AND r.status = 'enviada') AS total_respostas
           FROM ahp.comparacao_colaborativa_ambiente a
+          LEFT JOIN ahp.matriz_criterios_premissas m ON m.id = a.matriz_id
          WHERE a.matriz_id IN (
              SELECT matriz_id FROM hierarquizacao_demandas.hierarquizacao_portfolio WHERE id=%s
              UNION
-             SELECT (dados_hierarquizacao #>> '{reuso_matriz,origem_id}')::uuid
+             SELECT (dados_hierarquizacao #>> '{{reuso_matriz,origem_id}}')::uuid
              FROM hierarquizacao_demandas.hierarquizacao_portfolio
-             WHERE id=%s AND dados_hierarquizacao #>> '{reuso_matriz,confirmado}' = 'true'
+             WHERE id=%s AND dados_hierarquizacao #>> '{{reuso_matriz,confirmado}}' = 'true'
          )
          ORDER BY a.criado_em DESC
     """

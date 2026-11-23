@@ -1183,25 +1183,21 @@
     try { var url = new URL(String(judgment.url_publica), location.origin); return /^https?:$/.test(url.protocol) && /\/public\/analise-multicriterio\/(?:formulario-comparacao-pareada\/)?[^/]+\/?$/.test(url.pathname) ? url.href : ""; }
     catch (_error) { return ""; }
   }
-  function invitationLines(judgment, invite) {
-    var criteria = invite && invite.dimensoes ? judgment.criterios.filter(function (c) { return invite.dimensoes.includes(criterionDimension(c)); }).map(criterionName) : comparisonCriteria(judgment), deadline = deadlineLabel(judgment.valido_ate);
-    var lines = ["Olá, colaborador(a)!", "", "Você foi convidado(a) a preencher a matriz de comparação pareada" + (judgment.hierarquizacao_nome ? ' da análise "' + judgment.hierarquizacao_nome + '"' : " de uma análise AHP") + " no SICARD."];
-    if (invite && invite.dimensoes) lines.push("", "Dimensões atribuídas: " + invite.dimensoes.join(" · "));
-    if (criteria.length) { lines.push("", "Critérios a comparar (" + criteria.length + "):"); criteria.forEach(function (name, index) { lines.push((index + 1) + ". " + name); }); }
-    lines.push("", "Acesse o formulário colaborativo pelo link abaixo" + (deadline ? " até " + deadline : "") + ":", persistentPublicUrl(judgment) || "(link indisponível)", "", "Atenção: para enviar a resposta, a consistência (RC) deve ser menor que 0,10.", "", "Atenciosamente,", "Equipe SICARD-PLI");
-    return lines;
-  }
   function renderEmailDraft(judgment) {
     var recipient = $("ami-email-preview-recipient"), previous = recipient.value;
     recipient.replaceChildren();
     (judgment.convites || []).forEach(function (invite) { recipient.add(new Option((invite.nome || invite.email) + " · " + invite.email, invite.email)); });
     if (Array.from(recipient.options).some(function (option) { return option.value === previous; })) recipient.value = previous;
     var card = $("ami-email-draft-card"), url = persistentPublicUrl(judgment);
-    var message = judgment.email_mensagem || invitationLines(judgment, null).join("\n");
+    var message = judgment.email_mensagem || "";
     $("ami-email-sender-alias").value = judgment.email_remetente_alias || "SICARD-PLI";
     $("ami-email-subject").value = judgment.email_assunto || "Convite para preenchimento colaborativo AHP - PLI - SICARD";
     card.classList.remove("is-hidden");
-    SICARDEmailConvites.mostrar(judgment, message, url);
+    SICARDEmailConvites.mostrar(judgment, message, url, function (invite) {
+      return (judgment.criterios || []).filter(function (criterio) {
+        return invite.dimensoes.includes(criterionDimension(criterio));
+      }).map(criterionName);
+    });
   }
   function renderDraftEmails() {
     $("ami-collaborator-list-section").hidden = !draftEmails.length;

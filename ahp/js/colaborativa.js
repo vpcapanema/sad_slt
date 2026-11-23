@@ -68,6 +68,16 @@
       if (item[0] === "Prazo") line.title = "Horário de Brasília";
       box.appendChild(line);
     });
+    if (!meta.contextualizacao) return;
+    var texto = meta.contextualizacao;
+    el("collab-scope-intro").textContent = texto.introducao;
+    el("collab-scope-method-text").textContent = texto.metodo;
+    var exemplos = el("collab-scope-examples");
+    exemplos.textContent = (texto.exemplos || []).join(" ");
+    exemplos.hidden = !exemplos.textContent;
+    var orientacao = el("collab-scope-assignment");
+    orientacao.textContent = texto.orientacao || "";
+    orientacao.hidden = !orientacao.textContent;
   }
 
   function trackPair(pid) {
@@ -616,6 +626,7 @@
           feedback("Este julgamento não possui critérios suficientes. Solicite a revisão ao responsável.", "error");
           return;
         }
+        renderContext();
         return global.SLTColaborativaApi.iniciarResposta(token, candidato);
       }).then(function (resposta) {
         if (!resposta) return;

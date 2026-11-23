@@ -109,6 +109,14 @@ class AmbienteColaborativoResponseSchema(BaseModel):
     email_assunto: str = EMAIL_ASSUNTO_PADRAO
     email_mensagem: str
     email_config_persistida: bool = False
+    email_texto_padrao: bool = False
+
+
+class ContextualizacaoJulgamentoSchema(BaseModel):
+    introducao: str
+    metodo: str
+    orientacao: str = ""
+    exemplos: list[str] = Field(default_factory=list)
 
 
 class AmbientePublicoSchema(BaseModel):
@@ -119,6 +127,7 @@ class AmbientePublicoSchema(BaseModel):
     valido_ate: str
     status: str
     email_autorizado: bool = False
+    contextualizacao: ContextualizacaoJulgamentoSchema | None = None
 
 
 class IdentificacaoColaboradorSchema(BaseModel):

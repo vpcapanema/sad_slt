@@ -255,6 +255,14 @@
     const convite = contexto?.julgamento?.convites?.find(item => String(item.email || "").toLowerCase() === email.toLowerCase());
     const partesNome = String(convite?.nome || "").trim().split(/\s+/).filter(Boolean);
     if (partesNome.length) mensagem = mensagem.replace(/Olá,\s*colaborador\(a\)!/i, "Olá, " + partesNome.slice(0, 2).join(" ") + "!");
+    if (convite?.dimensoes?.length && contexto.julgamento.email_texto_padrao && texto === configuracaoOriginal?.email_mensagem) {
+      const criterios = contexto.criteriosDoConvite(convite), n = criterios.length;
+      const pares = n * (n - 1) / 2;
+      const participacao = `Você fará ${pares} ${pares === 1 ? "comparação" : "comparações"} entre os ${n} critérios listados abaixo.`;
+      const lista = [`Critérios a comparar (${n}):`, ...criterios.map((criterio, index) => `${index + 1}. ${criterio}`)].join("\n");
+      mensagem = mensagem.replace(/Você fará \d+ comparaç(?:ões|ão) entre os \d+ critérios listados abaixo\./u, () => participacao)
+        .replace(/Critérios a comparar \(\d+\):\n(?:\d+\. [^\n]+\n?)+/u, () => lista + "\n");
+    }
     return mensagem;
   }
   function atualizarPreviaInstitucional() {
@@ -299,6 +307,7 @@
       };
       definirMensagemProtegida(updated.email_mensagem, contexto.url);
       configuracaoAlterada = false;
+      atualizarPreviaInstitucional();
       $("ami-email-status").textContent = "Alias, assunto e mensagem salvos no julgamento.";
       if (!silencioso) Notify.success("Mensagem de e-mail", "Configuração salva e ligada ao serviço de envio.");
       return true;
@@ -612,8 +621,8 @@
   }
   window.SICARDEmailConvites = {
     modo(value) { modo = value; controles(); },
-    mostrar(julgamento, mensagem, link) {
-      contexto = {julgamento, mensagem, url: link, destinatarios: (julgamento.convites || []).map(c => typeof c === "string" ? c : c.email)};
+    mostrar(julgamento, mensagem, link, criteriosDoConvite) {
+      contexto = {julgamento, mensagem, url: link, criteriosDoConvite, destinatarios: (julgamento.convites || []).map(c => typeof c === "string" ? c : c.email)};
       definirMensagemProtegida(mensagem, link);
       $("ami-email-sender-address").value = "Carregando conta do serviço…";
       configuracaoOriginal = {

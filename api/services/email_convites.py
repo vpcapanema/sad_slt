@@ -18,7 +18,10 @@ from api.schemas.email import ConviteEmailEnvioSchema, EmailEnvioSchema
 from api.schemas.comparacao_colaborativa import EMAIL_ASSUNTO_PADRAO, EMAIL_REMETENTE_ALIAS_PADRAO
 from api.services import convite_envelope, email_service
 from api.services.comparacao_colaborativa_service import (
+    _criterios_convidado,
+    _mensagem_email_padrao,
     _validar_ambiente_ativo,
+    base_mensagem_padrao,
 )
 
 ASSUNTO = EMAIL_ASSUNTO_PADRAO
@@ -157,6 +160,11 @@ def _preparar_convite(ambiente: dict, convite: dict, destinatario: str, segredo:
     corpo = ambiente.get("email_mensagem")
     if not corpo or not corpo.strip():
         raise DemandaValidationError("Salve a mensagem do convite antes de enviar.", field="email_mensagem")
+    base = base_mensagem_padrao(ambiente)
+    if base is not None:
+        corpo = _mensagem_email_padrao(
+            ambiente, base_url=base, criterios=_criterios_convidado(ambiente, destinatario),
+        )
     corpo = _personalizar_mensagem(corpo, convite.get("nome"))
     if not any(caminho in corpo for caminho in caminhos):
         raise DemandaValidationError("A mensagem não contém o link deste julgamento.", field="texto")
