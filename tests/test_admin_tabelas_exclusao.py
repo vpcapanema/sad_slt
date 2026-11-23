@@ -26,6 +26,7 @@ def exclusao(monkeypatch):
             self.rollbacks = 0
             self.rowcount = 0
             self.corrida = False
+            self.vinculos_apos_rollback = []
 
         def execute(self, query, params):
             texto = query if isinstance(query, str) else query.as_string()
@@ -49,6 +50,8 @@ def exclusao(monkeypatch):
         def rollback(self):
             self.rollbacks += 1
             self.pendentes = set(self.salvos)
+            if self.corrida:
+                self.vinculos = self.vinculos_apos_rollback
 
     conn = Conexao()
 
@@ -79,7 +82,10 @@ def test_vinculo_retorna_conflito_amigavel_sem_excluir_nenhum_grupo(exclusao):
     client, conn, livre, vinculado = exclusao
     response = excluir(client, [livre, vinculado])
     assert response.status_code == 409
-    mensagem = response.json()["detail"]
+    erro = response.json()
+    assert erro["codigo"] == "agrupamento_em_uso"
+    assert "Desmarque" in erro["solution"] and "Gestão das Hierarquizações" in erro["solution"]
+    mensagem = erro["detail"]
     for nome in ("Grupo vinculado", "AGR-2", "Rodovias Regionais", "HIER-1"):
         assert nome in mensagem
     assert "Nenhum agrupamento foi excluído" in mensagem
@@ -105,8 +111,21 @@ def test_vinculo_concorrente_desfaz_lote_e_nao_expoe_sql(exclusao):
     conn.corrida = True
     response = excluir(client, [livre, vinculado])
     assert response.status_code == 409
+    assert response.json()["codigo"] == "agrupamento_vinculo_indeterminado"
     assert "Nenhum agrupamento foi excluído" in response.json()["detail"]
     assert "_fkey" not in response.text and "DETAIL" not in response.text
+    assert conn.salvos == conn.pendentes == {livre, vinculado}
+    assert conn.commits == 0 and conn.rollbacks == 1
+
+
+def test_vinculo_criado_durante_exclusao_e_identificado_apos_rollback(exclusao):
+    client, conn, livre, vinculado = exclusao
+    conn.vinculos_apos_rollback, conn.vinculos = conn.vinculos, []
+    conn.corrida = True
+    response = excluir(client, [livre, vinculado])
+    assert response.status_code == 409
+    assert response.json()["codigo"] == "agrupamento_em_uso"
+    assert "Rodovias Regionais (HIER-1)" in response.json()["detail"]
     assert conn.salvos == conn.pendentes == {livre, vinculado}
     assert conn.commits == 0 and conn.rollbacks == 1
 

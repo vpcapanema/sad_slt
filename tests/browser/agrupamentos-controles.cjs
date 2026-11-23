@@ -1,26 +1,39 @@
 const {chromium} = require('playwright');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const base = process.env.SICARD_TEST_URL || 'http://127.0.0.1:8083';
 
 (async () => {
   const browser = await chromium.launch({channel: 'msedge', headless: true});
+  const page = await browser.newPage({viewport: {width: 1440, height: 1000}});
+  let autenticado = false;
   try {
-    const page = await browser.newPage({viewport: {width: 1440, height: 1000}});
+    const credenciais = fs.readFileSync('credencias_sigma_agentes.txt', 'utf8');
+    assert.ok(credenciais.includes('sigma.agente_gestor'));
+    const senha = credenciais.match(/^[ \t]*senha[ \t]*[:=][ \t]*([^\r\n]+)/mi)[1].trim();
+    const login = await page.request.post(base + '/api/auth/login', {
+      data: {username: 'sigma.agente_gestor', senha, permanecer_conectado: false},
+    });
+    assert.equal(login.status(), 200);
+    autenticado = true;
     const errors = [], writes = [], nativeDialogs = [];
     const iniciais = [
       {id: 'g1', codigo: 'AGR-1', nome: 'Grupo A', tipo_demanda: 'projeto', quantidade_demandas: 2, criado_por_nome: 'Maria'},
       {id: 'g2', codigo: 'AGR-2', nome: 'Grupo B', tipo_demanda: 'plano', quantidade_demandas: 1, criado_por_nome: 'Joao'},
     ];
-    let groups = [...iniciais], cenario = 'sucesso', falharLista = false;
+    let groups = [...iniciais], cenario = 'sucesso', falharLista = false, vinculoConhecido = false;
+    const orientacao = 'Desmarque o agrupamento em uso ou revise a hierarquização HIER-1 na Gestão das Hierarquizações.';
     page.on('pageerror', error => errors.push(error.message));
     page.on('dialog', async dialog => { nativeDialogs.push(dialog.message()); await dialog.dismiss(); });
     await page.route('**/api/**', async route => {
       const url = new URL(route.request().url()).pathname;
       let json = [];
-      if (url.endsWith('/auth/me')) json = {id: 'u', nome: 'Admin teste', tipo_usuario: 'ADMIN'};
-      else if (url === '/api/agrupamentos-demandas') {
+      if (url.includes('/api/auth/') && route.request().method() === 'GET') return route.continue();
+      if (url.endsWith('/api/agrupamentos-demandas')) {
         if (falharLista) return route.fulfill({status: 503, json: {detail: 'Lista temporariamente indisponível.'}});
-        json = groups;
-      } else if (url === '/api/admin/tabelas/demandas/grupos_demandas') {
+        json = groups.map(g => ({...g, hierarquizacoes_vinculadas: vinculoConhecido && g.id === 'g2'
+          ? [{codigo: 'HIER-1', nome: 'Rodovias Regionais'}] : []}));
+      } else if (url.endsWith('/api/admin/tabelas/demandas/grupos_demandas')) {
         const body = route.request().postDataJSON(), method = route.request().method();
         writes.push({body, method});
         if (method === 'PATCH') {
@@ -28,7 +41,8 @@ const assert = require('node:assert/strict');
           json = {ok: true, afetados: 1};
         } else {
           if (cenario === 'conflito') return route.fulfill({status: 409, json: {
-            detail: 'O Grupo B (AGR-2) é utilizado por Rodovias Regionais (HIER-1). Revise os vínculos na Gestão das Hierarquizações. Nenhum agrupamento foi excluído.',
+            codigo: 'agrupamento_em_uso', title: 'Agrupamento em uso', solution: orientacao,
+            detail: 'O Grupo B (AGR-2) é utilizado por Rodovias Regionais (HIER-1). Nenhum agrupamento foi excluído.',
           }});
           if (cenario === 'rede') return route.abort('failed');
           if (cenario === 'parcial') groups = groups.filter(g => g.id !== 'g2');
@@ -40,7 +54,7 @@ const assert = require('node:assert/strict');
       }
       await route.fulfill({json});
     });
-    await page.goto('http://127.0.0.1:8083/restrict/agrupamento-demandas/');
+    await page.goto(base + '/restrict/agrupamento-demandas/');
     await page.locator('[data-grupo-id]').first().waitFor();
     assert.equal(await page.locator('.agrupamentos-table th').count(), 7);
     await page.locator('#grupos-filtro-coluna').selectOption('tipo_demanda');
@@ -71,6 +85,22 @@ const assert = require('node:assert/strict');
     assert.equal(writes.length, 1, 'Cancelar a confirmação não envia DELETE');
     assert.equal(await page.locator('[data-grupo-id]:checked').count(), 2);
 
+    vinculoConhecido = true;
+    await page.locator('[data-grupo-acao="reload"]').click();
+    await page.locator('#grupos-selecionar-todos').check();
+    await page.locator('[data-grupo-acao="delete"]').click();
+    await page.locator('#pfsErrorBox').waitFor({state: 'visible'});
+    assert.match(await page.locator('[data-pfs="error-message"]').innerText(), /Grupo B.*AGR-2.*Rodovias Regionais.*HIER-1/);
+    assert.equal(writes.length, 1, 'Um vínculo conhecido é informado antes do DELETE');
+    assert.equal(await page.locator('#pfsConfirmBox').isVisible(), false);
+    await page.locator('#pfsErrorOk').click();
+    assert.match(await page.locator('[data-pfs="error-solution"]').innerText(), /Desmarque.*Gestão das Hierarquizações/);
+    assert.equal(await page.locator('[data-pfs="error-solution-link"]').getAttribute('href'), base + '/restrict/hierarquizacao/processos/');
+    await page.locator('#pfsErrorBox .pfs-close').click();
+
+    vinculoConhecido = false;
+    await page.locator('[data-grupo-acao="reload"]').click();
+    await page.locator('#grupos-selecionar-todos').check();
     cenario = 'conflito';
     await page.locator('[data-grupo-acao="delete"]').click();
     await page.locator('#pfsConfirmOk').click();
@@ -79,6 +109,9 @@ const assert = require('node:assert/strict');
     assert.match(await page.locator('[data-pfs="error-message"]').innerText(), /Nenhum agrupamento foi excluído/);
     assert.equal(await page.locator('[data-grupo-id]:checked').count(), 2);
     assert.equal(await page.locator('#pfsSuccessBox').isVisible(), false);
+    await page.locator('#pfsErrorOk').click();
+    assert.equal(await page.locator('[data-pfs="error-solution"]').innerText(), orientacao);
+    assert.match(await page.locator('#pfsErrorLog').innerText(), /HTTP 409/);
     await page.locator('#pfsErrorBox .pfs-close').click();
 
     cenario = 'rede';
@@ -118,6 +151,7 @@ const assert = require('node:assert/strict');
       JSON.stringify(write.body) === JSON.stringify({chaves: [{id: 'g1'}, {id: 'g2'}]})));
     console.log('Agrupamentos: filtros, edição, confirmação padrão, cancelamento, vínculo, falha de rede, exclusão por IDs, resultado parcial e falha de atualização OK; APIs simuladas.');
   } finally {
+    if (autenticado) await page.request.post(base + '/api/auth/logout').catch(() => {});
     await browser.close();
   }
 })().catch(error => { console.error(error); process.exitCode = 1; });

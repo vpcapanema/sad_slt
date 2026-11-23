@@ -15,6 +15,11 @@ class AgrupamentoDemandaCreateSchema(BaseModel):
     demanda_ids: list[str] = Field(..., min_length=1)
 
 
+class HierarquizacaoVinculadaSchema(BaseModel):
+    codigo: str
+    nome: str
+
+
 class AgrupamentoDemandaSummarySchema(BaseModel):
     id: UUID
     codigo: str
@@ -25,6 +30,7 @@ class AgrupamentoDemandaSummarySchema(BaseModel):
     criado_por_nome: str | None = None
     criado_em: datetime
     atualizado_em: datetime
+    hierarquizacoes_vinculadas: list[HierarquizacaoVinculadaSchema] = Field(default_factory=list)
 
 
 class AgrupamentoDemandaSchema(AgrupamentoDemandaSummarySchema):

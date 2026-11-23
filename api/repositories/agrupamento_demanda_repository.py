@@ -62,7 +62,31 @@ def list_all() -> list[dict[str, Any]]:
          ORDER BY criado_em DESC, codigo DESC
     """
     with get_connection() as conn:
-        return list(conn.execute(query).fetchall())
+        rows = conn.execute(query).fetchall()
+        por_agrupamento: dict[UUID, list[dict[str, str]]] = {}
+        for vinculo in vinculos_hierarquizacoes(conn, [row["id"] for row in rows]):
+            por_agrupamento.setdefault(vinculo["grupo_id"], []).append({
+                "codigo": vinculo["hierarquizacao_codigo"], "nome": vinculo["hierarquizacao_nome"],
+            })
+        for row in rows:
+            row["hierarquizacoes_vinculadas"] = por_agrupamento.get(row["id"], [])
+        return rows
+
+
+def vinculos_hierarquizacoes(conn: Any, ids: list[UUID | str]) -> list[dict[str, Any]]:
+    if not ids:
+        return []
+    return conn.execute(
+        """
+        SELECT g.id AS grupo_id, g.codigo AS grupo_codigo, g.nome AS grupo_nome,
+               h.codigo AS hierarquizacao_codigo, h.nome AS hierarquizacao_nome
+          FROM hierarquizacao_demandas.hierarquizacao_portfolio h
+          JOIN demandas.grupos_demandas g ON g.id = h.grupo_demanda_id
+         WHERE h.grupo_demanda_id = ANY(%s::uuid[])
+         ORDER BY g.codigo, h.codigo
+        """,
+        (ids,),
+    ).fetchall()
 
 
 def insert(data: dict[str, Any]) -> dict[str, Any]:

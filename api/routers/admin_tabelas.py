@@ -16,6 +16,7 @@ from urllib.parse import quote
 from uuid import UUID
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Response
+from fastapi.responses import JSONResponse
 from psycopg import sql
 from psycopg.errors import ForeignKeyViolation
 from psycopg.types.json import Jsonb
@@ -23,7 +24,7 @@ from psycopg.types.json import Jsonb
 from api.db.connection import get_connection
 from api.deps.auth import require_admin
 from api.path_policy import project_path
-from api.repositories import sigma_usuario_repository
+from api.repositories import agrupamento_demanda_repository, sigma_usuario_repository
 from api.services.session_service import SessionUser
 from api.services import usuarios_sigma_automaticos
 from api.services import autorizacao as authz
@@ -591,40 +592,39 @@ def atualizar_registro(
     return {"ok": True, "afetados": afetados}
 
 
-def _validar_exclusao_agrupamentos(conn: Any, chaves: list[dict[str, Any]]) -> None:
-    vinculos = conn.execute(
-        """
-        SELECT g.codigo AS grupo_codigo, g.nome AS grupo_nome,
-               h.codigo AS hierarquizacao_codigo, h.nome AS hierarquizacao_nome
-          FROM hierarquizacao_demandas.hierarquizacao_portfolio h
-          JOIN demandas.grupos_demandas g ON g.id = h.grupo_demanda_id
-         WHERE h.grupo_demanda_id = ANY(%s::uuid[])
-         ORDER BY g.codigo, h.codigo
-        """,
-        ([registro["id"] for registro in chaves],),
-    ).fetchall()
-    if vinculos:
-        detalhes = "\n".join(
-            f'{row["grupo_nome"]} ({row["grupo_codigo"]}) — '
-            f'{row["hierarquizacao_nome"]} ({row["hierarquizacao_codigo"]})'
-            for row in vinculos
-        )
-        raise HTTPException(
-            status_code=409,
-            detail="Não é possível excluir agrupamentos utilizados por hierarquizações.\n\n"
-            "Agrupamento — Hierarquização:\n" + detalhes + "\n\n"
-            "Revise os vínculos na página Gestão das Hierarquizações antes de tentar novamente. "
-            "Nenhum agrupamento foi excluído; as demandas permanecem preservadas.",
-        )
+def _conflito_exclusao_agrupamentos(vinculos: list[dict[str, Any]]) -> JSONResponse:
+    if not vinculos:
+        return JSONResponse(status_code=409, content={
+            "codigo": "agrupamento_vinculo_indeterminado",
+            "detail": "O banco bloqueou a exclusão por um vínculo com outro registro. "
+                      "O registro vinculado não pôde ser identificado. Nenhum agrupamento foi excluído.",
+            "solution": "Recarregue os agrupamentos para conferir os vínculos atuais. Se o bloqueio persistir, "
+                        "baixe o relatório de erro e envie ao suporte para que ele identifique o registro vinculado.",
+        })
+    detalhes = "\n".join(
+        f'{row["grupo_nome"]} ({row["grupo_codigo"]}) — '
+        f'{row["hierarquizacao_nome"]} ({row["hierarquizacao_codigo"]})'
+        for row in vinculos
+    )
+    return JSONResponse(status_code=409, content={
+        "codigo": "agrupamento_em_uso",
+        "title": "Agrupamento em uso",
+        "detail": "A exclusão foi bloqueada porque a seleção inclui agrupamentos em uso. "
+                  "Nenhum agrupamento foi excluído.\n\nAgrupamento — Hierarquização:\n" + detalhes,
+        "solution": "Desmarque os agrupamentos listados para excluir apenas os que estão livres. "
+                    "Para excluir um agrupamento em uso, localize as hierarquizações pelo código em Gestão das "
+                    "Hierarquizações. Exclua cada hierarquização vinculada somente se ela puder ser descartada. "
+                    "Depois, recarregue os agrupamentos e repita a exclusão.",
+    })
 
 
-@router.delete("/tabelas/{esquema}/{tabela}")
+@router.delete("/tabelas/{esquema}/{tabela}", response_model=dict[str, Any])
 def excluir_registros(
     esquema: str,
     tabela: str,
     payload: dict[str, Any] = Body(...),
     _user: SessionUser = Depends(require_admin),
-) -> dict[str, Any]:
+) -> dict[str, Any] | JSONResponse:
     """Exclui registros pela chave primária; remove também o arquivo em disco vinculado."""
     _validar_esquema(esquema)
     chaves = payload.get("chaves") or []
@@ -633,6 +633,7 @@ def excluir_registros(
     removidos = 0
     arquivos: set[Path] = set()
     erro: tuple[int, str] | None = None
+    excluir_agrupamentos = (esquema, tabela) == ("demandas", "grupos_demandas")
     with get_connection() as conn:
         if not _tabela_existe(conn, esquema, tabela):
             erro = (404, f"Tabela '{esquema}.{tabela}' não encontrada.")
@@ -649,8 +650,11 @@ def excluir_registros(
                         if set(registro) != set(chave):
                             raise HTTPException(status_code=422, detail="Chave primária incompleta.")
                         chaves_validadas.append({k: _coagir_valor(registro[k], colunas_map[k]) for k in chave})
-                    if (esquema, tabela) == ("demandas", "grupos_demandas"):
-                        _validar_exclusao_agrupamentos(conn, chaves_validadas)
+                    if excluir_agrupamentos:
+                        ids = [registro["id"] for registro in chaves_validadas]
+                        vinculos = agrupamento_demanda_repository.vinculos_hierarquizacoes(conn, ids)
+                        if vinculos:
+                            return _conflito_exclusao_agrupamentos(vinculos)
                     for chave_valores in chaves_validadas:
                         # Coleta os arquivos antes de excluir o registro.
                         arquivos |= _arquivos_da_linha(conn, esquema, tabela, chave_valores, chave, colunas_map)
@@ -671,13 +675,10 @@ def excluir_registros(
                 conn.rollback()
                 arquivos.clear()
                 logger.warning("Exclusão bloqueada por vínculo em %s.%s", esquema, tabela, exc_info=True)
-                erro = (
-                    (409, "Um dos agrupamentos está vinculado a outros registros. "
-                     "Revise as hierarquizações que o utilizam antes de tentar novamente. "
-                     "Nenhum agrupamento foi excluído; as demandas permanecem preservadas.")
-                    if (esquema, tabela) == ("demandas", "grupos_demandas")
-                    else (422, str(exc).strip())
-                )
+                if excluir_agrupamentos:
+                    vinculos = agrupamento_demanda_repository.vinculos_hierarquizacoes(conn, ids)
+                    return _conflito_exclusao_agrupamentos(vinculos)
+                erro = (422, str(exc).strip())
             except Exception as exc:
                 conn.rollback()
                 arquivos.clear()

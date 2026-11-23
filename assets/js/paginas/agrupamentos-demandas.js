@@ -5,6 +5,7 @@
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const TIPOS = ["plano", "programa", "projeto"];
   const ROTULOS = { plano: "Plano", programa: "Programa", projeto: "Projeto" };
+  const GESTAO_HIERARQUIZACOES = { url: '/restrict/hierarquizacao/processos/', label: 'Abrir Gestão das Hierarquizações' };
   const STATUS_ELEGIVEIS = new Set(["analise_aprovada", "hierarq_em_andamento", "hierarq_aguardando_complementacao"]);
   const POR_PAGINA = 15;
   const SELECIONADOS = new Set();
@@ -216,6 +217,19 @@
       body = {chave: {id: grupoEditando}, valores: {nome}}; method = 'PATCH';
     } else if (acao === 'delete' && gruposSelecionados.size) {
       selecionados = grupos.filter(g => gruposSelecionados.has(g.id));
+      const vinculos = selecionados.flatMap(grupo => (grupo.hierarquizacoes_vinculadas || []).map(hierarquia =>
+        `${grupo.nome} (${grupo.codigo}) — ${hierarquia.nome} (${hierarquia.codigo})`));
+      if (vinculos.length) {
+        window.StatusFeedback.erro({
+          title: 'Agrupamento em uso', actionTitle: 'Excluir agrupamentos', codigo: 'agrupamento_em_uso',
+          message: 'A seleção inclui agrupamentos em uso. Nenhum agrupamento foi excluído.\n\nAgrupamento — Hierarquização:\n' + vinculos.join('\n'),
+          solution: 'Desmarque os agrupamentos listados para excluir apenas os que estão livres. ' +
+            'Para excluir um agrupamento em uso, localize as hierarquizações pelo código em Gestão das Hierarquizações. ' +
+            'Exclua cada hierarquização vinculada somente se ela puder ser descartada. Depois, recarregue os agrupamentos e repita a exclusão.',
+          solutionLink: GESTAO_HIERARQUIZACOES,
+        });
+        return;
+      }
       body = {chaves: selecionados.map(g => ({id:g.id}))}; method = 'DELETE';
     } else return;
     ocupado = true; controlesGrupos(); limparErro('#agrupamentos-error');
@@ -228,9 +242,18 @@
           'Se houver algum vínculo, nenhum agrupamento desta seleção será excluído.',
         confirmLabel: 'Excluir', danger: true,
       }))) return;
-      const response = await (window.SICARDBrowserLogs?.fetch || fetch)('/api/admin/tabelas/demandas/grupos_demandas', {method, credentials:'same-origin', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.detail || 'Não foi possível concluir a operação.');
+      const endpoint = '/api/admin/tabelas/demandas/grupos_demandas';
+      const response = await (window.SICARDBrowserLogs?.fetch || fetch)(endpoint, {method, credentials:'same-origin', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+      const result = await response.json().catch(error => { if (response.ok) throw error; return {}; });
+      if (!response.ok) {
+        window.StatusFeedback.erro({
+          title: result?.title || (method === 'DELETE' ? 'Exclusão de Agrupamentos' : 'Alteração de Agrupamento'),
+          status: response.status, method, endpoint, detail: result?.detail || 'Não foi possível concluir a operação.',
+          body: result, codigo: result?.codigo,
+          solutionLink: result?.codigo === 'agrupamento_em_uso' ? GESTAO_HIERARQUIZACOES : null,
+        });
+        return;
+      }
       if (method === 'DELETE' && (!Number.isInteger(result.removidos) || result.removidos < 0 || result.removidos > selecionados.length)) {
         throw new Error('O servidor não confirmou quantos agrupamentos foram excluídos. Recarregue a lista para conferir antes de tentar novamente.');
       }

@@ -82,7 +82,7 @@
             case 401: return `Sua sessão expirou. Entre novamente no sistema e repita${acao}.`;
             case 403: return 'Seu perfil no SICARD não possui a permissão necessária. Solicite a verificação do perfil ao responsável pelos acessos.';
             case 404: return 'O registro pode ter sido excluído ou alterado. Recarregue a página para atualizar os dados e tente de novo.';
-            case 409: return `O registro foi alterado por outra operação. Recarregue a página, confira os dados e repita${acao}.`;
+            case 409: return 'Confira o motivo do conflito na mensagem do servidor. Se não houver orientação ou se o bloqueio persistir, baixe o relatório e envie ao suporte.';
             case 413: return 'Reduza o tamanho do arquivo ou divida o envio em partes menores.';
             case 429: return `Aguarde alguns segundos e repita${acao}.`;
             case 500: return 'Falha interna do servidor. Baixe este relatório e envie ao suporte; o rastreamento completo fica no log do servidor.';
@@ -209,6 +209,7 @@
           <div class="pfs-solution" id="pfsSolution">
             <div class="pfs-solution-title"><i class="fas fa-lightbulb" aria-hidden="true"></i>Como Resolver</div>
             <p class="pfs-solution-text" data-pfs="error-solution">Verifique os dados informados e tente novamente.</p>
+            <a class="pfs-sp-action-btn pfs-hidden" data-pfs="error-solution-link"></a>
           </div>
           <button type="button" class="pfs-download-report" id="pfsDownloadReport">Baixar relatório de erro</button>
         </div>
@@ -1017,6 +1018,15 @@
 
             const solEl = q('#pfsSolution');
             if (n.solution) { solEl.style.display = ''; pfsText('error-solution', n.solution); } else { solEl.style.display = 'none'; }
+            const linkEl = q('[data-pfs="error-solution-link"]', this.errorBox);
+            linkEl.classList.toggle('pfs-hidden', !n.solutionLink);
+            if (n.solutionLink) {
+                linkEl.href = n.solutionLink.url;
+                linkEl.textContent = n.solutionLink.label;
+            } else {
+                linkEl.removeAttribute('href');
+                linkEl.textContent = '';
+            }
 
             this._show(this.errorBox, data);
         }
@@ -1107,7 +1117,16 @@
             if (r.campo) extras.push(`Campo rejeitado: ${r.campo}`);
             const proprios = r.details.filter(d => String(d).trim() && String(d).replace(/[.\s]+$/, '') !== r.message.replace(/[.\s]+$/, ''));
             r.details = extras.concat(proprios);
-            r.solution = ctx.solution || ctx.sugestao || ctx.suggestion || body.sugestao || _sugerirSolucao(r);
+            r.solution = ctx.solution || ctx.sugestao || ctx.suggestion || body.solution || body.sugestao || _sugerirSolucao(r);
+            const link = ctx.solutionLink;
+            if (typeof link?.url === 'string' && typeof link.label === 'string') {
+                try {
+                    const url = new URL(link.url, window.location.href);
+                    if (url.origin === window.location.origin && /^https?:$/.test(url.protocol)) {
+                        r.solutionLink = { url: url.href, label: link.label };
+                    }
+                } catch (_) { /* Um link inválido não impede a exibição da orientação. */ }
+            }
             return r;
         }
 
