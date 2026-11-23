@@ -2945,6 +2945,10 @@ body.admin-data-page .admin-card--revisao-status {
 
 .auth-input-wrap .auth-input::placeholder {
   color: #94a3b8;
+}
+
+.auth-input-wrap .auth-input::placeholder,
+.auth-input-wrap select.auth-input:has(option[value=""]:checked) {
   font-size: 0.875rem;
 }
 
