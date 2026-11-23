@@ -1797,7 +1797,7 @@
     }, filterImport);
     $("ami-import-select-all").addEventListener("change", function () {
       var checked = this.checked;
-      filteredImportRows(importedCollaborators.map(function (item) { return { item: item }; }))
+      filteredImportRows(importedCollaborators.map(function (item, index) { return { item: item, index: index }; }))
         .forEach(function (row) { row.item.selected = checked; });
       renderImportedCollaborators();
     });

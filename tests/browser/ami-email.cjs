@@ -98,7 +98,7 @@ const fs = require('node:fs');
     assert.equal(await page.locator('#ami-email-sender-address').getAttribute('readonly'),'');
     assert.equal(await page.locator('#ami-email-subject').inputValue(),'Convite institucional');
     assert.deepEqual(await page.locator('#ami-email-list').locator('xpath=ancestor::table').locator('th').allTextContents(),
-      ['', 'Colaboradores', 'E-mail colaborador', 'Data limite']);
+      ['', 'Colaboradores', 'E-mail colaborador', 'Grupos de critérios', 'Data limite']);
     assert.deepEqual(await page.locator('.ami-email-header-fields input').evaluateAll(inputs=>inputs.map(input=>input.id)),[
       'ami-email-sender-address','ami-email-sender-alias','ami-email-subject'
     ]);

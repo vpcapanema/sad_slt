@@ -30,7 +30,7 @@ const assert = require('node:assert/strict');
     assert.equal(await page.locator('#ami-criteria-matrix-summary').evaluate(el=>el.classList.contains('ahp-info-note')),false);
     await page.locator('#ami-new').click();
     assert.deepEqual(await page.locator('#ami-email-list').locator('xpath=ancestor::table').locator('th').allTextContents(),
-      ['', 'Colaboradores', 'E-mail colaborador', 'Data limite']);
+      ['', 'Colaboradores', 'E-mail colaborador', 'Grupos de critérios', 'Data limite']);
     assert.equal(await page.locator('#ami-emails-filter-coluna option').filter({hasText:'Dimensões atribuídas'}).count(),0);
     const submit=page.locator('#ami-create-form button[type="submit"]');
     assert.equal(await submit.isDisabled(),true);
