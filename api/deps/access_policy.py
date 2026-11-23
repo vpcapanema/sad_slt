@@ -107,6 +107,8 @@ def write_permissions(path, method):
             return ('mocad.solicitar_complementacao', 'mad.operar')
         if path.endswith('/solicitar'):
             return ('mad.operar',)
+        if method == 'PATCH' and len(parts) == 4 and parts[2] == 'hierarquizacoes':
+            return ('mad.operar', 'solicitacao.cumprir')
         return ('solicitacao.cumprir',)
     if name == 'sei':
         return ('mocad.cadastrar_lote',)

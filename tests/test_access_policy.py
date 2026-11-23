@@ -72,7 +72,7 @@ def test_read_only_page_has_context_and_accessible_control_script(profile, path)
     assert response.status_code == 200
     assert 'id="access-mode-notice"' in response.text
     assert "Somente visualização" in response.text
-    assert 'src="/assets/js/access-mode.js"' in response.text
+    assert 'id="sicard-access-policy" src="/assets/js/access-mode.js' in response.text
 
 
 @pytest.mark.parametrize("profile,path", [
@@ -134,6 +134,20 @@ def test_conclusion_dispatch_cannot_bypass_module_policy(monkeypatch, profile, c
         "categorias": categories, "hierarquizacao_codigo": "H", "demanda_codigo": "D",
     })
     response = client(profile).post(f"/api/complementacao/solicitacoes/{uuid4()}/concluir")
+    assert response.status_code == 403
+
+
+@pytest.mark.parametrize("profile,status", [
+    ("GESTOR", 422), ("OPERADOR", 422), ("ANALISTA", 403),
+    ("ADMIN", 403), ("VISUALIZADOR", 403),
+])
+def test_attribute_complement_save_uses_mad_or_operator_permission(profile, status):
+    response = client(profile).patch("/api/complementacao/hierarquizacoes/H", json={})
+    assert response.status_code == status
+
+
+def test_mad_permission_does_not_authorize_cadastral_complement_save():
+    response = client("GESTOR").patch("/api/complementacao/demandas/projeto/D/cadastro", json={})
     assert response.status_code == 403
 
 
