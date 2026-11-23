@@ -558,6 +558,7 @@ def test_regeneracao_preserva_original_e_nao_altera_respostas_ou_decisao(central
     monkeypatch.setattr(pareceres, "atomic_connection", lambda: nullcontext(conn))
     monkeypatch.setattr(pareceres, "bloquear", lambda *args: {**central.cadastro, "status": "analise_aguardando_complementacao"})
     monkeypatch.setattr(pareceres, "_ultima", lambda *args: None)
+    monkeypatch.setattr(pareceres.analise_service, "_geometria_cadastro", lambda *_args: None)
     pdf = Mock(return_value=b"%PDF-atual")
     monkeypatch.setattr(pareceres.analise_service, "gerar_pdf", pdf)
     pareceres.atualizar(central.pedido, central.user)
