@@ -319,7 +319,8 @@ $migrations = @(
     "173_escala_pesquisa_experiencia.sql",
     "175_escopo_pesquisa_experiencia.sql",
     "176_tipo_pesquisa_experiencia.sql",
-    "177_lista_colaboradores_julgamento.sql"
+    "177_lista_colaboradores_julgamento.sql",
+    "178_hierarquizacao_pesquisa_experiencia.sql"
 )
 
 if ($OnlyMigration) {

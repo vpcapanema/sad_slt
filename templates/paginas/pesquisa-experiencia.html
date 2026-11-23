@@ -47,6 +47,7 @@
     <section class="pesquisa-bloco" aria-labelledby="sobre-voce-titulo">
       <h2 id="sobre-voce-titulo">{{ "Sobre seu uso do formulário" if pesquisa_ahp else "Sobre seu uso do sistema" }}</h2>
       <div class="pesquisa-grid">
+        {% if pesquisa_ahp %}
         <label>Seu perfil de uso <span aria-hidden="true">*</span>
           <select name="perfil" required>
             <option value="">Selecione</option>
@@ -57,6 +58,16 @@
             <option value="outro">Outro</option>
           </select>
         </label>
+        {% else %}
+        <label>Hierarquização <span aria-hidden="true">*</span>
+          <select name="hierarquizacao_id" required{% if not hierarquizacoes %} disabled{% endif %}>
+            <option value="">Selecione a hierarquização</option>
+            {% for hierarquizacao in hierarquizacoes %}
+            <option value="{{ hierarquizacao.id }}">{{ hierarquizacao.nome }} — {{ hierarquizacao.codigo }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        {% endif %}
         <label>{{ "Com que frequência usa o formulário de comparação pareada?" if pesquisa_ahp else "Com que frequência utiliza o SICARD?" }} <span aria-hidden="true">*</span>
           <select name="frequencia_uso" required>
             <option value="">Selecione</option>
@@ -68,6 +79,9 @@
           </select>
         </label>
       </div>
+      {% if not pesquisa_ahp and not hierarquizacoes %}
+      <p class="escala-ajuda" role="status">{{ "A lista de hierarquizações está indisponível. Recarregue a página para tentar novamente." if hierarquizacoes_indisponiveis else "Nenhuma hierarquização cadastrada está disponível para seleção." }}</p>
+      {% endif %}
       <label>{{ "Qual recurso do formulário você mais utilizou?" if pesquisa_ahp else "Qual funcionalidade você mais utiliza?" }} <span class="opcional">Opcional</span>
         <input type="text" name="funcionalidade_mais_utilizada" maxlength="200">
       </label>
@@ -96,7 +110,7 @@
     </section>
 
     <div id="pesquisa-status" class="pesquisa-status" role="status" aria-live="polite"></div>
-    <button class="pesquisa-enviar" type="submit">Enviar avaliação</button>
+    <button class="pesquisa-enviar" type="submit"{% if not pesquisa_ahp and not hierarquizacoes %} disabled{% endif %}>Enviar avaliação</button>
   </form>
 
   <section id="pesquisa-sucesso" class="pesquisa-sucesso" hidden tabindex="-1">

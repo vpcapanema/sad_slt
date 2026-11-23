@@ -8,6 +8,7 @@ from api.repositories import convite_individual_repository, pesquisa_experiencia
 from api.schemas.pesquisa_experiencia import (
     PesquisaExperienciaAHPAcesso,
     PesquisaExperienciaAHPEntrada,
+    PesquisaExperienciaAvaliacao,
     PesquisaExperienciaEntrada,
     PesquisaExperienciaResultado,
 )
@@ -16,17 +17,20 @@ from api.services.comparacao_colaborativa_service import _validar_email_token
 router = APIRouter(prefix="/pesquisa-experiencia", tags=["pesquisa-experiencia"])
 
 
-def calcular_indice(dados: PesquisaExperienciaEntrada) -> float:
+def calcular_indice(dados: PesquisaExperienciaAvaliacao) -> float:
     notas = dados.notas()
     return round((sum(notas) - len(notas)) * 100 / (len(notas) * (dados.escala_maxima - 1)), 2)
 
 
-def _registrar(dados: PesquisaExperienciaEntrada, response: Response, escopo: str) -> PesquisaExperienciaResultado:
+def _registrar(dados: PesquisaExperienciaAvaliacao, response: Response, escopo: str) -> PesquisaExperienciaResultado:
     response.headers["Cache-Control"] = "no-store"
     indice = calcular_indice(dados)
-    pesquisa_experiencia_repository.criar(
-        {**dados.model_dump(exclude={"website"}), "escopo": escopo}, indice,
-    )
+    try:
+        pesquisa_experiencia_repository.criar(
+            {**dados.model_dump(exclude={"website"}), "escopo": escopo}, indice,
+        )
+    except DemandaValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc), headers={"Cache-Control": "no-store"}) from exc
     return PesquisaExperienciaResultado(indice_experiencia=indice)
 
 

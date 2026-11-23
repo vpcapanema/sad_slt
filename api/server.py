@@ -30,6 +30,7 @@ from api.deps.access_policy import module_for_path, read_only, page_allowed
 from api.services import autorizacao as authz
 from api.middleware.subpath_rewrite import SubpathRewriteMiddleware
 from api.path_policy import project_path, relative_path
+from api.repositories import pesquisa_experiencia_repository
 from api.routers import api_router
 from api.services import email_convites as convites_service, storage_remoto
 from api.services.email_confirmacoes_automaticas import lifespan as email_lifespan
@@ -335,7 +336,12 @@ def pagina_transparencia_publica(request: Request) -> Response:
 
 @app.get("/public/pesquisa-experiencia/", include_in_schema=False)
 def pagina_pesquisa_experiencia(request: Request) -> Response:
-    return render_page(request, "paginas/pesquisa-experiencia.html")
+    try:
+        hierarquizacoes = pesquisa_experiencia_repository.listar_hierarquizacoes()
+    except DatabaseUnavailableError:
+        return render_page(request, "paginas/pesquisa-experiencia.html",
+                           hierarquizacoes=[], hierarquizacoes_indisponiveis=True)
+    return render_page(request, "paginas/pesquisa-experiencia.html", hierarquizacoes=hierarquizacoes)
 
 
 @app.get("/public/pesquisa-experiencia-ahp", include_in_schema=False)
