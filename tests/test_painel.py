@@ -147,11 +147,23 @@ def test_pesos_nao_sao_reconstituidos_quando_score_historico_diverge():
 def test_repositorio_vincula_rodadas_por_tipo_e_codigo_sem_duplicar_demanda(monkeypatch):
     from api.repositories import painel_repository as repo
 
-    plano = {**_row("D-1", "hierarq_em_andamento"), "tipo": "plano"}
-    projeto = _row("D-1", "hierarq_finalizada")
+    plano = {**_row("D-1", "hierarq_em_andamento"), "tipo": "plano", "demanda_id": "plano-1"}
+    projeto = {**_row("D-1", "hierarq_finalizada"), "demanda_id": "projeto-1"}
+    projeto_legado = {**_row("D-2", "hierarq_finalizada"), "demanda_id": "projeto-2"}
+    historico = {"objetos": [
+        {"cabecalho_objeto": {"codigo": "D-ANTIGO", "demanda_id": "projeto-1"},
+         "hierarquizacao": {"sintese": {"posicao_final": 1}}},
+        {"cabecalho_objeto": {"codigo": "D-2"},
+         "hierarquizacao": {"sintese": {"posicao_final": 2}}},
+    ]}
     rodadas = [
-        {"codigo": codigo, "tipo_demanda_id": tipo, "objeto": {"cabecalho_objeto": {"codigo": "D-1"}}}
-        for codigo, tipo in (("H-PL", 1), ("H-PR1", 3), ("H-PR2", 3))
+        {"codigo": "H-PL", "tipo_demanda_id": 1, "dados_hierarquizacao": {
+            "objetos": [{"cabecalho_objeto": {"codigo": "D-1"}}],
+        }},
+        {"codigo": "H-PR1", "tipo_demanda_id": 3, "dados_hierarquizacao": historico},
+        {"codigo": "H-PR2", "tipo_demanda_id": 3, "dados_hierarquizacao": {
+            "objetos": [{"cabecalho_objeto": {"codigo": "D-1"}}],
+        }},
     ]
 
     class Conexao:
@@ -169,11 +181,17 @@ def test_repositorio_vincula_rodadas_por_tipo_e_codigo_sem_duplicar_demanda(monk
             return self
 
         def fetchall(self):
-            return [[plano], [], [projeto], rodadas][len(self.consultas) - 1]
+            return [[plano], [], [projeto, projeto_legado], rodadas][len(self.consultas) - 1]
 
     conn = Conexao()
     monkeypatch.setattr(repo, "get_connection", lambda: conn)
     itens = repo.list_all()
-    assert len(itens) == 2 and len(conn.consultas) == 4
+    assert len(itens) == 3 and len(conn.consultas) == 4
     assert [h["codigo"] for h in itens[0]["hierarquizacoes"]] == ["H-PL"]
     assert [h["codigo"] for h in itens[1]["hierarquizacoes"]] == ["H-PR1", "H-PR2"]
+    atual = itens[1]["hierarquizacoes"][0]
+    legado, = itens[2]["hierarquizacoes"]
+    assert atual["dados_hierarquizacao"] is legado["dados_hierarquizacao"] is historico
+    assert atual["objeto"]["cabecalho_objeto"]["codigo"] == "D-1"
+    assert atual["objeto"]["hierarquizacao"]["sintese"]["posicao_final"] == 1
+    assert legado["objeto"]["hierarquizacao"]["sintese"]["posicao_final"] == 2

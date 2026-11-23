@@ -17,6 +17,7 @@ _ABRANGENCIA_GEO = """
 _PLANOS_SQL = f"""
     SELECT
         p.codigo,
+        p.id::text AS demanda_id,
         'plano'::text AS tipo,
         p.status,
         p.criado_em,
@@ -61,6 +62,7 @@ _PLANOS_SQL = f"""
 _PROGRAMAS_SQL = f"""
     SELECT
         pg.codigo,
+        pg.id::text AS demanda_id,
         'programa'::text AS tipo,
         pg.status,
         pg.criado_em,
@@ -106,6 +108,7 @@ _PROGRAMAS_SQL = f"""
 _PROJETOS_SQL = """
     SELECT
         d.codigo,
+        d.id::text AS demanda_id,
         'projeto'::text AS tipo,
         d.status,
         d.criado_em,
@@ -184,34 +187,31 @@ def list_all(*, incluir_geometria: bool = True) -> list[dict[str, Any]]:
                    h.relatorio_fase1, h.relatorio_fase2, h.relatorio_fase3, h.relatorio_consolidado,
                    g.nome AS grupo_nome, g.codigo AS grupo_codigo, g.objetos AS grupo_objetos,
                    h.dados_hierarquizacao->'cabecalho_grupo'->'sintese' AS sintese,
-                   h.dados_hierarquizacao->'cabecalho_grupo'->'relatorios' AS relatorios,
-                   jsonb_build_object(
-                       'cabecalho_objeto', jsonb_build_object(
-                           'codigo', COALESCE(vivo.codigo, o.item->'cabecalho_objeto'->>'codigo')
-                       ),
-                       'hierarquizacao', o.item->'hierarquizacao'
-                   ) AS objeto
+                   h.dados_hierarquizacao->'cabecalho_grupo'->'relatorios' AS relatorios
             FROM hierarquizacao_demandas.hierarquizacao_portfolio h
             JOIN demandas.grupos_demandas g ON g.id = h.grupo_demanda_id
-            CROSS JOIN LATERAL jsonb_array_elements(
-                COALESCE(h.dados_hierarquizacao->'objetos', '[]'::jsonb)
-            ) AS o(item)
-            LEFT JOIN (
-                SELECT id::text AS id, codigo FROM demandas.plano
-                UNION ALL SELECT id::text, codigo FROM demandas.programa
-                UNION ALL SELECT id::text, codigo FROM demandas.projeto
-            ) vivo ON vivo.id = o.item->'cabecalho_objeto'->>'demanda_id'
             ORDER BY h.criado_em DESC, h.codigo
         """).fetchall()
+    demandas = planos + programas + projetos
+    codigos_atuais = {demanda["demanda_id"]: demanda["codigo"] for demanda in demandas}
     por_demanda: dict[tuple[int, str], list[dict[str, Any]]] = {}
     for resultado in resultados:
-        cab = (resultado["objeto"] or {}).get("cabecalho_objeto") or {}
-        chave = (resultado["tipo_demanda_id"], cab.get("codigo"))
-        por_demanda.setdefault(chave, []).append(resultado)
+        dados = resultado["dados_hierarquizacao"] or {}
+        # Compartilha o documento da rodada em memória, preservando o resultado individual.
+        for objeto in dados.get("objetos") or []:
+            cab = objeto.get("cabecalho_objeto") or {}
+            codigo_atual = codigos_atuais.get(str(cab.get("demanda_id")))
+            codigo = codigo_atual if codigo_atual is not None else cab.get("codigo")
+            if codigo is not None:
+                chave = (resultado["tipo_demanda_id"], codigo)
+                por_demanda.setdefault(chave, []).append({
+                    **resultado,
+                    "objeto": {"cabecalho_objeto": {"codigo": codigo}, "hierarquizacao": objeto.get("hierarquizacao")},
+                })
     tipos = {"plano": 1, "programa": 2, "projeto": 3}
     return [
         {**row, "hierarquizacoes": por_demanda.get((tipos[row["tipo"]], row["codigo"]), [])}
-        for row in planos + programas + projetos
+        for row in demandas
     ]
 
 

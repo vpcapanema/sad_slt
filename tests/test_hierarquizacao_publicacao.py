@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 
 from api.db import connection
 from api.exceptions import DemandaValidationError, HierarquizacaoNotFoundError
+from api.repositories import geometria_listagem_repository
 from api.server import app
 from api.services import hierarquizacao_service as service, painel_service
 from api.services.publicacao_hierarquizacao import assinatura_resultados, publicacao_vigente
@@ -176,6 +177,7 @@ def test_publico_expoe_somente_rodadas_publicadas_mantem_interno_e_cadastro(arma
         return [{**demanda, "hierarquizacoes": [painel_rodada(armazenamento), painel_rodada(privada)]}]
 
     monkeypatch.setattr(painel_service.painel_repository, "list_all", linhas)
+    monkeypatch.setattr(geometria_listagem_repository, "por_codigos", lambda codigos: {})
     [antes] = painel_service.listar_demandas_painel(public_only=True)
     assert antes.id == "D1" and antes.hierarquizacoes == [] and antes.representante is None
     assert TestClient(app).get("/api/painel/demandas").json()[0]["hierarquizacoes"] == []
