@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator, model_validator
 
 
 class PesquisaExperienciaEntrada(BaseModel):
@@ -43,8 +43,14 @@ class PesquisaExperienciaEntrada(BaseModel):
         return valor or None
 
 
+class PesquisaExperienciaAHPAcesso(BaseModel):
+    email: str = Field(min_length=3, max_length=320)
+    token_acesso: SecretStr
+
+
 class PesquisaExperienciaAHPEntrada(PesquisaExperienciaEntrada):
     escala_maxima: Literal[7] = 7
+    acesso: PesquisaExperienciaAHPAcesso = Field(exclude=True, repr=False)
 
 
 class PesquisaExperienciaResultado(BaseModel):

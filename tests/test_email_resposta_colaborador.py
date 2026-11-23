@@ -85,6 +85,7 @@ def test_confirmacao_convida_para_pesquisa_ahp():
     assert f'href="{url}"' in mensagem.html and ">Responder à pesquisa</a>" in mensagem.html
     for parte in (mensagem.texto, mensagem.html):
         assert "A pesquisa é anônima" in parte
+        assert "o mesmo e-mail e a mesma chave individual do convite" in parte
         assert parte.index(url) < parte.index("Esta é uma mensagem automática")
 
 

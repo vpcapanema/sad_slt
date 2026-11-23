@@ -1,0 +1,13 @@
+{% macro campos_convite(prefixo, exibir_chave=true) %}
+<div class="c-form-group">
+  <label for="{{ prefixo }}-email" class="c-form-label">E-mail</label>
+  <input id="{{ prefixo }}-email" name="email" type="email" class="c-form-control" autocomplete="email" maxlength="320" required>
+</div>
+{% if exibir_chave %}
+<div class="c-form-group">
+  <label for="{{ prefixo }}-token" class="c-form-label">Chave individual do convite</label>
+  <input id="{{ prefixo }}-token" name="token_acesso" type="text" class="c-form-control" pattern="[A-Za-z0-9_-]{43}" minlength="43" maxlength="43" autocomplete="off" spellcheck="false" autocapitalize="none" aria-describedby="{{ prefixo }}-token-help" required>
+  <p id="{{ prefixo }}-token-help" class="form-help">Cole a chave de 43 caracteres recebida por e-mail, sem espaços. Não compartilhe.</p>
+</div>
+{% endif %}
+{% endmacro %}

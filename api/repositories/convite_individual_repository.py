@@ -1,5 +1,6 @@
 """Convites externos por destinatário, sem armazenar o segredo em claro."""
 import hashlib
+import re
 import secrets
 from api.db.connection import get_connection
 from api.exceptions import DemandaValidationError
@@ -35,8 +36,32 @@ def registrar(ambiente_id, email, versao, segredo_hash, envelope_cifrado):
     return obter(ambiente_id, email, versao)
 
 
+def _hash_segredo(segredo):
+    if not isinstance(segredo, str) or not re.fullmatch(r"[A-Za-z0-9_-]{43}", segredo):
+        return None
+    return hashlib.sha256(segredo.encode()).hexdigest()
+
+
+def localizar_julgamento(email, segredo):
+    """Encontra o julgamento pelo convite individual em páginas sem um link de rodada."""
+    segredo_hash = _hash_segredo(segredo)
+    if segredo_hash is None:
+        return None
+    with get_connection() as conn:
+        row = conn.execute(
+            """SELECT a.id, a.status, a.valido_ate, a.convites, a.criterios
+               FROM ahp.convite_individual c
+               JOIN ahp.comparacao_colaborativa_ambiente a ON a.id = c.ambiente_id
+               WHERE c.email = %s AND c.segredo_hash = %s AND c.revogado_em IS NULL
+               LIMIT 1""",
+            (email, segredo_hash),
+        ).fetchone()
+    return dict(row) if row else None
+
+
 def validar(ambiente_id, email, segredo):
-    if not isinstance(segredo, str) or len(segredo) != 43 or not segredo.isascii():
+    segredo_hash = _hash_segredo(segredo)
+    if segredo_hash is None:
         return False
     with get_connection() as conn:
         row = conn.execute(
@@ -44,8 +69,7 @@ def validar(ambiente_id, email, segredo):
                WHERE ambiente_id = %s AND email = %s AND revogado_em IS NULL""",
             (ambiente_id, email),
         ).fetchone()
-    return bool(row and secrets.compare_digest(
-        row["segredo_hash"], hashlib.sha256(segredo.encode()).hexdigest()))
+    return bool(row and secrets.compare_digest(row["segredo_hash"], segredo_hash))
 
 
 def revogar(ambiente_id, email):

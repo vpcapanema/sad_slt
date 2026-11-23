@@ -11,8 +11,12 @@
 .pesquisa-bloco h2 { margin: 0 0 1rem; font-size: 1.2rem; color: #063b53; }
 .pesquisa-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 .pesquisa-formulario label { display: grid; gap: .42rem; margin: 0 0 1rem; font-weight: 650; }
-.pesquisa-formulario :is(input[type=text], select, textarea) { box-sizing: border-box; width: 100%; padding: .72rem .8rem; border: 1px solid #9fb4be; border-radius: 7px; background: #fff; color: #183443; font: inherit; }
+.pesquisa-formulario:not(.pesquisa-acesso) :is(input[type=text], select, textarea) { box-sizing: border-box; width: 100%; padding: .72rem .8rem; border: 1px solid #9fb4be; border-radius: 7px; background: #fff; color: #183443; font: inherit; }
 .pesquisa-formulario :is(input, select, textarea):focus { outline: 3px solid rgb(17 126 146 / 20%); border-color: #117e92; }
+.pesquisa-acesso .pesquisa-bloco { border-bottom: 0; padding-block-end: 0; }
+.pesquisa-acesso .c-form-group { min-width: 0; margin: 0 0 .8rem; }
+.pesquisa-acesso :is(.c-form-label, .form-help) { margin: 0; }
+.pesquisa-acesso .pesquisa-status:empty { display: none; }
 .opcional { font-weight: 400; font-size: .8rem; color: #5c717b; }
 .escala-ajuda { margin: -.35rem 0 1.2rem; color: #506771; }
 .pergunta-escala { margin: 0; padding: 1rem 0; border: 0; border-top: 1px solid #edf2f4; }

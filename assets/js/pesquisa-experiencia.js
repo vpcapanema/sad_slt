@@ -6,6 +6,9 @@
   const status = document.querySelector("#pesquisa-status");
   const sucesso = document.querySelector("#pesquisa-sucesso");
   if (!container || !form || !status || !sucesso) return;
+  const acesso = document.querySelector("#pesquisa-acesso");
+  const acessoStatus = document.querySelector("#pesquisa-acesso-status");
+  let credenciais = null;
 
   const perguntas = form.dataset.pesquisa === "ahp" ? [
     ["facilidade", "Foi fácil identificar os dois critérios de cada comparação."],
@@ -41,33 +44,82 @@
     container.appendChild(fieldset);
   });
 
+  async function enviarJson(formulario, dados, mensagem) {
+    const response = await fetch(formulario.action, {
+      method: formulario.method,
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(dados),
+    });
+    if (!response.ok) {
+      const resultado = await response.json().catch(() => ({}));
+      throw Object.assign(new Error(resultado.message || resultado.detail || mensagem), {status: response.status});
+    }
+  }
+
+  function exibirErro(destino, mensagem) {
+    destino.className = "pesquisa-status pesquisa-status--erro";
+    destino.textContent = mensagem;
+  }
+
+  acesso?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    acessoStatus.className = "pesquisa-status";
+    acessoStatus.textContent = "";
+    if (!acesso.reportValidity()) return;
+
+    const botao = acesso.querySelector("button[type=submit]");
+    if (botao.disabled) return;
+    botao.disabled = true;
+    acessoStatus.textContent = "Validando o convite…";
+    const convite = Object.fromEntries(new FormData(acesso));
+    try {
+      await enviarJson(acesso, convite, "Não foi possível validar o convite.");
+      credenciais = convite;
+      acesso.reset();
+      acessoStatus.textContent = "";
+      acesso.hidden = true;
+      form.hidden = false;
+      form.elements.namedItem("perfil").focus();
+    } catch (error) {
+      exibirErro(acessoStatus, error.message);
+    } finally {
+      botao.disabled = false;
+    }
+  });
+
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     status.className = "pesquisa-status";
     status.textContent = "";
     if (!form.reportValidity()) return;
+    if (acesso && !credenciais) return;
 
     const botao = form.querySelector("button[type=submit]");
+    if (botao.disabled) return;
     botao.disabled = true;
     botao.textContent = "Enviando…";
     const dados = Object.fromEntries(new FormData(form).entries());
     dados.escala_maxima = niveis.length;
     perguntas.forEach(([nome]) => { dados[nome] = Number(dados[nome]); });
+    if (acesso) dados.acesso = credenciais;
 
     try {
-      const response = await fetch(form.action, {
-        method: form.method,
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(dados),
-      });
-      const resultado = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(resultado.detail || "Não foi possível registrar sua avaliação.");
+      await enviarJson(form, dados, "Não foi possível registrar sua avaliação.");
+      credenciais = null;
       form.hidden = true;
       sucesso.hidden = false;
       sucesso.focus();
     } catch (error) {
-      status.className = "pesquisa-status pesquisa-status--erro";
-      status.textContent = error.message || "Não foi possível registrar sua avaliação. Tente novamente.";
+      if (acesso && error.status === 403) {
+        acesso.elements.namedItem("email").value = credenciais.email;
+        credenciais = null;
+        form.hidden = true;
+        acesso.hidden = false;
+        exibirErro(acessoStatus, error.message);
+        acesso.elements.namedItem("token_acesso").focus();
+      } else {
+        exibirErro(status, error.message || "Não foi possível registrar sua avaliação. Tente novamente.");
+      }
       botao.disabled = false;
       botao.textContent = "Enviar avaliação";
     }

@@ -1,4 +1,5 @@
 {% extends "bases/base_conteudo.html" %}
+{% from "componentes/analise_multicriterio/_campos_convite.html" import campos_convite %}
 {% set subtitulo = "Pesquisa de satisfação - AHP Interativa" if pesquisa_ahp else "Pesquisa de experiência" %}
 {% set descricao_pesquisa = "Pesquisa de satisfação sobre o formulário de comparação pareada da AHP Interativa do SICARD." if pesquisa_ahp else "Pesquisa de experiência dos usuários do SICARD." %}
 {% set navegacao = "publica" %}
@@ -10,7 +11,7 @@
 {% block classes_body %}pesquisa-experiencia-page{% endblock %}
 
 {% block estilos_pagina %}
-  <link rel="stylesheet" href="/assets/css/pesquisa-experiencia.css?v=20261123-largura-ahp">
+  <link rel="stylesheet" href="/assets/css/pesquisa-experiencia.css?v=20261123-acesso-ahp">
 {% endblock %}
 
 {% block conteudo %}
@@ -25,9 +26,24 @@
     {% endif %}
   </header>
 
+  {% if pesquisa_ahp %}
+  <form id="pesquisa-acesso" class="pesquisa-formulario pesquisa-acesso" method="post"
+        action="/api/pesquisa-experiencia/ahp/acesso" aria-labelledby="pesquisa-acesso-titulo" novalidate>
+    <section class="pesquisa-bloco">
+      <h2 id="pesquisa-acesso-titulo">Identificação</h2>
+      <p>Use o mesmo e-mail e a chave individual do convite para a comparação pareada. Esses dados servem para validar o acesso à pesquisa.</p>
+      <div class="pesquisa-grid">
+        {{ campos_convite("pesquisa") }}
+      </div>
+      <p id="pesquisa-acesso-status" class="pesquisa-status" role="status" aria-live="polite"></p>
+      <button type="submit" class="btn btn-primary"><i class="fas fa-unlock c-btn__icon" aria-hidden="true"></i>Liberar formulário</button>
+    </section>
+  </form>
+  {% endif %}
+
   <form id="pesquisa-form" class="pesquisa-formulario" method="post"
         action="{{ '/api/pesquisa-experiencia/ahp/respostas' if pesquisa_ahp else '/api/pesquisa-experiencia/respostas' }}"
-        {% if pesquisa_ahp %}data-pesquisa="ahp"{% endif %} novalidate>
+        {% if pesquisa_ahp %}data-pesquisa="ahp" hidden{% endif %} novalidate>
     <section class="pesquisa-bloco" aria-labelledby="sobre-voce-titulo">
       <h2 id="sobre-voce-titulo">{{ "Sobre seu uso do formulário" if pesquisa_ahp else "Sobre seu uso do sistema" }}</h2>
       <div class="pesquisa-grid">
@@ -92,5 +108,5 @@
 {% endblock %}
 
 {% block scripts_pagina %}
-  <script defer src="/assets/js/pesquisa-experiencia.js?v=20261123-ahp"></script>
+  <script defer src="/assets/js/pesquisa-experiencia.js?v=20261123-acesso-ahp"></script>
 {% endblock %}

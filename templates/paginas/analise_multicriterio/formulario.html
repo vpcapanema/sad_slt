@@ -1,4 +1,5 @@
 {% extends "bases/base_conteudo.html" %}
+{% from "componentes/analise_multicriterio/_campos_convite.html" import campos_convite %}
 {# Scripts preservam a ordem e executam antes de DOMContentLoaded, sem bloquear o HTML.
    O símbolo reduzido atende ao cabeçalho mobile em alta densidade; original preservado. #}
 {% set scripts_defer = true %}
@@ -57,8 +58,7 @@
 				<div class="collab-identificacao-grid">
 					<div class="c-form-group"><label for="colab-nome" class="c-form-label">Nome completo</label><input id="colab-nome" class="c-form-control" required></div>
 					<div class="c-form-group"><label for="colab-inst" class="c-form-label">Instituição vinculada</label><input id="colab-inst" class="c-form-control" required></div>
-					<div class="c-form-group"><label for="colab-email" class="c-form-label">E-mail</label><input id="colab-email" type="email" class="c-form-control" required></div>
-					{% if not modo_modelo %}<div class="c-form-group"><label for="colab-token" class="c-form-label">Chave individual do convite</label><input id="colab-token" name="token_acesso" type="text" class="c-form-control" pattern="[A-Za-z0-9_-]{43}" minlength="43" maxlength="43" autocomplete="off" aria-describedby="colab-token-help" required><p id="colab-token-help" class="form-help">Cole a chave de 43 caracteres recebida por e-mail, sem espaços. Não compartilhe.</p></div>{% endif %}
+					{{ campos_convite("colab", not modo_modelo) }}
 				</div>
 				<button type="button" class="btn btn-primary" id="btn-liberar-form"><i class="fas fa-unlock c-btn__icon"></i>Liberar formulário</button>
 				<p id="colab-id-feedback" class="ahp-matriz-edit-feedback" role="status"></p>

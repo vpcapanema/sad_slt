@@ -31,7 +31,8 @@ PESQUISA_AHP_URL = "https://56.125.163.194/sicard/public/pesquisa-experiencia-ah
 PESQUISA_AHP_TITULO = "Pesquisa de satisfação - AHP Interativa"
 PESQUISA_AHP_CONVITE = (
     "Como foi preencher o formulário de comparação pareada? Conte-nos o que funcionou bem e o que podemos "
-    "melhorar. A pesquisa é anônima e leva cerca de três minutos."
+    "melhorar. Para acessar, use o mesmo e-mail e a mesma chave individual do convite do julgamento. "
+    "A pesquisa é anônima e leva cerca de três minutos."
 )
 
 AZUL = (17, 101, 147)
