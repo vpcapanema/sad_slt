@@ -316,7 +316,8 @@ $migrations = @(
     "170_configuracao_email_convite.sql",
     "171_assinatura_email_convites.sql",
     "172_pesquisa_experiencia_sicard.sql",
-    "173_escala_pesquisa_experiencia.sql"
+    "173_escala_pesquisa_experiencia.sql",
+    "175_escopo_pesquisa_experiencia.sql"
 )
 
 if ($OnlyMigration) {

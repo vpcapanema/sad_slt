@@ -43,6 +43,10 @@ class PesquisaExperienciaEntrada(BaseModel):
         return valor or None
 
 
+class PesquisaExperienciaAHPEntrada(PesquisaExperienciaEntrada):
+    escala_maxima: Literal[7] = 7
+
+
 class PesquisaExperienciaResultado(BaseModel):
     status: Literal["recebido"] = "recebido"
     indice_experiencia: float

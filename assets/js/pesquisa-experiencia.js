@@ -1,7 +1,20 @@
 (() => {
   "use strict";
 
-  const perguntas = [
+  const container = document.querySelector("#perguntas-avaliacao");
+  const form = document.querySelector("#pesquisa-form");
+  const status = document.querySelector("#pesquisa-status");
+  const sucesso = document.querySelector("#pesquisa-sucesso");
+  if (!container || !form || !status || !sucesso) return;
+
+  const perguntas = form.dataset.pesquisa === "ahp" ? [
+    ["facilidade", "Foi fácil identificar os dois critérios de cada comparação."],
+    ["autonomia", "Consegui preencher as comparações sem precisar de ajuda adicional."],
+    ["clareza_interface", "A escala de importância deixou claro como registrar minha preferência entre os dois critérios."],
+    ["compreensao_resultados", "A indicação da Razão de Consistência (RC) me ajudou a entender se precisava revisar minhas comparações."],
+    ["desempenho", "O formulário respondeu rapidamente durante o preenchimento e o envio."],
+    ["satisfacao_geral", "De modo geral, fiquei satisfeito com a experiência de preencher o formulário."],
+  ] : [
     ["facilidade", "É fácil encontrar as funções que preciso."],
     ["autonomia", "Consigo realizar minhas atividades sem precisar de ajuda."],
     ["clareza_interface", "Os textos, botões e instruções são claros."],
@@ -9,12 +22,6 @@
     ["desempenho", "O sistema responde de maneira adequada durante o uso."],
     ["satisfacao_geral", "De modo geral, estou satisfeito com o SICARD."],
   ];
-
-  const container = document.querySelector("#perguntas-avaliacao");
-  const form = document.querySelector("#pesquisa-form");
-  const status = document.querySelector("#pesquisa-status");
-  const sucesso = document.querySelector("#pesquisa-sucesso");
-  if (!container || !form || !status || !sucesso) return;
 
   const niveis = [
     "Discordo totalmente", "Discordo", "Discordo um pouco", "Neutro",
@@ -48,8 +55,8 @@
     perguntas.forEach(([nome]) => { dados[nome] = Number(dados[nome]); });
 
     try {
-      const response = await fetch("/api/pesquisa-experiencia/respostas", {
-        method: "POST",
+      const response = await fetch(form.action, {
+        method: form.method,
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify(dados),
       });

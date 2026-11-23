@@ -62,7 +62,7 @@ def page_allowed(user, path):
 
 
 def _public(path, method):
-    if path == '/api/pesquisa-experiencia/respostas' and method == 'POST':
+    if method == 'POST' and path in {'/api/pesquisa-experiencia/respostas', '/api/pesquisa-experiencia/ahp/respostas'}:
         return True
     if path.startswith(('/api/auth/', '/api/health', '/api/ahp/comparacao-colaborativa/publico/')):
         return True

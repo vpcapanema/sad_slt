@@ -1,11 +1,12 @@
 {% extends "bases/base_conteudo.html" %}
-{% set subtitulo = "Pesquisa de experiência" %}
+{% set subtitulo = "Pesquisa de satisfação - AHP Interativa" if pesquisa_ahp else "Pesquisa de experiência" %}
+{% set descricao_pesquisa = "Pesquisa de satisfação sobre o formulário de comparação pareada da AHP Interativa do SICARD." if pesquisa_ahp else "Pesquisa de experiência dos usuários do SICARD." %}
 {% set navegacao = "publica" %}
 {% set requer_autenticacao = false %}
 {% set scripts_defer = true %}
 
-{% block titulo %}Pesquisa de experiência — SICARD{% endblock %}
-{% block descricao %}Pesquisa de experiência dos usuários do SICARD.{% endblock %}
+{% block titulo %}{{ subtitulo }} — SICARD{% endblock %}
+{% block descricao %}{{ descricao_pesquisa }}{% endblock %}
 {% block classes_body %}pesquisa-experiencia-page{% endblock %}
 
 {% block estilos_pagina %}
@@ -16,13 +17,19 @@
 <main class="pesquisa-experiencia" id="conteudo-principal">
   <header class="pesquisa-cabecalho">
     <p class="pesquisa-selo">Sua experiência ajuda a melhorar o SICARD</p>
-    <h1>Pesquisa de experiência</h1>
+    <h1>{{ subtitulo }}</h1>
+    {% if pesquisa_ahp %}
+    <p>Responda considerando sua experiência ao preencher o formulário de comparação pareada da AHP Interativa. A pesquisa é anônima e leva cerca de três minutos.</p>
+    {% else %}
     <p>Responda às perguntas considerando sua experiência geral com o sistema. A pesquisa é anônima e leva cerca de três minutos.</p>
+    {% endif %}
   </header>
 
-  <form id="pesquisa-form" class="pesquisa-formulario" novalidate>
+  <form id="pesquisa-form" class="pesquisa-formulario" method="post"
+        action="{{ '/api/pesquisa-experiencia/ahp/respostas' if pesquisa_ahp else '/api/pesquisa-experiencia/respostas' }}"
+        {% if pesquisa_ahp %}data-pesquisa="ahp"{% endif %} novalidate>
     <section class="pesquisa-bloco" aria-labelledby="sobre-voce-titulo">
-      <h2 id="sobre-voce-titulo">Sobre seu uso do sistema</h2>
+      <h2 id="sobre-voce-titulo">{{ "Sobre seu uso do formulário" if pesquisa_ahp else "Sobre seu uso do sistema" }}</h2>
       <div class="pesquisa-grid">
         <label>Seu perfil de uso <span aria-hidden="true">*</span>
           <select name="perfil" required>
@@ -34,10 +41,10 @@
             <option value="outro">Outro</option>
           </select>
         </label>
-        <label>Com que frequência utiliza o SICARD? <span aria-hidden="true">*</span>
+        <label>{{ "Com que frequência usa o formulário de comparação pareada?" if pesquisa_ahp else "Com que frequência utiliza o SICARD?" }} <span aria-hidden="true">*</span>
           <select name="frequencia_uso" required>
             <option value="">Selecione</option>
-            <option value="primeiro_acesso">Este é meu primeiro acesso</option>
+            <option value="primeiro_acesso">{{ "Foi a primeira vez que usei o formulário" if pesquisa_ahp else "Este é meu primeiro acesso" }}</option>
             <option value="raramente">Raramente</option>
             <option value="mensalmente">Mensalmente</option>
             <option value="semanalmente">Semanalmente</option>
@@ -45,7 +52,7 @@
           </select>
         </label>
       </div>
-      <label>Qual funcionalidade você mais utiliza? <span class="opcional">Opcional</span>
+      <label>{{ "Qual recurso do formulário você mais utilizou?" if pesquisa_ahp else "Qual funcionalidade você mais utiliza?" }} <span class="opcional">Opcional</span>
         <input type="text" name="funcionalidade_mais_utilizada" maxlength="200">
       </label>
     </section>
@@ -58,14 +65,14 @@
 
     <section class="pesquisa-bloco" aria-labelledby="comentarios-titulo">
       <h2 id="comentarios-titulo">Conte-nos mais</h2>
-      <label>Qual é a principal dificuldade que você encontra? <span class="opcional">Opcional</span>
+      <label>{{ "Em que parte do preenchimento você teve mais dificuldade?" if pesquisa_ahp else "Qual é a principal dificuldade que você encontra?" }} <span class="opcional">Opcional</span>
         <textarea name="principal_dificuldade" rows="3" maxlength="2000"></textarea>
       </label>
-      <label>O que deveria ser melhorado primeiro? <span class="opcional">Opcional</span>
+      <label>{{ "O que você mudaria primeiro para facilitar o preenchimento?" if pesquisa_ahp else "O que deveria ser melhorado primeiro?" }} <span class="opcional">Opcional</span>
         <textarea name="melhoria_prioritaria" rows="3" maxlength="2000"></textarea>
       </label>
       <label>Deixe aqui outras críticas, sugestões ou elogios <span class="opcional">Opcional</span>
-        <textarea name="criticas_sugestoes_elogios" rows="4" maxlength="3000" placeholder="Escreva livremente sobre sua experiência com o SICARD."></textarea>
+        <textarea name="criticas_sugestoes_elogios" rows="4" maxlength="3000" placeholder="{{ 'Escreva livremente sobre sua experiência com o formulário de comparação pareada.' if pesquisa_ahp else 'Escreva livremente sobre sua experiência com o SICARD.' }}"></textarea>
       </label>
       <label class="campo-armadilha" aria-hidden="true">Não preencha este campo
         <input type="text" name="website" tabindex="-1" autocomplete="off">
@@ -79,11 +86,11 @@
   <section id="pesquisa-sucesso" class="pesquisa-sucesso" hidden tabindex="-1">
     <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
     <h2>Obrigado pela sua contribuição</h2>
-    <p>Sua avaliação foi registrada e ajudará a orientar as próximas melhorias do SICARD.</p>
+    <p>Sua avaliação foi registrada e ajudará a orientar as próximas melhorias {{ "no formulário de comparação pareada." if pesquisa_ahp else "do SICARD." }}</p>
   </section>
 </main>
 {% endblock %}
 
 {% block scripts_pagina %}
-  <script defer src="/assets/js/pesquisa-experiencia.js?v=20261119-2"></script>
+  <script defer src="/assets/js/pesquisa-experiencia.js?v=20261123-ahp"></script>
 {% endblock %}

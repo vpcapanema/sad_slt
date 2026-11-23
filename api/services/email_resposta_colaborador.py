@@ -27,6 +27,13 @@ from api.services.comparacao_colaborativa_service import _criterio_nomes, _crite
 
 logger = logging.getLogger(__name__)
 
+PESQUISA_AHP_URL = "https://56.125.163.194/sicard/public/pesquisa-experiencia-ahp/"
+PESQUISA_AHP_TITULO = "Pesquisa de satisfação - AHP Interativa"
+PESQUISA_AHP_CONVITE = (
+    "Como foi preencher o formulário de comparação pareada? Conte-nos o que funcionou bem e o que podemos "
+    "melhorar. A pesquisa é anônima e leva cerca de três minutos."
+)
+
 AZUL = (17, 101, 147)
 VERMELHO = (122, 22, 32)
 LIMITE_RC = 0.10
@@ -126,7 +133,10 @@ def _texto(*, nome: str, julgamento: str, nomes: list[str], calculo: dict[str, A
     ]
     if outros:
         linhas += ["ATENÇÃO: " + _aviso(outros), ""]
-    linhas += ["Esta é uma mensagem automática do SICARD."]
+    linhas += [
+        PESQUISA_AHP_TITULO, PESQUISA_AHP_CONVITE, f"Responder à pesquisa: {PESQUISA_AHP_URL}",
+        "", "Esta é uma mensagem automática do SICARD.",
+    ]
     return "\n".join(linhas)
 
 
@@ -218,6 +228,13 @@ def _html(*, nome: str, julgamento: str, nomes: list[str], calculo: dict[str, An
         f'<tr><th style="{cab}">Código</th><th style="{cab}">Critério</th><th style="{cab}">Peso</th><th style="{cab}">&nbsp;</th></tr>'
         f'{linhas_pesos}</table>'
         f'{aviso}'
+        f'<h2 style="{titulo}">{PESQUISA_AHP_TITULO}</h2>'
+        f'<p style="{paragrafo}">{PESQUISA_AHP_CONVITE}</p>'
+        '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:16px 0;">'
+        '<tr><td align="center" style="border-radius:5px;background:#00507a;">'
+        f'<a href="{PESQUISA_AHP_URL}" target="_blank" style="display:inline-block;padding:13px 24px;'
+        f'{fonte}font-size:15px;font-weight:bold;color:#ffffff;text-decoration:none;'
+        'border:1px solid #003d5c;border-radius:5px;">Responder à pesquisa</a></td></tr></table>'
         f'<p style="{paragrafo}margin-top:22px;color:#516878;font-size:12px;">Esta é uma mensagem automática do SICARD.</p>'
         '</td></tr></table></td></tr></table></body></html>'
     )

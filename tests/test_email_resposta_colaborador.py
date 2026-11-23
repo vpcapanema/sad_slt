@@ -78,6 +78,16 @@ def test_html_escapa_nomes_do_colaborador_e_do_julgamento():
     assert "<Teste>" not in mensagem.html and "&lt;Teste&gt;" in mensagem.html
 
 
+def test_confirmacao_convida_para_pesquisa_ahp():
+    mensagem = confirmacao.montar(_ambiente([{"email": "a@x.gov.br"}]), _resposta())
+    url = "https://56.125.163.194/sicard/public/pesquisa-experiencia-ahp/"
+    assert f'Responder à pesquisa: {url}' in mensagem.texto
+    assert f'href="{url}"' in mensagem.html and ">Responder à pesquisa</a>" in mensagem.html
+    for parte in (mensagem.texto, mensagem.html):
+        assert "A pesquisa é anônima" in parte
+        assert parte.index(url) < parte.index("Esta é uma mensagem automática")
+
+
 def test_avisa_quando_outro_julgador_recebeu_o_mesmo_conjunto_de_criterios():
     convites = [{"email": "a@x.gov.br"}, {"email": "b@x.gov.br"}, {"email": "c@x.gov.br", "dimensoes": ["Financeira", "Social"]}]
     mensagem = confirmacao.montar(_ambiente(convites), _resposta())

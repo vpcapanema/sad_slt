@@ -338,6 +338,12 @@ def pagina_pesquisa_experiencia(request: Request) -> Response:
     return render_page(request, "paginas/pesquisa-experiencia.html")
 
 
+@app.get("/public/pesquisa-experiencia-ahp", include_in_schema=False)
+@app.get("/public/pesquisa-experiencia-ahp/", include_in_schema=False)
+def pagina_pesquisa_experiencia_ahp(request: Request) -> Response:
+    return render_page(request, "paginas/pesquisa-experiencia.html", pesquisa_ahp=True)
+
+
 @app.get("/public/login/", include_in_schema=False)
 def pagina_login_publico(request: Request) -> Response:
     return render_page(request, "paginas/admin/login.html")
