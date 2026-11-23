@@ -135,7 +135,7 @@ def _texto(*, nome: str, julgamento: str, nomes: list[str], calculo: dict[str, A
     if outros:
         linhas += ["ATENÇÃO: " + _aviso(outros), ""]
     linhas += [
-        PESQUISA_AHP_TITULO, PESQUISA_AHP_CONVITE, f"Responder à pesquisa: {PESQUISA_AHP_URL}",
+        "", PESQUISA_AHP_TITULO, "", PESQUISA_AHP_CONVITE, f"Responder à pesquisa: {PESQUISA_AHP_URL}",
         "", "Esta é uma mensagem automática do SICARD.",
     ]
     return "\n".join(linhas)
@@ -229,13 +229,23 @@ def _html(*, nome: str, julgamento: str, nomes: list[str], calculo: dict[str, An
         f'<tr><th style="{cab}">Código</th><th style="{cab}">Critério</th><th style="{cab}">Peso</th><th style="{cab}">&nbsp;</th></tr>'
         f'{linhas_pesos}</table>'
         f'{aviso}'
-        f'<h2 style="{titulo}">{PESQUISA_AHP_TITULO}</h2>'
-        f'<p style="{paragrafo}">{PESQUISA_AHP_CONVITE}</p>'
-        '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:16px 0;">'
-        '<tr><td align="center" style="border-radius:5px;background:#00507a;">'
-        f'<a href="{PESQUISA_AHP_URL}" target="_blank" style="display:inline-block;padding:13px 24px;'
-        f'{fonte}font-size:15px;font-weight:bold;color:#ffffff;text-decoration:none;'
-        'border:1px solid #003d5c;border-radius:5px;">Responder à pesquisa</a></td></tr></table>'
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" aria-hidden="true">'
+        '<tr><td height="44" style="height:44px;font-size:1px;line-height:44px;mso-line-height-rule:exactly;">'
+        '&nbsp;</td></tr></table>'
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
+        'style="border:1px solid #bed4e2;border-collapse:separate;">'
+        '<tr><td bgcolor="#00507a" style="padding:16px 20px;background:#00507a;">'
+        f'<h2 style="margin:0;{fonte}font-size:20px;line-height:1.3;font-weight:bold;color:#ffffff;">'
+        f'{e(PESQUISA_AHP_TITULO)}</h2></td></tr>'
+        '<tr><td bgcolor="#edf5fa" style="padding:20px;background:#edf5fa;">'
+        f'<p style="margin:0 0 16px;{fonte}font-size:15px;line-height:1.55;color:#22333f;">'
+        f'{e(PESQUISA_AHP_CONVITE)}</p>'
+        '<table role="presentation" cellpadding="0" cellspacing="0">'
+        '<tr><td align="center" bgcolor="#00507a" style="border-radius:5px;background:#00507a;">'
+        f'<a href="{PESQUISA_AHP_URL}" target="_blank" style="display:inline-block;padding:14px 24px;'
+        f'{fonte}font-size:16px;font-weight:bold;color:#ffffff;text-decoration:none;'
+        'border:1px solid #003d5c;border-radius:5px;">Responder à pesquisa</a>'
+        '</td></tr></table></td></tr></table>'
         f'<p style="{paragrafo}margin-top:22px;color:#516878;font-size:12px;">Esta é uma mensagem automática do SICARD.</p>'
         '</td></tr></table></td></tr></table></body></html>'
     )
