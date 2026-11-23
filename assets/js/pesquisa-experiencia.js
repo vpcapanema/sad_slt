@@ -52,7 +52,11 @@
     });
     if (!response.ok) {
       const resultado = await response.json().catch(() => ({}));
-      throw Object.assign(new Error(resultado.message || resultado.detail || mensagem), {status: response.status});
+      const detalhe = resultado.detail;
+      const erro = new Error(resultado.message || detalhe?.mensagem ||
+        (typeof detalhe === "string" ? detalhe : mensagem));
+      erro.codigo = detalhe?.codigo;
+      throw erro;
     }
   }
 
@@ -110,7 +114,7 @@
       sucesso.hidden = false;
       sucesso.focus();
     } catch (error) {
-      if (acesso && error.status === 403) {
+      if (acesso && error.codigo === "convite_invalido") {
         acesso.elements.namedItem("email").value = credenciais.email;
         credenciais = null;
         form.hidden = true;

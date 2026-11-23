@@ -44,8 +44,11 @@ def _validar_acesso_ahp(acesso: PesquisaExperienciaAHPAcesso) -> None:
             raise DemandaValidationError("Confira o e-mail e a chave individual do convite.", field="token_acesso")
         _validar_email_token(ambiente, email, chave)
     except DemandaValidationError as exc:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc),
-                            headers={"Cache-Control": "no-store"}) from exc
+        raise HTTPException(
+            status_code=422,
+            detail={"codigo": "convite_invalido", "mensagem": str(exc)},
+            headers={"Cache-Control": "no-store"},
+        ) from exc
 
 
 @router.post("/ahp/acesso", status_code=status.HTTP_204_NO_CONTENT)

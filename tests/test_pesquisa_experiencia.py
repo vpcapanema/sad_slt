@@ -114,13 +114,15 @@ def test_pesquisa_usa_a_chave_do_convite_e_revalida_antes_da_gravacao(monkeypatc
     assert cliente.post(respostas, json=_dados()).status_code == 422
     for invalido in ({**ACESSO, "email": "outro@example.com"}, {**ACESSO, "token_acesso": "B" * 43}):
         rejeitada = cliente.post(acesso, json=invalido)
-        assert rejeitada.status_code == 403 and invalido["token_acesso"] not in rejeitada.text
-        assert cliente.post(respostas, json=_dados(acesso=invalido)).status_code == 403
+        assert rejeitada.status_code == 422 and invalido["token_acesso"] not in rejeitada.text
+        assert rejeitada.json()["detail"]["codigo"] == "convite_invalido"
+        assert cliente.post(respostas, json=_dados(acesso=invalido)).status_code == 422
     convite_ahp["valido_ate"] = datetime.now(timezone.utc) - timedelta(seconds=1)
-    assert cliente.post(respostas, json=_dados(acesso=ACESSO)).status_code == 403
+    expirada = cliente.post(respostas, json=_dados(acesso=ACESSO))
+    assert expirada.status_code == 422 and "prazo" in expirada.json()["detail"]["mensagem"]
     convite_ahp["valido_ate"] = datetime.now(timezone.utc) + timedelta(days=1)
     monkeypatch.setattr(convite_individual_repository, "validar", lambda *_: False)
-    assert cliente.post(respostas, json=_dados(acesso=ACESSO)).status_code == 403
+    assert cliente.post(respostas, json=_dados(acesso=ACESSO)).status_code == 422
     assert gravacoes == []
 
 
