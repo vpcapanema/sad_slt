@@ -41,11 +41,16 @@ def analyses(monkeypatch):
     monkeypatch.setattr(service,'_analise_response',lambda data:data)
 
 
-@pytest.mark.parametrize('method,expected',[('geometrica',3),('aritmetica',5),('mediana',5)])
+@pytest.mark.parametrize('method,expected',[('geometrica',3),('aritmetica',5),('mediana',5),('moda',5)])
 def test_metodo_selecionado_e_persistido(analyses,method,expected):
     result=service.criar_analise('j1',AnaliseColaborativaCreateSchema(nome='Teste',resposta_ids=RIDS,metodo_agregacao=method))
     assert result['matriz_consolidada'][0][1]==pytest.approx(expected)
     assert result['matriz_consolidada'][1][0]==pytest.approx(1/expected)
+
+
+def test_moda_preserva_indice_original_e_desempata_pela_mediana():
+    assert service._moda_para_matriz([1 / 3, 1 / 3, 7]) == 1 / 3
+    assert service._moda_para_matriz([1 / 3, 1 / 3, 5, 5, 9]) == pytest.approx((1 / 3 + 5) / 2)
 
 
 def test_selecao_vazia_ou_resposta_de_outro_julgamento_nao_consolida(analyses):

@@ -195,7 +195,7 @@ class AnaliseColaborativaCreateSchema(BaseModel):
     resposta_ids: list[UUID] | None = None
     rc_maximo: float = Field(0.10, gt=0, le=1)
     excluir_inconsistentes: bool = True
-    metodo_agregacao: Literal["geometrica", "aritmetica", "mediana"] = "geometrica"
+    metodo_agregacao: Literal["geometrica", "aritmetica", "mediana", "moda"] = "geometrica"
 
 
 class AnaliseColaborativaResponseSchema(BaseModel):

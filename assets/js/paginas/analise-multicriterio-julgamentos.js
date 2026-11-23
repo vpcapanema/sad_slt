@@ -342,7 +342,7 @@
     var distancia = Math.abs(Math.log(Number(valor) || 1) - Math.log(Number(mediaGeometrica) || 1));
     return Math.min(1, distancia / Math.log(3));
   }
-  function modaLabel(pair) { var modas = pair.modas || []; return modas.length ? modas.map(saatyLabel).join(" / ") : "\u2014"; }
+  function modaLabel(pair) { var modas = pair.modas || []; return modas.length ? modas.map(fmtNumber).join(", ") : "\u2014"; }
   // O codigo identifica o par na tabela e no grafico e nao muda com o filtro de
   // julgador: o mesmo par mantem o mesmo codigo em qualquer visao.
   function codigoPar(pair, todosPares) { return "Par " + (todosPares.indexOf(pair) + 1); }
@@ -351,15 +351,15 @@
   function celulaCodigo(codigo) { return '<td class="ami-stats-table__codigo"><strong>' + escapeHtml(codigo) + '</strong></td>'; }
   function pairsTable(todosPares, destaque) {
     var cores = judgeColors(todosPares), pairs = paresDoJulgador(todosPares, destaque);
-    var descritivas = ["M\u00e9dia", "Mediana", "Moda"];
+    var descritivas = ["M\u00e9dia", "Mediana", "Moda", "Valor aplicado"];
     var cabecalho, corpo;
     if (destaque) {
       // Um unico valor por par: nao ha o que descrever, entao a tabela fica so
       // com o indice atribuido e o grafico vai para o lado.
-      cabecalho = ["Par de crit\u00e9rios", "\u00cdndice atribu\u00eddo"];
+      cabecalho = ["Par de crit\u00e9rios", "\u00cdndice atribu\u00eddo", "Valor aplicado"];
       corpo = pairs.map(function (pair) {
         var ponto = (pair.pontos || []).filter(function (item) { return item.resposta_id === destaque; })[0];
-        return '<tr data-pair="' + pair.i + '-' + pair.j + '">' + celulaCodigo(codigoPar(pair, todosPares)) + celulaCriterio(pair.criterio_a) + celulaCriterio(pair.criterio_b) + '<td><strong>' + (ponto ? saatyLabel(ponto.valor) : "\u2014") + '</strong></td></tr>';
+        return '<tr data-pair="' + pair.i + '-' + pair.j + '">' + celulaCodigo(codigoPar(pair, todosPares)) + celulaCriterio(pair.criterio_a) + celulaCriterio(pair.criterio_b) + '<td><strong>' + (ponto ? saatyLabel(ponto.valor) : "\u2014") + '</strong></td><td data-ami-applied></td></tr>';
       });
     } else {
       cabecalho = ["Par de crit\u00e9rios"].concat(cores.lista.map(function (julgador) {
@@ -372,11 +372,25 @@
           var intensidade = desvioIntensidade(ponto.valor, pair.media_geometrica);
           return '<td class="ami-stats-table__valor' + (intensidade > 0.55 ? " is-forte" : "") + '" style="--ami-deviation-color:rgba(17,101,147,' + (intensidade * 0.8).toFixed(3) + ')" title="' + escapeHtml(julgador.nome + ": " + saatyLabel(ponto.valor) + " \u00b7 m\u00e9dia geom\u00e9trica do par " + fmtNumber(pair.media_geometrica)) + '">' + saatyLabel(ponto.valor) + '</td>';
         }).join("");
-        return '<tr data-pair="' + pair.i + '-' + pair.j + '">' + celulaCodigo(codigoPar(pair, todosPares)) + celulaCriterio(pair.criterio_a) + celulaCriterio(pair.criterio_b) + celulas + '<td>' + fmtNumber(pair.media) + '</td><td>' + saatyLabel(pair.mediana) + '</td><td>' + modaLabel(pair) + '</td></tr>';
+        return '<tr data-pair="' + pair.i + '-' + pair.j + '">' + celulaCodigo(codigoPar(pair, todosPares)) + celulaCriterio(pair.criterio_a) + celulaCriterio(pair.criterio_b) + celulas + '<td>' + fmtNumber(pair.media) + '</td><td>' + fmtNumber(pair.mediana) + '</td><td>' + modaLabel(pair) + '</td><td data-ami-applied></td></tr>';
       });
     }
     var rodape = destaque ? "" : '<p class="ami-table-note"><span class="ami-table-note__escala">Marca na base da c\u00e9lula: afastamento da m\u00e9dia geom\u00e9trica do par <i></i><i></i><i></i><i></i></span></p>';
     return '<table class="admin-table ami-stats-table ami-table--indices" data-grouped-headers="true"><thead><tr><th rowspan="2" scope="col">C\u00f3digo</th><th colspan="2" scope="colgroup">Par de critérios</th>' + cabecalho.slice(1).map(function (titulo) { return '<th rowspan="2" scope="col">' + titulo + '</th>'; }).join("") + '</tr><tr class="ami-pair-leaf-headers"><th scope="col">Critério 1</th><th scope="col">Critério 2</th></tr></thead><tbody>' + (corpo.join("") || '<tr><td colspan="' + (cabecalho.length + 2) + '">Sem respostas enviadas.</td></tr>') + '</tbody></table>' + rodape;
+  }
+  function renderAppliedPairValues(data, foco) {
+    var tabela = $("ami-analysis-pairs").querySelector("table"), estado = tabela.analysisControls;
+    var criterios = foco && JSON.stringify(foco.criterios);
+    var recortes = (data.recortes || []).map(function (recorte) { return JSON.stringify(recorte.criterios); });
+    estado.rows.forEach(function (linha) {
+      var indices = linha.dataset.pair.split("-"), origem = indices[0].split(":");
+      var mesmoRecorte = origem.length === 1 || recortes[Number(origem[0])] === criterios;
+      var i = Number(origem[origem.length - 1]), j = Number(indices[1]);
+      var valor = foco && mesmoRecorte ? foco.matriz[i]?.[j] : null;
+      linha.querySelector("[data-ami-applied]").textContent = fmtNumber(valor);
+    });
+    estado.options();
+    estado.draw();
   }
   // A lista de julgadores vem das respostas enviadas daquele julgamento, e nao
   // de uma lista fixa: quem responde entra na lista sozinho.
@@ -501,7 +515,7 @@
   function analysisMatrixTable(item) {
     var criteria = criteriosDoRegistro(analysisWorkspace, item), matrix = item.matriz_consolidada || [];
     if (!matrix.length) return '<p class="ami-empty">Matriz consolidada indisponível.</p>';
-    return tableLabelHtml("Matriz consolidada da análise " + (item.nome || item.codigo || "sem nome")) + '<div class="matriz-table-wrap"><table class="admin-table matriz-view-table ami-matrix"><thead><tr><th>Critério</th>' + criteria.map(function (criterion, index) { return '<th>' + escapeHtml(criterionName(criterion, index)) + '</th>'; }).join("") + '</tr></thead><tbody>' + matrix.map(function (row, rowIndex) { return '<tr><th scope="row">' + escapeHtml(criterionName(criteria[rowIndex], rowIndex)) + '</th>' + row.map(function (value) { return '<td>' + fmtNumber(value) + '</td>'; }).join("") + '</tr>'; }).join("") + '</tbody></table></div>';
+    return '<p class="sicard-table-label">Matriz consolidada</p><div class="matriz-table-wrap"><table class="admin-table matriz-view-table ami-stats-table ami-matrix"><thead><tr><th>Critério</th>' + criteria.map(function (criterion, index) { return '<th>' + escapeHtml(criterionName(criterion, index)) + '</th>'; }).join("") + '</tr></thead><tbody>' + matrix.map(function (row, rowIndex) { return '<tr><th scope="row">' + escapeHtml(criterionName(criteria[rowIndex], rowIndex)) + '</th>' + row.map(function (value) { return '<td>' + fmtNumber(value) + '</td>'; }).join("") + '</tr>'; }).join("") + '</tbody></table></div>';
   }
   // Motor AHP do cliente, espelhando api/services/ahp_engine.py: vetor de
   // prioridades pela media geometrica das linhas e metricas de consistencia.
@@ -523,10 +537,22 @@
     var ic = (lambdaMax - n) / (n - 1), ri = n <= 2 ? 0 : (RI_POR_N[n] || 1.49);
     return { pesos: pesos, lambdaMax: lambdaMax, ic: ic, ri: ri, rc: (n > 2 && ri > 0) ? ic / ri : 0 };
   }
+  function mediana(valores) {
+    var ordem = valores.slice().sort(function (a, b) { return a - b; }), meio = Math.floor(ordem.length / 2);
+    return ordem.length % 2 ? ordem[meio] : (ordem[meio - 1] + ordem[meio]) / 2;
+  }
+  function modaParaMatriz(valores) {
+    var frequencias = new Map();
+    valores.forEach(function (valor) { frequencias.set(valor, (frequencias.get(valor) || 0) + 1); });
+    var ocorrencias = Array.from(frequencias.entries());
+    var maior = Math.max.apply(null, ocorrencias.map(function (entrada) { return entrada[1]; }));
+    return mediana(ocorrencias.filter(function (entrada) { return entrada[1] === maior; }).map(function (entrada) { return entrada[0]; }));
+  }
   var MEDIDAS = {
     geometrica: { rotulo: "m\u00e9dia geom\u00e9trica", calcula: function (valores) { return Math.exp(valores.reduce(function (soma, v) { return soma + Math.log(v); }, 0) / valores.length); } },
     aritmetica: { rotulo: "m\u00e9dia aritm\u00e9tica", calcula: function (valores) { return valores.reduce(function (soma, v) { return soma + v; }, 0) / valores.length; } },
-    mediana: { rotulo: "mediana", calcula: function (valores) { var ordem = valores.slice().sort(function (a, b) { return a - b; }), meio = Math.floor(ordem.length / 2); return ordem.length % 2 ? ordem[meio] : (ordem[meio - 1] + ordem[meio]) / 2; } }
+    mediana: { rotulo: "mediana", calcula: mediana },
+    moda: { rotulo: "moda", calcula: modaParaMatriz }
   };
   function respostasEnviadas(data) { return (data.respostas || []).filter(function (r) { return r.status === "enviada" && (r.matriz_comparacao || []).length; }); }
   function criteriosDoRegistro(data, registro) {
@@ -535,9 +561,8 @@
     return snapshot || (recorte && recorte.criterios) || data.ambiente.criterios || [];
   }
   function respostasMesmoRecorte(data, lista) {
-    var respostas = lista || respostasEnviadas(data).filter(function (r) { return analysisResponseIds.has(String(r.id)); });
-    return respostas.length < 2 || respostas.every(function (r) {
-      return JSON.stringify(criteriosDoRegistro(data, r)) === JSON.stringify(criteriosDoRegistro(data, respostas[0]));
+    return lista.length < 2 || lista.every(function (r) {
+      return JSON.stringify(criteriosDoRegistro(data, r)) === JSON.stringify(criteriosDoRegistro(data, lista[0]));
     });
   }
   // Na consulta (modo de visualizacao) nada e gravado: a agregacao usa todas as
@@ -553,9 +578,7 @@
   // Agrega o triangulo superior pela medida escolhida e espelha o reciproco: com
   // media aritmetica ou mediana, agregar as duas metades separadamente quebraria
   // a reciprocidade (a_ij x a_ji deixaria de ser 1).
-  function matrizAgregada(data, medida) {
-    var enviadas = respostasDaAgregacao(data);
-    if (!enviadas.length || !respostasMesmoRecorte(data, analysisMode === "edit" ? undefined : enviadas)) return null;
+  function matrizAgregada(enviadas, medida) {
     var n = enviadas[0].matriz_comparacao.length, calcula = (MEDIDAS[medida] || MEDIDAS.geometrica).calcula;
     var matriz = [];
     for (var i = 0; i < n; i++) { matriz.push([]); for (var j = 0; j < n; j++) matriz[i].push(1); }
@@ -577,18 +600,20 @@
   }
   function matrizEmFoco(data) {
     var consulta = analysisMode !== "edit";
-    if (selectedJudgeId && (consulta || !$("ami-analysis-exclude-inconsistent").checked)) {
+    if (selectedJudgeId && consulta) {
       var resposta = (data.respostas || []).filter(function (r) { return String(r.id) === selectedJudgeId; })[0];
       var matriz = resposta && resposta.matriz_comparacao;
-      return matriz && matriz.length ? { matriz: matriz, criterios: criteriosDoRegistro(data, resposta), origem: "julgador", rotulo: resposta.nome_completo, registro: consulta ? resposta : undefined } : null;
+      return matriz && matriz.length ? { matriz: matriz, criterios: criteriosDoRegistro(data, resposta), origem: "julgador", rotulo: resposta.nome_completo } : null;
     }
     if (consulta && selectedMeasure === "registrada") {
       var stored = analiseRegistrada(data), matrix = stored && stored.matriz_consolidada;
       return matrix && matrix.length ? { matriz: matrix, criterios: criteriosDoRegistro(data, stored), origem: "registrada", rotulo: stored.nome || "Análise registrada", registro: stored } : null;
     }
-    var agregada = matrizAgregada(data, selectedMeasure);
-    var primeira = respostasDaAgregacao(data)[0];
-    return agregada ? { matriz: agregada, criterios: criteriosDoRegistro(data, primeira), origem: "todos", rotulo: (MEDIDAS[selectedMeasure] || MEDIDAS.geometrica).rotulo, respostas: respostasDaAgregacao(data).length } : null;
+    var respostas = respostasDaAgregacao(data);
+    if (!respostas.length || !respostasMesmoRecorte(data, respostas)) return null;
+    var primeira = respostas[0], orig = selectedJudgeId ? "julgador" : "todos";
+    var rotulo = selectedJudgeId ? primeira.nome_completo : MEDIDAS[selectedMeasure].rotulo;
+    return { matriz: matrizAgregada(respostas, selectedMeasure), criterios: criteriosDoRegistro(data, primeira), origem: orig, rotulo: rotulo, respostas: respostas.length };
   }
   // Por que nao ha matriz: sem respostas, ou respostas de recortes distintos
   // (criterios diferentes nao formam uma matriz unica).
@@ -598,9 +623,10 @@
     return analysisMode === "edit" ? "Sem respostas inclu\u00eddas na an\u00e1lise." : "Sem respostas enviadas: ainda n\u00e3o h\u00e1 matriz.";
   }
   // A analise registrada so existe na consulta e depende do recorte exibido;
-  // fora disso a medida volta a ser uma das tres medidas de tendencia central.
+  // fora disso a medida volta a ser uma das medidas de tendencia central.
   function normalizarMedida(data) {
-    if (selectedMeasure === "registrada" && (analysisMode === "edit" || !analiseRegistrada(data))) selectedMeasure = "geometrica";
+    if (selectedMeasure === "registrada" && analysisMode !== "edit" && analiseRegistrada(data)) return;
+    if (!MEDIDAS[selectedMeasure]) selectedMeasure = "geometrica";
   }
   function analiseHomologada(data) {
     return (data.analises || []).filter(function (item) { return item.id === data.analise_homologada_id || item.status === "homologada"; })[0] || null;
@@ -651,16 +677,18 @@
     }).join("") || '<tr><td colspan="7" class="ami-empty">Nenhum julgador convidado.</td></tr>';
     SLTAnalysisTable($("ami-analysis-responses").closest("table"));
   }
-  function renderConsolidatedMatrix(data) {
-    var foco = matrizEmFoco(data), criterios = (foco ? foco.criterios : data.ambiente.criterios || []).map(criterionName);
+  function renderConsolidatedMatrix(data, foco) {
+    var criterios = (foco ? foco.criterios : data.ambiente.criterios || []).map(criterionName);
     var caixa = $("ami-analysis-measure-box");
     // A medida fica sempre disponivel: com um julgador selecionado ela incide
     // so sobre a resposta dele, e o resultado e a matriz desse julgador.
     caixa.classList.remove("is-hidden");
     var seletor = $("ami-analysis-measure"), registrada = analysisMode === "edit" ? null : analiseRegistrada(data);
-    var medidas = '<option value="geometrica">M\u00e9dia geom\u00e9trica dos \u00edndices</option><option value="aritmetica">M\u00e9dia aritm\u00e9tica dos \u00edndices</option><option value="mediana">Mediana dos \u00edndices</option>';
+    var medidas = '<option value="geometrica">M\u00e9dia geom\u00e9trica dos \u00edndices</option><option value="aritmetica">M\u00e9dia aritm\u00e9tica dos \u00edndices</option><option value="mediana">Mediana dos \u00edndices</option><option value="moda">Moda dos \u00edndices</option>';
     seletor.innerHTML = (registrada ? '<option value="registrada">An\u00e1lise registrada \u2014 ' + escapeHtml(registrada.nome || registrada.codigo || "sem nome") + '</option>' : '') + medidas;
     seletor.value = selectedMeasure;
+    $("ami-analysis-moda-hint").hidden = selectedMeasure !== "moda";
+    $("ami-analysis-consolidation-measure").textContent = seletor.selectedOptions[0].textContent;
     if (!seletor.dataset.bound) {
       seletor.dataset.bound = "1";
       seletor.addEventListener("change", function () { selectedMeasure = seletor.value; renderFioDerivado(analysisWorkspace); });
@@ -697,16 +725,18 @@
     if (!registro || chaves.some(function (chave) { return registro[chave] == null; })) return null;
     return { lambdaMax: registro.lambda_max, ic: registro.indice_consistencia, ri: registro.indice_aleatorio, rc: registro.razao_consistencia };
   }
-  function renderConsistencyMetrics(data) {
-    var foco = matrizEmFoco(data);
+  function renderConsistencyMetrics(data, foco, calculadas) {
     if (!foco) { $("ami-analysis-metrics-hint").textContent = ""; $("ami-analysis-metrics").innerHTML = '<p class="ami-empty">Sem m\u00e9tricas. ' + escapeHtml(motivoSemMatriz(data)) + '</p>'; return; }
     var armazenadas = metricasArmazenadas(foco.registro);
     if (foco.origem === "registrada" && !armazenadas) {
       $("ami-analysis-metrics-hint").textContent="Métricas não registradas para esta análise.";
       $("ami-analysis-metrics").innerHTML='<p class="ami-empty">Nenhuma métrica registrada.</p>';return;
     }
-    var resultado = armazenadas || analisarMatriz(foco.matriz), limite = Number($("ami-analysis-rc").value) || 0.1;
-    var aprovado = resultado.rc < limite, n = foco.matriz.length;
+    var resultado = armazenadas || calculadas;
+    var limite = foco.registro?.rc_maximo ?? (Number($("ami-analysis-rc").value) || 0.1);
+    var superficie = Boolean(data.ambiente.superficie_id);
+    if (superficie) limite = Math.min(limite, 0.1);
+    var aprovado = superficie ? resultado.rc <= limite : resultado.rc < limite, n = foco.matriz.length;
     $("ami-analysis-metrics-hint").innerHTML = (foco.origem === "julgador"
       ? 'Coer\u00eancia interna do julgamento de <strong>' + escapeHtml(foco.rotulo) + '</strong>'
       : foco.origem === "registrada" ? 'Coer\u00eancia da an\u00e1lise registrada <strong>' + escapeHtml(foco.rotulo) + '</strong>'
@@ -758,9 +788,10 @@
     }).join("") + '</dl>' + (conclusao ? '<p class="ami-metric-help__fecho is-' + (aprovado ? "ok" : "nok") + '">' + conclusao.conclusao + '</p>' : '') + '</div>';
     $("ami-analysis-metrics").innerHTML = grade + explicacoes;
   }
-  function renderWeights(data) {
-    var foco = matrizEmFoco(data), armazenados = foco && foco.registro && (foco.registro.pesos_consolidados || foco.registro.pesos);
-    var pesos = foco ? (armazenados && armazenados.length ? armazenados : analisarMatriz(foco.matriz).pesos) : [], criterios = (foco ? foco.criterios : data.ambiente.criterios || []).map(criterionName);
+  function renderWeights(data, foco, calculadas) {
+    var armazenados = foco?.registro?.pesos_consolidados;
+    var pesos = armazenados?.length ? armazenados : calculadas?.pesos || [];
+    var criterios = (foco ? foco.criterios : data.ambiente.criterios || []).map(criterionName);
     $("ami-analysis-weight-col").textContent = "Peso";
     $("ami-analysis-weights-hint").innerHTML = !foco ? escapeHtml(motivoSemMatriz(data)) : foco.origem === "julgador"
       ? 'Pesos derivados da matriz de <strong>' + escapeHtml(foco.rotulo) + '</strong>, sem agrega\u00e7\u00e3o \u2014 \u00e9 o julgamento de uma pessoa s\u00f3.'
@@ -797,9 +828,11 @@
   }
   // Tudo que deriva da matriz acompanha a selecao do julgador e da medida.
   function syncAnalysisCalculate() {
-    $("ami-analysis-calculate").disabled = analysisMode !== "edit" || analysisSaving || !analysisWorkspace || !analysisResponseIds.size || !respostasMesmoRecorte(analysisWorkspace);
+    var respostas = analysisMode === "edit" && analysisWorkspace ? respostasDaAgregacao(analysisWorkspace) : [];
+    var mesmoRecorte = respostasMesmoRecorte(analysisWorkspace, respostas);
+    $("ami-analysis-calculate").disabled = analysisMode !== "edit" || analysisSaving || !respostas.length || !mesmoRecorte;
     var message = "Para consolidar, selecione respostas de um mesmo recorte de dimensões.";
-    if (analysisWorkspace && !respostasMesmoRecorte(analysisWorkspace)) $("ami-analysis-feedback").textContent = message;
+    if (!mesmoRecorte) $("ami-analysis-feedback").textContent = message;
     else if ($("ami-analysis-feedback").textContent === message) $("ami-analysis-feedback").textContent = "";
   }
   function syncAnalysisMode() {
@@ -819,9 +852,11 @@
   function renderFioDerivado(data) {
     normalizarMedida(data);
     syncAnalysisCalculate();
-    renderConsolidatedMatrix(data);
-    renderConsistencyMetrics(data);
-    renderWeights(data);
+    var foco = matrizEmFoco(data), calculadas = foco && analisarMatriz(foco.matriz);
+    renderAppliedPairValues(data, foco);
+    renderConsolidatedMatrix(data, foco);
+    renderConsistencyMetrics(data, foco, calculadas);
+    renderWeights(data, foco, calculadas);
   }
   // --- Modal de acompanhamento do processo de consolidacao -----------------
   var ETAPAS_CONSOLIDACAO = [
@@ -855,9 +890,11 @@
   // Consolidacao completa: cada etapa alimenta o modal de processo e o desfecho
   // vai para o semaforo.
   function consolidarRespostas() {
-    if (!analysisWorkspace || analysisSaving || analysisMode !== "edit" || !respostasMesmoRecorte(analysisWorkspace)) return;
+    if (!analysisWorkspace || analysisSaving || analysisMode !== "edit") return;
+    var respostas = respostasDaAgregacao(analysisWorkspace);
+    if (!respostasMesmoRecorte(analysisWorkspace, respostas)) return;
     var ambienteId = analysisWorkspace.ambiente.id;
-    var selecionadas = Array.from(analysisResponseIds);
+    var selecionadas = respostas.map(function (resposta) { return String(resposta.id); });
     var enviadas = respostasEnviadas(analysisWorkspace).length;
     var limite = Number($("ami-analysis-rc").value);
     if (!$("ami-analysis-rc").reportValidity()) return;
@@ -970,7 +1007,7 @@
       $("ami-analysis-name").value = saved ? saved.nome : (analysisMode === "edit" ? "Análise com as respostas selecionadas" : "");
       $("ami-analysis-rc").value = saved ? (saved.rc_maximo ?? 0.1) : (analysisMode === "edit" ? "0.10" : "");
       $("ami-analysis-exclude-inconsistent").checked = saved ? Boolean(saved.excluir_inconsistentes) : analysisMode === "edit";
-      selectedMeasure = saved ? ({aij_media_geometrica:"geometrica",aij_media_aritmetica:"aritmetica",aij_mediana:"mediana"}[saved.metodo_agregacao] || saved.metodo_agregacao || "geometrica") : "geometrica";
+      selectedMeasure = saved ? ({aij_media_geometrica:"geometrica",aij_media_aritmetica:"aritmetica",aij_mediana:"mediana",aij_moda:"moda"}[saved.metodo_agregacao] || saved.metodo_agregacao || "geometrica") : "geometrica";
       if (analysisMode !== "edit" && analiseRegistrada(data)) selectedMeasure = "registrada";
       if (analysisMode === "view") analysisResponseIds = new Set(saved ? (saved.resposta_ids || []).map(String) : []);
     }
@@ -1004,17 +1041,20 @@
   function renderConsolidatedAnalyses(items, homologadaId) {
     $("ami-analysis-consolidations").innerHTML = items.map(function (item) {
       var criteria = criteriosDoRegistro(analysisWorkspace, item);
-      var analysisName = item.nome || item.codigo || "sem nome";
       var official = item.id === homologadaId || item.status === "homologada";
       var local = JSON.stringify(criteria) !== JSON.stringify(analysisSource.ambiente.criterios);
       var dimensions = Array.from(new Set(criteria.map(criterionDimension).filter(Boolean))).join(" · ");
       var action = local ? '<p class="form-help">Pesos locais deste recorte. Não substituem os pesos da matriz inteira.</p>'
         : official ? analiseHomologadaAviso()
         : '<button type="button" class="btn btn-success" data-homologate-analysis="' + escapeHtml(item.id) + '" ' + (!item.consistente ? "disabled" : "") + '>Homologar análise</button>';
+      var situacao = item.consistente ? "ok" : "nok";
+      var cards = [[item.respostas_incluidas, "Respostas"], [fmtNumber(item.razao_consistencia), "RC"], [item.consistente ? "Dentro do limite" : "Acima do limite", "Consistência"]].map(function (card) {
+        return '<div class="ami-metric-card is-' + situacao + '"><strong class="ami-metric-card__value">' + card[0] + '</strong><span>' + card[1] + '</span></div>';
+      }).join("");
       return '<p class="ami-consolidated-identification">' + escapeHtml(item.nome) + (item.codigo ? ' · ' + escapeHtml(item.codigo) : '') + (dimensions ? ' · ' + escapeHtml(dimensions) : '') +
-        '</p><div class="ami-kpis"><div><strong>' + item.respostas_incluidas + '</strong><span>respostas</span></div><div><strong>' + fmtNumber(item.razao_consistencia) + '</strong><span>RC</span></div><div><strong>' + (item.consistente ? "Sim" : "Não") + '</strong><span>consistente</span></div></div><div class="ahp-collab-grid2 ami-consolidated-tables" data-equal-table-height><div><h4>Pesos finais</h4>' + tableLabelHtml("Tabela dos pesos finais da análise " + analysisName) + '<div class="matriz-table-wrap"><table class="admin-table"><thead><tr><th>Critério</th><th>Peso final</th></tr></thead><tbody>' +
+        '</p><div class="ami-kpis">' + cards + '</div><div class="ahp-collab-grid2 ami-consolidated-tables" data-equal-table-height><div><p class="sicard-table-label">Tabela dos pesos finais</p><div class="matriz-table-wrap"><table class="admin-table ami-stats-table"><thead><tr><th>Critério</th><th>Peso final</th></tr></thead><tbody>' +
         item.pesos_consolidados.map(function (w,i) { return '<tr><td>' + escapeHtml(criterionName(criteria[i], i)) + '</td><td>' + fmtNumber(w) + '</td></tr>'; }).join("") +
-        '</tbody></table></div></div><div><h4>Matriz consolidada</h4>' + analysisMatrixTable(item) + '</div></div>' + action;
+        '</tbody></table></div></div><div>' + analysisMatrixTable(item) + '</div></div>' + action;
     }).join("") || '<p class="ami-empty">Nenhuma análise consolidada.</p>';
     $("ami-analysis-consolidations").querySelectorAll("table").forEach(SLTAnalysisTable);
     $("ami-analysis-consolidations").querySelectorAll("[data-homologate-analysis]").forEach(function (button) { button.addEventListener("click", async function () {

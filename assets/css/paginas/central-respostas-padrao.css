@@ -89,8 +89,8 @@
 .sicard-standard-page.ami-page #ami-analysis-workspace :is(.ami-kpis span, .ahp-metric-card__label, .ami-metric-card__label) {
   font: 600 .7rem/1.4 Roboto, Arial, sans-serif;
 }
-.sicard-standard-page.ami-page #ami-analysis-workspace .ami-consolidated-tables h4 {
-  margin: 0 0 8px; font: 700 .75rem/1.4 Montserrat, Verdana, sans-serif;
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-consolidated-tables .admin-table thead th {
+  height: 32px; box-sizing: border-box; white-space: nowrap;
 }
 .sicard-standard-page.ami-page #ami-analysis-consolidations > .ami-kpis + .ami-consolidated-tables {
   margin-top: 16px;

@@ -361,8 +361,8 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
     assert "Tabela da consolidação das respostas" in julgamentos_js
     assert "Tabela dos índices de importância de Saaty por par de critérios" in julgamentos_js
     assert "Matriz de comparação pareada do julgamento" in julgamentos_js
-    assert "Tabela dos pesos finais da análise " in julgamentos_js
-    assert "Matriz consolidada da análise " in julgamentos_js
+    assert 'class="sicard-table-label">Tabela dos pesos finais</p>' in julgamentos_js
+    assert 'class="sicard-table-label">Matriz consolidada</p>' in julgamentos_js
     assert "Matriz de comparação pareada da simulação" in julgamentos_js
     assert "Matriz de comparação pareada consolidada" in modal_tables_js
     assert "Tabela dos pesos consolidados do julgamento" in modal_tables_js

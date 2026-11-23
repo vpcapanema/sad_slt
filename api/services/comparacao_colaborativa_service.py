@@ -8,6 +8,7 @@ import unicodedata
 import base64
 import binascii
 import re
+from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -1074,7 +1075,7 @@ def media_geometrica_matrizes(matrizes: list[list[list[float]]]) -> list[list[fl
     for i in range(n):
         linha: list[float] = []
         for j in range(n):
-            produto = 1.0
+            soma_logs = 0.0
             for m in matrizes:
                 valor = float(m[i][j])
                 if valor <= 0:
@@ -1082,8 +1083,8 @@ def media_geometrica_matrizes(matrizes: list[list[list[float]]]) -> list[list[fl
                         "Há valores inválidos (≤ 0) nas matrizes enviadas.",
                         field="respostas",
                     )
-                produto *= valor
-            linha.append(produto ** (1.0 / k))
+                soma_logs += math.log(valor)
+            linha.append(math.exp(soma_logs / k))
         consolidada.append(linha)
     return consolidada
 
@@ -1123,6 +1124,12 @@ def _mediana(valores: list[float]) -> float:
     if len(ordenados) % 2:
         return ordenados[meio]
     return (ordenados[meio - 1] + ordenados[meio]) / 2
+
+
+def _moda_para_matriz(valores: list[float]) -> float:
+    frequencias = Counter(valores)
+    maior = max(frequencias.values())
+    return _mediana([valor for valor, frequencia in frequencias.items() if frequencia == maior])
 
 
 def _estatisticas_respostas(respostas: list[dict[str, Any]], criterios: list[str]) -> dict[str, Any]:
@@ -1196,12 +1203,15 @@ def criar_analise(ambiente_id: str, payload: AnaliseColaborativaCreateSchema, us
         for resposta in respostas:
             _validar_matriz_pareada(resposta["matriz_comparacao"], len(ambiente.get("criterios") or []))
     consolidada = media_geometrica_matrizes([r["matriz_comparacao"] for r in respostas])
-    if payload.metodo_agregacao != "geometrica":
-        for i in range(len(consolidada)):
-            for j in range(i + 1, len(consolidada)):
+    metodo = payload.metodo_agregacao
+    calcular = {"aritmetica": lambda valores: sum(valores) / len(valores), "mediana": _mediana, "moda": _moda_para_matriz}.get(metodo)
+    for i in range(len(consolidada)):
+        consolidada[i][i] = 1.0
+        for j in range(i + 1, len(consolidada)):
+            if calcular:
                 valores = [float(r["matriz_comparacao"][i][j]) for r in respostas]
-                valor = sum(valores) / len(valores) if payload.metodo_agregacao == "aritmetica" else _mediana(valores)
-                consolidada[i][j], consolidada[j][i] = valor, 1 / valor
+                consolidada[i][j] = calcular(valores)
+            consolidada[j][i] = 1 / consolidada[i][j]
     resultado = ahp_engine.analyze_matrix(consolidada)
     nomes = _criterio_nomes(criterios_recorte)
     estatisticas = _estatisticas_respostas(respostas, nomes)
@@ -1209,7 +1219,7 @@ def criar_analise(ambiente_id: str, payload: AnaliseColaborativaCreateSchema, us
     estatisticas["criterios_atribuidos"] = criterios_recorte
     row = analise_repo.insert_with_respostas({
         "ambiente_id": ambiente_id, "codigo": "ANL-" + secrets.token_hex(6).upper(), "nome": payload.nome.strip(),
-        "descricao": payload.descricao, "metodo_agregacao": {"geometrica": "aij_media_geometrica", "aritmetica": "aij_media_aritmetica", "mediana": "aij_mediana"}[payload.metodo_agregacao], "rc_maximo": payload.rc_maximo,
+        "descricao": payload.descricao, "metodo_agregacao": {"geometrica": "aij_media_geometrica", "aritmetica": "aij_media_aritmetica", "mediana": "aij_mediana", "moda": "aij_moda"}[metodo], "rc_maximo": payload.rc_maximo,
         "excluir_inconsistentes": payload.excluir_inconsistentes, "matriz_consolidada": consolidada,
         "pesos_consolidados": resultado["weights"], "lambda_max": resultado["lambdaMax"],
         "indice_consistencia": resultado["CI"], "indice_aleatorio": resultado["RI"],
