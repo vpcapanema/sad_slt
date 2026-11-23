@@ -63,6 +63,23 @@
     const toggle = document.getElementById('btn-toggle-senha');
     const initialCheck = new AbortController();
     let submitting = false, attempt = 0, navigated = false;
+    let usuarioVerificado, perfilInferido = '';
+    const perfilDoUsuario = nome => nome.includes('@') ? '' :
+      nome.match(/_(visualizador|operador|analista|gestor|admin)$/i)?.[1].toLowerCase() || '';
+
+    const sincronizarPerfil = () => {
+      const nome = usuario.value.trim();
+      if (nome === usuarioVerificado) return;
+      usuarioVerificado = nome;
+      const sufixo = perfilDoUsuario(nome);
+      if (sufixo || perfil.value === perfilInferido) perfil.value = sufixo;
+      perfilInferido = sufixo;
+    };
+    usuario.addEventListener('input', sincronizarPerfil);
+    usuario.addEventListener('change', sincronizarPerfil);
+    window.addEventListener('pageshow', sincronizarPerfil);
+    sincronizarPerfil();
+
     const show = (message, state = 'pending') => {
       status.hidden = false;
       status.dataset.state = state;
@@ -87,6 +104,7 @@
       const tentativa = ++attempt;
       const started = performance.now();
       erro.classList.add('hidden');
+      sincronizarPerfil();
       log('envio.iniciado', { tentativa, permanecer_conectado: remember.checked });
       if (!usuario.value.trim() || !senhaInput.value) {
         failure('Informe usuário e senha para entrar.');
@@ -95,7 +113,7 @@
         return;
       }
       const informado = usuario.value.trim();
-      const sufixo = informado.match(/_(visualizador|operador|analista|gestor|admin)$/i)?.[1].toLowerCase();
+      const sufixo = perfilDoUsuario(informado);
       if (perfil.value && sufixo && sufixo !== perfil.value) {
         failure('O tipo de perfil selecionado não corresponde ao sufixo do usuário SIGMA.');
         perfil.focus();

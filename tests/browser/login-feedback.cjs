@@ -40,7 +40,19 @@ assert.doesNotMatch(fs.readFileSync('admin/login.js','utf8'),/ProcessFeedback|No
   assert.match(await page.locator('#login-erro').innerText(),/usuário e senha/);
   assert.deepEqual(await page.locator('#form-login .auth-field [name]').evaluateAll(elements=>elements.map(e=>e.name)),
     ['login','tipo_usuario','senha']);
+  if(mode==='success'){
+   for(const perfil of ['visualizador','operador','analista','gestor','admin']){
+    await page.fill('#login','exemplo_sigma_'+perfil.toUpperCase());
+    assert.equal(await page.inputValue('#tipo-usuario'),perfil);
+   }
+   await page.fill('#login','exemplo_sigma');
+   assert.equal(await page.inputValue('#tipo-usuario'),'');
+   await page.selectOption('#tipo-usuario','operador');
+   await page.fill('#login','outro_usuario_sem_sufixo');
+   assert.equal(await page.inputValue('#tipo-usuario'),'operador');
+  }
   await page.fill('#login','PRIVATE_SENTINEL_analista');await page.fill('#senha','PASSWORD_SENTINEL');await page.check('#permanecer-conectado');
+  assert.equal(await page.inputValue('#tipo-usuario'),'analista');
   if(mode==='success'){
    await page.selectOption('#tipo-usuario','gestor');
    await page.click('#btn-entrar');
