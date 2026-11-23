@@ -158,6 +158,9 @@ def test_saida_real_gpkg_nome_exato_null_geometrias_e_metadados(monkeypatch, cod
     entrada_id = 'storage:saidas-geoespaciais/demandas.gpkg::demandas' if codigo else 'entrada'
     monkeypatch.setattr(service, '_carregar', lambda ref: camada(entrada if ref['id'] == entrada_id else base))
     if codigo:
+        from api.repositories import hierarquizacao_repository
+        monkeypatch.setattr(hierarquizacao_repository, 'get_by_codigo',
+                            lambda _: {'nome': 'Workshop PLI-SP 2050'})
         dados = vetor(entrada, 'demandas.gpkg', 'GPKG', layer='demandas',
                       layer_metadata={'SICARD_NORMALIZACAO': json.dumps({'origem': {'hierarquizacao': codigo}})})
         monkeypatch.setattr(service.storage_remoto, 'baixar', lambda caminho: dados['demandas.gpkg'])
@@ -174,7 +177,9 @@ def test_saida_real_gpkg_nome_exato_null_geometrias_e_metadados(monkeypatch, cod
                                  'restricao': [{'id': 'app', 'nome': 'APP'}], 'risco': []}, controle)
     nome, conteudos, pasta = gravados[0]
     from hashlib import sha256
-    assert nome == resultado['nome'] == 'Projetos_elegibilidade_territorial.gpkg'
+    esperado = ('Workshop_PLI-SP_2050_elegibilidade_territorial_projetos.gpkg' if codigo
+                else 'Projetos_elegibilidade_territorial.gpkg')
+    assert nome == resultado['nome'] == esperado
     assert resultado['arquivo'] == f'{pasta}/{nome}'
     raiz = (f'saidas-geoespaciais/hierarquizacoes/{codigo}/fase-1/' if codigo else
             'saidas-geoespaciais/analises-avulsas/elegibilidade-territorial/')

@@ -36,11 +36,16 @@ ABREVIACOES = {
 }
 
 
-def nome_saida(nome: str, *, analise: str = 'elegibilidade') -> str:
+def nome_saida(nome: str, *, analise: str = 'elegibilidade', registro: str | None = None) -> str:
+    from api.nome_arquivo import nome_arquivo
+
     nome = nome.strip()
     if PurePosixPath(nome).suffix.lower() in {'.gpkg', '.shp', '.fgb', '.geojson', '.json', '.kml', '.zip'}:
         nome = PurePosixPath(nome).stem
-    return nome_valido(f'{nome}_{ANALISES[analise]["camada"]}.gpkg')
+    produto = ANALISES[analise]['camada']
+    if registro:
+        produto += '_' + nome
+    return nome_arquivo(registro or nome, produto, 'gpkg')
 
 
 def campo_saida(nome: str, papel: str, existentes: set[str]) -> str:
@@ -319,7 +324,6 @@ def executar(payload: dict, controle: ControleProcessamento, *, analise: str = '
         ref['id'] for papel in config['papeis'] for ref in payload[papel]
     ]) if analise == 'elegibilidade' else {})
     entrada_ref = payload['entrada']
-    arquivo = nome_saida(entrada_ref['nome'], analise=analise)
     entrada = _carregar(entrada_ref)
     codigo = payload.get('hierarquizacao')
     if codigo:
@@ -332,6 +336,8 @@ def executar(payload: dict, controle: ControleProcessamento, *, analise: str = '
         origem = normalizacao.get('origem') if isinstance(normalizacao, dict) else None
         if not isinstance(origem, dict) or origem.get('hierarquizacao') != codigo:
             raise ValueError('A entrada não foi preparada a partir da hierarquização informada.')
+    from api.services.hierarquizacao_service import nome_registro
+    arquivo = nome_saida(entrada_ref['nome'], analise=analise, registro=nome_registro(codigo) if codigo else None)
     if not isinstance(entrada, ogr.Camada):
         raise ValueError('A entrada de demandas deve ser uma camada vetorial poligonal.')
     def bases():

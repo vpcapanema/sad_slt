@@ -12,7 +12,7 @@ const assert = require('node:assert/strict');
     if (process.env.SICARD_BROWSER_SESSION) {
       await page.context().addCookies([{name:'slt_session', value:process.env.SICARD_BROWSER_SESSION, url:base}]);
     }
-    page.on('pageerror', error => errors.push(error.message));
+    page.on('pageerror', error => errors.push(error.stack || error.message));
     const fontes = [{id: 'entrada', nome: 'Demandas', papel: 'entrada', tipo: 'camada'},
       {id: 'base', nome: 'Área protegida', papel: 'restricao', tipo: 'camada'}];
     const geometria = {type: 'FeatureCollection', features: [{
@@ -47,7 +47,7 @@ const assert = require('node:assert/strict');
         assert.deepEqual(route.request().postDataJSON().execucoes, ['execucao']);
         await new Promise(resolve => { releasePackage = resolve; });
         if (failPackage) return route.fulfill({status:503, json:{detail:'Storage temporariamente indisponível'}});
-        return route.fulfill({contentType:'application/zip',
+        return route.fulfill({contentType:'application/zip', headers:{'Content-Disposition':'attachment; filename="Workshop_PLI-SP_2050_relatorio_e_camadas.zip"'},
           body:Buffer.from('504b0506000000000000000000000000000000000000','hex')});
       }
       if (path.endsWith('/resultados/registrar')) {
@@ -111,7 +111,7 @@ const assert = require('node:assert/strict');
     failPackage = false;
     const download = page.waitForEvent('download');
     await abrirDownload();
-    assert.equal((await download).suggestedFilename(), 'Relatório e Camadas.zip');
+    assert.equal((await download).suggestedFilename(), 'Workshop_PLI-SP_2050_relatorio_e_camadas.zip');
     await page.locator('#pfsSuccessBox.pfs-active').waitFor();
     assert.match(await page.locator('#pfsSuccessBox').innerText(), /Download iniciado/);
     assert.equal(packages, 2);

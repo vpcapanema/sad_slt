@@ -9,6 +9,7 @@ from functools import lru_cache
 from api.storage_policy import TemporaryDirectory
 from zipfile import BadZipFile, ZipFile, ZipInfo, ZIP_DEFLATED
 from datetime import datetime
+from api.nome_arquivo import nome_arquivo
 from api.repositories import cadastro_geometria_repository as demandas
 from api.repositories import saidas_geoespaciais_repository as saidas
 from api.services import storage_geoespacial as storage, storage_remoto
@@ -316,7 +317,9 @@ def pacote(source,ident,user):
                 prefix,tipo,codigo=ident.split(':',2)
                 if prefix!="cadastro" or tipo not in TYPES: raise ValueError("Demanda inválida")
                 data=demandas.exportar_original(tipo,codigo)
-                name=re.sub(r'[^\w.-]+','_',codigo)+'.geojson'
+                registro = data['features'][0].get('properties', {}).get('nome') if data['features'] else None
+                registro = registro or codigo
+                name = nome_arquivo(registro, 'geometria cadastrada', 'geojson')
                 archive.writestr(name,json.dumps(data,ensure_ascii=False,allow_nan=False))
             else:
                 checksum=None
@@ -326,6 +329,8 @@ def pacote(source,ident,user):
                     row,ref=_output(ident,user);relative=row['arquivo'];file=storage.resolver(relative);checksum=ref.get('sha256')
                 else: raise ValueError("Repositório desconhecido")
                 name=PurePosixPath(relative).name
+                registro = (row.get('alias') or row.get('nome') or Path(name).stem
+                            if source == 'saidas' else Path(name).stem)
                 if name.lower().endswith('.shp'):
                     parent=PurePosixPath(relative).parent
                     listed=storage._listar(str(parent))
@@ -341,6 +346,7 @@ def pacote(source,ident,user):
                 else:
                     digest=_copy_zip(archive,file,relative,name)
                     if checksum and digest!=checksum: raise ValueError("Hash do arquivo diverge do catálogo")
-        return target,Path(name).stem+'.zip',temporary
+        produto = 'geometria cadastrada' if source == 'demandas' else 'pacote da camada'
+        return target, nome_arquivo(registro, produto, 'zip'), temporary
     except BaseException:
         temporary.cleanup();raise

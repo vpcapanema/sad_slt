@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse, Response
 
 from api.deps.auth import require_authenticated, require_gestor, require_operator
+from api.nome_arquivo import anexo
 from api.exceptions import (
     ConfigMulticriterioNotFoundError,
     DatabaseUnavailableError,
@@ -40,9 +41,9 @@ router = APIRouter(prefix="/ahp/hierarquizacoes", tags=["ahp-hierarquizacoes"])
 @router.get("/{codigo}/fases/3/relatorio.pdf")
 def baixar_relatorio_fase3(codigo: str, _user: SessionUser = Depends(require_authenticated)):
     try:
-        dados = service.relatorio_pdf_fase3(codigo)
+        nome, dados = service.relatorio_pdf_fase3(codigo, com_nome=True)
         return Response(dados, media_type="application/pdf", headers={
-            "Content-Disposition": 'attachment; filename="Relatorio_Fase_3.pdf"',
+            "Content-Disposition": anexo(nome),
             "Cache-Control": "no-store",
         })
     except HierarquizacaoNotFoundError as exc:
@@ -337,12 +338,12 @@ def baixar_matriz(
     _user: SessionUser = Depends(require_authenticated),
 ) -> JSONResponse:
     try:
-        matriz = service.matriz_da_hierarquizacao(codigo)
+        nome, matriz = service.matriz_da_hierarquizacao(codigo, com_nome=True)
     except HierarquizacaoNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return JSONResponse(
         content=matriz,
-        headers={"Content-Disposition": f'attachment; filename="matriz-{codigo}.json"'},
+        headers={"Content-Disposition": anexo(nome)},
     )
 
 

@@ -18,26 +18,26 @@ import zipfile
 from hashlib import sha256
 from pathlib import Path
 
+from api.nome_arquivo import nome_arquivo
 from api.repositories.camada_geoespacial_repository import _json_safe
 from api.services import extracao_atributos_aliases as aliases
 from api.services import extracao_atributos_exportacao as exportacao
 from api.services import extracao_atributos_relatorios as relatorios
-from api.services.ciclo_vida_arquivos import apelido
 from api.services.feedback_operacao import operacao
 
-# Chave -> (sufixo do arquivo, rótulo). A ordem é a ordem dentro do .zip.
+# Chave -> (produto, extensão, rótulo), na ordem do ZIP.
 ARQUIVOS = {
-    'gpkg': ('.gpkg', 'GeoPackage com a geometria resultante e a entrada'),
-    'pdf_processamento': ('_relatorio_processamento.pdf', 'Relatório de processamento'),
-    'pdf_analitico': ('_relatorio_analitico.pdf', 'Relatório analítico'),
-    'xlsx': ('_tabela_atributos.xlsx', 'Tabela de atributos da geometria de saída, com as colunas agrupadas por categoria e camada base'),
-    'csv': ('_tabela_atributos.csv', 'Tabela de atributos da geometria de saída'),
+    'gpkg': ('camada resultante', 'gpkg', 'GeoPackage com a geometria resultante e a entrada'),
+    'pdf_processamento': ('relatorio processamento', 'pdf', 'Relatório de processamento'),
+    'pdf_analitico': ('relatorio analitico', 'pdf', 'Relatório analítico'),
+    'xlsx': ('tabela atributos', 'xlsx', 'Tabela de atributos da geometria de saída, com as colunas agrupadas por categoria e camada base'),
+    'csv': ('tabela atributos', 'csv', 'Tabela de atributos da geometria de saída'),
 }
 
 
 def nomes(nome_saida: str) -> dict[str, str]:
-    base = apelido(nome_saida, 60) or 'extracao'
-    return {chave: f'{base}{sufixo}' for chave, (sufixo, _) in ARQUIVOS.items()}
+    return {chave: nome_arquivo(nome_saida, produto, ext, referencia='Extracao de Atributos')
+            for chave, (produto, ext, _) in ARQUIVOS.items()}
 
 
 def _para_gpkg(frame):
@@ -209,10 +209,10 @@ def montar_pacote(result: dict, saida, entrada, proc: dict, bases=(), mapa_base:
         conteudo = []
         for chave, nome in arquivos.items():
             if chave == 'pdf_processamento':
-                conteudo.append((nome, ARQUIVOS[chave][1], None, 'este arquivo'))
+                conteudo.append((nome, ARQUIVOS[chave][2], None, 'este arquivo'))
             else:
                 dados = (pasta / nome).read_bytes()
-                conteudo.append((nome, ARQUIVOS[chave][1], len(dados), sha256(dados).hexdigest()))
+                conteudo.append((nome, ARQUIVOS[chave][2], len(dados), sha256(dados).hexdigest()))
         with operacao(progress, 'Gerando relatório de processamento PDF'):
             relatorios.pdf_processamento(result, saida, {**proc, 'arquivos': arquivos},
                                          pasta / arquivos['pdf_processamento'], conteudo)
@@ -225,9 +225,9 @@ def montar_pacote(result: dict, saida, entrada, proc: dict, bases=(), mapa_base:
                     if not dados:
                         raise ValueError(f'O arquivo {nome} do pacote saiu vazio.')
                     pacote.writestr(nome, dados)
-                    manifesto.append({'chave': chave, 'nome': nome, 'descricao': ARQUIVOS[chave][1] if incluir_entrada or chave != 'gpkg' else 'GeoPackage com a geometria resultante (entrada local temporária não incluída)',
+                    manifesto.append({'chave': chave, 'nome': nome, 'descricao': ARQUIVOS[chave][2] if incluir_entrada or chave != 'gpkg' else 'GeoPackage com a geometria resultante (entrada local temporária não incluída)',
                                       'tamanho_bytes': len(dados), 'sha256': sha256(dados).hexdigest()})
-    return memoria.getvalue(), f"{Path(arquivos['gpkg']).stem}.zip", manifesto
+    return memoria.getvalue(), nome_arquivo(proc['nome_saida'], 'pacote da extracao', 'zip'), manifesto
 
 
 def ler_do_pacote(pacote: bytes, nome: str) -> bytes:

@@ -33,7 +33,8 @@ export async function exportarPacoteAnalise(rota, dados, informar) {
     const endereco = URL.createObjectURL(arquivo);
     const link = document.createElement('a');
     link.href = endereco;
-    link.download = 'Relatório e Camadas.zip';
+    link.download = SicardNomeArquivo.daResposta(resposta,
+      SicardNomeArquivo.gerar('Analise Territorial', 'relatorio e camadas', 'zip'));
     document.body.append(link);
     link.click();
     link.remove();

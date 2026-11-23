@@ -847,11 +847,11 @@
   }
 
   async function downloadParecer(codigo) {
-    const blob = await SLTAdminApi.fetchAnaliseParecerPdf(codigo);
+    const {blob, nome} = await SLTAdminApi.fetchAnaliseParecerPdf(codigo, true);
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `parecer-analise-${codigo}.pdf`;
+    link.download = nome || SicardNomeArquivo.gerar(record.nome, 'parecer de analise', 'pdf', codigo);
     document.body.appendChild(link);
     link.click();
     link.remove();

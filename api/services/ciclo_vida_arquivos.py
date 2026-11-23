@@ -169,11 +169,13 @@ def _registrar_exportacao(path: Path, recurso: str, tipo: str, *, pasta_saida: s
 
 
 def exportar_relatorio(resultado: dict, pasta: str, nome: str, origem: str) -> dict:
+    from api.nome_arquivo import nome_arquivo
     from api.services.pastas_storage import nome_valido
     from api.services.saidas_storage import pasta_exportacao
     pasta_exportacao(pasta)
     nome_valido(nome)
-    filename = nome if nome.lower().endswith('.json') else nome + '.json'
+    titulo = nome[:-5] if nome.lower().endswith('.json') else nome
+    filename = nome_arquivo(resultado.get('nome') or titulo, 'relatorio de geoprocessamento', 'json')
     nome_valido(filename)
     from api.storage_policy import sem_montagem
     if sem_montagem():
@@ -363,17 +365,6 @@ def pasta_de_saida(nome: str | None, referencia: str) -> Path:
     return alvo
 
 
-def _nome_de_arquivo(pasta: Path, nome: str | None, extensao: str) -> Path:
-    """Arquivo com o nome da camada dentro da pasta; contador se houver homonimo."""
-    base = apelido(nome) or 'saida'
-    alvo = pasta / f'{base}{extensao}'
-    conta = 1
-    while alvo.exists():
-        conta += 1
-        alvo = pasta / f'{base}_{conta}{extensao}'
-    return alvo
-
-
 def gravar(conn, camada_id: str, metadata: dict, *, frame=None, raster_bytes=None,
            regularizacao: bool = False, responsavel: str | None = None,
            execucao_id: str | None = None, caminho_destino: str | None = None) -> dict:
@@ -399,9 +390,11 @@ def gravar(conn, camada_id: str, metadata: dict, *, frame=None, raster_bytes=Non
     # O nome do arquivo em disco e outra coisa: leva o nome da camada.
     ident = str(existing['id']) if existing else str(uuid4())
     pasta = None if sem_montagem() else Path(mkdtemp(prefix='sicard-saida-'))
-    extension = '.gpkg' if frame is not None else '.tif'
-    path = (_nome_de_arquivo(pasta, metadata.get('nome'), extension) if pasta is not None else
-            Path((apelido(metadata.get('nome')) or 'saida') + extension))
+    from api.nome_arquivo import nome_arquivo
+    produto, extensao = ('camada vetorial', 'gpkg') if frame is not None else ('camada raster', 'tif')
+    nome = (PurePosixPath(caminho_destino).name if caminho_destino else
+            nome_arquivo(metadata.get('nome'), produto, extensao, referencia=metadata.get('origem')))
+    path = pasta / nome if pasta is not None else Path(nome)
     content = None
     remote_path = None
     anterior = None

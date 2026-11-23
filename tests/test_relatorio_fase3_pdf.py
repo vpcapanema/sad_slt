@@ -85,13 +85,14 @@ def test_rota_pdf_autenticada_e_erro_explicito(monkeypatch, registro):
     app = FastAPI()
     app.include_router(router)
     app.dependency_overrides[require_authenticated] = lambda: object()
-    monkeypatch.setattr(service, 'relatorio_pdf_fase3', lambda _: pdf.documento(registro))
+    monkeypatch.setattr(service.repo, 'get_by_codigo', lambda _: registro)
     client = TestClient(app)
     resposta = client.get('/ahp/hierarquizacoes/HIER-TESTE/fases/3/relatorio.pdf')
     assert resposta.status_code == 200 and resposta.content.startswith(b'%PDF')
     assert resposta.headers['content-type'] == 'application/pdf'
+    assert resposta.headers['content-disposition'] == 'attachment; filename="Rodada_demonstrativa_relatorio_fase_3.pdf"'
     assert resposta.headers['cache-control'] == 'no-store'
-    def desatualizado(_):
+    def desatualizado(_, **kwargs):
         raise ValueError('Recalcule a Fase 3.')
     monkeypatch.setattr(service, 'relatorio_pdf_fase3', desatualizado)
     resposta = client.get('/ahp/hierarquizacoes/HIER-TESTE/fases/3/relatorio.pdf')

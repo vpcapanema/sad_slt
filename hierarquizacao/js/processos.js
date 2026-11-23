@@ -513,7 +513,7 @@
   }
   function abrirMatriz(codigo) {
     const h = listaCache.find((x) => x.codigo === codigo);
-    matrizAtual = { codigo, matriz: matrizDaHier(h) };
+    matrizAtual = { codigo, nome: h.nome, matriz: matrizDaHier(h) };
     preencherModal("modal-matriz", `Matriz de critérios e premissas — ${codigo}`, matrizHtml(matrizAtual.matriz));
   }
   function erro(msg) {
@@ -603,7 +603,7 @@
       const blob = new Blob([JSON.stringify(matrizAtual.matriz, null, 2)], { type: "application/json" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = `matriz-${matrizAtual.codigo}.json`;
+      a.download = SicardNomeArquivo.gerar(matrizAtual.nome, 'matriz de criterios e premissas', 'json', matrizAtual.codigo);
       a.click();
       URL.revokeObjectURL(a.href);
     };
@@ -707,7 +707,7 @@
     $('hier-grupo-valor').onchange = changeGrupo;
     $('hier-grupo-select-all').onchange = event => {demandasFiltradas.forEach(item=>{if(event.target.checked)demandasSelecionadas.add(chaveDemanda(item));else demandasSelecionadas.delete(chaveDemanda(item));});renderDemandasAgrupamento();};
     $('hier-grupo-clear').onclick = () => {demandasSelecionadas.clear();renderDemandasAgrupamento();};
-    $('hier-grupo-export').onclick = () => SicardTableExport('demandas-do-agrupamento.csv',['Código','Processo SEI','Nome','Situação'],demandasAgrupamento.filter(item=>demandasSelecionadas.has(chaveDemanda(item))).map(item=>['codigo','origem_sei_processo','nome','status'].map(key=>valorAgrupamento(item,key))));
+    $('hier-grupo-export').onclick = () => SicardTableExport(SicardNomeArquivo.gerar(agrupamentosCache.find(item => String(item.id) === $('hier-agrupamento').value)?.nome, 'demandas do agrupamento', 'csv', $('hier-agrupamento').value),['Código','Processo SEI','Nome','Situação'],demandasAgrupamento.filter(item=>demandasSelecionadas.has(chaveDemanda(item))).map(item=>['codigo','origem_sei_processo','nome','status'].map(key=>valorAgrupamento(item,key))));
     SLTTable.bindFilter('hier-grupo', changeGrupo, () => { $('hier-grupo-coluna').value = ''; $('hier-grupo-valor').value = ''; atualizarFiltroAgrupamento(); });
     carregarLista();
     carregarAgrupamentos();

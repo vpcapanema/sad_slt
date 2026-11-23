@@ -51,7 +51,7 @@
       ...rows.filter(row => row.querySelector('input').checked).map(row => [...row.cells].slice(1).map(cell => cell.innerText.trim())) ];
     const blob = new Blob(['\ufeff' + data.map(row => row.map(escape).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob), anchor = document.createElement('a');
-    anchor.href = url; anchor.download = 'sicard-classificacoes-sugeridas.csv'; anchor.click();
+    anchor.href = url; anchor.download = SicardNomeArquivo.gerar('Risco e Restricao', 'classificacoes sugeridas', 'csv'); anchor.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   });
   render();

@@ -294,7 +294,7 @@ def _execute(ident, params, entrada_local=None, bases_locais=None, entradas_loca
         progress('Persistindo pacote, relatório e referências da execução; percentual interno indisponível')
         with _lock: etapas = list(_progress.get(ident) or [])
         from hashlib import sha256
-        pacote_ref, relatorio_ref = _guardar_saida(ident, nome_pacote, pacote, result)
+        pacote_ref, relatorio_ref = _guardar_saida(ident, nome_saida, nome_pacote, pacote, result)
         with get_connection() as conn:
             conn.execute('''INSERT INTO geoprocessamento.extracao_atributos
                 (execucao_id,nome_saida,operacao,responsavel,entrada,bases,camada_resultado_id,
@@ -408,7 +408,7 @@ def _executar_enriquecimento(ident, params, source, categories, progress, inicio
     getattr(progress, 'detalhe', progress)(f'Pacote gerado: {nome_pacote} ({len(pacote)} bytes)')
     progress('Persistindo pacote, relatório e referências da execução; percentual interno indisponível')
     with _lock: etapas = list(_progress.get(ident) or [])
-    pacote_ref, relatorio_ref = _guardar_saida(ident, nome_pacote, pacote, result)
+    pacote_ref, relatorio_ref = _guardar_saida(ident, nome_saida, nome_pacote, pacote, result)
     with get_connection() as conn:
         conn.execute('''INSERT INTO geoprocessamento.extracao_atributos
             (execucao_id,nome_saida,operacao,responsavel,entrada,bases,camada_resultado_id,
@@ -427,10 +427,13 @@ def _resumo_saida(resultado):
     return _jsonavel({key:resultado[key] for key in ['resumo','input_nome','camada_resultado_id','camadas','modo','operacao'] if key in resultado})
 
 
-def _guardar_saida(ident, nome, pacote, resultado):
-    package = saidas_storage.enviar_bytes(ident, 'pacotes', nome, pacote)
+def _guardar_saida(ident, nome_saida, nome_pacote, pacote, resultado):
+    from api.nome_arquivo import nome_arquivo
+
+    package = saidas_storage.enviar_bytes(ident, 'pacotes', nome_pacote, pacote)
     try:
-        report = saidas_storage.enviar_json(ident, 'resultado.json', _jsonavel(resultado))
+        relatorio = nome_arquivo(nome_saida, 'resultado da extracao', 'json', referencia='Extracao de Atributos')
+        report = saidas_storage.enviar_json(ident, relatorio, _jsonavel(resultado))
     except Exception:
         saidas_storage.remover(package['caminho'])
         raise

@@ -65,6 +65,9 @@ def analise(monkeypatch):
     monkeypatch.setattr(service.jobs, '_jobs', {})
     monkeypatch.setattr(service.jobs, 'consultar', consultar)
     service.limpar_cache_superficies()
+    from api.repositories import hierarquizacao_repository
+    monkeypatch.setattr(hierarquizacao_repository, 'get_by_codigo',
+                        lambda codigo: {'nome': 'Workshop PLI-SP 2050' if codigo == 'HIER-001' else codigo})
     def baixar(caminho):
         if caminho not in dados:
             raise FileNotFoundError(caminho)
@@ -226,10 +229,10 @@ def test_pacote_persistido_preserva_geometrias_e_aliases(analise):
     assert dados[caminho] == zip_bytes and caminho.startswith('saidas-geoespaciais/')
     with ZipFile(BytesIO(zip_bytes)) as pacote:
         assert pacote.testzip() is None
-        assert pacote.read('Relatório de Elegibilidade Territorial.pdf').startswith(b'%PDF')
-        for nome, conteudo in arquivos:
-            assert pacote.read(nome) == conteudo
-        manifesto = json.loads(pacote.read('Metadados da Análise.json'))
+        assert pacote.read('Elegibilidade_Territorial_relatorio_de_elegibilidade_territorial.pdf').startswith(b'%PDF')
+        manifesto = json.loads(pacote.read('Elegibilidade_Territorial_metadados_da_analise.json'))
+        for item, (_, conteudo) in zip(manifesto['arquivos'], arquivos, strict=True):
+            assert pacote.read(item['nome']) == conteudo
         assert manifesto['nomes_revisados'] is True
         assert {f['nome'] for f in manifesto['fontes']} == set(nomes.values())
         assert manifesto['arquivos'][0]['sha256'] == sha256(arquivos[0][1]).hexdigest()
@@ -251,19 +254,19 @@ def test_pdf_e_pacote_informam_restricao_risco_ou_livre_por_demanda(analise):
     assert texto.index('2 — Resultados por demanda') < texto.index('3 — Como ler os resultados') < texto.index('4 — Localização')
     zip_bytes, _ = service.pacote(modelo, arquivos)
     with ZipFile(BytesIO(zip_bytes)) as pacote:
-        conteudo = {'LEIA-ME.txt', 'Tabelas/Situação das Demandas.xlsx', 'Tabelas/Situação das Demandas.csv',
-                    'Tabelas/Resumo da Elegibilidade.xlsx', 'Tabelas/Resumo da Elegibilidade.csv'}
+        conteudo = {'Elegibilidade_Territorial_leia_me.txt', 'Tabelas/Elegibilidade_Territorial_situacao_das_demandas.xlsx', 'Tabelas/Elegibilidade_Territorial_situacao_das_demandas.csv',
+                    'Tabelas/Elegibilidade_Territorial_resumo_da_elegibilidade.xlsx', 'Tabelas/Elegibilidade_Territorial_resumo_da_elegibilidade.csv'}
         assert conteudo <= set(pacote.namelist())
-        leia = pacote.read('LEIA-ME.txt').decode('utf-8-sig')
+        leia = pacote.read('Elegibilidade_Territorial_leia_me.txt').decode('utf-8-sig')
         assert 'A demanda é o objeto da análise' in leia and 'Livres de restrições e riscos: 2' in leia
-        linhas = list(csv_lib.reader(StringIO(pacote.read('Tabelas/Situação das Demandas.csv').decode('utf-8-sig')),
+        linhas = list(csv_lib.reader(StringIO(pacote.read('Tabelas/Elegibilidade_Territorial_situacao_das_demandas.csv').decode('utf-8-sig')),
                                      delimiter=';'))
         assert len(linhas) == 1 + 2 * (1 + 62 * 7)
         assert {l[3] for l in linhas[1:]} == {'Com restrição e risco', 'Livre de restrições e riscos'}
-        livro = load_workbook(BytesIO(pacote.read('Tabelas/Situação das Demandas.xlsx')))
+        livro = load_workbook(BytesIO(pacote.read('Tabelas/Elegibilidade_Territorial_situacao_das_demandas.xlsx')))
         assert livro.sheetnames == ['Situação das Demandas', 'Resumo da Elegibilidade', 'Restrições e Riscos',
                                     'Camadas Consultadas', 'Como Ler']
-        resumo = list(csv_lib.reader(StringIO(pacote.read('Tabelas/Resumo da Elegibilidade.csv').decode('utf-8-sig')),
+        resumo = list(csv_lib.reader(StringIO(pacote.read('Tabelas/Elegibilidade_Territorial_resumo_da_elegibilidade.csv').decode('utf-8-sig')),
                                      delimiter=';'))
         assert resumo[0] == ['Conjunto de demandas', 'Objeto de demanda', 'Camadas de risco', 'Área de sobreposição (ha)',
                              'Porcentagem sobreposta', 'Índice de risco ambiental e territorial',
@@ -272,9 +275,9 @@ def test_pdf_e_pacote_informam_restricao_risco_ou_livre_por_demanda(analise):
         assert 'Resumo da Elegibilidade' in texto and 'Índice de risco ambiental e territorial' in texto
         assert livro['Situação das Demandas'].max_row == 1 + 2 * 63
         assert livro['Restrições e Riscos'].max_row == 1 + 2 * (1 + 62 * 7)
-        manifesto = json.loads(pacote.read('Metadados da Análise.json'))
-        assert {d['nome'] for d in manifesto['documentos']} == conteudo | {'Relatório de Elegibilidade Territorial.pdf'}
-        assert manifesto['versao_pacote'] == 2
+        manifesto = json.loads(pacote.read('Elegibilidade_Territorial_metadados_da_analise.json'))
+        assert {d['nome'] for d in manifesto['documentos']} == conteudo | {'Elegibilidade_Territorial_relatorio_de_elegibilidade_territorial.pdf'}
+        assert manifesto['versao_pacote'] == 3
         for documento in [*manifesto['documentos'], *manifesto['arquivos']]:
             assert documento['sha256'] == sha256(pacote.read(documento['nome'])).hexdigest()
 
@@ -431,7 +434,10 @@ def test_nova_analise_reune_camadas_pdf_zip_e_revisoes_sem_sobrescrever(analise,
     modelo, arquivos = service.montar(['job-1', 'job-2'], nomes, 'autor', True)
     service.salvar_nomes(['job-1', 'job-2'], modelo, 'autor')
     service.registrar_relatorios(['job-1', 'job-2'], modelo, 'autor')
-    _, pacote = service.pacote(modelo, arquivos)
+    zip_bytes, pacote = service.pacote(modelo, arquivos)
+    assert pacote.endswith('/Workshop_PLI-SP_2050_relatorio_e_camadas.zip')
+    with ZipFile(BytesIO(zip_bytes)) as zipado:
+        assert all(nome.rsplit('/', 1)[-1].startswith('Workshop_PLI-SP_2050_') for nome in zipado.namelist())
     pdf = modelo['relatorios_hierarquizacao'][0]['arquivo']
     assert modelo['pasta_analise'] == pasta
     assert pacote.rsplit('/', 1)[0] == pdf.rsplit('/', 1)[0] == pasta
@@ -524,9 +530,9 @@ def test_relatorio_parcial_explica_escopo_e_resumo_sem_restricao_sem_alterar_sai
     assert 'A rosca' not in texto
     pacote, _ = service.pacote(modelo, arquivos)
     with ZipFile(BytesIO(pacote)) as zipado:
-        guia = zipado.read('LEIA-ME.txt').decode('utf-8-sig')
+        guia = zipado.read('Demandas_do_Setor_Norte_leia_me.txt').decode('utf-8-sig')
         assert 'não constitui critério multicritério' in guia and 'SHA-256' in guia
-        assert zipado.read(arquivos[0][0]) == arquivos[0][1]
+        assert zipado.read('Camadas/01/Demandas_do_Setor_Norte_elegibilidade_territorial.gpkg') == arquivos[0][1]
 
 
 def test_download_de_relatorio_exige_vinculo_autenticacao_e_assinatura(analise, monkeypatch):
@@ -774,7 +780,7 @@ def test_nome_sem_cadastro_persiste_na_revisao_e_no_pdf_regenerado(analise):
     assert dados[arquivo] == original == arquivos[0][1]
     pacote, _ = service.pacote(modelo, arquivos)
     with ZipFile(BytesIO(pacote)) as zipado:
-        metadados = json.loads(zipado.read('Metadados da Análise.json'))
+        metadados = json.loads(zipado.read('Elegibilidade_Territorial_metadados_da_analise.json'))
     assert metadados['entradas'][0]['nomes_demandas_revisados'] == {
         '0':'Demanda avulsa revisada', '1':'Outro nome / setor_especial'}
     texto = ' '.join(p.extract_text() for p in PdfReader(BytesIO(service.pdf(regenerado))).pages)
@@ -939,7 +945,7 @@ def test_rotas_exportacao_autenticadas_e_revisadas(analise):
         assert client.post(rota+'/visualizar', json=payload).status_code == 200
         resposta = client.post(rota+'/pacote', json=payload)
         assert resposta.status_code == 200 and resposta.headers['content-type'] == 'application/zip'
-        assert 'filename*=' in resposta.headers['content-disposition']
+        assert resposta.headers['content-disposition'] == 'attachment; filename="Elegibilidade_Territorial_relatorio_e_camadas.zip"'
         assert 'X-SICARD-Package' in resposta.headers
         assert client.post(rota+'/demanda/nome', json={'execucao':'job-1','chave':'0','nome':'Revisão pela API'}).json()['nome'] == 'Revisão pela API'
         assert client.post(rota+'/demanda/nome', json={'execucao':'job-1','chave':'0','nome':' '}).status_code == 422

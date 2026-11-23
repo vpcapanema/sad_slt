@@ -329,7 +329,8 @@ def previsualizar_notificacao(solicitacao_id: UUID, user: SessionUser = Depends(
     cadastro = CADASTROS[pedido["demanda_tipo"]][0].get_by_codigo(pedido["demanda_codigo"])
     if not cadastro:
         raise HTTPException(409, "Cadastro de origem indisponível.")
-    previa, _ = preparar_notificacao(pedido, cadastro.get("representante_email"), pedido.get("hierarquizacao_codigo") or "")
+    previa, _ = preparar_notificacao(pedido, cadastro.get("representante_email"),
+                                      pedido.get("hierarquizacao_codigo") or "", nome_demanda=cadastro.get("nome"))
     if "atributos_objeto" not in pedido["categorias"]:
         from api.services import parecer_complementacao_service
         previa["parecer_revisao"] = parecer_complementacao_service.estado(pedido)
@@ -372,7 +373,7 @@ def notificar_solicitacao(solicitacao_id: UUID, user: SessionUser = Depends(requ
                       user, anexar_parecer=True, assinatura_previa=body.assinatura if body else None,
                       revisao_parecer=revisao,
                       cadastro_snapshot={k: str(cadastro[k]) if cadastro.get(k) is not None else None
-                                         for k in ("representante_nome", "representante_email", "criado_em")})
+                                         for k in ("nome", "representante_nome", "representante_email", "criado_em")})
 
 
 @router.post("/solicitacoes/{solicitacao_id}/confirmacoes")

@@ -148,7 +148,7 @@ def test_pacote_leva_camadas_apelidos_dicionario_e_configuracao(tmp_path):
                                                                  'apelidos': {'NM_MUN': 'Nome do município'}})))
     pacote, nome, manifesto = montar_pacote(saida['camadas'], entrada, saida['dicionario'],
                                             {'modo': 'enriquecimento'}, 'Teste enriquecimento')
-    assert nome == 'teste_enriquecimento.zip'
+    assert nome == 'Teste_enriquecimento_pacote_de_enriquecimento.zip'
     chaves = [item['chave'] for item in manifesto]
     assert chaves == ['gpkg', 'csv_pontos', 'csv_linhas', 'xlsx', 'csv_dicionario', 'configuracao', 'validacao']
     with zipfile.ZipFile(io.BytesIO(pacote)) as arquivo:

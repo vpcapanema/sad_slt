@@ -389,7 +389,8 @@
             const arquivo = URL.createObjectURL(await resposta.blob());
             const link = document.createElement("a");
             link.href = arquivo;
-            link.download = "Relatorio_Fase_3.pdf";
+            link.download = SicardNomeArquivo.daResposta(resposta,
+              SicardNomeArquivo.gerar(selecionada.nome, 'relatorio fase 3', 'pdf', selecionada.codigo));
             document.body.append(link);
             link.click();
             link.remove();
@@ -406,7 +407,7 @@
       hierarquizacoes = await HierApi.listar();
       $("fase-hierarquizacao").innerHTML = '<option value="">Selecione…</option>' + hierarquizacoes
         .filter((item) => (item.dados_hierarquizacao?.cabecalho_grupo?.fases_a_executar || [1, 2, 3]).includes(3))
-        .map((item) => `<option value="${esc(item.codigo)}">${esc(item.codigo)} — ${esc(item.nome)}</option>`).join("");
+        .map((item) => `<option value="${esc(item.codigo)}" data-nome="${esc(item.nome)}">${esc(item.codigo)} — ${esc(item.nome)}</option>`).join("");
       if (queryCode) { $("fase-hierarquizacao").value = queryCode; await render(atual()); }
       $("fase-hierarquizacao").onchange = () => { render(atual()).catch(erro); };
       globalThis.addEventListener("focus", atualizarDadosAoRetomar);

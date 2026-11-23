@@ -20,7 +20,8 @@
     table.querySelectorAll('.col-atributo-alias[title]').forEach(label => {
       label.textContent = label.title + ' ';
     });
-    SLTAnalysisTable(table);
+    const registro = document.querySelector('#fase-hierarquizacao option:checked');
+    SLTAnalysisTable(table, {nome: registro?.dataset.nome, codigo: registro?.value});
     if (table.dataset.rankingOrder === 'true') {
       const position = row => Number(row.dataset.rankingPosicao) > 0 ? Number(row.dataset.rankingPosicao) : Infinity;
       table.analysisControls.sort = rows => [...rows].sort((a, b) => position(a) - position(b));

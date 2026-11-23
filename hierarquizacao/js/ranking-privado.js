@@ -14,8 +14,8 @@
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
   }
-  function padronizarTabela(table, ranking = false) {
-    SLTAnalysisTable(table);
+  function padronizarTabela(table, ranking = false, item) {
+    SLTAnalysisTable(table, item);
     if (ranking) {
       table.analysisControls.sort = rows => [...rows].sort((a, b) => Number(a.dataset.posicao || Infinity) - Number(b.dataset.posicao || Infinity));
       table.analysisControls.draw();
@@ -153,7 +153,7 @@
     const linhas = D.dadosRanking(item).map(r => `<tr data-posicao="${r.posicao}" data-demanda="${esc(r.codigo || r.demanda_id)}" tabindex="0" aria-label="Enquadrar ${esc(r.nome)} no mapa"><td class="ranking-posicao">${r.posicao}º</td><td class="ranking-objeto-identidade"><strong>${esc(r.nome)}</strong><small>${esc(r.codigo)}</small></td><td>${indice(r.indiceRede)}</td><td>${indice(r.indiceGrade)}</td><td>${indice(r.indicePrioridade)}</td><td>${indice(r.score)}</td></tr>`).join("");
     $("ranking-objetos-tabela").innerHTML = `<table class="admin-table ranking-objetos-table" data-table-sort="off" aria-labelledby="ranking-objetos-titulo"><thead><tr><th>Posição</th><th>Objeto de demanda</th><th>Índice de favorabilidade de rede</th><th>Índice de favorabilidade territorial</th><th>Índice de prioridade</th><th>Índice geral de hierarquização</th></tr></thead><tbody>${linhas}</tbody></table>`;
     const table = $("ranking-objetos-tabela").querySelector("table");
-    padronizarTabela(table, true);
+    padronizarTabela(table, true, item);
     const focarLinha = event => {
       if (event.target.closest('input, button, a, select, textarea')) return;
       if (event.type === "keydown" && !["Enter", " "].includes(event.key)) return;
@@ -276,7 +276,7 @@
       <div class="hier-table-shell"><table class="admin-table" data-table-sort="off" aria-label="Resumo das fases por demanda"><thead><tr><th>Posição final</th><th>Demanda</th><th>Índice geral de hierarquização</th><th data-grupo-colunas="pesos">Pesos da síntese</th><th data-grupo-colunas="elegibilidade">Elegibilidade territorial</th><th data-grupo-colunas="indices">Índice de risco ambiental e territorial</th><th data-grupo-colunas="indices">Índice de favorabilidade de rede</th><th data-grupo-colunas="indices">Índice de favorabilidade territorial</th><th data-grupo-colunas="pesos">Pesos da Fase 2</th><th data-grupo-colunas="indices">Índice de prioridade</th><th data-grupo-colunas="pesos">Pesos da Fase 3</th></tr></thead><tbody>${linhas}</tbody></table></div>`;
     acionadorModal = acionador;
     $("ranking-detalhes-modal").classList.remove("hidden");
-    padronizarTabela($("ranking-detalhes-conteudo").querySelector("table"), true);
+    padronizarTabela($("ranking-detalhes-conteudo").querySelector("table"), true, item);
     controlesColunasDetalhes($("ranking-detalhes-conteudo").querySelector("table"));
     $("ranking-detalhes-modal").querySelector("[data-ranking-modal-close]").focus();
     window.SLTTableFit?.();

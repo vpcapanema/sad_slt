@@ -317,7 +317,7 @@ def csv_resumo(modelo: dict) -> bytes:
     return saida.getvalue().encode('utf-8-sig')
 
 
-def leia_me(modelo: dict, relatorio: str, arquivos: list[str]) -> bytes:
+def leia_me(modelo: dict, relatorio: str, arquivos: list[str], *, tabelas: list[str], metadados: str) -> bytes:
     ind = indicadores([f for e in modelo['entradas'] for f in caracterizar(e)])
     linhas = [
         'RELATÓRIO E CAMADAS — ELEGIBILIDADE TERRITORIAL', '',
@@ -331,13 +331,13 @@ def leia_me(modelo: dict, relatorio: str, arquivos: list[str]) -> bytes:
         f'- {relatorio}: identificação das execuções, fontes, guia de leitura, metodologia e resultados. '
         'Situação de cada demanda, mapa, resumo e detalhe por demanda; '
         'as matrizes de área por camada ficam no anexo.',
-        '- Tabelas/Situação das Demandas.xlsx: situação de cada demanda, restrições e riscos encontrados e camadas consultadas, com filtros.',
-        '- Tabelas/Situação das Demandas.csv: formato longo correspondente à aba Restrições e Riscos, '
+        f'- {tabelas[0]}: situação de cada demanda, restrições e riscos encontrados e camadas consultadas, com filtros.',
+        f'- {tabelas[1]}: formato longo correspondente à aba Restrições e Riscos, '
         'com uma linha por ocorrência ou uma linha sem ocorrência por demanda livre; não é uma linha por demanda.',
-        '- Tabelas/Resumo da Elegibilidade.xlsx e .csv: uma linha por demanda sem restrição, com camadas de risco, área e porcentagem '
+        f'- {tabelas[2]} e {tabelas[3]}: uma linha por demanda sem restrição, com camadas de risco, área e porcentagem '
         'sobrepostas e o índice de risco ambiental e territorial (0 a 1; mais próximo de 1, maior a elegibilidade).',
         '- Camadas/NN/*.gpkg: cópia integral de cada conjunto de demandas, com áreas e sobreposições gravadas na execução (para uso em SIG).',
-        '- Metadados da Análise.json: identificação, fontes, nomes revisados e assinatura (SHA-256) dos arquivos.', '',
+        f'- {metadados}: identificação, fontes, nomes revisados e assinatura (SHA-256) dos arquivos.', '',
         'COMO LER', NOTA_LEITURA, NOTA_INDICE, NOTA_CONFERENCIA,
         'CSV: UTF-8 com BOM, separador ponto e vírgula, decimal vírgula. '
         'As áreas do detalhe CSV são em m²; as áreas do resumo são em hectares. '

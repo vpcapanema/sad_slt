@@ -871,7 +871,7 @@
         adicionarRodape(pagina, totalPaginas);
       }
 
-      doc.save(`fase1-relatorio-${modelo.codigo || "rodada"}.pdf`);
+      doc.save(SicardNomeArquivo.gerar(modelo.nome, 'relatorio fase 1', 'pdf', modelo.codigo));
     } catch (e) {
       console.error(e);
       erro("Falha ao gerar PDF do relatório.");

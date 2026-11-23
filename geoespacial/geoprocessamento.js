@@ -822,7 +822,7 @@
     rows.forEach(row=>{const tr=document.createElement('tr');columns.forEach(column=>{const td=document.createElement('td');td.textContent=row[column]==null?'—':String(row[column]);tr.append(td);});table.append(tr);});
     $("#gp-operation-result-download").onclick=()=>{
       const data=body.geojson||body,url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'})),link=document.createElement('a');
-      link.href=url;link.download=slugifyName(title)+(body.geojson?'.geojson':'.json');link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+      link.href=url;link.download=SicardNomeArquivo.gerar(body.nome || title, 'resultado da operacao', body.geojson?'geojson':'json');link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
     };
     $("#gp-operation-result-close").onclick=()=>dialog.close();if(!dialog.open)dialog.showModal();
   }

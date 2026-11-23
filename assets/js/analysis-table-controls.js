@@ -2,8 +2,11 @@
 (function () {
   'use strict';
   let sequence = 0;
-  window.SLTAnalysisTable = function (table) {
+  window.SLTAnalysisTable = function (table, registro) {
     if (!table) return;
+    if (registro) {
+      table.dataset.registroExportacao = registro.nome || registro.codigo || registro.id || '';
+    }
     const body = table.tBodies[0];
     if (!body) return;
     let state = table.analysisControls;
@@ -59,7 +62,11 @@
         const quote=value=>'"'+String(value).replace(/^[=+@-]/,"'$&").replace(/"/g,'""')+'"';
         const indices=headers.map((h,i)=>i).filter(i=>!headers[i].querySelector('input'));
         const csv=[indices.map(i=>headers[i].textContent.trim()),...selected().map(row=>indices.map(i=>state.text(row,i)))].map(row=>row.map(quote).join(';')).join('\r\n');
-        const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob(['\uFEFF',csv],{type:'text/csv;charset=utf-8'}));a.download='registros.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+        const titulo = document.getElementById(table.getAttribute('aria-labelledby'))?.textContent;
+        const nomeTabela = table.dataset.produtoExportacao || (hasLabel ? label.textContent
+          : table.getAttribute('aria-label') || titulo || table.caption?.textContent || body.id);
+        const nome = SicardNomeArquivo.gerar(table.dataset.registroExportacao, nomeTabela || 'registros selecionados', 'csv', document.title);
+        const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob(['\uFEFF',csv],{type:'text/csv;charset=utf-8'}));a.download=nome;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
       };
       state.draw = () => {
         const rows = state.sort(state.rows.filter(row => SLTTable.matches(prefix,state.text(row,Number(column.value)) === (value.value === '__empty__' ? '' : value.value),column.value !== '' && Boolean(value.value))));

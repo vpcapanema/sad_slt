@@ -428,7 +428,7 @@
           const v = String(c[2](r) ?? ''); return cell(/^[=+\-@\t\r]/.test(v) ? "'" + v : v);
         }).join(';'))].join('\r\n');
         const url = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' }));
-        const a = document.createElement('a'); a.href = url; a.download = `pendencias-${key}.csv`; a.click(); URL.revokeObjectURL(url);
+        const a = document.createElement('a'); a.href = url; a.download = SicardNomeArquivo.gerar(rows.length === 1 ? rows[0].nome || rows[0].demanda_nome : null, `pendencias ${key}`, 'csv', 'Central de Pendencias'); a.click(); URL.revokeObjectURL(url);
       };
       root.querySelector('[data-reload]').onclick = () => load().catch(e => feedback(e.message));
       root.querySelector('[data-receipts]').onclick = async () => {

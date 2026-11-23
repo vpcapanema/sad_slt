@@ -568,12 +568,11 @@
   }
 
   async function exportarModalAnalisePdf(codigo) {
-    const blob = await SLTAdminApi.fetchAnaliseRelatorioPdf(codigo);
-    const nome = String(codigo || "demanda").replace(/[^A-Za-z0-9._-]+/g, "-");
+    const {blob, nome} = await SLTAdminApi.fetchAnaliseRelatorioPdf(codigo, true);
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `analise-tecnica-${nome}.pdf`;
+    link.download = nome || SicardNomeArquivo.gerar(codigo, 'analise tecnica', 'pdf');
     document.body.appendChild(link);
     link.click();
     link.remove();

@@ -447,7 +447,7 @@ function exportPDF() {
   const results = document.getElementById('results');
   const opt = {
     margin: 1,
-    filename: 'resultados_ahp.pdf',
+    filename: SicardNomeArquivo.gerar('AHP', 'resultados', 'pdf'),
     image: { type: 'jpeg', quality: 0.98 },
     html2canvas: { scale: 2 },
     jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
@@ -480,7 +480,7 @@ function exportCSV() {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = "matriz_ahp.csv";
+  link.download = SicardNomeArquivo.gerar('AHP', 'matriz', 'csv');
   link.click();
 }
 
@@ -510,7 +510,7 @@ function exportXLSX() {
   let ws = XLSX.utils.aoa_to_sheet(ws_data);
   let wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Relatório AHP");
-  XLSX.writeFile(wb, "matriz_ahp.xlsx");
+  XLSX.writeFile(wb, SicardNomeArquivo.gerar('AHP', 'matriz', 'xlsx'));
 }
 
 // -----------------------------------------------------------

@@ -447,7 +447,7 @@ def test_pdf_e_da_analise_e_nao_das_anotacoes_internas(central, monkeypatch):
         id_mensagem="MID", destinatario="teste@example.org", confirmacao_leitura_solicitada=True))
     monkeypatch.setattr(notification.email_service, "enviar", enviar)
     result = notification._notificar(central.pedido, "teste@example.org", "", central.user, anexar_parecer=True)
-    assert enviar.call_args.kwargs["anexo_pdf"] == ("parecer-analise-D.pdf", pdf)
+    assert enviar.call_args.kwargs["anexo_pdf"] == ("D_parecer_de_analise.pdf", pdf)
     assert enviar.call_args.kwargs["solicitar_confirmacoes"] is True
     assert central.pedido["parecer_tecnico"] not in enviar.call_args.args[0].texto
     assert enviar.call_args.args[0].texto == "Texto do parecer da análise\n\nCorreção necessária"
@@ -483,7 +483,7 @@ def test_pdf_e_da_analise_e_nao_das_anotacoes_internas(central, monkeypatch):
     email = enviar.call_args.args[0]
     assert str(email.destinatario) == central.cadastro["representante_email"]
     assert email.texto == previa["texto"] == "Parecer da análise"
-    assert enviar.call_args.kwargs["anexo_pdf"] == ("parecer-analise-D.pdf", pdf)
+    assert enviar.call_args.kwargs["anexo_pdf"] == ("Projeto_parecer_de_analise.pdf", pdf)
     assert result["destinatario"] == str(email.destinatario)
     assert registrar.call_args.args[1]["destinatario"] == str(email.destinatario)
     assert result["cadastro_no_envio"]["representante_nome"] == central.cadastro["representante_nome"]

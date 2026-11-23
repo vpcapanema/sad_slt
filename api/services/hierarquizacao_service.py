@@ -137,12 +137,16 @@ def _response(row: dict[str, Any]) -> HierarquizacaoResponseSchema:
     )
 
 
-def relatorio_pdf_fase3(codigo: str) -> bytes:
+def relatorio_pdf_fase3(codigo: str, *, com_nome: bool = False) -> bytes | tuple[str, bytes]:
+    from api.nome_arquivo import nome_arquivo
     from api.services.relatorio_fase3_pdf import documento
     row = _carregar(codigo)
     if configuracao_fase3_desatualizada(row):
         raise ValueError('Os critérios da Fase 3 mudaram. Recalcule antes de emitir o relatório.')
-    return documento(row)
+    dados = documento(row)
+    if com_nome:
+        return nome_arquivo(row.get('nome'), 'relatorio fase 3', 'pdf', referencia=codigo), dados
+    return dados
 
 
 def _carregar(codigo: str) -> dict[str, Any]:
@@ -150,6 +154,11 @@ def _carregar(codigo: str) -> dict[str, Any]:
     if not row:
         raise HierarquizacaoNotFoundError(codigo)
     return row
+
+
+def nome_registro(codigo: str) -> str:
+    row = repo.get_by_codigo(codigo)
+    return (row or {}).get('nome') or codigo
 
 
 _ANALISE_DA_FASE = {1: ('elegibilidade', 'elegibilidade_territorial'), 2: ('favorabilidade', 'favorabilidade_territorial')}
@@ -914,9 +923,14 @@ def excluir_hierarquizacao(codigo: str) -> None:
         raise HierarquizacaoNotFoundError(codigo)
 
 
-def matriz_da_hierarquizacao(codigo: str) -> Any:
+def matriz_da_hierarquizacao(codigo: str, *, com_nome: bool = False) -> Any:
     """Matriz independente associada à hierarquização."""
-    return matrizes_criterios.da_hierarquizacao(_carregar(codigo))
+    from api.nome_arquivo import nome_arquivo
+    row = _carregar(codigo)
+    matriz = matrizes_criterios.da_hierarquizacao(row)
+    if com_nome:
+        return nome_arquivo(row.get('nome'), 'matriz de criterios e premissas', 'json', referencia=codigo), matriz
+    return matriz
 
 
 def atualizar_hierarquizacao(

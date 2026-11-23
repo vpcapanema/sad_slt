@@ -56,3 +56,21 @@ Não crie variações locais ou omita elementos por decisão própria.
 Esta regra foi estabelecida expressamente pelo usuário em 27/10/2026 e aplica-se
 a todo o repositório. Instruções mais específicas devem preservar esse padrão;
 alterações posteriores explicitamente solicitadas pelo usuário prevalecem.
+
+## Nomes dos arquivos gerados pelo SICARD
+
+Use `Nome_do_registro_produto.extensao` em qualquer formato de saída do
+SICARD, incluindo arquivos entregues dentro de ZIPs e anexos gerados pelo
+sistema. Use `api/nome_arquivo.py` no servidor e `assets/js/nome-arquivo.js`
+no navegador. Quando a API entregar o arquivo, o navegador deve adotar o nome
+informado em `Content-Disposition`.
+
+O prefixo vem do campo `nome` do registro de origem. Na hierarquização, use
+o nome mostrado na tabela **Hierarquizações realizadas**. Para uma saída
+avulsa, use o nome associado à origem. Para exportações coletivas, use o
+nome da coleção, do lote ou da ferramenta. O sistema acrescenta a descrição
+do produto e a extensão real. Preserve maiúsculas e hífens no prefixo e
+normalize espaços e sinais para produzir nomes portáteis.
+
+O pacote da Seção 1 de `Workshop PLI-SP 2050` deve sair como
+`Workshop_PLI-SP_2050_relatorio_e_camadas.zip`.

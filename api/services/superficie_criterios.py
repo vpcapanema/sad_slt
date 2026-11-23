@@ -303,7 +303,8 @@ def matriz_excel(row):
     return stream.getvalue()
 
 
-def exportar(ident, user, indice=False):
+def exportar(ident, user, indice=False, *, com_nome=False):
+    from api.nome_arquivo import nome_arquivo
     from api.services import saidas_storage
     row = obter(ident, user)
     resource = row['camada_indice_id'] if indice else row['camada_id']
@@ -313,4 +314,8 @@ def exportar(ident, user, indice=False):
     if loaded is None:
         raise ValueError('Camada salva não disponível no acervo.')
     info = loaded[1]
-    return saidas_storage.conferir(info['storage_caminho'], (info.get('metadados') or {}).get('sha256'))
+    dados = saidas_storage.conferir(info['storage_caminho'], (info.get('metadados') or {}).get('sha256'))
+    if com_nome:
+        produto = 'superficie com indice fase 2' if indice else 'superficie preparada fase 2'
+        return nome_arquivo(row['nome'], produto, 'gpkg', referencia=str(ident)), dados
+    return dados

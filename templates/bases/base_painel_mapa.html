@@ -18,6 +18,7 @@
   {% block estilos_pagina %}{% endblock %}
   <link rel="stylesheet" href="/assets/css/table-scrollbars.css?v=20261027-1">
   <link rel="stylesheet" href="/assets/css/explorador-acoes.css?v=20261104-menu">
+  <script src="/assets/js/nome-arquivo.js?v=1"></script>
 </head>
 <body class="pagina-painel-mapa layout-with-sidebar {% block classes_body %}{% endblock %}" data-navegacao="painel_{{ navegacao }}"{% if requer_autenticacao %} data-requer-autenticacao="true"{% endif %}>
   <div class="estrutura-painel-mapa layout-with-sidebar-grid">
@@ -38,7 +39,7 @@
   </div>
 
   <script src="/assets/js/notification_system.js"></script>
-  <script src="/assets/js/process_feedback_unified.js?v=20261123-solucao-conflito"></script>
+  <script src="/assets/js/process_feedback_unified.js?v=20261123-nomes-arquivos"></script>
   {% block scripts_pagina %}{% endblock %}
   <script src="/assets/js/table-sort.js?v=20261027-cabecalho-agrupado"></script>
   <script src="/assets/js/template-base.js"></script>

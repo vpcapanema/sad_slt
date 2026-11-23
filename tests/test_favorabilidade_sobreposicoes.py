@@ -185,21 +185,23 @@ def test_painel_completo_nomes_pdf_e_pacote_preservam_fragmentos(analise):
     assert arquivos_storage[caminho] == pacote
     with ZipFile(BytesIO(pacote)) as zipado:
         assert zipado.testzip() is None
-        assert zipado.read('Relatório de Favorabilidade Territorial.pdf').startswith(b'%PDF')
-        assert json.loads(zipado.read('Metadados da Análise.json'))['analise'] == 'favorabilidade'
-        manifesto = json.loads(zipado.read('Metadados da Análise.json'))
-        assert manifesto['versao_pacote'] == 2
+        prefixo = caminho.rsplit('/', 1)[-1].removesuffix('_relatorio_e_camadas.zip')
+        relatorio = f'{prefixo}_relatorio_de_favorabilidade_territorial.pdf'
+        guia_nome = f'{prefixo}_leia_me.txt'
+        assert zipado.read(relatorio).startswith(b'%PDF')
+        manifesto = json.loads(zipado.read(f'{prefixo}_metadados_da_analise.json'))
+        assert manifesto['analise'] == 'favorabilidade'
+        assert manifesto['versao_pacote'] == 3
         assert {item['nome'] for item in manifesto['documentos']} == {
-            'Relatório de Favorabilidade Territorial.pdf',
-            'Tabelas/Favorabilidade Territorial.xlsx', 'Tabelas/Índices e Classes.csv',
-            'Tabelas/Cobertura por Superfície.csv', 'LEIA-ME.txt',
+            relatorio, f'Tabelas/{prefixo}_favorabilidade_territorial.xlsx', f'Tabelas/{prefixo}_indices_e_classes.csv',
+            f'Tabelas/{prefixo}_cobertura_por_superficie.csv', guia_nome,
         }
         for item in [*manifesto['documentos'], *manifesto['arquivos']]:
             assert sha256(zipado.read(item['nome'])).hexdigest() == item['sha256']
-        guia = zipado.read('LEIA-ME.txt').decode('utf-8-sig')
+        guia = zipado.read(guia_nome).decode('utf-8-sig')
         assert 'Alterar Excel ou CSV não atualiza o SICARD' in guia
         assert 'Todas as entradas previstas foram concluídas' in guia
-        detalhes = list(csv.DictReader(StringIO(zipado.read('Tabelas/Índices e Classes.csv').decode('utf-8-sig')),
+        detalhes = list(csv.DictReader(StringIO(zipado.read(f'Tabelas/{prefixo}_indices_e_classes.csv').decode('utf-8-sig')),
                                        delimiter=';'))
         # Cada demanda aparece em cada superficie, inclusive sem intersecao.
         assert len(detalhes) == 12
@@ -209,19 +211,20 @@ def test_painel_completo_nomes_pdf_e_pacote_preservam_fragmentos(analise):
         assert all(item['Índice dimensionado'] == '0,0' and item['Estado do índice dimensionado'] == 'valido'
                    for item in contatos)
         assert {item['Execução'] for item in detalhes} == {'job-1', 'job-2'}
-        livro = load_workbook(BytesIO(zipado.read('Tabelas/Favorabilidade Territorial.xlsx')))
+        livro = load_workbook(BytesIO(zipado.read(f'Tabelas/{prefixo}_favorabilidade_territorial.xlsx')))
         assert livro.sheetnames == ['Índices e Classes', 'Cobertura por Superfície', 'Fontes e Nomes', 'Como Ler']
         assert livro['Índices e Classes'].max_row == 13
         assert livro['Índices e Classes']['N2'].value == .7
         assert livro['Índices e Classes'].freeze_panes == 'A2'
-        cobertura = list(csv.DictReader(StringIO(zipado.read('Tabelas/Cobertura por Superfície.csv').decode('utf-8-sig')),
+        cobertura = list(csv.DictReader(StringIO(zipado.read(f'Tabelas/{prefixo}_cobertura_por_superficie.csv').decode('utf-8-sig')),
                                         delimiter=';'))
         assert len(cobertura) == 4
         assert cobertura[0]['Demandas com interseção'] == '2'
         assert cobertura[0]['Demandas sem interseção'] == '1'
         assert cobertura[0]['Índices válidos'] == '2'
-        for indice, (nome, dados) in enumerate(arquivos, 1):
-            assert zipado.read(nome) == arquivos_storage[resultados[f'job-{indice}']['arquivo']]
+        for indice, item in enumerate(manifesto['arquivos'], 1):
+            dados = zipado.read(item['nome'])
+            assert dados == arquivos_storage[resultados[f'job-{indice}']['arquivo']]
             recortes = gpd.read_file(BytesIO(dados), layer='intersecoes')
             assert 'classe' in ' '.join(recortes.columns)
             assert 'fav_territorial_dim' in ' '.join(recortes.columns)
@@ -235,15 +238,19 @@ def test_tabelas_preservam_precisao_estados_homonimos_e_nao_executam_formulas(an
     primeiro = modelo['entradas'][0]['linhas'][0]['sobreposicoes'][0]
     primeiro['favorabilidade']['indice'] = .7134567890123456
     primeiro['nome'] = '=1+2'
-    documentos = dict(exportacao.documentos(modelo, 'relatorio.pdf', [n for n, _ in arquivos]))
-    registros = list(csv.DictReader(StringIO(documentos['Tabelas/Índices e Classes.csv'].decode('utf-8-sig')),
+    from api.nome_arquivo import nome_arquivo
+    def nome(produto, ext):
+        return nome_arquivo('Teste', produto, ext)
+    documentos = dict(exportacao.documentos(modelo, 'Teste_relatorio.pdf', [n for n, _ in arquivos],
+                                            nome, 'Teste_metadados.json'))
+    registros = list(csv.DictReader(StringIO(documentos['Tabelas/Teste_indices_e_classes.csv'].decode('utf-8-sig')),
                                     delimiter=';'))
     assert registros[0]['Índice dimensionado'] == repr(primeiro['favorabilidade']['indice']).replace('.', ',')
     assert registros[0]['Feição'] == "'=1+2"
-    livro = load_workbook(BytesIO(documentos['Tabelas/Favorabilidade Territorial.xlsx']), data_only=False)
+    livro = load_workbook(BytesIO(documentos['Tabelas/Teste_favorabilidade_territorial.xlsx']), data_only=False)
     assert livro.active['K2'].value == '=1+2' and livro.active['K2'].data_type == 's'
     assert livro.active['N2'].value == pytest.approx(primeiro['favorabilidade']['indice'], abs=1e-15, rel=0)
-    assert 'PACOTE PARCIAL' in documentos['LEIA-ME.txt'].decode('utf-8-sig')
+    assert 'PACOTE PARCIAL' in documentos['Teste_leia_me.txt'].decode('utf-8-sig')
     for estado in ('ausente', 'nulo', 'invalido'):
         primeiro['favorabilidade'].update(indice=None, estado_indice=estado)
         linhas = exportacao.detalhe(modelo)

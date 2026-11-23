@@ -66,13 +66,15 @@ _UPDATE_FIELDS = frozenset(
 
 def _build_arquivo_fase1(row: dict[str, Any]) -> dict[str, Any]:
     """Artefato da Fase 1: escopo, universo e metadados de criação."""
+    from api.nome_arquivo import nome_arquivo
     tid = row.get("tipo_demanda_id")
     return {
         "versao": 1,
         "fase": "fase_1",
         "gerado_em": datetime.now(timezone.utc).isoformat(),
         "denominacao": row.get("denominacao"),
-        "nome_arquivo": (row.get("denominacao") or row.get("codigo", "config")) + "_fase1.json",
+        "nome_arquivo": nome_arquivo(row.get("nome") or row.get("denominacao"), "objetos fase 1", "json",
+                                     referencia=row.get("codigo") or "AHP"),
         "codigo": row.get("codigo"),
         "tipo": row.get("tipo"),
         "nome": row.get("nome"),
@@ -91,12 +93,14 @@ def _build_arquivo_fase1(row: dict[str, Any]) -> dict[str, Any]:
 
 def _build_arquivo_fase2(row: dict[str, Any]) -> dict[str, Any]:
     """Artefato da Fase 2: Fase 1 + critérios, premissas e matriz pareada."""
+    from api.nome_arquivo import nome_arquivo
     base = _build_arquivo_fase1(row)
     base.update({
         "versao": 1,
         "fase": "fase_2",
         "gerado_em": datetime.now(timezone.utc).isoformat(),
-        "nome_arquivo": (row.get("denominacao") or row.get("codigo", "config")) + "_fase2.json",
+        "nome_arquivo": nome_arquivo(row.get("nome") or row.get("denominacao"), "matriz fase 2", "json",
+                                     referencia=row.get("codigo") or "AHP"),
         "metodo_entrada": row.get("metodo_entrada"),
         "metodo_comparacao": row.get("metodo_comparacao"),
         "modo_preenchimento": row.get("modo_preenchimento"),
@@ -111,12 +115,14 @@ def _build_arquivo_fase2(row: dict[str, Any]) -> dict[str, Any]:
 
 def _build_arquivo_homologado(row: dict[str, Any]) -> dict[str, Any]:
     """Artefato homologado: Fase 2 + pesos, métricas e registro de homologação."""
+    from api.nome_arquivo import nome_arquivo
     base = _build_arquivo_fase2(row)
     base.update({
         "versao": 1,
         "fase": "homologado",
         "gerado_em": datetime.now(timezone.utc).isoformat(),
-        "nome_arquivo": (row.get("denominacao") or row.get("codigo", "config")) + "_homologado.json",
+        "nome_arquivo": nome_arquivo(row.get("nome") or row.get("denominacao"), "pesos homologados", "json",
+                                     referencia=row.get("codigo") or "AHP"),
         "pesos": row.get("pesos"),
         "lambda_max": _float(row.get("lambda_max")),
         "indice_consistencia": _float(row.get("indice_consistencia")),

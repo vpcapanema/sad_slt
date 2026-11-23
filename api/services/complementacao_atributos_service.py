@@ -7,13 +7,13 @@ from email.utils import make_msgid
 from hashlib import sha256
 import logging
 import json
-import re
 
 from pydantic import ValidationError
 
 from api.constants import STATUS_EM_HIERARQUIZACAO, STATUS_HIERARQUIZACAO_COMPLEMENTACAO
 from api.db.connection import atomic_connection
 from api.exceptions import DemandaValidationError, HierarquizacaoNotFoundError
+from api.nome_arquivo import nome_arquivo
 from api.repositories import dominio_repository, hierarquizacao_repository, analise_demanda_repository
 from api.repositories import solicitacao_complementacao_repository as pedidos
 from api.schemas.email import EmailEnvioSchema
@@ -24,7 +24,8 @@ from api.services.session_service import SessionUser
 
 logger = logging.getLogger(__name__)
 
-def preparar_notificacao(pedido: dict, destinatario: str | None, nome_hierarquia: str) -> tuple[dict, bytes]:
+def preparar_notificacao(pedido: dict, destinatario: str | None, nome_hierarquia: str, *,
+                         nome_demanda: str | None = None) -> tuple[dict, bytes]:
     """Prepara a mesma mensagem e o mesmo anexo usados na confirmação do envio."""
     from api.services.analise_demanda_service import _parecer_com_geometria
     codigo = pedido["demanda_codigo"]
@@ -49,7 +50,7 @@ def preparar_notificacao(pedido: dict, destinatario: str | None, nome_hierarquia
     previa = {
         "destinatario": destinatario or "", "assunto": f"SICARD: complementação da demanda {codigo}",
         "texto": texto, "mensagem": mensagem, "revisao": pedido.get("revisao"),
-        "anexo_nome": "parecer-analise-" + re.sub(r"[^a-zA-Z0-9._-]", "_", codigo) + ".pdf",
+        "anexo_nome": nome_arquivo(nome_demanda, 'parecer de analise', 'pdf', referencia=codigo),
         "anexo_sha256": sha256(pdf).hexdigest(),
     }
     previa["assinatura"] = sha256(json.dumps(previa, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()
@@ -63,7 +64,8 @@ def _notificar(pedido: dict, destinatario: str | None, nome_hierarquia: str, use
     anexo = None
     previa = None
     if anexar_parecer:
-        previa, pdf = preparar_notificacao(pedido, destinatario, nome_hierarquia)
+        previa, pdf = preparar_notificacao(pedido, destinatario, nome_hierarquia,
+                                            nome_demanda=(cadastro_snapshot or {}).get('nome'))
         if assinatura_previa and assinatura_previa != previa["assinatura"]:
             raise DemandaValidationError("O destinatário, a mensagem ou o PDF mudou. Abra novamente a prévia antes de enviar.", field="previsualizacao")
         anexo = (previa["anexo_nome"], pdf)

@@ -423,7 +423,7 @@
     $("ami-analysis-pairs-chart").innerHTML = '<div class="ami-chart-stack"><p class="ami-table-label ami-chart-label">' + escapeHtml(tituloGraficoPares(pairs, selectedJudgeId)) + '</p>' +
       '<div class="ami-chart-card" id="ami-analysis-pairs-plot"></div>' +
       '<div class="admin-table-footer ami-chart-footer"><nav id="ami-pairs-chart-pagination" class="admin-pagination" aria-label="Paginar pares do gr\u00e1fico"></nav><p id="ami-pairs-chart-summary" class="admin-table-summary" aria-live="polite"></p></div></div>';
-    SLTAnalysisTable($("ami-analysis-pairs").querySelector("table"));
+    SLTAnalysisTable($("ami-analysis-pairs").querySelector("table"), analysisWorkspace.ambiente);
     ligarGraficoATabela(pairs, selectedJudgeId);
     espelharRotuloDaTabela($("ami-analysis-pairs"), $("ami-analysis-pairs-chart").querySelector(".ami-chart-label"));
     renderFioDerivado(analysisWorkspace);
@@ -670,7 +670,7 @@
         (r ? '<td>' + escapeHtml(deadlineLabel(r.iniciadoEm)) + '</td>' : vazio) +
         (r && r.enviadoEm ? '<td>' + escapeHtml(deadlineLabel(r.enviadoEm)) + '</td>' : vazio) + '</tr>';
     }).join("") || '<tr><td colspan="7" class="ami-empty">Nenhum julgador convidado.</td></tr>';
-    SLTAnalysisTable($("ami-analysis-judges").closest("table"));
+    SLTAnalysisTable($("ami-analysis-judges").closest("table"), data.ambiente);
   }
   function renderResponsesForConsolidation(data) {
     var vazio = '<td class="ami-cell-vazio"></td>';
@@ -683,7 +683,7 @@
         (r ? '<td>' + escapeHtml(deadlineLabel(r.iniciadoEm)) + '</td>' : vazio) +
         (enviada ? '<td>' + escapeHtml(deadlineLabel(r.enviadoEm)) + '</td>' : vazio) + '</tr>';
     }).join("") || '<tr><td colspan="7" class="ami-empty">Nenhum julgador convidado.</td></tr>';
-    SLTAnalysisTable($("ami-analysis-responses").closest("table"));
+    SLTAnalysisTable($("ami-analysis-responses").closest("table"), data.ambiente);
   }
   function renderConsolidatedMatrix(data, foco) {
     var criterios = (foco ? foco.criterios : data.ambiente.criterios || []).map(criterionName);
@@ -719,7 +719,7 @@
         return '<tr><td class="ami-stats-table__name">' + escapeHtml(criterios[i]) + '</td>' +
           linha.map(function (valor, j) { return '<td' + (i === j ? ' class="is-diagonal"' : '') + ' title="' + escapeHtml(criterios[i] + " \u00d7 " + criterios[j]) + '">' + fmtNumber(valor) + '</td>'; }).join("") + '</tr>';
       }).join("") + '</tbody></table></div>';
-    SLTAnalysisTable($("ami-analysis-matrix").querySelector("table"));
+    SLTAnalysisTable($("ami-analysis-matrix").querySelector("table"), data.ambiente);
   }
   // Explicacao curta de cada metrica, em linguagem de quem vai decidir.
   var EXPLICACAO_METRICAS = {
@@ -814,7 +814,7 @@
     }).join("") || '<tr><td colspan="3" class="ami-empty">Sem respostas enviadas.</td></tr>';
     $("ami-analysis-criteria-chart").innerHTML = '<div class="ami-chart-stack"><p class="ami-table-label ami-chart-label">Participa\u00e7\u00e3o de cada crit\u00e9rio nos pesos</p>' +
       '<div class="ami-chart-card">' + (pesos.length ? weightsDonut(criterios, pesos) : '<p class="ami-empty">Sem respostas enviadas.</p>') + '</div></div>';
-    SLTAnalysisTable($("ami-analysis-criteria").closest("table"));
+    SLTAnalysisTable($("ami-analysis-criteria").closest("table"), data.ambiente);
     espelharRotuloDaTabela($("ami-analysis-criteria").closest("table").parentElement, $("ami-analysis-criteria-chart").querySelector(".ami-chart-label"));
     ligarSelecaoCruzada($("ami-analysis-criteria-chart").parentElement, "criterio");
   }

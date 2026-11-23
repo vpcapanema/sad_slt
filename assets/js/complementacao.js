@@ -280,7 +280,7 @@
       .map(row => row.map(quote).join(';')).join('\r\n');
     const link = document.createElement('a');
     link.href = URL.createObjectURL(new Blob(['\uFEFF', csv], {type: 'text/csv;charset=utf-8'}));
-    link.download = 'atributos-complementacao.csv';
+    link.download = SicardNomeArquivo.gerar(selecionada?.nome, 'atributos complementacao', 'csv', selecionada?.codigo || selecionada?.id);
     link.click();
     setTimeout(() => URL.revokeObjectURL(link.href), 1000);
   });

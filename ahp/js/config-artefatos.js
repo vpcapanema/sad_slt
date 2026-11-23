@@ -163,14 +163,8 @@
   };
 
   function nomeArquivo(tipo, config) {
-    var den = config && config.denominacao;
-    if (den) {
-      var sufixo = tipo === "objetos" ? "fase1" : tipo === "matriz" ? "fase2" : "homologado";
-      return den + "_" + sufixo + ".json";
-    }
-    // Fallback para configs sem denominação (pré-migração 036).
-    var cod = (config && config.codigo) || "config";
-    return "ahp_" + tipo + "_" + cod + ".json";
+    var produtos = {objetos: "objetos fase 1", matriz: "matriz fase 2", pesos: "pesos homologados"};
+    return global.SicardNomeArquivo.gerar(config?.nome || config?.denominacao, produtos[tipo], "json", config?.codigo || "AHP");
   }
 
   function baixar(obj, filename) {
@@ -214,7 +208,8 @@
       // Prefere o artefato pré-gerado salvo no banco; constrói só se ausente.
       var coluna = _COLUNA_ARTEFATO[tipo];
       var artefato = (coluna && config[coluna]) ? config[coluna] : build(config);
-      baixar(artefato, nomeArquivo(tipo, config));
+      var filename = nomeArquivo(tipo, config);
+      baixar(Object.assign({}, artefato, {nome_arquivo: filename}), filename);
       return config;
     });
   }

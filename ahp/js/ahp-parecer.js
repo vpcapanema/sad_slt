@@ -590,8 +590,7 @@
       y = doc.lastAutoTable.finalY + 6;
     }
 
-    var den = config.denominacao || ('parecer_' + (config.codigo || 'ahp'));
-    doc.save(den + '_parecer.pdf');
+    doc.save(SicardNomeArquivo.gerar(config.nome || config.denominacao, 'parecer', 'pdf', config.codigo || 'AHP'));
   };
 
   global.SLTAhpParecer = SLTAhpParecer;

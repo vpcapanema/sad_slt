@@ -25,6 +25,7 @@ from shapely.geometry import Polygon, MultiPolygon, mapping, box
 from shapely.ops import unary_union
 from shapely.validation import make_valid
 
+from api.nome_arquivo import nome_arquivo
 from api.services import elegibilidade_jobs as jobs, storage_remoto, saidas_storage
 from api.services.elegibilidade_processamento import pasta_saida, ANALISES, individualizar_intersecoes
 from api.services import extracao_atributos_aliases as aliases
@@ -321,8 +322,11 @@ def registrar_relatorios(identificadores: list[str], modelo: dict, dono, *, anal
                    'concluidas': len(resultados),
                    'previstas': resultados[0].get('total_entradas', len(resultados))}
         dados = pdf(recorte)
+        from api.services.hierarquizacao_service import nome_registro
+        registro_nome = nome_registro(codigo)
         caminho = saidas_storage.caminho_documento(
-            _pasta_resultados(resultados, analise=analise), f'Relatório de {_titulo_analise(analise)}.pdf')
+            _pasta_resultados(resultados, analise=analise),
+            nome_arquivo(registro_nome, 'relatorio de ' + _titulo_analise(analise), 'pdf'))
         assinatura = sha256(dados).hexdigest()
         saidas_storage.enviar_conteudo(caminho, dados)
         if sha256(storage_remoto.baixar(caminho)).hexdigest() != assinatura:
@@ -334,7 +338,8 @@ def registrar_relatorios(identificadores: list[str], modelo: dict, dono, *, anal
             # O Resumo da Elegibilidade acompanha o PDF e a camada no relatório da Fase 1 da hierarquização.
             planilha = sintese.xlsx_resumo(recorte)
             caminho_planilha = saidas_storage.caminho_documento(
-                _pasta_resultados(resultados, analise=analise), 'Resumo da Elegibilidade.xlsx')
+                _pasta_resultados(resultados, analise=analise),
+                nome_arquivo(registro_nome, 'resumo da elegibilidade', 'xlsx'))
             assinatura_planilha = sha256(planilha).hexdigest()
             saidas_storage.enviar_conteudo(caminho_planilha, planilha)
             if sha256(storage_remoto.baixar(caminho_planilha)).hexdigest() != assinatura_planilha:
@@ -1031,40 +1036,61 @@ def pdf(modelo: dict) -> bytes:
 
 
 def pacote(modelo: dict, arquivos: list[tuple[str, bytes]]) -> tuple[bytes, str]:
+    from api.services.hierarquizacao_service import nome_registro
+
+    analise = modelo.get('analise', 'elegibilidade')
+    entradas = modelo['entradas']
+    codigos = {entrada.get('hierarquizacao') for entrada in entradas}
+    codigo = next(iter(codigos)) if len(codigos) == 1 else None
+    nomes_hierarquizacoes = {cod: nome_registro(cod) for cod in codigos if cod}
+    registro = (nomes_hierarquizacoes[codigo] if codigo else
+                entradas[0]['nome'] if len(entradas) == 1 else _titulo_analise(analise))
+
+    def nome(produto, extensao):
+        return nome_arquivo(registro, produto, extensao, referencia=_titulo_analise(analise))
+
+    nome_relatorio = nome('relatorio de ' + _titulo_analise(analise), 'pdf')
+    metadados = nome('metadados da analise', 'json')
+    produto_camada = ANALISES[analise]['camada']
+    camadas = []
+    for entrada, (caminho, dados) in zip(entradas, arquivos, strict=True):
+        hierarquia = nomes_hierarquizacoes.get(entrada.get('hierarquizacao'))
+        produto = f"{produto_camada} {entrada['nome']}" if hierarquia and len(entradas) > 1 else produto_camada
+        arquivo = nome_arquivo(hierarquia or entrada['nome'], produto, 'gpkg')
+        camadas.append((str(PurePosixPath(caminho).with_name(arquivo)), dados))
+    nomes_camadas = [n for n, _ in camadas]
     relatorio = pdf(modelo)
     memoria = BytesIO()
     with ZipFile(memoria, 'w', ZIP_DEFLATED) as zipado:
-        analise = modelo.get('analise', 'elegibilidade')
-        nome_relatorio = f'Relatório de {_titulo_analise(analise)}.pdf'
         zipado.writestr(nome_relatorio, relatorio)
-        for nome, dados in arquivos:
-            zipado.writestr(nome, dados)
-        documentos = []
+        for caminho_camada, dados in camadas:
+            zipado.writestr(caminho_camada, dados)
         if analise == 'elegibilidade':
-            documentos = [('Tabelas/Situação das Demandas.xlsx', sintese.xlsx(modelo)),
-                          ('Tabelas/Situação das Demandas.csv', sintese.csv_detalhe(modelo)),
-                          ('Tabelas/Resumo da Elegibilidade.xlsx', sintese.xlsx_resumo(modelo)),
-                          ('Tabelas/Resumo da Elegibilidade.csv', sintese.csv_resumo(modelo)),
-                          ('LEIA-ME.txt', sintese.leia_me(modelo, nome_relatorio, [n for n, _ in arquivos]))]
+            documentos = [(f'Tabelas/{nome("situacao das demandas", "xlsx")}', sintese.xlsx(modelo)),
+                          (f'Tabelas/{nome("situacao das demandas", "csv")}', sintese.csv_detalhe(modelo)),
+                          (f'Tabelas/{nome("resumo da elegibilidade", "xlsx")}', sintese.xlsx_resumo(modelo)),
+                          (f'Tabelas/{nome("resumo da elegibilidade", "csv")}', sintese.csv_resumo(modelo))]
+            guia = sintese.leia_me(modelo, nome_relatorio, nomes_camadas,
+                                    tabelas=[n for n, _ in documentos], metadados=metadados)
+            documentos.append((nome('leia me', 'txt'), guia))
         else:
-            documentos = favorabilidade_exportacao.documentos(modelo, nome_relatorio, [n for n, _ in arquivos])
-        for nome, dados in documentos:
-            zipado.writestr(nome, dados)
+            documentos = favorabilidade_exportacao.documentos(modelo, nome_relatorio, nomes_camadas, nome, metadados)
+        for caminho_documento, dados in documentos:
+            zipado.writestr(caminho_documento, dados)
         manifesto = {**{k: v for k, v in modelo.items() if k != 'entradas'},
                      'entradas': [{k: v for k, v in item.items() if k not in {'mapa', 'linhas', 'geometrias', 'intersecoes'}} for item in modelo['entradas']],
-                     'arquivos': [{'nome': n, 'sha256': sha256(d).hexdigest()} for n, d in arquivos]}
-        if documentos:
-            manifesto['documentos'] = [{'nome': n, 'sha256': sha256(d).hexdigest()} for n, d in documentos]
-        manifesto['versao_pacote'] = 2
-        manifesto['documentos'].insert(0, {'nome': nome_relatorio, 'sha256': sha256(relatorio).hexdigest()})
-        zipado.writestr('Metadados da Análise.json', json.dumps(manifesto, ensure_ascii=False, indent=2))
+                     'arquivos': [{'nome': n, 'sha256': sha256(d).hexdigest()} for n, d in camadas],
+                     'documentos': [{'nome': n, 'sha256': sha256(d).hexdigest()}
+                                    for n, d in [(nome_relatorio, relatorio), *documentos]],
+                     'versao_pacote': 3}
+        zipado.writestr(metadados, json.dumps(manifesto, ensure_ascii=False, indent=2))
     dados = memoria.getvalue()
     with ZipFile(BytesIO(dados)) as zipado:
         if zipado.testzip() is not None:
             raise ValueError('O pacote não passou na conferência de integridade.')
     pasta = saidas_storage.pasta_exportacao(modelo['pasta_analise'])
     saidas_storage.validar(pasta + '/analise.json')
-    caminho = saidas_storage.caminho_documento(pasta, 'Relatório e Camadas.zip')
+    caminho = saidas_storage.caminho_documento(pasta, nome('relatorio e camadas', 'zip'))
     saidas_storage.enviar_conteudo(caminho, dados)
     if sha256(storage_remoto.baixar(caminho)).digest() != sha256(dados).digest():
         raise ValueError('O pacote no storage diverge do conteúdo conferido.')

@@ -777,23 +777,26 @@ def decidir(
     return resposta, status_anterior, status_atual
 
 
-def obter_pdf(codigo: str) -> tuple[str, bytes]:
+def obter_pdf(codigo: str, *, com_nome: bool = False) -> tuple[str, bytes]:
+    from api.nome_arquivo import nome_arquivo
     _tipo, demanda = _localizar_demanda(codigo)
     pdf = analise_demanda_repository.get_pdf(demanda["codigo"])
     if not pdf:
         raise DemandaNotFoundError(
             f"Nenhum parecer em PDF foi gerado para a demanda {demanda['codigo']}."
         )
-    return demanda["codigo"], pdf
+    nome = nome_arquivo(demanda.get('nome'), 'parecer de analise', 'pdf', referencia=demanda['codigo'])
+    return (nome if com_nome else demanda["codigo"]), pdf
 
 
-def gerar_relatorio_atual_pdf(codigo: str) -> tuple[str, bytes]:
+def gerar_relatorio_atual_pdf(codigo: str, *, com_nome: bool = False) -> tuple[str, bytes]:
     """Gera o relatório da análise no estado atual, sem exigir decisão final.
 
     Diferentemente de :func:`obter_pdf`, esta emissão não depende de um parecer
     oficial previamente persistido. Ela é usada pela visualização das demandas e
     preserva o mesmo padrão institucional dos pareceres definitivos.
     """
+    from api.nome_arquivo import nome_arquivo
     tipo, demanda = _localizar_demanda(codigo)
     analise = analise_demanda_repository.get_by_codigo(demanda["codigo"]) or {}
     respostas = _respostas(analise)
@@ -824,7 +827,8 @@ def gerar_relatorio_atual_pdf(codigo: str) -> tuple[str, bytes]:
         momento=momento,
         geometria=_geometria_cadastro(tipo, demanda["codigo"]),
     )
-    return demanda["codigo"], pdf
+    nome = nome_arquivo(demanda.get('nome'), 'analise tecnica', 'pdf', referencia=demanda['codigo'])
+    return (nome if com_nome else demanda["codigo"]), pdf
 
 
 # ---------------------------------------------------------------------------

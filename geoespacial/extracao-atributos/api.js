@@ -98,7 +98,7 @@ export const adaptador={
     rastreio.concluir(response.status);
     if(!response.ok){const data=await response.json().catch(()=>({}));throw new Error(data.detail||'Falha ao baixar o arquivo.');}
     // O nome sai do servidor: é o nome da saída, igual ao que está dentro do pacote.
-    const nome=/filename="([^"]+)"/.exec(response.headers.get('Content-Disposition')||'')?.[1]||`extracao-${resultado_id}.zip`;
+    const nome=SicardNomeArquivo.daResposta(response,SicardNomeArquivo.gerar(resultado_id,'pacote da extracao','zip'));
     let blob;try{blob=await response.blob();}catch(error){rastreio.falhar(error);throw error;}
     log('download.recebido',{job:resultado_id,bytes:blob.size});
     const url=URL.createObjectURL(blob),link=document.createElement('a');

@@ -188,12 +188,14 @@ def preparar_hierarquizacao(codigo: str, demandas: list[str], dono: str, *,
         for origem in origens:
             contagens.update(origem['normalizacao'][campo])
         auditoria[campo] = dict(contagens)
-    return _gravar_demanda(normalizada, auditoria, ident, f"{codigo} — {dados['nome']}", dono, analise=analise)
+    return _gravar_demanda(normalizada, auditoria, ident, f"{codigo} — {dados['nome']}", dono,
+                           analise=analise, registro=dados['nome'] or codigo)
 
 
 def _gravar_demanda(normalizada: nativo.Camada, auditoria: dict, ident: str, nome: str, dono: str, *,
-                    analise: str = 'elegibilidade') -> dict:
-    nome_arquivo = 'demandas_normalizadas.gpkg'
+                    analise: str = 'elegibilidade', registro: str | None = None) -> dict:
+    from api.nome_arquivo import nome_arquivo as nome_saida
+    nome_arquivo = nome_saida(registro or nome, 'demandas normalizadas', 'gpkg', referencia=ident)
     normalizada.metadados['SICARD_NORMALIZACAO'] = json.dumps(auditoria, ensure_ascii=False, allow_nan=False)
     conteudos = {nome_arquivo: nativo.serializar(normalizada, 'demandas')}
     reaberta = nativo.ler(conteudos[nome_arquivo], 'demandas')

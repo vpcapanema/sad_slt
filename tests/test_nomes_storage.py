@@ -9,10 +9,19 @@ from types import SimpleNamespace
 
 import pytest
 
+from api.nome_arquivo import nome_arquivo
 from api.services.nomes_storage import reservar as reservar_real
 from api.services import saidas_storage, storage_remoto
 from scripts.migrar_nomes_storage import planejar, consolidar_catalogo
 from scripts.migrar_destinos_storage import transformar_jsons, Remapeamento
+
+
+def test_nomes_de_saida_preservam_registro_e_extensao():
+    assert nome_arquivo('Workshop PLI-SP 2050', 'Relatório e camadas', '.ZIP') == (
+        'Workshop_PLI-SP_2050_relatorio_e_camadas.zip')
+    assert nome_arquivo('///', 'Projeto', 'sicard.json', referencia='Bancada') == 'Bancada_projeto.sicard.json'
+    longo = nome_arquivo('Á' * 200, 'Mapa final', 'tif')
+    assert len(longo) == 120 and longo.endswith('_mapa_final.tif')
 
 
 class Consulta:

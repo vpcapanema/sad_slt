@@ -25,7 +25,7 @@ export function criarResultados(){
       try{const response=await fetch(link.href,{credentials:'same-origin',signal:AbortSignal.timeout(180000)});
         if(!response.ok){const data=await response.json().catch(()=>({}));throw new Error(typeof data.detail==='string'?data.detail:`Falha ao baixar relatório (HTTP ${response.status}).`);}
         const url=URL.createObjectURL(await response.blob()),anchor=clone('ea-tpl-download');anchor.href=url;
-        anchor.download=/filename="([^"\r\n]+)"/.exec(response.headers.get('Content-Disposition')||'')?.[1]||`relatorio-${tipo}.pdf`;
+        anchor.download=SicardNomeArquivo.daResposta(response,SicardNomeArquivo.gerar('Extracao de Atributos',`relatorio ${tipo}`,'pdf'));
         anchor.click();setTimeout(()=>URL.revokeObjectURL(url),30000);proc.concluirTarefa(TAREFA,'PDF gerado');
         proc.sucesso({title:'Download iniciado',message:'O relatório foi gerado e o download começou.',name:anchor.download});
       }catch(error){proc.erro({message:error.message});}finally{delete link.dataset.baixando;}

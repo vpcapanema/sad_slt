@@ -242,6 +242,7 @@ def salvar_raster(
 def _salvar_saida(recurso_id, nome, origem, *, metadados, geometria_tipo, crs,
                   gdf=None, raster_bytes=None):
     """Catálogo no banco; conteúdo vetorial/raster exclusivamente no storage."""
+    from api.nome_arquivo import nome_arquivo
     metadados.update(nome=nome)
     with get_connection() as conn:
         from api.services import ciclo_vida_arquivos as ciclo, saidas_storage
@@ -252,9 +253,9 @@ def _salvar_saida(recurso_id, nome, origem, *, metadados, geometria_tipo, crs,
                 (id,operacao,status,finalizado_em,parametros)
                 VALUES (%s,%s,'concluido',now(),%s)''',
                 (execution,origem,_jsonb({'linhagem_original':metadados.get('linhagem'), 'nome_saida': nome})))
-        destino=saidas_storage.destino(
-            execution,'camadas',(ciclo.apelido(nome) or 'saida')+('.gpkg' if gdf is not None else '.tif'),
-            elemento=recurso_id, conn=conn)
+        arquivo = (nome_arquivo(nome, 'camada vetorial', 'gpkg', referencia=origem) if gdf is not None
+                   else nome_arquivo(nome, 'camada raster', 'tif', referencia=origem))
+        destino = saidas_storage.destino(execution, 'camadas', arquivo, elemento=recurso_id, conn=conn)
         row = conn.execute('''INSERT INTO geoprocessamento.camada_processada
             (recurso_sessao_id,nome,tipo,geometria_tipo,crs,formato,operacao_origem,linhagem,metadados,storage_caminho)
             VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id''',

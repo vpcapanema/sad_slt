@@ -136,8 +136,11 @@ def xlsx(modelo: dict, detalhes: list[list], resumos: list[list]) -> bytes:
     return memoria.getvalue()
 
 
-def documentos(modelo: dict, relatorio: str, arquivos: list[str]) -> list[tuple[str, bytes]]:
+def documentos(modelo: dict, relatorio: str, arquivos: list[str], nome, metadados: str) -> list[tuple[str, bytes]]:
     detalhes, resumos = detalhe(modelo), resumo(modelo)
+    planilha = 'Tabelas/' + nome('favorabilidade territorial', 'xlsx')
+    indices = 'Tabelas/' + nome('indices e classes', 'csv')
+    cobertura = 'Tabelas/' + nome('cobertura por superficie', 'csv')
     guia = [
         'RELATÓRIO E CAMADAS — FAVORABILIDADE TERRITORIAL', '',
         f'Entradas concluídas: {modelo["concluidas"]} de {modelo["previstas"]}.',
@@ -145,12 +148,12 @@ def documentos(modelo: dict, relatorio: str, arquivos: list[str]) -> list[tuple[
         if modelo['concluidas'] != modelo['previstas'] else 'Todas as entradas previstas foram concluídas.',
         '', 'ORDEM DE LEITURA',
         f'1. {relatorio}: alcance, cobertura por superfície, mapa e valores originais por demanda e feição.',
-        '2. Tabelas/Favorabilidade Territorial.xlsx: detalhe editável, cobertura por superfície, fontes e guia.',
-        '3. Tabelas/Índices e Classes.csv: o mesmo detalhe em formato aberto.',
-        '4. Tabelas/Cobertura por Superfície.csv: contagens para conferir presença e qualidade dos índices, sem escore agregado.',
+        f'2. {planilha}: detalhe editável, cobertura por superfície, fontes e guia.',
+        f'3. {indices}: o mesmo detalhe em formato aberto.',
+        f'4. {cobertura}: contagens para conferir presença e qualidade dos índices, sem escore agregado.',
         '5. Camadas/NN/*.gpkg: produtos integrais para SIG, com a entrada preparada e a camada intersecoes, '
         'todos os atributos de origem, vínculos e metadados SICARD_FAVORABILIDADE.',
-        '6. Metadados da Análise.json: execuções, nomes revisados e SHA-256 das camadas, PDF, tabelas e deste guia.',
+        f'6. {metadados}: execuções, nomes revisados e SHA-256 das camadas, PDF, tabelas e deste guia.',
         '', 'COMO LER', NOTA,
         'CSV: UTF-8 com BOM; separador ponto e vírgula; decimal vírgula; célula vazia não significa zero. '
         'Campos de estado distinguem ausente, nulo, invalido e sem_intersecao; valido indica valor utilizável. '
@@ -165,12 +168,12 @@ def documentos(modelo: dict, relatorio: str, arquivos: list[str]) -> list[tuple[
         'edições externas. A emissão do pacote não altera ranking, AHP ou homologação.',
         '', 'ARQUIVOS DE CAMADAS', *[f'- {nome}' for nome in arquivos],
     ]
-    arquivos_raster = ([('Tabelas/Síntese Raster.csv', _csv(COLUNAS_RASTER, sintese_raster(modelo)))]
+    arquivos_raster = ([('Tabelas/' + nome('sintese raster', 'csv'), _csv(COLUNAS_RASTER, sintese_raster(modelo)))]
                        if any(c.get('tipo') == 'raster' for e in modelo['entradas'] for c in e['campos']) else [])
     return [
-        ('Tabelas/Favorabilidade Territorial.xlsx', xlsx(modelo, detalhes, resumos)),
-        ('Tabelas/Índices e Classes.csv', _csv(COLUNAS_DETALHE, detalhes)),
-        ('Tabelas/Cobertura por Superfície.csv', _csv(COLUNAS_RESUMO, resumos)),
-        ('LEIA-ME.txt', ('\r\n'.join(guia) + '\r\n').encode('utf-8-sig')),
+        (planilha, xlsx(modelo, detalhes, resumos)),
+        (indices, _csv(COLUNAS_DETALHE, detalhes)),
+        (cobertura, _csv(COLUNAS_RESUMO, resumos)),
+        (nome('leia me', 'txt'), ('\r\n'.join(guia) + '\r\n').encode('utf-8-sig')),
         *arquivos_raster,
     ]

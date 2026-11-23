@@ -196,7 +196,7 @@
   $("ami-email-history-export").onclick = () => {
     if (!historyContext) return;
     exportar(historico(historyContext.row, historyContext.tipo).filter(row => historySelected.has(row.id)).map(detalhes),
-      ["Entrega", "Leitura", "Detalhes"], "historico-email-" + historyContext.tipo + ".csv");
+      ["Entrega", "Leitura", "Detalhes"], SicardNomeArquivo.gerar(contexto?.julgamento?.nome, `historico email ${historyContext.tipo}`, 'csv', 'Julgamento Colaborativo'));
   };
   async function request(path, options) {
     const response = await fetch(path, Object.assign({
@@ -745,7 +745,7 @@
     const rows = monitorRows.filter(row => selected.has(rowKey(row)));
     if (!rows.length) return;
     const headings = Array.from($("ami-monitor-table").tHead.rows[0].cells).slice(1).map(th => th.textContent.trim());
-    exportar(rows.map(cells), headings, "monitoramento-colaboradores.csv");
+    exportar(rows.map(cells), headings, SicardNomeArquivo.gerar(contexto?.julgamento?.nome, 'monitoramento colaboradores', 'csv', 'Julgamento Colaborativo'));
   });
   function atualizarAutomaticamente() {
     if (contexto && !ocupado && !carregando && modo === "view" &&

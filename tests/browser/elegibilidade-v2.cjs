@@ -125,7 +125,7 @@ const assert = require('node:assert/strict');
         downloadRequests.push(req.postDataJSON());
         if(failDownload)return route.fulfill({status:503,json:{detail:'Storage indisponível; tente novamente.'}});
         return route.fulfill({contentType:'application/zip',body:Buffer.from('PK\\x03\\x04-fixture'),
-          headers:{'content-disposition':'attachment; filename="Relatorio e Camadas.zip"'}});
+          headers:{'content-disposition':'attachment; filename="Workshop_PLI-SP_2050_relatorio_e_camadas.zip"'}});
       }
       if(path.endsWith('/elegibilidade/execucoes') && req.method()==='POST'){
         const payload=req.postDataJSON(),id=`execucao-${executions.length+1}`;
@@ -817,7 +817,7 @@ const assert = require('node:assert/strict');
       failDownload=false;
       const download=page.waitForEvent('download');
       await page.locator('#ev-resultados-download').click();
-      assert.equal((await download).suggestedFilename(),'Relatório e Camadas.zip');
+      assert.equal((await download).suggestedFilename(),'Workshop_PLI-SP_2050_relatorio_e_camadas.zip');
       assert.deepEqual(downloadRequests.at(-1),reportRequests.at(-1),'PDF e tela usam os mesmos aliases e execuções, não a página da tabela');
       await page.locator('#ev-resultados-tabela tbody tr').nth(2).locator('td[data-base] button').first().click();
       await page.locator('#ev-resultados-legenda button').first().click();

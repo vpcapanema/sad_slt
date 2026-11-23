@@ -54,10 +54,11 @@ def test_demand_zip_preserves_coordinates(client,monkeypatch):
     monkeypatch.setattr(explorer.demandas,'exportar_original',lambda *args:original)
     response=client.get('/api/geoespacial/explorador/download',params={'fonte':'demandas','id':'cadastro:projeto:PRJ-1'})
     assert response.status_code==200
+    assert response.headers['content-disposition'].endswith('Sao_Paulo_geometria_cadastrada.zip')
     import json
     with ZipFile(BytesIO(response.content)) as archive:
-        assert archive.namelist()==['PRJ-1.geojson']
-        assert json.loads(archive.read('PRJ-1.geojson'))==original
+        assert archive.namelist()==['Sao_Paulo_geometria_cadastrada.geojson']
+        assert json.loads(archive.read('Sao_Paulo_geometria_cadastrada.geojson'))==original
 
 
 def test_storage_zip_preserves_original_and_shapefile_companions(client,mounted):

@@ -6,9 +6,7 @@ apenas como origem dos insumos e do componente React compilado.
 """
 import io
 import json
-import re
 import threading
-import unicodedata
 from collections import Counter
 from contextlib import nullcontext
 from datetime import datetime, timedelta, timezone
@@ -110,12 +108,10 @@ def previa(codigo, payload):
 
 
 def base_arquivos(nome: str, territorialidade='municipios') -> str:
-    """municipios_sp + identificador curto + o nome que o usuário deu."""
-    texto = unicodedata.normalize('NFKD', str(nome)).encode('ascii', 'ignore').decode()
-    # 40 caracteres: o nome completo fica no banco; aqui o caminho precisa caber.
-    texto = re.sub(r'[^a-zA-Z0-9]+', '_', texto).strip('_').lower()[:40].strip('_')
-    curto = uuid4().hex[:8]
-    return '_'.join(parte for parte in (backend(territorialidade).PREFIXO, curto, texto) if parte)
+    from api.nome_arquivo import nome_arquivo
+    produto = backend(territorialidade).PREFIXO
+    # Deixa espaço para os sufixos dos relatórios e dicionários do pacote.
+    return nome_arquivo(nome[:48], produto, 'zip', referencia='Camadas Territoriais').removesuffix('.zip')
 
 
 def materializar(payload, folder=None, base=None, controle=None):

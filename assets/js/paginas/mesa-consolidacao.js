@@ -87,7 +87,7 @@
       const aspas = v => '"' + String(v ?? '').replace(/^[=+@-]/, "'$&").replace(/"/g, '""') + '"';
       const escolhidas = estado.linhas.filter(l => estado.selecionados.has(idLinha(l)));
       const csv = [colunas.map(c => c.titulo)].concat(escolhidas.map(l => colunas.map((c, i) => textoDe(l, i)))).map(l => l.map(aspas).join(';')).join('\r\n');
-      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\uFEFF', csv], { type: 'text/csv;charset=utf-8' })); a.download = id + '.csv'; a.click();
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\uFEFF', csv], { type: 'text/csv;charset=utf-8' })); a.download = SicardNomeArquivo.gerar(S.espaco?.ambiente?.nome, id, 'csv', 'Mesa de Consolidacao'); a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 1000);
     }
     function linhaHtml(linha) {
@@ -527,7 +527,7 @@
       folha('Matriz consolidada', [[''].concat(nomes)].concat(r.matriz.map((linha, i) => [nomes[i]].concat(linha))));
       folha('Pesos', [['Critério', 'Peso consolidado', 'Menor individual', 'Maior individual', 'Variação (CV)'].concat(S.enviadas.map((x, k) => 'Peso ' + hoverLabel(x, k)))].concat(r.criterios.map((c, k) => [c.nome, c.peso, c.minimo, c.maximo, c.cv].concat(S.enviadas.map(x => r.individuais.get(String(x.id)).pesos[k])))));
     }
-    XLSX.writeFile(livro, 'mesa-consolidacao-' + String(ambiente.nome || ambiente.id).normalize('NFD').replace(/[^\w]+/g, '-').replace(/^-|-$/g, '').toLowerCase() + '.xlsx');
+    XLSX.writeFile(livro, SicardNomeArquivo.gerar(ambiente.nome, 'mesa de consolidacao', 'xlsx', ambiente.id));
   }
 
   /* ---------- Inicialização ---------- */

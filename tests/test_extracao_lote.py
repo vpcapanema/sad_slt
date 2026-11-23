@@ -64,7 +64,7 @@ def test_lote_metricas_ranking_e_pacotes(tmp_path):
     conteudo,_,manifest=montar_lote(res,{'execucao_id':'teste'},'Teste')
     with zipfile.ZipFile(io.BytesIO(conteudo)) as pacote:
         assert len([n for n in pacote.namelist() if n.endswith('.gpkg')])==3
-        assert 'unificado/demandas.csv' in pacote.namelist()
+        assert 'unificado/Teste_demandas.csv' in pacote.namelist()
         for item in res['individuais']:
             member=next(m['nome'] for m in manifest if m['chave']==item['chave'])
             with zipfile.ZipFile(io.BytesIO(pacote.read(member))) as individual:

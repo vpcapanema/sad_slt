@@ -611,7 +611,9 @@ def visualizar_resultados_elegibilidade(request: Request, payload: ApresentacaoE
 @router.post('/favorabilidade/resultados/pacote')
 def pacote_resultados_elegibilidade(request: Request, payload: ApresentacaoElegibilidade,
                                    user: SessionUser = Depends(require_geospatial_access)):
+    from pathlib import PurePosixPath
     from urllib.parse import quote
+    from api.nome_arquivo import anexo
     from api.services import elegibilidade_relatorio
     try:
         opcoes = {'analise': 'favorabilidade'} if '/favorabilidade/' in request.url.path else {}
@@ -619,7 +621,7 @@ def pacote_resultados_elegibilidade(request: Request, payload: ApresentacaoElegi
         elegibilidade_relatorio.registrar_relatorios(payload.execucoes, modelo, user.id, **opcoes)
         dados, caminho = elegibilidade_relatorio.pacote(modelo, arquivos)
         return Response(dados, media_type='application/zip', headers={
-            'Content-Disposition': "attachment; filename=\"Relatorio e Camadas.zip\"; filename*=UTF-8''" + quote('Relatório e Camadas.zip'),
+            'Content-Disposition': anexo(PurePosixPath(caminho).name),
             'Cache-Control': 'no-store', 'X-SICARD-Package': quote(caminho)})
     except FileNotFoundError as exc:
         raise HTTPException(404, str(exc)) from exc
@@ -906,12 +908,14 @@ def excluir(ident: UUID, user: SessionUser = Depends(require_geospatial_access))
 @router.get('/execucoes/{ident}/pacote')
 def baixar_pacote(ident: UUID, saida: str = Query(default='', pattern=r'^(entrada_[1-9][0-9]*)?$'), user: SessionUser = Depends(require_geospatial_access)):
     """O pacote .zip da extração, lido do banco. Os arquivos não são baixados avulsos."""
+    from pathlib import PurePosixPath
+
     try:
         conteudo, nome = service.arquivo_do_pacote(ident,user,saida or 'zip')
     except LookupError as exc:
         raise HTTPException(404,str(exc)) from exc
     return Response(conteudo,media_type='application/zip',
-                    headers={'Content-Disposition':f'attachment; filename="{nome}"','Cache-Control':'no-store'})
+                    headers={'Content-Disposition':f'attachment; filename="{PurePosixPath(nome).name}"','Cache-Control':'no-store'})
 
 
 @router.get('/execucoes/{ident}/relatorios/{tipo}')

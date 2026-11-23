@@ -1713,6 +1713,18 @@ class GeoespacialService:
             "versao_classificacao": versao_classificacao,
         }
 
+    def _nome_exportacao(self, recurso: str, arquivo: str, produto: str) -> str:
+        from api.nome_arquivo import nome_arquivo
+        from api.path_policy import relative_file_name
+
+        destino = Path(relative_file_name(arquivo))
+        registro = self._metadados.get(recurso, {}).get('nome')
+        if not registro:
+            registro = destino.stem
+        elif destino.stem.casefold() != registro.casefold():
+            produto = destino.stem
+        return nome_arquivo(registro, produto, destino.suffix)
+
     async def exportar_camada(
         self,
         camada_id: str,
@@ -1749,6 +1761,7 @@ class GeoespacialService:
                     camada_id, "data/geoespacial/outputs", nome_arquivo,
                     crs_saida or "auto", {"GPKG": "gpkg", "GeoJSON": "geojson", "ESRI Shapefile": "shapefile"}[driver],
                 )
+            nome_arquivo = self._nome_exportacao(camada_id, nome_arquivo, 'exportacao vetorial')
             caminho_completo = caminho_exportacao(nome_arquivo, "vetor")
             caminho_relativo = Path(project_relative(caminho_completo))
             if progress:
@@ -1980,6 +1993,7 @@ class GeoespacialService:
 
         if opcao_salvamento == "persistir_sistema":
             from api.services.ciclo_vida_arquivos import caminho_exportacao, registrar_exportacao
+            nome_arquivo = self._nome_exportacao(raster_id, nome_arquivo, 'exportacao raster')
             if tempfile.sem_montagem():
                 from api.path_policy import relative_file_name, validar_categoria_compativel
                 from api.services.ciclo_vida_arquivos import registrar_exportacao_memoria
@@ -2063,6 +2077,8 @@ class GeoespacialService:
         from api.services.arquivos_geoespaciais_memoria import vetor
         remoto = tempfile.sem_montagem()
         validar_categoria_compativel(saida, categoria_dado)
+        produto = 'exportacao vetorial' if categoria_dado == 'vetor' else 'exportacao raster'
+        saida = self._nome_exportacao(entrada, saida, produto)
         caminho = Path(relative_file_name(saida)) if remoto else caminho_exportacao(saida, categoria_dado)
         pasta = caminho.parent
         extensao = caminho.suffix.lower()

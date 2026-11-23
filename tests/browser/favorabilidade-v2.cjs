@@ -119,7 +119,11 @@ const assert = require('node:assert/strict');
       const send = data => route.fulfill({json:data});
       requests.push({path,method:req.method(),query:Object.fromEntries(url.searchParams),
         body:['POST','PATCH'].includes(req.method()) ? req.postDataJSON() : null});
-      if (path.includes('/auth/')) return send({authenticated:true,id:'fixture',nome:'Teste',username:'Teste',tipo_usuario:'ADMIN'});
+      if (path.includes('/auth/')) {
+        const user = {id:'fixture',nome:'Teste',username:'Teste',tipo_usuario:'ADMIN',
+          permissoes:{'mad.visualizar':'todos','mad.operar':'todos','ferramentas.visualizar':'todos','ferramentas.operar':'todos'}};
+        return send({authenticated:true,...user,user});
+      }
       if (path.endsWith('/ahp/hierarquizacoes')) return send([hier,
         {...hier,codigo:'HIER-F1',dados_hierarquizacao:{cabecalho_grupo:{fases_a_executar:[1]}}}]);
       if (path.endsWith('/ahp/hierarquizacoes/HIER-F2')) return send(hier);
@@ -156,7 +160,7 @@ const assert = require('node:assert/strict');
           }))}});
       }
       if (path.endsWith('/favorabilidade/resultados/pacote')) {
-        return route.fulfill({contentType:'application/zip',body:Buffer.from('PK-fixture')});
+        return route.fulfill({contentType:'application/zip',headers:{'Content-Disposition':'attachment; filename="Workshop_PLI-SP_2050_relatorio_e_camadas.zip"'},body:Buffer.from('PK-fixture')});
       }
       if (path.endsWith('/favorabilidade/resultados/abrir')) {
         return send({execucoes:['reaberta'],fontes:fontesResultados(['reaberta']),revisados:true,concluidas:1,previstas:1});
@@ -230,6 +234,9 @@ const assert = require('node:assert/strict');
       return send([]);
     });
     const base = process.env.SICARD_TEST_URL || 'http://127.0.0.1:8083';
+    if (process.env.SICARD_BROWSER_SESSION) {
+      await page.context().addCookies([{name:'slt_session',value:process.env.SICARD_BROWSER_SESSION,url:base}]);
+    }
     await page.goto(`${base}/restrict/hierarquizacao/fase-2/`,{waitUntil:'domcontentloaded'});
     await page.evaluate(() => {
       window.avisosTeste = [];
@@ -642,7 +649,7 @@ const assert = require('node:assert/strict');
     const downloadPromise = page.waitForEvent('download');
     await page.locator('#ev-resultados-download').click();
     const download = await downloadPromise;
-    assert.equal(download.suggestedFilename(),'Relatório e Camadas.zip');
+    assert.equal(download.suggestedFilename(),'Workshop_PLI-SP_2050_relatorio_e_camadas.zip');
     await download.delete();
     await dismiss();
     modoExecucao = 'cancelar';

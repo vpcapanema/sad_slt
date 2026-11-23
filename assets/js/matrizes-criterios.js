@@ -23,6 +23,7 @@
       if (labelText && document.querySelector('.ami-main[data-modo="espaco"]')) host.append(element("p", labelText, "ami-table-label"));
       const shell = element("div", null, "matriz-table-wrap");
       const grid = element("table", null, "admin-table matriz-view-table ami-matrix");
+      grid.dataset.produtoExportacao = title;
       const head = grid.createTHead().insertRow();
       headers.forEach(header => head.append(element("th", header)));
       const body = grid.createTBody();
@@ -51,7 +52,7 @@
     const pairs = table("Estrutura de comparação pareada — sem julgamentos", ["Critério", ...names],
       names.map(name => [name, ...names.map(() => "—")]), "Matriz da estrutura de comparação pareada sem julgamentos");
     dialog.showModal();
-    [premises, pairs].forEach(grid => global.SLTAnalysisTable(grid));
+    [premises, pairs].forEach(grid => global.SLTAnalysisTable(grid, record));
   }
   function rows(content) {
     const values = Array.isArray(content) ? content : content && (content.linhas || content.rows || content.criterios || content.dados);

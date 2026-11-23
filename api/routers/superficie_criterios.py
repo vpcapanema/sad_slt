@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from api.deps.auth import require_analyst
 from api.error_handlers import sanitizar
 from api.exceptions import DatabaseUnavailableError, DemandaValidationError
+from api.nome_arquivo import anexo, nome_arquivo
 from api.services import superficie_criterios as service
 from api.services.session_service import SessionUser
 from api.services.storage_remoto import StorageIndisponivel
@@ -37,9 +38,9 @@ class Calculo(BaseModel):
     ambiente_id: str | None = None
 
 
-def invoke(fn, *args):
+def invoke(fn, *args, **kwargs):
     try:
-        return fn(*args)
+        return fn(*args, **kwargs)
     except (ValueError, DemandaValidationError) as exc:
         raise HTTPException(422, str(exc)) from exc
     except (DatabaseUnavailableError, StorageIndisponivel, OSError) as exc:
@@ -80,13 +81,15 @@ def mapa(ident: UUID, campo: str, user: SessionUser = Depends(require_analyst)):
 @router.get('/{ident}/matriz.xlsx')
 def matriz(ident: UUID, user: SessionUser = Depends(require_analyst)):
     row = invoke(service.obter, ident, user)
+    nome = nome_arquivo(row['nome'], 'matriz fase 2', 'xlsx', referencia=str(ident))
     return Response(service.matriz_excel(row),
                     media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                    headers={'Content-Disposition': 'attachment; filename="matriz_fase2.xlsx"'})
+                    headers={'Content-Disposition': anexo(nome)})
 
 
 @router.get('/{ident}/camada.gpkg')
 def exportar(ident: UUID, indice: bool = False, user: SessionUser = Depends(require_analyst)):
-    return Response(invoke(service.exportar, ident, user, indice),
+    nome, dados = invoke(service.exportar, ident, user, indice, com_nome=True)
+    return Response(dados,
                     media_type='application/geopackage+sqlite3',
-                    headers={'Content-Disposition': 'attachment; filename="superficie_fase2.gpkg"'})
+                    headers={'Content-Disposition': anexo(nome)})

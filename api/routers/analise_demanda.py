@@ -144,10 +144,9 @@ def baixar_parecer_pdf(
 ) -> Response:
     """Devolve o PDF do parecer já persistido para a demanda."""
     try:
-        codigo_demanda, pdf = analise_demanda_service.obter_pdf(codigo)
+        nome_arquivo, pdf = analise_demanda_service.obter_pdf(codigo, com_nome=True)
     except (DemandaNotFoundError, DemandaValidationError, DatabaseUnavailableError) as exc:
         raise _erro_http(exc) from exc
-    nome_arquivo = f"parecer-analise-{codigo_demanda}.pdf"
     return Response(
         content=pdf,
         media_type="application/pdf",
@@ -162,10 +161,9 @@ def baixar_relatorio_atual_pdf(
 ) -> Response:
     """Gera e baixa a versão institucional da análise exibida no modal."""
     try:
-        codigo_demanda, pdf = analise_demanda_service.gerar_relatorio_atual_pdf(codigo)
+        nome_arquivo, pdf = analise_demanda_service.gerar_relatorio_atual_pdf(codigo, com_nome=True)
     except (DemandaNotFoundError, DemandaValidationError, DatabaseUnavailableError) as exc:
         raise _erro_http(exc) from exc
-    nome_arquivo = f"analise-tecnica-{codigo_demanda}.pdf"
     return Response(
         content=pdf,
         media_type="application/pdf",

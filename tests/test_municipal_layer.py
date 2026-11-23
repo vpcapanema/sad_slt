@@ -108,18 +108,9 @@ def test_pacote_leva_dicionario_e_alias(tmp_path):
     assert package[:2] == b'PK'
 
 
-def test_base_dos_arquivos_usa_prefixo_id_curto_e_nome():
-    base = service.base_arquivos('Risco hídrico 2026')
-    prefixo, curto, resto = base.split('_', 2)
-    assert prefixo == 'municipios'          # municipios_sp e o prefixo composto
-    assert base.startswith('municipios_sp_')
-    curto = base.removeprefix('municipios_sp_').split('_', 1)[0]
-    assert len(curto) == 8 and curto.isalnum()
-    assert base.endswith('_risco_hidrico_2026')
-    # Nome vazio ainda produz uma base valida, so com o identificador curto.
-    assert service.base_arquivos('   ').startswith('municipios_sp_')
-    # Dois pedidos iguais nunca colidem.
-    assert service.base_arquivos('igual') != service.base_arquivos('igual')
+def test_base_dos_arquivos_usa_nome_da_camada_seguido_do_produto():
+    assert service.base_arquivos('Risco hídrico 2026') == 'Risco_hidrico_2026_municipios_sp'
+    assert service.base_arquivos('   ') == 'Camadas_Territoriais_municipios_sp'
 
 
 def test_pacote_nomeia_os_arquivos_pela_base(tmp_path):

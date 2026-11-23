@@ -121,7 +121,7 @@
   }
 
   /** Baixa o parecer já persistido como Blob (a sessão vai pelo cookie). */
-  async function fetchAnaliseParecerPdf(codigo) {
+  async function fetchAnaliseParecerPdf(codigo, comNome = false) {
     const res = await fetch(analisePath(codigo, "/parecer.pdf"), {
       credentials: "include",
     });
@@ -134,11 +134,12 @@
       const body = await res.json().catch(() => null);
       throw new Error(errorMessage(body));
     }
-    return res.blob();
+    const blob = await res.blob();
+    return comNome ? {blob, nome: SicardNomeArquivo.daResposta(res)} : blob;
   }
 
   /** Gera o relatório institucional da análise no estado atual. */
-  async function fetchAnaliseRelatorioPdf(codigo) {
+  async function fetchAnaliseRelatorioPdf(codigo, comNome = false) {
     const res = await fetch(analisePath(codigo, "/relatorio.pdf"), {
       credentials: "include",
     });
@@ -151,7 +152,8 @@
       const body = await res.json().catch(() => null);
       throw new Error(errorMessage(body));
     }
-    return res.blob();
+    const blob = await res.blob();
+    return comNome ? {blob, nome: SicardNomeArquivo.daResposta(res)} : blob;
   }
 
   async function listPlanos() {

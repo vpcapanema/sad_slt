@@ -154,7 +154,7 @@ def test_pacote_leva_geometria_relatorios_e_tabelas(tmp_path,com_ocorrencia):
     bases=[('Risco','Área contaminada',frame([base],nome=['Área contaminada']))]
     pacote,nome,manifesto=montar_pacote(result,tabela,source,_processamento(result,tabela),bases=bases,
                                         mapa_base=False,intersecoes=longa)
-    assert nome=='extracao_de_teste_ferrovia.zip'
+    assert nome=='Extracao_de_teste_ferrovia_pacote_da_extracao.zip'
     assert [item['chave'] for item in manifesto]==['gpkg','pdf_processamento','pdf_analitico','xlsx','csv']
     with zipfile.ZipFile(io.BytesIO(pacote)) as arquivo:
         assert arquivo.namelist()==[item['nome'] for item in manifesto]

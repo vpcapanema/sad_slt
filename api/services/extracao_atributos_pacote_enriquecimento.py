@@ -27,27 +27,29 @@ from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
 from openpyxl.styles import Font
 from openpyxl.utils import get_column_letter
 
+from api.nome_arquivo import nome_arquivo
 from api.services import extracao_atributos_exportacao as exportacao
 from api.services.feedback_operacao import operacao, contexto
-from api.services.ciclo_vida_arquivos import apelido
 from api.services.extracao_atributos_pacote import _para_gpkg
 
 COLUNAS_DICIONARIO = ['camada', 'campo', 'apelido', 'tema', 'base', 'campo_origem', 'regra']
 
 
 def nomes(nome_saida: str, camadas, finalidades=None) -> dict[str, tuple[str, str]]:
-    base = apelido(nome_saida, 60) or 'extracao'
-    arquivos = {'gpkg': (f'{base}.gpkg', 'GeoPackage com uma camada por tipo de geometria, as finalidades e a entrada')}
+    def nome(produto, ext):
+        return nome_arquivo(nome_saida, produto, ext, referencia='Extracao de Atributos')
+
+    arquivos = {'gpkg': (nome('camadas enriquecidas', 'gpkg'), 'GeoPackage com uma camada por tipo de geometria, as finalidades e a entrada')}
     for camada in camadas:
-        arquivos[f'csv_{camada}'] = (f'{base}_{camada}.csv', f'Tabela de atributos da camada {camada}')
+        arquivos[f'csv_{camada}'] = (nome(camada, 'csv'), f'Tabela de atributos da camada {camada}')
     for chave, item in (finalidades or {}).items():
         for camada in item['camadas']:
             descricao = f"Finalidade {item['nome']}: camada {camada}"
-            arquivos[f'csv_{chave}_{camada}'] = (f'{base}_{chave}_{camada}.csv', descricao)
-    arquivos['xlsx'] = (f'{base}_tabelas.xlsx', 'Planilha com uma aba por camada e o dicionário de campos')
-    arquivos['csv_dicionario'] = (f'{base}_dicionario_campos.csv', 'Dicionário de campos')
-    arquivos['configuracao'] = (f'{base}_configuracao.json', 'Configuração usada no processamento')
-    arquivos['validacao'] = (f'{base}_validacao.json', 'Conferência do resultado')
+            arquivos[f'csv_{chave}_{camada}'] = (nome(f'{chave}_{camada}', 'csv'), descricao)
+    arquivos['xlsx'] = (nome('tabelas', 'xlsx'), 'Planilha com uma aba por camada e o dicionário de campos')
+    arquivos['csv_dicionario'] = (nome('dicionario campos', 'csv'), 'Dicionário de campos')
+    arquivos['configuracao'] = (nome('configuracao', 'json'), 'Configuração usada no processamento')
+    arquivos['validacao'] = (nome('validacao', 'json'), 'Conferência do resultado')
     return arquivos
 
 
@@ -176,7 +178,7 @@ def montar_pacote(camadas: dict, entrada, dicionario: list[dict], configuracao: 
                     pacote.writestr(nome, dados)
                     manifesto.append({'chave': chave, 'nome': nome, 'descricao': descricao,
                                       'tamanho_bytes': len(dados), 'sha256': sha256(dados).hexdigest()})
-    return memoria.getvalue(), f"{Path(arquivos['gpkg'][0]).stem}.zip", manifesto
+    return memoria.getvalue(), nome_arquivo(nome_saida, 'pacote de enriquecimento', 'zip'), manifesto
 
 
 def arquivos_analiticos(snapshot):
@@ -199,6 +201,11 @@ def montar_lote(saida, configuracao, nome_saida, progress=None):
     import geopandas as gpd
     memoria = io.BytesIO()
     manifesto = []
+    def unificado(arquivo):
+        path = Path(arquivo)
+        nome = nome_arquivo(nome_saida, path.stem, path.suffix, referencia='Extracao de Atributos')
+        return 'unificado/' + nome
+
     def adicionar(pacote, chave, nome, dados, descricao):
         with operacao(progress, f'Compactando {nome} no pacote geral e calculando SHA-256; percentual interno indisponível'):
             pacote.writestr(nome, dados)
@@ -225,30 +232,31 @@ def montar_lote(saida, configuracao, nome_saida, progress=None):
             with zipfile.ZipFile(memoria_individual,'a',zipfile.ZIP_DEFLATED) as individual:
                 with operacao(progress, f"{item['nome']}: gerando JSON e CSV analíticos e adicionando ao pacote"):
                     for arquivo,dados in arquivos_analiticos(snapshot).items():
-                        individual.writestr(arquivo,dados)
+                        path = Path(arquivo)
+                        individual.writestr(nome_arquivo(item['nome_saida'], path.stem, path.suffix), dados)
             conteudo = memoria_individual.getvalue()
             adicionar(geral,item['chave'],f"{item['chave']}/{nome}",conteudo,'Pacote individual: '+item['nome'])
             with zipfile.ZipFile(io.BytesIO(conteudo)) as individual:
                 for arq in individual.namelist():
                     if arq.endswith('.gpkg'):
-                        adicionar(geral,item['chave']+'_gpkg',f"geopackages/{item['chave']}_{arq}",individual.read(arq),'GeoPackage individual')
+                        adicionar(geral,item['chave']+'_gpkg',f"geopackages/{item['chave']}/{arq}",individual.read(arq),'GeoPackage individual')
         with tempfile.TemporaryDirectory(prefix='sicard_lote_') as tmp:
             path = Path(tmp)
             escrever_xlsx(saida['camadas'],saida['dicionario'],path/'tabelas_unificadas.xlsx', progress=contexto(progress, 'Tabelas unificadas'))
-            adicionar(geral,'xlsx','unificado/tabelas.xlsx',(path/'tabelas_unificadas.xlsx').read_bytes(),'Tabelas de todas as saídas')
+            adicionar(geral,'xlsx',unificado('tabelas.xlsx'),(path/'tabelas_unificadas.xlsx').read_bytes(),'Tabelas de todas as saídas')
             with operacao(progress, 'Preparando análise descritiva unificada das saídas'):
                 snapshot = snapshot_saida(saida['camadas'])
             from api.services.extracao_resultados_territoriais import consultar
             with operacao(progress, 'Gerando arquivos JSON e CSV analíticos unificados'):
                 analiticos = arquivos_analiticos(snapshot)
             for arquivo,dados in analiticos.items():
-                adicionar(geral,'analitico_'+arquivo,'unificado/'+arquivo,dados,'Análise descritiva por demanda e elemento')
+                adicionar(geral,'analitico_'+arquivo,unificado(arquivo),dados,'Análise descritiva por demanda e elemento')
             ranking = consultar(snapshot,tamanho=max(1,sum(len(e['feicoes']) for e in snapshot['entradas'])))
-            adicionar(geral,'analise','unificado/analise.json',json.dumps(ranking,ensure_ascii=False,default=str).encode(),'Análise descritiva unificada')
+            adicionar(geral,'analise',unificado('analise.json'),json.dumps(ranking,ensure_ascii=False,default=str).encode(),'Análise descritiva unificada')
             columns = ['entrada','demanda','restricoes','riscos']
             stream=io.StringIO(); writer=csv.writer(stream,delimiter=';'); writer.writerow(columns)
             for row in ranking['linhas']:
                 writer.writerow([exportacao.safe(row['entrada']),exportacao.safe(row.get('identificador')),row.get('contagens',{}).get('restricao',0),row.get('contagens',{}).get('risco',0)])
-            adicionar(geral,'ranking','unificado/demandas.csv',stream.getvalue().encode('utf-8-sig'),'Comparação descritiva das demandas')
-        adicionar(geral,'configuracao','unificado/configuracao.json',json.dumps(configuracao,ensure_ascii=False,default=str).encode(),'Procedência do lote')
-    return memoria.getvalue(),f"{apelido(nome_saida,60) or 'extracao'}_lote.zip",manifesto
+            adicionar(geral,'ranking',unificado('demandas.csv'),stream.getvalue().encode('utf-8-sig'),'Comparação descritiva das demandas')
+        adicionar(geral,'configuracao',unificado('configuracao.json'),json.dumps(configuracao,ensure_ascii=False,default=str).encode(),'Procedência do lote')
+    return memoria.getvalue(),nome_arquivo(nome_saida, 'pacote de extracao em lote', 'zip'),manifesto

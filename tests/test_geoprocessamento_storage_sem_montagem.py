@@ -106,7 +106,7 @@ def test_op03_grava_canonico_exporta_e_reabre_sem_montagem(remoto, monkeypatch, 
     )))
     import re
     path = result["arquivo_saida"]["caminho"]
-    assert path == f'saidas-geoespaciais/Teste/Resultado.{ext}'
+    assert path == f'saidas-geoespaciais/Teste/Camada_normalizada_de_entrada_resultado.{ext}'
     from api.services.arquivos_geoespaciais_memoria import ler_vetor
     components = {PurePosixPath(p).name: content for p, content in files.items()
                   if p.startswith("saidas-geoespaciais/Teste/")}

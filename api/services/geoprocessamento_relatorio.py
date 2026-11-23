@@ -132,6 +132,7 @@ def construir(job: dict[str, Any]) -> dict[str, Any]:
 
 def salvar(job: dict[str, Any]) -> list[str]:
     """Grava a proveniência no mesmo Storage das camadas e registra a referência."""
+    from api.nome_arquivo import nome_arquivo
     from api.services import ciclo_vida_arquivos as ciclo, saidas_storage
     from api.repositories import saidas_geoespaciais_repository as catalogo
     execution = job.get('execucao_id') or (job.get('resultado') or {}).get('execucao_id')
@@ -141,7 +142,9 @@ def salvar(job: dict[str, Any]) -> list[str]:
             execution = ciclo.iniciar('relatorio_' + str(job.get('tipo', 'job')),
                                       {'job_id':job.get('id')}, job.get('responsavel'))
         report = construir(job)
-        item = saidas_storage.enviar_json(str(execution), 'relatorio_execucao.json', report)
+        registro = (report['parametros'].get('nome_saida') or job.get('algoritmo') or job.get('tipo'))
+        nome = nome_arquivo(registro, 'relatorio de execucao', 'json', referencia='Bancada de Geoprocessamento')
+        item = saidas_storage.enviar_json(str(execution), nome, report)
         catalogo.registrar_documento(str(execution), str(job.get('id')), item,
                                      validacao={'json':True,'tipo':'relatorio_execucao'})
         if own:

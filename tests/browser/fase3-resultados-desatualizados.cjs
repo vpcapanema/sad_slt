@@ -15,10 +15,11 @@ const rodada = (codigo, pendente, desatualizada) => ({codigo, nome: codigo, dado
 (async () => {
   const paginas = JSON.parse(execFileSync(path.join(root, '.venv', 'Scripts', 'python.exe'), ['-B', '-X', 'utf8', '-c', [
     'import json', 'from fastapi.testclient import TestClient', 'from api.server import app',
-    'from api.services.session_service import SessionUser, cookie_name, create_token',
+    'from api.services.session_service import SessionUser', 'import api.server as servidor',
     `rotas = ${JSON.stringify([rota, referencia])}`, 'client = TestClient(app)',
     'usuario = SessionUser(id="00000000-0000-0000-0000-000000000021", email="teste@example.org", username="teste_admin", nome="Teste", tipo_usuario="ADMIN")',
-    'client.cookies.set(cookie_name(), create_token(usuario))',
+    'servidor.get_optional_session = lambda *args: usuario',
+    'servidor.page_allowed = lambda *args: True',
     'respostas = {rota: client.get(rota) for rota in rotas}', 'assert all(r.status_code == 200 for r in respostas.values())',
     'print(json.dumps({rota: r.text for rota, r in respostas.items()}))',
   ].join('\n')], {cwd: root, encoding: 'utf8'}));
@@ -95,8 +96,9 @@ const rodada = (codigo, pendente, desatualizada) => ({codigo, nome: codigo, dado
         return route.fulfill({contentType: 'application/pdf', body: '%PDF-1.4\n% Mock de download'});
       }
       let json = [];
-      if (p === '/api/auth/me') json = {id: 'u1', nome: 'Teste', tipo_usuario: 'ADMIN'};
-      else if (p === '/api/auth/session') json = {authenticated: true};
+      const user = {id: 'u1', nome: 'Teste', tipo_usuario: 'ADMIN', permissoes: {'mad.visualizar': 'todos', 'mad.operar': 'todos'}};
+      if (p === '/api/auth/me') json = user;
+      else if (p === '/api/auth/session') json = {authenticated: true, ...user, user};
       else if (p === '/api/ahp/hierarquizacoes') json = rodadas;
       else if (p.endsWith('/colunas')) json = {colunas: []};
       else if (p === '/api/ahp/hierarquizacoes/ANTIGA/fases/3/calcular') json = rodada('ANTIGA', false, false);
@@ -175,11 +177,11 @@ const rodada = (codigo, pendente, desatualizada) => ({codigo, nome: codigo, dado
     const [download] = await Promise.all([
       page.waitForEvent('download'), page.locator('#fase3-baixar-relatorio').click(),
     ]);
-    assert.equal(download.suggestedFilename(), 'Relatorio_Fase_3.pdf');
+    assert.equal(download.suggestedFilename(), 'ATUAL_relatorio_fase_3.pdf');
     const [downloadAcao] = await Promise.all([
       page.waitForEvent('download'), page.locator('#fase3-baixar-relatorio-acao').click(),
     ]);
-    assert.equal(downloadAcao.suggestedFilename(), 'Relatorio_Fase_3.pdf');
+    assert.equal(downloadAcao.suggestedFilename(), 'ATUAL_relatorio_fase_3.pdf');
     await page.waitForTimeout(150);
     const demandLayout = await page.locator('table[data-ranking-order]').evaluate(table => {
       const cell = table.tBodies[0].rows[0].cells[2], range = document.createRange();

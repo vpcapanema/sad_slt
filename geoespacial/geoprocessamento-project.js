@@ -8,7 +8,7 @@
     'geometryTypes', 'leftTab', 'history', 'layerFilters', 'layerFilterFeatures',
     'nativeFilterQueries', 'nativeFilterStyles', 'filterSources', 'selectedGeoJSON', 'nativeSelectionLayers',
     'attributeTableLayers', 'activeAttributeLayerId'];
-  let handle = null, filename = 'Projeto.sicard.json', dirty = false, busy = false, restoring = false, lastCamera = '';
+  let handle = null, filename = SicardNomeArquivo.gerar('Bancada', 'projeto', 'sicard.json'), dirty = false, busy = false, restoring = false, lastCamera = '';
   const app = () => window.gpApp;
   const cameraKey = () => { const map = app().state.map; return JSON.stringify([map.getCenter().toArray(), map.getZoom(), map.getBearing(), map.getPitch(), map.getPadding()]); };
   function label(message) {
@@ -267,7 +267,8 @@
     } else {
       const name = prompt('Nome do arquivo do projeto:', filename);
       if (!name) return false;
-      filename = name.endsWith('.sicard.json') ? name : `${name}.sicard.json`;
+      const registro = name.replace(/\.sicard\.json$/i, '');
+      filename = name === filename ? filename : SicardNomeArquivo.gerar(registro, 'projeto', 'sicard.json');
       const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
       const link = document.createElement('a'); link.href = url; link.download = filename; link.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -319,7 +320,7 @@
     project.style.sources = Object.fromEntries(Object.entries(project.style.sources).filter(([id]) => sources.has(id)));
     project.models = null; project.camera = { center: [-48.5, -22.4], zoom: 6.2, bearing: 0, pitch: 0, padding: 0 };
     project.ui.operation = null; project.ui.table = null; project.ui.right = 'properties'; project.ui.searches = {}; project.ui.ribbon = 'mapa';
-    await restore(project); handle = null; filename = 'Projeto.sicard.json'; dirty = false; label('Novo projeto');
+    await restore(project); handle = null; filename = SicardNomeArquivo.gerar('Bancada', 'projeto', 'sicard.json'); dirty = false; label('Novo projeto');
   }
   function report(error) {
     if (error.name === 'AbortError') return;
