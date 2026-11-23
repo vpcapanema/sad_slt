@@ -1,0 +1,28 @@
+﻿RELATÓRIO E CAMADAS — ELEGIBILIDADE TERRITORIAL
+
+A demanda é o objeto da análise; as bases de restrição e de risco servem para caracterizá-la. Para cada demanda, este relatório informa se ela tem restrição, tem risco, tem ambos ou está livre de restrições e riscos ambientais e territoriais, conforme as camadas consultadas.
+
+Demandas analisadas: 15. Com restrição: 0. Com risco: 6. Com restrição e risco: 2. Livres de restrições e riscos: 7.
+Conjuntos de demandas concluídos: 1 de 1.
+Todas as entradas previstas foram concluídas.
+
+CONTEÚDO DO PACOTE
+- Relatório de Elegibilidade Territorial.pdf: identificação das execuções, fontes, guia de leitura, metodologia e resultados. Situação de cada demanda, mapa, resumo e detalhe por demanda; as matrizes de área por camada ficam no anexo.
+- Tabelas/Situação das Demandas.xlsx: situação de cada demanda, restrições e riscos encontrados e camadas consultadas, com filtros.
+- Tabelas/Situação das Demandas.csv: formato longo correspondente à aba Restrições e Riscos, com uma linha por ocorrência ou uma linha sem ocorrência por demanda livre; não é uma linha por demanda.
+- Tabelas/Resumo da Elegibilidade.xlsx e .csv: uma linha por demanda sem restrição, com camadas de risco, área e porcentagem sobrepostas e o índice de risco ambiental e territorial (0 a 1; mais próximo de 1, maior a elegibilidade).
+- Camadas/NN/*.gpkg: cópia integral de cada conjunto de demandas, com áreas e sobreposições gravadas na execução (para uso em SIG).
+- Metadados da Análise.json: identificação, fontes, nomes revisados e assinatura (SHA-256) dos arquivos.
+
+COMO LER
+Livre de restrições e riscos significa que não foi encontrada sobreposição com as camadas consultadas. O percentual usa a área total da demanda como base; áreas atingidas por camadas diferentes podem coincidir e não são somadas. “Apenas toca o limite” indica contato sem área atingida. O relatório informa a situação de cada demanda; não a classifica como elegível ou inelegível.
+Índice de risco ambiental e territorial = 1 − (área da demanda sobreposta por camadas de risco ÷ área total da demanda). Varia de 0 a 1: quanto mais próximo de 1, maior a elegibilidade da demanda para execução; quanto mais próximo de 0, menor. A área sobreposta é a união das áreas atingidas por todas as camadas de risco, sem contar duas vezes o que coincide. Demandas com restrição não constam desta tabela.
+Use execução + chave posicional da demanda para distinguir demandas, inclusive homônimas. No detalhe, acrescente o ID da camada e o ID da feição de origem. Nomes são de apresentação. As tabelas preservam a precisão numérica disponível; a formatação de leitura não modifica os valores. O XLSX apresenta percentuais como porcentagens; o CSV registra números em 0–100, não frações. Célula vazia de área indica ausência de interseção, não zero. Contato sem área é uma ocorrência com área zero e pode caracterizar restrição ou risco. As contagens de ocorrências são de feições, não necessariamente de camadas distintas. Áreas por camada não são parcelas exclusivas e não devem ser somadas para recalcular o índice do resumo, que utiliza a união das áreas de risco. Editar uma cópia da planilha ou CSV não atualiza o SICARD e não constitui reimportação. Confira a fonte e, se necessário, corrija-a e gere nova execução, preservando o pacote original.
+CSV: UTF-8 com BOM, separador ponto e vírgula, decimal vírgula. As áreas do detalhe CSV são em m²; as áreas do resumo são em hectares. A aba Restrições e Riscos inclui m², km² e hectares. Os percentuais do CSV são em 0–100. Textos iniciados por caracteres de fórmula recebem apóstrofo de proteção no CSV; no Excel são células de texto, não fórmulas.
+O índice de risco ambiental e territorial descreve a exposição espacial da demanda; não constitui critério multicritério nem altera pesos AHP, ranking ou homologação. Se o Resumo da Elegibilidade estiver vazio, consulte a situação de todas as demandas: demandas com restrição não entram nesse resumo.
+
+RASTREABILIDADE E PRÓXIMOS PASSOS
+O PDF identifica cada execução e sua data de conclusão. Os metadados contêm as assinaturas SHA-256 das camadas, PDF, tabelas e guia para conferência. Entradas não concluídas não recebem resultado; ausência de resultado não significa ausência de restrição ou risco. Reabra o GeoPackage de saída na seção 5 para consultar novamente, sem repetir o cálculo. Confira as ocorrências e as fontes antes de avançar à Fase 2 pela navegação da página.
+
+ARQUIVOS DE CAMADAS
+- Camadas/01/HIER-20261123-115230-05AD — Workshop PLI-SP 2050_elegibilidade_territorial.gpkg

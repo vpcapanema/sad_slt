@@ -30,8 +30,8 @@
       "command": "${workspaceFolder}/.venv/Scripts/python.exe",
       "args": [
         "-B",
-        "-c",
-        "import urllib.request; u='http://127.0.0.1:8083/api/health/ready'; r=urllib.request.urlopen(u,timeout=15); print('HTTP',r.status); print(r.read().decode('utf-8'))"
+        "${workspaceFolder}/scripts/start-local-task.py",
+        "--check"
       ],
       "options": {
         "cwd": "${workspaceFolder}"

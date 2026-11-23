@@ -1,6 +1,7 @@
 """Servidor Windows e pagina inicial no perfil atual do Edge."""
 from __future__ import annotations
 
+import argparse
 import json
 import os
 from pathlib import Path
@@ -11,10 +12,13 @@ import sys
 import threading
 import time
 from types import SimpleNamespace
+from urllib.error import HTTPError, URLError
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
 URL = 'http://127.0.0.1:8083'
+
+
 def say(message):
     print(f'[SICARD local] {message}', flush=True)
 
@@ -103,7 +107,39 @@ def confirmar_bancos():
     return counts
 
 
+def verificar_prontidao():
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    try:
+        with opener.open(URL + '/api/health/ready', timeout=15) as response:
+            status = response.status
+            report = json.load(response)
+    except HTTPError as error:
+        raise SystemExit(f'O SICARD respondeu com HTTP {error.code} na rota de prontidão.') from None
+    except URLError as error:
+        if isinstance(error.reason, ConnectionRefusedError):
+            raise SystemExit(
+                'Nenhum servidor SICARD está escutando na porta 8083. '
+                'Execute a tarefa "SICARD: Iniciar servidor local".'
+            ) from None
+        raise SystemExit(f'Falha na conexão com {URL}: {error.reason}') from None
+    except TimeoutError:
+        raise SystemExit(f'O SICARD local não respondeu no prazo em {URL}.') from None
+    except ValueError:
+        raise SystemExit('A rota de prontidão do SICARD não retornou um relatório JSON válido.') from None
+    print(f'HTTP {status}')
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+    if not isinstance(report, dict) or report.get('ok') is not True:
+        raise SystemExit('O servidor respondeu, mas há verificações de prontidão pendentes.')
+
+
 def main():
+    parser = argparse.ArgumentParser(description='Inicia ou verifica o servidor SICARD local.')
+    parser.add_argument('--check', action='store_true', help='Consulta a prontidão do servidor em execução.')
+    parser.add_argument('--no-browser', action='store_true', help='Inicia sem abrir o Edge.')
+    options = parser.parse_args()
+    if options.check:
+        verificar_prontidao()
+        return
     if sys.platform != 'win32':
         raise SystemExit('Esta tarefa e destinada ao Windows.')
     os.chdir(ROOT)
@@ -127,7 +163,8 @@ def main():
         if healthy:
             say('Servidor SICARD já disponível na porta 8083; reutilizando a instância existente.')
             say('Esta execução não administra nem encerra a instância existente.')
-            open_browsers()
+            if not options.no_browser:
+                open_browsers()
             return
         raise SystemExit('Porta 8083 ocupada por um serviço que não respondeu como SICARD saudável. Encerre esse serviço antes de iniciar a task.')
     import uvicorn
@@ -147,14 +184,17 @@ def main():
     # instancia, entao a prontidao e decidida apenas pelas sondagens HTTP.
     instancia = SimpleNamespace(started=True)
     stopped = threading.Event()
-    monitor = threading.Thread(target=open_when_ready, args=(instancia, stopped), daemon=True)
-    monitor.start()
+    monitor = None
+    if not options.no_browser:
+        monitor = threading.Thread(target=open_when_ready, args=(instancia, stopped), daemon=True)
+        monitor.start()
     say('Auto-reload ativo: alteracoes em api/ reiniciam o servidor.')
     try:
         ChangeReload(config, target=server.run, sockets=[sock]).run()
     finally:
         stopped.set()
-        monitor.join(timeout=7)
+        if monitor is not None:
+            monitor.join(timeout=7)
 
 
 if __name__ == '__main__':
