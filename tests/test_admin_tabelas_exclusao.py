@@ -20,6 +20,7 @@ def exclusao(monkeypatch):
             self.vinculos = [{
                 "grupo_codigo": "AGR-2", "grupo_nome": "Grupo vinculado",
                 "hierarquizacao_codigo": "HIER-1", "hierarquizacao_nome": "Rodovias Regionais",
+                "hierarquizacao_status": "em_julgamento",
             }]
             self.consultas = []
             self.commits = 0
@@ -84,11 +85,16 @@ def test_vinculo_retorna_conflito_amigavel_sem_excluir_nenhum_grupo(exclusao):
     assert response.status_code == 409
     erro = response.json()
     assert erro["codigo"] == "agrupamento_em_uso"
-    assert "Desmarque" in erro["solution"] and "Gestão das Hierarquizações" in erro["solution"]
+    assert "desmarque" in erro["solution"]
     mensagem = erro["detail"]
     for nome in ("Grupo vinculado", "AGR-2", "Rodovias Regionais", "HIER-1"):
         assert nome in mensagem
     assert "Nenhum agrupamento foi excluído" in mensagem
+    assert mensagem.splitlines()[:3] == [
+        "Para excluir o agrupamento “Grupo vinculado” (AGR-2), siga esta ordem.",
+        "1. Na Gestão das Hierarquizações, exclua a hierarquização “Rodovias Regionais” (HIER-1).",
+        "2. Volte à página Agrupamento de Demandas, recarregue a lista e exclua o agrupamento “Grupo vinculado” (AGR-2).",
+    ]
     assert "foreign key" not in mensagem and "_fkey" not in mensagem
     assert conn.salvos == {livre, vinculado}
     assert conn.commits == 0
@@ -125,9 +131,26 @@ def test_vinculo_criado_durante_exclusao_e_identificado_apos_rollback(exclusao):
     response = excluir(client, [livre, vinculado])
     assert response.status_code == 409
     assert response.json()["codigo"] == "agrupamento_em_uso"
-    assert "Rodovias Regionais (HIER-1)" in response.json()["detail"]
+    assert "“Rodovias Regionais” (HIER-1)" in response.json()["detail"]
     assert conn.salvos == conn.pendentes == {livre, vinculado}
     assert conn.commits == 0 and conn.rollbacks == 1
+
+
+def test_reversao_da_homologacao_precede_exclusao_das_hierarquizacoes(exclusao):
+    client, conn, _, vinculado = exclusao
+    conn.vinculos[0]["hierarquizacao_status"] = "homologada"
+    conn.vinculos.append({**conn.vinculos[0], "hierarquizacao_codigo": "HIER-2", "hierarquizacao_status": "em_julgamento"})
+    response = excluir(client, [vinculado])
+    assert response.status_code == 409
+    linhas = response.json()["detail"].splitlines()
+    assert linhas[1].startswith("1. Em Homologação, Ranking e Publicação")
+    assert linhas[2].endswith("(HIER-1)")
+    assert linhas[3:6] == [
+        "2. Na Gestão das Hierarquizações, exclua as hierarquizações abaixo.",
+        "• “Rodovias Regionais” (HIER-1)",
+        "• “Rodovias Regionais” (HIER-2)",
+    ]
+    assert linhas[6].startswith("3. Volte à página Agrupamento de Demandas")
 
 
 def test_chave_incompleta_nao_inicia_exclusao(exclusao):

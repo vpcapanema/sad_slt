@@ -601,20 +601,29 @@ def _conflito_exclusao_agrupamentos(vinculos: list[dict[str, Any]]) -> JSONRespo
             "solution": "Recarregue os agrupamentos para conferir os vínculos atuais. Se o bloqueio persistir, "
                         "baixe o relatório de erro e envie ao suporte para que ele identifique o registro vinculado.",
         })
-    detalhes = "\n".join(
-        f'{row["grupo_nome"]} ({row["grupo_codigo"]}) — '
-        f'{row["hierarquizacao_nome"]} ({row["hierarquizacao_codigo"]})'
-        for row in vinculos
-    )
+    por_agrupamento: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for row in vinculos:
+        por_agrupamento.setdefault((row["grupo_nome"], row["grupo_codigo"]), []).append(row)
+    instrucoes = []
+    for (nome, codigo), hierarquizacoes in por_agrupamento.items():
+        grupo = f'“{nome}” ({codigo})'
+        alvos = [f'“{row["hierarquizacao_nome"]}” ({row["hierarquizacao_codigo"]})' for row in hierarquizacoes]
+        homologadas = [alvo for alvo, row in zip(alvos, hierarquizacoes) if row["hierarquizacao_status"] == "homologada"]
+        passos = []
+        if homologadas:
+            passos.append("Em Homologação, Ranking e Publicação, um gestor diferente de quem homologou deve reverter a homologação dos registros abaixo.\n• "
+                          + "\n• ".join(homologadas))
+        destino = f"a hierarquização {alvos[0]}." if len(alvos) == 1 else "as hierarquizações abaixo.\n• " + "\n• ".join(alvos)
+        passos.append("Na Gestão das Hierarquizações, exclua " + destino)
+        passos.append(f"Volte à página Agrupamento de Demandas, recarregue a lista e exclua o agrupamento {grupo}.")
+        instrucoes.append(f"Para excluir o agrupamento {grupo}, siga esta ordem.\n" +
+                          "\n".join(f"{indice}. {passo}" for indice, passo in enumerate(passos, start=1)))
     return JSONResponse(status_code=409, content={
         "codigo": "agrupamento_em_uso",
         "title": "Agrupamento em uso",
-        "detail": "A exclusão foi bloqueada porque a seleção inclui agrupamentos em uso. "
-                  "Nenhum agrupamento foi excluído.\n\nAgrupamento — Hierarquização:\n" + detalhes,
-        "solution": "Desmarque os agrupamentos listados para excluir apenas os que estão livres. "
-                    "Para excluir um agrupamento em uso, localize as hierarquizações pelo código em Gestão das "
-                    "Hierarquizações. Exclua cada hierarquização vinculada somente se ela puder ser descartada. "
-                    "Depois, recarregue os agrupamentos e repita a exclusão.",
+        "detail": "\n\n".join(instrucoes) + "\n\nNenhum agrupamento foi excluído.",
+        "solution": "Exclua as hierarquizações listadas somente se elas puderem ser descartadas. "
+                    "Para excluir apenas os agrupamentos livres, desmarque os agrupamentos em uso.",
     })
 
 

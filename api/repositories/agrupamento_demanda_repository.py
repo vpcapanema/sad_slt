@@ -67,6 +67,7 @@ def list_all() -> list[dict[str, Any]]:
         for vinculo in vinculos_hierarquizacoes(conn, [row["id"] for row in rows]):
             por_agrupamento.setdefault(vinculo["grupo_id"], []).append({
                 "codigo": vinculo["hierarquizacao_codigo"], "nome": vinculo["hierarquizacao_nome"],
+                "status": vinculo["hierarquizacao_status"],
             })
         for row in rows:
             row["hierarquizacoes_vinculadas"] = por_agrupamento.get(row["id"], [])
@@ -79,7 +80,8 @@ def vinculos_hierarquizacoes(conn: Any, ids: list[UUID | str]) -> list[dict[str,
     return conn.execute(
         """
         SELECT g.id AS grupo_id, g.codigo AS grupo_codigo, g.nome AS grupo_nome,
-               h.codigo AS hierarquizacao_codigo, h.nome AS hierarquizacao_nome
+               h.codigo AS hierarquizacao_codigo, h.nome AS hierarquizacao_nome,
+               h.status AS hierarquizacao_status
           FROM hierarquizacao_demandas.hierarquizacao_portfolio h
           JOIN demandas.grupos_demandas g ON g.id = h.grupo_demanda_id
          WHERE h.grupo_demanda_id = ANY(%s::uuid[])

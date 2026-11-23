@@ -203,6 +203,24 @@
     for (const el of document.querySelectorAll('.agrupamentos-list-section .admin-filter-bar input, .agrupamentos-list-section .admin-filter-bar select, #grupos-filtro-inverter, #grupos-filtro-limpar')) el.disabled = ocupado || Boolean(grupoEditando) || (el.id === 'grupos-filtro-valor' && !$('#grupos-filtro-coluna').value);
   }
 
+  function instrucoesExclusaoGrupo(grupo) {
+    const nome = `“${grupo.nome}” (${grupo.codigo})`;
+    const hierarquizacoes = grupo.hierarquizacoes_vinculadas;
+    const rotulo = hierarquia => `“${hierarquia.nome}” (${hierarquia.codigo})`;
+    const lista = registros => '\n• ' + registros.map(rotulo).join('\n• ');
+    const homologadas = hierarquizacoes.filter(hierarquia => hierarquia.status === 'homologada');
+    const passos = [];
+    if (homologadas.length) {
+      passos.push('Em Homologação, Ranking e Publicação, um gestor diferente de quem homologou deve reverter a homologação dos registros abaixo.' + lista(homologadas));
+    }
+    const alvo = hierarquizacoes.length === 1
+      ? `a hierarquização ${rotulo(hierarquizacoes[0])}.`
+      : 'as hierarquizações abaixo.' + lista(hierarquizacoes);
+    passos.push('Na Gestão das Hierarquizações, exclua ' + alvo);
+    passos.push(`Volte à página Agrupamento de Demandas, recarregue a lista e exclua o agrupamento ${nome}.`);
+    return `Para excluir o agrupamento ${nome}, siga esta ordem.\n` + passos.map((passo, i) => `${i + 1}. ${passo}`).join('\n');
+  }
+
   async function acaoGrupo(acao) {
     if (ocupado) return;
     if (acao === 'edit-group' && gruposSelecionados.size === 1) { await editarGrupo([...gruposSelecionados][0]); return; }
@@ -217,15 +235,13 @@
       body = {chave: {id: grupoEditando}, valores: {nome}}; method = 'PATCH';
     } else if (acao === 'delete' && gruposSelecionados.size) {
       selecionados = grupos.filter(g => gruposSelecionados.has(g.id));
-      const vinculos = selecionados.flatMap(grupo => (grupo.hierarquizacoes_vinculadas || []).map(hierarquia =>
-        `${grupo.nome} (${grupo.codigo}) — ${hierarquia.nome} (${hierarquia.codigo})`));
-      if (vinculos.length) {
+      const vinculados = selecionados.filter(grupo => grupo.hierarquizacoes_vinculadas?.length);
+      if (vinculados.length) {
         window.StatusFeedback.erro({
           title: 'Agrupamento em uso', actionTitle: 'Excluir agrupamentos', codigo: 'agrupamento_em_uso',
-          message: 'A seleção inclui agrupamentos em uso. Nenhum agrupamento foi excluído.\n\nAgrupamento — Hierarquização:\n' + vinculos.join('\n'),
-          solution: 'Desmarque os agrupamentos listados para excluir apenas os que estão livres. ' +
-            'Para excluir um agrupamento em uso, localize as hierarquizações pelo código em Gestão das Hierarquizações. ' +
-            'Exclua cada hierarquização vinculada somente se ela puder ser descartada. Depois, recarregue os agrupamentos e repita a exclusão.',
+          message: vinculados.map(instrucoesExclusaoGrupo).join('\n\n') + '\n\nNenhum agrupamento foi excluído.',
+          solution: 'Exclua as hierarquizações listadas somente se elas puderem ser descartadas. ' +
+            'Para excluir apenas os agrupamentos livres, desmarque os agrupamentos em uso.',
           solutionLink: GESTAO_HIERARQUIZACOES,
         });
         return;

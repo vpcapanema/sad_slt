@@ -22,7 +22,10 @@ const base = process.env.SICARD_TEST_URL || 'http://127.0.0.1:8083';
       {id: 'g2', codigo: 'AGR-2', nome: 'Grupo B', tipo_demanda: 'plano', quantidade_demandas: 1, criado_por_nome: 'Joao'},
     ];
     let groups = [...iniciais], cenario = 'sucesso', falharLista = false, vinculoConhecido = false;
-    const orientacao = 'Desmarque o agrupamento em uso ou revise a hierarquização HIER-1 na Gestão das Hierarquizações.';
+    const orientacao = 'Para excluir apenas os agrupamentos livres, desmarque os agrupamentos em uso.';
+    const mensagemExclusao = 'Para excluir o agrupamento “Grupo B” (AGR-2), siga esta ordem.\n' +
+      '1. Na Gestão das Hierarquizações, exclua a hierarquização “Rodovias Regionais” (HIER-1).\n' +
+      '2. Volte à página Agrupamento de Demandas, recarregue a lista e exclua o agrupamento “Grupo B” (AGR-2).';
     page.on('pageerror', error => errors.push(error.message));
     page.on('dialog', async dialog => { nativeDialogs.push(dialog.message()); await dialog.dismiss(); });
     await page.route('**/api/**', async route => {
@@ -32,7 +35,7 @@ const base = process.env.SICARD_TEST_URL || 'http://127.0.0.1:8083';
       if (url.endsWith('/api/agrupamentos-demandas')) {
         if (falharLista) return route.fulfill({status: 503, json: {detail: 'Lista temporariamente indisponível.'}});
         json = groups.map(g => ({...g, hierarquizacoes_vinculadas: vinculoConhecido && g.id === 'g2'
-          ? [{codigo: 'HIER-1', nome: 'Rodovias Regionais'}] : []}));
+          ? [{codigo: 'HIER-1', nome: 'Rodovias Regionais', status: 'em_julgamento'}] : []}));
       } else if (url.endsWith('/api/admin/tabelas/demandas/grupos_demandas')) {
         const body = route.request().postDataJSON(), method = route.request().method();
         writes.push({body, method});
@@ -42,7 +45,7 @@ const base = process.env.SICARD_TEST_URL || 'http://127.0.0.1:8083';
         } else {
           if (cenario === 'conflito') return route.fulfill({status: 409, json: {
             codigo: 'agrupamento_em_uso', title: 'Agrupamento em uso', solution: orientacao,
-            detail: 'O Grupo B (AGR-2) é utilizado por Rodovias Regionais (HIER-1). Nenhum agrupamento foi excluído.',
+            detail: mensagemExclusao + '\n\nNenhum agrupamento foi excluído.',
           }});
           if (cenario === 'rede') return route.abort('failed');
           if (cenario === 'parcial') groups = groups.filter(g => g.id !== 'g2');
@@ -90,11 +93,11 @@ const base = process.env.SICARD_TEST_URL || 'http://127.0.0.1:8083';
     await page.locator('#grupos-selecionar-todos').check();
     await page.locator('[data-grupo-acao="delete"]').click();
     await page.locator('#pfsErrorBox').waitFor({state: 'visible'});
-    assert.match(await page.locator('[data-pfs="error-message"]').innerText(), /Grupo B.*AGR-2.*Rodovias Regionais.*HIER-1/);
+    assert.ok((await page.locator('[data-pfs="error-message"]').innerText()).startsWith(mensagemExclusao));
     assert.equal(writes.length, 1, 'Um vínculo conhecido é informado antes do DELETE');
     assert.equal(await page.locator('#pfsConfirmBox').isVisible(), false);
     await page.locator('#pfsErrorOk').click();
-    assert.match(await page.locator('[data-pfs="error-solution"]').innerText(), /Desmarque.*Gestão das Hierarquizações/);
+    assert.match(await page.locator('[data-pfs="error-solution"]').innerText(), /desmarque os agrupamentos em uso/);
     assert.equal(await page.locator('[data-pfs="error-solution-link"]').getAttribute('href'), base + '/restrict/hierarquizacao/processos/');
     await page.locator('#pfsErrorBox .pfs-close').click();
 
@@ -105,7 +108,7 @@ const base = process.env.SICARD_TEST_URL || 'http://127.0.0.1:8083';
     await page.locator('[data-grupo-acao="delete"]').click();
     await page.locator('#pfsConfirmOk').click();
     await page.locator('#pfsErrorBox').waitFor({state: 'visible'});
-    assert.match(await page.locator('[data-pfs="error-message"]').innerText(), /Rodovias Regionais.*HIER-1/);
+    assert.ok((await page.locator('[data-pfs="error-message"]').innerText()).startsWith(mensagemExclusao));
     assert.match(await page.locator('[data-pfs="error-message"]').innerText(), /Nenhum agrupamento foi excluído/);
     assert.equal(await page.locator('[data-grupo-id]:checked').count(), 2);
     assert.equal(await page.locator('#pfsSuccessBox').isVisible(), false);

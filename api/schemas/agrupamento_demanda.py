@@ -18,6 +18,7 @@ class AgrupamentoDemandaCreateSchema(BaseModel):
 class HierarquizacaoVinculadaSchema(BaseModel):
     codigo: str
     nome: str
+    status: str
 
 
 class AgrupamentoDemandaSummarySchema(BaseModel):
