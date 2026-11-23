@@ -1233,16 +1233,17 @@
     return String(value == null ? "" : value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase().replace(/[^a-z0-9]+/g, " ");
   }
   function importRowsFromGrid(grid) {
-    var rows = (grid || []).filter(function (row) { return Array.isArray(row) && row.some(function (cell) { return String(cell == null ? "" : cell).trim(); }); });
+    var rows = (grid || []).map(function (cells, index) { return { cells: cells, linha: index + 1 }; })
+      .filter(function (row) { return Array.isArray(row.cells) && row.cells.some(function (cell) { return String(cell == null ? "" : cell).trim(); }); });
     if (!rows.length) throw new Error("O arquivo está vazio.");
-    var headers = rows[0].map(normalizeImportHeader);
+    var headers = rows[0].cells.map(normalizeImportHeader);
     var nameAliases = ["nome", "nome do colaborador", "colaborador", "nome completo"], emailAliases = ["email", "e mail", "e mail valido", "email valido", "email do colaborador"];
     var nameIndex = headers.findIndex(function (header) { return nameAliases.includes(header); });
     var emailIndex = headers.findIndex(function (header) { return emailAliases.includes(header); });
     var hasHeader = nameIndex >= 0 && emailIndex >= 0;
     if (!hasHeader) { nameIndex = 0; emailIndex = 1; }
-    return rows.slice(hasHeader ? 1 : 0).map(function (row, index) {
-      return { nome: String(row[nameIndex] == null ? "" : row[nameIndex]).trim(), email: String(row[emailIndex] == null ? "" : row[emailIndex]).trim().toLowerCase(), linha: index + (hasHeader ? 2 : 1) };
+    return rows.slice(hasHeader ? 1 : 0).map(function (row) {
+      return { nome: String(row.cells[nameIndex] ?? "").trim(), email: String(row.cells[emailIndex] ?? "").trim().toLowerCase(), linha: row.linha };
     }).filter(function (item) { return item.nome || item.email; });
   }
   async function readCollaboratorFile(file) {
@@ -1259,17 +1260,15 @@
         grid = [keys].concat(data.map(function (row) { return keys.map(function (key) { return row[key]; }); }));
       } else grid = data;
     } else {
-      var text = (await file.text()).replace(/^\uFEFF/, ""), firstLine = (text.split(/\r?\n/, 1)[0] || "");
+      var text = (await file.text()).replace(/^\uFEFF/, ""), lines = text.split(/\r?\n/);
+      var firstLine = lines.find(function (line) { return line.trim(); }) || "";
       var delimiters = ["\t", ";", ","], delimiter = delimiters.sort(function (a, b) { return firstLine.split(b).length - firstLine.split(a).length; })[0];
-      grid = text.split(/\r?\n/).map(function (line) { return line.split(delimiter).map(function (cell) { return cell.trim().replace(/^(["'])(.*)\1$/, "$2"); }); });
+      grid = lines.map(function (line) { return line.split(delimiter).map(function (cell) { return cell.trim().replace(/^(["'])(.*)\1$/, "$2"); }); });
     }
     var rows = importRowsFromGrid(grid), invalid = rows.filter(function (item) { return !item.nome || !/^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(item.email); });
     if (!rows.length) throw new Error("Nenhum colaborador foi encontrado no arquivo.");
-    if (invalid.length) throw new Error("Corrija nome e e-mail nas linhas: " + invalid.slice(0, 8).map(function (item) { return item.linha; }).join(", ") + (invalid.length > 8 ? "…" : "") + ".");
-    var seen = new Set(), duplicates = rows.filter(function (item) { if (seen.has(item.email)) return true; seen.add(item.email); return false; });
-    if (duplicates.length) throw new Error("O arquivo contém e-mails repetidos: " + Array.from(new Set(duplicates.map(function (item) { return item.email; }))).join(", ") + ".");
-    var selected = Array.from($("ami-dimension-options").querySelectorAll("input:checked")).map(function (input) { return input.value; });
-    return rows.map(function (item) { return { nome: item.nome, email: item.email, dimensoes: selected.slice(), selected: true }; });
+    if (invalid.length) throw new Error("Informe um nome e o e-mail correspondente nas linhas " + invalid.slice(0, 8).map(function (item) { return item.linha; }).join(", ") + (invalid.length > 8 ? "…" : "") + ".");
+    return rows.map(function (item) { return { nome: item.nome, email: item.email, selected: true }; });
   }
   function closeImportModal() {
     $("ami-import-modal").hidden = true; importedCollaborators = []; importPage = 1; $("ami-collaborator-file").value = "";
@@ -1278,13 +1277,11 @@
     var query = normalizeImportHeader($("ami-import-search").value), rows = importedCollaborators.map(function (item, index) { return { item: item, index: index }; }).filter(function (row) { return !query || normalizeImportHeader(row.item.nome + " " + row.item.email).includes(query); });
     var result = SLTTable.paginate("ami-import-pagination", rows, importPage, function (page) { importPage = page; renderImportedCollaborators(); });
     importPage = result.page;
-    var dimensions = Array.from(new Set(phase3Rows(criteriaMatrix).map(criterionDimension).filter(Boolean)));
     $("ami-import-list").innerHTML = result.rows.map(function (row) {
       var item = row.item;
-      return '<tr><td class="ahp-collab-chk-col"><input type="checkbox" data-import-select="' + row.index + '" ' + (item.selected ? "checked" : "") + ' aria-label="Selecionar ' + escapeHtml(item.email) + '"></td><td>' + escapeHtml(item.nome) + '</td><td>' + escapeHtml(item.email) + '</td><td><div class="ami-import-dimensions">' + dimensions.map(function (dimension) { return '<label><input type="checkbox" data-import-dimension="' + row.index + '" value="' + escapeHtml(dimension) + '" ' + (item.dimensoes.includes(dimension) ? "checked" : "") + '>' + escapeHtml(dimension) + '</label>'; }).join("") + '</div></td></tr>';
-    }).join("") || '<tr><td colspan="4" class="ami-empty">Nenhum colaborador encontrado.</td></tr>';
+      return '<tr><td class="ahp-collab-chk-col"><input type="checkbox" data-import-select="' + row.index + '" ' + (item.selected ? "checked" : "") + ' aria-label="Selecionar ' + escapeHtml(item.nome + " · " + item.email) + '"></td><td>' + escapeHtml(item.nome) + '</td><td>' + escapeHtml(item.email) + '</td></tr>';
+    }).join("") || '<tr><td colspan="3" class="ami-empty">Nenhum colaborador encontrado.</td></tr>';
     $("ami-import-list").querySelectorAll("[data-import-select]").forEach(function (box) { box.onchange = function () { importedCollaborators[Number(box.dataset.importSelect)].selected = box.checked; renderImportedCollaborators(); }; });
-    $("ami-import-list").querySelectorAll("[data-import-dimension]").forEach(function (box) { box.onchange = function () { var item = importedCollaborators[Number(box.dataset.importDimension)]; item.dimensoes = box.checked ? Array.from(new Set(item.dimensoes.concat(box.value))) : item.dimensoes.filter(function (dimension) { return dimension !== box.value; }); }; });
     var selectedCount = importedCollaborators.filter(function (item) { return item.selected; }).length;
     $("ami-import-select-all").checked = importedCollaborators.length > 0 && selectedCount === importedCollaborators.length;
     $("ami-import-select-all").indeterminate = selectedCount > 0 && selectedCount < importedCollaborators.length;
@@ -1293,13 +1290,19 @@
   }
   function confirmCollaboratorImport() {
     var selected = importedCollaborators.filter(function (item) { return item.selected; });
-    var invalid = selected.filter(function (item) { return !activeSurfaceId && (!item.dimensoes.length || phase3Rows(criteriaMatrix).filter(function (row) { return item.dimensoes.includes(criterionDimension(row)); }).length < 2); });
-    if (invalid.length) { $("ami-import-feedback").textContent = "Atribua a cada colaborador dimensões que reúnam ao menos dois critérios."; return; }
-    var existing = new Set(draftEmails.map(function (item) { return item.email.toLowerCase(); })), repeated = selected.filter(function (item) { return existing.has(item.email); });
-    if (repeated.length) { $("ami-import-feedback").textContent = "Já existem na lista: " + repeated.map(function (item) { return item.email; }).join(", ") + "."; return; }
+    var existing = new Set(draftEmails.map(function (item) { return item.email.trim().toLowerCase(); }));
+    var novos = [];
+    selected.forEach(function (item) {
+      if (existing.has(item.email)) return;
+      existing.add(item.email);
+      novos.push({ nome: item.nome, email: item.email });
+    });
+    if (!novos.length) { $("ami-import-feedback").textContent = "Os e-mails selecionados já estão na lista de colaboradores."; return; }
     if (!draftEditing) { draftSnapshot = draftEmails.map(function (item) { return Object.assign({}, item); }); draftEditing = true; }
-    draftEmails = draftEmails.concat(selected.map(function (item) { return { nome: item.nome, email: item.email, ...(!activeSurfaceId ? { dimensoes: item.dimensoes.slice() } : {}) }; }));
-    $("ami-emails-feedback").textContent = selected.length + " colaborador(es) importado(s). Confirme a lista ao terminar.";
+    draftEmails = draftEmails.concat(novos);
+    var repetidos = selected.length - novos.length;
+    $("ami-emails-feedback").textContent = novos.length + " colaborador(es) importado(s). " +
+      (repetidos ? repetidos + " registro(s) com e-mail repetido foram ignorados. " : "") + "Confirme a lista ao terminar.";
     closeImportModal(); renderDraftEmails();
   }
   // Aceita "Nome <email@dominio>" ou o e-mail puro, um por linha, virgula ou
@@ -1685,7 +1688,6 @@
     $("ami-add-emails").addEventListener("click", addDraftEmails);
     $("ami-import-collaborators").addEventListener("click", function () {
       if (environmentMode === "view" || environmentSaving) return;
-      if (!activeSurfaceId && phase3Rows(criteriaMatrix).length < 2) { avisarFormulario("Selecione primeiro uma matriz com ao menos dois critérios da Fase 3.", $("ami-create-feedback")); return; }
       $("ami-collaborator-file").click();
     });
     $("ami-collaborator-file").addEventListener("change", async function () {

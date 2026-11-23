@@ -816,10 +816,7 @@
 .ami-import-preview { overflow: hidden; border: 1px solid #374151; border-radius: 8px; }
 .ami-import-preview .admin-filter-bar { border: 0; border-bottom: 1px solid #374151; border-radius: 0; }
 .ami-import-table-wrap { overflow: auto; }
-.ami-import-table-wrap table { width: 100%; min-width: 760px; }
-.ami-import-table-wrap td:last-child { min-width: 280px; }
-.ami-import-dimensions { display: flex; flex-wrap: wrap; gap: 0.35rem 0.75rem; }
-.ami-import-dimensions label { display: inline-flex; align-items: center; gap: 0.25rem; font-weight: 400; }
+.ami-import-table-wrap table { width: 100%; }
 @media (max-width: 600px) {
   .ami-page.ami-espaco-page .ami-registration-grid {
     grid-template-columns: minmax(0, 1fr);
