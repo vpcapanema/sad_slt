@@ -16,6 +16,8 @@
   var editVersion = 0;
   var consistencyHelpReturnFocus = null;
   var consistencyWindowDrag = null;
+  var consistencyReviews = new Map();
+  var highlightedReviewPair = null;
 
   function bloquearIdentificacao(bloqueado) {
     ["colab-nome", "colab-inst", "colab-email", "colab-token", "btn-liberar-form"].forEach(function (id) {
@@ -89,10 +91,12 @@
           updateProgressHint();
           refreshConsistencyHelp();
         }
+        updateConsistencyReview(pair, true);
         pairTimers.set(pair, setTimeout(function () {
           pairTimers.delete(pair);
           pair.classList.remove("is-auto-editing");
           pair.classList.add("is-auto-validated");
+          updateConsistencyReview(pair);
           updateProgressHint();
           refreshConsistencyHelp();
         }, 3000));
@@ -362,10 +366,40 @@
     var modal = el("collab-consistency-modal");
     if (modal.hidden) return;
     modal.hidden = true;
-    document.querySelectorAll("#collab-form-section .saaty-pair.is-consistency-review").forEach(function (pair) {
-      pair.classList.remove("is-consistency-review");
-    });
+    highlightReviewPair(null);
+    consistencyReviews.clear();
     if (consistencyHelpReturnFocus) consistencyHelpReturnFocus.focus();
+  }
+
+  function highlightReviewPair(pair) {
+    if (highlightedReviewPair) highlightedReviewPair.classList.remove("is-consistency-review");
+    highlightedReviewPair = pair;
+    if (pair) pair.classList.add("is-consistency-review");
+  }
+
+  function updateConsistencyReview(pair, edited) {
+    var review = consistencyReviews.get(pair);
+    if (!review) return;
+    var value = Number(review.input.value);
+    var matches = Math.abs(value - review.suggestedValue) < 1e-8;
+    var validated = pair.classList.contains("is-auto-validated");
+    var confirmed = matches && validated;
+    if (edited) review.edited = true;
+    review.current.value = formatSaatyValue(value);
+    review.item.classList.toggle("is-review-confirmed", confirmed);
+    review.status.classList.toggle("is-acceptable", confirmed);
+    var message = "Aplique o valor sugerido na régua.";
+    if (confirmed) message = "Valor sugerido confirmado.";
+    else if (matches) message = "Valor sugerido selecionado. Aguardando confirmação.";
+    else if (review.edited && validated) message = "O valor confirmado difere da sugestão.";
+    if (review.status.textContent !== message) review.status.textContent = message;
+    if (confirmed && highlightedReviewPair === pair) {
+      highlightReviewPair(null);
+      if (review.minimizedForReview) {
+        review.minimizedForReview = false;
+        minimizeConsistencyWindow(false);
+      }
+    }
   }
 
   function consistencyWindow() {
@@ -451,6 +485,8 @@
     diagnosis.reviews = plan ? plan.changes : [];
     var names = normalizeCriteriaNames(meta.criterios);
     var list = el("collab-consistency-pairs");
+    highlightReviewPair(null);
+    consistencyReviews.clear();
     list.replaceChildren();
     el("collab-consistency-modal-summary").textContent =
       "Foram confirmados " + diagnosis.count + " de " + diagnosis.total + " pares (" +
@@ -469,26 +505,42 @@
       var values = document.createElement("div");
       var input = el("pair_" + review.i + "_" + review.j);
       var pair = input && input.closest(".saaty-pair");
+      var current = consistencyReviewField("Valor atual:", formatSaatyValue(review.currentValue));
+      var suggested = consistencyReviewField("Valor sugerido:", formatSaatyValue(review.suggestedValue));
+      var status = document.createElement("p");
       item.className = "collab-consistency-review-item";
       values.className = "collab-consistency-review-values";
-      if (pair) pair.id = "collab-review-" + review.i + "-" + review.j;
+      suggested.classList.add("collab-consistency-review-suggested");
+      status.className = "collab-consistency-review-status";
+      status.setAttribute("role", "status");
+      if (pair) {
+        pair.id = "collab-review-" + review.i + "-" + review.j;
+        consistencyReviews.set(pair, { input: input, item: item, current: current.querySelector("input"),
+          suggestedValue: review.suggestedValue, status: status, edited: false });
+        updateConsistencyReview(pair);
+      }
       link.href = pair ? "#" + pair.id : "#";
       link.textContent = names[review.i] + " × " + names[review.j];
       link.addEventListener("click", function (event) {
         event.preventDefault();
         if (!pair) return;
-        document.querySelectorAll("#collab-form-section .saaty-pair.is-consistency-review").forEach(function (candidate) {
-          candidate.classList.remove("is-consistency-review");
-        });
-        pair.classList.add("is-consistency-review");
+        var confirmed = item.classList.contains("is-review-confirmed");
+        highlightReviewPair(confirmed ? null : pair);
         pair.scrollIntoView({ behavior: "auto", block: "center" });
-        pair.querySelector(".saaty-scale").focus({ preventScroll: true });
+        var scale = pair.querySelector(".saaty-scale");
+        var rail = scale.getBoundingClientRect();
+        var panel = consistencyWindow();
+        var bounds = panel.getBoundingClientRect();
+        if (!confirmed && bounds.left < rail.right && bounds.right > rail.left &&
+            bounds.top < rail.bottom && bounds.bottom > rail.top) {
+          consistencyReviews.get(pair).minimizedForReview = true;
+          minimizeConsistencyWindow(true);
+          if (panel.getBoundingClientRect().bottom > rail.top) panel.style.top = "12px";
+        }
+        scale.focus({ preventScroll: true });
       });
-      values.append(
-        consistencyReviewField("Valor atual:", formatSaatyValue(review.currentValue)),
-        consistencyReviewField("Valor sugerido:", formatSaatyValue(review.suggestedValue))
-      );
-      item.append(link, values);
+      values.append(current, suggested);
+      item.append(link, values, status);
       list.appendChild(item);
     });
     var primary = null, triad = null;

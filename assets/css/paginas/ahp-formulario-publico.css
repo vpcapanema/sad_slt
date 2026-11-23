@@ -314,13 +314,38 @@ body.ami-public-page {
 }
 
 .ami-public-page .collab-consistency-review-status.is-acceptable {
-  border-left-color: #15803d;
-  color: #166534;
+  border-left-color: var(--pfs-green-dark);
+  background: var(--pfs-green-light);
+  color: var(--pfs-green-dark);
+}
+
+.ami-public-page .is-review-confirmed .collab-consistency-review-suggested input {
+  border-color: var(--pfs-green-dark);
+  background: var(--pfs-green-light);
+  color: var(--pfs-green-dark);
 }
 
 .ami-public-page #collab-form-section .saaty-pair.is-consistency-review {
   border: 2px solid #b91c1c;
-  box-shadow: 0 0 0 3px rgba(185, 28, 28, .2), 0 5px 16px rgba(185, 28, 28, .16);
+  box-shadow: 0 0 0 4px rgba(185, 28, 28, .45);
+  animation: collab-consistency-pulse 1.35s ease-in-out infinite;
+}
+
+@keyframes collab-consistency-pulse {
+  0%, 100% {
+    border-color: #b91c1c;
+    box-shadow: 0 0 0 2px rgba(185, 28, 28, .2);
+  }
+  50% {
+    border-color: #dc2626;
+    box-shadow: 0 0 0 6px rgba(185, 28, 28, .5);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ami-public-page #collab-form-section .saaty-pair.is-consistency-review {
+    animation: none;
+  }
 }
 
 .ami-public-page .collab-consistency-explanation p {
