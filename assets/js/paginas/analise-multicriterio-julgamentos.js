@@ -1352,7 +1352,13 @@
   }
   function renderImportHeaders() {
     var header = $("ami-import-headers");
-    header.querySelectorAll(".ami-import-scope").forEach(function (cell) { cell.remove(); });
+    var identityHeaders = Array.from(header.cells).slice(1, 3).map(function (previous) {
+      var cell = document.createElement("th");
+      cell.scope = "col";
+      cell.textContent = previous.textContent.trim().replace(/\s+/g, " ");
+      return cell;
+    });
+    header.replaceChildren(header.cells[0], ...identityHeaders);
     importGroups.concat("Todos").forEach(function (name, column) {
       var cell = document.createElement("th"), box = document.createElement("input");
       cell.scope = "col";

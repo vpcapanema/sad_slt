@@ -94,6 +94,11 @@ const base = process.env.SICARD_TEST_URL || 'http://127.0.0.1:8083';
     const groups = ['Ambiental', 'Social', 'Viabilidade institucional e financeira'];
     const headers = (await modal.locator('th').allTextContents()).map(text => text.trim().replace(/\s+/g, ' '));
     assert.deepEqual(headers, ['', 'Nome do colaborador', 'E-mail', ...groups, 'Todos']);
+    const nameHeader = modal.locator('thead th').nth(1);
+    for (const direction of ['ascending', 'descending', 'none']) {
+      await nameHeader.click();
+      assert.equal(await nameHeader.getAttribute('aria-sort'), direction);
+    }
     const scope = (email, group) => modal.locator('tbody tr').filter({hasText: email}).getByRole('checkbox', {name: new RegExp('^'+group+' ·')});
     const bulk = group => modal.getByRole('checkbox', {name: `Atribuir ${group} a todos os colaboradores filtrados`});
     assert.equal(await modal.locator('tbody [data-import-scope-row]:checked').count(), 0);
