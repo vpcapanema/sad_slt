@@ -671,30 +671,24 @@
 
         /* ── Sucesso → delega ao StatusFeedbackSystem ── */
         sucesso(data) {
-            if (this._finalizado) return;
-            if (_progressSystem && _progressSystem !== this) {
-                if (!this._encerrarMinimizado()) return;
-                this._finalizado = true;
-                const resultado = { actionTitle: this._actionTitle, ...data, _elapsed: this._elapsed() };
-                if (data?._status === 'partial') _statusSystem.mostrarParcial(resultado);
-                else _statusSystem.mostrarSucesso(resultado);
-                this.config.onSuccess?.(data);
-                return;
-            }
+            const corrente = !_progressSystem || _progressSystem === this;
+            if (this._finalizado || (!corrente && !this._compacto)) return;
             const confirmado = this._sicard?.snapshot?.status;
             if (['erro', 'interrompido'].includes(confirmado)) { this.erro(data); return; }
             if (confirmado === 'cancelado') { this.confirmarCancelamento(); return; }
             if (confirmado === 'parcial') data = { ...(data || {}), _status: 'partial' };
             this._finalizado = true;
             this._estadoFinal = data && data._status === 'partial' ? 'Concluído com ressalvas' : 'Concluído';
-            this._atualizarAcompanhamento();
+            if (corrente) this._atualizarAcompanhamento();
             this._stop();
             const elapsed = this._elapsed();
-            if (data?._status !== 'partial') {
-                this.progresso(100);
-                this.progressoTarefa(100);
+            if (corrente) {
+                if (data?._status !== 'partial') {
+                    this.progresso(100);
+                    this.progressoTarefa(100);
+                }
+                this.log(data && data._status === 'partial' ? 'Processo concluído com ressalvas.' : 'Processo concluído com sucesso!', data && data._status === 'partial' ? 'warning' : 'success');
             }
-            this.log(data && data._status === 'partial' ? 'Processo concluído com ressalvas.' : 'Processo concluído com sucesso!', data && data._status === 'partial' ? 'warning' : 'success');
             this._fecharSeCorrente();
             if (data && data._status === 'partial') _statusSystem.mostrarParcial({ actionTitle: this._actionTitle, ...data, _elapsed: elapsed });
             else _statusSystem.mostrarSucesso({ actionTitle: this._actionTitle, ...data, _elapsed: elapsed });
@@ -703,22 +697,18 @@
 
         /* ── Erro → delega ao StatusFeedbackSystem ── */
         erro(data) {
-            if (this._finalizado) return;
-            if (_progressSystem && _progressSystem !== this) {
-                if (!this._encerrarMinimizado()) return;
-                this._finalizado = true;
-                _statusSystem.mostrarErro({ actionTitle: this._actionTitle, ...data, _elapsed: this._elapsed() });
-                this.config.onError?.(data);
-                return;
-            }
+            const corrente = !_progressSystem || _progressSystem === this;
+            if (this._finalizado || (!corrente && !this._compacto)) return;
             this._finalizado = true;
             this._estadoFinal = 'Interrompido por erro';
-            this.diagnosticoTecnico(data?.diagnostico_tecnico || data?.errors || data?.details);
-            this._atualizarAcompanhamento();
+            if (corrente) {
+                this.diagnosticoTecnico(data?.diagnostico_tecnico || data?.errors || data?.details);
+                this._atualizarAcompanhamento();
+            }
             this._stop();
             const elapsed = this._elapsed();
-            this.log('Erro no processo!', 'error');
-            if (this.currentTaskIndex >= 0) {
+            if (corrente) this.log('Erro no processo!', 'error');
+            if (corrente && this.currentTaskIndex >= 0) {
                 const seg = this.segmentsEl.children[this.currentTaskIndex];
                 if (seg) { seg.classList.remove('pfs-segment--active'); seg.classList.add('pfs-segment--error'); }
             }
@@ -767,7 +757,8 @@
             }
         }
         reabrir() {
-            if (_progressSystem !== this || this._finalizado || this._compacto) return;
+            if (_progressSystem !== this || this._finalizado) return;
+            if (this._compacto) return;
             _statusSystem.fechar();
             q('#pfsReopen').hidden = true;
             this.overlay.classList.add('pfs-active'); this.box.classList.add('pfs-active');
@@ -790,10 +781,8 @@
         }
 
         _encerrarMinimizado() {
-            if (!this._compacto) return false;
-            this._compacto.remove();
+            this._compacto?.remove();
             this._compacto = null;
-            return true;
         }
 
         _tituloFluxo(nome) {
@@ -908,7 +897,7 @@
             }
         }
         /* Um processo que terminou não fecha o overlay de outro que já começou. */
-        _fecharSeCorrente() { if (!_progressSystem || _progressSystem === this) this.fechar(); else this._stop(); }
+        _fecharSeCorrente() { if (!_progressSystem || _progressSystem === this) this.fechar(); else this._encerrarMinimizado(); }
 
         /* ── Internals ── */
         _touch() {

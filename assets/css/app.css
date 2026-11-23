@@ -2927,7 +2927,7 @@ body.admin-data-page .admin-card--revisao-status {
 
 .auth-input-wrap .auth-input {
   width: 100%;
-  min-height: 44px;
+  min-height: calc(2.75rem + 2px);
   padding: 0.625rem 2.875rem;
   border: 1px solid var(--pli-border);
   border-radius: 6px;

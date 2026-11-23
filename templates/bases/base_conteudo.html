@@ -7,7 +7,7 @@
   <meta name="description" content="{% block descricao %}SICARD — Sistema Inteligente de Cadastro e Ranking de Demandas.{% endblock %}">
   <title>{% block titulo %}SICARD{% endblock %}</title>
   <link rel="icon" href="{{ simbolo_sicard | default('/assets/img/brand/sicard-simbolo.png') }}" type="image/png">
-  <link rel="stylesheet" href="/assets/css/app.css?v=20261106-col-select">
+  <link rel="stylesheet" href="/assets/css/app.css?v=20261123-campos-login">
   <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
   <link rel="stylesheet" href="/assets/css/template-conteudo.css">
   <link rel="stylesheet" href="/assets/css/process_feedback_system.css?v=20261123-acompanhamento-compacto">
@@ -28,7 +28,7 @@
   {% include "componentes/footer.html" %}
 
   <script{% if scripts_defer %} defer{% endif %} src="/assets/js/notification_system.js"></script>
-  <script{% if scripts_defer %} defer{% endif %} src="/assets/js/process_feedback_unified.js?v=20261123-acompanhamento-compacto"></script>
+  <script{% if scripts_defer %} defer{% endif %} src="/assets/js/process_feedback_unified.js?v=20261123-resultado-compacto"></script>
   {% block scripts_pagina %}{% endblock %}
   <script{% if scripts_defer %} defer{% endif %} src="/assets/js/table-sort.js?v=20261027-cabecalho-agrupado"></script>
   <script{% if scripts_defer %} defer{% endif %} src="/assets/js/template-base.js"></script>
