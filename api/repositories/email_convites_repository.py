@@ -10,7 +10,7 @@ import sys
 from psycopg.types.json import Jsonb
 from psycopg.pq import TransactionStatus
 
-from api.db.connection import get_connection
+from api.db.connection import ConnectionDict, get_connection
 from api.exceptions import DemandaValidationError
 from api.services.email_status_catalogo import texto_explicacao
 
@@ -102,12 +102,16 @@ def bloquear_coleta() -> _BloqueioColeta:
     return _BloqueioColeta()
 
 
+def bloquear_envio(conn: ConnectionDict, ambiente_id: str, destinatario: str, natureza: str = "convite") -> None:
+    conn.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))",
+                 (f"ahp-email:{ambiente_id}:{destinatario}:{natureza}",))
+
+
 def reservar(ambiente_id: str, destinatario: str, conteudo_hash: str, mensagem_id: str,
              usuario_id: str, versao: datetime, *, natureza: str = "convite",
              validar_ativo: bool = True) -> tuple[dict[str, Any], bool]:
     with get_connection() as conn:
-        conn.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))",
-                     (f"ahp-email:{ambiente_id}:{destinatario}:{natureza}",))
+        bloquear_envio(conn, ambiente_id, destinatario, natureza)
         condicao_ativa = "AND status='ativa' AND valido_ate >= now()" if validar_ativo else ""
         atual = conn.execute(
             f"""SELECT id FROM ahp.comparacao_colaborativa_ambiente
@@ -159,8 +163,7 @@ def reservar_monitorado(
 ) -> tuple[dict[str, Any], bool]:
     """Serializa envios manuais e automáticos da mesma comunicação."""
     with get_connection() as conn:
-        conn.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))",
-                     (f"ahp-email:{ambiente_id}:{destinatario}:{natureza}",))
+        bloquear_envio(conn, ambiente_id, destinatario, natureza)
         # Um convite devolvido pelo servidor do destinatário (entrega falha) não
         # chegou: conta como pendente e admite novo envio pelo monitoramento.
         existente = conn.execute(

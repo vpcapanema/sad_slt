@@ -62,6 +62,7 @@ class EmailConexaoResultado(BaseModel):
 
 class ConviteEmailEnvioSchema(EmailTesteSchema):
     versao: datetime
+    revisao_convites: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     reenvio_id: UUID | None = None
     somente_nao_enviado: bool = False
 

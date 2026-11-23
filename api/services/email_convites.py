@@ -10,6 +10,7 @@ from uuid import uuid4
 
 from cryptography.exceptions import InvalidTag
 
+from api.db.connection import atomic_connection, get_connection
 from api.exceptions import DatabaseUnavailableError, DemandaValidationError
 from api.repositories import comparacao_colaborativa_repository as ambientes
 from api.repositories import email_convites_repository as repo
@@ -22,6 +23,7 @@ from api.services.comparacao_colaborativa_service import (
     _mensagem_email_padrao,
     _validar_ambiente_ativo,
     base_mensagem_padrao,
+    revisao_convites,
 )
 
 ASSUNTO = EMAIL_ASSUNTO_PADRAO
@@ -193,19 +195,26 @@ def _preparar_convite(ambiente: dict, convite: dict, destinatario: str, segredo:
     return {"segredo": segredo, "identidade": identidade, "mensagem": mensagem.model_dump(mode="json")}
 
 
-def enviar(ambiente_id: str, dados: ConviteEmailEnvioSchema, usuario_id: str) -> dict:
-    ambiente = ambientes.get_ambiente_by_id(ambiente_id)
+def _reservar_convite(
+    ambiente_id: str, dados: ConviteEmailEnvioSchema, usuario_id: str,
+) -> tuple[dict, EmailEnvioSchema | None]:
+    revisao = dados.revisao_convites
+    ambiente = ambientes.get_ambiente_by_id(ambiente_id, bloquear=revisao is not None)
     if not ambiente:
         raise DemandaValidationError("Julgamento não encontrado.", field="ambiente_id")
     _validar_ambiente_ativo(ambiente)
-    if ambiente["atualizado_em"] != dados.versao:
+    versao = ambiente["atualizado_em"]
+    if revisao and revisao != revisao_convites(ambiente):
+        raise DemandaValidationError("A configuração dos convites mudou. Reabra o julgamento e confira os dados antes de enviar.",
+                                     field="revisao_convites")
+    if revisao is None and versao != dados.versao:
         raise DemandaValidationError("O julgamento mudou. Reabra o registro antes de enviar.", field="versao")
     destinatario = str(dados.destinatario).lower()
     convites = {str(c["email"]).strip().lower(): c for c in ambiente["convites"]}
     convite = convites.get(destinatario)
     if convite is None:
         raise DemandaValidationError("O destinatário não pertence aos colaboradores salvos.", field="destinatario")
-    original = convite_individual_repository.obter(ambiente_id, destinatario, dados.versao)
+    original = convite_individual_repository.obter(ambiente_id, destinatario, versao)
     if original:
         envelope = _mensagem_original(ambiente_id, destinatario, original)
         cifrado = None
@@ -222,30 +231,44 @@ def enviar(ambiente_id: str, dados: ConviteEmailEnvioSchema, usuario_id: str) ->
     resumo = sha256(identidade.encode()).hexdigest()
     reserva = (
         ambiente_id, destinatario, resumo, f"<sicard.{uuid4().hex}@{str(config.remetente).rsplit('@', 1)[1]}>",
-        usuario_id, dados.versao,
+        usuario_id, versao,
     )
     if dados.somente_nao_enviado:
         registro, novo = repo.reservar_monitorado(*reserva, rejeitar_enviado=False)
     else:
         registro, novo = repo.reservar(*reserva)
     if not novo:
-        return {**registro, "reutilizado": True}
+        return {**registro, "reutilizado": True}, None
     try:
         if cifrado is not None:
             original = convite_individual_repository.registrar(
-                ambiente_id, destinatario, dados.versao,
+                ambiente_id, destinatario, versao,
                 sha256(envelope["segredo"].encode()).hexdigest(), cifrado,
             )
-            if not original:
-                raise DemandaValidationError("O convite mudou. Reabra o julgamento.", field="convite")
-            envelope = _mensagem_original(ambiente_id, destinatario, original)
         else:
             # Confirma novamente a validade vigente depois da reserva.
-            original = convite_individual_repository.obter(ambiente_id, destinatario, dados.versao)
-            if not original:
-                raise DemandaValidationError("O convite mudou. Reabra o julgamento.", field="convite")
-            envelope = _mensagem_original(ambiente_id, destinatario, original)
-        mensagem = EmailEnvioSchema.model_validate(envelope["mensagem"])
+            original = convite_individual_repository.obter(ambiente_id, destinatario, versao)
+        if not original:
+            raise DemandaValidationError("O convite mudou. Reabra o julgamento.", field="convite")
+        envelope = _mensagem_original(ambiente_id, destinatario, original)
+        return registro, EmailEnvioSchema.model_validate(envelope["mensagem"])
+    except (DatabaseUnavailableError, DemandaValidationError):
+        if revisao is None:
+            repo.finalizar(str(registro["id"]), "falha", "Convite não emitido. Reabra o julgamento e tente novamente.")
+        raise
+
+
+def enviar(ambiente_id: str, dados: ConviteEmailEnvioSchema, usuario_id: str) -> dict:
+    if dados.revisao_convites is None:
+        registro, mensagem = _reservar_convite(ambiente_id, dados, usuario_id)
+    else:
+        # A revisão, a chave individual e a reserva são conferidas juntas antes do SMTP.
+        with get_connection() as conn, atomic_connection(conn):
+            repo.bloquear_envio(conn, ambiente_id, str(dados.destinatario).lower())
+            registro, mensagem = _reservar_convite(ambiente_id, dados, usuario_id)
+    if mensagem is None:
+        return registro
+    try:
         resultado = email_service.enviar(
             mensagem,
             usuario_id=usuario_id, id_mensagem=registro["mensagem_id"], solicitar_confirmacoes=True,

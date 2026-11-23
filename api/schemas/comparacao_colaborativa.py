@@ -129,6 +129,7 @@ class AmbienteColaborativoResponseSchema(BaseModel):
     email_mensagem: str
     email_config_persistida: bool = False
     email_texto_padrao: bool = False
+    revisao_convites: str | None = None
 
 
 class ContextualizacaoJulgamentoSchema(BaseModel):

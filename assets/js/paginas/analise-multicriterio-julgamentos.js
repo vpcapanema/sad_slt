@@ -1543,7 +1543,8 @@
       }
       list = collaboratorList(updated);
       Object.assign(judgment, { convites: updated.convites, lista_colaboradores: list,
-        total_convites: updated.total_convites, atualizadoEm: updated.atualizadoEm });
+        total_convites: updated.total_convites, atualizadoEm: updated.atualizadoEm,
+        revisao_convites: updated.revisao_convites });
       message = "Lista de colaboradores e grupos de critérios salvos no julgamento.";
     } else if (judgment) {
       message = "Lista confirmada. Informe um novo prazo e salve para reabrir o julgamento e gravar a lista.";

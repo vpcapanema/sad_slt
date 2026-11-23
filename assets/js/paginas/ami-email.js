@@ -460,7 +460,7 @@
   }
   // Intervalo entre envios e esperas antes de repetir quando o provedor limita a taxa.
   const INTERVALO_ENVIO_MS = 3000, ESPERAS_LIMITE_MS = [60000, 120000];
-  const ESPERAS_API_MS = [5000, 10000, 20000, 30000];
+  const ESPERAS_API_MS = [5000, 10000, 20000, 30000, 60000];
   const aguardar = ms => new Promise(resolve => setTimeout(resolve, ms));
   const limitadoPeloServidor = row => row.envio_status === "falha" &&
     /limitou temporariamente/i.test(row.detalhe || "");
@@ -498,15 +498,18 @@
     const rota = url(atual.julgamento.id) + "/enviar";
     const opcoes = {method: "POST", body: JSON.stringify(dados)};
     for (let tentativa = 0; ; tentativa++) {
+      const espera = ESPERAS_API_MS[tentativa];
+      let mensagem;
       try {
-        return await request(rota, opcoes);
+        const registro = await request(rota, opcoes);
+        if (!espera || !registro?.reutilizado || registro.envio_status !== "enviando") return registro;
+        mensagem = "O SICARD ainda está concluindo a tentativa anterior. Consultando novamente em ";
       } catch (erro) {
-        const espera = ESPERAS_API_MS[tentativa];
         if (!erro.interrupcaoApi || !espera) throw erro;
-        processo.tarefaAtual(dados.destinatario,
-          erro.message + " Retomando automaticamente em " + espera / 1000 + " s.");
-        await aguardar(espera);
+        mensagem = erro.message + " Retomando automaticamente em ";
       }
+      processo.tarefaAtual(dados.destinatario, mensagem + espera / 1000 + " s.");
+      await aguardar(espera);
     }
   }
   async function enviar(apenasSelecionados) {
@@ -519,6 +522,7 @@
     const somentePendentes = !apenasSelecionados && !reenvio;
     const lista = apenasSelecionados ? selecionados() : reenvio ? atual.destinatarios : pendentes;
     if (!lista.length) return;
+    const {revisao_convites, atualizadoEm} = atual.julgamento;
     bloquear(true);
     let processo, aceitos = 0, problemas = 0, interrompido = 0, motivo = "", iniciados = 0;
     let codigo = "envio_email";
@@ -545,7 +549,7 @@
         for (let tentativa = 0; ; tentativa++) {
           try {
             row = await solicitarEnvioConvite(atual, {
-              destinatario, versao: atual.julgamento.atualizadoEm,
+              destinatario, versao: atualizadoEm, revisao_convites,
               reenvio_id: reenvioId, somente_nao_enviado: somentePendentes
             }, processo);
           } catch (error) {

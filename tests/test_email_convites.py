@@ -1,4 +1,5 @@
 from base64 import urlsafe_b64encode
+from contextlib import nullcontext
 from datetime import datetime, timedelta, timezone
 from hashlib import sha256
 from unittest.mock import MagicMock
@@ -46,7 +47,7 @@ def ambiente(monkeypatch):
         "email_assunto": "Convite para preenchimento colaborativo AHP - PLI - SICARD",
         "email_mensagem": "Olá, colaborador(a)!\nhttps://example.com/sicard/public/analise-multicriterio/formulario-comparacao-pareada/token-teste/\nEquipe SICARD-PLI",
     }
-    monkeypatch.setattr(service.ambientes, "get_ambiente_by_id", lambda _: row)
+    monkeypatch.setattr(service.ambientes, "get_ambiente_by_id", lambda _, **kwargs: row)
     return row
 
 
@@ -307,6 +308,30 @@ def test_nao_envia_convite_invalido(ambiente, smtp, registros, alteracao):
         service.enviar(ambiente["id"], payload(ambiente, **extras), "analista")
     smtp.assert_not_called()
     assert registros == []
+
+
+def test_lote_sobrevive_a_respostas_e_protege_configuracao(ambiente, smtp, registros, monkeypatch):
+    conn = MagicMock()
+    monkeypatch.setattr(service, "get_connection", lambda: nullcontext(conn))
+    monkeypatch.setattr(service, "atomic_connection", nullcontext)
+    carregar = MagicMock(return_value=ambiente)
+    monkeypatch.setattr(service.ambientes, "get_ambiente_by_id", carregar)
+    revisao = service.revisao_convites(ambiente)
+    dados = payload(ambiente, revisao_convites=revisao)
+
+    ambiente["atualizado_em"] += timedelta(seconds=1)
+    ambiente["respostas_em_preenchimento"] = 1
+    assert service.enviar(ambiente["id"], dados, "analista")["envio_status"] == "aceito_smtp"
+    carregar.assert_called_once_with(ambiente["id"], bloquear=True)
+
+    ambiente["atualizado_em"] += timedelta(seconds=1)
+    ambiente["total_respostas"] = 1
+    assert service.enviar(ambiente["id"], dados, "analista")["reutilizado"]
+
+    ambiente["email_assunto"] = "Assunto alterado durante o lote"
+    with pytest.raises(DemandaValidationError, match="configuração dos convites mudou"):
+        service.enviar(ambiente["id"], dados, "analista")
+    smtp.assert_called_once()
 
 
 @pytest.mark.parametrize("codigo,status", [("resultado_indeterminado", "indeterminado"), ("destinatario_recusado", "falha")])

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import math
 import logging
+import json
 import secrets
 import unicodedata
 import base64
@@ -10,6 +11,7 @@ import binascii
 import re
 from collections import Counter
 from datetime import datetime, timezone
+from hashlib import sha256
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote
@@ -319,6 +321,17 @@ def _consolidacao_from_row(row: dict[str, Any]) -> ConsolidacaoColaborativaSchem
     )
 
 
+def revisao_convites(row: dict[str, Any]) -> str:
+    """Identifica a configuração do envio, independente da atividade dos colaboradores."""
+    campos = (
+        "id", "token", "nome", "status", "valido_ate", "matriz_id", "arquivo_matriz_nome",
+        "criterios", "convites", "email_remetente_alias", "email_assunto", "email_mensagem",
+    )
+    dados = {campo: row.get(campo) for campo in campos}
+    dados["valido_ate"] = _iso(dados["valido_ate"])
+    return sha256(json.dumps(dados, sort_keys=True, default=str).encode()).hexdigest()
+
+
 def _ambiente_to_response(row: dict[str, Any], *, base_url: str = "", gestao: bool = False) -> AmbienteColaborativoResponseSchema:
     token = row["token"]
     url = f"{base_url.rstrip('/')}/public/analise-multicriterio/formulario-comparacao-pareada/{quote(str(token), safe='')}/"
@@ -369,6 +382,7 @@ def _ambiente_to_response(row: dict[str, Any], *, base_url: str = "", gestao: bo
         email_mensagem=(_mensagem_email_padrao(row, base_url=base_url) if texto_padrao else salva) if gestao else "",
         email_texto_padrao=texto_padrao,
         email_config_persistida=bool(row.get("email_mensagem")) if gestao else False,
+        revisao_convites=revisao_convites(row) if gestao else None,
     )
 
 

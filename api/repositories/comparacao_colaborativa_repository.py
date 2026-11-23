@@ -115,7 +115,8 @@ def get_ambiente_by_hierarquizacao(hierarquizacao_id: Any) -> dict[str, Any] | N
     )
 
 
-def get_ambiente_by_id(ambiente_id: str) -> dict[str, Any] | None:
+def get_ambiente_by_id(ambiente_id: str, *, bloquear: bool = False) -> dict[str, Any] | None:
+    bloqueio = "FOR SHARE OF a" if bloquear else ""
     return _get_ambiente(
         f"""
         SELECT a.*, {_CAMPOS_MATRIZ}, to_jsonb(analise_exibida) AS analise_exibida,
@@ -126,6 +127,7 @@ def get_ambiente_by_id(ambiente_id: str) -> dict[str, Any] | None:
           LEFT JOIN ahp.matriz_criterios_premissas m ON m.id = a.matriz_id
           {_JOIN_ANALISE_EXIBIDA}
          WHERE a.id = %s
+         {bloqueio}
         """,
         (ambiente_id,),
     )
