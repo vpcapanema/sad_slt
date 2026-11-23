@@ -146,22 +146,29 @@ def list_ambientes() -> list[dict[str, Any]]:
     return [dict(row) for row in rows]
 
 
-def update_ambiente(ambiente_id: str, data: dict[str, Any]) -> dict[str, Any] | None:
+def update_ambiente(
+    ambiente_id: str, data: dict[str, Any], *, atualizado_em_esperado: datetime | None = None,
+) -> dict[str, Any] | None:
     if not data:
         return get_ambiente_by_id(ambiente_id)
     assignments = sql.SQL(", ").join(
         sql.SQL("{} = {}").format(sql.Identifier(key), sql.Placeholder(key))
         for key in data
     )
+    filtro_versao = (
+        sql.SQL(" AND atualizado_em = %(atualizado_em_esperado)s") if atualizado_em_esperado is not None else sql.SQL("")
+    )
     query = sql.SQL(
         "UPDATE ahp.comparacao_colaborativa_ambiente "
-        "SET {sets}, atualizado_em = now() WHERE id = %(ambiente_id)s RETURNING *"
-    ).format(sets=assignments)
+        "SET {sets}, atualizado_em = now() WHERE id = %(ambiente_id)s{filtro_versao} RETURNING *"
+    ).format(sets=assignments, filtro_versao=filtro_versao)
     params = {
         key: Jsonb(value) if key in {"convites", "criterios"} else value
         for key, value in data.items()
     }
     params["ambiente_id"] = ambiente_id
+    if atualizado_em_esperado is not None:
+        params["atualizado_em_esperado"] = atualizado_em_esperado
     with get_connection() as conn:
         row = conn.execute(query, params).fetchone()
         conn.commit()

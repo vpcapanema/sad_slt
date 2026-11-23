@@ -14,6 +14,17 @@ const base = process.env.SICARD_TEST_URL || 'http://127.0.0.1:8083';
     {etapa: 'Fase 3', criterio: 'C4', dimensao: 'Viabilidade institucional e financeira'},
     {etapa: 'Fase 2', criterio: 'C5', dimensao: 'Espacial'},
   ]}};
+  const versao = '2026-11-01T12:00:00+00:00';
+  let julgamento = {
+    id: 'julgamento-teste', nome: 'Julgamento de teste', matriz_id: matriz.id, status: 'ativa',
+    criterios: matriz.conteudo.linhas.slice(0, 4), n_criterios: 4, atualizadoEm: versao,
+    valido_ate: '2036-01-01T23:59:59-03:00',
+  };
+  julgamento.convites = julgamento.lista_colaboradores = [
+    {nome: 'Ana Silva', email: 'ana@example.com', dimensoes: ['Ambiental']},
+    {nome: 'Bia Souza', email: 'bia@example.com'},
+  ];
+  const confirmacoes = [];
   let payload;
   let autenticado = false;
   try {
@@ -32,8 +43,16 @@ const base = process.env.SICARD_TEST_URL || 'http://127.0.0.1:8083';
         payload = req.postDataJSON();
         return route.fulfill({status: 422, json: {detail: 'Fim do teste isolado.'}});
       }
+      if (req.method() === 'PATCH' && path.endsWith('/ambientes/' + julgamento.id)) {
+        const dados = req.postDataJSON();
+        confirmacoes.push(dados);
+        if (confirmacoes.length === 1) return route.fulfill({status: 422, json: {detail: 'A lista precisa ser conferida.'}});
+        julgamento = {...julgamento, convites: dados.convites, lista_colaboradores: dados.convites, total_convites: dados.convites.length};
+        return route.fulfill({json: julgamento});
+      }
       if (req.method() !== 'GET') { escritas.push(req.method()); return route.abort(); }
       if (path.includes('/api/auth/')) return route.continue();
+      if (path.endsWith('/comparacao-colaborativa/ambientes')) return route.fulfill({json: [julgamento]});
       if (path.endsWith('/comparacao-colaborativa/matrizes')) return route.fulfill({json: [matriz]});
       if (path.endsWith('/matrizes/' + matriz.id)) return route.fulfill({json: matriz});
       return route.fulfill({ json: [] });
@@ -168,7 +187,7 @@ const base = process.env.SICARD_TEST_URL || 'http://127.0.0.1:8083';
     });
     await page.locator('#ami-create-feedback').getByText(/e-mail correspondente nas linhas 4/).waitFor();
     assert.equal(await modal.isVisible(), false);
-    await page.locator('#ami-confirm-emails').click();
+    assert.equal(await page.locator('#ami-confirm-emails').isDisabled(), true);
     assert.match(await page.locator('#ami-emails-feedback').textContent(), /Lista confirmada/);
     assert.match(await page.locator('#ami-email-list').textContent(), /Ana da Silva.*ana@example.com/);
     assert.match(await page.locator('#ami-email-list').textContent(), /Carla dos Reis.*carla@example.com.*Ambiental · Social/);
@@ -185,11 +204,39 @@ const base = process.env.SICARD_TEST_URL || 'http://127.0.0.1:8083';
       nome: 'Carla dos Reis', email: 'carla@example.com', dimensoes: ['Ambiental', 'Social'],
     });
     assert.deepEqual(payload.convites.find(item => item.email === 'debora@example.com'), {
-      nome: 'Débora Nunes', email: 'debora@example.com',
+      nome: 'Débora Nunes', email: 'debora@example.com', dimensoes: null,
     });
     assert.deepEqual(payload.convites.find(item => item.email === 'elisa@example.com'), {
-      nome: 'Elisa Ramos', email: 'elisa@example.com',
+      nome: 'Elisa Ramos', email: 'elisa@example.com', dimensoes: null,
     });
+    await page.reload({waitUntil: 'domcontentloaded'});
+    await page.locator('[data-lista-colaboradores="julgamento-teste"]').click();
+    await modal.waitFor({state: 'visible'});
+    assert.equal(await scope('ana@example.com', 'Ambiental').isChecked(), true);
+    assert.equal(await scope('ana@example.com', 'Ambiental').isDisabled(), true);
+    await page.locator('#ami-import-close').click();
+
+    await page.locator('[data-select-id="julgamento-teste"]').check();
+    await page.locator('#ami-environment-edit').click();
+    await page.locator('#ami-open-collaborators').click();
+    await modal.waitFor({state: 'visible'});
+    await scope('ana@example.com', 'Todos os grupos').check();
+    await page.locator('#ami-import-cancel').click();
+    assert.deepEqual(confirmacoes, []);
+    await page.locator('#ami-open-collaborators').click();
+    assert.equal(await scope('ana@example.com', 'Todos os grupos').isChecked(), false);
+    await scope('ana@example.com', 'Todos os grupos').check();
+    await page.locator('#ami-import-confirm').click();
+    await page.locator('#ami-import-feedback').getByText('A lista precisa ser conferida', {exact: false}).waitFor();
+    await page.locator('#ami-import-confirm').click();
+    await modal.waitFor({state: 'hidden'});
+    assert.equal(confirmacoes.length, 2);
+    assert.equal(confirmacoes[1].versao_lista_colaboradores, versao);
+    assert.equal(confirmacoes[1].convites[0].dimensoes, null);
+    assert.match(await page.locator('#ami-emails-feedback').innerText(), /salvos no julgamento/);
+    await page.reload({waitUntil: 'domcontentloaded'});
+    await page.locator('[data-lista-colaboradores="julgamento-teste"]').click();
+    assert.equal(await scope('ana@example.com', 'Todos os grupos').isChecked(), true);
     assert.deepEqual(errors, []);
     assert.deepEqual(escritas, []);
     console.log('Importação CSV/XLSX, colunas por grupo, atribuição em lote, Todos, padrão visual e envio verificados.');

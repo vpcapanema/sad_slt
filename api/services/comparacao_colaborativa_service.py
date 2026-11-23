@@ -324,6 +324,8 @@ def _ambiente_to_response(row: dict[str, Any], *, base_url: str = "", gestao: bo
     url = f"{base_url.rstrip('/')}/public/analise-multicriterio/formulario-comparacao-pareada/{quote(str(token), safe='')}/"
     salva = row.get("email_mensagem")
     texto_padrao = gestao and (not salva or base_mensagem_padrao(row) is not None)
+    convites = row.get("convites") or []
+    lista_colaboradores = row.get("lista_colaboradores", convites) if gestao else []
     return AmbienteColaborativoResponseSchema(
         matriz_id=str(row["matriz_id"]) if row.get("matriz_id") else None,
         matriz_nome=row.get("matriz_nome"),
@@ -342,9 +344,10 @@ def _ambiente_to_response(row: dict[str, Any], *, base_url: str = "", gestao: bo
         arquivo_matriz_nome=row.get("arquivo_matriz_nome"),
         token=token if gestao else "",
         token_acesso=None,
-        total_convites=len(row.get("convites") or []),
-        convites=[{k: c[k] for k in ("email", "nome", "dimensoes") if k in c}
-                  for c in row.get("convites") or []] if gestao else [],
+        total_convites=len(convites),
+        convites=[{k: c[k] for k in ("email", "nome", "dimensoes") if k in c} for c in convites] if gestao else [],
+        lista_colaboradores=[{k: c[k] for k in ("email", "nome", "dimensoes") if k in c}
+                             for c in lista_colaboradores],
         valido_ate=_iso(row.get("valido_ate")) or "",
         status=row["status"],
         url_publica=url if gestao else "",
@@ -543,6 +546,10 @@ def atualizar_ambiente(
     atual = repo.get_ambiente_by_id(ambiente_id)
     if not atual:
         raise DemandaValidationError("Julgamento não encontrado.", field="julgamento_id")
+    versao_lista = payload.versao_lista_colaboradores
+    mensagem_conflito = "O julgamento foi alterado depois que você abriu a lista. Recarregue o julgamento para conferir a versão atual."
+    if versao_lista is not None and payload.convites is None:
+        raise DemandaValidationError("Informe a lista de colaboradores a confirmar.", field="convites")
     somente_nome = payload.model_fields_set == {"nome"} and payload.nome is not None
     if not somente_nome:
         matrizes_criterios.exigir_julgamento_fase3(atual)
@@ -774,7 +781,12 @@ def atualizar_ambiente(
         base_padrao = base_mensagem_padrao({**atual, "email_mensagem": mensagem_recebida})
     if base_padrao is not None:
         data["email_mensagem"] = _mensagem_email_padrao({**atual, **data}, base_url=base_url or base_padrao)
-    atualizado = repo.update_ambiente(ambiente_id, data)
+    if versao_lista is not None:
+        atualizado = repo.update_ambiente(ambiente_id, data, atualizado_em_esperado=versao_lista)
+        if not atualizado:
+            raise DemandaValidationError(mensagem_conflito, field="convites")
+    else:
+        atualizado = repo.update_ambiente(ambiente_id, data)
     if not atualizado:
         raise DemandaValidationError("Julgamento não encontrado.", field="julgamento_id")
     atualizado.setdefault("matriz_nome", atual.get("matriz_nome"))

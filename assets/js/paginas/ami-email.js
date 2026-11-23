@@ -621,6 +621,12 @@
   }
   window.SICARDEmailConvites = {
     modo(value) { modo = value; controles(); },
+    atualizarColaboradores(julgamento) {
+      if (contexto?.julgamento.id !== julgamento.id) return;
+      contexto.destinatarios = (julgamento.convites || []).map(c => c.email);
+      atualizarPreviaInstitucional();
+      carregar(contexto, true);
+    },
     mostrar(julgamento, mensagem, link, criteriosDoConvite) {
       contexto = {julgamento, mensagem, url: link, criteriosDoConvite, destinatarios: (julgamento.convites || []).map(c => typeof c === "string" ? c : c.email)};
       definirMensagemProtegida(mensagem, link);

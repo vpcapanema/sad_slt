@@ -25,20 +25,28 @@
       var c = j.consolidacao, invited = j.total_convites ?? (j.convites || []).length, received = Number(j.total_respostas || 0), selected = options.selectedIds ? options.selectedIds.has(j.id) : options.selectedId === j.id, editing = options.editingId === j.id;
       var matrixId = j.matriz_id || j.hierarquizacao_id || "—";
       var matrixName = j.matriz_nome || [j.hierarquizacao_nome, j.hierarquizacao_codigo].filter(Boolean).join(" · ") || "—";
+      var total = (j.lista_colaboradores ?? j.convites ?? []).length;
+      var lista = options.onOpenCollaborators ? '<td><button type="button" class="ami-cell-link" data-lista-colaboradores="' + esc(j.id) + '" aria-haspopup="dialog" aria-label="Abrir lista de colaboradores de ' + esc(j.nome || j.id) + '">' + total + (total === 1 ? ' colaborador' : ' colaboradores') + '</button></td>' : "";
       return '<tr class="collab-round-row ' + (selected ? "is-selected" : "") + '" aria-selected="' + selected + '"><td class="col-select"><input type="checkbox" class="ami-row-select" data-select-id="' + esc(j.id) + '" ' + (selected ? "checked" : "") + (options.editingId ? " disabled" : "") + ' aria-label="Selecionar julgamento ' + esc(j.hierarquizacao_codigo) + '"></td>' +
         '<td>' + (editing ? '<input class="ami-inline-input" data-edit-field="nome" type="text" maxlength="200" required aria-label="Nome do julgamento">' : esc(j.nome || 'Julgamento ' + j.id)) + '</td><td>' + esc({ ativa: "Aberto", consolidada: "Consolidado", encerrada: "Encerrado" }[j.status] || j.status) + '</td><td class="ami-cell-id" title="' + esc(j.id) + '">' + esc(j.id) + '</td><td class="ami-cell-id" title="' + esc(matrixId) + '">' + esc(matrixId) + '</td>' +
         '<td title="' + esc(matrixName) + '">' + esc(matrixName) + '</td>' +
-        '<td>' + participationLink(j, received, invited) + '</td><td>' + deadlineDate(j.valido_ate) + '</td><td>' + date(j.criadoEm) + '</td><td>' + date(j.atualizadoEm) + '</td>' +
+        '<td>' + participationLink(j, received, invited) + '</td>' + lista + '<td>' + deadlineDate(j.valido_ate) + '</td><td>' + date(j.criadoEm) + '</td><td>' + date(j.atualizadoEm) + '</td>' +
         '<td><button class="ami-cell-link" data-modal-kind="criteria" data-record-id="' + esc(j.id) + '">' + esc(j.n_criterios) + ' critérios</button></td>' +
         '<td class="ami-cell-token" title="Chaves individuais são entregues somente por e-mail">Individual por e-mail</td><td>' + num(c && c.lambda_max) + '</td><td>' + num(c && c.indice_consistencia) + '</td><td>' + num(c && c.indice_aleatorio) + '</td><td>' + num(c && c.razao_consistencia) + '</td>' +
         '<td><button class="ami-cell-link" data-availability="' + (c && c.matriz_consolidada ? 'available' : 'pending') + '" data-modal-kind="matrix" data-record-id="' + esc(j.id) + '">' + (c && c.matriz_consolidada ? "Disponível" : "Pendente") + '</button></td><td><button class="ami-cell-link" data-availability="' + (c && c.pesos_consolidados && c.pesos_consolidados.length ? 'available' : 'pending') + '" data-modal-kind="weights" data-record-id="' + esc(j.id) + '">' + (c && c.pesos_consolidados && c.pesos_consolidados.length ? "Disponíveis" : "Pendentes") + '</button></td></tr>';
-    }).join("") || '<tr><td colspan="18" class="ami-empty">Nenhum registro colaborativo encontrado no banco.</td></tr>';
+    }).join("") || '<tr><td colspan="' + (options.onOpenCollaborators ? 19 : 18) + '" class="ami-empty">Nenhum registro colaborativo encontrado no banco.</td></tr>';
     var nameInput = body.querySelector('[data-edit-field="nome"]');
     if (nameInput) {
       var editingRecord = (julgamentos || []).find(function (j) { return j.id === options.editingId; });
       nameInput.value = editingRecord.nome || 'Julgamento ' + editingRecord.id;
     }
     syncTopActions(options.selectedId);
+    body.querySelectorAll("[data-lista-colaboradores]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        var julgamento = julgamentos.find(function (item) { return item.id === button.dataset.listaColaboradores; });
+        if (julgamento) options.onOpenCollaborators(julgamento, button);
+      });
+    });
     body.querySelectorAll("[data-select-id]").forEach(function (checkbox) { checkbox.addEventListener("change", function () { if (options.onSelectionChange) options.onSelectionChange(checkbox.dataset.selectId, checkbox.checked); }); });
     var modal = document.getElementById(tbodyId + "-modal"), modalTitle = document.getElementById(tbodyId + "-modal-title"), modalContent = document.getElementById(tbodyId + "-modal-content");
     function closeModal() { modal.classList.add("is-hidden"); }

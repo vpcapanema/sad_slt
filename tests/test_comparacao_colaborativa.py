@@ -231,6 +231,7 @@ def test_resposta_de_consulta_nao_expoe_configuracao_do_convite():
     assert resposta.email_mensagem == ""
     assert resposta.email_config_persistida is False
     assert resposta.token == "" and resposta.convites == [] and resposta.url_publica == ""
+    assert resposta.lista_colaboradores == []
 
 
 def test_alias_assunto_e_mensagem_do_convite_persistem_no_julgamento(monkeypatch):
@@ -502,6 +503,31 @@ def test_nao_altera_recorte_apos_inicio(monkeypatch):
             convites=[{"email": "a@x.gov.br", "dimensoes": ["Financeira"]}],
         ))
     update.assert_not_called()
+
+
+def test_confirmacao_salva_lista_com_grupos_e_exige_versao_atual(monkeypatch):
+    atual = _ambiente_dimensoes()
+    monkeypatch.setattr(repo, "get_ambiente_by_id", lambda _: atual)
+    monkeypatch.setattr(repo, "list_respostas", lambda _: [])
+    atualizar = MagicMock(side_effect=lambda _, dados, **kwargs: {
+        **atual, **dados, "lista_colaboradores": dados["convites"],
+    })
+    monkeypatch.setattr(repo, "update_ambiente", atualizar)
+    payload = AmbienteColaborativoUpdateSchema(
+        versao_lista_colaboradores=atual["atualizado_em"],
+        convites=[{"nome": "Ana", "email": "a@x.gov.br", "dimensoes": None},
+                  {"nome": "Bia", "email": "b@x.gov.br", "dimensoes": ["Financeira"]}],
+    )
+    resultado = service.atualizar_ambiente(AMBIENTE_ID, payload)
+    lista = [{"email": "a@x.gov.br", "nome": "Ana"},
+             {"email": "b@x.gov.br", "nome": "Bia", "dimensoes": ["Financeira"]}]
+    atualizar.assert_called_once_with(AMBIENTE_ID, {"convites": lista}, atualizado_em_esperado=atual["atualizado_em"])
+    assert resultado.lista_colaboradores == lista
+
+    atualizar.side_effect = None
+    atualizar.return_value = None
+    with pytest.raises(DemandaValidationError, match="alterado depois"):
+        service.atualizar_ambiente(AMBIENTE_ID, payload)
 
 
 def test_nao_homologa_pesos_locais_como_globais(monkeypatch):

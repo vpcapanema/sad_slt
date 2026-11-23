@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import AwareDatetime, BaseModel, Field, field_validator
 
 
 EMAIL_REMETENTE_ALIAS_PADRAO = "SICARD-PLI"
@@ -51,6 +51,7 @@ class AmbienteColaborativoUpdateSchema(BaseModel):
     arquivo_matriz_base64: str | None = None
     arquivo_matriz_nome: str | None = Field(None, max_length=255)
     convites: list[ConviteColaborativoSchema] | None = Field(None, min_length=1)
+    versao_lista_colaboradores: AwareDatetime | None = None
     valido_ate: datetime | None = None
     email_remetente_alias: str | None = Field(None, min_length=1, max_length=200)
     email_assunto: str | None = Field(None, min_length=1, max_length=200)
@@ -93,6 +94,7 @@ class AmbienteColaborativoResponseSchema(BaseModel):
     token: str
     token_acesso: str | None = None
     convites: list[dict[str, Any]]
+    lista_colaboradores: list[dict[str, Any]] = Field(default_factory=list)
     total_convites: int = 0
     valido_ate: str
     status: str
