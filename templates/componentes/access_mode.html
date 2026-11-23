@@ -5,5 +5,5 @@
 </p>
 {% endif %}
 {% if access_profile %}
-<script id="sicard-access-policy" src="/assets/js/access-mode.js" data-policy="{{ access_policy | default({}) | tojson | forceescape }}" data-access-profile="{{ access_profile }}" data-access-module="{{ access_module }}"></script>
+<script id="sicard-access-policy" src="/assets/js/access-mode.js?v=20261123-formulario-modulo" data-policy="{{ access_policy | default({}) | tojson | forceescape }}" data-access-profile="{{ access_profile }}" data-access-module="{{ access_module }}"></script>
 {% endif %}

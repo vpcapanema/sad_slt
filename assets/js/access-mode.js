@@ -36,14 +36,20 @@
     const label = [el.id, el.title, el.getAttribute('aria-label'), el.dataset.action, el.textContent].join(' ');
     return !el.hasAttribute('data-write-control') && !writeAction.test(label) && readAction.test(label);
   }
+  function accessModule(el) {
+    return el.closest('[data-access-module]')?.dataset.accessModule || module;
+  }
+  function canOperateIn(mod) {
+    if (module === 'operador' && mod === 'mad' && can('solicitacao.cumprir')) return true;
+    return can(moduleWrites[mod] || 'operate');
+  }
   function allowed(el) {
     if (el.closest('[data-policy-readonly="true"]') && !isRead(el)) return false;
     const permission = el.dataset.permission || el.dataset.writePermission;
     if (permission) return can(permission);
     if (isRead(el)) return true;
-    const mod = el.closest('[data-access-module]')?.dataset.accessModule || module;
-    if (module === 'operador' && mod === 'mad' && can('solicitacao.cumprir')) return true;
-    return mod ? can(moduleWrites[mod] || 'operate') : true;
+    const mod = accessModule(el);
+    return !mod || canOperateIn(mod);
   }
   function mark(el) {
     const ok = allowed(el);
@@ -93,7 +99,9 @@
       if (el?.disabled) reject(event);
     }, true);
     document.addEventListener('submit', event => {
-      if (event.target.closest('[data-read-control],.admin-filter,.admin-filter-bar,[role="search"]') || can('operate')) return;
+      const form = event.target;
+      if (form.closest('[data-read-control],.admin-filter,.admin-filter-bar,[role="search"]')) return;
+      if (!form.closest('[data-policy-readonly="true"]') && canOperateIn(accessModule(form))) return;
       event.preventDefault(); event.stopImmediatePropagation(); denied('enviar este formulário');
     }, true);
   }
