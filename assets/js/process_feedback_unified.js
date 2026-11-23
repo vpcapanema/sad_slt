@@ -671,7 +671,16 @@
 
         /* ── Sucesso → delega ao StatusFeedbackSystem ── */
         sucesso(data) {
-            if (this._finalizado || (_progressSystem && _progressSystem !== this)) return;
+            if (this._finalizado) return;
+            if (_progressSystem && _progressSystem !== this) {
+                if (!this._encerrarMinimizado()) return;
+                this._finalizado = true;
+                const resultado = { actionTitle: this._actionTitle, ...data, _elapsed: this._elapsed() };
+                if (data?._status === 'partial') _statusSystem.mostrarParcial(resultado);
+                else _statusSystem.mostrarSucesso(resultado);
+                this.config.onSuccess?.(data);
+                return;
+            }
             const confirmado = this._sicard?.snapshot?.status;
             if (['erro', 'interrompido'].includes(confirmado)) { this.erro(data); return; }
             if (confirmado === 'cancelado') { this.confirmarCancelamento(); return; }
@@ -694,7 +703,14 @@
 
         /* ── Erro → delega ao StatusFeedbackSystem ── */
         erro(data) {
-            if (this._finalizado || (_progressSystem && _progressSystem !== this)) return;
+            if (this._finalizado) return;
+            if (_progressSystem && _progressSystem !== this) {
+                if (!this._encerrarMinimizado()) return;
+                this._finalizado = true;
+                _statusSystem.mostrarErro({ actionTitle: this._actionTitle, ...data, _elapsed: this._elapsed() });
+                this.config.onError?.(data);
+                return;
+            }
             this._finalizado = true;
             this._estadoFinal = 'Interrompido por erro';
             this.diagnosticoTecnico(data?.diagnostico_tecnico || data?.errors || data?.details);
@@ -745,14 +761,39 @@
         fechar() {
             if (this._finalizado) this._stop();
             this.ocultar();
-            if (this._finalizado && _progressSystem === this) q('#pfsReopen').hidden = true;
+            if (this._finalizado) {
+                this._encerrarMinimizado();
+                if (_progressSystem === this) q('#pfsReopen').hidden = true;
+            }
         }
         reabrir() {
-            if (_progressSystem !== this || this._finalizado) return;
+            if (_progressSystem !== this || this._finalizado || this._compacto) return;
             _statusSystem.fechar();
             q('#pfsReopen').hidden = true;
             this.overlay.classList.add('pfs-active'); this.box.classList.add('pfs-active');
             abrirComFoco(this.box);
+        }
+
+        minimizar(texto) {
+            if (this._finalizado) return;
+            if (!this._compacto) {
+                this._compacto = document.createElement('div');
+                this._compacto.className = 'pfs-reopen pfs-compacto';
+                this._compacto.setAttribute('role', 'status');
+                document.body.appendChild(this._compacto);
+                if (_progressSystem === this) {
+                    this.ocultar();
+                    q('#pfsReopen').hidden = true;
+                }
+            }
+            this._compacto.textContent = texto;
+        }
+
+        _encerrarMinimizado() {
+            if (!this._compacto) return false;
+            this._compacto.remove();
+            this._compacto = null;
+            return true;
         }
 
         _tituloFluxo(nome) {

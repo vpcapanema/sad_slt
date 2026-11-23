@@ -76,6 +76,7 @@ class EmailSettings(BaseModel):
     remetente: EmailStr | None = None
     responder_para: EmailStr | None = None
     timeout: int = Field(default=30, ge=1, le=60)
+    mensagens_por_minuto: int = Field(default=0, ge=0, le=6000)
     imap_habilitado: bool = False
     imap_host: str = ""
     imap_porta: int = Field(default=993, ge=1, le=65535)
@@ -104,6 +105,7 @@ def get_email_settings() -> EmailSettings:
         "remetente": os.getenv("SICARD_EMAIL_FROM", "").strip() or None,
         "responder_para": os.getenv("SICARD_EMAIL_REPLY_TO", "").strip() or None,
         "timeout": os.getenv("SICARD_SMTP_TIMEOUT", "30"),
+        "mensagens_por_minuto": os.getenv("SICARD_SMTP_MESSAGES_PER_MINUTE", "28"),
         "imap_habilitado": os.getenv("SICARD_EMAIL_IMAP_ENABLED", "false"),
         "imap_host": os.getenv("SICARD_EMAIL_IMAP_HOST", "").strip(),
         "imap_porta": os.getenv("SICARD_EMAIL_IMAP_PORT", "993"),

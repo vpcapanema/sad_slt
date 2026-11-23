@@ -58,6 +58,7 @@
     const btn = document.getElementById('btn-entrar');
     const senhaInput = document.getElementById('senha');
     const usuario = document.getElementById('login');
+    const perfil = document.getElementById('tipo-usuario');
     const remember = document.getElementById('permanecer-conectado');
     const toggle = document.getElementById('btn-toggle-senha');
     const initialCheck = new AbortController();
@@ -93,6 +94,14 @@
         log('validacao.rejeitada', { tentativa, motivo: 'campos_obrigatorios' }, 'warn');
         return;
       }
+      const informado = usuario.value.trim();
+      const sufixo = informado.match(/_(visualizador|operador|analista|gestor|admin)$/i)?.[1].toLowerCase();
+      if (perfil.value && sufixo && sufixo !== perfil.value) {
+        failure('O tipo de perfil selecionado não corresponde ao sufixo do usuário SIGMA.');
+        perfil.focus();
+        return;
+      }
+      const username = perfil.value && !sufixo && !informado.includes('@') ? informado + '_' + perfil.value : informado;
       submitting = true;
       btn.disabled = true;
       remember.disabled = true;
@@ -108,7 +117,7 @@
       }, 5000);
       try {
         if (!window.SLTAdminApi) throw new Error('Não foi possível carregar o serviço de login. Atualize a página.');
-        await SLTAdminApi.login(usuario.value.trim(), senhaInput.value, remember.checked, { log, tentativa });
+        await SLTAdminApi.login(username, senhaInput.value, remember.checked, { log, tentativa });
         etapa = 'confirmacao_sessao';
         progress('Credenciais aceitas. Confirmando o cookie e a sessão restrita…');
         const session = await SLTAdminApi.fetchSession({ log, tentativa });

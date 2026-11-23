@@ -320,7 +320,8 @@ $migrations = @(
     "175_escopo_pesquisa_experiencia.sql",
     "176_tipo_pesquisa_experiencia.sql",
     "177_lista_colaboradores_julgamento.sql",
-    "178_hierarquizacao_pesquisa_experiencia.sql"
+    "178_hierarquizacao_pesquisa_experiencia.sql",
+    "179_cadencia_email.sql"
 )
 
 if ($OnlyMigration) {
@@ -496,6 +497,11 @@ if (-not $OnlyMigration) {
         Write-Ok "Schema legado ja esta atualizado; migrations 002-036 serao ignoradas"
         $migrations = $migrations | Where-Object { [int]$_.Substring(0, 3) -ge 37 }
     }
+}
+
+if (-not $OnlyMigration -and "179_cadencia_email.sql" -notin $migrations -and
+    -not (Test-SchemaReady "SELECT to_regclass('public.sicard_email_cadencia') IS NOT NULL;")) {
+    $migrations += "179_cadencia_email.sql"
 }
 
 if (-not $OnlyMigration -and "166_politica_usuarios_sicard.sql" -notin $migrations) {

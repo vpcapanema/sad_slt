@@ -57,6 +57,21 @@
           </div>
 
           <div class="auth-field">
+            <label class="auth-label" for="tipo-usuario">Tipo de perfil</label>
+            <div class="auth-input-wrap">
+              <span class="auth-input-icon" aria-hidden="true"><i class="fas fa-id-badge"></i></span>
+              <select id="tipo-usuario" name="tipo_usuario" class="auth-input">
+                <option value="">Identificar pelo usuário</option>
+                <option value="visualizador">Visualizador</option>
+                <option value="operador">Operador</option>
+                <option value="analista">Analista</option>
+                <option value="gestor">Gestor</option>
+                <option value="admin">Administrador</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="auth-field">
             <label class="auth-label" for="senha">Senha</label>
             <div class="auth-input-wrap">
               <span class="auth-input-icon" aria-hidden="true">
@@ -158,5 +173,5 @@
   <script src="/assets/js/admin-api.js"></script>
   <script src="/assets/js/admin-auth.js"></script>
   <script src="/assets/js/admin-ui.js"></script>
-  <script src="/restrict/login.js"></script>
+  <script src="/restrict/login.js?v=20261123-perfil"></script>
 {% endblock %}

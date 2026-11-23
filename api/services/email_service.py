@@ -11,15 +11,44 @@ import smtplib
 import ssl
 from hashlib import sha256
 from collections.abc import Generator
+from threading import BoundedSemaphore
+from time import sleep
 
 from pydantic import ValidationError
 
 from api.config import EmailSettings, get_email_settings
+from api.db.connection import get_connection
+from api.exceptions import DatabaseUnavailableError
 from api.schemas.email import (
     EmailConexaoResultado, EmailDiagnostico, EmailEnvioResultado, EmailEnvioSchema,
 )
 
 logger = logging.getLogger(__name__)
+_envios_concorrentes = BoundedSemaphore(3)
+
+
+def _aguardar_cadencia(config: EmailSettings) -> None:
+    taxa = config.mensagens_por_minuto
+    if config.host.rstrip(".").lower() == "smtp.office365.com":
+        taxa = min(taxa or 28, 30)
+    if not taxa:
+        return
+    intervalo = 60.0 / taxa
+    conta = sha256(f"{config.host.rstrip('.').lower()}\n{config.usuario.casefold()}".encode()).hexdigest()
+    try:
+        with get_connection() as conn:
+            row = conn.execute(
+                """INSERT INTO public.sicard_email_cadencia (conta, proximo_envio)
+                   VALUES (%s, clock_timestamp() + %s * interval '1 second')
+                   ON CONFLICT (conta) DO UPDATE
+                   SET proximo_envio = greatest(sicard_email_cadencia.proximo_envio, clock_timestamp())
+                                        + %s * interval '1 second'
+                   RETURNING extract(epoch FROM proximo_envio - clock_timestamp()) - %s AS espera""",
+                (conta, intervalo, intervalo, intervalo),
+            ).fetchone()
+    except DatabaseUnavailableError as exc:
+        raise FalhaEmail("conexao", "O SICARD não conseguiu reservar o próximo horário de envio. Tente novamente.") from exc
+    sleep(max(0, float(row["espera"])))
 
 
 class FalhaEmail(RuntimeError):
@@ -104,7 +133,10 @@ def _falha_smtp(exc: Exception, *, iniciou_envio: bool, usuario_id: str,
     smtp_codigo = getattr(exc, "smtp_code", None)
     estendido = _status_estendido(exc)
     referencia = " ".join(str(parte) for parte in (smtp_codigo, estendido) if parte)
-    if isinstance(exc, smtplib.SMTPAuthenticationError):
+    if (smtp_codigo, estendido) == (432, "4.3.2"):
+        codigo = "limite_temporario"
+        mensagem = f"O servidor de email limitou temporariamente os envios (código {referencia})."
+    elif isinstance(exc, smtplib.SMTPAuthenticationError):
         codigo = "autenticacao"
         mensagem = (
             "O servidor de email recusou a autenticação do SICARD"
@@ -197,8 +229,9 @@ def enviar(dados: EmailEnvioSchema, *, usuario_id: str, id_mensagem: str | None 
     iniciou_envio = False
     dsn_solicitada = False
     try:
-        with _conexao(config) as servidor:
+        with _envios_concorrentes, _conexao(config) as servidor:
             dsn_solicitada = solicitar_confirmacoes and servidor.has_extn("dsn")
+            _aguardar_cadencia(config)
             iniciou_envio = True
             if dsn_solicitada:
                 recusados = servidor.send_message(

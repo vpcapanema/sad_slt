@@ -20,6 +20,7 @@ assert.doesNotMatch(fs.readFileSync('admin/login.js','utf8'),/ProcessFeedback|No
    if(u.pathname==='/api/auth/session')return route.fulfill({json:{authenticated:accepted&&mode!=='session-missing'}});
    if(u.pathname==='/api/auth/login'){
     posts++;const payload=route.request().postDataJSON();assert.equal(payload.permanecer_conectado,true);
+    assert.equal(payload.username,'PRIVATE_SENTINEL_analista');
     if(mode==='network')return route.abort();
     if(mode==='timeout'){await new Promise(r=>setTimeout(r,150));return route.fulfill({json:{ok:true}}).catch(()=>{});}
     await new Promise(r=>release=r);
@@ -37,7 +38,17 @@ assert.doesNotMatch(fs.readFileSync('admin/login.js','utf8'),/ProcessFeedback|No
   await page.click('#btn-entrar');
   assert.equal(posts,0);
   assert.match(await page.locator('#login-erro').innerText(),/usuário e senha/);
+  assert.deepEqual(await page.locator('#form-login .auth-field [name]').evaluateAll(elements=>elements.map(e=>e.name)),
+    ['login','tipo_usuario','senha']);
   await page.fill('#login','PRIVATE_SENTINEL_analista');await page.fill('#senha','PASSWORD_SENTINEL');await page.check('#permanecer-conectado');
+  if(mode==='success'){
+   await page.selectOption('#tipo-usuario','gestor');
+   await page.click('#btn-entrar');
+   assert.equal(posts,0);
+   assert.match(await page.locator('#login-erro').innerText(),/não corresponde ao sufixo/);
+   await page.fill('#login','PRIVATE_SENTINEL');
+   await page.selectOption('#tipo-usuario','analista');
+  }
   await page.click('#btn-entrar');
   if(!['timeout','network'].includes(mode)){
    await page.waitForFunction(()=>document.querySelector('#btn-entrar').disabled);

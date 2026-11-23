@@ -2,6 +2,7 @@
 import smtplib
 import ssl
 from unittest.mock import MagicMock
+from contextlib import nullcontext
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -27,6 +28,7 @@ def smtp(monkeypatch):
         "SICARD_EMAIL_FROM": "sicard@example.com",
         "SICARD_EMAIL_REPLY_TO": "suporte@example.com",
         "SICARD_SMTP_TIMEOUT": "12",
+        "SICARD_SMTP_MESSAGES_PER_MINUTE": "0",
     }
     for nome, valor in valores.items():
         monkeypatch.setenv(nome, valor)
@@ -62,6 +64,23 @@ def dados(**extras):
         "texto": "Texto da mensagem.",
         **extras,
     }
+
+
+def test_envio_reserva_cadencia_da_conta_antes_de_submeter(client, smtp, monkeypatch):
+    monkeypatch.setenv("SICARD_SMTP_HOST", "smtp.office365.com")
+    monkeypatch.setenv("SICARD_SMTP_MESSAGES_PER_MINUTE", "60")
+    conn = MagicMock()
+    conn.execute.return_value.fetchone.return_value = {"espera": 1.5}
+    monkeypatch.setattr(email_service, "get_connection", lambda: nullcontext(conn))
+    esperar = MagicMock()
+    monkeypatch.setattr(email_service, "sleep", esperar)
+    smtp[0].send_message.side_effect = lambda *args, **kwargs: esperar.assert_called_once_with(1.5) or {}
+
+    response = client.post("/api/email/enviar", headers=autenticacao(), json=dados())
+
+    assert response.status_code == 200
+    params = conn.execute.call_args.args[1]
+    assert len(params[0]) == 64 and params[1:] == (2.0, 2.0, 2.0)
 
 
 def test_router_registrado_na_api_real():

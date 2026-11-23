@@ -2,6 +2,7 @@
   "use strict";
   const $ = id => document.getElementById(id);
   let contexto = null, registros = [], pronto = false, ocupado = false, modo = "create", pagina = 1;
+  let loteEmExecucao = false;
   let configuracaoOriginal = null, configuracaoAlterada = false;
   const aliasInput = $("ami-email-sender-alias"), assuntoInput = $("ami-email-subject"),
     mensagemInput = $("ami-email-template"), mensagemAfterInput = $("ami-email-template-after"),
@@ -333,7 +334,7 @@
     const rotulo = pendentes.length && (enviados || incertos) ? "Enviar aos pendentes (" + pendentes.length + ")" :
       incertos ? "Envio geral indisponível" : enviados ? "Reenviar e-mails" : "Enviar e-mail";
     $("ami-open-mail").innerHTML = '<i class="fas fa-envelope c-btn__icon" aria-hidden="true"></i>' + rotulo;
-    const bloqueiaConvites = ocupado || !pronto || modo !== "view" || !contexto ||
+    const bloqueiaConvites = ocupado || loteEmExecucao || !pronto || modo !== "view" || !contexto ||
       !contexto.url || contexto.julgamento.status !== "ativa" ||
       !(Date.parse(contexto.julgamento.valido_ate) >= Date.now()) || !contexto.destinatarios.length;
     $("ami-open-mail").disabled = bloqueiaConvites || Boolean(incertos && !pendentes.length);
@@ -344,9 +345,9 @@
     const marcados = monitorRows.filter(row => selected.has(rowKey(row)));
     const baseBloqueada = ocupado || !pronto || modo !== "view" || !contexto || !marcados.length;
     $("ami-monitor-send").disabled = bloqueiaConvites || baseBloqueada;
-    $("ami-monitor-send-response").disabled = baseBloqueada ||
+    $("ami-monitor-send-response").disabled = loteEmExecucao || baseBloqueada ||
       !marcados.every(row => row.resposta_recebida);
-    $("ami-email-receipts").disabled = ocupado || !contexto || modo !== "view" || !contexto.confirmacoesConfiguradas;
+    $("ami-email-receipts").disabled = ocupado || loteEmExecucao || !contexto || modo !== "view" || !contexto.confirmacoesConfiguradas;
     $("ami-revoke-invitation").disabled = ocupado || !contexto || modo !== "view" || !contexto.destinatarios.length;
     $("ami-monitor-refresh").disabled = $("ami-email-receipts").disabled;
     $("ami-monitor-export").disabled = ocupado || !pronto || !selected.size;
@@ -458,8 +459,8 @@
     document.querySelector(".ami-main").inert = valor;
     controles();
   }
-  // Intervalo entre envios e esperas antes de repetir quando o provedor limita a taxa.
-  const INTERVALO_ENVIO_MS = 3000, ESPERAS_LIMITE_MS = [60000, 120000];
+  // O servidor controla a cadência da conta. A tela só espera quando precisa repetir.
+  const ESPERAS_LIMITE_MS = [60000, 120000];
   const ESPERAS_API_MS = [5000, 10000, 20000, 30000, 60000];
   const aguardar = ms => new Promise(resolve => setTimeout(resolve, ms));
   const limitadoPeloServidor = row => row.envio_status === "falha" &&
@@ -512,6 +513,19 @@
       await aguardar(espera);
     }
   }
+  function atualizarProgressoDoLote(processo, indice, total) {
+    if (indice < 2) return false;
+    if (indice === 2) bloquear(false);
+    processo.minimizar("Enviando e-mails · " + indice + " de " + total + " processados");
+    return true;
+  }
+
+  function encerrarLote(emSegundoPlano) {
+    loteEmExecucao = false;
+    if (emSegundoPlano) controles();
+    else bloquear(false);
+  }
+
   async function enviar(apenasSelecionados) {
     const botao = apenasSelecionados ? $("ami-monitor-send") : $("ami-open-mail");
     if (botao.disabled) return;
@@ -523,8 +537,10 @@
     const lista = apenasSelecionados ? selecionados() : reenvio ? atual.destinatarios : pendentes;
     if (!lista.length) return;
     const {revisao_convites, atualizadoEm} = atual.julgamento;
+    loteEmExecucao = true;
     bloquear(true);
     let processo, aceitos = 0, problemas = 0, interrompido = 0, motivo = "", iniciados = 0;
+    let emSegundoPlano = false;
     let codigo = "envio_email";
     const detalhes = [];
     try {
@@ -542,7 +558,7 @@
       processo = ProcessFeedback.iniciarCadastro({title: "Enviando convites por e-mail", tasks: lista});
       for (let indice = 0; indice < lista.length; indice++) {
         const destinatario = lista[indice];
-        if (indice) await aguardar(INTERVALO_ENVIO_MS);
+        emSegundoPlano = atualizarProgressoDoLote(processo, indice, lista.length);
         iniciados++;
         processo.tarefaAtual(destinatario);
         let row;
@@ -561,8 +577,10 @@
             break;
           }
           if (!row?.id || !rotulosEnvio[row.envio_status]) throw new Error("O servidor não confirmou o estado do envio. Consulte o histórico antes de tentar novamente.");
-          registros = registros.filter(item => item.id !== row.id).concat(row);
-          render();
+          if (contexto === atual) {
+            registros = registros.filter(item => item.id !== row.id).concat(row);
+            render();
+          }
           if (!limitadoPeloServidor(row) || tentativa >= ESPERAS_LIMITE_MS.length) break;
           const espera = ESPERAS_LIMITE_MS[tentativa];
           processo.tarefaAtual(destinatario, "O servidor de e-mail limitou os envios. Nova tentativa em " + espera / 1000 + " s.");
@@ -581,23 +599,20 @@
       if (!motivo) linhas.push(...new Set(detalhes));
       if (motivo) linhas.push("Envio interrompido: " + motivo + (interrompido ? " " + interrompido + " colaborador(es) não foram tentados e permanecem pendentes." : ""));
       const resumo = linhas.join("\n") + "\n\nConsulte os detalhes por destinatário.";
-      $("ami-email-status").textContent = resumo;
-      if (!aceitos && problemas) processo.erro({message: resumo, codigo});
-      else processo.sucesso({_status: problemas || interrompido ? "partial" : "success", title: "Envio de convites", message: resumo});
+      if (contexto === atual) $("ami-email-status").textContent = resumo;
+      if (problemas || interrompido) processo.erro({message: resumo, codigo});
+      else processo.sucesso({title: "Envio de convites", message: resumo});
     } catch (error) {
       const message = "Envio interrompido. " + error.message + "\n\n" +
         aceitos + " convite(s) com aceite confirmado nesta operação. " +
         (lista.length - iniciados) + " destinatário(s) ainda sem tentativa nesta operação. " +
         (error.interrupcaoApi ? "Quando o SICARD voltar, atualize o monitoramento e use Enviar aos pendentes. " : "") +
         "Consulte o histórico para verificar a última tentativa.";
-      $("ami-email-status").textContent = message;
-      if (processo) {
-        if (aceitos) processo.sucesso({_status: "partial", title: "Parte dos convites foi aceita", message});
-        else processo.erro({message});
-      } else Notify.error("Envio de convites", message);
-      await carregar(atual);
-      $("ami-email-status").textContent = message;
-    } finally { bloquear(false); }
+      if (processo) processo.erro({message});
+      else Notify.error("Envio de convites", message);
+      if (contexto === atual) await carregar(atual);
+      if (contexto === atual) $("ami-email-status").textContent = message;
+    } finally { encerrarLote(emSegundoPlano); }
   }
   async function coletar() {
     if ($("ami-email-receipts").disabled) return;
@@ -623,8 +638,9 @@
   async function enviarResposta() {
     if ($("ami-monitor-send-response").disabled) return;
     const atual = contexto, lista = selecionados();
+    loteEmExecucao = true;
     bloquear(true);
-    let processo, aceitos = 0;
+    let processo, aceitos = 0, emSegundoPlano = false;
     try {
       if (!(await ProcessFeedback.confirmar({
         title: "Enviar e-mail de resposta aos selecionados",
@@ -638,13 +654,16 @@
       let codigo = "envio_email";
       const detalhes = [];
       for (let index = 0; index < lista.length; index++) {
-        if (index) await aguardar(INTERVALO_ENVIO_MS);
+        emSegundoPlano = atualizarProgressoDoLote(processo, index, lista.length);
         const destinatario = lista[index]; processo.tarefaAtual(destinatario);
         const row = await request(url(atual.julgamento.id) + "/resposta/enviar", {
           method: "POST", body: JSON.stringify({destinatario, reenvio_id: reenvioId})
         });
         if (!row.id || !rotulosEnvio[row.envio_status]) throw new Error("O servidor não confirmou o estado do envio. Atualize o monitoramento antes de tentar novamente.");
-        registros = registros.filter(item => item.id !== row.id).concat(row); render();
+        if (contexto === atual) {
+          registros = registros.filter(item => item.id !== row.id).concat(row);
+          render();
+        }
         if (row.envio_status === "aceito_smtp") aceitos++; else problemas++;
         if (row.envio_status !== "aceito_smtp" && row.detalhe) detalhes.push(row.detalhe);
         if (autenticacaoRecusada(row)) codigo = "smtp_autenticacao";
@@ -653,15 +672,14 @@
       }
       const message = aceitos + " confirmação(ões) aceita(s) pelo servidor; " + problemas + " sem envio confirmado; " + interrompidos + " não tentada(s). Consulte os detalhes por colaborador." +
         (detalhes.length ? "\n" + [...new Set(detalhes)].join("\n") : "");
-      $("ami-email-status").textContent = message;
-      if (!aceitos && problemas) processo.erro({message, codigo});
-      else processo.sucesso({_status: problemas || interrompidos ? "partial" : "success", title: "Confirmações de resposta", message});
+      if (contexto === atual) $("ami-email-status").textContent = message;
+      if (problemas || interrompidos) processo.erro({message, codigo});
+      else processo.sucesso({title: "Confirmações de resposta", message});
     } catch (error) {
-      if (processo && aceitos) processo.sucesso({_status: "partial", title: "Envio interrompido", message: error.message});
-      else if (processo) processo.erro({message: error.message});
+      if (processo) processo.erro({message: aceitos + " confirmação(ões) aceita(s). " + error.message});
       else Notify.error("Confirmações de resposta", error.message);
-      await carregar(atual);
-    } finally { bloquear(false); }
+      if (contexto === atual) await carregar(atual);
+    } finally { encerrarLote(emSegundoPlano); }
   }
   window.SICARDEmailConvites = {
     modo(value) { modo = value; controles(); },
