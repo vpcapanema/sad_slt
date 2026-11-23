@@ -326,6 +326,10 @@ def _ambiente_to_response(row: dict[str, Any], *, base_url: str = "", gestao: bo
     texto_padrao = gestao and (not salva or base_mensagem_padrao(row) is not None)
     convites = row.get("convites") or []
     lista_colaboradores = row.get("lista_colaboradores", convites) if gestao else []
+    consolidacao = _consolidacao_from_row(row)
+    analise_exibida = row.get("analise_exibida")
+    if consolidacao and analise_exibida and analise_exibida["status"] != "homologada":
+        analise_exibida = None
     return AmbienteColaborativoResponseSchema(
         matriz_id=str(row["matriz_id"]) if row.get("matriz_id") else None,
         matriz_nome=row.get("matriz_nome"),
@@ -358,7 +362,8 @@ def _ambiente_to_response(row: dict[str, Any], *, base_url: str = "", gestao: bo
         respostas_consistentes=int(row.get("respostas_consistentes") or 0),
         total_analises=int(row.get("total_analises") or 0),
         analise_homologada_id=str(row["analise_homologada_id"]) if row.get("analise_homologada_id") else None,
-        consolidacao=_consolidacao_from_row(row),
+        consolidacao=consolidacao,
+        analise_exibida=analise_exibida,
         email_remetente_alias=(row.get("email_remetente_alias") or EMAIL_REMETENTE_ALIAS_PADRAO) if gestao else EMAIL_REMETENTE_ALIAS_PADRAO,
         email_assunto=(row.get("email_assunto") or EMAIL_ASSUNTO_PADRAO) if gestao else EMAIL_ASSUNTO_PADRAO,
         email_mensagem=(_mensagem_email_padrao(row, base_url=base_url) if texto_padrao else salva) if gestao else "",
@@ -791,6 +796,7 @@ def atualizar_ambiente(
         raise DemandaValidationError("Julgamento não encontrado.", field="julgamento_id")
     atualizado.setdefault("matriz_nome", atual.get("matriz_nome"))
     atualizado.setdefault("matriz_contexto", atual.get("matriz_contexto"))
+    atualizado.setdefault("analise_exibida", atual.get("analise_exibida"))
     if "convites" in data:
         novos = {c["email"].strip().lower(): c for c in data["convites"]}
         for anterior in atual.get("convites") or []:

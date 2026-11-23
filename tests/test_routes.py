@@ -579,7 +579,8 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
     assert 'class="json-modal-body ami-data-modal__content"' in html
     assert 'class="matriz-table-wrap"' in tabela_js
     assert 'class="admin-table matriz-view-table ami-matrix"' in tabela_js
-    assert "Matriz de comparação pareada agregada por média geométrica" in tabela_js
+    assert "metodos[resultado.metodo_agregacao]" in tabela_js
+    assert "Matriz de comparação pareada enviada pelo especialista" in tabela_js
     assert "Autovetor principal normalizado" in tabela_js
     assert 'id="ami-judgments-pagination"' in html
     assert html.index('id="ami-deadline"') < html.index('id="ami-hierarchy"')

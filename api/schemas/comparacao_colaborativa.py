@@ -75,6 +75,22 @@ class ConsolidacaoColaborativaSchema(BaseModel):
     consolidadoEm: str
 
 
+class AnaliseExibidaSchema(BaseModel):
+    id: UUID
+    codigo: str
+    nome: str
+    status: Literal["calculada", "homologada"]
+    metodo_agregacao: str
+    matriz_consolidada: list[list[float]]
+    pesos_consolidados: list[float]
+    lambda_max: float
+    indice_consistencia: float
+    indice_aleatorio: float
+    razao_consistencia: float
+    criterios: list[dict[str, Any]]
+    recorte_parcial: bool
+
+
 class AmbienteColaborativoResponseSchema(BaseModel):
     matriz_id: str | None = None
     matriz_nome: str | None = None
@@ -107,6 +123,7 @@ class AmbienteColaborativoResponseSchema(BaseModel):
     total_analises: int = 0
     analise_homologada_id: str | None = None
     consolidacao: ConsolidacaoColaborativaSchema | None = None
+    analise_exibida: AnaliseExibidaSchema | None = None
     email_remetente_alias: str = EMAIL_REMETENTE_ALIAS_PADRAO
     email_assunto: str = EMAIL_ASSUNTO_PADRAO
     email_mensagem: str

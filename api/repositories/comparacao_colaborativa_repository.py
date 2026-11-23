@@ -19,6 +19,28 @@ _CAMPOS_MATRIZ = """
 """
 
 
+_JOIN_ANALISE_EXIBIDA = """
+    LEFT JOIN LATERAL (
+        SELECT an.id, an.codigo, an.nome, an.status, an.metodo_agregacao,
+               an.matriz_consolidada, an.pesos_consolidados,
+               an.lambda_max, an.indice_consistencia, an.indice_aleatorio, an.razao_consistencia,
+               recorte.criterios,
+               recorte.criterios IS DISTINCT FROM a.criterios AS recorte_parcial
+          FROM ahp.comparacao_colaborativa_analise an
+          CROSS JOIN LATERAL (
+              SELECT COALESCE(NULLIF(an.estatisticas_analise->'criterios_atribuidos', 'null'::jsonb),
+                              a.criterios, '[]'::jsonb) AS criterios
+          ) recorte
+         WHERE an.ambiente_id = a.id AND an.status IN ('calculada', 'homologada')
+         ORDER BY (an.id IS NOT DISTINCT FROM a.analise_homologada_id) DESC,
+                  (an.status = 'homologada') DESC,
+                  (recorte.criterios IS NOT DISTINCT FROM a.criterios) DESC,
+                  an.criado_em DESC, an.id DESC
+         LIMIT 1
+    ) analise_exibida ON true
+"""
+
+
 def garantir_token_acesso(ambiente_id: str, versao: datetime, candidato: str) -> str:
     raise DemandaValidationError(
         "Códigos compartilhados foram desativados. Envie convites individuais por destinatário.",
@@ -96,12 +118,13 @@ def get_ambiente_by_hierarquizacao(hierarquizacao_id: Any) -> dict[str, Any] | N
 def get_ambiente_by_id(ambiente_id: str) -> dict[str, Any] | None:
     return _get_ambiente(
         f"""
-        SELECT a.*, {_CAMPOS_MATRIZ},
+        SELECT a.*, {_CAMPOS_MATRIZ}, to_jsonb(analise_exibida) AS analise_exibida,
                (SELECT COUNT(*)::int
                   FROM ahp.comparacao_colaborativa_resposta r
                  WHERE r.ambiente_id = a.id AND r.status = 'enviada') AS total_respostas
           FROM ahp.comparacao_colaborativa_ambiente a
           LEFT JOIN ahp.matriz_criterios_premissas m ON m.id = a.matriz_id
+          {_JOIN_ANALISE_EXIBIDA}
          WHERE a.id = %s
         """,
         (ambiente_id,),
@@ -127,7 +150,7 @@ def get_active_ambiente_by_config(config_tipo: str, config_id: Any) -> dict[str,
 
 def list_ambientes() -> list[dict[str, Any]]:
     query = f"""
-        SELECT a.*, {_CAMPOS_MATRIZ},
+        SELECT a.*, {_CAMPOS_MATRIZ}, to_jsonb(analise_exibida) AS analise_exibida,
                COALESCE(a.config_nome, h.nome) AS hierarquizacao_nome,
                (SELECT COUNT(*)::int
                   FROM ahp.comparacao_colaborativa_resposta r
@@ -139,6 +162,7 @@ def list_ambientes() -> list[dict[str, Any]]:
           LEFT JOIN ahp.matriz_criterios_premissas m ON m.id = a.matriz_id
           LEFT JOIN hierarquizacao_demandas.hierarquizacao_portfolio h
             ON h.id = a.hierarquizacao_id
+          {_JOIN_ANALISE_EXIBIDA}
          ORDER BY a.criado_em DESC
     """
     with get_connection() as conn:

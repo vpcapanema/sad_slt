@@ -191,10 +191,11 @@
     if (modo === 'julgamentos') return [null, j=>j.nome, j=>statusLabel(j.status), j=>(j.convites||[]).length,
       j=>(j.total_respostas||0)+(j.respostas_em_preenchimento||0), j=>j.respostas_em_preenchimento||0,
       j=>j.total_respostas||0, j=>j.respostas_consistentes||0, j=>j.valido_ate, j=>j.atualizadoEm];
+    var resultado = j => j.analise_exibida || j.consolidacao;
     return [null, j=>j.nome, j=>statusLabel(j.status), j=>j.id, j=>j.matriz_id||j.hierarquizacao_id, j=>j.matriz_nome||j.hierarquizacao_nome||j.hierarquizacao_codigo,
       j=>(j.total_respostas||0)/Math.max(1,(j.convites||[]).length), j=>collaboratorList(j).length, j=>j.valido_ate, j=>j.criadoEm, j=>j.atualizadoEm,
-      j=>j.n_criterios, j=>'Individual por e-mail', ...['lambda_max','indice_consistencia','indice_aleatorio','razao_consistencia'].map(key=>j=>j.consolidacao?.[key]),
-      j=>JSON.stringify(j.consolidacao?.matriz_consolidada), j=>JSON.stringify(j.consolidacao?.pesos_consolidados)];
+      j=>j.n_criterios, j=>'Individual por e-mail', ...['lambda_max','indice_consistencia','indice_aleatorio','razao_consistencia'].map(key=>j=>resultado(j)?.[key]),
+      j=>JSON.stringify(resultado(j)?.matriz_consolidada), j=>JSON.stringify(resultado(j)?.pesos_consolidados)];
   }, function () { currentPage=1; selectedIds.clear(); render(); }, function () { return !editingId; });
   function filteredRows() {
     var column = $("ami-filter-coluna").value, value = $("ami-filter-valor").value;

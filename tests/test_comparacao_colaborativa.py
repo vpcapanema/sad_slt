@@ -221,6 +221,39 @@ def test_resposta_administrativa_nao_expoe_chave_individual():
     assert "012345" not in resposta.url_publica
 
 
+@pytest.mark.parametrize(("legado", "status", "exibe_analise"), [
+    (False, "calculada", True),
+    (True, "calculada", False),
+    (True, "homologada", True),
+])
+def test_listagem_exibe_analise_salva_sem_converter_resultado_em_homologacao(legado, status, exibe_analise):
+    criterios = [{"Critério": "Custo"}, {"Critério": "Prazo"}]
+    analise = {
+        "id": AMBIENTE_ID,
+        "codigo": "ANL-TESTE",
+        "nome": "Análise salva",
+        "status": status,
+        "metodo_agregacao": "aij_media_aritmetica",
+        "criterios": criterios,
+        "recorte_parcial": True,
+        "matriz_consolidada": [[1.0, 2.0], [0.5, 1.0]],
+        "pesos_consolidados": [2 / 3, 1 / 3],
+        "lambda_max": 2.0,
+        "indice_consistencia": 0.0,
+        "indice_aleatorio": 0.0,
+        "razao_consistencia": 0.0,
+    }
+    dados_legados = {"matriz_consolidada": [[1.0, 1.0], [1.0, 1.0]], "pesos_consolidados": [0.5, 0.5]} if legado else {}
+    row = _ambiente_row(analise_exibida=analise, **dados_legados)
+    resposta = service._ambiente_to_response(row, gestao=True)
+    assert (resposta.consolidacao is not None) == legado
+    assert (resposta.analise_exibida is not None) == exibe_analise
+    if exibe_analise:
+        assert resposta.analise_exibida.criterios == criterios
+        assert resposta.analise_exibida.razao_consistencia == 0.0
+        assert resposta.analise_exibida.metodo_agregacao == "aij_media_aritmetica"
+
+
 def test_resposta_de_consulta_nao_expoe_configuracao_do_convite():
     row = _ambiente_row(
         email_remetente_alias="Alias privado",

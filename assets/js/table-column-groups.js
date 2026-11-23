@@ -15,8 +15,8 @@
       grupos: [
         grupo("principal", "Julgamento", ["Nome do julgamento", "Situação", "ID Julgamento", "Matriz / contexto"], PRINCIPAL, true),
         grupo("prazos", "Participação e prazos", ["Participação", "Prazo para respostas", "Criado em", "Atualizado em", "Código de acesso ao formulário"], PALETA[0]),
-        grupo("matriz", "Matriz e pesos", ["ID Matriz / contexto", "Critérios", "Matriz de comparação pareada", "Pesos consolidados"], PALETA[1]),
-        grupo("consistencia", "Consistência", ["Lambda máximo (λmax)", "Índice de consistência (IC)", "Índice aleatório (IA)", "Razão de consistência (RC)"], PALETA[2])
+        { ...grupo("matriz", "Matriz e pesos", ["ID Matriz / contexto", "Critérios", "Matriz de comparação pareada", "Pesos consolidados"], PALETA[1]), visivelInicialmente: true },
+        { ...grupo("consistencia", "Consistência", ["Lambda máximo (λmax)", "Índice de consistência (IC)", "Índice aleatório (IA)", "Razão de consistência (RC)"], PALETA[2]), visivelInicialmente: true }
       ]
     },
     {

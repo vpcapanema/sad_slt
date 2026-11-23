@@ -4,14 +4,56 @@
   function date(value) { var parsed = new Date(value); return !value || isNaN(parsed.getTime()) ? "—" : parsed.toLocaleString("pt-BR"); }
   function num(value) { return value == null ? "—" : Number(value).toLocaleString("pt-BR", { maximumFractionDigits: 4 }); }
   function json(value, label) { return value == null ? "—" : '<details><summary>' + esc(label) + '</summary><pre>' + esc(JSON.stringify(value, null, 2)) + '</pre></details>'; }
-  function criterionNames(j) { return (j.criterios || []).map(function (c, index) { return typeof c === "string" ? c : c.criterio || c.nome || c.Critério || c.name || "Critério " + (index + 1); }); }
+  function criterionNames(j, resultado) { return (resultado.criterios || j.criterios || []).map(function (c, index) { return typeof c === "string" ? c : c.criterio || c.nome || c.Critério || c.name || "Critério " + (index + 1); }); }
   function localDate(value) { var parsed = new Date(value); if (!value || isNaN(parsed.getTime())) return ""; var shifted = new Date(parsed.getTime() - parsed.getTimezoneOffset() * 60000); return shifted.toISOString().slice(0, 10); }
   function deadlineDate(value) { var parsed = new Date(value); return !value || isNaN(parsed.getTime()) ? "—" : parsed.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }); }
   function tableLabel(text) { return document.querySelector('.ami-main[data-modo="espaco"]') ? '<p class="ami-table-label">' + esc(text) + '</p>' : ""; }
   function setButtonState(id, enabled) { var button = document.getElementById(id); if (!button) return; button.disabled = !enabled; button.classList.toggle("is-disabled", !enabled); }
   function syncCrudActions(tbodyId, selectedId, editingId) { var selected = Boolean(selectedId), editing = Boolean(editingId && editingId === selectedId); setButtonState(tbodyId + "-edit-action", selected && !editing); setButtonState(tbodyId + "-save-action", editing); setButtonState(tbodyId + "-cancel-action", editing); setButtonState(tbodyId + "-delete-action", selected && !editing); }
-  function matrix(j) { var value = j.consolidacao && j.consolidacao.matriz_consolidada, names = criterionNames(j); if (!value) return '<p class="ami-empty">Matriz ainda não consolidada.</p>'; return '<p class="ami-modal-description">Matriz de comparação pareada agregada por média geométrica das respostas consistentes.</p>' + tableLabel("Matriz de comparação pareada consolidada") + '<div class="matriz-table-wrap"><table class="admin-table matriz-view-table ami-matrix"><thead><tr><th>Critério</th>' + names.map(function (name) { return '<th title="' + esc(name) + '">' + esc(name) + '</th>'; }).join("") + '</tr></thead><tbody>' + value.map(function (row, index) { return '<tr><th title="' + esc(names[index] || "Critério " + (index + 1)) + '">' + esc(names[index] || "Critério " + (index + 1)) + '</th>' + row.map(function (cell) { return '<td>' + num(cell) + '</td>'; }).join("") + '</tr>'; }).join("") + '</tbody></table></div>'; }
-  function weightsModal(j) { var weights = j.consolidacao && j.consolidacao.pesos_consolidados, names = criterionNames(j); if (!weights || !weights.length) return '<p class="ami-empty">Pesos ainda não consolidados.</p>'; return '<p class="ami-modal-description">Autovetor principal normalizado calculado a partir da matriz de comparação pareada consolidada.</p>' + tableLabel("Tabela dos pesos consolidados do julgamento") + '<div class="matriz-table-wrap"><table class="admin-table matriz-view-table ami-weights"><thead><tr><th>Critério</th><th>Peso consolidado</th></tr></thead><tbody>' + weights.map(function (weight, index) { return '<tr><td>' + esc(names[index] || "Critério " + (index + 1)) + '</td><td>' + num(weight) + '</td></tr>'; }).join("") + '</tbody></table></div>'; }
+  function motivoPendente(j) {
+    return j.total_respostas
+      ? "Para preencher as métricas, a matriz e os pesos, abra este julgamento em modo de edição na Central de Respostas. Na seção 6, clique em Calcular e salvar análise."
+      : "Aguardando respostas enviadas para calcular a matriz, os pesos e as métricas.";
+  }
+  function descricaoResultado(resultado) {
+    if (!resultado.nome) return '<p class="ami-modal-description">Resultado consolidado deste julgamento.</p>';
+    var metodos = {
+      aij_media_geometrica: "Média geométrica",
+      aij_media_aritmetica: "Média aritmética",
+      aij_mediana: "Mediana",
+      aij_moda: "Moda"
+    };
+    var estado = resultado.status === "homologada" ? "Homologada" : "Calculada · aguardando homologação";
+    var detalhes = [resultado.codigo, estado, resultado.recorte_parcial ? "Recorte de critérios" : "Matriz completa", metodos[resultado.metodo_agregacao]];
+    return '<p class="ami-modal-description"><strong>' + esc(resultado.nome) + '</strong> · ' +
+      esc(detalhes.filter(Boolean).join(" · ")) + '</p>';
+  }
+  function matrix(j, descricao = "", rotulo = "Matriz de comparação pareada consolidada") {
+    var resultado = j.analise_exibida || j.consolidacao, value = resultado?.matriz_consolidada;
+    if (!value?.length) return '<p class="ami-empty">' + esc(motivoPendente(j)) + '</p>';
+    var names = criterionNames(j, resultado);
+    var texto = descricao ? '<p class="ami-modal-description">' + esc(descricao) + '</p>' : descricaoResultado(resultado);
+    return texto + tableLabel(rotulo) +
+      '<div class="matriz-table-wrap"><table class="admin-table matriz-view-table ami-matrix"><thead><tr><th>Critério</th>' +
+      names.map(function (name) { return '<th title="' + esc(name) + '">' + esc(name) + '</th>'; }).join("") +
+      '</tr></thead><tbody>' + value.map(function (row, index) {
+        var name = names[index] || "Critério " + (index + 1);
+        return '<tr><th title="' + esc(name) + '">' + esc(name) + '</th>' +
+          row.map(function (cell) { return '<td>' + num(cell) + '</td>'; }).join("") + '</tr>';
+      }).join("") + '</tbody></table></div>';
+  }
+  function weightsModal(j) {
+    var resultado = j.analise_exibida || j.consolidacao, weights = resultado?.pesos_consolidados;
+    if (!weights?.length) return '<p class="ami-empty">' + esc(motivoPendente(j)) + '</p>';
+    var names = criterionNames(j, resultado);
+    return descricaoResultado(resultado) +
+      '<p class="ami-modal-description">Autovetor principal normalizado calculado a partir da matriz de comparação pareada consolidada.</p>' +
+      tableLabel("Tabela dos pesos consolidados do julgamento") +
+      '<div class="matriz-table-wrap"><table class="admin-table matriz-view-table ami-weights"><thead><tr><th>Critério</th><th>Peso consolidado</th></tr></thead><tbody>' +
+      weights.map(function (weight, index) {
+        return '<tr><td>' + esc(names[index] || "Critério " + (index + 1)) + '</td><td>' + num(weight) + '</td></tr>';
+      }).join("") + '</tbody></table></div>';
+  }
   function criteriaModal(j) { return '<p><strong>' + esc(j.n_criterios) + ' critérios vinculados ao julgamento.</strong></p><div class="ami-modal-criteria">' + (j.criterios || []).map(function (c, index) { var name = typeof c === "string" ? c : c.criterio || c.nome || c.Critério || c.name || "Critério " + (index + 1); var dimension = typeof c === "object" && (c.dimensao || c.Dimensão); var phase = typeof c === "object" && (c.fase || c.Fase); return '<article><span>' + (index + 1) + '</span><div><strong>' + esc(name) + '</strong><small>' + esc([dimension, phase].filter(Boolean).join(" · ")) + '</small></div></article>'; }).join("") + '</div>'; }
   function collaboratorsModal(j) { var invitations = j.convites || [], received = Number(j.total_respostas || 0); if (!invitations.length) return '<p class="ami-empty">Nenhum colaborador convidado.</p>'; return '<p class="ami-modal-description"><strong>' + received + '</strong> de <strong>' + invitations.length + '</strong> respostas recebidas.</p>' + tableLabel("Tabela dos colaboradores do julgamento") + '<div class="matriz-table-wrap"><table class="admin-table matriz-view-table ami-collaborators"><thead><tr><th>Colaborador</th><th>E-mail</th></tr></thead><tbody>' + invitations.map(function (invitation, index) { var email = typeof invitation === "string" ? invitation : invitation.email; return '<tr><td>' + (index + 1) + '</td><td>' + esc(email || "—") + '</td></tr>'; }).join("") + '</tbody></table></div>'; }
   function participationLink(j, received, invited) { return '<button class="ami-cell-link" data-modal-kind="collaborators" data-record-id="' + esc(j.id) + '">' + received + ' de ' + invited + ' (' + (invited ? num(received / invited * 100) : "0") + '%)</button>'; }
@@ -22,7 +64,8 @@
     function setTopAction(kind, href) { var link = document.getElementById(tbodyId + "-" + kind + "-action"); if (!link) return; link.href = href || "#"; link.classList.toggle("is-disabled", !href); link.setAttribute("aria-disabled", href ? "false" : "true"); }
     function syncTopActions(selectedId) { var selected = (julgamentos || []).find(function (item) { return item.id === selectedId; }); var links = selected && options.linksFor ? options.linksFor(selected) : {}; setTopAction("public", links && links.public); syncCrudActions(tbodyId, selectedId, options.editingId); }
     body.innerHTML = (julgamentos || []).map(function (j) {
-      var c = j.consolidacao, invited = j.total_convites ?? (j.convites || []).length, received = Number(j.total_respostas || 0), selected = options.selectedIds ? options.selectedIds.has(j.id) : options.selectedId === j.id, editing = options.editingId === j.id;
+      var c = j.analise_exibida || j.consolidacao, invited = j.total_convites ?? (j.convites || []).length, received = Number(j.total_respostas || 0), selected = options.selectedIds ? options.selectedIds.has(j.id) : options.selectedId === j.id, editing = options.editingId === j.id;
+      var temMatriz = Boolean(c?.matriz_consolidada?.length), temPesos = Boolean(c?.pesos_consolidados?.length);
       var matrixId = j.matriz_id || j.hierarquizacao_id || "—";
       var matrixName = j.matriz_nome || [j.hierarquizacao_nome, j.hierarquizacao_codigo].filter(Boolean).join(" · ") || "—";
       var total = (j.lista_colaboradores ?? j.convites ?? []).length;
@@ -33,7 +76,7 @@
         '<td>' + participationLink(j, received, invited) + '</td>' + lista + '<td>' + deadlineDate(j.valido_ate) + '</td><td>' + date(j.criadoEm) + '</td><td>' + date(j.atualizadoEm) + '</td>' +
         '<td><button class="ami-cell-link" data-modal-kind="criteria" data-record-id="' + esc(j.id) + '">' + esc(j.n_criterios) + ' critérios</button></td>' +
         '<td class="ami-cell-token" title="Chaves individuais são entregues somente por e-mail">Individual por e-mail</td><td>' + num(c && c.lambda_max) + '</td><td>' + num(c && c.indice_consistencia) + '</td><td>' + num(c && c.indice_aleatorio) + '</td><td>' + num(c && c.razao_consistencia) + '</td>' +
-        '<td><button class="ami-cell-link" data-availability="' + (c && c.matriz_consolidada ? 'available' : 'pending') + '" data-modal-kind="matrix" data-record-id="' + esc(j.id) + '">' + (c && c.matriz_consolidada ? "Disponível" : "Pendente") + '</button></td><td><button class="ami-cell-link" data-availability="' + (c && c.pesos_consolidados && c.pesos_consolidados.length ? 'available' : 'pending') + '" data-modal-kind="weights" data-record-id="' + esc(j.id) + '">' + (c && c.pesos_consolidados && c.pesos_consolidados.length ? "Disponíveis" : "Pendentes") + '</button></td></tr>';
+        '<td><button class="ami-cell-link" data-availability="' + (temMatriz ? 'available' : 'pending') + '" data-modal-kind="matrix" data-record-id="' + esc(j.id) + '">' + (temMatriz ? "Disponível" : "Pendente") + '</button></td><td><button class="ami-cell-link" data-availability="' + (temPesos ? 'available' : 'pending') + '" data-modal-kind="weights" data-record-id="' + esc(j.id) + '">' + (temPesos ? "Disponíveis" : "Pendentes") + '</button></td></tr>';
     }).join("") || '<tr><td colspan="' + (options.onOpenCollaborators ? 19 : 18) + '" class="ami-empty">Nenhum registro colaborativo encontrado no banco.</td></tr>';
     var nameInput = body.querySelector('[data-edit-field="nome"]');
     if (nameInput) {
@@ -64,7 +107,24 @@
     syncActions(options.selectedId);
     body.querySelectorAll("[data-select-id]").forEach(function (checkbox) { checkbox.addEventListener("change", function () { if (options.onSelectionChange) options.onSelectionChange(checkbox.dataset.selectId, checkbox.checked); }); });
     var modal = document.getElementById(tbodyId + "-modal"), title = document.getElementById(tbodyId + "-modal-title"), content = document.getElementById(tbodyId + "-modal-content");
-    body.querySelectorAll("[data-response-modal]").forEach(function (button) { button.addEventListener("click", function () { var r = (respostas || []).find(function (item) { return item.id === button.dataset.recordId; }); if (!r) return; if (button.dataset.responseModal === "matrix") { title.textContent = "Matriz de comparação pareada da resposta"; content.innerHTML = matrix({ criterios: r.criterios, consolidacao: { matriz_consolidada: r.matriz_comparacao } }).replace("agregada por média geométrica das respostas consistentes", "enviada pelo especialista"); } else { title.textContent = "Estatísticas da resposta"; content.innerHTML = json(r.estatisticas || {}, "Dados estatísticos"); } modal.classList.remove("is-hidden"); modal.querySelector("[data-modal-close]").focus(); }); });
+    body.querySelectorAll("[data-response-modal]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        var r = (respostas || []).find(function (item) { return item.id === button.dataset.recordId; });
+        if (!r) return;
+        if (button.dataset.responseModal === "matrix") {
+          title.textContent = "Matriz de comparação pareada da resposta";
+          content.innerHTML = matrix({
+            criterios: r.criterios,
+            consolidacao: { matriz_consolidada: r.matriz_comparacao }
+          }, "Matriz de comparação pareada enviada pelo especialista.", "Matriz de comparação pareada da resposta");
+        } else {
+          title.textContent = "Estatísticas da resposta";
+          content.innerHTML = json(r.estatisticas || {}, "Dados estatísticos");
+        }
+        modal.classList.remove("is-hidden");
+        modal.querySelector("[data-modal-close]").focus();
+      });
+    });
     function closeModal() { modal.classList.add("is-hidden"); } modal.querySelector("[data-modal-close]").onclick = closeModal; modal.onclick = function (event) { if (event.target === modal) closeModal(); };
   };
 })(window);
