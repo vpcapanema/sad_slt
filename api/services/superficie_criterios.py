@@ -281,15 +281,22 @@ def matriz_excel(row):
     sheet.delete_rows(2, max(sheet.max_row - 1, 1))
     matrix_sheet = book['Matriz Crit Premissas v3']
     matrix_sheet.delete_rows(2, max(matrix_sheet.max_row - 1, 1))
+    cabecalhos = [cell.value for cell in matrix_sheet[1]]
     for n, c in enumerate(row['criterios'], 1):
         sheet.append([n, c['criterio'], c['dimensao']])
-        matrix_sheet.append([
-            c['dimensao'], c['criterio'], c['premissa'], 'Favorabilidade territorial — município e rede rodoviária',
-            None, 'Fase 2', c.get('fonte'), c['variavel'], c.get('unidade'),
-            'Transformação linear mínimo–máximo',
-            '↑ Positiva' if c['relacao'] == 'positiva' else '↓ Negativa',
-            c['campo_reescalonado'], c.get('url'), 'Não',
-        ])
+        fontes = dict.fromkeys(valor for valor in (c.get('fonte'), c.get('url')) if valor)
+        campos = {
+            'Dimensão': c['dimensao'],
+            'Critério': c['criterio'],
+            'Premissa': c['premissa'],
+            'Etapa': 'Favorabilidade territorial — município e rede rodoviária',
+            'Métrica (o que é medido)': c['variavel'],
+            'Unidade de medida': c.get('unidade'),
+            'Relação': '↑ Positiva' if c['relacao'] == 'positiva' else '↓ Negativa',
+            'Variável (interface de leitura)': c['campo_reescalonado'],
+            'Fonte': ' · '.join(fontes) or None,
+        }
+        matrix_sheet.append([campos.get(cabecalho) for cabecalho in cabecalhos])
     sheet = book.create_sheet('Comparação pareada')
     criteria = row['criterios']
     sheet.append(['Critério'] + [c['criterio'] for c in criteria])

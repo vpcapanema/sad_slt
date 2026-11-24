@@ -28,6 +28,13 @@ def test_extrai_criterio_de_ajuste_por_atributo_do_objeto(etapa) -> None:
     assert colunas[0]["id"] == "grau_de_apoio_institucional"
     assert colunas[0]["criterio"] == "Apoio institucional"
     assert colunas[0]["premissa"] == "Maior apoio reduz riscos de implantação."
+    assert colunas[0]["mandatorio"] is False
+
+
+@pytest.mark.parametrize("campo", [{}, {"Mandatório": ""}])
+def test_criterio_da_matriz_e_obrigatorio_por_padrao(campo):
+    colunas = extrair_colunas([{"Etapa": "Fase 3", "Critério": "Apoio institucional", **campo}])
+    assert colunas[0]["mandatorio"] is True
 
 
 def test_escala_ordinal_declarada_no_dado_nao_se_perde_quando_existe_metrica():

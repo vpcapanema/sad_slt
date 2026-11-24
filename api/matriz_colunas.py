@@ -8,7 +8,7 @@ A partir da matriz enviada na gestão de hierarquizações, extrai as linhas de
 - tipo de dado da célula = derivado de ``Unidade de medida``;
 - direção de normalização= coluna ``Relação`` (↑/↓);
 - interface de leitura   = coluna ``Variável (interface de leitura)``;
-- selo obrigatório       = coluna ``Mandatório``.
+- atributos obrigatórios por padrão, com leitura da indicação em matrizes antigas.
 
 Compartilhado entre o router ``atributos_objetos`` e o serviço de criação de
 hierarquizações (que pré-cria os slots de atributo por objeto).
@@ -114,7 +114,8 @@ def _e_etapa3(valor: Any) -> bool:
 
 
 def _mandatorio(valor: Any) -> bool:
-    return _norm(valor) in {"sim", "s", "true", "1", "obrigatorio"}
+    normalizado = _norm(valor)
+    return not normalizado or normalizado in {"sim", "s", "true", "1", "obrigatorio"}
 
 
 _PREFIXOS_VARIAVEL = (

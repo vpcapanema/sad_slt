@@ -97,14 +97,25 @@ def test_excel_usa_somente_criterios_da_superficie(hierarquizacao_id):
     row = {'id':'superficie','hierarquizacao_id':hierarquizacao_id,
            'criterios':[{'id':'c001','dimensao':'Social','criterio':'Atendimento',
                          'premissa':'Quanto maior...', 'variavel':'População','relacao':'positiva',
-                         'campo_reescalonado':'pop_r'}]}
+                         'campo_reescalonado':'pop_r', 'fonte':'Base de teste', 'url':'https://example.com/base'}]}
     book = load_workbook(io.BytesIO(service.matriz_excel(row)), data_only=True)
     assert book['Vínculo']['B2'].value == hierarquizacao_id
     assert book['Comparação pareada'].cell(1,2).value == 'Atendimento'
     assert book['Comparação pareada'].cell(2,2).value == 1
     assert book['Vínculo'].cell(1,2).value == 'superficie'
     assert book['Dimensões de Critérios'].max_row == 13
-    assert book['Matriz Crit Premissas v3'].cell(2,2).value == 'Atendimento'
+    cabecalho, valores = list(book['Matriz Crit Premissas v3'].values)
+    assert dict(zip(cabecalho, valores, strict=True)) == {
+        'Dimensão': 'Social',
+        'Critério': 'Atendimento',
+        'Premissa': 'Quanto maior...',
+        'Etapa': 'Favorabilidade territorial — município e rede rodoviária',
+        'Métrica (o que é medido)': 'População',
+        'Unidade de medida': None,
+        'Relação': '↑ Positiva',
+        'Variável (interface de leitura)': 'pop_r',
+        'Fonte': 'Base de teste · https://example.com/base',
+    }
     book.close()
 
 

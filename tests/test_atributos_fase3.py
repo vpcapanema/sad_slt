@@ -79,7 +79,7 @@ def test_sintese_detecta_escala_alterada_e_atributo_novo_do_configurador(monkeyp
     from api.matriz_colunas import extrair_colunas
     matriz = [{"Etapa": "Priorização", "Métrica": "Complexidade",
                "Dado": "Escala qualitativa de 1 a 5", "Unidade": "escala ordinal"}]
-    criterio = {"nome_coluna": "complexidade", "tipo_dado": "ordinal", "direcao": "neutro", "mapeamento": {}}
+    criterio = {"nome_coluna": "complexidade", "tipo_dado": "ordinal", "direcao": "neutro", "mapeamento": {}, "obrigatorio": True}
     row = {"dados_hierarquizacao": {
         "cabecalho_grupo": {"matriz_premissas_criterios": matriz,
                             "configuracoes": {"fase_3": {"criterios": [criterio]}}},
