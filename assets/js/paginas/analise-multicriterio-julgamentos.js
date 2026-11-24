@@ -1394,7 +1394,7 @@
     var judgment = selectedRecord();
     environmentId = judgment.id; viewSelectedEnvironment();
     setEnvironmentMode("edit");
-    if (participacaoPublica(judgment)) SICARDEmailConvites.mostrarPublico(judgment);
+    if (participacaoPublica(judgment)) SICARDEmailConvites.mostrarPublico(judgment, render);
     $("ami-create-feedback").textContent = isPublicDraft() ? "Edite o nome e a data limite. Ao salvar um prazo futuro, a coleta será reaberta com o mesmo link." : "Edite o nome, a data limite e os colaboradores. A matriz é imutável: para utilizar outra, crie um novo julgamento. Ao salvar um prazo futuro, a coleta será reaberta e os convites poderão ser reenviados.";
     $("ami-deadline").focus();
   }

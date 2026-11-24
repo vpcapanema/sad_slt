@@ -1,18 +1,19 @@
 """Recebimento da pesquisa publica de experiencia do SICARD."""
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Response, status
+from fastapi import APIRouter, HTTPException, Request, Response, status
 
 from api.exceptions import DemandaValidationError
 from api.repositories import convite_individual_repository, pesquisa_experiencia_repository
 from api.schemas.pesquisa_experiencia import (
     PesquisaExperienciaAHPAcesso,
+    PesquisaExperienciaAHPAcessoPublico,
     PesquisaExperienciaAHPEntrada,
     PesquisaExperienciaAvaliacao,
     PesquisaExperienciaEntrada,
     PesquisaExperienciaResultado,
 )
-from api.services.comparacao_colaborativa_service import _validar_email_token
+from api.services.comparacao_colaborativa_service import _validar_email_token, inscricao_publica_enviada, nome_cookie_inscricao
 
 router = APIRouter(prefix="/pesquisa-experiencia", tags=["pesquisa-experiencia"])
 
@@ -39,7 +40,21 @@ def registrar_resposta(dados: PesquisaExperienciaEntrada, response: Response) ->
     return _registrar(dados, response, "sicard")
 
 
-def _validar_acesso_ahp(acesso: PesquisaExperienciaAHPAcesso) -> None:
+def _validar_acesso_ahp(
+    acesso: PesquisaExperienciaAHPAcesso | PesquisaExperienciaAHPAcessoPublico, request: Request,
+) -> None:
+    if isinstance(acesso, PesquisaExperienciaAHPAcessoPublico):
+        segredo = request.cookies.get(nome_cookie_inscricao(acesso.julgamento))
+        if acesso.email and acesso.token_acesso:
+            segredo = acesso.token_acesso.get_secret_value()
+        if inscricao_publica_enviada(acesso.julgamento, segredo, email=acesso.email):
+            return
+        raise HTTPException(
+            status_code=422,
+            detail={"codigo": "inscricao_invalida",
+                    "mensagem": "Abra a pesquisa no navegador usado para enviar o julgamento ou confira o e-mail e o código de retomada."},
+            headers={"Cache-Control": "no-store"},
+        )
     email = acesso.email.strip().lower()
     chave = acesso.token_acesso.get_secret_value()
     try:
@@ -56,12 +71,16 @@ def _validar_acesso_ahp(acesso: PesquisaExperienciaAHPAcesso) -> None:
 
 
 @router.post("/ahp/acesso", status_code=status.HTTP_204_NO_CONTENT)
-def validar_acesso_ahp(acesso: PesquisaExperienciaAHPAcesso, response: Response) -> None:
+def validar_acesso_ahp(
+    acesso: PesquisaExperienciaAHPAcessoPublico | PesquisaExperienciaAHPAcesso, request: Request, response: Response,
+) -> None:
     response.headers["Cache-Control"] = "no-store"
-    _validar_acesso_ahp(acesso)
+    _validar_acesso_ahp(acesso, request)
 
 
 @router.post("/ahp/respostas", response_model=PesquisaExperienciaResultado, status_code=status.HTTP_201_CREATED)
-def registrar_resposta_ahp(dados: PesquisaExperienciaAHPEntrada, response: Response) -> PesquisaExperienciaResultado:
-    _validar_acesso_ahp(dados.acesso)
+def registrar_resposta_ahp(
+    dados: PesquisaExperienciaAHPEntrada, request: Request, response: Response,
+) -> PesquisaExperienciaResultado:
+    _validar_acesso_ahp(dados.acesso, request)
     return _registrar(dados, response, "ahp_interativa")

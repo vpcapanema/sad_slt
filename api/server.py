@@ -15,7 +15,7 @@ from contextlib import asynccontextmanager
 import json
 import os
 
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.gzip import GZipMiddleware
 from starlette.concurrency import run_in_threadpool
@@ -348,8 +348,10 @@ def pagina_pesquisa_experiencia(request: Request) -> Response:
 
 @app.get("/public/pesquisa-experiencia-ahp", include_in_schema=False)
 @app.get("/public/pesquisa-experiencia-ahp/", include_in_schema=False)
-def pagina_pesquisa_experiencia_ahp(request: Request) -> Response:
-    return render_page(request, "paginas/pesquisa-experiencia.html", pesquisa_ahp=True)
+def pagina_pesquisa_experiencia_ahp(
+    request: Request, julgamento: str | None = Query(None, pattern=r"^[A-Za-z0-9_-]{43}$"),
+) -> Response:
+    return render_page(request, "paginas/pesquisa-experiencia.html", pesquisa_ahp=True, julgamento=julgamento)
 
 
 @app.get("/public/login/", include_in_schema=False)

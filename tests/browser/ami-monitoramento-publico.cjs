@@ -6,6 +6,7 @@ const base = process.env.SICARD_TEST_URL || 'http://127.0.0.1:8083';
 const dataInscricao = '2026-11-23T13:30:00Z';
 const convidados = [{nome: 'Pessoa convidada', email: 'convite@example.invalid'}];
 const inscritos = Array.from({length: 17}, (_, i) => ({
+  inscricao_id: 'inscricao-' + (i + 1),
   nome: `Inscrito ${String(i + 1).padStart(2, '0')}`, email: `inscrito${i + 1}@example.invalid`,
   registrado_em: dataInscricao, etapa_rotulo: i === 0 ? 'Inscrito' : i === 1 ? 'Em preenchimento' : 'Resposta enviada',
   resposta_recebida: i >= 2,
@@ -26,7 +27,7 @@ const publico = {...ambiente, id: 'publico', nome: 'Consulta pública', modo_par
     const login = await context.request.post(base + '/api/auth/login', {data: {username, senha, permanecer_conectado: false}});
     assert.equal(login.status(), 200);
     const page = await context.newPage();
-    const errors = [], envios = [], registros = [];
+    const errors = [], envios = [], registros = [], exclusoes = [];
     let leituras = 0;
     page.on('pageerror', error => errors.push(error.message));
     await page.route('**/api/**', async route => {
@@ -49,7 +50,15 @@ const publico = {...ambiente, id: 'publico', nome: 'Consulta pública', modo_par
         registros.push(registro);
         return route.fulfill({json: registro});
       }
-      assert.equal(request.method(), 'GET', 'A única escrita simulada permitida é o comprovante de resposta.');
+      if (request.method() === 'DELETE' && pathname.endsWith('/publico/inscricoes/inscricao-17')) {
+        exclusoes.push(pathname);
+        if (exclusoes.length === 1) return route.fulfill({status: 409, json: {detail: 'A resposta integra uma análise salva.'}});
+        const index = inscritos.findIndex(item => item.inscricao_id === 'inscricao-17');
+        assert.ok(index >= 0);
+        inscritos.splice(index, 1);
+        return route.fulfill({status: 204});
+      }
+      assert.equal(request.method(), 'GET', 'Escrita simulada fora dos controles testados.');
       return route.fulfill({json: []});
     });
     await page.goto(base + '/restrict/analise-multicriterio/central-julgamentos');
@@ -66,6 +75,7 @@ const publico = {...ambiente, id: 'publico', nome: 'Consulta pública', modo_par
     await monitor.getByText('Pessoa convidada').waitFor();
     const referencia = await estilo();
     assert.equal(referencia.length, 7);
+    assert.equal(await page.locator('#ami-monitor-delete').isVisible(), false);
     await page.locator('#ami-judgments [data-select-id="convite"]').uncheck();
     await editar('publico');
     await monitor.getByText('Inscrito 01', {exact: true}).waitFor();
@@ -77,9 +87,14 @@ const publico = {...ambiente, id: 'publico', nome: 'Consulta pública', modo_par
     assert.equal(await monitor.locator('[data-email-history="convite"]').count(), 0);
     assert.equal(await monitor.getByText('Não se aplica', {exact: true}).count(), 15);
     assert.equal(await page.locator('#ami-monitor-send').isDisabled(), true);
+    assert.equal(await page.locator('#ami-monitor-clear i.fa-broom').count(), 1);
+    assert.equal(await page.locator('#ami-monitor-delete i.fa-xmark').count(), 1);
+    assert.equal(await page.locator('#ami-monitor-delete').isVisible(), true);
+    assert.equal(await page.locator('#ami-monitor-delete').isDisabled(), true);
     await page.locator('#ami-monitor-select-all').check();
     assert.match(await page.locator('#ami-email-status-count').textContent(), /^17 selecionados/);
     assert.equal(await page.locator('#ami-monitor-send-response').isDisabled(), true);
+    assert.equal(await page.locator('#ami-monitor-delete').isDisabled(), true);
     await page.locator('#ami-email-status-pagination button').last().click();
     assert.equal(await monitor.locator('tbody input:checked').count(), 2);
     await page.locator('#ami-monitor-clear').click();
@@ -113,6 +128,21 @@ const publico = {...ambiente, id: 'publico', nome: 'Consulta pública', modo_par
     assert.match(await page.locator('#ami-email-history-body').innerText(), /Comprovante aceito em teste/);
     await page.locator('#ami-email-history-close').click();
 
+    await page.locator('#ami-monitor-delete').click();
+    await page.locator('#pfsConfirmCancel').click();
+    assert.equal(exclusoes.length, 0);
+    await page.locator('#ami-monitor-delete').click();
+    await page.locator('#pfsConfirmOk').click();
+    await page.getByText(/A resposta integra uma análise salva/).waitFor();
+    assert.equal(exclusoes.length, 1);
+    assert.equal(await linha.getByText('Inscrito 17').count(), 1);
+    await page.locator('#ami-monitor-delete').click();
+    await page.locator('#pfsConfirmOk').click();
+    await monitor.getByText('Inscrito 17', {exact: true}).waitFor({state: 'detached'});
+    assert.equal(exclusoes.length, 2);
+    assert.equal(await page.locator('#ami-monitor-delete').isDisabled(), true);
+    assert.match(await page.locator('#ami-email-status-count').textContent(), /16/);
+
     const antes = leituras;
     await page.locator('#ami-monitor-refresh').click();
     assert.ok(leituras > antes);
@@ -120,6 +150,6 @@ const publico = {...ambiente, id: 'publico', nome: 'Consulta pública', modo_par
     assert.equal(await page.locator('#ami-monitor-filter-coluna').isVisible(), true);
     assert.equal(await monitor.locator('..').evaluate(wrap => wrap.scrollWidth > wrap.clientWidth), true);
     assert.deepEqual(errors, []);
-    console.log('Monitoramento público em edição, filtros, seleção, paginação, exportação, atualização e comprovante simulado verificados.');
+    console.log('Monitoramento público em edição: filtros, seleção, paginação, exportação, comprovante e exclusão verificados.');
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

@@ -73,6 +73,19 @@ def contexto_inscricao(token: str, segredo: str | None = None) -> tuple[dict[str
     return ambiente, _inscricao_por_segredo(ambiente, segredo)
 
 
+def inscricao_publica_enviada(token: str, segredo: str | None, *, email: str | None = None) -> bool:
+    if not segredo:
+        return False
+    try:
+        ambiente, inscricao = contexto_inscricao(token, segredo)
+    except DemandaValidationError:
+        return False
+    if not inscricao or (email is not None and inscricao["email"] != email.strip().lower()):
+        return False
+    resposta = repo.get_resposta_by_ambiente_email(str(ambiente["id"]), inscricao["email"])
+    return bool(resposta and resposta["status"] == "enviada" and resposta["inscricao_id"] == inscricao["id"])
+
+
 def estado_fila_publica(ambiente: dict[str, Any], inscricao: dict[str, Any] | None) -> dict[str, Any]:
     _validar_ambiente_ativo(ambiente)
     if not inscricao:

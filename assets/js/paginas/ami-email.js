@@ -11,7 +11,8 @@
     falha: "Não enviado", indeterminado: "Resultado indeterminado"};
   const rotulosEntrega = {sem_confirmacao: "Sem confirmação", confirmada: "Entregue", falha: "Devolvido",
     adiada: "Recusado temporariamente pelo destinatário"};
-  const url = id => "/api/ahp/comparacao-colaborativa/ambientes/" + encodeURIComponent(id) + "/emails";
+  const ambienteUrl = id => "/api/ahp/comparacao-colaborativa/ambientes/" + encodeURIComponent(id);
+  const url = id => ambienteUrl(id) + "/emails";
   const filterColumn = $("ami-monitor-filter-coluna"), filterValue = $("ami-monitor-filter-valor");
   const monitor = $("ami-monitoring-section"), monitorConvites = monitor.parentElement;
   const monitorPublico = $("ami-public-monitor-host");
@@ -24,6 +25,8 @@
   const selected = new Set();
   let filteredRows = [], visibleCount = 0;
   const rowKey = row => row.destinatario.toLowerCase();
+  const chaveSelecao = row => row.inscricao_id || rowKey(row);
+  const marcado = row => selected.has(chaveSelecao(row));
   const natureza = row => row.natureza || "convite";
   const registrosPorEmail = new Map();
   const registrosDe = row => registrosPorEmail.get(rowKey(row)) || [];
@@ -362,7 +365,7 @@
       Date.parse(contexto.julgamento.valido_ate) >= Date.now();
     aliasInput.disabled = assuntoInput.disabled = mensagemInput.disabled = !editavel;
     $("ami-save-email-config").disabled = !editavel || !configuracaoAlterada;
-    const marcados = monitorRows.filter(row => selected.has(rowKey(row)));
+    const marcados = monitorRows.filter(marcado);
     const baseBloqueada = ocupado || !pronto || !modoMonitor() || !contexto || !marcados.length;
     $("ami-monitor-send").disabled = bloqueiaConvites || baseBloqueada;
     $("ami-monitor-send-response").disabled = loteEmExecucao || baseBloqueada ||
@@ -373,8 +376,9 @@
       ? ocupado || loteEmExecucao || !modoMonitor() : $("ami-email-receipts").disabled;
     $("ami-monitor-export").disabled = ocupado || !pronto || !selected.size;
     $("ami-monitor-clear").disabled = ocupado || !selected.size;
+    $("ami-monitor-delete").disabled = baseBloqueada || !contexto?.publico || marcados.length !== 1 || !marcados[0]?.inscricao_id;
     const all = $("ami-monitor-select-all");
-    const count = filteredRows.filter(row => selected.has(rowKey(row))).length;
+    const count = filteredRows.filter(marcado).length;
     all.disabled = ocupado || !pronto || !filteredRows.length;
     all.checked = count > 0 && count === filteredRows.length;
     all.indeterminate = count > 0 && count < filteredRows.length;
@@ -385,13 +389,14 @@
     tbody.replaceChildren();
     if (!pronto) { controles(); return; }
     const rows = (contexto.colaboradores || []).map(c => ({
-      nome: c.nome, destinatario: c.email, resposta_recebida: c.resposta_recebida, registrado_em: c.registrado_em,
+      inscricao_id: c.inscricao_id, nome: c.nome, destinatario: c.email,
+      resposta_recebida: c.resposta_recebida, registrado_em: c.registrado_em,
       clique_link_em: c.clique_link_em, acesso_formulario_em: c.acesso_formulario_em,
       resposta_enviada_em: c.resposta_enviada_em, etapa_codigo: c.etapa_codigo,
       etapa_rotulo: c.etapa_rotulo, etapa_atualizada_em: c.etapa_atualizada_em
     }));
     monitorRows = rows;
-    const keys = new Set(rows.map(rowKey));
+    const keys = new Set(rows.map(chaveSelecao));
     selected.forEach(key => { if (!keys.has(key)) selected.delete(key); });
     filterOptions();
     const filtered = sortRows(rows.filter(row => SLTTable.matches("ami-monitor-filter", cells(row)[Number(filterColumn.value)] === (filterValue.value === "__empty__" ? "" : filterValue.value), filterColumn.value !== "" && Boolean(filterValue.value))));
@@ -400,13 +405,13 @@
     pagina = result.page;
     result.rows.forEach(row => {
       const tr = document.createElement("tr");
-      tr.classList.toggle("is-selected", selected.has(rowKey(row)));
+      tr.classList.toggle("is-selected", marcado(row));
       const cell = tr.insertCell(); cell.className = "col-select";
       const checkbox = document.createElement("input"); checkbox.type = "checkbox";
-      checkbox.checked = selected.has(rowKey(row));
+      checkbox.checked = marcado(row);
       checkbox.setAttribute("aria-label", "Selecionar registro de " + row.destinatario);
       checkbox.addEventListener("change", () => {
-        if (checkbox.checked) selected.add(rowKey(row)); else selected.delete(rowKey(row));
+        if (checkbox.checked) selected.add(chaveSelecao(row)); else selected.delete(chaveSelecao(row));
         tr.classList.toggle("is-selected", checkbox.checked); controles();
       });
       cell.appendChild(checkbox);
@@ -440,11 +445,12 @@
     if (row) abrirHistorico(row, button.dataset.emailHistory, button);
   });
   async function carregar(atual, automatica = false) {
-    carregando = atual;
+    const leitura = {atual};
+    carregando = leitura;
     try {
       const result = await request(url(atual.julgamento.id) + "/monitoramento");
       if (!Array.isArray(result.registros) || !Array.isArray(result.colaboradores)) throw new Error("O monitoramento de e-mails retornou um formato inválido.");
-      if (contexto !== atual) return;
+      if (contexto !== atual || carregando !== leitura) return;
       definirRegistros(result.registros); atual.colaboradores = result.colaboradores;
       atual.confirmacoesConfiguradas = result.confirmacoes_configuradas === true; pronto = true;
       $("ami-email-status").textContent = atual.publico ? "Inscrições e confirmações carregadas." : "Histórico de envios carregado.";
@@ -460,11 +466,11 @@
       }
       render();
     } catch (error) {
-      if (contexto !== atual) return;
+      if (contexto !== atual || carregando !== leitura) return;
       pronto = false; controles();
       $("ami-email-status").textContent = "Histórico indisponível. " + error.message;
       if (!automatica) Notify.error("E-mails do julgamento", error.message);
-    } finally { if (carregando === atual) carregando = null; }
+    } finally { if (carregando === leitura) carregando = null; }
   }
   async function carregarRemetente(atual) {
     try {
@@ -504,7 +510,7 @@
   // Destinatários salvos correspondentes às linhas marcadas na coluna de seletores.
   function selecionados() {
     if (!contexto) return [];
-    const linhas = monitorRows.filter(row => selected.has(rowKey(row)));
+    const linhas = monitorRows.filter(marcado);
     if (contexto.publico) return linhas.map(row => row.destinatario);
     const marcados = new Set(linhas.map(rowKey));
     return contexto.destinatarios.filter(destinatario => marcados.has(destinatario.toLowerCase()));
@@ -704,12 +710,46 @@
       if (contexto === atual) await carregar(atual);
     } finally { encerrarLote(emSegundoPlano); }
   }
+  async function excluirInscricao() {
+    if ($("ami-monitor-delete").disabled) return;
+    const atual = contexto;
+    const row = monitorRows.find(marcado);
+    bloquear(true);
+    try {
+      if (!(await ProcessFeedback.confirmar({
+        title: "Excluir registro",
+        message: "Excluir a inscrição de " + (row.nome || row.destinatario) + " (" + row.destinatario + ")?",
+        warning: "Os dados da inscrição, a resposta vinculada, se houver, e o histórico de e-mails deste julgamento serão excluídos definitivamente.",
+        danger: true, confirmLabel: "Excluir registro"
+      }))) return;
+      await request(ambienteUrl(atual.julgamento.id) + "/inscricoes/" + encodeURIComponent(row.inscricao_id), {method: "DELETE"});
+      if (contexto === atual) {
+        atual.colaboradores = atual.colaboradores.filter(item => item.inscricao_id !== row.inscricao_id);
+        definirRegistros(registros.filter(item => rowKey(item) !== rowKey(row)));
+        render();
+        await carregar(atual, true);
+        if (contexto === atual) {
+          atual.julgamento.total_inscritos = atual.colaboradores.length;
+          atual.julgamento.total_respostas = atual.colaboradores.filter(item => item.resposta_recebida).length;
+          atual.onExcluir?.();
+          if (pronto) $("ami-email-status").textContent = "Inscrição excluída.";
+        }
+      }
+      Notify.success("Excluir registro", "Inscrição excluída.");
+    } catch (error) {
+      Notify.error("Excluir registro", error.message);
+    } finally { bloquear(false); }
+  }
   function prepararMonitoramento() {
     const publico = Boolean(contexto.publico);
     (publico ? monitorPublico : monitorConvites).appendChild(monitor);
     monitorPublico.classList.toggle("is-hidden", !publico);
     $("ami-monitor-invited-help").hidden = publico;
     $("ami-monitor-public-help").hidden = !publico;
+    const iconeLimpar = $("ami-monitor-clear").querySelector("i");
+    iconeLimpar.classList.toggle("fa-xmark", !publico);
+    iconeLimpar.classList.toggle("fa-broom", publico);
+    $("ami-monitor-delete").classList.toggle("is-hidden", !publico);
     $("ami-monitor-send").title = publico ? "Convite individual não se aplica ao link público" :
       "Enviar e-mail de convite aos selecionados";
     definirRegistros([]); pronto = false; pagina = 1;
@@ -732,8 +772,8 @@
       }
       controles();
     },
-    mostrarPublico(julgamento) {
-      contexto = {julgamento, publico: true, destinatarios: []};
+    mostrarPublico(julgamento, onExcluir) {
+      contexto = {julgamento, publico: true, destinatarios: [], onExcluir};
       prepararMonitoramento();
     },
     atualizarColaboradores(julgamento) {
@@ -787,18 +827,19 @@
     finally { bloquear(false); }
   });
   $("ami-monitor-select-all").addEventListener("change", event => {
-    filteredRows.forEach(row => { if (event.target.checked) selected.add(rowKey(row)); else selected.delete(rowKey(row)); });
+    filteredRows.forEach(row => { if (event.target.checked) selected.add(chaveSelecao(row)); else selected.delete(chaveSelecao(row)); });
     render();
   });
   $("ami-monitor-clear").addEventListener("click", () => { selected.clear(); render(); });
+  $("ami-monitor-delete").addEventListener("click", excluirInscricao);
   $("ami-monitor-export").addEventListener("click", () => {
-    const rows = monitorRows.filter(row => selected.has(rowKey(row)));
+    const rows = monitorRows.filter(marcado);
     if (!rows.length) return;
     const headings = Array.from($("ami-monitor-table").tHead.rows[0].cells).slice(1).map(th => th.textContent.trim());
     exportar(rows.map(cells), headings, SicardNomeArquivo.gerar(contexto?.julgamento?.nome, 'monitoramento colaboradores', 'csv', 'Julgamento Colaborativo'));
   });
   function atualizarAutomaticamente() {
-    if (contexto && !ocupado && carregando !== contexto && modoMonitor() &&
+    if (contexto && !ocupado && carregando?.atual !== contexto && modoMonitor() &&
         !document.hidden && !monitor.closest(".is-hidden")) carregar(contexto, true);
   }
   setInterval(atualizarAutomaticamente, 5000);

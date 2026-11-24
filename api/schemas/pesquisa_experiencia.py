@@ -48,14 +48,24 @@ class PesquisaExperienciaEntrada(PesquisaExperienciaAvaliacao):
 
 
 class PesquisaExperienciaAHPAcesso(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     email: str = Field(min_length=3, max_length=320)
     token_acesso: SecretStr
+
+
+class PesquisaExperienciaAHPAcessoPublico(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    julgamento: str = Field(pattern=r"^[A-Za-z0-9_-]{43}$")
+    email: str | None = Field(default=None, min_length=3, max_length=320)
+    token_acesso: SecretStr | None = None
 
 
 class PesquisaExperienciaAHPEntrada(PesquisaExperienciaAvaliacao):
     perfil: Literal["tecnico", "gestor", "administrativo", "usuario_eventual", "outro"]
     escala_maxima: Literal[7] = 7
-    acesso: PesquisaExperienciaAHPAcesso = Field(exclude=True, repr=False)
+    acesso: PesquisaExperienciaAHPAcessoPublico | PesquisaExperienciaAHPAcesso = Field(exclude=True, repr=False)
 
 
 class PesquisaExperienciaResultado(BaseModel):

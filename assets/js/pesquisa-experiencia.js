@@ -65,6 +65,23 @@
     destino.textContent = mensagem;
   }
 
+  function abrirPesquisa(dados, focar) {
+    credenciais = dados;
+    acesso.reset();
+    acessoStatus.textContent = "";
+    acesso.hidden = true;
+    form.hidden = false;
+    if (focar) form.elements.namedItem("perfil").focus();
+  }
+
+  const julgamento = acesso?.elements.namedItem("julgamento")?.value;
+  if (julgamento) {
+    const sessao = { julgamento };
+    enviarJson(acesso, sessao, "Não foi possível validar a inscrição.")
+      .then(() => { if (!credenciais) abrirPesquisa(sessao, false); })
+      .catch(() => { /* O formulário de retomada permanece disponível. */ });
+  }
+
   acesso?.addEventListener("submit", async (event) => {
     event.preventDefault();
     acessoStatus.className = "pesquisa-status";
@@ -74,16 +91,11 @@
     const botao = acesso.querySelector("button[type=submit]");
     if (botao.disabled) return;
     botao.disabled = true;
-    acessoStatus.textContent = "Validando o convite…";
-    const convite = Object.fromEntries(new FormData(acesso));
+    acessoStatus.textContent = "Validando o acesso…";
+    const dados = Object.fromEntries(new FormData(acesso));
     try {
-      await enviarJson(acesso, convite, "Não foi possível validar o convite.");
-      credenciais = convite;
-      acesso.reset();
-      acessoStatus.textContent = "";
-      acesso.hidden = true;
-      form.hidden = false;
-      form.elements.namedItem("perfil").focus();
+      await enviarJson(acesso, dados, "Não foi possível validar o acesso.");
+      abrirPesquisa(dados, true);
     } catch (error) {
       exibirErro(acessoStatus, error.message);
     } finally {
@@ -114,8 +126,8 @@
       sucesso.hidden = false;
       sucesso.focus();
     } catch (error) {
-      if (acesso && error.codigo === "convite_invalido") {
-        acesso.elements.namedItem("email").value = credenciais.email;
+      if (acesso && ["convite_invalido", "inscricao_invalida"].includes(error.codigo)) {
+        acesso.elements.namedItem("email").value = credenciais.email || "";
         credenciais = null;
         form.hidden = true;
         acesso.hidden = false;

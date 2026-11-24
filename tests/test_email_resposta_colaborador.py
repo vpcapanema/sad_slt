@@ -90,7 +90,7 @@ def test_confirmacao_convida_para_pesquisa_ahp():
 
 
 def test_confirmacao_publica_reusa_os_resultados_salvos_das_duas_etapas(monkeypatch, rastreamento):
-    ambiente = {**_ambiente([]), "modo_participacao": "publico", "modo_comparacao": "duas_etapas"}
+    ambiente = {**_ambiente([]), "modo_participacao": "publico", "modo_comparacao": "duas_etapas", "token": "J" * 43}
     resposta = _resposta(matriz=[[1, 3, None], [1 / 3, 1, None], [None, None, 1]])
     resposta["inscricao_id"] = "inscricao-1"
     resposta["estatisticas"].update({
@@ -121,7 +121,10 @@ def test_confirmacao_publica_reusa_os_resultados_salvos_das_duas_etapas(monkeypa
         assert "Custo — 75,0%" in parte and "RC): 0,0357" in parte
         assert "Pesos globais dos critérios" in parte and "Custo — 60,0%" in parte
         assert "chave individual do convite" not in parte
-        assert confirmacao.PESQUISA_AHP_URL not in parte
+        link = confirmacao.PESQUISA_AHP_URL + "?julgamento=" + ambiente["token"]
+        assert parte.index("Pesos globais dos critérios") < parte.index(link) < parte.index(confirmacao.RODAPE_EMAIL)
+        assert "mesmo navegador" in parte
+    assert f'href="{link}"' in mensagens[0].html
     with pytest.raises(DemandaValidationError, match="Ainda não há resposta"):
         confirmacao.enviar("amb-1", "outra@example.com", "gestor")
 

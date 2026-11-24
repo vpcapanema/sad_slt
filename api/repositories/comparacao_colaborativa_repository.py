@@ -382,6 +382,28 @@ def list_inscricoes(ambiente_id: str) -> list[dict[str, Any]]:
     return [dict(row) for row in rows]
 
 
+def delete_inscricao_publica(ambiente_id: str, inscricao_id: str) -> bool:
+    with get_connection() as conn:
+        inscricao = conn.execute(
+            """DELETE FROM ahp.comparacao_colaborativa_inscricao i
+               USING ahp.comparacao_colaborativa_ambiente a
+               WHERE i.id = %s AND i.ambiente_id = %s AND a.id = i.ambiente_id
+                 AND a.modo_participacao = 'publico'
+               RETURNING i.email""",
+            (inscricao_id, ambiente_id),
+        ).fetchone()
+        if not inscricao:
+            return False
+        # Invalida reservas de e-mail feitas com a versão anterior do julgamento.
+        conn.execute(_touch_ambiente_query(), (ambiente_id,))
+        conn.execute(
+            """DELETE FROM ahp.comparacao_colaborativa_email
+               WHERE ambiente_id = %s AND lower(destinatario) = %s""",
+            (ambiente_id, inscricao["email"]),
+        )
+        return True
+
+
 def insert_resposta(data: dict[str, Any]) -> dict[str, Any]:
     columns = list(data)
     query = sql.SQL(

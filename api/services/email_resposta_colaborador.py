@@ -14,6 +14,7 @@ import re
 from hashlib import sha256
 from html import escape
 from typing import Any
+from urllib.parse import urlencode
 from uuid import UUID, uuid4
 
 from pydantic import ValidationError
@@ -29,11 +30,14 @@ logger = logging.getLogger(__name__)
 
 PESQUISA_AHP_URL = "https://56.125.163.194/sicard/public/pesquisa-experiencia-ahp/"
 PESQUISA_AHP_TITULO = "Pesquisa de satisfação - AHP Interativa"
-PESQUISA_AHP_CONVITE = (
-    "Como foi preencher o formulário de comparação pareada? Conte-nos o que funcionou bem e o que podemos "
-    "melhorar. Para acessar, use o mesmo e-mail e a mesma chave individual do convite do julgamento. "
-    "A pesquisa é anônima e leva cerca de três minutos."
+PESQUISA_AHP_INTRO = (
+    "Como foi preencher o formulário de comparação pareada? Conte-nos o que funcionou bem e o que podemos melhorar."
 )
+PESQUISA_AHP_CONVITE = (
+    f"{PESQUISA_AHP_INTRO} A pesquisa é anônima e leva cerca de três minutos."
+)
+FONTE_EMAIL = "font-family:Arial,Helvetica,sans-serif;"
+RODAPE_EMAIL = "Esta é uma mensagem automática do SICARD."
 
 AZUL = (17, 101, 147)
 VERMELHO = (122, 22, 32)
@@ -111,7 +115,48 @@ def calcular(resposta: dict[str, Any]) -> dict[str, Any]:
     return {"matriz": matriz, **ahp_engine.analyze_matrix(matriz)}
 
 
-def _texto(*, nome: str, julgamento: str, nomes: list[str], calculo: dict[str, Any], outros: int) -> str:
+def _texto_rodape(url: str, convite: str) -> list[str]:
+    return ["", PESQUISA_AHP_TITULO, "", convite, f"Responder à pesquisa: {url}", "", RODAPE_EMAIL]
+
+
+def _html_confirmacao(conteudo: str, pesquisa_url: str, pesquisa_convite: str) -> str:
+    fonte = FONTE_EMAIL
+    return (
+        '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">'
+        '<meta name="viewport" content="width=device-width, initial-scale=1"></head>'
+        '<body style="margin:0;padding:0;background:#eef3f7;">'
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef3f7;">'
+        '<tr><td align="center" style="padding:18px 8px;">'
+        '<table role="presentation" width="640" cellpadding="0" cellspacing="0" '
+        'style="max-width:640px;width:100%;background:#ffffff;border:1px solid #d5dee6;">'
+        '<tr><td bgcolor="#00507a" style="background:#00507a;padding:16px 22px;">'
+        f'<h1 style="margin:0;{fonte}color:#ffffff;font-size:19px;line-height:1.35;font-weight:bold;">'
+        'SICARD · Confirmação de recebimento</h1></td></tr>'
+        f'<tr><td style="padding:22px;">{conteudo}'
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" aria-hidden="true">'
+        '<tr><td height="36" style="height:36px;font-size:1px;line-height:36px;mso-line-height-rule:exactly;">'
+        '&nbsp;</td></tr></table>'
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
+        'style="border:1px solid #bed4e2;border-collapse:separate;">'
+        '<tr><td bgcolor="#00507a" style="padding:14px 18px;background:#00507a;">'
+        f'<h2 style="margin:0;{fonte}font-size:18px;line-height:1.35;font-weight:bold;color:#ffffff;">'
+        f'{escape(PESQUISA_AHP_TITULO)}</h2></td></tr>'
+        '<tr><td bgcolor="#edf5fa" style="padding:18px;background:#edf5fa;">'
+        f'<p style="margin:0 0 16px;{fonte}font-size:14px;line-height:1.55;color:#22333f;">'
+        f'{escape(pesquisa_convite)}</p>'
+        '<table role="presentation" cellpadding="0" cellspacing="0">'
+        '<tr><td align="center" bgcolor="#00507a" style="border-radius:5px;background:#00507a;">'
+        f'<a href="{escape(pesquisa_url)}" target="_blank" style="display:inline-block;padding:13px 20px;'
+        f'{fonte}font-size:15px;font-weight:bold;color:#ffffff;text-decoration:none;'
+        'border:1px solid #003d5c;border-radius:5px;">Responder à pesquisa</a>'
+        '</td></tr></table></td></tr></table>'
+        f'<p style="margin:20px 0 0;{fonte}color:#516878;font-size:12px;line-height:1.5;">{RODAPE_EMAIL}</p>'
+        '</td></tr></table></td></tr></table></body></html>'
+    )
+
+
+def _texto(*, nome: str, julgamento: str, nomes: list[str], calculo: dict[str, Any], outros: int,
+           pesquisa_url: str, pesquisa_convite: str) -> str:
     matriz, pesos = calculo["matriz"], calculo["weights"]
     n = len(nomes)
     linhas = [
@@ -134,18 +179,16 @@ def _texto(*, nome: str, julgamento: str, nomes: list[str], calculo: dict[str, A
     ]
     if outros:
         linhas += ["ATENÇÃO: " + _aviso(outros), ""]
-    linhas += [
-        "", PESQUISA_AHP_TITULO, "", PESQUISA_AHP_CONVITE, f"Responder à pesquisa: {PESQUISA_AHP_URL}",
-        "", "Esta é uma mensagem automática do SICARD.",
-    ]
+    linhas += _texto_rodape(pesquisa_url, pesquisa_convite)
     return "\n".join(linhas)
 
 
-def _html(*, nome: str, julgamento: str, nomes: list[str], calculo: dict[str, Any], outros: int) -> str:
+def _html(*, nome: str, julgamento: str, nomes: list[str], calculo: dict[str, Any], outros: int,
+          pesquisa_url: str, pesquisa_convite: str) -> str:
     matriz, pesos = calculo["matriz"], calculo["weights"]
     n = len(nomes)
     e = escape
-    fonte = "font-family:Arial,Helvetica,sans-serif;"
+    fonte = FONTE_EMAIL
     cel = f"padding:7px 9px;border:1px solid #d5dee6;{fonte}font-size:13px;"
     cab = f"{cel}background:#00507a;color:#ffffff;font-weight:bold;text-align:center;"
 
@@ -201,14 +244,7 @@ def _html(*, nome: str, julgamento: str, nomes: list[str], calculo: dict[str, An
 
     titulo = f"margin:24px 0 8px;{fonte}font-size:14px;color:#00507a;text-transform:uppercase;letter-spacing:.03em;"
     paragrafo = f"margin:0 0 10px;{fonte}font-size:13px;line-height:1.55;color:#22333f;"
-    return (
-        '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"></head>'
-        '<body style="margin:0;padding:0;background:#eef3f7;">'
-        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef3f7;"><tr><td align="center" style="padding:18px 8px;">'
-        '<table role="presentation" width="640" cellpadding="0" cellspacing="0" style="max-width:640px;width:100%;background:#ffffff;border:1px solid #d5dee6;">'
-        f'<tr><td style="background:#00507a;padding:16px 22px;{fonte}color:#ffffff;font-size:18px;font-weight:bold;">'
-        'SICARD · Confirmação de recebimento</td></tr>'
-        '<tr><td style="padding:22px;">'
+    conteudo = (
         f'<p style="{paragrafo}font-size:15px;">Olá, <strong>{e(nome)}</strong>!</p>'
         f'<p style="{paragrafo}">Recebemos a sua resposta ao julgamento <strong>{e(julgamento)}</strong>. '
         'Agradecemos a sua colaboração: a contribuição de especialistas é fundamental para a definição dos pesos dos critérios.</p>'
@@ -229,30 +265,12 @@ def _html(*, nome: str, julgamento: str, nomes: list[str], calculo: dict[str, An
         f'<tr><th style="{cab}">Código</th><th style="{cab}">Critério</th><th style="{cab}">Peso</th><th style="{cab}">&nbsp;</th></tr>'
         f'{linhas_pesos}</table>'
         f'{aviso}'
-        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" aria-hidden="true">'
-        '<tr><td height="44" style="height:44px;font-size:1px;line-height:44px;mso-line-height-rule:exactly;">'
-        '&nbsp;</td></tr></table>'
-        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
-        'style="border:1px solid #bed4e2;border-collapse:separate;">'
-        '<tr><td bgcolor="#00507a" style="padding:16px 20px;background:#00507a;">'
-        f'<h2 style="margin:0;{fonte}font-size:20px;line-height:1.3;font-weight:bold;color:#ffffff;">'
-        f'{e(PESQUISA_AHP_TITULO)}</h2></td></tr>'
-        '<tr><td bgcolor="#edf5fa" style="padding:20px;background:#edf5fa;">'
-        f'<p style="margin:0 0 16px;{fonte}font-size:15px;line-height:1.55;color:#22333f;">'
-        f'{e(PESQUISA_AHP_CONVITE)}</p>'
-        '<table role="presentation" cellpadding="0" cellspacing="0">'
-        '<tr><td align="center" bgcolor="#00507a" style="border-radius:5px;background:#00507a;">'
-        f'<a href="{PESQUISA_AHP_URL}" target="_blank" style="display:inline-block;padding:14px 24px;'
-        f'{fonte}font-size:16px;font-weight:bold;color:#ffffff;text-decoration:none;'
-        'border:1px solid #003d5c;border-radius:5px;">Responder à pesquisa</a>'
-        '</td></tr></table></td></tr></table>'
-        f'<p style="{paragrafo}margin-top:22px;color:#516878;font-size:12px;">Esta é uma mensagem automática do SICARD.</p>'
-        '</td></tr></table></td></tr></table></body></html>'
     )
+    return _html_confirmacao(conteudo, pesquisa_url, pesquisa_convite)
 
 
 def _resumo_por_dimensao(ambiente: dict[str, Any], resposta: dict[str, Any], *,
-                        nome: str, julgamento: str) -> tuple[str, str]:
+                        nome: str, julgamento: str, pesquisa_url: str, pesquisa_convite: str) -> tuple[str, str]:
     dados = resposta["estatisticas"]
     primeira = dados.get("julgamento_dimensoes")
     secoes = []
@@ -274,39 +292,54 @@ def _resumo_por_dimensao(ambiente: dict[str, Any], resposta: dict[str, Any], *,
     saudacao = f"Olá, {nome}!"
     confirmacao = f"Recebemos a sua resposta ao julgamento “{julgamento}”. Agradecemos a sua colaboração."
     texto = [saudacao, "", confirmacao]
-    html = [f"<h1>SICARD · Confirmação de recebimento</h1><p>{escape(saudacao)}</p><p>{escape(confirmacao)}</p>"]
+    fonte = FONTE_EMAIL
+    paragrafo = f"{fonte}font-size:14px;line-height:1.5;color:#22333f;"
+    html = [
+        f'<p style="margin:0 0 10px;{paragrafo}">Olá, <strong>{escape(nome)}</strong>!</p>',
+        f'<p style="margin:0;{paragrafo}">Recebemos a sua resposta ao julgamento '
+        f'<strong>{escape(julgamento)}</strong>. Agradecemos a sua colaboração.</p>',
+    ]
     for titulo, rc, pesos in secoes:
         texto += ["", titulo]
-        html.append(f"<h2>{escape(titulo)}</h2>")
+        html.append(
+            '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
+            'style="margin-top:16px;border:1px solid #d5dee6;">'
+            '<tr><td bgcolor="#e8f0f6" style="background:#e8f0f6;padding:10px 14px;">'
+            f'<h2 style="margin:0;{fonte}font-size:15px;line-height:1.4;color:#00507a;">{escape(titulo)}</h2>'
+            '</td></tr><tr><td style="padding:12px 14px;">'
+        )
         if rc is not None:
             metrica = f"Razão de consistência (RC): {_numero(rc, 4)}"
             texto.append(metrica)
-            html.append(f"<p>{metrica}</p>")
-        html.append("<ul>")
+            cor = "#1f6b3a" if rc < LIMITE_RC else "#8a1c1c"
+            html.append(f'<p style="margin:0 0 6px;{paragrafo}"><strong style="color:{cor};">{metrica}</strong></p>')
+        html.append(f'<ul style="margin:0;padding:0 0 0 19px;{paragrafo}">')
         for item, peso in pesos:
             linha = f"{item} — {_numero(peso * 100, 1)}%"
             texto.append(linha)
             html.append(f"<li>{escape(linha)}</li>")
-        html.append("</ul>")
-
-    if ambiente.get("modo_participacao") != "publico":
-        texto += ["", PESQUISA_AHP_TITULO, PESQUISA_AHP_CONVITE, f"Responder à pesquisa: {PESQUISA_AHP_URL}"]
-        html.append(f'<h2>{escape(PESQUISA_AHP_TITULO)}</h2><p>{escape(PESQUISA_AHP_CONVITE)}</p>'
-                    f'<p><a href="{PESQUISA_AHP_URL}">Responder à pesquisa</a></p>')
-    rodape = "Esta é uma mensagem automática do SICARD."
-    return "\n".join([*texto, "", rodape]), "".join([*html, f"<p>{rodape}</p>"])
+        html.append("</ul></td></tr></table>")
+    texto += _texto_rodape(pesquisa_url, pesquisa_convite)
+    return "\n".join(texto), _html_confirmacao("".join(html), pesquisa_url, pesquisa_convite)
 
 
 def montar(ambiente: dict[str, Any], resposta: dict[str, Any]) -> EmailEnvioSchema:
     nome = str(resposta.get("nome_completo") or "colaborador(a)").strip()
     julgamento = str(ambiente.get("nome") or "Julgamento colaborativo").strip()
+    pesquisa_url = PESQUISA_AHP_URL
+    pesquisa_convite = PESQUISA_AHP_CONVITE
+    if ambiente.get("modo_participacao") == "publico":
+        pesquisa_url += "?" + urlencode({"julgamento": ambiente["token"]})
+        pesquisa_convite += " Se possível, abra o link no mesmo navegador em que você enviou o julgamento."
+    else:
+        pesquisa_convite += " Para acessar, use o mesmo e-mail e a mesma chave individual do convite do julgamento."
+    contexto = {"nome": nome, "julgamento": julgamento, "pesquisa_url": pesquisa_url, "pesquisa_convite": pesquisa_convite}
     if (resposta.get("estatisticas") or {}).get("resultados_por_grupo"):
-        texto, html = _resumo_por_dimensao(ambiente, resposta, nome=nome, julgamento=julgamento)
+        texto, html = _resumo_por_dimensao(ambiente, resposta, **contexto)
     else:
         calculo = calcular(resposta)
-        contexto = {"nome": nome, "julgamento": julgamento,
-                    "nomes": _nomes(ambiente, resposta, len(calculo["matriz"])),
-                    "calculo": calculo, "outros": outros_julgadores_mesmo_conjunto(ambiente, resposta)}
+        contexto.update(nomes=_nomes(ambiente, resposta, len(calculo["matriz"])), calculo=calculo,
+                        outros=outros_julgadores_mesmo_conjunto(ambiente, resposta))
         texto, html = _texto(**contexto), _html(**contexto)
     assunto = re.sub(r"[\x00-\x1f\x7f]", " ", f"SICARD: recebemos a sua resposta — {julgamento[:120]}")
     return EmailEnvioSchema(

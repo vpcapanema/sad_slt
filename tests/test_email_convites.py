@@ -846,6 +846,7 @@ def test_monitoramento_publico_le_inscricoes_e_respostas_vinculadas(ambiente, re
     buscar_inscritos.assert_called_once_with(str(ambiente["id"]))
     assert result["registros"] == [comprovante]
     assert [row["nome"] for row in result["colaboradores"]] == ["Lia", "Ana", "Bia"]
+    assert [row["inscricao_id"] for row in result["colaboradores"]] == ["1", "2", "3"]
     assert [row["etapa_codigo"] for row in result["colaboradores"]] == ["inscrito", "em_preenchimento", "resposta_enviada"]
     assert [row["resposta_recebida"] for row in result["colaboradores"]] == [False, False, True]
     assert all(row["registrado_em"] == quando.isoformat() for row in result["colaboradores"])

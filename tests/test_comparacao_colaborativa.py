@@ -192,6 +192,24 @@ def _client_autenticado(perfil: str = "GESTOR") -> TestClient:
     return client
 
 
+def test_excluir_inscricao_publica_exige_permissao_e_delimita_o_julgamento(monkeypatch):
+    chamadas = []
+
+    def excluir(ambiente_id, inscricao_id):
+        chamadas.append((ambiente_id, inscricao_id))
+        return ambiente_id == AMBIENTE_ID
+
+    monkeypatch.setattr(repo, "delete_inscricao_publica", excluir)
+    rota = "/api/ahp/comparacao-colaborativa/ambientes/{}/inscricoes/" + HIERARQUIZACAO_ID
+    assert TestClient(app).delete(rota.format(AMBIENTE_ID)).status_code == 401
+    assert _client_autenticado("VISUALIZADOR").delete(rota.format(AMBIENTE_ID)).status_code == 403
+    assert chamadas == []
+    gestor = _client_autenticado()
+    assert gestor.delete(rota.format(AMBIENTE_ID)).status_code == 204
+    assert gestor.delete(rota.format(HIERARQUIZACAO_ID)).status_code == 404
+    assert chamadas == [(AMBIENTE_ID, HIERARQUIZACAO_ID), (HIERARQUIZACAO_ID, HIERARQUIZACAO_ID)]
+
+
 def _ambiente_row(**extra) -> dict:
     row = {
         "id": AMBIENTE_ID,
@@ -1428,6 +1446,8 @@ def test_inscricao_publica_transita_da_lista_ate_envio_com_confirmacao(monkeypat
     assert publico.get(pagina + "formulario/", follow_redirects=False).status_code == 303
     aberta = publico.get(pagina)
     assert aberta.status_code == 200, aberta.text
+    assert 'id="ami-monitor-table"' not in aberta.text
+    assert 'id="ami-monitor-delete"' not in aberta.text
     assert f'data-formulario-url="{pagina}formulario/"' in aberta.text
     prefixo = {"X-Forwarded-Prefix": "/sicard"}
     assert f'data-formulario-url="/sicard{pagina}formulario/"' in publico.get(pagina, headers=prefixo).text
@@ -1453,6 +1473,7 @@ def test_inscricao_publica_transita_da_lista_ate_envio_com_confirmacao(monkeypat
     espera = outro.get(pagina + "formulario/", follow_redirects=False)
     assert espera.status_code == 200
     assert "Sua posição na fila é 1" in espera.text
+    assert 'id="ami-monitor-table"' not in espera.text
     assert "Código de retomada" in espera.text and codigo not in espera.text
     assert 'id="btn-liberar-form"' not in espera.text
     assert outro.post(caminho + "/fila").json() == fila
@@ -1474,6 +1495,8 @@ def test_inscricao_publica_transita_da_lista_ate_envio_com_confirmacao(monkeypat
     admitida = outro.get(pagina + "formulario/")
     assert admitida.status_code == 200
     assert 'id="collab-public-enrollment"' in admitida.text
+    assert 'id="ami-monitor-table"' not in admitida.text
+    assert 'id="ami-monitor-delete"' not in admitida.text
     assert 'id="btn-liberar-form"' not in admitida.text
     assert "A avaliação é feita em duas etapas" in admitida.text
     assert ident["instituicao"] in admitida.text

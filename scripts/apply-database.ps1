@@ -326,7 +326,8 @@ $migrations = @(
     "181_matriz_integral_julgamento.sql",
     "182_julgamento_dimensoes.sql",
     "183_inscricoes_publicas_ahp.sql",
-    "184_fila_publica_ahp.sql"
+    "184_fila_publica_ahp.sql",
+    "185_exclusao_inscricoes_publicas_ahp.sql"
 )
 
 if ($OnlyMigration) {
@@ -532,6 +533,11 @@ if (-not $OnlyMigration -and "183_inscricoes_publicas_ahp.sql" -notin $migration
 if (-not $OnlyMigration -and "184_fila_publica_ahp.sql" -notin $migrations -and
     -not (Test-SltSql "SELECT to_regclass('ahp.comparacao_colaborativa_fila') IS NOT NULL")) {
     $migrations += "184_fila_publica_ahp.sql"
+}
+
+if (-not $OnlyMigration -and "185_exclusao_inscricoes_publicas_ahp.sql" -notin $migrations -and
+    -not (Test-SchemaReady "SELECT NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname IN ('slt_user', 'sigma_user') AND NOT coalesce(has_table_privilege(oid, to_regclass('ahp.comparacao_colaborativa_inscricao'), 'DELETE'), false));")) {
+    $migrations += "185_exclusao_inscricoes_publicas_ahp.sql"
 }
 
 if (-not $OnlyMigration -and "166_politica_usuarios_sicard.sql" -notin $migrations) {

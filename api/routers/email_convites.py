@@ -116,7 +116,7 @@ def _monitorar_inscritos(inscricoes: list[dict], respostas: list[dict]) -> list[
     return [
         {**_atividade_colaborador(inscricao, por_inscricao.get(str(inscricao["id"])),
                                   ("inscrito", "Inscrito", inscricao.get("criado_em"))),
-         "registrado_em": _iso(inscricao.get("criado_em"))}
+         "inscricao_id": str(inscricao["id"]), "registrado_em": _iso(inscricao.get("criado_em"))}
         for inscricao in inscricoes
     ]
 

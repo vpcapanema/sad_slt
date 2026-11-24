@@ -7,6 +7,7 @@ from threading import Lock
 from time import monotonic
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response
+from psycopg.errors import ForeignKeyViolation
 
 from api.deps.auth import require_analyst, require_authenticated
 from api.exceptions import DatabaseUnavailableError, DemandaValidationError
@@ -237,6 +238,25 @@ def excluir_ambiente(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except DatabaseUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.delete("/ambientes/{ambiente_id}/inscricoes/{inscricao_id}", status_code=204)
+def excluir_inscricao_publica(
+    ambiente_id: UUID, inscricao_id: UUID, _user: SessionUser = Depends(require_analyst),
+) -> None:
+    from api.repositories import comparacao_colaborativa_repository as repo
+
+    try:
+        if not repo.delete_inscricao_publica(str(ambiente_id), str(inscricao_id)):
+            raise HTTPException(status_code=404, detail="Esta inscrição não foi encontrada neste julgamento público.")
+    except ForeignKeyViolation as exc:
+        if exc.diag.constraint_name != "comparacao_colaborativa_analise_resposta_resposta_id_fkey":
+            raise
+        raise HTTPException(
+            status_code=409, detail="A resposta desta inscrição faz parte de uma análise salva. O registro foi preservado.",
+        ) from exc
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail="O banco de dados está indisponível. Tente excluir a inscrição novamente.") from exc
 
 
 @router.patch("/respostas/{resposta_id}", response_model=RespostaColaborativaResponseSchema)

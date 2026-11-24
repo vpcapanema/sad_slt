@@ -31,10 +31,22 @@
         action="/api/pesquisa-experiencia/ahp/acesso" aria-labelledby="pesquisa-acesso-titulo" novalidate>
     <section class="pesquisa-bloco">
       <h2 id="pesquisa-acesso-titulo">Identificação</h2>
+      {% if julgamento %}
+      <p>Abra esta pesquisa no mesmo navegador em que você enviou o julgamento para usar sua inscrição. Em outro navegador, informe o e-mail da inscrição e o código de retomada.</p>
+      <input type="hidden" name="julgamento" value="{{ julgamento }}">
+      <div class="pesquisa-grid">
+        {{ campos_convite("pesquisa", false) }}
+        <div class="c-form-group">
+          <label for="pesquisa-token" class="c-form-label">Código de retomada</label>
+          <input id="pesquisa-token" name="token_acesso" type="text" class="c-form-control" pattern="[A-Za-z0-9_\-]{43}" minlength="43" maxlength="43" autocomplete="off" spellcheck="false" autocapitalize="none" required>
+        </div>
+      </div>
+      {% else %}
       <p>Use o mesmo e-mail e a chave individual do convite para a comparação pareada. Esses dados servem para validar o acesso à pesquisa.</p>
       <div class="pesquisa-grid">
         {{ campos_convite("pesquisa") }}
       </div>
+      {% endif %}
       <p id="pesquisa-acesso-status" class="pesquisa-status" role="status" aria-live="polite"></p>
       <button type="submit" class="btn btn-primary"><i class="fas fa-unlock c-btn__icon" aria-hidden="true"></i>Liberar formulário</button>
     </section>
@@ -122,5 +134,5 @@
 {% endblock %}
 
 {% block scripts_pagina %}
-  <script defer src="/assets/js/pesquisa-experiencia.js?v=20261123-validacao-ahp"></script>
+  <script defer src="/assets/js/pesquisa-experiencia.js?v=20261124-inscricao-ahp"></script>
 {% endblock %}

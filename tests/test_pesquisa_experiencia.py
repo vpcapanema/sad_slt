@@ -1,14 +1,16 @@
 from datetime import datetime, timedelta, timezone
+from hashlib import sha256
 from uuid import UUID
 
 from fastapi.testclient import TestClient
 import pytest
 
 from api.exceptions import DatabaseUnavailableError, DemandaValidationError
-from api.repositories import convite_individual_repository, pesquisa_experiencia_repository
+from api.repositories import comparacao_colaborativa_repository, convite_individual_repository, pesquisa_experiencia_repository
 from api.routers.pesquisa_experiencia import calcular_indice
 from api.schemas.pesquisa_experiencia import PesquisaExperienciaEntrada
 from api.server import app
+from api.services.comparacao_colaborativa_service import nome_cookie_inscricao
 
 
 ACESSO = {"email": "convidado@example.com", "token_acesso": "A" * 43}
@@ -168,6 +170,46 @@ def test_pesquisa_usa_a_chave_do_convite_e_revalida_antes_da_gravacao(monkeypatc
     monkeypatch.setattr(convite_individual_repository, "validar", lambda *_: False)
     assert cliente.post(respostas, json=_dados(ahp=True, acesso=ACESSO)).status_code == 422
     assert gravacoes == []
+
+
+def test_pesquisa_aceita_inscricao_publica_com_resposta_enviada(monkeypatch):
+    token = "J" * 43
+    codigo = "R" * 43
+    ambiente = {"id": "judg-1", "modo_participacao": "publico", "status": "encerrada"}
+    inscricao = {"id": "insc-1", "email": "pessoa@example.com"}
+    resposta = {"inscricao_id": inscricao["id"], "status": "em_preenchimento"}
+    monkeypatch.setattr(comparacao_colaborativa_repository, "get_ambiente_by_token",
+                        lambda chave: ambiente if chave == token else None)
+    monkeypatch.setattr(comparacao_colaborativa_repository, "get_inscricao", lambda id, segredo:
+                        inscricao if (id, segredo) == (ambiente["id"], sha256(codigo.encode()).hexdigest()) else None)
+    monkeypatch.setattr(comparacao_colaborativa_repository, "get_resposta_by_ambiente_email",
+                        lambda id, email: resposta if (id, email) == (ambiente["id"], inscricao["email"]) else None)
+    gravacoes = []
+    monkeypatch.setattr(pesquisa_experiencia_repository, "criar", lambda dados, _: gravacoes.append(dados))
+
+    cliente = TestClient(app)
+    pagina = cliente.get("/public/pesquisa-experiencia-ahp/", params={"julgamento": token})
+    assert pagina.status_code == 200 and "Código de retomada" in pagina.text
+    assert f'name="julgamento" value="{token}"' in pagina.text
+    acesso = "/api/pesquisa-experiencia/ahp/acesso"
+    respostas = "/api/pesquisa-experiencia/ahp/respostas"
+    dados = _dados(ahp=True, acesso={"julgamento": token})
+    assert cliente.post(respostas, json=dados).status_code == 422
+    cliente.cookies.set(nome_cookie_inscricao(token), codigo)
+    assert cliente.post(acesso, json=dados["acesso"]).status_code == 422
+    assert cliente.post(respostas, json=dados).status_code == 422
+    assert gravacoes == []
+
+    resposta["status"] = "enviada"
+    assert cliente.post(acesso, json=dados["acesso"]).status_code == 204
+    assert cliente.post(respostas, json=dados).status_code == 201
+    cliente.cookies.clear()
+    retomada = {"julgamento": token, "email": inscricao["email"], "token_acesso": codigo}
+    assert cliente.post(acesso, json=retomada).status_code == 204
+    assert cliente.post(acesso, json={**retomada, "email": "outro@example.com"}).status_code == 422
+    assert cliente.post(respostas, json={**dados, "acesso": retomada}).status_code == 201
+    assert len(gravacoes) == 2
+    assert all(not {"acesso", "email", "token_acesso", "julgamento", "inscricao_id"} & linha.keys() for linha in gravacoes)
 
 
 def test_rejeita_nota_fora_da_escala(monkeypatch):
