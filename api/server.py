@@ -24,7 +24,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from api.error_handlers import registrar_tratadores
-from api.exceptions import DatabaseUnavailableError
+from api.exceptions import DatabaseUnavailableError, DemandaValidationError
 from api.deps.auth import get_optional_session, require_admin, require_geospatial_access, require_operator
 from api.deps.access_policy import module_for_path, read_only, page_allowed
 from api.services import autorizacao as authz
@@ -33,6 +33,7 @@ from api.path_policy import project_path, relative_path
 from api.repositories import pesquisa_experiencia_repository
 from api.routers import api_router
 from api.services import email_convites as convites_service, storage_remoto
+from api.services import comparacao_colaborativa_service as julgamento_service
 from api.services.email_confirmacoes_automaticas import lifespan as email_lifespan
 from api.services.usuarios_sigma_automaticos import lifespan as usuarios_lifespan
 from api.services.session_service import SessionUser, cookie_name
@@ -553,6 +554,47 @@ def pagina_formulario_multicriterio(request: Request, token: str) -> Response:
     if codigo:
         convites_service.registrar_clique_link(token, codigo)
     return render_page(request, "paginas/analise_multicriterio/formulario.html", token=token)
+
+
+@app.get("/public/analise-multicriterio/participar/{token}/", include_in_schema=False)
+def pagina_inscricao_julgamento(request: Request, token: str) -> Response:
+    try:
+        ambiente, inscricao = julgamento_service.contexto_inscricao(
+            token, request.cookies.get(julgamento_service.nome_cookie_inscricao(token)),
+        )
+    except DemandaValidationError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    erro = None
+    try:
+        julgamento_service._validar_ambiente_ativo(ambiente)
+    except DemandaValidationError as exc:
+        erro = str(exc)
+    caminho = f"/public/analise-multicriterio/participar/{quote(token, safe='')}/"
+    return render_page(
+        request, "paginas/analise_multicriterio/inscricao.html",
+        token=token, julgamento=ambiente["nome"], prazo=ambiente["valido_ate"].isoformat(),
+        erro=erro, inscrito=inscricao is not None, formulario_url=caminho + "formulario/",
+    )
+
+
+@app.get("/public/analise-multicriterio/participar/{token}/formulario/", include_in_schema=False)
+def pagina_formulario_inscrito(request: Request, token: str) -> Response:
+    try:
+        ambiente, inscricao = julgamento_service.contexto_inscricao(
+            token, request.cookies.get(julgamento_service.nome_cookie_inscricao(token)),
+        )
+        julgamento_service._validar_ambiente_ativo(ambiente)
+    except DemandaValidationError:
+        inscricao = None
+    if not inscricao:
+        return RedirectResponse(
+            f"/public/analise-multicriterio/participar/{quote(token, safe='')}/", status_code=303,
+            headers={"Cache-Control": "no-store"},
+        )
+    return render_page(
+        request, "paginas/analise_multicriterio/formulario.html",
+        token=token, modo_inscricao=True, inscricao=inscricao,
+    )
 
 
 @app.get("/restrict/{pagina}/", include_in_schema=False)

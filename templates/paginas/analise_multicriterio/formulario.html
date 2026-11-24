@@ -14,11 +14,12 @@
 	<link rel="stylesheet" href="/assets/css/ahp-module.css?v=20261103-regua-invertida">
 	<link rel="stylesheet" href="/assets/css/analise-multicriterio.css?v=20260819-ui6">
 	<link rel="stylesheet" href="/assets/css/escala-tipografica.css">
-	<link rel="stylesheet" href="/assets/css/paginas/ahp-formulario-publico.css?v=20261123-validacao-ajuda">
+	<link rel="stylesheet" href="/assets/css/paginas/ahp-formulario-publico.css?v=20261124-guia-dimensoes">
 {% endblock %}
 
 {% block conteudo %}
 <main class="conteudo-principal app-main ahp-main">
+		{% if modo_inscricao %}<div id="collab-public-enrollment" data-token="{{ token }}" data-email="{{ inscricao.email }}" hidden></div>{% endif %}
 		<section class="card-collab-context secao-collab-context card ahp-step-section">
 			<div class="ahp-section-label"><i class="fas fa-compass"></i><span>Contextualização</span></div>
 			<div class="ahp-section-body">
@@ -45,11 +46,15 @@
 							{% if modo_modelo %}
 							<li><strong>Conheça os critérios.</strong> Consulte as premissas da matriz para entender o que cada critério avalia.</li>
 							<li><strong>Inicie a simulação.</strong> Preencha os campos de identificação e clique em “Liberar formulário”.</li>
+							{% elif modo_inscricao %}
+							<li><strong>Confira sua inscrição.</strong> Seus dados já foram registrados. Clique em “Iniciar julgamento” para começar ou retomar sua resposta.</li>
+							<li><strong>Compare as dimensões.</strong> Conclua esta etapa com RC inferior a 0,10 para avançar.</li>
+							<li><strong>Compare os critérios.</strong> Julgue os pares de critérios de uma dimensão por vez.</li>
 							{% else %}
 							<li><strong>Confira a rodada.</strong> Leia o objetivo, verifique o prazo e o status apresentados acima e confirme que está participando da hierarquização para a qual recebeu o convite.</li>
 							<li><strong>Identifique-se.</strong> Informe nome completo, instituição, e-mail convidado e chave individual recebida por e-mail. Clique em “Liberar formulário”. O convite é exclusivo do destinatário; nome e instituição identificam sua resposta.</li>
 							{% endif %}
-							<li><strong>Compare todos os pares.</strong> Leia os critérios e ajuste cada barra para expressar a importância relativa. Use 1 quando considerar os critérios igualmente importantes. Após três segundos sem novos ajustes, o par e seu valor inverso recebem confirmação visual verde. Essa indicação não significa que a resposta já foi enviada; você pode movimentar a barra novamente para revisar sua escolha.</li>
+							<li><strong>Compare todos os pares.</strong> {% if modo_modelo %}Compare os critérios de uma dimensão por vez. Depois de conferir a consistência das respostas, avance para a próxima dimensão. {% endif %}Leia os critérios e ajuste cada barra para expressar a importância relativa. Use 1 quando considerar os critérios igualmente importantes. Após três segundos sem novos ajustes, o par e seu valor inverso recebem confirmação visual verde. Essa indicação não significa que a resposta já foi enviada; você pode movimentar a barra novamente para revisar sua escolha.</li>
 							<li><strong>Acompanhe a consistência.</strong> Observe a Razão de Consistência (RC) e revise as comparações quando necessário. Procure coerência entre suas escolhas: se A é mais importante que B e B é mais importante que C, uma preferência muito forte de C sobre A merece reavaliação.</li>
 							{% if modo_modelo %}
 							<li><strong>Revise o preenchimento.</strong> Confira todos os pares. O progresso fica disponível enquanto a página estiver aberta.</li>
@@ -70,19 +75,23 @@
 		<section class="card-colab-nome secao-colab-nome card ahp-step-section">
 			<div class="ahp-section-label"><i class="fas fa-id-card"></i><span>Identificação</span></div>
 			<div class="ahp-section-body">
-				<p class="step-intro">{% if modo_modelo %}Informe nome, instituição e e-mail para liberar a simulação.{% else %}Informe seus dados e a chave individual recebida no convite. Códigos compartilhados antigos não são aceitos; solicite um novo convite ao responsável.{% endif %}</p>
+				<p class="step-intro">{% if modo_inscricao %}Inscrição confirmada. Confira seus dados para iniciar ou retomar o julgamento.{% elif modo_modelo %}Informe nome, instituição e e-mail para liberar a simulação.{% else %}Informe seus dados e a chave individual recebida no convite. Códigos compartilhados antigos não são aceitos; solicite um novo convite ao responsável.{% endif %}</p>
 				<div class="collab-identificacao-grid">
-					<div class="c-form-group"><label for="colab-nome" class="c-form-label">Nome completo</label><input id="colab-nome" class="c-form-control" required></div>
-					<div class="c-form-group"><label for="colab-inst" class="c-form-label">Instituição vinculada</label><input id="colab-inst" class="c-form-control" required></div>
-					{{ campos_convite("colab", not modo_modelo) }}
+					<div class="c-form-group"><label for="colab-nome" class="c-form-label">Nome completo</label><input id="colab-nome" class="c-form-control" {% if modo_inscricao %}value="{{ inscricao.nome_completo }}" readonly{% endif %} required></div>
+					<div class="c-form-group"><label for="colab-inst" class="c-form-label">Instituição vinculada</label><input id="colab-inst" class="c-form-control" {% if modo_inscricao %}value="{{ inscricao.instituicao }}" readonly{% endif %} required></div>
+					{{ campos_convite("colab", not modo_modelo and not modo_inscricao) }}
 				</div>
-				<button type="button" class="btn btn-primary" id="btn-liberar-form"><i class="fas fa-unlock c-btn__icon"></i>Liberar formulário</button>
+				<button type="button" class="btn btn-primary" id="btn-liberar-form"><i class="fas fa-unlock c-btn__icon"></i>{% if modo_inscricao %}Iniciar julgamento{% else %}Liberar formulário{% endif %}</button>
 				<p id="colab-id-feedback" class="ahp-matriz-edit-feedback" role="status"></p>
 			</div>
 		</section>
 		<section class="card-collab-form-section secao-collab-form-section card ahp-step-section is-hidden" id="collab-form-section">
 			<div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">3</span><span>Comparação pareada</span></div>
 			<div class="ahp-section-body">
+				<section class="collab-dimension-guide is-hidden" id="collab-linked-stage" aria-labelledby="collab-linked-title">
+					<h3 id="collab-linked-title" tabindex="-1"></h3>
+					<p id="collab-linked-description"></p>
+				</section>
 				<section class="secao-collab-guia ahp-subcard info-card collab-comparison-subcard" aria-labelledby="collab-guia-titulo">
 					<h2 class="ahp-subsection-title" id="collab-guia-titulo"><span class="ahp-subsection-num" aria-hidden="true">3.1</span><span>Entenda a escala antes de comparar</span></h2>
 					<div class="info-card-content">
@@ -113,11 +122,16 @@
 				<section class="secao-collab-pairwise ahp-subcard info-card collab-comparison-subcard" aria-labelledby="collab-pairwise-title">
 					<h2 class="ahp-subsection-title" id="collab-pairwise-title"><span class="ahp-subsection-num" aria-hidden="true">3.2</span><span>Comparação pareada</span></h2>
 					<div class="info-card-content">
-						<p class="collab-pairwise-intro">Para cada par, indique qual critério é mais importante para o objetivo desta análise e com que intensidade. Se ambos tiverem a mesma importância, escolha 1 (igual importância). Cada ajuste preenche automaticamente o valor inverso e atualiza os indicadores de consistência. Enquanto houver pares sem resposta, o cálculo é provisório e usa 1 para esses pares. O envio exige RC &lt; 0,10. Após 3 segundos sem novos ajustes no par, ele e seu valor inverso ficam verdes. Para revisar, mova a barra novamente. Essa confirmação visual não substitui o envio final.</p>
 						<div id="collab-group-context" hidden>
+							<section class="collab-dimension-guide" aria-labelledby="collab-dimension-guide-title">
+								<h3 id="collab-dimension-guide-title">Como funciona a comparação por dimensão</h3>
+								<p id="collab-group-method">Os critérios são organizados em dimensões. <strong id="collab-dimension-count"></strong></p>
+								<p>O formulário apresenta uma dimensão por vez. Você só compara critérios da dimensão exibida. Em cada par, indique qual dos dois critérios deve pesar mais na decisão e com que intensidade. Confira a consistência das suas respostas antes de avançar.</p>
+								<p id="collab-group-note" class="is-hidden"></p>
+							</section>
 							<h3 id="collab-group-title" tabindex="-1"></h3>
-							<p id="collab-group-note" class="form-help"></p>
 						</div>
+						<p class="collab-pairwise-intro">Para cada par, indique qual critério é mais importante para o objetivo desta análise e com que intensidade. Se ambos tiverem a mesma importância, escolha 1 (igual importância). Cada ajuste preenche automaticamente o valor inverso e atualiza os indicadores de consistência. Enquanto houver pares sem resposta, o cálculo é provisório e usa 1 para esses pares. O envio exige RC &lt; 0,10. Após 3 segundos sem novos ajustes no par, ele e seu valor inverso ficam verdes. Para revisar, mova a barra novamente. Essa confirmação visual não substitui o envio final.</p>
 						<section class="secao-collab-metrics" aria-labelledby="collab-metrics-title">
 							<h3 id="collab-metrics-title">Indicadores instantâneos de consistência AHP</h3>
 							<div id="liveMetrics" class="ahp-live-metrics">
@@ -151,8 +165,12 @@
 				<p id="collab-submit-feedback" class="ahp-matriz-edit-feedback" role="status"></p>
 				<p id="collab-save-feedback" class="form-help" role="status"></p>
 				<div id="collab-group-navigation" class="ahp-form-actions is-hidden">
-					<button type="button" class="btn btn-secondary" id="collab-previous-group">Grupo anterior</button>
-					<button type="button" class="btn btn-primary" id="collab-next-group">Próximo grupo</button>
+					<button type="button" class="btn btn-secondary" id="collab-previous-group">Dimensão anterior</button>
+					<button type="button" class="btn btn-primary" id="collab-next-group">Próxima dimensão</button>
+				</div>
+				<div id="collab-linked-navigation" class="ahp-form-actions is-hidden">
+					<button type="button" class="btn btn-secondary is-hidden" id="collab-linked-back">Voltar às dimensões</button>
+					<button type="button" class="btn btn-primary is-hidden" id="collab-linked-next">Validar dimensões e avançar</button>
 				</div>
 				<button type="button" class="btn btn-success" id="btn-enviar-resposta" disabled><i class="fas fa-paper-plane c-btn__icon"></i>Enviar resposta</button>
 			</div>
@@ -175,9 +193,9 @@
 	<script defer src="/assets/js/saaty-selector-color.js?v=20261124-matriz-pli"></script>
 	<script defer src="/restrict/ahp/js/ahp-core.js?v=20261119-rc-compartilhada"></script>
 	<script defer src="/restrict/ahp/js/colaborativa-api.js?v=20261027-modelo-pli"></script>
-	{% if modo_modelo %}<script defer src="/restrict/ahp/js/colaborativa-modelo.js?v=20261124-matriz-pli"></script>{% else %}<script defer src="/restrict/ahp/js/colaborativa-simulacao.js?v=20261124-comparacao-grupos"></script>{% endif %}
-	<script defer src="/restrict/ahp/js/script.js?v=20261124-matriz-pli"></script>
-	<script defer src="/restrict/ahp/js/colaborativa.js?v=20261124-comparacao-grupos"></script>
+	{% if modo_modelo %}<script defer src="/restrict/ahp/js/colaborativa-modelo.js?v=20261124-pli-por-dimensao"></script>{% elif not modo_inscricao %}<script defer src="/restrict/ahp/js/colaborativa-simulacao.js?v=20261124-comparacao-grupos"></script>{% endif %}
+	<script defer src="/restrict/ahp/js/script.js?v=20261124-aplicar-sugestao"></script>
+	<script defer src="/restrict/ahp/js/colaborativa.js?v=20261124-inscricao"></script>
 	<script defer src="/assets/js/paginas/ahp-comparacao-abas.js?v=20261124-matriz-pli"></script>
 	<script defer src="/assets/js/paginas/ahp-formulario-layout.js?v=20261104-card-default-90"></script>
 {% endblock %}

@@ -323,7 +323,9 @@ $migrations = @(
     "178_hierarquizacao_pesquisa_experiencia.sql",
     "179_cadencia_email.sql",
     "180_modo_comparacao_julgamento.sql",
-    "181_matriz_integral_julgamento.sql"
+    "181_matriz_integral_julgamento.sql",
+    "182_julgamento_dimensoes.sql",
+    "183_inscricoes_publicas_ahp.sql"
 )
 
 if ($OnlyMigration) {
@@ -514,6 +516,16 @@ if (-not $OnlyMigration -and "180_modo_comparacao_julgamento.sql" -notin $migrat
 if (-not $OnlyMigration -and "181_matriz_integral_julgamento.sql" -notin $migrations -and
     -not (Test-SchemaReady "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='ahp' AND table_name='comparacao_colaborativa_ambiente' AND column_name='matriz_integral');")) {
     $migrations += "181_matriz_integral_julgamento.sql"
+}
+
+if (-not $OnlyMigration -and "182_julgamento_dimensoes.sql" -notin $migrations -and
+    -not (Test-SchemaReady "SELECT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid=to_regclass('ahp.comparacao_colaborativa_ambiente') AND conname='comparacao_colaborativa_ambiente_modo_comparacao_check' AND pg_get_constraintdef(oid) LIKE '%duas_etapas%');")) {
+    $migrations += "182_julgamento_dimensoes.sql"
+}
+
+if (-not $OnlyMigration -and "183_inscricoes_publicas_ahp.sql" -notin $migrations -and
+    -not (Test-SchemaReady "SELECT to_regclass('ahp.comparacao_colaborativa_inscricao') IS NOT NULL;")) {
+    $migrations += "183_inscricoes_publicas_ahp.sql"
 }
 
 if (-not $OnlyMigration -and "166_politica_usuarios_sicard.sql" -notin $migrations) {

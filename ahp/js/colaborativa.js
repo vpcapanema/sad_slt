@@ -19,6 +19,8 @@
   var consistencyReviews = new Map();
   var highlightedReviewPair = null;
   var comparisonGroups = [], activeGroup = 0;
+  var linkedStage = null, linkedDraft = null;
+  var inscricao = null;
 
   function bloquearIdentificacao(bloqueado) {
     ["colab-nome", "colab-inst", "colab-email", "colab-token", "btn-liberar-form"].forEach(function (id) {
@@ -103,9 +105,26 @@
       });
       return { nome: nome, indices: indices, matriz: matriz, pares: pares };
     });
+    var quantidade = comparisonGroups.length;
+    var pares = comparisonGroups.reduce(function (total, grupo) {
+      var n = grupo.indices.length;
+      return total + n * (n - 1) / 2;
+    }, 0);
+    var escopo = quantidade === 1 ? "1 dimensão" : quantidade + " dimensões";
+    el("collab-dimension-count").textContent = "Você vai julgar os critérios de " + escopo +
+      " em " + (pares === 1 ? "1 comparação." : pares + " comparações.");
     var semPares = grupos.filter(function (grupo) { return grupo[1].length === 1; }).map(function (grupo) { return grupo[0]; });
-    el("collab-group-note").textContent = semPares.length ? "Grupos com um único critério não têm pares de comparação. " + semPares.join(" · ") : "Compare os critérios deste grupo e avance ao concluir.";
-    activeGroup = comparisonGroups.findIndex(function (grupo) { return !grupoPronto(grupo); });
+    var nota = el("collab-group-note");
+    nota.classList.toggle("is-hidden", !semPares.length);
+    if (semPares.length) {
+      var nomes = new Intl.ListFormat("pt-BR").format(semPares);
+      nota.textContent = semPares.length === 1
+        ? "A dimensão " + nomes + " tem um único critério. Ele recebe 100% do peso dentro da dimensão e dispensa comparação."
+        : "As dimensões " + nomes + " têm um único critério cada. Cada critério recebe 100% do peso dentro da sua dimensão e dispensa comparação.";
+    }
+    activeGroup = comparisonGroups.findIndex(function (grupo) {
+      return !(linkedStage ? grupoCompleto(grupo) : grupoPronto(grupo));
+    });
     if (activeGroup < 0) activeGroup = comparisonGroups.length - 1;
   }
 
@@ -119,14 +138,18 @@
     return grupoCompleto(grupo) && SLTAhp.analyzeMatrix(grupo.matriz).CR < 0.10;
   }
 
-  function matrizParaGravar(matriz) {
-    if (!comparisonGroups.length) return matriz;
-    var atual = comparisonGroups[activeGroup];
-    atual.matriz = matriz.map(function (linha, i) {
+  function matrizComParesInformados(matriz) {
+    return matriz.map(function (linha, i) {
       return linha.map(function (valor, j) {
         return i === j || stats.pares[Math.min(i, j) + "_" + Math.max(i, j)] > 0 ? valor : null;
       });
     });
+  }
+
+  function matrizParaGravar(matriz) {
+    if (!comparisonGroups.length) return linkedStage ? matrizComParesInformados(matriz) : matriz;
+    var atual = comparisonGroups[activeGroup];
+    atual.matriz = matrizComParesInformados(matriz);
     var total = meta.criterios.length;
     var completa = Array.from({length: total}, function (_, i) {
       return Array.from({length: total}, function (_, j) { return i === j ? 1 : null; });
@@ -164,7 +187,7 @@
     global.ahpCollaborativeDraftMatrix = grupo.matriz;
     el("collab-group-context").hidden = false;
     el("collab-group-navigation").classList.remove("is-hidden");
-    el("collab-group-title").textContent = "Grupo " + (activeGroup + 1) + " de " + comparisonGroups.length + " · " + grupo.nome;
+    el("collab-group-title").textContent = "Dimensão " + (activeGroup + 1) + " de " + comparisonGroups.length + " · " + grupo.nome;
     el("collab-previous-group").disabled = activeGroup === 0;
     var ultimo = activeGroup === comparisonGroups.length - 1;
     el("collab-next-group").classList.toggle("is-hidden", ultimo);
@@ -216,16 +239,29 @@
   }
 
   function queueProgress(matrix, version) {
-    var payload = {
-      email: acesso.identificacao.email, token_acesso: acesso.token_acesso, matriz_comparacao: matrix,
-      estatisticas: estatisticasResposta(),
-    };
+    var payload = payloadProgresso(matrix);
     saveQueue = saveQueue.then(function () {
-      return global.SLTColaborativaApi.salvarProgresso(token, payload);
+      return gravarProgresso(payload);
     }).then(function () {
       if (draftActive && version === editVersion) el("collab-save-feedback").textContent = global.SLTColaborativaSimulacao ? "Progresso mantido apenas nesta simulação." : "Progresso salvo automaticamente.";
     }).catch(function (err) {
       el("collab-save-feedback").textContent = "Não foi possível salvar o progresso: " + (err.message || err);
+    });
+  }
+
+  function payloadProgresso(matrix) {
+    return {
+      email: acesso.identificacao.email, token_acesso: acesso.token_acesso, matriz_comparacao: matrix,
+      estatisticas: estatisticasResposta(),
+      ...(linkedStage ? { etapa: linkedStage } : {}),
+    };
+  }
+
+  function gravarProgresso(payload) {
+    if (payload.etapa) payload.versao = linkedDraft.atualizadoEm;
+    return global.SLTColaborativaApi.salvarProgresso(token, payload).then(function (resposta) {
+      if (payload.etapa) linkedDraft = resposta;
+      return resposta;
     });
   }
 
@@ -249,13 +285,16 @@
     rcCard.classList.toggle("is-failure", !consistent);
     var rcStatus = el("collab-rc-status");
     var porGrupo = comparisonGroups.length > 0;
-    var status = complete ? (porGrupo ? "RC do grupo" : "RC da matriz completa") : "RC provisória";
+    var status = complete ? (porGrupo ? "RC da dimensão" : "RC da matriz completa") : "RC provisória";
     if (rcStatus.textContent !== status) rcStatus.textContent = status;
-    var pronto = consistent && (!porGrupo || complete);
+    var pronto = linkedStage ? complete : consistent && (!porGrupo || complete);
     if (porGrupo) el("collab-next-group").disabled = !pronto;
-    el("btn-enviar-resposta").disabled = !pronto || (porGrupo && !comparisonGroups.every(grupoPronto));
-    var prontoTexto = porGrupo && !complete ? "Conclua todos os pares deste grupo para continuar."
-      : porGrupo && activeGroup < comparisonGroups.length - 1 ? "Grupo consistente. Avance para o próximo grupo."
+    if (linkedStage) el("collab-linked-next").disabled = !complete;
+    el("btn-enviar-resposta").disabled = !pronto || (porGrupo && !comparisonGroups.every(linkedStage ? grupoCompleto : grupoPronto));
+    var prontoTexto = linkedStage === "dimensoes" ? (complete ? "Solicite a validação das dimensões para avançar." : "Responda a todos os pares de dimensões.")
+      : porGrupo && !complete ? "Conclua todas as comparações desta dimensão para continuar."
+      : linkedStage === "criterios" && activeGroup === comparisonGroups.length - 1 ? "Envie a resposta para validar as comparações entre critérios."
+      : porGrupo && activeGroup < comparisonGroups.length - 1 ? "Comparações consistentes. Avance para a próxima dimensão."
       : "Matriz consistente (RC < 0,10). Você pode enviar.";
     submitFeedback(
       consistent
@@ -266,7 +305,7 @@
     clearTimeout(saveTimer);
     var version = ++editVersion;
     el("collab-save-feedback").textContent = "Alterações aguardando salvamento…";
-    saveTimer = setTimeout(function () { queueProgress(matrizGravada, version); }, 1600);
+    saveTimer = setTimeout(function () { queueProgress(matrizGravada, version); }, inscricao ? 6000 : 1600);
   }
 
   function formatSaatyValue(value) {
@@ -502,9 +541,10 @@
     var confirmed = matches && validated;
     if (edited) review.edited = true;
     review.current.value = formatSaatyValue(value);
+    review.applyButton.disabled = matches;
     review.item.classList.toggle("is-review-confirmed", confirmed);
     review.status.classList.toggle("is-acceptable", confirmed);
-    var message = "Aplique o valor sugerido na régua.";
+    var message = "";
     if (confirmed) message = "Valor sugerido confirmado.";
     else if (matches) message = "Valor sugerido selecionado. Aguardando confirmação.";
     else if (review.edited && validated) message = "O valor confirmado difere da sugestão.";
@@ -623,16 +663,24 @@
       var pair = input && input.closest(".saaty-pair");
       var current = consistencyReviewField("Valor atual:", formatSaatyValue(review.currentValue));
       var suggested = consistencyReviewField("Valor sugerido:", formatSaatyValue(review.suggestedValue));
+      var applyButton = document.createElement("button");
       var status = document.createElement("p");
       item.className = "collab-consistency-review-item";
       values.className = "collab-consistency-review-values";
       suggested.classList.add("collab-consistency-review-suggested");
+      applyButton.type = "button";
+      applyButton.className = "btn btn-secondary collab-consistency-review-apply";
+      applyButton.textContent = "Aplicar o valor sugerido";
+      applyButton.disabled = !pair;
       status.className = "collab-consistency-review-status";
       status.setAttribute("role", "status");
       if (pair) {
         pair.id = "collab-review-" + review.i + "-" + review.j;
         consistencyReviews.set(pair, { input: input, item: item, current: current.querySelector("input"),
-          suggestedValue: review.suggestedValue, status: status, edited: false });
+          suggestedValue: review.suggestedValue, status: status, applyButton: applyButton, edited: false });
+        applyButton.addEventListener("click", function () {
+          if (draftActive) setSaatyPairValue(pair, review.suggestedValue);
+        });
         updateConsistencyReview(pair);
       }
       link.href = pair ? "#" + pair.id : "#";
@@ -656,7 +704,7 @@
         scale.focus({ preventScroll: true });
       });
       values.append(current, suggested);
-      item.append(link, values, status);
+      item.append(link, values, applyButton, status);
       list.appendChild(item);
     });
     var primary = null, triad = null;
@@ -698,23 +746,103 @@
 
   global.updateLiveMetrics = updateCollabMetrics;
 
+  function renderEtapaVinculada(etapa) {
+    clearTimeout(saveTimer);
+    pairTimers.forEach(clearTimeout);
+    pairTimers.clear();
+    if (!el("collab-consistency-modal").hidden) closeConsistencyHelp();
+    draftActive = false;
+    linkedStage = etapa;
+    var primeira = linkedStage === "dimensoes";
+    el("collab-linked-stage").classList.remove("is-hidden");
+    el("collab-linked-navigation").classList.remove("is-hidden");
+    el("collab-linked-title").textContent = primeira ? "Etapa 1 de 2 · Dimensões" : "Etapa 2 de 2 · Critérios por dimensão";
+    el("collab-linked-description").textContent = primeira
+      ? "Compare a importância das dimensões para o objetivo desta análise. Responda a todos os pares e valide a etapa para avançar."
+      : "A etapa das dimensões está validada. Compare os critérios de cada dimensão para concluir sua resposta.";
+    el("collab-linked-back").classList.toggle("is-hidden", primeira);
+    el("collab-linked-next").classList.toggle("is-hidden", !primeira);
+    el("collab-group-context").hidden = primeira;
+    el("collab-group-navigation").classList.toggle("is-hidden", primeira);
+    el("btn-enviar-resposta").classList.toggle("is-hidden", primeira);
+    var semPares = !primeira && !Object.values(meta.grupos_comparacao).some(indices => indices.length > 1);
+    document.querySelectorAll(".secao-collab-pairwise, .secao-collab-guia").forEach(function (secao) {
+      secao.classList.toggle("is-hidden", semPares);
+    });
+    if (semPares) {
+      comparisonGroups = [];
+      stats.pares = {};
+      el("collab-linked-description").textContent = "Cada dimensão contém um único critério, que recebe 100% do peso local. Sua resposta está pronta para envio.";
+      el("collab-group-navigation").classList.add("is-hidden");
+      el("btn-enviar-resposta").disabled = false;
+      draftActive = true;
+      el("collab-linked-title").focus();
+      return;
+    }
+    if (primeira) {
+      comparisonGroups = [];
+      var anterior = linkedDraft.estatisticas?.julgamento_dimensoes;
+      stats.pares = {...(anterior?.revisoes_por_par || {})};
+      global.setAhpCriteria(meta.dimensoes_comparacao);
+      global.ahpCollaborativeDraftMatrix = anterior?.matriz || null;
+      generatePairwiseFormStep4();
+      patchSaatyTracking();
+      draftActive = true;
+      updateProgressHint();
+      updateCollabMetrics();
+    } else {
+      carregarGrupos(linkedDraft);
+      renderComparisonGroup();
+    }
+    el("collab-linked-title").focus();
+  }
+
+  async function trocarEtapaVinculada(destino) {
+    if (!draftActive || !linkedStage) return;
+    clearTimeout(saveTimer);
+    var payload = payloadProgresso(matrizDaEtapaVinculada());
+    payload.concluir_etapa = destino === "criterios";
+    draftActive = false;
+    el("comparisonContent").inert = true;
+    el("collab-linked-next").disabled = true;
+    el("collab-linked-back").disabled = true;
+    submitFeedback(destino === "criterios" ? "Validando as comparações entre dimensões…" : "Salvando as comparações entre critérios…", "info");
+    try {
+      await saveQueue;
+      await gravarProgresso(payload);
+      renderEtapaVinculada(destino);
+    } catch (error) {
+      draftActive = true;
+      el("collab-linked-next").disabled = false;
+      submitFeedback(error.message, "error");
+    } finally {
+      el("comparisonContent").inert = false;
+      el("collab-linked-back").disabled = false;
+    }
+  }
+
+  function matrizDaEtapaVinculada() {
+    return linkedStage === "criterios" && !comparisonGroups.length
+      ? linkedDraft.matriz_comparacao : matrizParaGravar(buildLiveMatrix());
+  }
+
   function liberarFormulario() {
     if (verificando || draftActive) return;
     var nome = (el("colab-nome").value || "").trim();
     var inst = (el("colab-inst").value || "").trim();
     var email = (el("colab-email").value || "").trim().toLowerCase();
-    var codigo = global.SLTColaborativaModelo ? "000000" : (el("colab-token").value || "").trim();
+    var codigo = inscricao ? undefined : (global.SLTColaborativaModelo ? "000000" : (el("colab-token").value || "").trim());
     if (!nome || !inst || !email) {
       feedback("Informe nome, instituição e e-mail para iniciar o preenchimento.", "error");
       return;
     }
-    if (!global.SLTColaborativaModelo && !/^[A-Za-z0-9_-]{43}$/.test(codigo)) {
+    if (!inscricao && !global.SLTColaborativaModelo && !/^[A-Za-z0-9_-]{43}$/.test(codigo)) {
       feedback("Informe a chave individual recebida por e-mail. Códigos antigos não são mais aceitos.", "error");
       return;
     }
     verificando = true;
     bloquearIdentificacao(true);
-    feedback("Verificando convite…", "info");
+    feedback(inscricao ? "Verificando inscrição…" : "Verificando convite…", "info");
     var candidato = { token_acesso: codigo, identificacao: { nome_completo: nome, email: email, instituicao: inst } };
     global.SLTColaborativaApi.validarAcesso(token, email, codigo)
       .then(function (m) {
@@ -723,7 +851,7 @@
           return;
         }
         if (!m.email_autorizado) {
-          feedback("E-mail ou código de acesso inválido. Confira o convite recebido.", "error");
+          feedback(inscricao ? "Confira sua inscrição e tente novamente." : "E-mail ou código de acesso inválido. Confira o convite recebido.", "error");
           return;
         }
         meta = m;
@@ -736,7 +864,10 @@
         return global.SLTColaborativaApi.iniciarResposta(token, candidato);
       }).then(function (resposta) {
         if (!resposta) return;
-        if (resposta.status === "enviada") { feedback("Este e-mail já enviou a resposta deste julgamento.", "error"); return; }
+        if (resposta.status === "enviada") {
+          feedback(inscricao ? "Sua resposta já foi enviada. Obrigado!" : "Este e-mail já enviou a resposta deste julgamento.", inscricao ? "success" : "error");
+          return;
+        }
         acesso = candidato;
         if (typeof global.setAhpCriteria === "function") global.setAhpCriteria(meta.criterios || []); else global.criteria = meta.criterios || [];
         global.ahpCollaborativeDraftMatrix = resposta.matriz_comparacao || null;
@@ -749,6 +880,11 @@
         feedback(global.SLTColaborativaSimulacao ? "Simulação liberada. O progresso não será gravado." : "Formulário liberado. O progresso será salvo automaticamente.", "success");
         el("collab-form-section").classList.remove("is-hidden");
         stats.inicio_ms = Date.now(); draftActive = false;
+        if (meta.modo_comparacao === "duas_etapas") {
+          linkedDraft = resposta;
+          renderEtapaVinculada(resposta.estatisticas?.julgamento_dimensoes?.resultado ? "criterios" : "dimensoes");
+          return;
+        }
         if (meta.modo_comparacao === "por_grupo") {
           carregarGrupos(resposta);
           renderComparisonGroup();
@@ -778,14 +914,14 @@
       submitFeedback("Matriz incompleta.", "error");
       return;
     }
-    var res = SLTAhp.analyzeMatrix(matrix);
-    if (res.CR >= 0.1) {
+    if (linkedStage === "dimensoes") return;
+    if (!linkedStage && SLTAhp.analyzeMatrix(matrix).CR >= 0.1) {
       submitFeedback("RC ≥ 0,10 — envio bloqueado.", "error");
       return;
     }
-    var matrizGravada = matrizParaGravar(matrix);
-    if (!comparisonGroups.every(grupoPronto)) {
-      submitFeedback("Conclua todos os pares e confira a consistência de cada grupo antes de enviar.", "error");
+    var matrizGravada = linkedStage ? matrizDaEtapaVinculada() : matrizParaGravar(matrix);
+    if (!linkedStage && !comparisonGroups.every(grupoPronto)) {
+      submitFeedback("Conclua todas as comparações e confira a consistência de cada dimensão antes de enviar.", "error");
       return;
     }
     var estatisticas = estatisticasResposta();
@@ -807,6 +943,7 @@
       token_acesso: acesso.token_acesso,
       matriz_comparacao: matrizGravada,
       estatisticas: estatisticas,
+      ...(linkedStage ? { versao: linkedDraft.atualizadoEm } : {}),
     }); })
       .then(function () {
         draftActive = false;
@@ -826,9 +963,11 @@
   }
 
   document.addEventListener("DOMContentLoaded", function () {
+    inscricao = el("collab-public-enrollment");
     var tokenPath = global.location.pathname.match(/\/public\/analise-multicriterio\/formulario-comparacao-pareada\/([^/]+)\/?$/);
-    token = global.SLTColaborativaModelo ? "modelo-pli" : (qp("token") || (tokenPath ? decodeURIComponent(tokenPath[1]) : ""));
-    var preEmail = qp("email") || "";
+    token = inscricao ? inscricao.dataset.token : (global.SLTColaborativaModelo ? "modelo-pli" : (qp("token") || (tokenPath ? decodeURIComponent(tokenPath[1]) : "")));
+    var preEmail = inscricao ? inscricao.dataset.email : (qp("email") || "");
+    if (inscricao) el("colab-email").readOnly = true;
     if (preEmail && el("colab-email")) el("colab-email").value = preEmail;
     if (!token) {
       el("collab-context").innerHTML =
@@ -847,6 +986,8 @@
     el("btn-enviar-resposta").addEventListener("click", enviarResposta);
     el("collab-previous-group").addEventListener("click", function () { navegarGrupo(-1); });
     el("collab-next-group").addEventListener("click", function () { navegarGrupo(1); });
+    el("collab-linked-next").addEventListener("click", function () { trocarEtapaVinculada("criterios"); });
+    el("collab-linked-back").addEventListener("click", function () { trocarEtapaVinculada("dimensoes"); });
     el("collab-consistency-help-button").addEventListener("click", openConsistencyHelp);
     el("collab-consistency-modal-close").addEventListener("click", closeConsistencyHelp);
     el("collab-consistency-modal-minimize").addEventListener("click", function () {

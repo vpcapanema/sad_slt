@@ -1310,7 +1310,7 @@ e **rastreabilidade**.
 
 O formulário-modelo público usa os 18 critérios da matriz oficial do
 PLI-SP 2050, distribuídos em sete dimensões. A página permite consultar as
-premissas e simular os 153 pares entre todos os critérios, de qualquer etapa.
+premissas e simular os 16 pares de critérios da mesma dimensão, de qualquer etapa.
 As respostas da simulação são descartadas ao sair da página.
 
 A matriz de critérios e premissas constitui um registro independente e imutável.

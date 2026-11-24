@@ -23,7 +23,10 @@ _JOIN_ANALISE_EXIBIDA = """
     LEFT JOIN LATERAL (
         SELECT an.id, an.codigo, an.nome, an.status, an.metodo_agregacao,
                an.matriz_consolidada, an.pesos_consolidados,
-               an.lambda_max, an.indice_consistencia, an.indice_aleatorio, an.razao_consistencia,
+               CASE WHEN an.matriz_consolidada <> '[]'::jsonb THEN an.lambda_max END AS lambda_max,
+               CASE WHEN an.matriz_consolidada <> '[]'::jsonb THEN an.indice_consistencia END AS indice_consistencia,
+               CASE WHEN an.matriz_consolidada <> '[]'::jsonb THEN an.indice_aleatorio END AS indice_aleatorio,
+               CASE WHEN an.matriz_consolidada <> '[]'::jsonb THEN an.razao_consistencia END AS razao_consistencia,
                recorte.criterios,
                recorte.criterios IS DISTINCT FROM a.criterios AS recorte_parcial
           FROM ahp.comparacao_colaborativa_analise an
@@ -83,13 +86,7 @@ def _get_ambiente(query: str, params: tuple[Any, ...]) -> dict[str, Any] | None:
 def get_ambiente_by_token(token: str) -> dict[str, Any] | None:
     return _get_ambiente(
         f"""
-        SELECT a.*, {_CAMPOS_MATRIZ},
-               (SELECT COUNT(*)::int
-                  FROM ahp.comparacao_colaborativa_resposta r
-                 WHERE r.ambiente_id = a.id AND r.status = 'enviada') AS total_respostas
-               ,(SELECT COUNT(*)::int FROM ahp.comparacao_colaborativa_resposta r WHERE r.ambiente_id=a.id AND r.status='em_preenchimento') AS respostas_em_preenchimento
-               ,(SELECT COUNT(*)::int FROM ahp.comparacao_colaborativa_resposta r WHERE r.ambiente_id=a.id AND r.status='enviada' AND r.consistente) AS respostas_consistentes
-               ,(SELECT COUNT(*)::int FROM ahp.comparacao_colaborativa_analise an WHERE an.ambiente_id=a.id) AS total_analises
+        SELECT a.*, {_CAMPOS_MATRIZ}
           FROM ahp.comparacao_colaborativa_ambiente a
           LEFT JOIN ahp.matriz_criterios_premissas m ON m.id = a.matriz_id
          WHERE a.token = %s
@@ -120,6 +117,9 @@ def get_ambiente_by_id(ambiente_id: str, *, bloquear: bool = False) -> dict[str,
     return _get_ambiente(
         f"""
         SELECT a.*, {_CAMPOS_MATRIZ}, to_jsonb(analise_exibida) AS analise_exibida,
+               CASE WHEN a.modo_participacao = 'publico' THEN
+                 (SELECT COUNT(*) FROM ahp.comparacao_colaborativa_inscricao i WHERE i.ambiente_id = a.id)
+               END AS total_inscritos,
                (SELECT COUNT(*)::int
                   FROM ahp.comparacao_colaborativa_resposta r
                  WHERE r.ambiente_id = a.id AND r.status = 'enviada') AS total_respostas
@@ -154,6 +154,9 @@ def list_ambientes() -> list[dict[str, Any]]:
     query = f"""
         SELECT a.*, {_CAMPOS_MATRIZ}, to_jsonb(analise_exibida) AS analise_exibida,
                COALESCE(a.config_nome, h.nome) AS hierarquizacao_nome,
+               CASE WHEN a.modo_participacao = 'publico' THEN
+                 (SELECT COUNT(*) FROM ahp.comparacao_colaborativa_inscricao i WHERE i.ambiente_id = a.id)
+               END AS total_inscritos,
                (SELECT COUNT(*)::int
                   FROM ahp.comparacao_colaborativa_resposta r
                  WHERE r.ambiente_id = a.id AND r.status = 'enviada') AS total_respostas,
@@ -233,6 +236,20 @@ def list_ambientes_by_hierarquizacao(hierarquizacao_id: Any) -> list[dict[str, A
     return [dict(row) for row in rows]
 
 
+def list_fontes_pesos_dimensoes(matriz_id: Any) -> list[dict[str, Any]]:
+    with get_connection() as conn:
+        rows = conn.execute("""
+            SELECT a.nome, an.id AS analise_id, an.codigo
+              FROM ahp.comparacao_colaborativa_ambiente a
+              JOIN ahp.comparacao_colaborativa_analise an
+                ON an.id = a.analise_homologada_id AND an.ambiente_id = a.id
+             WHERE a.matriz_id = %s AND a.modo_comparacao = 'dimensoes'
+               AND an.status = 'homologada' AND an.consistente
+             ORDER BY an.homologado_em DESC, an.id
+        """, (matriz_id,)).fetchall()
+    return [dict(row) for row in rows]
+
+
 def encerrar_ambientes_anteriores(hierarquizacao_id: Any) -> None:
     query = """
         UPDATE ahp.comparacao_colaborativa_ambiente
@@ -253,6 +270,43 @@ def encerrar_ambientes_anteriores_config(config_tipo: str, config_id: Any) -> No
             (config_tipo, config_id),
         )
         conn.commit()
+
+
+def insert_inscricao(ambiente_id: str, nome: str, email: str, instituicao: str, segredo_hash: str) -> dict[str, Any] | None:
+    with get_connection() as conn:
+        row = conn.execute(
+            """INSERT INTO ahp.comparacao_colaborativa_inscricao
+                   (ambiente_id, nome_completo, email, instituicao, segredo_hash)
+               SELECT id, %s, %s, %s, %s
+                 FROM ahp.comparacao_colaborativa_ambiente
+                WHERE id = %s AND modo_participacao = 'publico'
+                  AND status = 'ativa' AND valido_ate > clock_timestamp()
+               ON CONFLICT (ambiente_id, email) DO NOTHING
+               RETURNING id, nome_completo, email, instituicao""",
+            (nome, email, instituicao, segredo_hash, ambiente_id),
+        ).fetchone()
+        conn.commit()
+    return dict(row) if row else None
+
+
+def get_inscricao(ambiente_id: str, segredo_hash: str) -> dict[str, Any] | None:
+    return _get_ambiente(
+        """SELECT id, nome_completo, email, instituicao
+             FROM ahp.comparacao_colaborativa_inscricao
+            WHERE ambiente_id = %s AND segredo_hash = %s""",
+        (ambiente_id, segredo_hash),
+    )
+
+
+def list_inscricoes(ambiente_id: str) -> list[dict[str, Any]]:
+    with get_connection() as conn:
+        rows = conn.execute(
+            """SELECT id, nome_completo AS nome, email, instituicao, criado_em
+                 FROM ahp.comparacao_colaborativa_inscricao
+                WHERE ambiente_id = %s ORDER BY criado_em, id""",
+            (ambiente_id,),
+        ).fetchall()
+    return [dict(row) for row in rows]
 
 
 def insert_resposta(data: dict[str, Any]) -> dict[str, Any]:
@@ -284,19 +338,25 @@ def get_resposta_by_ambiente_email(ambiente_id: str, email: str) -> dict[str, An
     )
 
 
-def update_resposta_progresso(resposta_id: str, data: dict[str, Any]) -> dict[str, Any] | None:
+def update_resposta_progresso(
+    resposta_id: str, data: dict[str, Any], *, versao: datetime | None = None,
+) -> dict[str, Any] | None:
     assignments = sql.SQL(", ").join(
         sql.SQL("{} = {}").format(sql.Identifier(key), sql.Placeholder(key)) for key in data
     )
     query = sql.SQL(
         "UPDATE ahp.comparacao_colaborativa_resposta SET {sets}, atualizado_em = now() "
-        "WHERE id = %(resposta_id)s RETURNING *"
-    ).format(sets=assignments)
+        "WHERE id = %(resposta_id)s{versao} RETURNING *"
+    ).format(sets=assignments, versao=sql.SQL(
+        " AND status = 'em_preenchimento' AND atualizado_em = %(versao)s" if versao is not None else ""
+    ))
     params = {
         key: Jsonb(value) if key in {"matriz_comparacao", "estatisticas"} else value
         for key, value in data.items()
     }
     params["resposta_id"] = resposta_id
+    if versao is not None:
+        params["versao"] = versao
     with get_connection() as conn:
         row = conn.execute(query, params).fetchone()
         conn.commit()
@@ -344,7 +404,7 @@ def update_resposta(resposta_id: str, data: dict[str, Any]) -> dict[str, Any] | 
     )
     query = sql.SQL(
         "UPDATE ahp.comparacao_colaborativa_resposta SET {sets} "
-        "WHERE id = %(resposta_id)s RETURNING *"
+        "WHERE id = %(resposta_id)s AND inscricao_id IS NULL RETURNING *"
     ).format(sets=assignments)
     params = {**data, "resposta_id": resposta_id}
     with get_connection() as conn:

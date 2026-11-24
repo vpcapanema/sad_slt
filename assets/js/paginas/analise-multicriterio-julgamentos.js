@@ -97,7 +97,7 @@
     var host = $("ami-dimension-options"), groups = dimensionGroups();
     var selected = Array.from(host.querySelectorAll("input:checked")).map(function (input) { return input.value; });
     host.replaceChildren();
-    $("ami-collaborator-dimensions").hidden = Boolean(activeSurfaceId);
+    $("ami-collaborator-dimensions").classList.toggle("is-hidden", Boolean(activeSurfaceId) || julgaTodasDimensoes());
     if (!groups.size) { host.textContent = "Selecione uma matriz com ao menos dois critérios e suas dimensões informadas."; return; }
     groups.forEach(function (count, dimension) {
       var label = document.createElement("label"), input = document.createElement("input");
@@ -106,6 +106,9 @@
       label.append(input, document.createTextNode(dimension + " · " + count + (count === 1 ? " critério" : " critérios")));
       host.append(label);
     });
+  }
+  function julgaTodasDimensoes() {
+    return ["dimensoes", "duas_etapas"].includes($("ami-modo-comparacao").value);
   }
   function invitePayload(invite) {
     return { nome: invite.nome, email: invite.email, ...(invite.dimensoes !== undefined ? { dimensoes: invite.dimensoes } : {}) };
@@ -147,7 +150,17 @@
   }
   function loadRequestedSurface() {
     var params = new URLSearchParams(location.search), surfaceId = params.get("superficie_id");
-    if (!surfaceId) { if (params.get("novo") === "1") showCreateSection(); return Promise.resolve(); }
+    if (!surfaceId) {
+      if (params.get("novo") === "1") {
+        showCreateSection();
+        if (params.get("modo_comparacao") === "dimensoes") {
+          $("ami-modo-comparacao").value = "dimensoes";
+          renderDimensionOptions();
+          if (params.get("matriz_id")) return matrixPicker.choose(params.get("matriz_id"));
+        }
+      }
+      return Promise.resolve();
+    }
     return Promise.reject(new Error("Selecione uma matriz de critérios e premissas para o julgamento. Superfícies são configuradas separadamente."));
   }
   function matrixSummary(message, isError) {
@@ -172,12 +185,21 @@
     if (field) field.focus();
   }
   function statusLabel(status) { return { ativa: "Aberto", consolidada: "Consolidado", encerrada: "Encerrado" }[status] || status; }
-  function actionLinks(j) { return { workspace: appUrl("restrict", "/analise-multicriterio/julgamentos/" + encodeURIComponent(j.id) + "/"), public: appUrl("public", "/analise-multicriterio/formulario-comparacao-pareada/" + encodeURIComponent(j.token) + "/") }; }
+  function participacaoPublica(j) { return j.modo_participacao === "publico"; }
+  function totalParticipantes(j) { return participacaoPublica(j) ? (j.total_inscritos || 0) : (j.convites || []).length; }
+  function responsesUrl(j) { return appUrl("restrict", "/analise-multicriterio/central-respostas") + "?julgamento=" + encodeURIComponent(j.id); }
+  function actionLinks(j) {
+    return {
+      workspace: appUrl("restrict", "/analise-multicriterio/julgamentos/" + encodeURIComponent(j.id) + "/"),
+      public: persistentPublicUrl(j) || appUrl("public", "/analise-multicriterio/formulario-comparacao-pareada/" + encodeURIComponent(j.token) + "/"),
+    };
+  }
   function filterValue(j, column) {
-    if (column === "lista_colaboradores") return String(collaboratorList(j).length);
+    if (column === "lista_colaboradores") return String(participacaoPublica(j) ? totalParticipantes(j) : collaboratorList(j).length);
     if (modo === "julgamentos") {
-      var invited = (j.convites || []).length;
+      var invited = totalParticipantes(j);
       var metrics = { enviadas: invited, recebidas: (j.total_respostas || 0) + (j.respostas_em_preenchimento || 0), preenchimento: j.respostas_em_preenchimento || 0, finalizadas: j.total_respostas || 0, consistentes: j.respostas_consistentes || 0 };
+      if (column === "enviadas" && participacaoPublica(j)) return String(invited);
       if (Object.prototype.hasOwnProperty.call(metrics, column)) return metrics[column] + "/" + invited + " (" + (invited ? Math.round(metrics[column] / invited * 100) : 0) + "%)";
       if (column === "valido_ate" || column === "atualizadoEm") return deadlineLabel(j[column]);
     }
@@ -185,13 +207,13 @@
     return String(Object.assign({}, j, { status: statusLabel(j.status), hierarquizacao_nome: j.hierarquizacao_nome || h && h.nome })[column] ?? '');
   }
   var ordenarJulgamentos = SLTTable.sorting($('ami-judgments').closest('table'), function () {
-    if (modo === 'julgamentos') return [null, j=>j.nome, j=>statusLabel(j.status), j=>(j.convites||[]).length,
+    if (modo === 'julgamentos') return [null, j=>j.nome, j=>statusLabel(j.status), totalParticipantes,
       j=>(j.total_respostas||0)+(j.respostas_em_preenchimento||0), j=>j.respostas_em_preenchimento||0,
       j=>j.total_respostas||0, j=>j.respostas_consistentes||0, j=>j.valido_ate, j=>j.atualizadoEm];
     var resultado = j => j.analise_exibida || j.consolidacao;
     return [null, j=>j.nome, j=>statusLabel(j.status), j=>j.id, j=>j.matriz_id||j.hierarquizacao_id, j=>j.matriz_nome||j.hierarquizacao_nome||j.hierarquizacao_codigo,
-      j=>(j.total_respostas||0)/Math.max(1,(j.convites||[]).length), j=>collaboratorList(j).length, j=>j.valido_ate, j=>j.criadoEm, j=>j.atualizadoEm,
-      j=>j.n_criterios, j=>'Individual por e-mail', ...['lambda_max','indice_consistencia','indice_aleatorio','razao_consistencia'].map(key=>j=>resultado(j)?.[key]),
+      j=>(j.total_respostas||0)/Math.max(1,totalParticipantes(j)), totalParticipantes, j=>j.valido_ate, j=>j.criadoEm, j=>j.atualizadoEm,
+      j=>j.n_criterios, j=>participacaoPublica(j) ? 'Link público' : 'Individual por e-mail', ...['lambda_max','indice_consistencia','indice_aleatorio','razao_consistencia'].map(key=>j=>resultado(j)?.[key]),
       j=>JSON.stringify(resultado(j)?.matriz_consolidada), j=>JSON.stringify(resultado(j)?.pesos_consolidados)];
   }, function () { currentPage=1; selectedIds.clear(); render(); }, function () { return !editingId; });
   function filteredRows() {
@@ -206,7 +228,7 @@
     $("ami-filter-valor").disabled = !column;
   }
   function setupEnvironmentFilters() {
-    if (modo === "julgamentos") environmentFilterColumns = [["nome", "Nome do julgamento"], ["status", "Situação"], ["enviadas", "Enviadas"], ["recebidas", "Recebidas"], ["preenchimento", "Em preenchimento"], ["finalizadas", "Finalizadas"], ["consistentes", "Finalizadas com consistência"], ["valido_ate", "Prazo"], ["atualizadoEm", "Atualizado em"]];
+    if (modo === "julgamentos") environmentFilterColumns = [["nome", "Nome do julgamento"], ["status", "Situação"], ["enviadas", "Convidados / inscritos"], ["recebidas", "Recebidas"], ["preenchimento", "Em preenchimento"], ["finalizadas", "Finalizadas"], ["consistentes", "Finalizadas com consistência"], ["valido_ate", "Prazo"], ["atualizadoEm", "Atualizado em"]];
     $("ami-filter-coluna").insertAdjacentHTML("beforeend", environmentFilterColumns.map(function (entry) { return '<option value="' + entry[0] + '">' + entry[1] + '</option>'; }).join(''));
     function change() { currentPage = 1; selectedIds.clear(); editingId = null; render(); }
     $("ami-filter-coluna").onchange = function () { $("ami-filter-valor").value = ''; syncEnvironmentFilterOptions(); change(); };
@@ -254,7 +276,7 @@
     pagination.querySelector("[data-page-last]").disabled = pagination.querySelector("[data-page-next]").disabled = currentPage >= pageCount;
   }
   function renderAnalysisRounds(rows) {
-    $("ami-judgments").innerHTML = rows.map(function (j) { var selected = selectedIds.has(j.id), convidados = (j.convites || []).length, finalizadas = j.total_respostas || 0, preenchendo = j.respostas_em_preenchimento || 0, consistentes = j.respostas_consistentes || 0, recebidas = finalizadas + preenchendo; return '<tr class="collab-round-row ' + (selected ? "is-selected" : "") + '"><td class="col-select"><input type="checkbox" class="ami-row-select" data-analysis-round="' + escapeHtml(j.id) + '" ' + (selected ? "checked" : "") + '></td><td>' + escapeHtml(j.nome || "—") + '</td><td>' + escapeHtml(statusLabel(j.status)) + '</td><td>' + ratioLabel(convidados, convidados) + '</td><td>' + ratioLabel(recebidas, convidados) + '</td><td>' + ratioLabel(preenchendo, convidados) + '</td><td>' + ratioLabel(finalizadas, convidados) + '</td><td>' + ratioLabel(consistentes, convidados) + '</td><td>' + escapeHtml(deadlineLabel(j.valido_ate)) + '</td><td>' + escapeHtml(deadlineLabel(j.atualizadoEm)) + '</td></tr>'; }).join("") || '<tr><td colspan="10" class="ami-empty">Nenhum julgamento encontrado.</td></tr>';
+    $("ami-judgments").innerHTML = rows.map(function (j) { var selected = selectedIds.has(j.id), convidados = totalParticipantes(j), finalizadas = j.total_respostas || 0, preenchendo = j.respostas_em_preenchimento || 0, consistentes = j.respostas_consistentes || 0, recebidas = finalizadas + preenchendo; return '<tr class="collab-round-row ' + (selected ? "is-selected" : "") + '"><td class="col-select"><input type="checkbox" class="ami-row-select" data-analysis-round="' + escapeHtml(j.id) + '" ' + (selected ? "checked" : "") + '></td><td>' + escapeHtml(j.nome || "—") + '</td><td>' + escapeHtml(statusLabel(j.status)) + '</td><td>' + (participacaoPublica(j) ? convidados : ratioLabel(convidados, convidados)) + '</td><td>' + ratioLabel(recebidas, convidados) + '</td><td>' + ratioLabel(preenchendo, convidados) + '</td><td>' + ratioLabel(finalizadas, convidados) + '</td><td>' + ratioLabel(consistentes, convidados) + '</td><td>' + escapeHtml(deadlineLabel(j.valido_ate)) + '</td><td>' + escapeHtml(deadlineLabel(j.atualizadoEm)) + '</td></tr>'; }).join("") || '<tr><td colspan="10" class="ami-empty">Nenhum julgamento encontrado.</td></tr>';
     $("ami-judgments").querySelectorAll("[data-analysis-round]").forEach(function (input) { input.addEventListener("change", function () { changeRowSelection(input.dataset.analysisRound, input.checked); }); });
   }
   function ratioLabel(realizado, total) { var percentage = total > 0 ? Math.round((realizado / total) * 100) : 0; return '<span class="ami-ratio"><strong>' + realizado + '/' + total + '</strong><small>' + percentage + '%</small></span>'; }
@@ -636,23 +658,28 @@
   function analiseHomologada(data) {
     return (data.analises || []).filter(function (item) { return item.id === data.analise_homologada_id || item.status === "homologada"; })[0] || null;
   }
-  // Todos os julgadores convidados para a hierarquizacao, tenham respondido ou
-  // nao. O nome vem da resposta quando ela existe e, antes disso, do convite.
   function julgadoresDoJulgamento(data) {
-    var respostas = data.respostas || [], enviadas = respostasEnviadas(data);
-    var lista = (data.ambiente.convites || []).map(function (convite) {
-      var email = typeof convite === "string" ? convite : convite.email;
-      var nomeConvite = typeof convite === "string" ? null : convite.nome;
-      var resposta = respostas.filter(function (r) { return r.email === email; })[0] || null;
-      return { email: email, nome: (resposta && resposta.nome_completo) || nomeConvite || "", resposta: resposta };
-    });
+    var publico = participacaoPublica(data.ambiente), respostas = data.respostas || [];
+    var porEmail = new Map(respostas.map(function (r) { return [r.email, r]; }));
+    var indices = new Map(respostasEnviadas(data).map(function (r, i) { return [r.id, i]; }));
+    var participantes = publico ? (data.inscritos || []) : (data.ambiente.convites || []);
+    var lista = new Map(participantes.map(function (p) {
+      var email = typeof p === "string" ? p : p.email;
+      return [email, {email: email, nome: p.nome, instituicao: p.instituicao, inscritoEm: p.criado_em}];
+    }));
     respostas.forEach(function (r) {
-      if (!lista.some(function (item) { return item.email === r.email; })) lista.push({ email: r.email, nome: r.nome_completo, resposta: r });
+      if (!lista.has(r.email)) lista.set(r.email, {email: r.email});
     });
-    return lista.map(function (item) {
-      item.indice = item.resposta ? enviadas.map(function (r) { return String(r.id); }).indexOf(String(item.resposta.id)) : -1;
-      item.situacao = !item.resposta ? "N\u00e3o iniciada"
-        : item.resposta.status === "enviada" ? (item.resposta.consistente ? "Consistente" : "Inconsistente") : "Em preenchimento";
+    return Array.from(lista.values()).map(function (item) {
+      var r = porEmail.get(item.email);
+      item.resposta = r;
+      item.nome = r?.nome_completo || item.nome;
+      item.instituicao = r?.instituicao || item.instituicao;
+      item.indice = indices.get(r?.id) ?? -1;
+      item.situacao = !r ? (publico ? "Inscrito" : "Não iniciada")
+        : r.status === "enviada" ? (publico ? "Enviado" : r.consistente ? "Consistente" : "Inconsistente")
+        : publico ? ("Em preenchimento · " + (r.estatisticas?.julgamento_dimensoes?.resultado ? "Critérios" : "Dimensões"))
+        : "Em preenchimento";
       return item;
     });
   }
@@ -661,12 +688,12 @@
     $("ami-analysis-judges").innerHTML = julgadoresDoJulgamento(data).map(function (julgador) {
       var r = julgador.resposta;
       return '<tr' + (r ? '' : ' class="is-sem-resposta"') + '><td class="ami-stats-table__name">' + (julgador.indice >= 0 ? '<strong>J' + (julgador.indice + 1) + '</strong> ' : '') + escapeHtml(julgador.nome || "\u2014") + '</td><td class="ami-stats-table__name">' + escapeHtml(julgador.email) + '</td>' +
-        (r ? '<td class="ami-stats-table__name">' + escapeHtml(r.instituicao || "") + '</td>' : vazio) +
+        (julgador.instituicao ? '<td class="ami-stats-table__name">' + escapeHtml(julgador.instituicao) + '</td>' : vazio) +
         '<td>' + julgador.situacao + '</td>' +
         (r && r.status === "enviada" ? '<td>' + fmtNumber(r.razao_consistencia) + '</td>' : vazio) +
         (r ? '<td>' + escapeHtml(deadlineLabel(r.iniciadoEm)) + '</td>' : vazio) +
         (r && r.enviadoEm ? '<td>' + escapeHtml(deadlineLabel(r.enviadoEm)) + '</td>' : vazio) + '</tr>';
-    }).join("") || '<tr><td colspan="7" class="ami-empty">Nenhum julgador convidado.</td></tr>';
+    }).join("") || '<tr><td colspan="7" class="ami-empty">Nenhum colaborador registrado.</td></tr>';
     SLTAnalysisTable($("ami-analysis-judges").closest("table"), data.ambiente);
   }
   function renderResponsesForConsolidation(data) {
@@ -679,7 +706,7 @@
         (enviada ? '<td>' + fmtNumber(r.razao_consistencia) + '</td>' : vazio) +
         (r ? '<td>' + escapeHtml(deadlineLabel(r.iniciadoEm)) + '</td>' : vazio) +
         (enviada ? '<td>' + escapeHtml(deadlineLabel(r.enviadoEm)) + '</td>' : vazio) + '</tr>';
-    }).join("") || '<tr><td colspan="7" class="ami-empty">Nenhum julgador convidado.</td></tr>';
+    }).join("") || '<tr><td colspan="7" class="ami-empty">Nenhum colaborador registrado.</td></tr>';
     SLTAnalysisTable($("ami-analysis-responses").closest("table"), data.ambiente);
   }
   function renderConsolidatedMatrix(data, foco) {
@@ -852,6 +879,10 @@
       var item=(analysisWorkspace.analises||[]).find(function(a){return a.id===button.dataset.homologateAnalysis;});
       button.disabled=readonly || analysisSaving || !item || !item.consistente;
     });
+    $("ami-global-fields").disabled = readonly || analysisSaving;
+    $("ami-linked-analysis-fields").disabled = readonly || analysisSaving || !analysisSource?.participacao?.enviadas;
+    var homologarPesos = $("ami-global-results").querySelector("[data-homologate-analysis]");
+    if (homologarPesos) homologarPesos.disabled = readonly || analysisSaving;
     syncAnalysisCalculate();
   }
   function renderFioDerivado(data) {
@@ -965,7 +996,8 @@
       analysisWorkspace = null;
     } else analysisScope = scope;
     var recortes = analysisSource.recortes || [], picker = $("ami-analysis-scope");
-    var porGrupo = analysisSource.ambiente.modo_comparacao === "por_grupo";
+    var emDuasEtapas = analysisSource.ambiente.modo_comparacao === "duas_etapas";
+    var porGrupo = emDuasEtapas || analysisSource.ambiente.modo_comparacao === "por_grupo";
     picker.replaceChildren();
     if (!porGrupo) picker.add(new Option("Todos", "-1"));
     recortes.forEach(function (recorte, index) {
@@ -999,7 +1031,8 @@
         dimensao: recorte.dimensao,
         estatisticas: recorte.estatisticas,
         analises: analysisSource.analises.filter(function (a) {
-          return JSON.stringify((a.estatisticas_analise || {}).criterios_atribuidos || analysisSource.ambiente.criterios) === JSON.stringify(recorte.criterios);
+          return !["pesos_por_dimensao", "media_pesos_individuais"].includes(a.metodo_agregacao) &&
+            JSON.stringify((a.estatisticas_analise || {}).criterios_atribuidos || analysisSource.ambiente.criterios) === JSON.stringify(recorte.criterios);
         })
       });
       data.ambiente.convites = data.ambiente.convites.filter(function (c) {
@@ -1009,7 +1042,8 @@
       if (recorte.dimensao) {
         var enviadas = data.respostas.filter(function (resposta) { return resposta.status === "enviada"; });
         var consistentes = enviadas.filter(function (resposta) { return resposta.consistente; }).length;
-        data.participacao = {convidados: data.ambiente.convites.length, nao_iniciados: Math.max(0, data.ambiente.convites.length - data.respostas.length),
+        var total = participacaoPublica(data.ambiente) ? (data.inscritos || []).length : data.ambiente.convites.length;
+        data.participacao = {convidados: total, nao_iniciados: Math.max(0, total - data.respostas.length),
           em_preenchimento: data.respostas.length - enviadas.length, enviadas: enviadas.length, consistentes: consistentes, inconsistentes: enviadas.length - consistentes};
       }
     }
@@ -1027,12 +1061,15 @@
       if (analysisMode === "view") analysisResponseIds = new Set(saved ? (saved.resposta_ids || []).map(String) : []);
     }
     $("ami-analysis-context").textContent = (a.matriz_nome || a.hierarquizacao_nome || a.hierarquizacao_codigo || a.nome || "Julgamento avulso") + " · " + a.n_criterios + " critérios";
-    $("ami-analysis-participation").innerHTML = [["Convidados",p.convidados],["Não iniciados",p.nao_iniciados],["Em preenchimento",p.em_preenchimento],["Enviadas",p.enviadas],["Consistentes",p.consistentes],["Inconsistentes",p.inconsistentes]].map(function (x) { return '<div class="ahp-metric-card"><div class="ahp-metric-card__label">' + x[0] + '</div><div class="ahp-metric-card__value">' + x[1] + '</div></div>'; }).join("");
+    $("ami-analysis-participation").innerHTML = [[participacaoPublica(a) ? "Inscritos" : "Convidados",p.convidados],["Não iniciados",p.nao_iniciados],["Em preenchimento",p.em_preenchimento],["Enviadas",p.enviadas],["Consistentes",p.consistentes],["Inconsistentes",p.inconsistentes]].map(function (x) { return '<div class="ahp-metric-card"><div class="ahp-metric-card__label">' + x[0] + '</div><div class="ahp-metric-card__value">' + x[1] + '</div></div>'; }).join("");
     renderResponsesForConsolidation(data);
     // O fio: julgadores -> indices -> matriz -> metricas -> pesos.
     renderJudges(data);
     renderPairsSection();
     renderConsolidatedAnalyses(data.analises, data.analise_homologada_id);
+    $("ami-analysis-local-consolidation").classList.toggle("is-hidden", emDuasEtapas);
+    $("ami-analysis-local-results").classList.toggle("is-hidden", emDuasEtapas);
+    renderGlobalWeights(analysisSource);
     syncAnalysisMode();
     $("ami-analysis-workspace").classList.remove("is-hidden"); $("ami-analysis-workspace").scrollIntoView({behavior:"smooth",block:"start"});
   }
@@ -1044,6 +1081,9 @@
     { href: "/restrict/hierarquizacao/fase-3/", numero: "3", nome: "Priorização de demandas por atributos", resumo: "combina os atributos do objeto de demanda com o risco herdado e fecha a síntese" }
   ];
   function analiseHomologadaAviso() {
+    if (analysisWorkspace && analysisWorkspace.ambiente.modo_comparacao === "dimensoes") {
+      return '<p class="form-help">Pesos das dimensões homologados. Eles podem ser usados para calcular os pesos globais de um julgamento por grupo da mesma matriz.</p>';
+    }
     if (analysisWorkspace && analysisWorkspace.ambiente.superficie_id) {
       return '<div class="ami-homologada"><p><strong>Análise homologada da superfície da Fase 2.</strong></p><p>Os pesos correspondem exclusivamente aos critérios snapshot desta superfície, não aos critérios globais da hierarquização.</p><a href="/restrict/hierarquizacao/fase-2/" class="btn btn-secondary">Favorabilidade territorial</a></div>';
     }
@@ -1052,6 +1092,162 @@
       '<ol class="ami-homologada__fases">' + FASES_HIERARQUIZACAO.map(function (fase) {
         return '<li><a href="' + fase.href + '"><span class="ami-homologada__num">' + fase.numero + '</span><span><strong>' + fase.nome + '</strong><small>' + fase.resumo + '</small></span><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a></li>';
       }).join("") + '</ol></div>';
+  }
+  function renderGlobalWeights(data) {
+    var panel = $("ami-global-weights"), form = $("ami-global-form"), fields = $("ami-global-dimensions");
+    var emDuasEtapas = data.ambiente.modo_comparacao === "duas_etapas";
+    panel.hidden = !emDuasEtapas && data.ambiente.modo_comparacao !== "por_grupo";
+    if (panel.hidden) return;
+    form.hidden = emDuasEtapas || analysisMode !== "edit";
+    $("ami-linked-analysis-form").hidden = !emDuasEtapas || analysisMode !== "edit";
+    if (emDuasEtapas) {
+      var participacao = data.participacao;
+      $("ami-linked-analysis-summary").textContent = participacao.enviadas +
+        " respostas com as duas etapas validadas. Cada resposta tem a mesma participação na média do ranking.";
+      $("ami-linked-analysis-form").onsubmit = async function (event) {
+        event.preventDefault();
+        if (analysisSaving || analysisMode !== "edit" || !participacao.enviadas) return;
+        var url = "/api/ahp/comparacao-colaborativa/ambientes/" + encodeURIComponent(data.ambiente.id);
+        var nome = $("ami-linked-analysis-name").value.trim();
+        analysisSaving = true;
+        syncAnalysisMode();
+        try {
+          await executarOperacao("Salvar ranking coletivo", function () {
+            return api(url + "/analises", {method: "POST", body: JSON.stringify({nome: nome})});
+          }, async function (item) {
+            renderAnalysisWorkspace(await api(url + "/espaco-analitico"), analysisScope);
+            $("ami-global-result-select").value = item.id;
+            $("ami-global-result-select").onchange();
+          });
+        } finally { analysisSaving = false; syncAnalysisMode(); }
+      };
+      renderGlobalResults(data);
+      return;
+    }
+    var same = form.dataset.ambiente === data.ambiente.id;
+    var previous = new Map(Array.from(fields.querySelectorAll("[data-global-percent]"), input => [input.dataset.globalPercent, input.value]));
+    var previousLocal = new Map(Array.from(fields.querySelectorAll("[data-global-local]"), select => [select.dataset.globalLocal, select.value]));
+    var source = $("ami-global-source"), ahp = $("ami-global-ahp"), selectedAhp = same ? ahp.value : "";
+    if (!same) {
+      form.reset();
+      $("ami-global-feedback").textContent = "";
+    }
+    form.dataset.ambiente = data.ambiente.id;
+    ahp.replaceChildren(new Option("Selecione um julgamento homologado", ""));
+    (data.fontes_pesos_dimensoes || []).forEach(function (item) {
+      ahp.add(new Option(item.nome + " · " + item.codigo, item.analise_id));
+    });
+    if (Array.from(ahp.options).some(option => option.value === selectedAhp)) ahp.value = selectedAhp;
+    var link = $("ami-global-new-ahp");
+    link.hidden = !data.ambiente.matriz_id;
+    link.href = appUrl("restrict", "/analise-multicriterio/central-julgamentos?") + new URLSearchParams({
+      novo: "1", modo_comparacao: "dimensoes", matriz_id: data.ambiente.matriz_id || ""
+    });
+    fields.innerHTML = (data.recortes || []).map(function (grupo) {
+      var nome = escapeHtml(grupo.dimensao);
+      var locais = data.analises.filter(a => a.consistente && a.estatisticas_analise?.dimensao === grupo.dimensao &&
+        ["calculada", "homologada"].includes(a.status));
+      var local = grupo.criterios.length === 1 ? '<p class="form-help">Critério único. Peso local de 100%.</p>'
+        : '<label class="c-form-group">Análise local de ' + nome + '<select class="c-form-control" required data-global-local="' + nome + '">' +
+          '<option value="">' + (locais.length ? 'Selecione a análise local' : 'Salve uma análise consistente neste grupo') + '</option>' +
+          locais.map(a => '<option value="' + escapeHtml(a.id) + '">' + escapeHtml(a.nome + " · " + a.codigo) + '</option>').join("") +
+          '</select></label>';
+      return '<div class="ahp-collab-grid2"><label class="c-form-group">Peso de ' + nome + ' (%)' +
+        '<input type="number" class="c-form-control" min="0" max="100" step="any" required data-global-percent="' + nome + '"></label>' + local + '</div>';
+    }).join("");
+    if (same) {
+      fields.querySelectorAll("[data-global-percent]").forEach(input => { input.value = previous.get(input.dataset.globalPercent) || ""; });
+      fields.querySelectorAll("[data-global-local]").forEach(select => {
+        var value = previousLocal.get(select.dataset.globalLocal);
+        if (Array.from(select.options).some(option => option.value === value)) select.value = value;
+      });
+    }
+    function syncSource() {
+      var manual = source.value === "manual";
+      var total = 0;
+      fields.querySelectorAll("[data-global-percent]").forEach(function (input) {
+        input.parentElement.classList.toggle("is-hidden", !manual);
+        input.disabled = !manual;
+        total += Number(input.value);
+      });
+      $("ami-global-ahp-field").classList.toggle("is-hidden", manual);
+      ahp.required = !manual;
+      $("ami-global-total").textContent = manual ? "Total informado: " + total.toLocaleString("pt-BR", {maximumFractionDigits: 8}) + "%. Total necessário: 100%."
+        : ahp.options.length <= 1 ? "Nenhum julgamento das dimensões desta matriz foi homologado." : "";
+    }
+    form.oninput = syncSource;
+    syncSource();
+    form.onsubmit = async function (event) {
+      event.preventDefault();
+      if (analysisSaving || analysisMode !== "edit") return;
+      var percentuais = Object.fromEntries(Array.from(fields.querySelectorAll("[data-global-percent]"),
+        input => [input.dataset.globalPercent, input.valueAsNumber]));
+      var manual = source.value === "manual";
+      if (manual && Math.abs(Object.values(percentuais).reduce((a, b) => a + b, 0) - 100) > 1e-8) {
+        $("ami-global-feedback").textContent = "A soma dos percentuais das dimensões deve ser 100%.";
+        return;
+      }
+      var payload = {
+        nome: $("ami-global-name").value.trim(),
+        analises_locais: Object.fromEntries(Array.from(fields.querySelectorAll("[data-global-local]"),
+          select => [select.dataset.globalLocal, select.value])),
+        ...(manual ? {percentuais_dimensoes: percentuais} : {analise_dimensoes_id: ahp.value})
+      };
+      analysisSaving = true;
+      syncAnalysisMode();
+      $("ami-global-feedback").textContent = "";
+      var url = "/api/ahp/comparacao-colaborativa/ambientes/" + encodeURIComponent(data.ambiente.id);
+      try {
+        await executarOperacao("Salvar pesos globais", function () {
+          return api(url + "/pesos-globais", {method: "POST", body: JSON.stringify(payload)});
+        }, async function (item) {
+          var atualizado = await api(url + "/espaco-analitico");
+          renderAnalysisWorkspace(atualizado, analysisScope);
+          $("ami-global-result-select").value = item.id;
+          $("ami-global-result-select").onchange();
+          $("ami-global-feedback").textContent = "Pesos globais calculados e salvos.";
+        });
+      } finally { analysisSaving = false; syncAnalysisMode(); }
+    };
+    renderGlobalResults(data);
+  }
+  function renderGlobalResults(data) {
+    var host = $("ami-global-results");
+    var itens = data.analises.filter(a => ["pesos_por_dimensao", "media_pesos_individuais"].includes(a.metodo_agregacao));
+    host.replaceChildren();
+    if (!itens.length) return;
+    host.innerHTML = '<label class="c-form-group">Pesos globais gravados<select id="ami-global-result-select" class="c-form-control"></select></label><div id="ami-global-result-detail"></div>';
+    var picker = $("ami-global-result-select"), detalhe = $("ami-global-result-detail");
+    itens.forEach(a => picker.add(new Option(a.nome + " · " + a.codigo + (a.status === "homologada" ? " · Homologada" : ""), a.id)));
+    picker.onchange = function () {
+      var item = itens.find(a => a.id === picker.value), dados = item.estatisticas_analise;
+      var percentual = valor => Number(valor).toLocaleString("pt-BR", {style: "percent", maximumFractionDigits: 4});
+      var coletivo = item.metodo_agregacao === "media_pesos_individuais";
+      var fonte = coletivo ? "Média dos pesos globais de " + item.respostas_incluidas + " respostas completas e validadas."
+        : dados.analise_dimensoes_id ? "Julgamento homologado das dimensões" : "Percentuais definidos pelo gestor";
+      detalhe.innerHTML = '<p class="form-help">' + fonte + '</p>' +
+        '<ol>' + (dados.ordem_ranking || dados.criterios_atribuidos.map((_, i) => i).sort((a, b) => item.pesos_consolidados[b] - item.pesos_consolidados[a])).map(function (i) {
+          var criterio = dados.criterios_atribuidos[i];
+          var dimensao = criterionDimension(criterio);
+          var rotulo = '<li><strong>' + escapeHtml(criterionName(criterio, i)) + '</strong> · ' + escapeHtml(dimensao);
+          if (coletivo) {
+            var faixa = dados.faixas_pesos_individuais[i];
+            return rotulo + ' · <strong>' + percentual(item.pesos_consolidados[i]) + ' global</strong>' +
+              ' · respostas de ' + percentual(faixa.minimo) + ' a ' + percentual(faixa.maximo) + '</li>';
+          }
+          return rotulo +
+            ' · ' + percentual(dados.pesos_dimensoes[dimensao]) + ' da dimensão × ' + percentual(dados.pesos_locais[i]) +
+            ' local = <strong>' + percentual(item.pesos_consolidados[i]) + ' global</strong></li>';
+        }).join("") + '</ol>' + (item.status === "homologada" ? analiseHomologadaAviso() :
+          item.status === "calculada" && analysisMode === "edit"
+            ? '<button type="button" class="btn btn-success" data-homologate-analysis="' + escapeHtml(item.id) + '">Homologar pesos globais</button>' : "");
+      var button = detalhe.querySelector("[data-homologate-analysis]");
+      if (button) {
+        button.disabled = analysisSaving;
+        button.onclick = function () { homologateAnalysis(button, "Confirmar esta composição como referência dos pesos globais dos critérios?"); };
+      }
+    };
+    picker.onchange();
   }
   function renderConsolidatedAnalyses(items, homologadaId) {
     $("ami-analysis-consolidations").innerHTML = items.map(function (item) {
@@ -1072,14 +1268,21 @@
         '</tbody></table></div></div><div>' + analysisMatrixTable(item) + '</div></div>' + action;
     }).join("") || '<p class="ami-empty">Nenhuma análise consolidada.</p>';
     $("ami-analysis-consolidations").querySelectorAll("table").forEach(SLTAnalysisTable);
-    $("ami-analysis-consolidations").querySelectorAll("[data-homologate-analysis]").forEach(function (button) { button.addEventListener("click", async function () {
+    $("ami-analysis-consolidations").querySelectorAll("[data-homologate-analysis]").forEach(function (button) {
+      var message = analysisWorkspace.ambiente.modo_comparacao === "dimensoes"
+        ? "Confirmar estes pesos como referência das dimensões desta matriz?"
+        : "Confirmar esta análise como referência de pesos da hierarquização?";
+      button.addEventListener("click", function () { homologateAnalysis(button, message); });
+    });
+  }
+  async function homologateAnalysis(button, message) {
       var ambienteId = analysisWorkspace.ambiente.id;
       if (button.disabled || analysisSaving || analysisMode !== "edit") return;
       analysisSaving = true;
       button.disabled = true;
       try {
         if (!(await ProcessFeedback.confirmar({title: "Homologar análise",
-          message: "Confirmar esta análise como referência de pesos da hierarquização?", confirmLabel: "Homologar"}))) return;
+          message: message, confirmLabel: "Homologar"}))) return;
         await executarOperacao("Homologar análise", function () {
           return api("/api/ahp/comparacao-colaborativa/analises/" + button.dataset.homologateAnalysis + "/homologar", {method:"POST"});
         }, async function () {
@@ -1087,7 +1290,6 @@
           if (analysisWorkspace.ambiente.id === ambienteId) renderAnalysisWorkspace(data);
         });
       } finally { analysisSaving = false; syncAnalysisMode(); }
-    }); });
   }
   function openAnalysisWorkspace(ambienteId, mode) {
     ambienteId = typeof ambienteId === "string" ? ambienteId : selectedId;
@@ -1118,7 +1320,7 @@
     $("ami-emails-filter-valor").value = "";
     SLTTable.inversion($("ami-emails-filter-inverter"), false);
     var creating = mode === "create", editing = mode === "edit", readonly = mode === "view";
-    $("ami-modo-comparacao").disabled = !creating;
+    syncParticipationForm();
     ["ami-judgment-name", "ami-deadline", "ami-collaborator-name", "ami-emails", "ami-add-emails", "ami-select-all", "ami-delete-emails", "ami-criteria-matrix"].forEach(function (id) { if ($(id)) $(id).disabled = readonly; });
     $("ami-hierarchy").disabled = readonly || Boolean(activeSurfaceId);
     syncMatrixContext();
@@ -1131,7 +1333,16 @@
     $("ami-create-section").classList.toggle("is-readonly", readonly);
     renderDraftEmails();
   }
-  function showCreateSection() { if (environmentSaving || surfaceLoading) return; environmentId = null; activeSurfaceId = null; setEnvironmentMode("create"); $("ami-create-form").reset(); if (matrixPicker) matrixPicker.reset(); draftEmails = []; criteriaMatrix = null; criteriaMatrixFileBase64 = null; criteriaMatrixFileName = null; renderDraftEmails(); matrixSummary(""); $("ami-hierarchy-summary").textContent = ""; $("ami-create-status").className = "ami-empty"; $("ami-create-status").textContent = "O status será exibido após a confirmação dos colaboradores."; $("ami-email-draft-card").classList.add("is-hidden"); applySurfaceContext(); $("ami-create-section").classList.remove("is-hidden"); $("ami-deadline").focus(); $("ami-create-section").querySelector(".ami-environment-title").scrollIntoView({ behavior: "smooth", block: "start" }); }
+  function isPublicDraft() { return $("ami-modo-participacao").value === "publico"; }
+  function syncParticipationForm() {
+    var publico = isPublicDraft(), creating = environmentMode === "create";
+    $("ami-modo-participacao").disabled = !creating || Boolean(activeSurfaceId);
+    if (publico) $("ami-modo-comparacao").value = "duas_etapas";
+    $("ami-modo-comparacao").disabled = !creating || publico;
+    $("ami-invited-participation").classList.toggle("is-hidden", publico);
+    $("ami-public-participation-help").classList.toggle("is-hidden", !publico);
+  }
+  function showCreateSection() { if (environmentSaving || surfaceLoading) return; environmentId = null; activeSurfaceId = null; $("ami-create-form").reset(); setEnvironmentMode("create"); if (matrixPicker) matrixPicker.reset(); draftEmails = []; criteriaMatrix = null; criteriaMatrixFileBase64 = null; criteriaMatrixFileName = null; renderDraftEmails(); matrixSummary(""); $("ami-hierarchy-summary").textContent = ""; $("ami-create-status").className = "ami-empty"; $("ami-email-draft-card").classList.add("is-hidden"); $("ami-public-link-card").classList.add("is-hidden"); applySurfaceContext(); syncParticipationForm(); $("ami-create-section").classList.remove("is-hidden"); $("ami-deadline").focus(); $("ami-create-section").querySelector(".ami-environment-title").scrollIntoView({ behavior: "smooth", block: "start" }); }
   function hideCreateSection() { $("ami-create-section").classList.add("is-hidden"); $("ami-create-feedback").textContent = ""; setEnvironmentMode("create"); }
   function dateInputValue(value) { if (!value) return ""; var date = new Date(value), parts = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(date).reduce(function (result, part) { result[part.type] = part.value; return result; }, {}); return parts.year + "-" + parts.month + "-" + parts.day; }
   function viewSelectedEnvironment() {
@@ -1149,6 +1360,7 @@
     criteriaMatrixFileBase64 = null; criteriaMatrixFileName = judgment.arquivo_matriz_nome || null;
     matrixSummary((judgment.criterios || []).length + " critério(s) armazenado(s) neste julgamento" + (criteriaMatrixFileName ? " · " + criteriaMatrixFileName : "") + ".");
     draftEmails = collaboratorList(judgment);
+    $("ami-modo-participacao").value = judgment.modo_participacao || "convite";
     $("ami-modo-comparacao").value = judgment.modo_comparacao || "todos";
     renderDimensionOptions();
     renderDraftEmails(); setEnvironmentMode("view");
@@ -1156,29 +1368,30 @@
     $("ami-create-status").innerHTML = [
       ["Situação", statusLabel(judgment.status), "Estado atual do julgamento", "fa-circle-info"],
       ["Data limite", deadlineLabel(judgment.valido_ate), "Prazo para envio das respostas", "fa-calendar-days"],
-      ["Participação", String(judgment.total_respostas || 0) + " de " + String((judgment.convites || []).length), "Respostas recebidas / colaboradores convidados", "fa-users"]
+      ["Participação", String(judgment.total_respostas || 0) + " de " + String(totalParticipantes(judgment)), participacaoPublica(judgment) ? "Respostas recebidas / inscritos" : "Respostas recebidas / colaboradores convidados", "fa-users"]
     ].map(function (item) { return '<article class="ami-status-card"><span><i class="fas ' + item[3] + '" aria-hidden="true"></i> ' + item[0] + '</span><strong>' + escapeHtml(item[1]) + '</strong><small>' + item[2] + '</small></article>'; }).join("");
-    renderEmailDraft(judgment); $("ami-create-feedback").textContent = "Visualização somente leitura do registro selecionado.";
+    renderParticipationAccess(judgment); $("ami-create-feedback").textContent = "Visualização somente leitura do registro selecionado.";
     $("ami-create-section").classList.remove("is-hidden"); $("ami-create-section").querySelector(".ami-environment-title").scrollIntoView({ behavior: "smooth", block: "start" });
   }
   function editSelectedEnvironment() {
     if (modo !== "espaco" || selectedIds.size !== 1 || !selectedRecord() || editingId) return;
     environmentId = selectedId; viewSelectedEnvironment();
     setEnvironmentMode("edit");
-    $("ami-create-feedback").textContent = "Edite o nome, a data limite e os colaboradores. A matriz é imutável: para utilizar outra, crie um novo julgamento. Ao salvar um prazo futuro, a coleta será reaberta e os convites poderão ser reenviados.";
+    $("ami-create-feedback").textContent = isPublicDraft() ? "Edite o nome e a data limite. Ao salvar um prazo futuro, a coleta será reaberta com o mesmo link." : "Edite o nome, a data limite e os colaboradores. A matriz é imutável: para utilizar outra, crie um novo julgamento. Ao salvar um prazo futuro, a coleta será reaberta e os convites poderão ser reenviados.";
     $("ami-deadline").focus();
   }
   function saveSelectedEnvironment() {
     var judgment = julgamentos.find(function (j) { return j.id === environmentId; }), feedbackNode = $("ami-create-feedback");
     if (!judgment || environmentMode !== "edit" || environmentSaving) return;
     if (!$("ami-judgment-name").value.trim()) { avisarFormulario("Informe o nome do julgamento.", feedbackNode, $("ami-judgment-name")); return; }
-    if (draftEditing) { avisarFormulario("Confirme a lista de colaboradores antes de salvar o julgamento.", feedbackNode, $("ami-confirm-emails")); return; }
-    if (!draftEmails.length) { avisarFormulario("Adicione ao menos um colaborador à lista.", feedbackNode, $("ami-emails")); return; }
+    if (!isPublicDraft() && draftEditing) { avisarFormulario("Confirme a lista de colaboradores antes de salvar o julgamento.", feedbackNode, $("ami-confirm-emails")); return; }
+    if (!isPublicDraft() && !draftEmails.length) { avisarFormulario("Adicione ao menos um colaborador à lista.", feedbackNode, $("ami-emails")); return; }
     if (!$("ami-deadline").value) { avisarFormulario("Informe a data limite da coleta.", feedbackNode, $("ami-deadline")); return; }
     if (Date.parse(deadlineEndOfDay()) <= Date.now()) { avisarFormulario("A data limite já venceu. Escolha uma nova data para reabrir o período de colaboração.", feedbackNode, $("ami-deadline")); return; }
     feedbackNode.textContent = "Salvando alterações…";
     environmentSaving = true; $("ami-environment-save").disabled = true;
-    var updatePayload = { nome: $("ami-judgment-name").value.trim(), convites: draftEmails.map(invitePayload), valido_ate: deadlineEndOfDay() };
+    var updatePayload = { nome: $("ami-judgment-name").value.trim(), valido_ate: deadlineEndOfDay() };
+    if (!isPublicDraft()) updatePayload.convites = draftEmails.map(invitePayload);
     if ($("ami-deadline").value === dateInputValue(judgment.valido_ate) && judgment.status === "ativa") delete updatePayload.valido_ate;
     if (judgment.status !== "ativa") updatePayload.reabrir = true;
     executarOperacao("Salvar julgamento", function () {
@@ -1197,7 +1410,7 @@
   function deadlineEndOfDay() { return endOfDayIso($("ami-deadline").value); }
   function persistentPublicUrl(judgment) {
     if (!judgment || !judgment.url_publica) return "";
-    try { var url = new URL(String(judgment.url_publica), location.origin); return /^https?:$/.test(url.protocol) && /\/public\/analise-multicriterio\/(?:formulario-comparacao-pareada\/)?[^/]+\/?$/.test(url.pathname) ? url.href : ""; }
+    try { var url = new URL(String(judgment.url_publica), location.origin); return /^https?:$/.test(url.protocol) && /\/public\/analise-multicriterio\/(?:(?:formulario-comparacao-pareada|participar)\/)?[^/]+\/?$/.test(url.pathname) ? url.href : ""; }
     catch (_error) { return ""; }
   }
   function renderEmailRecipients(judgment) {
@@ -1219,8 +1432,19 @@
       }).map(criterionName);
     });
   }
+  function renderParticipationAccess(judgment) {
+    var publico = participacaoPublica(judgment);
+    $("ami-public-link-card").classList.toggle("is-hidden", !publico);
+    $("ami-email-draft-card").classList.toggle("is-hidden", publico);
+    if (publico) {
+      var url = actionLinks(judgment).public;
+      $("ami-public-link").value = url;
+      $("ami-open-public-link").href = url;
+      $("ami-open-public-responses").href = responsesUrl(judgment);
+    } else renderEmailDraft(judgment);
+  }
   function renderDraftEmails() {
-    $("ami-collaborator-list-section").hidden = !draftEmails.length;
+    $("ami-collaborator-list-section").hidden = isPublicDraft() || !draftEmails.length;
     var column = $("ami-emails-filter-coluna").value, valueSelect = $("ami-emails-filter-valor");
     var rows = draftEmails.map(function (item, index) { return { item: item, index: index }; });
     SLTTable.values(valueSelect, rows, function (row) { return draftValue(row, column); });
@@ -1264,9 +1488,9 @@
   }
   function updateDraftControls() {
     syncEnvironmentEditButton();
-    var editing = draftEditing && environmentMode !== "view";
+    var publico = isPublicDraft(), editing = !publico && draftEditing && environmentMode !== "view";
     ["ami-select-all", "ami-cancel-emails"].forEach(function (id) { $(id).disabled = !editing; });
-    ["ami-collaborator-name", "ami-emails", "ami-add-emails", "ami-import-collaborators"].forEach(function (id) { $(id).disabled = environmentMode === "view" || environmentSaving; });
+    ["ami-collaborator-name", "ami-emails", "ami-add-emails", "ami-import-collaborators"].forEach(function (id) { $(id).disabled = publico || environmentMode === "view" || environmentSaving; });
     $("ami-open-collaborators").disabled = environmentSaving || !draftEmails.length;
     $("ami-dimension-options").querySelectorAll("input").forEach(function (input) { input.disabled = environmentMode === "view" || environmentSaving; });
     $("ami-confirm-emails").disabled = !editing || !draftEmails.length;
@@ -1277,8 +1501,8 @@
     $("ami-select-all").checked = boxes.length > 0 && boxes.every(function (box) { return box.checked; });
     $("ami-select-all").indeterminate = boxes.some(function (box) { return box.checked; }) && !$("ami-select-all").checked;
     SLTTable.summary('ami-emails-count', boxes.filter(function (box) { return box.checked; }).length, draftVisibleCount, draftEmails.length);
-    $("ami-create-form").querySelector('button[type="submit"]').disabled = environmentSaving || !draftEmails.length;
-    $("ami-environment-save").disabled = environmentSaving || draftEditing || !draftEmails.length;
+    $("ami-create-form").querySelector('button[type="submit"]').disabled = environmentSaving || (!publico && !draftEmails.length);
+    $("ami-environment-save").disabled = environmentSaving || (!publico && (draftEditing || !draftEmails.length));
   }
   function addDraftEmails() {
     if (environmentMode === "view" || environmentSaving) return;
@@ -1461,7 +1685,7 @@
       return { ...item, dimensoes: item.dimensoes ?? null, selected: true };
     });
     if (source === "file") markImportDuplicates(importedCollaborators);
-    importGroups = Array.from(groups.keys());
+    importGroups = julgaTodasDimensoes() ? [] : Array.from(groups.keys());
     importSource = source;
     importReadOnly = readOnly;
     var description = "Marque os grupos que cada colaborador vai responder. Todos atribui a matriz completa. A caixa no cabeçalho aplica a atribuição a todos os colaboradores filtrados.";
@@ -1487,6 +1711,7 @@
   }
   function openSavedCollaborators(judgment, trigger) {
     if (environmentSaving) return;
+    if (participacaoPublica(judgment)) { location.assign(responsesUrl(judgment)); return; }
     var groups = judgment.superficie_id ? new Map() : dimensionGroups({ linhas: judgment.criterios || [] });
     openCollaboratorPreview(collaboratorList(judgment), groups, "list", trigger, true);
   }
@@ -1607,7 +1832,9 @@
   }
   function validatedCollaboratorList(list, feedback) {
     var normalized = list.map(function (item) {
-      return { ...invitePayload(item), nome: normalizeCollaboratorName(item.nome) || null, email: item.email.trim().toLowerCase() };
+      var invite = { ...invitePayload(item), nome: normalizeCollaboratorName(item.nome) || null, email: item.email.trim().toLowerCase() };
+      if (julgaTodasDimensoes()) delete invite.dimensoes;
+      return invite;
     });
     if (!normalized.length || normalized.some(function (item) { return !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(item.email); })) {
       feedback.textContent = "Informe um e-mail válido para cada colaborador.";
@@ -1822,7 +2049,7 @@
       toggle.addEventListener("click", toggleScale); toggle.addEventListener("keydown", function (event) { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); toggleScale(); } });
     }).catch(function (error) { host.innerHTML = '<p class="ami-feedback">' + escapeHtml(error.message) + "</p>"; });
   }
-  function syncPairwiseButtons() { [$("ami-judgments-matrix-action"), $("ami-judgments-form-action")].forEach(function (button) { if (!button) return; var enabled = modo === "espaco" && Boolean(selectedId) && !editingId; button.disabled = !enabled; button.classList.toggle("is-disabled", !enabled); button.classList.toggle("is-hidden", modo !== "espaco"); }); }
+  function syncPairwiseButtons() { [$("ami-judgments-matrix-action"), $("ami-judgments-form-action")].forEach(function (button) { if (!button) return; var visible = modo === "espaco" && !(button.id === "ami-judgments-form-action" && selectedRecord()?.modo_participacao === "publico"); var enabled = visible && Boolean(selectedId) && !editingId; button.disabled = !enabled; button.classList.toggle("is-disabled", !enabled); button.classList.toggle("is-hidden", !visible); }); }
   function syncEnvironmentEditButton() {
     var button = $("ami-environment-edit"); if (!button) return;
     var enabled = modo === "espaco" && selectedIds.size === 1 && Boolean(selectedRecord()) && !editingId && !environmentSaving;
@@ -1905,15 +2132,22 @@
     if (preview) { preview.hidden = true; preview.querySelector('iframe').src = 'about:blank'; }
  pairwiseMode = mode; [["ami-judgments-matrix-action", "matrix"], ["ami-judgments-form-action", "form"]].forEach(function (entry) { var active = mode === entry[1]; $(entry[0]).classList.toggle("is-active", active); $(entry[0]).setAttribute("aria-pressed", String(active)); }); $("ami-pairwise-panel").classList.remove("is-hidden"); loadSaatyScale().then(function () { renderPairwiseScope(judgment); $("ami-pairwise-panel").scrollIntoView({ behavior: "smooth", block: "start" }); }); }
   function renderPairwiseScope(judgment) {
-    var select = $("ami-pairwise-group"), porGrupo = judgment.modo_comparacao === "por_grupo";
+    var select = $("ami-pairwise-group"), emDuasEtapas = judgment.modo_comparacao === "duas_etapas";
+    var porGrupo = emDuasEtapas || judgment.modo_comparacao === "por_grupo";
     select.parentElement.classList.toggle("is-hidden", !porGrupo);
     if (!porGrupo) { renderPairwise(judgment); return; }
     var grupos = dimensionGroups({linhas: judgment.criterios || []});
     select.replaceChildren(...Array.from(grupos).filter(function (item) { return item[1] > 1; })
       .map(function (item) { return new Option(item[0], item[0]); }));
+    if (emDuasEtapas) {
+      select.prepend(new Option("Etapa 1 · Comparação entre dimensões", ""));
+      select.value = "";
+    }
     select.onchange = function () {
+      var criterios = select.value ? judgment.criterios.filter(row => criterionDimension(row) === select.value)
+        : Array.from(grupos.keys()).map(nome => ({nome: nome}));
       renderPairwise({...judgment, id: judgment.id + ":" + select.value, hierarquizacao_codigo: select.value,
-        criterios: judgment.criterios.filter(function (row) { return criterionDimension(row) === select.value; }), consolidacao: null});
+        criterios: criterios, consolidacao: null});
     };
     select.onchange();
   }
@@ -2048,7 +2282,17 @@
     createViewButton();
     setupEnvironmentFilters();
     if (modo === "julgamentos") {
-      api(ambientesSourceUrl).then(function (values) { respostasCentral = values; syncEnvironmentFilterOptions(); render(); }).catch(function (err) { feedback(err.message, true); $("ami-judgments").innerHTML = '<tr><td colspan="10" class="ami-empty">' + escapeHtml(err.message) + "</td></tr>"; });
+      api(ambientesSourceUrl).then(function (values) {
+        respostasCentral = values;
+        syncEnvironmentFilterOptions();
+        var destino = new URLSearchParams(location.search).get("julgamento");
+        if (destino && values.some(function (j) { return j.id === destino; })) {
+          selectedIds.add(destino);
+          currentPage = Math.floor(filteredRows().findIndex(function (j) { return j.id === destino; }) / PAGE_SIZE) + 1;
+          openAnalysisWorkspace(destino, "view");
+        }
+        render();
+      }).catch(function (err) { feedback(err.message, true); $("ami-judgments").innerHTML = '<tr><td colspan="10" class="ami-empty">' + escapeHtml(err.message) + "</td></tr>"; });
     } else {
       api(ambientesSourceUrl).then(function (values) { julgamentos = values; syncEnvironmentFilterOptions(); render(); }).catch(function (err) { feedback(err.message, true); $("ami-judgments").innerHTML = '<tr><td colspan="17" class="ami-empty">' + escapeHtml(err.message) + "</td></tr>"; });
       if (new URLSearchParams(location.search).has("superficie_id")) api(hierarquizacoesSourceUrl).then(function (values) {
@@ -2157,6 +2401,12 @@
       renderDraftEmails();
     });
     $("ami-deadline").addEventListener("change", renderDraftEmails);
+    $("ami-modo-comparacao").addEventListener("change", renderDimensionOptions);
+    $("ami-modo-participacao").addEventListener("change", function () {
+      syncParticipationForm();
+      renderDimensionOptions();
+      renderDraftEmails();
+    });
     $("ami-select-all").addEventListener("change", function () { var checked = this.checked; $("ami-email-list").querySelectorAll("[data-draft-index]").forEach(function (checkbox) { checkbox.checked = checked; }); updateDraftControls(); });
     $("ami-delete-emails").addEventListener("click", function () { var selected = Array.from($("ami-email-list").querySelectorAll("[data-draft-index]:checked")).map(function (checkbox) { return Number(checkbox.dataset.draftIndex); }); draftEmails = draftEmails.filter(function (_email, index) { return !selected.includes(index); }); renderDraftEmails(); });
     $("ami-create-form").addEventListener("submit", async function (event) {
@@ -2164,20 +2414,27 @@
       var feedback = $("ami-create-feedback");
       if (environmentMode !== "create" || environmentSaving || surfaceLoading) return;
       if (!$("ami-judgment-name").value.trim()) { avisarFormulario("Informe o nome do julgamento.", feedback, $("ami-judgment-name")); return; }
-      if (draftEditing) { avisarFormulario("Confirme a lista de colaboradores antes de cadastrar o julgamento.", feedback, $("ami-confirm-emails")); return; }
-      if (!draftEmails.length) { avisarFormulario("Adicione ao menos um colaborador à lista.", feedback, $("ami-emails")); return; }
+      var publico = isPublicDraft();
+      if (!publico && draftEditing) { avisarFormulario("Confirme a lista de colaboradores antes de cadastrar o julgamento.", feedback, $("ami-confirm-emails")); return; }
+      if (!publico && !draftEmails.length) { avisarFormulario("Adicione ao menos um colaborador à lista.", feedback, $("ami-emails")); return; }
       if (!$("ami-deadline").value) { avisarFormulario("Informe a data limite da coleta.", feedback, $("ami-deadline")); return; }
       if (Date.parse(deadlineEndOfDay()) <= Date.now()) { avisarFormulario("A data limite já venceu. Escolha uma data válida para a coleta de respostas.", feedback, $("ami-deadline")); return; }
       var matrixId = activeSurfaceId ? null : selectedMatrixId(feedback);
       if (!activeSurfaceId && !matrixId) return;
-      if (!activeSurfaceId && !validatedCollaboratorList(draftEmails, feedback)) return;
+      var convites = publico ? [] : activeSurfaceId ? draftEmails.map(invitePayload) : validatedCollaboratorList(draftEmails, feedback);
+      if (!convites) return;
+      if (julgaTodasDimensoes() &&
+          (dimensionGroups().size < 2 || matrixRows(criteriaMatrix).some(function (row) { return !criterionDimension(row); }))) {
+        avisarFormulario("Para julgar as dimensões, informe a dimensão de todos os critérios e use pelo menos duas dimensões.", feedback, $("ami-modo-comparacao"));
+        return;
+      }
       if (activeSurfaceId && matrixRows(criteriaMatrix).length < 2) { avisarFormulario("A superfície deve possuir ao menos dois critérios.", feedback); return; }
       feedback.textContent = "Criando ambiente colaborativo…";
       var selectedHierarchy = $("ami-hierarchy").selectedOptions[0];
       environmentSaving = true; updateDraftControls();
       try {
       await executarOperacao("Criar julgamento", function () {
-        var payload = { nome: $("ami-judgment-name").value.trim(), convites: draftEmails.map(invitePayload), valido_ate: deadlineEndOfDay() };
+        var payload = { nome: $("ami-judgment-name").value.trim(), convites: convites, valido_ate: deadlineEndOfDay(), modo_participacao: $("ami-modo-participacao").value };
         if (activeSurfaceId) { payload.hierarquizacao_id = selectedHierarchy.dataset.hierarquizacaoId; payload.superficie_id = activeSurfaceId; }
         else {
           payload.matriz_id = matrixId;
@@ -2190,7 +2447,7 @@
         $("ami-create-status").className = "ami-create-success";
         $("ami-create-status").innerHTML = '<strong>Ambiente colaborativo criado.</strong><span>Situação: ' + escapeHtml(statusLabel(j.status)) + '</span><span>Data limite: ' + escapeHtml(deadlineLabel(j.valido_ate)) + '</span><div class="ami-actions"><a class="btn btn-primary" href="' + escapeHtml(links.workspace) + '">Abrir espaço do julgamento</a><a class="btn btn-secondary" href="' + escapeHtml(links.public) + '">Abrir formulário público</a></div>';
         environmentId = j.id; viewSelectedEnvironment();
-        feedback.textContent = "Colaboradores confirmados e ambiente criado.";
+        feedback.textContent = publico ? "Julgamento criado. O link público está disponível abaixo." : "Colaboradores confirmados e ambiente criado.";
       });
       } finally { environmentSaving = false; updateDraftControls(); }
     });
@@ -2199,6 +2456,16 @@
       if (!url || !navigator.clipboard) { Notify.warning("Link do julgamento", "O link ou a área de transferência não está disponível."); return; }
       try { await navigator.clipboard.writeText(url); Notify.success("Link do julgamento", "Link copiado."); }
       catch (error) { Notify.error("Não foi possível copiar o link", error.message); }
+    });
+    $("ami-copy-public-link").addEventListener("click", async function () {
+      var campo = $("ami-public-link");
+      try {
+        await navigator.clipboard.writeText(campo.value);
+        Notify.success("Link público de colaboração", "Link copiado.");
+      } catch (_error) {
+        campo.select();
+        Notify.warning("Link público de colaboração", "Selecione e copie o link no campo.");
+      }
     });
     $("ami-analysis-responses").addEventListener("change", function (event) {
       var id = event.target.dataset.analysisResponse; if (!id || analysisMode !== "edit") return;

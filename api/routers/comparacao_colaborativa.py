@@ -2,6 +2,9 @@
 from __future__ import annotations
 
 from uuid import UUID
+from collections import Counter
+from threading import Lock
+from time import monotonic
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response
 
@@ -13,8 +16,10 @@ from api.schemas.comparacao_colaborativa import (
     AmbienteColaborativoResponseSchema,
     AmbienteColaborativoUpdateSchema,
     AmbientePublicoSchema,
+    InscricaoPublicaSchema,
     AnaliseColaborativaCreateSchema,
     AnaliseColaborativaResponseSchema,
+    PesosGlobaisCreateSchema,
     RespostaColaborativaCreateSchema,
     RespostaColaborativaInicioSchema,
     RespostaColaborativaProgressoSchema,
@@ -30,6 +35,45 @@ from typing import Any
 from api.services import matrizes_criterios
 
 router = APIRouter(prefix="/ahp/comparacao-colaborativa", tags=["ahp-comparacao-colaborativa"])
+_inscricoes_lock = Lock()
+_inscricoes_por_ip: Counter[str] = Counter()
+_inscricoes_periodo = -1
+_inscricoes_total = 0
+
+
+def _limitar_inscricoes(request: Request) -> None:
+    global _inscricoes_periodo, _inscricoes_total
+    agora = int(monotonic())
+    periodo = agora // 60
+    ip = request.client.host if request.client else ""
+    with _inscricoes_lock:
+        if periodo != _inscricoes_periodo:
+            _inscricoes_por_ip.clear()
+            _inscricoes_total = 0
+            _inscricoes_periodo = periodo
+        if _inscricoes_total >= 360 or _inscricoes_por_ip[ip] >= 120:
+            raise HTTPException(
+                status_code=429, detail="Muitas tentativas de inscrição. Aguarde e tente novamente.",
+                headers={"Retry-After": str(60 - agora % 60), "Cache-Control": "no-store"},
+            )
+        _inscricoes_por_ip[ip] += 1
+        _inscricoes_total += 1
+
+
+@router.post("/publico/{token}/inscricao")
+def inscrever_participante(token: str, body: InscricaoPublicaSchema, request: Request, response: Response) -> dict:
+    _limitar_inscricoes(request)
+    cookie = service.nome_cookie_inscricao(token)
+    try:
+        segredo = service.cadastrar_inscricao(token, body, request.cookies.get(cookie))
+    except DemandaValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc), headers={"Cache-Control": "no-store"}) from exc
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail="Não foi possível confirmar a inscrição. Tente novamente.", headers={"Cache-Control": "no-store"}) from exc
+    response.headers["Cache-Control"] = "no-store"
+    seguro = request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https"
+    response.set_cookie(cookie, segredo, httponly=True, secure=seguro, samesite="lax")
+    return {"codigo_retomada": segredo}
 
 
 class MatrizCreateSchema(BaseModel):
@@ -264,6 +308,18 @@ def homologar_analise(analise_id: str, user: SessionUser = Depends(require_analy
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
+@router.post("/ambientes/{ambiente_id}/pesos-globais", response_model=AnaliseColaborativaResponseSchema, status_code=201)
+def compor_pesos_globais(
+    ambiente_id: UUID, body: PesosGlobaisCreateSchema, user: SessionUser = Depends(require_analyst),
+) -> AnaliseColaborativaResponseSchema:
+    try:
+        return service.compor_pesos_globais(str(ambiente_id), body, str(user.id))
+    except DemandaValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
 @router.get("/ambientes/{ambiente_id}", response_model=AmbienteColaborativoResponseSchema)
 def obter_ambiente_id(
     ambiente_id: str,
@@ -350,11 +406,14 @@ def obter_ambiente_publico(
 
 @router.post("/publico/{token}/acesso", response_model=AmbientePublicoSchema)
 def validar_acesso_publico(
-    token: str, body: AcessoColaborativoSchema, response: Response,
+    token: str, body: AcessoColaborativoSchema, response: Response, request: Request,
 ) -> AmbientePublicoSchema:
     response.headers["Cache-Control"] = "no-store"
     try:
-        return service.obter_ambiente_publico(token, email=body.email, token_acesso=body.token_acesso)
+        return service.obter_ambiente_publico(
+            token, email=body.email, token_acesso=body.token_acesso,
+            sessao_inscricao=request.cookies.get(service.nome_cookie_inscricao(token)),
+        )
     except DemandaValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc), headers={"Cache-Control": "no-store"}) from exc
     except DatabaseUnavailableError as exc:
@@ -366,24 +425,33 @@ def enviar_resposta(
     token: str,
     body: RespostaColaborativaCreateSchema,
     segundo_plano: BackgroundTasks,
+    request: Request,
+    response: Response,
 ) -> RespostaColaborativaResponseSchema:
     """Envia resposta colaborativa (RC < 0,10 obrigatório) e confirma o recebimento por e-mail."""
     try:
-        resposta = service.registrar_resposta(token, body)
+        response.headers["Cache-Control"] = "no-store"
+        resposta = service.registrar_resposta(
+            token, body, sessao_inscricao=request.cookies.get(service.nome_cookie_inscricao(token)),
+        )
     except DemandaValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except DatabaseUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
-    segundo_plano.add_task(email_resposta_colaborador.notificar, resposta.ambiente_id, resposta.id)
+    if not resposta.inscricao_id:
+        segundo_plano.add_task(email_resposta_colaborador.notificar, resposta.ambiente_id, resposta.id)
     return resposta
 
 
 @router.post("/publico/{token}/respostas/iniciar", response_model=RespostaColaborativaResponseSchema)
 def iniciar_resposta_publica(
-    token: str, body: RespostaColaborativaInicioSchema
+    token: str, body: RespostaColaborativaInicioSchema, request: Request, response: Response,
 ) -> RespostaColaborativaResponseSchema:
     try:
-        return service.iniciar_resposta(token, body)
+        response.headers["Cache-Control"] = "no-store"
+        return service.iniciar_resposta(
+            token, body, sessao_inscricao=request.cookies.get(service.nome_cookie_inscricao(token)),
+        )
     except DemandaValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except DatabaseUnavailableError as exc:
@@ -392,10 +460,13 @@ def iniciar_resposta_publica(
 
 @router.patch("/publico/{token}/respostas/progresso", response_model=RespostaColaborativaResponseSchema)
 def salvar_progresso_resposta_publica(
-    token: str, body: RespostaColaborativaProgressoSchema
+    token: str, body: RespostaColaborativaProgressoSchema, request: Request, response: Response,
 ) -> RespostaColaborativaResponseSchema:
     try:
-        return service.salvar_progresso_resposta(token, body)
+        response.headers["Cache-Control"] = "no-store"
+        return service.salvar_progresso_resposta(
+            token, body, sessao_inscricao=request.cookies.get(service.nome_cookie_inscricao(token)),
+        )
     except DemandaValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except DatabaseUnavailableError as exc:

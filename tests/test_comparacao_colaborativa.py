@@ -974,16 +974,17 @@ class _FakeRepo:
         if self.get_resposta_by_ambiente_email(data["ambiente_id"], data["email"]):
             return {}
         row = dict(data)
-        row.update({"id": self._next_id(), "enviado_em": datetime.now(timezone.utc)})
+        agora = datetime.now(timezone.utc)
+        row.update({"id": self._next_id(), "enviado_em": agora, "atualizado_em": agora})
         self.respostas.append(row)
         return dict(row)
 
     def get_resposta_by_ambiente_email(self, ambiente_id: str, email: str):
         return next((dict(r) for r in self.respostas if r["ambiente_id"] == ambiente_id and r["email"].lower() == email.lower()), None)
 
-    def update_resposta_progresso(self, resposta_id: str, data: dict):
+    def update_resposta_progresso(self, resposta_id: str, data: dict, *, versao=None):
         row = next((r for r in self.respostas if r["id"] == resposta_id), None)
-        if not row:
+        if not row or (versao is not None and (row["status"] != "em_preenchimento" or row["atualizado_em"] != versao)):
             return None
         row.update(data)
         row["atualizado_em"] = datetime.now(timezone.utc)
@@ -1010,6 +1011,7 @@ class _FakeRepo:
 
 def _instalar_fake_repo(monkeypatch) -> _FakeRepo:
     fake = _FakeRepo()
+    monkeypatch.setattr(repo, "list_fontes_pesos_dimensoes", lambda _: [])
     matrizes = {}
     def criar_matriz(nome, conteudo, arquivo_base64=None, arquivo_nome=None):
         registro = {"id": CONFIG_ID, "nome": nome, "conteudo": conteudo, "arquivo_nome": arquivo_nome}
@@ -1166,6 +1168,193 @@ def test_fluxo_por_grupo_preserva_os_pares_e_consolida_separadamente(monkeypatch
     assert gestor.patch(rota_ambiente, json={"modo_comparacao": "todos"}).status_code == 422
 
 
+def test_rodada_das_dimensoes_usa_a_mesma_matriz_e_compara_somente_dimensoes(monkeypatch):
+    _instalar_fake_repo(monkeypatch)
+    criterios = _ambiente_dimensoes()["criterios"]
+    gestor, publico = _client_autenticado("GESTOR"), TestClient(app)
+    base = "/api/ahp/comparacao-colaborativa"
+    body = {"nome": "Rodada das dimensões", "modo_comparacao": "dimensoes",
+            "valido_ate": "2030-12-31T23:59:59Z", "matriz_premissas_criterios": {"linhas": criterios},
+            "convites": [{"email": "a@x.gov.br"}]}
+    assert gestor.post(f"{base}/ambientes", json={**body, "convites": [{"email": "a@x.gov.br", "dimensoes": ["Social"]}]}).status_code == 422
+    criado = gestor.post(f"{base}/ambientes", json=body)
+    assert criado.status_code == 201, criado.text
+    ambiente = criado.json()
+    assert ambiente["modo_comparacao"] == "dimensoes"
+    assert ambiente["matriz_id"] == CONFIG_ID
+    assert service.matrizes_criterios.obter(CONFIG_ID)["conteudo"]["linhas"] == criterios
+    caminho = f"{base}/publico/{ambiente['token']}"
+    acesso = {"email": "a@x.gov.br", "token_acesso": KEY}
+    meta = publico.post(caminho + "/acesso", json=acesso)
+    assert meta.status_code == 200, meta.text
+    assert meta.json()["criterios"] == ["Financeira", "Social"]
+    assert meta.json()["grupos_comparacao"] == {}
+    resposta = publico.post(caminho + "/respostas", json={
+        "token_acesso": KEY, "identificacao": {"email": acesso["email"], "nome_completo": "Ana", "instituicao": "Teste"},
+        "matriz_comparacao": [[1, 3], [1 / 3, 1]],
+    })
+    assert resposta.status_code == 201, resposta.text
+    assert resposta.json()["razao_consistencia"] == 0
+
+
+def test_pesos_globais_com_fontes_manuais_ou_ahp_e_homologacao(monkeypatch):
+    fonte_id = "33333333-3333-3333-3333-333333333333"
+    financeira_id = "66666666-6666-6666-6666-666666666666"
+    social_id = "77777777-7777-7777-7777-777777777777"
+    rodada_dimensoes = "88888888-8888-8888-8888-888888888888"
+    global_id = "99999999-9999-9999-9999-999999999999"
+    ambiente = _ambiente_dimensoes()
+    ambiente.update(modo_comparacao="por_grupo", matriz_integral=True, matriz_id=CONFIG_ID, hierarquizacao_id=None)
+    ambiente["criterios"].append({"Critério": "Sinistros graves", "Dimensão": "Segurança", "Etapa": "Fase 2"})
+    dimensoes = [{"Critério": nome, "Dimensão": nome} for nome in ("Segurança", "Financeira", "Social")]
+    origem = {"id": rodada_dimensoes, "modo_comparacao": "dimensoes", "matriz_id": CONFIG_ID, "criterios": dimensoes, "analise_homologada_id": fonte_id}
+    analises = {
+        financeira_id: {"ambiente_id": AMBIENTE_ID, "status": "calculada", "consistente": True, "pesos_consolidados": [.75, .25],
+                        "estatisticas_analise": {"dimensao": "Financeira", "criterios_atribuidos": ambiente["criterios"][:2]}},
+        social_id: {"ambiente_id": AMBIENTE_ID, "status": "calculada", "consistente": True, "pesos_consolidados": [.4, .6],
+                    "estatisticas_analise": {"dimensao": "Social", "criterios_atribuidos": ambiente["criterios"][2:4]}},
+        fonte_id: {"ambiente_id": rodada_dimensoes, "status": "homologada", "consistente": True, "pesos_consolidados": [.1, .5, .4],
+                   "estatisticas_analise": {"criterios_atribuidos": dimensoes}},
+    }
+    monkeypatch.setattr(repo, "get_ambiente_by_id", {AMBIENTE_ID: ambiente, rodada_dimensoes: origem}.get)
+    monkeypatch.setattr(service.analise_repo, "get_by_id", analises.get)
+    monkeypatch.setattr(service.analise_repo, "list_resposta_ids", lambda _: ["resp1"])
+    def gravar(row, respostas):
+        assert [r["resposta_id"] for r in respostas] == ["resp1"]
+        analises[global_id] = {**row, "id": global_id}
+        return analises[global_id]
+    monkeypatch.setattr(service.analise_repo, "insert_with_respostas", gravar)
+    gestor = _client_autenticado("GESTOR")
+    base = "/api/ahp/comparacao-colaborativa"
+    caminho = f"{base}/ambientes/{AMBIENTE_ID}/pesos-globais"
+    body = {"nome": "Pesos globais", "analises_locais": {"Financeira": financeira_id, "Social": social_id}}
+    manual = {"Financeira": 50, "Social": 40, "Segurança": 10}
+    assert gestor.post(caminho, json={**body, "percentuais_dimensoes": {**manual, "Social": 5}}).status_code == 422
+    assert gestor.post(caminho, json={**body, "analises_locais": {}, "percentuais_dimensoes": manual}).status_code == 422
+    assert gestor.post(caminho, json={**body, "percentuais_dimensoes": manual, "analise_dimensoes_id": fonte_id}).status_code == 422
+    for fonte in ({"percentuais_dimensoes": manual}, {"analise_dimensoes_id": fonte_id}):
+        response = gestor.post(caminho, json={**body, **fonte})
+        assert response.status_code == 201, response.text
+        resultado = response.json()
+        assert resultado["matriz_consolidada"] == [] and resultado["razao_consistencia"] is None
+        assert resultado["pesos_consolidados"] == pytest.approx([.375, .125, .16, .24, .1])
+        assert resultado["estatisticas_analise"]["pesos_locais"] == [.75, .25, .4, .6, 1.]
+        assert resultado["estatisticas_analise"]["analise_dimensoes_id"] == fonte.get("analise_dimensoes_id")
+    origem["matriz_id"] = HIERARQUIZACAO_ID
+    assert gestor.post(caminho, json={**body, "analise_dimensoes_id": fonte_id}).status_code == 422
+    def homologar(ambiente_id, pesos, _, *, homologacao):
+        assert ambiente_id == AMBIENTE_ID and homologacao[0] == global_id
+        ambiente.update(pesos)
+        analises[global_id]["status"] = "homologada"
+    monkeypatch.setattr(repo, "atualizar_consolidacao", homologar)
+    assert gestor.post(f"{base}/analises/{global_id}/homologar").json()["status"] == "homologada"
+    from api.services.ponderacao_fase3 import pesos_do_julgamento
+    pesos_fase3 = pesos_do_julgamento(ambiente)
+    assert pesos_fase3["custo"] == pytest.approx(.375)
+    assert "sinistros_graves" not in pesos_fase3
+
+
+def test_duas_etapas_validam_uma_vez_e_agregam_pesos_individuais(monkeypatch):
+    from api.services import email_resposta_colaborador
+    monkeypatch.setattr(email_resposta_colaborador, "notificar", lambda *_: None)
+    _instalar_fake_repo(monkeypatch)
+    criterios = [{"Critério": nome, "Dimensão": dimensao, "Etapa": "Fase 3"} for nome, dimensao in (
+        ("Custo", "Financeira"), ("Prazo", "Financeira"), ("Retorno", "Financeira"),
+        ("Acesso", "Social"), ("Equidade", "Social"), ("Sinistros", "Segurança"),
+    )]
+    gestor, publico = _client_autenticado("GESTOR"), TestClient(app)
+    base = "/api/ahp/comparacao-colaborativa"
+    body = {"nome": "Duas etapas", "modo_comparacao": "duas_etapas",
+            "valido_ate": "2030-12-31T23:59:59Z", "matriz_premissas_criterios": {"linhas": criterios},
+            "convites": [{"email": email} for email in ("ana@x.gov.br", "bia@x.gov.br", "caio@x.gov.br")]}
+    limitado = {**body, "convites": [{"email": "ana@x.gov.br", "dimensoes": ["Financeira"]}]}
+    assert gestor.post(f"{base}/ambientes", json=limitado).status_code == 422
+    criado = gestor.post(f"{base}/ambientes", json=body)
+    assert criado.status_code == 201, criado.text
+    ambiente = criado.json()
+    caminho = f"{base}/publico/{ambiente['token']}/respostas"
+    calcula = MagicMock(wraps=service.ahp_engine.analyze_matrix)
+    monkeypatch.setattr(service.ahp_engine, "analyze_matrix", calcula)
+
+    def iniciar(email):
+        acesso = {"email": email, "token_acesso": KEY}
+        ident = {"email": email, "nome_completo": "Colaborador", "instituicao": "Teste"}
+        resp = publico.post(caminho + "/iniciar", json={"identificacao": ident, "token_acesso": KEY})
+        assert resp.status_code == 200, resp.text
+        return acesso, ident, resp.json()
+
+    def progresso(acesso, atual, matriz, etapa="dimensoes", concluir=False):
+        return publico.patch(caminho + "/progresso", json={
+            **acesso, "versao": atual["atualizadoEm"], "matriz_comparacao": matriz,
+            "etapa": etapa, "concluir_etapa": concluir,
+        })
+
+    def enviar(ident, atual, matriz):
+        return publico.post(caminho, json={
+            "identificacao": ident, "token_acesso": KEY, "versao": atual["atualizadoEm"],
+            "matriz_comparacao": matriz,
+            "estatisticas": {"pesos_globais_individuais": [1, 0, 0, 0, 0, 0]},
+        })
+
+    def blocos(financeira, social):
+        matriz = [[1 if i == j else None for j in range(6)] for i in range(6)]
+        for indices, bloco in [([0, 1, 2], financeira), ([3, 4], social)]:
+            for i, linha in zip(indices, bloco):
+                for j, valor in zip(indices, linha):
+                    matriz[i][j] = valor
+        return matriz
+
+    ana, id_ana, draft = iniciar("ana@x.gov.br")
+    metadados = publico.post(f"{base}/publico/{ambiente['token']}/acesso", json=ana).json()
+    assert metadados["dimensoes_comparacao"] == ["Financeira", "Social", "Segurança"]
+    assert metadados["grupos_comparacao"] == {"Financeira": [0, 1, 2], "Social": [3, 4], "Segurança": [5]}
+    assert enviar(id_ana, draft, draft["matriz_comparacao"]).status_code == 422
+    parcial = [[1, None, None], [None, 1, None], [None, None, 1]]
+    primeiros_pesos = [[1, 3, 3], [1 / 3, 1, 1], [1 / 3, 1, 1]]
+    incoerente = [[1, 9, 1 / 9], [1 / 9, 1, 9], [9, 1 / 9, 1]]
+    assert progresso(ana, draft, parcial, concluir=True).status_code == 422
+    assert progresso(ana, draft, incoerente, concluir=True).status_code == 422
+    validada = progresso(ana, draft, primeiros_pesos, concluir=True)
+    assert validada.status_code == 200, validada.text
+    validada = validada.json()
+    calcula.reset_mock()
+    repetida = progresso(ana, validada, primeiros_pesos, concluir=True)
+    assert repetida.status_code == 200, repetida.text
+    calcula.assert_not_called()
+    editada = progresso(ana, repetida.json(), parcial)
+    assert editada.status_code == 200, editada.text
+    assert editada.json()["estatisticas"]["julgamento_dimensoes"]["resultado"] is None
+    assert progresso(ana, validada, primeiros_pesos, concluir=True).status_code == 422
+    assert enviar(id_ana, editada.json(), editada.json()["matriz_comparacao"]).status_code == 422
+    validada = progresso(ana, editada.json(), primeiros_pesos, concluir=True).json()
+    assert enviar(id_ana, validada, blocos(incoerente, [[1, 3], [1 / 3, 1]])).status_code == 422
+    calcula.reset_mock()
+    final_ana = enviar(id_ana, validada, blocos(primeiros_pesos, [[1, 3], [1 / 3, 1]]))
+    assert final_ana.status_code == 201, final_ana.text
+    assert [len(call.args[0]) for call in calcula.call_args_list] == [3, 2, 1]
+    assert final_ana.json()["estatisticas"]["pesos_globais_individuais"] == pytest.approx([.36, .12, .12, .15, .05, .20])
+
+    bia, id_bia, draft_bia = iniciar("bia@x.gov.br")
+    validada_bia = progresso(bia, draft_bia, [[1, 1 / 3, 1], [3, 1, 3], [1, 1 / 3, 1]], concluir=True).json()
+    final_bia = enviar(id_bia, validada_bia, blocos([[1] * 3 for _ in range(3)], [[1, 1 / 3], [3, 1]]))
+    assert final_bia.status_code == 201, final_bia.text
+    iniciar("caio@x.gov.br")
+
+    gravar = MagicMock(side_effect=lambda dados, respostas: {**dados, "id": CONFIG_ID})
+    monkeypatch.setattr(service.analise_repo, "insert_with_respostas", gravar)
+    monkeypatch.setattr(service.analise_repo, "list_resposta_ids", lambda _: [final_ana.json()["id"], final_bia.json()["id"]])
+    analise = gestor.post(f"{base}/ambientes/{ambiente['id']}/analises", json={"nome": "Ranking coletivo"})
+    assert analise.status_code == 201, analise.text
+    resultado = analise.json()
+    assert resultado["metodo_agregacao"] == "media_pesos_individuais"
+    assert resultado["respostas_incluidas"] == 2 and resultado["razao_consistencia"] is None
+    globais = [(a + b) / 2 for a, b in zip(
+        final_ana.json()["estatisticas"]["pesos_globais_individuais"], final_bia.json()["estatisticas"]["pesos_globais_individuais"]
+    )]
+    assert resultado["pesos_consolidados"] == pytest.approx(globais)
+    assert resultado["estatisticas_analise"]["ordem_ranking"] == sorted(range(6), key=lambda i: -globais[i])
+
+
 def test_invitation_uses_active_form_with_production_prefix(monkeypatch) -> None:
     _instalar_fake_repo(monkeypatch)
     response = _client_autenticado("GESTOR").post(
@@ -1180,6 +1369,96 @@ def test_invitation_uses_active_form_with_production_prefix(monkeypatch) -> None
     assert response.status_code == 201, response.text
     body = response.json()
     assert body["url_publica"] == f"http://testserver/sicard/public/analise-multicriterio/formulario-comparacao-pareada/{body['token']}/"
+
+
+def test_inscricao_publica_transita_da_lista_ate_envio_sem_email(monkeypatch):
+    from api.services import email_resposta_colaborador
+
+    _instalar_fake_repo(monkeypatch)
+    inscricoes = {}
+    indisponivel = False
+    notificar = MagicMock()
+    monkeypatch.setattr(email_resposta_colaborador, "notificar", notificar)
+    monkeypatch.setattr(service.analise_repo, "list_by_ambiente", lambda _: [])
+
+    def inserir(ambiente_id, nome, email, instituicao, segredo_hash):
+        if indisponivel:
+            from api.exceptions import DatabaseUnavailableError
+            raise DatabaseUnavailableError("Banco indisponível.")
+        if any(i["email"] == email for i in inscricoes.values()):
+            return None
+        dados = {"id": HIERARQUIZACAO_ID, "nome_completo": nome, "nome": nome,
+                 "email": email, "instituicao": instituicao, "ambiente_id": ambiente_id}
+        inscricoes[segredo_hash] = dados
+        return dados
+
+    monkeypatch.setattr(repo, "insert_inscricao", inserir)
+    monkeypatch.setattr(repo, "get_inscricao", lambda ambiente, chave: next(
+        (i for hash_, i in inscricoes.items() if hash_ == chave and i["ambiente_id"] == ambiente), None,
+    ))
+    monkeypatch.setattr(repo, "list_inscricoes", lambda ambiente: [
+        i for i in inscricoes.values() if i["ambiente_id"] == ambiente
+    ])
+    gestor = _client_autenticado()
+    publico = TestClient(app, base_url="https://testserver")
+    outro = TestClient(app, base_url="https://testserver")
+    api = "/api/ahp/comparacao-colaborativa"
+    criacao = {"nome": "Consulta pública", "valido_ate": "2030-10-10T22:00:00Z",
+               "modo_participacao": "publico", "modo_comparacao": "duas_etapas",
+               "matriz_premissas_criterios": {"linhas": [
+                   {"Critério": "Acesso", "Dimensão": "Social", "Etapa": "Fase 1"},
+                   {"Critério": "Equidade", "Dimensão": "Social", "Etapa": "Fase 2"},
+                   {"Critério": "Custo", "Dimensão": "Financeira", "Etapa": "Fase 3"},
+               ]}}
+    assert gestor.post(api + "/ambientes", json={**criacao, "modo_comparacao": "todos"}).status_code == 422
+    assert gestor.post(api + "/ambientes", json={**criacao, "convites": [{"email": "teste@x.gov.br"}]}).status_code == 422
+    criada = gestor.post(api + "/ambientes", json=criacao)
+    assert criada.status_code == 201, criada.text
+    ambiente = criada.json()
+    caminho = f"{api}/publico/{ambiente['token']}"
+    pagina = f"/public/analise-multicriterio/participar/{ambiente['token']}/"
+    gestao = f"{api}/ambientes/{ambiente['id']}/espaco-analitico"
+    ident = {"email": "pessoa@x.gov.br", "nome_completo": "Pessoa Teste", "instituicao": "Instituição Teste"}
+    assert ambiente["url_publica"].endswith(pagina)
+    assert publico.get(pagina + "formulario/", follow_redirects=False).status_code == 303
+    assert publico.post(caminho + "/acesso", json={"email": ident["email"], "token_acesso": KEY}).status_code == 422
+    indisponivel = True
+    falha = publico.post(caminho + "/inscricao", json=ident)
+    assert falha.status_code == 503 and "set-cookie" not in falha.headers
+    indisponivel = False
+    inscrita = publico.post(caminho + "/inscricao", json=ident)
+    assert inscrita.status_code == 200, inscrita.text
+    assert "HttpOnly" in inscrita.headers["set-cookie"] and "Secure" in inscrita.headers["set-cookie"]
+    assert outro.post(caminho + "/inscricao", json={**ident, "email": ident["email"].upper()}).status_code == 422
+    codigo = inscrita.json()["codigo_retomada"]
+    assert outro.post(caminho + "/inscricao", json={"email": "outra@x.gov.br", "codigo_retomada": codigo}).status_code == 422
+    assert outro.post(caminho + "/inscricao", json={"email": ident["email"], "codigo_retomada": codigo}).status_code == 200
+    assert outro.get(pagina + "formulario/", follow_redirects=False).status_code == 200
+    assert publico.get(gestao).status_code == 401
+    antes = gestor.get(gestao)
+    assert antes.status_code == 200, antes.text
+    assert antes.json()["participacao"]["nao_iniciados"] == 1
+    assert antes.json()["inscritos"][0]["instituicao"] == ident["instituicao"]
+    assert antes.json()["respostas"] == []
+    assert publico.post(caminho + "/acesso", json={"email": ident["email"]}).json()["criterios"] == ["Acesso", "Equidade", "Custo"]
+    respostas = caminho + "/respostas"
+    inicio = publico.post(respostas + "/iniciar", json={"identificacao": {**ident, "nome_completo": "Nome adulterado"}})
+    assert inicio.status_code == 200, inicio.text
+    assert inicio.json()["nome_completo"] == ident["nome_completo"]
+    assert inicio.json()["inscricao_id"] == HIERARQUIZACAO_ID
+    matriz = [[1, 1, None], [1, 1, None], [None, None, 1]]
+    final = {"identificacao": ident, "matriz_comparacao": matriz, "versao": inicio.json()["atualizadoEm"]}
+    assert publico.post(respostas, json=final).status_code == 422
+    etapa = publico.patch(respostas + "/progresso", json={
+        "email": ident["email"], "matriz_comparacao": [[1, 3], [1 / 3, 1]],
+        "versao": inicio.json()["atualizadoEm"], "etapa": "dimensoes", "concluir_etapa": True,
+    })
+    assert etapa.status_code == 200, etapa.text
+    envio = publico.post(respostas, json={**final, "versao": etapa.json()["atualizadoEm"]})
+    assert envio.status_code == 201, envio.text
+    assert envio.json()["estatisticas"]["pesos_globais_individuais"] == pytest.approx([.375, .375, .25])
+    assert gestor.get(gestao).json()["participacao"]["enviadas"] == 1
+    notificar.assert_not_called()
 
 
 def test_fluxo_colaborativo_completo(monkeypatch) -> None:

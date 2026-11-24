@@ -5,12 +5,12 @@ from datetime import datetime
 from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import AwareDatetime, BaseModel, Field, field_validator
+from pydantic import AwareDatetime, BaseModel, EmailStr, Field, FiniteFloat, field_validator
 
 
 EMAIL_REMETENTE_ALIAS_PADRAO = "SICARD-PLI"
 EMAIL_ASSUNTO_PADRAO = "Convite para preenchimento colaborativo AHP - PLI - SICARD"
-ModoComparacao = Literal["todos", "por_grupo"]
+ModoComparacao = Literal["todos", "por_grupo", "dimensoes", "duas_etapas"]
 
 
 def _validar_cabecalho_email(valor: object) -> object:
@@ -29,6 +29,7 @@ class ConviteColaborativoSchema(BaseModel):
 
 class AmbienteColaborativoCreateSchema(BaseModel):
     modo_comparacao: ModoComparacao = "todos"
+    modo_participacao: Literal["convite", "publico"] = "convite"
     matriz_id: UUID | None = None
     nome: str | None = Field(None, min_length=1, max_length=200)
     config_tipo: str | None = None
@@ -38,7 +39,7 @@ class AmbienteColaborativoCreateSchema(BaseModel):
     matriz_premissas_criterios: dict[str, Any] | list[dict[str, Any]] | None = None
     arquivo_matriz_base64: str | None = None
     arquivo_matriz_nome: str | None = Field(None, max_length=255)
-    convites: list[ConviteColaborativoSchema] = Field(..., min_length=1)
+    convites: list[ConviteColaborativoSchema] = Field(default_factory=list)
     valido_ate: datetime
 
 
@@ -69,10 +70,10 @@ class AmbienteColaborativoUpdateSchema(BaseModel):
 class ConsolidacaoColaborativaSchema(BaseModel):
     matriz_consolidada: list[list[float]]
     pesos_consolidados: list[float]
-    lambda_max: float
-    indice_consistencia: float
-    indice_aleatorio: float
-    razao_consistencia: float
+    lambda_max: float | None
+    indice_consistencia: float | None
+    indice_aleatorio: float | None
+    razao_consistencia: float | None
     consistente: bool
     respostas_consolidadas: int
     consolidadoEm: str
@@ -86,16 +87,17 @@ class AnaliseExibidaSchema(BaseModel):
     metodo_agregacao: str
     matriz_consolidada: list[list[float]]
     pesos_consolidados: list[float]
-    lambda_max: float
-    indice_consistencia: float
-    indice_aleatorio: float
-    razao_consistencia: float
+    lambda_max: float | None
+    indice_consistencia: float | None
+    indice_aleatorio: float | None
+    razao_consistencia: float | None
     criterios: list[dict[str, Any]]
     recorte_parcial: bool
 
 
 class AmbienteColaborativoResponseSchema(BaseModel):
     modo_comparacao: ModoComparacao = "todos"
+    modo_participacao: Literal["convite", "publico"] = "convite"
     matriz_id: str | None = None
     matriz_nome: str | None = None
     id: str
@@ -116,6 +118,7 @@ class AmbienteColaborativoResponseSchema(BaseModel):
     convites: list[dict[str, Any]]
     lista_colaboradores: list[dict[str, Any]] = Field(default_factory=list)
     total_convites: int = 0
+    total_inscritos: int = 0
     valido_ate: str
     status: str
     url_publica: str
@@ -150,6 +153,7 @@ class AmbientePublicoSchema(BaseModel):
     criterios: list[str]
     modo_comparacao: ModoComparacao = "todos"
     grupos_comparacao: dict[str, list[int]] = Field(default_factory=dict)
+    dimensoes_comparacao: list[str] = Field(default_factory=list)
     valido_ate: str
     status: str
     email_autorizado: bool = False
@@ -162,8 +166,20 @@ class IdentificacaoColaboradorSchema(BaseModel):
     instituicao: str = Field(..., min_length=2, max_length=300)
 
 
+class InscricaoPublicaSchema(BaseModel):
+    nome_completo: str | None = Field(None, min_length=2, max_length=200)
+    email: EmailStr
+    instituicao: str | None = Field(None, min_length=2, max_length=300)
+    codigo_retomada: str | None = Field(None, pattern=r"^[A-Za-z0-9_-]{43}$")
+
+    @field_validator("nome_completo", "instituicao", mode="before")
+    @classmethod
+    def remover_espacos(cls, valor):
+        return valor.strip() if isinstance(valor, str) else valor
+
+
 class TokenAcessoColaborativoSchema(BaseModel):
-    token_acesso: str = Field(..., pattern=r"^[A-Za-z0-9_-]{43}$", min_length=43, max_length=43)
+    token_acesso: str | None = Field(None, pattern=r"^[A-Za-z0-9_-]{43}$")
 
 
 class AcessoColaborativoSchema(TokenAcessoColaborativoSchema):
@@ -174,6 +190,7 @@ class RespostaColaborativaCreateSchema(TokenAcessoColaborativoSchema):
     identificacao: IdentificacaoColaboradorSchema
     matriz_comparacao: list[list[float | None]]
     estatisticas: dict[str, Any] | None = None
+    versao: AwareDatetime | None = None
 
 
 class RespostaColaborativaInicioSchema(TokenAcessoColaborativoSchema):
@@ -183,6 +200,9 @@ class RespostaColaborativaInicioSchema(TokenAcessoColaborativoSchema):
 class RespostaColaborativaProgressoSchema(AcessoColaborativoSchema):
     matriz_comparacao: list[list[float | None]]
     estatisticas: dict[str, Any] | None = None
+    etapa: Literal["dimensoes", "criterios"] = "criterios"
+    concluir_etapa: bool = False
+    versao: AwareDatetime | None = None
 
 
 class RespostaColaborativaUpdateSchema(BaseModel):
@@ -194,6 +214,7 @@ class RespostaColaborativaUpdateSchema(BaseModel):
 class RespostaColaborativaResponseSchema(BaseModel):
     id: str
     ambiente_id: str
+    inscricao_id: str | None = None
     nome_completo: str
     email: str
     instituicao: str
@@ -234,6 +255,13 @@ class AnaliseColaborativaCreateSchema(BaseModel):
     metodo_agregacao: Literal["geometrica", "aritmetica", "mediana", "moda"] = "geometrica"
 
 
+class PesosGlobaisCreateSchema(BaseModel):
+    nome: str = Field(..., min_length=1, max_length=200)
+    analises_locais: dict[str, UUID]
+    percentuais_dimensoes: dict[str, FiniteFloat] | None = None
+    analise_dimensoes_id: UUID | None = None
+
+
 class AnaliseColaborativaResponseSchema(BaseModel):
     id: str
     ambiente_id: str
@@ -245,10 +273,10 @@ class AnaliseColaborativaResponseSchema(BaseModel):
     excluir_inconsistentes: bool
     matriz_consolidada: list[list[float]]
     pesos_consolidados: list[float]
-    lambda_max: float
-    indice_consistencia: float
-    indice_aleatorio: float
-    razao_consistencia: float
+    lambda_max: float | None
+    indice_consistencia: float | None
+    indice_aleatorio: float | None
+    razao_consistencia: float | None
     consistente: bool
     estatisticas_analise: dict[str, Any] = Field(default_factory=dict)
     status: str

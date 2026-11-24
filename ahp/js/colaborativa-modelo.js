@@ -4,9 +4,16 @@
   global.SLTColaborativaModelo = true;
   global.SLTColaborativaSimulacao = true;
   const api = global.SLTColaborativaApi;
-  let modelo, draft;
+  let carregamento, draft;
 
-  function renderizarPremissas() {
+  function carregarModelo() {
+    return carregamento ??= api.obterModeloPli().catch(error => {
+      carregamento = null;
+      throw error;
+    });
+  }
+
+  function renderizarPremissas(modelo) {
     const detalhes = document.getElementById('collab-model-criteria');
     const grupos = modelo.dimensoes.map(({ nome, criterios }) => {
       const grupo = document.createElement('section');
@@ -28,16 +35,20 @@
   }
 
   api.obterPublico = async function () {
-    modelo = await api.obterModeloPli();
-    renderizarPremissas();
+    const modelo = await carregarModelo();
+    renderizarPremissas(modelo);
     return Object.assign({}, modelo, { criterios: [] });
   };
   api.validarAcesso = async function () {
-    return structuredClone(modelo || await api.obterModeloPli());
+    return structuredClone(await carregarModelo());
   };
   api.iniciarResposta = async function () {
-    const n = modelo.criterios.length;
-    draft = {status: 'em_preenchimento', matriz_comparacao: Array.from({length: n}, () => Array(n).fill(1)), estatisticas: {}};
+    const { criterios } = await carregarModelo();
+    draft = {
+      status: 'em_preenchimento',
+      matriz_comparacao: criterios.map((_, i) => criterios.map((_, j) => i === j ? 1 : null)),
+      estatisticas: {},
+    };
     return structuredClone(draft);
   };
   api.salvarProgresso = async function (_, payload) {

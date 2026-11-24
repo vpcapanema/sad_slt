@@ -303,6 +303,10 @@ body.ami-public-page {
   font: 700 var(--consistency-font-body)/1.3 Roboto, Arial, sans-serif;
 }
 
+.ami-public-page .collab-consistency-review-apply {
+  margin-top: .65rem;
+}
+
 .ami-public-page .collab-consistency-review-status {
   margin: .65rem 0 0;
   padding: .55rem .65rem;
@@ -311,6 +315,12 @@ body.ami-public-page {
   color: #6b4700;
   font-size: var(--consistency-font-detail);
   line-height: 1.5;
+}
+
+.ami-public-page .collab-consistency-review-status:empty {
+  margin: 0;
+  padding: 0;
+  border: 0;
 }
 
 .ami-public-page .collab-consistency-review-status.is-acceptable {
@@ -625,7 +635,7 @@ body.ami-public-page {
   font-size: var(--ami-font-help);
 }
 
-.ami-public-page #collab-form-section .collab-guia-saaty {
+.ami-public-page #collab-form-section :is(.collab-guia-saaty, .collab-dimension-guide) {
   display: grid;
   gap: 1.25rem;
   margin: 0 0 1rem;
@@ -639,13 +649,28 @@ body.ami-public-page {
   text-align: left;
 }
 
-.ami-public-page #collab-form-section .collab-guia-saaty h3 {
+.ami-public-page #collab-form-section :is(.collab-guia-saaty, .collab-dimension-guide) h3 {
   display: flex;
   align-items: center;
   gap: 0.6rem;
   margin: 0;
   font-size: 1.2rem;
   line-height: 1.3;
+}
+
+.ami-public-page #collab-form-section .collab-dimension-guide {
+  gap: .65rem;
+  background: #eaf3fa;
+}
+
+.ami-public-page #collab-form-section .collab-dimension-guide h3 {
+  font-size: 1.35rem;
+}
+
+.ami-public-page #collab-form-section .collab-dimension-guide p {
+  margin: 0;
+  font-size: 1.125rem;
+  line-height: 1.6;
 }
 
 .ami-public-page #collab-form-section .collab-guia-saaty h3 i {

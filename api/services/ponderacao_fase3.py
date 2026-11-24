@@ -10,6 +10,8 @@ from api.services.matrizes_criterios import exigir_compativel, exigir_julgamento
 
 
 def pesos_do_julgamento(julgamento):
+    if julgamento.get("modo_comparacao") == "dimensoes":
+        raise DemandaValidationError("Use os pesos das dimensões na composição dos pesos globais dos critérios.", field="julgamento_id")
     integral = bool(julgamento.get("matriz_integral"))
     if not integral:
         exigir_julgamento_fase3(julgamento)
@@ -34,6 +36,8 @@ def pesos_do_julgamento(julgamento):
 def listar_julgamentos(row):
     itens = []
     for julgamento in julgamentos.list_ambientes_by_hierarquizacao(row["id"]):
+        if julgamento.get("modo_comparacao") == "dimensoes":
+            continue
         item = {"id": str(julgamento["id"]), "nome": julgamento.get("nome") or f"Julgamento {julgamento['id']}", "pesos": {}, "erro": None}
         try:
             if row.get("matriz_id"):

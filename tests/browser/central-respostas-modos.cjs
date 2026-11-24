@@ -28,6 +28,7 @@ const BASE = process.env.SICARD_BROWSER_BASE_URL || 'http://127.0.0.1:8083';
    estatisticas:{por_par:[[0,1,indices],[0,2,indices.map(()=>2)],[1,2,indices.map(()=>3)]].map(([i,j,values])=>({i,j,criterio_a:`C${i+1}`,criterio_b:`C${j+1}`,mediana:i===0&&j===1?3:values[0],modas:[values[0]],media:values.reduce((a,b)=>a+b)/values.length,media_geometrica:values.reduce((a,b)=>a*b)**(1/values.length),pontos:answersJ2.map((r,k)=>({resposta_id:r.id,respondente:r.nome_completo,valor:values[k]}))}))},
    analises:[],analise_homologada_id:null};
  let exibirPorGrupo = false;
+ let exibirDuasEtapas = false;
  const recortes = ['Financeira', 'Social'].map((dimensao, index) => {
    const criteriosDoGrupo = ['Custo', 'Prazo', 'Acesso', 'Equidade'].slice(index * 2, index * 2 + 2)
      .map(nome => ({nome, dimensao}));
@@ -38,20 +39,47 @@ const BASE = process.env.SICARD_BROWSER_BASE_URL || 'http://127.0.0.1:8083';
      estatisticas: {por_par: [{i: 0, j: 1, criterio_a: criteriosDoGrupo[0].nome, criterio_b: criteriosDoGrupo[1].nome,
        pontos: [{resposta_id: resposta.id, respondente: resposta.nome_completo, valor}]}]}};
  });
- const workspacePorGrupo = {...workspaceJ2, ambiente: {...workspaceJ2.ambiente, modo_comparacao: 'por_grupo',
+ const workspacePorGrupo = {...workspaceJ2, ambiente: {...workspaceJ2.ambiente, matriz_id: 'matriz1', modo_comparacao: 'por_grupo',
    n_criterios: 4, criterios: recortes.flatMap(item => item.criterios)}, recortes,
+   fontes_pesos_dimensoes: [{nome:'Julgamento das dimensões', analise_id:'fonte1', codigo:'DIM1'}],
+   analises: recortes.map((g, i) => ({...official, id:'local' + i, codigo:'LOC' + i, nome:'Análise ' + g.dimensao,
+     status:'calculada', estatisticas_analise:{dimensao:g.dimensao, criterios_atribuidos:g.criterios}})),
    respostas: [{...answers[0], matriz_comparacao: [[1, 3, null, null], [1/3, 1, null, null],
      [null, null, 1, 5], [null, null, 1/5, 1]]}]};
+ const workspaceDuasEtapas = {...workspacePorGrupo, ambiente:{...workspacePorGrupo.ambiente, modo_comparacao:'duas_etapas'},
+   participacao:{...workspacePorGrupo.participacao, enviadas:1, em_preenchimento:1}, analises:[]};
  const oldObjects=[{id:'p1',codigo:'P1',nome:'Objeto salvo na hierarquizacao',status:'aprovada'}];
  const group={id:'g1',codigo:'G1',nome:'Grupo atual',tipo_demanda:'projeto',objetos:[...oldObjects,{id:'p2',codigo:'P2',nome:'Objeto adicionado posteriormente'}]};
  const hierarchy={id:'h1',codigo:'H1',nome:'Hier',status:'em_julgamento',grupo_demanda_id:'g1',objetos:oldObjects,dados_hierarquizacao:{cabecalho_grupo:{matriz_premissas_criterios:{linhas:criteria}}}};
  await page.route('**/api/**',r=>{const req=r.request(),path=new URL(req.url()).pathname.replace(/^\/sicard\//,'/');let json=[];
  if(agentLogin && path.startsWith('/api/auth/'))return r.continue();
- if(req.method()!=='GET'){writes.push({method:req.method(),path,data:req.postDataJSON()});return r.fulfill({status:422,json:{detail:'Auditoria: envio capturado'}});}
+ if(req.method()!=='GET'){
+   const payload=req.postDataJSON();
+   writes.push({method:req.method(),path,data:payload});
+   if(path.endsWith('/pesos-globais')){
+     const item={id:'global'+writes.length,nome:payload.nome,codigo:'GLOBAL'+writes.length,status:'calculada',
+       metodo_agregacao:'pesos_por_dimensao',consistente:true,pesos_consolidados:[.45,.15,.32,.08],
+       estatisticas_analise:{criterios_atribuidos:workspacePorGrupo.ambiente.criterios,
+         pesos_dimensoes:{Financeira:.6,Social:.4},pesos_locais:[.75,.25,.8,.2],
+         analise_dimensoes_id:payload.analise_dimensoes_id || null}};
+     workspacePorGrupo.analises.unshift(item);
+     return r.fulfill({status:201,json:item});
+   }
+   if(exibirDuasEtapas && path.endsWith('/j2/analises')){
+     const item={id:'coletivo',nome:payload.nome,codigo:'COLETIVO1',status:'calculada',respostas_incluidas:1,
+       metodo_agregacao:'media_pesos_individuais',consistente:true,pesos_consolidados:[.25,.15,.5,.1],
+       estatisticas_analise:{criterios_atribuidos:workspaceDuasEtapas.ambiente.criterios,ordem_ranking:[2,0,1,3],
+         faixas_pesos_individuais:[.25,.15,.5,.1].map(peso=>({minimo:peso,maximo:peso}))}};
+     workspaceDuasEtapas.analises.unshift(item);
+     return r.fulfill({status:201,json:item});
+   }
+   return r.fulfill({status:422,json:{detail:'Auditoria: envio capturado'}});
+ }
  if(path==='/api/auth/me')json={id:'u',tipo_usuario:'ANALISTA'};
  if(path==='/api/auth/session')json={authenticated:true,user:{id:'u',tipo_usuario:'ANALISTA'}};
  if(path==='/api/ahp/comparacao-colaborativa/ambientes')json=rounds;
- if(path.endsWith('/espaco-analitico'))json=path.includes('/j2/') ? (exibirPorGrupo ? workspacePorGrupo : workspaceJ2) : workspace;
+ if(path==='/api/ahp/comparacao-colaborativa/matrizes/matriz1')json={id:'matriz1',nome:'Matriz de teste',conteudo:{linhas:workspacePorGrupo.ambiente.criterios}};
+ if(path.endsWith('/espaco-analitico'))json=path.includes('/j2/') ? (exibirDuasEtapas ? workspaceDuasEtapas : exibirPorGrupo ? workspacePorGrupo : workspaceJ2) : workspace;
  if(path==='/api/ahp/hierarquizacoes'||path==='/api/ahp/hierarquizacoes/portfolio')json=[hierarchy];
  if(path==='/api/agrupamentos-demandas')json=[group];
  if(path==='/api/agrupamentos-demandas/g1')json=group;
@@ -172,7 +200,53 @@ const BASE = process.env.SICARD_BROWSER_BASE_URL || 'http://127.0.0.1:8083';
  await page.locator('#pfsStatusOverlay .pfs-box.pfs-active').waitFor({state:'visible'});
  assert.equal(writes.at(-1).data.dimensao, 'Social');
  assert.deepEqual(writes.at(-1).data.resposta_ids, ['r0']);
- assert.deepEqual(errors,[]);console.log('PASS: quatro medidas sincronizadas, estilos desktop/mobile e consolidação por grupo');
+ const closeFeedback = () => page.locator('#pfsStatusOverlay .pfs-box.pfs-active .pfs-close').click();
+ await closeFeedback();
+ const globais = page.locator('#ami-global-weights');
+ assert.equal(await globais.isVisible(), true);
+ await globais.locator('[data-global-local="Financeira"]').selectOption('local0');
+ await globais.locator('[data-global-local="Social"]').selectOption('local1');
+ await globais.locator('[data-global-percent="Financeira"]').fill('60');
+ await globais.locator('[data-global-percent="Social"]').fill('30');
+ await globais.getByRole('button', {name:'Calcular e salvar pesos globais'}).click();
+ assert.match(await page.locator('#ami-global-feedback').innerText(), /100%/);
+ await globais.locator('[data-global-percent="Social"]').fill('40');
+ await globais.getByRole('button', {name:'Calcular e salvar pesos globais'}).click();
+ await page.locator('#pfsStatusOverlay .pfs-box.pfs-active').waitFor({state:'visible'});
+ assert.match(writes.at(-1).path, /j2\/pesos-globais$/);
+ assert.deepEqual(writes.at(-1).data.percentuais_dimensoes, {Financeira:60,Social:40});
+ assert.deepEqual(writes.at(-1).data.analises_locais, {Financeira:'local0',Social:'local1'});
+ await page.locator('#ami-global-results li').first().getByText(/45% global/).waitFor();
+ assert.equal(await globais.getByRole('button', {name:'Homologar pesos globais'}).isVisible(),true);
+ await closeFeedback();
+ await page.locator('#ami-global-source').selectOption('ahp');
+ assert.equal(await globais.locator('[data-global-percent="Financeira"]').isVisible(), false);
+ await page.locator('#ami-global-ahp').selectOption('fonte1');
+ await globais.getByRole('button', {name:'Calcular e salvar pesos globais'}).click();
+ await page.locator('#pfsStatusOverlay .pfs-box.pfs-active').waitFor({state:'visible'});
+ assert.equal(writes.at(-1).data.analise_dimensoes_id, 'fonte1');
+ assert.equal('percentuais_dimensoes' in writes.at(-1).data, false);
+ await closeFeedback();
+ exibirDuasEtapas = true;
+ await page.locator('#ami-responses-edit-action').click();
+ const analiseColetiva = page.locator('#ami-linked-analysis-form');
+ await analiseColetiva.waitFor();
+ assert.equal(await page.locator('#ami-analysis-local-consolidation').isVisible(), false);
+ assert.equal(await page.locator('#ami-global-form').isVisible(), false);
+ await analiseColetiva.getByRole('button', {name:'Calcular e salvar ranking coletivo'}).click();
+ await page.locator('#ami-global-result-detail li').first().getByText(/50% global/).waitFor();
+ assert.match(await page.locator('#ami-global-result-detail li').first().innerText(), /Acesso/);
+ assert.deepEqual(writes.at(-1).data, {nome:'Ranking coletivo dos critérios'});
+ await closeFeedback();
+ exibirDuasEtapas = false;
+ await page.locator('#ami-responses-edit-action').click();
+ await page.locator('#ami-global-new-ahp').waitFor();
+ await page.locator('#ami-global-new-ahp').click();
+ await page.waitForURL(/central-julgamentos\?novo=1/);
+ assert.equal(await page.locator('#ami-modo-comparacao').inputValue(), 'dimensoes');
+ assert.equal(await page.locator('#ami-collaborator-dimensions').isVisible(), false);
+ await page.waitForFunction(() => document.querySelector('#ami-matrix-section [data-matrix-select]').value === 'matriz1');
+ assert.deepEqual(errors,[]);console.log('PASS: estilos desktop/mobile, consolidação por grupo e opções de pesos globais');
  if(agentLogin)await page.request.post(BASE+'/api/auth/logout');
  } finally {await browser.close();}
 })().catch(e=>{console.error(e);process.exit(1)});

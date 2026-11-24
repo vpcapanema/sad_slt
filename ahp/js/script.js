@@ -723,6 +723,12 @@ const SAATY_STEPS = [
   { v: 9, label: "9", desc: "Extremamente" },
 ].reverse();
 const SAATY_CENTER = 4;
+const saatyPairSetters = new WeakMap();
+
+function setSaatyPairValue(pair, value) {
+  const index = SAATY_STEPS.findIndex(step => Math.abs(step.v - value) < 1e-8);
+  if (index >= 0) saatyPairSetters.get(pair)?.(index);
+}
 
 function escAhp(s) {
   return String(s ?? "")
@@ -932,6 +938,12 @@ function wireSaaty(pair) {
     if (typeof updateLiveMetrics === "function") updateLiveMetrics();
   }
 
+  function applyUserChange(newIdx) {
+    pair.classList.add("saaty-pair--touched");
+    apply(newIdx, true);
+  }
+  saatyPairSetters.set(pair, applyUserChange);
+
   function idxFromX(clientX) {
     const r = rail.getBoundingClientRect();
     let ratio = (clientX - r.left) / r.width;
@@ -944,9 +956,8 @@ function wireSaaty(pair) {
   }
   function down(e) {
     dragging = true;
-    pair.classList.add("saaty-pair--touched");
     scale.classList.add("saaty-scale--active");
-    apply(idxFromX(pointerX(e)), true);
+    applyUserChange(idxFromX(pointerX(e)));
     e.preventDefault();
   }
   function move(e) {
@@ -969,20 +980,16 @@ function wireSaaty(pair) {
 
   scale.addEventListener("keydown", (e) => {
     if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
-      pair.classList.add("saaty-pair--touched");
-      apply(idx - 1, true);
+      applyUserChange(idx - 1);
       e.preventDefault();
     } else if (e.key === "ArrowRight" || e.key === "ArrowUp") {
-      pair.classList.add("saaty-pair--touched");
-      apply(idx + 1, true);
+      applyUserChange(idx + 1);
       e.preventDefault();
     } else if (e.key === "Home") {
-      pair.classList.add("saaty-pair--touched");
-      apply(0, true);
+      applyUserChange(0);
       e.preventDefault();
     } else if (e.key === "End") {
-      pair.classList.add("saaty-pair--touched");
-      apply(lastIdx, true);
+      applyUserChange(lastIdx);
       e.preventDefault();
     }
   });

@@ -77,6 +77,8 @@ def abertura_convite(ambiente: dict, nomes_criterios: list[str]) -> str:
 
 def orientacao_convite(ambiente: dict, n: int) -> str:
     pedido = (
+        "Nesta rodada, pedimos que você avalie a importância relativa das dimensões da matriz."
+        if ambiente.get("modo_comparacao") == "dimensoes" else
         "Nesta rodada, pedimos que você avalie a importância relativa das dimensões propostas para o PLI-SP 2050. "
         "No formulário, elas aparecem como critérios."
         if eh_pli(ambiente) and not ambiente.get("matriz_integral") else
@@ -85,7 +87,9 @@ def orientacao_convite(ambiente: dict, n: int) -> str:
     quantidade = (f" Você fará {n * (n - 1) // 2} comparações entre os {n} critérios listados abaixo."
                   if n > 2 else " Você fará 1 comparação entre os 2 critérios listados abaixo." if n == 2 else "")
     if ambiente.get("modo_comparacao") == "por_grupo":
-        quantidade = " Você fará as comparações dentro de cada grupo, um grupo por vez."
+        quantidade = " Você fará as comparações entre critérios da mesma dimensão, uma dimensão por vez."
+    elif ambiente.get("modo_comparacao") == "duas_etapas":
+        quantidade = " Primeiro, compare a importância das dimensões entre si. Depois, compare os critérios dentro de cada dimensão e envie uma única resposta."
     return (
         f"Como participar. {pedido}{quantidade} Em cada par, indique qual deles deve ter mais influência na "
         "priorização e com que intensidade. Se os dois tiverem a mesma importância, escolha 1."
@@ -136,7 +140,11 @@ def contextualizacao_formulario(ambiente: dict, criterios_atribuidos: list[dict]
     )
     if grupos_comparacao:
         pares = sum(len(indices) * (len(indices) - 1) // 2 for indices in grupos_comparacao.values())
-        recorte = f"Seu formulário reúne {n} critérios em {pares} {'par' if pares == 1 else 'pares'} de comparação dentro dos grupos."
+        recorte = f"Seu formulário reúne {n} critérios em {pares} {'par' if pares == 1 else 'pares'} de comparação dentro de cada dimensão."
+        if ambiente.get("modo_comparacao") == "duas_etapas":
+            total = len(grupos_comparacao)
+            recorte = (f"Primeiro, compare as {total} dimensões em {total * (total - 1) // 2} comparações. "
+                       f"Depois, compare os {n} critérios em {pares} comparações dentro das dimensões.")
     return {
         "introducao": introducao,
         "metodo": _METODO_FORMULARIO,

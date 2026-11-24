@@ -213,7 +213,12 @@ def test_modelo_pli_compara_os_18_criterios_da_matriz_oficial():
     ]
     assert set(corpo["premissas"]) == set(corpo["criterios"])
     assert all(corpo["premissas"].values())
-    assert "18 critérios em 153 pares" in corpo["contextualizacao"]["orientacao"]
+    assert corpo["modo_comparacao"] == "por_grupo"
+    assert corpo["grupos_comparacao"] == {
+        dimensao["nome"]: [corpo["criterios"].index(criterio) for criterio in dimensao["criterios"]]
+        for dimensao in corpo["dimensoes"]
+    }
+    assert "18 critérios em 16 pares" in corpo["contextualizacao"]["orientacao"]
     assert "Simular" in corpo["objetivo"]
     assert "sem gravação" in corpo["objetivo"]
     assert response.headers["cache-control"] == "no-store"

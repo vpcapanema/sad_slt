@@ -22,7 +22,7 @@ async function exerciseReview(browser, width) {
     await page.clock.install();
     await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 300);
     const count = await scales.count();
-    assert.equal(count, 153);
+    assert.equal(count, 3);
     for (let i = 0; i < count; i++) await scales.nth(i).press(i % 2 ? 'End' : 'Home');
     await page.clock.runFor(3000);
 
@@ -34,11 +34,30 @@ async function exerciseReview(browser, width) {
     const link = item.getByRole('link');
     const current = item.getByRole('textbox', { name: 'Valor atual:', includeHidden: true });
     const suggested = item.getByRole('textbox', { name: 'Valor sugerido:' });
+    const apply = item.getByRole('button', { name: 'Aplicar o valor sugerido', exact: true });
     const target = await suggested.inputValue();
     const index = steps.indexOf(target.split(' ')[0]);
     assert.ok(index >= 0, 'A sugestão existe na escala');
     const pair = page.locator(await link.getAttribute('href'));
     const scale = pair.locator('.saaty-scale');
+    assert.notEqual(await current.inputValue(), target);
+    if (mobile) await apply.tap();
+    else await apply.click();
+    assert.equal(await current.inputValue(), target);
+    assert.equal(await scale.getAttribute('aria-valuenow'), String(index));
+    assert.equal(await apply.isDisabled(), true);
+    assert.match(await status.innerText(), /Aguardando confirmação/);
+    const value = index > 4 ? 1 / Number(steps[index].split('/')[1]) : Number(steps[index]);
+    const {i, j} = await pair.evaluate(element => ({i: Number(element.dataset.i), j: Number(element.dataset.j)}));
+    const resultado = await page.evaluate(({i, j}) => {
+      const matriz = buildLiveMatrix();
+      return { direta: matriz[i][j], inversa: matriz[j][i], rc: SLTAhp.formatMetric(SLTAhp.analyzeMatrix(matriz).CR) };
+    }, {i, j});
+    assert.deepEqual([resultado.direta, resultado.inversa], [value, 1 / value]);
+    assert.equal(await page.locator('#metricRCValue').textContent(), resultado.rc);
+    const cells = page.locator('#collab-matrix-wrap tbody tr');
+    assert.equal(Number(await cells.nth(i).locator('td').nth(j).getAttribute('data-value')), value);
+    assert.equal(Number(await cells.nth(j).locator('td').nth(i).getAttribute('data-value')), 1 / value);
     await link.click();
     assert.equal(await page.locator('#collab-tab-form').getAttribute('aria-selected'), 'true');
     assert.equal(await scale.evaluate(el => document.activeElement === el), true);
@@ -58,6 +77,7 @@ async function exerciseReview(browser, width) {
     await selectStep((index + 1) % steps.length);
     await page.clock.runFor(3000);
     assert.match(await status.textContent(), /difere da sugestão/);
+    assert.equal(await item.locator('.collab-consistency-review-apply').isEnabled(), true);
     assert.equal(await item.evaluate(el => el.classList.contains('is-review-confirmed')), false);
     assert.equal(await pair.evaluate(el => el.classList.contains('is-consistency-review')), true);
 
@@ -82,7 +102,7 @@ async function exerciseReview(browser, width) {
     assert.equal(await panel.isVisible(), false);
     assert.equal(await page.locator('.saaty-pair.is-consistency-review').count(), 0);
     assert.deepEqual(errors, []);
-    console.log(`PASS ${width}px: régua acessível, confirmação sincronizada, destaque removido e preferência de movimento respeitada.`);
+    console.log(`PASS ${width}px: sugestão aplicada na régua, recíproco e RC atualizados e confirmação sincronizada.`);
   } finally {
     await page.close();
   }

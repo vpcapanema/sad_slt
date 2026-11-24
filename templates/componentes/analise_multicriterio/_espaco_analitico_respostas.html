@@ -40,7 +40,7 @@
       <div class="ahp-section-body ami-analysis-split"><div class="matriz-table-wrap"><table class="admin-table ami-stats-table ami-table--pesos"><thead><tr><th>C&oacute;digo</th><th>Crit&eacute;rio</th><th id="ami-analysis-weight-col">Peso</th></tr></thead><tbody id="ami-analysis-criteria"></tbody></table></div><div class="ami-analysis-chart" id="ami-analysis-criteria-chart" aria-label="Peso de cada critério"></div></div>
     </section>
 
-    <section class="ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">{{ '6' if indicacao_processos else '2.6' }}</span><span>Consolidação das respostas</span></div>
+    <section class="ahp-subcard" id="ami-analysis-local-consolidation"><div class="ahp-subsection-title"><span class="ahp-subsection-num">{{ '6' if indicacao_processos else '2.6' }}</span><span>Consolidação das respostas</span></div>
       <p class="ami-subsection-hint">Gravar o resultado: escolha quais respostas entram e salve a análise consolidada do julgamento. Quem ainda não enviou aparece na lista, mas não pode ser incluído.</p>
       <div class="ahp-section-body">
         <fieldset class="ami-analysis-config">
@@ -56,8 +56,47 @@
         <div class="ahp-form-actions"><button type="button" class="btn btn-primary" id="ami-analysis-calculate"><i class="fas fa-calculator"></i> Calcular e salvar análise</button></div><p id="ami-analysis-feedback" class="ami-feedback" role="status"></p>
       </div>
     </section>
-    <section class="ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">{{ '7' if indicacao_processos else '2.7' }}</span><span>An&aacute;lises consolidadas e pesos finais</span></div>
+    <section class="ahp-subcard" id="ami-analysis-local-results"><div class="ahp-subsection-title"><span class="ahp-subsection-num">{{ '7' if indicacao_processos else '2.7' }}</span><span>An&aacute;lises consolidadas e pesos finais</span></div>
       <div class="ahp-section-body" id="ami-analysis-consolidations"><p class="ami-empty">Nenhuma an&aacute;lise consolidada.</p></div>
+    </section>
+    <section class="ahp-subcard" id="ami-global-weights" aria-labelledby="ami-global-title" hidden>
+      <h3 class="ahp-subsection-title" id="ami-global-title">Pesos globais dos critérios</h3>
+      <div class="ahp-section-body">
+        <p class="step-intro">Se precisar de pesos globais, multiplique o peso local de cada critério pelo peso da sua dimensão.</p>
+        <form id="ami-global-form">
+          <fieldset class="ami-analysis-config" id="ami-global-fields">
+            <legend>Composição dos pesos globais</legend>
+            <div class="ahp-collab-grid2">
+              <label class="c-form-group">Nome da análise<input class="c-form-control" id="ami-global-name" value="Pesos globais dos critérios" maxlength="200" required></label>
+              <label class="c-form-group">Origem dos pesos das dimensões
+                <select id="ami-global-source" class="c-form-control">
+                  <option value="manual">Definir percentuais manualmente</option>
+                  <option value="ahp">Usar um julgamento AHP homologado</option>
+                </select>
+              </label>
+            </div>
+            <label class="c-form-group is-hidden" id="ami-global-ahp-field">Julgamento das dimensões
+              <select class="c-form-control" id="ami-global-ahp"></select>
+            </label>
+            <div id="ami-global-dimensions"></div>
+            <p class="form-help" id="ami-global-total" role="status"></p>
+            <div class="ahp-form-actions">
+              <button class="btn btn-primary" type="submit">Calcular e salvar pesos globais</button>
+              <a id="ami-global-new-ahp" class="btn btn-secondary">Novo AHP das dimensões</a>
+            </div>
+          </fieldset>
+        </form>
+        <form id="ami-linked-analysis-form" hidden>
+          <p class="form-help" id="ami-linked-analysis-summary"></p>
+          <fieldset class="ami-analysis-config" id="ami-linked-analysis-fields">
+            <legend>Resultado coletivo</legend>
+            <label class="c-form-group">Nome da análise<input class="c-form-control" id="ami-linked-analysis-name" value="Ranking coletivo dos critérios" maxlength="200" required></label>
+            <button class="btn btn-primary" type="submit">Calcular e salvar ranking coletivo</button>
+          </fieldset>
+        </form>
+        <p class="ami-feedback" id="ami-global-feedback" role="status"></p>
+        <div id="ami-global-results"></div>
+      </div>
     </section>
   </div>
 </section>

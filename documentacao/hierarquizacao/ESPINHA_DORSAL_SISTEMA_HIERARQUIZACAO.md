@@ -85,7 +85,8 @@ explicitamente informados, sem nova derivação por comparação pareada.
 O formulário-modelo público, sem token de convite, usa a aba
 `Matriz Crit Premissas v3` da matriz oficial do PLI-SP 2050. A página
 apresenta as premissas dos 18 critérios nas suas sete dimensões e simula
-os 153 pares entre todos os critérios, de qualquer etapa. As respostas
+os 16 pares de critérios da mesma dimensão, de qualquer etapa. Segurança
+tem um único critério e dispensa comparação. As respostas
 da simulação ficam na página e são descartadas ao sair. O julgamento
 de uma rodada usa a matriz e o modo de comparação definidos pelo gestor.
 

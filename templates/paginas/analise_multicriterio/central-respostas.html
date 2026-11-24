@@ -44,6 +44,17 @@
     <form id="ami-create-form">
       {% include "componentes/analise_multicriterio/_analise_multicriterio_interativa.html" %}
     </form>
+    <section id="ami-public-link-card" class="card ahp-step-section is-hidden">
+      <div class="ahp-section-label"><i class="fas fa-link" aria-hidden="true"></i><span>Link público de colaboração</span></div>
+      <div class="ahp-section-body">
+        <label class="c-form-group">Link para divulgar<input class="c-form-control" type="url" id="ami-public-link" readonly></label>
+        <div class="ahp-form-actions">
+          <button type="button" class="btn btn-primary" id="ami-copy-public-link"><i class="fas fa-copy" aria-hidden="true"></i> Copiar link público</button>
+          <a class="btn btn-secondary" id="ami-open-public-link" target="_blank" rel="noopener">Abrir inscrição pública</a>
+          <a class="btn btn-secondary" id="ami-open-public-responses">Ver inscritos e respostas</a>
+        </div>
+      </div>
+    </section>
       <section id="ami-email-draft-card" class="secao-collab-email-draft-card card card-ami-email-draft ahp-step-section is-hidden">
         <div class="ahp-section-label"><i class="fas fa-envelope" aria-hidden="true"></i><span>Convites e acompanhamento</span></div>
         <div class="ahp-section-body">
@@ -150,11 +161,11 @@
   <script src="/assets/js/analysis-table-controls.js?v=20261106-rotulo-unico"></script>
   <script src="/assets/js/admin-auth.js"></script>
   <script src="/assets/vendor/xlsx/xlsx-0.18.5.min.js"></script>
-  <script src="/assets/js/paginas/analise-multicriterio-tabela.js?v=20261124-comparacao-grupos"></script>
+  <script src="/assets/js/paginas/analise-multicriterio-tabela.js?v=20261124-inscricao"></script>
   <script src="/assets/js/api-erro.js?v=20261027"></script>
   <script src="/assets/js/paginas/ami-email.js?v=20261123-envio-silencioso"></script>
   <script src="/assets/js/matriz-criterios-arquivo.js?v=20261009"></script>
   <script src="/assets/js/matrizes-criterios.js?v=20261124-matriz-integral"></script>
   <script src="/assets/js/saaty-selector-color.js?v=20261103-1"></script>
-  <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20261124-matriz-integral"></script>
+  <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20261124-inscricao"></script>
 {% endblock %}

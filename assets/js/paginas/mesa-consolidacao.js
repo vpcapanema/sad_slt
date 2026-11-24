@@ -209,6 +209,12 @@
     try {
       const espaco = await api(BASE + '/ambientes/' + encodeURIComponent(ambienteId) + '/espaco-analitico');
       if (pedido !== S.pedido) return;
+      if (espaco.ambiente.modo_comparacao === 'duas_etapas') {
+        S.tabelas.julgamentos.definirSelecao([]);
+        fecharMesa();
+        feedback('O ranking coletivo dos julgamentos em duas etapas é calculado na Central de Respostas.');
+        return;
+      }
       S.selecionado = ambienteId; S.espaco = espaco; S.enviadas = M.enviadas(espaco.respostas);
       const params2 = new URLSearchParams(modoDemo ? { demo: 1 } : {}); params2.set('julgamento', ambienteId);
       history.replaceState(null, '', location.pathname + '?' + params2.toString());

@@ -2,7 +2,7 @@
   <div class="ahp-section-label"><i class="fas fa-sliders" aria-hidden="true"></i><span>Configuração do julgamento</span></div>
   <div class="ahp-section-body">
     <div class="ami-registration-intro">
-        <p class="step-intro"><i class="fas fa-circle-info" aria-hidden="true"></i> Selecione ou cadastre uma matriz de critérios, defina a data limite da coleta e informe os colaboradores. O julgamento pode ser criado sem hierarquização. A mesma matriz poderá ser associada posteriormente a uma hierarquização. Julgamentos de superfícies preservam sua matriz fixa.</p>
+        <p class="step-intro"><i class="fas fa-circle-info" aria-hidden="true"></i> Selecione ou cadastre uma matriz de critérios, defina a data limite da coleta e escolha a forma de participação. O julgamento pode ser criado sem hierarquização. A mesma matriz poderá ser associada posteriormente a uma hierarquização. Julgamentos de superfícies preservam sua matriz fixa.</p>
     <p class="ami-feedback" id="ami-create-feedback" role="status" aria-live="polite"></p>
     <p id="ami-criteria-matrix-summary" class="form-help hidden" role="status" aria-live="polite"></p>
     </div>
@@ -22,8 +22,10 @@
             <select id="ami-modo-comparacao" class="c-form-control" aria-describedby="ami-modo-comparacao-help">
               <option value="todos">Entre todos os critérios atribuídos</option>
               <option value="por_grupo">Somente entre critérios do mesmo grupo</option>
+              <option value="dimensoes">Somente entre dimensões</option>
+              <option value="duas_etapas">Dimensões e critérios em duas etapas</option>
             </select>
-            <span id="ami-modo-comparacao-help" class="form-help">Os grupos vêm da coluna Dimensão de toda a matriz. No modo por grupo, o formulário avança um grupo por vez e os pesos são calculados separadamente.</span>
+            <span id="ami-modo-comparacao-help" class="form-help">Em duas etapas, todos os colaboradores comparam primeiro as dimensões e depois os critérios de cada dimensão. Cada colaborador envia uma resposta única.</span>
           </label>
         </section>
         <section class="ahp-subcard ami-collaborator-section" aria-labelledby="ami-hierarchy-section-title" id="ami-surface-hierarchy-section" hidden>
@@ -32,7 +34,14 @@
         </section>
         <section class="ahp-subcard ami-collaborator-section" aria-labelledby="ami-email-section-title">
           <div class="ahp-subsection-title"><span class="ahp-subsection-num">4</span><span id="ami-email-section-title">Informações do colaborador</span></div>
-          <div class="c-form-group ami-config-field ami-collaborator-entry">
+          <label class="c-form-group ami-config-field">Forma de participação
+            <select id="ami-modo-participacao" class="c-form-control">
+              <option value="convite">Por convite</option>
+              <option value="publico">Por link público</option>
+            </select>
+          </label>
+          <p id="ami-public-participation-help" class="form-help is-hidden">Divulgue um único link. Cada colaborador informa nome, e-mail e instituição para acessar o julgamento em duas etapas.</p>
+          <div id="ami-invited-participation" class="c-form-group ami-config-field ami-collaborator-entry">
             <small class="form-help" id="ami-collaborator-help"><i class="fas fa-info-circle"></i> Informe o nome e o e-mail do colaborador e clique em + para adicioná-lo à lista.</small>
             <div class="ami-collaborator-fields">
               <label for="ami-collaborator-name">Nome<input id="ami-collaborator-name" class="c-form-control" type="text" maxlength="200" autocomplete="name" aria-required="true" aria-describedby="ami-collaborator-help"></label>

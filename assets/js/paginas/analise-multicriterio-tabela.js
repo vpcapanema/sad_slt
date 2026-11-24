@@ -21,7 +21,9 @@
       aij_media_geometrica: "Média geométrica",
       aij_media_aritmetica: "Média aritmética",
       aij_mediana: "Mediana",
-      aij_moda: "Moda"
+      aij_moda: "Moda",
+      pesos_por_dimensao: "Composição dos pesos por dimensão",
+      media_pesos_individuais: "Média dos pesos individuais"
     };
     var estado = resultado.status === "homologada" ? "Homologada" : resultado.recorte_parcial ? "Calculada" : "Calculada · aguardando homologação";
     var detalhes = [resultado.codigo, estado, resultado.recorte_parcial ? "Recorte de critérios" : "Matriz completa", metodos[resultado.metodo_agregacao]];
@@ -47,7 +49,11 @@
     if (!weights?.length) return '<p class="ami-empty">' + esc(motivoPendente(j)) + '</p>';
     var names = criterionNames(j, resultado);
     return descricaoResultado(resultado) +
-      '<p class="ami-modal-description">Autovetor principal normalizado calculado a partir da matriz de comparação pareada consolidada.</p>' +
+      '<p class="ami-modal-description">' + (resultado.metodo_agregacao === "media_pesos_individuais"
+        ? "Cada peso global é a média dos pesos individuais das respostas completas."
+        : resultado.matriz_consolidada?.length
+        ? "Autovetor principal normalizado calculado a partir da matriz de comparação pareada consolidada."
+        : "Cada peso global é o produto do peso da dimensão pelo peso local do critério.") + '</p>' +
       tableLabel("Tabela dos pesos consolidados do julgamento") +
       '<div class="matriz-table-wrap"><table class="admin-table matriz-view-table ami-weights"><thead><tr><th>Critério</th><th>Peso consolidado</th></tr></thead><tbody>' +
       weights.map(function (weight, index) {
@@ -56,7 +62,11 @@
   }
   function criteriaModal(j) { return '<p><strong>' + esc(j.n_criterios) + ' critérios vinculados ao julgamento.</strong></p><div class="ami-modal-criteria">' + (j.criterios || []).map(function (c, index) { var name = typeof c === "string" ? c : c.criterio || c.nome || c.Critério || c.name || "Critério " + (index + 1); var dimension = typeof c === "object" && (c.dimensao || c.Dimensão); var phase = typeof c === "object" && (c.fase || c.Fase); return '<article><span>' + (index + 1) + '</span><div><strong>' + esc(name) + '</strong><small>' + esc([dimension, phase].filter(Boolean).join(" · ")) + '</small></div></article>'; }).join("") + '</div>'; }
   function collaboratorsModal(j) { var invitations = j.convites || [], received = Number(j.total_respostas || 0); if (!invitations.length) return '<p class="ami-empty">Nenhum colaborador convidado.</p>'; return '<p class="ami-modal-description"><strong>' + received + '</strong> de <strong>' + invitations.length + '</strong> respostas recebidas.</p>' + tableLabel("Tabela dos colaboradores do julgamento") + '<div class="matriz-table-wrap"><table class="admin-table matriz-view-table ami-collaborators"><thead><tr><th>Colaborador</th><th>E-mail</th></tr></thead><tbody>' + invitations.map(function (invitation, index) { var email = typeof invitation === "string" ? invitation : invitation.email; return '<tr><td>' + (index + 1) + '</td><td>' + esc(email || "—") + '</td></tr>'; }).join("") + '</tbody></table></div>'; }
-  function participationLink(j, received, invited) { return '<button class="ami-cell-link" data-modal-kind="collaborators" data-record-id="' + esc(j.id) + '">' + received + ' de ' + invited + ' (' + (invited ? num(received / invited * 100) : "0") + '%)</button>'; }
+  function participationLink(j, received, invited) {
+    var label = received + ' de ' + invited + ' (' + (invited ? num(received / invited * 100) : "0") + '%)';
+    return j.modo_participacao === "publico" ? esc(label)
+      : '<button class="ami-cell-link" data-modal-kind="collaborators" data-record-id="' + esc(j.id) + '">' + label + '</button>';
+  }
   global.renderTabelaColaborativa = function (tbodyId, julgamentos, options) {
     var body = document.getElementById(tbodyId); if (!body) return;
     if (typeof options === "function") options = { actionsFor: options }; options = options || {};
@@ -64,18 +74,19 @@
     function setTopAction(kind, href) { var link = document.getElementById(tbodyId + "-" + kind + "-action"); if (!link) return; link.href = href || "#"; link.classList.toggle("is-disabled", !href); link.setAttribute("aria-disabled", href ? "false" : "true"); }
     function syncTopActions(selectedId) { var selected = (julgamentos || []).find(function (item) { return item.id === selectedId; }); var links = selected && options.linksFor ? options.linksFor(selected) : {}; setTopAction("public", links && links.public); syncCrudActions(tbodyId, selectedId, options.editingId); }
     body.innerHTML = (julgamentos || []).map(function (j) {
-      var c = j.analise_exibida || j.consolidacao, invited = j.total_convites ?? (j.convites || []).length, received = Number(j.total_respostas || 0), selected = options.selectedIds ? options.selectedIds.has(j.id) : options.selectedId === j.id, editing = options.editingId === j.id;
+      var publico = j.modo_participacao === "publico";
+      var c = j.analise_exibida || j.consolidacao, invited = publico ? j.total_inscritos || 0 : (j.total_convites ?? (j.convites || []).length), received = Number(j.total_respostas || 0), selected = options.selectedIds ? options.selectedIds.has(j.id) : options.selectedId === j.id, editing = options.editingId === j.id;
       var temMatriz = Boolean(c?.matriz_consolidada?.length), temPesos = Boolean(c?.pesos_consolidados?.length);
       var matrixId = j.matriz_id || j.hierarquizacao_id || "—";
       var matrixName = j.matriz_nome || [j.hierarquizacao_nome, j.hierarquizacao_codigo].filter(Boolean).join(" · ") || "—";
-      var total = (j.lista_colaboradores ?? j.convites ?? []).length;
-      var lista = options.onOpenCollaborators ? '<td><button type="button" class="ami-cell-link" data-lista-colaboradores="' + esc(j.id) + '" aria-haspopup="dialog" aria-label="Abrir lista de colaboradores de ' + esc(j.nome || j.id) + '">' + total + (total === 1 ? ' colaborador' : ' colaboradores') + '</button></td>' : "";
+      var total = publico ? invited : (j.lista_colaboradores ?? j.convites ?? []).length;
+      var lista = options.onOpenCollaborators ? '<td><button type="button" class="ami-cell-link" data-lista-colaboradores="' + esc(j.id) + '"' + (publico ? '' : ' aria-haspopup="dialog"') + ' aria-label="Abrir lista de colaboradores de ' + esc(j.nome || j.id) + '">' + total + (publico ? (total === 1 ? ' inscrito' : ' inscritos') : (total === 1 ? ' colaborador' : ' colaboradores')) + '</button></td>' : "";
       return '<tr class="collab-round-row ' + (selected ? "is-selected" : "") + '" aria-selected="' + selected + '"><td class="col-select"><input type="checkbox" class="ami-row-select" data-select-id="' + esc(j.id) + '" ' + (selected ? "checked" : "") + (options.editingId ? " disabled" : "") + ' aria-label="Selecionar julgamento ' + esc(j.hierarquizacao_codigo) + '"></td>' +
         '<td>' + (editing ? '<input class="ami-inline-input" data-edit-field="nome" type="text" maxlength="200" required aria-label="Nome do julgamento">' : esc(j.nome || 'Julgamento ' + j.id)) + '</td><td>' + esc({ ativa: "Aberto", consolidada: "Consolidado", encerrada: "Encerrado" }[j.status] || j.status) + '</td><td class="ami-cell-id" title="' + esc(j.id) + '">' + esc(j.id) + '</td><td class="ami-cell-id" title="' + esc(matrixId) + '">' + esc(matrixId) + '</td>' +
         '<td title="' + esc(matrixName) + '">' + esc(matrixName) + '</td>' +
         '<td>' + participationLink(j, received, invited) + '</td>' + lista + '<td>' + deadlineDate(j.valido_ate) + '</td><td>' + date(j.criadoEm) + '</td><td>' + date(j.atualizadoEm) + '</td>' +
         '<td><button class="ami-cell-link" data-modal-kind="criteria" data-record-id="' + esc(j.id) + '">' + esc(j.n_criterios) + ' critérios</button></td>' +
-        '<td class="ami-cell-token" title="Chaves individuais são entregues somente por e-mail">Individual por e-mail</td><td>' + num(c && c.lambda_max) + '</td><td>' + num(c && c.indice_consistencia) + '</td><td>' + num(c && c.indice_aleatorio) + '</td><td>' + num(c && c.razao_consistencia) + '</td>' +
+        '<td class="ami-cell-token">' + (publico ? "Link público" : "Individual por e-mail") + '</td><td>' + num(c && c.lambda_max) + '</td><td>' + num(c && c.indice_consistencia) + '</td><td>' + num(c && c.indice_aleatorio) + '</td><td>' + num(c && c.razao_consistencia) + '</td>' +
         '<td><button class="ami-cell-link" data-availability="' + (temMatriz ? 'available' : 'pending') + '" data-modal-kind="matrix" data-record-id="' + esc(j.id) + '">' + (temMatriz ? "Disponível" : "Pendente") + '</button></td><td><button class="ami-cell-link" data-availability="' + (temPesos ? 'available' : 'pending') + '" data-modal-kind="weights" data-record-id="' + esc(j.id) + '">' + (temPesos ? "Disponíveis" : "Pendentes") + '</button></td></tr>';
     }).join("") || '<tr><td colspan="' + (options.onOpenCollaborators ? 19 : 18) + '" class="ami-empty">Nenhum registro colaborativo encontrado no banco.</td></tr>';
     var nameInput = body.querySelector('[data-edit-field="nome"]');
