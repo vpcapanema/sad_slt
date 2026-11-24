@@ -128,10 +128,39 @@ function workbookWithTables() {
     });
     await modal.waitFor({state: 'visible'});
     assert.equal(await page.locator('#ami-import-list tr').count(), 15);
+    await page.setViewportSize({width: 390, height: 470});
+    const previewTable = modal.locator('.ami-table-shell');
+    const scrollState = () => previewTable.evaluate(shell => {
+      const preview = shell.closest('#ami-import-preview');
+      const bounds = element => element.getBoundingClientRect();
+      return {
+        overflow: shell.scrollHeight - shell.clientHeight,
+        modalScrollTop: preview.scrollTop,
+        headerTop: bounds(shell.querySelector('thead')).top,
+        lastRowBottom: bounds(shell.querySelector('tbody tr:last-child')).bottom,
+        tableBottom: bounds(shell).top + shell.clientHeight,
+        footerVisible: bounds(preview.querySelector('.admin-table-footer')).bottom <= bounds(preview).bottom,
+      };
+    });
+    const beforeScroll = await scrollState();
+    assert.ok(beforeScroll.overflow > 0);
+    assert.equal(beforeScroll.footerVisible, true);
+    await previewTable.hover();
+    await page.mouse.wheel(0, 1500);
+    await page.waitForFunction(() => {
+      const shell = document.querySelector('#ami-import-preview .ami-table-shell');
+      return shell.scrollTop + shell.clientHeight >= shell.scrollHeight - 1;
+    });
+    const afterScroll = await scrollState();
+    assert.equal(afterScroll.modalScrollTop, 0);
+    assert.ok(Math.abs(afterScroll.headerTop - beforeScroll.headerTop) <= 1);
+    assert.ok(afterScroll.lastRowBottom <= afterScroll.tableBottom + 1);
+    await page.setViewportSize({width: 1440, height: 1000});
     await modal.getByRole('checkbox', {name: 'Atribuir todos os grupos a todos os colaboradores filtrados'}).uncheck();
     await page.locator('#ami-import-pagination').getByRole('button', {name: 'Próxima página'}).click();
     assert.match(await page.locator('#ami-import-list').innerText(), /Pessoa 16/);
     assert.equal(await modal.locator('tbody [data-import-scope-row]:checked').count(), 0);
+    assert.equal((await scrollState()).overflow, 0);
     await page.locator('#ami-import-cancel').click();
     assert.equal(await page.locator('#ami-email-list tr').count(), 2);
 
@@ -228,6 +257,17 @@ function workbookWithTables() {
       const shell = document.querySelector('#ami-import-modal .ami-table-shell');
       return shell.scrollWidth > shell.clientWidth && getComputedStyle(shell).overflowX === 'auto';
     });
+    const reachableColumns = await previewTable.evaluate(shell => {
+      const viewport = shell.getBoundingClientRect();
+      const frame = shell.closest('.ami-filtered-table').getBoundingClientRect();
+      if (viewport.left < frame.left || viewport.right > frame.right) return [];
+      return Array.from(shell.querySelectorAll('thead th'), header => {
+        header.scrollIntoView({block: 'nearest', inline: 'center'});
+        const {left, right} = header.getBoundingClientRect();
+        return left >= viewport.left - 1 && right <= viewport.left + shell.clientWidth + 1;
+      });
+    });
+    assert.deepEqual(reachableColumns, headers.map(() => true));
     await page.setViewportSize({width: 1440, height: 1000});
     assert.equal(await modal.locator('tbody .ami-import-scope input').evaluateAll(boxes => boxes.every(box => {
       const input = box.getBoundingClientRect(), cell = box.parentElement.getBoundingClientRect();
