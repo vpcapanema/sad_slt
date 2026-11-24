@@ -131,7 +131,7 @@
 							</section>
 							<h3 id="collab-group-title" tabindex="-1"></h3>
 						</div>
-						<p class="collab-pairwise-intro">Para cada par, indique qual critério é mais importante para o objetivo desta análise e com que intensidade. Se ambos tiverem a mesma importância, escolha 1 (igual importância). Cada ajuste preenche automaticamente o valor inverso e atualiza os indicadores de consistência. Enquanto houver pares sem resposta, o cálculo é provisório e usa 1 para esses pares. O envio exige RC &lt; 0,10. Após 3 segundos sem novos ajustes no par, ele e seu valor inverso ficam verdes. Para revisar, mova a barra novamente. Essa confirmação visual não substitui o envio final.</p>
+						<p class="collab-pairwise-intro">Para cada par, indique qual critério é mais importante para o objetivo desta análise e com que intensidade. Se ambos tiverem a mesma importância, escolha 1 (igual importância). Cada ajuste preenche automaticamente o valor inverso e atualiza os indicadores de consistência. Enquanto houver pares sem resposta, o cálculo é provisório e usa 1 para esses pares. O envio exige RC &lt; 0,10. Após 1,5 segundo sem novos ajustes no par, ele e seu valor inverso ficam verdes. Para revisar, mova a barra novamente. Essa confirmação visual não substitui o envio final.</p>
 						<section class="secao-collab-metrics" aria-labelledby="collab-metrics-title">
 							<h3 id="collab-metrics-title">Indicadores instantâneos de consistência AHP</h3>
 							<div id="liveMetrics" class="ahp-live-metrics">
@@ -190,12 +190,12 @@
 {% endblock %}
 
 {% block scripts_pagina %}
-	<script defer src="/assets/js/saaty-selector-color.js?v=20261124-matriz-pli"></script>
+	<script defer src="/assets/js/saaty-selector-color.js?v=20261124-resposta-regua"></script>
 	<script defer src="/restrict/ahp/js/ahp-core.js?v=20261119-rc-compartilhada"></script>
 	<script defer src="/restrict/ahp/js/colaborativa-api.js?v=20261124-fila"></script>
 	{% if modo_modelo %}<script defer src="/restrict/ahp/js/colaborativa-modelo.js?v=20261124-pli-por-dimensao"></script>{% elif not modo_inscricao %}<script defer src="/restrict/ahp/js/colaborativa-simulacao.js?v=20261124-comparacao-grupos"></script>{% endif %}
-	<script defer src="/restrict/ahp/js/script.js?v=20261124-aplicar-sugestao"></script>
-	<script defer src="/restrict/ahp/js/colaborativa.js?v=20261124-fila"></script>
+	<script defer src="/restrict/ahp/js/script.js?v=20261124-resposta-regua"></script>
+	<script defer src="/restrict/ahp/js/colaborativa.js?v=20261124-validacao-1500"></script>
 	<script defer src="/assets/js/paginas/ahp-comparacao-abas.js?v=20261124-matriz-pli"></script>
 	<script defer src="/assets/js/paginas/ahp-formulario-layout.js?v=20261104-card-default-90"></script>
 {% endblock %}

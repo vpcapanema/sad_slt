@@ -906,9 +906,9 @@ function initSaatySliders() {
         widget.style.setProperty("--saaty-fit", ratio);
       }
     });
+    if (pairs.length) SLTSaatySelectorColor.updateAll();
   }
   fitSaatyScales();
-  if (pairs.length) SLTSaatySelectorColor.updateAll();
   if (window.__saatyFitObserver) window.__saatyFitObserver.disconnect();
   if (typeof ResizeObserver === "function") {
     window.__saatyFitObserver = new ResizeObserver(fitSaatyScales);
@@ -922,6 +922,7 @@ function wireSaaty(pair) {
   const handle = pair.querySelector(".saaty-handle");
   const pid = scale.dataset.pid;
   const input = document.getElementById("pair_" + pid);
+  const reciprocal = pair.querySelector(".saaty-reciprocal");
   const lastIdx = SAATY_STEPS.length - 1;
   let idx = SAATY_CENTER;
   let dragging = false;
@@ -930,7 +931,7 @@ function wireSaaty(pair) {
     idx = Math.max(0, Math.min(lastIdx, newIdx));
     handle.style.left = (idx / lastIdx) * 100 + "%";
     scale.setAttribute("aria-valuenow", idx);
-    if (fromUser) SLTSaatySelectorColor.update(pair);
+    if (fromUser) (SLTSaatySelectorColor.updateCached || SLTSaatySelectorColor.update)(pair);
     input.value = SAATY_STEPS[idx].v;
     updateSaatyReadout(pair, idx);
     updateSaatyReciprocal(pair, idx);
@@ -962,7 +963,8 @@ function wireSaaty(pair) {
   }
   function move(e) {
     if (!dragging) return;
-    apply(idxFromX(pointerX(e)), true);
+    const nextIdx = idxFromX(pointerX(e));
+    if (nextIdx !== idx) apply(nextIdx, true);
     e.preventDefault();
   }
   function up() {
@@ -977,6 +979,13 @@ function wireSaaty(pair) {
   document.addEventListener("touchmove", move, { passive: false });
   document.addEventListener("touchend", up);
   document.addEventListener("touchcancel", up);
+  if (reciprocal) {
+    const finishPulse = (event) => {
+      if (event.animationName === "saatyReciprocalPulse") reciprocal.classList.remove("is-updated");
+    };
+    reciprocal.addEventListener("animationend", finishPulse);
+    reciprocal.addEventListener("animationcancel", finishPulse);
+  }
 
   scale.addEventListener("keydown", (e) => {
     if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
@@ -1056,10 +1065,8 @@ function updateSaatyReciprocal(pair, idx) {
     textEl.textContent =
       criteria[j] + " em relação a " + criteria[i] + " = " + formatSaatyValue(reciprocal);
   }
-  box.classList.remove("is-updated", "is-positive", "is-negative", "is-equal");
-  box.classList.add(value > 1 ? "is-negative" : value < 1 ? "is-positive" : "is-equal");
-  void box.offsetWidth;
-  box.classList.add("is-updated");
+  box.classList.remove("is-positive", "is-negative", "is-equal");
+  box.classList.add("is-updated", value > 1 ? "is-negative" : value < 1 ? "is-positive" : "is-equal");
 }
 
 // -----------------------------------------------------------

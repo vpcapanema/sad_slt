@@ -46,6 +46,9 @@
       }
     });
   }
+  function updateCached(pair) {
+    update(pair, palettes.get(pair) || palette(pair));
+  }
   function updateAll() {
     // Leia a geometria de todas as réguas antes de atualizar seus estilos.
     var colors = Array.from(document.querySelectorAll(".saaty-pair"), function (pair) {
@@ -53,6 +56,6 @@
     });
     colors.forEach(function ([pair, paletteColors]) { update(pair, paletteColors); });
   }
-  window.SLTSaatySelectorColor = {update: update, updateAll: updateAll, palette: palette};
+  window.SLTSaatySelectorColor = {update: update, updateCached: updateCached, updateAll: updateAll, palette: palette};
   window.addEventListener("resize", updateAll);
 })();
