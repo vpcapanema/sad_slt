@@ -1308,12 +1308,10 @@ e **rastreabilidade**.
 
 ### Preenchimento colaborativo e consolidação de julgamentos
 
-O formulário-modelo público constitui demonstração isolada, sem gravação de
-respostas nem aplicação dos pesos às hierarquizações. Conforme a espinha dorsal,
-utiliza os sete critérios D1–D7 da planilha
-`Matriz_PLI_v6_Blocos_Dimensoes.xlsx`, organizados em três blocos e comparados em
-21 pares, sem filtro por fase. Essa simulação não modifica a exclusividade da
-Fase 3 nos julgamentos reais.
+O formulário-modelo público usa os 18 critérios da matriz oficial do
+PLI-SP 2050, distribuídos em sete dimensões. A página permite consultar as
+premissas e simular os 153 pares entre todos os critérios, de qualquer etapa.
+As respostas da simulação são descartadas ao sair da página.
 
 A matriz de critérios e premissas constitui um registro independente e imutável.
 Os convites podem delimitar uma ou mais dimensões por colaborador, apresentando

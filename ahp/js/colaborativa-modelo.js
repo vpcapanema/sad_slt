@@ -5,8 +5,31 @@
   global.SLTColaborativaSimulacao = true;
   const api = global.SLTColaborativaApi;
   let modelo, draft;
+
+  function renderizarPremissas() {
+    const detalhes = document.getElementById('collab-model-criteria');
+    const grupos = modelo.dimensoes.map(({ nome, criterios }) => {
+      const grupo = document.createElement('section');
+      const titulo = document.createElement('h4');
+      const lista = document.createElement('dl');
+      titulo.textContent = nome;
+      criterios.forEach(criterio => {
+        const termo = document.createElement('dt');
+        const premissa = document.createElement('dd');
+        termo.textContent = criterio;
+        premissa.textContent = modelo.premissas[criterio];
+        lista.append(termo, premissa);
+      });
+      grupo.append(titulo, lista);
+      return grupo;
+    });
+    detalhes.querySelector('div').replaceChildren(...grupos);
+    detalhes.hidden = false;
+  }
+
   api.obterPublico = async function () {
     modelo = await api.obterModeloPli();
+    renderizarPremissas();
     return Object.assign({}, modelo, { criterios: [] });
   };
   api.validarAcesso = async function () {

@@ -327,6 +327,8 @@ def obter_modelo_formulario_pli(response: Response) -> dict:
     response.headers["Cache-Control"] = "no-store"
     try:
         return service.obter_modelo_formulario_pli()
+    except DemandaValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except DatabaseUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 

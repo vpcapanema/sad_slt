@@ -183,28 +183,37 @@ def test_formulario_publico_e_o_formulario_do_colaborador_em_modo_modelo():
     for elemento in (
         'id="collab-context"', 'id="btn-liberar-form"', 'id="comparisonContent"',
         'id="btn-enviar-resposta"', "Passo a passo da sua participação",
-        "colaborativa-api.js", "colaborativa-modelo.js",
+        'id="collab-model-criteria"', "colaborativa-api.js", "colaborativa-modelo.js",
     ):
         assert elemento in response.text
     assert 'id="colab-token"' not in response.text
     assert "colaborativa-simulacao.js" not in response.text
 
 
-def test_modelo_pli_compara_sete_criterios_agrupados_em_tres_blocos():
+def test_modelo_pli_compara_os_18_criterios_da_matriz_oficial():
     response = TestClient(app).get("/api/ahp/comparacao-colaborativa/modelo-pli")
     assert response.status_code == 200
     corpo = response.json()
     assert [d["nome"] for d in corpo["dimensoes"]] == [
-        "Mérito e resultados", "Sustentabilidade e território", "Capacidade de entrega",
+        "Eficiência Logística", "Econômica", "Social e territorial", "Segurança",
+        "Ambiental e climática", "Viabilidade institucional e financeira", "Riscos",
     ]
     assert corpo["criterios"] == [
-        "D1 · Eficiência logística", "D2 · Econômica", "D3 · Social e territorial",
-        "D4 · Segurança", "D5 · Ambiental e climática",
-        "D6 · Viabilidade institucional e financeira", "D7 · Riscos",
+        "Saturação e alívio de gargalos", "Tempo e confiabilidade", "Conectividade e intermodalidade",
+        "Emprego e desenv. regional", "Impacto nas cadeias produtivas", "Custo do ciclo de vida do projeto",
+        "Equidade territorial", "Acessibilidade a serviços", "Integração urbana", "Sinistros graves",
+        "Descarbonização", "Sensibilidade socioambiental", "Resiliência climática",
+        "Esforço fiscal e alavancagem", "Governança e aderência a planos", "Prontidão",
+        "Risco de entrega", "Risco de demanda e benefício",
     ]
     assert [d["criterios"] for d in corpo["dimensoes"]] == [
-        corpo["criterios"][:2], corpo["criterios"][2:5], corpo["criterios"][5:],
+        corpo["criterios"][:3], corpo["criterios"][3:6], corpo["criterios"][6:9],
+        corpo["criterios"][9:10], corpo["criterios"][10:13], corpo["criterios"][13:16],
+        corpo["criterios"][16:],
     ]
+    assert set(corpo["premissas"]) == set(corpo["criterios"])
+    assert all(corpo["premissas"].values())
+    assert "18 critérios em 153 pares" in corpo["contextualizacao"]["orientacao"]
     assert "Simular" in corpo["objetivo"]
     assert "sem gravação" in corpo["objetivo"]
     assert response.headers["cache-control"] == "no-store"

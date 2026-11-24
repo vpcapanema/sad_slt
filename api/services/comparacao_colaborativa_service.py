@@ -888,43 +888,50 @@ def listar_ambientes_hierarquizacao(
 
 
 def obter_modelo_formulario_pli() -> dict[str, Any]:
-    """Simulação pública dos sete critérios D1–D7, agrupados nos blocos do PLI."""
+    """Simulação pública com todos os critérios da matriz oficial do PLI."""
     from openpyxl import load_workbook
 
-    arquivo = Path(__file__).resolve().parents[2] / "documentacao" / "matrizes" / "Matriz_PLI_v6_Blocos_Dimensoes.xlsx"
+    arquivo = Path(__file__).with_name("dados") / "Matriz_Criterios_Premissas_PLI.xlsx"
     with arquivo.open("rb") as stream:
         workbook = load_workbook(stream, read_only=True, data_only=True)
         try:
-            dimensoes = [
-                {"codigo": str(codigo), "nome": nome, "criterios": []}
+            dimensoes = {
+                nome: {"codigo": str(codigo), "nome": nome, "criterios": []}
                 for codigo, nome, *_ in workbook["Dimensões de Critérios"].iter_rows(min_row=2, values_only=True)
                 if codigo is not None and nome
+            }
+            matriz = workbook["Matriz Crit Premissas v3"].values
+            colunas = next(matriz)
+            criterios = [
+                dict(zip(colunas, linha, strict=True)) for linha in matriz if any(linha)
             ]
-            criterios = []
-            for _, nome, bloco in workbook["Critérios"].iter_rows(min_row=2, values_only=True):
-                if not nome:
-                    continue
-                dimensao = next((d for d in dimensoes if d["nome"] == bloco), None)
-                if dimensao is None:
-                    raise DemandaValidationError(
-                        f"O critério “{nome}” não possui bloco válido na matriz PLI.", field="criterios",
-                    )
-                criterios.append(nome)
-                dimensao["criterios"].append(nome)
         finally:
             workbook.close()
     if len(criterios) < 2:
         raise DemandaValidationError("Os critérios do PLI não estão cadastrados no domínio.", field="criterios")
+    premissas = {}
+    for criterio in criterios:
+        nome = criterio["Critério"]
+        dimensao = criterio["Dimensão"]
+        if not nome or nome in premissas or dimensao not in dimensoes or not criterio["Premissa"]:
+            raise DemandaValidationError(
+                f"Confira o nome, a dimensão e a premissa do critério “{nome}” na matriz PLI.",
+                field="criterios",
+            )
+        dimensoes[dimensao]["criterios"].append(nome)
+        premissas[nome] = criterio["Premissa"]
     return {
         "escopo": "Hierarquização da carteira de projetos e ações — PLI-SP 2050",
         "objetivo": (
-            "Simular a comparação dos sete critérios D1–D7 do PLI-SP 2050, organizados em três blocos, "
+            f"Simular a comparação entre todos os {len(criterios)} critérios da matriz do PLI-SP 2050, "
+            f"distribuídos em {len(dimensoes)} dimensões, "
             "sem gravação de respostas nem aplicação dos pesos às hierarquizações."
         ),
-        "criterios": criterios,
-        "dimensoes": dimensoes,
+        "criterios": list(premissas),
+        "dimensoes": list(dimensoes.values()),
+        "premissas": premissas,
         "contextualizacao": contexto_julgamento_ahp.contextualizacao_formulario(
-            {"matriz_nome": "PLI-SP 2050"}, [{"criterio": nome} for nome in criterios]
+            {"matriz_nome": "PLI-SP 2050"}, criterios
         ),
         "valido_ate": None,
         "status": "ativa",

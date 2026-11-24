@@ -82,12 +82,12 @@ homologação. Não se reinterpretam respostas históricas nem se removem linhas
 de matrizes já respondidas. Na Fase 2 permanecem a média simples e os pesos
 explicitamente informados, sem nova derivação por comparação pareada.
 
-O formulário-modelo público, sem token de convite, constitui uma simulação
-isolada: compara os sete critérios D1–D7 da aba `Critérios` de
-`documentacao/matrizes/Matriz_PLI_v6_Blocos_Dimensoes.xlsx`, agrupados nos três
-blocos da aba `Dimensões de Critérios`. São 21 pares, sem filtro por fase,
-gravação de respostas ou aplicação dos pesos às hierarquizações. Essa
-demonstração não altera a restrição à Fase 3 dos julgamentos reais.
+O formulário-modelo público, sem token de convite, usa a aba
+`Matriz Crit Premissas v3` da matriz oficial do PLI-SP 2050. A página
+apresenta as premissas dos 18 critérios nas suas sete dimensões e simula
+os 153 pares entre todos os critérios, de qualquer etapa. As respostas
+da simulação ficam na página e são descartadas ao sair. O julgamento
+de uma rodada usa a matriz e o modo de comparação definidos pelo gestor.
 
 Nos novos convites de julgamentos por dimensão, o responsável seleciona uma ou
 mais dimensões do recorte da Fase 3 para cada colaborador. O recorte contém os critérios

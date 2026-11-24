@@ -22,7 +22,7 @@ async function exerciseReview(browser, width) {
     await page.clock.install();
     await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 300);
     const count = await scales.count();
-    assert.equal(count, 21);
+    assert.equal(count, 153);
     for (let i = 0; i < count; i++) await scales.nth(i).press(i % 2 ? 'End' : 'Home');
     await page.clock.runFor(3000);
 

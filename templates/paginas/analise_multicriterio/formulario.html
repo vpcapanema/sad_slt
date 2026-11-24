@@ -27,6 +27,12 @@
 					<h2 id="collab-scope-title">Escopo do formulário</h2>
 					<p id="collab-scope-intro">Os recursos disponíveis limitam quantas demandas podem ser atendidas em cada período. O SICARD auxilia a definição de prioridades ao organizar as demandas e os critérios usados para avaliá-las.</p>
 					<p id="collab-scope-examples" hidden></p>
+					{% if modo_modelo %}
+					<details id="collab-model-criteria" hidden>
+						<summary>Critérios e premissas da matriz do PLI-SP 2050</summary>
+						<div></div>
+					</details>
+					{% endif %}
 					<section class="secao-collab-scope-method" aria-labelledby="collab-scope-method">
 						<h3 id="collab-scope-method">Método utilizado: comparação pareada pelo AHP</h3>
 						<p id="collab-scope-method-text">O SICARD apresenta os critérios dois a dois para avaliar sua importância relativa. As comparações servem para calcular os pesos pelo Método de Análise Hierárquica (AHP).</p>
@@ -36,12 +42,22 @@
 					<section class="secao-collab-scope-steps" aria-labelledby="collab-scope-steps">
 						<h3 id="collab-scope-steps">Passo a passo da sua participação</h3>
 						<ol>
+							{% if modo_modelo %}
+							<li><strong>Conheça os critérios.</strong> Consulte as premissas da matriz para entender o que cada critério avalia.</li>
+							<li><strong>Inicie a simulação.</strong> Preencha os campos de identificação e clique em “Liberar formulário”.</li>
+							{% else %}
 							<li><strong>Confira a rodada.</strong> Leia o objetivo, verifique o prazo e o status apresentados acima e confirme que está participando da hierarquização para a qual recebeu o convite.</li>
 							<li><strong>Identifique-se.</strong> Informe nome completo, instituição, e-mail convidado e chave individual recebida por e-mail. Clique em “Liberar formulário”. O convite é exclusivo do destinatário; nome e instituição identificam sua resposta.</li>
+							{% endif %}
 							<li><strong>Compare todos os pares.</strong> Leia os critérios e ajuste cada barra para expressar a importância relativa. Use 1 quando considerar os critérios igualmente importantes. Após três segundos sem novos ajustes, o par e seu valor inverso recebem confirmação visual verde. Essa indicação não significa que a resposta já foi enviada; você pode movimentar a barra novamente para revisar sua escolha.</li>
 							<li><strong>Acompanhe a consistência.</strong> Observe a Razão de Consistência (RC) e revise as comparações quando necessário. Procure coerência entre suas escolhas: se A é mais importante que B e B é mais importante que C, uma preferência muito forte de C sobre A merece reavaliação.</li>
+							{% if modo_modelo %}
+							<li><strong>Revise o preenchimento.</strong> Confira todos os pares. O progresso fica disponível enquanto a página estiver aberta.</li>
+							<li><strong>Conclua a simulação.</strong> Com a RC inferior a 0,10, clique em “Enviar resposta” para simular o envio.</li>
+							{% else %}
 							<li><strong>Revise o preenchimento.</strong> Confira todos os pares, inclusive os que permaneceram em igual importância. O progresso é salvo automaticamente durante o preenchimento; acompanhe a mensagem de salvamento. Salvar o progresso não substitui o envio definitivo.</li>
 							<li><strong>Envie sua contribuição.</strong> Com a RC inferior a 0,10, clique em “Enviar resposta”, dentro do prazo da rodada, e aguarde a confirmação de sucesso. É essa confirmação que indica a conclusão da sua participação.</li>
+							{% endif %}
 						</ol>
 					</section>
 					<section class="secao-collab-scope-consistency" aria-labelledby="collab-scope-consistency">
@@ -54,7 +70,7 @@
 		<section class="card-colab-nome secao-colab-nome card ahp-step-section">
 			<div class="ahp-section-label"><i class="fas fa-id-card"></i><span>Identificação</span></div>
 			<div class="ahp-section-body">
-				<p class="step-intro">Informe seus dados e a chave individual recebida no convite. Códigos compartilhados antigos não são aceitos; solicite um novo convite ao responsável.</p>
+				<p class="step-intro">{% if modo_modelo %}Informe nome, instituição e e-mail para liberar a simulação.{% else %}Informe seus dados e a chave individual recebida no convite. Códigos compartilhados antigos não são aceitos; solicite um novo convite ao responsável.{% endif %}</p>
 				<div class="collab-identificacao-grid">
 					<div class="c-form-group"><label for="colab-nome" class="c-form-label">Nome completo</label><input id="colab-nome" class="c-form-control" required></div>
 					<div class="c-form-group"><label for="colab-inst" class="c-form-label">Instituição vinculada</label><input id="colab-inst" class="c-form-control" required></div>
@@ -159,7 +175,7 @@
 	<script defer src="/assets/js/saaty-selector-color.js?v=20261104-paleta"></script>
 	<script defer src="/restrict/ahp/js/ahp-core.js?v=20261119-rc-compartilhada"></script>
 	<script defer src="/restrict/ahp/js/colaborativa-api.js?v=20261027-modelo-pli"></script>
-	{% if modo_modelo %}<script defer src="/restrict/ahp/js/colaborativa-modelo.js?v=20261027-1"></script>{% else %}<script defer src="/restrict/ahp/js/colaborativa-simulacao.js?v=20261124-comparacao-grupos"></script>{% endif %}
+	{% if modo_modelo %}<script defer src="/restrict/ahp/js/colaborativa-modelo.js?v=20261124-matriz-pli"></script>{% else %}<script defer src="/restrict/ahp/js/colaborativa-simulacao.js?v=20261124-comparacao-grupos"></script>{% endif %}
 	<script defer src="/restrict/ahp/js/script.js?v=20261118-regua-mobile-inteira"></script>
 	<script defer src="/restrict/ahp/js/colaborativa.js?v=20261124-comparacao-grupos"></script>
 	<script defer src="/assets/js/paginas/ahp-comparacao-abas.js?v=20261118-ajuda-consistencia-modal"></script>
