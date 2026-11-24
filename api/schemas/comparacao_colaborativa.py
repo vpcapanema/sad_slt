@@ -10,6 +10,7 @@ from pydantic import AwareDatetime, BaseModel, Field, field_validator
 
 EMAIL_REMETENTE_ALIAS_PADRAO = "SICARD-PLI"
 EMAIL_ASSUNTO_PADRAO = "Convite para preenchimento colaborativo AHP - PLI - SICARD"
+ModoComparacao = Literal["todos", "por_grupo"]
 
 
 def _validar_cabecalho_email(valor: object) -> object:
@@ -27,6 +28,7 @@ class ConviteColaborativoSchema(BaseModel):
 
 
 class AmbienteColaborativoCreateSchema(BaseModel):
+    modo_comparacao: ModoComparacao = "todos"
     matriz_id: UUID | None = None
     nome: str | None = Field(None, min_length=1, max_length=200)
     config_tipo: str | None = None
@@ -41,6 +43,7 @@ class AmbienteColaborativoCreateSchema(BaseModel):
 
 
 class AmbienteColaborativoUpdateSchema(BaseModel):
+    modo_comparacao: ModoComparacao | None = None
     matriz_id: UUID | None = None
     reabrir: bool = False
     nome: str | None = Field(None, min_length=1, max_length=200)
@@ -92,6 +95,7 @@ class AnaliseExibidaSchema(BaseModel):
 
 
 class AmbienteColaborativoResponseSchema(BaseModel):
+    modo_comparacao: ModoComparacao = "todos"
     matriz_id: str | None = None
     matriz_nome: str | None = None
     id: str
@@ -144,6 +148,8 @@ class AmbientePublicoSchema(BaseModel):
     escopo: str | None = None
     objetivo: str | None = None
     criterios: list[str]
+    modo_comparacao: ModoComparacao = "todos"
+    grupos_comparacao: dict[str, list[int]] = Field(default_factory=dict)
     valido_ate: str
     status: str
     email_autorizado: bool = False
@@ -166,7 +172,7 @@ class AcessoColaborativoSchema(TokenAcessoColaborativoSchema):
 
 class RespostaColaborativaCreateSchema(TokenAcessoColaborativoSchema):
     identificacao: IdentificacaoColaboradorSchema
-    matriz_comparacao: list[list[float]]
+    matriz_comparacao: list[list[float | None]]
     estatisticas: dict[str, Any] | None = None
 
 
@@ -175,7 +181,7 @@ class RespostaColaborativaInicioSchema(TokenAcessoColaborativoSchema):
 
 
 class RespostaColaborativaProgressoSchema(AcessoColaborativoSchema):
-    matriz_comparacao: list[list[float]]
+    matriz_comparacao: list[list[float | None]]
     estatisticas: dict[str, Any] | None = None
 
 
@@ -222,6 +228,7 @@ class AnaliseColaborativaCreateSchema(BaseModel):
     nome: str = Field(..., min_length=1, max_length=200)
     descricao: str | None = None
     resposta_ids: list[UUID] | None = None
+    dimensao: str | None = None
     rc_maximo: float = Field(0.10, gt=0, le=1)
     excluir_inconsistentes: bool = True
     metodo_agregacao: Literal["geometrica", "aritmetica", "mediana", "moda"] = "geometrica"

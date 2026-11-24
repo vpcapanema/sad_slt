@@ -43,6 +43,23 @@ def test_ahp_usa_valores_do_banco_e_nao_do_cliente(monkeypatch):
     assert service.configuracao(payload)["julgamento_id"] == j["id"]
 
 
+def test_fase3_usa_os_pesos_das_linhas_correspondentes_na_matriz_integral(monkeypatch):
+    row = {"id": str(uuid4())}
+    j = julgamento(row["id"], matriz_integral=True)
+    investimento, beneficio = j["criterios"]
+    j["criterios"] = [
+        {"Etapa": "Fase 1", "Fase": 1, "Critério": "Investimento"},
+        investimento,
+        {"Etapa": "Fase 2", "Fase": 2, "Critério": "Benefício"},
+        beneficio,
+    ]
+    j["pesos_consolidados"] = [0.4, 0.1, 0.3, 0.2]
+    monkeypatch.setattr(service.julgamentos, "get_ambiente_by_id", lambda _: j)
+    payload = HierarquizacaoFase3PesosSchema(criterios=criterios(), fonte_pesos="ahp", julgamento_id=j["id"])
+
+    assert [c["peso"] for c in service.resolver(row, {}, payload.criterios, payload)] == [0.1, 0.2, 1]
+
+
 @pytest.mark.parametrize("problema", ["outra_rodada", "sem_pesos", "incompleto"])
 def test_ahp_rejeita_julgamento_invalido(monkeypatch, problema):
     row = {"id": str(uuid4())}

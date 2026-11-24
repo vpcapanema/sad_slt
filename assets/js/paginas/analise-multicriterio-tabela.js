@@ -23,7 +23,7 @@
       aij_mediana: "Mediana",
       aij_moda: "Moda"
     };
-    var estado = resultado.status === "homologada" ? "Homologada" : "Calculada · aguardando homologação";
+    var estado = resultado.status === "homologada" ? "Homologada" : resultado.recorte_parcial ? "Calculada" : "Calculada · aguardando homologação";
     var detalhes = [resultado.codigo, estado, resultado.recorte_parcial ? "Recorte de critérios" : "Matriz completa", metodos[resultado.metodo_agregacao]];
     return '<p class="ami-modal-description"><strong>' + esc(resultado.nome) + '</strong> · ' +
       esc(detalhes.filter(Boolean).join(" · ")) + '</p>';
@@ -116,7 +116,9 @@
           content.innerHTML = matrix({
             criterios: r.criterios,
             consolidacao: { matriz_consolidada: r.matriz_comparacao }
-          }, "Matriz de comparação pareada enviada pelo especialista.", "Matriz de comparação pareada da resposta");
+          }, r.estatisticas?.modo_comparacao === "por_grupo"
+            ? "Comparações por grupo. Os traços indicam pares sem resposta ou de grupos diferentes."
+            : "Matriz de comparação pareada enviada pelo especialista.", "Matriz de comparação pareada da resposta");
         } else {
           title.textContent = "Estatísticas da resposta";
           content.innerHTML = json(r.estatisticas || {}, "Dados estatísticos");

@@ -79,18 +79,20 @@ def orientacao_convite(ambiente: dict, n: int) -> str:
     pedido = (
         "Nesta rodada, pedimos que você avalie a importância relativa das dimensões propostas para o PLI-SP 2050. "
         "No formulário, elas aparecem como critérios."
-        if eh_pli(ambiente) else
+        if eh_pli(ambiente) and not ambiente.get("matriz_integral") else
         "Nesta rodada, pedimos que você avalie a importância relativa dos critérios da matriz."
     )
     quantidade = (f" Você fará {n * (n - 1) // 2} comparações entre os {n} critérios listados abaixo."
                   if n > 2 else " Você fará 1 comparação entre os 2 critérios listados abaixo." if n == 2 else "")
+    if ambiente.get("modo_comparacao") == "por_grupo":
+        quantidade = " Você fará as comparações dentro de cada grupo, um grupo por vez."
     return (
         f"Como participar. {pedido}{quantidade} Em cada par, indique qual deles deve ter mais influência na "
         "priorização e com que intensidade. Se os dois tiverem a mesma importância, escolha 1."
     )
 
 
-def contextualizacao_formulario(ambiente: dict, criterios_atribuidos: list[dict]) -> dict:
+def contextualizacao_formulario(ambiente: dict, criterios_atribuidos: list[dict], *, grupos_comparacao: dict | None = None) -> dict:
     matriz = ambiente.get("matriz_contexto") or {}
     fenomeno = _campo(matriz, "fenomeno avaliado", "fenomeno")
     introducao = (
@@ -132,6 +134,9 @@ def contextualizacao_formulario(ambiente: dict, criterios_atribuidos: list[dict]
     recorte = f"Seu formulário reúne {n} critérios em {pares} pares." if n > 2 else (
         "Seu formulário reúne 2 critérios em 1 par." if n == 2 else ""
     )
+    if grupos_comparacao:
+        pares = sum(len(indices) * (len(indices) - 1) // 2 for indices in grupos_comparacao.values())
+        recorte = f"Seu formulário reúne {n} critérios em {pares} {'par' if pares == 1 else 'pares'} de comparação dentro dos grupos."
     return {
         "introducao": introducao,
         "metodo": _METODO_FORMULARIO,

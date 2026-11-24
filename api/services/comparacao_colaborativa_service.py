@@ -127,8 +127,19 @@ def _criterios_from_hierarquizacao(hierarq: dict[str, Any]) -> list[dict[str, An
 
 
 def _criterios_from_matriz(matriz: Any) -> list[dict[str, Any]]:
-    """Recorta apenas a Fase 3, sem modificar a matriz cadastrada."""
-    return matrizes_criterios.criterios_fase3(matriz)
+    criterios = matrizes_criterios.comparavel(matriz)["linhas"]
+    if len(criterios) < 2 or any(not isinstance(c, dict) or not c for c in criterios):
+        raise DemandaValidationError("A matriz deve possuir ao menos dois critérios válidos para abrir um julgamento AHP.", field="criterios")
+    if any("_superficie_id" in c for c in criterios):
+        raise DemandaValidationError("Selecione uma matriz de critérios e premissas para o julgamento. Superfícies são configuradas separadamente.", field="criterios")
+    return criterios
+
+
+def _exigir_criterios_julgamento(ambiente: dict[str, Any]) -> None:
+    if ambiente.get("matriz_integral"):
+        _criterios_from_matriz(ambiente.get("criterios") or [])
+    else:
+        matrizes_criterios.exigir_julgamento_fase3(ambiente)
 
 
 def _arquivo_matriz(base64_value: str | None) -> bytes | None:
@@ -159,6 +170,10 @@ def _criterio_nomes(criterios: list[dict[str, Any]]) -> list[str]:
         nome = normalizados.get("criterio") or normalizados.get("nome") or f"Critério {idx + 1}"
         nomes.append(str(nome))
     return nomes
+
+
+def _criterios_com_pesos(criterios: list[dict[str, Any]], pesos: list[float]) -> list[dict[str, Any]]:
+    return [{**criterio, "peso_ahp": peso} for criterio, peso in zip(criterios, pesos, strict=True)]
 
 
 def _link_publico(row: dict[str, Any], *, base_url: str = "") -> str:
@@ -261,20 +276,31 @@ def _dimensao(criterio: dict[str, Any]) -> str:
     return ""
 
 
-def _validar_dimensoes(convites: list[dict[str, Any]], criterios: list[dict[str, Any]]) -> None:
+def _grupos_comparacao(criterios: list[dict[str, Any]]) -> dict[str, list[int]]:
+    grupos: dict[str, list[int]] = {}
+    for indice, criterio in enumerate(criterios):
+        grupos.setdefault(_dimensao(criterio), []).append(indice)
+    return grupos
+
+
+def _validar_dimensoes(convites: list[dict[str, Any]], criterios: list[dict[str, Any]], modo: str = "todos") -> None:
     disponiveis = {_dimensao(c) for c in criterios} - {""}
+    grupos = _grupos_comparacao(criterios) if modo == "por_grupo" else {}
+    if "" in grupos:
+        raise DemandaValidationError("Preencha a coluna Dimensão de todos os critérios da matriz para comparar por grupo.", field="modo_comparacao")
     for convite in convites:
         dimensoes = convite.get("dimensoes")
-        if dimensoes is None:
-            continue  # Convites integrais legados continuam válidos.
-        if not dimensoes or len(set(dimensoes)) != len(dimensoes) or set(dimensoes) - disponiveis:
+        if dimensoes is not None and (not dimensoes or len(set(dimensoes)) != len(dimensoes) or set(dimensoes) - disponiveis):
             raise DemandaValidationError("Selecione dimensões válidas da matriz, sem repetições.", field="convites")
-        if sum(_dimensao(c) in dimensoes for c in criterios) < 2:
+        if modo == "por_grupo" and not any(len(indices) >= 2 for nome, indices in grupos.items() if dimensoes is None or nome in dimensoes):
+            nome = convite.get("nome") or convite["email"]
+            raise DemandaValidationError(f"Atribua a {nome} pelo menos um grupo com dois ou mais critérios para comparar por grupo.", field="convites")
+        if dimensoes is not None and sum(_dimensao(c) in dimensoes for c in criterios) < 2:
             raise DemandaValidationError("O recorte do colaborador deve conter ao menos dois critérios.", field="convites")
 
 
 def _criterios_convidado(ambiente: dict[str, Any], email: str) -> list[dict[str, Any]]:
-    matrizes_criterios.exigir_julgamento_fase3(ambiente)
+    _exigir_criterios_julgamento(ambiente)
     criterios = ambiente.get("criterios") or []
     convite = next((c for c in ambiente.get("convites", []) if c["email"].strip().lower() == email.strip().lower()), None)
     if convite is None:
@@ -285,7 +311,12 @@ def _criterios_convidado(ambiente: dict[str, Any], email: str) -> list[dict[str,
 
 def _estatisticas_recorte(ambiente: dict[str, Any], email: str, estatisticas: dict | None) -> dict:
     criterios = _criterios_convidado(ambiente, email)
-    return {**(estatisticas or {}), "criterios_atribuidos": criterios,
+    recebidas = dict(estatisticas or {})
+    recebidas.pop("resultados_por_grupo", None)
+    recebidas.pop("modo_comparacao", None)
+    if ambiente.get("modo_comparacao") == "por_grupo":
+        recebidas["modo_comparacao"] = "por_grupo"
+    return {**recebidas, "criterios_atribuidos": criterios,
             "dimensoes_atribuidas": list(dict.fromkeys(_dimensao(c) for c in criterios if _dimensao(c)))}
 
 
@@ -302,6 +333,29 @@ def _recorte_analise(ambiente: dict[str, Any], respostas: list[dict[str, Any]]) 
             field="resposta_ids",
         )
     return criterios
+
+
+def _respostas_da_dimensao(ambiente: dict[str, Any], respostas: list[dict[str, Any]], dimensao: str) -> list[dict[str, Any]]:
+    projetadas = []
+    for resposta in respostas:
+        criterios = _criterios_resposta(ambiente, resposta)
+        indices = _grupos_comparacao(criterios).get(dimensao, [])
+        if not indices:
+            continue
+        stats = resposta.get("estatisticas") or {}
+        bloco = _submatriz(resposta["matriz_comparacao"], indices)
+        resultado = (stats.get("resultados_por_grupo") or {}).get(dimensao)
+        if resultado is None:
+            resultado = ahp_engine.analyze_matrix(bloco) if len(indices) == 1 else {}
+        projetadas.append({
+            **resposta, "matriz_comparacao": bloco,
+            "lambda_max": resultado.get("lambdaMax"), "indice_consistencia": resultado.get("CI"),
+            "indice_aleatorio": resultado.get("RI"), "razao_consistencia": resultado.get("CR"),
+            "consistente": bool(resultado and resultado["CR"] < 0.10),
+            "estatisticas": {**stats, "criterios_atribuidos": [criterios[i] for i in indices],
+                             "dimensoes_atribuidas": [dimensao]},
+        })
+    return projetadas
 
 
 def _consolidacao_from_row(row: dict[str, Any]) -> ConsolidacaoColaborativaSchema | None:
@@ -358,6 +412,7 @@ def _ambiente_to_response(row: dict[str, Any], *, base_url: str = "", gestao: bo
         config_nome=row.get("config_nome"),
         criterios=row.get("criterios") or [],
         n_criterios=int(row.get("n_criterios") or 0),
+        modo_comparacao=row.get("modo_comparacao", "todos"),
         arquivo_matriz_nome=row.get("arquivo_matriz_nome"),
         token=token if gestao else "",
         token_acesso=None,
@@ -420,7 +475,7 @@ def criar_ambiente(
         config = hierarq = None
     elif payload.superficie_id:
         raise DemandaValidationError(
-            "Julgamentos AHP são exclusivos dos critérios da Fase 3; não abra julgamentos para superfícies da Fase 2.",
+            "Selecione uma matriz de critérios e premissas para o julgamento. Superfícies são configuradas separadamente.",
             field="superficie_id",
         )
     elif payload.config_tipo and payload.config_id:
@@ -433,19 +488,15 @@ def criar_ambiente(
         hierarq = None
     elif payload.hierarquizacao_id:
         hierarq = _carregar_hierarquizacao(payload.hierarquizacao_id)
-        criterios = _criterios_from_matriz(_criterios_from_hierarquizacao(hierarq))
+        if hierarq.get("matriz_id"):
+            matriz = matrizes_criterios.obter(hierarq["matriz_id"])
+        criterios = _criterios_from_matriz(matriz["conteudo"] if matriz else _criterios_from_hierarquizacao(hierarq))
         config = None
     elif payload.matriz_premissas_criterios is not None:
         criterios = _criterios_from_matriz(payload.matriz_premissas_criterios)
         config = hierarq = None
     else:
         raise DemandaValidationError("Selecione uma matriz de critérios e premissas.", field="matriz_id")
-
-    if len(criterios) < 2:
-        raise DemandaValidationError(
-            "A matriz deve possuir ao menos dois critérios da Fase 3 para abrir um julgamento AHP.",
-            field="criterios",
-        )
 
     valido_ate = payload.valido_ate
     if valido_ate.tzinfo is None:
@@ -457,7 +508,7 @@ def criar_ambiente(
 
     convites = [{"email": str(c.email).strip().lower(), "nome": (c.nome or "").strip() or None,
                 **({"dimensoes": [d.strip() for d in c.dimensoes]} if c.dimensoes is not None else {})} for c in payload.convites]
-    _validar_dimensoes(convites, criterios)
+    _validar_dimensoes(convites, criterios, payload.modo_comparacao)
     emails = {c["email"] for c in convites}
     if len(emails) != len(convites):
         raise DemandaValidationError(
@@ -465,20 +516,13 @@ def criar_ambiente(
         )
 
     if not matriz:
-        if hierarq and hierarq.get("matriz_id") and not payload.superficie_id:
-            matriz = matrizes_criterios.obter(hierarq["matriz_id"])
-            criterios = _criterios_from_matriz(matriz["conteudo"])
-        else:
-            conteudo = (
-                {"linhas": criterios} if payload.superficie_id or config
-                else matrizes_criterios.da_hierarquizacao(hierarq) if hierarq
-                else payload.matriz_premissas_criterios or {"linhas": criterios}
-            )
-            matriz = matrizes_criterios.criar(
-                payload.arquivo_matriz_nome or payload.nome or "Matriz AHP",
-                conteudo, payload.arquivo_matriz_base64,
-                _nome_arquivo_hierarquizacao(hierarq) if hierarq else payload.arquivo_matriz_nome,
-            )
+        conteudo = (matrizes_criterios.da_hierarquizacao(hierarq) if hierarq
+                    else payload.matriz_premissas_criterios) or {"linhas": criterios}
+        matriz = matrizes_criterios.criar(
+            payload.arquivo_matriz_nome or payload.nome or "Matriz AHP",
+            conteudo, payload.arquivo_matriz_base64,
+            _nome_arquivo_hierarquizacao(hierarq) if hierarq else payload.arquivo_matriz_nome,
+        )
     token = secrets.token_urlsafe(32)
     nomes_criterios = _criterio_nomes(criterios)
     arquivo_superficie = None
@@ -491,6 +535,8 @@ def criar_ambiente(
 
     ambiente_data = {
         "matriz_id": matriz["id"],
+        "matriz_integral": True,
+        **({"modo_comparacao": "por_grupo"} if payload.modo_comparacao == "por_grupo" else {}),
         "nome": (payload.nome or "").strip() or "Julgamento " + (hierarq.get("nome", "") if hierarq else (config or {}).get("nome", "AHP")),
         "hierarquizacao_id": str(payload.hierarquizacao_id) if payload.superficie_id else None,
         "hierarquizacao_codigo": hierarq.get("codigo", "") if payload.superficie_id else None,
@@ -565,13 +611,15 @@ def atualizar_ambiente(
     atual = repo.get_ambiente_by_id(ambiente_id)
     if not atual:
         raise DemandaValidationError("Julgamento não encontrado.", field="julgamento_id")
+    if payload.modo_comparacao is not None and payload.modo_comparacao != atual.get("modo_comparacao", "todos"):
+        raise DemandaValidationError("O modo de comparação é definido na criação do julgamento. Crie outro julgamento para usar um modo diferente.", field="modo_comparacao")
     versao_lista = payload.versao_lista_colaboradores
     mensagem_conflito = "O julgamento foi alterado depois que você abriu a lista. Recarregue o julgamento para conferir a versão atual."
     if versao_lista is not None and payload.convites is None:
         raise DemandaValidationError("Informe a lista de colaboradores a confirmar.", field="convites")
     somente_nome = payload.model_fields_set == {"nome"} and payload.nome is not None
     if not somente_nome:
-        matrizes_criterios.exigir_julgamento_fase3(atual)
+        _exigir_criterios_julgamento(atual)
     if atual.get("status") != "ativa" and not somente_nome and not payload.reabrir:
         raise DemandaValidationError(
             "Somente julgamentos abertos podem ser editados.", field="status"
@@ -643,7 +691,7 @@ def atualizar_ambiente(
         )
     if payload.hierarquizacao_id is not None and not superficie_vinculada:
         hierarq = _carregar_hierarquizacao(payload.hierarquizacao_id)
-        criterios = _criterios_from_matriz(_criterios_from_hierarquizacao(hierarq))
+        criterios = matrizes_criterios.criterios_fase3(_criterios_from_hierarquizacao(hierarq))
         if len(criterios) < 2:
             raise DemandaValidationError(
                 "A hierarquização deve possuir ao menos dois critérios.",
@@ -685,7 +733,7 @@ def atualizar_ambiente(
     elif payload.matriz_premissas_criterios is not None:
         if atual.get("hierarquizacao_id"):
             raise DemandaValidationError("A matriz deve ser definida no cadastro da hierarquização.", field="matriz_premissas_criterios")
-        criterios = _criterios_from_matriz(payload.matriz_premissas_criterios)
+        criterios = matrizes_criterios.criterios_fase3(payload.matriz_premissas_criterios)
         if len(criterios) < 2:
             raise DemandaValidationError(
                 "A matriz deve possuir ao menos dois critérios.", field="criterios"
@@ -702,7 +750,7 @@ def atualizar_ambiente(
         config = config_repo.get_by_id(payload.config_tipo, payload.config_id)
         if not config:
             raise DemandaValidationError("Configuração multicritério não encontrada.", field="config_id")
-        criterios = _criterios_from_matriz(config.get("criterios") or [])
+        criterios = matrizes_criterios.criterios_fase3(config.get("criterios") or [])
         if len(criterios) < 2:
             raise DemandaValidationError(
                 "A configuração deve possuir ao menos dois critérios.", field="config_id"
@@ -747,7 +795,7 @@ def atualizar_ambiente(
             dimensoes = item.dimensoes if "dimensoes" in item.model_fields_set else anterior.get("dimensoes")
             if dimensoes is not None:
                 convite["dimensoes"] = [d.strip() for d in dimensoes]
-        _validar_dimensoes(convites, atual.get("criterios") or [])
+        _validar_dimensoes(convites, atual.get("criterios") or [], atual.get("modo_comparacao", "todos"))
         respostas = repo.list_respostas(ambiente_id)
         proposto = {**atual, "convites": convites}
         for resposta in respostas:
@@ -904,6 +952,8 @@ def obter_ambiente_publico(
         hierarq = _carregar_hierarquizacao(row["hierarquizacao_id"])
         criterios_atribuidos = _criterios_from_hierarquizacao(hierarq)
     criterios = _criterio_nomes(criterios_atribuidos)
+    modo_comparacao = row.get("modo_comparacao", "todos")
+    grupos_comparacao = _grupos_comparacao(criterios_atribuidos) if modo_comparacao == "por_grupo" else {}
 
     valido_ate = row.get("valido_ate")
     if isinstance(valido_ate, datetime) and valido_ate.tzinfo is None:
@@ -920,8 +970,10 @@ def obter_ambiente_publico(
             token=token, escopo=matriz,
             objetivo=objetivo if isinstance(objetivo, str) and objetivo.strip() else "Avaliar a importância relativa dos critérios da matriz de critérios e premissas.",
             criterios=criterios, valido_ate=_iso(valido_ate) or "", status=status,
+            modo_comparacao=modo_comparacao,
+            grupos_comparacao=grupos_comparacao,
             email_autorizado=autorizado,
-            contextualizacao=contexto_julgamento_ahp.contextualizacao_formulario(row, criterios_atribuidos),
+            contextualizacao=contexto_julgamento_ahp.contextualizacao_formulario(row, criterios_atribuidos, grupos_comparacao=grupos_comparacao),
         )
     # Contexto dos registros anteriores à migração.
     try:
@@ -945,11 +997,13 @@ def obter_ambiente_publico(
         escopo=escopo,
         objetivo=objetivo,
         criterios=criterios,
+        modo_comparacao=modo_comparacao,
+        grupos_comparacao=grupos_comparacao,
         valido_ate=_iso(valido_ate) or "",
         status=status,
         email_autorizado=autorizado,
         contextualizacao=contexto_julgamento_ahp.contextualizacao_formulario(
-            {**row, "hierarquizacao_nome": escopo}, criterios_atribuidos,
+            {**row, "hierarquizacao_nome": escopo}, criterios_atribuidos, grupos_comparacao=grupos_comparacao,
         ),
     )
 
@@ -966,7 +1020,7 @@ def _validar_ambiente_ativo(row: dict[str, Any]) -> None:
             raise DemandaValidationError(
                 "O prazo para preenchimento encerrou.", field="valido_ate"
             )
-    matrizes_criterios.exigir_julgamento_fase3(row)
+    _exigir_criterios_julgamento(row)
 
 
 def _validar_matriz_pareada(matriz: list[list[float]], n: int) -> None:
@@ -977,8 +1031,8 @@ def _validar_matriz_pareada(matriz: list[list[float]], n: int) -> None:
         )
     for i in range(n):
         for j in range(n):
-            valor = float(matriz[i][j])
-            if not math.isfinite(valor) or valor <= 0:
+            valor = matriz[i][j]
+            if valor is None or not math.isfinite(valor) or valor <= 0:
                 raise DemandaValidationError(
                     "Todos os valores da matriz devem ser positivos e finitos.",
                     field="matriz_comparacao",
@@ -988,13 +1042,47 @@ def _validar_matriz_pareada(matriz: list[list[float]], n: int) -> None:
                     "A diagonal principal da matriz deve ser igual a 1.",
                     field="matriz_comparacao",
                 )
-            if i < j and not math.isclose(
-                valor * float(matriz[j][i]), 1.0, rel_tol=1e-6, abs_tol=1e-6
-            ):
+            if i < j and (matriz[j][i] is None or not math.isclose(
+                valor * matriz[j][i], 1.0, rel_tol=1e-6, abs_tol=1e-6
+            )):
                 raise DemandaValidationError(
                     "A matriz deve ser recíproca: a comparação inversa deve ser 1/valor.",
                     field="matriz_comparacao",
                 )
+
+
+def _submatriz(matriz, indices):
+    return [[matriz[i][j] for j in indices] for i in indices]
+
+
+def _validar_comparacao_por_grupo(matriz, criterios, *, rascunho=False):
+    n = len(criterios)
+    if len(matriz) != n or any(len(linha) != n for linha in matriz):
+        raise DemandaValidationError(f"A matriz deve ser {n}×{n} para os critérios deste convite.", field="matriz_comparacao")
+    dimensoes = [_dimensao(criterio) for criterio in criterios]
+    if any(valor is not None and dimensoes[i] != dimensoes[j]
+           for i, linha in enumerate(matriz) for j, valor in enumerate(linha)):
+        raise DemandaValidationError("A resposta contém comparações entre grupos diferentes.", field="matriz_comparacao")
+    resultados = {}
+    for grupo, indices in _grupos_comparacao(criterios).items():
+        bloco = _submatriz(matriz, indices)
+        if rascunho:
+            if any((valor is None) != (bloco[j][i] is None) for i, linha in enumerate(bloco) for j, valor in enumerate(linha)):
+                raise DemandaValidationError("Os pares do rascunho devem ser recíprocos.", field="matriz_comparacao")
+            bloco = [[1.0 if valor is None and i != j else valor for j, valor in enumerate(linha)]
+                     for i, linha in enumerate(bloco)]
+        elif any(valor is None for linha in bloco for valor in linha):
+            raise DemandaValidationError(f"Preencha todos os pares do grupo {grupo} antes de enviar.", field="matriz_comparacao")
+        _validar_matriz_pareada(bloco, len(indices))
+        if not rascunho:
+            resultado = ahp_engine.analyze_matrix(bloco)
+            if resultado["CR"] >= 0.10:
+                raise DemandaValidationError(
+                    f"Revise o grupo {grupo}: RC = {resultado['CR']:.4f} (necessário RC < 0,10).",
+                    field="razao_consistencia",
+                )
+            resultados[grupo] = {**resultado, "criterios": _criterio_nomes([criterios[i] for i in indices])}
+    return resultados
 
 
 def iniciar_resposta(token: str, payload: RespostaColaborativaInicioSchema) -> RespostaColaborativaResponseSchema:
@@ -1010,7 +1098,8 @@ def iniciar_resposta(token: str, payload: RespostaColaborativaInicioSchema) -> R
     if existente:
         return _resposta_to_response(existente)
     n = len(_criterios_convidado(ambiente, email))
-    matriz_inicial = [[1.0 for _ in range(n)] for _ in range(n)]
+    por_grupo = ambiente.get("modo_comparacao") == "por_grupo"
+    matriz_inicial = [[1.0 if i == j or not por_grupo else None for j in range(n)] for i in range(n)]
     inserted = repo.insert_resposta({
         "ambiente_id": str(ambiente["id"]),
         "nome_completo": ident.nome_completo.strip(),
@@ -1039,7 +1128,11 @@ def salvar_progresso_resposta(token: str, payload: RespostaColaborativaProgresso
         raise DemandaValidationError("Inicie o preenchimento antes de salvar o progresso.", field="email")
     if resposta.get("status", "enviada") == "enviada":
         raise DemandaValidationError("Esta resposta já foi enviada.", field="status")
-    _validar_matriz_pareada(payload.matriz_comparacao, len(_criterios_convidado(ambiente, email)))
+    criterios = _criterios_convidado(ambiente, email)
+    if ambiente.get("modo_comparacao") == "por_grupo":
+        _validar_comparacao_por_grupo(payload.matriz_comparacao, criterios, rascunho=True)
+    else:
+        _validar_matriz_pareada(payload.matriz_comparacao, len(criterios))
     updated = repo.update_resposta_progresso(str(resposta["id"]), {
         "matriz_comparacao": payload.matriz_comparacao,
         "estatisticas": _estatisticas_recorte(ambiente, email, payload.estatisticas),
@@ -1062,24 +1155,28 @@ def registrar_resposta(token: str, payload: RespostaColaborativaCreateSchema) ->
 
     criterios_snapshot = row.get("criterios") or []
     if criterios_snapshot:
-        nomes = _criterio_nomes(_criterios_convidado(row, email))
+        criterios_lista = _criterios_convidado(row, email)
     else:
         hierarq = _carregar_hierarquizacao(row["hierarquizacao_id"])
         criterios_lista = _criterios_from_hierarquizacao(hierarq)
-        nomes = _criterio_nomes(criterios_lista)
 
     matriz = payload.matriz_comparacao
-    n = len(nomes)
-    _validar_matriz_pareada(matriz, n)
-
-    resultado = ahp_engine.analyze_matrix(matriz)
-    rc = float(resultado["CR"])
-    if rc >= 0.10:
-        raise DemandaValidationError(
-            f"Resposta rejeitada: RC = {rc:.4f} (necessário RC < 0,10). "
-            "Revise as comparações antes de enviar.",
-            field="razao_consistencia",
-        )
+    estatisticas = _estatisticas_recorte(row, email, payload.estatisticas)
+    if row.get("modo_comparacao") == "por_grupo":
+        resultados = _validar_comparacao_por_grupo(matriz, criterios_lista)
+        resultado = {}
+        rc = max(float(item["CR"]) for item in resultados.values())
+        estatisticas["resultados_por_grupo"] = resultados
+    else:
+        _validar_matriz_pareada(matriz, len(criterios_lista))
+        resultado = ahp_engine.analyze_matrix(matriz)
+        rc = float(resultado["CR"])
+        if rc >= 0.10:
+            raise DemandaValidationError(
+                f"Resposta rejeitada: RC = {rc:.4f} (necessário RC < 0,10). "
+                "Revise as comparações antes de enviar.",
+                field="razao_consistencia",
+            )
 
     dados_resposta = {
             "ambiente_id": str(row["id"]),
@@ -1087,13 +1184,13 @@ def registrar_resposta(token: str, payload: RespostaColaborativaCreateSchema) ->
             "email": email,
             "instituicao": ident.instituicao.strip(),
             "matriz_comparacao": matriz,
-            "lambda_max": resultado["lambdaMax"],
-            "indice_consistencia": resultado["CI"],
-            "indice_aleatorio": resultado["RI"],
+            "lambda_max": resultado.get("lambdaMax"),
+            "indice_consistencia": resultado.get("CI"),
+            "indice_aleatorio": resultado.get("RI"),
             "razao_consistencia": rc,
             "consistente": True,
             "status": "enviada",
-            "estatisticas": _estatisticas_recorte(row, email, payload.estatisticas),
+            "estatisticas": estatisticas,
             "enviado_em": datetime.now(timezone.utc),
         }
     inserted = repo.update_resposta_progresso(str(existente["id"]), dados_resposta) if existente else repo.insert_resposta(dados_resposta)
@@ -1280,13 +1377,22 @@ def criar_analise(ambiente_id: str, payload: AnaliseColaborativaCreateSchema, us
     ambiente = repo.get_ambiente_by_id(ambiente_id)
     if not ambiente:
         raise DemandaValidationError("Julgamento não encontrado.", field="ambiente_id")
-    matrizes_criterios.exigir_julgamento_fase3(ambiente)
+    _exigir_criterios_julgamento(ambiente)
     respostas = [r for r in repo.list_respostas(ambiente_id) if r.get("status", "enviada") == "enviada"]
     selecionadas = {str(v) for v in payload.resposta_ids} if payload.resposta_ids is not None else None
     if selecionadas is not None:
         if selecionadas - {str(r["id"]) for r in respostas}:
             raise DemandaValidationError("Há respostas que não pertencem a este julgamento ou ainda não foram enviadas.", field="resposta_ids")
         respostas = [r for r in respostas if str(r["id"]) in selecionadas]
+    if ambiente.get("modo_comparacao") == "por_grupo":
+        dimensao = payload.dimensao
+        grupos = _grupos_comparacao(ambiente.get("criterios") or [])
+        if dimensao not in grupos:
+            raise DemandaValidationError("Selecione uma dimensão da matriz para consolidar.", field="dimensao")
+        projetadas = _respostas_da_dimensao(ambiente, respostas, dimensao)
+        if selecionadas is not None and len(projetadas) != len(respostas):
+            raise DemandaValidationError("Selecione apenas respostas de colaboradores que receberam este grupo.", field="resposta_ids")
+        respostas = projetadas
     if payload.excluir_inconsistentes:
         respostas = [r for r in respostas if r.get("consistente") and float(r.get("razao_consistencia") or 0) <= payload.rc_maximo]
     if not respostas:
@@ -1311,6 +1417,9 @@ def criar_analise(ambiente_id: str, payload: AnaliseColaborativaCreateSchema, us
     estatisticas = _estatisticas_respostas(respostas, nomes)
     estatisticas["total_respostas"] = len(respostas)
     estatisticas["criterios_atribuidos"] = criterios_recorte
+    estatisticas["criterios_com_pesos"] = _criterios_com_pesos(criterios_recorte, resultado["weights"])
+    if ambiente.get("modo_comparacao") == "por_grupo":
+        estatisticas["dimensao"] = payload.dimensao
     row = analise_repo.insert_with_respostas({
         "ambiente_id": ambiente_id, "codigo": "ANL-" + secrets.token_hex(6).upper(), "nome": payload.nome.strip(),
         "descricao": payload.descricao, "metodo_agregacao": {"geometrica": "aij_media_geometrica", "aritmetica": "aij_media_aritmetica", "mediana": "aij_mediana", "moda": "aij_moda"}[metodo], "rc_maximo": payload.rc_maximo,
@@ -1335,19 +1444,28 @@ def obter_espaco_analitico(ambiente_id: str, *, base_url: str = "", gestao: bool
         raise DemandaValidationError("Julgamento não encontrado.", field="ambiente_id")
     respostas = repo.list_respostas(ambiente_id)
     enviados = [r for r in respostas if r.get("status", "enviada") == "enviada"]
-    nomes = _criterio_nomes(ambiente.get("criterios") or [])
+    criterios = ambiente.get("criterios") or []
+    por_grupo = ambiente.get("modo_comparacao") == "por_grupo"
     grupos: list[dict[str, Any]] = []
-    for resposta in respostas:
-        criterios_recorte = _criterios_resposta(ambiente, resposta)
-        grupo = next((g for g in grupos if g["criterios"] == criterios_recorte), None)
-        if grupo is None:
-            grupo = {"criterios": criterios_recorte, "respostas": []}
-            grupos.append(grupo)
-        grupo["respostas"].append(resposta)
+    if por_grupo:
+        grupos = [{"dimensao": dimensao, "criterios": [criterios[i] for i in indices],
+                   "respostas": _respostas_da_dimensao(ambiente, respostas, dimensao)}
+                  for dimensao, indices in _grupos_comparacao(criterios).items()]
+    else:
+        for resposta in respostas:
+            criterios_recorte = _criterios_resposta(ambiente, resposta)
+            grupo = next((g for g in grupos if g["criterios"] == criterios_recorte), None)
+            if grupo is None:
+                grupo = {"criterios": criterios_recorte, "respostas": []}
+                grupos.append(grupo)
+            grupo["respostas"].append(resposta)
     for grupo in grupos:
         enviadas = [r for r in grupo["respostas"] if r.get("status", "enviada") == "enviada"]
         grupo["estatisticas"] = _estatisticas_respostas(enviadas, _criterio_nomes(grupo["criterios"])) if enviadas else {"individuais": [], "por_criterio": [], "por_par": []}
-        grupo["resposta_ids"] = [str(r["id"]) for r in grupo.pop("respostas")]
+        respostas_grupo = grupo.pop("respostas")
+        grupo["resposta_ids"] = [str(r["id"]) for r in respostas_grupo]
+        if por_grupo:
+            grupo["respostas"] = [_resposta_to_response(r).model_dump() for r in respostas_grupo]
     estatisticas = grupos[0]["estatisticas"] if len(grupos) == 1 else {"individuais": [], "por_criterio": [], "por_par": []}
     return {
         "ambiente": _ambiente_to_response(ambiente, base_url=base_url, gestao=gestao).model_dump(),
@@ -1369,7 +1487,7 @@ def homologar_analise(analise_id: str, usuario_id: str | None = None, *, base_ur
     ambiente = repo.get_ambiente_by_id(str(analise["ambiente_id"]))
     if not ambiente:
         raise DemandaValidationError("Julgamento da análise não encontrado.", field="ambiente_id")
-    matrizes_criterios.exigir_julgamento_fase3(ambiente)
+    _exigir_criterios_julgamento(ambiente)
     criterios_analise = (analise.get("estatisticas_analise") or {}).get("criterios_atribuidos", ambiente.get("criterios") or [])
     if criterios_analise != (ambiente.get("criterios") or []):
         raise DemandaValidationError("Esta análise contém apenas um recorte de dimensões e não pode substituir os pesos da matriz inteira.", field="analise_id")
@@ -1383,6 +1501,20 @@ def homologar_analise(analise_id: str, usuario_id: str | None = None, *, base_ur
                        razao_consistencia=resultado["CR"], consistente=True)
     if ambiente.get("hierarquizacao_id"):
         _carregar_hierarquizacao(ambiente["hierarquizacao_id"])
+    dados_hierarquizacao = None
+    if ambiente.get("hierarquizacao_id") and not superficie_ahp.superficie_id(ambiente):
+        criterios = ambiente.get("criterios") or []
+        pesos = analise["pesos_consolidados"]
+        dados_hierarquizacao = {"comparacao_colaborativa": {
+            "analise_homologada_id": analise_id,
+            "ambiente_id": str(ambiente["id"]),
+            "hierarquizacao_id": str(ambiente["hierarquizacao_id"]),
+            "criterios": criterios,
+            "matriz_integral": bool(ambiente.get("matriz_integral")),
+            "criterios_com_pesos": _criterios_com_pesos(criterios, pesos),
+            "matriz_comparacao": analise["matriz_consolidada"],
+            "pesos": {"criteria": _criterio_nomes(criterios), "weights": pesos},
+        }}
     agora = datetime.now(timezone.utc)
     repo.atualizar_consolidacao(str(analise["ambiente_id"]), {
         "matriz_consolidada": analise["matriz_consolidada"], "pesos_consolidados": analise["pesos_consolidados"],
@@ -1390,8 +1522,7 @@ def homologar_analise(analise_id: str, usuario_id: str | None = None, *, base_ur
         "indice_aleatorio": analise["indice_aleatorio"], "razao_consistencia": analise["razao_consistencia"],
         "consistente": analise["consistente"], "respostas_consolidadas": len(analise_repo.list_resposta_ids(analise_id)),
         "consolidado_em": agora, "status": "consolidada",
-    }, {"comparacao_colaborativa": {"analise_homologada_id": analise_id, "ambiente_id": str(ambiente["id"]), "hierarquizacao_id": str(ambiente["hierarquizacao_id"]), "criterios": ambiente.get("criterios") or [], "matriz_comparacao": analise["matriz_consolidada"], "pesos": {"criteria": _criterio_nomes(ambiente.get("criterios") or []), "weights": analise["pesos_consolidados"]}}} if ambiente.get("hierarquizacao_id") and not superficie_ahp.superficie_id(ambiente) else None,
-        homologacao=(analise_id, usuario_id))
+    }, dados_hierarquizacao, homologacao=(analise_id, usuario_id))
     atualizado = analise_repo.get_by_id(analise_id)
     atualizado["respostas_incluidas"] = len(analise_repo.list_resposta_ids(analise_id))
     return _analise_response(atualizado)
@@ -1404,8 +1535,10 @@ def consolidar_ambiente(
     amb = repo.get_ambiente_by_id(ambiente_id)
     if not amb:
         raise DemandaValidationError("Ambiente não encontrado.", field="ambiente_id")
+    if amb.get("modo_comparacao") == "por_grupo":
+        raise DemandaValidationError("Abra o espaço analítico e selecione o grupo de critérios a consolidar.", field="dimensao")
 
-    matrizes_criterios.exigir_julgamento_fase3(amb)
+    _exigir_criterios_julgamento(amb)
     respostas = [
         r for r in repo.list_respostas(ambiente_id)
         if r.get("status", "enviada") == "enviada" and r.get("consistente")
@@ -1446,6 +1579,8 @@ def consolidar_ambiente(
         "modo_preenchimento": "colaborativo",
         "n_criterios": len(criterios),
         "criterios": criterios,
+        "matriz_integral": bool(amb.get("matriz_integral")),
+        "criterios_com_pesos": _criterios_com_pesos(criterios, resultado["weights"]),
         "matriz_comparacao": consolidada,
         "pesos": pesos,
         "lambda_max": resultado["lambdaMax"],

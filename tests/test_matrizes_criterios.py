@@ -143,13 +143,15 @@ def test_julgamento_por_id_nao_aceita_conteudo_substituto(monkeypatch):
         colaborativa.criar_ambiente(payload)
 
 
-def test_julgamento_filtra_fase3_antes_de_validar_dimensoes(monkeypatch):
+def test_julgamento_agrupa_matriz_integral_sem_filtrar_por_fase(monkeypatch):
     ident = str(uuid4())
     conteudo = matriz()
-    conteudo["linhas"].insert(0, {"criterio": "Espacial", "Dimensão": "Território",
-                                 "Etapa": "Favorabilidade territorial — município e rede rodoviária"})
-    for row in conteudo["linhas"][1:]:
+    for row in conteudo["linhas"]:
         row["Dimensão"] = "Atributos"
+    conteudo["linhas"][:0] = [
+        {"criterio": "Risco territorial", "Dimensão": "Território", "Etapa": "Elegibilidade territorial"},
+        {"criterio": "Espacial", "Dimensão": "Território", "Etapa": "Favorabilidade territorial — município e rede rodoviária"},
+    ]
     original = deepcopy(conteudo)
     monkeypatch.setattr(service, "obter", lambda _: {"id": ident, "nome": "Mista", "conteudo": conteudo})
     saved = {}
@@ -158,14 +160,16 @@ def test_julgamento_filtra_fase3_antes_de_validar_dimensoes(monkeypatch):
         return {**_ambiente_row(), **data}
     monkeypatch.setattr(colaborativa.repo, "insert_ambiente", insert)
     payload = AmbienteColaborativoCreateSchema(
-        matriz_id=ident, convites=[{"email": "teste@example.org", "dimensoes": ["Atributos"]}],
+        matriz_id=ident, modo_comparacao="por_grupo", convites=[{"email": "teste@example.org", "dimensoes": ["Território"]}],
         valido_ate="2030-01-01T00:00:00Z",
     )
     result = colaborativa.criar_ambiente(payload)
-    assert result.n_criterios == 2
-    assert result.criterios == conteudo["linhas"][1:]
+    assert result.n_criterios == 4
+    assert result.criterios == conteudo["linhas"]
+    assert saved["matriz_integral"] is True
+    assert colaborativa._criterios_convidado(saved, "teste@example.org") == conteudo["linhas"][:2]
     assert conteudo == original
-    payload.convites[0].dimensoes = ["Território"]
+    payload.convites[0].dimensoes = ["Inexistente"]
     with pytest.raises(DemandaValidationError, match="dimensões válidas"):
         colaborativa.criar_ambiente(payload)
 
@@ -185,14 +189,14 @@ def test_fase_divergente_e_julgamento_legado_misto_sao_bloqueados():
         ]})
 
 
-@pytest.mark.parametrize("fases", [[1, 2], [2, 2], [2, 3]])
-def test_julgamento_exige_ao_menos_dois_criterios_fase3(monkeypatch, fases):
+@pytest.mark.parametrize("fases", [[], [1], [2], [3]])
+def test_julgamento_exige_ao_menos_dois_criterios(monkeypatch, fases):
     ident = str(uuid4())
     monkeypatch.setattr(service, "obter", lambda _: {
         "id": ident, "nome": "Insuficiente",
         "conteudo": {"linhas": [{"criterio": f"C{i}", "Etapa": f"Fase {fase}"} for i, fase in enumerate(fases)]},
     })
     monkeypatch.setattr(colaborativa.repo, "insert_ambiente", lambda _: pytest.fail("Não deve gravar"))
-    with pytest.raises(DemandaValidationError, match="dois critérios da Fase 3"):
+    with pytest.raises(DemandaValidationError, match="dois critérios válidos"):
         colaborativa.criar_ambiente(AmbienteColaborativoCreateSchema(
             matriz_id=ident, convites=[{"email": "teste@example.org"}], valido_ate="2030-01-01T00:00:00Z"))

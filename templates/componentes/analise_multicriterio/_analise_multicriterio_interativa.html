@@ -18,6 +18,13 @@
         <section class="ahp-subcard ami-collaborator-section" aria-labelledby="ami-matrix-section-title" id="ami-matrix-section">
           <div class="ahp-subsection-title"><span class="ahp-subsection-num">3</span><span id="ami-matrix-section-title">Matriz de critérios</span></div>
           {% include "componentes/_seletor_matriz_criterios.html" %}
+          <label class="c-form-group ami-config-field">Escopo da comparação pareada
+            <select id="ami-modo-comparacao" class="c-form-control" aria-describedby="ami-modo-comparacao-help">
+              <option value="todos">Entre todos os critérios atribuídos</option>
+              <option value="por_grupo">Somente entre critérios do mesmo grupo</option>
+            </select>
+            <span id="ami-modo-comparacao-help" class="form-help">Os grupos vêm da coluna Dimensão de toda a matriz. No modo por grupo, o formulário avança um grupo por vez e os pesos são calculados separadamente.</span>
+          </label>
         </section>
         <section class="ahp-subcard ami-collaborator-section" aria-labelledby="ami-hierarchy-section-title" id="ami-surface-hierarchy-section" hidden>
           <div class="ahp-subsection-title"><span class="ahp-subsection-num">3</span><span id="ami-hierarchy-section-title">Contexto da superfície</span></div>
@@ -40,7 +47,7 @@
             </div>
             <fieldset id="ami-collaborator-dimensions" class="matrix-source-option">
               <legend>Dimensões atribuídas ao colaborador</legend>
-              <small class="form-help"><i class="fas fa-info-circle" aria-hidden="true"></i> Selecione uma ou mais dimensões entre os critérios da Fase 3. Critérios espaciais da Fase 2 não entram no julgamento AHP.</small>
+              <small class="form-help"><i class="fas fa-info-circle" aria-hidden="true"></i> Selecione uma ou mais dimensões entre os critérios do julgamento.</small>
               <div id="ami-dimension-options"></div>
             </fieldset>
           </div>

@@ -321,7 +321,9 @@ $migrations = @(
     "176_tipo_pesquisa_experiencia.sql",
     "177_lista_colaboradores_julgamento.sql",
     "178_hierarquizacao_pesquisa_experiencia.sql",
-    "179_cadencia_email.sql"
+    "179_cadencia_email.sql",
+    "180_modo_comparacao_julgamento.sql",
+    "181_matriz_integral_julgamento.sql"
 )
 
 if ($OnlyMigration) {
@@ -502,6 +504,16 @@ if (-not $OnlyMigration) {
 if (-not $OnlyMigration -and "179_cadencia_email.sql" -notin $migrations -and
     -not (Test-SchemaReady "SELECT to_regclass('public.sicard_email_cadencia') IS NOT NULL;")) {
     $migrations += "179_cadencia_email.sql"
+}
+
+if (-not $OnlyMigration -and "180_modo_comparacao_julgamento.sql" -notin $migrations -and
+    -not (Test-SchemaReady "SELECT EXISTS (SELECT 1 FROM pg_trigger WHERE tgrelid=to_regclass('ahp.comparacao_colaborativa_ambiente') AND tgname='julgamento_modo_comparacao_imutavel' AND tgenabled='O');")) {
+    $migrations += "180_modo_comparacao_julgamento.sql"
+}
+
+if (-not $OnlyMigration -and "181_matriz_integral_julgamento.sql" -notin $migrations -and
+    -not (Test-SchemaReady "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='ahp' AND table_name='comparacao_colaborativa_ambiente' AND column_name='matriz_integral');")) {
+    $migrations += "181_matriz_integral_julgamento.sql"
 }
 
 if (-not $OnlyMigration -and "166_politica_usuarios_sicard.sql" -notin $migrations) {

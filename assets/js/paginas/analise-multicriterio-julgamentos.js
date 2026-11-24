@@ -78,19 +78,16 @@
       else proc.erro({message: error.message, status: error.status, method: error.method, url: error.url, body: error.body});
     }
   }
-  function matrixRows(matrix) { if (Array.isArray(matrix)) return matrix.filter(function (row) { return row && typeof row === "object"; }); if (!matrix || typeof matrix !== "object") return []; var rows = matrix.linhas || matrix.rows || matrix.criterios || matrix.dados || []; return Array.isArray(rows) ? rows.filter(function (row) { return row && typeof row === "object"; }) : []; }
+  function matrixRows(matrix) { return SLTMatrizesCriterios.rows(matrix); }
   function criterionDimension(row) {
     var key = Object.keys(row || {}).find(function (key) {
       return ["dimensao", "dimensao de criterio", "dimensao de criterios"].includes(key.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase());
     });
     return key ? String(row[key] || "").trim() : "";
   }
-  function phase3Rows(matrix) {
-    return SLTMatrizesCriterios.phase3Rows(matrix);
-  }
   function dimensionGroups(matrix = criteriaMatrix) {
     var groups = new Map();
-    phase3Rows(matrix).forEach(function (row) {
+    matrixRows(matrix).forEach(function (row) {
       var dimension = criterionDimension(row);
       if (dimension) groups.set(dimension, (groups.get(dimension) || 0) + 1);
     });
@@ -101,7 +98,7 @@
     var selected = Array.from(host.querySelectorAll("input:checked")).map(function (input) { return input.value; });
     host.replaceChildren();
     $("ami-collaborator-dimensions").hidden = Boolean(activeSurfaceId);
-    if (!groups.size) { host.textContent = "Selecione uma matriz com ao menos dois critérios da Fase 3 e suas dimensões informadas."; return; }
+    if (!groups.size) { host.textContent = "Selecione uma matriz com ao menos dois critérios e suas dimensões informadas."; return; }
     groups.forEach(function (count, dimension) {
       var label = document.createElement("label"), input = document.createElement("input");
       input.type = "checkbox"; input.value = dimension; input.checked = selected.includes(dimension);
@@ -151,7 +148,7 @@
   function loadRequestedSurface() {
     var params = new URLSearchParams(location.search), surfaceId = params.get("superficie_id");
     if (!surfaceId) { if (params.get("novo") === "1") showCreateSection(); return Promise.resolve(); }
-    return Promise.reject(new Error("Julgamentos AHP são exclusivos da Fase 3. Superfícies da Fase 2 não participam."));
+    return Promise.reject(new Error("Selecione uma matriz de critérios e premissas para o julgamento. Superfícies são configuradas separadamente."));
   }
   function matrixSummary(message, isError) {
     var node = $("ami-criteria-matrix-summary"); node.textContent = message || ""; node.classList.toggle("hidden", !message); node.classList.toggle("ahp-info-note--error", Boolean(isError));
@@ -166,7 +163,7 @@
   function selectedMatrixId(feedbackNode) {
     if (matrixPicker.pending()) { avisarFormulario("Aguarde o carregamento ou conclua o cadastro do arquivo da matriz.", feedbackNode); return null; }
     var record = matrixPicker.selected();
-    if (!record || phase3Rows(record.conteudo).length < 2) { avisarFormulario("Selecione uma matriz cadastrada com ao menos dois critérios da Fase 3.", feedbackNode); return null; }
+    if (!record || matrixRows(record.conteudo).length < 2) { avisarFormulario("Selecione uma matriz cadastrada com ao menos dois critérios.", feedbackNode); return null; }
     return record.id;
   }
   function avisarFormulario(message, node, field) {
@@ -920,7 +917,8 @@
     var criada = null; analysisSaving = true; $("ami-analysis-calculate").disabled = true;
     api("/api/ahp/comparacao-colaborativa/ambientes/" + encodeURIComponent(ambienteId) + "/analises", {
       method: "POST",
-      body: JSON.stringify({ nome: nome, metodo_agregacao: selectedMeasure, resposta_ids: selecionadas, rc_maximo: limite, excluir_inconsistentes: $("ami-analysis-exclude-inconsistent").checked })
+      body: JSON.stringify({ nome: nome, metodo_agregacao: selectedMeasure, resposta_ids: selecionadas, rc_maximo: limite,
+        excluir_inconsistentes: $("ami-analysis-exclude-inconsistent").checked, dimensao: analysisWorkspace.dimensao })
     }).then(function (analise) {
       criada = analise;
       marcarEtapa("envio", "ok", "Matriz calculada com o m\u00e9todo selecionado.");
@@ -929,7 +927,7 @@
       return api("/api/ahp/comparacao-colaborativa/ambientes/" + encodeURIComponent(ambienteId) + "/espaco-analitico");
     }).then(function (data) {
       marcarEtapa("recarga", "ok", "Se\u00e7\u00f5es 1 a 7 atualizadas.");
-      renderAnalysisWorkspace(data);
+      renderAnalysisWorkspace(data, analysisWorkspace.dimensao ? analysisScope : undefined);
       var incluidas = criada.respostas_incluidas || selecionadas.length;
       var campos = [
         ["An\u00e1lise", (criada.nome || "") + (criada.codigo ? " (" + criada.codigo + ")" : "")],
@@ -961,20 +959,21 @@
   }
   function renderAnalysisWorkspace(data, scope) {
     selecaoCruzada.pair = null; selecaoCruzada.criterio = null;
+    analysisSource = data;
     if (scope == null) {
       analysisScope = -1;
       analysisWorkspace = null;
-      analysisSource = data;
     } else analysisScope = scope;
     var recortes = analysisSource.recortes || [], picker = $("ami-analysis-scope");
+    var porGrupo = analysisSource.ambiente.modo_comparacao === "por_grupo";
     picker.replaceChildren();
-    picker.add(new Option("Todos", "-1"));
+    if (!porGrupo) picker.add(new Option("Todos", "-1"));
     recortes.forEach(function (recorte, index) {
       var label = Array.from(new Set(recorte.criterios.map(criterionDimension).filter(Boolean))).join(" · ") || "Matriz integral";
       picker.add(new Option(label + " · " + recorte.criterios.length + " critérios", String(index)));
     });
     picker.parentElement.hidden = false;
-    if (analysisScope >= recortes.length) analysisScope = -1;
+    if (analysisScope >= recortes.length || (porGrupo && analysisScope < 0)) analysisScope = porGrupo ? 0 : -1;
     picker.value = String(analysisScope);
     picker.onchange = function () { analysisWorkspace = null; renderAnalysisWorkspace(analysisSource, Number(picker.value)); };
     var recorte = recortes[analysisScope];
@@ -996,15 +995,23 @@
       var ids = new Set(recorte.resposta_ids);
       data = Object.assign({}, analysisSource, {
         ambiente: Object.assign({}, analysisSource.ambiente, {criterios: recorte.criterios, n_criterios: recorte.criterios.length}),
-        respostas: analysisSource.respostas.filter(function (r) { return ids.has(r.id); }),
+        respostas: recorte.respostas || analysisSource.respostas.filter(function (r) { return ids.has(r.id); }),
+        dimensao: recorte.dimensao,
         estatisticas: recorte.estatisticas,
         analises: analysisSource.analises.filter(function (a) {
           return JSON.stringify((a.estatisticas_analise || {}).criterios_atribuidos || analysisSource.ambiente.criterios) === JSON.stringify(recorte.criterios);
         })
       });
       data.ambiente.convites = data.ambiente.convites.filter(function (c) {
+        if (recorte.dimensao) return !c.dimensoes || c.dimensoes.includes(recorte.dimensao);
         return JSON.stringify(analysisSource.ambiente.criterios.filter(function (row) { return !c.dimensoes || c.dimensoes.includes(criterionDimension(row)); })) === JSON.stringify(recorte.criterios);
       });
+      if (recorte.dimensao) {
+        var enviadas = data.respostas.filter(function (resposta) { return resposta.status === "enviada"; });
+        var consistentes = enviadas.filter(function (resposta) { return resposta.consistente; }).length;
+        data.participacao = {convidados: data.ambiente.convites.length, nao_iniciados: Math.max(0, data.ambiente.convites.length - data.respostas.length),
+          em_preenchimento: data.respostas.length - enviadas.length, enviadas: enviadas.length, consistentes: consistentes, inconsistentes: enviadas.length - consistentes};
+      }
     }
     var same = analysisWorkspace && analysisWorkspace.ambiente.id === data.ambiente.id;
     var validResponses = respostasEnviadas(data).map(function (r) { return String(r.id); });
@@ -1041,7 +1048,7 @@
       return '<div class="ami-homologada"><p><strong>Análise homologada da superfície da Fase 2.</strong></p><p>Os pesos correspondem exclusivamente aos critérios snapshot desta superfície, não aos critérios globais da hierarquização.</p><a href="/restrict/hierarquizacao/fase-2/" class="btn btn-secondary">Favorabilidade territorial</a></div>';
     }
     return '<div class="ami-homologada"><p class="ami-homologada__titulo"><i class="fa-solid fa-circle-check" aria-hidden="true"></i> <strong>Análise homologada</strong></p>' +
-      '<p class="ami-homologada__texto">Os pesos homologados pertencem a esta hierarquização e serão aplicados aos critérios correspondentes na fase 3. Cada fase mantém seus próprios requisitos de execução:</p>' +
+      '<p class="ami-homologada__texto">Na Fase 3, o gestor pode escolher os pesos homologados para os critérios correspondentes. Cada fase mantém seus requisitos de execução.</p>' +
       '<ol class="ami-homologada__fases">' + FASES_HIERARQUIZACAO.map(function (fase) {
         return '<li><a href="' + fase.href + '"><span class="ami-homologada__num">' + fase.numero + '</span><span><strong>' + fase.nome + '</strong><small>' + fase.resumo + '</small></span><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a></li>';
       }).join("") + '</ol></div>';
@@ -1111,6 +1118,7 @@
     $("ami-emails-filter-valor").value = "";
     SLTTable.inversion($("ami-emails-filter-inverter"), false);
     var creating = mode === "create", editing = mode === "edit", readonly = mode === "view";
+    $("ami-modo-comparacao").disabled = !creating;
     ["ami-judgment-name", "ami-deadline", "ami-collaborator-name", "ami-emails", "ami-add-emails", "ami-select-all", "ami-delete-emails", "ami-criteria-matrix"].forEach(function (id) { if ($(id)) $(id).disabled = readonly; });
     $("ami-hierarchy").disabled = readonly || Boolean(activeSurfaceId);
     syncMatrixContext();
@@ -1141,6 +1149,7 @@
     criteriaMatrixFileBase64 = null; criteriaMatrixFileName = judgment.arquivo_matriz_nome || null;
     matrixSummary((judgment.criterios || []).length + " critério(s) armazenado(s) neste julgamento" + (criteriaMatrixFileName ? " · " + criteriaMatrixFileName : "") + ".");
     draftEmails = collaboratorList(judgment);
+    $("ami-modo-comparacao").value = judgment.modo_comparacao || "todos";
     renderDimensionOptions();
     renderDraftEmails(); setEnvironmentMode("view");
     $("ami-create-status").className = "ami-status-cards";
@@ -1284,8 +1293,8 @@
     }
     if (!draftEditing) { draftSnapshot = draftEmails.map(function (item) { return Object.assign({}, item); }); draftEditing = true; }
     var dimensions = Array.from($("ami-dimension-options").querySelectorAll("input:checked")).map(function (input) { return input.value; });
-    if (!activeSurfaceId && (!dimensions.length || phase3Rows(criteriaMatrix).filter(function (row) { return dimensions.includes(criterionDimension(row)); }).length < 2)) {
-      avisarFormulario("Selecione dimensões que contenham ao menos dois critérios para este colaborador.", $("ami-create-feedback")); return;
+    if (!activeSurfaceId && !collaboratorHasPairs(dimensionGroups(), dimensions)) {
+      avisarFormulario(collaboratorScopeError(nome), $("ami-create-feedback")); return;
     }
     draftEmails.push({nome: nome, email: email, ...(!activeSurfaceId ? {dimensoes: dimensions} : {})});
     $("ami-collaborator-name").value = "";
@@ -1584,6 +1593,18 @@
     $("ami-import-close").disabled = environmentSaving;
     $("ami-import-cancel").disabled = environmentSaving;
   }
+  function collaboratorHasPairs(groups, dimensions) {
+    if (dimensions?.some(function (group) { return !groups.has(group); })) return false;
+    var sizes = (dimensions || Array.from(groups.keys())).map(function (group) { return groups.get(group) || 0; });
+    return $("ami-modo-comparacao").value === "por_grupo"
+      ? sizes.some(function (size) { return size >= 2; })
+      : sizes.reduce(function (total, size) { return total + size; }, 0) >= 2;
+  }
+  function collaboratorScopeError(name) {
+    return $("ami-modo-comparacao").value === "por_grupo"
+      ? "Atribua a " + name + " pelo menos um grupo com dois ou mais critérios para comparar por grupo."
+      : "Selecione grupos que reúnam ao menos dois critérios para " + name + " ou escolha Todos.";
+  }
   function validatedCollaboratorList(list, feedback) {
     var normalized = list.map(function (item) {
       return { ...invitePayload(item), nome: normalizeCollaboratorName(item.nome) || null, email: item.email.trim().toLowerCase() };
@@ -1597,12 +1618,12 @@
       return null;
     }
     var groups = dimensionGroups();
+    var porGrupo = $("ami-modo-comparacao").value === "por_grupo";
     var invalid = normalized.find(function (item) {
-      return item.dimensoes && (item.dimensoes.some(function (group) { return !groups.has(group); })
-        || item.dimensoes.reduce(function (count, group) { return count + (groups.get(group) || 0); }, 0) < 2);
+      return (item.dimensoes || (porGrupo && criteriaMatrix)) && !collaboratorHasPairs(groups, item.dimensoes);
     });
     if (invalid) {
-      feedback.textContent = "Selecione grupos que reúnam ao menos dois critérios para " + (invalid.nome || invalid.email) + " ou escolha Todos.";
+      feedback.textContent = collaboratorScopeError(invalid.nome || invalid.email);
       return null;
     }
     return normalized;
@@ -1882,7 +1903,20 @@
       return;
     }
     if (preview) { preview.hidden = true; preview.querySelector('iframe').src = 'about:blank'; }
- pairwiseMode = mode; [["ami-judgments-matrix-action", "matrix"], ["ami-judgments-form-action", "form"]].forEach(function (entry) { var active = mode === entry[1]; $(entry[0]).classList.toggle("is-active", active); $(entry[0]).setAttribute("aria-pressed", String(active)); }); $("ami-pairwise-panel").classList.remove("is-hidden"); loadSaatyScale().then(function () { renderPairwise(judgment); $("ami-pairwise-panel").scrollIntoView({ behavior: "smooth", block: "start" }); }); }
+ pairwiseMode = mode; [["ami-judgments-matrix-action", "matrix"], ["ami-judgments-form-action", "form"]].forEach(function (entry) { var active = mode === entry[1]; $(entry[0]).classList.toggle("is-active", active); $(entry[0]).setAttribute("aria-pressed", String(active)); }); $("ami-pairwise-panel").classList.remove("is-hidden"); loadSaatyScale().then(function () { renderPairwiseScope(judgment); $("ami-pairwise-panel").scrollIntoView({ behavior: "smooth", block: "start" }); }); }
+  function renderPairwiseScope(judgment) {
+    var select = $("ami-pairwise-group"), porGrupo = judgment.modo_comparacao === "por_grupo";
+    select.parentElement.classList.toggle("is-hidden", !porGrupo);
+    if (!porGrupo) { renderPairwise(judgment); return; }
+    var grupos = dimensionGroups({linhas: judgment.criterios || []});
+    select.replaceChildren(...Array.from(grupos).filter(function (item) { return item[1] > 1; })
+      .map(function (item) { return new Option(item[0], item[0]); }));
+    select.onchange = function () {
+      renderPairwise({...judgment, id: judgment.id + ":" + select.value, hierarquizacao_codigo: select.value,
+        criterios: judgment.criterios.filter(function (row) { return criterionDimension(row) === select.value; }), consolidacao: null});
+    };
+    select.onchange();
+  }
   function setupMode() {
     if (modo === "espaco") {
       $("ami-page-title-text").textContent = "Gestão de julgamentos AHP";
@@ -1993,7 +2027,7 @@
     addPageTableLabels();
     observeTableLabelFonts();
     matrixPicker = window.SLTMatrizesCriterios.mount($("ami-matrix-section"), { onChange: function (record) {
-      if (!activeSurfaceId) criteriaMatrix = record ? record.conteudo : null;
+      if (!activeSurfaceId && environmentId === null) criteriaMatrix = record ? record.conteudo : null;
       renderDimensionOptions();
     } });
     var actionRow = $("ami-new") && $("ami-new").parentElement;
@@ -2136,6 +2170,7 @@
       if (Date.parse(deadlineEndOfDay()) <= Date.now()) { avisarFormulario("A data limite já venceu. Escolha uma data válida para a coleta de respostas.", feedback, $("ami-deadline")); return; }
       var matrixId = activeSurfaceId ? null : selectedMatrixId(feedback);
       if (!activeSurfaceId && !matrixId) return;
+      if (!activeSurfaceId && !validatedCollaboratorList(draftEmails, feedback)) return;
       if (activeSurfaceId && matrixRows(criteriaMatrix).length < 2) { avisarFormulario("A superfície deve possuir ao menos dois critérios.", feedback); return; }
       feedback.textContent = "Criando ambiente colaborativo…";
       var selectedHierarchy = $("ami-hierarchy").selectedOptions[0];
@@ -2144,7 +2179,10 @@
       await executarOperacao("Criar julgamento", function () {
         var payload = { nome: $("ami-judgment-name").value.trim(), convites: draftEmails.map(invitePayload), valido_ate: deadlineEndOfDay() };
         if (activeSurfaceId) { payload.hierarquizacao_id = selectedHierarchy.dataset.hierarquizacaoId; payload.superficie_id = activeSurfaceId; }
-        else payload.matriz_id = matrixId;
+        else {
+          payload.matriz_id = matrixId;
+          payload.modo_comparacao = $("ami-modo-comparacao").value;
+        }
         return api("/api/ahp/comparacao-colaborativa/ambientes", { method: "POST", body: JSON.stringify(payload) });
       }, function (j) {
         julgamentos.unshift(j); currentPage = 1; selectedIds.clear(); selectedIds.add(j.id); updateSelectedId(); render();

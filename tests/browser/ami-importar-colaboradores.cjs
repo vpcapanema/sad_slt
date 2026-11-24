@@ -167,6 +167,7 @@ function workbookWithTables() {
     await page.locator('[data-matrix-mode][value="existing"]').check();
     await page.locator('[data-matrix-select]').selectOption(matriz.id);
     await page.locator('#ami-dimension-options input[value="Ambiental"]').waitFor();
+    await page.locator('#ami-dimension-options input[value="Espacial"]').waitFor();
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([['Instruções']]), 'Leia primeiro');
     XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
@@ -200,7 +201,7 @@ function workbookWithTables() {
     assert.equal(await confirm.isDisabled(), true);
     await removeDuplicates.click();
     assert.equal(await page.locator('#ami-import-list tr').count(), 3);
-    const groups = ['Ambiental', 'Social', 'Viabilidade institucional e financeira'];
+    const groups = ['Ambiental', 'Social', 'Viabilidade institucional e financeira', 'Espacial'];
     const headers = (await modal.locator('th').allTextContents()).map(text => text.trim().replace(/\s+/g, ' '));
     assert.deepEqual(headers, ['', 'Nome do colaborador', 'E-mail', ...groups, 'Todos']);
     const nameHeader = modal.locator('thead th').nth(1);
@@ -312,9 +313,11 @@ function workbookWithTables() {
       ['', 'Colaboradores', 'E-mail colaborador', 'Grupos de critérios', 'Data limite']);
     await page.locator('#ami-judgment-name').fill('Teste de atribuição');
     await page.locator('#ami-deadline').fill('2036-01-01');
+    await page.locator('#ami-modo-comparacao').selectOption('por_grupo');
     await page.locator('#ami-create-form button[type="submit"]').click();
     await page.locator('#pfsErrorBox').waitFor({state: 'visible'});
     assert.equal(payload.matriz_id, matriz.id);
+    assert.equal(payload.modo_comparacao, 'por_grupo');
     assert.deepEqual(payload.convites.find(item => item.email === 'carla@example.com'), {
       nome: 'Carla dos Reis', email: 'carla@example.com', dimensoes: ['Ambiental', 'Social'],
     });
@@ -333,8 +336,11 @@ function workbookWithTables() {
 
     await page.locator('[data-select-id="julgamento-teste"]').check();
     await page.locator('#ami-environment-edit').click();
+    assert.equal(await page.locator('#ami-modo-comparacao').inputValue(), 'todos');
+    assert.equal(await page.locator('#ami-modo-comparacao').isDisabled(), true);
     await page.locator('#ami-open-collaborators').click();
     await modal.waitFor({state: 'visible'});
+    assert.equal(await modal.locator('th').filter({hasText: 'Espacial'}).count(), 0);
     await scope('ana@example.com', 'Todos os grupos').check();
     await page.locator('#ami-import-cancel').click();
     assert.deepEqual(confirmacoes, []);

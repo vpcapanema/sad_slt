@@ -44,8 +44,8 @@
     const keys = [...new Set(criteria.flatMap(row => Object.keys(row)))];
     const premises = table("Critérios e premissas do arquivo", keys, criteria.map(row => keys.map(key => row[key] ?? "—")),
       "Tabela dos critérios e premissas do arquivo");
-    host.append(element("p", "A comparação pareada AHP contempla somente os critérios da Fase 3. As demais fases permanecem na tabela de premissas acima."));
-    const names = phase3Rows(record.conteudo).map((row, index) => {
+    host.append(element("p", "As dimensões de todas as linhas da matriz formam os grupos de critérios do julgamento."));
+    const names = criteria.map((row, index) => {
       const key = Object.keys(row).find(key => ["criterio", "nome", "name"].includes(key.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase()));
       return key ? row[key] : "Critério " + (index + 1);
     });
@@ -57,15 +57,6 @@
   function rows(content) {
     const values = Array.isArray(content) ? content : content && (content.linhas || content.rows || content.criterios || content.dados);
     return Array.isArray(values) ? values.filter(row => row && typeof row === "object" && !Array.isArray(row)) : [];
-  }
-  function phase3Rows(content) {
-    return rows(content).filter(row => {
-      const key = Object.keys(row).find(key => ["etapa", "etapa da hierarquizacao", "etapa_hierarquizacao"]
-        .includes(key.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase()));
-      const stage = String(key ? row[key] : "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-        .trim().toLowerCase().replace(/[\s-]+/g, "_");
-      return ["3", "fase3", "fase_3"].includes(stage) || stage.startsWith("priorizacao") || stage.startsWith("ajuste");
-    });
   }
   async function request(url, options) {
     const response = await (global.SICARDBrowserLogs?.fetch || fetch)(url, { credentials: "same-origin", ...options });
@@ -212,5 +203,5 @@
       reset() { version++; busy = false; notify(null); parsedFile = null; select.value = ""; file.value = ""; name.value = ""; feedback.textContent = ""; modes.forEach(radio => { radio.checked = false; }); sync(); if (!catalogLoaded) load(); },
     };
   }
-  global.SLTMatrizesCriterios = { mount, rows, phase3Rows };
+  global.SLTMatrizesCriterios = { mount, rows };
 })(window);

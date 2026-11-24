@@ -10,7 +10,10 @@ from api.services.matrizes_criterios import exigir_compativel, exigir_julgamento
 
 
 def pesos_do_julgamento(julgamento):
-    exigir_julgamento_fase3(julgamento)
+    integral = bool(julgamento.get("matriz_integral"))
+    if not integral:
+        exigir_julgamento_fase3(julgamento)
+    criterios = julgamento.get("criterios") or []
     valores = julgamento.get("pesos_consolidados") or []
     if not valores:
         raise DemandaValidationError("Os pesos consolidados deste julgamento ainda não estão disponíveis.", field="julgamento_id")
@@ -22,8 +25,9 @@ def pesos_do_julgamento(julgamento):
         raise DemandaValidationError("Os pesos consolidados deste julgamento são inválidos.", field="julgamento_id")
     return mapa_pesos({"comparacao_colaborativa": {
         "analise_homologada_id": str(julgamento["id"]),
-        "criterios": julgamento.get("criterios") or [],
-        "pesos": {"criteria": _criterio_nomes(julgamento.get("criterios") or []), "weights": valores},
+        "criterios": criterios,
+        "matriz_integral": integral,
+        "pesos": {"criteria": _criterio_nomes(criterios), "weights": valores},
     }})
 
 

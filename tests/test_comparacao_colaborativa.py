@@ -1050,6 +1050,122 @@ def _instalar_fake_repo(monkeypatch) -> _FakeRepo:
     return fake
 
 
+def test_julgamento_anterior_mantem_comparacoes_entre_dimensoes_desde_a_criacao(monkeypatch):
+    fake = _instalar_fake_repo(monkeypatch)
+    ambiente = fake.insert_ambiente(_ambiente_dimensoes())
+    gestor, publico = _client_autenticado("GESTOR"), TestClient(app)
+    base = "/api/ahp/comparacao-colaborativa"
+    rota_ambiente = f"{base}/ambientes/{ambiente['id']}"
+    rota_publica = f"{base}/publico/{ambiente['token']}"
+    acesso = {"email": "b@x.gov.br", "token_acesso": KEY}
+    identidade = {"token_acesso": KEY, "identificacao": {
+        "email": acesso["email"], "nome_completo": "Bia", "instituicao": "Teste",
+    }}
+
+    assert not fake.list_respostas(ambiente["id"])
+    alteracao_sem_respostas = gestor.patch(rota_ambiente, json={"modo_comparacao": "por_grupo"})
+    assert alteracao_sem_respostas.status_code == 422
+    assert "definido na criação" in alteracao_sem_respostas.json()["detail"]
+
+    meta = publico.post(f"{rota_publica}/acesso", json=acesso)
+    assert meta.status_code == 200, meta.text
+    assert meta.json()["modo_comparacao"] == "todos"
+    assert meta.json()["grupos_comparacao"] == {}
+
+    inicio = publico.post(f"{rota_publica}/respostas/iniciar", json=identidade)
+    assert inicio.status_code == 200, inicio.text
+    matriz = inicio.json()["matriz_comparacao"]
+    matriz[0][2], matriz[2][0] = 3, 1 / 3  # Custo (Financeira) e Acesso (Social).
+    progresso = publico.patch(f"{rota_publica}/respostas/progresso", json={**acesso, "matriz_comparacao": matriz})
+    assert progresso.status_code == 200, progresso.text
+
+    alteracao = gestor.patch(rota_ambiente, json={"modo_comparacao": "por_grupo"})
+    assert alteracao.status_code == 422
+    assert "definido na criação" in alteracao.json()["detail"]
+    edicao = gestor.patch(rota_ambiente, json={"nome": "Julgamento em andamento"})
+    assert edicao.status_code == 200, edicao.text
+    assert edicao.json()["modo_comparacao"] == "todos"
+    assert edicao.json()["criterios"] == ambiente["criterios"]
+
+    retomada = publico.post(f"{rota_publica}/respostas/iniciar", json=identidade)
+    assert retomada.status_code == 200, retomada.text
+    assert retomada.json()["matriz_comparacao"] == matriz
+
+
+def test_fluxo_por_grupo_preserva_os_pares_e_consolida_separadamente(monkeypatch):
+    _instalar_fake_repo(monkeypatch)
+    criterios = _ambiente_dimensoes()["criterios"] + [{"Critério": "Ambiental", "Dimensão": "Ambiental", "Etapa": "Fase 3"}]
+    criterios[0]["Etapa"] = "Fase 1"
+    criterios[1].pop("Etapa")
+    criterios[2]["Etapa"] = "Fase 2"
+    criterios[2]["Fase"] = 2
+    gestor, publico = _client_autenticado("GESTOR"), TestClient(app)
+    base = "/api/ahp/comparacao-colaborativa"
+    body = {"nome": "Julgamento por grupo", "modo_comparacao": "por_grupo", "valido_ate": "2030-12-31T23:59:59Z",
+            "matriz_premissas_criterios": {"linhas": criterios}, "convites": [{"email": "a@x.gov.br"}]}
+    erro = gestor.post(f"{base}/ambientes", json={**body, "convites": [{"email": "a@x.gov.br", "dimensoes": ["Ambiental"]}]})
+    assert erro.status_code == 422 and "pelo menos um grupo" in erro.json()["detail"]
+    criado = gestor.post(f"{base}/ambientes", json=body)
+    assert criado.status_code == 201, criado.text
+    ambiente = criado.json()
+    assert ambiente["modo_comparacao"] == "por_grupo"
+    assert ambiente["criterios"] == criterios
+    rota_ambiente = f"{base}/ambientes/{ambiente['id']}"
+    rota_publica = f"{base}/publico/{ambiente['token']}"
+    acesso = {"email": "a@x.gov.br", "token_acesso": KEY}
+    dados = {"token_acesso": KEY, "identificacao": {"email": acesso["email"], "nome_completo": "Ana", "instituicao": "Teste"}}
+    assert publico.get(rota_publica).json()["grupos_comparacao"] == {}
+    meta = publico.post(f"{rota_publica}/acesso", json=acesso).json()
+    assert meta["grupos_comparacao"] == {"Financeira": [0, 1], "Social": [2, 3], "Ambiental": [4]}
+    assert "2 pares de comparação" in meta["contextualizacao"]["orientacao"]
+    iniciado = publico.post(f"{rota_publica}/respostas/iniciar", json=dados)
+    assert iniciado.status_code == 200, iniciado.text
+    matriz = iniciado.json()["matriz_comparacao"]
+    assert matriz == [[1 if i == j else None for j in range(5)] for i in range(5)]
+    matriz[0][1], matriz[1][0] = 3, 1 / 3
+    progresso = publico.patch(f"{rota_publica}/respostas/progresso", json={**acesso, "matriz_comparacao": matriz})
+    assert progresso.status_code == 200, progresso.text
+    assert publico.post(f"{rota_publica}/respostas/iniciar", json=dados).json()["matriz_comparacao"] == matriz
+    falta_par = publico.post(f"{rota_publica}/respostas", json={**dados, "matriz_comparacao": matriz})
+    assert falta_par.status_code == 422 and "grupo Social" in falta_par.json()["detail"]
+    matriz[2][3], matriz[3][2] = 2, .5
+    cruzada = [linha[:] for linha in matriz]
+    cruzada[1][2] = cruzada[2][1] = 1
+    erro = publico.post(f"{rota_publica}/respostas", json={**dados, "matriz_comparacao": cruzada})
+    assert erro.status_code == 422 and "grupos diferentes" in erro.json()["detail"]
+    enviada = publico.post(f"{rota_publica}/respostas", json={**dados, "matriz_comparacao": matriz})
+    assert enviada.status_code == 201, enviada.text
+    resposta = enviada.json()
+    assert resposta["lambda_max"] is None
+    assert resposta["estatisticas"]["resultados_por_grupo"]["Financeira"]["weights"] == pytest.approx([.75, .25])
+    assert resposta["estatisticas"]["resultados_por_grupo"]["Ambiental"]["weights"] == [1]
+
+    analise_id = "33333333-3333-3333-3333-333333333333"
+    gravar = MagicMock(side_effect=lambda data, _: {**data, "id": analise_id})
+    monkeypatch.setattr(service.analise_repo, "insert_with_respostas", gravar)
+    monkeypatch.setattr(service.analise_repo, "list_resposta_ids", lambda _: [resposta["id"]])
+    monkeypatch.setattr(service.analise_repo, "list_by_ambiente", lambda _: [])
+    espaco = gestor.get(f"{rota_ambiente}/espaco-analitico")
+    assert espaco.status_code == 200, espaco.text
+    assert [r["dimensao"] for r in espaco.json()["recortes"]] == ["Financeira", "Social", "Ambiental"]
+    assert espaco.json()["recortes"][1]["respostas"][0]["matriz_comparacao"] == [[1, 2], [.5, 1]]
+    assert gestor.post(f"{rota_ambiente}/analises", json={"nome": "Sem grupo"}).status_code == 422
+    analise = gestor.post(f"{rota_ambiente}/analises", json={"nome": "Análise Social", "dimensao": "Social"})
+    assert analise.status_code == 201, analise.text
+    assert analise.json()["pesos_consolidados"] == pytest.approx([2 / 3, 1 / 3])
+    assert analise.json()["estatisticas_analise"]["dimensao"] == "Social"
+    assert analise.json()["estatisticas_analise"]["criterios_com_pesos"] == [
+        {**criterios[2], "peso_ahp": pytest.approx(2 / 3)},
+        {**criterios[3], "peso_ahp": pytest.approx(1 / 3)},
+    ]
+    monkeypatch.setattr(service.analise_repo, "get_by_id", lambda _: gravar.call_args.args[0])
+    assert gestor.post(f"{base}/analises/{analise_id}/homologar").status_code == 422
+    unica = gestor.post(f"{rota_ambiente}/analises", json={"nome": "Análise Ambiental", "dimensao": "Ambiental"})
+    assert unica.status_code == 201, unica.text
+    assert unica.json()["estatisticas_analise"]["criterios_com_pesos"] == [{**criterios[4], "peso_ahp": 1}]
+    assert gestor.patch(rota_ambiente, json={"modo_comparacao": "todos"}).status_code == 422
+
+
 def test_invitation_uses_active_form_with_production_prefix(monkeypatch) -> None:
     _instalar_fake_repo(monkeypatch)
     response = _client_autenticado("GESTOR").post(

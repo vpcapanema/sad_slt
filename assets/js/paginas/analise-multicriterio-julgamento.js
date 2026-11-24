@@ -10,7 +10,7 @@
   function deadlineLabel(iso) { return new Date(iso).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }); }
   function deadlineEndOfDay(value) { var parts = value.split("-").map(Number); return new Date(parts[0], parts[1] - 1, parts[2], 23, 59, 59, 0).toISOString(); }
   function weights(matrix) { var sums = matrix.map(function (row) { return Math.pow(row.reduce(function (a, b) { return a * Number(b); }, 1), 1 / row.length); }); var total = sums.reduce(function (a, b) { return a + b; }, 0); return sums.map(function (v) { return v / total; }); }
-  function bars(values) { return '<div class="ami-bars">' + values.map(function (v, i) { return '<div><span>' + esc(names()[i] || "Critério " + (i + 1)) + '</span><progress max="1" value="' + Number(v) + '"></progress><strong>' + (Number(v) * 100).toFixed(1) + "%</strong></div>"; }).join("") + "</div>"; }
+  function bars(values, criteria = names()) { return '<div class="ami-bars">' + values.map(function (v, i) { return '<div><span>' + esc(criteria[i] || "Critério " + (i + 1)) + '</span><progress max="1" value="' + Number(v) + '"></progress><strong>' + (Number(v) * 100).toFixed(1) + "%</strong></div>"; }).join("") + "</div>"; }
   function render() {
     var labels = { ativa: "Aberto", consolidada: "Consolidado", encerrada: "Encerrado" };
     $("ami-title").textContent = hierarquia && hierarquia.nome || julgamento.config_nome || julgamento.hierarquizacao_codigo;
@@ -22,9 +22,16 @@
     var consistent = respostas.filter(function (r) { return r.consistente; }).length;
     $("ami-kpis").innerHTML = "<div><strong>" + respostas.length + "</strong><span>recebidas</span></div><div><strong>" + consistent + "</strong><span>consistentes</span></div><div><strong>" + (julgamento.convites.length - respostas.length) + "</strong><span>pendentes</span></div>";
     $("ami-responses").innerHTML = respostas.length ? respostas.map(function (r) { return "<tr><td>" + esc(r.nome_completo) + "</td><td>" + esc(r.instituicao) + "</td><td>" + (r.razao_consistencia == null ? "—" : Number(r.razao_consistencia).toFixed(3)) + "</td><td>" + (r.consistente ? "Sim" : "Não") + "</td><td>" + new Date(r.enviadoEm).toLocaleString("pt-BR") + "</td></tr>"; }).join("") : '<tr><td colspan="5" class="ami-empty">Ainda não há respostas.</td></tr>';
-    $("ami-priorities").innerHTML = respostas.map(function (r) { return '<article class="ami-priority"><h4>' + esc(r.nome_completo) + "</h4>" + bars(weights(r.matriz_comparacao)) + "</article>"; }).join("");
+    var porGrupo = julgamento.modo_comparacao === "por_grupo";
+    $("ami-priorities").innerHTML = respostas.filter(function (r) { return r.status !== "em_preenchimento"; }).map(function (r) {
+      var prioridades = porGrupo ? Object.entries(r.estatisticas?.resultados_por_grupo || {}).map(function ([grupo, resultado]) {
+        return "<h5>" + esc(grupo) + "</h5>" + bars(resultado.weights, resultado.criterios);
+      }).join("") : bars(weights(r.matriz_comparacao));
+      return '<article class="ami-priority"><h4>' + esc(r.nome_completo) + "</h4>" + prioridades + "</article>";
+    }).join("");
     $("ami-consolidation").innerHTML = julgamento.consolidacao ? '<div class="ami-kpis"><div><strong>' + julgamento.consolidacao.respostas_consolidadas + '</strong><span>respostas usadas</span></div><div><strong>' + Number(julgamento.consolidacao.razao_consistencia).toFixed(3) + '</strong><span>RC do grupo</span></div></div>' + bars(julgamento.consolidacao.pesos_consolidados) : '<p class="ami-empty">A consolidação ainda não foi executada.</p>';
-    $("ami-consolidate").disabled = !consistent || julgamento.status === "consolidada";
+    $("ami-consolidate").disabled = porGrupo || !consistent || julgamento.status === "consolidada";
+    if (porGrupo) $("ami-consolidation").innerHTML = '<p>Selecione o grupo de critérios para consolidar na Central de Respostas.</p><a href="/restrict/analise-multicriterio/central-respostas">Abrir Central de Respostas</a>';
     window.renderTabelaColaborativa("ami-workspace-database", julgamentos, { selectedId: id, linksFor: function (j) { return { workspace: appUrl("restrict", "/analise-multicriterio/julgamentos/" + encodeURIComponent(j.id) + "/"), public: appUrl("public", "/analise-multicriterio/formulario-comparacao-pareada/" + encodeURIComponent(j.token) + "/") }; } });
   }
   function load() { return Promise.all([api("/api/ahp/comparacao-colaborativa/ambientes/" + id), api("/api/ahp/comparacao-colaborativa/ambientes/" + id + "/respostas"), api("/api/ahp/comparacao-colaborativa/configuracoes"), api("/api/ahp/comparacao-colaborativa/ambientes")]).then(function (v) { julgamento = v[0]; respostas = v[1]; hierarquia = v[2].find(function (h) { return h.id === (julgamento.config_id || julgamento.hierarquizacao_id); }); julgamentos = v[3]; render(); }); }

@@ -602,7 +602,8 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
     assert 'id="ami-criteria-matrix-summary"' in html
     assert ">2</span><span>Monitoramento das atividades" in html
     assert ">1</span><span>Mensagem de email" in html
-    assert html.count("ami-config-field") == 4
+    assert html.count("ami-config-field") == 5
+    assert 'id="ami-modo-comparacao"' in html
     for field_id, help_id in (
         ("ami-deadline", "ami-deadline-help"),
         ("ami-hierarchy", "ami-hierarchy-source"),

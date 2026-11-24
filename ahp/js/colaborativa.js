@@ -18,6 +18,7 @@
   var consistencyWindowDrag = null;
   var consistencyReviews = new Map();
   var highlightedReviewPair = null;
+  var comparisonGroups = [], activeGroup = 0;
 
   function bloquearIdentificacao(bloqueado) {
     ["colab-nome", "colab-inst", "colab-email", "colab-token", "btn-liberar-form"].forEach(function (id) {
@@ -88,6 +89,106 @@
     return stats.duracao_anterior_ms + (stats.inicio_ms ? Date.now() - stats.inicio_ms : 0);
   }
 
+  function carregarGrupos(resposta) {
+    var grupos = Object.entries(meta.grupos_comparacao || {}).sort(function (a, b) { return a[1][0] - b[1][0]; });
+    var anteriores = resposta.estatisticas?.revisoes_por_par || {};
+    comparisonGroups = grupos.filter(function (grupo) { return grupo[1].length > 1; }).map(function ([nome, indices]) {
+      var pares = {};
+      var matriz = indices.map(function (linha, i) {
+        return indices.map(function (coluna, j) {
+          var valor = resposta.matriz_comparacao?.[linha]?.[coluna] ?? (i === j ? 1 : null);
+          if (i < j && valor !== null) pares[i + "_" + j] = anteriores[linha + "_" + coluna] || 1;
+          return valor;
+        });
+      });
+      return { nome: nome, indices: indices, matriz: matriz, pares: pares };
+    });
+    var semPares = grupos.filter(function (grupo) { return grupo[1].length === 1; }).map(function (grupo) { return grupo[0]; });
+    el("collab-group-note").textContent = semPares.length ? "Grupos com um único critério não têm pares de comparação. " + semPares.join(" · ") : "Compare os critérios deste grupo e avance ao concluir.";
+    activeGroup = comparisonGroups.findIndex(function (grupo) { return !grupoPronto(grupo); });
+    if (activeGroup < 0) activeGroup = comparisonGroups.length - 1;
+  }
+
+  function grupoCompleto(grupo) {
+    return grupo.matriz.every(function (linha, i) {
+      return linha.every(function (valor, j) { return i >= j || valor !== null; });
+    });
+  }
+
+  function grupoPronto(grupo) {
+    return grupoCompleto(grupo) && SLTAhp.analyzeMatrix(grupo.matriz).CR < 0.10;
+  }
+
+  function matrizParaGravar(matriz) {
+    if (!comparisonGroups.length) return matriz;
+    var atual = comparisonGroups[activeGroup];
+    atual.matriz = matriz.map(function (linha, i) {
+      return linha.map(function (valor, j) {
+        return i === j || stats.pares[Math.min(i, j) + "_" + Math.max(i, j)] > 0 ? valor : null;
+      });
+    });
+    var total = meta.criterios.length;
+    var completa = Array.from({length: total}, function (_, i) {
+      return Array.from({length: total}, function (_, j) { return i === j ? 1 : null; });
+    });
+    comparisonGroups.forEach(function (grupo) {
+      grupo.indices.forEach(function (linha, i) {
+        grupo.indices.forEach(function (coluna, j) { completa[linha][coluna] = grupo.matriz[i][j]; });
+      });
+    });
+    return completa;
+  }
+
+  function estatisticasResposta() {
+    var pares = {...stats.pares};
+    if (comparisonGroups.length) {
+      pares = {};
+      comparisonGroups.forEach(function (grupo) {
+        Object.entries(grupo.pares).forEach(function ([par, revisoes]) {
+          var indices = par.split("_").map(function (i) { return grupo.indices[Number(i)]; });
+          pares[indices.join("_")] = revisoes;
+        });
+      });
+    }
+    return { revisoes_por_par: pares, duracao_ms: duracaoTotal() };
+  }
+
+  function renderComparisonGroup() {
+    var grupo = comparisonGroups[activeGroup];
+    draftActive = false;
+    pairTimers.forEach(clearTimeout);
+    pairTimers.clear();
+    if (!el("collab-consistency-modal").hidden) closeConsistencyHelp();
+    stats.pares = grupo.pares;
+    global.setAhpCriteria(grupo.indices.map(function (index) { return meta.criterios[index]; }));
+    global.ahpCollaborativeDraftMatrix = grupo.matriz;
+    el("collab-group-context").hidden = false;
+    el("collab-group-navigation").classList.remove("is-hidden");
+    el("collab-group-title").textContent = "Grupo " + (activeGroup + 1) + " de " + comparisonGroups.length + " · " + grupo.nome;
+    el("collab-previous-group").disabled = activeGroup === 0;
+    var ultimo = activeGroup === comparisonGroups.length - 1;
+    el("collab-next-group").classList.toggle("is-hidden", ultimo);
+    el("btn-enviar-resposta").classList.toggle("is-hidden", !ultimo);
+    generatePairwiseFormStep4();
+    document.querySelectorAll("#comparisonContent .saaty-pair").forEach(function (pair) {
+      if (stats.pares[pair.querySelector(".saaty-scale").dataset.pid] > 0) pair.classList.add("is-auto-validated");
+    });
+    patchSaatyTracking();
+    draftActive = true;
+    updateProgressHint();
+    updateCollabMetrics();
+  }
+
+  function navegarGrupo(delta) {
+    var proximo = activeGroup + delta;
+    if (!draftActive || !comparisonGroups[proximo] || (delta > 0 && el("collab-next-group").disabled)) return;
+    clearTimeout(saveTimer);
+    queueProgress(matrizParaGravar(buildLiveMatrix()), ++editVersion);
+    activeGroup = proximo;
+    renderComparisonGroup();
+    el("collab-group-title").focus();
+  }
+
   function patchSaatyTracking() {
     document.querySelectorAll("#comparisonContent .saaty-pair").forEach(function (pair) {
       pair.addEventListener("saaty:change", function () {
@@ -117,8 +218,7 @@
   function queueProgress(matrix, version) {
     var payload = {
       email: acesso.identificacao.email, token_acesso: acesso.token_acesso, matriz_comparacao: matrix,
-      estatisticas: { revisoes_por_par: Object.assign({}, stats.pares),
-        duracao_ms: duracaoTotal() },
+      estatisticas: estatisticasResposta(),
     };
     saveQueue = saveQueue.then(function () {
       return global.SLTColaborativaApi.salvarProgresso(token, payload);
@@ -134,6 +234,7 @@
     var matrix = buildLiveMatrix();
     if (!matrix) return;
     var res = SLTAhp.analyzeMatrix(matrix);
+    var matrizGravada = matrizParaGravar(matrix);
     var complete = matrix.every(function (row, i) {
       return row.every(function (value, j) {
         return j <= i || value !== 1 || stats.pares[i + "_" + j] > 0;
@@ -147,20 +248,25 @@
     rcCard.classList.toggle("is-success", consistent);
     rcCard.classList.toggle("is-failure", !consistent);
     var rcStatus = el("collab-rc-status");
-    var status = complete ? "RC da matriz completa" : "RC provisória";
+    var porGrupo = comparisonGroups.length > 0;
+    var status = complete ? (porGrupo ? "RC do grupo" : "RC da matriz completa") : "RC provisória";
     if (rcStatus.textContent !== status) rcStatus.textContent = status;
-    var btn = el("btn-enviar-resposta");
-    if (btn) btn.disabled = !consistent;
+    var pronto = consistent && (!porGrupo || complete);
+    if (porGrupo) el("collab-next-group").disabled = !pronto;
+    el("btn-enviar-resposta").disabled = !pronto || (porGrupo && !comparisonGroups.every(grupoPronto));
+    var prontoTexto = porGrupo && !complete ? "Conclua todos os pares deste grupo para continuar."
+      : porGrupo && activeGroup < comparisonGroups.length - 1 ? "Grupo consistente. Avance para o próximo grupo."
+      : "Matriz consistente (RC < 0,10). Você pode enviar.";
     submitFeedback(
       consistent
-        ? "Matriz consistente (RC < 0,10). Você pode enviar."
+        ? prontoTexto
         : "RC = " + SLTAhp.formatMetric(res.CR) + " — ajuste as comparações (necessário RC < 0,10).",
       consistent ? "success" : "error"
     );
     clearTimeout(saveTimer);
     var version = ++editVersion;
     el("collab-save-feedback").textContent = "Alterações aguardando salvamento…";
-    saveTimer = setTimeout(function () { queueProgress(matrix, version); }, 1600);
+    saveTimer = setTimeout(function () { queueProgress(matrizGravada, version); }, 1600);
   }
 
   function formatSaatyValue(value) {
@@ -643,6 +749,11 @@
         feedback(global.SLTColaborativaSimulacao ? "Simulação liberada. O progresso não será gravado." : "Formulário liberado. O progresso será salvo automaticamente.", "success");
         el("collab-form-section").classList.remove("is-hidden");
         stats.inicio_ms = Date.now(); draftActive = false;
+        if (meta.modo_comparacao === "por_grupo") {
+          carregarGrupos(resposta);
+          renderComparisonGroup();
+          return;
+        }
         if (typeof generatePairwiseFormStep4 === "function") generatePairwiseFormStep4();
         patchSaatyTracking();
         draftActive = true;
@@ -672,7 +783,12 @@
       submitFeedback("RC ≥ 0,10 — envio bloqueado.", "error");
       return;
     }
-    var duracao_ms = duracaoTotal();
+    var matrizGravada = matrizParaGravar(matrix);
+    if (!comparisonGroups.every(grupoPronto)) {
+      submitFeedback("Conclua todos os pares e confira a consistência de cada grupo antes de enviar.", "error");
+      return;
+    }
+    var estatisticas = estatisticasResposta();
     var processo = global.ProcessFeedback.iniciarCadastro({
       title: global.SLTColaborativaSimulacao ? "Simular envio da resposta" : "Enviar resposta do especialista",
       tasks: ["Concluir salvamentos pendentes", "Enviar resposta"],
@@ -689,8 +805,8 @@
       return global.SLTColaborativaApi.enviarResposta(token, {
       identificacao: acesso.identificacao,
       token_acesso: acesso.token_acesso,
-      matriz_comparacao: matrix,
-      estatisticas: { duracao_ms: duracao_ms, revisoes_por_par: stats.pares },
+      matriz_comparacao: matrizGravada,
+      estatisticas: estatisticas,
     }); })
       .then(function () {
         draftActive = false;
@@ -729,6 +845,8 @@
       });
     el("btn-liberar-form").addEventListener("click", liberarFormulario);
     el("btn-enviar-resposta").addEventListener("click", enviarResposta);
+    el("collab-previous-group").addEventListener("click", function () { navegarGrupo(-1); });
+    el("collab-next-group").addEventListener("click", function () { navegarGrupo(1); });
     el("collab-consistency-help-button").addEventListener("click", openConsistencyHelp);
     el("collab-consistency-modal-close").addEventListener("click", closeConsistencyHelp);
     el("collab-consistency-modal-minimize").addEventListener("click", function () {

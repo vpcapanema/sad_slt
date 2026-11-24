@@ -128,6 +128,7 @@
     <div class="ahp-section-label"><i class="fas fa-table-cells" aria-hidden="true"></i><span>Simulação de comparação pareada</span></div>
     <div class="ahp-section-body">
       <p class="step-intro">Simulação local: as alterações não são salvas e não modificam respostas, análises ou pesos homologados.</p><div id="ami-saaty-scale-host"></div>
+      <label class="c-form-group is-hidden">Grupo de critérios<select class="c-form-control" id="ami-pairwise-group"></select></label>
       <div class="ahp-subcard info-card info-card--spaced" id="ami-metrics-card">
         <div class="ahp-subsection-title"><span class="ahp-subsection-num">{{ '2' if indicacao_processos else '3.2' }}</span><span>Indicadores instantâneos de consistência AHP</span></div>
         <div class="info-card-content"><div class="ahp-live-metrics ami-live-metrics is-initial" id="ami-live-metrics" aria-live="polite">
@@ -149,11 +150,11 @@
   <script src="/assets/js/analysis-table-controls.js?v=20261106-rotulo-unico"></script>
   <script src="/assets/js/admin-auth.js"></script>
   <script src="/assets/vendor/xlsx/xlsx-0.18.5.min.js"></script>
-  <script src="/assets/js/paginas/analise-multicriterio-tabela.js?v=20261123-resultados-visiveis"></script>
+  <script src="/assets/js/paginas/analise-multicriterio-tabela.js?v=20261124-comparacao-grupos"></script>
   <script src="/assets/js/api-erro.js?v=20261027"></script>
   <script src="/assets/js/paginas/ami-email.js?v=20261123-envio-silencioso"></script>
   <script src="/assets/js/matriz-criterios-arquivo.js?v=20261009"></script>
-  <script src="/assets/js/matrizes-criterios.js?v=20261117-form-identifiers"></script>
+  <script src="/assets/js/matrizes-criterios.js?v=20261124-matriz-integral"></script>
   <script src="/assets/js/saaty-selector-color.js?v=20261103-1"></script>
-  <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20261124-importacao-colaboradores"></script>
+  <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20261124-matriz-integral"></script>
 {% endblock %}

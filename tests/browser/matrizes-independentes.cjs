@@ -1,5 +1,6 @@
 const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
 
 const BASE = process.env.SICARD_BROWSER_BASE_URL || 'http://127.0.0.1:8083';
 const MATRIZES = '/api/ahp/comparacao-colaborativa/matrizes';
@@ -23,6 +24,15 @@ const uploadedContent = { linhas: [{ criterio: 'Acesso', dimensao: 'Social', Eta
   const browser = await chromium.launch({ channel: 'msedge', headless: true });
   try {
     const page = await browser.newPage();
+    const agentLogin = process.env.SICARD_BROWSER_AGENT_LOGIN === '1';
+    if (agentLogin) {
+      const credentials = fs.readFileSync('credencias_sigma_agentes.txt', 'utf8');
+      const username = 'sigma.agente_gestor';
+      const senha = credentials.match(/^[ \t]*senha[ \t]*[:=][ \t]*([^\r\n]+)/mi)?.[1].trim();
+      assert.ok(credentials.includes(username) && senha, 'Credencial local do gestor indisponível.');
+      const login = await page.request.post(BASE + '/api/auth/login', {data: {username, senha, permanecer_conectado: false}});
+      assert.equal(login.status(), 200);
+    }
     if (process.env.SICARD_BROWSER_SESSION) {
       await page.context().addCookies([{ name: 'slt_session', value: process.env.SICARD_BROWSER_SESSION, url: BASE }]);
     }
@@ -40,6 +50,7 @@ const uploadedContent = { linhas: [{ criterio: 'Acesso', dimensao: 'Social', Eta
     page.on('pageerror', error => errors.push(error.message));
     await page.route('**/api/**', async route => {
       const req = route.request(), path = new URL(req.url()).pathname, method = req.method();
+      if (agentLogin && path.startsWith('/api/auth/')) return route.continue();
       requests.push(path);
       if (method !== 'GET') writes.push({ path, method, data: req.postDataJSON() });
       let json = [];
@@ -174,7 +185,7 @@ const uploadedContent = { linhas: [{ criterio: 'Acesso', dimensao: 'Social', Eta
     await judgmentPicker.locator('[data-matrix-feedback]').filter({ hasText: 'Arquivo carregado' }).waitFor();
     await judgmentPicker.locator('[data-matrix-name]').fill('Matriz avulsa');
     assert.equal(await judgmentPicker.locator('[data-matrix-upload]').getAttribute('aria-label'), 'Cadastrar matriz');
-    assert.match(await judgmentPicker.locator('[data-matrix-details]').textContent(), /Matriz avulsa · 2 critérios · criterios.json/);
+    assert.match(await judgmentPicker.locator('[data-matrix-details]').textContent(), /Matriz avulsa · 2 critérios · arquivo criterios\.json/);
     assert.equal(await judgmentPicker.locator('[data-matrix-new-summary] [data-matrix-details]').isVisible(), true);
     const uploadLayout = await judgmentPicker.locator('[data-matrix-new]').evaluate(panel => {
       const input = panel.querySelector('input[type=text]').getBoundingClientRect();
@@ -222,7 +233,7 @@ const uploadedContent = { linhas: [{ criterio: 'Acesso', dimensao: 'Social', Eta
     assert.equal(writes.length, 1, 'Upload avulso não cria hierarquização ou julgamento');
     assert.equal(await judgmentPicker.locator('[data-matrix-mode][value=new]').isChecked(), true);
     assert.equal(await judgmentPicker.locator('[data-matrix-new-summary] [data-matrix-details]').isVisible(), true);
-    assert.match(await judgmentPicker.locator('[data-matrix-details]').textContent(), /Matriz avulsa · 2 critérios · criterios.json/);
+    assert.match(await judgmentPicker.locator('[data-matrix-details]').textContent(), /Matriz avulsa · 2 critérios · arquivo criterios\.json/);
     await page.locator('#ami-judgment-name').fill('Julgamento avulso');
     await page.locator('#ami-deadline').fill('2030-12-31');
     await collaborators();
@@ -271,6 +282,7 @@ const uploadedContent = { linhas: [{ criterio: 'Acesso', dimensao: 'Social', Eta
     const hierarchyWrite = writes.find(write => write.path === HIER && write.method === 'POST');
     assert.equal(hierarchyWrite.data.matriz_id, ids.upload);
     assert.equal('matriz_premissas_criterios' in hierarchyWrite.data, false);
+    await page.getByRole('button', {name: 'Composição', exact: true}).click();
     await page.locator('.hier-row-select').check();
     await page.locator('#hier-bulk-edit').click();
     const editor = page.locator('[data-hier-matrix-editor]');
@@ -329,8 +341,8 @@ const uploadedContent = { linhas: [{ criterio: 'Acesso', dimensao: 'Social', Eta
     await prepare('/restrict/analise-multicriterio/central-julgamentos');
     await page.locator('#ami-new').click();
     await selectMatrix(judgmentPicker, '99999999-9999-4999-8999-999999999999');
-    assert.equal(await page.locator('#ami-dimension-options input').count(), 2);
-    assert.doesNotMatch(await page.locator('#ami-dimension-options').textContent(), /Território/);
+    assert.equal(await page.locator('#ami-dimension-options input').count(), 3);
+    assert.match(await page.locator('#ami-dimension-options').textContent(), /Território/);
     await page.locator('#ami-judgment-name').fill('Especialistas por dimensão');
     await page.locator('#ami-deadline').fill('2030-12-31');
     await collaborators(['Social'], 'social@example.com');
@@ -426,7 +438,7 @@ const uploadedContent = { linhas: [{ criterio: 'Acesso', dimensao: 'Social', Eta
 
     judgments = [];
     await prepare('/restrict/analise-multicriterio/central-julgamentos?novo=1&superficie_id=' + ids.surface + '&hierarquizacao_id=' + ids.hierarchy);
-    await page.waitForFunction(() => document.getElementById('ami-hierarchy-summary').textContent.includes('exclusivos da Fase 3'));
+    await page.waitForFunction(() => document.getElementById('ami-hierarchy-summary').textContent.includes('Superfícies são configuradas separadamente'));
     assert.equal(await page.locator('#ami-create-section').isVisible(), false);
     assert.equal(judgments.length, 0);
     assert.equal(requests.includes(MATRIZES + '/' + ids.matrix), true);

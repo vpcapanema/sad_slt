@@ -13,7 +13,9 @@
   api.iniciarResposta = async function () {
     if (!metadata?.email_autorizado) throw new Error('Valide o acesso antes de simular.');
     const n = metadata.criterios.length;
-    draft = {status: 'em_preenchimento', matriz_comparacao: Array.from({length: n}, () => Array(n).fill(1)), estatisticas: {}};
+    const matriz = Array.from({length: n}, (_, i) => Array.from({length: n}, (_, j) =>
+      i === j || metadata.modo_comparacao !== 'por_grupo' ? 1 : null));
+    draft = {status: 'em_preenchimento', matriz_comparacao: matriz, estatisticas: {}};
     return structuredClone(draft);
   };
   api.salvarProgresso = async function (_, payload) {

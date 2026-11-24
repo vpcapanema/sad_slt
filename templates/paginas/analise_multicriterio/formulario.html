@@ -98,6 +98,10 @@
 					<h2 class="ahp-subsection-title" id="collab-pairwise-title"><span class="ahp-subsection-num" aria-hidden="true">3.2</span><span>Comparação pareada</span></h2>
 					<div class="info-card-content">
 						<p class="collab-pairwise-intro">Para cada par, indique qual critério é mais importante para o objetivo desta análise e com que intensidade. Se ambos tiverem a mesma importância, escolha 1 (igual importância). Cada ajuste preenche automaticamente o valor inverso e atualiza os indicadores de consistência. Enquanto houver pares sem resposta, o cálculo é provisório e usa 1 para esses pares. O envio exige RC &lt; 0,10. Após 3 segundos sem novos ajustes no par, ele e seu valor inverso ficam verdes. Para revisar, mova a barra novamente. Essa confirmação visual não substitui o envio final.</p>
+						<div id="collab-group-context" hidden>
+							<h3 id="collab-group-title" tabindex="-1"></h3>
+							<p id="collab-group-note" class="form-help"></p>
+						</div>
 						<section class="secao-collab-metrics" aria-labelledby="collab-metrics-title">
 							<h3 id="collab-metrics-title">Indicadores instantâneos de consistência AHP</h3>
 							<div id="liveMetrics" class="ahp-live-metrics">
@@ -130,6 +134,10 @@
 				</section>
 				<p id="collab-submit-feedback" class="ahp-matriz-edit-feedback" role="status"></p>
 				<p id="collab-save-feedback" class="form-help" role="status"></p>
+				<div id="collab-group-navigation" class="ahp-form-actions is-hidden">
+					<button type="button" class="btn btn-secondary" id="collab-previous-group">Grupo anterior</button>
+					<button type="button" class="btn btn-primary" id="collab-next-group">Próximo grupo</button>
+				</div>
 				<button type="button" class="btn btn-success" id="btn-enviar-resposta" disabled><i class="fas fa-paper-plane c-btn__icon"></i>Enviar resposta</button>
 			</div>
 		</section>
@@ -151,9 +159,9 @@
 	<script defer src="/assets/js/saaty-selector-color.js?v=20261104-paleta"></script>
 	<script defer src="/restrict/ahp/js/ahp-core.js?v=20261119-rc-compartilhada"></script>
 	<script defer src="/restrict/ahp/js/colaborativa-api.js?v=20261027-modelo-pli"></script>
-	{% if modo_modelo %}<script defer src="/restrict/ahp/js/colaborativa-modelo.js?v=20261027-1"></script>{% else %}<script defer src="/restrict/ahp/js/colaborativa-simulacao.js?v=20261027-1"></script>{% endif %}
+	{% if modo_modelo %}<script defer src="/restrict/ahp/js/colaborativa-modelo.js?v=20261027-1"></script>{% else %}<script defer src="/restrict/ahp/js/colaborativa-simulacao.js?v=20261124-comparacao-grupos"></script>{% endif %}
 	<script defer src="/restrict/ahp/js/script.js?v=20261118-regua-mobile-inteira"></script>
-	<script defer src="/restrict/ahp/js/colaborativa.js?v=20261123-contexto-convite"></script>
+	<script defer src="/restrict/ahp/js/colaborativa.js?v=20261124-comparacao-grupos"></script>
 	<script defer src="/assets/js/paginas/ahp-comparacao-abas.js?v=20261118-ajuda-consistencia-modal"></script>
 	<script defer src="/assets/js/paginas/ahp-formulario-layout.js?v=20261104-card-default-90"></script>
 {% endblock %}

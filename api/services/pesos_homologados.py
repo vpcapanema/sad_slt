@@ -6,6 +6,7 @@ import unicodedata
 from copy import deepcopy
 from api.exceptions import DemandaValidationError
 from api.matriz_colunas import extrair_colunas
+from api.services.matrizes_criterios import comparavel, fase_criterio
 
 
 CADASTRO = {
@@ -28,7 +29,6 @@ def mapa_pesos(dados):
         return {}
     atual = (dados.get("cabecalho_grupo") or {}).get("matriz_premissas_criterios")
     if atual is not None and official.get("criterios"):
-        from api.services.matrizes_criterios import comparavel
         if comparavel(atual)["linhas"] != official["criterios"]:
             raise DemandaValidationError(
                 "Os critérios ou premissas mudaram. Refaça os julgamentos e recalcule os pesos.",
@@ -38,13 +38,21 @@ def mapa_pesos(dados):
     values = (official.get("pesos") or {}).get("weights", [])
     if len(names) != len(values) or not names:
         raise DemandaValidationError("A análise homologada possui pesos incompatíveis com seus critérios.", field="pesos")
+    matrix = official.get("criterios") or dados.get("cabecalho_grupo", {}).get("matriz_premissas_criterios")
+    pares = zip(names, values)
+    if official.get("matriz_integral"):
+        linhas = official.get("criterios") or []
+        if len(linhas) != len(values):
+            raise DemandaValidationError("A análise homologada possui pesos incompatíveis com seus critérios.", field="pesos")
+        indices = [indice for indice, linha in enumerate(linhas) if fase_criterio(linha) == 3]
+        matrix = [linhas[indice] for indice in indices]
+        pares = ((names[indice], values[indice]) for indice in indices)
     by_name = {}
-    for name, value in zip(names, values):
+    for name, value in pares:
         key, number = _norm(name), float(value)
         if not key or key in by_name or not math.isfinite(number) or number < 0:
             raise DemandaValidationError("Critérios ou pesos ambíguos na análise homologada.", field="pesos")
         by_name[key] = number
-    matrix = official.get("criterios") or dados.get("cabecalho_grupo", {}).get("matriz_premissas_criterios")
     result = {}
     for column in extrair_colunas(matrix):
         key = _norm(column.get("criterio"))
