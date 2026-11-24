@@ -87,7 +87,9 @@
     $('#agrupamento-tipo').disabled = fechado || membrosGrupo.size > 0;
     $('#agrupamento-new').disabled = salvandoGrupo || abrindoGrupo;
     $('#agrupamento-cancel').disabled = salvandoGrupo;
-    $$('#agrupamento-rows input, #agrupamento-selecionar-pagina, #grupo-composicao-rows input, #grupo-selecionar-todos').forEach(el => { el.disabled = fechado; });
+    $$('#agrupamento-rows input, #grupo-composicao-rows input, #grupo-selecionar-todos').forEach(el => { el.disabled = fechado; });
+    const semDemandas = !$('#agrupamento-rows [data-demanda-id]');
+    $$('#agrupamento-selecionar-todos, #universo-filtro-selecionar-tudo').forEach(el => { el.disabled = fechado || semDemandas; });
     $('#agrupamento-selecao-resumo').textContent = resumoTabela(membrosSelecionados.size, recorte(filtrarDemandas([...membrosGrupo.values()], 'composicao-filtro'), paginaComposicao).length, membrosGrupo.size);
     $('#grupo-confirmar').title = grupoConfirmado ? 'Registros confirmados' : 'Confirmar registros do grupo';
   }
@@ -168,7 +170,7 @@
   }
 
   const ordenarGrupos = SLTTable.sorting($('#agrupamentos-tbody').closest('table'), () => [null,...Object.keys(colunasGrupo).map(key=>g=>valorGrupo(g,key))], () => { paginaGrupos=1; gruposSelecionados.clear(); renderGrupos(); }, () => !ocupado && !grupoEditando);
-  const ordenarUniverso = SLTTable.sorting($('#agrupamento-rows').closest('table'), () => [null,...colunas().map(col=>item=>SLTTable.plainText(formatarValor(item,col.campo)))], () => { pagina=1; SELECIONADOS.clear(); renderDemandas(); });
+  const ordenarUniverso = SLTTable.sorting($('#agrupamento-rows').closest('table'), () => [null,...colunas().map(col=>item=>SLTTable.plainText(formatarValor(item,col.campo)))], () => { pagina=1; renderDemandas(); });
   const ordenarComposicao = SLTTable.sorting($('#grupo-composicao-rows').closest('table'), () => [null,...colunas().map(col=>item=>SLTTable.plainText(formatarValor(item,col.campo)))], () => { paginaComposicao=1; membrosSelecionados.clear(); renderComposicao(); });
   function gruposFiltrados() {
     const campo = $('#grupos-filtro-coluna').value;
@@ -365,13 +367,17 @@
     return ordenarUniverso(filtrarDemandas(universo.filter(elegivel), 'universo-filtro'));
   }
 
+  function selecionarDemandas(lista, marcar) {
+    SELECIONADOS.clear();
+    if (marcar) lista.forEach(item => SELECIONADOS.add(String(item.id)));
+    renderDemandas();
+  }
+
   function renderDemandas() {
     const tbody = $("#agrupamento-rows");
     const head = $("#agrupamento-head");
-    const selecionarTudo = $("#universo-filtro-selecionar-tudo");
     const tipo = $("#agrupamento-tipo").value;
     if (!tipo) {
-      selecionarTudo.disabled = true;
       head.innerHTML = "";
       tbody.innerHTML = '<tr><td>Selecione o tipo de demanda.</td></tr>';
       $("#agrupamento-contagem").textContent = resumoTabela(0, 0, 0);
@@ -381,25 +387,21 @@
       return;
     }
     const lista = filtrados();
-    selecionarTudo.disabled = lista.length === 0;
     const totalPaginas = Math.max(1, Math.ceil(lista.length / POR_PAGINA));
     pagina = Math.max(1, Math.min(pagina, totalPaginas));
     const inicio = (pagina - 1) * POR_PAGINA;
     const visiveis = lista.slice(inicio, inicio + POR_PAGINA);
     const cols = colunas();
-    head.innerHTML = `<tr><th class="col-select"><input type="checkbox" id="agrupamento-selecionar-pagina" aria-label="Selecionar demandas elegíveis visíveis"></th>${cols.map((c) => `<th scope="col">${escapar(c.rotulo)}</th>`).join("")}</tr>`;
+    head.innerHTML = `<tr><th class="col-select" scope="col"><input type="checkbox" id="agrupamento-selecionar-todos" aria-label="Selecionar todas as demandas filtradas" title="Selecionar todas as demandas em todas as páginas"></th>${cols.map((c) => `<th scope="col">${escapar(c.rotulo)}</th>`).join("")}</tr>`;
     tbody.innerHTML = visiveis.length ? visiveis.map((item) => `<tr data-id="${escapar(item.id)}"><td class="col-select"><input type="checkbox" data-demanda-id="${escapar(item.id)}" aria-label="Selecionar ${escapar(item.codigo)}"${SELECIONADOS.has(String(item.id)) ? " checked" : ""}></td>${cols.map((col) => `<td>${formatarValor(item, col.campo)}</td>`).join("")}</tr>`).join("") : `<tr><td colspan="${cols.length + 1}" class="process-empty-row">Nenhuma demanda elegível encontrada.</td></tr>`;
     $("#agrupamento-contagem").textContent = resumoTabela(SELECIONADOS.size, visiveis.length, universo.filter(elegivel).length);
     $("#agrupamento-pagina-info").textContent = `Página ${pagina} de ${totalPaginas}`;
     $("#agrupamento-primeira").disabled = $("#agrupamento-anterior").disabled = pagina <= 1;
     $("#agrupamento-ultima").disabled = $("#agrupamento-proxima").disabled = pagina >= totalPaginas;
-    const selectAll = $("#agrupamento-selecionar-pagina");
-    selectAll.checked = visiveis.length > 0 && visiveis.every((item) => SELECIONADOS.has(String(item.id)));
-    selectAll.indeterminate = visiveis.some((item) => SELECIONADOS.has(String(item.id))) && !selectAll.checked;
-    selectAll.onchange = () => {
-      visiveis.forEach((item) => selectAll.checked ? SELECIONADOS.add(String(item.id)) : SELECIONADOS.delete(String(item.id)));
-      renderDemandas();
-    };
+    const selectAll = $("#agrupamento-selecionar-todos");
+    selectAll.checked = lista.length > 0 && lista.every(item => SELECIONADOS.has(String(item.id)));
+    selectAll.indeterminate = !selectAll.checked && SELECIONADOS.size > 0;
+    selectAll.onchange = () => selecionarDemandas(lista, selectAll.checked);
     tbody.querySelectorAll("[data-demanda-id]").forEach((checkbox) => {
       checkbox.onchange = () => {
         checkbox.checked ? SELECIONADOS.add(checkbox.dataset.demandaId) : SELECIONADOS.delete(checkbox.dataset.demandaId);
@@ -473,12 +475,7 @@
 
   function iniciar() {
     bindFiltroDemandas('universo-filtro', () => universo.filter(elegivel), SELECIONADOS, renderDemandas);
-    $('#universo-filtro-selecionar-tudo').onclick = () => {
-      const resultados = filtrados();
-      SELECIONADOS.clear();
-      resultados.forEach(item => SELECIONADOS.add(String(item.id)));
-      renderDemandas();
-    };
+    $('#universo-filtro-selecionar-tudo').onclick = () => selecionarDemandas(filtrados(), true);
     bindFiltroDemandas('composicao-filtro', () => [...membrosGrupo.values()], membrosSelecionados, renderComposicao);
     $('#agrupamento-nome').oninput = renderComposicao;
     $('#grupo-adicionar').onclick = () => {
@@ -537,10 +534,10 @@
     };
     $("#agrupamento-cancel").onclick = () => { abrir.classList.add("hidden"); limparErro(); };
     $("#agrupamento-tipo").onchange = carregarUniverso;
-    $("#agrupamento-primeira").onclick = () => { pagina = 1; SELECIONADOS.clear(); renderDemandas(); };
-    $("#agrupamento-ultima").onclick = () => { pagina = Math.max(1, Math.ceil(filtrados().length / POR_PAGINA)); SELECIONADOS.clear(); renderDemandas(); };
-    $("#agrupamento-anterior").onclick = () => { pagina -= 1; SELECIONADOS.clear(); renderDemandas(); };
-    $("#agrupamento-proxima").onclick = () => { pagina += 1; SELECIONADOS.clear(); renderDemandas(); };
+    $("#agrupamento-primeira").onclick = () => { pagina = 1; renderDemandas(); };
+    $("#agrupamento-ultima").onclick = () => { pagina = Math.max(1, Math.ceil(filtrados().length / POR_PAGINA)); renderDemandas(); };
+    $("#agrupamento-anterior").onclick = () => { pagina -= 1; renderDemandas(); };
+    $("#agrupamento-proxima").onclick = () => { pagina += 1; renderDemandas(); };
     window.SLTDemandasGrupo.bindModalClosures();
     $("#agrupamento-form").onsubmit = async (event) => {
       event.preventDefault();
