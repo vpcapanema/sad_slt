@@ -89,6 +89,43 @@ def test_confirmacao_convida_para_pesquisa_ahp():
         assert parte.index(url) < parte.index("Esta é uma mensagem automática")
 
 
+def test_confirmacao_publica_reusa_os_resultados_salvos_das_duas_etapas(monkeypatch, rastreamento):
+    ambiente = {**_ambiente([]), "modo_participacao": "publico", "modo_comparacao": "duas_etapas"}
+    resposta = _resposta(matriz=[[1, 3, None], [1 / 3, 1, None], [None, None, 1]])
+    resposta["inscricao_id"] = "inscricao-1"
+    resposta["estatisticas"].update({
+        "julgamento_dimensoes": {"dimensoes": ["Financeira", "Social"],
+                                 "resultado": {"CR": 0, "weights": [.8, .2]}},
+        "resultados_por_grupo": {
+            "Financeira": {"CR": .0357, "criterios": ["Custo", "Retorno"], "weights": [.75, .25]},
+            "Social": {"CR": 0, "criterios": ["Acesso"], "weights": [1]},
+        },
+        "pesos_globais_individuais": [.60, .20, .20],
+    })
+    monkeypatch.setattr(email_service, "_config", lambda **_: SimpleNamespace(remetente="sicard@example.com"))
+    monkeypatch.setattr(confirmacao.repo, "get_ambiente_by_id", lambda _: ambiente)
+    monkeypatch.setattr(confirmacao.repo, "list_respostas", lambda _: [resposta])
+    mensagens = []
+
+    def smtp(mensagem, *, id_mensagem, **_opcoes):
+        mensagens.append(mensagem)
+        return EmailEnvioResultado(id_mensagem=id_mensagem, destinatario=str(mensagem.destinatario))
+
+    monkeypatch.setattr(email_service, "enviar", smtp)
+    confirmacao.notificar("amb-1", "resp-1")
+    assert rastreamento[0]["envio_status"] == "aceito_smtp"
+    assert mensagens[0].destinatario == resposta["email"]
+    for parte in (mensagens[0].texto, mensagens[0].html):
+        assert "Etapa 1 — Comparação entre dimensões" in parte and "Financeira — 80,0%" in parte
+        assert "Etapa 2 — Critérios da dimensão Social" in parte and "Acesso — 100,0%" in parte
+        assert "Custo — 75,0%" in parte and "RC): 0,0357" in parte
+        assert "Pesos globais dos critérios" in parte and "Custo — 60,0%" in parte
+        assert "chave individual do convite" not in parte
+        assert confirmacao.PESQUISA_AHP_URL not in parte
+    with pytest.raises(DemandaValidationError, match="Ainda não há resposta"):
+        confirmacao.enviar("amb-1", "outra@example.com", "gestor")
+
+
 def test_avisa_quando_outro_julgador_recebeu_o_mesmo_conjunto_de_criterios():
     convites = [{"email": "a@x.gov.br"}, {"email": "b@x.gov.br"}, {"email": "c@x.gov.br", "dimensoes": ["Financeira", "Social"]}]
     mensagem = confirmacao.montar(_ambiente(convites), _resposta())
@@ -226,7 +263,7 @@ def test_envio_da_resposta_agenda_a_confirmacao_somente_quando_registrada(monkey
         matriz_comparacao=[[1, 2], [0.5, 1]], consistente=True,
     )
 
-    def registrar(_token, _body):
+    def registrar(_token, _body, *, sessao_inscricao=None):
         if not sucesso:
             from api.exceptions import DemandaValidationError
             raise DemandaValidationError("RC acima do limite", field="razao_consistencia")

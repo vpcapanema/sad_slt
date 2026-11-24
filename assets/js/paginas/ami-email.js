@@ -13,6 +13,8 @@
     adiada: "Recusado temporariamente pelo destinatário"};
   const url = id => "/api/ahp/comparacao-colaborativa/ambientes/" + encodeURIComponent(id) + "/emails";
   const filterColumn = $("ami-monitor-filter-coluna"), filterValue = $("ami-monitor-filter-valor");
+  const monitor = $("ami-monitoring-section"), monitorConvites = monitor.parentElement;
+  const monitorPublico = $("ami-public-monitor-host");
   const historyModal = $("ami-email-history-modal"), historyColumn = $("ami-email-history-filter-coluna"),
     historyValue = $("ami-email-history-filter-valor"), historySelected = new Set();
   let historyContext = null, historyPage = 1, historyFiltered = [], historyTrigger = null;
@@ -23,8 +25,20 @@
   let filteredRows = [], visibleCount = 0;
   const rowKey = row => row.destinatario.toLowerCase();
   const natureza = row => row.natureza || "convite";
+  const registrosPorEmail = new Map();
+  const registrosDe = row => registrosPorEmail.get(rowKey(row)) || [];
+  const modoMonitor = () => contexto?.publico ? modo === "edit" : modo === "view";
+  function definirRegistros(lista) {
+    registros = lista;
+    registrosPorEmail.clear();
+    lista.forEach(item => {
+      const chave = rowKey(item);
+      if (!registrosPorEmail.has(chave)) registrosPorEmail.set(chave, []);
+      registrosPorEmail.get(chave).push(item);
+    });
+  }
   function historico(row, tipo) {
-    return registros.filter(item => rowKey(item) === rowKey(row) && natureza(item) === tipo)
+    return registrosDe(row).filter(item => natureza(item) === tipo)
       .flatMap(item => [item, ...(item.eventos || []).filter(event => event.tipo === "tentativa" && event.registro)
         .map(event => ({...event.registro, id: item.id + ":" + event.fonte}))])
       .sort((a, b) => Date.parse(b.criado_em) - Date.parse(a.criado_em));
@@ -62,12 +76,18 @@
         (rotulosEnvio[row.envio_status] || "Não enviado") + ". " + (row.detalhe || "") + aviso +
         (retornos ? " " + retornos : "")];
   }
-  function cells(row) {
-    const datas = registros.filter(item => rowKey(item) === rowKey(row)).map(item => item.criado_em).filter(Boolean).sort();
-    return [row.nome, row.destinatario, datas.length ? new Date(datas[0]).toLocaleString("pt-BR") : "—",
-      row.etapa_rotulo || "Convite não enviado", estado(row, "convite"), estado(row, "resposta")];
+  function registradoEm(row) {
+    if (contexto?.publico) return row.registrado_em;
+    return registrosDe(row).map(item => item.criado_em).filter(Boolean).sort()[0];
   }
-  const sortRows = SLTTable.sorting($("ami-monitor-table"), () => [null, ...Array.from({length: 6}, (_, index) => row => cells(row)[index])], () => { pagina = 1; render(); });
+  function cells(row) {
+    const data = registradoEm(row);
+    return [row.nome, row.destinatario, data ? new Date(data).toLocaleString("pt-BR") : "—",
+      row.etapa_rotulo || (contexto?.publico ? "Inscrito" : "Convite não enviado"),
+      contexto?.publico ? "Não se aplica" : estado(row, "convite"), estado(row, "resposta")];
+  }
+  const sortRows = SLTTable.sorting($("ami-monitor-table"), () => [null, ...Array.from({length: 6}, (_, index) =>
+    index === 2 ? row => Date.parse(registradoEm(row)) || "" : row => cells(row)[index])], () => { pagina = 1; render(); });
   Array.from($("ami-monitor-table").tHead.rows[0].cells).slice(1).forEach((th, index) => filterColumn.add(new Option(th.textContent, String(index))));
   function filterOptions() {
     SLTTable.values(filterValue, monitorRows, row => cells(row)[Number(filterColumn.value)]);
@@ -334,22 +354,23 @@
     const rotulo = pendentes.length && (enviados || incertos) ? "Enviar aos pendentes (" + pendentes.length + ")" :
       incertos ? "Envio geral indisponível" : enviados ? "Reenviar e-mails" : "Enviar e-mail";
     $("ami-open-mail").innerHTML = '<i class="fas fa-envelope c-btn__icon" aria-hidden="true"></i>' + rotulo;
-    const bloqueiaConvites = ocupado || loteEmExecucao || !pronto || modo !== "view" || !contexto ||
+    const bloqueiaConvites = ocupado || loteEmExecucao || !pronto || modo !== "view" || !contexto || contexto.publico ||
       !contexto.url || contexto.julgamento.status !== "ativa" ||
       !(Date.parse(contexto.julgamento.valido_ate) >= Date.now()) || !contexto.destinatarios.length;
     $("ami-open-mail").disabled = bloqueiaConvites || Boolean(incertos && !pendentes.length);
-    const editavel = !ocupado && contexto && contexto.julgamento.status === "ativa" &&
+    const editavel = !ocupado && contexto && !contexto.publico && contexto.julgamento.status === "ativa" &&
       Date.parse(contexto.julgamento.valido_ate) >= Date.now();
     aliasInput.disabled = assuntoInput.disabled = mensagemInput.disabled = !editavel;
     $("ami-save-email-config").disabled = !editavel || !configuracaoAlterada;
     const marcados = monitorRows.filter(row => selected.has(rowKey(row)));
-    const baseBloqueada = ocupado || !pronto || modo !== "view" || !contexto || !marcados.length;
+    const baseBloqueada = ocupado || !pronto || !modoMonitor() || !contexto || !marcados.length;
     $("ami-monitor-send").disabled = bloqueiaConvites || baseBloqueada;
     $("ami-monitor-send-response").disabled = loteEmExecucao || baseBloqueada ||
       !marcados.every(row => row.resposta_recebida);
-    $("ami-email-receipts").disabled = ocupado || loteEmExecucao || !contexto || modo !== "view" || !contexto.confirmacoesConfiguradas;
+    $("ami-email-receipts").disabled = ocupado || loteEmExecucao || !contexto || !modoMonitor() || !contexto.confirmacoesConfiguradas;
     $("ami-revoke-invitation").disabled = ocupado || !contexto || modo !== "view" || !contexto.destinatarios.length;
-    $("ami-monitor-refresh").disabled = $("ami-email-receipts").disabled;
+    $("ami-monitor-refresh").disabled = contexto?.publico
+      ? ocupado || loteEmExecucao || !modoMonitor() : $("ami-email-receipts").disabled;
     $("ami-monitor-export").disabled = ocupado || !pronto || !selected.size;
     $("ami-monitor-clear").disabled = ocupado || !selected.size;
     const all = $("ami-monitor-select-all");
@@ -364,7 +385,7 @@
     tbody.replaceChildren();
     if (!pronto) { controles(); return; }
     const rows = (contexto.colaboradores || []).map(c => ({
-      nome: c.nome, destinatario: c.email, resposta_recebida: c.resposta_recebida,
+      nome: c.nome, destinatario: c.email, resposta_recebida: c.resposta_recebida, registrado_em: c.registrado_em,
       clique_link_em: c.clique_link_em, acesso_formulario_em: c.acesso_formulario_em,
       resposta_enviada_em: c.resposta_enviada_em, etapa_codigo: c.etapa_codigo,
       etapa_rotulo: c.etapa_rotulo, etapa_atualizada_em: c.etapa_atualizada_em
@@ -391,7 +412,7 @@
       cell.appendChild(checkbox);
       cells(row).forEach((value, index) => {
         const td = tr.insertCell();
-        if (index >= 4) {
+        if (index === 5 || (index === 4 && !contexto.publico)) {
           const button = document.createElement("button");
           button.type = "button"; button.className = "ami-cell-link"; button.textContent = value;
           button.dataset.emailHistory = index === 4 ? "convite" : "resposta";
@@ -411,7 +432,7 @@
       if (atual) { historyContext.row = atual; renderHistorico(); } else fecharHistorico();
     }
   }
-  let carregando = false;
+  let carregando = null;
   $("ami-email-deliveries").addEventListener("click", event => {
     const button = event.target.closest("button[data-email-history]");
     if (!button) return;
@@ -419,14 +440,14 @@
     if (row) abrirHistorico(row, button.dataset.emailHistory, button);
   });
   async function carregar(atual, automatica = false) {
-    carregando = true;
+    carregando = atual;
     try {
       const result = await request(url(atual.julgamento.id) + "/monitoramento");
       if (!Array.isArray(result.registros) || !Array.isArray(result.colaboradores)) throw new Error("O monitoramento de e-mails retornou um formato inválido.");
       if (contexto !== atual) return;
-      registros = result.registros; atual.colaboradores = result.colaboradores;
+      definirRegistros(result.registros); atual.colaboradores = result.colaboradores;
       atual.confirmacoesConfiguradas = result.confirmacoes_configuradas === true; pronto = true;
-      $("ami-email-status").textContent = "Histórico de envios carregado.";
+      $("ami-email-status").textContent = atual.publico ? "Inscrições e confirmações carregadas." : "Histórico de envios carregado.";
       if (result.coleta_automatica) {
         const coleta = result.coleta_automatica;
         $("ami-email-status").textContent += coleta.erro
@@ -443,7 +464,7 @@
       pronto = false; controles();
       $("ami-email-status").textContent = "Histórico indisponível. " + error.message;
       if (!automatica) Notify.error("E-mails do julgamento", error.message);
-    } finally { carregando = false; }
+    } finally { if (carregando === atual) carregando = null; }
   }
   async function carregarRemetente(atual) {
     try {
@@ -483,7 +504,9 @@
   // Destinatários salvos correspondentes às linhas marcadas na coluna de seletores.
   function selecionados() {
     if (!contexto) return [];
-    const marcados = new Set(monitorRows.filter(row => selected.has(rowKey(row))).map(row => row.destinatario.toLowerCase()));
+    const linhas = monitorRows.filter(row => selected.has(rowKey(row)));
+    if (contexto.publico) return linhas.map(row => row.destinatario);
+    const marcados = new Set(linhas.map(rowKey));
     return contexto.destinatarios.filter(destinatario => marcados.has(destinatario.toLowerCase()));
   }
   async function garantirConfiguracaoPersistida(atual) {
@@ -578,7 +601,7 @@
           }
           if (!row?.id || !rotulosEnvio[row.envio_status]) throw new Error("O servidor não confirmou o estado do envio. Consulte o histórico antes de tentar novamente.");
           if (contexto === atual) {
-            registros = registros.filter(item => item.id !== row.id).concat(row);
+            definirRegistros(registros.filter(item => item.id !== row.id).concat(row));
             render();
           }
           if (!limitadoPeloServidor(row) || tentativa >= ESPERAS_LIMITE_MS.length) break;
@@ -661,7 +684,7 @@
         });
         if (!row.id || !rotulosEnvio[row.envio_status]) throw new Error("O servidor não confirmou o estado do envio. Atualize o monitoramento antes de tentar novamente.");
         if (contexto === atual) {
-          registros = registros.filter(item => item.id !== row.id).concat(row);
+          definirRegistros(registros.filter(item => item.id !== row.id).concat(row));
           render();
         }
         if (row.envio_status === "aceito_smtp") aceitos++; else problemas++;
@@ -681,10 +704,40 @@
       if (contexto === atual) await carregar(atual);
     } finally { encerrarLote(emSegundoPlano); }
   }
+  function prepararMonitoramento() {
+    const publico = Boolean(contexto.publico);
+    (publico ? monitorPublico : monitorConvites).appendChild(monitor);
+    monitorPublico.classList.toggle("is-hidden", !publico);
+    $("ami-monitor-invited-help").hidden = publico;
+    $("ami-monitor-public-help").hidden = !publico;
+    $("ami-monitor-send").title = publico ? "Convite individual não se aplica ao link público" :
+      "Enviar e-mail de convite aos selecionados";
+    definirRegistros([]); pronto = false; pagina = 1;
+    selected.clear(); monitorRows = []; filteredRows = []; visibleCount = 0;
+    fecharHistorico();
+    filterColumn.value = ""; filterValue.value = "";
+    SLTTable.inversion($("ami-monitor-filter-inverter"), false);
+    $("ami-email-status").textContent = publico ? "Carregando inscrições e confirmações…" : "Carregando histórico de envios…";
+    $("ami-email-status-pagination").replaceChildren();
+    render(); carregar(contexto);
+  }
   window.SICARDEmailConvites = {
-    modo(value) { modo = value; controles(); },
+    modo(value) {
+      modo = value;
+      if (modo !== "edit" && contexto?.publico) {
+        contexto = null;
+        pronto = false;
+        fecharHistorico();
+        monitorPublico.classList.add("is-hidden");
+      }
+      controles();
+    },
+    mostrarPublico(julgamento) {
+      contexto = {julgamento, publico: true, destinatarios: []};
+      prepararMonitoramento();
+    },
     atualizarColaboradores(julgamento) {
-      if (contexto?.julgamento.id !== julgamento.id) return;
+      if (contexto?.julgamento.id !== julgamento.id || contexto.publico) return;
       contexto.destinatarios = (julgamento.convites || []).map(c => c.email);
       atualizarPreviaInstitucional();
       carregar(contexto, true);
@@ -700,15 +753,7 @@
       };
       configuracaoAlterada = false;
       atualizarPreviaInstitucional();
-      registros = []; pronto = false; pagina = 1;
-      selected.clear(); monitorRows = []; filteredRows = []; visibleCount = 0;
-      fecharHistorico();
-      filterColumn.value = ""; filterValue.value = "";
-      SLTTable.inversion($("ami-monitor-filter-inverter"), false);
-      $("ami-email-status").textContent = "Carregando histórico de envios…";
-      $("ami-email-status-count").textContent = "";
-      $("ami-email-status-pagination").replaceChildren();
-      render(); carregar(contexto); carregarRemetente(contexto);
+      prepararMonitoramento(); carregarRemetente(contexto);
     }
   };
   [aliasInput, assuntoInput, mensagemInput, mensagemAfterInput].forEach(input => input.addEventListener("input", marcarConfiguracaoAlterada));
@@ -735,7 +780,12 @@
     } finally { bloquear(false); }
   });
   $("ami-email-receipts").addEventListener("click", coletar);
-  $("ami-monitor-refresh").addEventListener("click", coletar);
+  $("ami-monitor-refresh").addEventListener("click", async () => {
+    if (!contexto?.publico || contexto.confirmacoesConfiguradas) return coletar();
+    bloquear(true);
+    try { await carregar(contexto); }
+    finally { bloquear(false); }
+  });
   $("ami-monitor-select-all").addEventListener("change", event => {
     filteredRows.forEach(row => { if (event.target.checked) selected.add(rowKey(row)); else selected.delete(rowKey(row)); });
     render();
@@ -748,8 +798,8 @@
     exportar(rows.map(cells), headings, SicardNomeArquivo.gerar(contexto?.julgamento?.nome, 'monitoramento colaboradores', 'csv', 'Julgamento Colaborativo'));
   });
   function atualizarAutomaticamente() {
-    if (contexto && !ocupado && !carregando && modo === "view" &&
-        !document.hidden &&         !$("ami-email-draft-card").classList.contains("is-hidden")) carregar(contexto, true);
+    if (contexto && !ocupado && carregando !== contexto && modoMonitor() &&
+        !document.hidden && !monitor.closest(".is-hidden")) carregar(contexto, true);
   }
   setInterval(atualizarAutomaticamente, 5000);
   window.addEventListener("focus", atualizarAutomaticamente);

@@ -39,6 +39,7 @@ from api.schemas.comparacao_colaborativa import (
     RespostaColaborativaCreateSchema,
     RespostaColaborativaInicioSchema,
     RespostaColaborativaProgressoSchema,
+    RespostaColaborativaReinicioSchema,
     RespostaColaborativaResponseSchema,
     RespostaColaborativaUpdateSchema,
     EMAIL_ASSUNTO_PADRAO,
@@ -1212,6 +1213,11 @@ def _validar_comparacao_por_grupo(matriz, criterios, *, rascunho=False):
     return resultados
 
 
+def _matriz_inicial_resposta(ambiente, n):
+    por_grupo = ambiente.get("modo_comparacao") in {"por_grupo", "duas_etapas"}
+    return [[1.0 if i == j or not por_grupo else None for j in range(n)] for i in range(n)]
+
+
 def iniciar_resposta(token: str, payload: RespostaColaborativaInicioSchema, *, sessao_inscricao: str | None = None) -> RespostaColaborativaResponseSchema:
     """Cria ou recupera o preenchimento persistente assim que o formulário é liberado."""
     ambiente = repo.get_ambiente_by_token(token)
@@ -1224,15 +1230,13 @@ def iniciar_resposta(token: str, payload: RespostaColaborativaInicioSchema, *, s
     if existente:
         return _resposta_to_response(existente)
     n = len(_criterios_convidado(ambiente, email))
-    por_grupo = ambiente.get("modo_comparacao") in {"por_grupo", "duas_etapas"}
-    matriz_inicial = [[1.0 if i == j or not por_grupo else None for j in range(n)] for i in range(n)]
     inserted = repo.insert_resposta({
         "ambiente_id": str(ambiente["id"]),
         **({"inscricao_id": inscricao["id"]} if inscricao else {}),
         "nome_completo": inscricao["nome_completo"] if inscricao else ident.nome_completo.strip(),
         "email": email,
         "instituicao": inscricao["instituicao"] if inscricao else ident.instituicao.strip(),
-        "matriz_comparacao": matriz_inicial,
+        "matriz_comparacao": _matriz_inicial_resposta(ambiente, n),
         "consistente": False,
         "status": "em_preenchimento",
         "estatisticas": _estatisticas_recorte(ambiente, email, None),
@@ -1243,8 +1247,8 @@ def iniciar_resposta(token: str, payload: RespostaColaborativaInicioSchema, *, s
     return _resposta_to_response(inserted)
 
 
-def _gravar_resposta_em_duas_etapas(resposta, dados, versao):
-    if versao is None or versao != resposta.get("atualizado_em"):
+def _gravar_rascunho_versionado(resposta, dados, versao):
+    if not resposta or versao is None or versao != resposta.get("atualizado_em"):
         raise DemandaValidationError("O rascunho foi atualizado. Recarregue o formulário para continuar.", field="versao")
     liberar_vaga = bool(resposta.get("inscricao_id")) and dados.get("status") == "enviada"
     updated = repo.update_resposta_progresso(
@@ -1253,6 +1257,28 @@ def _gravar_resposta_em_duas_etapas(resposta, dados, versao):
     if not updated:
         raise DemandaValidationError("O rascunho foi atualizado ou já enviado. Recarregue o formulário.", field="versao")
     return _resposta_to_response(updated)
+
+
+def reiniciar_resposta(token: str, payload: RespostaColaborativaReinicioSchema, *,
+                       sessao_inscricao: str | None = None) -> RespostaColaborativaResponseSchema:
+    ambiente = repo.get_ambiente_by_token(token)
+    if not ambiente:
+        raise DemandaValidationError("Ambiente não encontrado.", field="token")
+    email = payload.email.strip().lower()
+    _validar_email_token(ambiente, email, payload.token_acesso, sessao_inscricao)
+    resposta = repo.get_resposta_by_ambiente_email(str(ambiente["id"]), email)
+    if not resposta or resposta.get("status") != "em_preenchimento":
+        raise DemandaValidationError("Somente um julgamento em preenchimento pode ser reiniciado.", field="status")
+    criterios = _criterios_convidado(ambiente, email)
+    return _gravar_rascunho_versionado(resposta, {
+        "matriz_comparacao": _matriz_inicial_resposta(ambiente, len(criterios)),
+        "estatisticas": _estatisticas_recorte(ambiente, email, None),
+        "lambda_max": None,
+        "indice_consistencia": None,
+        "indice_aleatorio": None,
+        "razao_consistencia": None,
+        "consistente": False,
+    }, payload.versao)
 
 
 def _salvar_progresso_duas_etapas(ambiente, resposta, criterios, payload):
@@ -1289,7 +1315,7 @@ def _salvar_progresso_duas_etapas(ambiente, resposta, criterios, payload):
             "matriz_comparacao": matriz,
             "estatisticas": {**_estatisticas_recorte(ambiente, payload.email, payload.estatisticas), "julgamento_dimensoes": primeira},
         }
-    return _gravar_resposta_em_duas_etapas(resposta, dados, payload.versao)
+    return _gravar_rascunho_versionado(resposta, dados, payload.versao)
 
 
 def salvar_progresso_resposta(token: str, payload: RespostaColaborativaProgressoSchema, *, sessao_inscricao: str | None = None) -> RespostaColaborativaResponseSchema:
@@ -1312,10 +1338,13 @@ def salvar_progresso_resposta(token: str, payload: RespostaColaborativaProgresso
         _validar_comparacao_por_grupo(payload.matriz_comparacao, criterios, rascunho=True)
     else:
         _validar_matriz_pareada(payload.matriz_comparacao, len(criterios))
-    updated = repo.update_resposta_progresso(str(resposta["id"]), {
+    dados = {
         "matriz_comparacao": payload.matriz_comparacao,
         "estatisticas": _estatisticas_recorte(ambiente, email, payload.estatisticas),
-    })
+    }
+    if payload.versao is not None:
+        return _gravar_rascunho_versionado(resposta, dados, payload.versao)
+    updated = repo.update_resposta_progresso(str(resposta["id"]), dados)
     return _resposta_to_response(updated)
 def registrar_resposta(token: str, payload: RespostaColaborativaCreateSchema, *, sessao_inscricao: str | None = None) -> RespostaColaborativaResponseSchema:
     """Registra resposta colaborativa após validar e-mail, matriz e RC < 0,10."""
@@ -1384,8 +1413,8 @@ def registrar_resposta(token: str, payload: RespostaColaborativaCreateSchema, *,
             "estatisticas": estatisticas,
             "enviado_em": datetime.now(timezone.utc),
         }
-    if duas_etapas:
-        return _gravar_resposta_em_duas_etapas(existente, dados_resposta, payload.versao)
+    if duas_etapas or payload.versao is not None:
+        return _gravar_rascunho_versionado(existente, dados_resposta, payload.versao)
     inserted = repo.update_resposta_progresso(str(existente["id"]), dados_resposta) if existente else repo.insert_resposta(dados_resposta)
     if not inserted:
         raise DemandaValidationError(

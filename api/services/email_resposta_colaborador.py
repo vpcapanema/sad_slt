@@ -1,8 +1,8 @@
 """Confirmação automática de recebimento da resposta do colaborador especialista.
 
-Depois que a resposta é registrada, o servidor calcula os pesos da matriz que o
-colaborador preencheu e envia a ele, por e-mail, o agradecimento, a matriz de
-comparação pareada, as métricas de consistência de Saaty e os pesos dos critérios.
+Depois que a resposta é registrada, o servidor envia uma confirmação com as
+métricas e os pesos individuais. Nos julgamentos por dimensão, o comprovante
+usa os resultados salvos de cada etapa.
 
 O envio é complementar: qualquer falha é registrada em log e nunca desfaz nem
 bloqueia o registro da resposta.
@@ -251,18 +251,67 @@ def _html(*, nome: str, julgamento: str, nomes: list[str], calculo: dict[str, An
     )
 
 
+def _resumo_por_dimensao(ambiente: dict[str, Any], resposta: dict[str, Any], *,
+                        nome: str, julgamento: str) -> tuple[str, str]:
+    dados = resposta["estatisticas"]
+    primeira = dados.get("julgamento_dimensoes")
+    secoes = []
+    if primeira and primeira.get("resultado"):
+        resultado = primeira["resultado"]
+        secoes.append(("Etapa 1 — Comparação entre dimensões", resultado["CR"],
+                       zip(primeira["dimensoes"], resultado["weights"], strict=True)))
+
+    prefixo = "Etapa 2 — " if secoes else ""
+    for dimensao, resultado in dados["resultados_por_grupo"].items():
+        secoes.append((f"{prefixo}Critérios da dimensão {dimensao}", resultado["CR"],
+                       zip(resultado["criterios"], resultado["weights"], strict=True)))
+
+    globais = dados.get("pesos_globais_individuais")
+    if globais is not None:
+        secoes.append(("Pesos globais dos critérios", None,
+                       zip(_criterio_nomes(_criterios_resposta(ambiente, resposta)), globais, strict=True)))
+
+    saudacao = f"Olá, {nome}!"
+    confirmacao = f"Recebemos a sua resposta ao julgamento “{julgamento}”. Agradecemos a sua colaboração."
+    texto = [saudacao, "", confirmacao]
+    html = [f"<h1>SICARD · Confirmação de recebimento</h1><p>{escape(saudacao)}</p><p>{escape(confirmacao)}</p>"]
+    for titulo, rc, pesos in secoes:
+        texto += ["", titulo]
+        html.append(f"<h2>{escape(titulo)}</h2>")
+        if rc is not None:
+            metrica = f"Razão de consistência (RC): {_numero(rc, 4)}"
+            texto.append(metrica)
+            html.append(f"<p>{metrica}</p>")
+        html.append("<ul>")
+        for item, peso in pesos:
+            linha = f"{item} — {_numero(peso * 100, 1)}%"
+            texto.append(linha)
+            html.append(f"<li>{escape(linha)}</li>")
+        html.append("</ul>")
+
+    if ambiente.get("modo_participacao") != "publico":
+        texto += ["", PESQUISA_AHP_TITULO, PESQUISA_AHP_CONVITE, f"Responder à pesquisa: {PESQUISA_AHP_URL}"]
+        html.append(f'<h2>{escape(PESQUISA_AHP_TITULO)}</h2><p>{escape(PESQUISA_AHP_CONVITE)}</p>'
+                    f'<p><a href="{PESQUISA_AHP_URL}">Responder à pesquisa</a></p>')
+    rodape = "Esta é uma mensagem automática do SICARD."
+    return "\n".join([*texto, "", rodape]), "".join([*html, f"<p>{rodape}</p>"])
+
+
 def montar(ambiente: dict[str, Any], resposta: dict[str, Any]) -> EmailEnvioSchema:
-    calculo = calcular(resposta)
-    nomes = _nomes(ambiente, resposta, len(calculo["matriz"]))
-    contexto = {
-        "nome": str(resposta.get("nome_completo") or "colaborador(a)").strip(),
-        "julgamento": str(ambiente.get("nome") or "Julgamento colaborativo").strip(),
-        "nomes": nomes, "calculo": calculo, "outros": outros_julgadores_mesmo_conjunto(ambiente, resposta),
-    }
-    assunto = re.sub(r"[\x00-\x1f\x7f]", " ", f"SICARD: recebemos a sua resposta — {contexto['julgamento'][:120]}")
+    nome = str(resposta.get("nome_completo") or "colaborador(a)").strip()
+    julgamento = str(ambiente.get("nome") or "Julgamento colaborativo").strip()
+    if (resposta.get("estatisticas") or {}).get("resultados_por_grupo"):
+        texto, html = _resumo_por_dimensao(ambiente, resposta, nome=nome, julgamento=julgamento)
+    else:
+        calculo = calcular(resposta)
+        contexto = {"nome": nome, "julgamento": julgamento,
+                    "nomes": _nomes(ambiente, resposta, len(calculo["matriz"])),
+                    "calculo": calculo, "outros": outros_julgadores_mesmo_conjunto(ambiente, resposta)}
+        texto, html = _texto(**contexto), _html(**contexto)
+    assunto = re.sub(r"[\x00-\x1f\x7f]", " ", f"SICARD: recebemos a sua resposta — {julgamento[:120]}")
     return EmailEnvioSchema(
         destinatario=str(resposta["email"]), assunto=assunto,
-        texto=_texto(**contexto), html=_html(**contexto),
+        texto=texto, html=html,
     )
 
 
@@ -274,10 +323,12 @@ def enviar(ambiente_id: str, destinatario: str, usuario_id: str, *,
     if not ambiente:
         raise DemandaValidationError("Julgamento não encontrado.", field="ambiente_id")
     email = destinatario.strip().lower()
-    if not automatico and email not in {str(c["email"]).strip().lower() for c in ambiente["convites"]}:
+    publico = ambiente.get("modo_participacao") == "publico"
+    if not publico and not automatico and email not in {str(c["email"]).strip().lower() for c in ambiente["convites"]}:
         raise DemandaValidationError("O destinatário não pertence aos colaboradores salvos.", field="destinatario")
     respostas = [r for r in repo.list_respostas(ambiente_id)
                  if r.get("status") == "enviada"
+                 and (not publico or r.get("inscricao_id"))
                  and (str(r["id"]) == resposta_id if resposta_id else str(r["email"]).strip().lower() == email)]
     if not respostas:
         raise DemandaValidationError("Ainda não há resposta recebida deste colaborador.", field="destinatario")

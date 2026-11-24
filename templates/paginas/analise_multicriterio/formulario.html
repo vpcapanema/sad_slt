@@ -54,7 +54,7 @@
 							<li><strong>Confira a rodada.</strong> Leia o objetivo, verifique o prazo e o status apresentados acima e confirme que está participando da hierarquização para a qual recebeu o convite.</li>
 							<li><strong>Identifique-se.</strong> Informe nome completo, instituição, e-mail convidado e chave individual recebida por e-mail. Clique em “Liberar formulário”. O convite é exclusivo do destinatário; nome e instituição identificam sua resposta.</li>
 							{% endif %}
-							<li><strong>Compare todos os pares.</strong> {% if modo_modelo %}Compare os critérios de uma dimensão por vez. Depois de conferir a consistência das respostas, avance para a próxima dimensão. {% endif %}Leia os critérios e ajuste cada barra para expressar a importância relativa. Use 1 quando considerar os critérios igualmente importantes. Após três segundos sem novos ajustes, o par e seu valor inverso recebem confirmação visual verde. Essa indicação não significa que a resposta já foi enviada; você pode movimentar a barra novamente para revisar sua escolha.</li>
+							<li><strong>Compare todos os pares.</strong> {% if modo_modelo or modo_inscricao %}Compare os critérios de uma dimensão por vez. Responda a todos os pares e obtenha RC inferior a 0,10 para avançar. {% endif %}Leia os critérios e ajuste cada barra para expressar a importância relativa. Use 1 quando considerar os critérios igualmente importantes. Após 1,5 segundo sem novos ajustes, o par e seu valor inverso recebem confirmação visual verde. Você pode movimentar a barra novamente para revisar sua escolha antes do envio.</li>
 							<li><strong>Acompanhe a consistência.</strong> Observe a Razão de Consistência (RC) e revise as comparações quando necessário. Procure coerência entre suas escolhas: se A é mais importante que B e B é mais importante que C, uma preferência muito forte de C sobre A merece reavaliação.</li>
 							{% if modo_modelo %}
 							<li><strong>Revise o preenchimento.</strong> Confira todos os pares. O progresso fica disponível enquanto a página estiver aberta.</li>
@@ -172,7 +172,10 @@
 					<button type="button" class="btn btn-secondary is-hidden" id="collab-linked-back">Voltar às dimensões</button>
 					<button type="button" class="btn btn-primary is-hidden" id="collab-linked-next">Validar dimensões e avançar</button>
 				</div>
-				<button type="button" class="btn btn-success" id="btn-enviar-resposta" disabled><i class="fas fa-paper-plane c-btn__icon"></i>Enviar resposta</button>
+				<div class="ahp-form-actions">
+					<button type="button" class="btn btn-secondary" id="collab-restart" disabled><i class="fas fa-rotate-left c-btn__icon" aria-hidden="true"></i>Recomeçar do zero</button>
+					<button type="button" class="btn btn-success" id="btn-enviar-resposta" disabled><i class="fas fa-paper-plane c-btn__icon"></i>Enviar resposta</button>
+				</div>
 			</div>
 		</section>
 </main>
@@ -192,10 +195,10 @@
 {% block scripts_pagina %}
 	<script defer src="/assets/js/saaty-selector-color.js?v=20261124-resposta-regua"></script>
 	<script defer src="/restrict/ahp/js/ahp-core.js?v=20261119-rc-compartilhada"></script>
-	<script defer src="/restrict/ahp/js/colaborativa-api.js?v=20261124-fila"></script>
-	{% if modo_modelo %}<script defer src="/restrict/ahp/js/colaborativa-modelo.js?v=20261124-pli-por-dimensao"></script>{% elif not modo_inscricao %}<script defer src="/restrict/ahp/js/colaborativa-simulacao.js?v=20261124-comparacao-grupos"></script>{% endif %}
+	<script defer src="/restrict/ahp/js/colaborativa-api.js?v=20261124-reinicio"></script>
+	{% if modo_modelo %}<script defer src="/restrict/ahp/js/colaborativa-modelo.js?v=20261124-reinicio"></script>{% elif not modo_inscricao %}<script defer src="/restrict/ahp/js/colaborativa-simulacao.js?v=20261124-reinicio"></script>{% endif %}
 	<script defer src="/restrict/ahp/js/script.js?v=20261124-resposta-regua"></script>
-	<script defer src="/restrict/ahp/js/colaborativa.js?v=20261124-validacao-1500"></script>
+	<script defer src="/restrict/ahp/js/colaborativa.js?v=20261124-rc-reinicio"></script>
 	<script defer src="/assets/js/paginas/ahp-comparacao-abas.js?v=20261124-matriz-pli"></script>
 	<script defer src="/assets/js/paginas/ahp-formulario-layout.js?v=20261104-card-default-90"></script>
 {% endblock %}

@@ -55,6 +55,7 @@
         </div>
       </div>
     </section>
+    <div id="ami-public-monitor-host" class="card ahp-step-section is-hidden"></div>
       <section id="ami-email-draft-card" class="secao-collab-email-draft-card card card-ami-email-draft ahp-step-section is-hidden">
         <div class="ahp-section-label"><i class="fas fa-envelope" aria-hidden="true"></i><span>Convites e acompanhamento</span></div>
         <div class="ahp-section-body">
@@ -87,10 +88,10 @@
           <p class="form-help">O servidor acrescenta uma chave individual de 43 caracteres exclusiva do destinatário. O reenvio mantém a mensagem e a chave originais, sem renovar a validade. Códigos compartilhados antigos não são aceitos. A revogação abaixo afeta apenas o destinatário selecionado na prévia, sem excluir sua resposta.</p>
             </div>
           </section>
-          <section class="secao-ami-monitoring ahp-subcard ami-monitoring-section standard-table-section">
+          <section id="ami-monitoring-section" class="secao-ami-monitoring ahp-subcard ami-monitoring-section standard-table-section">
             <div class="ahp-subsection-title"><span class="ahp-subsection-num">2</span><span>Monitoramento das atividades</span></div>
             <div class="ahp-section-body">
-          <p class="form-help">A etapa da colaboração avança automaticamente quando o convite é enviado, o link é acessado, o preenchimento começa e a resposta é enviada. Aceitação pelo servidor não confirma entrega; entrega e leitura dependem dos retornos externos do provedor de e-mail.</p>
+          <p class="form-help"><span id="ami-monitor-invited-help">A etapa da colaboração avança automaticamente quando o convite é enviado, o link é acessado, o preenchimento começa e a resposta é enviada.</span><span id="ami-monitor-public-help" hidden>A etapa acompanha a inscrição, o início do preenchimento e o envio da resposta.</span> A entrega e a leitura dependem dos retornos do provedor de e-mail.</p>
           <p id="ami-email-status" class="form-help" role="status" aria-live="polite"></p>
           {% if modo_pagina == 'espaco' %}<p class="ami-table-label">Tabela do monitoramento das atividades</p>{% endif %}
           <div class="ami-filtered-table">
@@ -163,9 +164,9 @@
   <script src="/assets/vendor/xlsx/xlsx-0.18.5.min.js"></script>
   <script src="/assets/js/paginas/analise-multicriterio-tabela.js?v=20261124-link-julgamentos"></script>
   <script src="/assets/js/api-erro.js?v=20261027"></script>
-  <script src="/assets/js/paginas/ami-email.js?v=20261123-envio-silencioso"></script>
+  <script src="/assets/js/paginas/ami-email.js?v=20261124-monitoramento-publico"></script>
   <script src="/assets/js/matriz-criterios-arquivo.js?v=20261009"></script>
   <script src="/assets/js/matrizes-criterios.js?v=20261124-matriz-integral"></script>
   <script src="/assets/js/saaty-selector-color.js?v=20261103-1"></script>
-  <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20261124-link-julgamentos"></script>
+  <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20261124-monitoramento-publico"></script>
 {% endblock %}

@@ -1371,7 +1371,7 @@ def test_invitation_uses_active_form_with_production_prefix(monkeypatch) -> None
     assert body["url_publica"] == f"http://testserver/sicard/public/analise-multicriterio/formulario-comparacao-pareada/{body['token']}/"
 
 
-def test_inscricao_publica_transita_da_lista_ate_envio_sem_email(monkeypatch):
+def test_inscricao_publica_transita_da_lista_ate_envio_com_confirmacao(monkeypatch):
     from api.services import email_resposta_colaborador
 
     fake = _instalar_fake_repo(monkeypatch)
@@ -1478,12 +1478,33 @@ def test_inscricao_publica_transita_da_lista_ate_envio_sem_email(monkeypatch):
         "versao": inicio.json()["atualizadoEm"], "etapa": "dimensoes", "concluir_etapa": True,
     })
     assert etapa.status_code == 200, etapa.text
+    notificar.assert_not_called()
+    reset = respostas + "/reiniciar"
+    chave_reset = {"email": ident["email"], "versao": etapa.json()["atualizadoEm"]}
+    assert TestClient(app).post(reset, json=chave_reset).status_code == 422
+    assert publico.post(reset, json={**chave_reset, "versao": inicio.json()["atualizadoEm"]}).status_code == 422
+    reinicio = publico.post(reset, json=chave_reset)
+    assert reinicio.status_code == 200, reinicio.text
+    limpo = reinicio.json()
+    assert limpo["id"] == inicio.json()["id"] and limpo["inscricao_id"] == inicio.json()["inscricao_id"]
+    assert limpo["status"] == "em_preenchimento" and limpo["matriz_comparacao"] == [[1, None, None], [None, 1, None], [None, None, 1]]
+    assert "julgamento_dimensoes" not in limpo["estatisticas"]
+    assert atualizar.call_args.kwargs["liberar_vaga"] is False
+    assert publico.patch(respostas + "/progresso", json={
+        "email": ident["email"], "matriz_comparacao": matriz, "versao": limpo["atualizadoEm"],
+    }).status_code == 422
+    etapa = publico.patch(respostas + "/progresso", json={
+        "email": ident["email"], "matriz_comparacao": [[1, 3], [1 / 3, 1]],
+        "versao": limpo["atualizadoEm"], "etapa": "dimensoes", "concluir_etapa": True,
+    })
+    assert etapa.status_code == 200, etapa.text
     envio = publico.post(respostas, json={**final, "versao": etapa.json()["atualizadoEm"]})
     assert envio.status_code == 201, envio.text
     assert atualizar.call_args.kwargs["liberar_vaga"] is True
     assert envio.json()["estatisticas"]["pesos_globais_individuais"] == pytest.approx([.375, .375, .25])
     assert gestor.get(gestao).json()["participacao"]["enviadas"] == 1
-    notificar.assert_not_called()
+    notificar.assert_called_once_with(ambiente["id"], envio.json()["id"])
+    assert publico.post(reset, json={**chave_reset, "versao": envio.json()["atualizadoEm"]}).status_code == 422
 
 
 def test_fluxo_colaborativo_completo(monkeypatch) -> None:

@@ -51,6 +51,7 @@
     };
     return structuredClone(draft);
   };
+  api.reiniciarResposta = api.iniciarResposta;
   api.salvarProgresso = async function (_, payload) {
     Object.assign(draft, structuredClone(payload));
     return structuredClone(draft);

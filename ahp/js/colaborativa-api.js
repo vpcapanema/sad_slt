@@ -73,6 +73,12 @@
         method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
       });
     },
+    reiniciarResposta: function (token, payload) {
+      return request("/publico/" + encodeURIComponent(token) + "/respostas/reiniciar", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    },
     listarRespostas: function (ambienteId) {
       return request("/ambientes/" + encodeURIComponent(ambienteId) + "/respostas");
     },

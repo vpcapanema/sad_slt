@@ -146,7 +146,7 @@ const fs = require('node:fs');
     assert.equal(await page.locator('#ami-email-history-body tr').count(),1);
     await page.locator('#ami-email-history-all').check();
     const download=page.waitForEvent('download'); await page.locator('#ami-email-history-export').click();
-    assert.equal((await download).suggestedFilename(),'historico-email-convite.csv');
+    assert.equal((await download).suggestedFilename(),'Julgamento_Colaborativo_historico_email_convite.csv');
     await page.locator('#ami-email-history-clear').click();
     assert.equal(await page.locator('#ami-email-history-export').isDisabled(),true);
     await page.keyboard.press('Escape');

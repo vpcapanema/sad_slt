@@ -205,6 +205,10 @@ class RespostaColaborativaProgressoSchema(AcessoColaborativoSchema):
     versao: AwareDatetime | None = None
 
 
+class RespostaColaborativaReinicioSchema(AcessoColaborativoSchema):
+    versao: AwareDatetime
+
+
 class RespostaColaborativaUpdateSchema(BaseModel):
     nome_completo: str | None = Field(None, min_length=2, max_length=200)
     email: str | None = Field(None, min_length=3, max_length=320)

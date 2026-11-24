@@ -23,6 +23,7 @@ from api.schemas.comparacao_colaborativa import (
     RespostaColaborativaCreateSchema,
     RespostaColaborativaInicioSchema,
     RespostaColaborativaProgressoSchema,
+    RespostaColaborativaReinicioSchema,
     RespostaColaborativaResponseSchema,
     RespostaColaborativaUpdateSchema,
     RespostaCentralResponseSchema,
@@ -464,8 +465,7 @@ def enviar_resposta(
         raise _erro_preenchimento(exc) from exc
     except DatabaseUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
-    if not resposta.inscricao_id:
-        segundo_plano.add_task(email_resposta_colaborador.notificar, resposta.ambiente_id, resposta.id)
+    segundo_plano.add_task(email_resposta_colaborador.notificar, resposta.ambiente_id, resposta.id)
     return resposta
 
 
@@ -491,6 +491,21 @@ def salvar_progresso_resposta_publica(
     try:
         response.headers["Cache-Control"] = "no-store"
         return service.salvar_progresso_resposta(
+            token, body, sessao_inscricao=request.cookies.get(service.nome_cookie_inscricao(token)),
+        )
+    except DemandaValidationError as exc:
+        raise _erro_preenchimento(exc) from exc
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.post("/publico/{token}/respostas/reiniciar", response_model=RespostaColaborativaResponseSchema)
+def reiniciar_resposta_publica(
+    token: str, body: RespostaColaborativaReinicioSchema, request: Request, response: Response,
+) -> RespostaColaborativaResponseSchema:
+    try:
+        response.headers["Cache-Control"] = "no-store"
+        return service.reiniciar_resposta(
             token, body, sessao_inscricao=request.cookies.get(service.nome_cookie_inscricao(token)),
         )
     except DemandaValidationError as exc:

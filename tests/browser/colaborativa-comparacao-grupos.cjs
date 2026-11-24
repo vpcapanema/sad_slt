@@ -154,6 +154,12 @@ async function testPublicModel(browser) {
       assert.equal(estilo.semTransbordamento, true);
     }
     await page.setViewportSize({width: 390, height: 844});
+    await escalas.first().press('ArrowRight');
+    await page.locator('#collab-restart').click();
+    await page.locator('#pfsConfirmOk').click();
+    await page.getByText('Rascunho reiniciado.', {exact:true}).waitFor();
+    assert.equal(await escalas.first().getAttribute('aria-valuenow'), '4');
+    assert.equal(await next.isDisabled(), true);
     let total = 0;
     for (const [ordem, [nome, indices]] of grupos.entries()) {
       assert.equal(await titulo.innerText(), `Dimensão ${ordem + 1} de 6 · ${nome}`);
@@ -185,9 +191,12 @@ async function testLinkedStages(browser) {
   const page = await browser.newPage({viewport: {width: 390, height: 844}});
   const token = 'rodada-duas-etapas-teste', key = 'A'.repeat(43);
   const errors = [];
-  let version = 0, validations = 0, sent;
+  const linkedCriteria = [...criteria, 'Investimento'];
+  const linkedGroups = {...groups, Financeira: [0, 2, 5]};
+  const initialMatrix = () => linkedCriteria.map((_, i) => linkedCriteria.map((_, j) => i === j ? 1 : null));
+  let version = 0, validations = 0, resets = 0, sent;
   let draft = {status: 'em_preenchimento', atualizadoEm: new Date(version).toISOString(),
-    matriz_comparacao: matrix(true), estatisticas: {}};
+    matriz_comparacao: initialMatrix(), estatisticas: {}};
   try {
     page.on('pageerror', error => errors.push(error.message));
     await page.route('**/api/ahp/comparacao-colaborativa/publico/' + token + '**', route => {
@@ -197,10 +206,15 @@ async function testLinkedStages(browser) {
       if (request.method() === 'GET') return route.fulfill({json: {...meta, criterios: [], email_autorizado: false}});
       const body = request.postDataJSON();
       assert.equal(body.token_acesso, key);
-      if (path.endsWith('/acesso')) return route.fulfill({json: {...meta, criterios: criteria,
-        grupos_comparacao: groups, dimensoes_comparacao: Object.keys(groups), email_autorizado: true}});
+      if (path.endsWith('/acesso')) return route.fulfill({json: {...meta, criterios: linkedCriteria,
+        grupos_comparacao: linkedGroups, dimensoes_comparacao: Object.keys(linkedGroups), email_autorizado: true}});
       if (path.endsWith('/iniciar')) return route.fulfill({json: draft});
       assert.equal(body.versao, draft.atualizadoEm);
+      if (path.endsWith('/reiniciar')) {
+        resets++;
+        draft = {...draft, atualizadoEm:new Date(++version).toISOString(), matriz_comparacao:initialMatrix(), estatisticas:{}};
+        return route.fulfill({json: draft});
+      }
       if (path.endsWith('/progresso')) {
         if (body.etapa === 'dimensoes') {
           if (body.concluir_etapa && ++validations === 1) {
@@ -235,15 +249,23 @@ async function testLinkedStages(browser) {
     const titulo = page.locator('#collab-linked-title');
     const escalas = page.locator('#comparisonContent .saaty-scale');
     const nextStage = page.locator('#collab-linked-next');
+    const nextGroup = page.locator('#collab-next-group');
     const send = page.locator('#btn-enviar-resposta');
     assert.match(await titulo.innerText(), /Etapa 1 de 2/);
     assert.equal(await escalas.count(), 3);
     assert.equal(await send.isVisible(), false);
     assert.equal(await nextStage.isDisabled(), true);
-    for (const escala of await escalas.all()) {
-      await escala.press('ArrowLeft');
-      await escala.press('ArrowRight');
+    async function ajustarPares(inconsistente) {
+      for (const [i, escala] of (await escalas.all()).entries()) {
+        await escala.press(inconsistente && i === 1 ? 'End' : 'Home');
+        if (!inconsistente) for (let passo = 0; passo < 4; passo++) await escala.press('ArrowRight');
+      }
     }
+    await ajustarPares(true);
+    await page.getByText(/ajuste as comparações/).waitFor();
+    assert.equal(await nextStage.isDisabled(), true);
+    assert.equal(validations, 0);
+    await ajustarPares(false);
     await nextStage.click();
     await page.getByText('Revise as comparações entre dimensões.', {exact:true}).waitFor();
     assert.match(await titulo.innerText(), /Etapa 1 de 2/);
@@ -256,13 +278,39 @@ async function testLinkedStages(browser) {
     assert.equal(await nextStage.isEnabled(), true);
     await nextStage.click();
     await page.getByText('Etapa 2 de 2 · Critérios por dimensão', {exact: true}).waitFor();
-    assert.equal(await escalas.count(), 1);
+    assert.equal(await escalas.count(), 3);
+    await ajustarPares(true);
+    await page.getByText(/ajuste as comparações/).waitFor();
+    assert.equal(await nextGroup.isDisabled(), true);
+    await ajustarPares(false);
+    await nextGroup.click();
+    await page.getByText(/Dimensão 2 de 2 · Social/).waitFor();
+    const restart = page.locator('#collab-restart');
+    await restart.click();
+    await page.locator('#pfsConfirmCancel').click();
+    assert.equal(resets, 0);
+    assert.match(await titulo.innerText(), /Etapa 2 de 2/);
+    await restart.click();
+    await page.locator('#pfsConfirmOk').click();
+    await page.getByText('Rascunho reiniciado.', {exact:true}).waitFor();
+    assert.equal(resets, 1);
+    assert.match(await titulo.innerText(), /Etapa 1 de 2/);
+    assert.deepEqual(await escalas.evaluateAll(nodes => nodes.map(node => node.getAttribute('aria-valuenow'))), ['4','4','4']);
+    assert.equal(await nextStage.isDisabled(), true);
+    await open();
+    assert.match(await titulo.innerText(), /Etapa 1 de 2/);
+    assert.equal(await nextStage.isDisabled(), true);
+    await ajustarPares(false);
+    await nextStage.click();
+    await ajustarPares(false);
     await escalas.first().press('ArrowRight');
-    await page.locator('#collab-next-group').click();
+    await escalas.nth(1).press('ArrowRight');
+    await nextGroup.click();
     assert.equal(await send.isDisabled(), true);
     await escalas.first().press('ArrowLeft');
     await send.click();
     await page.getByText('Resposta enviada com sucesso. Obrigado!', {exact:true}).first().waitFor();
+    assert.equal(await restart.isDisabled(), true);
     assert.equal(sent.matriz_comparacao[0][1], null);
     assert.equal(sent.matriz_comparacao[0][2], 1 / 3);
     assert.equal(sent.matriz_comparacao[1][3], 3);

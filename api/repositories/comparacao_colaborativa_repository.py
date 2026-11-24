@@ -419,9 +419,9 @@ def update_resposta_progresso(
     )
     query = sql.SQL(
         "UPDATE ahp.comparacao_colaborativa_resposta SET {sets}, atualizado_em = now() "
-        "WHERE id = %(resposta_id)s{versao} RETURNING *"
+        "WHERE id = %(resposta_id)s AND status = 'em_preenchimento'{versao} RETURNING *"
     ).format(sets=assignments, versao=sql.SQL(
-        " AND status = 'em_preenchimento' AND atualizado_em = %(versao)s" if versao is not None else ""
+        " AND atualizado_em = %(versao)s" if versao is not None else ""
     ))
     params = {
         key: Jsonb(value) if key in {"matriz_comparacao", "estatisticas"} else value

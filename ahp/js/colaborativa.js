@@ -5,6 +5,7 @@
   "use strict";
 
   var PAIR_VALIDATION_MS = 1500;
+  var LIMITE_RC = 0.10;
   var token = "";
   var meta = null;
   var stats = { inicio_ms: null, duracao_anterior_ms: 0, pares: {} };
@@ -21,7 +22,7 @@
   var consistencyReviews = new Map();
   var highlightedReviewPair = null;
   var comparisonGroups = [], activeGroup = 0;
-  var linkedStage = null, linkedDraft = null;
+  var linkedStage = null, rascunho = null;
   var inscricao = null;
   var timerPresenca = null;
 
@@ -141,9 +142,7 @@
         ? "A dimensão " + nomes + " tem um único critério. Ele recebe 100% do peso dentro da dimensão e dispensa comparação."
         : "As dimensões " + nomes + " têm um único critério cada. Cada critério recebe 100% do peso dentro da sua dimensão e dispensa comparação.";
     }
-    activeGroup = comparisonGroups.findIndex(function (grupo) {
-      return !(linkedStage ? grupoCompleto(grupo) : grupoPronto(grupo));
-    });
+    activeGroup = comparisonGroups.findIndex(function (grupo) { return !grupoPronto(grupo); });
     if (activeGroup < 0) activeGroup = comparisonGroups.length - 1;
   }
 
@@ -154,7 +153,19 @@
   }
 
   function grupoPronto(grupo) {
-    return grupoCompleto(grupo) && SLTAhp.analyzeMatrix(grupo.matriz).CR < 0.10;
+    return grupoCompleto(grupo) && SLTAhp.analyzeMatrix(grupo.matriz).CR < LIMITE_RC;
+  }
+
+  function paresRespondidos(matriz) {
+    return matriz.every(function (linha, i) {
+      return linha.every(function (valor, j) {
+        return j <= i || valor !== 1 || stats.pares[i + "_" + j] > 0;
+      });
+    });
+  }
+
+  function comparacoesProntas(matriz) {
+    return matriz && paresRespondidos(matriz) && SLTAhp.analyzeMatrix(matriz).CR < LIMITE_RC;
   }
 
   function matrizComParesInformados(matriz) {
@@ -212,9 +223,6 @@
     el("collab-next-group").classList.toggle("is-hidden", ultimo);
     el("btn-enviar-resposta").classList.toggle("is-hidden", !ultimo);
     generatePairwiseFormStep4();
-    document.querySelectorAll("#comparisonContent .saaty-pair").forEach(function (pair) {
-      if (stats.pares[pair.querySelector(".saaty-scale").dataset.pid] > 0) pair.classList.add("is-auto-validated");
-    });
     patchSaatyTracking();
     draftActive = true;
     updateProgressHint();
@@ -223,9 +231,11 @@
 
   function navegarGrupo(delta) {
     var proximo = activeGroup + delta;
-    if (!draftActive || !comparisonGroups[proximo] || (delta > 0 && el("collab-next-group").disabled)) return;
+    if (!draftActive || !comparisonGroups[proximo]) return;
+    var matriz = buildLiveMatrix();
+    if (delta > 0 && !comparacoesProntas(matriz)) return;
     clearTimeout(saveTimer);
-    queueProgress(matrizParaGravar(buildLiveMatrix()), ++editVersion);
+    queueProgress(matrizParaGravar(matriz), ++editVersion);
     activeGroup = proximo;
     renderComparisonGroup();
     el("collab-group-title").focus();
@@ -233,9 +243,11 @@
 
   function patchSaatyTracking() {
     document.querySelectorAll("#comparisonContent .saaty-pair").forEach(function (pair) {
+      var pid = pair.querySelector(".saaty-scale").dataset.pid;
+      if (stats.pares[pid] > 0) pair.classList.add("is-auto-validated");
       pair.addEventListener("saaty:change", function () {
         if (!draftActive) return;
-        trackPair(pair.querySelector(".saaty-scale").dataset.pid);
+        trackPair(pid);
         clearTimeout(pairTimers.get(pair));
         var wasValidated = pair.classList.contains("is-auto-validated");
         pair.classList.remove("is-auto-validated");
@@ -255,6 +267,7 @@
         }, PAIR_VALIDATION_MS));
       });
     });
+    refreshConsistencyHelp();
   }
 
   function queueProgress(matrix, version) {
@@ -277,9 +290,9 @@
   }
 
   function gravarProgresso(payload) {
-    if (payload.etapa) payload.versao = linkedDraft.atualizadoEm;
+    if (rascunho?.atualizadoEm) payload.versao = rascunho.atualizadoEm;
     return global.SLTColaborativaApi.salvarProgresso(token, payload).then(function (resposta) {
-      if (payload.etapa) linkedDraft = resposta;
+      rascunho = resposta;
       return resposta;
     });
   }
@@ -300,12 +313,8 @@
     if (!matrix) return;
     var res = SLTAhp.analyzeMatrix(matrix);
     var matrizGravada = matrizParaGravar(matrix);
-    var complete = matrix.every(function (row, i) {
-      return row.every(function (value, j) {
-        return j <= i || value !== 1 || stats.pares[i + "_" + j] > 0;
-      });
-    });
-    var consistent = res.CR < 0.1;
+    var complete = paresRespondidos(matrix);
+    var consistent = res.CR < LIMITE_RC;
     [["metricLambdaValue", res.lambdaMax], ["metricICValue", res.CI], ["metricRCValue", res.CR]].forEach(function ([id, value]) {
       var metric = el(id), formatted = SLTAhp.formatMetric(value);
       if (metric.textContent !== formatted) metric.textContent = formatted;
@@ -317,21 +326,24 @@
     var porGrupo = comparisonGroups.length > 0;
     var status = complete ? (porGrupo ? "RC da dimensão" : "RC da matriz completa") : "RC provisória";
     if (rcStatus.textContent !== status) rcStatus.textContent = status;
-    var pronto = linkedStage ? complete : consistent && (!porGrupo || complete);
+    var exigePares = porGrupo || linkedStage === "dimensoes";
+    var pronto = consistent && (!exigePares || complete);
+    var ultimaDimensao = !porGrupo || activeGroup === comparisonGroups.length - 1;
     if (porGrupo) el("collab-next-group").disabled = !pronto;
-    if (linkedStage) el("collab-linked-next").disabled = !complete;
-    el("btn-enviar-resposta").disabled = !pronto || (porGrupo && !comparisonGroups.every(linkedStage ? grupoCompleto : grupoPronto));
-    var prontoTexto = linkedStage === "dimensoes" ? (complete ? "Solicite a validação das dimensões para avançar." : "Responda a todos os pares de dimensões.")
-      : porGrupo && !complete ? "Conclua todas as comparações desta dimensão para continuar."
-      : linkedStage === "criterios" && activeGroup === comparisonGroups.length - 1 ? "Envie a resposta para validar as comparações entre critérios."
-      : porGrupo && activeGroup < comparisonGroups.length - 1 ? "Comparações consistentes. Avance para a próxima dimensão."
+    if (linkedStage === "dimensoes") el("collab-linked-next").disabled = !pronto;
+    el("btn-enviar-resposta").disabled = !pronto || !ultimaDimensao || !comparisonGroups.every(function (grupo, i) {
+      return i === activeGroup || grupoPronto(grupo);
+    });
+    var prontoTexto = linkedStage === "dimensoes" ? "Comparações consistentes. Você pode avançar para os critérios."
+      : !ultimaDimensao ? "Comparações consistentes. Avance para a próxima dimensão."
       : "Matriz consistente (RC < 0,10). Você pode enviar.";
-    submitFeedback(
-      consistent
-        ? prontoTexto
-        : "RC = " + SLTAhp.formatMetric(res.CR) + " — ajuste as comparações (necessário RC < 0,10).",
-      consistent ? "success" : "error"
-    );
+    if (exigePares && !complete) {
+      submitFeedback(linkedStage === "dimensoes" ? "Responda a todos os pares de dimensões."
+        : "Conclua todas as comparações desta dimensão para continuar.", "info");
+    } else {
+      submitFeedback(consistent ? prontoTexto : "RC = " + SLTAhp.formatMetric(res.CR)
+        + " — ajuste as comparações (necessário RC < 0,10).", consistent ? "success" : "error");
+    }
     clearTimeout(saveTimer);
     var version = ++editVersion;
     el("collab-save-feedback").textContent = "Alterações aguardando salvamento…";
@@ -522,7 +534,7 @@
   function refreshConsistencyHelp() {
     var matrix = buildLiveMatrix();
     var state = matrix && validatedConsistencyState(matrix);
-    el("collab-consistency-help-button").hidden = !state || state.cr < 0.1;
+    el("collab-consistency-help-button").hidden = !state || state.cr < LIMITE_RC;
   }
 
   function validatedConsistencyState(matrix) {
@@ -663,7 +675,7 @@
     var matrix = buildLiveMatrix();
     if (!matrix) return;
     var diagnosis = validatedConsistencyState(matrix);
-    if (!diagnosis || diagnosis.cr < 0.1) {
+    if (!diagnosis || diagnosis.cr < LIMITE_RC) {
       el("collab-consistency-help-button").hidden = true;
       return;
     }
@@ -814,7 +826,7 @@
     }
     if (primeira) {
       comparisonGroups = [];
-      var anterior = linkedDraft.estatisticas?.julgamento_dimensoes;
+      var anterior = rascunho.estatisticas?.julgamento_dimensoes;
       stats.pares = {...(anterior?.revisoes_por_par || {})};
       global.setAhpCriteria(meta.dimensoes_comparacao);
       global.ahpCollaborativeDraftMatrix = anterior?.matriz || null;
@@ -824,7 +836,7 @@
       updateProgressHint();
       updateCollabMetrics();
     } else {
-      carregarGrupos(linkedDraft);
+      carregarGrupos(rascunho);
       renderComparisonGroup();
     }
     el("collab-linked-title").focus();
@@ -832,6 +844,8 @@
 
   async function trocarEtapaVinculada(destino) {
     if (!draftActive || !linkedStage) return;
+    if (destino === "criterios" && (linkedStage !== "dimensoes" || !comparacoesProntas(buildLiveMatrix()))) return;
+    if (destino === "dimensoes" && linkedStage !== "criterios") return;
     clearTimeout(saveTimer);
     var payload = payloadProgresso(matrizDaEtapaVinculada());
     payload.concluir_etapa = destino === "criterios";
@@ -839,6 +853,7 @@
     el("comparisonContent").inert = true;
     el("collab-linked-next").disabled = true;
     el("collab-linked-back").disabled = true;
+    el("collab-restart").disabled = true;
     submitFeedback(destino === "criterios" ? "Validando as comparações entre dimensões…" : "Salvando as comparações entre critérios…", "info");
     try {
       await saveQueue;
@@ -846,17 +861,87 @@
       renderEtapaVinculada(destino);
     } catch (error) {
       draftActive = true;
-      el("collab-linked-next").disabled = false;
+      updateCollabMetrics();
       submitFeedback(error.message, "error");
     } finally {
       el("comparisonContent").inert = false;
       el("collab-linked-back").disabled = false;
+      el("collab-restart").disabled = !draftActive;
     }
   }
 
   function matrizDaEtapaVinculada() {
     return linkedStage === "criterios" && !comparisonGroups.length
-      ? linkedDraft.matriz_comparacao : matrizParaGravar(buildLiveMatrix());
+      ? rascunho.matriz_comparacao : matrizParaGravar(buildLiveMatrix());
+  }
+
+  function mostrarRascunho(resposta) {
+    draftActive = false;
+    rascunho = resposta;
+    pairTimers.forEach(clearTimeout);
+    pairTimers.clear();
+    if (!el("collab-consistency-modal").hidden) closeConsistencyHelp();
+    global.setAhpCriteria(meta.criterios || []);
+    global.ahpCollaborativeDraftMatrix = resposta.matriz_comparacao || null;
+    var anteriores = resposta.estatisticas || {};
+    stats.pares = {};
+    Object.entries(anteriores.revisoes_por_par || {}).forEach(function ([par, revisoes]) {
+      if (/^\d+_\d+$/.test(par) && Number.isInteger(revisoes) && revisoes >= 0) stats.pares[par] = revisoes;
+    });
+    stats.duracao_anterior_ms = Number.isFinite(anteriores.duracao_ms) && anteriores.duracao_ms >= 0 ? anteriores.duracao_ms : 0;
+    stats.inicio_ms = Date.now();
+    el("collab-form-section").classList.remove("is-hidden");
+    el("collab-restart").disabled = false;
+    if (meta.modo_comparacao === "duas_etapas") {
+      var rc = anteriores.julgamento_dimensoes?.resultado?.CR;
+      renderEtapaVinculada(Number.isFinite(rc) && rc < LIMITE_RC ? "criterios" : "dimensoes");
+    } else if (meta.modo_comparacao === "por_grupo") {
+      carregarGrupos(resposta);
+      renderComparisonGroup();
+    } else {
+      generatePairwiseFormStep4();
+      patchSaatyTracking();
+      draftActive = true;
+      updateProgressHint();
+      updateCollabMetrics();
+    }
+  }
+
+  async function reiniciarFormulario() {
+    if (!draftActive || !acesso) return;
+    var botao = el("collab-restart");
+    botao.disabled = true;
+    var confirmou = await global.ProcessFeedback.confirmar({
+      title: "Recomeçar julgamento?",
+      message: "Todas as comparações deste rascunho serão apagadas. Você voltará à primeira etapa disponível.",
+      confirmLabel: "Recomeçar do zero",
+      danger: true,
+    });
+    if (!confirmou || !draftActive) {
+      botao.disabled = !draftActive;
+      if (draftActive) botao.focus();
+      return;
+    }
+    clearTimeout(saveTimer);
+    draftActive = false;
+    el("comparisonContent").inert = true;
+    submitFeedback("Reiniciando o julgamento…", "info");
+    try {
+      await saveQueue;
+      var resposta = await global.SLTColaborativaApi.reiniciarResposta(token, {
+        email: acesso.identificacao.email, token_acesso: acesso.token_acesso, versao: rascunho?.atualizadoEm,
+      });
+      mostrarRascunho(resposta);
+      el("collab-tab-form").click();
+      el("collab-save-feedback").textContent = "Rascunho reiniciado.";
+    } catch (error) {
+      draftActive = true;
+      updateCollabMetrics();
+      submitFeedback(error.message || String(error), "error");
+    } finally {
+      el("comparisonContent").inert = false;
+      botao.disabled = !draftActive;
+    }
   }
 
   function liberarFormulario() {
@@ -902,32 +987,8 @@
           return;
         }
         acesso = candidato;
-        if (typeof global.setAhpCriteria === "function") global.setAhpCriteria(meta.criterios || []); else global.criteria = meta.criterios || [];
-        global.ahpCollaborativeDraftMatrix = resposta.matriz_comparacao || null;
-        var anteriores = resposta.estatisticas || {};
-        stats.pares = {};
-        Object.entries(anteriores.revisoes_por_par || {}).forEach(function (entry) {
-          if (/^\d+_\d+$/.test(entry[0]) && Number.isInteger(entry[1]) && entry[1] >= 0) stats.pares[entry[0]] = entry[1];
-        });
-        stats.duracao_anterior_ms = Number.isFinite(anteriores.duracao_ms) && anteriores.duracao_ms >= 0 ? anteriores.duracao_ms : 0;
         feedback(global.SLTColaborativaSimulacao ? "Simulação liberada. O progresso não será gravado." : "Formulário liberado. O progresso será salvo automaticamente.", "success");
-        el("collab-form-section").classList.remove("is-hidden");
-        stats.inicio_ms = Date.now(); draftActive = false;
-        if (meta.modo_comparacao === "duas_etapas") {
-          linkedDraft = resposta;
-          renderEtapaVinculada(resposta.estatisticas?.julgamento_dimensoes?.resultado ? "criterios" : "dimensoes");
-          return;
-        }
-        if (meta.modo_comparacao === "por_grupo") {
-          carregarGrupos(resposta);
-          renderComparisonGroup();
-          return;
-        }
-        if (typeof generatePairwiseFormStep4 === "function") generatePairwiseFormStep4();
-        patchSaatyTracking();
-        draftActive = true;
-        updateProgressHint();
-        updateCollabMetrics();
+        mostrarRascunho(resposta);
       })
       .catch(function (err) {
         feedback(err.message || String(err), "error");
@@ -948,12 +1009,12 @@
       return;
     }
     if (linkedStage === "dimensoes") return;
-    if (!linkedStage && SLTAhp.analyzeMatrix(matrix).CR >= 0.1) {
+    if (!linkedStage && !comparisonGroups.length && SLTAhp.analyzeMatrix(matrix).CR >= LIMITE_RC) {
       submitFeedback("RC ≥ 0,10 — envio bloqueado.", "error");
       return;
     }
     var matrizGravada = linkedStage ? matrizDaEtapaVinculada() : matrizParaGravar(matrix);
-    if (!linkedStage && !comparisonGroups.every(grupoPronto)) {
+    if (!comparisonGroups.every(grupoPronto)) {
       submitFeedback("Conclua todas as comparações e confira a consistência de cada dimensão antes de enviar.", "error");
       return;
     }
@@ -967,6 +1028,7 @@
     clearTimeout(saveTimer);
     draftActive = false;
     el("btn-enviar-resposta").disabled = true;
+    el("collab-restart").disabled = true;
     el("comparisonContent").inert = true;
     saveQueue.then(function () {
       processo.concluirTarefa("Concluir salvamentos pendentes");
@@ -976,7 +1038,7 @@
       token_acesso: acesso.token_acesso,
       matriz_comparacao: matrizGravada,
       estatisticas: estatisticas,
-      ...(linkedStage ? { versao: linkedDraft.atualizadoEm } : {}),
+      ...(rascunho?.atualizadoEm ? { versao: rascunho.atualizadoEm } : {}),
     }); })
       .then(function () {
         draftActive = false;
@@ -990,6 +1052,7 @@
         draftActive = true;
         el("comparisonContent").inert = false;
         el("btn-enviar-resposta").disabled = false;
+        el("collab-restart").disabled = false;
         submitFeedback(err.message || String(err), "error");
         processo.erro({title: "Resposta não enviada", message: err.message || String(err),
           detail: "O preenchimento foi mantido. Confira o problema e tente enviar novamente."});
@@ -1021,6 +1084,7 @@
       });
     el("btn-liberar-form").addEventListener("click", liberarFormulario);
     el("btn-enviar-resposta").addEventListener("click", enviarResposta);
+    el("collab-restart").addEventListener("click", reiniciarFormulario);
     el("collab-previous-group").addEventListener("click", function () { navegarGrupo(-1); });
     el("collab-next-group").addEventListener("click", function () { navegarGrupo(1); });
     el("collab-linked-next").addEventListener("click", function () { trocarEtapaVinculada("criterios"); });

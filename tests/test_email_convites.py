@@ -817,6 +817,40 @@ def test_monitoramento_inclui_nomes_e_disponibilidade_da_resposta(ambiente, regi
     ]
 
 
+def test_monitoramento_publico_le_inscricoes_e_respostas_vinculadas(ambiente, registros, monkeypatch):
+    from api.routers.email_convites import monitoramento
+    from fastapi import HTTPException
+
+    ambiente.update(modo_participacao="publico", convites=[{"nome": "Convite fora da coleta", "email": DEST}])
+    quando = datetime(2026, 11, 24, 16, 30, tzinfo=timezone.utc)
+    inscritos = [
+        {"id": str(i), "nome": nome, "email": f"pessoa-{i}@example.com", "criado_em": quando}
+        for i, nome in enumerate(["Lia", "Ana", "Bia"], start=1)
+    ]
+    buscar_inscritos = MagicMock(return_value=inscritos)
+    monkeypatch.setattr(service.ambientes, "list_inscricoes", buscar_inscritos)
+    monkeypatch.setattr(service.ambientes, "list_respostas", lambda _: [
+        {"inscricao_id": None, "email": inscritos[0]["email"], "status": "enviada"},
+        {"inscricao_id": "2", "email": inscritos[1]["email"], "status": "em_preenchimento", "iniciado_em": quando},
+        {"inscricao_id": "3", "email": inscritos[2]["email"], "status": "enviada", "enviado_em": quando},
+    ])
+    comprovante = {"natureza": "resposta", "destinatario": inscritos[2]["email"], "envio_status": "aceito_smtp"}
+    registros.extend([{"natureza": "convite", "destinatario": DEST}, comprovante])
+    with pytest.raises(HTTPException) as sem_permissao:
+        monitoramento(ambiente["id"], SessionUser("id", "", "leitura", "Leitura", "VISUALIZADOR", permissoes={}))
+    assert sem_permissao.value.status_code == 403
+    buscar_inscritos.assert_not_called()
+
+    gestor = SessionUser("id", "", "gestor", "Gestor", "GESTOR", permissoes={"mad.operar": True})
+    result = monitoramento(ambiente["id"], gestor)
+    buscar_inscritos.assert_called_once_with(str(ambiente["id"]))
+    assert result["registros"] == [comprovante]
+    assert [row["nome"] for row in result["colaboradores"]] == ["Lia", "Ana", "Bia"]
+    assert [row["etapa_codigo"] for row in result["colaboradores"]] == ["inscrito", "em_preenchimento", "resposta_enviada"]
+    assert [row["resposta_recebida"] for row in result["colaboradores"]] == [False, False, True]
+    assert all(row["registrado_em"] == quando.isoformat() for row in result["colaboradores"])
+
+
 def test_configuracao_expoe_somente_conta_de_autenticacao_real_do_servico(ambiente, registros, monkeypatch):
     from api.routers import email_convites as router_service
     monkeypatch.setattr(router_service, "get_email_settings", lambda: EmailSettings(
