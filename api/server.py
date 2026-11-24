@@ -570,10 +570,13 @@ def pagina_inscricao_julgamento(request: Request, token: str) -> Response:
     except DemandaValidationError as exc:
         erro = str(exc)
     caminho = f"/public/analise-multicriterio/participar/{quote(token, safe='')}/"
+    formulario_url = caminho + "formulario/"
+    if not erro and inscricao is not None:
+        return RedirectResponse(formulario_url, status_code=303, headers={"Cache-Control": "no-store"})
     pagina = render_page(
         request, "paginas/analise_multicriterio/inscricao.html",
         token=token, julgamento=ambiente["nome"], prazo=ambiente["valido_ate"].isoformat(),
-        erro=erro, inscrito=inscricao is not None, formulario_url=caminho + "formulario/",
+        erro=erro, formulario_url=formulario_url,
     )
     if not erro and not chave:
         definir_cookie_inscricao(request, pagina, token, julgamento_service.gerar_token_acesso())
@@ -597,7 +600,7 @@ def pagina_formulario_inscrito(request: Request, token: str) -> Response:
     if fila["situacao"] != "admitida":
         return render_page(
             request, "paginas/analise_multicriterio/fila.html",
-            julgamento=ambiente["nome"], token=token, fila=fila,
+            julgamento=ambiente["nome"], token=token, fila=fila, inscricao=inscricao,
         )
     return render_page(
         request, "paginas/analise_multicriterio/formulario.html",

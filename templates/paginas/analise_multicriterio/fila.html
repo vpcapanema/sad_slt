@@ -6,7 +6,7 @@
 {% block classes_body %}ahp-module-page ahp-colaborativa-page ami-public-page{% endblock %}
 {% block estilos_pagina %}
 <link rel="stylesheet" href="/assets/css/ahp-module.css?v=20261103-regua-invertida">
-<link rel="stylesheet" href="/assets/css/paginas/ahp-formulario-publico.css?v=20261124-guia-dimensoes">
+<link rel="stylesheet" href="/assets/css/paginas/ahp-formulario-publico.css?v=20261124-acesso-direto">
 {% endblock %}
 
 {% block conteudo %}
@@ -20,6 +20,7 @@
       {% else %}
       <p>Todas as vagas de preenchimento estão ocupadas. Mantenha esta página aberta. O formulário abrirá automaticamente quando chegar a sua vez.</p>
       <p id="ahp-fila-status" role="status" data-api="/api/ahp/comparacao-colaborativa/publico/{{ token }}/fila">Sua posição na fila é {{ fila.posicao }}.</p>
+      {% include "componentes/analise_multicriterio/_codigo_retomada.html" %}
       {% endif %}
     </div>
   </section>
@@ -27,5 +28,8 @@
 {% endblock %}
 
 {% block scripts_pagina %}
-{% if fila.situacao == "aguardando" %}<script defer src="/assets/js/paginas/ahp-fila.js?v=20261124"></script>{% endif %}
+{% if fila.situacao == "aguardando" %}
+<script defer src="/assets/js/paginas/ahp-fila.js?v=20261124"></script>
+<script defer src="/assets/js/paginas/ahp-codigo-retomada.js?v=20261124"></script>
+{% endif %}
 {% endblock %}

@@ -43,6 +43,10 @@
   }
 
   function bloquearIdentificacao(bloqueado) {
+    if (inscricao) {
+      el("collab-retry-start").disabled = bloqueado;
+      return;
+    }
     ["colab-nome", "colab-inst", "colab-email", "colab-token", "btn-liberar-form"].forEach(function (id) {
       if (el(id)) el(id).disabled = bloqueado;
     });
@@ -91,7 +95,7 @@
       if (item[0] === "Prazo") line.title = "Horário de Brasília";
       box.appendChild(line);
     });
-    if (!meta.contextualizacao) return;
+    if (inscricao || !meta.contextualizacao) return;
     var texto = meta.contextualizacao;
     el("collab-scope-intro").textContent = texto.introducao;
     el("collab-scope-method-text").textContent = texto.metodo;
@@ -791,7 +795,7 @@
     if (document.hidden && metricsFrame !== null) updateCollabMetrics();
   });
 
-  function renderEtapaVinculada(etapa) {
+  function renderEtapaVinculada(etapa, focar = true) {
     clearTimeout(saveTimer);
     pairTimers.forEach(clearTimeout);
     pairTimers.clear();
@@ -821,7 +825,7 @@
       el("collab-group-navigation").classList.add("is-hidden");
       el("btn-enviar-resposta").disabled = false;
       draftActive = true;
-      el("collab-linked-title").focus();
+      if (focar) el("collab-linked-title").focus();
       return;
     }
     if (primeira) {
@@ -839,7 +843,7 @@
       carregarGrupos(rascunho);
       renderComparisonGroup();
     }
-    el("collab-linked-title").focus();
+    if (focar) el("collab-linked-title").focus();
   }
 
   async function trocarEtapaVinculada(destino) {
@@ -875,7 +879,7 @@
       ? rascunho.matriz_comparacao : matrizParaGravar(buildLiveMatrix());
   }
 
-  function mostrarRascunho(resposta) {
+  function mostrarRascunho(resposta, focar = true) {
     draftActive = false;
     rascunho = resposta;
     pairTimers.forEach(clearTimeout);
@@ -894,7 +898,7 @@
     el("collab-restart").disabled = false;
     if (meta.modo_comparacao === "duas_etapas") {
       var rc = anteriores.julgamento_dimensoes?.resultado?.CR;
-      renderEtapaVinculada(Number.isFinite(rc) && rc < LIMITE_RC ? "criterios" : "dimensoes");
+      renderEtapaVinculada(Number.isFinite(rc) && rc < LIMITE_RC ? "criterios" : "dimensoes", focar);
     } else if (meta.modo_comparacao === "por_grupo") {
       carregarGrupos(resposta);
       renderComparisonGroup();
@@ -946,9 +950,9 @@
 
   function liberarFormulario() {
     if (verificando || draftActive) return;
-    var nome = (el("colab-nome").value || "").trim();
-    var inst = (el("colab-inst").value || "").trim();
-    var email = (el("colab-email").value || "").trim().toLowerCase();
+    var nome = (inscricao ? el("colab-nome").textContent : el("colab-nome").value).trim();
+    var inst = (inscricao ? el("colab-inst").textContent : el("colab-inst").value).trim();
+    var email = (inscricao ? inscricao.dataset.email : el("colab-email").value).trim().toLowerCase();
     var codigo = inscricao ? undefined : (global.SLTColaborativaModelo ? "000000" : (el("colab-token").value || "").trim());
     if (!nome || !inst || !email) {
       feedback("Informe nome, instituição e e-mail para iniciar o preenchimento.", "error");
@@ -960,7 +964,11 @@
     }
     verificando = true;
     bloquearIdentificacao(true);
-    feedback(inscricao ? "Verificando inscrição…" : "Verificando convite…", "info");
+    if (inscricao) {
+      el("collab-retry-start").hidden = true;
+      el("collab-context").hidden = false;
+    }
+    feedback(inscricao ? "Carregando as comparações…" : "Verificando convite…", "info");
     var candidato = { token_acesso: codigo, identificacao: { nome_completo: nome, email: email, instituicao: inst } };
     global.SLTColaborativaApi.validarAcesso(token, email, codigo)
       .then(function (m) {
@@ -987,12 +995,16 @@
           return;
         }
         acesso = candidato;
-        feedback(global.SLTColaborativaSimulacao ? "Simulação liberada. O progresso não será gravado." : "Formulário liberado. O progresso será salvo automaticamente.", "success");
-        mostrarRascunho(resposta);
+        feedback(inscricao ? "" : (global.SLTColaborativaSimulacao
+          ? "Simulação liberada. O progresso não será gravado."
+          : "Formulário liberado. O progresso será salvo automaticamente."), "success");
+        mostrarRascunho(resposta, !inscricao);
       })
       .catch(function (err) {
         feedback(err.message || String(err), "error");
+        if (inscricao) el("collab-retry-start").hidden = false;
       }).finally(function () {
+        if (inscricao && !meta) el("collab-context").hidden = true;
         verificando = false;
         bloquearIdentificacao(draftActive);
       });
@@ -1063,26 +1075,24 @@
     inscricao = el("collab-public-enrollment");
     var tokenPath = global.location.pathname.match(/\/public\/analise-multicriterio\/formulario-comparacao-pareada\/([^/]+)\/?$/);
     token = inscricao ? inscricao.dataset.token : (global.SLTColaborativaModelo ? "modelo-pli" : (qp("token") || (tokenPath ? decodeURIComponent(tokenPath[1]) : "")));
-    var preEmail = inscricao ? inscricao.dataset.email : (qp("email") || "");
-    if (inscricao) {
-      el("colab-email").readOnly = true;
-      manterVagaPublica();
-    }
-    if (preEmail && el("colab-email")) el("colab-email").value = preEmail;
     if (!token) {
       el("collab-context").innerHTML =
         '<p class="ahp-recommendation">Link inválido — token ausente.</p>';
       return;
     }
-    global.SLTColaborativaApi.obterPublico(token)
-      .then(function (m) {
-        meta = m;
-        renderContext();
-      })
-      .catch(function (err) {
-        el("collab-context").textContent = err.message || String(err);
-      });
-    el("btn-liberar-form").addEventListener("click", liberarFormulario);
+    if (!inscricao) {
+      var preEmail = qp("email");
+      if (preEmail) el("colab-email").value = preEmail;
+      global.SLTColaborativaApi.obterPublico(token)
+        .then(function (m) {
+          meta = m;
+          renderContext();
+        })
+        .catch(function (err) {
+          el("collab-context").textContent = err.message || String(err);
+        });
+      el("btn-liberar-form").addEventListener("click", liberarFormulario);
+    }
     el("btn-enviar-resposta").addEventListener("click", enviarResposta);
     el("collab-restart").addEventListener("click", reiniciarFormulario);
     el("collab-previous-group").addEventListener("click", function () { navegarGrupo(-1); });
@@ -1136,5 +1146,10 @@
     document.addEventListener("keydown", function (event) {
       if (event.key === "Escape" && !el("collab-consistency-modal").hidden) closeConsistencyHelp();
     });
+    if (inscricao) {
+      el("collab-retry-start").addEventListener("click", liberarFormulario);
+      manterVagaPublica();
+      liberarFormulario();
+    }
   });
 })(window);

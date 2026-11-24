@@ -19,6 +19,7 @@ document.addEventListener("DOMContentLoaded", function () {
   form.addEventListener("submit", async function (event) {
     event.preventDefault();
     const botao = form.querySelector("button[type=submit]");
+    if (botao.disabled) return;
     const dados = Object.fromEntries(new FormData(form));
     if (secaoCodigo.open) {
       delete dados.nome_completo;
@@ -35,18 +36,14 @@ document.addEventListener("DOMContentLoaded", function () {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(dados),
       });
-      const corpo = await resposta.json();
       if (!resposta.ok) {
-        throw new Error(typeof corpo.detail === "string" ? corpo.detail :
+        const corpo = await resposta.json().catch(() => null);
+        throw new Error(typeof corpo?.detail === "string" ? corpo.detail :
           "Confira se os dados da inscrição estão corretos e completos.");
       }
-      document.getElementById("inscricao-codigo").value = corpo.codigo_retomada;
-      form.hidden = true;
-      document.getElementById("inscricao-confirmada").hidden = false;
-      document.getElementById("inscricao-confirmada-titulo").focus();
+      window.location.replace(form.dataset.formularioUrl);
     } catch (erro) {
       feedback.textContent = erro.message || "Falha ao confirmar sua inscrição. Tente novamente.";
-    } finally {
       botao.disabled = false;
     }
   });

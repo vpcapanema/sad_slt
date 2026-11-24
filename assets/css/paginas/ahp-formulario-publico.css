@@ -473,6 +473,10 @@ body.ami-public-page {
   font-size: inherit;
 }
 
+.ami-public-page #collab-context[hidden] {
+  display: none;
+}
+
 .ami-public-page #collab-context strong {
   font-size: inherit;
 }
@@ -509,6 +513,84 @@ body.ami-public-page {
   display: grid;
   gap: 0.5rem;
   padding-left: 1.25rem;
+}
+
+.ami-public-page .collab-enrollment-guide {
+  row-gap: .75rem;
+}
+
+.ami-public-page .collab-enrollment-guide h2 {
+  font-size: 1rem;
+}
+
+.ami-public-page .collab-enrollment-guide :is(p, li),
+.ami-public-page .collab-inscrito .ahp-section-body {
+  font-size: var(--collab-context-font-size);
+}
+
+.ami-public-page .collab-enrollment-guide ol {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 0;
+  list-style: none;
+}
+
+.ami-public-page .collab-enrollment-guide li {
+  padding: .65rem .85rem;
+  border-radius: 8px;
+  background: #eaf3fa;
+}
+
+.ami-public-page .collab-enrollment-guide li strong {
+  color: var(--pli-deep);
+  font-size: .875rem;
+}
+
+.ami-public-page .collab-inscrito .ahp-section-body {
+  gap: .5rem;
+}
+
+.ami-public-page .collab-inscrito-dados {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .5rem 1rem;
+  overflow-wrap: anywhere;
+}
+
+.ami-public-page .collab-inscrito-dados dt {
+  font-weight: 600;
+  color: var(--pli-deep);
+}
+
+.ami-public-page .collab-inscrito-dados dd {
+  margin: 0;
+}
+
+.ami-public-page .collab-retomada p {
+  margin: .35rem 0;
+}
+
+.ami-public-page .collab-retomada input {
+  max-width: 24rem;
+}
+
+.ami-public-page .collab-retomada summary {
+  color: var(--pli-deep);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ami-public-page .collab-inscrito #colab-id-feedback:empty,
+.ami-public-page .collab-inscrito #collab-retry-start[hidden],
+.ami-public-page #collab-retomada-feedback:empty,
+.ami-public-page #collab-retomada-codigo[hidden] {
+  display: none;
+}
+
+@media (max-width: 600px) {
+  .ami-public-page .collab-enrollment-guide ol,
+  .ami-public-page .collab-inscrito-dados {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .ami-public-page .collab-identificacao-grid {

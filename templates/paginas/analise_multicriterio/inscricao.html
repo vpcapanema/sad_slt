@@ -18,13 +18,10 @@
       <p>Prazo para enviar sua resposta <time id="inscricao-prazo" datetime="{{ prazo }}">{{ prazo }}</time> (horário de Brasília).</p>
       {% if erro %}
       <p role="status">{{ erro }}</p>
-      {% elif inscrito %}
-      <p>Sua inscrição está confirmada neste navegador.</p>
-      <a class="btn btn-primary" href="{{ formulario_url }}">Continuar para o julgamento</a>
       {% else %}
       <p>Informe seus dados para participar. O julgamento tem duas etapas. Você compara primeiro as dimensões e, depois, os critérios de cada dimensão.</p>
       <p>Se todas as vagas de preenchimento estiverem ocupadas, aguarde sua vez na fila. O formulário abrirá automaticamente quando a vaga for liberada.</p>
-      <form id="ahp-inscricao" method="post" data-api="/api/ahp/comparacao-colaborativa/publico/{{ token }}/inscricao">
+      <form id="ahp-inscricao" method="post" data-api="/api/ahp/comparacao-colaborativa/publico/{{ token }}/inscricao" data-formulario-url="{{ formulario_url }}">
         <div class="collab-identificacao-grid">
           <div class="c-form-group"><label class="c-form-label" for="inscricao-nome">Nome completo</label><input class="c-form-control" id="inscricao-nome" name="nome_completo" autocomplete="name" required minlength="2" maxlength="200"></div>
           <div class="c-form-group"><label class="c-form-label" for="inscricao-email">E-mail</label><input class="c-form-control" id="inscricao-email" name="email" type="email" autocomplete="email" required maxlength="320"></div>
@@ -37,12 +34,6 @@
         <p id="inscricao-feedback" role="status" aria-live="polite"></p>
         <button class="btn btn-primary" type="submit">Confirmar inscrição</button>
       </form>
-      <section id="inscricao-confirmada" aria-labelledby="inscricao-confirmada-titulo" hidden>
-        <h2 id="inscricao-confirmada-titulo" tabindex="-1">Inscrição confirmada</h2>
-        <p>Guarde este código para retomar sua resposta em outro navegador ou dispositivo. Use-o junto com o e-mail da inscrição.</p>
-        <div class="c-form-group"><label class="c-form-label" for="inscricao-codigo">Seu código de retomada</label><input class="c-form-control" id="inscricao-codigo" readonly></div>
-        <a class="btn btn-primary" href="{{ formulario_url }}">Continuar para o julgamento</a>
-      </section>
       {% endif %}
     </div>
   </section>
@@ -50,5 +41,5 @@
 {% endblock %}
 
 {% block scripts_pagina %}
-<script defer src="/assets/js/paginas/ahp-inscricao.js?v=20261124"></script>
+<script defer src="/assets/js/paginas/ahp-inscricao.js?v=20261124-acesso-direto"></script>
 {% endblock %}

@@ -1428,6 +1428,9 @@ def test_inscricao_publica_transita_da_lista_ate_envio_com_confirmacao(monkeypat
     assert publico.get(pagina + "formulario/", follow_redirects=False).status_code == 303
     aberta = publico.get(pagina)
     assert aberta.status_code == 200, aberta.text
+    assert f'data-formulario-url="{pagina}formulario/"' in aberta.text
+    prefixo = {"X-Forwarded-Prefix": "/sicard"}
+    assert f'data-formulario-url="/sicard{pagina}formulario/"' in publico.get(pagina, headers=prefixo).text
     chave_pendente = publico.cookies[service.nome_cookie_inscricao(ambiente["token"])]
     assert publico.post(caminho + "/acesso", json={"email": ident["email"], "token_acesso": KEY}).status_code == 422
     indisponivel = True
@@ -1439,6 +1442,10 @@ def test_inscricao_publica_transita_da_lista_ate_envio_com_confirmacao(monkeypat
     assert "HttpOnly" in inscrita.headers["set-cookie"] and "Secure" in inscrita.headers["set-cookie"]
     assert inscrita.json()["codigo_retomada"] == chave_pendente
     assert publico.post(caminho + "/inscricao", json=ident).json() == inscrita.json()
+    assert publico.post(caminho + "/inscricao", json={"email": ident["email"]}).json() == inscrita.json()
+    retorno = publico.get(pagina, headers=prefixo, follow_redirects=False)
+    assert retorno.status_code == 303
+    assert retorno.headers["location"] == f"/sicard{pagina}formulario/"
     assert outro.post(caminho + "/inscricao", json={**ident, "email": ident["email"].upper()}).status_code == 422
     codigo = inscrita.json()["codigo_retomada"]
     assert outro.post(caminho + "/inscricao", json={"email": "outra@x.gov.br", "codigo_retomada": codigo}).status_code == 422
@@ -1446,6 +1453,7 @@ def test_inscricao_publica_transita_da_lista_ate_envio_com_confirmacao(monkeypat
     espera = outro.get(pagina + "formulario/", follow_redirects=False)
     assert espera.status_code == 200
     assert "Sua posição na fila é 1" in espera.text
+    assert "Código de retomada" in espera.text and codigo not in espera.text
     assert 'id="btn-liberar-form"' not in espera.text
     assert outro.post(caminho + "/fila").json() == fila
     assert publico.post(caminho + "/acesso", json={"email": ident["email"]}).status_code == 409
@@ -1463,7 +1471,13 @@ def test_inscricao_publica_transita_da_lista_ate_envio_com_confirmacao(monkeypat
     assert antes.json()["inscritos"][0]["instituicao"] == ident["instituicao"]
     assert antes.json()["respostas"] == []
     fila = {"situacao": "admitida"}
-    assert 'id="btn-liberar-form"' in outro.get(pagina + "formulario/").text
+    admitida = outro.get(pagina + "formulario/")
+    assert admitida.status_code == 200
+    assert 'id="collab-public-enrollment"' in admitida.text
+    assert 'id="btn-liberar-form"' not in admitida.text
+    assert "A avaliação é feita em duas etapas" in admitida.text
+    assert ident["instituicao"] in admitida.text
+    assert codigo not in admitida.text
     assert publico.post(caminho + "/acesso", json={"email": ident["email"]}).json()["criterios"] == ["Acesso", "Equidade", "Custo"]
     respostas = caminho + "/respostas"
     inicio = publico.post(respostas + "/iniciar", json={"identificacao": {**ident, "nome_completo": "Nome adulterado"}})
