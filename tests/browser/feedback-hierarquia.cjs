@@ -140,9 +140,35 @@ const fs = require('node:fs');
     await page.locator('#pfsConfirmInput').fill('Configuração de teste');
     await page.keyboard.press('Enter');
     assert.equal(await page.evaluate(()=>decision),'Configuração de teste');
-    // Resultado mantém o desenho e centraliza somente título e frase principal.
+    // Uma frase isolada mantém o alinhamento do título.
     for(const selector of ['#pfsSuccessBox .pfs-result-message','#pfsPartialBox .pfs-result-message','#pfsErrorBox .pfs-error-message'])
       assert.equal(await page.locator(selector).evaluate(n=>getComputedStyle(n).textAlign),'center');
+
+    const resultados = ['1 confirmação aceita pelo servidor.', '0 sem envio confirmado.', '0 não tentadas.'];
+    const orientacao = 'Consulte os detalhes por colaborador.';
+    for (const width of [390, 1100]) {
+      await page.setViewportSize({width, height: 850});
+      for (const tipo of ['success', 'partial', 'error']) {
+        await page.evaluate(({tipo, message}) => {
+          const processo = ProcessFeedback.iniciarCadastro({title: 'Teste de desfecho'});
+          if (tipo === 'error') processo.erro({message});
+          else processo.sucesso({message, _status: tipo});
+        }, {tipo, message: resultados.join('\n') + '\n\n' + orientacao});
+        const mensagem = page.locator(`[data-pfs="${tipo}-message"]`);
+        await mensagem.waitFor();
+        const paragrafos = mensagem.locator('.pfs-result-paragraph');
+        assert.equal(await paragrafos.count(), 2);
+        assert.deepEqual(await paragrafos.first().locator('.pfs-result-line').allTextContents(), resultados);
+        assert.equal(await paragrafos.last().textContent(), orientacao);
+        assert.equal(await mensagem.evaluate(n => getComputedStyle(n).textAlign), 'left');
+        const espaco = await paragrafos.evaluateAll(([anterior, seguinte]) => ({
+          margem: getComputedStyle(seguinte).marginTop,
+          altura: seguinte.offsetTop - (anterior.offsetTop + anterior.offsetHeight),
+        }));
+        assert.equal(espaco.margem, '14px');
+        assert.ok(espaco.altura >= 13);
+      }
+    }
     assert.deepEqual(errors,[]);
     console.log('PASS: três linhas, medidas, detalhes exclusivos, ordenação, fallback, cancelamento, isolamento, confirmações e responsividade.');
   } finally { await browser.close(); }

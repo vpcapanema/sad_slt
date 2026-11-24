@@ -33,7 +33,7 @@
     const q = (sel, ctx) => (ctx || document).querySelector(sel);
     const esc = (s) => { if (s == null || s === '') return ''; const d = document.createElement('div'); d.textContent = String(s); return d.innerHTML; };
     const pfsText = (attr, text, ctx) => { const el = q(`[data-pfs="${attr}"]`, ctx); if (el) el.textContent = text == null ? '' : String(text); };
-    /* Quebra simples (\n) vira linha; linha em branco (\n\n) vira parágrafo separado. */
+    /* Nos desfechos, passe um resultado por linha em message e uma linha em branco antes da orientação. */
     const pfsParagrafos = (attr, text, ctx) => {
         const el = q(`[data-pfs="${attr}"]`, ctx);
         if (!el) return;

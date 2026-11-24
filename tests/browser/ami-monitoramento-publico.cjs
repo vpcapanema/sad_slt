@@ -120,6 +120,12 @@ const publico = {...ambiente, id: 'publico', nome: 'Consulta pública', modo_par
     await page.locator('#ami-monitor-send-response').click();
     await page.locator('#pfsConfirmOk').click();
     await page.getByText('Confirmações de resposta', {exact: true}).waitFor();
+    const resumo = page.locator('#pfsSuccessBox [data-pfs="success-message"] .pfs-result-paragraph');
+    assert.equal(await resumo.count(), 2);
+    assert.deepEqual(await resumo.first().locator('.pfs-result-line').allTextContents(), [
+      '1 confirmação aceita pelo servidor.', '0 sem envio confirmado.', '0 não tentadas.',
+    ]);
+    assert.equal(await resumo.last().textContent(), 'Consulte os detalhes por colaborador.');
     assert.equal(envios.length, 1);
     assert.equal(envios[0].destinatario, 'inscrito17@example.invalid');
     assert.ok(envios[0].reenvio_id);

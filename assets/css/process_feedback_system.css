@@ -719,6 +719,9 @@
 #pfsComponente #pfsPartialBox .pfs-result-message,
 #pfsComponente #pfsErrorBox .pfs-error-title,
 #pfsComponente #pfsErrorBox .pfs-error-message { text-align: center; }
+#pfsComponente #pfsStatusOverlay :is(.pfs-result-message, .pfs-error-message):has(
+    .pfs-result-line + .pfs-result-line, .pfs-result-paragraph + .pfs-result-paragraph
+) { text-align: left; }
 #pfsComponente .pfs-result-line { display: block; line-height: 1.3; }
 #pfsComponente .pfs-result-paragraph { display: block; }
 #pfsComponente .pfs-result-paragraph + .pfs-result-paragraph { margin-top: 14px; }

@@ -632,10 +632,12 @@
       if (problemas || interrompido) processo.erro({message: resumo, codigo});
       else processo.sucesso({title: "Envio de convites", message: resumo});
     } catch (error) {
-      const message = "Envio interrompido. " + error.message + "\n\n" +
-        aceitos + " convite(s) com aceite confirmado nesta operação. " +
-        (lista.length - iniciados) + " destinatário(s) ainda sem tentativa nesta operação. " +
-        (error.interrupcaoApi ? "Quando o SICARD voltar, atualize o monitoramento e use Enviar aos pendentes. " : "") +
+      const message = [
+        "Envio interrompido. " + error.message,
+        aceitos + " convite(s) com aceite confirmado nesta operação.",
+        (lista.length - iniciados) + " destinatário(s) ainda sem tentativa nesta operação."
+      ].join("\n") + "\n\n" + (error.interrupcaoApi
+        ? "Quando o SICARD voltar, atualize o monitoramento e use Enviar aos pendentes. " : "") +
         "Consulte o histórico para verificar a última tentativa.";
       if (processo) processo.erro({message});
       else Notify.error("Envio de convites", message);
@@ -654,7 +656,8 @@
       const result = await request(url(atual.julgamento.id) + "/confirmacoes", {method: "POST"});
       if (!Array.isArray(result.registros)) throw new Error("O servidor retornou um histórico inválido.");
       await carregar(atual);
-      const message = result.relatorios_consultados + " relatório(s) consultado(s). Sem retorno não significa que o e-mail não foi entregue ou lido.";
+      const message = result.relatorios_consultados +
+        " relatório(s) consultado(s).\n\nSem retorno não significa que o e-mail não foi entregue ou lido.";
       $("ami-email-status").textContent = message;
       processo.concluirTarefa(tarefa); processo.sucesso({title: "Confirmações atualizadas", message});
     } catch (error) {
@@ -699,13 +702,18 @@
         processo.concluirTarefa(destinatario);
         if (bloqueioDoServidor(row)) { interrompidos = lista.length - index - 1; break; }
       }
-      const message = aceitos + " confirmação(ões) aceita(s) pelo servidor; " + problemas + " sem envio confirmado; " + interrompidos + " não tentada(s). Consulte os detalhes por colaborador." +
-        (detalhes.length ? "\n" + [...new Set(detalhes)].join("\n") : "");
+      const message = [
+        aceitos + (aceitos === 1 ? " confirmação aceita" : " confirmações aceitas") + " pelo servidor.",
+        problemas + " sem envio confirmado.",
+        interrompidos + (interrompidos === 1 ? " não tentada." : " não tentadas."),
+        ...new Set(detalhes)
+      ].join("\n") + "\n\nConsulte os detalhes por colaborador.";
       if (contexto === atual) $("ami-email-status").textContent = message;
       if (problemas || interrompidos) processo.erro({message, codigo});
       else processo.sucesso({title: "Confirmações de resposta", message});
     } catch (error) {
-      if (processo) processo.erro({message: aceitos + " confirmação(ões) aceita(s). " + error.message});
+      if (processo) processo.erro({message: aceitos + " confirmação(ões) aceita(s).\n" + error.message +
+        "\n\nConsulte os detalhes por colaborador."});
       else Notify.error("Confirmações de resposta", error.message);
       if (contexto === atual) await carregar(atual);
     } finally { encerrarLote(emSegundoPlano); }
