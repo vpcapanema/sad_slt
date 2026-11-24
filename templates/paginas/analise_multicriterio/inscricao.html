@@ -23,6 +23,7 @@
       <a class="btn btn-primary" href="{{ formulario_url }}">Continuar para o julgamento</a>
       {% else %}
       <p>Informe seus dados para participar. O julgamento tem duas etapas. Você compara primeiro as dimensões e, depois, os critérios de cada dimensão.</p>
+      <p>Se todas as vagas de preenchimento estiverem ocupadas, aguarde sua vez na fila. O formulário abrirá automaticamente quando a vaga for liberada.</p>
       <form id="ahp-inscricao" method="post" data-api="/api/ahp/comparacao-colaborativa/publico/{{ token }}/inscricao">
         <div class="collab-identificacao-grid">
           <div class="c-form-group"><label class="c-form-label" for="inscricao-nome">Nome completo</label><input class="c-form-control" id="inscricao-nome" name="nome_completo" autocomplete="name" required minlength="2" maxlength="200"></div>

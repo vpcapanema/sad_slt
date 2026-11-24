@@ -7,8 +7,81 @@ from datetime import datetime
 from psycopg import sql
 from psycopg.types.json import Jsonb
 
-from api.db.connection import get_connection, commit_unless_atomic
+from api.db.connection import ConnectionDict, get_connection, commit_unless_atomic
 from api.exceptions import DemandaValidationError
+
+
+_LIMITE_VAGAS_PUBLICAS = 60
+_PRESENCA_FILA = "45 seconds"
+_VAGA_INATIVIDADE = "5 minutes"
+
+
+def _bloquear_distribuicao_de_vagas(conn: ConnectionDict) -> None:
+    conn.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", ("ahp.fila_publica",))
+
+
+def _renovar_vaga(conn: ConnectionDict, inscricao_id: str) -> bool:
+    return conn.execute(
+        """UPDATE ahp.comparacao_colaborativa_fila
+              SET expira_em = clock_timestamp() + %s::interval
+            WHERE inscricao_id = %s AND admitida AND expira_em > clock_timestamp()""",
+        (_VAGA_INATIVIDADE, inscricao_id),
+    ).rowcount == 1
+
+
+def renovar_vaga_publica(inscricao_id: str) -> bool:
+    with get_connection() as conn:
+        return _renovar_vaga(conn, inscricao_id)
+
+
+def solicitar_vaga_publica(inscricao_id: str) -> dict[str, Any]:
+    with get_connection() as conn:
+        if _renovar_vaga(conn, inscricao_id):
+            return {"situacao": "admitida"}
+        _bloquear_distribuicao_de_vagas(conn)
+        enviada = conn.execute(
+            """SELECT 1 FROM ahp.comparacao_colaborativa_resposta
+                WHERE inscricao_id = %s AND status = 'enviada'""",
+            (inscricao_id,),
+        ).fetchone()
+        if enviada:
+            return {"situacao": "enviada"}
+        conn.execute(
+            """DELETE FROM ahp.comparacao_colaborativa_fila f
+                 USING ahp.comparacao_colaborativa_inscricao i, ahp.comparacao_colaborativa_ambiente a
+                 WHERE f.inscricao_id = i.id AND i.ambiente_id = a.id
+                   AND (f.expira_em <= clock_timestamp() OR a.status <> 'ativa' OR a.valido_ate <= clock_timestamp())"""
+        )
+        conn.execute(
+            """INSERT INTO ahp.comparacao_colaborativa_fila AS f (inscricao_id, expira_em)
+               VALUES (%s, clock_timestamp() + %s::interval)
+               ON CONFLICT (inscricao_id) DO UPDATE SET expira_em = EXCLUDED.expira_em
+               WHERE NOT f.admitida""",
+            (inscricao_id, _PRESENCA_FILA),
+        )
+        conn.execute(
+            """WITH vagas AS (
+                   SELECT GREATEST(0, %s - count(*)) AS livres
+                     FROM ahp.comparacao_colaborativa_fila WHERE admitida
+               ), proximas AS (
+                   SELECT inscricao_id FROM ahp.comparacao_colaborativa_fila
+                    WHERE NOT admitida ORDER BY ordem LIMIT (SELECT livres FROM vagas)
+               )
+               UPDATE ahp.comparacao_colaborativa_fila f
+                  SET admitida = true, expira_em = clock_timestamp() + %s::interval
+                 FROM proximas p WHERE f.inscricao_id = p.inscricao_id""",
+            (_LIMITE_VAGAS_PUBLICAS, _PRESENCA_FILA),
+        )
+        if _renovar_vaga(conn, inscricao_id):
+            return {"situacao": "admitida"}
+        posicao = conn.execute(
+            """SELECT 1 + count(*) AS posicao FROM ahp.comparacao_colaborativa_fila
+                WHERE NOT admitida AND ordem < (
+                    SELECT ordem FROM ahp.comparacao_colaborativa_fila WHERE inscricao_id = %s
+                )""",
+            (inscricao_id,),
+        ).fetchone()["posicao"]
+        return {"situacao": "aguardando", "posicao": posicao}
 
 
 _CAMPOS_MATRIZ = """
@@ -339,7 +412,7 @@ def get_resposta_by_ambiente_email(ambiente_id: str, email: str) -> dict[str, An
 
 
 def update_resposta_progresso(
-    resposta_id: str, data: dict[str, Any], *, versao: datetime | None = None,
+    resposta_id: str, data: dict[str, Any], *, versao: datetime | None = None, liberar_vaga: bool = False,
 ) -> dict[str, Any] | None:
     assignments = sql.SQL(", ").join(
         sql.SQL("{} = {}").format(sql.Identifier(key), sql.Placeholder(key)) for key in data
@@ -358,7 +431,14 @@ def update_resposta_progresso(
     if versao is not None:
         params["versao"] = versao
     with get_connection() as conn:
+        if liberar_vaga:
+            _bloquear_distribuicao_de_vagas(conn)
         row = conn.execute(query, params).fetchone()
+        if liberar_vaga and row:
+            conn.execute(
+                "DELETE FROM ahp.comparacao_colaborativa_fila WHERE inscricao_id = %s",
+                (row["inscricao_id"],),
+            )
         conn.commit()
     return dict(row) if row else None
 

@@ -80,6 +80,25 @@ def definir_cookie_inscricao(request: Request, response: Response, token: str, s
     response.set_cookie(service.nome_cookie_inscricao(token), segredo, httponly=True, secure=seguro, samesite="lax")
 
 
+@router.post("/publico/{token}/fila")
+def consultar_fila_publica(token: str, request: Request, response: Response) -> dict:
+    try:
+        ambiente, inscricao = service.contexto_inscricao(
+            token, request.cookies.get(service.nome_cookie_inscricao(token)),
+        )
+        response.headers["Cache-Control"] = "no-store"
+        return service.estado_fila_publica(ambiente, inscricao)
+    except DemandaValidationError as exc:
+        raise _erro_preenchimento(exc) from exc
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail="Não foi possível atualizar a fila. Tente novamente.", headers={"Cache-Control": "no-store"}) from exc
+
+
+def _erro_preenchimento(exc: DemandaValidationError) -> HTTPException:
+    status = 409 if exc.field == "fila_publica" else 422
+    return HTTPException(status_code=status, detail=str(exc), headers={"Cache-Control": "no-store"})
+
+
 class MatrizCreateSchema(BaseModel):
     nome: str = Field(..., min_length=1, max_length=200)
     conteudo: dict[str, Any] | list[dict[str, Any]]
@@ -422,7 +441,7 @@ def validar_acesso_publico(
             sessao_inscricao=request.cookies.get(service.nome_cookie_inscricao(token)),
         )
     except DemandaValidationError as exc:
-        raise HTTPException(status_code=422, detail=str(exc), headers={"Cache-Control": "no-store"}) from exc
+        raise _erro_preenchimento(exc) from exc
     except DatabaseUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc), headers={"Cache-Control": "no-store"}) from exc
 
@@ -442,7 +461,7 @@ def enviar_resposta(
             token, body, sessao_inscricao=request.cookies.get(service.nome_cookie_inscricao(token)),
         )
     except DemandaValidationError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        raise _erro_preenchimento(exc) from exc
     except DatabaseUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     if not resposta.inscricao_id:
@@ -460,7 +479,7 @@ def iniciar_resposta_publica(
             token, body, sessao_inscricao=request.cookies.get(service.nome_cookie_inscricao(token)),
         )
     except DemandaValidationError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        raise _erro_preenchimento(exc) from exc
     except DatabaseUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
@@ -475,6 +494,6 @@ def salvar_progresso_resposta_publica(
             token, body, sessao_inscricao=request.cookies.get(service.nome_cookie_inscricao(token)),
         )
     except DemandaValidationError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        raise _erro_preenchimento(exc) from exc
     except DatabaseUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc

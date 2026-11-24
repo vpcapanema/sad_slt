@@ -1,0 +1,31 @@
+{% extends "bases/base_conteudo.html" %}
+{% set subtitulo = "Participação em julgamento AHP" %}
+{% set navegacao = "publica" %}
+{% set requer_autenticacao = false %}
+{% block titulo %}{% if fila.situacao == "enviada" %}Resposta enviada{% else %}Fila de espera{% endif %} — SICARD{% endblock %}
+{% block classes_body %}ahp-module-page ahp-colaborativa-page ami-public-page{% endblock %}
+{% block estilos_pagina %}
+<link rel="stylesheet" href="/assets/css/ahp-module.css?v=20261103-regua-invertida">
+<link rel="stylesheet" href="/assets/css/paginas/ahp-formulario-publico.css?v=20261124-guia-dimensoes">
+{% endblock %}
+
+{% block conteudo %}
+<main class="conteudo-principal app-main ahp-main">
+  <section class="card ahp-step-section" aria-labelledby="fila-titulo">
+    <div class="ahp-section-label"><span>{% if fila.situacao == "enviada" %}Resposta enviada{% else %}Fila de espera{% endif %}</span></div>
+    <div class="ahp-section-body">
+      <h1 id="fila-titulo">{{ julgamento }}</h1>
+      {% if fila.situacao == "enviada" %}
+      <p>Sua resposta já foi enviada. Obrigado pela participação.</p>
+      {% else %}
+      <p>Todas as vagas de preenchimento estão ocupadas. Mantenha esta página aberta. O formulário abrirá automaticamente quando chegar a sua vez.</p>
+      <p id="ahp-fila-status" role="status" data-api="/api/ahp/comparacao-colaborativa/publico/{{ token }}/fila">Sua posição na fila é {{ fila.posicao }}.</p>
+      {% endif %}
+    </div>
+  </section>
+</main>
+{% endblock %}
+
+{% block scripts_pagina %}
+{% if fila.situacao == "aguardando" %}<script defer src="/assets/js/paginas/ahp-fila.js?v=20261124"></script>{% endif %}
+{% endblock %}

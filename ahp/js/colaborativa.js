@@ -21,6 +21,23 @@
   var comparisonGroups = [], activeGroup = 0;
   var linkedStage = null, linkedDraft = null;
   var inscricao = null;
+  var timerPresenca = null;
+
+  function manterVagaPublica() {
+    var houveInteracao = false;
+    ["pointerdown", "keydown", "input"].forEach(function (evento) {
+      document.addEventListener(evento, function () { houveInteracao = true; });
+    });
+    timerPresenca = global.setInterval(function () {
+      if (!houveInteracao || document.hidden) return;
+      houveInteracao = false;
+      global.SLTColaborativaApi.consultarFila(token).then(function (fila) {
+        if (fila.situacao !== "admitida") global.location.reload();
+      }).catch(function () {
+        houveInteracao = true;
+      });
+    }, 25000);
+  }
 
   function bloquearIdentificacao(bloqueado) {
     ["colab-nome", "colab-inst", "colab-email", "colab-token", "btn-liberar-form"].forEach(function (id) {
@@ -947,6 +964,7 @@
     }); })
       .then(function () {
         draftActive = false;
+        global.clearInterval(timerPresenca);
         var mensagem = global.SLTColaborativaSimulacao ? "Envio simulado com sucesso. Nenhuma resposta foi gravada." : "Resposta enviada com sucesso. Obrigado!";
         submitFeedback(mensagem, "success");
         processo.concluirTarefa("Enviar resposta");
@@ -967,7 +985,10 @@
     var tokenPath = global.location.pathname.match(/\/public\/analise-multicriterio\/formulario-comparacao-pareada\/([^/]+)\/?$/);
     token = inscricao ? inscricao.dataset.token : (global.SLTColaborativaModelo ? "modelo-pli" : (qp("token") || (tokenPath ? decodeURIComponent(tokenPath[1]) : "")));
     var preEmail = inscricao ? inscricao.dataset.email : (qp("email") || "");
-    if (inscricao) el("colab-email").readOnly = true;
+    if (inscricao) {
+      el("colab-email").readOnly = true;
+      manterVagaPublica();
+    }
     if (preEmail && el("colab-email")) el("colab-email").value = preEmail;
     if (!token) {
       el("collab-context").innerHTML =

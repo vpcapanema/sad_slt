@@ -325,7 +325,8 @@ $migrations = @(
     "180_modo_comparacao_julgamento.sql",
     "181_matriz_integral_julgamento.sql",
     "182_julgamento_dimensoes.sql",
-    "183_inscricoes_publicas_ahp.sql"
+    "183_inscricoes_publicas_ahp.sql",
+    "184_fila_publica_ahp.sql"
 )
 
 if ($OnlyMigration) {
@@ -526,6 +527,11 @@ if (-not $OnlyMigration -and "182_julgamento_dimensoes.sql" -notin $migrations -
 if (-not $OnlyMigration -and "183_inscricoes_publicas_ahp.sql" -notin $migrations -and
     -not (Test-SchemaReady "SELECT to_regclass('ahp.comparacao_colaborativa_inscricao') IS NOT NULL;")) {
     $migrations += "183_inscricoes_publicas_ahp.sql"
+}
+
+if (-not $OnlyMigration -and "184_fila_publica_ahp.sql" -notin $migrations -and
+    -not (Test-SltSql "SELECT to_regclass('ahp.comparacao_colaborativa_fila') IS NOT NULL")) {
+    $migrations += "184_fila_publica_ahp.sql"
 }
 
 if (-not $OnlyMigration -and "166_politica_usuarios_sicard.sql" -notin $migrations) {

@@ -72,6 +72,13 @@ def contexto_inscricao(token: str, segredo: str | None = None) -> tuple[dict[str
     return ambiente, _inscricao_por_segredo(ambiente, segredo)
 
 
+def estado_fila_publica(ambiente: dict[str, Any], inscricao: dict[str, Any] | None) -> dict[str, Any]:
+    _validar_ambiente_ativo(ambiente)
+    if not inscricao:
+        raise DemandaValidationError("Confirme sua inscrição para entrar na fila.", field="email")
+    return repo.solicitar_vaga_publica(str(inscricao["id"]))
+
+
 def cadastrar_inscricao(token: str, dados: InscricaoPublicaSchema, sessao: str | None) -> str:
     ambiente, atual = contexto_inscricao(token, sessao)
     _validar_ambiente_ativo(ambiente)
@@ -111,6 +118,8 @@ def _validar_email_token(
     if row.get("modo_participacao") == "publico":
         inscricao = _inscricao_por_segredo(row, sessao_inscricao)
         if inscricao and inscricao["email"] == email:
+            if not repo.renovar_vaga_publica(str(inscricao["id"])):
+                raise DemandaValidationError("Aguarde uma vaga para preencher o formulário.", field="fila_publica")
             return inscricao
         raise DemandaValidationError("Confirme sua inscrição para acessar este formulário.", field="email")
     if (email not in _emails_convites(row.get("convites") or [])
@@ -1237,7 +1246,10 @@ def iniciar_resposta(token: str, payload: RespostaColaborativaInicioSchema, *, s
 def _gravar_resposta_em_duas_etapas(resposta, dados, versao):
     if versao is None or versao != resposta.get("atualizado_em"):
         raise DemandaValidationError("O rascunho foi atualizado. Recarregue o formulário para continuar.", field="versao")
-    updated = repo.update_resposta_progresso(str(resposta["id"]), dados, versao=versao)
+    liberar_vaga = bool(resposta.get("inscricao_id")) and dados.get("status") == "enviada"
+    updated = repo.update_resposta_progresso(
+        str(resposta["id"]), dados, versao=versao, liberar_vaga=liberar_vaga,
+    )
     if not updated:
         raise DemandaValidationError("O rascunho foi atualizado ou já enviado. Recarregue o formulário.", field="versao")
     return _resposta_to_response(updated)

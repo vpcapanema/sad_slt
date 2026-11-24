@@ -982,7 +982,7 @@ class _FakeRepo:
     def get_resposta_by_ambiente_email(self, ambiente_id: str, email: str):
         return next((dict(r) for r in self.respostas if r["ambiente_id"] == ambiente_id and r["email"].lower() == email.lower()), None)
 
-    def update_resposta_progresso(self, resposta_id: str, data: dict, *, versao=None):
+    def update_resposta_progresso(self, resposta_id: str, data: dict, *, versao=None, liberar_vaga=False):
         row = next((r for r in self.respostas if r["id"] == resposta_id), None)
         if not row or (versao is not None and (row["status"] != "em_preenchimento" or row["atualizado_em"] != versao)):
             return None
@@ -1374,7 +1374,12 @@ def test_invitation_uses_active_form_with_production_prefix(monkeypatch) -> None
 def test_inscricao_publica_transita_da_lista_ate_envio_sem_email(monkeypatch):
     from api.services import email_resposta_colaborador
 
-    _instalar_fake_repo(monkeypatch)
+    fake = _instalar_fake_repo(monkeypatch)
+    atualizar = MagicMock(wraps=fake.update_resposta_progresso)
+    monkeypatch.setattr(repo, "update_resposta_progresso", atualizar)
+    fila = {"situacao": "aguardando", "posicao": 1}
+    monkeypatch.setattr(repo, "solicitar_vaga_publica", lambda _: fila)
+    monkeypatch.setattr(repo, "renovar_vaga_publica", lambda _: fila["situacao"] == "admitida")
     inscricoes = {}
     indisponivel = False
     notificar = MagicMock()
@@ -1438,13 +1443,27 @@ def test_inscricao_publica_transita_da_lista_ate_envio_sem_email(monkeypatch):
     codigo = inscrita.json()["codigo_retomada"]
     assert outro.post(caminho + "/inscricao", json={"email": "outra@x.gov.br", "codigo_retomada": codigo}).status_code == 422
     assert outro.post(caminho + "/inscricao", json={"email": ident["email"], "codigo_retomada": codigo}).status_code == 200
-    assert outro.get(pagina + "formulario/", follow_redirects=False).status_code == 200
+    espera = outro.get(pagina + "formulario/", follow_redirects=False)
+    assert espera.status_code == 200
+    assert "Sua posição na fila é 1" in espera.text
+    assert 'id="btn-liberar-form"' not in espera.text
+    assert outro.post(caminho + "/fila").json() == fila
+    assert publico.post(caminho + "/acesso", json={"email": ident["email"]}).status_code == 409
+    assert publico.post(caminho + "/respostas/iniciar", json={"identificacao": ident}).status_code == 409
+    assert publico.patch(caminho + "/respostas/progresso", json={
+        "email": ident["email"], "matriz_comparacao": [[1, 1], [1, 1]],
+    }).status_code == 409
+    assert publico.post(caminho + "/respostas", json={
+        "identificacao": ident, "matriz_comparacao": [[1, 1], [1, 1]],
+    }).status_code == 409
     assert publico.get(gestao).status_code == 401
     antes = gestor.get(gestao)
     assert antes.status_code == 200, antes.text
     assert antes.json()["participacao"]["nao_iniciados"] == 1
     assert antes.json()["inscritos"][0]["instituicao"] == ident["instituicao"]
     assert antes.json()["respostas"] == []
+    fila = {"situacao": "admitida"}
+    assert 'id="btn-liberar-form"' in outro.get(pagina + "formulario/").text
     assert publico.post(caminho + "/acesso", json={"email": ident["email"]}).json()["criterios"] == ["Acesso", "Equidade", "Custo"]
     respostas = caminho + "/respostas"
     inicio = publico.post(respostas + "/iniciar", json={"identificacao": {**ident, "nome_completo": "Nome adulterado"}})
@@ -1461,6 +1480,7 @@ def test_inscricao_publica_transita_da_lista_ate_envio_sem_email(monkeypatch):
     assert etapa.status_code == 200, etapa.text
     envio = publico.post(respostas, json={**final, "versao": etapa.json()["atualizadoEm"]})
     assert envio.status_code == 201, envio.text
+    assert atualizar.call_args.kwargs["liberar_vaga"] is True
     assert envio.json()["estatisticas"]["pesos_globais_individuais"] == pytest.approx([.375, .375, .25])
     assert gestor.get(gestao).json()["participacao"]["enviadas"] == 1
     notificar.assert_not_called()

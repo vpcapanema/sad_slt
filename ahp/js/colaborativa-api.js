@@ -10,6 +10,9 @@
     return fetch(BASE + path, { credentials: "same-origin", ...(options || {}) }).then(function (res) {
       return res.json().then(function (body) {
         if (!res.ok) {
+          if (res.status === 409 && document.getElementById("collab-public-enrollment")) {
+            global.location.reload();
+          }
           var err = new Error(
             (body && (body.detail || body.message)) || "Erro na requisição."
           );
@@ -43,6 +46,9 @@
     },
     obterModeloPli: function () {
       return request("/modelo-pli");
+    },
+    consultarFila: function (token) {
+      return request("/publico/" + encodeURIComponent(token) + "/fila", { method: "POST" });
     },
     validarAcesso: function (token, email, tokenAcesso) {
       return request("/publico/" + encodeURIComponent(token) + "/acesso", {

@@ -586,13 +586,18 @@ def pagina_formulario_inscrito(request: Request, token: str) -> Response:
         ambiente, inscricao = julgamento_service.contexto_inscricao(
             token, request.cookies.get(julgamento_service.nome_cookie_inscricao(token)),
         )
-        julgamento_service._validar_ambiente_ativo(ambiente)
+        fila = julgamento_service.estado_fila_publica(ambiente, inscricao)
     except DemandaValidationError:
         inscricao = None
     if not inscricao:
         return RedirectResponse(
             f"/public/analise-multicriterio/participar/{quote(token, safe='')}/", status_code=303,
             headers={"Cache-Control": "no-store"},
+        )
+    if fila["situacao"] != "admitida":
+        return render_page(
+            request, "paginas/analise_multicriterio/fila.html",
+            julgamento=ambiente["nome"], token=token, fila=fila,
         )
     return render_page(
         request, "paginas/analise_multicriterio/formulario.html",
