@@ -541,14 +541,13 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
     assert "startInlineEdit" in julgamentos_js
     headers = [
         "Situação",
-        "ID Julgamento",
-        "ID Matriz / contexto",
         "Matriz / contexto",
+        "Critérios",
+        "Link público",
         "Participação",
         "Prazo para respostas",
         "Criado em",
         "Atualizado em",
-        "Critérios",
         "Código de acesso ao formulário",
         "Lambda máximo (λmax)",
         "Índice de consistência (IC)",
@@ -557,8 +556,10 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
         "Matriz de comparação pareada consolidada",
         "Pesos consolidados",
     ]
-    positions = [html.index(f"<th>{header}</th>") for header in headers]
+    positions = [html.index(f">{header}</th>") for header in headers]
     assert positions == sorted(positions)
+    assert "<th>ID Julgamento</th>" not in html
+    assert "<th>ID Matriz / contexto</th>" not in html
     assert "<th>Auditoria</th>" not in html
     tabela_js = (
         __import__("pathlib").Path("assets/js/paginas/analise-multicriterio-tabela.js")

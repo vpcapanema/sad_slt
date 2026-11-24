@@ -54,9 +54,9 @@ function workbookWithTables() {
   let autenticado = false;
   try {
     const credentials = fs.readFileSync('credencias_sigma_agentes.txt', 'utf8');
-    const username = 'sigma.agente_gestor';
+    const username = credentials.match(/^[ \t]*([^\s:]+[._]gestor)[ \t]*$/mi)?.[1];
     const senha = credentials.match(/^[ \t]*senha[ \t]*[:=][ \t]*([^\r\n]+)/mi)?.[1].trim();
-    assert.ok(credentials.includes(username) && senha, 'Credencial local do gestor indisponível.');
+    assert.ok(username && senha, 'Credencial local do gestor indisponível.');
     const login = await page.request.post(base + '/api/auth/login', {data: {username, senha, permanecer_conectado: false}});
     assert.equal(login.status(), 200);
     autenticado = true;
@@ -386,6 +386,28 @@ function workbookWithTables() {
       ['Ana Silva', 'ana@example.com', null], ['Bia Souza', 'bia@example.com', null],
       ['Fabio Dias', 'fabio@example.com', ['Ambiental']],
     ]);
+    await page.locator('#ami-new').click();
+    await page.locator('#ami-collaborator-file').setInputFiles({
+      name: 'lista-paginada.csv', mimeType: 'text/csv',
+      buffer: Buffer.from('Nome;Email\n' + Array.from({length: 17}, (_, index) =>
+        `Pessoa ${index + 1};pessoa${index + 1}@example.com`).join('\n')),
+    });
+    await modal.waitFor({state: 'visible'});
+    await confirm.click();
+    await modal.waitFor({state: 'hidden'});
+    await page.locator('#ami-edit-emails').click();
+    const todosRascunhos = page.locator('#ami-select-all');
+    await todosRascunhos.check();
+    assert.match(await page.locator('#ami-emails-count').textContent(), /^17 selecionados/);
+    await page.locator('#ami-emails-pagination').getByRole('button', {name: 'Próxima página'}).click();
+    const rascunhosVisiveis = page.locator('#ami-email-list [data-draft-index]');
+    assert.equal(await page.locator('#ami-email-list [data-draft-index]:checked').count(), 2);
+    const preservado = await rascunhosVisiveis.first().getAttribute('aria-label');
+    await rascunhosVisiveis.first().uncheck();
+    assert.equal(await todosRascunhos.evaluate(input => input.indeterminate), true);
+    await page.locator('#ami-delete-emails').click();
+    assert.equal(await rascunhosVisiveis.count(), 1);
+    assert.equal(await rascunhosVisiveis.first().getAttribute('aria-label'), preservado);
     assert.deepEqual(errors, []);
     assert.deepEqual(escritas, []);
     console.log('Importação CSV/XLSX, seleção de aba e tabela, duplicatas, atribuição de grupos, padrão visual e envio verificados.');

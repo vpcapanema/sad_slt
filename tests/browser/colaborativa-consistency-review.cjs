@@ -23,10 +23,29 @@ async function exerciseReview(browser, width) {
     await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 300);
     const count = await scales.count();
     assert.equal(count, 3);
-    for (let i = 0; i < count; i++) await scales.nth(i).press(i % 2 ? 'End' : 'Home');
-    await page.clock.runFor(3000);
+    await page.evaluate(() => {
+      const analyze = SLTAhp.analyzeMatrix;
+      let runs = 0;
+      SLTAhp.analyzeMatrix = matrix => {
+        runs++;
+        return analyze(matrix);
+      };
+      window.finishMetricCount = () => {
+        SLTAhp.analyzeMatrix = analyze;
+        return runs;
+      };
+      document.querySelectorAll('.saaty-scale').forEach((scale, i) => {
+        scale.dispatchEvent(new KeyboardEvent('keydown', { key: i % 2 ? 'End' : 'Home', cancelable: true }));
+      });
+    });
+    await page.clock.runFor(32);
+    assert.equal(await page.evaluate(() => finishMetricCount()), 1, 'Uma sequência de ajustes agenda um só cálculo por quadro');
+    await page.clock.runFor(1500);
+    assert.equal(await page.locator('.saaty-pair.is-auto-validated').count(), count);
 
     await page.locator('#collab-tab-matrix').click();
+    await page.locator('#collab-matrix-wrap').scrollIntoViewIfNeeded();
+    await page.clock.runFor(32);
     await page.locator('#collab-consistency-help-button').click();
     const panel = page.locator('.ahp-coerencia-modal');
     const item = panel.locator('.collab-consistency-review-item').first();
@@ -54,7 +73,9 @@ async function exerciseReview(browser, width) {
       return { direta: matriz[i][j], inversa: matriz[j][i], rc: SLTAhp.formatMetric(SLTAhp.analyzeMatrix(matriz).CR) };
     }, {i, j});
     assert.deepEqual([resultado.direta, resultado.inversa], [value, 1 / value]);
+    await page.clock.runFor(32);
     assert.equal(await page.locator('#metricRCValue').textContent(), resultado.rc);
+    assert.equal(await page.locator('#collab-rc-sticky .ahp-metric-card__value').textContent(), resultado.rc);
     const cells = page.locator('#collab-matrix-wrap tbody tr');
     assert.equal(Number(await cells.nth(i).locator('td').nth(j).getAttribute('data-value')), value);
     assert.equal(Number(await cells.nth(j).locator('td').nth(i).getAttribute('data-value')), 1 / value);
@@ -75,7 +96,7 @@ async function exerciseReview(browser, width) {
     }
 
     await selectStep((index + 1) % steps.length);
-    await page.clock.runFor(3000);
+    await page.clock.runFor(1500);
     assert.match(await status.textContent(), /difere da sugestão/);
     assert.equal(await item.locator('.collab-consistency-review-apply').isEnabled(), true);
     assert.equal(await item.evaluate(el => el.classList.contains('is-review-confirmed')), false);
@@ -84,7 +105,7 @@ async function exerciseReview(browser, width) {
     await selectStep(index);
     assert.equal(await current.inputValue(), target);
     assert.match(await status.textContent(), /Aguardando confirmação/);
-    await page.clock.runFor(2999);
+    await page.clock.runFor(1499);
     assert.equal(await pair.evaluate(el => el.classList.contains('is-consistency-review')), true);
     assert.equal(await item.evaluate(el => el.classList.contains('is-review-confirmed')), false);
     await page.clock.runFor(1);

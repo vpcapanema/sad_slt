@@ -333,9 +333,10 @@ def obter_tabela(
     filtro_tipo: Literal["valor", "vazias", "contem"] = Query("valor"),
     filtro_valor: str | None = Query(None),
     filtro_inverter: bool = Query(False),
+    somente_chaves: bool = Query(False),
     _user: SessionUser = Depends(require_admin),
 ) -> dict[str, Any]:
-    """Retorna metadados das colunas e uma página de registros (com ordenação e filtro)."""
+    """Retorna uma página de registros ou as chaves primárias de todos os resultados filtrados."""
     _validar_esquema(esquema)
     payload: dict[str, Any] | None = None
     with get_connection() as conn:
@@ -365,6 +366,13 @@ def obter_tabela(
                     )
                     params.append(filtro_valor if filtro_valor is not None else "")
                 where = sql.SQL(" WHERE ") + cond
+
+            if somente_chaves:
+                if not chave:
+                    return {"chaves": []}
+                colunas_chave = sql.SQL(", ").join(_expr_selecao(colunas_map[nome]) for nome in chave)
+                chaves = conn.execute(sql.SQL("SELECT {} FROM {}{}").format(colunas_chave, alvo, where), params)
+                return {"chaves": [dict(row) for row in chaves.fetchall()]}
 
             total = conn.execute(
                 sql.SQL("SELECT count(*) AS total FROM {}{}").format(alvo, where), params

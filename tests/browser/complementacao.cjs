@@ -526,15 +526,18 @@ async function capturar(alvo, nome, opcoes = {}) {
     await page.locator('#complementacao-atributos-filtro-limpar').click();
     const seletorAtributos = page.locator('[data-atributos-selecionar-todos]');
     await seletorAtributos.check();
-    assert((await contador.innerText()).startsWith('15 selecionados'));
+    assert((await contador.innerText()).startsWith('18 selecionados'));
     const downloadAtributos = page.waitForEvent('download');
     await page.locator('#complementacao-atributos-exportar').click();
     const download = await downloadAtributos;
     assert.equal(download.suggestedFilename(), 'atributos-complementacao.csv');
     const chunks = [];
     for await (const chunk of await download.createReadStream()) chunks.push(chunk);
-    assert.equal(Buffer.concat(chunks).toString('utf8').split('\r\n').length, 16);
+    assert.equal(Buffer.concat(chunks).toString('utf8').split('\r\n').length, 19);
+    await paginador.getByRole('button', {name: 'Última página', exact: true}).click();
+    assert.equal(await linhasVisiveis.locator('input[type="checkbox"]:checked').count(), 3);
     await seletorAtributos.uncheck();
+    await paginador.getByRole('button', {name: 'Primeira página', exact: true}).click();
     assert.equal(await paginador.getByRole('button', {name: 'Primeira página', exact: true}).isDisabled(), true);
     for (const tamanho of ['25', '35', '50', '100']) {
       await tamanhoAtributos.selectOption(tamanho);

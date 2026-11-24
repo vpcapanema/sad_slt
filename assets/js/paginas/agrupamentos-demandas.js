@@ -90,14 +90,17 @@
     $$('#agrupamento-rows input, #grupo-composicao-rows input, #grupo-selecionar-todos').forEach(el => { el.disabled = fechado; });
     const semDemandas = !$('#agrupamento-rows [data-demanda-id]');
     $$('#agrupamento-selecionar-todos, #universo-filtro-selecionar-tudo').forEach(el => { el.disabled = fechado || semDemandas; });
-    $('#agrupamento-selecao-resumo').textContent = resumoTabela(membrosSelecionados.size, recorte(filtrarDemandas([...membrosGrupo.values()], 'composicao-filtro'), paginaComposicao).length, membrosGrupo.size);
+    const membrosFiltrados = filtrarDemandas([...membrosGrupo.values()], 'composicao-filtro');
+    const selecionarMembros = $('#grupo-selecionar-todos');
+    if (selecionarMembros) selecionarMembros.disabled = fechado || !membrosFiltrados.length;
+    $('#agrupamento-selecao-resumo').textContent = resumoTabela(membrosSelecionados.size, recorte(membrosFiltrados, paginaComposicao).length, membrosGrupo.size);
     $('#grupo-confirmar').title = grupoConfirmado ? 'Registros confirmados' : 'Confirmar registros do grupo';
   }
 
   function renderComposicao() {
     atualizarFiltroDemandas('composicao-filtro', [...membrosGrupo.values()]);
     const lista = ordenarComposicao(filtrarDemandas([...membrosGrupo.values()], 'composicao-filtro'));
-    paginaComposicao = paginar('composicao', lista, paginaComposicao, p => { paginaComposicao = p; membrosSelecionados.clear(); renderComposicao(); });
+    paginaComposicao = paginar('composicao', lista, paginaComposicao, p => { paginaComposicao = p; renderComposicao(); });
     const visiveis = recorte(lista, paginaComposicao);
     const nome = $('#agrupamento-nome').value.trim();
     $('#grupo-composicao-titulo').textContent = `Tabela de demandas do grupo${nome ? ' — ' + nome : ''}`;
@@ -105,12 +108,12 @@
     $('#grupo-composicao-head').innerHTML = `<tr><th class="col-select"><input type="checkbox" id="grupo-selecionar-todos" aria-label="Selecionar todos os registros do grupo"></th>${cols.map(c => `<th>${escapar(c.rotulo || 'Demanda')}</th>`).join('')}</tr>`;
     $('#grupo-composicao-rows').innerHTML = visiveis.length ? visiveis.map(item => `<tr><td class="col-select"><input type="checkbox" data-membro-id="${escapar(item.id)}" aria-label="Selecionar registro do grupo ${escapar(item.codigo)}"${membrosSelecionados.has(String(item.id)) ? ' checked' : ''}></td>${cols.map(c => `<td>${formatarValor(item,c.campo)}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${cols.length + 1}">Nenhuma demanda adicionada ao grupo.</td></tr>`;
     const todos = $('#grupo-selecionar-todos');
-    todos.checked = visiveis.length > 0 && visiveis.every(item => membrosSelecionados.has(String(item.id)));
-    todos.indeterminate = visiveis.some(item => membrosSelecionados.has(String(item.id))) && !todos.checked;
+    todos.checked = lista.length > 0 && lista.every(item => membrosSelecionados.has(String(item.id)));
+    todos.indeterminate = lista.some(item => membrosSelecionados.has(String(item.id))) && !todos.checked;
     todos.onchange = () => {
       if (grupoConfirmado || salvandoGrupo) return;
       membrosSelecionados.clear();
-      if (todos.checked) visiveis.forEach(item => membrosSelecionados.add(String(item.id)));
+      if (todos.checked) lista.forEach(item => membrosSelecionados.add(String(item.id)));
       renderComposicao();
     };
     $$('[data-membro-id]').forEach(el => { el.onchange = () => {
@@ -169,9 +172,9 @@
     return String(grupo[campo] ?? '');
   }
 
-  const ordenarGrupos = SLTTable.sorting($('#agrupamentos-tbody').closest('table'), () => [null,...Object.keys(colunasGrupo).map(key=>g=>valorGrupo(g,key))], () => { paginaGrupos=1; gruposSelecionados.clear(); renderGrupos(); }, () => !ocupado && !grupoEditando);
+  const ordenarGrupos = SLTTable.sorting($('#agrupamentos-tbody').closest('table'), () => [null,...Object.keys(colunasGrupo).map(key=>g=>valorGrupo(g,key))], () => { paginaGrupos=1; renderGrupos(); }, () => !ocupado && !grupoEditando);
   const ordenarUniverso = SLTTable.sorting($('#agrupamento-rows').closest('table'), () => [null,...colunas().map(col=>item=>SLTTable.plainText(formatarValor(item,col.campo)))], () => { pagina=1; renderDemandas(); });
-  const ordenarComposicao = SLTTable.sorting($('#grupo-composicao-rows').closest('table'), () => [null,...colunas().map(col=>item=>SLTTable.plainText(formatarValor(item,col.campo)))], () => { paginaComposicao=1; membrosSelecionados.clear(); renderComposicao(); });
+  const ordenarComposicao = SLTTable.sorting($('#grupo-composicao-rows').closest('table'), () => [null,...colunas().map(col=>item=>SLTTable.plainText(formatarValor(item,col.campo)))], () => { paginaComposicao=1; renderComposicao(); });
   function gruposFiltrados() {
     const campo = $('#grupos-filtro-coluna').value;
     const valor = $('#grupos-filtro-valor').value;
@@ -195,9 +198,9 @@
     $('#grupos-controles').innerHTML = grupoEditando
       ? botao('save', 'fa-check', 'Salvar alterações') + botao('cancel', 'fa-xmark', 'Cancelar')
       : botao('edit-group', 'fa-pen-to-square', 'Editar grupo', gruposSelecionados.size !== 1 || !SLTAdminAuth.can('operate')) + botao('reload', 'fa-rotate-right', 'Recarregar') + botao('edit', 'fa-pen', 'Editar selecionado — operação do MAD', !admin || gruposSelecionados.size !== 1) + botao('delete', 'fa-trash', 'Excluir selecionados — operação do MAD', !admin || !gruposSelecionados.size);
-    $('#grupos-selecao').textContent = resumoTabela(gruposSelecionados.size, recorte(gruposFiltrados(), paginaGrupos).length, grupos.length);
-    const todos = $('#grupos-selecionar-todos'), lista = recorte(gruposFiltrados(), paginaGrupos);
-    paginar('grupos', gruposFiltrados(), paginaGrupos, p => { paginaGrupos = p; gruposSelecionados.clear(); renderGrupos(); }, ocupado || Boolean(grupoEditando));
+    const todos = $('#grupos-selecionar-todos'), lista = gruposFiltrados();
+    $('#grupos-selecao').textContent = resumoTabela(gruposSelecionados.size, recorte(lista, paginaGrupos).length, grupos.length);
+    paginar('grupos', lista, paginaGrupos, p => { paginaGrupos = p; renderGrupos(); }, ocupado || Boolean(grupoEditando));
     todos.checked = lista.length > 0 && lista.every(g => gruposSelecionados.has(g.id));
     todos.indeterminate = !todos.checked && lista.some(g => gruposSelecionados.has(g.id));
     todos.disabled = ocupado || Boolean(grupoEditando) || !lista.length;
@@ -229,7 +232,13 @@
     if (acao === 'reload') { gruposSelecionados.clear(); await carregarGrupos(); return; }
     if (acao === 'cancel') { grupoEditando = null; renderGrupos(); return; }
     if (!SLTAdminAuth.can('mad.operar')) { window.SICARDAccess?.denied('alterar agrupamentos'); return; }
-    if (acao === 'edit' && gruposSelecionados.size === 1) { grupoEditando = [...gruposSelecionados][0]; renderGrupos(); $('#grupo-nome-edicao').focus(); return; }
+    if (acao === 'edit' && gruposSelecionados.size === 1) {
+      grupoEditando = [...gruposSelecionados][0];
+      paginaGrupos = Math.floor(gruposFiltrados().findIndex(grupo => grupo.id === grupoEditando) / POR_PAGINA) + 1;
+      renderGrupos();
+      $('#grupo-nome-edicao').focus();
+      return;
+    }
     let body, method, selecionados = [];
     if (acao === 'save' && grupoEditando) {
       const nome = $('#grupo-nome-edicao').value.trim();
@@ -509,7 +518,7 @@
     };
     $('#grupos-selecionar-todos').onchange = event => {
       gruposSelecionados.clear();
-      if (event.target.checked) recorte(gruposFiltrados(), paginaGrupos).forEach(g => gruposSelecionados.add(g.id));
+      if (event.target.checked) gruposFiltrados().forEach(g => gruposSelecionados.add(g.id));
       renderGrupos();
     };
     $('#grupos-controles').onclick = event => {

@@ -4,11 +4,13 @@
 (function (global) {
   "use strict";
 
+  var PAIR_VALIDATION_MS = 1500;
   var token = "";
   var meta = null;
   var stats = { inicio_ms: null, duracao_anterior_ms: 0, pares: {} };
   var draftActive = false;
   var saveTimer = null;
+  var metricsFrame = null;
   var acesso = null;
   var verificando = false;
   var pairTimers = new Map();
@@ -250,7 +252,7 @@
           updateConsistencyReview(pair);
           updateProgressHint();
           refreshConsistencyHelp();
-        }, 3000));
+        }, PAIR_VALIDATION_MS));
       });
     });
   }
@@ -282,7 +284,17 @@
     });
   }
 
+  function scheduleCollabMetrics() {
+    if (!draftActive) return;
+    clearTimeout(saveTimer);
+    if (metricsFrame === null) metricsFrame = global.requestAnimationFrame(updateCollabMetrics);
+  }
+
   function updateCollabMetrics() {
+    if (metricsFrame !== null) {
+      global.cancelAnimationFrame(metricsFrame);
+      metricsFrame = null;
+    }
     if (!draftActive || typeof buildLiveMatrix !== "function" || typeof SLTAhp === "undefined") return;
     var matrix = buildLiveMatrix();
     if (!matrix) return;
@@ -294,9 +306,10 @@
       });
     });
     var consistent = res.CR < 0.1;
-    el("metricLambdaValue").textContent = SLTAhp.formatMetric(res.lambdaMax);
-    el("metricICValue").textContent = SLTAhp.formatMetric(res.CI);
-    el("metricRCValue").textContent = SLTAhp.formatMetric(res.CR);
+    [["metricLambdaValue", res.lambdaMax], ["metricICValue", res.CI], ["metricRCValue", res.CR]].forEach(function ([id, value]) {
+      var metric = el(id), formatted = SLTAhp.formatMetric(value);
+      if (metric.textContent !== formatted) metric.textContent = formatted;
+    });
     var rcCard = el("metricRCValue").closest(".ahp-metric-card");
     rcCard.classList.toggle("is-success", consistent);
     rcCard.classList.toggle("is-failure", !consistent);
@@ -761,7 +774,10 @@
     hint.textContent = "Pares confirmados: " + touched + "/" + total;
   }
 
-  global.updateLiveMetrics = updateCollabMetrics;
+  global.updateLiveMetrics = scheduleCollabMetrics;
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden && metricsFrame !== null) updateCollabMetrics();
+  });
 
   function renderEtapaVinculada(etapa) {
     clearTimeout(saveTimer);

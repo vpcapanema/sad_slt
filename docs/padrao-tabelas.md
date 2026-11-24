@@ -16,6 +16,9 @@ paginação e contagem. Não adicionar controles decorativos ou ações fictíci
 Os botões de controle correspondem às operações reais da tabela; sua aparência
 e disposição devem seguir a referência. Não omitir a coluna de seletores.
 
+O seletor geral abrange os registros disponíveis em todas as páginas, dentro
+do filtro ativo. A seleção permanece ao navegar ou ordenar a tabela.
+
 ## Aparência e espaçamento
 
 - Copiar exatamente a tipografia, cores, alinhamento e espaçamentos da tabela
@@ -103,7 +106,7 @@ Esta exceção não altera o padrão das outras tabelas da aplicação.
 
 A página de complementação reutiliza o hero, as seções e a escala tipográfica
 da Central de pendências. A tabela de atributos possui filtros por coluna e
-valor, inversão, seletores por página e exportação dos registros selecionados.
+valor, inversão, seleção em todas as páginas e exportação dos registros selecionados.
 Os campos das páginas não exibidas permanecem no formulário para preservar a
 validação e a gravação integral dos atributos. A identificação da demanda e os
 seletores permanecem fixos durante a rolagem horizontal; em telas estreitas,

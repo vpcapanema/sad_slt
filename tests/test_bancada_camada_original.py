@@ -136,6 +136,8 @@ def test_tabela_retorna_fid_real_por_feicao_nos_tres_formatos(tmp_path, monkeypa
         rows.extend(bancada_camada_original.ler_tabela(ident, arquivo, meta["revisao"], offset, 2)["linhas"])
     assert [row["id"] for row in rows] == expected
     assert len({row["id"] for row in rows}) == 3
+    apenas_ids = bancada_camada_original.ler_tabela(ident, arquivo, meta["revisao"], 2, 1, somente_ids=True)
+    assert apenas_ids == {"id": ident, "arquivo": arquivo, "revisao": meta["revisao"], "total": 3, "ids": expected}
     assert path.read_bytes() == before
 
 

@@ -220,11 +220,15 @@
     () => { paginaAtributos = 1; paginarAtributos(); },
     () => !ocupado);
 
-  function paginarAtributos() {
-    const linhas = ordenarAtributos(linhasAtributos.filter(linha => SLTTable.matches(
+  function filtrarAtributos() {
+    return linhasAtributos.filter(linha => SLTTable.matches(
       filtroPrefixo,
       textoCelula(linha, Number(filtroColuna.value || 1)) === (filtroValor.value === '__empty__' ? '' : filtroValor.value),
-      Boolean(filtroColuna.value && filtroValor.value))));
+      Boolean(filtroColuna.value && filtroValor.value)));
+  }
+
+  function paginarAtributos() {
+    const linhas = ordenarAtributos(filtrarAtributos());
     const resultado = SLTTable.paginate(paginacaoAtributos.id, linhas, paginaAtributos, pagina => {
       paginaAtributos = pagina;
       paginarAtributos();
@@ -236,10 +240,10 @@
     tabelaAtributos.tBodies[0].replaceChildren(...linhas, ...linhasAtributos.filter(linha => !linhas.includes(linha)));
     const selecionados = linhasAtributos.filter(linha => linha.querySelector('[data-atributos-selecionar]').checked);
     SLTTable.summary('complementacao-atributos-summary', selecionados.length, resultado.rows.length, linhas.length);
-    const marcados = resultado.rows.filter(linha => linha.querySelector('[data-atributos-selecionar]').checked).length;
-    selecionarTodos.checked = marcados > 0 && marcados === resultado.rows.length;
-    selecionarTodos.indeterminate = marcados > 0 && marcados < resultado.rows.length;
-    selecionarTodos.disabled = ocupado || !resultado.rows.length;
+    const marcados = selecionados.length;
+    selecionarTodos.checked = marcados > 0 && marcados === linhas.length;
+    selecionarTodos.indeterminate = marcados > 0 && marcados < linhas.length;
+    selecionarTodos.disabled = ocupado || !linhas.length;
     exportar.disabled = ocupado || !selecionados.length;
     linhasAtributos.forEach(linha => linha.classList.toggle('is-selected', linha.querySelector('[data-atributos-selecionar]').checked));
     tamanhoPagina.disabled = ocupado;
@@ -263,7 +267,7 @@
     valoresFiltro();
   });
   selecionarTodos.addEventListener('change', () => {
-    linhasAtributos.filter(linha => !linha.hidden).forEach(linha => {
+    filtrarAtributos().forEach(linha => {
       linha.querySelector('[data-atributos-selecionar]').checked = selecionarTodos.checked;
     });
     paginarAtributos();

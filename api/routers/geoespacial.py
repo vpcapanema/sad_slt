@@ -2191,6 +2191,7 @@ class LerTabelaCamadaOriginal(PrepararCamadaOriginal):
     offset: int = Field(default=0, ge=0, le=10_000_000)
     limite: int = Field(default=100, ge=1, le=500)
     localizar_fid: str | None = Field(default=None, pattern=r"^[0-9]+$", max_length=20)
+    somente_ids: bool = False
 
 
 class LerGeometriasCamadaOriginal(PrepararCamadaOriginal):
@@ -2232,7 +2233,7 @@ async def preparar_camada_original(payload: PrepararCamadaOriginal) -> dict[str,
 
 @router.post("/bancada-arquivos/tabela")
 async def ler_tabela_camada_original(payload: LerTabelaCamadaOriginal) -> dict[str, Any]:
-    """Lê uma página de atributos sem carregar geometrias nem GeoJSON."""
+    """Lê uma página de atributos ou os identificadores da camada sem materializar geometrias."""
     from api.services import bancada_camada_original
 
     try:
@@ -2244,6 +2245,7 @@ async def ler_tabela_camada_original(payload: LerTabelaCamadaOriginal) -> dict[s
             payload.offset,
             payload.limite,
             localizar_fid=payload.localizar_fid,
+            somente_ids=payload.somente_ids,
         )
     except (FileNotFoundError, ValueError, DatabaseUnavailableError, RuntimeError) as exc:
         raise _erro_bancada_camada_original(exc) from exc

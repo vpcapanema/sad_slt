@@ -24,13 +24,108 @@
     }else d.dirty=JSON.stringify(d.rows)!==JSON.stringify(d.original);
     controls();
   }
-  function controls(){if(!current||!root?.isConnected)return;const dirty=changed(),count=ready?grid.getSelectedData().length:0;$('[data-at-action="undo"]').disabled=!ready||!grid.getHistoryUndoSize()||current.busy;$('[data-at-action="redo"]').disabled=!ready||!grid.getHistoryRedoSize()||current.busy;$('[data-at-save]').disabled=!dirty||current.busy;$('[data-at-discard]').disabled=!dirty||current.busy;$('[data-at-edit]').disabled=current.readonly||current.busy;$('[data-at-delete]').disabled=current.readonly||!current.editing||!count||current.busy;$('[data-at-edit]').classList.toggle('active',current.editing);$('[data-at-edit]').setAttribute('aria-pressed',String(current.editing));const total=current.remote&&current.total!=null?` · ${current.total} no total`:'';$('[data-at-count]').textContent=current.remote?`Página atual: ${current.rows.length} registros${total} · ${count} selecionados nesta página${dirty?' · alterações pendentes':''}`:`${current.rows.length} registros · ${count} selecionados${dirty?' · alterações pendentes':''}`;}
+  function controls(){
+    if(!current||!root?.isConnected)return;
+    const dirty=changed(),count=ready?grid.getSelectedData().length:0;
+    $('[data-at-action="undo"]').disabled=!ready||!grid.getHistoryUndoSize()||current.busy;
+    $('[data-at-action="redo"]').disabled=!ready||!grid.getHistoryRedoSize()||current.busy;
+    $('[data-at-save]').disabled=!dirty||current.busy;
+    $('[data-at-discard]').disabled=!dirty||current.busy;
+    $('[data-at-edit]').disabled=current.readonly||current.busy;
+    $('[data-at-delete]').disabled=current.readonly||!current.editing||!count||current.busy;
+    $('[data-at-edit]').classList.toggle('active',current.editing);
+    $('[data-at-edit]').setAttribute('aria-pressed',String(current.editing));
+    const total=current.remote&&current.total!=null?` · ${current.total} no total`:'';
+    const resumo=current.remote
+      ? `Página atual: ${current.rows.length} registros${total} · ${atualizarCabecalhoRemoto(current)} selecionados em todas as páginas`
+      : `${current.rows.length} registros · ${count} selecionados`;
+    $('[data-at-count]').textContent=resumo+(dirty?' · alterações pendentes':'');
+  }
+  function selecaoDaCamada(d){
+    return (app().state.selectedGeoJSON?.features||[]).filter(feature=>feature.properties?.__gp_layer_id===d.id);
+  }
+  const fidSelecionado=feature=>String(feature.properties.__gp_selection_key??feature.id);
+  function escopoRemoto(d){
+    const filtro=app().state.layerFilterFeatures?.[d.id];
+    const ids=filtro?new Set(filtro.features.map(key)):null;
+    if($('[data-at-only]').getAttribute('aria-pressed')==='true'){
+      return new Set(selecaoDaCamada(d).map(fidSelecionado).filter(fid=>!ids||ids.has(fid)));
+    }
+    return ids;
+  }
+  function atualizarCabecalhoRemoto(d){
+    const selecionadas=selecaoDaCamada(d).map(fidSelecionado).filter(fid=>!d.excluidos.has(fid));
+    const escopo=escopoRemoto(d);
+    const quantidade=escopo?[...escopo].filter(fid=>!d.excluidos.has(fid)).length:d.total==null?null:d.total-d.excluidos.size;
+    const marcadas=escopo?selecionadas.filter(fid=>escopo.has(fid)).length:selecionadas.length;
+    if(d.seletorTodos){
+      d.seletorTodos.disabled=!ready||d.busy||d.loadingPage||quantidade===0;
+      d.seletorTodos.checked=marcadas>0&&marcadas===quantidade;
+      d.seletorTodos.indeterminate=marcadas>0&&!d.seletorTodos.checked;
+    }
+    return selecionadas.length;
+  }
+  function lerTabelaRemota(d,parametros){
+    const file=window.gpArquivos.sessions.get(d.id);
+    const dados={revisao:d.body.revisao||file.revisao,...parametros};
+    return request('/api/geoespacial'+(window.gpArquivos.requestPath?.(file,'tabela')||'/bancada-arquivos/tabela'),
+      window.gpArquivos.requestPayload?.(file,dados)||{id:d.id,arquivo:file.arquivo,...dados});
+  }
+  async function selecionarTodasRemotas(marcar){
+    const d=current;
+    if(!ready||d.busy||d.loadingPage)return;
+    const revisao=d.body.revisao||window.gpArquivos.sessions.get(d.id).revisao;
+    const token=d.selectionToken=(d.selectionToken||0)+1;
+    const escopo=escopoRemoto(d);
+    const anteriores=selecaoDaCamada(d);
+    d.busy=true;
+    controls();
+    try{
+      let ids=escopo;
+      if(marcar&&!ids){
+        const resultado=await lerTabelaRemota(d,{somente_ids:true});
+        if(current!==d||token!==d.selectionToken)return;
+        if(resultado.revisao!==revisao||!Array.isArray(resultado.ids)||resultado.total!==resultado.ids.length){
+          throw Error('O servidor não retornou os identificadores desta revisão da camada.');
+        }
+        ids=new Set(resultado.ids.map(String));
+        d.total=resultado.total;
+      }
+      const previas=new Map(anteriores.map(feature=>[fidSelecionado(feature),feature]));
+      const linhas=new Map(d.rows.map(row=>[row.__gp_fid,row]));
+      const selecionadas=escopo?anteriores.filter(feature=>!escopo.has(fidSelecionado(feature))):[];
+      if(marcar){
+        for(const fid of ids){
+          if(d.excluidos.has(fid))continue;
+          selecionadas.push(previas.get(fid)||{type:'Feature',id:fid,geometry:null,properties:linhas.has(fid)?clean(linhas.get(fid)):{}});
+        }
+      }
+      app().state.activeLayerId=d.id;
+      window.gpCommands.setLayerSelection(d.id,selecionadas);
+      sync({preserveFocus:true});
+      status(`${selecionadas.length} registros selecionados em todas as páginas.`);
+    }catch(error){
+      if(current===d)status(error.message,true);
+    }finally{
+      d.busy=false;
+      if(current===d)controls();
+    }
+  }
+  function cabecalhoRemoto(d){
+    const input=document.createElement('input');
+    input.type='checkbox';
+    input.setAttribute('aria-label','Selecionar todos os registros filtrados');
+    input.addEventListener('change',()=>selecionarTodasRemotas(input.checked));
+    d.seletorTodos=input;
+    return input;
+  }
   function selection(){if(syncing||!ready||current.loadingPage)return;current.focusToken=(current.focusToken||0)+1;const rows=grid.getSelectedData();app().state.activeLayerId=current.id;if(current.remote)remoteSelection(current,rows);else window.gpCommands.setLayerSelection(current.id,rows.map(rowFeature));controls();}
   // Seleções feitas em outras páginas permanecem no mapa; só os FIDs da página carregada são substituídos.
   async function remoteSelection(d,rows){
     const token=d.selectionToken=(d.selectionToken||0)+1,file=window.gpArquivos?.sessions.get(d.id);if(!file)return;
     const revisao=d.body.revisao||file.revisao;if(d.geometriesRevision!==revisao){d.geometries=new Map();d.geometriesRevision=revisao;}
-    const page=new Set(grid.getData().map(row=>String(row.__gp_fid))),selected=rows.map(row=>String(row.__gp_fid)),missing=selected.filter(fid=>!d.geometries.has(fid));
+    const previas=new Map(selecaoDaCamada(d).map(feature=>[fidSelecionado(feature),feature]));
+    const page=new Set(grid.getData().map(row=>String(row.__gp_fid))),selected=rows.map(row=>String(row.__gp_fid)),missing=selected.filter(fid=>!d.geometries.has(fid)&&!previas.has(fid));
     try{
       for(let i=0;i<missing.length;i+=100){
         const ids=missing.slice(i,i+100),result=await request('/api/geoespacial'+(window.gpArquivos.requestPath?.(file,'geometrias')||'/bancada-arquivos/geometrias'),window.gpArquivos.requestPayload?.(file,{revisao,ids})||{id:d.id,arquivo:file.arquivo,revisao,ids});
@@ -43,7 +138,7 @@
     if(token!==d.selectionToken||current!==d)return;
     const byFid=new Map(rows.map(row=>[String(row.__gp_fid),row]));
     const kept=(app().state.selectedGeoJSON?.features||[]).filter(feature=>{if(feature.properties?.__gp_layer_id!==d.id)return false;const fid=String(feature.properties.__gp_selection_key??feature.id);return !page.has(fid)&&!d.excluidos.has(fid);}).map(({properties:{__gp_layer_id,__gp_selection_key,...properties},...feature})=>({...feature,properties}));
-    syncing=true;try{window.gpCommands.setLayerSelection(d.id,[...kept,...selected.map(fid=>({type:'Feature',id:fid,geometry:d.geometries.get(fid)??null,properties:clean(byFid.get(fid))}))]);}finally{syncing=false;}
+    syncing=true;try{window.gpCommands.setLayerSelection(d.id,[...kept,...selected.map(fid=>({type:'Feature',id:fid,geometry:d.geometries.get(fid)??previas.get(fid)?.geometry??null,properties:clean(byFid.get(fid))}))]);}finally{syncing=false;}
     controls();
   }
   function sync({preserveFocus=false}={}){
@@ -232,7 +327,7 @@
     const host=document.querySelector('#gp-editor-view');host.replaceChildren(document.querySelector('#gp-attribute-template').content.cloneNode(true));root=host.firstElementChild;
     bindAttributeDrag();
     if(remote){
-      const labels={all:'Selecionar registros desta página',invert:'Inverter seleção nesta página',csv:'Exportar esta página em CSV',clear:'Limpar seleção e filtros desta página'};
+      const labels={all:'Selecionar registros em todas as páginas',invert:'Inverter seleção nesta página',csv:'Exportar esta página em CSV',clear:'Limpar seleção e filtros desta página'};
       Object.entries(labels).forEach(([action,label])=>{const button=$(`[data-at-action="${action}"]`);if(button){button.title=label;button.setAttribute('aria-label',label);}});
       $('[data-at-scope] option[value="all"]').textContent='Todos os registros desta página';
       $('[data-at-scope] option[value="selection"]').textContent='Seleção desta página';
@@ -258,7 +353,7 @@
       const page=Math.max(1,Number(params.page)||1),size=Math.min(500,Math.max(1,Number(params.size)||100)),file=window.gpArquivos.sessions.get(id);
       d.loadingPage=true;
       try{
-        const result=await request('/api/geoespacial'+(window.gpArquivos.requestPath?.(file,'tabela')||'/bancada-arquivos/tabela'),window.gpArquivos.requestPayload?.(file,{revisao:d.body.revisao||file.revisao,offset:(page-1)*size,limite:size})||{id,arquivo:file.arquivo,revisao:d.body.revisao||file.revisao,offset:(page-1)*size,limite:size});
+        const result=await lerTabelaRemota(d,{offset:(page-1)*size,limite:size});
         if(result.revisao!==(d.body.revisao||file.revisao))throw Error('A revisão do arquivo mudou. Reabra a tabela antes de continuar.');
         if(!Array.isArray(result.linhas))throw Error('O servidor não retornou as linhas da página solicitada.');
         const rows=result.linhas.filter(row=>!d.excluidos.has(String(row.id))).map(row=>{
@@ -272,12 +367,12 @@
         return {last_page:lastPage,data:rows};
       }catch(error){d.loadingPage=false;if(current===d&&root?.isConnected)status(error.message,true);throw error;}
     }}:{data:d.rows};
-    grid=new Tabulator($('[data-at-grid]'),{...config,index:'__gp_row',height:'100%',layout:'fitDataStretch',nestedFieldSeparator:false,history:true,movableColumns:true,selectableRows:true,selectableRowsPersistence:!remote,selectableRowsRangeMode:'click',editTriggerEvent:'dblclick',pagination:true,paginationMode:remote?'remote':'local',paginationSize:100,paginationSizeSelector:[25,50,100,500],locale:'pt-br',langs:{'pt-br':{pagination:{page_size:'Por página',first:pageSymbol(['m11 17-5-5 5-5','m18 17-5-5 5-5']),first_title:'Primeira página',last:pageSymbol(['m6 17 5-5-5-5','m13 17 5-5-5-5']),last_title:'Última página',prev:pageSymbol(['m15 18-6-6 6-6']),prev_title:'Página anterior',next:pageSymbol(['m9 18 6-6-6-6']),next_title:'Próxima página',page_title:'Ir para a página',all:'Todos'}}},placeholder:'Nenhum registro encontrado',rowHeader:{formatter:'rowSelection',titleFormatter:'rowSelection',titleFormatterParams:{rowRange:'active'},headerSort:false,hozAlign:'center',width:38,frozen:true},columns:columns.map(c=>({title:esc(c.rotulo||c.nome),field:c.nome,minWidth:135,frozen:Boolean(c.identificador),headerTooltip:c.descricao||false,headerSort:!remote,formatter:'plaintext',editor:c.identificador?false:/bool/i.test(c.tipo)?'tickCross':/int|float|real|double/i.test(c.tipo)?'number':'input',editorParams:/int|float|real|double/i.test(c.tipo)?{step:/int/i.test(c.tipo)?1:'any'}:{},editable:cell=>d.editing&&!d.readonly&&!d.busy&&!c.identificador&&(cell.getValue()===null||typeof cell.getValue()!=='object'),validator:/int/i.test(c.tipo)?'integer':undefined}))});
+    grid=new Tabulator($('[data-at-grid]'),{...config,index:'__gp_row',height:'100%',layout:'fitDataStretch',nestedFieldSeparator:false,history:true,movableColumns:true,selectableRows:true,selectableRowsPersistence:!remote,selectableRowsRangeMode:'click',editTriggerEvent:'dblclick',pagination:true,paginationMode:remote?'remote':'local',paginationSize:100,paginationSizeSelector:[25,50,100,500],locale:'pt-br',langs:{'pt-br':{pagination:{page_size:'Por página',first:pageSymbol(['m11 17-5-5 5-5','m18 17-5-5 5-5']),first_title:'Primeira página',last:pageSymbol(['m6 17 5-5-5-5','m13 17 5-5-5-5']),last_title:'Última página',prev:pageSymbol(['m15 18-6-6 6-6']),prev_title:'Página anterior',next:pageSymbol(['m9 18 6-6-6-6']),next_title:'Próxima página',page_title:'Ir para a página',all:'Todos'}}},placeholder:'Nenhum registro encontrado',rowHeader:{formatter:'rowSelection',titleFormatter:remote?()=>cabecalhoRemoto(d):'rowSelection',titleFormatterParams:{rowRange:'active'},headerSort:false,hozAlign:'center',width:38,frozen:true},columns:columns.map(c=>({title:esc(c.rotulo||c.nome),field:c.nome,minWidth:135,frozen:Boolean(c.identificador),headerTooltip:c.descricao||false,headerSort:!remote,formatter:'plaintext',editor:c.identificador?false:/bool/i.test(c.tipo)?'tickCross':/int|float|real|double/i.test(c.tipo)?'number':'input',editorParams:/int|float|real|double/i.test(c.tipo)?{step:/int/i.test(c.tipo)?1:'any'}:{},editable:cell=>d.editing&&!d.readonly&&!d.busy&&!c.identificador&&(cell.getValue()===null||typeof cell.getValue()!=='object'),validator:/int/i.test(c.tipo)?'integer':undefined}))});
     // Após trocar de página, a seleção do mapa é reaplicada às linhas carregadas.
     // dataLoaded/pageLoaded disparam antes da troca das linhas; a limpeza de seleção do Tabulator vem depois.
     function pageReady(){if(current!==d)return;d.rows=grid.getData();if(d.remote&&d.loadingPage){d.loadingPage=false;if(ready)sync({preserveFocus:true});}controls();}
     grid.on('tableBuilt',()=>{ready=true;sync({preserveFocus:true});applyView();controls();if(d.pendingFocus){d.pendingFocus=false;focusSelection(id);}});grid.on('rowSelectionChanged',selection);grid.on('dataProcessed',pageReady);grid.on('cellEdited',()=>{markDirty(d);});grid.on('historyUndo',(action,_component,data)=>{if(d.remote&&action==='rowDelete')d.excluidos.delete(String(data.data.__gp_fid));markDirty(d);});grid.on('historyRedo',(action,_component,data)=>{if(d.remote&&action==='rowDelete'){d.excluidos.add(String(data.data.__gp_fid));d.edits.delete(String(data.data.__gp_fid));}markDirty(d);});
-    root.addEventListener('click',event=>{const action=event.target.closest('[data-at-action]')?.dataset.atAction;if(!action||!ready||current.busy)return;Promise.resolve().then(async()=>{if(action==='maximize')maximize();if(action==='query')query();if(action==='invert')invertSelection();if(action==='clear'){grid.clearFilter(true);grid.deselectRow();$('[data-at-only]').setAttribute('aria-pressed','false');$('[data-at-only]').classList.remove('active');applyView();}if(action==='only'){const button=$('[data-at-only]'),active=button.getAttribute('aria-pressed')!=='true';button.setAttribute('aria-pressed',String(active));button.classList.toggle('active',active);applyView();}if(action==='all'){grid.selectRow('active');if(d.remote)status('Seleção aplicada somente aos registros carregados nesta página; seleções de outras páginas são mantidas no mapa.');}if(action==='zoom')window.gpCommands.fitSelection();if(action==='edit'){if(d.readonly)return;d.editing=!d.editing;if(d.editing)app().state.editingLayers.add(id);else app().state.editingLayers.delete(id);controls();status(d.editing?'Duplo clique na célula para editar. Salve ao terminar.':'Edição desativada.');}if(action==='delete')await remove();if(action==='save')await save();if(action==='discard')await discard(id,body);if(action==='undo')grid.undo();if(action==='redo')grid.redo();if(action==='csv'){grid.download('csv',SicardNomeArquivo.gerar(body.nome || id,'tabela de atributos','csv'),{bom:true});if(d.remote)status('CSV exportado somente com os registros desta página.');}}).catch(e=>status(e.message,true));});
+    root.addEventListener('click',event=>{const action=event.target.closest('[data-at-action]')?.dataset.atAction;if(!action||!ready||current.busy)return;Promise.resolve().then(async()=>{if(action==='maximize')maximize();if(action==='query')query();if(action==='invert')invertSelection();if(action==='clear'){grid.clearFilter(true);grid.deselectRow();$('[data-at-only]').setAttribute('aria-pressed','false');$('[data-at-only]').classList.remove('active');applyView();}if(action==='only'){const button=$('[data-at-only]'),active=button.getAttribute('aria-pressed')!=='true';button.setAttribute('aria-pressed',String(active));button.classList.toggle('active',active);applyView();}if(action==='all'){if(d.remote)await selecionarTodasRemotas(true);else grid.selectRow('active');}if(action==='zoom')window.gpCommands.fitSelection();if(action==='edit'){if(d.readonly)return;d.editing=!d.editing;if(d.editing)app().state.editingLayers.add(id);else app().state.editingLayers.delete(id);controls();status(d.editing?'Duplo clique na célula para editar. Salve ao terminar.':'Edição desativada.');}if(action==='delete')await remove();if(action==='save')await save();if(action==='discard')await discard(id,body);if(action==='undo')grid.undo();if(action==='redo')grid.redo();if(action==='csv'){grid.download('csv',SicardNomeArquivo.gerar(body.nome || id,'tabela de atributos','csv'),{bom:true});if(d.remote)status('CSV exportado somente com os registros desta página.');}}).catch(e=>status(e.message,true));});
     window.lucide?.createIcons();
     $('[data-at-field]').onchange=()=>{$('[data-at-value]').value='';suggestValues();};
     $('[data-at-operator]').onchange=queryControls;
@@ -285,7 +380,7 @@
     $('[data-at-value]').onfocus=suggestValues;
     suggestValues();
     $('[data-at-query]').onsubmit=event=>{event.preventDefault();try{query();}catch(e){status(e.message,true);}};
-    controls();status(d.readonly?(d.readonlyReason||'Camada somente leitura.'):d.remote?'Tabela paginada no servidor. Consulta, “selecionar todos”, inversão e CSV abrangem somente a página carregada; a seleção é enviada ao mapa por FID e a de outras páginas é mantida.':'Clique para selecionar · duplo clique para editar quando a edição estiver ativa.');
+    controls();status(d.readonly?(d.readonlyReason||'Camada somente leitura.'):d.remote?'“Selecionar todos” abrange todas as páginas. A consulta por atributo, a inversão e o CSV usam a página carregada.':'Clique para selecionar · duplo clique para editar quando a edição estiver ativa.');
   }
   function projectSnapshot(){
     if(!ready||!root?.isConnected)return null;

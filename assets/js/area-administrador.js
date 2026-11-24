@@ -342,21 +342,26 @@
     carregarTabela();
   }
 
+  function consultaTabela(pagina, porPagina) {
+    const q = new URLSearchParams({ pagina, por_pagina: porPagina });
+    if (state.ordenar) { q.set("ordenar", state.ordenar); q.set("direcao", state.direcao); }
+    const f = state.filtro;
+    if (f.coluna && (f.tipo === "vazias" || f.valor != null)) {
+      q.set("filtro_coluna", f.coluna);
+      q.set("filtro_tipo", f.tipo);
+      if (f.tipo !== "vazias" && f.valor != null) q.set("filtro_valor", f.valor);
+      if (f.inverter) q.set("filtro_inverter", "true");
+    }
+    return q;
+  }
+
   async function carregarTabela(notificar = true) {
     const revisao = ++revisaoTabela;
     refs.titulo.textContent = aliasTabela(state.tabela);
     document.title = `${aliasTabela(state.tabela)} — Administração`;
     refs.host.innerHTML = '<p class="admin-placeholder">Carregando registros…</p>';
     try {
-      const q = new URLSearchParams({ pagina: state.pagina, por_pagina: POR_PAGINA });
-      if (state.ordenar) { q.set("ordenar", state.ordenar); q.set("direcao", state.direcao); }
-      const f = state.filtro;
-      if (f.coluna && (f.tipo === "vazias" || f.valor != null)) {
-        q.set("filtro_coluna", f.coluna);
-        q.set("filtro_tipo", f.tipo);
-        if (f.tipo !== "vazias" && f.valor != null) q.set("filtro_valor", f.valor);
-        if (f.inverter) q.set("filtro_inverter", "true");
-      }
+      const q = consultaTabela(state.pagina, POR_PAGINA);
       const data = await jsonFetch(`${API}/tabelas/${state.esquema}/${state.tabela}?${q}`);
       refs.host.dataset.policyReadonly = String(!data.pode_editar);
       if (revisao !== revisaoTabela) return false;
@@ -389,7 +394,7 @@
     if (state.ordenar !== nome) { state.ordenar = nome; state.direcao = "asc"; }
     else if (state.direcao === "asc") { state.direcao = "desc"; }
     else { state.ordenar = null; state.direcao = "asc"; }
-    state.pagina = 1; state.selecao.clear();
+    state.pagina = 1;
     carregarTabela();
   }
 
@@ -554,7 +559,7 @@
 
     // Cabeçalho: checkbox + colunas (2 linhas)
     const thSelect = el("th", { class: "col-select" }, el("input", {
-      type: "checkbox", "aria-label": "Selecionar todas",
+      type: "checkbox", "aria-label": "Selecionar todos os registros filtrados", "data-selecionar-registros": "",
       onchange: (e) => alternarTodas(e.target.checked),
     }));
     const headTr = el("tr", {}, thSelect);
@@ -712,7 +717,18 @@
     if (resumo) resumo.textContent = `${state.selecao.size} selecionados / ${state.linhas.length} na página / ${state.totalTabela} no total`;
     const btnEdit = $(".admin-icon-btn.edit", refs.host);
     const btnDel = $(".admin-icon-btn.delete", refs.host);
-    if (btnEdit) btnEdit.disabled = state.ocupado || state.selecao.size !== 1 || !state.chavePrimaria.length;
+    const seletor = $("[data-selecionar-registros]", refs.host);
+    if (seletor) {
+      seletor.checked = state.total > 0 && state.selecao.size === state.total;
+      seletor.indeterminate = state.selecao.size > 0 && !seletor.checked;
+      seletor.disabled = state.ocupado || !state.chavePrimaria.length || !state.total;
+    }
+    if (btnEdit) {
+      const registroNaPagina = state.linhas.some(linha => state.selecao.has(chaveId(chaveDaLinha(linha))));
+      btnEdit.disabled = state.ocupado || state.selecao.size !== 1 || !registroNaPagina;
+      btnEdit.title = state.selecao.size === 1 && !registroNaPagina
+        ? "Abra a página do registro selecionado para editar" : "Editar selecionado";
+    }
     if (btnDel) btnDel.disabled = state.ocupado || state.selecao.size < 1 || !state.chavePrimaria.length;
   }
 
@@ -720,20 +736,40 @@
     if (marcado) state.selecao.set(kid, chave); else state.selecao.delete(kid);
     atualizarBotoes();
   }
-  function alternarTodas(marcado) {
-    state.selecao.clear();
-    if (marcado) state.linhas.forEach((l) => { const c = chaveDaLinha(l); state.selecao.set(chaveId(c), c); });
-    renderTabela();
+  async function alternarTodas(marcado) {
+    if (!marcado) {
+      state.selecao.clear();
+      renderTabela();
+      return;
+    }
+    const q = consultaTabela(1, POR_PAGINA);
+    q.set("somente_chaves", "true");
+    ocupar(true);
+    try {
+      const data = await jsonFetch(`${API}/tabelas/${state.esquema}/${state.tabela}?${q}`);
+      if (!Array.isArray(data.chaves) || data.chaves.some(c => !state.chavePrimaria.every(k => c?.[k] != null))) {
+        throw new Error("O servidor não retornou as chaves dos registros filtrados.");
+      }
+      state.selecao = new Map(data.chaves.map(linha => {
+        const chave = chaveDaLinha(linha);
+        return [chaveId(chave), chave];
+      }));
+      renderTabela();
+    } catch (error) {
+      feedback(error, "error");
+    } finally {
+      ocupar(false);
+    }
   }
 
   function montarPaginacao() {
     const nav = el("div", { class: "admin-pagination" });
-    const prev = el("button", { type: "button", title: "Anterior", onclick: () => { if (state.pagina > 1) { state.pagina--; state.selecao.clear(); carregarTabela(); } } }, "<");
-    const next = el("button", { type: "button", title: "Próxima", onclick: () => { if (state.pagina < state.paginas) { state.pagina++; state.selecao.clear(); carregarTabela(); } } }, ">");
+    const prev = el("button", { type: "button", title: "Anterior", onclick: () => { if (state.pagina > 1) { state.pagina--; carregarTabela(); } } }, "<");
+    const next = el("button", { type: "button", title: "Próxima", onclick: () => { if (state.pagina < state.paginas) { state.pagina++; carregarTabela(); } } }, ">");
     prev.disabled = state.pagina <= 1;
     next.disabled = state.pagina >= state.paginas;
-    const first = el("button", { type: "button", title: "Primeira página", "aria-label": "Primeira página", onclick: () => { state.pagina = 1; state.selecao.clear(); carregarTabela(); } }, "<<");
-    const last = el("button", { type: "button", title: "Última página", "aria-label": "Última página", onclick: () => { state.pagina = state.paginas; state.selecao.clear(); carregarTabela(); } }, ">>");
+    const first = el("button", { type: "button", title: "Primeira página", "aria-label": "Primeira página", onclick: () => { state.pagina = 1; carregarTabela(); } }, "<<");
+    const last = el("button", { type: "button", title: "Última página", "aria-label": "Última página", onclick: () => { state.pagina = state.paginas; carregarTabela(); } }, ">>");
     first.disabled = prev.disabled;
     last.disabled = next.disabled;
     nav.append(first, prev, el("span", {}, `Página ${state.pagina} de ${state.paginas}`), next, last);
@@ -748,6 +784,7 @@
 
   async function salvarEdicao() {
     if (state.ocupado) return;
+    if (!refs.host.querySelector("tr.is-editing")) return;
     const kid = state.editando;
     const chave = state.selecao.get(kid) || JSON.parse(kid);
     const valores = {};

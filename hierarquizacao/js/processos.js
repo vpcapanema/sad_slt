@@ -31,7 +31,7 @@
     ...Object.keys(RELATORIOS).map(key=>h=>JSON.stringify(h[key])),
     h=>h.homologadoEm, h=>h.homologadoPorNome||h.homologadoPor, h=>h.criadoPorNome||h.criadoPor,
     h=>h.criadoEm, h=>h.atualizadoEm, h=>rotuloTipoDemanda(h.tipo_demanda||h.tipo_demanda_id), h=>h.grupo_id, h=>JSON.stringify(h.dados_hierarquizacao)
-  ], () => { paginaHier=1; selecionadasHier.clear(); renderTabela(); }, () => !hierEditMode);
+  ], () => { paginaHier=1; renderTabela(); }, () => !hierEditMode);
   let paginaHier = 1;
   let operando = false;
   const selecionadasHier = new Set();
@@ -156,7 +156,7 @@
       `</tr>`;
   }
   function renderTabela() {
-    const result = SLTTable.paginate('hier-pagination', hierarquizacoesFiltradas(), paginaHier, page => { paginaHier = page; selecionadasHier.clear(); hierEditMode = false; renderTabela(); });
+    const result = SLTTable.paginate('hier-pagination', hierarquizacoesFiltradas(), paginaHier, page => { paginaHier = page; renderTabela(); });
     paginaHier = result.page;
     const rows = result.rows;
     const editando = hierEditMode ? selecionadasHier : new Set();
@@ -165,7 +165,6 @@
 
     ligarEventosTabela();
     atualizarBotoesLote();
-    syncSelectAll();
   }
   function valorFiltro(h, coluna) {
     if (coluna === "status") return rotuloSituacaoHier(h.status);
@@ -230,23 +229,33 @@
         if (cb.checked) selecionadasHier.add(cb.dataset.codigo);
         else selecionadasHier.delete(cb.dataset.codigo);
         atualizarBotoesLote();
-        syncSelectAll();
       };
     });
   }
   function syncSelectAll() {
     const sa = $("hier-select-all");
-    const rows = hierarquizacoesFiltradas().slice((paginaHier - 1) * 15, paginaHier * 15);
-    if (sa) sa.checked = rows.length > 0 && rows.every((h) => selecionadasHier.has(h.codigo));
+    if (!sa) return;
+    const rows = hierarquizacoesFiltradas();
+    sa.checked = rows.length > 0 && rows.every(h => selecionadasHier.has(h.codigo));
+    sa.indeterminate = !sa.checked && rows.some(h => selecionadasHier.has(h.codigo));
+    sa.disabled = hierEditMode || operando || !rows.length;
+  }
+  function selecaoEditavelNaPagina(visiveis) {
+    const codigos = new Set(visiveis.map(h => h.codigo));
+    return [...selecionadasHier].every(codigo => codigos.has(codigo));
   }
   function atualizarBotoesLote() {
-    document.querySelectorAll('#hier-filter-coluna, #hier-filter-valor, #hier-filter-inverter, #hier-filter-limpar, #hier-select-all, .hier-row-select').forEach(el => { el.disabled = hierEditMode || operando; });
+    document.querySelectorAll('#hier-filter-coluna, #hier-filter-valor, #hier-filter-inverter, #hier-filter-limpar, .hier-row-select').forEach(el => { el.disabled = hierEditMode || operando; });
+    syncSelectAll();
     if (hierEditMode || operando) document.querySelectorAll('#hier-pagination button').forEach(el => { el.disabled = true; });
-    SLTTable.summary("hier-filter-count", selecionadasHier.size, hierarquizacoesFiltradas().slice((paginaHier - 1) * 15, paginaHier * 15).length, listaCache.length);
+    const visiveis = hierarquizacoesFiltradas().slice((paginaHier - 1) * 15, paginaHier * 15);
+    SLTTable.summary("hier-filter-count", selecionadasHier.size, visiveis.length, listaCache.length);
     const has = selecionadasHier.size > 0;
+    const editavel = selecaoEditavelNaPagina(visiveis);
     const set = (id, dis) => { const el = $(id); if (el) el.disabled = dis || operando; };
     set("hier-new", false);
-    set("hier-bulk-edit", !has || hierEditMode);
+    set("hier-bulk-edit", !has || hierEditMode || !editavel);
+    $("hier-bulk-edit").title = editavel ? "Editar selecionadas" : "Para editar, selecione apenas registros da página atual";
     set("hier-bulk-view", selecionadasHier.size !== 1 || hierEditMode);
     set("hier-bulk-cancel", !hierEditMode);
     set("hier-bulk-save", !hierEditMode || !has);
@@ -614,7 +623,11 @@
     return Boolean((h.pesos_projetos && Object.keys(h.pesos_projetos).length) ||
       official?.pesos_consolidados?.length || h.dados_hierarquizacao?.cabecalho_grupo?.configuracoes?.fase_3);
   }
-  bindLote("hier-bulk-edit", () => { if (!selecionadasHier.size) return; hierEditMode = true; renderTabela(); });
+  bindLote("hier-bulk-edit", () => {
+    if (!selecionadasHier.size || !selecaoEditavelNaPagina(hierarquizacoesFiltradas().slice((paginaHier - 1) * 15, paginaHier * 15))) return;
+    hierEditMode = true;
+    renderTabela();
+  });
   bindLote("hier-bulk-view", visualizarHierarquizacaoSelecionada);
   bindLote("hier-bulk-cancel", () => { hierEditMode = false; renderTabela(); });
   async function executarLote(excluir) {
@@ -680,7 +693,7 @@
   bindLote("hier-bulk-delete", () => executarLote(true));
   if ($("hier-select-all")) {
     $("hier-select-all").onchange = () => {
-      if ($("hier-select-all").checked) hierarquizacoesFiltradas().slice((paginaHier - 1) * 15, paginaHier * 15).forEach((h) => selecionadasHier.add(h.codigo));
+      if ($("hier-select-all").checked) hierarquizacoesFiltradas().forEach(h => selecionadasHier.add(h.codigo));
       else selecionadasHier.clear();
       renderTabela();
     };

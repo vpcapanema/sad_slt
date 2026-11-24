@@ -296,7 +296,12 @@
   }
 
   function visibleCodigos() {
-    return paginatedRows().map((d) => d.id);
+    return new Set(paginatedRows().map(d => d.id));
+  }
+
+  function selecaoEditavelNaPagina() {
+    const visiveis = visibleCodigos();
+    return [...selected].every(codigo => visiveis.has(codigo));
   }
 
   function updateBulkButtons() {
@@ -308,7 +313,9 @@
       return;
     }
     const hasSel = selected.size > 0;
-    $("#btn-bulk-edit").disabled = !hasSel || editMode || !SLTAdminAuth.can('editDemandTable');
+    const editavel = selecaoEditavelNaPagina();
+    $("#btn-bulk-edit").disabled = !hasSel || editMode || !editavel || !SLTAdminAuth.can('editDemandTable');
+    $("#btn-bulk-edit").title = editavel ? "Editar selecionados" : "Para editar, selecione apenas demandas da página atual";
     $("#btn-bulk-cancel").disabled = !editMode;
     $("#btn-bulk-save").disabled = !editMode || !hasSel || !SLTAdminAuth.can('editDemandTable');
     $("#btn-bulk-delete").disabled = !hasSel || editMode || !SLTAdminAuth.can('deleteDemand');
@@ -612,7 +619,7 @@
     return document.querySelector('[data-demandas-table="' + tipo + '"]');
   }
 
-  function renderHead() {
+  function renderHead(filtered = filteredRows()) {
     document.querySelectorAll("[data-demandas-table]").forEach((table) => {
       table.hidden = table.dataset.demandasTable !== tipo;
     });
@@ -621,14 +628,14 @@
     });
     const checkbox = activeTable()?.querySelector(".select-all");
     if (!checkbox) return;
-    const visible = paginatedRows();
-    checkbox.checked =
-      visible.length > 0 &&
-      visible.every((d) => selected.has(d.id) || isSentinel(d));
+    const selecionaveis = filtered.filter(d => !isSentinel(d));
+    const marcados = selecionaveis.filter(d => selected.has(d.id)).length;
+    checkbox.disabled = editMode || !selecionaveis.length;
+    checkbox.checked = marcados > 0 && marcados === selecionaveis.length;
+    checkbox.indeterminate = marcados > 0 && marcados < selecionaveis.length;
     checkbox.onchange = (ev) => {
       const on = ev.target.checked;
-      visible.forEach((d) => {
-        if (isSentinel(d)) return;
+      selecionaveis.forEach((d) => {
         if (on) selected.add(d.id);
         else selected.delete(d.id);
       });
@@ -710,7 +717,7 @@
     const data = paginatedRows(filtered);
     const tbody = activeTable()?.querySelector('[data-demandas-body="' + tipo + '"]');
     const vazia = $("#lista-vazia");
-    renderHead();
+    renderHead(filtered);
     renderPagination(filtered.length, totalPages);
     if (!data.length) {
       tbody.innerHTML = "";
@@ -827,8 +834,8 @@
     if (!pagination) return;
     pagination.classList.remove("hidden");
     $("#pagination-info").textContent = `Página ${currentPage} de ${totalPages}`;
-    $("#pagination-first").disabled = $("#pagination-prev").disabled = currentPage <= 1;
-    $("#pagination-last").disabled = $("#pagination-next").disabled = currentPage >= totalPages;
+    $("#pagination-first").disabled = $("#pagination-prev").disabled = editMode || currentPage <= 1;
+    $("#pagination-last").disabled = $("#pagination-next").disabled = editMode || currentPage >= totalPages;
   }
 
   function val(tr, field) {
@@ -1011,7 +1018,7 @@
 
   function enterEditMode() {
     if (!SLTAdminAuth.can('editDemandTable')) { window.SICARDAccess?.denied('editar demandas'); return; }
-    if (!selected.size) return;
+    if (!selected.size || !selecaoEditavelNaPagina()) return;
     editMode = true;
     renderTable();
   }
@@ -1071,7 +1078,7 @@
       input.addEventListener("input", () => { currentPage = 1; resetSelection(); renderTable(); });
     }
     for (const kind of ['plano','programa','projeto']) {
-      ordenadores[kind] = SLTTable.sorting(document.querySelector(`[data-demandas-table="${kind}"]`), () => [null, ...(complementacao ? [] : [null]), ...COLUMNS[kind].map(column => row => columnDisplayValue(column,row))], () => { currentPage=1; resetSelection(); renderTable(); }, () => !editMode);
+      ordenadores[kind] = SLTTable.sorting(document.querySelector(`[data-demandas-table="${kind}"]`), () => [null, ...(complementacao ? [] : [null]), ...COLUMNS[kind].map(column => row => columnDisplayValue(column,row))], () => { currentPage=1; renderTable(); }, () => !editMode);
     }
     const user = await SLTAdminAuth.requireAuth();
     if (!user) return;
@@ -1110,19 +1117,16 @@
       }
       pageSize = tamanho;
       currentPage = 1;
-      resetSelection();
       renderTable();
     });
-    $("#pagination-first").addEventListener("click", () => { currentPage = 1; resetSelection(); renderTable(); });
-    $("#pagination-last").addEventListener("click", () => { currentPage = Math.max(1, Math.ceil(filteredRows().length / pageSize)); resetSelection(); renderTable(); });
+    $("#pagination-first").addEventListener("click", () => { currentPage = 1; renderTable(); });
+    $("#pagination-last").addEventListener("click", () => { currentPage = Math.max(1, Math.ceil(filteredRows().length / pageSize)); renderTable(); });
     $("#pagination-prev").addEventListener("click", () => {
       currentPage = Math.max(1, currentPage - 1);
-      resetSelection();
       renderTable();
     });
     $("#pagination-next").addEventListener("click", () => {
       currentPage += 1;
-      resetSelection();
       renderTable();
     });
     $("#btn-bulk-edit")?.addEventListener("click", enterEditMode);

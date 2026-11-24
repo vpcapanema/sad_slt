@@ -50,6 +50,13 @@ def test_atributos_fid_paginacao_e_geometria(local):
     assert data['total'] == 3
     assert data['linhas'][0]['atributos'] == {'nome': 'Sem geometria', 'valor': None, 'fid': 'original-b', 'geom': 'preservado'}
     fid = data['linhas'][0]['id']
+    ids_response = client.post('/bancada-arquivos/local/tabela',
+                               json={**payload, 'offset': 1, 'limite': 1, 'somente_ids': True})
+    assert ids_response.status_code == 200, ids_response.text
+    ids_page = ids_response.json()
+    assert ids_page['total'] == len(ids_page['ids']) == 3
+    assert ids_page['ids'][1] == fid
+    assert 'linhas' not in ids_page
     geometry = client.post('/bancada-arquivos/local/geometrias', json={**payload, 'ids': [fid]})
     assert geometry.status_code == 200, geometry.text
     assert geometry.json()['features'][0]['id'] == fid

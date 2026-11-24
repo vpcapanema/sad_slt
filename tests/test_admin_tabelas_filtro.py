@@ -13,13 +13,16 @@ def filtro(monkeypatch):
 
     class Conexao:
         def execute(self, query, params=None):
-            consultas.append((query.as_string(), params))
+            self.query = query.as_string()
+            consultas.append((self.query, params))
             return self
 
         def fetchone(self):
             return {"total": 1}
 
         def fetchall(self):
+            if self.query.startswith('SELECT "id" FROM'):
+                return [{"id": "a"}, {"id": "b"}]
             return [{"nome": "Projeto Municipal"}]
 
     @contextmanager
@@ -107,3 +110,17 @@ def test_operador_invalido_e_rejeitado_antes_de_consultar(filtro):
     response = client.get("/admin/tabelas/demandas/teste", params={"filtro_tipo": "invalido"})
     assert response.status_code == 422
     assert consultas == []
+
+
+def test_selecao_global_retorna_apenas_chaves_do_filtro_sem_paginacao(filtro):
+    client, consultas = filtro
+    response = client.get("/admin/tabelas/demandas/teste", params={
+        "somente_chaves": True, "pagina": 2, "por_pagina": 1,
+        "filtro_coluna": "nome", "filtro_tipo": "contem", "filtro_valor": "municipal",
+    })
+    assert response.status_code == 200
+    assert response.json() == {"chaves": [{"id": "a"}, {"id": "b"}]}
+    assert consultas == [
+        ('SELECT "id" FROM "demandas"."teste" WHERE (strpos(lower(CAST("nome" AS text)), lower(%s)) > 0)',
+         ["municipal"]),
+    ]

@@ -18,7 +18,7 @@ def consultar(acao, payload, dono):
     args = (payload.id, "", token)
     if acao == 'tabela':
         return original.ler_tabela(*args, payload.offset, payload.limite, _source=fonte,
-                                   localizar_fid=payload.localizar_fid)
+                                   localizar_fid=payload.localizar_fid, somente_ids=payload.somente_ids)
     if acao == 'geometrias':
         return original.ler_geometrias(*args, payload.ids, _source=fonte)
     if acao == 'consulta':

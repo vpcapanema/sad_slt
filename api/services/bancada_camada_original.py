@@ -251,13 +251,20 @@ def _json_value(value: Any) -> Any:
     return value
 
 
+def _validar_revisao_lida(fonte: Fonte, revisao: str, assinatura: tuple[tuple[str, int, int], ...] | None) -> None:
+    if fonte.local and assinatura != _assinatura_local(fonte.caminho):
+        raise ValueError("O arquivo foi alterado durante a leitura. Reabra a tabela.")
+    if _revisao(fonte) != revisao:
+        raise ValueError("O arquivo mudou durante a leitura. Reabra a tabela.")
+
+
 def ler_tabela(
     ident: str,
     arquivo: str,
     revisao: str,
     offset: int,
     limite: int,
-    *, _source: Fonte | None = None, localizar_fid: str | None = None,
+    *, _source: Fonte | None = None, localizar_fid: str | None = None, somente_ids: bool = False,
 ) -> dict[str, Any]:
     fonte = _source or _fonte(ident, arquivo)
     atual = _revisao(fonte)
@@ -266,16 +273,21 @@ def ler_tabela(
     signature = _assinatura_local(fonte.caminho) if fonte.local else None
     dataset, camada = _abrir(fonte)
     try:
-        count = camada.GetFeatureCount(0)
-        total = count if count >= 0 else None
-        if localizar_fid is not None:
-            fid = _fids([localizar_fid])[0]
-            definition = camada.GetLayerDefn()
+        definition = camada.GetLayerDefn()
+        if somente_ids or localizar_fid is not None:
             camada.SetIgnoredFields([
                 "OGR_GEOMETRY",
                 *[definition.GetFieldDefn(i).GetName() for i in range(definition.GetFieldCount())],
             ])
             camada.ResetReading()
+        if somente_ids:
+            ids = [str(feature.GetFID()) for feature in camada]
+            _validar_revisao_lida(fonte, revisao, signature)
+            return {"id": fonte.ident, "arquivo": fonte.arquivo, "revisao": revisao, "total": len(ids), "ids": ids}
+        count = camada.GetFeatureCount(0)
+        total = count if count >= 0 else None
+        if localizar_fid is not None:
+            fid = _fids([localizar_fid])[0]
             for position, feature in enumerate(camada):
                 if feature.GetFID() == fid:
                     offset = (position // limite) * limite
@@ -311,10 +323,7 @@ def ler_tabela(
                     for name, index in columns
                 },
             })
-        if fonte.local and signature != _assinatura_local(fonte.caminho):
-            raise ValueError("O arquivo foi alterado durante a leitura. Reabra a tabela.")
-        if _revisao(fonte) != revisao:
-            raise ValueError("O arquivo mudou durante a leitura. Reabra a tabela.")
+        _validar_revisao_lida(fonte, revisao, signature)
         return {
             "id": fonte.ident,
             "arquivo": fonte.arquivo,

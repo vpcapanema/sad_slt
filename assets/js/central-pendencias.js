@@ -345,7 +345,7 @@
       const expanded = new Set();
       const hiddenColumn = name => Object.entries(groups).some(([group, names]) => names.includes(name) && !expanded.has(group));
       const selected = new Set(), column = get(prefix + '-coluna'), value = get(prefix + '-valor');
-      let page = 1, filtered = [], visible = [];
+      let page = 1, filtered = [];
       const preview = notificationPreview(get(id + '-previa'), load);
       columns.forEach(([name, label]) => column.add(new Option(label, name)));
       const source = () => all.filter(r => (key === 'atributos') === r.categorias.includes('atributos_objeto'));
@@ -355,7 +355,8 @@
         filtered = source().filter(r => SLTTable.matches(prefix, field && String(field[2](r) ?? '') === (value.value === '__empty__' ? '' : value.value),
           Boolean(field && value.value)));
         const result = SLTTable.paginate(id + '-pagination', filtered, page, p => { page = p; render(); });
-        page = result.page; visible = result.rows;
+        page = result.page;
+        const visible = result.rows;
         const tbody = root.querySelector('tbody');
         tbody.replaceChildren();
         visible.forEach(row => {
@@ -382,9 +383,9 @@
           const tr = document.createElement('tr'); tr.append(td); tbody.append(tr);
         }
         const selectAll = root.querySelector('[data-select-all]');
-        selectAll.checked = visible.length > 0 && visible.every(r => selected.has(rowKey(r)));
-        selectAll.indeterminate = visible.some(r => selected.has(rowKey(r))) && !selectAll.checked;
-        selectAll.disabled = !visible.length;
+        selectAll.checked = filtered.length > 0 && filtered.every(r => selected.has(rowKey(r)));
+        selectAll.indeterminate = filtered.some(r => selected.has(rowKey(r))) && !selectAll.checked;
+        selectAll.disabled = !filtered.length;
         root.querySelector('[data-open]').disabled = selected.size !== 1;
         root.querySelector('[data-export]').disabled = !selected.size;
         const chosen = source().filter(r => selected.has(rowKey(r)));
@@ -412,7 +413,7 @@
       value.onchange = () => { page = 1; selected.clear(); render(); };
       SLTTable.bindFilter(prefix, () => { page = 1; selected.clear(); render(); },
         () => { column.value = ''; values(); });
-      root.querySelector('[data-select-all]').onchange = e => { visible.forEach(r => e.target.checked ? selected.add(rowKey(r)) : selected.delete(rowKey(r))); render(); };
+      root.querySelector('[data-select-all]').onchange = e => { filtered.forEach(r => e.target.checked ? selected.add(rowKey(r)) : selected.delete(rowKey(r))); render(); };
       root.querySelector('[data-open]').onclick = () => {
         const row = source().find(r => selected.has(rowKey(r)));
         if (selected.size === 1 && row) location.href = detailUrl(row);

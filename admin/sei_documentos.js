@@ -110,11 +110,11 @@
     SLTTable.values(q('sei-filter-valor'), documentosTabela, doc => valorTabela(doc, column));
     q('sei-filter-valor').disabled = !column;
   }
-  const ordenarDocumentos = SLTTable.sorting(q('sei-documentos-table'), () => [null,...colunasTabela.map(([key])=>doc=>valorTabela(doc,key))], () => { paginaTabela=1; selecionadosTabela.clear(); renderDocumentos(); });
+  const ordenarDocumentos = SLTTable.sorting(q('sei-documentos-table'), () => [null,...colunasTabela.map(([key])=>doc=>valorTabela(doc,key))], () => { paginaTabela=1; renderDocumentos(); });
   function renderDocumentos() {
     const column = q('sei-filter-coluna').value, value = q('sei-filter-valor').value;
     const filtered = ordenarDocumentos(documentosTabela.filter(doc => SLTTable.matches('sei-filter', String(valorTabela(doc, column)) === value, Boolean(column && value))));
-    const result = SLTTable.paginate('sei-pagination', filtered, paginaTabela, page => { paginaTabela = page; selecionadosTabela.clear(); renderDocumentos(); });
+    const result = SLTTable.paginate('sei-pagination', filtered, paginaTabela, page => { paginaTabela = page; renderDocumentos(); });
     paginaTabela = result.page;
     q('sei-documentos-body').replaceChildren();
     q('sei-documentos-vazio').classList.toggle('hidden', !!filtered.length);
@@ -125,9 +125,10 @@
       q('sei-documentos-body').append(tr);
     }
     const all = q('sei-select-all');
-    all.checked = result.rows.length > 0 && result.rows.every(doc => selecionadosTabela.has(doc.id));
-    all.indeterminate = !all.checked && result.rows.some(doc => selecionadosTabela.has(doc.id));
-    all.onchange = () => { result.rows.forEach(doc => all.checked ? selecionadosTabela.add(doc.id) : selecionadosTabela.delete(doc.id)); renderDocumentos(); };
+    all.disabled = !filtered.length;
+    all.checked = filtered.length > 0 && filtered.every(doc => selecionadosTabela.has(doc.id));
+    all.indeterminate = !all.checked && filtered.some(doc => selecionadosTabela.has(doc.id));
+    all.onchange = () => { filtered.forEach(doc => all.checked ? selecionadosTabela.add(doc.id) : selecionadosTabela.delete(doc.id)); renderDocumentos(); };
     const doc = selecionadosTabela.size === 1 ? documentosTabela.find(doc => selecionadosTabela.has(doc.id)) : null;
     q('sei-table-actions').innerHTML = doc ? acoes(doc) : Object.keys(ICONES).map(botaoIcone).join('');
     q('sei-table-actions').querySelectorAll('button').forEach(button => { button.classList.add('admin-icon-btn'); button.disabled = !doc; button.onclick = () => executar(button, doc, button.dataset.acao); });

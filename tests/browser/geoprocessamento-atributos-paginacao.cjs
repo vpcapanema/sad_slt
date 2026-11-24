@@ -30,6 +30,10 @@ const root=path.resolve(__dirname,'../..');
    if(pathname.endsWith('/bancada-arquivos/tabela')){
     const payload=route.request().postDataJSON();
     tablePayloads.push(payload);
+    if(payload.somente_ids)return route.fulfill({json:{
+      id:payload.id,arquivo:payload.arquivo,revisao:payload.revisao,total:105,
+      ids:Array.from({length:105},(_,index)=>'fid-'+index),
+    }});
     return route.fulfill({json:{
      id:payload.id,arquivo:payload.arquivo,revisao:payload.revisao,total:105,
      offset:payload.offset,limite:payload.limite,
@@ -99,6 +103,18 @@ const root=path.resolve(__dirname,'../..');
   assert.equal(await page.evaluate(()=>gpAttributeTable.grid.getSelectedData().length),100);
   await page.locator('[data-at-action="clear"]').click();
   await page.waitForFunction(()=>(gpApp.state.selectedGeoJSON?.features||[]).length===0);
+  const seletor=page.getByRole('checkbox',{name:'Selecionar todos os registros filtrados'});
+  await seletor.click();
+  await page.waitForFunction(()=>gpApp.state.selectedGeoJSON.features.length===105);
+  assert.equal(await seletor.isChecked(),true);
+  assert.equal(tablePayloads.at(-1).somente_ids,true);
+  await page.locator('.tabulator-page[data-page="next"]').click();
+  await page.waitForFunction(()=>gpAttributeTable.grid.getSelectedData().length===5);
+  assert.equal(await seletor.isChecked(),true);
+  await seletor.uncheck();
+  await page.waitForFunction(()=>gpApp.state.selectedGeoJSON.features.length===0);
+  await page.locator('.tabulator-page[data-page="prev"]').click();
+  await page.waitForFunction(()=>gpAttributeTable.grid.getData()[0]?.__gp_fid==='fid-0');
   geometryPayloads.length=0;
   const mapSelection=()=>page.evaluate(()=>(gpApp.state.selectedGeoJSON?.features||[]).filter(feature=>feature.properties?.__gp_layer_id==='storage:table-test').map(feature=>({fid:feature.properties.__gp_selection_key,geometry:feature.geometry?.type})).sort((a,b)=>a.fid.localeCompare(b.fid)));
   await page.locator('.tabulator-row').first().click();

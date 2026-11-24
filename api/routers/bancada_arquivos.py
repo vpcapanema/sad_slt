@@ -133,6 +133,7 @@ class TabelaTemporaria(LeituraTemporaria):
     offset: int = Field(default=0, ge=0, le=10_000_000)
     limite: int = Field(default=100, ge=1, le=500)
     localizar_fid: str | None = Field(default=None, pattern=r"^[0-9]+$", max_length=20)
+    somente_ids: bool = False
 
 
 class GeometriasTemporarias(LeituraTemporaria):
