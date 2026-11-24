@@ -4,11 +4,12 @@
   var form = document.getElementById("comparisonContent");
   var wrap = document.getElementById("collab-matrix-wrap");
   if (!tabs.length || !form || !wrap) return;
+  var matrixPanel = wrap.closest("[role=tabpanel]");
   var cells = [];
   var namesKey = null;
 
   function activate(tab, focus) {
-    sync();
+    if (tab.getAttribute("aria-controls") === matrixPanel.id) sync();
     tabs.forEach(function (item) {
       var selected = item === tab;
       item.setAttribute("aria-selected", String(selected));
@@ -17,7 +18,6 @@
       document.getElementById(item.getAttribute("aria-controls")).hidden = !selected;
     });
     if (focus) tab.focus();
-    sync();
     window.dispatchEvent(new Event("resize"));
   }
   tabs.forEach(function (tab, index) {
@@ -90,6 +90,14 @@
       table.appendChild(body);
       wrap.replaceChildren(table);
     }
+    var colorsByPair = new Map();
+    matrix.forEach(function (row, i) {
+      for (var j = i + 1; j < row.length; j += 1) {
+        var input = document.getElementById("pair_" + i + "_" + j);
+        var pair = input ? input.closest(".saaty-pair") : form.querySelector(".saaty-pair");
+        colorsByPair.set(i + "_" + j, SLTSaatySelectorColor.palette(pair));
+      }
+    });
     matrix.forEach(function (row, i) {
       row.forEach(function (value, j) {
         var cell = cells[i][j];
@@ -105,21 +113,22 @@
           cell.style.color = "";
           return;
         }
-        var input = document.getElementById("pair_" + Math.min(i, j) + "_" + Math.max(i, j));
-        var pair = input ? input.closest(".saaty-pair") : form.querySelector(".saaty-pair");
-        var colors = SLTSaatySelectorColor.palette(pair);
+        var colors = colorsByPair.get(Math.min(i, j) + "_" + Math.max(i, j));
         var color = colors[nearestSaatyIdx(value)];
         cell.style.backgroundColor = color.background;
         cell.style.color = readableText(color.background);
       });
     });
   }
-  form.addEventListener("saaty:change", sync);
-  window.addEventListener("resize", sync);
-  new MutationObserver(sync).observe(form, { childList: true, subtree: true, attributes: true, attributeFilter: ["class"] });
+  function syncVisibleMatrix() {
+    if (!matrixPanel.hidden) sync();
+  }
+  form.addEventListener("saaty:change", syncVisibleMatrix);
+  window.addEventListener("resize", syncVisibleMatrix);
+  new MutationObserver(syncVisibleMatrix).observe(form, { childList: true, subtree: true, attributes: true, attributeFilter: ["class"] });
   var consistencyModal = document.getElementById("collab-consistency-modal");
   if (consistencyModal) consistencyModal.addEventListener("click", function (event) {
     if (event.target.closest("#collab-consistency-pairs a")) activate(tabs[0], false);
   }, true);
-  sync();
+  syncVisibleMatrix();
 })();

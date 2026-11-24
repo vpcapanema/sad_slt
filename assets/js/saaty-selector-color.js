@@ -32,9 +32,8 @@
     palettes.set(pair, colors);
     return colors;
   }
-  function update(pair) {
+  function update(pair, colors = palette(pair)) {
     var scale = pair.querySelector(".saaty-scale"), handle = pair.querySelector(".saaty-handle");
-    var colors = palette(pair);
     var color = colors[Number(scale.getAttribute("aria-valuenow"))];
     handle.style.backgroundColor = color.background;
     pair.querySelectorAll(".saaty-tick").forEach(function (tick, index) {
@@ -47,8 +46,13 @@
       }
     });
   }
-  window.SLTSaatySelectorColor = {update: update, palette: palette};
-  window.addEventListener("resize", function () {
-    document.querySelectorAll(".saaty-pair").forEach(update);
-  });
+  function updateAll() {
+    // Leia a geometria de todas as réguas antes de atualizar seus estilos.
+    var colors = Array.from(document.querySelectorAll(".saaty-pair"), function (pair) {
+      return [pair, palette(pair)];
+    });
+    colors.forEach(function ([pair, paletteColors]) { update(pair, paletteColors); });
+  }
+  window.SLTSaatySelectorColor = {update: update, updateAll: updateAll, palette: palette};
+  window.addEventListener("resize", updateAll);
 })();

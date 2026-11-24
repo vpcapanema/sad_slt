@@ -886,16 +886,23 @@ function buildSaatyPair(i, j, sourceCriteria) {
 
 function initSaatySliders() {
   // Cada régua ocupa a largura real do card; a apresentação se ajusta ao mobile.
-  document.querySelectorAll(".saaty-pair").forEach(wireSaaty);
+  const pairs = document.querySelectorAll(".saaty-pair");
+  pairs.forEach(wireSaaty);
 
   function fitSaatyScales() {
-    document.querySelectorAll(".saaty-widget").forEach(widget => {
+    const widths = Array.from(document.querySelectorAll(".saaty-widget"), widget => {
       const available = widget.getBoundingClientRect().width;
       const ratio = Math.max(0.68, Math.min(1, available / 600));
-      widget.style.setProperty("--saaty-fit", ratio.toFixed(3));
+      return [widget, ratio.toFixed(3)];
+    });
+    widths.forEach(([widget, ratio]) => {
+      if (widget.style.getPropertyValue("--saaty-fit") !== ratio) {
+        widget.style.setProperty("--saaty-fit", ratio);
+      }
     });
   }
   fitSaatyScales();
+  if (pairs.length) SLTSaatySelectorColor.updateAll();
   if (window.__saatyFitObserver) window.__saatyFitObserver.disconnect();
   if (typeof ResizeObserver === "function") {
     window.__saatyFitObserver = new ResizeObserver(fitSaatyScales);
@@ -917,7 +924,7 @@ function wireSaaty(pair) {
     idx = Math.max(0, Math.min(lastIdx, newIdx));
     handle.style.left = (idx / lastIdx) * 100 + "%";
     scale.setAttribute("aria-valuenow", idx);
-    SLTSaatySelectorColor.update(pair);
+    if (fromUser) SLTSaatySelectorColor.update(pair);
     input.value = SAATY_STEPS[idx].v;
     updateSaatyReadout(pair, idx);
     updateSaatyReciprocal(pair, idx);
@@ -987,7 +994,6 @@ function wireSaaty(pair) {
     idx = nearestSaatyIdx(initV);
     handle.style.left = (idx / lastIdx) * 100 + "%";
     scale.setAttribute("aria-valuenow", idx);
-    SLTSaatySelectorColor.update(pair);
     updateSaatyReadout(pair, idx);
     updateSaatyReciprocal(pair, idx);
   } else {
