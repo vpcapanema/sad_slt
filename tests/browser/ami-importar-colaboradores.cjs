@@ -4,6 +4,31 @@ const fs = require('node:fs');
 const XLSX = require('../../assets/vendor/xlsx/xlsx-0.18.5.min.js');
 const base = process.env.SICARD_TEST_URL || 'http://127.0.0.1:8083';
 
+function workbookWithTables() {
+  const book = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(book, XLSX.utils.aoa_to_sheet([
+    ['Nome', 'Email', null, 'Nome', 'Email'],
+    ['Ana Silva', 'ana@example.com', null, 'Marcia Luz', 'marcia@example.com'],
+    [null, null, null, 'Total', 1],
+  ]), 'Equipes');
+  const zip = XLSX.CFB.read(XLSX.write(book, {bookType: 'xlsx', type: 'buffer'}), {type: 'buffer'});
+  const add = (path, xml) => XLSX.CFB.utils.cfb_add(zip, path, Buffer.from(xml));
+  const read = path => Buffer.from(XLSX.CFB.find(zip, '/' + path).content).toString();
+  const ns = 'http://schemas.openxmlformats.org';
+  const tables = [['EquipeA', 'A1:B2', 0], ['EquipeB', 'D1:E3', 1]];
+  const relationships = tables.map((table, index) => {
+    const id = index + 1;
+    add(`xl/tables/table${id}.xml`, `<table xmlns="${ns}/spreadsheetml/2006/main" id="${id}" name="${table[0]}" displayName="${table[0]}" ref="${table[1]}" totalsRowCount="${table[2]}"><tableColumns count="2"><tableColumn id="1" name="Nome"/><tableColumn id="2" name="Email"/></tableColumns></table>`);
+    return `<Relationship Id="rId${id}" Type="${ns}/officeDocument/2006/relationships/table" Target="../tables/table${id}.xml"/>`;
+  });
+  add('xl/worksheets/_rels/sheet1.xml.rels', `<Relationships xmlns="${ns}/package/2006/relationships">${relationships.join('')}</Relationships>`);
+  const worksheet = 'xl/worksheets/sheet1.xml';
+  add(worksheet, read(worksheet).replace('</worksheet>', '<tableParts count="2"><tablePart r:id="rId1"/><tablePart r:id="rId2"/></tableParts></worksheet>'));
+  add('[Content_Types].xml', read('[Content_Types].xml').replace('</Types>', tables.map((_, index) =>
+    `<Override PartName="/xl/tables/table${index + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.table+xml"/>`).join('') + '</Types>'));
+  return Buffer.from(XLSX.CFB.write(zip, {fileType: 'zip', type: 'buffer'}));
+}
+
 (async () => {
   const browser = await chromium.launch({ channel: 'msedge', headless: true });
   const page = await browser.newPage({viewport: {width: 1440, height: 1000}}), errors = [], escritas = [];
@@ -70,15 +95,31 @@ const base = process.env.SICARD_TEST_URL || 'http://127.0.0.1:8083';
     await modal.waitFor({state: 'visible'});
     assert.deepEqual(await modal.locator('th').allTextContents(), ['', 'Nome do colaborador', 'E-mail', 'Todos']);
     assert.equal(await page.locator('#ami-import-list tr').count(), 3);
-    assert.equal(await modal.locator('tbody [data-import-scope-row]:checked').count(), 3);
+    const removeDuplicates = modal.getByRole('button', {name: 'Excluir duplicatas'});
+    const confirm = page.locator('#ami-import-confirm');
+    const duplicateNotes = modal.locator('.ami-import-duplicate');
+    await removeDuplicates.waitFor();
+    assert.match(await duplicateNotes.textContent(), /E-mail repetido no arquivo/);
+    assert.equal(await confirm.isDisabled(), true);
+    assert.equal(await modal.locator('[data-import-scope-column]:enabled').count(), 0);
+    const duplicateButtonStyle = await page.evaluate(() => {
+      const style = id => {
+        const css = getComputedStyle(document.getElementById(id));
+        return [css.width, css.height, css.color, css.borderColor];
+      };
+      return [style('ami-import-remove-duplicates'), style('ami-judgments-delete-action')];
+    });
+    assert.deepEqual(...duplicateButtonStyle);
     await page.locator('#ami-import-filter-coluna').selectOption('email');
     await page.locator('#ami-import-filter-valor').selectOption('bia@example.com');
     assert.equal(await page.locator('#ami-import-list tr').count(), 1);
-    await page.locator('#ami-import-filter-limpar').click();
-    await page.locator('#ami-import-confirm').click();
+    await removeDuplicates.click();
+    assert.equal(await modal.locator('tbody [data-import-scope-row]:checked:enabled').count(), 2);
+    assert.equal(await removeDuplicates.isVisible(), false);
+    await confirm.click();
     await modal.waitFor({state: 'hidden'});
     assert.equal(await page.locator('#ami-email-list tr').count(), 2);
-    assert.match(await page.locator('#ami-emails-feedback').textContent(), /1 registro\(s\) com e-mail repetido/);
+    assert.match(await page.locator('#ami-emails-feedback').textContent(), /Lista confirmada/);
 
     await page.locator('#ami-collaborator-file').setInputFiles({
       name: 'lista-longa.tsv', mimeType: 'text/tab-separated-values',
@@ -98,6 +139,7 @@ const base = process.env.SICARD_TEST_URL || 'http://127.0.0.1:8083';
     await page.locator('[data-matrix-select]').selectOption(matriz.id);
     await page.locator('#ami-dimension-options input[value="Ambiental"]').waitFor();
     const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([['Instruções']]), 'Leia primeiro');
     XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
       ['Cargo', 'E-mail', 'Nome completo'],
       ['Gestor', 'ana@example.com', 'Outra grafia de Ana'],
@@ -105,11 +147,30 @@ const base = process.env.SICARD_TEST_URL || 'http://127.0.0.1:8083';
       ['Analista', 'debora@example.com', 'DÉBORA NUNES'],
       ['Analista', 'elisa@example.com', 'Elisa Ramos'],
     ]), 'Colaboradores');
-    await page.locator('#ami-collaborator-file').setInputFiles({
+    const workbookFile = {
       name: 'colaboradores.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       buffer: Buffer.from(XLSX.write(workbook, {bookType: 'xlsx', type: 'array'})),
-    });
+    };
+    await page.locator('#ami-collaborator-file').setInputFiles(workbookFile);
     await modal.waitFor({state: 'visible'});
+    const sourceSelect = page.locator('#ami-import-source');
+    const load = page.locator('#ami-import-source-continue');
+    await sourceSelect.waitFor();
+    assert.equal(await load.isDisabled(), true);
+    assert.equal(await page.locator('#ami-import-preview').isVisible(), false);
+    assert.deepEqual(await sourceSelect.locator('option').allTextContents(), ['Selecione…', 'Aba: Leia primeiro', 'Aba: Colaboradores']);
+    await sourceSelect.selectOption({label: 'Aba: Leia primeiro'});
+    await load.click();
+    await page.locator('#ami-import-source-feedback').getByText(/e-mail correspondente nas linhas 1/).waitFor();
+    await sourceSelect.press('Escape');
+    await modal.waitFor({state: 'hidden'});
+    await page.locator('#ami-collaborator-file').setInputFiles(workbookFile);
+    await sourceSelect.selectOption({label: 'Aba: Colaboradores'});
+    await load.click();
+    assert.match(await duplicateNotes.textContent(), /Já está na lista de colaboradores/);
+    assert.equal(await confirm.isDisabled(), true);
+    await removeDuplicates.click();
+    assert.equal(await page.locator('#ami-import-list tr').count(), 3);
     const groups = ['Ambiental', 'Social', 'Viabilidade institucional e financeira'];
     const headers = (await modal.locator('th').allTextContents()).map(text => text.trim().replace(/\s+/g, ' '));
     assert.deepEqual(headers, ['', 'Nome do colaborador', 'E-mail', ...groups, 'Todos']);
@@ -182,6 +243,20 @@ const base = process.env.SICARD_TEST_URL || 'http://127.0.0.1:8083';
     assert.equal(await page.locator('#ami-email-list tr').count(), 5);
 
     await page.locator('#ami-collaborator-file').setInputFiles({
+      name: 'equipes.xlsx', mimeType: workbookFile.mimeType, buffer: workbookWithTables(),
+    });
+    await sourceSelect.waitFor();
+    assert.deepEqual(await sourceSelect.locator('option').allTextContents(), [
+      'Selecione…', 'Aba: Equipes', 'Tabela: EquipeA (Equipes)', 'Tabela: EquipeB (Equipes)',
+    ]);
+    await sourceSelect.selectOption({label: 'Tabela: EquipeB (Equipes)'});
+    await load.click();
+    assert.equal(await modal.locator('tbody tr').count(), 1);
+    assert.match(await modal.locator('tbody').innerText(), /Marcia Luz/);
+    assert.equal(await removeDuplicates.isVisible(), false);
+    await page.locator('#ami-import-cancel').click();
+
+    await page.locator('#ami-collaborator-file').setInputFiles({
       name: 'incompleto.csv', mimeType: 'text/csv',
       buffer: Buffer.from('Nome;E-mail\nEdna;edna@example.com\n\nDaniel;'),
     });
@@ -237,9 +312,37 @@ const base = process.env.SICARD_TEST_URL || 'http://127.0.0.1:8083';
     await page.reload({waitUntil: 'domcontentloaded'});
     await page.locator('[data-lista-colaboradores="julgamento-teste"]').click();
     assert.equal(await scope('ana@example.com', 'Todos os grupos').isChecked(), true);
+    await page.locator('#ami-import-close').click();
+    await page.locator('[data-select-id="julgamento-teste"]').check();
+    await page.locator('#ami-environment-edit').click();
+    await page.locator('#ami-collaborator-file').setInputFiles({
+      name: 'somente-duplicatas.csv', mimeType: 'text/csv',
+      buffer: Buffer.from('Nome;Email\nOutra grafia; ANA@EXAMPLE.COM'),
+    });
+    await removeDuplicates.click();
+    assert.match(await page.locator('#ami-import-feedback').innerText(), /Todos os registros eram duplicados/);
+    assert.equal(await confirm.isDisabled(), true);
+    assert.equal(confirmacoes.length, 2);
+    await page.locator('#ami-import-close').click();
+    await page.locator('#ami-collaborator-file').setInputFiles({
+      name: 'novos.csv', mimeType: 'text/csv',
+      buffer: Buffer.from('Nome;Email\nOutra grafia; ANA@EXAMPLE.COM\nBia;bia@example.com\nFabio Dias;fabio@example.com\nRepetido;FABIO@example.com'),
+    });
+    await removeDuplicates.waitFor();
+    assert.equal(await duplicateNotes.count(), 3);
+    assert.equal(await scope('fabio@example.com', 'Ambiental').first().isDisabled(), true);
+    await removeDuplicates.click();
+    await scope('fabio@example.com', 'Ambiental').check();
+    await confirm.click();
+    await modal.waitFor({state: 'hidden'});
+    assert.equal(confirmacoes.length, 3);
+    assert.deepEqual(confirmacoes[2].convites.map(item => [item.nome, item.email, item.dimensoes]), [
+      ['Ana Silva', 'ana@example.com', null], ['Bia Souza', 'bia@example.com', null],
+      ['Fabio Dias', 'fabio@example.com', ['Ambiental']],
+    ]);
     assert.deepEqual(errors, []);
     assert.deepEqual(escritas, []);
-    console.log('Importação CSV/XLSX, colunas por grupo, atribuição em lote, Todos, padrão visual e envio verificados.');
+    console.log('Importação CSV/XLSX, seleção de aba e tabela, duplicatas, atribuição de grupos, padrão visual e envio verificados.');
   } finally {
     if (autenticado) await page.request.post(base + '/api/auth/logout').catch(() => {});
     await browser.close();

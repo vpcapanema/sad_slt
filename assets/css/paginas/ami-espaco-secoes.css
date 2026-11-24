@@ -499,7 +499,7 @@
   --ami-botao-cor: #92400e;
   --ami-botao-borda: #622b09;
 }
-.ami-espaco-page .ami-table-actions #ami-judgments-delete-action {
+.ami-espaco-page .ami-table-actions :is(#ami-judgments-delete-action, #ami-import-remove-duplicates) {
   --ami-botao-cor: #991b1b;
   --ami-botao-borda: #661212;
 }
@@ -718,7 +718,8 @@
   gap: 8px;
 }
 .ami-page.ami-espaco-page #ami-import-modal .ami-data-modal__content > * { margin: 0; }
-#ami-import-feedback:empty { display: none; }
+#ami-import-modal .ami-feedback:empty { display: none; }
+.ami-page #ami-import-modal .ami-import-duplicate { display: block; color: #991b1b; }
 .ami-page #ami-import-modal th.ami-import-scope {
   position: relative;
   padding-inline: 7px 25px;

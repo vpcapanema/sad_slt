@@ -1298,8 +1298,8 @@
   function normalizeImportHeader(value) {
     return String(value == null ? "" : value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase().replace(/[^a-z0-9]+/g, " ");
   }
-  function importRowsFromGrid(grid) {
-    var rows = (grid || []).map(function (cells, index) { return { cells: cells, linha: index + 1 }; })
+  function importRowsFromGrid(grid, firstRow) {
+    var rows = (grid || []).map(function (cells, index) { return { cells: cells, linha: index + firstRow }; })
       .filter(function (row) { return Array.isArray(row.cells) && row.cells.some(function (cell) { return String(cell == null ? "" : cell).trim(); }); });
     if (!rows.length) throw new Error("O arquivo está vazio.");
     var headers = rows[0].cells.map(normalizeImportHeader);
@@ -1312,12 +1312,56 @@
       return { nome: String(row.cells[nameIndex] ?? "").trim(), email: String(row.cells[emailIndex] ?? "").trim().toLowerCase(), linha: row.linha };
     }).filter(function (item) { return item.nome || item.email; });
   }
+  function collaboratorsFromGrid(grid, firstRow = 1) {
+    var rows = importRowsFromGrid(grid, firstRow), invalid = rows.filter(function (item) { return !item.nome || !/^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(item.email); });
+    if (!rows.length) throw new Error("Nenhum colaborador foi encontrado no arquivo.");
+    if (invalid.length) throw new Error("Informe um nome e o e-mail correspondente nas linhas " + invalid.slice(0, 8).map(function (item) { return item.linha; }).join(", ") + (invalid.length > 8 ? "…" : "") + ".");
+    return rows.map(function (item) { return { nome: item.nome, email: item.email }; });
+  }
+  function spreadsheetImportSources(workbook) {
+    var parser = new DOMParser(), decoder = new TextDecoder();
+    function part(path) {
+      var content = workbook.files?.[path]?.content;
+      return content && parser.parseFromString(decoder.decode(content), "application/xml");
+    }
+    function relatedParts(path, type) {
+      var slash = path.lastIndexOf("/") + 1;
+      var relationships = part(path.slice(0, slash) + "_rels/" + path.slice(slash) + ".rels");
+      return new Map(Array.from(relationships?.getElementsByTagNameNS("*", "Relationship") || [])
+        .filter(function (element) { return element.getAttribute("Type")?.endsWith("/" + type) && element.getAttribute("TargetMode") !== "External"; })
+        .map(function (element) {
+          var base = new URL(path, "https://xlsx.invalid/");
+          return [element.getAttribute("Id"), new URL(element.getAttribute("Target"), base).pathname.slice(1)];
+        }));
+    }
+    // As tabelas nomeadas do XLSX descrevem intervalos dentro das células já lidas pelo SheetJS.
+    var workbookPath = relatedParts("", "officeDocument").values().next().value;
+    var sheetPaths = workbookPath ? relatedParts(workbookPath, "worksheet") : new Map();
+    function source(label, sheet, range, totals = 0) {
+      return { label: label, read: function () {
+        if (!range) return collaboratorsFromGrid([]);
+        var grid = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", range: range });
+        if (totals > 0) grid = grid.slice(0, -totals);
+        return collaboratorsFromGrid(grid, XLSX.utils.decode_range(range).s.r + 1);
+      } };
+    }
+    return workbook.SheetNames.flatMap(function (name, index) {
+      var sheet = workbook.Sheets[name], path = sheetPaths.get(workbook.Workbook?.Sheets?.[index]?.id);
+      var tables = path ? Array.from(relatedParts(path, "table").values(), function (tablePath) {
+        var table = part(tablePath)?.documentElement;
+        var displayName = table?.getAttribute("displayName"), range = table?.getAttribute("ref");
+        return displayName && range && source("Tabela: " + displayName + " (" + name + ")", sheet, range, Number(table.getAttribute("totalsRowCount")));
+      }).filter(Boolean) : [];
+      if (workbook.SheetNames.length === 1 && tables.length === 1) return tables;
+      return [source("Aba: " + name, sheet, sheet?.["!ref"]), ...tables];
+    });
+  }
   async function readCollaboratorFile(file) {
     var extension = (file.name.split(".").pop() || "").toLowerCase(), grid;
     if (["xlsx", "xls"].includes(extension)) {
       if (!window.XLSX) throw new Error("A biblioteca de planilhas não foi carregada.");
-      var workbook = XLSX.read(await file.arrayBuffer(), { type: "array" }), sheet = workbook.Sheets[workbook.SheetNames[0]];
-      grid = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+      var workbook = XLSX.read(await file.arrayBuffer(), { type: "array", bookFiles: extension === "xlsx" });
+      return spreadsheetImportSources(workbook);
     } else if (extension === "json") {
       var data = JSON.parse(await file.text());
       if (!Array.isArray(data)) throw new Error("O JSON deve conter uma lista de colaboradores.");
@@ -1331,15 +1375,45 @@
       var delimiters = ["\t", ";", ","], delimiter = delimiters.sort(function (a, b) { return firstLine.split(b).length - firstLine.split(a).length; })[0];
       grid = lines.map(function (line) { return line.split(delimiter).map(function (cell) { return cell.trim().replace(/^(["'])(.*)\1$/, "$2"); }); });
     }
-    var rows = importRowsFromGrid(grid), invalid = rows.filter(function (item) { return !item.nome || !/^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(item.email); });
-    if (!rows.length) throw new Error("Nenhum colaborador foi encontrado no arquivo.");
-    if (invalid.length) throw new Error("Informe um nome e o e-mail correspondente nas linhas " + invalid.slice(0, 8).map(function (item) { return item.linha; }).join(", ") + (invalid.length > 8 ? "…" : "") + ".");
-    return rows.map(function (item) { return { nome: item.nome, email: item.email, selected: true }; });
+    return [{ read: function () { return collaboratorsFromGrid(grid); } }];
+  }
+  function showImportModal(title, choosingSource, trigger) {
+    var modal = $("ami-import-modal");
+    importTrigger = trigger;
+    $("ami-import-title").textContent = title;
+    modal.setAttribute("aria-describedby", choosingSource ? "ami-import-source-description" : "ami-import-description");
+    $("ami-import-source-form").classList.toggle("is-hidden", !choosingSource);
+    $("ami-import-preview").classList.toggle("is-hidden", choosingSource);
+    modal.hidden = false;
+    modal.classList.remove("is-hidden");
+  }
+  function previewCollaboratorSource(source, trigger) {
+    var collaborators = source.read();
+    var groups = activeSurfaceId ? new Map() : dimensionGroups();
+    collaborators.forEach(function (item) { item.dimensoes = groups.size ? [] : null; });
+    $("ami-import-source-form").onsubmit = null;
+    openCollaboratorPreview(collaborators, groups, "file", trigger);
+  }
+  function chooseCollaboratorSource(sources, trigger) {
+    var select = $("ami-import-source"), feedback = $("ami-import-source-feedback");
+    select.replaceChildren(new Option("Selecione…", ""));
+    sources.forEach(function (source, index) { select.add(new Option(source.label, index)); });
+    $("ami-import-source-continue").disabled = true;
+    feedback.textContent = "";
+    $("ami-import-source-form").onsubmit = function (event) {
+      event.preventDefault();
+      if (!select.value) return;
+      try { previewCollaboratorSource(sources[Number(select.value)], trigger); }
+      catch (error) { feedback.textContent = error.message; }
+    };
+    showImportModal("Selecionar aba ou tabela", true, trigger);
+    select.focus();
   }
   function closeImportModal() {
     if (environmentSaving) return;
     $("ami-import-modal").classList.add("is-hidden");
     $("ami-import-modal").hidden = true;
+    $("ami-import-source-form").onsubmit = null;
     importedCollaborators = []; importPage = 1; $("ami-collaborator-file").value = "";
     importTrigger?.focus();
     importTrigger = null;
@@ -1350,13 +1424,36 @@
     $("ami-import-filter-valor").value = "";
     SLTTable.inversion($("ami-import-filter-inverter"), false);
   }
+  function markImportDuplicates(rows) {
+    var existing = new Set(draftEmails.map(function (item) { return item.email.trim().toLowerCase(); }));
+    var seen = new Set();
+    rows.forEach(function (item) {
+      if (existing.has(item.email)) item.duplicate = "Já está na lista de colaboradores";
+      else if (seen.has(item.email)) item.duplicate = "E-mail repetido no arquivo";
+      if (item.duplicate) item.selected = false;
+      seen.add(item.email);
+    });
+  }
+  function importHasDuplicates() {
+    return importedCollaborators.some(function (item) { return item.duplicate; });
+  }
+  function removeImportDuplicates() {
+    if (environmentSaving || !importHasDuplicates()) return;
+    importedCollaborators = importedCollaborators.filter(function (item) { return !item.duplicate; });
+    resetImportFilters();
+    renderImportedCollaborators();
+    $("ami-import-feedback").textContent = importedCollaborators.length
+      ? "Duplicatas excluídas da prévia. Atribua os grupos de critérios aos colaboradores restantes."
+      : "Todos os registros eram duplicados. Nenhum colaborador pode ser importado deste arquivo.";
+    ($("ami-import-list").querySelector("[data-import-scope-row]") || $("ami-import-close")).focus();
+  }
   function openCollaboratorPreview(rows, groups, source, trigger, readOnly = false) {
     importedCollaborators = rows.map(function (item) {
       return { ...item, dimensoes: item.dimensoes ?? null, selected: true };
     });
+    if (source === "file") markImportDuplicates(importedCollaborators);
     importGroups = Array.from(groups.keys());
     importSource = source;
-    importTrigger = trigger;
     importReadOnly = readOnly;
     var description = "Marque os grupos que cada colaborador vai responder. Todos atribui a matriz completa. A caixa no cabeçalho aplica a atribuição a todos os colaboradores filtrados.";
     $("ami-import-description").textContent = readOnly ? "Consulte os colaboradores e seus grupos de critérios. Todos indica a matriz completa."
@@ -1369,10 +1466,13 @@
     $("ami-import-cancel").setAttribute("aria-label", closeLabel);
     $("ami-import-cancel").title = closeLabel;
     $("ami-import-feedback").textContent = "";
+    var duplicateCount = importedCollaborators.filter(function (item) { return item.duplicate; }).length;
+    if (duplicateCount) {
+      $("ami-import-feedback").textContent = (duplicateCount === 1 ? "Há 1 registro duplicado" : "Há " + duplicateCount + " registros duplicados") + ". Use Excluir duplicatas para liberar a atribuição dos grupos.";
+    }
     resetImportFilters();
     renderImportHeaders();
-    $("ami-import-modal").hidden = false;
-    $("ami-import-modal").classList.remove("is-hidden");
+    showImportModal("Prévia da lista de colaboradores", false, trigger);
     renderImportedCollaborators();
     $("ami-import-close").focus();
   }
@@ -1429,6 +1529,9 @@
   }
   function renderImportedCollaborators() {
     var rows = importRows(), scopeColumns = importGroups.concat("Todos");
+    var hasDuplicates = importHasDuplicates(), assignmentDisabled = importReadOnly || environmentSaving || hasDuplicates;
+    $("ami-import-remove-duplicates").classList.toggle("is-hidden", !hasDuplicates);
+    $("ami-import-remove-duplicates").disabled = environmentSaving;
     var column = $("ami-import-filter-coluna").value, valueSelect = $("ami-import-filter-valor");
     SLTTable.values(valueSelect, rows, function (row) { return draftValue(row, column); });
     valueSelect.disabled = !column;
@@ -1442,12 +1545,13 @@
         var label = column === importGroups.length ? "Todos os grupos" : name;
         return '<td class="ami-import-scope"><input type="checkbox" data-import-scope-row="' + row.index + '" data-import-scope-column="' + column + '"' + (checked ? ' checked' : '') + ' aria-label="' + escapeHtml([label, item.nome, item.email].filter(Boolean).join(" · ")) + '"></td>';
       }).join("");
-      return '<tr><td class="col-select"><input type="checkbox" data-import-select="' + row.index + '" ' + (item.selected ? "checked" : "") + ' aria-label="Selecionar ' + escapeHtml(item.nome + " · " + item.email) + '"></td><td>' + escapeHtml(item.nome) + '</td><td>' + escapeHtml(item.email) + '</td>' + scopes + '</tr>';
+      var duplicateNote = item.duplicate ? '<strong class="ami-import-duplicate">Duplicata · ' + escapeHtml(item.duplicate) + '</strong>' : '';
+      return '<tr><td class="col-select"><input type="checkbox" data-import-select="' + row.index + '" ' + (item.selected ? "checked" : "") + ' aria-label="Selecionar ' + escapeHtml(item.nome + " · " + item.email) + '"></td><td>' + escapeHtml(item.nome) + '</td><td>' + escapeHtml(item.email) + duplicateNote + '</td>' + scopes + '</tr>';
     }).join("") || '<tr><td colspan="' + (3 + scopeColumns.length) + '" class="ami-empty">Nenhum colaborador encontrado.</td></tr>';
     $("ami-import-list").querySelectorAll("[data-import-scope-row]").forEach(function (box) {
       var row = Number(box.dataset.importScopeRow), column = Number(box.dataset.importScopeColumn);
       var item = importedCollaborators[row];
-      box.disabled = importReadOnly || environmentSaving;
+      box.disabled = assignmentDisabled;
       box.indeterminate = column === importGroups.length && Boolean(item.dimensoes?.length);
       box.onchange = function () {
         setImportScope(item, column, box.checked);
@@ -1463,15 +1567,20 @@
       box.indeterminate = !box.checked && filtered.some(function (row) {
         return importScopeChecked(row.item, group) || (column === importGroups.length && Boolean(row.item.dimensoes?.length));
       });
-      box.disabled = importReadOnly || environmentSaving || !filtered.length;
+      box.disabled = assignmentDisabled || !filtered.length;
     });
-    $("ami-import-list").querySelectorAll("[data-import-select]").forEach(function (box) { box.disabled = environmentSaving; box.onchange = function () { importedCollaborators[Number(box.dataset.importSelect)].selected = box.checked; renderImportedCollaborators(); }; });
+    $("ami-import-list").querySelectorAll("[data-import-select]").forEach(function (box) {
+      var item = importedCollaborators[Number(box.dataset.importSelect)];
+      box.disabled = environmentSaving || Boolean(item.duplicate);
+      box.onchange = function () { item.selected = box.checked; renderImportedCollaborators(); };
+    });
     var selectedCount = importedCollaborators.filter(function (item) { return item.selected; }).length;
-    $("ami-import-select-all").checked = filtered.length > 0 && filtered.every(function (row) { return row.item.selected; });
-    $("ami-import-select-all").indeterminate = !$("ami-import-select-all").checked && filtered.some(function (row) { return row.item.selected; });
-    $("ami-import-select-all").disabled = environmentSaving || !filtered.length;
+    var selectable = filtered.filter(function (row) { return !row.item.duplicate; });
+    $("ami-import-select-all").checked = selectable.length > 0 && selectable.every(function (row) { return row.item.selected; });
+    $("ami-import-select-all").indeterminate = !$("ami-import-select-all").checked && selectable.some(function (row) { return row.item.selected; });
+    $("ami-import-select-all").disabled = environmentSaving || !selectable.length;
     SLTTable.summary("ami-import-count", result.rows.filter(function (row) { return row.item.selected; }).length, result.rows.length, importedCollaborators.length);
-    $("ami-import-confirm").disabled = importReadOnly || environmentSaving || !selectedCount;
+    $("ami-import-confirm").disabled = assignmentDisabled || !selectedCount;
     $("ami-import-close").disabled = environmentSaving;
     $("ami-import-cancel").disabled = environmentSaving;
   }
@@ -1499,23 +1608,16 @@
     return normalized;
   }
   async function confirmCollaboratorImport() {
-    if (importReadOnly || environmentSaving || environmentMode === "view") return;
+    if (importReadOnly || environmentSaving || environmentMode === "view" || importHasDuplicates()) return;
     var selected = importedCollaborators.filter(function (item) { return item.selected; });
     if (!selected.length) return;
     var feedback = $("ami-import-feedback");
-    var list = draftEmails.slice();
-    var repeated = 0;
+    var list;
     if (importSource === "file") {
-      var existing = new Set(list.map(function (item) { return item.email.trim().toLowerCase(); }));
-      selected.forEach(function (item) {
-        if (existing.has(item.email)) { repeated += 1; return; }
-        existing.add(item.email);
-        list.push(item);
-      });
-      if (repeated === selected.length) { feedback.textContent = "Os e-mails selecionados já estão na lista de colaboradores."; return; }
+      list = draftEmails.concat(selected);
     } else {
       var changes = new Map(selected.map(function (item) { return [item.email, item]; }));
-      list = list.map(function (item) { return changes.get(item.email) || item; });
+      list = draftEmails.map(function (item) { return changes.get(item.email) || item; });
     }
     list = validatedCollaboratorList(list, feedback);
     if (!list) return;
@@ -1552,7 +1654,7 @@
     draftEmails = list;
     draftSnapshot = list.map(invitePayload);
     draftEditing = false;
-    $("ami-emails-feedback").textContent = (repeated ? repeated + " registro(s) com e-mail repetido foram ignorados. " : "") + message;
+    $("ami-emails-feedback").textContent = message;
     closeImportModal();
     renderDraftEmails();
     if (updated) {
@@ -1953,15 +2055,27 @@
     });
     $("ami-collaborator-file").addEventListener("change", async function () {
       var file = this.files && this.files[0]; if (!file) return;
+      var trigger = $("ami-import-collaborators"), judgmentId = environmentId, mode = environmentMode;
       try {
-        var collaborators = await readCollaboratorFile(file);
-        var groups = activeSurfaceId ? new Map() : dimensionGroups();
-        collaborators.forEach(function (item) { item.dimensoes = groups.size ? [] : null; });
-        openCollaboratorPreview(collaborators, groups, "file", $("ami-import-collaborators"));
-      } catch (error) { this.value = ""; avisarFormulario(error.message, $("ami-create-feedback"), $("ami-import-collaborators")); }
+        var sources = await readCollaboratorFile(file);
+        if (this.files[0] !== file || environmentId !== judgmentId || environmentMode !== mode || trigger.disabled) return;
+        $("ami-create-feedback").textContent = "";
+        if (!sources.length) throw new Error("Nenhuma aba ou tabela foi encontrada no arquivo.");
+        if (sources.length === 1) previewCollaboratorSource(sources[0], trigger);
+        else chooseCollaboratorSource(sources, trigger);
+      } catch (error) {
+        if (this.files[0] !== file || environmentId !== judgmentId || environmentMode !== mode) return;
+        this.value = "";
+        avisarFormulario(error.message, $("ami-create-feedback"), trigger);
+      }
+    });
+    $("ami-import-source").addEventListener("change", function () {
+      $("ami-import-source-continue").disabled = !this.value;
+      $("ami-import-source-feedback").textContent = "";
     });
     $("ami-import-close").addEventListener("click", closeImportModal);
     $("ami-import-cancel").addEventListener("click", closeImportModal);
+    $("ami-import-remove-duplicates").addEventListener("click", removeImportDuplicates);
     $("ami-import-confirm").addEventListener("click", confirmCollaboratorImport);
     var importColumns = [["nome", "Nome do colaborador"], ["email", "E-mail"], ["dimensoes", "Grupos de critérios"]];
     importColumns.forEach(function (entry) { $("ami-import-filter-coluna").add(new Option(entry[1], entry[0])); });
@@ -1975,7 +2089,7 @@
     $("ami-import-select-all").addEventListener("change", function () {
       var checked = this.checked;
       filteredImportRows(importRows())
-        .forEach(function (row) { row.item.selected = checked; });
+        .forEach(function (row) { if (!row.item.duplicate) row.item.selected = checked; });
       renderImportedCollaborators();
     });
     $("ami-import-modal").addEventListener("click", function (event) { if (event.target === this) closeImportModal(); });
