@@ -71,9 +71,13 @@ def inscrever_participante(token: str, body: InscricaoPublicaSchema, request: Re
     except DatabaseUnavailableError as exc:
         raise HTTPException(status_code=503, detail="Não foi possível confirmar a inscrição. Tente novamente.", headers={"Cache-Control": "no-store"}) from exc
     response.headers["Cache-Control"] = "no-store"
-    seguro = request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https"
-    response.set_cookie(cookie, segredo, httponly=True, secure=seguro, samesite="lax")
+    definir_cookie_inscricao(request, response, token, segredo)
     return {"codigo_retomada": segredo}
+
+
+def definir_cookie_inscricao(request: Request, response: Response, token: str, segredo: str) -> None:
+    seguro = request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https"
+    response.set_cookie(service.nome_cookie_inscricao(token), segredo, httponly=True, secure=seguro, samesite="lax")
 
 
 class MatrizCreateSchema(BaseModel):
@@ -133,8 +137,11 @@ def listar_respostas_central(
 
 
 def _base_url(request: Request) -> str:
-    base = str(request.base_url).rstrip("/")
     prefix = request.headers.get("x-forwarded-prefix", "").rstrip("/")
+    url = request.base_url
+    if prefix and request.headers.get("x-forwarded-proto") == "https":
+        url = url.replace(scheme="https")
+    base = str(url).rstrip("/")
     return base if not prefix or base.endswith(prefix) else base + prefix
 
 

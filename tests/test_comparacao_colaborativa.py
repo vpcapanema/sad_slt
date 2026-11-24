@@ -1421,6 +1421,9 @@ def test_inscricao_publica_transita_da_lista_ate_envio_sem_email(monkeypatch):
     ident = {"email": "pessoa@x.gov.br", "nome_completo": "Pessoa Teste", "instituicao": "Instituição Teste"}
     assert ambiente["url_publica"].endswith(pagina)
     assert publico.get(pagina + "formulario/", follow_redirects=False).status_code == 303
+    aberta = publico.get(pagina)
+    assert aberta.status_code == 200, aberta.text
+    chave_pendente = publico.cookies[service.nome_cookie_inscricao(ambiente["token"])]
     assert publico.post(caminho + "/acesso", json={"email": ident["email"], "token_acesso": KEY}).status_code == 422
     indisponivel = True
     falha = publico.post(caminho + "/inscricao", json=ident)
@@ -1429,6 +1432,8 @@ def test_inscricao_publica_transita_da_lista_ate_envio_sem_email(monkeypatch):
     inscrita = publico.post(caminho + "/inscricao", json=ident)
     assert inscrita.status_code == 200, inscrita.text
     assert "HttpOnly" in inscrita.headers["set-cookie"] and "Secure" in inscrita.headers["set-cookie"]
+    assert inscrita.json()["codigo_retomada"] == chave_pendente
+    assert publico.post(caminho + "/inscricao", json=ident).json() == inscrita.json()
     assert outro.post(caminho + "/inscricao", json={**ident, "email": ident["email"].upper()}).status_code == 422
     codigo = inscrita.json()["codigo_retomada"]
     assert outro.post(caminho + "/inscricao", json={"email": "outra@x.gov.br", "codigo_retomada": codigo}).status_code == 422

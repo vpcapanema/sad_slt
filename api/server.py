@@ -32,6 +32,7 @@ from api.middleware.subpath_rewrite import SubpathRewriteMiddleware
 from api.path_policy import project_path, relative_path
 from api.repositories import pesquisa_experiencia_repository
 from api.routers import api_router
+from api.routers.comparacao_colaborativa import definir_cookie_inscricao
 from api.services import email_convites as convites_service, storage_remoto
 from api.services import comparacao_colaborativa_service as julgamento_service
 from api.services.email_confirmacoes_automaticas import lifespan as email_lifespan
@@ -558,10 +559,9 @@ def pagina_formulario_multicriterio(request: Request, token: str) -> Response:
 
 @app.get("/public/analise-multicriterio/participar/{token}/", include_in_schema=False)
 def pagina_inscricao_julgamento(request: Request, token: str) -> Response:
+    chave = request.cookies.get(julgamento_service.nome_cookie_inscricao(token))
     try:
-        ambiente, inscricao = julgamento_service.contexto_inscricao(
-            token, request.cookies.get(julgamento_service.nome_cookie_inscricao(token)),
-        )
+        ambiente, inscricao = julgamento_service.contexto_inscricao(token, chave)
     except DemandaValidationError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     erro = None
@@ -570,11 +570,14 @@ def pagina_inscricao_julgamento(request: Request, token: str) -> Response:
     except DemandaValidationError as exc:
         erro = str(exc)
     caminho = f"/public/analise-multicriterio/participar/{quote(token, safe='')}/"
-    return render_page(
+    pagina = render_page(
         request, "paginas/analise_multicriterio/inscricao.html",
         token=token, julgamento=ambiente["nome"], prazo=ambiente["valido_ate"].isoformat(),
         erro=erro, inscrito=inscricao is not None, formulario_url=caminho + "formulario/",
     )
+    if not erro and not chave:
+        definir_cookie_inscricao(request, pagina, token, julgamento_service.gerar_token_acesso())
+    return pagina
 
 
 @app.get("/public/analise-multicriterio/participar/{token}/formulario/", include_in_schema=False)

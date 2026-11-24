@@ -87,14 +87,18 @@ def cadastrar_inscricao(token: str, dados: InscricaoPublicaSchema, sessao: str |
         raise DemandaValidationError("O código de retomada não corresponde ao e-mail informado.", field="codigo_retomada")
     if not dados.nome_completo or not dados.instituicao:
         raise DemandaValidationError("Informe o nome completo e a instituição.", field="nome_completo")
-    segredo = gerar_token_acesso()
+    # O navegador recebe a chave pendente na abertura da página. Ela só passa
+    # a autorizar acesso depois do commit, inclusive se a resposta HTTP se perder.
+    segredo = sessao if sessao and re.fullmatch(r"[A-Za-z0-9_-]{43}", sessao) else gerar_token_acesso()
     inscricao = repo.insert_inscricao(
         str(ambiente["id"]), dados.nome_completo, email, dados.instituicao,
         sha256(segredo.encode()).hexdigest(),
     )
     if not inscricao:
-        ambiente, _ = contexto_inscricao(token)
+        ambiente, existente = contexto_inscricao(token, segredo)
         _validar_ambiente_ativo(ambiente)
+        if existente and existente["email"] == email:
+            return segredo
         raise DemandaValidationError("Este e-mail já está inscrito. Use o código de retomada para continuar.", field="email")
     return segredo
 

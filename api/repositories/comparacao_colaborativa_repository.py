@@ -281,7 +281,7 @@ def insert_inscricao(ambiente_id: str, nome: str, email: str, instituicao: str, 
                  FROM ahp.comparacao_colaborativa_ambiente
                 WHERE id = %s AND modo_participacao = 'publico'
                   AND status = 'ativa' AND valido_ate > clock_timestamp()
-               ON CONFLICT (ambiente_id, email) DO NOTHING
+               ON CONFLICT DO NOTHING
                RETURNING id, nome_completo, email, instituicao""",
             (nome, email, instituicao, segredo_hash, ambiente_id),
         ).fetchone()
