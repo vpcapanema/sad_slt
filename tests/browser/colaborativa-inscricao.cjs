@@ -32,6 +32,12 @@ print(json.dumps({
 
 async function testarFluxo(browser, width, aguardar) {
   const page = await browser.newPage({ viewport: { width, height: 900 } });
+  async function conferirCabecalho() {
+    const cabecalho = page.locator('.app-header');
+    assert.equal(await cabecalho.locator('.app-brand-title').isVisible(), true);
+    assert.equal(await cabecalho.locator('nav, a[href]').count(), 0);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
+  }
   const erros = [];
   const requisicoes = [];
   let falhar = true;
@@ -69,6 +75,7 @@ async function testarFluxo(browser, width, aguardar) {
       } });
     });
     await page.goto(base + inscricao);
+    await conferirCabecalho();
     for (const [campo, valor] of Object.entries(pessoa)) await page.locator(`[name="${campo}"]`).fill(valor);
     const confirmar = page.getByRole('button', { name: 'Confirmar inscrição' });
     await confirmar.click();
@@ -79,6 +86,7 @@ async function testarFluxo(browser, width, aguardar) {
     await page.waitForURL(base + formulario);
     if (aguardar) {
       await page.getByText('Sua posição na fila é 1.', { exact: true }).waitFor();
+      await conferirCabecalho();
       assert.equal(await page.locator('#collab-form-section').count(), 0);
       assert.equal(requisicoes.includes('/acesso'), false);
       assert.equal(requisicoes.includes('/respostas/iniciar'), false);
@@ -87,6 +95,7 @@ async function testarFluxo(browser, width, aguardar) {
       aguardando = false;
     }
     await page.getByText('Etapa 1 de 2 · Dimensões', { exact: true }).waitFor();
+    await conferirCabecalho();
     await page.getByRole('heading', { name: 'A avaliação é feita em duas etapas' }).waitFor();
     assert.equal(await page.locator('#btn-liberar-form').count(), 0);
     const visual = await page.evaluate(() => ({

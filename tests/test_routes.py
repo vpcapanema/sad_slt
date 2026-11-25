@@ -47,6 +47,14 @@ def test_active_specialist_form_is_public_and_legacy_html_is_not_served() -> Non
     assert 'id="colab-email"' in response.text
     assert 'id="btn-enviar-resposta"' in response.text
     assert 'data-requer-autenticacao="true"' not in response.text
+    assert '<div class="marca-sicard app-header-brand">' in response.text
+    assert 'class="navbar-publica app-nav"' not in response.text
+    assert 'href="/restrict/' not in response.text
+    modelo = client.get("/public/analise-multicriterio/formulario-comparacao-pareada/")
+    assert 'class="navbar-publica app-nav"' in modelo.text
+    central = client.get("/restrict/analise-multicriterio/central-respostas", follow_redirects=False)
+    assert central.status_code == 303
+    assert central.headers["location"].startswith("/public/login/?next=")
     assert client.get("/legados/templates/paginas/ahp/colaborativa.html").status_code == 404
 
 

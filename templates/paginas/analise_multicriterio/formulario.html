@@ -6,6 +6,7 @@
 {% set simbolo_sicard = "/assets/img/brand/sicard-simbolo-384.png" %}
 {% set subtitulo = "Matriz de comparação pareada AHP" %}
 {% set navegacao = "publica" %}
+{% set somente_marca = not modo_modelo %}
 {% set requer_autenticacao = false %}
 {% block titulo %}{% if modo_modelo %}Formulário de comparação pareada — modelo PLI{% else %}Julgamento interativo{% endif %} — SICARD{% endblock %}
 {% block classes_body %}ahp-module-page ahp-colaborativa-page ami-public-page escala-revisada{% endblock %}

@@ -1,6 +1,7 @@
 <header class="cabecalho-principal app-header">
   <div class="conteudo-cabecalho app-header-inner">
-    <a href="/public/" class="marca-sicard app-header-brand" title="Página inicial">
+    {% set tag_marca = 'div' if somente_marca else 'a' %}
+    <{{ tag_marca }} class="marca-sicard app-header-brand"{% if not somente_marca %} href="/public/" title="Página inicial"{% endif %}>
       <span class="moldura-simbolo app-header-icon-frame" aria-hidden="true">
         <img src="{{ simbolo_sicard | default('/assets/img/brand/sicard-simbolo.png') }}" alt="" class="simbolo-sicard app-header-icon">
       </span>
@@ -8,7 +9,8 @@
         <span class="nome-sistema app-brand-title">SICARD</span>
         <small>{{ subtitulo | default("Sistema Inteligente de Cadastro e Ranking de Demandas") }}</small>
       </span>
-    </a>
+    </{{ tag_marca }}>
+    {% if not somente_marca %}
     <nav class="navbar-publica app-nav" aria-label="Navegação pública principal">
       <a href="/public/cadastro/">Cadastro de Demandas</a>
       <a href="/public/transparencia/">Transparência e Acompanhamento</a>
@@ -23,5 +25,6 @@
       </div>
       <a href="/public/login/" class="acao-area-restrita app-nav-action" data-link-area-restrita>Área restrita</a>
     </nav>
+    {% endif %}
   </div>
 </header>
