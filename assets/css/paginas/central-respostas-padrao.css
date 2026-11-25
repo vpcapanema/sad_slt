@@ -60,6 +60,17 @@
   text-align: left; align-self: flex-start;
 }
 .sicard-standard-page.ami-page #ami-analysis-workspace .ami-judge-filter__hint { font-size: .64rem !important; font-weight: 400 !important; }
+.sicard-standard-page.ami-page .ami-analysis-selectors {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem;
+}
+.sicard-standard-page.ami-page #ami-analysis-workspace .ami-analysis-selectors select { width: 100%; }
+.sicard-standard-page.ami-page .ami-analysis-group {
+  display: grid; gap: 8px; min-width: 0;
+}
+.sicard-standard-page.ami-page .ami-analysis-group + .ami-analysis-group { margin-top: 1rem; }
+.sicard-standard-page.ami-page .ami-analysis-group > h4 {
+  margin: 0; color: var(--pli-deep); font: 700 .75rem/1.4 Montserrat, Verdana, sans-serif;
+}
 .sicard-standard-page.ami-page #ami-analysis-workspace .ami-report-table { display: grid; gap: 8px; min-width: 0; }
 .sicard-standard-page.ami-page #ami-analysis-workspace .ami-analysis-split > .ami-report-table { grid-column: 1; grid-row: 1; align-self: stretch; }
 .sicard-standard-page.ami-page #ami-analysis-workspace .ami-analysis-split > .ami-analysis-chart { grid-column: 2; grid-row: 1; align-self: stretch; }
@@ -137,6 +148,7 @@
 }
 .sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__judge-name { white-space: normal; overflow-wrap: anywhere; }
 @media (max-width: 720px) {
+  .sicard-standard-page.ami-page .ami-analysis-selectors { grid-template-columns: minmax(0, 1fr); gap: 0; }
   .sicard-standard-page.ami-page #ami-analysis-workspace .ami-analysis-split > .ami-analysis-chart { grid-column: 1; grid-row: 2; }
   .sicard-standard-page.ami-page #ami-analysis-workspace .ami-chart-stack { position: static; }
   .sicard-standard-page.ami-page #ami-analysis-workspace .ami-chart-card { max-height: 70vh; }

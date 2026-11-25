@@ -22,10 +22,10 @@
   <link rel="stylesheet" href="/assets/css/paginas/ami-report-tables.css?v=20261020-paginacao">
   {% if modo_pagina in ['espaco', 'julgamentos'] %}
   <link rel="stylesheet" href="/assets/css/admin-table-controls.css?v=20261015-botoes-quadrados">
-  <link rel="stylesheet" href="/assets/css/paginas/ami-espaco-secoes.css?v=20261124-rolagem-vertical-horizontal-previa">
+  <link rel="stylesheet" href="/assets/css/paginas/ami-espaco-secoes.css?v=20261125-resumo-respostas">
   {% endif %}
   {% if modo_pagina == 'julgamentos' %}<link rel="stylesheet" href="/assets/css/paginas/sicard-standard-pages.css?v=20261027-1">{% endif %}
-  {% if modo_pagina == 'julgamentos' %}<link rel="stylesheet" href="/assets/css/paginas/central-respostas-padrao.css?v=20261123-medidas-ahp">{% endif %}
+  {% if modo_pagina == 'julgamentos' %}<link rel="stylesheet" href="/assets/css/paginas/central-respostas-padrao.css?v=20261125-recortes-ahp">{% endif %}
 {% endblock %}
 {% block conteudo %}
 {% set indicacao_processos = modo_pagina in ['espaco', 'julgamentos'] %}
@@ -37,6 +37,12 @@
     <p class="standard-page-hero__description" id="ami-page-intro">{% if modo_pagina == 'julgamentos' %}Consulte as respostas enviadas pelos especialistas nos julgamentos colaborativos.{% elif modo_pagina == 'formulario' %}Selecione um julgamento e abra o formulário público destinado aos especialistas.{% else %}Configure participantes, prazo de coleta e acesso ao ambiente colaborativo.{% endif %}</p>
   </section>
   {% set tabela_colaborativa_id = "ami-judgments" %}{% set tabela_colaborativa_respostas = modo_pagina == 'julgamentos' %}{% set tabela_colaborativa_comparacao = modo_pagina == 'espaco' %}{% include "componentes/_tabela_colaborativa.html" %}
+  {% if tabela_colaborativa_respostas %}
+  <section class="ami-environment-content is-hidden" id="ami-analysis-summary" aria-labelledby="ami-analysis-title">
+    <h2 class="ami-environment-title" id="ami-analysis-title"><i class="fas fa-chart-line" aria-hidden="true"></i> <span>Análise e consolidação das respostas</span></h2>
+    <div class="ami-status-cards" id="ami-analysis-participation" aria-label="Participação na rodada"></div>
+  </section>
+  {% endif %}
   {% include "componentes/analise_multicriterio/_espaco_analitico_respostas.html" %}
   <div class="ami-environment-content is-hidden" id="ami-create-section">
     <h2 class="ami-environment-title"><i class="fas fa-people-group" aria-hidden="true"></i> <span>Ambiente colaborativo</span></h2>
@@ -169,5 +175,5 @@
   <script src="/assets/js/matriz-criterios-arquivo.js?v=20261009"></script>
   <script src="/assets/js/matrizes-criterios.js?v=20261124-matriz-integral"></script>
   <script src="/assets/js/saaty-selector-color.js?v=20261103-1"></script>
-  <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20261124-excluir-inscricao"></script>
+  <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20261125-recortes-ahp"></script>
 {% endblock %}

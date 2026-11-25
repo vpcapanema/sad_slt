@@ -1,12 +1,16 @@
+{% macro painel_pesos(principal) %}
+<div class="ami-analysis-split"{% if principal %} id="ami-analysis-weights-main"{% endif %}>
+  <div class="matriz-table-wrap"><table class="admin-table ami-stats-table ami-table--pesos"><thead><tr><th>Código</th><th>Critério</th><th>Peso</th></tr></thead><tbody{% if principal %} id="ami-analysis-criteria"{% endif %}></tbody></table></div>
+  <div class="ami-analysis-chart"{% if principal %} id="ami-analysis-criteria-chart"{% endif %} aria-label="Peso de cada critério"></div>
+</div>
+{% endmacro %}
 <section class="card ahp-step-section is-hidden" id="ami-analysis-workspace">
   <div class="ahp-section-label">{% if indicacao_processos %}<i class="fas fa-chart-line" aria-hidden="true"></i>{% else %}<span class="ahp-section-index-icon">2</span>{% endif %}<span>Espaço analítico do julgamento</span></div>
   <div class="ahp-section-body">
-    <label class="c-form-group">Recorte de dimensões<select id="ami-analysis-scope" class="c-form-control"></select></label>
-    <p class="step-intro" id="ami-analysis-scope-hint" hidden>Todos os recortes estão em exibição. Os pares e os pesos locais permanecem identificados por seu recorte; respostas com critérios diferentes não formam uma matriz global. Selecione um recorte ou um julgador para consultar sua matriz.</p>
     <div id="ami-analysis-context" class="step-intro"></div>
     <p id="ami-analysis-mode" class="step-intro" role="status"></p>
     <p class="step-intro"><i class="fas fa-circle-info" aria-hidden="true"></i> As respostas expressam a intensidade de importância entre os critérios. A consolidação dessas comparações calcula os pesos dos critérios da matriz associada ao julgamento. Após a homologação, os pesos poderão ser selecionados em hierarquizações compatíveis com essa matriz. Julgamentos de superfícies preservam seu contexto específico.</p>
-    <div class="ahp-live-metrics ami-live-metrics" id="ami-analysis-participation"></div>
+    {% if not tabela_colaborativa_respostas %}<div class="ahp-live-metrics ami-live-metrics" id="ami-analysis-participation"></div>{% endif %}
 
     <section class="ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">{{ '1' if indicacao_processos else '2.1' }}</span><span>Julgadores</span></div>
       <p class="ami-subsection-hint">Todos os julgadores convidados para este julgamento. Quem ainda não respondeu aparece com nome e e-mail, e os demais campos em branco.</p>
@@ -16,8 +20,12 @@
 
     <section class="ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">{{ '2' if indicacao_processos else '2.2' }}</span><span>Índices de importância de Saaty por par de critérios</span></div>
       <p class="ami-subsection-hint">Índice que cada julgador atribuiu a cada par, na escala fundamental de Saaty (1/9, 1/7, 1/5, 1/3, 1, 3, 5, 7, 9) — a mesma do formulário dos especialistas. As linhas da tabela e as barras do gr&aacute;fico s&atilde;o sempre os pares de crit&eacute;rios do julgador escolhido na lista suspensa: com &ldquo;Todos os julgadores&rdquo; aparecem todos os pares e um julgador por coluna; ao escolher um julgador, aparecem somente os pares que lhe foram atribu&iacute;dos. Passar o cursor por uma linha destaca o par no gr&aacute;fico, e vice-versa; clicar numa linha ou numa barra seleciona o par nos dois lados, e clicar de novo desfaz. Cada par tem um c&oacute;digo (Par 1, Par 2&hellip;), que identifica a linha da tabela e a barra do gr&aacute;fico; com todos &agrave; vista, clicar num julgador da legenda abre aquele julgador. A marca na base da c&eacute;lula indica o afastamento em rela&ccedil;&atilde;o &agrave; m&eacute;dia geom&eacute;trica do par.</p>
-      <div class="ami-judge-filter"><label class="c-form-label" for="ami-pairs-judge">Julgador</label><select class="c-form-control" id="ami-pairs-judge"></select><span class="ami-judge-filter__hint" id="ami-pairs-judge-hint"></span></div>
-      <div class="ami-judge-filter is-hidden" id="ami-analysis-measure-box"><label class="c-form-label" for="ami-analysis-measure">Medida de tendência central</label><select class="c-form-control" id="ami-analysis-measure"></select><span class="ami-judge-filter__hint">A coluna Valor aplicado alimenta a matriz de comparação pareada.</span></div>
+      <div class="ami-analysis-selectors" data-read-control>
+        <div class="ami-judge-filter"><label class="c-form-label" for="ami-analysis-scope">Recorte de dimensões</label><select id="ami-analysis-scope" class="c-form-control" aria-describedby="ami-analysis-scope-hint"></select></div>
+        <div class="ami-judge-filter"><label class="c-form-label" for="ami-pairs-judge">Julgador</label><select class="c-form-control" id="ami-pairs-judge"></select><span class="ami-judge-filter__hint" id="ami-pairs-judge-hint"></span></div>
+        <div class="ami-judge-filter" id="ami-analysis-measure-box"><label class="c-form-label" for="ami-analysis-measure">Medidas de tendência central</label><select class="c-form-control" id="ami-analysis-measure"></select><span class="ami-judge-filter__hint">A coluna Valor aplicado alimenta a matriz de comparação pareada.</span></div>
+      </div>
+      <p class="form-help" id="ami-analysis-scope-hint" hidden>Os pares, as matrizes, as métricas e os pesos são calculados separadamente para cada recorte. Cada peso local representa a participação do critério dentro do seu recorte.</p>
       <p class="form-help" id="ami-analysis-moda-hint" hidden>Quando vários valores têm a mesma frequência máxima, aplica-se a mediana desses valores.</p>
       <div class="ahp-section-body ami-analysis-split" id="ami-analysis-pairs-body"><div class="matriz-table-wrap" id="ami-analysis-pairs"></div><div class="ami-analysis-chart" id="ami-analysis-pairs-chart" aria-label="Índices atribuídos por julgador em cada par de critérios"></div></div>
     </section>
@@ -37,7 +45,8 @@
 
     <section class="ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">{{ '5' if indicacao_processos else '2.5' }}</span><span>Pesos de cada critério</span></div>
       <p class="ami-subsection-hint" id="ami-analysis-weights-hint"></p>
-      <div class="ahp-section-body ami-analysis-split"><div class="matriz-table-wrap"><table class="admin-table ami-stats-table ami-table--pesos"><thead><tr><th>C&oacute;digo</th><th>Crit&eacute;rio</th><th id="ami-analysis-weight-col">Peso</th></tr></thead><tbody id="ami-analysis-criteria"></tbody></table></div><div class="ami-analysis-chart" id="ami-analysis-criteria-chart" aria-label="Peso de cada critério"></div></div>
+      <div class="ahp-section-body">{{ painel_pesos(true) }}<div id="ami-analysis-group-weights" hidden></div></div>
+      <template id="ami-analysis-weights-template">{{ painel_pesos(false) }}</template>
     </section>
 
     <section class="ahp-subcard" id="ami-analysis-local-consolidation"><div class="ahp-subsection-title"><span class="ahp-subsection-num">{{ '6' if indicacao_processos else '2.6' }}</span><span>Consolidação das respostas</span></div>

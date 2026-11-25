@@ -35,9 +35,10 @@ const BASE = process.env.SICARD_BROWSER_BASE_URL || 'http://127.0.0.1:8083';
    const valor = index ? 5 : 3;
    const resposta = {...answers[0], matriz_comparacao: [[1, valor], [1 / valor, 1]],
      estatisticas: {criterios_atribuidos: criteriosDoGrupo}};
-   return {dimensao, criterios: criteriosDoGrupo, respostas: [resposta], resposta_ids: [resposta.id],
+   const respostas = index ? [resposta] : [resposta, {...answers[1], matriz_comparacao: [[1, 7], [1 / 7, 1]], estatisticas: resposta.estatisticas}];
+   return {dimensao, criterios: criteriosDoGrupo, respostas, resposta_ids: respostas.map(r => r.id),
      estatisticas: {por_par: [{i: 0, j: 1, criterio_a: criteriosDoGrupo[0].nome, criterio_b: criteriosDoGrupo[1].nome,
-       pontos: [{resposta_id: resposta.id, respondente: resposta.nome_completo, valor}]}]}};
+       pontos: respostas.map(r => ({resposta_id: r.id, respondente: r.nome_completo, valor: r.matriz_comparacao[0][1]}))}]}};
  });
  const workspacePorGrupo = {...workspaceJ2, ambiente: {...workspaceJ2.ambiente, matriz_id: 'matriz1', modo_comparacao: 'por_grupo',
    n_criterios: 4, criterios: recortes.flatMap(item => item.criterios)}, recortes,
@@ -45,7 +46,7 @@ const BASE = process.env.SICARD_BROWSER_BASE_URL || 'http://127.0.0.1:8083';
    analises: recortes.map((g, i) => ({...official, id:'local' + i, codigo:'LOC' + i, nome:'Análise ' + g.dimensao,
      status:'calculada', estatisticas_analise:{dimensao:g.dimensao, criterios_atribuidos:g.criterios}})),
    respostas: [{...answers[0], matriz_comparacao: [[1, 3, null, null], [1/3, 1, null, null],
-     [null, null, 1, 5], [null, null, 1/5, 1]]}]};
+     [null, null, 1, 5], [null, null, 1/5, 1]]}, recortes[0].respostas[1]]};
  const workspaceDuasEtapas = {...workspacePorGrupo, ambiente:{...workspacePorGrupo.ambiente, modo_comparacao:'duas_etapas'},
    participacao:{...workspacePorGrupo.participacao, enviadas:1, em_preenchimento:1}, analises:[]};
  const oldObjects=[{id:'p1',codigo:'P1',nome:'Objeto salvo na hierarquizacao',status:'aprovada'}];
@@ -75,8 +76,9 @@ const BASE = process.env.SICARD_BROWSER_BASE_URL || 'http://127.0.0.1:8083';
    }
    return r.fulfill({status:422,json:{detail:'Auditoria: envio capturado'}});
  }
- if(path==='/api/auth/me')json={id:'u',tipo_usuario:'ANALISTA'};
- if(path==='/api/auth/session')json={authenticated:true,user:{id:'u',tipo_usuario:'ANALISTA'}};
+ const user = {id:'u',tipo_usuario:'ANALISTA',permissoes:{'mad.visualizar':true,'mad.operar':true}};
+ if(path==='/api/auth/me')json=user;
+ if(path==='/api/auth/session')json={authenticated:true,user};
  if(path==='/api/ahp/comparacao-colaborativa/ambientes')json=rounds;
  if(path==='/api/ahp/comparacao-colaborativa/matrizes/matriz1')json={id:'matriz1',nome:'Matriz de teste',conteudo:{linhas:workspacePorGrupo.ambiente.criterios}};
  if(path.endsWith('/espaco-analitico'))json=path.includes('/j2/') ? (exibirDuasEtapas ? workspaceDuasEtapas : exibirPorGrupo ? workspacePorGrupo : workspaceJ2) : workspace;
@@ -191,11 +193,44 @@ const BASE = process.env.SICARD_BROWSER_BASE_URL || 'http://127.0.0.1:8083';
  await page.locator('#ami-responses-edit-action').click();
  const scope = page.locator('#ami-analysis-scope');
  await scope.locator('option').filter({hasText: 'Financeira'}).waitFor({state: 'attached'});
- assert.deepEqual(await scope.locator('option').allTextContents(), ['Financeira · 2 critérios', 'Social · 2 critérios']);
- assert.match(await page.locator('#ami-analysis-matrix tbody').innerText(), /3.000/);
+ assert.deepEqual(await scope.locator('option').allTextContents(), ['Todas', 'Financeira · 2 critérios', 'Social · 2 critérios']);
+ assert.equal(await scope.inputValue(), '-1');
+ assert.deepEqual(await page.locator('#ami-analysis-summary .ami-status-card strong').allTextContents(), ['2', '0', '0', '2', '2', '0']);
+ assert.equal(await page.locator('#ami-analysis-summary + #ami-analysis-workspace').isVisible(), true);
+ const seletores = page.locator('.ami-analysis-selectors select');
+ assert.deepEqual(await seletores.evaluateAll(campos => campos.map(campo => campo.id)), ['ami-analysis-scope', 'ami-pairs-judge', 'ami-analysis-measure']);
+ await page.setViewportSize({width:1440,height:900});
+ const estiloDoResumo = await page.locator('#ami-analysis-title').evaluate(titulo => {
+   const grade = titulo.nextElementSibling, card = grade.firstElementChild;
+   return [getComputedStyle(titulo).fontSize, getComputedStyle(grade).gap, getComputedStyle(card).padding, getComputedStyle(card).borderRadius];
+ });
+ assert.deepEqual(estiloDoResumo, ['23.2px', '16px', '16px', '8px']);
+ const posicoes = await seletores.evaluateAll(campos => campos.map(campo => campo.getBoundingClientRect().top));
+ assert.equal(new Set(posicoes).size, 1);
+ assert.equal(await page.locator('#ami-analysis-matrix table').count(), 2);
+ assert.deepEqual(await page.locator('#ami-analysis-matrix .ami-analysis-group h4').allTextContents(), ['Financeira', 'Social']);
+ assert.deepEqual(await page.locator('#ami-analysis-pairs [data-ami-applied]').allTextContents(), ['4.583', '5.000']);
+ await page.locator('#ami-analysis-measure').selectOption('aritmetica');
+ assert.deepEqual(await page.locator('#ami-analysis-pairs [data-ami-applied]').allTextContents(), ['5.000', '5.000']);
+ assert.equal(await page.locator('#ami-analysis-metrics .ami-metric-grid').count(), 2);
+ assert.equal(await page.locator('#ami-analysis-group-weights .ami-donut-chart').count(), 2);
+ assert.equal(await page.locator('#ami-analysis-calculate').isDisabled(), true);
+ await page.setViewportSize({width:390,height:900});
+ const colunasNoCelular = await page.locator('.ami-analysis-selectors').evaluate(grade => getComputedStyle(grade).gridTemplateColumns.split(' ').length);
+ assert.equal(colunasNoCelular, 1);
+ assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
+ await page.setViewportSize({width:1440,height:900});
+ await page.locator('#ami-pairs-judge').selectOption('r0');
+ assert.deepEqual(await page.locator('#ami-analysis-pairs [data-ami-applied]').allTextContents(), ['3.000', '5.000']);
+ await page.locator('#ami-pairs-judge').selectOption('r1');
+ assert.deepEqual(await page.locator('#ami-analysis-pairs [data-ami-applied]').allTextContents(), ['7.000']);
+ assert.equal(await page.locator('#ami-analysis-matrix table').count(), 1);
  await scope.selectOption('1');
  assert.match(await page.locator('#ami-analysis-matrix tbody').innerText(), /5.000/);
  assert.match(await page.locator('#ami-analysis-matrix tbody').innerText(), /Equidade/i);
+ assert.equal(await page.locator('#ami-analysis-group-weights').isVisible(), false);
+ assert.equal(await page.locator('#ami-analysis-measure').inputValue(), 'aritmetica');
+ assert.deepEqual(await page.locator('#ami-analysis-summary .ami-status-card strong').allTextContents(), ['2', '0', '0', '2', '2', '0']);
  await page.locator('#ami-analysis-calculate').click();
  await page.locator('#pfsStatusOverlay .pfs-box.pfs-active').waitFor({state:'visible'});
  assert.equal(writes.at(-1).data.dimensao, 'Social');

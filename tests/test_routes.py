@@ -627,6 +627,18 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
     assert "repeat(2,minmax(0,1fr))" in create_grid
 
 
+def test_central_respostas_posiciona_resumo_e_seletores() -> None:
+    html = _client().get("/restrict/analise-multicriterio/central-respostas").text
+    elementos = (
+        "ami-judgments", "ami-analysis-summary", "ami-analysis-title",
+        "ami-analysis-participation", "ami-analysis-workspace", "ami-analysis-judges",
+        "ami-analysis-scope", "ami-pairs-judge", "ami-analysis-measure", "ami-analysis-pairs",
+    )
+    posicoes = [html.index(f'id="{elemento}"') for elemento in elementos]
+    assert posicoes == sorted(posicoes)
+    assert "Análise e consolidação das respostas" in html
+
+
 def test_legacy_page_redirect_preserves_query_string() -> None:
     response = TestClient(app).get(
         "/geoespacial/bancada?modulo=fase1&embutido=1",

@@ -358,8 +358,9 @@
         var regua = '<div class="saaty-scale ami-pair-bars__ruler" aria-valuemin="0" aria-valuemax="8" aria-valuenow="' + indice + '"><div class="saaty-arrow"></div><div class="saaty-rail">' + graduacoes + '<div class="saaty-handle" style="left:' + (indice / 8 * 100).toFixed(2) + '%"></div></div></div>';
         return '<div class="ami-pair-bars__line" data-judge="' + escapeHtml(julgador.id) + '" title="' + escapeHtml(descricao) + '" aria-label="' + escapeHtml(descricao) + '"><span class="ami-pair-bars__end is-a" aria-hidden="true">CT 1</span>' + regua + '<span class="ami-pair-bars__end is-b" aria-hidden="true">CT 2</span></div>';
       }).join("");
-      var rotulo = pair.criterio_a + " \u00d7 " + pair.criterio_b, codigo = codigoPar(pair, todosPares);
+      var rotulo = (pair.escopo ? pair.escopo + " · " : "") + pair.criterio_a + " \u00d7 " + pair.criterio_b, codigo = codigoPar(pair, todosPares);
       var cabecalho = visiveis.filter(function (julgador) { return (pair.pontos || []).some(function (item) { return item.resposta_id === julgador.id; }); }).map(function (julgador) { return '<span class="ami-pair-bars__tag">J' + (cores.lista.indexOf(julgador) + 1) + ' - ' + escapeHtml(codigo) + '</span>'; }).join("");
+      if (pair.escopo) cabecalho += '<span class="ami-pair-bars__tag">' + escapeHtml(pair.escopo) + '</span>';
       return '<div class="ami-pair-bars__row" data-pair="' + pair.i + '-' + pair.j + '" role="button" tabindex="0" aria-label="' + escapeHtml("Selecionar " + codigo + ": " + rotulo) + '"><div class="ami-pair-bars__head">' + cabecalho + '</div><div class="ami-pair-bars__plot">' + trilhas + '</div></div>';
     }).join("");
     var legenda = destaque ? '' : '<ul class="ami-pair-bars__legend">' + cores.lista.map(function (julgador, indice) { return '<li data-judge-open="' + escapeHtml(julgador.id) + '" role="button" tabindex="0" title="Ver somente este julgador"><strong>J' + (indice + 1) + '</strong><span class="ami-pair-bars__judge-name">' + escapeHtml(julgador.nome) + '</span></li>'; }).join("") + '</ul>';
@@ -389,7 +390,10 @@
   // julgador: o mesmo par mantem o mesmo codigo em qualquer visao.
   function codigoPar(pair, todosPares) { return "Par " + (todosPares.indexOf(pair) + 1); }
   function nomeCurtoCriterio(nome) { var partes = String(nome || "").split(" \u2014 "); return partes[partes.length - 1].trim() || String(nome || ""); }
-  function celulaCriterio(nome) { return '<td class="ami-stats-table__name" title="' + escapeHtml(nome) + '">' + escapeHtml(nomeCurtoCriterio(nome)) + '</td>'; }
+  function celulaCriterio(nome, escopo) {
+    var prefixo = escopo ? escopo + " · " : "";
+    return '<td class="ami-stats-table__name" title="' + escapeHtml(prefixo + nome) + '">' + escapeHtml(prefixo + nomeCurtoCriterio(nome)) + '</td>';
+  }
   function celulaCodigo(codigo) { return '<td class="ami-stats-table__codigo"><strong>' + escapeHtml(codigo) + '</strong></td>'; }
   function pairsTable(todosPares, destaque) {
     var cores = judgeColors(todosPares), pairs = paresDoJulgador(todosPares, destaque);
@@ -401,7 +405,7 @@
       cabecalho = ["Par de crit\u00e9rios", "\u00cdndice atribu\u00eddo", "Valor aplicado"];
       corpo = pairs.map(function (pair) {
         var ponto = (pair.pontos || []).filter(function (item) { return item.resposta_id === destaque; })[0];
-        return '<tr data-pair="' + pair.i + '-' + pair.j + '">' + celulaCodigo(codigoPar(pair, todosPares)) + celulaCriterio(pair.criterio_a) + celulaCriterio(pair.criterio_b) + '<td><strong>' + (ponto ? saatyLabel(ponto.valor) : "\u2014") + '</strong></td><td data-ami-applied></td></tr>';
+        return '<tr data-pair="' + pair.i + '-' + pair.j + '">' + celulaCodigo(codigoPar(pair, todosPares)) + celulaCriterio(pair.criterio_a, pair.escopo) + celulaCriterio(pair.criterio_b) + '<td><strong>' + (ponto ? saatyLabel(ponto.valor) : "\u2014") + '</strong></td><td data-ami-applied></td></tr>';
       });
     } else {
       cabecalho = ["Par de crit\u00e9rios"].concat(cores.lista.map(function (julgador) {
@@ -414,21 +418,19 @@
           var intensidade = desvioIntensidade(ponto.valor, pair.media_geometrica);
           return '<td class="ami-stats-table__valor' + (intensidade > 0.55 ? " is-forte" : "") + '" style="--ami-deviation-color:rgba(17,101,147,' + (intensidade * 0.8).toFixed(3) + ')" title="' + escapeHtml(julgador.nome + ": " + saatyLabel(ponto.valor) + " \u00b7 m\u00e9dia geom\u00e9trica do par " + fmtNumber(pair.media_geometrica)) + '">' + saatyLabel(ponto.valor) + '</td>';
         }).join("");
-        return '<tr data-pair="' + pair.i + '-' + pair.j + '">' + celulaCodigo(codigoPar(pair, todosPares)) + celulaCriterio(pair.criterio_a) + celulaCriterio(pair.criterio_b) + celulas + '<td>' + fmtNumber(pair.media) + '</td><td>' + fmtNumber(pair.mediana) + '</td><td>' + modaLabel(pair) + '</td><td data-ami-applied></td></tr>';
+        return '<tr data-pair="' + pair.i + '-' + pair.j + '">' + celulaCodigo(codigoPar(pair, todosPares)) + celulaCriterio(pair.criterio_a, pair.escopo) + celulaCriterio(pair.criterio_b) + celulas + '<td>' + fmtNumber(pair.media) + '</td><td>' + fmtNumber(pair.mediana) + '</td><td>' + modaLabel(pair) + '</td><td data-ami-applied></td></tr>';
       });
     }
     var rodape = destaque ? "" : '<p class="ami-table-note"><span class="ami-table-note__escala">Marca na base da c\u00e9lula: afastamento da m\u00e9dia geom\u00e9trica do par <i></i><i></i><i></i><i></i></span></p>';
     return '<table class="admin-table ami-stats-table ami-table--indices" data-grouped-headers="true"><thead><tr><th rowspan="2" scope="col">C\u00f3digo</th><th colspan="2" scope="colgroup">Par de critérios</th>' + cabecalho.slice(1).map(function (titulo) { return '<th rowspan="2" scope="col">' + titulo + '</th>'; }).join("") + '</tr><tr class="ami-pair-leaf-headers"><th scope="col">Critério 1</th><th scope="col">Critério 2</th></tr></thead><tbody>' + (corpo.join("") || '<tr><td colspan="' + (cabecalho.length + 2) + '">Sem respostas enviadas.</td></tr>') + '</tbody></table>' + rodape;
   }
-  function renderAppliedPairValues(data, foco) {
+  function renderAppliedPairValues(foco, focosPorRecorte) {
     var tabela = $("ami-analysis-pairs").querySelector("table"), estado = tabela.analysisControls;
-    var criterios = foco && JSON.stringify(foco.criterios);
-    var recortes = (data.recortes || []).map(function (recorte) { return JSON.stringify(recorte.criterios); });
     estado.rows.forEach(function (linha) {
       var indices = linha.dataset.pair.split("-"), origem = indices[0].split(":");
-      var mesmoRecorte = origem.length === 1 || recortes[Number(origem[0])] === criterios;
+      var resultado = origem.length === 1 ? foco : focosPorRecorte[Number(origem[0])];
       var i = Number(origem[origem.length - 1]), j = Number(indices[1]);
-      var valor = foco && mesmoRecorte ? foco.matriz[i]?.[j] : null;
+      var valor = resultado?.matriz[i]?.[j];
       linha.querySelector("[data-ami-applied]").textContent = fmtNumber(valor);
     });
     estado.options();
@@ -636,6 +638,7 @@
   // A matriz que alimenta as secoes 3 a 5: a do julgador selecionado, a analise
   // registrada (so na consulta) ou a agregacao de todos pela medida escolhida.
   function analiseRegistrada(data) {
+    if (data.recortesEmExibicao) return null;
     return analiseHomologada(data) || (data.analises || []).find(function (item) {
       return JSON.stringify(criteriosDoRegistro(data, item)) === JSON.stringify(data.ambiente.criterios);
     }) || null;
@@ -660,6 +663,7 @@
   // Por que nao ha matriz: sem respostas, ou respostas de recortes distintos
   // (criterios diferentes nao formam uma matriz unica).
   function motivoSemMatriz(data) {
+    if (selectedJudgeId && !respostasEnviadas(data).some(function (r) { return String(r.id) === selectedJudgeId; })) return "Este julgador não enviou uma resposta para este recorte.";
     var enviadas = respostasDaAgregacao(data);
     if (enviadas.length > 1 && !respostasMesmoRecorte(data, enviadas)) return "As respostas enviadas usam crit\u00e9rios de recortes diferentes e n\u00e3o formam uma matriz \u00fanica. Selecione um recorte de dimens\u00f5es ou um julgador.";
     return analysisMode === "edit" ? "Sem respostas inclu\u00eddas na an\u00e1lise." : "Sem respostas enviadas: ainda n\u00e3o h\u00e1 matriz.";
@@ -724,12 +728,9 @@
     }).join("") || '<tr><td colspan="7" class="ami-empty">Nenhum colaborador registrado.</td></tr>';
     SLTAnalysisTable($("ami-analysis-responses").closest("table"), data.ambiente);
   }
-  function renderConsolidatedMatrix(data, foco) {
-    var criterios = (foco ? foco.criterios : data.ambiente.criterios || []).map(criterionName);
-    var caixa = $("ami-analysis-measure-box");
+  function renderMeasureSelector(data) {
     // A medida fica sempre disponivel: com um julgador selecionado ela incide
     // so sobre a resposta dele, e o resultado e a matriz desse julgador.
-    caixa.classList.remove("is-hidden");
     var seletor = $("ami-analysis-measure"), registrada = analysisMode === "edit" ? null : analiseRegistrada(data);
     var medidas = '<option value="geometrica">M\u00e9dia geom\u00e9trica dos \u00edndices</option><option value="aritmetica">M\u00e9dia aritm\u00e9tica dos \u00edndices</option><option value="mediana">Mediana dos \u00edndices</option><option value="moda">Moda dos \u00edndices</option>';
     seletor.innerHTML = (registrada ? '<option value="registrada">An\u00e1lise registrada \u2014 ' + escapeHtml(registrada.nome || registrada.codigo || "sem nome") + '</option>' : '') + medidas;
@@ -740,8 +741,10 @@
       seletor.dataset.bound = "1";
       seletor.addEventListener("change", function () { selectedMeasure = seletor.value; renderFioDerivado(analysisWorkspace); });
     }
-
-    $("ami-analysis-matrix-hint").innerHTML = !foco
+  }
+  function renderConsolidatedMatrix(data, foco, host, hint) {
+    var criterios = (foco ? foco.criterios : data.ambiente.criterios || []).map(criterionName);
+    hint.innerHTML = !foco
       ? escapeHtml(motivoSemMatriz(data))
       : foco.origem === "julgador"
         ? 'Matriz do julgador <strong>' + escapeHtml(foco.rotulo) + '</strong>, selecionado na se\u00e7\u00e3o de \u00edndices por par, exatamente como ele a preencheu: a medida de tend\u00eancia central incide sobre uma \u00fanica resposta e devolve os pr\u00f3prios \u00edndices atribu\u00eddos. Cada c\u00e9lula responde: quantas vezes o crit\u00e9rio da linha importa mais que o da coluna. Escolha "Todos os julgadores" para agregar as respostas pela medida.'
@@ -751,14 +754,16 @@
             ? 'Agrega\u00e7\u00e3o das <strong>' + foco.respostas + '</strong> respostas enviadas, par a par, pela <strong>' + escapeHtml(foco.rotulo) + '</strong> dos \u00edndices. C\u00e1lculo de consulta, sem exclus\u00e3o de respostas inconsistentes e sem grava\u00e7\u00e3o; a an\u00e1lise registrada est\u00e1 na subse\u00e7\u00e3o 7.'
             : 'Agrega\u00e7\u00e3o dos julgamentos dos julgadores selecionados, par a par, pela <strong>' + escapeHtml(foco.rotulo) + '</strong> dos \u00edndices.' +
               ' Pr\u00e9via das respostas selecionadas na subse\u00e7\u00e3o 6. O resultado homologado est\u00e1 identificado na subse\u00e7\u00e3o 7.';
-    if (!foco) { $("ami-analysis-matrix").innerHTML = '<p class="ami-empty">' + escapeHtml(motivoSemMatriz(data)) + '</p>'; return; }
-    $("ami-analysis-matrix").innerHTML = tableLabelHtml("Matriz de comparação pareada do julgamento") + '<div class="matriz-table-wrap"><table class="admin-table ami-stats-table ami-matrix" data-table-sort="off"><thead><tr><th>Crit\u00e9rio</th>' +
+    if (!foco) { host.replaceChildren(); return; }
+    host.innerHTML = tableLabelHtml("Matriz de comparação pareada do julgamento") + '<div class="matriz-table-wrap"><table class="admin-table ami-stats-table ami-matrix" data-table-sort="off"><thead><tr><th>Crit\u00e9rio</th>' +
       criterios.map(function (nome) { return '<th>' + escapeHtml(nome) + '</th>'; }).join("") + '</tr></thead><tbody>' +
       foco.matriz.map(function (linha, i) {
         return '<tr><td class="ami-stats-table__name">' + escapeHtml(criterios[i]) + '</td>' +
           linha.map(function (valor, j) { return '<td' + (i === j ? ' class="is-diagonal"' : '') + ' title="' + escapeHtml(criterios[i] + " \u00d7 " + criterios[j]) + '">' + fmtNumber(valor) + '</td>'; }).join("") + '</tr>';
       }).join("") + '</tbody></table></div>';
-    SLTAnalysisTable($("ami-analysis-matrix").querySelector("table"), data.ambiente);
+    var tabela = host.querySelector("table");
+    if (data.rotuloRecorte) tabela.dataset.produtoExportacao = "Matriz de comparação pareada " + data.rotuloRecorte;
+    SLTAnalysisTable(tabela, data.ambiente);
   }
   // Explicacao curta de cada metrica, em linguagem de quem vai decidir.
   var EXPLICACAO_METRICAS = {
@@ -772,19 +777,19 @@
     if (!registro || chaves.some(function (chave) { return registro[chave] == null; })) return null;
     return { lambdaMax: registro.lambda_max, ic: registro.indice_consistencia, ri: registro.indice_aleatorio, rc: registro.razao_consistencia };
   }
-  function renderConsistencyMetrics(data, foco, calculadas) {
-    if (!foco) { $("ami-analysis-metrics-hint").textContent = ""; $("ami-analysis-metrics").innerHTML = '<p class="ami-empty">Sem m\u00e9tricas. ' + escapeHtml(motivoSemMatriz(data)) + '</p>'; return; }
+  function renderConsistencyMetrics(data, foco, calculadas, host, hint) {
+    if (!foco) { hint.textContent = "Sem métricas. " + motivoSemMatriz(data); host.replaceChildren(); return; }
     var armazenadas = metricasArmazenadas(foco.registro);
     if (foco.origem === "registrada" && !armazenadas) {
-      $("ami-analysis-metrics-hint").textContent="Métricas não registradas para esta análise.";
-      $("ami-analysis-metrics").innerHTML='<p class="ami-empty">Nenhuma métrica registrada.</p>';return;
+      hint.textContent = "Métricas não registradas para esta análise.";
+      host.replaceChildren(); return;
     }
     var resultado = armazenadas || calculadas;
     var limite = foco.registro?.rc_maximo ?? (Number($("ami-analysis-rc").value) || 0.1);
     var superficie = Boolean(data.ambiente.superficie_id);
     if (superficie) limite = Math.min(limite, 0.1);
     var aprovado = superficie ? resultado.rc <= limite : resultado.rc < limite, n = foco.matriz.length;
-    $("ami-analysis-metrics-hint").innerHTML = (foco.origem === "julgador"
+    hint.innerHTML = (foco.origem === "julgador"
       ? 'Coer\u00eancia interna do julgamento de <strong>' + escapeHtml(foco.rotulo) + '</strong>'
       : foco.origem === "registrada" ? 'Coer\u00eancia da an\u00e1lise registrada <strong>' + escapeHtml(foco.rotulo) + '</strong>'
       : 'Coer\u00eancia da matriz agregada pela <strong>' + escapeHtml(foco.rotulo) + '</strong>') +
@@ -833,43 +838,44 @@
     var explicacoes = '<div class="ami-metric-help"><h4>O que cada métrica diz</h4><dl>' + cartas.map(function (carta) {
       return '<dt>' + carta.rotulo + '</dt><dd>' + carta.texto + '</dd>';
     }).join("") + '</dl>' + (conclusao ? '<p class="ami-metric-help__fecho is-' + (aprovado ? "ok" : "nok") + '">' + conclusao.conclusao + '</p>' : '') + '</div>';
-    $("ami-analysis-metrics").innerHTML = grade + explicacoes;
+    host.innerHTML = grade + explicacoes;
   }
-  function renderWeights(data, foco, calculadas) {
+  function renderWeights(data, foco, calculadas, host, hint, prefixo) {
     var armazenados = foco?.registro?.pesos_consolidados;
     var pesos = armazenados?.length ? armazenados : calculadas?.pesos || [];
     var criterios = (foco ? foco.criterios : data.ambiente.criterios || []).map(criterionName);
-    $("ami-analysis-weight-col").textContent = "Peso";
-    $("ami-analysis-weights-hint").innerHTML = !foco ? escapeHtml(motivoSemMatriz(data)) : foco.origem === "julgador"
+    hint.innerHTML = !foco ? escapeHtml(motivoSemMatriz(data)) : foco.origem === "julgador"
       ? 'Pesos derivados da matriz de <strong>' + escapeHtml(foco.rotulo) + '</strong>, sem agrega\u00e7\u00e3o \u2014 \u00e9 o julgamento de uma pessoa s\u00f3.'
       : foco.origem === "registrada"
         ? 'Pesos gravados na an\u00e1lise registrada <strong>' + escapeHtml(foco.rotulo) + '</strong>.'
         : analysisMode !== "edit"
           ? 'Pesos calculados a partir da matriz agregada de todas as respostas enviadas, pela <strong>' + escapeHtml(foco.rotulo) + '</strong> dos \u00edndices.'
           : 'Pesos consolidados a partir dos \u00edndices dos julgadores selecionados, agregados pela <strong>' + escapeHtml(foco.rotulo) + '</strong>.';
-    $("ami-analysis-weights-hint").innerHTML += ' Cada crit\u00e9rio tem um c\u00f3digo (CT1, CT2\u2026), usado tamb\u00e9m na rosca ao lado; clicar numa linha ou numa fatia seleciona o crit\u00e9rio nos dois lados.';
-    $("ami-analysis-criteria").innerHTML = criterios.map(function (nome, indice) {
-      return '<tr data-criterio="' + indice + '"><td class="ami-stats-table__codigo"><strong>CT' + (indice + 1) + '</strong></td><td class="ami-stats-table__name" title="' + escapeHtml(nome) + '">' + escapeHtml(nome) + '</td><td><strong>' + (pesos.length ? fmtNumber(pesos[indice]) : "\u2014") + '</strong></td></tr>';
+    if (pesos.length) hint.innerHTML += ' Cada crit\u00e9rio tem um c\u00f3digo (CT1, CT2\u2026), usado tamb\u00e9m na rosca ao lado; clicar numa linha ou numa fatia seleciona o crit\u00e9rio nos dois lados.';
+    var tabela = host.querySelector("table"), grafico = host.querySelector(".ami-analysis-chart");
+    tabela.dataset.produtoExportacao = data.rotuloRecorte ? "Pesos dos critérios " + data.rotuloRecorte : "";
+    tabela.tBodies[0].innerHTML = criterios.map(function (nome, indice) {
+      return '<tr data-criterio="' + (prefixo || "") + indice + '"><td class="ami-stats-table__codigo"><strong>CT' + (indice + 1) + '</strong></td><td class="ami-stats-table__name" title="' + escapeHtml(nome) + '">' + escapeHtml(nome) + '</td><td><strong>' + (pesos.length ? fmtNumber(pesos[indice]) : "\u2014") + '</strong></td></tr>';
     }).join("") || '<tr><td colspan="3" class="ami-empty">Sem respostas enviadas.</td></tr>';
-    $("ami-analysis-criteria-chart").innerHTML = '<div class="ami-chart-stack"><p class="ami-table-label ami-chart-label">Participa\u00e7\u00e3o de cada crit\u00e9rio nos pesos</p>' +
-      '<div class="ami-chart-card">' + (pesos.length ? weightsDonut(criterios, pesos) : '<p class="ami-empty">Sem respostas enviadas.</p>') + '</div></div>';
-    SLTAnalysisTable($("ami-analysis-criteria").closest("table"), data.ambiente);
-    espelharRotuloDaTabela($("ami-analysis-criteria").closest("table").parentElement, $("ami-analysis-criteria-chart").querySelector(".ami-chart-label"));
-    ligarSelecaoCruzada($("ami-analysis-criteria-chart").parentElement, "criterio");
+    grafico.innerHTML = '<div class="ami-chart-stack"><p class="ami-table-label ami-chart-label">Participa\u00e7\u00e3o de cada crit\u00e9rio nos pesos</p>' +
+      '<div class="ami-chart-card">' + (pesos.length ? weightsDonut(criterios, pesos, prefixo || "") : '<p class="ami-empty">Sem respostas enviadas.</p>') + '</div></div>';
+    SLTAnalysisTable(tabela, data.ambiente);
+    espelharRotuloDaTabela(tabela.parentElement, grafico.querySelector(".ami-chart-label"));
+    ligarSelecaoCruzada(host, "criterio");
   }
   // Os pesos somam 100%, entao cabem numa rosca: cada fatia e um criterio,
   // identificado pelo codigo CT da tabela ao lado. A rosca e um SVG para que cada
   // fatia possa ser realcada e clicada.
-  function weightsDonut(criterios, pesos) {
+  function weightsDonut(criterios, pesos, prefixo) {
     var total = pesos.reduce(function (soma, peso) { return soma + Number(peso); }, 0) || 1, inicio = 0;
     var cores = criterios.map(function (nome, indice) { return indice < 8 ? "var(--ami-chart-" + (indice + 1) + ")" : "hsl(" + ((indice * 47) % 360) + " 55% 45%)"; });
     var fatias = pesos.map(function (peso, indice) {
       var parte = Number(peso) / total * 100, rotulo = "CT" + (indice + 1) + " \u00b7 " + criterios[indice] + " \u2014 " + parte.toFixed(1) + "%";
-      var fatia = '<circle class="ami-donut-chart__slice" data-criterio="' + indice + '" cx="50" cy="50" r="36" pathLength="100" style="stroke:' + cores[indice] + '" stroke-dasharray="' + parte.toFixed(3) + " " + (100 - parte).toFixed(3) + '" stroke-dashoffset="' + (-inicio).toFixed(3) + '" transform="rotate(-90 50 50)" role="button" tabindex="0" aria-label="' + escapeHtml(rotulo) + '"><title>' + escapeHtml(rotulo) + '</title></circle>';
+      var fatia = '<circle class="ami-donut-chart__slice" data-criterio="' + prefixo + indice + '" cx="50" cy="50" r="36" pathLength="100" style="stroke:' + cores[indice] + '" stroke-dasharray="' + parte.toFixed(3) + " " + (100 - parte).toFixed(3) + '" stroke-dashoffset="' + (-inicio).toFixed(3) + '" transform="rotate(-90 50 50)" role="button" tabindex="0" aria-label="' + escapeHtml(rotulo) + '"><title>' + escapeHtml(rotulo) + '</title></circle>';
       inicio += parte; return fatia;
     }).join("");
     var legenda = criterios.map(function (nome, indice) {
-      return '<li data-criterio="' + indice + '" role="button" tabindex="0" title="' + escapeHtml("CT" + (indice + 1) + " \u00b7 " + nome) + '"><span class="ami-donut-chart__swatch" style="background:' + cores[indice] + '"></span><span>CT' + (indice + 1) + '</span><strong>' + (Number(pesos[indice]) / total * 100).toFixed(1) + '%</strong></li>';
+      return '<li data-criterio="' + prefixo + indice + '" role="button" tabindex="0" title="' + escapeHtml("CT" + (indice + 1) + " \u00b7 " + nome) + '"><span class="ami-donut-chart__swatch" style="background:' + cores[indice] + '"></span><span>CT' + (indice + 1) + '</span><strong>' + (Number(pesos[indice]) / total * 100).toFixed(1) + '%</strong></li>';
     }).join("");
     return '<figure class="ami-donut-chart" data-selecionavel aria-label="Peso de cada crit\u00e9rio, identificado pelo c\u00f3digo CT"><div class="ami-donut-chart__plot"><svg viewBox="0 0 100 100" aria-hidden="false">' + fatias + '</svg><span><strong>100%</strong>' + criterios.length + ' crit\u00e9rios</span></div><figcaption><ul>' + legenda + '</ul></figcaption></figure>';
   }
@@ -877,9 +883,10 @@
   function syncAnalysisCalculate() {
     var respostas = analysisMode === "edit" && analysisWorkspace ? respostasDaAgregacao(analysisWorkspace) : [];
     var mesmoRecorte = respostasMesmoRecorte(analysisWorkspace, respostas);
-    $("ami-analysis-calculate").disabled = analysisMode !== "edit" || analysisSaving || !respostas.length || !mesmoRecorte;
-    var message = "Para consolidar, selecione respostas de um mesmo recorte de dimensões.";
-    if (!mesmoRecorte) $("ami-analysis-feedback").textContent = message;
+    var selecioneDimensao = exigeRecorteParaConsolidar(analysisWorkspace);
+    $("ami-analysis-calculate").disabled = analysisMode !== "edit" || analysisSaving || !respostas.length || !mesmoRecorte || selecioneDimensao;
+    var message = "Para consolidar, selecione um recorte de dimensões e inclua as respostas desejadas.";
+    if (analysisMode === "edit" && (!mesmoRecorte || selecioneDimensao)) $("ami-analysis-feedback").textContent = message;
     else if ($("ami-analysis-feedback").textContent === message) $("ami-analysis-feedback").textContent = "";
   }
   function syncAnalysisMode() {
@@ -903,11 +910,48 @@
   function renderFioDerivado(data) {
     normalizarMedida(data);
     syncAnalysisCalculate();
-    var foco = matrizEmFoco(data), calculadas = foco && analisarMatriz(foco.matriz);
-    renderAppliedPairValues(data, foco);
-    renderConsolidatedMatrix(data, foco);
-    renderConsistencyMetrics(data, foco, calculadas);
-    renderWeights(data, foco, calculadas);
+    renderMeasureSelector(data);
+    var matriz = $("ami-analysis-matrix"), metricas = $("ami-analysis-metrics"), pesos = $("ami-analysis-weights-main"), gruposPesos = $("ami-analysis-group-weights");
+    var dicaMatriz = $("ami-analysis-matrix-hint"), dicaMetricas = $("ami-analysis-metrics-hint"), dicaPesos = $("ami-analysis-weights-hint");
+    var recortes = data.recortesEmExibicao;
+    pesos.classList.toggle("is-hidden", Boolean(recortes));
+    gruposPesos.hidden = !recortes;
+    gruposPesos.replaceChildren();
+    if (!recortes) {
+      var foco = matrizEmFoco(data), calculadas = foco && analisarMatriz(foco.matriz);
+      renderAppliedPairValues(foco);
+      renderConsolidatedMatrix(data, foco, matriz, dicaMatriz);
+      renderConsistencyMetrics(data, foco, calculadas, metricas, dicaMetricas);
+      renderWeights(data, foco, calculadas, pesos, dicaPesos);
+      return;
+    }
+
+    [dicaMatriz, dicaMetricas, dicaPesos].forEach(function (dica) { dica.textContent = ""; });
+    matriz.replaceChildren(); metricas.replaceChildren();
+    var focos = recortes.map(function (recorte, indice) {
+      var resultado = matrizEmFoco(recorte);
+      var calculo = resultado && analisarMatriz(resultado.matriz);
+      var painelMatriz = painelDoRecorte(matriz, recorte.rotuloRecorte);
+      var painelMetricas = painelDoRecorte(metricas, recorte.rotuloRecorte);
+      var painelPesos = painelDoRecorte(gruposPesos, recorte.rotuloRecorte);
+      var gradePesos = $("ami-analysis-weights-template").content.firstElementChild.cloneNode(true);
+      painelPesos.body.append(gradePesos);
+      renderConsolidatedMatrix(recorte, resultado, painelMatriz.body, painelMatriz.hint);
+      renderConsistencyMetrics(recorte, resultado, calculo, painelMetricas.body, painelMetricas.hint);
+      renderWeights(recorte, resultado, calculo, gradePesos, painelPesos.hint, indice + ":");
+      return resultado;
+    });
+    renderAppliedPairValues(null, focos);
+  }
+  function painelDoRecorte(host, rotulo) {
+    var painel = document.createElement("div"), titulo = document.createElement("h4");
+    var hint = document.createElement("p"), body = document.createElement("div");
+    painel.className = "ami-analysis-group";
+    titulo.textContent = rotulo;
+    hint.className = "ami-subsection-hint";
+    painel.append(titulo, hint, body);
+    host.append(painel);
+    return { body: body, hint: hint };
   }
   // --- Modal de acompanhamento do processo de consolidacao -----------------
   var ETAPAS_CONSOLIDACAO = [
@@ -941,7 +985,7 @@
   // Consolidacao completa: cada etapa alimenta o modal de processo e o desfecho
   // vai para o semaforo.
   function consolidarRespostas() {
-    if (!analysisWorkspace || analysisSaving || analysisMode !== "edit") return;
+    if (!analysisWorkspace || analysisSaving || analysisMode !== "edit" || exigeRecorteParaConsolidar(analysisWorkspace)) return;
     var respostas = respostasDaAgregacao(analysisWorkspace);
     if (!respostasMesmoRecorte(analysisWorkspace, respostas)) return;
     var ambienteId = analysisWorkspace.ambiente.id;
@@ -973,7 +1017,7 @@
       return api("/api/ahp/comparacao-colaborativa/ambientes/" + encodeURIComponent(ambienteId) + "/espaco-analitico");
     }).then(function (data) {
       marcarEtapa("recarga", "ok", "Se\u00e7\u00f5es 1 a 7 atualizadas.");
-      renderAnalysisWorkspace(data, analysisWorkspace.dimensao ? analysisScope : undefined);
+      renderAnalysisWorkspace(data, analysisScope);
       var incluidas = criada.respostas_incluidas || selecionadas.length;
       var campos = [
         ["An\u00e1lise", (criada.nome || "") + (criada.codigo ? " (" + criada.codigo + ")" : "")],
@@ -1003,6 +1047,34 @@
         [["Etapa", pendente ? pendente.titulo : "\u2014"], ["Selecionadas", String(selecionadas.length)]]);
     }).finally(function () { analysisSaving = false; syncAnalysisCalculate(); });
   }
+  function rotuloDoRecorte(recorte) {
+    return recorte.dimensao || Array.from(new Set(recorte.criterios.map(criterionDimension).filter(Boolean))).join(" · ") || "Matriz integral";
+  }
+  function dadosDoRecorte(data, recorte) {
+    var ids = new Set(recorte.resposta_ids.map(String));
+    var criterios = JSON.stringify(recorte.criterios);
+    return Object.assign({}, data, {
+      ambiente: Object.assign({}, data.ambiente, {
+        criterios: recorte.criterios,
+        n_criterios: recorte.criterios.length,
+        convites: (data.ambiente.convites || []).filter(function (convite) {
+          if (recorte.dimensao) return !convite.dimensoes || convite.dimensoes.includes(recorte.dimensao);
+          return JSON.stringify(data.ambiente.criterios.filter(function (row) { return !convite.dimensoes || convite.dimensoes.includes(criterionDimension(row)); })) === criterios;
+        })
+      }),
+      respostas: recorte.respostas || data.respostas.filter(function (r) { return ids.has(String(r.id)); }),
+      dimensao: recorte.dimensao,
+      rotuloRecorte: rotuloDoRecorte(recorte),
+      estatisticas: recorte.estatisticas,
+      analises: data.analises.filter(function (a) {
+        return !["pesos_por_dimensao", "media_pesos_individuais"].includes(a.metodo_agregacao) &&
+          JSON.stringify((a.estatisticas_analise || {}).criterios_atribuidos || data.ambiente.criterios) === criterios;
+      })
+    });
+  }
+  function exigeRecorteParaConsolidar(data) {
+    return data?.ambiente.modo_comparacao === "por_grupo" && !data.dimensao;
+  }
   function renderAnalysisWorkspace(data, scope) {
     selecaoCruzada.pair = null; selecaoCruzada.criterio = null;
     analysisSource = data;
@@ -1014,79 +1086,78 @@
     var emDuasEtapas = analysisSource.ambiente.modo_comparacao === "duas_etapas";
     var porGrupo = emDuasEtapas || analysisSource.ambiente.modo_comparacao === "por_grupo";
     picker.replaceChildren();
-    if (!porGrupo) picker.add(new Option("Todos", "-1"));
+    picker.add(new Option("Todas", "-1"));
     recortes.forEach(function (recorte, index) {
-      var label = Array.from(new Set(recorte.criterios.map(criterionDimension).filter(Boolean))).join(" · ") || "Matriz integral";
-      picker.add(new Option(label + " · " + recorte.criterios.length + " critérios", String(index)));
+      var quantidade = recorte.criterios.length;
+      picker.add(new Option(rotuloDoRecorte(recorte) + " · " + quantidade + (quantidade === 1 ? " critério" : " critérios"), String(index)));
     });
-    picker.parentElement.hidden = false;
-    if (analysisScope >= recortes.length || (porGrupo && analysisScope < 0)) analysisScope = porGrupo ? 0 : -1;
+    if (analysisScope >= recortes.length) analysisScope = -1;
     picker.value = String(analysisScope);
-    picker.onchange = function () { analysisWorkspace = null; renderAnalysisWorkspace(analysisSource, Number(picker.value)); };
+    picker.onchange = function () {
+      if (analysisSaving) { picker.value = String(analysisScope); return; }
+      analysisWorkspace = null;
+      renderAnalysisWorkspace(analysisSource, Number(picker.value));
+    };
     var recorte = recortes[analysisScope];
-    $("ami-analysis-scope-hint").hidden = Boolean(recorte) || recortes.length < 2;
-    data = analysisSource;
-    if (!recorte && recortes.length) {
-      data = Object.assign({}, analysisSource, { estatisticas: {
-        por_par: recortes.flatMap(function (r, index) {
-          return r.estatisticas.por_par.map(function (pair) {
-            var label = Array.from(new Set(r.criterios.map(criterionDimension).filter(Boolean))).join(" · ");
-            return Object.assign({}, pair, { i: index + ":" + pair.i,
-              criterio_a: (label ? label + " — " : "") + pair.criterio_a,
-              criterio_b: (label ? label + " — " : "") + pair.criterio_b });
-          });
-        })
-      } });
-    }
-    if (recorte) {
-      var ids = new Set(recorte.resposta_ids);
-      data = Object.assign({}, analysisSource, {
-        ambiente: Object.assign({}, analysisSource.ambiente, {criterios: recorte.criterios, n_criterios: recorte.criterios.length}),
-        respostas: recorte.respostas || analysisSource.respostas.filter(function (r) { return ids.has(r.id); }),
-        dimensao: recorte.dimensao,
-        estatisticas: recorte.estatisticas,
-        analises: analysisSource.analises.filter(function (a) {
-          return !["pesos_por_dimensao", "media_pesos_individuais"].includes(a.metodo_agregacao) &&
-            JSON.stringify((a.estatisticas_analise || {}).criterios_atribuidos || analysisSource.ambiente.criterios) === JSON.stringify(recorte.criterios);
-        })
-      });
-      data.ambiente.convites = data.ambiente.convites.filter(function (c) {
-        if (recorte.dimensao) return !c.dimensoes || c.dimensoes.includes(recorte.dimensao);
-        return JSON.stringify(analysisSource.ambiente.criterios.filter(function (row) { return !c.dimensoes || c.dimensoes.includes(criterionDimension(row)); })) === JSON.stringify(recorte.criterios);
-      });
-      if (recorte.dimensao) {
-        var enviadas = data.respostas.filter(function (resposta) { return resposta.status === "enviada"; });
-        var consistentes = enviadas.filter(function (resposta) { return resposta.consistente; }).length;
-        var total = participacaoPublica(data.ambiente) ? (data.inscritos || []).length : data.ambiente.convites.length;
-        data.participacao = {convidados: total, nao_iniciados: Math.max(0, total - data.respostas.length),
-          em_preenchimento: data.respostas.length - enviadas.length, enviadas: enviadas.length, consistentes: consistentes, inconsistentes: enviadas.length - consistentes};
-      }
-    }
+    var exibirRecortes = !recorte && recortes.length > 0 && (porGrupo || recortes.length > 1 ||
+      JSON.stringify(recortes[0].criterios) !== JSON.stringify(data.ambiente.criterios));
+    $("ami-analysis-scope-hint").hidden = !exibirRecortes;
+    if (recorte) data = dadosDoRecorte(analysisSource, recorte);
+    if (exibirRecortes) data = Object.assign({}, analysisSource, {
+      recortesEmExibicao: recortes.map(function (r) { return dadosDoRecorte(analysisSource, r); }),
+      estatisticas: { por_par: recortes.flatMap(function (r, index) {
+        var escopo = rotuloDoRecorte(r);
+        return r.estatisticas.por_par.map(function (pair) {
+          return Object.assign({}, pair, { i: index + ":" + pair.i, escopo: escopo });
+        });
+      }) }
+    });
     var same = analysisWorkspace && analysisWorkspace.ambiente.id === data.ambiente.id;
     var validResponses = respostasEnviadas(data).map(function (r) { return String(r.id); });
     analysisResponseIds = new Set(same ? validResponses.filter(function (id) { return analysisResponseIds.has(id); }) : validResponses);
-    analysisWorkspace = data; selectedJudgeId = null; var a = data.ambiente, p = data.participacao;
+    analysisWorkspace = data; selectedJudgeId = null; var a = data.ambiente;
     if (!same) {
+      var medidaAtual = scope != null && MEDIDAS[selectedMeasure] ? selectedMeasure : null;
       var saved = analiseHomologada(data) || (data.analises || [])[0];
       $("ami-analysis-name").value = saved ? saved.nome : (analysisMode === "edit" ? "Análise com as respostas selecionadas" : "");
       $("ami-analysis-rc").value = saved ? (saved.rc_maximo ?? 0.1) : (analysisMode === "edit" ? "0.10" : "");
       $("ami-analysis-exclude-inconsistent").checked = saved ? Boolean(saved.excluir_inconsistentes) : analysisMode === "edit";
       selectedMeasure = saved ? ({aij_media_geometrica:"geometrica",aij_media_aritmetica:"aritmetica",aij_mediana:"mediana",aij_moda:"moda"}[saved.metodo_agregacao] || saved.metodo_agregacao || "geometrica") : "geometrica";
       if (analysisMode !== "edit" && analiseRegistrada(data)) selectedMeasure = "registrada";
+      if (medidaAtual) selectedMeasure = medidaAtual;
       if (analysisMode === "view") analysisResponseIds = new Set(saved ? (saved.resposta_ids || []).map(String) : []);
     }
     $("ami-analysis-context").textContent = (a.matriz_nome || a.hierarquizacao_nome || a.hierarquizacao_codigo || a.nome || "Julgamento avulso") + " · " + a.n_criterios + " critérios";
-    $("ami-analysis-participation").innerHTML = [[participacaoPublica(a) ? "Inscritos" : "Convidados",p.convidados],["Não iniciados",p.nao_iniciados],["Em preenchimento",p.em_preenchimento],["Enviadas",p.enviadas],["Consistentes",p.consistentes],["Inconsistentes",p.inconsistentes]].map(function (x) { return '<div class="ahp-metric-card"><div class="ahp-metric-card__label">' + x[0] + '</div><div class="ahp-metric-card__value">' + x[1] + '</div></div>'; }).join("");
+    renderAnalysisParticipation(analysisSource);
     renderResponsesForConsolidation(data);
     // O fio: julgadores -> indices -> matriz -> metricas -> pesos.
     renderJudges(data);
     renderPairsSection();
-    renderConsolidatedAnalyses(data.analises, data.analise_homologada_id);
+    renderConsolidatedAnalyses(porGrupo ? data.analises.filter(function (item) {
+      return item.metodo_agregacao !== "pesos_por_dimensao" && item.metodo_agregacao !== "media_pesos_individuais";
+    }) : data.analises, data.analise_homologada_id);
     $("ami-analysis-local-consolidation").classList.toggle("is-hidden", emDuasEtapas);
     $("ami-analysis-local-results").classList.toggle("is-hidden", emDuasEtapas);
     renderGlobalWeights(analysisSource);
     syncAnalysisMode();
-    $("ami-analysis-workspace").classList.remove("is-hidden"); $("ami-analysis-workspace").scrollIntoView({behavior:"smooth",block:"start"});
+    var workspace = $("ami-analysis-workspace"), summary = $("ami-analysis-summary");
+    workspace.classList.remove("is-hidden");
+    if (summary) summary.classList.remove("is-hidden");
+    if (scope == null) (summary ? $("ami-analysis-title") : workspace).scrollIntoView({behavior:"smooth",block:"start"});
+  }
+  function renderAnalysisParticipation(data) {
+    var p = data.participacao;
+    var cards = [
+      [participacaoPublica(data.ambiente) ? "Inscritos" : "Convidados", p.convidados, "", "fa-users"],
+      ["Não iniciados", p.nao_iniciados, "", "fa-hourglass-start"],
+      ["Em preenchimento", p.em_preenchimento, "", "fa-pen-to-square"],
+      ["Enviadas", p.enviadas, "", "fa-paper-plane"],
+      ["Consistentes", p.consistentes, "", "fa-circle-check"],
+      ["Inconsistentes", p.inconsistentes, "", "fa-circle-exclamation"]
+    ];
+    $("ami-analysis-participation").innerHTML = $("ami-analysis-summary") ? cards.map(statusCardHtml).join("") : cards.map(function (card) {
+      return '<div class="ahp-metric-card"><div class="ahp-metric-card__label">' + card[0] + '</div><div class="ahp-metric-card__value">' + card[1] + '</div></div>';
+    }).join("");
   }
   // Com os pesos homologados, o julgamento cumpriu o seu papel: as tres fases
   // do processo global de hierarquizacao ja podem ser executadas.
@@ -1302,7 +1373,7 @@
           return api("/api/ahp/comparacao-colaborativa/analises/" + button.dataset.homologateAnalysis + "/homologar", {method:"POST"});
         }, async function () {
           const data = await api("/api/ahp/comparacao-colaborativa/ambientes/" + encodeURIComponent(ambienteId) + "/espaco-analitico");
-          if (analysisWorkspace.ambiente.id === ambienteId) renderAnalysisWorkspace(data);
+          if (analysisWorkspace.ambiente.id === ambienteId) renderAnalysisWorkspace(data, analysisScope);
         });
       } finally { analysisSaving = false; syncAnalysisMode(); }
   }
@@ -1361,6 +1432,9 @@
   function showCreateSection() { if (environmentSaving || surfaceLoading) return; environmentId = null; activeSurfaceId = null; $("ami-create-form").reset(); setEnvironmentMode("create"); if (matrixPicker) matrixPicker.reset(); draftEmails = []; criteriaMatrix = null; criteriaMatrixFileBase64 = null; criteriaMatrixFileName = null; renderDraftEmails(); matrixSummary(""); $("ami-hierarchy-summary").textContent = ""; $("ami-create-status").className = "ami-empty"; $("ami-email-draft-card").classList.add("is-hidden"); $("ami-public-link-card").classList.add("is-hidden"); applySurfaceContext(); syncParticipationForm(); $("ami-create-section").classList.remove("is-hidden"); $("ami-deadline").focus(); $("ami-create-section").querySelector(".ami-environment-title").scrollIntoView({ behavior: "smooth", block: "start" }); }
   function hideCreateSection() { $("ami-create-section").classList.add("is-hidden"); $("ami-create-feedback").textContent = ""; setEnvironmentMode("create"); }
   function dateInputValue(value) { if (!value) return ""; var date = new Date(value), parts = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(date).reduce(function (result, part) { result[part.type] = part.value; return result; }, {}); return parts.year + "-" + parts.month + "-" + parts.day; }
+  function statusCardHtml(item) {
+    return '<article class="ami-status-card"><span><i class="fas ' + item[3] + '" aria-hidden="true"></i> ' + item[0] + '</span><strong>' + escapeHtml(item[1]) + '</strong>' + (item[2] ? '<small>' + item[2] + '</small>' : '') + '</article>';
+  }
   function viewSelectedEnvironment() {
     var judgment = julgamentos.find(function (j) { return j.id === environmentId; }) || selectedRecord(); if (!judgment || modo !== "espaco") return;
     environmentId = judgment.id;
@@ -1385,7 +1459,7 @@
       ["Situação", statusLabel(judgment.status), "Estado atual do julgamento", "fa-circle-info"],
       ["Data limite", deadlineLabel(judgment.valido_ate), "Prazo para envio das respostas", "fa-calendar-days"],
       ["Participação", String(judgment.total_respostas || 0) + " de " + String(totalParticipantes(judgment)), participacaoPublica(judgment) ? "Respostas recebidas / inscritos" : "Respostas recebidas / colaboradores convidados", "fa-users"]
-    ].map(function (item) { return '<article class="ami-status-card"><span><i class="fas ' + item[3] + '" aria-hidden="true"></i> ' + item[0] + '</span><strong>' + escapeHtml(item[1]) + '</strong><small>' + item[2] + '</small></article>'; }).join("");
+    ].map(statusCardHtml).join("");
     renderParticipationAccess(judgment); $("ami-create-feedback").textContent = "Visualização somente leitura do registro selecionado.";
     $("ami-create-section").classList.remove("is-hidden"); $("ami-create-section").querySelector(".ami-environment-title").scrollIntoView({ behavior: "smooth", block: "start" });
   }
@@ -2092,6 +2166,7 @@
     if (!["espaco","julgamentos"].includes(modo) || $("ami-judgments-view-action")) return;
     var toolbar = document.querySelector(".ami-table-actions"), edit = $("ami-judgments-edit-action"), button = document.createElement("button");
     button.className = "admin-icon-btn is-disabled"; button.id = "ami-judgments-view-action"; button.type = "button"; button.title = modo === "julgamentos" ? "Ver respostas colaborativas" : "Visualizar ambiente colaborativo"; button.setAttribute("aria-label", button.title); button.disabled = true; button.innerHTML = '<i class="fa-solid fa-eye" aria-hidden="true"></i>';
+    button.setAttribute("data-read-control", "");
     toolbar.insertBefore(button, edit); button.addEventListener("click", modo === "julgamentos" ? function(){openAnalysisWorkspace(selectedId,"view");} : function () { environmentId = selectedId; viewSelectedEnvironment(); });
     if (modo === "julgamentos") {
       var editResponses=document.createElement("button");

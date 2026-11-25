@@ -790,7 +790,7 @@
 .ami-page.ami-espaco-page #ami-create-form {
   margin: 0;
 }
-.ami-page.ami-espaco-page #ami-create-status.ami-status-cards {
+.ami-page.ami-espaco-page .ami-status-cards {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1rem;
@@ -799,6 +799,10 @@
   background: none;
   border: 0;
 }
+.ami-page.ami-espaco-page #ami-analysis-participation.ami-status-cards {
+  grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 1rem; margin: 0 0 1.25rem;
+}
+.ami-page.ami-espaco-page #ami-analysis-summary .ami-status-card { align-content: start; min-width: 0; }
 .ami-page.ami-espaco-page #ami-create-status[hidden] { display: none; }
 .ami-page.ami-espaco-page .ami-status-card {
   display: grid;
@@ -871,6 +875,10 @@
 }
 .ami-page.ami-espaco-page #ami-email-status-pagination button { border: 0; }
 .ami-page.ami-espaco-page .ami-monitoring-section .matriz-table-wrap { margin: 0; border: 0; }
+@media (max-width: 900px) {
+  .ami-page.ami-espaco-page #ami-analysis-participation.ami-status-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
 @media (max-width: 600px) {
   .ami-page.ami-espaco-page #ami-create-status.ami-status-cards { grid-template-columns: 1fr; }
+  .ami-page.ami-espaco-page #ami-analysis-participation.ami-status-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
