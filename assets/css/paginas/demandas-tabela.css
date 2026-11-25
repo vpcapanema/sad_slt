@@ -5,10 +5,12 @@
 }
 .secao-tipo-tabs .admin-table th.col-select { z-index: 5; }
 .secao-tipo-tabs .admin-table :is(th, td).col-actions {
+  --acoes-largura: 9.5rem;
   position: sticky; left: 2.75rem; z-index: 3;
-  width: 9.5rem; min-width: 9.5rem; max-width: 9.5rem;
+  width: var(--acoes-largura); min-width: var(--acoes-largura); max-width: var(--acoes-largura);
   padding-inline: .3rem; text-align: center;
 }
+:root[data-user-profile="gestor"] .secao-tipo-tabs .admin-table :is(th, td).col-actions { --acoes-largura: 11.6rem; }
 .secao-tipo-tabs .admin-table th.col-actions { z-index: 5; background: var(--pli-deep, #123b56); }
 .secao-tipo-tabs .admin-table :is(th, td):is(.col-select, .col-actions, .col-status) {
   overflow: visible !important;
@@ -35,9 +37,10 @@
   border: 1px solid #45667b; border-radius: .3rem; color: #123b56;
   background: #f8fafc; text-decoration: none; cursor: pointer;
 }
-.demanda-row-action:hover, .demanda-row-action:focus-visible {
+.demanda-row-action:not(:disabled):hover, .demanda-row-action:focus-visible {
   color: #fff; background: #17628b; border-color: #123b56;
 }
+.demanda-row-action:disabled { opacity: .5; cursor: not-allowed; }
 .demanda-row-action:focus-visible { outline: 2px solid #1683c4; outline-offset: 1px; }
 
 .demanda-analise-modal-shell {

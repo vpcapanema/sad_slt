@@ -23,6 +23,7 @@
   } = SLTAdminLabels;
 
   const PAGE_SIZES = [15, 25, 35, 50, 100];
+  const STATUS_GEOMETRIA_EXTRAORDINARIA = new Set(["hierarq_em_andamento", "hierarq_aguardando_complementacao"]);
   let pageSize = PAGE_SIZES[0];
   const complementacao = window.SLTComplementacaoTabela;
   let tipo = "projeto";
@@ -526,6 +527,18 @@
     return `<button type="button" class="demanda-row-action" data-read-control data-demand-action="parecer-modal" data-codigo="${escapeHtml(codigo)}" title="${label}" aria-label="${label}"><i class="fa-solid ${icon}" aria-hidden="true"></i></button>`;
   }
 
+  function renderGeometriaExtraordinaria(d) {
+    if (SLTAdminAuth.currentUser?.tipo_usuario !== "GESTOR" || !SLTAdminAuth.can("mad.operar")) return "";
+    const label = "Alteração extraordinária de geometria";
+    const icon = "fa-pen-ruler";
+    if (!STATUS_GEOMETRIA_EXTRAORDINARIA.has(d.status)) {
+      const motivo = `${label} — disponível durante a hierarquização`;
+      return `<button type="button" class="demanda-row-action" data-permission="mad.operar" disabled title="${motivo}" aria-label="${motivo}"><i class="fa-solid ${icon}" aria-hidden="true"></i></button>`;
+    }
+    const params = new URLSearchParams({tipo, codigo: d.id, geometria_extraordinaria: "true"});
+    return actionButton(`/restrict/solicitacao-complementacao/?${escapeHtml(params.toString())}`, icon, label, ' data-permission="mad.operar"');
+  }
+
   function renderActions(d) {
     const params = `tipo=${encodeURIComponent(tipo)}&id=${encodeURIComponent(d.id)}`;
     return `<div class="demanda-row-actions" role="group" aria-label="Ações para ${escapeHtml(d.id)}">
@@ -533,6 +546,7 @@
       ${actionButton(`/restrict/geoespacial/visualizador-camadas/?camada=${encodeURIComponent(`cadastro:${tipo}:${d.id}`)}`, "fa-draw-polygon", "Ver geometria")}
       ${modalActionButton("fa-file-signature", "Ver parecer técnico", d.id)}
       ${actionButton(`/api/analise/${encodeURIComponent(d.id)}/parecer.pdf`, "fa-file-pdf", "Ver PDF do parecer técnico", ' data-demand-action="parecer-pdf"')}
+      ${renderGeometriaExtraordinaria(d)}
     </div>`;
   }
 

@@ -7,9 +7,9 @@
         <p class="field-help">Selecione uma demanda aguardando complementação para corrigir os dados cadastrais ou a geometria.</p>
         {% endif %}
         <div class="admin-tabs" id="tipo-tabs" role="tablist" aria-label="Tipo de demanda">
-          <button type="button" class="admin-tab" data-tipo="plano" role="tab" aria-selected="false">Plano</button>
-          <button type="button" class="admin-tab" data-tipo="programa" role="tab" aria-selected="false">Programa</button>
-          <button type="button" class="admin-tab is-active" data-tipo="projeto" role="tab" aria-selected="true">Projeto</button>
+          <button type="button" class="admin-tab" data-tipo="plano" data-read-control role="tab" aria-selected="false">Plano</button>
+          <button type="button" class="admin-tab" data-tipo="programa" data-read-control role="tab" aria-selected="false">Programa</button>
+          <button type="button" class="admin-tab is-active" data-tipo="projeto" data-read-control role="tab" aria-selected="true">Projeto</button>
         </div>
 
         {% if not modo_complementacao %}<h3 id="demandas-tabela-titulo">Demandas cadastradas</h3>{% endif %}
