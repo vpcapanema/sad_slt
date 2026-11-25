@@ -39,13 +39,13 @@ def obter(id, *, lock=False, interno=False):
         row = conn.execute(f"SELECT * FROM {TABLE} WHERE id=%s" + (" FOR UPDATE" if lock else ""), (id,)).fetchone()
         return row if interno else _publica(row)
 
-def criar(tipo, codigo, categorias, descricao, user, hierarquizacao=None):
+def criar(tipo, codigo, categorias, descricao, user, hierarquizacao=None, *, origem=None):
     with get_connection() as conn:
         pedido = conn.execute(f"""INSERT INTO {TABLE}
           (demanda_tipo,demanda_codigo,categorias,descricao,solicitado_por,solicitado_nome,hierarquizacao_codigo,origem)
           VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING *""",
           (tipo,codigo,categorias,descricao,user.id,user.nome or 'Usuário',hierarquizacao,
-           'hierarquizacao' if hierarquizacao else 'analise')).fetchone()
+           origem or ('hierarquizacao' if hierarquizacao else 'analise'))).fetchone()
         if pedido is None:
             raise RuntimeError("Não foi possível registrar a solicitação de complementação.")
         return pedido

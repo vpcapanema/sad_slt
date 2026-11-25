@@ -165,7 +165,9 @@
     for (const p of pedidos) {
       const bloco = document.createElement('div');
       const texto = document.createElement('p');
-      texto.textContent = `${p.categorias.map(c => rotulosPedido[c]).join(' e ')} — ${p.descricao} — Solicitante: ${p.solicitado_nome}`;
+      const extraordinaria = p.origem === 'geometria_extraordinaria';
+      const categoria = extraordinaria ? 'Alteração extraordinária de geometria' : p.categorias.map(c => rotulosPedido[c]).join(' e ');
+      texto.textContent = `${categoria} — ${p.descricao} — Solicitante: ${p.solicitado_nome}`;
       const concluir = document.createElement('button');
       concluir.type = 'button'; concluir.className = 'btn btn-secondary'; concluir.textContent = 'Concluir solicitação';
       concluir.disabled = !p.categorias.every(c => Object.hasOwn(p.categorias_salvas || {}, c));
@@ -176,8 +178,11 @@
         try {
           await api(`/api/complementacao/solicitacoes/${encodeURIComponent(p.id)}/concluir`, {method: 'POST'});
           bloco.remove();
-          SLTAdminUi.showToast('Solicitação de complementação concluída.');
-          mensagem('Solicitação concluída. A retomada da análise fica disponível quando não houver pedidos cadastrais ou de geometria abertos.');
+          const confirmacao = extraordinaria ? 'Solicitação de geometria concluída. A demanda mantém seu status.'
+            : 'Solicitação de complementação concluída.';
+          SLTAdminUi.showToast(confirmacao);
+          mensagem(extraordinaria ? confirmacao
+            : 'Solicitação concluída. A retomada da análise fica disponível quando não houver pedidos cadastrais ou de geometria abertos.');
           document.dispatchEvent(new Event('complementacao-salva'));
           if (p.hierarquizacao_codigo) await carregarAtributos();
         } catch (e) { mensagem(e.message, true); mensagemAtributos(e.message, true); concluir.disabled = false; }

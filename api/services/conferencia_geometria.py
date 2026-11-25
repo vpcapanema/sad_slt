@@ -27,9 +27,13 @@ def conferir(geometry):
     g=ogr.CreateGeometryFromJson(json.dumps(geometry))
     if g is None or g.IsEmpty() or not g.IsValid():raise HTTPException(422,"Geometria vazia ou inválida.")
     g=reprojetar(g,4326,5880)
+    dimensao = g.GetDimension()
     names=[]; coverage=None
     for code,name,m in municipios_metricos():
         if not g.Intersects(m):continue
+        trecho = g.Intersection(m)
+        if trecho.IsEmpty() or trecho.GetDimension() != dimensao:
+            continue
         names.append({'codigo':code,'nome':name})
         coverage=m.Clone() if coverage is None else coverage.Union(m)
     remaining=g if coverage is None else g.Difference(coverage)
@@ -38,16 +42,29 @@ def conferir(geometry):
             'mensagem':'A geometria está inserida em: '+', '.join(n['nome'] for n in names)+'. Confirma a localização? Para retificar, envie outra geometria.',
             'fonte':'IBGE · Malha municipal 2022 · São Paulo'}
     marine=cobertura_marinha()
+    places=', '.join(n['nome'] for n in names)
     if remaining.Difference(marine).IsEmpty():
-        places=', '.join(n['nome'] for n in names)
         message=('A geometria está inserida na área marítima de referência de São Paulo.' if not places else
                  'A geometria está inserida em '+places+' e na área marítima de referência de São Paulo.')
         return {'situacao':'marinha' if not names else 'mista','permitido':True,'municipios':names,
             'mensagem':message+' Confirma a localização? Para retificar, envie outra geometria.',
             'fonte':'IBGE/ANP · Projeções estaduais e Sistema Costeiro-Marinho 2024',
             'referencia_marinha':'recorte operacional estimado de São Paulo'}
+    trecho_marinho = remaining.Intersection(marine)
+    if not trecho_marinho.IsEmpty() and trecho_marinho.GetDimension() == dimensao:
+        places = ' e '.join(filter(None, (places, 'área marítima de referência de São Paulo')))
+    if places:
+        return {
+            'situacao': 'parcial', 'permitido': True, 'municipios': names,
+            'mensagem': (
+                'A geometria cruza o limite da área de abrangência de São Paulo. '
+                f'Cobertura paulista identificada: {places}. '
+                'A geometria completa será registrada. Confirma a localização?'
+            ),
+            'fonte': 'IBGE · Malha municipal paulista e área marítima de referência SP',
+        }
     return {'situacao':'fora_abrangencia','permitido':False,'municipios':names,
-        'mensagem':'A geometria está total ou parcialmente fora da área de abrangência terrestre e marítima de São Paulo. Envie uma geometria dentro da área de abrangência do estado.',
+        'mensagem':'A geometria não tem interseção efetiva com a área de abrangência terrestre ou marítima de São Paulo. Contato apenas com a borda não é suficiente para linhas e polígonos.',
         'fonte':'IBGE · Malha municipal paulista e área marítima de referência SP'}
 
 def emitir_confirmacao(content,usuario,tipo,codigo):

@@ -18,6 +18,7 @@
   const STATUS_PRE_APROVACAO = new Set([
     "analise_em_avaliacao",
   ]);
+  const STATUS_GEOMETRIA_EXTRAORDINARIA = new Set(["hierarq_em_andamento", "hierarq_aguardando_complementacao"]);
 
   const TIPOS = [
     { id: "plano", label: "Plano" },
@@ -347,6 +348,9 @@
 
   function analiseActionsHtml(d, { withDecisions }) {
     const canAnalyze = SLTAdminAuth.can("analyzeDemand");
+    const linkGeometria = SLTAdminAuth.can("mad.operar") && STATUS_GEOMETRIA_EXTRAORDINARIA.has(d.status)
+      ? `/restrict/solicitacao-complementacao/?${new URLSearchParams({tipo, codigo: d.id, geometria_extraordinaria: 'true'})}`
+      : null;
     const decisionButtons =
       withDecisions && canAnalyze
         ? DECISOES.map(
@@ -392,6 +396,7 @@
       </div>
       <div class="admin-dashboard-actions span-2">
         <a href="/restrict/demandas/" class="btn btn-secondary">Voltar à lista</a>
+        ${linkGeometria ? `<a href="${escapeHtml(linkGeometria)}" class="btn btn-secondary" data-permission="mad.operar">Alteração extraordinária de geometria</a>` : ''}
         ${situacaoButtons}
         ${decisionButtons}
       </div>`;

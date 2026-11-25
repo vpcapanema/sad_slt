@@ -9,7 +9,9 @@ from typing import Any, Literal
 from uuid import UUID
 from urllib.parse import quote
 from api.repositories import solicitacao_complementacao_repository as solicitacoes
-from api.services.solicitacao_complementacao_service import bloquear, solicitar
+from api.services.solicitacao_complementacao_service import (
+    ORIGEM_GEOMETRIA_EXTRAORDINARIA, STATUS_GEOMETRIA_EXTRAORDINARIA, bloquear, solicitar,
+)
 
 from fastapi import APIRouter, Body, Depends, HTTPException, File, Form, UploadFile
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
@@ -63,6 +65,7 @@ class SolicitacaoCriacao(SolicitacaoConteudo):
     demanda_tipo: str
     demanda_codigo: str = Field(min_length=1)
     hierarquizacao_codigo: str | None = None
+    geometria_extraordinaria: bool = False
 
 
 class NotificacaoConfirmacao(BaseModel):
@@ -85,18 +88,25 @@ def _visao_ampla(user):
             authz.permite(user, 'mad.visualizar', escopo='todos'))
 
 
+def _permissao_pedido(pedido):
+    if 'atributos_objeto' in pedido['categorias'] or pedido.get('origem') == ORIGEM_GEOMETRIA_EXTRAORDINARIA:
+        return 'mad.operar'
+    return 'mocad.solicitar_complementacao'
+
+
 def _pode_gerir_pedido(pedido, user):
-    return authz.permite(user, 'mad.operar' if 'atributos_objeto' in pedido['categorias'] else 'mocad.solicitar_complementacao')
+    return authz.permite(user, _permissao_pedido(pedido))
 
 
-def _pedido_central(id, user, *, editar=False, lock=False):
+def _pedido_central(id, user, *, editar=False, lock=False, aceitar_extraordinaria=False):
     _perfil_central(user)
     pedido = solicitacoes.obter(id, interno=True, lock=lock)
     if not pedido:
         raise HTTPException(404, "Solicitação não encontrada.")
     if editar and not _pode_gerir_pedido(pedido, user):
-        codigo = 'mad.operar' if 'atributos_objeto' in pedido['categorias'] else 'mocad.solicitar_complementacao'
-        authz.negar(user, 'gerenciar esta solicitação de complementação', (codigo,))
+        authz.negar(user, 'gerenciar esta solicitação de complementação', (_permissao_pedido(pedido),))
+    if editar and not aceitar_extraordinaria and pedido.get('origem') == ORIGEM_GEOMETRIA_EXTRAORDINARIA:
+        raise HTTPException(422, "O pedido extraordinário é atendido pela página de complementação de demandas.")
     if editar and "revisao" not in pedido:
         raise HTTPException(409, "A edição depende da aplicação da migração 153 no banco.")
     return pedido
@@ -107,7 +117,8 @@ def _enriquecer_pedido(pedido, user, cadastro=None, parecer=None, status_nomes=N
     cadastro = cadastro if cadastro is not None else CADASTROS[tipo][0].get_by_codigo(pedido["demanda_codigo"])
     if parecer is None:
         parecer = analise_demanda_repository.get_by_codigo(pedido["demanda_codigo"]) or {}
-    tem_pdf = bool(parecer.get("tem_parecer_pdf") and parecer.get("demanda_tipo") == tipo)
+    extraordinaria = pedido.get("origem") == ORIGEM_GEOMETRIA_EXTRAORDINARIA
+    tem_pdf = bool(not extraordinaria and parecer.get("tem_parecer_pdf") and parecer.get("demanda_tipo") == tipo)
     salvas = set(pedido.get("categorias_salvas") or {}) & set(pedido["categorias"])
     cumprimento = ("cumprida" if pedido["status"] == "atendida" else "em_atendimento" if salvas else "nao_iniciada")
     if status_nomes is None:
@@ -125,7 +136,7 @@ def _enriquecer_pedido(pedido, user, cadastro=None, parecer=None, status_nomes=N
             "parecer_pdf_gerado_em": parecer.get("parecer_pdf_gerado_em") if tem_pdf else None,
             "cumprimento_status": cumprimento,
             "categorias_atendidas": len(salvas),
-            "pode_consultar_confirmacoes": _pode_gerir_pedido(pedido, user),
+            "pode_consultar_confirmacoes": not extraordinaria and _pode_gerir_pedido(pedido, user),
             "cadastro_disponivel": cadastro is not None,
             "migracao_pendente": "revisao" not in pedido,
             "pode_editar": bool(cadastro and "revisao" in pedido and pedido["status"] == "registrada"
@@ -237,9 +248,39 @@ def central_solicitacoes(user: SessionUser = Depends(require_analyst)):
     return itens
 
 
+def _contexto_geometria_extraordinaria(tipo, codigo, user, *, cadastro=None):
+    authz.exigir(user, 'mad.operar', acao='solicitar alteração extraordinária de geometria')
+    if tipo not in CADASTROS:
+        raise HTTPException(422, "Tipo de demanda inválido.")
+    if cadastro is None:
+        cadastro = CADASTROS[tipo][0].get_by_codigo(codigo)
+    if not cadastro:
+        raise HTTPException(404, "Demanda não encontrada.")
+    if cadastro.get("status") not in STATUS_GEOMETRIA_EXTRAORDINARIA:
+        raise HTTPException(409, "A demanda precisa estar em hierarquização para solicitar a alteração extraordinária.")
+    for pedido in solicitacoes.listar(tipo=tipo, codigo=codigo, interno=True):
+        if pedido.get("hierarquizacao_codigo"):
+            continue
+        if pedido.get("origem") == ORIGEM_GEOMETRIA_EXTRAORDINARIA:
+            return _enriquecer_pedido(pedido, user, cadastro=cadastro)
+        raise HTTPException(409, "Já existe uma solicitação de cadastro ou geometria aberta para esta demanda.")
+    return _enriquecer_pedido({
+        "id": None, "demanda_tipo": tipo, "demanda_codigo": codigo,
+        "hierarquizacao_codigo": None, "categorias": ["geometria"],
+        "origem": ORIGEM_GEOMETRIA_EXTRAORDINARIA, "status": "nao_solicitada",
+        "pode_criar": True,
+        "descricao": "", "parecer_tecnico": "", "mensagem_gestor": "",
+        "revisao": 0, "categorias_salvas": {}, "notificacao": {},
+    }, user, cadastro=cadastro, parecer={}) | {"pode_editar": True}
+
+
 @router.get("/solicitacoes/contexto")
 def preparar_solicitacao(tipo: str, codigo: str, hierarquizacao_codigo: str | None = None,
-                         user: SessionUser = Depends(require_analyst)):
+                         user: SessionUser = Depends(require_analyst), geometria_extraordinaria: bool = False):
+    if geometria_extraordinaria:
+        if hierarquizacao_codigo:
+            raise HTTPException(422, "A alteração extraordinária de geometria é solicitada para a demanda.")
+        return _contexto_geometria_extraordinaria(tipo, codigo, user)
     for item in central_solicitacoes(user):
         if (item["demanda_tipo"] == tipo and item["demanda_codigo"] == codigo
                 and item.get("hierarquizacao_codigo") == hierarquizacao_codigo
@@ -261,22 +302,31 @@ def criar_solicitacao(body: SolicitacaoCriacao, user: SessionUser = Depends(requ
         raise HTTPException(422, "Solicite atributos separadamente do cadastro e geometria.")
     if atributos != bool(body.hierarquizacao_codigo):
         raise HTTPException(422, "Selecione uma hierarquização somente para atributos.")
-    if not _pode_gerir_pedido({"categorias": categorias}, user):
-        authz.negar(user, 'criar esta solicitação de complementação', ('mad.operar' if atributos else 'mocad.solicitar_complementacao',))
+    if body.geometria_extraordinaria and categorias != ["geometria"]:
+        raise HTTPException(422, "A alteração extraordinária aceita apenas a categoria Geometria.")
+    perm = _permissao_pedido({
+        "categorias": categorias,
+        "origem": ORIGEM_GEOMETRIA_EXTRAORDINARIA if body.geometria_extraordinaria else None,
+    })
+    authz.exigir(user, perm, acao='criar esta solicitação de complementação')
     with atomic_connection() as conn:
         if body.hierarquizacao_codigo:
             hierarquizacao_repository.get_by_codigo(body.hierarquizacao_codigo, for_update=True)
         cadastro = bloquear(conn, body.demanda_tipo, body.demanda_codigo)
         if not cadastro:
             raise HTTPException(404, "Demanda não encontrada.")
-        candidato = preparar_solicitacao(body.demanda_tipo, body.demanda_codigo, body.hierarquizacao_codigo, user)
+        candidato = (
+            _contexto_geometria_extraordinaria(body.demanda_tipo, body.demanda_codigo, user, cadastro=cadastro)
+            if body.geometria_extraordinaria else
+            preparar_solicitacao(body.demanda_tipo, body.demanda_codigo, body.hierarquizacao_codigo, user)
+        )
         if candidato["id"]:
             raise HTTPException(409, "Já existe solicitação aberta. Atualize a central para editá-la.")
         if not candidato["pode_criar"]:
             raise HTTPException(409, candidato["impedimento"])
         pedido = solicitar(body.demanda_codigo, categorias=categorias, descricao=body.descricao,
                            user=user, hierarquizacao_codigo=body.hierarquizacao_codigo,
-                           demanda_tipo=body.demanda_tipo)
+                           demanda_tipo=body.demanda_tipo, geometria_extraordinaria=body.geometria_extraordinaria)
         campos = body.model_dump(include={"descricao", "categorias", "parecer_tecnico", "mensagem_gestor"})
         campos.update(categorias=categorias, descricao=body.descricao.strip(),
                       parecer_tecnico=body.parecer_tecnico.strip(), mensagem_gestor=body.mensagem_gestor.strip())
@@ -298,7 +348,7 @@ def detalhe_solicitacao(solicitacao_id: UUID, user: SessionUser = Depends(requir
 def editar_solicitacao(solicitacao_id: UUID, body: SolicitacaoEdicao,
                       user: SessionUser = Depends(require_analyst)):
     with atomic_connection():
-        pedido = _pedido_central(solicitacao_id, user, editar=True, lock=True)
+        pedido = _pedido_central(solicitacao_id, user, editar=True, lock=True, aceitar_extraordinaria=True)
         if pedido["status"] != "registrada":
             raise HTTPException(409, "Solicitações atendidas são somente leitura.")
         if body.revisao != pedido["revisao"]:
@@ -307,7 +357,9 @@ def editar_solicitacao(solicitacao_id: UUID, body: SolicitacaoEdicao,
             raise HTTPException(409, "Aguarde a conclusão da notificação antes de editar.")
         categorias = list(dict.fromkeys(body.categorias))
         permitidas = {"atributos_objeto"} if pedido.get("hierarquizacao_codigo") else {"dados_cadastrais", "geometria"}
-        if not set(categorias) <= permitidas or not body.descricao.strip():
+        extraordinaria = pedido.get("origem") == ORIGEM_GEOMETRIA_EXTRAORDINARIA
+        if (not set(categorias) <= permitidas or not body.descricao.strip()
+                or (extraordinaria and categorias != ["geometria"])):
             raise HTTPException(422, "Informe o motivo e categorias compatíveis com o contexto original.")
         if set(categorias) != set(pedido["categorias"]) and pedido.get("categorias_salvas"):
             raise HTTPException(409, "As categorias já possuem atendimento registrado e não podem ser alteradas.")
@@ -390,8 +442,12 @@ def confirmar_notificacao(solicitacao_id: UUID, user: SessionUser = Depends(requ
         raise _erro(exc) from exc
 
 
-def _visivel(demanda: dict, user: SessionUser, pessoa_id: str | None) -> bool:
-    if demanda.get("status") != STATUS_COMPLEMENTACAO:
+def _visivel(demanda: dict, user: SessionUser, pessoa_id: str | None, pedidos=()) -> bool:
+    status = demanda.get("status")
+    if status != STATUS_COMPLEMENTACAO and not (
+        status in STATUS_GEOMETRIA_EXTRAORDINARIA
+        and any(p.get("origem") == ORIGEM_GEOMETRIA_EXTRAORDINARIA for p in pedidos)
+    ):
         return False
     return _visao_ampla(user) or _pode_editar(
         {}, pessoa_id=pessoa_id, usuario_id=str(user.id), demanda=demanda
@@ -402,9 +458,11 @@ def _demanda_autorizada(tipo: str, codigo: str, user: SessionUser, categoria: st
     if tipo not in CADASTROS:
         raise HTTPException(422, "Tipo de demanda inválido.")
     demanda = CADASTROS[tipo][0].get_by_codigo(codigo)
-    if not demanda or not _visivel(demanda, user, _pessoa_id(user)):
+    if not demanda:
         raise HTTPException(403, "Demanda indisponível para complementação por este usuário.")
-    _exigir_solicitacao(tipo, codigo, categoria)
+    pedidos = _exigir_solicitacao(tipo, codigo, categoria)
+    if not _visivel(demanda, user, _pessoa_id(user), pedidos):
+        raise HTTPException(403, "Demanda indisponível para complementação por este usuário.")
     return demanda
 
 
@@ -538,7 +596,7 @@ def listar_demandas_complementaveis(tipo: str, user: SessionUser = Depends(requi
     for pedido in pedidos:
         por_codigo.setdefault(pedido['demanda_codigo'], []).append(pedido)
     rows = [row for codigo in por_codigo if (row := repo.get_by_codigo(codigo))
-            and _visivel(row, user, pessoa_id)]
+            and _visivel(row, user, pessoa_id, por_codigo[codigo])]
     rows = resolver_nomes_registros(rows)
     return [{**service._row_to_response(row, incluir_auditoria=True, nomes_resolvidos=True).model_dump(),
              'solicitacoes': por_codigo[row['codigo']]} for row in rows]

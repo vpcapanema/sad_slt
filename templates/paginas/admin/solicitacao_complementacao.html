@@ -4,7 +4,8 @@
 <section class="secao-cabecalho-julgamentos card ahp-step-intro ami-hero standard-page-hero card-cabecalho-julgamentos">
   <h1 class="standard-page-hero__title"><i class="fa-solid fa-clipboard-list" aria-hidden="true"></i><span id="solicitacao-titulo">Gerenciar pendência</span></h1>
   <p class="ami-eyebrow standard-page-hero__eyebrow">Central de pendências</p>
-  <p class="standard-page-hero__description">Confira o que falta, registre a orientação ao representante e revise a notificação antes de enviar.</p>
+  <p class="standard-page-hero__description" data-notificacao-regular>Confira o que falta, registre a orientação ao representante e revise a notificação antes de enviar.</p>
+  <p class="standard-page-hero__description" id="solicitacao-extraordinaria-contexto" hidden>Registre o motivo da correção. O representante poderá enviar o arquivo em <a href="/restrict/complementacao/">Complementação de dados da demanda</a>. O pedido preserva o status e a participação no grupo.</p>
 </section>
 <div class="standard-section-action-row">
   <a href="/restrict/central-pendencias/">Voltar à central de pendências</a>
@@ -22,7 +23,7 @@
 </section>
 <section class="card ahp-step-section ami-panel" data-attributes-section>
   <div class="ahp-section-label"><i class="fa-solid fa-circle-info" aria-hidden="true"></i><span>1. Confira a demanda e o representante</span></div>
-  <div class="ahp-section-body"><p class="form-help">A notificação será enviada ao e-mail do representante cadastrado. Nenhum e-mail é enviado ao abrir ou salvar esta página.</p><dl class="notificacao-resumo" id="solicitacao-contexto"></dl></div>
+  <div class="ahp-section-body"><p class="form-help" data-notificacao-regular>A notificação será enviada ao e-mail do representante cadastrado. Nenhum e-mail é enviado ao abrir ou salvar esta página.</p><dl class="notificacao-resumo" id="solicitacao-contexto"></dl></div>
 </section>
 <section class="card ahp-step-section ami-panel" id="solicitacao-pendencias" hidden>
   <div class="ahp-section-label"><i class="fa-solid fa-list-check" aria-hidden="true"></i><span>Atributos que precisam ser preenchidos</span></div>
@@ -34,7 +35,7 @@
 <section class="card ahp-step-section ami-panel" data-attributes-section>
   <div class="ahp-section-label"><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i><span>2. Prepare e salve o pedido</span></div>
   <div class="ahp-section-body">
-    <p id="solicitacao-pdf-status" class="form-help"></p>
+    <p id="solicitacao-pdf-status" class="form-help" data-notificacao-regular></p>
     <a id="solicitacao-pdf" target="_blank" rel="noopener noreferrer" hidden>Ver parecer PDF da análise da demanda</a>
     <form id="solicitacao-form">
       <fieldset id="solicitacao-campos" class="solicitacao-campos" disabled>
@@ -48,12 +49,12 @@
         <div class="form-field"><label for="solicitacao-parecer">Anotações internas da equipe</label><p class="form-help">Opcional. Estas anotações não são enviadas por e-mail.</p><textarea class="c-form-control" id="solicitacao-parecer" rows="4" maxlength="10000"></textarea></div>
         <div class="form-field"><label for="solicitacao-mensagem">Mensagem do e-mail ao representante</label><p class="form-help">Informe quais itens devem ser preenchidos e como proceder. Salve a mensagem antes de preparar a notificação.</p><textarea class="c-form-control" id="solicitacao-mensagem" rows="5" maxlength="10000"></textarea></div>
       </fieldset>
-      <p class="form-help">Salvar apenas registra o pedido. Depois, use “Preparar notificação” para conferir a prévia; o envio só ocorre ao confirmar “Enviar notificação”.</p>
+      <p class="form-help" data-notificacao-regular>Salvar apenas registra o pedido. Depois, use “Preparar notificação” para conferir a prévia; o envio só ocorre ao confirmar “Enviar notificação”.</p>
       <div class="process-actions">
         <button type="submit" class="btn btn-primary" id="solicitacao-salvar" disabled>Salvar pedido</button>
         <button type="button" class="btn btn-secondary" id="solicitacao-recarregar">Recarregar</button>
-        <button type="button" class="btn btn-secondary" id="solicitacao-notificar" disabled>Preparar notificação</button>
-        <button type="button" class="btn btn-secondary" id="solicitacao-confirmacoes" disabled>Consultar entrega e leitura</button>
+        <button type="button" class="btn btn-secondary" id="solicitacao-notificar" data-notificacao-regular disabled>Preparar notificação</button>
+        <button type="button" class="btn btn-secondary" id="solicitacao-confirmacoes" data-notificacao-regular disabled>Consultar entrega e leitura</button>
       </div>
     </form>
   </div>
@@ -61,7 +62,7 @@
 {% set previa_id = "solicitacao-previa" %}
 {% include "componentes/previsualizacao_notificacao.html" %}
 <section class="card ahp-step-section ami-panel" data-attributes-section>
-  <div class="ahp-section-label"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i><span>3. Acompanhe a notificação e o atendimento</span></div>
+  <div class="ahp-section-label"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i><span id="solicitacao-acompanhamento-titulo">3. Acompanhe a notificação e o atendimento</span></div>
   <div class="ahp-section-body">
     <dl class="notificacao-resumo" id="solicitacao-auditoria"></dl>
     <div id="solicitacao-historico"></div>

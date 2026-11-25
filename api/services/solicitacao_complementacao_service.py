@@ -6,6 +6,8 @@ from api.repositories import solicitacao_complementacao_repository as repo, hier
 from api.constants import STATUS_EM_HIERARQUIZACAO, STATUS_HIERARQUIZACAO_COMPLEMENTACAO
 
 TIPOS = {'dados_cadastrais', 'geometria', 'atributos_objeto'}
+ORIGEM_GEOMETRIA_EXTRAORDINARIA = 'geometria_extraordinaria'
+STATUS_GEOMETRIA_EXTRAORDINARIA = frozenset({STATUS_EM_HIERARQUIZACAO, STATUS_HIERARQUIZACAO_COMPLEMENTACAO})
 
 def bloquear(conn, tipo, codigo):
     if tipo not in {'projeto','programa','plano'}:
@@ -13,7 +15,8 @@ def bloquear(conn, tipo, codigo):
     return conn.execute(sql.SQL('SELECT * FROM demandas.{} WHERE codigo=%s FOR UPDATE').format(
         sql.Identifier(tipo)), (codigo,)).fetchone()
 
-def solicitar(codigo, *, categorias, descricao, user, hierarquizacao_codigo=None, demanda_tipo=None):
+def solicitar(codigo, *, categorias, descricao, user, hierarquizacao_codigo=None, demanda_tipo=None,
+              geometria_extraordinaria=False):
     from api.services import analise_demanda_service as analise
     categorias = list(dict.fromkeys(categorias or []))
     if not categorias or not set(categorias) <= TIPOS:
@@ -36,6 +39,13 @@ def solicitar(codigo, *, categorias, descricao, user, hierarquizacao_codigo=None
             raise DemandaValidationError('Demanda não encontrada.', field='codigo')
         if any(s.get('hierarquizacao_codigo') == hierarquizacao_codigo for s in repo.listar(tipo=tipo,codigo=codigo)):
             raise DemandaValidationError('Já existe uma solicitação aberta para esta demanda e contexto.', field='codigo')
+        if geometria_extraordinaria:
+            if categorias != ['geometria'] or row['status'] not in STATUS_GEOMETRIA_EXTRAORDINARIA:
+                raise DemandaValidationError(
+                    'A alteração extraordinária exige uma demanda em hierarquização e uma solicitação somente de geometria.',
+                    field='status',
+                )
+            return repo.criar(tipo, codigo, categorias, descricao.strip(), user, origem=ORIGEM_GEOMETRIA_EXTRAORDINARIA)
         if hierarquizacao_codigo:
             if not h or h.get("status") in {"arquivada", "homologada"}:
                 raise DemandaValidationError('A hierarquização não está aberta para complementação.', field='hierarquizacao_codigo')

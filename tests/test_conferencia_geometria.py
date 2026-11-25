@@ -92,11 +92,39 @@ def test_recorte_marinho_sp_aceita_sp_e_exclui_outros_estados(monkeypatch,coordi
     assert result['situacao']==('marinha' if allowed else 'fora_abrangencia')
     assert 'revisao_marinha' not in str(result)
 
-def test_poligono_parcialmente_fora_nao_e_aceito(monkeypatch):
+def test_poligono_parcialmente_marinho_e_aceito_com_aviso(monkeypatch):
     from api.services import conferencia_geometria as check
     monkeypatch.setattr(check,"municipios_metricos",lambda:())
     result=check.conferir({'type':'Polygon','coordinates':[[[-45.5,-25],[-42.5,-25],[-42.5,-23.5],[-45.5,-25]]]})
-    assert result['permitido'] is False
+    assert result['permitido'] is True
+    assert result['situacao'] == 'parcial'
+    assert result['municipios'] == []
+    assert 'área marítima de referência' in result['mensagem']
+
+
+@pytest.mark.parametrize('coordinates,allowed', [
+    ([[-46.2, -23.05], [-45.9, -23.05]], True),
+    ([[-46.2, -23.2], [-46.1, -23.1]], False),
+])
+def test_linha_na_divisa_exige_um_trecho_dentro_de_sp(monkeypatch, coordinates, allowed):
+    from osgeo import ogr
+    from api.services import conferencia_geometria as check
+
+    sp = ogr.CreateGeometryFromWkt(
+        'POLYGON ((-46.1 -23.1, -46 -23.1, -46 -23, -46.1 -23, -46.1 -23.1))'
+    )
+    monkeypatch.setattr(check, 'municipios_metricos', lambda: (
+        ('3500000', 'Município paulista', check.reprojetar(sp, 4326, 5880)),
+    ))
+    monkeypatch.setattr(check, 'cobertura_marinha', lambda: ogr.Geometry(ogr.wkbPolygon))
+
+    result = check.conferir({'type': 'LineString', 'coordinates': coordinates})
+
+    assert result['permitido'] is allowed
+    assert result['situacao'] == ('parcial' if allowed else 'fora_abrangencia')
+    if allowed:
+        assert result['municipios'] == [{'codigo': '3500000', 'nome': 'Município paulista'}]
+        assert 'A geometria completa será registrada' in result['mensagem']
 
 def test_token_adulterado_nao_autoriza_upload():
     token=emitir_confirmacao(b'original','user','plano','COD')

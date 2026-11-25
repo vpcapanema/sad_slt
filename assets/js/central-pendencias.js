@@ -3,6 +3,8 @@
   const get = id => document.getElementById(id);
   const api = '/api/complementacao/solicitacoes';
   const labels = { dados_cadastrais: 'Dados cadastrais', geometria: 'Geometria', atributos_objeto: 'Atributos da demanda' };
+  const extraordinaria = row => row?.origem === 'geometria_extraordinaria';
+  const tituloExtraordinaria = 'Alteração extraordinária de geometria';
   const feedback = text => { get('pendencias-feedback').textContent = text; };
   const text = value => value == null || value === '' ? 'Não registrado' : typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value);
   const request = async (url, method = 'GET', body) => {
@@ -150,7 +152,7 @@
       get('solicitacao-salvar').disabled = !editable;
       get('solicitacao-recarregar').disabled = busy;
       const status = row?.notificacao?.status;
-      get('solicitacao-notificar').disabled = !editable || !row.id || !row.tem_parecer_pdf
+      get('solicitacao-notificar').disabled = !editable || extraordinaria(row) || !row.id || !row.tem_parecer_pdf
         || (row.categorias.includes('atributos_objeto') && !row.mensagem_gestor?.trim())
         || ['enviando', 'aceito_smtp', 'indeterminado'].includes(status)
         || JSON.stringify(payload()) !== JSON.stringify(saved);
@@ -170,18 +172,24 @@
       get('solicitacao-mensagem').value = row.mensagem_gestor || '';
       get('solicitacao-mensagem').closest('.form-field').hidden = !row.categorias.includes('atributos_objeto');
       const attributes = row.categorias.includes('atributos_objeto');
-      form.dataset.accessModule = attributes ? 'mad' : 'mocad';
+      const geometryException = extraordinaria(row);
+      form.dataset.accessModule = attributes || geometryException ? 'mad' : 'mocad';
       window.SICARDAccess?.scan(form);
-      document.querySelectorAll('[data-attributes-section]').forEach(section => { section.hidden = !attributes && Boolean(row.id); });
-      get('solicitacao-cadastro-parecer').hidden = attributes;
+      document.querySelectorAll('[data-attributes-section]').forEach(section => { section.hidden = !attributes && !geometryException && Boolean(row.id); });
+      document.querySelectorAll('[data-notificacao-regular]').forEach(element => { element.hidden = geometryException; });
+      get('solicitacao-extraordinaria-contexto').hidden = !geometryException;
+      get('solicitacao-cadastro-parecer').hidden = attributes || geometryException;
       get('solicitacao-abrir-analise').href = '/restrict/demanda/?' + new URLSearchParams({ tipo: row.demanda_tipo, id: row.demanda_codigo });
       get('solicitacao-atualizar-parecer').disabled = busy || !row.id || !row.pode_editar;
-      get('solicitacao-titulo').textContent = attributes ? 'Solicitar complementação de atributos' : 'Gerenciar pendência de cadastro e geometria';
+      get('solicitacao-titulo').textContent = geometryException ? tituloExtraordinaria
+        : attributes ? 'Solicitar complementação de atributos' : 'Gerenciar pendência de cadastro e geometria';
+      get('solicitacao-acompanhamento-titulo').textContent = geometryException
+        ? '3. Acompanhe o atendimento' : '3. Acompanhe a notificação e o atendimento';
       form.querySelectorAll('[name=categoria]').forEach(e => {
         e.checked = row.categorias.includes(e.value);
-        const attributes = Boolean(row.hierarquizacao_codigo);
-        e.disabled = attributes !== (e.value === 'atributos_objeto') || Object.keys(row.categorias_salvas || {}).length > 0;
-        e.closest('label').hidden = attributes !== (e.value === 'atributos_objeto');
+        const visivel = geometryException ? e.value === 'geometria' : Boolean(row.hierarquizacao_codigo) === (e.value === 'atributos_objeto');
+        e.disabled = !visivel || geometryException || Object.keys(row.categorias_salvas || {}).length > 0;
+        e.closest('label').hidden = !visivel;
       });
       definition('solicitacao-contexto', [
         ['Tipo de demanda', ({ projeto: 'Projeto', programa: 'Programa', plano: 'Plano' })[row.demanda_tipo]],
@@ -229,10 +237,13 @@
         ['Pedido', row.id ? row.status === 'atendida' ? 'Atendido' : 'Registrado — não comprova envio' : 'Ainda não registrado'],
         ['Pendência registrada por', row.solicitado_por ? row.solicitado_nome : 'Autoria não registrada'],
         ['Pendência registrada em', row.solicitado_em ? date(row.solicitado_em) : ''],
-        ['Status da notificação', notifyLabel(row)], ['Notificado por', notified(row) ? row.notificacao?.por_nome : ''],
-        ['Notificado em', row.notificacao?.enviado_em ? date(row.notificacao.enviado_em) : ''],
-        ['Destinatário', row.notificacao?.destinatario], ['Entrega', receipt(row.notificacao?.entrega_status)],
-        ['Abertura do e-mail', reading(row.notificacao?.leitura_status)], ['Cumprimento da pendência', fulfillment(row)],
+        ...(geometryException ? [] : [
+          ['Status da notificação', notifyLabel(row)], ['Notificado por', notified(row) ? row.notificacao?.por_nome : ''],
+          ['Notificado em', row.notificacao?.enviado_em ? date(row.notificacao.enviado_em) : ''],
+          ['Destinatário', row.notificacao?.destinatario], ['Entrega', receipt(row.notificacao?.entrega_status)],
+          ['Abertura do e-mail', reading(row.notificacao?.leitura_status)],
+        ]),
+        ['Cumprimento da pendência', fulfillment(row)],
         ['Atendimento concluído em', date(row.atendido_em)],
         ['Categorias preenchidas', Object.keys(row.categorias_salvas || {}).map(c => labels[c] || 'Categoria não identificada').join(', ') || 'Nenhuma'],
         ['Revisão', row.revisao], ['Última atualização', date(row.atualizado_em)],
@@ -256,10 +267,12 @@
       saved = payload();
       controls();
       feedback(row.migracao_pendente ? 'A edição depende da aplicação da migração 153 no banco. Consulta disponível em modo somente leitura.'
-        : row.impedimento || (row.status === 'nao_solicitada'
+        : row.impedimento || (geometryException
+          ? row.id ? 'Solicitação registrada. Consulte o cumprimento nesta página.' : 'Informe o motivo e salve o pedido de geometria.'
+          : row.status === 'nao_solicitada'
           ? 'Pendência identificada automaticamente. Preencha e salve para registrar a solicitação; o envio será uma ação separada.'
           : row.pode_editar ? 'Solicitação carregada. As anotações técnicas permanecem internas; o PDF enviado é o da análise.' : 'Solicitação em modo somente leitura.'));
-      if (!attributes && row.id) {
+      if (!attributes && !geometryException && row.id) {
         get('solicitacao-previa').querySelector('[data-close]').hidden = true;
         await preview.show(row, false);
       }
@@ -275,11 +288,14 @@
         } else {
           const { revisao, ...content } = payload();
           const created = await request(api, 'POST', { ...content, demanda_tipo: row.demanda_tipo,
-            demanda_codigo: row.demanda_codigo, hierarquizacao_codigo: row.hierarquizacao_codigo });
+            demanda_codigo: row.demanda_codigo, hierarquizacao_codigo: row.hierarquizacao_codigo,
+            ...(extraordinaria(row) ? { geometria_extraordinaria: true } : {}) });
           id = created.id;
           history.replaceState(null, '', detailUrl(created));
         }
-        await load(); feedback('Solicitação salva. Nenhum e-mail foi enviado.');
+        await load();
+        feedback(extraordinaria(row) ? 'Pedido de geometria salvo. A demanda mantém o status e o vínculo com o grupo.'
+          : 'Solicitação salva. Nenhum e-mail foi enviado.');
       }
       catch (error) { feedback(error.message); }
       finally { busy = false; controls(); }
@@ -317,7 +333,7 @@
     const baseColumns = [
       ['demanda_tipo', 'Tipo', r => r.demanda_tipo], ['demanda_codigo', 'Código', r => r.demanda_codigo],
       ['demanda_nome', 'Nome da demanda', r => r.demanda_nome || 'Cadastro indisponível'],
-      ['categorias', 'Categorias', r => r.categorias.map(c => labels[c] || c).join(', ')],
+      ['categorias', 'Categorias', r => extraordinaria(r) ? tituloExtraordinaria : r.categorias.map(c => labels[c] || c).join(', ')],
       ['notificacao', 'Status da notificação', notifyLabel],
       ['pendencias_atributos', 'Atributos pendentes', pendingNames],
       ['hierarquizacao_codigo', 'Hierarquização', r => r.hierarquizacao_codigo || 'Não se aplica'],

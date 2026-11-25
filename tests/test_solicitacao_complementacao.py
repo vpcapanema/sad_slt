@@ -18,10 +18,10 @@ def fluxo(monkeypatch):
     monkeypatch.setattr(service, 'bloquear', lambda *args: demanda)
     monkeypatch.setattr(analise, '_localizar_demanda', lambda codigo: ('projeto', demanda))
     monkeypatch.setattr(service.repo, 'listar', lambda **kw: pedidos)
-    def criar(tipo, codigo, categorias, descricao, user, hierarquizacao):
+    def criar(tipo, codigo, categorias, descricao, user, hierarquizacao=None, *, origem=None):
         p = dict(id=str(uuid4()), demanda_tipo=tipo, demanda_codigo=codigo, categorias=categorias,
                  descricao=descricao, hierarquizacao_codigo=hierarquizacao,
-                 status='registrada', categorias_salvas={})
+                 status='registrada', categorias_salvas={}, origem=origem)
         pedidos.append(p)
         eventos.append('pedido')
         return p
@@ -45,6 +45,62 @@ def test_pedido_para_espera_legada_sem_inventar_autoria_anterior(fluxo):
     pedido = service.solicitar("D", categorias=["geometria"], descricao="Corrigir geometria", user=fluxo.user)
     assert pedido["status"] == "registrada"
     assert fluxo.eventos == ["pedido"]
+
+
+@pytest.mark.parametrize("status", ["hierarq_em_andamento", "hierarq_aguardando_complementacao"])
+def test_pedido_extraordinario_e_atendimento_preservam_o_status_da_demanda(fluxo, monkeypatch, status):
+    fluxo.demanda.update(status=status, criado_por=fluxo.user.id)
+    fluxo.user.tipo_usuario = "GESTOR"
+    monkeypatch.setattr(router, "atomic_connection", lambda: nullcontext(Mock()))
+    monkeypatch.setattr(router, "bloquear", lambda *a: fluxo.demanda)
+    monkeypatch.setattr(router, "_pessoa_id", lambda user: None)
+    monkeypatch.setattr(router.demanda_repository, "get_by_codigo", lambda codigo: fluxo.demanda)
+    monkeypatch.setattr(router.analise_demanda_repository, "get_by_codigo", lambda codigo: None)
+    monkeypatch.setattr(router.dominio_repository, "list_status_demanda", lambda: [{"codigo": status, "nome": status}])
+    monkeypatch.setattr(service.repo, "editar", lambda id, campos, user: fluxo.pedidos[0] | {"revisao": 1})
+    contexto = router.preparar_solicitacao("projeto", "D", user=fluxo.user, geometria_extraordinaria=True)
+    assert contexto["categorias"] == ["geometria"] and contexto["pode_editar"]
+    body = router.SolicitacaoCriacao(
+        demanda_tipo="projeto", demanda_codigo="D", categorias=["geometria"],
+        descricao="Corrigir o eixo da demanda", parecer_tecnico="", mensagem_gestor="",
+        geometria_extraordinaria=True,
+    )
+    result = router.criar_solicitacao(body, fluxo.user)
+    p, = fluxo.pedidos
+    assert result["origem"] == service.ORIGEM_GEOMETRIA_EXTRAORDINARIA
+    assert result["demanda_status"] == status
+    assert fluxo.eventos == ["pedido"]
+    with pytest.raises(HTTPException) as erro:
+        router.criar_solicitacao(body, fluxo.user)
+    assert erro.value.status_code == 409
+
+    fluxo.user.tipo_usuario = "OPERADOR"
+    assert router._demanda_autorizada("projeto", "D", fluxo.user, "geometria") is fluxo.demanda
+    with pytest.raises(HTTPException) as erro:
+        router._demanda_autorizada("projeto", "D", fluxo.user, "dados_cadastrais")
+    assert erro.value.status_code == 403
+
+    monkeypatch.setattr(service.repo, "obter", lambda *a, **kw: p)
+    atendidos = Mock(return_value=p | {"status": "atendida"})
+    monkeypatch.setattr(service.repo, "atender", atendidos)
+    with pytest.raises(HTTPException) as erro:
+        router.concluir_solicitacao(p["id"], fluxo.user)
+    assert erro.value.status_code == 422
+    p["categorias_salvas"]["geometria"] = {"por": fluxo.user.id}
+    router.concluir_solicitacao(p["id"], fluxo.user)
+    atendidos.assert_called_once_with(p["id"], fluxo.user.id)
+    assert fluxo.demanda["status"] == status
+
+
+def test_extraordinaria_exige_gestor_e_demanda_em_hierarquizacao(fluxo, monkeypatch):
+    monkeypatch.setattr(router.demanda_repository, "get_by_codigo", lambda codigo: fluxo.demanda)
+    with pytest.raises(HTTPException) as negada:
+        router.preparar_solicitacao("projeto", "D", user=fluxo.user, geometria_extraordinaria=True)
+    assert negada.value.status_code == 403
+    fluxo.user.tipo_usuario = "GESTOR"
+    with pytest.raises(HTTPException) as fora_da_fase:
+        router.preparar_solicitacao("projeto", "D", user=fluxo.user, geometria_extraordinaria=True)
+    assert fora_da_fase.value.status_code == 409
 
 
 def test_tipo_explicito_nao_localiza_apenas_pelo_codigo(fluxo, monkeypatch):

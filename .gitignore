@@ -86,6 +86,11 @@ documentacao/geoespacial/entregas/
 /outputs/inventario-saidas-20261008/
 /outputs/migracao-demandas/
 
+# Entregáveis locais do PLI.
+/outputs/corredores-cajati/
+/outputs/d14-indicadores/
+/outputs/ponte-panorama/
+
 # Ambiente descartável e evidências locais das validações de outubro.
 /.tmp/
 /artifacts/admin-vermelho-escuro.png

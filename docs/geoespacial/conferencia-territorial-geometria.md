@@ -4,6 +4,8 @@ Projeto, Programa e Plano oferecem Enviar/substituir geometria no modo Editar.
 O endpoint POST /api/geometria/conferir/{tipo}/{codigo} interpreta o arquivo original sem buffer; não grava a demanda.
 Confere a geometria inteira usando OGR em EPSG:5880 contra a malha municipal paulista e o recorte marítimo de referência.
 Mais de um município é apresentado como lista; geometria terrestre/marítima informa ambos; em área exclusivamente marítima não inventa município.
+Geometrias que cruzam o limite paulista podem prosseguir quando há interseção efetiva com a malha municipal ou o recorte marítimo. A interface informa a cobertura parcial e a substituição registra a geometria completa.
+O contato em um único ponto é insuficiente para uma linha, assim como o contato somente pela borda é insuficiente para um polígono.
 A confirmação exige token HMAC vinculado ao hash dos bytes, usuário, tipo e código, com validade de 15 minutos.
 POST /api/geometria/substituir/{tipo}/{codigo} valida o token e repete a conferência antes de processar.
 Reutiliza parse_upload, normalizar e receber_arquivo_geometria do cadastro; pontos recebem raio 50 m, linhas buffer 25 m de cada lado.
@@ -29,5 +31,5 @@ A geometria do usuário não sofre simplificação. O recorte de validação pod
 ## Validação
 
 Testes de confirmação vinculada ao arquivo/sessão/alvo, expiração, adulteração e ausência de sessão.
-Casos marítimos em SP, RJ e PR, caso terrestre fora do estado e geometria parcialmente externa.
+Casos marítimos em SP, RJ e PR, caso terrestre fora do estado, geometrias parcialmente externas e uma linha que só toca a divisa.
 Recepção do arquivo original pelos três tipos, preservação das autorias e teste de interação do modal no Edge headless.
