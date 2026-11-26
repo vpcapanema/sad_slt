@@ -30,7 +30,7 @@ print(json.dumps({
 }))
 `, JSON.stringify({ token, inscricao, formulario, pessoa })], { encoding: 'utf8' }));
 
-async function testarFluxo(browser, width, aguardar) {
+async function testarFluxo(browser, width, aguardar, associada = false) {
   const page = await browser.newPage({ viewport: { width, height: 900 } });
   async function conferirCabecalho() {
     const cabecalho = page.locator('.app-header');
@@ -48,6 +48,7 @@ async function testarFluxo(browser, width, aguardar) {
     email_autorizado: true, criterios: ['Acesso', 'Equidade', 'Custo'],
     modo_comparacao: 'duas_etapas', dimensoes_comparacao: ['Social', 'Financeira'],
     grupos_comparacao: { Social: [0, 1], Financeira: [2] },
+    dimensoes_associadas: associada,
   };
   try {
     page.on('pageerror', error => erros.push(error.message));
@@ -94,6 +95,23 @@ async function testarFluxo(browser, width, aguardar) {
       await page.waitForFunction(() => document.getElementById('collab-retomada-codigo').value === 'a'.repeat(43));
       aguardando = false;
     }
+    if (associada) {
+      await page.getByRole('heading', { name: 'Critérios por dimensão', exact: true }).waitFor();
+      await page.getByRole('heading', { name: 'Comparação dos critérios', exact: true }).waitFor();
+      assert.equal(await page.locator('#collab-linked-back').isVisible(), false);
+      assert.equal(await page.locator('#collab-linked-next').isVisible(), false);
+      assert.equal(await page.locator('#collab-enrollment-guide').isVisible(), false);
+      assert.equal(await page.locator('#collab-enrollment-guide-associated').isVisible(), true);
+      assert.equal(await page.locator('#comparisonContent .saaty-pair').count(), 1);
+      assert.equal(await page.locator('.collab-pair-tabs').evaluate(abas => abas.scrollWidth <= abas.clientWidth + 1), true);
+      await conferirCabecalho();
+      assert.deepEqual(erros, []);
+      if (process.env.SICARD_ASSOCIACAO_QA_DIR) {
+        await page.screenshot({path: require('node:path').join(process.env.SICARD_ASSOCIACAO_QA_DIR, `criterios-${width}.png`), fullPage: true});
+      }
+      console.log(`PASS ${width}px com dimensões associadas`);
+      return;
+    }
     await page.getByText('Etapa 1 de 2 · Dimensões', { exact: true }).waitFor();
     await conferirCabecalho();
     await page.getByRole('heading', { name: 'A avaliação é feita em duas etapas' }).waitFor();
@@ -125,7 +143,10 @@ async function testarFluxo(browser, width, aguardar) {
 (async () => {
   const browser = await chromium.launch();
   try {
-    await Promise.all([testarFluxo(browser, 1440, false), testarFluxo(browser, 390, true)]);
+    await Promise.all([
+      testarFluxo(browser, 1440, false), testarFluxo(browser, 390, true),
+      ...[1440, 768, 390].map(width => testarFluxo(browser, width, false, true)),
+    ]);
   } finally {
     await browser.close();
   }

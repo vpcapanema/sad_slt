@@ -127,7 +127,7 @@ const BASE = process.env.SICARD_BROWSER_BASE_URL || 'http://127.0.0.1:8083';
  await page.locator('#ami-analysis-measure').selectOption('geometrica');
  assert.match(await page.locator('#ami-analysis-matrix tbody').innerText(),/3.000/);
  assert.match(await page.locator('#ami-analysis-criteria').innerText(),/0.750/);
- assert.match(await page.locator('#ami-analysis-metrics').innerText(),/λmax/);
+ assert.match(await page.locator('#ami-analysis-matrix .ami-metric-grid').innerText(),/λmax/);
  await page.locator('#ami-pairs-judge').selectOption('r1');
  assert.match(await page.locator('#ami-analysis-matrix tbody').innerText(),/9.000/);
  assert.match(await page.locator('#ami-analysis-criteria').innerText(),/0.900/,'peso do julgador calculado na consulta');
@@ -177,6 +177,24 @@ const BASE = process.env.SICARD_BROWSER_BASE_URL || 'http://127.0.0.1:8083';
  await page.locator('[data-analysis-round="j2"]').check();
  await page.locator('#ami-judgments-view-action').click();
  await page.waitForFunction(()=>document.querySelectorAll('#ami-analysis-matrix tbody tr').length===3);
+ const tabelaIndices = page.locator('#ami-analysis-pairs');
+ const controlesIndices = tabelaIndices.locator('table').locator('xpath=ancestor::div[contains(@class,"ami-report-table")][1]');
+ const linhaIndices = tabelaIndices.locator('[data-pair="0-1"]');
+ const intensidades = linhaIndices.locator('.ami-stats-table__valor');
+ assert.deepEqual(await intensidades.allTextContents(), ['0.333', '0.333', '3.000', '5.000', '7.000']);
+ assert.match(await intensidades.first().getAttribute('title'), /Julgador 1: 0\.333/);
+ assert.equal(await page.locator('#ami-analysis-pairs-chart [data-pair="0-1"] [data-judge="s0"] .is-selected .ami-pair-bars__tick-val').innerText(),'0.333');
+ await controlesIndices.getByRole('combobox', {name:'Coluna do filtro'}).selectOption({label:'Julgador 1'});
+ await controlesIndices.getByRole('combobox', {name:'Valor do filtro'}).selectOption('0.333');
+ assert.equal(await tabelaIndices.locator('tbody tr').count(),1);
+ await tabelaIndices.locator('thead input').check();
+ const exportacao = page.waitForEvent('download');
+ await controlesIndices.getByRole('button', {name:'Exportar selecionados'}).click();
+ assert.match(fs.readFileSync(await (await exportacao).path(),'utf8'), /"0\.333";"0\.333";"3\.000"/);
+ await controlesIndices.getByRole('button', {name:'Limpar filtros'}).click();
+ await page.locator('#ami-pairs-judge').selectOption('s0');
+ assert.equal(await linhaIndices.locator('td').nth(4).innerText(),'0.333');
+ await page.locator('#ami-pairs-judge').selectOption('');
  const rcs = new Set(), weights = new Set();
  for (const [method,index,label] of [['geometrica',(35/3)**(1/5),/Média geométrica/],['aritmetica',47/15,/Média aritmética/],['mediana',3,/Mediana/],['moda',1/3,/Moda/]]) {
    await page.locator('#ami-analysis-measure').selectOption(method);
@@ -185,7 +203,7 @@ const BASE = process.env.SICARD_BROWSER_BASE_URL || 'http://127.0.0.1:8083';
    assert.equal(await rows.nth(0).locator('td').nth(3).innerText(),index.toFixed(3));
    assert.equal(await rows.nth(1).locator('td').nth(2).innerText(),(1/index).toFixed(3));
    assert.match(await page.locator('#ami-analysis-consolidation-measure').innerText(),label);
-   rcs.add(await page.locator('#ami-analysis-metrics .ami-metric-card__value').last().innerText());
+   rcs.add(await page.locator('#ami-analysis-matrix .ami-metric-card__value').last().innerText());
    weights.add(await page.locator('#ami-analysis-criteria tr').first().locator('strong').last().innerText());
  }
  assert.equal(rcs.size,4);assert.equal(weights.size,4);
@@ -210,18 +228,56 @@ const BASE = process.env.SICARD_BROWSER_BASE_URL || 'http://127.0.0.1:8083';
  const posicoes = await seletores.evaluateAll(campos => campos.map(campo => campo.getBoundingClientRect().top));
  assert.equal(new Set(posicoes).size, 1);
  assert.equal(await page.locator('#ami-analysis-matrix table').count(), 2);
- assert.deepEqual(await page.locator('#ami-analysis-matrix .ami-analysis-group h4').allTextContents(), ['Financeira', 'Social']);
+ assert.match(await page.locator('#ami-analysis-matrix-intro').innerText(), /Cada tabela mostra as comparações entre os critérios de uma dimensão\./);
+ const titulosMatrizes = page.locator('#ami-analysis-matrix .ami-analysis-group h4');
+ assert.deepEqual(await titulosMatrizes.allTextContents(), ['Dimensão Financeira', 'Dimensão Social']);
+ assert.deepEqual(await page.locator('#ami-analysis-matrix table').evaluateAll(tabelas => tabelas.map(tabela => tabela.dataset.tableTitle)),
+   ['Matriz da dimensão Financeira', 'Matriz da dimensão Social']);
  assert.deepEqual(await page.locator('#ami-analysis-pairs [data-ami-applied]').allTextContents(), ['4.583', '5.000']);
  await page.locator('#ami-analysis-measure').selectOption('aritmetica');
  assert.deepEqual(await page.locator('#ami-analysis-pairs [data-ami-applied]').allTextContents(), ['5.000', '5.000']);
- assert.equal(await page.locator('#ami-analysis-metrics .ami-metric-grid').count(), 2);
+ assert.equal(await page.locator('#ami-analysis-matrix .ami-metric-grid').count(), 2);
+ const explicacaoMetricas = page.locator('#ami-analysis-metric-help');
+ assert.equal(await page.getByText('O que cada métrica diz', {exact:true}).count(), 1);
+ assert.equal(await explicacaoMetricas.locator('dl').isVisible(), false);
+ assert.ok(await explicacaoMetricas.evaluate(guia => guia.previousElementSibling.matches('.ami-section-intro')));
+ await explicacaoMetricas.locator('summary').click();
+ assert.equal(await explicacaoMetricas.locator('dt:visible').count(), 4);
+ await explicacaoMetricas.locator('summary').click();
+ assert.ok(await page.locator('#ami-analysis-matrix .ami-analysis-group').evaluateAll(grupos => grupos.every(grupo => {
+   const metricas = grupo.querySelector('.ami-metric-grid');
+   return metricas.children.length === 4 && metricas.nextElementSibling.querySelector('.ami-table-label, .sicard-table-label') &&
+     metricas.nextElementSibling.querySelector('table');
+ })));
  assert.equal(await page.locator('#ami-analysis-group-weights .ami-donut-chart').count(), 2);
+ const pesosPorDimensao = page.locator('#ami-analysis-group-weights');
+ for (const dimensao of ['Financeira', 'Social']) {
+   assert.equal(await pesosPorDimensao.getByText('Tabela de pesos da dimensão ' + dimensao, {exact:true}).isVisible(), true);
+   assert.equal(await pesosPorDimensao.getByText('Gráfico de pesos da dimensão ' + dimensao, {exact:true}).isVisible(), true);
+ }
  assert.equal(await page.locator('#ami-analysis-calculate').isDisabled(), true);
  await page.setViewportSize({width:390,height:900});
  const colunasNoCelular = await page.locator('.ami-analysis-selectors').evaluate(grade =>
    getComputedStyle(grade).gridTemplateColumns.split(' ').filter(largura => parseFloat(largura) > 0).length);
  assert.equal(colunasNoCelular, 2);
  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
+ const diametros = [];
+ for (const largura of [1440, 768, 390]) {
+   await page.setViewportSize({width:largura,height:900});
+   assert.ok(await titulosMatrizes.evaluateAll(titulos => titulos.every(titulo =>
+     titulo.scrollWidth <= titulo.clientWidth + 1 && getComputedStyle(titulo).fontWeight === getComputedStyle(titulos[0]).fontWeight)));
+   const tamanhos = await pesosPorDimensao.locator('.ami-chart-card').evaluateAll(graficos => graficos.map(grafico => {
+     const rosca = grafico.querySelector('.ami-donut-chart__plot').getBoundingClientRect();
+     const legenda = grafico.querySelector('figcaption').getBoundingClientRect();
+     const entradas = [...grafico.querySelectorAll('figcaption li')].map(item => item.getBoundingClientRect());
+     return {diametro:rosca.width, ladoALado:rosca.right <= legenda.left && rosca.top < legenda.bottom && legenda.top < rosca.bottom,
+       umaColuna:entradas.every((entrada, i) => !i || (entrada.left === entradas[0].left && entrada.top >= entradas[i - 1].bottom)),
+       semRolagem:grafico.scrollHeight <= grafico.clientHeight + 1};
+   }));
+   assert.ok(tamanhos.every(tamanho => tamanho.ladoALado && tamanho.umaColuna && tamanho.semRolagem));
+   diametros.push(tamanhos[0].diametro);
+ }
+ assert.ok(diametros[0] > diametros[1] && diametros[1] > diametros[2]);
  await page.setViewportSize({width:1440,height:900});
  await page.locator('#ami-pairs-judge').selectOption('r0');
  assert.deepEqual(await page.locator('#ami-analysis-pairs [data-ami-applied]').allTextContents(), ['3.000', '5.000']);
@@ -229,6 +285,8 @@ const BASE = process.env.SICARD_BROWSER_BASE_URL || 'http://127.0.0.1:8083';
  assert.deepEqual(await page.locator('#ami-analysis-pairs [data-ami-applied]').allTextContents(), ['7.000']);
  assert.equal(await page.locator('#ami-analysis-matrix table').count(), 1);
  await scope.selectOption('1');
+ assert.equal(await page.getByText('Tabela de pesos da dimensão Social', {exact:true}).isVisible(), true);
+ assert.equal(await page.getByText('Gráfico de pesos da dimensão Social', {exact:true}).isVisible(), true);
  assert.match(await page.locator('#ami-analysis-matrix tbody').innerText(), /5.000/);
  assert.match(await page.locator('#ami-analysis-matrix tbody').innerText(), /Equidade/i);
  assert.equal(await page.locator('#ami-analysis-group-weights').isVisible(), false);

@@ -46,6 +46,7 @@ from api.schemas.comparacao_colaborativa import (
     EMAIL_REMETENTE_ALIAS_PADRAO,
 )
 from api.services import ahp_engine, contexto_julgamento_ahp, superficie_ahp, matrizes_criterios, mensagens_ahp
+from api.services import associacao_dimensoes_ahp
 
 logger = logging.getLogger(__name__)
 METODO_PESOS_GLOBAIS = "pesos_por_dimensao"
@@ -1104,6 +1105,7 @@ def obter_ambiente_publico(
     modo_comparacao = row.get("modo_comparacao", "todos")
     grupos_comparacao = _grupos_comparacao(criterios_atribuidos) if modo_comparacao in {"por_grupo", "duas_etapas"} else {}
     dimensoes_comparacao = list(grupos_comparacao) if modo_comparacao == "duas_etapas" else []
+    dimensoes_associadas = bool(email and associacao_dimensoes_ahp.vinculo(row, email.strip().lower()))
 
     valido_ate = row.get("valido_ate")
     if isinstance(valido_ate, datetime) and valido_ate.tzinfo is None:
@@ -1126,6 +1128,7 @@ def obter_ambiente_publico(
             modo_comparacao=modo_comparacao,
             grupos_comparacao=grupos_comparacao,
             dimensoes_comparacao=dimensoes_comparacao,
+            dimensoes_associadas=dimensoes_associadas,
             email_autorizado=autorizado,
             contextualizacao=contexto_julgamento_ahp.contextualizacao_formulario(row, criterios_atribuidos, grupos_comparacao=grupos_comparacao),
         )
@@ -1154,6 +1157,7 @@ def obter_ambiente_publico(
         modo_comparacao=modo_comparacao,
         grupos_comparacao=grupos_comparacao,
         dimensoes_comparacao=dimensoes_comparacao,
+        dimensoes_associadas=dimensoes_associadas,
         valido_ate=_iso(valido_ate) or "",
         status=status,
         email_autorizado=autorizado,
@@ -1262,7 +1266,10 @@ def iniciar_resposta(token: str, payload: RespostaColaborativaInicioSchema, *, s
     inscricao = _validar_email_token(ambiente, email, payload.token_acesso, sessao_inscricao)
     existente = repo.get_resposta_by_ambiente_email(str(ambiente["id"]), email)
     if existente:
-        return _resposta_to_response(existente)
+        resposta = _resposta_to_response(existente)
+        if associacao_dimensoes_ahp.vinculo(ambiente, email):
+            return _resposta_sem_dimensoes_associadas(resposta)
+        return resposta
     n = len(_criterios_convidado(ambiente, email))
     inserted = repo.insert_resposta({
         "ambiente_id": str(ambiente["id"]),
@@ -1319,6 +1326,9 @@ def _salvar_progresso_duas_etapas(ambiente, resposta, criterios, payload):
     anteriores = resposta.get("estatisticas") or {}
     primeira = anteriores.get("julgamento_dimensoes") or {}
     matriz = payload.matriz_comparacao
+    associada = associacao_dimensoes_ahp.vinculo(ambiente, payload.email.strip().lower())
+    if associada and (payload.etapa == "dimensoes" or payload.concluir_etapa):
+        raise DemandaValidationError("As dimensões já foram validadas pelo gestor. Preencha somente os critérios.", field="etapa")
     if payload.etapa == "dimensoes":
         dimensoes = list(_grupos_comparacao(criterios))
         resultado = primeira.get("resultado") if primeira.get("matriz") == matriz else None
@@ -1342,12 +1352,15 @@ def _salvar_progresso_duas_etapas(ambiente, resposta, criterios, payload):
         if (payload.estatisticas or {}).get("duracao_ms") is not None:
             dados["estatisticas"]["duracao_ms"] = payload.estatisticas["duracao_ms"]
     else:
-        if payload.concluir_etapa or not primeira.get("resultado"):
+        if payload.concluir_etapa or (not associada and not primeira.get("resultado")):
             raise DemandaValidationError("Conclua a etapa das dimensões para preencher os critérios.", field="etapa")
         _validar_comparacao_por_grupo(matriz, criterios, rascunho=True)
+        estatisticas = _estatisticas_recorte(ambiente, payload.email, payload.estatisticas)
+        if not associada:
+            estatisticas["julgamento_dimensoes"] = primeira
         dados = {
             "matriz_comparacao": matriz,
-            "estatisticas": {**_estatisticas_recorte(ambiente, payload.email, payload.estatisticas), "julgamento_dimensoes": primeira},
+            "estatisticas": estatisticas,
         }
     return _gravar_rascunho_versionado(resposta, dados, payload.versao)
 
@@ -1380,6 +1393,15 @@ def salvar_progresso_resposta(token: str, payload: RespostaColaborativaProgresso
         return _gravar_rascunho_versionado(resposta, dados, payload.versao)
     updated = repo.update_resposta_progresso(str(resposta["id"]), dados)
     return _resposta_to_response(updated)
+
+
+def _resposta_sem_dimensoes_associadas(resposta: RespostaColaborativaResponseSchema) -> RespostaColaborativaResponseSchema:
+    # O link público usa a inscrição. As comparações antigas ficam na resposta oficial e na apuração restrita.
+    estatisticas = {chave: valor for chave, valor in (resposta.estatisticas or {}).items()
+                    if chave not in {"julgamento_dimensoes", "pesos_globais_individuais"}}
+    return resposta.model_copy(update={"estatisticas": estatisticas, "razao_consistencia": None})
+
+
 def registrar_resposta(token: str, payload: RespostaColaborativaCreateSchema, *, sessao_inscricao: str | None = None) -> RespostaColaborativaResponseSchema:
     """Registra resposta colaborativa após validar e-mail, matriz e RC < 0,10."""
     row = repo.get_ambiente_by_token(token)
@@ -1403,9 +1425,10 @@ def registrar_resposta(token: str, payload: RespostaColaborativaCreateSchema, *,
     matriz = payload.matriz_comparacao
     estatisticas = _estatisticas_recorte(row, email, payload.estatisticas)
     duas_etapas = row.get("modo_comparacao") == "duas_etapas"
+    vinculo = associacao_dimensoes_ahp.vinculo(row, email)
     if duas_etapas:
         primeira = ((existente or {}).get("estatisticas") or {}).get("julgamento_dimensoes") or {}
-        if not primeira.get("resultado"):
+        if not vinculo and not primeira.get("resultado"):
             raise DemandaValidationError("Conclua e valide a etapa das dimensões antes de enviar.", field="etapa")
     if row.get("modo_comparacao") == "por_grupo" or duas_etapas:
         resultados = _validar_comparacao_por_grupo(matriz, criterios_lista)
@@ -1413,6 +1436,8 @@ def registrar_resposta(token: str, payload: RespostaColaborativaCreateSchema, *,
         rc = max(float(item["CR"]) for item in resultados.values())
         estatisticas["resultados_por_grupo"] = resultados
         if duas_etapas:
+            if vinculo:
+                primeira = associacao_dimensoes_ahp.dimensoes_para_envio(vinculo, email, list(_grupos_comparacao(criterios_lista)))
             estatisticas["julgamento_dimensoes"] = primeira
             pesos_dimensoes = dict(zip(primeira["dimensoes"], primeira["resultado"]["weights"], strict=True))
             globais = [0.0] * len(criterios_lista)
@@ -1448,7 +1473,8 @@ def registrar_resposta(token: str, payload: RespostaColaborativaCreateSchema, *,
             "enviado_em": datetime.now(timezone.utc),
         }
     if duas_etapas or payload.versao is not None:
-        return _gravar_rascunho_versionado(existente, dados_resposta, payload.versao)
+        resposta = _gravar_rascunho_versionado(existente, dados_resposta, payload.versao)
+        return _resposta_sem_dimensoes_associadas(resposta) if vinculo else resposta
     inserted = repo.update_resposta_progresso(str(existente["id"]), dados_resposta) if existente else repo.insert_resposta(dados_resposta)
     if not inserted:
         raise DemandaValidationError(
@@ -1856,11 +1882,16 @@ def obter_espaco_analitico(ambiente_id: str, *, base_url: str = "", gestao: bool
         if por_grupo:
             grupo["respostas"] = [_resposta_to_response(r).model_dump() for r in respostas_grupo]
     estatisticas = grupos[0]["estatisticas"] if len(grupos) == 1 else {"individuais": [], "por_criterio": [], "por_par": []}
+    associados = associacao_dimensoes_ahp.emails_associados(ambiente) if gestao else set()
+    respostas_exibidas = [_resposta_to_response(r).model_dump() for r in respostas]
+    for resposta in respostas_exibidas:
+        if resposta["status"] == "em_preenchimento" and resposta["email"] in associados:
+            resposta["dimensoes_associadas"] = True
     return {
         "ambiente": _ambiente_to_response(ambiente, base_url=base_url, gestao=gestao).model_dump(),
         "participacao": {"convidados": participantes, "nao_iniciados": max(0, participantes-len(respostas)), "em_preenchimento": sum(r.get("status") == "em_preenchimento" for r in respostas), "enviadas": len(enviados), "consistentes": sum(bool(r.get("consistente")) for r in enviados), "inconsistentes": sum(not bool(r.get("consistente")) for r in enviados)},
         "inscritos": inscricoes,
-        "respostas": [_resposta_to_response(r).model_dump() for r in respostas],
+        "respostas": respostas_exibidas,
         "estatisticas": estatisticas,
         "recortes": grupos,
         "analises": [a.model_dump() for a in listar_analises(ambiente_id)],

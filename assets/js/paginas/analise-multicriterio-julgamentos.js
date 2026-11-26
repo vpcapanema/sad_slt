@@ -300,14 +300,6 @@
   }
   function ratioLabel(realizado, total) { var percentage = total > 0 ? Math.round((realizado / total) * 100) : 0; return '<span class="ami-ratio"><strong>' + realizado + '/' + total + '</strong><small>' + percentage + '%</small></span>'; }
   function fmtNumber(value) { return value == null ? "—" : Number(value).toFixed(3); }
-  // Os indices atribuidos sao valores da escala de Saaty, entao aparecem na
-  // notacao da propria escala (1/3, 3, 5) em vez de decimal.
-  var SAATY_ESCALA = [[1 / 9, "1/9"], [1 / 8, "1/8"], [1 / 7, "1/7"], [1 / 6, "1/6"], [1 / 5, "1/5"], [1 / 4, "1/4"], [1 / 3, "1/3"], [1 / 2, "1/2"], [1, "1"], [2, "2"], [3, "3"], [4, "4"], [5, "5"], [6, "6"], [7, "7"], [8, "8"], [9, "9"]];
-  function saatyLabel(valor) {
-    if (valor == null) return "—";
-    for (var i = 0; i < SAATY_ESCALA.length; i++) { if (Math.abs(Number(valor) - SAATY_ESCALA[i][0]) < 0.0005) return SAATY_ESCALA[i][1]; }
-    return fmtNumber(valor);
-  }
   // Uma cor por julgador, estavel entre tabela, grafico e legenda.
   function judgeColors(pairs) {
     var nomes = [], mapa = {};
@@ -332,7 +324,7 @@
   // acompanha a paginacao, o filtro e a ordenacao da tabela.
   // Degraus da escala de Saaty na ordem da regua do formulario: 9 a esquerda (CT 1), 1/9 a direita (CT 2).
   var PASSOS_REGUA_SAATY = [9, 7, 5, 3, 1, 1 / 3, 1 / 5, 1 / 7, 1 / 9];
-  function passoRotulo(passo) { return passo >= 1 ? String(passo) : "1/" + Math.round(1 / passo); }
+  function passoRotulo(passo) { return passo >= 1 ? String(passo) : fmtNumber(passo); }
   function indicePassoRegua(valor) {
     var melhor = 4, diferenca = Infinity;
     PASSOS_REGUA_SAATY.forEach(function (passo, indice) {
@@ -353,7 +345,7 @@
       var trilhas = visiveis.map(function (julgador) {
         var ponto = (pair.pontos || []).filter(function (item) { return item.resposta_id === julgador.id; })[0];
         if (!ponto) return '';
-        var valor = Number(ponto.valor) || 1, indice = indicePassoRegua(valor), rotulo = passoRotulo(PASSOS_REGUA_SAATY[indice]), sentido = valor > 1.0005 ? "a" : valor < 0.9995 ? "b" : "";
+        var valor = Number(ponto.valor) || 1, indice = indicePassoRegua(valor), rotulo = fmtNumber(valor), sentido = valor > 1.0005 ? "a" : valor < 0.9995 ? "b" : "";
         var descricao = julgador.nome + ": " + rotulo + (sentido === "a" ? " (CT 1, " + pair.criterio_a + ", mais importante)" : sentido === "b" ? " (CT 2, " + pair.criterio_b + ", mais importante)" : " (igual import\u00e2ncia)");
         // Mesma marcacao da regua do formulario publico (.saaty-scale), em miniatura.
         var graduacoes = PASSOS_REGUA_SAATY.map(function (passo, n) {
@@ -368,8 +360,9 @@
       return '<div class="ami-pair-bars__row" data-pair="' + pair.i + '-' + pair.j + '" role="button" tabindex="0" aria-label="' + escapeHtml("Selecionar " + codigo + ": " + rotulo) + '"><div class="ami-pair-bars__head">' + cabecalho + '</div><div class="ami-pair-bars__plot">' + trilhas + '</div></div>';
     }).join("");
     var legenda = destaque ? '' : '<ul class="ami-pair-bars__legend">' + cores.lista.map(function (julgador, indice) { return '<li data-judge-open="' + escapeHtml(julgador.id) + '" role="button" tabindex="0" title="Ver somente este julgador"><strong>J' + (indice + 1) + '</strong><span class="ami-pair-bars__judge-name">' + escapeHtml(julgador.nome) + '</span></li>'; }).join("") + '</ul>';
-    var escala = '<div class="ami-scale-key" aria-hidden="true"><span>9</span><span class="ami-scale"><i class="ami-scale__fill is-a" style="width:50%"></i><i class="ami-scale__fill is-b" style="width:50%"></i></span><span>1/9</span></div>';
-    return '<figure class="ami-pair-bars" data-selecionavel><div class="ami-pair-bars__grid">' + linhas + '</div>' + '<figcaption>' + legenda + escala + '<p>Escala de Saaty, de 9 a 1/9, centrada em 1 (igual import\u00e2ncia). Azul, \u00e0 esquerda: o CT 1 do par \u00e9 mais importante; vermelho, \u00e0 direita: o CT 2.</p></figcaption></figure>';
+    var extremoDireito = passoRotulo(PASSOS_REGUA_SAATY.at(-1));
+    var escala = '<div class="ami-scale-key" aria-hidden="true"><span>9</span><span class="ami-scale"><i class="ami-scale__fill is-a" style="width:50%"></i><i class="ami-scale__fill is-b" style="width:50%"></i></span><span>' + extremoDireito + '</span></div>';
+    return '<figure class="ami-pair-bars" data-selecionavel><div class="ami-pair-bars__grid">' + linhas + '</div>' + '<figcaption>' + legenda + escala + '<p>Escala de Saaty, de 9 a ' + extremoDireito + ', centrada em 1 (igual import\u00e2ncia). Azul, \u00e0 esquerda: o CT 1 do par \u00e9 mais importante; vermelho, \u00e0 direita: o CT 2.</p></figcaption></figure>';
   }
   function analysisRangeBars(items) {
     if (!items.length) return '<p class="ami-empty">Sem respostas enviadas para o gr\u00e1fico.</p>';
@@ -409,7 +402,7 @@
       cabecalho = ["Par de crit\u00e9rios", "\u00cdndice atribu\u00eddo", "Valor aplicado"];
       corpo = pairs.map(function (pair) {
         var ponto = (pair.pontos || []).filter(function (item) { return item.resposta_id === destaque; })[0];
-        return '<tr data-pair="' + pair.i + '-' + pair.j + '">' + celulaCodigo(codigoPar(pair, todosPares)) + celulaCriterio(pair.criterio_a, pair.escopo) + celulaCriterio(pair.criterio_b) + '<td><strong>' + (ponto ? saatyLabel(ponto.valor) : "\u2014") + '</strong></td><td data-ami-applied></td></tr>';
+        return '<tr data-pair="' + pair.i + '-' + pair.j + '">' + celulaCodigo(codigoPar(pair, todosPares)) + celulaCriterio(pair.criterio_a, pair.escopo) + celulaCriterio(pair.criterio_b) + '<td><strong>' + fmtNumber(ponto?.valor) + '</strong></td><td data-ami-applied></td></tr>';
       });
     } else {
       cabecalho = ["Par de crit\u00e9rios"].concat(cores.lista.map(function (julgador) {
@@ -420,7 +413,8 @@
           var ponto = (pair.pontos || []).filter(function (item) { return item.resposta_id === julgador.id; })[0];
           if (!ponto) return '<td>\u2014</td>';
           var intensidade = desvioIntensidade(ponto.valor, pair.media_geometrica);
-          return '<td class="ami-stats-table__valor' + (intensidade > 0.55 ? " is-forte" : "") + '" style="--ami-deviation-color:rgba(17,101,147,' + (intensidade * 0.8).toFixed(3) + ')" title="' + escapeHtml(julgador.nome + ": " + saatyLabel(ponto.valor) + " \u00b7 m\u00e9dia geom\u00e9trica do par " + fmtNumber(pair.media_geometrica)) + '">' + saatyLabel(ponto.valor) + '</td>';
+          var valor = fmtNumber(ponto.valor);
+          return '<td class="ami-stats-table__valor' + (intensidade > 0.55 ? " is-forte" : "") + '" style="--ami-deviation-color:rgba(17,101,147,' + (intensidade * 0.8).toFixed(3) + ')" title="' + escapeHtml(julgador.nome + ": " + valor + " \u00b7 m\u00e9dia geom\u00e9trica do par " + fmtNumber(pair.media_geometrica)) + '">' + valor + '</td>';
         }).join("");
         return '<tr data-pair="' + pair.i + '-' + pair.j + '">' + celulaCodigo(codigoPar(pair, todosPares)) + celulaCriterio(pair.criterio_a, pair.escopo) + celulaCriterio(pair.criterio_b) + celulas + '<td>' + fmtNumber(pair.media) + '</td><td>' + fmtNumber(pair.mediana) + '</td><td>' + modaLabel(pair) + '</td><td data-ami-applied></td></tr>';
       });
@@ -639,7 +633,7 @@
     }
     return matriz;
   }
-  // A matriz que alimenta as secoes 3 a 5: a do julgador selecionado, a analise
+  // A matriz que alimenta as métricas e os pesos: a do julgador selecionado, a analise
   // registrada (so na consulta) ou a agregacao de todos pela medida escolhida.
   function analiseRegistrada(data) {
     if (data.recortesEmExibicao) return null;
@@ -701,7 +695,7 @@
       item.indice = indices.get(r?.id) ?? -1;
       item.situacao = !r ? (publico ? "Inscrito" : "Não iniciada")
         : r.status === "enviada" ? (publico ? "Enviado" : r.consistente ? "Consistente" : "Inconsistente")
-        : publico ? ("Em preenchimento · " + (r.estatisticas?.julgamento_dimensoes?.resultado ? "Critérios" : "Dimensões"))
+        : publico ? ("Em preenchimento · " + (r.dimensoes_associadas || r.estatisticas?.julgamento_dimensoes?.resultado ? "Critérios" : "Dimensões"))
         : "Em preenchimento";
       return item;
     });
@@ -748,7 +742,7 @@
       seletor.addEventListener("change", function () { selectedMeasure = seletor.value; renderFioDerivado(analysisWorkspace); });
     }
   }
-  function renderConsolidatedMatrix(data, foco, host, hint) {
+  function renderConsolidatedMatrix(data, foco, calculadas, host, hint) {
     var criterios = (foco ? foco.criterios : data.ambiente.criterios || []).map(criterionName);
     hint.innerHTML = !foco
       ? escapeHtml(motivoSemMatriz(data))
@@ -757,94 +751,68 @@
         : foco.origem === "registrada"
           ? 'Matriz da an\u00e1lise registrada <strong>' + escapeHtml(foco.rotulo) + '</strong>. Para recalcular com todas as respostas enviadas, escolha uma medida de tend\u00eancia central.'
           : analysisMode !== "edit"
-            ? 'Agrega\u00e7\u00e3o das <strong>' + foco.respostas + '</strong> respostas enviadas, par a par, pela <strong>' + escapeHtml(foco.rotulo) + '</strong> dos \u00edndices. C\u00e1lculo de consulta, sem exclus\u00e3o de respostas inconsistentes e sem grava\u00e7\u00e3o; a an\u00e1lise registrada est\u00e1 na subse\u00e7\u00e3o 7.'
+            ? 'Agrega\u00e7\u00e3o das <strong>' + foco.respostas + '</strong> respostas enviadas, par a par, pela <strong>' + escapeHtml(foco.rotulo) + '</strong> dos \u00edndices. C\u00e1lculo de consulta, sem exclus\u00e3o de respostas inconsistentes e sem grava\u00e7\u00e3o; a an\u00e1lise registrada est\u00e1 na subse\u00e7\u00e3o 6.'
             : 'Agrega\u00e7\u00e3o dos julgamentos dos julgadores selecionados, par a par, pela <strong>' + escapeHtml(foco.rotulo) + '</strong> dos \u00edndices.' +
-              ' Pr\u00e9via das respostas selecionadas na subse\u00e7\u00e3o 6. O resultado homologado est\u00e1 identificado na subse\u00e7\u00e3o 7.';
+              ' Pr\u00e9via das respostas selecionadas na subse\u00e7\u00e3o 5. O resultado homologado est\u00e1 identificado na subse\u00e7\u00e3o 6.';
     if (!foco) { host.replaceChildren(); return; }
-    host.innerHTML = tableLabelHtml("Matriz de comparação pareada do julgamento") + '<div class="matriz-table-wrap"><table class="admin-table ami-stats-table ami-matrix" data-table-sort="off"><thead><tr><th>Crit\u00e9rio</th>' +
+    var titulo = data.dimensao ? "Matriz da dimensão " + data.dimensao : data.rotuloRecorte
+      ? "Matriz de comparação pareada · " + data.rotuloRecorte : "Matriz de comparação pareada do julgamento";
+    host.innerHTML = consistencyMetricsHtml(data, foco, calculadas) + tableLabelHtml(titulo) + '<div class="matriz-table-wrap"><table class="admin-table ami-stats-table ami-matrix" data-table-sort="off"><thead><tr><th>Crit\u00e9rio</th>' +
       criterios.map(function (nome) { return '<th>' + escapeHtml(nome) + '</th>'; }).join("") + '</tr></thead><tbody>' +
       foco.matriz.map(function (linha, i) {
         return '<tr><td class="ami-stats-table__name">' + escapeHtml(criterios[i]) + '</td>' +
           linha.map(function (valor, j) { return '<td' + (i === j ? ' class="is-diagonal"' : '') + ' title="' + escapeHtml(criterios[i] + " \u00d7 " + criterios[j]) + '">' + fmtNumber(valor) + '</td>'; }).join("") + '</tr>';
       }).join("") + '</tbody></table></div>';
     var tabela = host.querySelector("table");
+    tabela.dataset.tableTitle = titulo;
     if (data.rotuloRecorte) tabela.dataset.produtoExportacao = "Matriz de comparação pareada " + data.rotuloRecorte;
     SLTAnalysisTable(tabela, data.ambiente);
   }
-  // Explicacao curta de cada metrica, em linguagem de quem vai decidir.
-  var EXPLICACAO_METRICAS = {
-    lambda: "Autovalor principal da matriz. Numa matriz perfeitamente coerente ele seria igual ao n\u00famero de crit\u00e9rios; quanto mais passar disso, mais os julgamentos se contradizem.",
-    ic: "\u00cdndice de consist\u00eancia: o quanto \u03bbmax passou do n\u00famero de crit\u00e9rios, dividido pelo espa\u00e7o que ele tinha para passar. Zero significa nenhuma contradi\u00e7\u00e3o.",
-    ri: "\u00cdndice aleat\u00f3rio: o IC m\u00e9dio de matrizes preenchidas ao acaso, do mesmo tamanho. Serve de r\u00e9gua para saber se o IC obtido \u00e9 pequeno de verdade.",
-    rc: "Raz\u00e3o de consist\u00eancia: o IC comparado \u00e0 r\u00e9gua do acaso (IC \u00f7 IA). \u00c9 a m\u00e9trica de aceita\u00e7\u00e3o: abaixo do limite, os julgamentos s\u00e3o coerentes o bastante para virar peso."
-  };
   function metricasArmazenadas(registro) {
     var chaves = ["lambda_max", "indice_consistencia", "indice_aleatorio", "razao_consistencia"];
     if (!registro || chaves.some(function (chave) { return registro[chave] == null; })) return null;
     return { lambdaMax: registro.lambda_max, ic: registro.indice_consistencia, ri: registro.indice_aleatorio, rc: registro.razao_consistencia };
   }
-  function renderConsistencyMetrics(data, foco, calculadas, host, hint) {
-    if (!foco) { hint.textContent = "Sem métricas. " + motivoSemMatriz(data); host.replaceChildren(); return; }
+  function consistencyMetricsHtml(data, foco, calculadas) {
     var armazenadas = metricasArmazenadas(foco.registro);
     if (foco.origem === "registrada" && !armazenadas) {
-      hint.textContent = "Métricas não registradas para esta análise.";
-      host.replaceChildren(); return;
+      return '<p class="ami-subsection-hint">Métricas não registradas para esta análise.</p>';
     }
     var resultado = armazenadas || calculadas;
     var limite = foco.registro?.rc_maximo ?? (Number($("ami-analysis-rc").value) || 0.1);
     var superficie = Boolean(data.ambiente.superficie_id);
     if (superficie) limite = Math.min(limite, 0.1);
     var aprovado = superficie ? resultado.rc <= limite : resultado.rc < limite, n = foco.matriz.length;
-    hint.innerHTML = (foco.origem === "julgador"
-      ? 'Coer\u00eancia interna do julgamento de <strong>' + escapeHtml(foco.rotulo) + '</strong>'
-      : foco.origem === "registrada" ? 'Coer\u00eancia da an\u00e1lise registrada <strong>' + escapeHtml(foco.rotulo) + '</strong>'
-      : 'Coer\u00eancia da matriz agregada pela <strong>' + escapeHtml(foco.rotulo) + '</strong>') +
-      ': se ela diz que A vale 3 vezes B e que B vale 3 vezes C, esperaria-se algo perto de 9 entre A e C. As m\u00e9tricas medem esse tipo de desencontro \u2014 cada carta abaixo mostra a sua pr\u00f3pria situa\u00e7\u00e3o.';
-    // Cada metrica traz o seu proprio veredito: situacao (cor), selo e, quando
-    // faz sentido, a barra do quanto do limite foi consumido.
     var excedente = resultado.lambdaMax - n;
     var cartas = [
       {
-        rotulo: "\u03bbmax", valor: fmtNumber(resultado.lambdaMax), situacao: excedente <= 0.2 ? "ok" : excedente <= 0.5 ? "atencao" : "nok",
+        sigla: "λmax", rotulo: "Autovalor principal (λmax)", valor: fmtNumber(resultado.lambdaMax), situacao: excedente <= 0.2 ? "ok" : excedente <= 0.5 ? "atencao" : "nok",
         selo: excedente <= 0.2 ? "pr\u00f3ximo do ideal" : excedente <= 0.5 ? "acima do ideal" : "bem acima do ideal",
-        nota: "ideal para " + n + " crit\u00e9rios: " + fmtNumber(n) + " \u00b7 excedente " + fmtNumber(excedente),
-        texto: EXPLICACAO_METRICAS.lambda
+        nota: "ideal para " + n + " crit\u00e9rios: " + fmtNumber(n) + " \u00b7 excedente " + fmtNumber(excedente)
       },
       {
-        rotulo: "\u00cdndice de consist\u00eancia (IC)", valor: fmtNumber(resultado.ic), situacao: resultado.ic <= 0.05 ? "ok" : resultado.ic <= 0.1 ? "atencao" : "nok",
+        sigla: "IC", rotulo: "Índice de consistência (IC)", valor: fmtNumber(resultado.ic), situacao: resultado.ic <= 0.05 ? "ok" : resultado.ic <= 0.1 ? "atencao" : "nok",
         selo: resultado.ic <= 0.05 ? "pr\u00f3ximo de zero" : resultado.ic <= 0.1 ? "moderado" : "alto",
-        nota: "ideal: 0", texto: EXPLICACAO_METRICAS.ic
+        nota: "ideal: 0"
       },
       {
-        rotulo: "\u00cdndice aleat\u00f3rio (IA)", valor: fmtNumber(resultado.ri), situacao: "neutro", selo: "refer\u00eancia",
-        nota: "r\u00e9gua fixa para " + n + " crit\u00e9rios", texto: EXPLICACAO_METRICAS.ri
+        sigla: "IA", rotulo: "Índice aleatório (IA)", valor: fmtNumber(resultado.ri), situacao: "neutro", selo: "refer\u00eancia",
+        nota: "r\u00e9gua fixa para " + n + " crit\u00e9rios"
       },
       {
-        rotulo: "Raz\u00e3o de consist\u00eancia (RC)", valor: fmtNumber(resultado.rc), situacao: aprovado ? "ok" : "nok",
+        sigla: "RC", rotulo: "Razão de consistência (RC)", valor: fmtNumber(resultado.rc), situacao: aprovado ? "ok" : "nok",
         selo: aprovado ? "dentro do limite" : "acima do limite",
-        nota: "limite adotado: " + fmtNumber(limite), texto: EXPLICACAO_METRICAS.rc,
-        medidor: Math.max(2, Math.min(100, resultado.rc / Math.max(limite, 0.0001) * 100)),
-        conclusao: aprovado
-          ? "Os julgamentos se sustentam entre si; os pesos derivados desta matriz podem ser usados."
-          : "H\u00e1 contradi\u00e7\u00f5es demais entre os julgamentos: reveja os pares mais destoantes na subse\u00e7\u00e3o 2 antes de consolidar."
+        nota: "limite adotado: " + fmtNumber(limite)
       }
     ];
     var icones = { ok: "fa-circle-check", atencao: "fa-triangle-exclamation", nok: "fa-circle-xmark", neutro: "fa-circle-info" };
-    // Os cards carregam a validacao visual; a explicacao de cada metrica fica
-    // fora deles, num bloco proprio logo abaixo.
-    var grade = '<div class="ami-metric-grid">' + cartas.map(function (carta) {
-      return '<div class="ami-metric-card is-' + carta.situacao + '">' +
-        '<div class="ami-metric-card__top"><span class="ami-metric-card__label">' + carta.rotulo + '</span>' +
-        '<span class="ami-metric-card__selo"><i class="fa-solid ' + icones[carta.situacao] + '" aria-hidden="true"></i>' + carta.selo + '</span></div>' +
-        '<div class="ami-metric-card__value">' + carta.valor + '</div>' +
-        (carta.medidor ? '<div class="ami-metric-card__gauge"><span style="width:' + carta.medidor.toFixed(1) + '%"></span></div>' : '') +
-        '<div class="ami-metric-card__note">' + carta.nota + '</div></div>';
+    return '<div class="ami-metric-grid ami-metric-grid--compact" role="group" aria-label="Métricas de consistência da matriz">' + cartas.map(function (carta) {
+      var descricao = carta.rotulo + ' · ' + carta.selo + ' · ' + carta.nota;
+      return '<div class="ami-metric-card is-' + carta.situacao + '" role="group" aria-label="' + escapeHtml(descricao) + '" title="' + escapeHtml(descricao) + '">' +
+        '<span class="ami-metric-card__label" aria-hidden="true">' + carta.sigla + '</span>' +
+        '<strong class="ami-metric-card__value">' + carta.valor + '</strong>' +
+        '<i class="fa-solid ' + icones[carta.situacao] + '" aria-hidden="true"></i></div>';
     }).join("") + '</div>';
-    var conclusao = cartas.filter(function (carta) { return carta.conclusao; })[0];
-    var explicacoes = '<div class="ami-metric-help"><h4>O que cada métrica diz</h4><dl>' + cartas.map(function (carta) {
-      return '<dt>' + carta.rotulo + '</dt><dd>' + carta.texto + '</dd>';
-    }).join("") + '</dl>' + (conclusao ? '<p class="ami-metric-help__fecho is-' + (aprovado ? "ok" : "nok") + '">' + conclusao.conclusao + '</p>' : '') + '</div>';
-    host.innerHTML = grade + explicacoes;
   }
   function renderWeights(data, foco, calculadas, host, hint, prefixo) {
     var armazenados = foco?.registro?.pesos_consolidados;
@@ -859,12 +827,17 @@
           : 'Pesos consolidados a partir dos \u00edndices dos julgadores selecionados, agregados pela <strong>' + escapeHtml(foco.rotulo) + '</strong>.';
     if (pesos.length) hint.innerHTML += ' Cada crit\u00e9rio tem um c\u00f3digo (CT1, CT2\u2026), usado tamb\u00e9m na rosca ao lado; clicar numa linha ou numa fatia seleciona o crit\u00e9rio nos dois lados.';
     var tabela = host.querySelector("table"), grafico = host.querySelector(".ami-analysis-chart");
+    var recorte = data.dimensao ? " da dimensão " + data.dimensao : data.rotuloRecorte ? " · " + data.rotuloRecorte : "";
+    var tituloTabela = (data.dimensao ? "Tabela de pesos" : "Tabela dos pesos de cada critério") + recorte;
+    var tituloGrafico = (data.dimensao ? "Gráfico de pesos" : "Participação de cada critério nos pesos") + recorte;
+    tabela.dataset.tableTitle = tituloTabela;
     tabela.dataset.produtoExportacao = data.rotuloRecorte ? "Pesos dos critérios " + data.rotuloRecorte : "";
     tabela.tBodies[0].innerHTML = criterios.map(function (nome, indice) {
       return '<tr data-criterio="' + (prefixo || "") + indice + '"><td class="ami-stats-table__codigo"><strong>CT' + (indice + 1) + '</strong></td><td class="ami-stats-table__name" title="' + escapeHtml(nome) + '">' + escapeHtml(nome) + '</td><td><strong>' + (pesos.length ? fmtNumber(pesos[indice]) : "\u2014") + '</strong></td></tr>';
     }).join("") || '<tr><td colspan="3" class="ami-empty">Sem respostas enviadas.</td></tr>';
-    grafico.innerHTML = '<div class="ami-chart-stack"><p class="ami-table-label ami-chart-label">Participa\u00e7\u00e3o de cada crit\u00e9rio nos pesos</p>' +
-      '<div class="ami-chart-card">' + (pesos.length ? weightsDonut(criterios, pesos, prefixo || "") : '<p class="ami-empty">Sem respostas enviadas.</p>') + '</div></div>';
+    grafico.innerHTML = '<div class="ami-chart-stack"><p class="ami-table-label ami-chart-label">' + escapeHtml(tituloGrafico) + '</p>' +
+      '<div class="ami-chart-card">' + (pesos.length ? weightsDonut(criterios, pesos, prefixo || "", tituloGrafico) : '<p class="ami-empty">Sem respostas enviadas.</p>') + '</div></div>';
+    addTableLabel(tabela, tituloTabela);
     SLTAnalysisTable(tabela, data.ambiente);
     espelharRotuloDaTabela(tabela.parentElement, grafico.querySelector(".ami-chart-label"));
     ligarSelecaoCruzada(host, "criterio");
@@ -872,7 +845,7 @@
   // Os pesos somam 100%, entao cabem numa rosca: cada fatia e um criterio,
   // identificado pelo codigo CT da tabela ao lado. A rosca e um SVG para que cada
   // fatia possa ser realcada e clicada.
-  function weightsDonut(criterios, pesos, prefixo) {
+  function weightsDonut(criterios, pesos, prefixo, titulo) {
     var total = pesos.reduce(function (soma, peso) { return soma + Number(peso); }, 0) || 1, inicio = 0;
     var cores = criterios.map(function (nome, indice) { return indice < 8 ? "var(--ami-chart-" + (indice + 1) + ")" : "hsl(" + ((indice * 47) % 360) + " 55% 45%)"; });
     var fatias = pesos.map(function (peso, indice) {
@@ -883,7 +856,7 @@
     var legenda = criterios.map(function (nome, indice) {
       return '<li data-criterio="' + prefixo + indice + '" role="button" tabindex="0" title="' + escapeHtml("CT" + (indice + 1) + " \u00b7 " + nome) + '"><span class="ami-donut-chart__swatch" style="background:' + cores[indice] + '"></span><span>CT' + (indice + 1) + '</span><strong>' + (Number(pesos[indice]) / total * 100).toFixed(1) + '%</strong></li>';
     }).join("");
-    return '<figure class="ami-donut-chart" data-selecionavel aria-label="Peso de cada crit\u00e9rio, identificado pelo c\u00f3digo CT"><div class="ami-donut-chart__plot"><svg viewBox="0 0 100 100" aria-hidden="false">' + fatias + '</svg><span><strong>100%</strong>' + criterios.length + ' crit\u00e9rios</span></div><figcaption><ul>' + legenda + '</ul></figcaption></figure>';
+    return '<figure class="ami-donut-chart" data-selecionavel aria-label="' + escapeHtml(titulo) + '"><div class="ami-donut-chart__plot"><svg viewBox="0 0 100 100" aria-hidden="false">' + fatias + '</svg><span><strong>100%</strong>' + criterios.length + (criterios.length === 1 ? ' critério' : ' critérios') + '</span></div><figcaption><ul>' + legenda + '</ul></figcaption></figure>';
   }
   // Tudo que deriva da matriz acompanha a selecao do julgador e da medida.
   function syncAnalysisCalculate() {
@@ -900,7 +873,7 @@
     $("ami-analysis-workspace").dataset.mode = analysisMode;
     ["ami-analysis-name", "ami-analysis-rc", "ami-analysis-exclude-inconsistent"].forEach(function(id){$(id).disabled = readonly || analysisSaving;});
     // A medida de tendencia central e so de leitura: na consulta nada e gravado,
-    // entao ela segue liberada para recalcular as secoes 3 a 5.
+    // entao ela segue liberada para recalcular a matriz, as metricas e os pesos.
     $("ami-analysis-measure").disabled = analysisSaving;
     $("ami-analysis-mode").textContent = readonly ? "Visualização somente leitura — dados registrados." : "Edição das respostas colaborativas — configure a análise e salve as alterações.";
     $("ami-analysis-consolidations").querySelectorAll('[data-homologate-analysis]').forEach(function(button){
@@ -917,8 +890,11 @@
     normalizarMedida(data);
     syncAnalysisCalculate();
     renderMeasureSelector(data);
-    var matriz = $("ami-analysis-matrix"), metricas = $("ami-analysis-metrics"), pesos = $("ami-analysis-weights-main"), gruposPesos = $("ami-analysis-group-weights");
-    var dicaMatriz = $("ami-analysis-matrix-hint"), dicaMetricas = $("ami-analysis-metrics-hint"), dicaPesos = $("ami-analysis-weights-hint");
+    var matriz = $("ami-analysis-matrix"), pesos = $("ami-analysis-weights-main"), gruposPesos = $("ami-analysis-group-weights");
+    var dicaMatriz = $("ami-analysis-matrix-hint"), dicaPesos = $("ami-analysis-weights-hint");
+    $("ami-analysis-matrix-intro").textContent = ["por_grupo", "duas_etapas"].includes(data.ambiente.modo_comparacao)
+      ? "Cada tabela mostra as comparações entre os critérios de uma dimensão."
+      : "Consulte como os valores de importância relativa foram organizados na matriz em exibição.";
     var recortes = data.recortesEmExibicao;
     pesos.classList.toggle("is-hidden", Boolean(recortes));
     gruposPesos.hidden = !recortes;
@@ -926,24 +902,22 @@
     if (!recortes) {
       var foco = matrizEmFoco(data), calculadas = foco && analisarMatriz(foco.matriz);
       renderAppliedPairValues(foco);
-      renderConsolidatedMatrix(data, foco, matriz, dicaMatriz);
-      renderConsistencyMetrics(data, foco, calculadas, metricas, dicaMetricas);
+      renderConsolidatedMatrix(data, foco, calculadas, matriz, dicaMatriz);
       renderWeights(data, foco, calculadas, pesos, dicaPesos);
       return;
     }
 
-    [dicaMatriz, dicaMetricas, dicaPesos].forEach(function (dica) { dica.textContent = ""; });
-    matriz.replaceChildren(); metricas.replaceChildren();
+    [dicaMatriz, dicaPesos].forEach(function (dica) { dica.textContent = ""; });
+    matriz.replaceChildren();
     var focos = recortes.map(function (recorte, indice) {
       var resultado = matrizEmFoco(recorte);
       var calculo = resultado && analisarMatriz(resultado.matriz);
-      var painelMatriz = painelDoRecorte(matriz, recorte.rotuloRecorte);
-      var painelMetricas = painelDoRecorte(metricas, recorte.rotuloRecorte);
-      var painelPesos = painelDoRecorte(gruposPesos, recorte.rotuloRecorte);
+      var tituloRecorte = recorte.dimensao ? "Dimensão " + recorte.dimensao : recorte.rotuloRecorte;
+      var painelMatriz = painelDoRecorte(matriz, tituloRecorte);
+      var painelPesos = painelDoRecorte(gruposPesos, tituloRecorte);
       var gradePesos = $("ami-analysis-weights-template").content.firstElementChild.cloneNode(true);
       painelPesos.body.append(gradePesos);
-      renderConsolidatedMatrix(recorte, resultado, painelMatriz.body, painelMatriz.hint);
-      renderConsistencyMetrics(recorte, resultado, calculo, painelMetricas.body, painelMetricas.hint);
+      renderConsolidatedMatrix(recorte, resultado, calculo, painelMatriz.body, painelMatriz.hint);
       renderWeights(recorte, resultado, calculo, gradePesos, painelPesos.hint, indice + ":");
       return resultado;
     });
@@ -1042,7 +1016,7 @@
       } else {
         mostrarResultado("verde", "An\u00e1lise consolidada com sucesso",
           parcial ? "Todas as respostas deste recorte entraram e o resultado é consistente. Os pesos locais foram gravados e não substituem os pesos da matriz inteira."
-            : "Todas as respostas enviadas entraram e o resultado é consistente. A análise já pode ser homologada na subseção 7.", campos);
+            : "Todas as respostas enviadas entraram e o resultado é consistente. A análise já pode ser homologada em Análises consolidadas e pesos finais.", campos);
       }
     }).catch(function (erro) {
       var pendente = ETAPAS_CONSOLIDACAO.filter(function (etapa) { return estadoEtapas[etapa.id] === "andamento"; })[0];
@@ -2367,7 +2341,6 @@
       ["ami-judgments", "Tabela dos julgamentos realizados"],
       ["ami-email-list", "Tabela da lista de colaboradores"],
       ["ami-analysis-judges", "Tabela dos julgadores"],
-      ["ami-analysis-criteria", "Tabela dos pesos de cada critério"],
       ["ami-analysis-responses", "Tabela da consolidação das respostas"]
     ].forEach(function (entry) {
       var body = $(entry[0]);

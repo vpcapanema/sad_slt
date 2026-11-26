@@ -8,6 +8,13 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, StringConstraints, field_validator, model_validator
 
 
+class AssociacaoDimensoesSchema(BaseModel):
+    origem: UUID
+    destino: Literal["criterios", "dimensoes"]
+    destinatarios: list[EmailStr] = Field(min_length=1)
+    confirmacao: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+
+
 class EmailTesteSchema(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 

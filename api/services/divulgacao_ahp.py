@@ -12,7 +12,7 @@ from api.schemas.email import (
     DivulgacaoEmailEnvioSchema, DivulgacaoTransporteSchema, ExclusaoDestinatariosDivulgacaoSchema,
     ListaDivulgacaoSchema, MensagemDivulgacaoSchema, SalvamentoListaDivulgacaoSchema,
 )
-from api.services import email_ahp_rascunho, email_service, mensagens_ahp
+from api.services import associacao_dimensoes_ahp, email_ahp_rascunho, email_service, mensagens_ahp
 from api.services.comparacao_colaborativa_service import _link_publico, _validar_ambiente_ativo, instituicao_convidado
 from api.services.email_convites import _personalizar_mensagem
 
@@ -27,8 +27,9 @@ def ambiente_publico(ambiente_id: str, *, bloquear: bool = False) -> dict:
 
 
 def listar(ambiente_id: str) -> dict:
-    ambiente_publico(ambiente_id)
+    ambiente = ambiente_publico(ambiente_id)
     return {
+        "associacao_dimensoes_disponivel": associacao_dimensoes_ahp.disponivel(ambiente),
         "destinatarios": destinatarios.listar(ambiente_id),
         "emails_inscritos": [inscricao["email"].strip().lower() for inscricao in ambientes.list_inscricoes(ambiente_id)],
         "registros": emails.listar(ambiente_id, natureza=NATUREZA),

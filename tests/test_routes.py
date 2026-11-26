@@ -500,7 +500,7 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
     assert 'id="ami-analysis-pairs-chart"' in central_html
     assert 'id="ami-analysis-judges"' in central_html
     assert 'id="ami-analysis-matrix"' in central_html
-    assert 'id="ami-analysis-metrics"' in central_html
+    assert central_html.count('id="ami-analysis-metric-help"') == 1
     # A matriz, as metricas e os pesos seguem o julgador selecionado; com todos,
     # a medida de tendencia central e do usuario.
     assert 'id="ami-analysis-measure"' in central_html
@@ -526,9 +526,9 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
     # e a consolidacao (que refaz o percurso) fica depois delas.
     for anterior, seguinte in [
         ('id="ami-analysis-judges"', 'id="ami-analysis-pairs"'),
-        ('id="ami-analysis-pairs"', 'id="ami-analysis-matrix"'),
-        ('id="ami-analysis-matrix"', 'id="ami-analysis-metrics"'),
-        ('id="ami-analysis-metrics"', 'id="ami-analysis-criteria"'),
+        ('id="ami-analysis-pairs"', 'id="ami-analysis-metric-help"'),
+        ('id="ami-analysis-metric-help"', 'id="ami-analysis-matrix"'),
+        ('id="ami-analysis-matrix"', 'id="ami-analysis-criteria"'),
         ('id="ami-analysis-criteria"', 'id="ami-analysis-responses"'),
         ('id="ami-analysis-responses"', 'id="ami-analysis-consolidations"'),
     ]:

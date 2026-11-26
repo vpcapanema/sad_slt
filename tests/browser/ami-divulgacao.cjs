@@ -22,7 +22,7 @@ const inscricaoDireta = {nome: 'Inscrição Direta', email: 'direto@example.org'
     const sessao = process.env.SICARD_BROWSER_SESSION;
     assert.ok(sessao, 'Informe uma sessão para carregar o template restrito.');
     await page.context().addCookies([{name: 'slt_session', value: sessao, url: base}]);
-    const contatos = [], registros = [], disparos = [], salvamentos = [], catalogo = [], erros = [];
+    const contatos = [], registros = [], disparos = [], salvamentos = [], catalogo = [], erros = [], associacoes = [];
     let inscrito = false, inscricaoDiretaVisivel = false, mensagemSalva = null;
     const usuario = {id: 'gestor', tipo_usuario: 'ANALISTA', permissoes: {'mad.operar': true, 'mad.visualizar': true}};
     page.on('pageerror', erro => erros.push(erro.message));
@@ -50,7 +50,18 @@ const inscricaoDireta = {nome: 'Inscrição Direta', email: 'direto@example.org'
       }
       if (path.endsWith('/divulgacao') || path.endsWith('/divulgacao/confirmacoes')) return route.fulfill({json: {
         destinatarios: contatos, emails_inscritos: [...(inscricaoDiretaVisivel ? [inscricaoDireta.email] : []), ...(inscrito ? ['ana@example.org'] : [])],
-        registros, mensagem: mensagemSalva, confirmacoes_configuradas: true}});
+        registros, mensagem: mensagemSalva, confirmacoes_configuradas: true, associacao_dimensoes_disponivel: true}});
+      if (path.endsWith('/divulgacao/associacao-dimensoes')) {
+        if (req.method() === 'GET') return route.fulfill({json: {origens: [{id: 'anterior', nome: 'Julgamento anterior'}]}});
+        const dados = req.postDataJSON();
+        associacoes.push(dados);
+        if (dados.confirmacao) return route.fulfill({json: {confirmados: 1}});
+        return route.fulfill({json: {
+          origem: ['Ambiental', 'Social'], correspondencias: [{origem: 'Ambiental', destino: 'Ambiental'}, {origem: 'Social', destino: 'Social'}],
+          destinatarios: [{nome: 'Ana Lima', email: 'ana@example.org', problema: null}],
+          prontos: 1, ...(dados.destino === 'dimensoes' ? {confirmacao: '1'.repeat(64)} : {}),
+        }});
+      }
       if (path.endsWith('/emails/mensagem')) {
         if (req.method() === 'GET') return route.fulfill({json: {padrao, rascunho: mensagemSalva}});
         assert.equal(req.method(), 'PUT');
@@ -330,6 +341,48 @@ const inscricaoDireta = {nome: 'Inscrição Direta', email: 'direto@example.org'
     await ana.getByRole('checkbox').check();
     assert.equal(await painel.locator('#ami-divulgacao-enviar').isEnabled(), true);
     assert.equal(salvamentos.length, 1);
+    const associacao = painel.locator('#ami-divulgacao-associacao');
+    await associacao.locator('summary').click();
+    await associacao.getByLabel('Julgamento de origem').selectOption('anterior');
+    await associacao.getByLabel('Associar às').selectOption('criterios');
+    await associacao.getByRole('button', {name: 'Conferir associação'}).click();
+    await associacao.getByText('A associação aos critérios está disponível apenas para conferência nesta coleta.').waitFor();
+    assert.equal(await associacao.getByRole('button', {name: 'Aproveitar intensidades'}).isVisible(), false);
+    await associacao.getByLabel('Associar às').selectOption('dimensoes');
+    await associacao.getByRole('button', {name: 'Conferir associação'}).click();
+    await associacao.getByText('Ambiental → Ambiental', {exact: true}).waitFor();
+    for (const largura of [1440, 768, 390]) {
+      await page.setViewportSize({width: largura, height: 900});
+      const medidas = await associacao.evaluate(secao => {
+        const campos = [...secao.querySelectorAll('select')];
+        return {
+          alturas: campos.map(campo => Math.round(campo.getBoundingClientRect().height)),
+          fontes: campos.map(campo => getComputedStyle(campo).fontSize),
+          recuos: campos.map(campo => Math.round(campo.getBoundingClientRect().left - secao.getBoundingClientRect().left)),
+          layout: [...campos, ...campos.map(campo => campo.parentElement), secao.querySelector('form')].map(elemento => {
+            const estilo = getComputedStyle(elemento);
+            const propriedades = ['width', 'maxWidth', 'marginLeft', 'display', 'justifySelf', 'justifyItems', 'gridTemplateColumns'];
+            return [elemento.tagName, elemento.className, ...propriedades.map(chave => estilo[chave])];
+          }),
+          largura: secao.clientWidth, larguraConteudo: secao.scrollWidth,
+        };
+      });
+      assert.equal(medidas.alturas[0], medidas.alturas[1]);
+      assert.equal(medidas.fontes[0], medidas.fontes[1]);
+      assert.ok(medidas.larguraConteudo <= medidas.largura + 1, JSON.stringify(medidas));
+      assert.ok(medidas.recuos[0] <= 2, JSON.stringify(medidas));
+      if (largura <= 768) assert.deepEqual(medidas.recuos, [0, 0]);
+      if (process.env.SICARD_ASSOCIACAO_QA_DIR) {
+        await associacao.screenshot({path: require('node:path').join(process.env.SICARD_ASSOCIACAO_QA_DIR, `destinatarios-${largura}.png`)});
+      }
+    }
+    await page.setViewportSize({width: 1440, height: 900});
+    await associacao.getByRole('button', {name: 'Aproveitar intensidades', exact: true}).click();
+    await page.getByRole('button', {name: 'Sim, aproveitar intensidades', exact: true}).click();
+    await associacao.getByText(/Associação confirmada para 1 destinatário/).waitFor();
+    assert.deepEqual(associacoes[2], {origem: 'anterior', destino: 'dimensoes', destinatarios: ['ana@example.org'], confirmacao: '1'.repeat(64)});
+    assert.equal(disparos.length, 0);
+    await associacao.locator('summary').click();
     const textoAtual = 'Mensagem revisada.\n\nNovo parágrafo com acentuação.';
     await painel.getByLabel('Mensagem antes do link', {exact: true}).fill(textoAtual);
     await painel.getByLabel('Mensagem depois do link').fill('Agradecemos a colaboração.');

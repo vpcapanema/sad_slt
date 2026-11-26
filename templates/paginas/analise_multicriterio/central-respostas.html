@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="/assets/css/ahp-collab-rounds.css?v=20261126-cursor">
   <link rel="stylesheet" href="/assets/css/analise-multicriterio.css?v=20261106-regua-miniatura-7">
   <link rel="stylesheet" href="/assets/css/analise-multicriterio-tabela.css?v=20261126-cursor">
-  <link rel="stylesheet" href="/assets/css/central-respostas-layout.css?v=20261105-table-labels">
+  <link rel="stylesheet" href="/assets/css/central-respostas-layout.css?v=20261126-graficos-pesos">
   <link rel="stylesheet" href="/assets/css/analise-multicriterio-modal.css?v=20260819-modal5">
   <link rel="stylesheet" href="/assets/css/mad-filter-standard.css?v=20260820-1">
   <link rel="stylesheet" href="/assets/css/page-title-standard.css?v=20260820-3">
@@ -22,10 +22,10 @@
   <link rel="stylesheet" href="/assets/css/paginas/ami-report-tables.css?v=20261020-paginacao">
   {% if modo_pagina in ['espaco', 'julgamentos'] %}
   <link rel="stylesheet" href="/assets/css/admin-table-controls.css?v=20261015-botoes-quadrados">
-  <link rel="stylesheet" href="/assets/css/paginas/ami-espaco-secoes.css?v=20261126-email-prazo">
+  <link rel="stylesheet" href="/assets/css/paginas/ami-espaco-secoes.css?v=20261126-associacao-dimensoes">
   {% endif %}
   {% if modo_pagina == 'julgamentos' %}<link rel="stylesheet" href="/assets/css/paginas/sicard-standard-pages.css?v=20261126-padrao-status">{% endif %}
-  {% if modo_pagina == 'julgamentos' %}<link rel="stylesheet" href="/assets/css/paginas/central-respostas-padrao.css?v=20261126-padrao-status">{% endif %}
+  {% if modo_pagina == 'julgamentos' %}<link rel="stylesheet" href="/assets/css/paginas/central-respostas-padrao.css?v=20261126-metricas-compactas">{% endif %}
   {% if modo_pagina in ['espaco', 'julgamentos'] %}<link rel="stylesheet" href="/assets/css/paginas/ami-responsivo.css?v=20261126-iniciais-grupos">{% endif %}
   <link rel="stylesheet" href="/assets/css/paginas/ami-contextualizacao.css?v=20261126-contextos-ahp">
 {% endblock %}
@@ -226,12 +226,12 @@
   <script src="/assets/js/admin-auth.js"></script>
   <script src="/assets/vendor/xlsx/xlsx-0.18.5.min.js"></script>
   <script src="/assets/js/paginas/ami-status.js?v=20261126-padrao-status"></script>
-  <script src="/assets/js/paginas/analise-multicriterio-tabela.js?v=20261126-contextos-ahp"></script>
+  <script src="/assets/js/paginas/analise-multicriterio-tabela.js?v=20261126-metricas-compactas"></script>
   <script src="/assets/js/api-erro.js?v=20261027"></script>
   <script src="/assets/js/paginas/ami-email.js?v=20261126-email-prazo"></script>
-  {% if modo_pagina == 'espaco' %}<script src="/assets/js/paginas/ami-divulgacao.js?v=20261126-email-remetente"></script>{% endif %}
+  {% if modo_pagina == 'espaco' %}<script src="/assets/js/paginas/ami-divulgacao.js?v=20261126-associacao-dimensoes"></script>{% endif %}
   <script src="/assets/js/matriz-criterios-arquivo.js?v=20261009"></script>
   <script src="/assets/js/matrizes-criterios.js?v=20261126-contextos-ahp"></script>
   <script src="/assets/js/saaty-selector-color.js?v=20261103-1"></script>
-  <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20261126-email-ahp"></script>
+  <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20261126-graficos-pesos"></script>
 {% endblock %}

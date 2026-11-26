@@ -1,7 +1,7 @@
 {% macro painel_pesos(principal) %}
 <div class="ami-analysis-split"{% if principal %} id="ami-analysis-weights-main"{% endif %}>
   <div class="matriz-table-wrap"><table class="admin-table ami-stats-table ami-table--pesos"><thead><tr><th>Código</th><th>Critério</th><th>Peso</th></tr></thead><tbody{% if principal %} id="ami-analysis-criteria"{% endif %}></tbody></table></div>
-  <div class="ami-analysis-chart"{% if principal %} id="ami-analysis-criteria-chart"{% endif %} aria-label="Peso de cada critério"></div>
+  <div class="ami-analysis-chart ami-weights-chart"{% if principal %} id="ami-analysis-criteria-chart"{% endif %}></div>
 </div>
 {% endmacro %}
 <section class="card ahp-step-section is-hidden" id="ami-analysis-workspace">
@@ -34,27 +34,29 @@
     <p class="ami-fio-elo"><span>Esses índices formam a matriz de comparação pareada: a do julgador selecionado, ou a agregação de todos pela medida de tendência central escolhida.</span></p>
 
     <section class="ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">{{ '3' if indicacao_processos else '2.3' }}</span><span>Matriz de comparação pareada</span></div>
-      <p class="ami-section-intro">Consulte como os valores de importância relativa foram organizados na matriz em exibição. A matriz individual, agregada ou registrada serve de base para examinar a consistência e os pesos do recorte.</p>
+      <p class="ami-section-intro"><span id="ami-analysis-matrix-intro"></span> A matriz individual, agregada ou registrada serve de base para examinar a consistência e os pesos do recorte.</p>
+      <details class="ami-metric-help" id="ami-analysis-metric-help">
+        <summary>O que cada métrica diz</summary>
+        <dl>
+          <dt>Autovalor principal (λmax)</dt><dd>Em uma matriz perfeitamente coerente, é igual ao número de critérios. Quanto maior o excedente, maior a inconsistência.</dd>
+          <dt>Índice de consistência (IC)</dt><dd>Excedente do λmax em relação ao número de critérios, dividido pelo número de critérios menos um. Valores próximos de zero indicam maior coerência.</dd>
+          <dt>Índice aleatório (IA)</dt><dd>Índice de consistência médio de matrizes aleatórias do mesmo tamanho.</dd>
+          <dt>Razão de consistência (RC)</dt><dd>Razão entre o IC e o IA. A comparação com o limite adotado indica se a matriz atende ao critério de consistência.</dd>
+        </dl>
+      </details>
       <p class="ami-subsection-hint" id="ami-analysis-matrix-hint"></p>
       <div class="ahp-section-body" id="ami-analysis-matrix"></div>
     </section>
-    <p class="ami-fio-elo"><span>Da matriz saem as métricas que atestam a sua coerência.</span></p>
-
-    <section class="ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">{{ '4' if indicacao_processos else '2.4' }}</span><span>Métricas de consistência</span></div>
-      <p class="ami-section-intro">Avalie a coerência interna das comparações. A razão de consistência (RC), comparada ao limite adotado, indica se a matriz atende ao critério de consistência da análise.</p>
-      <p class="ami-subsection-hint" id="ami-analysis-metrics-hint"></p>
-      <div class="ahp-section-body" id="ami-analysis-metrics"></div>
-    </section>
     <p class="ami-fio-elo"><span>Os pesos são calculados a partir da matriz. A consistência é avaliada para a homologação do resultado.</span></p>
 
-    <section class="ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">{{ '5' if indicacao_processos else '2.5' }}</span><span>Pesos de cada critério</span></div>
+    <section class="ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">{{ '4' if indicacao_processos else '2.4' }}</span><span>Pesos de cada critério</span></div>
       <p class="ami-section-intro">Consulte a importância relativa dos critérios ou das dimensões na matriz em exibição. Quando o cálculo é feito por grupo, cada peso expressa a importância do critério dentro do seu grupo.</p>
       <p class="ami-subsection-hint" id="ami-analysis-weights-hint"></p>
       <div class="ahp-section-body">{{ painel_pesos(true) }}<div id="ami-analysis-group-weights" hidden></div></div>
       <template id="ami-analysis-weights-template">{{ painel_pesos(false) }}</template>
     </section>
 
-    <section class="ahp-subcard" id="ami-analysis-local-consolidation"><div class="ahp-subsection-title"><span class="ahp-subsection-num">{{ '6' if indicacao_processos else '2.6' }}</span><span>Consolidação das respostas</span></div>
+    <section class="ahp-subcard" id="ami-analysis-local-consolidation"><div class="ahp-subsection-title"><span class="ahp-subsection-num">{{ '5' if indicacao_processos else '2.5' }}</span><span>Consolidação das respostas</span></div>
       <p class="ami-section-intro">Defina quais respostas enviadas entram na análise e se o limite de consistência individual será aplicado à seleção. O SICARD agrega os valores dos pares pela medida escolhida e salva a matriz consolidada, as métricas de consistência e os pesos do recorte.</p>
       <p class="form-help">Somente respostas já enviadas podem ser incluídas. Quem ainda não enviou aparece na lista para acompanhamento.</p>
       <div class="ahp-section-body">
@@ -71,7 +73,7 @@
         <div class="ahp-form-actions"><button type="button" class="btn btn-primary" id="ami-analysis-calculate"><i class="fas fa-calculator"></i> Calcular e salvar análise</button></div><p id="ami-analysis-feedback" class="ami-feedback" role="status"></p>
       </div>
     </section>
-    <section class="ahp-subcard" id="ami-analysis-local-results"><div class="ahp-subsection-title"><span class="ahp-subsection-num">{{ '7' if indicacao_processos else '2.7' }}</span><span>An&aacute;lises consolidadas e pesos finais</span></div>
+    <section class="ahp-subcard" id="ami-analysis-local-results"><div class="ahp-subsection-title"><span class="ahp-subsection-num">{{ '6' if indicacao_processos else '2.6' }}</span><span>An&aacute;lises consolidadas e pesos finais</span></div>
       <p class="ami-section-intro">Consulte as análises salvas, as respostas incluídas, a consistência e os pesos obtidos. Quando o resultado atender às condições, homologue-o como referência de pesos para a finalidade do julgamento.</p>
       <div class="ahp-section-body" id="ami-analysis-consolidations"><p class="ami-empty">Nenhuma an&aacute;lise consolidada.</p></div>
     </section>

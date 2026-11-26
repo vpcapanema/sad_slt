@@ -91,6 +91,8 @@
   min-height: 0; overflow: auto; padding: 1rem; border: 1px solid var(--pli-border); border-radius: 8px; background: #fff;
 }
 .sicard-standard-page.ami-page #ami-analysis-workspace .ami-chart-footer { margin: 0; }
+.sicard-standard-page.ami-page #ami-analysis-pairs-chart { container-type: inline-size; }
+.sicard-standard-page.ami-page #ami-analysis-pairs-chart .saaty-tick.is-selected .ami-pair-bars__tick-val { font-size: .5rem; }
 .sicard-standard-page.ami-page #ami-analysis-workspace :is(.ami-kpis, .ahp-live-metrics) { gap: 1rem; }
 .sicard-standard-page.ami-page #ami-analysis-workspace :is(.ami-kpis > div, .ahp-metric-card, .ami-metric-card) { text-align: center; }
 .sicard-standard-page.ami-page #ami-analysis-workspace .ami-metric-card__top { justify-content: center; }
@@ -147,12 +149,15 @@
   max-width: 100%; min-width: 0; text-align: left; align-items: start; line-height: 1.4;
 }
 .sicard-standard-page.ami-page #ami-analysis-workspace .ami-pair-bars__judge-name { white-space: normal; overflow-wrap: anywhere; }
+@container (max-width: 28rem) {
+  .sicard-standard-page.ami-page #ami-analysis-pairs-chart .ami-pair-bars__grid { grid-template-columns: minmax(0,1fr); }
+}
 @media (max-width: 720px) {
   .sicard-standard-page.ami-page .ami-analysis-selectors { grid-template-columns: minmax(0, 1fr); gap: 0; }
   .sicard-standard-page.ami-page #ami-analysis-workspace .ami-analysis-split > .ami-analysis-chart { grid-column: 1; grid-row: 2; }
   .sicard-standard-page.ami-page #ami-analysis-workspace .ami-chart-stack { position: static; }
   .sicard-standard-page.ami-page #ami-analysis-workspace .ami-chart-card { max-height: 70vh; }
-  .sicard-standard-page.ami-page #ami-analysis-workspace :is(.ahp-collab-grid2, .ami-metric-grid) { grid-template-columns: minmax(0,1fr); }
+  .sicard-standard-page.ami-page #ami-analysis-workspace .ahp-collab-grid2 { grid-template-columns: minmax(0,1fr); }
   .sicard-standard-page.ami-page #ami-analysis-workspace .ami-kpis { grid-template-columns: repeat(3,minmax(0,1fr)); }
   .sicard-standard-page.ami-page #ami-analysis-workspace .ami-kpis > div { min-width: 0; padding: .5rem; }
   .sicard-standard-page.ami-page #ami-analysis-workspace .ami-range-chart__row { grid-template-columns: minmax(0,1fr) minmax(0,1fr) 3rem; }

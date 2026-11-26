@@ -1373,6 +1373,104 @@ def test_duas_etapas_validam_uma_vez_e_agregam_pesos_individuais(monkeypatch):
     assert resultado["estatisticas_analise"]["ordem_ranking"] == sorted(range(6), key=lambda i: -globais[i])
 
 
+def test_associacao_extraordinaria_grava_dimensoes_somente_no_envio_valido(monkeypatch, tmp_path):
+    from api.services import associacao_dimensoes_ahp, email_resposta_colaborador
+
+    fake = _instalar_fake_repo(monkeypatch)
+    monkeypatch.setattr(repo, "get_ambiente_by_id", lambda ident, **_: fake.get_ambiente_by_id(ident))
+    atual = _ambiente_row(modo_participacao="publico", modo_comparacao="duas_etapas", matriz_integral=True,
+                          matriz_id=CONFIG_ID, matriz_nome="Matriz atual", nome="Julgamento atual", criterios=[
+                              {"Critério": "Acesso", "Dimensão": "Social"},
+                              {"Critério": "Equidade", "Dimensão": "Social"},
+                              {"Critério": "Custo", "Dimensão": "Financeira"},
+                          ])
+    origem = _ambiente_row(id=CONFIG_ID, nome="Origem", token="origem", modo_comparacao="todos",
+                           status="encerrada", criterios=[{"Critério": "Financeira"}, {"Critério": "Social"}])
+    fake.ambientes.update({AMBIENTE_ID: atual, CONFIG_ID: origem})
+    email, sem_resposta = "ana@x.gov.br", "bia@x.gov.br"
+    antiga = [[1, 3], [1 / 3, 1]]
+    fake.insert_resposta({"ambiente_id": CONFIG_ID, "email": email, "status": "enviada", "matriz_comparacao": antiga})
+    monkeypatch.setattr(associacao_dimensoes_ahp.destinatarios, "listar", lambda _: [
+        {"email": email, "nome": "Ana"}, {"email": sem_resposta, "nome": "Bia"},
+    ])
+    arquivo = tmp_path / "associacoes.json"
+    monkeypatch.setenv("SICARD_AHP_ASSOCIACAO_ARQUIVO", str(arquivo))
+    monkeypatch.setenv("SICARD_AHP_ASSOCIACAO_JULGAMENTO", AMBIENTE_ID)
+    notificar = MagicMock()
+    monkeypatch.setattr(email_resposta_colaborador, "notificar", notificar)
+    inscricoes = {}
+
+    def inscrever(ambiente_id, nome, email, instituicao, segredo_hash):
+        inscricao = {"id": HIERARQUIZACAO_ID, "email": email, "nome_completo": nome, "instituicao": instituicao}
+        inscricoes[ambiente_id, segredo_hash] = inscricao
+        return inscricao
+
+    monkeypatch.setattr(repo, "insert_inscricao", inscrever)
+    monkeypatch.setattr(repo, "get_inscricao", lambda ambiente, hash_: inscricoes.get((ambiente, hash_)))
+    monkeypatch.setattr(repo, "renovar_vaga_publica", lambda _: True)
+
+    gestor, publico = _client_autenticado(), TestClient(app, base_url="https://testserver")
+    base = "/api/ahp/comparacao-colaborativa"
+    gestao = f"{base}/ambientes/{AMBIENTE_ID}/emails/divulgacao/associacao-dimensoes"
+    dados = {"origem": CONFIG_ID, "destino": "dimensoes", "destinatarios": [email]}
+    assert publico.post(gestao, json=dados).status_code == 401
+    assert gestor.get(gestao).json()["origens"] == [{"id": CONFIG_ID, "nome": "Origem"}]
+    pendente = gestor.post(gestao, json={**dados, "destinatarios": [email, sem_resposta]})
+    assert pendente.status_code == 200, pendente.text
+    pendente = pendente.json()
+    assert "confirmacao" not in pendente and pendente["destinatarios"][1]["problema"]
+    previa = gestor.post(gestao, json=dados).json()
+    assert [(par["origem"], par["destino"]) for par in previa["correspondencias"]] == [
+        ("Social", "Social"), ("Financeira", "Financeira"),
+    ]
+    assert not arquivo.exists()
+    assert gestor.post(gestao, json={**dados, "confirmacao": "0" * 64}).status_code == 422
+    confirmada = gestor.post(gestao, json={**dados, "confirmacao": previa["confirmacao"]})
+    assert confirmada.json() == {"confirmados": 1}
+    assert "matriz" not in arquivo.read_text(encoding="utf-8")
+    assert not fake.list_respostas(AMBIENTE_ID)
+
+    rota = f"{base}/publico/{atual['token']}"
+    ident = {"email": email, "nome_completo": "Ana Lima", "instituicao": "Instituição"}
+    assert publico.get(rota).json()["dimensoes_associadas"] is False
+    assert publico.post(rota + "/inscricao", json=ident).status_code == 200
+    assert not fake.list_respostas(AMBIENTE_ID)
+    acesso = publico.post(rota + "/acesso", json={"email": email})
+    assert acesso.json()["dimensoes_associadas"] is True
+    respostas = rota + "/respostas"
+    inicio = publico.post(respostas + "/iniciar", json={"identificacao": ident})
+    assert inicio.status_code == 200, inicio.text
+    versao = {"email": email, "versao": inicio.json()["atualizadoEm"]}
+    assert publico.patch(respostas + "/progresso", json={
+        **versao, "etapa": "dimensoes", "concluir_etapa": True, "matriz_comparacao": antiga,
+    }).status_code == 422
+    invalida = [[1, None, None], [None, 1, None], [None, None, 1]]
+    valida = [[1, 2, None], [1 / 2, 1, None], [None, None, 1]]
+    rascunho = publico.patch(respostas + "/progresso", json={**versao, "matriz_comparacao": valida})
+    assert rascunho.status_code == 200, rascunho.text
+    assert "julgamento_dimensoes" not in rascunho.json()["estatisticas"]
+    reiniciada = publico.post(respostas + "/reiniciar", json={**versao, "versao": rascunho.json()["atualizadoEm"]})
+    assert reiniciada.status_code == 200, reiniciada.text
+    assert "julgamento_dimensoes" not in reiniciada.json()["estatisticas"]
+    envio = {"identificacao": ident, "versao": reiniciada.json()["atualizadoEm"]}
+    assert publico.post(respostas, json={**envio, "matriz_comparacao": invalida}).status_code == 422
+    parcial = fake.get_resposta_by_ambiente_email(AMBIENTE_ID, email)
+    assert parcial["status"] == "em_preenchimento" and "julgamento_dimensoes" not in parcial["estatisticas"]
+    notificar.assert_not_called()
+
+    final = publico.post(respostas, json={**envio, "matriz_comparacao": valida})
+    assert final.status_code == 201, final.text
+    assert "julgamento_dimensoes" not in final.json()["estatisticas"]
+    oficial = fake.get_resposta_by_ambiente_email(AMBIENTE_ID, email)
+    assert oficial["status"] == "enviada"
+    dimensoes = oficial["estatisticas"]["julgamento_dimensoes"]
+    assert dimensoes["dimensoes"] == ["Social", "Financeira"]
+    assert dimensoes["matriz"] == [[1, 1 / 3], [3, 1]]
+    assert oficial["estatisticas"]["pesos_globais_individuais"] == pytest.approx([1 / 6, 1 / 12, 3 / 4])
+    assert publico.post(respostas, json={**envio, "matriz_comparacao": valida}).status_code == 422
+    notificar.assert_called_once()
+
+
 def test_invitation_uses_active_form_with_production_prefix(monkeypatch) -> None:
     _instalar_fake_repo(monkeypatch)
     response = _client_autenticado("GESTOR").post(

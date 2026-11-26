@@ -96,7 +96,11 @@
       if (item[0] === "Prazo") line.title = "Horário de Brasília";
       box.appendChild(line);
     });
-    if (inscricao) return;
+    if (inscricao) {
+      el("collab-enrollment-guide").classList.toggle("is-hidden", meta.dimensoes_associadas === true);
+      el("collab-enrollment-guide-associated").classList.toggle("is-hidden", !meta.dimensoes_associadas);
+      return;
+    }
     var detalhes = el("collab-scope-details");
     var texto = meta.contextualizacao || {};
     [["collab-scope-intro", texto.introducao], ["collab-scope-method-text", texto.metodo],
@@ -256,7 +260,9 @@
   function patchSaatyTracking() {
     document.querySelectorAll("#comparisonContent .saaty-pair").forEach(function (pair) {
       var pid = pair.querySelector(".saaty-scale").dataset.pid;
-      if (stats.pares[pid] > 0) pair.classList.add("is-auto-validated");
+      if (stats.pares[pid] > 0 || Number(el("pair_" + pid).value) !== 1) {
+        pair.classList.add("is-auto-validated");
+      }
       pair.addEventListener("saaty:change", function () {
         if (!draftActive) return;
         trackPair(pid);
@@ -793,10 +799,11 @@
 
   function updateProgressHint() {
     var hint = el("collab-reciprocal-hint");
-    if (!hint) return;
-    var total = document.querySelectorAll(".saaty-pair").length;
-    var touched = document.querySelectorAll("#comparisonContent .saaty-pair.is-auto-validated").length;
-    hint.textContent = "Pares confirmados: " + touched + "/" + total;
+    var content = el("comparisonContent");
+    var total = content.querySelectorAll(".saaty-pair").length;
+    var confirmed = content.querySelectorAll(".saaty-pair.is-auto-validated").length;
+    content.classList.toggle("is-pairwise-complete", total > 0 && confirmed === total);
+    if (hint) hint.textContent = "Pares confirmados: " + confirmed + "/" + total;
   }
 
   global.updateLiveMetrics = scheduleCollabMetrics;
@@ -814,11 +821,13 @@
     var primeira = linkedStage === "dimensoes";
     el("collab-linked-stage").classList.remove("is-hidden");
     el("collab-linked-navigation").classList.remove("is-hidden");
-    el("collab-linked-title").textContent = primeira ? "Etapa 1 de 2 · Dimensões" : "Etapa 2 de 2 · Critérios por dimensão";
+    el("collab-linked-title").textContent = meta.dimensoes_associadas ? "Critérios por dimensão" :
+      primeira ? "Etapa 1 de 2 · Dimensões" : "Etapa 2 de 2 · Critérios por dimensão";
     el("collab-linked-description").textContent = primeira
       ? "Compare a importância das dimensões para o objetivo desta análise. Responda a todos os pares e valide a etapa para avançar."
+      : meta.dimensoes_associadas ? "Complete as comparações de critérios e confira a consistência antes de enviar."
       : "A etapa das dimensões está validada. Compare os critérios de cada dimensão para concluir sua resposta.";
-    el("collab-linked-back").classList.toggle("is-hidden", primeira);
+    el("collab-linked-back").classList.toggle("is-hidden", primeira || meta.dimensoes_associadas);
     el("collab-linked-next").classList.toggle("is-hidden", !primeira);
     el("collab-group-context").hidden = primeira;
     el("collab-group-navigation").classList.toggle("is-hidden", primeira);
@@ -858,7 +867,7 @@
   async function trocarEtapaVinculada(destino) {
     if (!draftActive || !linkedStage) return;
     if (destino === "criterios" && (linkedStage !== "dimensoes" || !comparacoesProntas(buildLiveMatrix()))) return;
-    if (destino === "dimensoes" && linkedStage !== "criterios") return;
+    if (destino === "dimensoes" && (linkedStage !== "criterios" || meta.dimensoes_associadas)) return;
     clearTimeout(saveTimer);
     var payload = payloadProgresso(matrizDaEtapaVinculada());
     payload.concluir_etapa = destino === "criterios";
@@ -907,7 +916,8 @@
     el("collab-restart").disabled = false;
     if (meta.modo_comparacao === "duas_etapas") {
       var rc = anteriores.julgamento_dimensoes?.resultado?.CR;
-      renderEtapaVinculada(Number.isFinite(rc) && rc < LIMITE_RC ? "criterios" : "dimensoes", focar);
+      var pronta = meta.dimensoes_associadas || (Number.isFinite(rc) && rc < LIMITE_RC);
+      renderEtapaVinculada(pronta ? "criterios" : "dimensoes", focar);
     } else if (meta.modo_comparacao === "por_grupo") {
       carregarGrupos(resposta);
       renderComparisonGroup();
@@ -926,7 +936,8 @@
     botao.disabled = true;
     var confirmou = await global.ProcessFeedback.confirmar({
       title: "Recomeçar julgamento?",
-      message: "Todas as comparações deste rascunho serão apagadas. Você voltará à primeira etapa disponível.",
+      message: meta.dimensoes_associadas ? "As comparações dos critérios deste rascunho serão apagadas." :
+        "Todas as comparações deste rascunho serão apagadas. Você voltará à primeira etapa disponível.",
       confirmLabel: "Recomeçar do zero",
       danger: true,
     });

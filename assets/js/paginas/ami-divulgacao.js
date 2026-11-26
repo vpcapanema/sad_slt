@@ -6,6 +6,8 @@
     assunto = $("assunto"), mensagem = $("mensagem");
   const mensagemDepois = $("mensagem-depois");
   const modal = $("modal"), modalForm = $("modal-form");
+  const associacao = $("associacao"), associacaoForm = $("associacao-form");
+  const origemAssociacao = $("associacao-origem"), destinoAssociacao = $("associacao-destino");
   const envio = {enviando: "Resultado pendente", aceito_smtp: "Aceito pelo servidor de e-mail", falha: "Falha no envio", indeterminado: "Resultado indeterminado"};
   const entrega = {sem_confirmacao: "Sem confirmação", confirmada: "Entregue", falha: "Devolvido", adiada: "Entrega adiada"};
   let atual = null, modo = "create";
@@ -87,6 +89,7 @@
     [$("nome"), $("email"), $("instituicao"), $("adicionar"), $("arquivo"), $("listas")].forEach(campo => { campo.disabled = !pronto; });
     [remetente, assunto, mensagem, mensagemDepois].forEach(campo => { campo.readOnly = !editavel || !atual.edicao; });
     $("salvar-mensagem").disabled = !pronto || !atual.edicao || !atual.editorAlterado;
+    controlesAssociacao(pronto, coletaAberta, pendente);
     if (!$("enviar")) return;
     const marcados = atual ? selecionados() : [];
     const temContatos = Boolean(tabela.analysisControls?.rows.length);
@@ -98,6 +101,116 @@
     $("enviar").disabled = !podeEnviar || !marcados.some(contato => elegivel(contato, false));
     $("reenviar").disabled = !podeEnviar || !marcados.some(contato => elegivel(contato, true));
     $("confirmacoes").disabled = !atual || atual.ocupado || atual.carregando;
+  }
+
+  function controlesAssociacao(pronto, coletaAberta, pendente) {
+    const visivel = modo === "edit" && atual?.dados?.associacao_dimensoes_disponivel;
+    associacao.classList.toggle("is-hidden", !visivel);
+    const podePrever = visivel && pronto && coletaAberta && !pendente;
+    origemAssociacao.disabled = destinoAssociacao.disabled = !podePrever;
+    $("associacao-prever").disabled = !podePrever || !origemAssociacao.value || !selecionados().length;
+    const previa = atual?.associacaoPrevia;
+    const confirmar = $("associacao-confirmar");
+    confirmar.classList.toggle("is-hidden", !previa?.confirmacao);
+    confirmar.disabled = !podePrever || !previa?.confirmacao ||
+      previa.parametros.destinatarios.join() !== selecionados().map(item => item.email).sort().join();
+  }
+
+  function limparAssociacao(contexto = atual) {
+    if (contexto) contexto.associacaoPrevia = null;
+    $("associacao-previa").replaceChildren();
+    $("associacao-status").textContent = "";
+  }
+
+  function listarAssociacao(pai, titulo, itens) {
+    if (!itens.length) return;
+    const rotulo = document.createElement("p"), destaque = document.createElement("strong"), lista = document.createElement("ul");
+    destaque.textContent = titulo;
+    rotulo.className = "ami-section-intro";
+    rotulo.append(destaque);
+    itens.forEach(texto => {
+      const item = document.createElement("li");
+      item.textContent = texto;
+      lista.append(item);
+    });
+    pai.append(rotulo, lista);
+  }
+
+  async function carregarOrigensAssociacao() {
+    const contexto = atual;
+    if (!associacao.open || !contexto?.dados?.associacao_dimensoes_disponivel || contexto.origensAssociacao) return;
+    try {
+      const {origens} = await contexto.api(contexto.url + "/associacao-dimensoes");
+      if (contexto !== atual) return;
+      contexto.origensAssociacao = origens;
+      origemAssociacao.replaceChildren(new Option("Selecione…", ""), ...origens.map(origem => new Option(origem.nome, origem.id)));
+      if (!origens.length) $("associacao-status").textContent = "Nenhum julgamento de origem disponível.";
+      controles();
+    } catch (erro) {
+      if (contexto === atual) $("associacao-status").textContent = erro.message;
+    }
+  }
+
+  async function preverAssociacao(evento) {
+    evento.preventDefault();
+    if ($("associacao-prever").disabled) return;
+    const contexto = atual;
+    const parametros = {origem: origemAssociacao.value, destino: destinoAssociacao.value,
+      destinatarios: selecionados().map(item => item.email).sort()};
+    limparAssociacao();
+    contexto.ocupado = true;
+    controles();
+    try {
+      const previa = await contexto.api(contexto.url + "/associacao-dimensoes", {method: "POST", body: JSON.stringify(parametros)});
+      if (contexto !== atual) return;
+      contexto.associacaoPrevia = {...previa, parametros};
+      const painelPrevia = $("associacao-previa");
+      listarAssociacao(painelPrevia, "Correspondência por nome", previa.correspondencias.map(par =>
+        par.origem ? `${par.origem} → ${par.destino}` : `${par.destino} — ${par.problema}`));
+      const encontrados = new Set(previa.correspondencias.map(par => par.origem));
+      listarAssociacao(painelPrevia, "Critérios de origem sem correspondência", previa.origem.filter(nome => !encontrados.has(nome)));
+      listarAssociacao(painelPrevia, "Destinatários que precisam de conferência", previa.destinatarios
+        .filter(item => item.problema).map(item => `${item.nome} (${item.email}) — ${item.problema}`));
+      const total = previa.destinatarios.length;
+      const resumo = total === 1 ? (previa.prontos ? "Destinatário com correspondência válida." : "Destinatário com associação pendente.") :
+        `${previa.prontos} de ${total} destinatários com correspondência válida.`;
+      $("associacao-status").textContent = parametros.destino === "criterios" ?
+        "A associação aos critérios está disponível apenas para conferência nesta coleta." : resumo;
+    } catch (erro) {
+      if (contexto === atual) $("associacao-status").textContent = erro.message;
+    } finally {
+      contexto.ocupado = false;
+      if (contexto === atual) controles();
+    }
+  }
+
+  async function confirmarAssociacao() {
+    if ($("associacao-confirmar").disabled) return;
+    const contexto = atual;
+    const previa = contexto.associacaoPrevia;
+    const total = previa.prontos === 1 ? "1 destinatário" : `${previa.prontos} destinatários`;
+    const confirma = await ProcessFeedback.confirmar({
+      title: "Aproveitar as intensidades de importância do julgamento anterior?",
+      message: `Os critérios de origem correspondem às dimensões atuais para ${total}. O formulário público abrirá direto em Critérios para os destinatários com associação confirmada.`,
+      confirmLabel: "Sim, aproveitar intensidades",
+    });
+    if (!confirma || contexto !== atual || previa !== contexto.associacaoPrevia || $("associacao-confirmar").disabled) return;
+    contexto.ocupado = true;
+    controles();
+    try {
+      const dados = await contexto.api(contexto.url + "/associacao-dimensoes", {
+        method: "POST", body: JSON.stringify({...previa.parametros, confirmacao: previa.confirmacao}),
+      });
+      if (contexto !== atual) return;
+      limparAssociacao();
+      const confirmados = dados.confirmados === 1 ? "1 destinatário" : `${dados.confirmados} destinatários`;
+      $("associacao-status").textContent = `Associação confirmada para ${confirmados}. Use Enviar e-mail aos selecionados para divulgar o link público.`;
+    } catch (erro) {
+      if (contexto === atual) $("associacao-status").textContent = erro.message;
+    } finally {
+      contexto.ocupado = false;
+      if (contexto === atual) controles();
+    }
   }
 
   function renderizar(contexto, marcados = new Set(selecionados().map(contato => contato.email))) {
@@ -447,6 +560,10 @@
     fechar() {
       atual = null;
       if (modal.open) modal.close();
+      associacao.open = false;
+      associacaoForm.reset();
+      origemAssociacao.replaceChildren();
+      limparAssociacao();
       contatoForm.reset();
       $("contato-alerta").textContent = "";
       tabela.tBodies[0].replaceChildren();
@@ -496,6 +613,10 @@
     }
   };
   $("modal-fechar").addEventListener("click", () => modal.close());
+  associacao.addEventListener("toggle", carregarOrigensAssociacao);
+  associacaoForm.addEventListener("change", () => { limparAssociacao(); controles(); });
+  associacaoForm.addEventListener("submit", preverAssociacao);
+  $("associacao-confirmar").addEventListener("click", confirmarAssociacao);
   [remetente, assunto, mensagem, mensagemDepois].forEach(campo => campo.addEventListener("input", () => {
     if (!atual?.edicao) return;
     const anterior = atual.edicao.rascunho || atual.edicao.padrao;

@@ -15,6 +15,51 @@
 .ami-page .ami-data-modal__content > .ami-table-label { margin-top: 0; }
 .ami-page .ami-data-modal__content > .ami-table-label + .matriz-table-wrap { margin-top: 4px; }
 
+.ami-page #ami-analysis-metric-help {
+  margin: 4px 0 8px;
+  padding: 4px 8px;
+}
+.ami-page #ami-analysis-metric-help summary {
+  color: var(--pli-deep);
+  font: 700 .7rem/1.4 Roboto, Arial, sans-serif;
+  cursor: pointer;
+}
+.ami-page #ami-analysis-metric-help[open] dl { margin-top: 6px; }
+.ami-page #ami-analysis-matrix .ami-metric-grid--compact {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  margin-bottom: 4px;
+}
+.ami-page #ami-analysis-matrix .ami-metric-grid--compact .ami-metric-card {
+  display: grid;
+  grid-template-columns: auto auto auto;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 3px 4px;
+  border-radius: 6px;
+  font-size: .6875rem;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+.ami-page #ami-analysis-matrix .ami-metric-grid--compact .ami-metric-card::before { display: none; }
+.ami-page #ami-analysis-matrix .ami-metric-grid--compact .ami-metric-card .ami-metric-card__label {
+  font: 700 .625rem/1.25 Roboto, Arial, sans-serif;
+  text-transform: none;
+}
+.ami-page #ami-analysis-matrix .ami-metric-grid--compact .ami-metric-card .ami-metric-card__value {
+  margin: 0;
+  font: 800 .75rem/1.25 Roboto, Arial, sans-serif;
+}
+.ami-page #ami-analysis-matrix .ami-metric-grid--compact .ami-metric-card > i { color: var(--pli-muted); }
+.ami-page #ami-analysis-matrix .ami-metric-grid--compact .is-ok > i { color: #166b3a; }
+.ami-page #ami-analysis-matrix .ami-metric-grid--compact .is-atencao > i { color: #8a6500; }
+.ami-page #ami-analysis-matrix .ami-metric-grid--compact .is-nok > i { color: #8e1e18; }
+@media (max-width: 440px) {
+  .ami-page #ami-analysis-matrix .ami-metric-grid--compact { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 .ami-page .ami-analysis-split > .matriz-table-wrap {
   grid-column: 1;
   grid-row: 1;
@@ -28,6 +73,34 @@
   grid-row: 1;
   min-width: 0;
 }
+
+.ami-page #ami-analysis-workspace .ami-analysis-chart.ami-weights-chart .ami-chart-stack {
+  position: static;
+  grid-template-rows: auto auto;
+}
+.ami-page #ami-analysis-workspace .ami-analysis-chart.ami-weights-chart .ami-chart-card {
+  max-height: none;
+  overflow: visible;
+  padding: clamp(8px, 1.25vw, 16px);
+}
+.ami-page .ami-analysis-chart.ami-weights-chart .ami-donut-chart {
+  grid-template-columns: min(42%, 13rem, 22vw, 36svh) minmax(0, 1fr);
+  gap: clamp(6px, 1.25vw, 16px);
+  align-items: start;
+}
+.ami-page .ami-weights-chart .ami-donut-chart__plot {
+  container-type: inline-size;
+  width: 100%;
+  margin: 0;
+}
+.ami-page .ami-weights-chart .ami-donut-chart__plot span { font-size: min(.625rem, 10cqi); line-height: 1.15; }
+.ami-page .ami-weights-chart .ami-donut-chart__plot strong { font-size: min(1.15rem, 16cqi); }
+.ami-page .ami-weights-chart .ami-donut-chart figcaption { align-self: center; }
+.ami-page .ami-weights-chart .ami-donut-chart ul {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+}
+.ami-page .ami-weights-chart .ami-donut-chart li { padding: 2px 4px; }
 
 .ami-page .ami-analysis-split.ami-analysis-split--table-labeled > .ami-table-label {
   grid-column: 1;

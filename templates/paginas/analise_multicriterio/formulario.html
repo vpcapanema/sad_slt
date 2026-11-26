@@ -13,11 +13,11 @@
 {% block classes_body %}ahp-module-page ahp-colaborativa-page ami-public-page escala-revisada{% endblock %}
 {% block base_url %}<base href="/public/analise-multicriterio/formulario-comparacao-pareada/">{% endblock %}
 {% block estilos_pagina %}
-	<link rel="stylesheet" href="/assets/css/ahp-module.css?v=20261126-validacao-rc">
+	<link rel="stylesheet" href="/assets/css/ahp-module.css?v=20261126-validacao-tres-estagios">
 	<link rel="stylesheet" href="/assets/css/analise-multicriterio.css?v=20260819-ui6">
 	<link rel="stylesheet" href="/assets/css/escala-tipografica.css">
 	<link rel="stylesheet" href="/assets/css/page-title-standard.css?v=20260820-3">
-	<link rel="stylesheet" href="/assets/css/paginas/ahp-formulario-publico.css?v=20261126-identificacao">
+	<link rel="stylesheet" href="/assets/css/paginas/ahp-formulario-publico.css?v=20261126-associacao-dimensoes">
 	<link rel="stylesheet" href="/assets/css/paginas/ami-responsivo.css?v=20261126-contexto-formulario">
 	<link rel="stylesheet" href="/assets/css/paginas/ami-contextualizacao.css?v=20261126-contexto-formulario">
 {% endblock %}
@@ -35,7 +35,7 @@
 			<div class="ahp-section-body">
 				<div id="collab-context" aria-live="polite"><p>Carregando os dados desta rodada de julgamento…</p></div>
 				{% if modo_inscricao %}
-				<section class="collab-scope collab-enrollment-guide" aria-labelledby="collab-scope-title">
+				<section class="collab-scope collab-enrollment-guide" id="collab-enrollment-guide" aria-labelledby="collab-scope-title">
 					<h2 id="collab-scope-title">A avaliação é feita em duas etapas</h2>
 					<p class="ami-section-intro">Primeiro, compare as dimensões entre si. Depois, compare os critérios dentro de cada dimensão. Você envia uma única resposta ao final.</p>
 					<ol>
@@ -43,6 +43,10 @@
 						<li><strong>Etapa 2 · Critérios</strong><p>Defina a importância de cada critério na sua dimensão.</p></li>
 					</ol>
 					<p>Complete os pares de cada etapa. A <strong>razão de consistência (RC) deve ficar abaixo de 0,10</strong> para avançar ou enviar.</p>
+				</section>
+				<section class="collab-scope collab-enrollment-guide is-hidden" id="collab-enrollment-guide-associated" aria-labelledby="collab-scope-title-associated">
+					<h2 id="collab-scope-title-associated">Comparação dos critérios</h2>
+					<p class="ami-section-intro">A importância das dimensões já foi validada. Compare os critérios dentro de cada dimensão e envie sua resposta.</p>
 				</section>
 				{% else %}
 				<section class="secao-collab-scope collab-scope" aria-labelledby="collab-scope-title">
@@ -193,7 +197,7 @@
 							</aside>
 							<div id="collab-panel-form" role="tabpanel" aria-labelledby="collab-tab-form">
 								<p class="ami-section-intro">Registre uma escolha em cada cartão. A régua pode ser ajustada até o envio.</p>
-								<p id="collab-form-legend" class="collab-pairwise-intro">O azul-claro indica um par confirmado. Quando a Razão de Consistência (RC) fica abaixo de 0,10, todos os cartões confirmados ficam verdes. Você ainda pode revisar suas escolhas.</p>
+								<p id="collab-form-legend" class="collab-pairwise-intro">Enquanto houver pares a confirmar, os cartões já confirmados ficam em azul-claro. Com todos os pares confirmados, os cartões ficam verdes se a RC estiver abaixo de 0,10 e vermelhos se for igual ou superior a 0,10.</p>
 								<div id="comparisonContent" class="ahp-comparison-content"></div>
 							</div>
 							<div id="collab-panel-matrix" role="tabpanel" aria-labelledby="collab-tab-matrix" hidden>
@@ -246,7 +250,7 @@
 	{% if modo_inscricao %}<script defer src="/assets/js/paginas/ahp-codigo-retomada.js?v=20261124"></script>{% endif %}
 	{% if modo_modelo %}<script defer src="/restrict/ahp/js/colaborativa-modelo.js?v=20261126-contexto-formulario"></script>{% elif not modo_inscricao %}<script defer src="/restrict/ahp/js/colaborativa-simulacao.js?v=20261126-contexto-formulario"></script>{% endif %}
 	<script defer src="/restrict/ahp/js/script.js?v=20261124-resposta-regua"></script>
-	<script defer src="/restrict/ahp/js/colaborativa.js?v=20261126-validacao-rc"></script>
+	<script defer src="/restrict/ahp/js/colaborativa.js?v=20261126-validacao-tres-estagios"></script>
 	<script defer src="/assets/js/paginas/ahp-comparacao-abas.js?v=20261124-matriz-pli"></script>
 	<script defer src="/assets/js/paginas/ahp-formulario-layout.js?v=20261104-card-default-90"></script>
 {% endblock %}

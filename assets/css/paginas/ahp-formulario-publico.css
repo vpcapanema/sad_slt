@@ -1232,6 +1232,13 @@ body.ami-public-page {
 .ami-public-page .collab-pair-tabs button {
   font-size: var(--ami-font-child);
 }
+@media (max-width: 540px) {
+  .ami-public-page .collab-pair-tabs button {
+    flex: 1 1 0;
+    min-width: 0;
+    white-space: normal;
+  }
+}
 .ami-public-page .collab-pairs-quadrant [hidden] {
   display: none !important;
 }

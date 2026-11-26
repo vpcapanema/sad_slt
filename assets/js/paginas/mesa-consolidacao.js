@@ -347,18 +347,19 @@
     const colunas = [{ titulo: 'Par de critérios', texto: p => p.rotulo, classe: () => 'mesa-esq' }];
     julgs.forEach((r, k) => {
       colunas.push({
-        titulo: hoverLabel(r, k), texto: p => M.rotuloSaaty(p.valores.get(String(r.id)).valor), ordem: p => p.valores.get(String(r.id)).valor,
+        titulo: hoverLabel(r, k), texto: p => num(p.valores.get(String(r.id)).valor), ordem: p => p.valores.get(String(r.id)).valor,
         classe: () => 'ami-stats-table__valor mesa-indice' + (S.resultado && S.resultado.situacoes.get(String(r.id)).estado !== 'incluida' ? ' is-fora' : ''),
         html: p => {
           const v = p.valores.get(String(r.id)), intensidade = Math.min(1, Math.abs(v.afastamento) / Math.log(3));
-          return '<span class="mesa-indice__valor" style="--ami-deviation-color:rgba(17,101,147,' + (intensidade * 0.8).toFixed(3) + ')" title="' + esc(r.nome_completo + ': ' + M.rotuloSaaty(v.valor) + ' · consolidado do par ' + num(p.consolidado)) + '">' + M.rotuloSaaty(v.valor) + '</span>';
+          const valor = num(v.valor);
+          return '<span class="mesa-indice__valor" style="--ami-deviation-color:rgba(17,101,147,' + (intensidade * 0.8).toFixed(3) + ')" title="' + esc(r.nome_completo + ': ' + valor + ' · consolidado do par ' + num(p.consolidado)) + '">' + valor + '</span>';
         },
       });
     });
     colunas.push(
       { titulo: 'Consolidado do par', texto: p => num(p.consolidado), ordem: p => p.consolidado, html: p => '<strong>' + num(p.consolidado) + '</strong>' },
       { titulo: 'Dispersão (×)', texto: p => Math.exp(p.dispersao).toFixed(2), ordem: p => p.dispersao },
-      { titulo: 'Mais destoante', texto: p => p.destoante ? rotuloJulgador(p.destoante.id) + ' (' + M.rotuloSaaty(p.destoante.valor) + ')' : '—', classe: p => p.destoante ? 'mesa-destoante' : '' },
+      { titulo: 'Mais destoante', texto: p => p.destoante ? rotuloJulgador(p.destoante.id) + ' (' + num(p.destoante.valor) + ')' : '—', classe: p => p.destoante ? 'mesa-destoante' : '' },
     );
     S.tabelas.pares = montarTabela({ id: 'mesa-pares', host: $('mesa-tabela-pares'), rotulo: 'índices por par de critérios', seletor: 'multi', idLinha: p => p.i + '-' + p.j, colunas, vazio: 'Marque ao menos uma resposta enviada.' });
   }

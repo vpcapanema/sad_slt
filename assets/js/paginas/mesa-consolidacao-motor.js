@@ -11,19 +11,12 @@
   'use strict';
 
   const INDICE_ALEATORIO = { 1: 0, 2: 0, 3: 0.58, 4: 0.9, 5: 1.12, 6: 1.24, 7: 1.32, 8: 1.41, 9: 1.45, 10: 1.49 };
-  const ESCALA_SAATY = [[1 / 9, '1/9'], [1 / 8, '1/8'], [1 / 7, '1/7'], [1 / 6, '1/6'], [1 / 5, '1/5'], [1 / 4, '1/4'], [1 / 3, '1/3'], [1 / 2, '1/2'], [1, '1'], [2, '2'], [3, '3'], [4, '4'], [5, '5'], [6, '6'], [7, '7'], [8, '8'], [9, '9']];
   // Um índice a 3 vezes do valor consolidado (ou a 1/3 dele) é tratado como destoante.
   const LIMITE_DESTOANTE = Math.log(3) - 1e-9;
   const METODO_DA_API = { aij_media_geometrica: 'geometrica', aij_media_aritmetica: 'aritmetica', aij_mediana: 'mediana' };
   const ROTULO_METODO = { geometrica: 'Média geométrica', aritmetica: 'Média aritmética', mediana: 'Mediana' };
 
   function indiceAleatorio(n) { return n <= 2 ? 0 : (INDICE_ALEATORIO[n] || 1.49); }
-
-  function rotuloSaaty(valor) {
-    if (valor == null || !Number.isFinite(Number(valor))) return '—';
-    for (const [numero, texto] of ESCALA_SAATY) if (Math.abs(Number(valor) - numero) < 0.0005) return texto;
-    return Number(valor).toFixed(3);
-  }
 
   function analisarMatriz(matriz) {
     const n = matriz.length;
@@ -148,5 +141,5 @@
     });
   }
 
-  return { consolidar, analisarMatriz, agregar, elegivel, consistenteNoLimite, diferencaMaxima, rotuloSaaty, nomeCriterio, enviadas, indiceAleatorio, METODO_DA_API, ROTULO_METODO, LIMITE_DESTOANTE };
+  return { consolidar, analisarMatriz, agregar, elegivel, consistenteNoLimite, diferencaMaxima, nomeCriterio, enviadas, indiceAleatorio, METODO_DA_API, ROTULO_METODO, LIMITE_DESTOANTE };
 });

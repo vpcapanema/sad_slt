@@ -155,6 +155,7 @@ class AmbientePublicoSchema(BaseModel):
     modo_comparacao: ModoComparacao = "todos"
     grupos_comparacao: dict[str, list[int]] = Field(default_factory=dict)
     dimensoes_comparacao: list[str] = Field(default_factory=list)
+    dimensoes_associadas: bool = False
     valido_ate: str
     status: str
     email_autorizado: bool = False

@@ -22,6 +22,27 @@
             <button type="button" class="btn btn-secondary" id="ami-divulgacao-listas" aria-haspopup="dialog" aria-controls="ami-import-modal"><i class="fas fa-list c-btn__icon" aria-hidden="true"></i><span>Carregar lista existente</span></button>
           </div>
         </form>
+        <details id="ami-divulgacao-associacao" class="ahp-section-body is-hidden">
+          <summary>Associar intensidades de importância de outro julgamento</summary>
+          <p class="ami-section-intro">Salve a lista e selecione na tabela os destinatários que responderam ao julgamento de origem.</p>
+          <form id="ami-divulgacao-associacao-form" class="ahp-collab-grid2">
+            <label class="c-form-group">Julgamento de origem
+              <select class="c-form-control" id="ami-divulgacao-associacao-origem" required></select>
+            </label>
+            <label class="c-form-group">Associar às
+              <select class="c-form-control" id="ami-divulgacao-associacao-destino">
+                <option value="dimensoes">Dimensões</option>
+                <option value="criterios">Critérios</option>
+              </select>
+            </label>
+            <div class="ahp-form-actions">
+              <button type="submit" class="btn btn-secondary" id="ami-divulgacao-associacao-prever">Conferir associação</button>
+              <button type="button" class="btn btn-primary is-hidden" id="ami-divulgacao-associacao-confirmar">Aproveitar intensidades</button>
+            </div>
+          </form>
+          <p class="form-help" id="ami-divulgacao-associacao-status" role="status"></p>
+          <div id="ami-divulgacao-associacao-previa"></div>
+        </details>
       </section>
       <section class="ahp-subcard" aria-labelledby="ami-divulgacao-mensagem-title">
         <h4 class="ahp-subsection-title" id="ami-divulgacao-mensagem-title">Mensagem de e-mail</h4>
@@ -31,7 +52,7 @@
           <label class="c-form-group" for="ami-divulgacao-assunto">Assunto do e-mail<input class="c-form-control" id="ami-divulgacao-assunto" maxlength="200" required></label>
           <label class="c-form-group" for="ami-divulgacao-mensagem">Mensagem antes do link<textarea class="c-form-control collab-email-template" id="ami-divulgacao-mensagem" rows="10" maxlength="49000" aria-describedby="ami-divulgacao-link-ajuda"></textarea></label>
           <div class="c-form-group ami-divulgacao-link">
-            <p class="form-help" id="ami-divulgacao-link-ajuda">Este é o link público de inscrição incluído na mensagem.</p>
+            <p class="ami-section-intro" id="ami-divulgacao-link-ajuda">Este é o link público de inscrição incluído na mensagem.</p>
             <a id="ami-divulgacao-link-mensagem" class="ami-email-protected-link" target="_blank" rel="noopener"></a>
           </div>
           <label class="c-form-group" for="ami-divulgacao-mensagem-depois">Mensagem depois do link<textarea class="c-form-control collab-email-template" id="ami-divulgacao-mensagem-depois" rows="3" maxlength="49000" aria-describedby="ami-divulgacao-link-ajuda"></textarea></label>

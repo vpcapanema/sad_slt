@@ -13,7 +13,7 @@
   function syncCrudActions(tbodyId, selectedId, editingId) { var selected = Boolean(selectedId), editing = Boolean(editingId && editingId === selectedId); setButtonState(tbodyId + "-edit-action", selected && !editing); setButtonState(tbodyId + "-save-action", editing); setButtonState(tbodyId + "-cancel-action", editing); setButtonState(tbodyId + "-delete-action", selected && !editing); }
   function motivoPendente(j) {
     return j.total_respostas
-      ? "Para preencher as métricas, a matriz e os pesos, abra este julgamento em modo de edição na Central de Respostas. Na seção 6, clique em Calcular e salvar análise."
+      ? "Para preencher as métricas, a matriz e os pesos, abra este julgamento em modo de edição na Central de Respostas. Na seção 5, clique em Calcular e salvar análise."
       : "Aguardando respostas enviadas para calcular a matriz, os pesos e as métricas.";
   }
   function descricaoResultado(resultado) {

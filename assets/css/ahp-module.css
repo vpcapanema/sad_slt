@@ -2989,7 +2989,7 @@ a.ahp-progress-step:hover {
   background: #cbe6f7;
 }
 
-.ahp-colaborativa-page #comparisonContent.is-rc-acceptable .saaty-pair.is-auto-validated {
+.ahp-colaborativa-page #comparisonContent.is-pairwise-complete.is-rc-acceptable .saaty-pair {
   background: var(--pfs-green-light);
 }
 
@@ -3015,9 +3015,13 @@ a.ahp-progress-step:hover {
   background: #fbf4f0;
 }
 
+.ahp-colaborativa-page #comparisonContent.is-pairwise-complete:not(.is-rc-acceptable) .saaty-pair,
+.ahp-colaborativa-page .ahp-metric-card.is-failure {
+  background: var(--pfs-red-light);
+}
+
 .ahp-colaborativa-page .ahp-metric-card.is-failure {
   border-color: var(--pfs-red-dark);
-  background: var(--pfs-red-light);
   color: var(--pfs-red-dark);
 }
 

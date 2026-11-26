@@ -12,11 +12,12 @@ from api.repositories import email_convites_repository as repo
 from api.routers.comparacao_colaborativa import _base_url
 from api.routers.email import _erro, _nao_armazenar
 from api.schemas.email import (
+    AssociacaoDimensoesSchema,
     ConviteEmailEnvioSchema, DivulgacaoEmailEnvioSchema, ExclusaoDestinatariosDivulgacaoSchema,
     ListaDivulgacaoSchema, MensagemDivulgacaoSchema, RascunhoEmailAhpSchema, RespostaEmailEnvioSchema,
     SalvamentoListaDivulgacaoSchema,
 )
-from api.services import autorizacao, divulgacao_ahp, email_ahp_rascunho, email_confirmacoes, email_convites, email_resposta_colaborador
+from api.services import associacao_dimensoes_ahp, autorizacao, divulgacao_ahp, email_ahp_rascunho, email_confirmacoes, email_convites, email_resposta_colaborador
 from api.services.atividade_colaboracao_ahp import etapa_colaboracao
 from api.services.email_service import FalhaEmail
 from api.services.session_service import SessionUser
@@ -128,6 +129,30 @@ def listar_divulgacao(ambiente_id: UUID) -> dict:
 def listar_origens_divulgacao(ambiente_id: UUID, origem: UUID | None = None, catalogo: bool = False) -> dict:
     try:
         return divulgacao_ahp.listas_existentes(str(ambiente_id), str(origem) if origem else None, catalogo=catalogo)
+    except DemandaValidationError as exc:
+        raise HTTPException(422, detail=str(exc)) from exc
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(503, detail=str(exc)) from exc
+
+
+@router.get("/{ambiente_id}/emails/divulgacao/associacao-dimensoes", dependencies=[Depends(_gestor_divulgacao)])
+def origens_associacao_dimensoes(ambiente_id: UUID) -> dict:
+    try:
+        ambiente = divulgacao_ahp.ambiente_publico(str(ambiente_id))
+        return {"origens": associacao_dimensoes_ahp.origens(ambiente)}
+    except DemandaValidationError as exc:
+        raise HTTPException(422, detail=str(exc)) from exc
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(503, detail=str(exc)) from exc
+
+
+@router.post("/{ambiente_id}/emails/divulgacao/associacao-dimensoes", dependencies=[Depends(_gestor_divulgacao)])
+def associar_dimensoes(ambiente_id: UUID, dados: AssociacaoDimensoesSchema) -> dict:
+    try:
+        ambiente = divulgacao_ahp.ambiente_publico(str(ambiente_id))
+        return associacao_dimensoes_ahp.associar(
+            ambiente, str(dados.origem), dados.destino, [str(email).lower() for email in dados.destinatarios], dados.confirmacao,
+        )
     except DemandaValidationError as exc:
         raise HTTPException(422, detail=str(exc)) from exc
     except DatabaseUnavailableError as exc:
