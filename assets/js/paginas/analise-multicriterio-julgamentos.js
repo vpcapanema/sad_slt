@@ -34,6 +34,7 @@
   var analysisMode = "view";
   var analysisRequest = 0;
   var selectedJudgeId = null; // null = todos os julgadores juntos
+  var observadorAlturaPares;
   var selectedMeasure = "geometrica"; // medida de tendencia central da agregacao
   var modo = document.querySelector(".ami-main").dataset.modo;
   var ambientesSourceUrl = "/api/ahp/comparacao-colaborativa/ambientes";
@@ -338,6 +339,7 @@
     if (!paresDoJulgador(todosPares, destaque).length) return '<p class="ami-empty">Sem respostas enviadas para o gr\u00e1fico.</p>';
     if (!pairs.length) return '<p class="ami-empty">Nenhum par nesta p\u00e1gina da tabela.</p>';
     var visiveis = destaque ? cores.lista.filter(function (j) { return j.id === destaque; }) : cores.lista;
+    var codigos = new Map(judgeOptions().map(function (julgador, indice) { return [julgador.id, "J" + (indice + 1)]; }));
     // Mesma orientacao da regua do formulario publico: o criterio 1 do par fica
     // a esquerda (9 ... 3), 1 no centro e o criterio 2 a direita (1/3 ... 1/9).
     // Cada degrau da escala vale 1/8 da meia-largura da trilha.
@@ -346,20 +348,19 @@
         var ponto = (pair.pontos || []).filter(function (item) { return item.resposta_id === julgador.id; })[0];
         if (!ponto) return '';
         var valor = Number(ponto.valor) || 1, indice = indicePassoRegua(valor), rotulo = fmtNumber(valor), sentido = valor > 1.0005 ? "a" : valor < 0.9995 ? "b" : "";
-        var descricao = julgador.nome + ": " + rotulo + (sentido === "a" ? " (CT 1, " + pair.criterio_a + ", mais importante)" : sentido === "b" ? " (CT 2, " + pair.criterio_b + ", mais importante)" : " (igual import\u00e2ncia)");
+        var codigoJulgador = codigos.get(String(julgador.id)) || "";
+        var descricao = (codigoJulgador ? codigoJulgador + " · " : "") + julgador.nome + ": " + rotulo + (sentido === "a" ? " (CT 1, " + pair.criterio_a + ", mais importante)" : sentido === "b" ? " (CT 2, " + pair.criterio_b + ", mais importante)" : " (igual import\u00e2ncia)");
         // Mesma marcacao da regua do formulario publico (.saaty-scale), em miniatura.
         var graduacoes = PASSOS_REGUA_SAATY.map(function (passo, n) {
           return '<span class="saaty-tick' + (n === indice ? ' is-selected' : '') + '" style="left:' + (n / 8 * 100).toFixed(2) + '%"><span class="saaty-tick-mark"></span><span class="ami-pair-bars__tick-val">' + (n === indice ? rotulo : passoRotulo(passo)) + '</span></span>';
         }).join("");
         var regua = '<div class="saaty-scale ami-pair-bars__ruler" aria-valuemin="0" aria-valuemax="8" aria-valuenow="' + indice + '"><div class="saaty-arrow"></div><div class="saaty-rail">' + graduacoes + '<div class="saaty-handle" style="left:' + (indice / 8 * 100).toFixed(2) + '%"></div></div></div>';
-        return '<div class="ami-pair-bars__line" data-judge="' + escapeHtml(julgador.id) + '" title="' + escapeHtml(descricao) + '" aria-label="' + escapeHtml(descricao) + '"><span class="ami-pair-bars__end is-a" aria-hidden="true">CT 1</span>' + regua + '<span class="ami-pair-bars__end is-b" aria-hidden="true">CT 2</span></div>';
+        return '<div class="ami-pair-bars__line" data-judge="' + escapeHtml(julgador.id) + '" title="' + escapeHtml(descricao) + '" aria-label="' + escapeHtml(descricao) + '"><strong class="ami-pair-bars__judge-code" aria-hidden="true">' + codigoJulgador + '</strong><span class="ami-pair-bars__end is-a" aria-hidden="true">CT 1</span>' + regua + '<span class="ami-pair-bars__end is-b" aria-hidden="true">CT 2</span></div>';
       }).join("");
-      var rotulo = (pair.escopo ? pair.escopo + " · " : "") + pair.criterio_a + " \u00d7 " + pair.criterio_b, codigo = codigoPar(pair, todosPares);
-      var cabecalho = visiveis.filter(function (julgador) { return (pair.pontos || []).some(function (item) { return item.resposta_id === julgador.id; }); }).map(function (julgador) { return '<span class="ami-pair-bars__tag">J' + (cores.lista.indexOf(julgador) + 1) + ' - ' + escapeHtml(codigo) + '</span>'; }).join("");
-      if (pair.escopo) cabecalho += '<span class="ami-pair-bars__tag">' + escapeHtml(pair.escopo) + '</span>';
-      return '<div class="ami-pair-bars__row" data-pair="' + pair.i + '-' + pair.j + '" role="button" tabindex="0" aria-label="' + escapeHtml("Selecionar " + codigo + ": " + rotulo) + '"><div class="ami-pair-bars__head">' + cabecalho + '</div><div class="ami-pair-bars__plot">' + trilhas + '</div></div>';
+      var rotulo = pair.criterio_a + " \u00d7 " + pair.criterio_b, codigo = codigoPar(pair, todosPares);
+      return '<div class="ami-pair-bars__row" data-pair="' + pair.i + '-' + pair.j + '" role="button" tabindex="0" aria-label="' + escapeHtml("Selecionar " + codigo + ": " + rotulo) + '"><div class="ami-pair-bars__head">' + escapeHtml(codigo + " · " + rotulo) + '</div><div class="ami-pair-bars__plot">' + trilhas + '</div></div>';
     }).join("");
-    var legenda = destaque ? '' : '<ul class="ami-pair-bars__legend">' + cores.lista.map(function (julgador, indice) { return '<li data-judge-open="' + escapeHtml(julgador.id) + '" role="button" tabindex="0" title="Ver somente este julgador"><strong>J' + (indice + 1) + '</strong><span class="ami-pair-bars__judge-name">' + escapeHtml(julgador.nome) + '</span></li>'; }).join("") + '</ul>';
+    var legenda = destaque ? '' : '<ul class="ami-pair-bars__legend">' + cores.lista.map(function (julgador) { return '<li data-judge-open="' + escapeHtml(julgador.id) + '" role="button" tabindex="0" title="Ver somente este julgador"><strong>' + (codigos.get(String(julgador.id)) || "") + '</strong><span class="ami-pair-bars__judge-name">' + escapeHtml(julgador.nome) + '</span></li>'; }).join("") + '</ul>';
     var extremoDireito = passoRotulo(PASSOS_REGUA_SAATY.at(-1));
     var escala = '<div class="ami-scale-key" aria-hidden="true"><span>9</span><span class="ami-scale"><i class="ami-scale__fill is-a" style="width:50%"></i><i class="ami-scale__fill is-b" style="width:50%"></i></span><span>' + extremoDireito + '</span></div>';
     return '<figure class="ami-pair-bars" data-selecionavel><div class="ami-pair-bars__grid">' + linhas + '</div>' + '<figcaption>' + legenda + escala + '<p>Escala de Saaty, de 9 a ' + extremoDireito + ', centrada em 1 (igual import\u00e2ncia). Azul, \u00e0 esquerda: o CT 1 do par \u00e9 mais importante; vermelho, \u00e0 direita: o CT 2.</p></figcaption></figure>';
@@ -455,7 +456,7 @@
     $("ami-analysis-pairs").innerHTML = pairsTable(pairs, selectedJudgeId);
     if (modo === "espaco") addTableLabel($("ami-analysis-pairs").querySelector("table"), "Tabela dos índices de importância de Saaty por par de critérios");
     $("ami-analysis-pairs-chart").innerHTML = '<div class="ami-chart-stack"><p class="ami-table-label ami-chart-label">' + escapeHtml(tituloGraficoPares(pairs, selectedJudgeId)) + '</p>' +
-      '<div class="ami-chart-card" id="ami-analysis-pairs-plot"></div>' +
+      '<div class="ami-chart-card" id="ami-analysis-pairs-plot" role="region" aria-label="Pares de critérios do gráfico" tabindex="0"></div>' +
       '<div class="admin-table-footer ami-chart-footer"><nav id="ami-pairs-chart-pagination" class="admin-pagination" aria-label="Paginar pares do gr\u00e1fico"></nav><p id="ami-pairs-chart-summary" class="admin-table-summary" aria-live="polite"></p></div></div>';
     SLTAnalysisTable($("ami-analysis-pairs").querySelector("table"), analysisWorkspace.ambiente);
     ligarGraficoATabela(pairs, selectedJudgeId);
@@ -481,10 +482,16 @@
   function ligarGraficoATabela(pairs, destaque) {
     var tabela = $("ami-analysis-pairs").querySelector("table"), estado = tabela && tabela.analysisControls;
     if (!estado) return;
+    var corpo = tabela.tBodies[0], plot = $("ami-analysis-pairs-plot");
+    observadorAlturaPares?.disconnect();
+    observadorAlturaPares = new ResizeObserver(function ([medida]) {
+      plot.style.height = medida.borderBoxSize[0].blockSize + "px";
+    });
+    observadorAlturaPares.observe(corpo, { box: "border-box" });
     function desenhar() {
-      var corpo = tabela.tBodies[0], chaves = Array.prototype.map.call(corpo.rows, function (linha) { return linha.dataset.pair; }).filter(Boolean);
+      var chaves = Array.prototype.map.call(corpo.rows, function (linha) { return linha.dataset.pair; }).filter(Boolean);
       var recorte = chaves.map(function (chave) { return pairs.filter(function (pair) { return pair.i + "-" + pair.j === chave; })[0]; }).filter(Boolean);
-      var plot = $("ami-analysis-pairs-plot"), nav = $("ami-pairs-chart-pagination"), resumo = $("ami-pairs-chart-summary");
+      var nav = $("ami-pairs-chart-pagination"), resumo = $("ami-pairs-chart-summary");
       if (!plot || !nav || !resumo) return;
       plot.innerHTML = analysisPairBars(pairs, destaque, recorte);
       SLTTable.paginate(nav.id, estado.filtered || [], estado.page, function (pagina) { estado.page = pagina; estado.draw(); });
@@ -786,32 +793,32 @@
     var excedente = resultado.lambdaMax - n;
     var cartas = [
       {
-        sigla: "λmax", rotulo: "Autovalor principal (λmax)", valor: fmtNumber(resultado.lambdaMax), situacao: excedente <= 0.2 ? "ok" : excedente <= 0.5 ? "atencao" : "nok",
+        rotulo: "Autovalor principal", sigla: "λmax", valor: fmtNumber(resultado.lambdaMax), situacao: excedente <= 0.2 ? "ok" : excedente <= 0.5 ? "atencao" : "nok",
         selo: excedente <= 0.2 ? "pr\u00f3ximo do ideal" : excedente <= 0.5 ? "acima do ideal" : "bem acima do ideal",
         nota: "ideal para " + n + " crit\u00e9rios: " + fmtNumber(n) + " \u00b7 excedente " + fmtNumber(excedente)
       },
       {
-        sigla: "IC", rotulo: "Índice de consistência (IC)", valor: fmtNumber(resultado.ic), situacao: resultado.ic <= 0.05 ? "ok" : resultado.ic <= 0.1 ? "atencao" : "nok",
+        rotulo: "Índice de consistência", sigla: "IC", valor: fmtNumber(resultado.ic), situacao: resultado.ic <= 0.05 ? "ok" : resultado.ic <= 0.1 ? "atencao" : "nok",
         selo: resultado.ic <= 0.05 ? "pr\u00f3ximo de zero" : resultado.ic <= 0.1 ? "moderado" : "alto",
         nota: "ideal: 0"
       },
       {
-        sigla: "IA", rotulo: "Índice aleatório (IA)", valor: fmtNumber(resultado.ri), situacao: "neutro", selo: "refer\u00eancia",
+        rotulo: "Índice aleatório", sigla: "IA", valor: fmtNumber(resultado.ri), situacao: "neutro", selo: "refer\u00eancia",
         nota: "r\u00e9gua fixa para " + n + " crit\u00e9rios"
       },
       {
-        sigla: "RC", rotulo: "Razão de consistência (RC)", valor: fmtNumber(resultado.rc), situacao: aprovado ? "ok" : "nok",
+        rotulo: "Razão de consistência", sigla: "RC", valor: fmtNumber(resultado.rc), situacao: aprovado ? "ok" : "nok",
         selo: aprovado ? "dentro do limite" : "acima do limite",
         nota: "limite adotado: " + fmtNumber(limite)
       }
     ];
     var icones = { ok: "fa-circle-check", atencao: "fa-triangle-exclamation", nok: "fa-circle-xmark", neutro: "fa-circle-info" };
     return '<div class="ami-metric-grid ami-metric-grid--compact" role="group" aria-label="Métricas de consistência da matriz">' + cartas.map(function (carta) {
-      var descricao = carta.rotulo + ' · ' + carta.selo + ' · ' + carta.nota;
+      var descricao = carta.rotulo + ' (' + carta.sigla + ') · ' + carta.selo + ' · ' + carta.nota;
       return '<div class="ami-metric-card is-' + carta.situacao + '" role="group" aria-label="' + escapeHtml(descricao) + '" title="' + escapeHtml(descricao) + '">' +
-        '<span class="ami-metric-card__label" aria-hidden="true">' + carta.sigla + '</span>' +
-        '<strong class="ami-metric-card__value">' + carta.valor + '</strong>' +
-        '<i class="fa-solid ' + icones[carta.situacao] + '" aria-hidden="true"></i></div>';
+        '<span class="ami-metric-card__label" aria-hidden="true">' + carta.rotulo + ' <span class="ami-metric-card__sigla">(' + carta.sigla + ')</span></span>' +
+        '<div class="ami-metric-card__result"><strong class="ami-metric-card__value">' + carta.valor + '</strong>' +
+        '<i class="fa-solid ' + icones[carta.situacao] + '" aria-hidden="true"></i></div></div>';
     }).join("") + '</div>';
   }
   function renderWeights(data, foco, calculadas, host, hint, prefixo) {

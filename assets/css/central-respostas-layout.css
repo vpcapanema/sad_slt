@@ -15,49 +15,72 @@
 .ami-page .ami-data-modal__content > .ami-table-label { margin-top: 0; }
 .ami-page .ami-data-modal__content > .ami-table-label + .matriz-table-wrap { margin-top: 4px; }
 
+.ami-page #ami-analysis-workspace :is(#ami-analysis-matrix-section, #ami-analysis-weights-section) :is(.ami-table-label, .sicard-table-label) {
+  font-size: clamp(.75rem, 1.2vw, .875rem) !important;
+}
+.ami-page #ami-analysis-workspace :is(#ami-analysis-matrix-section, #ami-analysis-weights-section) .ami-analysis-group > h4 {
+  font-size: .8125rem;
+}
+.ami-page #ami-analysis-workspace :is(#ami-analysis-matrix-section, #ami-analysis-weights-section) .ami-subsection-hint {
+  font-size: .725rem;
+  line-height: 1.4;
+}
 .ami-page #ami-analysis-metric-help {
   margin: 4px 0 8px;
   padding: 4px 8px;
 }
 .ami-page #ami-analysis-metric-help summary {
   color: var(--pli-deep);
-  font: 700 .7rem/1.4 Roboto, Arial, sans-serif;
+  font: 700 .75rem/1.4 Roboto, Arial, sans-serif;
   cursor: pointer;
 }
 .ami-page #ami-analysis-metric-help[open] dl { margin-top: 6px; }
+.ami-page #ami-analysis-metric-help :is(dt, dd) { font-size: .725rem; }
 .ami-page #ami-analysis-matrix .ami-metric-grid--compact {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 4px;
   margin-bottom: 4px;
 }
 .ami-page #ami-analysis-matrix .ami-metric-grid--compact .ami-metric-card {
-  display: grid;
-  grid-template-columns: auto auto auto;
-  justify-content: center;
+  display: flex;
+  flex-direction: column;
+  container-type: inline-size;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   min-width: 0;
   padding: 3px 4px;
   border-radius: 6px;
   font-size: .6875rem;
   line-height: 1.25;
-  white-space: nowrap;
 }
 .ami-page #ami-analysis-matrix .ami-metric-grid--compact .ami-metric-card::before { display: none; }
 .ami-page #ami-analysis-matrix .ami-metric-grid--compact .ami-metric-card .ami-metric-card__label {
-  font: 700 .625rem/1.25 Roboto, Arial, sans-serif;
+  font: 700 .6875rem/1.2 Roboto, Arial, sans-serif;
+  text-align: center;
   text-transform: none;
+}
+.ami-page #ami-analysis-matrix .ami-metric-card__result {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: auto;
 }
 .ami-page #ami-analysis-matrix .ami-metric-grid--compact .ami-metric-card .ami-metric-card__value {
   margin: 0;
-  font: 800 .75rem/1.25 Roboto, Arial, sans-serif;
+  font: 800 .875rem/1.15 Roboto, Arial, sans-serif;
 }
-.ami-page #ami-analysis-matrix .ami-metric-grid--compact .ami-metric-card > i { color: var(--pli-muted); }
-.ami-page #ami-analysis-matrix .ami-metric-grid--compact .is-ok > i { color: #166b3a; }
-.ami-page #ami-analysis-matrix .ami-metric-grid--compact .is-atencao > i { color: #8a6500; }
-.ami-page #ami-analysis-matrix .ami-metric-grid--compact .is-nok > i { color: #8e1e18; }
-@media (max-width: 440px) {
+.ami-page #ami-analysis-matrix .ami-metric-card__result i { color: var(--pli-muted); }
+.ami-page #ami-analysis-matrix .is-ok .ami-metric-card__result i { color: #166b3a; }
+.ami-page #ami-analysis-matrix .is-atencao .ami-metric-card__result i { color: #8a6500; }
+.ami-page #ami-analysis-matrix .is-nok .ami-metric-card__result i { color: #8e1e18; }
+@media (max-width: 640px) {
   .ami-page #ami-analysis-matrix .ami-metric-grid--compact { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container (max-width: 9rem) {
+  .ami-page #ami-analysis-matrix .ami-metric-card__sigla { display: none; }
+}
+@container (min-width: 7rem) {
+  .ami-page #ami-analysis-matrix .ami-metric-card__label { white-space: nowrap; }
 }
 
 .ami-page .ami-analysis-split > .matriz-table-wrap {
@@ -72,6 +95,57 @@
   grid-column: 2;
   grid-row: 1;
   min-width: 0;
+}
+
+.ami-page #ami-analysis-workspace #ami-analysis-pairs-chart .ami-chart-stack {
+  grid-template-rows: auto auto auto;
+  align-content: start;
+}
+.ami-page #ami-analysis-workspace #ami-analysis-pairs-plot {
+  box-sizing: border-box;
+  max-height: none;
+  padding: 6px clamp(6px, .8vw, 12px);
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(18 59 86 / 30%) transparent;
+}
+.ami-page #ami-analysis-pairs-plot:focus-visible { outline: 2px solid var(--pli-blue); }
+.ami-page #ami-analysis-pairs-plot > .ami-empty { padding: 0 !important; margin: 0; }
+.ami-page #ami-analysis-pairs-chart #ami-analysis-pairs-plot .ami-pair-bars__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr));
+  gap: 8px;
+}
+.ami-page #ami-analysis-pairs-chart .ami-pair-bars__grid > .ami-pair-bars__row { margin-bottom: 0; }
+.ami-page #ami-analysis-pairs-chart .ami-pair-bars__row > .ami-pair-bars__head {
+  display: block;
+  color: var(--pli-deep);
+  font: 700 .75rem/1.3 Roboto, Arial, sans-serif;
+  overflow-wrap: anywhere;
+}
+.ami-page #ami-analysis-pairs-chart .ami-pair-bars__line {
+  grid-template-columns: 2.4rem auto minmax(0, 1fr) auto;
+  gap: 4px;
+}
+.ami-page #ami-analysis-pairs-chart .ami-pair-bars__line > :is(.ami-pair-bars__judge-code, .ami-pair-bars__end) {
+  align-self: start;
+  margin-top: .6rem;
+  line-height: 1.2;
+  transform: translateY(-50%);
+}
+.ami-page #ami-analysis-pairs-chart .ami-pair-bars__judge-code {
+  color: var(--pli-deep);
+  font-size: .6875rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.ami-page #ami-analysis-pairs-chart .ami-pair-bars__ruler { container-type: inline-size; }
+@container (max-width: 16rem) {
+  .ami-page #ami-analysis-pairs-chart .saaty-tick:not(.is-selected, :first-child, :nth-child(5), :nth-child(9)) .ami-pair-bars__tick-val,
+  .ami-page #ami-analysis-pairs-chart .saaty-tick.is-selected + .saaty-tick .ami-pair-bars__tick-val,
+  .ami-page #ami-analysis-pairs-chart .saaty-tick:has(+ .saaty-tick.is-selected) .ami-pair-bars__tick-val {
+    visibility: hidden;
+  }
 }
 
 .ami-page #ami-analysis-workspace .ami-analysis-chart.ami-weights-chart .ami-chart-stack {
@@ -93,7 +167,7 @@
   width: 100%;
   margin: 0;
 }
-.ami-page .ami-weights-chart .ami-donut-chart__plot span { font-size: min(.625rem, 10cqi); line-height: 1.15; }
+.ami-page .ami-weights-chart .ami-donut-chart__plot span { font-size: min(.6875rem, 10cqi); line-height: 1.15; }
 .ami-page .ami-weights-chart .ami-donut-chart__plot strong { font-size: min(1.15rem, 16cqi); }
 .ami-page .ami-weights-chart .ami-donut-chart figcaption { align-self: center; }
 .ami-page .ami-weights-chart .ami-donut-chart ul {
@@ -101,6 +175,7 @@
   gap: 4px;
 }
 .ami-page .ami-weights-chart .ami-donut-chart li { padding: 2px 4px; }
+.ami-page .ami-weights-chart .ami-donut-chart li :is(span, strong) { font-size: .725rem; }
 
 .ami-page .ami-analysis-split.ami-analysis-split--table-labeled > .ami-table-label {
   grid-column: 1;

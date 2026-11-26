@@ -33,7 +33,7 @@
     </section>
     <p class="ami-fio-elo"><span>Esses índices formam a matriz de comparação pareada: a do julgador selecionado, ou a agregação de todos pela medida de tendência central escolhida.</span></p>
 
-    <section class="ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">{{ '3' if indicacao_processos else '2.3' }}</span><span>Matriz de comparação pareada</span></div>
+    <section class="ahp-subcard" id="ami-analysis-matrix-section"><div class="ahp-subsection-title"><span class="ahp-subsection-num">{{ '3' if indicacao_processos else '2.3' }}</span><span>Matriz de comparação pareada</span></div>
       <p class="ami-section-intro"><span id="ami-analysis-matrix-intro"></span> A matriz individual, agregada ou registrada serve de base para examinar a consistência e os pesos do recorte.</p>
       <details class="ami-metric-help" id="ami-analysis-metric-help">
         <summary>O que cada métrica diz</summary>
@@ -49,7 +49,7 @@
     </section>
     <p class="ami-fio-elo"><span>Os pesos são calculados a partir da matriz. A consistência é avaliada para a homologação do resultado.</span></p>
 
-    <section class="ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">{{ '4' if indicacao_processos else '2.4' }}</span><span>Pesos de cada critério</span></div>
+    <section class="ahp-subcard" id="ami-analysis-weights-section"><div class="ahp-subsection-title"><span class="ahp-subsection-num">{{ '4' if indicacao_processos else '2.4' }}</span><span>Pesos de cada critério</span></div>
       <p class="ami-section-intro">Consulte a importância relativa dos critérios ou das dimensões na matriz em exibição. Quando o cálculo é feito por grupo, cada peso expressa a importância do critério dentro do seu grupo.</p>
       <p class="ami-subsection-hint" id="ami-analysis-weights-hint"></p>
       <div class="ahp-section-body">{{ painel_pesos(true) }}<div id="ami-analysis-group-weights" hidden></div></div>

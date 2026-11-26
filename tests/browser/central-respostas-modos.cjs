@@ -135,7 +135,10 @@ const BASE = process.env.SICARD_BROWSER_BASE_URL || 'http://127.0.0.1:8083';
  assert.equal(await page.locator('#ami-analysis-criteria-chart .ami-donut-chart').count(),1,'rosca de pesos');
  assert.match(await page.locator('#ami-analysis-criteria-chart').innerText(),/CT1[\s\S]*CT2/);
  assert.equal(await page.locator('#ami-analysis-pairs tbody tr td:nth-child(2)').first().innerText(),'Par 1','coluna Código logo após o seletor');
- assert.match(await page.locator('#ami-analysis-pairs-chart .ami-pair-bars__tag').first().innerText(),/Par 1$/);
+ assert.equal(await page.locator('#ami-analysis-pairs-chart .ami-pair-bars__head').first().innerText(),'Par 1 · C1 × C2');
+ assert.equal(await page.locator('#ami-analysis-pairs-chart .ami-pair-bars__judge-code').first().innerText(),'J2');
+ await page.waitForFunction(() => Math.abs(document.querySelector('#ami-analysis-pairs-plot').getBoundingClientRect().height -
+   document.querySelector('#ami-analysis-pairs tbody').getBoundingClientRect().height) < .5);
  await page.locator('#ami-analysis-pairs tbody tr').first().click();
  assert.equal(await page.locator('#ami-analysis-pairs-chart .ami-pair-bars__row.is-sel').count(),1,'clique na tabela seleciona o par no gráfico');
  await page.locator('#ami-analysis-pairs-chart .ami-pair-bars__row').first().click();
@@ -187,6 +190,8 @@ const BASE = process.env.SICARD_BROWSER_BASE_URL || 'http://127.0.0.1:8083';
  await controlesIndices.getByRole('combobox', {name:'Coluna do filtro'}).selectOption({label:'Julgador 1'});
  await controlesIndices.getByRole('combobox', {name:'Valor do filtro'}).selectOption('0.333');
  assert.equal(await tabelaIndices.locator('tbody tr').count(),1);
+ await page.waitForFunction(() => Math.abs(document.querySelector('#ami-analysis-pairs-plot').getBoundingClientRect().height -
+   document.querySelector('#ami-analysis-pairs tbody').getBoundingClientRect().height) < .5);
  await tabelaIndices.locator('thead input').check();
  const exportacao = page.waitForEvent('download');
  await controlesIndices.getByRole('button', {name:'Exportar selecionados'}).click();
@@ -237,6 +242,8 @@ const BASE = process.env.SICARD_BROWSER_BASE_URL || 'http://127.0.0.1:8083';
  await page.locator('#ami-analysis-measure').selectOption('aritmetica');
  assert.deepEqual(await page.locator('#ami-analysis-pairs [data-ami-applied]').allTextContents(), ['5.000', '5.000']);
  assert.equal(await page.locator('#ami-analysis-matrix .ami-metric-grid').count(), 2);
+ assert.deepEqual(await page.locator('#ami-analysis-matrix .ami-metric-grid').first().locator('.ami-metric-card__label').allTextContents(),
+   ['Autovalor principal (λmax)', 'Índice de consistência (IC)', 'Índice aleatório (IA)', 'Razão de consistência (RC)']);
  const explicacaoMetricas = page.locator('#ami-analysis-metric-help');
  assert.equal(await page.getByText('O que cada métrica diz', {exact:true}).count(), 1);
  assert.equal(await explicacaoMetricas.locator('dl').isVisible(), false);
