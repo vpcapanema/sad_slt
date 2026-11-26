@@ -361,7 +361,7 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
     assert 'id="ami-collaborator-dimensions"' in html
     assert "readCollaboratorFile" in julgamentos_js
     assert "confirmCollaboratorImport" in julgamentos_js
-    assert "Tabela do monitoramento das atividades" in html
+    assert "Tabela de monitoramento das atividades dos colaboradores" in html
     assert "Tabela dos julgamentos realizados" in julgamentos_js
     assert "Tabela da lista de colaboradores" in julgamentos_js
     assert "Tabela dos julgadores" in julgamentos_js
@@ -377,7 +377,7 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
     assert "Tabela dos colaboradores do julgamento" in modal_tables_js
     assert "Tabela dos critérios e premissas do arquivo" in matrix_details_js
     assert "Matriz da estrutura de comparação pareada sem julgamentos" in matrix_details_js
-    assert "Tabela do monitoramento das atividades" not in central_html
+    assert "Tabela de monitoramento das atividades dos colaboradores" not in central_html
     assert 'class="col-select"' in html
     assert 'id="ami-select-all-rows"' in html
     assert 'Selecionar todos os registros filtrados' in html
@@ -449,7 +449,8 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
     assert "Matriz de comparação pareada" in html
     assert "Formulário de comparação pareada" in html
     assert 'judgment.criterios || []' in julgamentos_js
-    assert 'querySelector("#saaty-scale-subcard")' in julgamentos_js
+    assert 'id="saaty-scale-subcard"' in html
+    assert '"/ahp/comparacao/"' not in julgamentos_js
     assert 'data-pair-row' in julgamentos_js and 'data-pair-column' in julgamentos_js
     assert 'class="saaty-form ami-saaty-form"' in julgamentos_js
     assert 'class="saaty-scale"' in julgamentos_js
@@ -484,8 +485,7 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
     assert '/analises/' in julgamentos_js
     assert '"Central de respostas"' in julgamentos_js
     assert "Central de respostas" in central_html
-    assert "Julgamentos com respostas colaborativas" in central_html
-    assert "Enviadas" in central_html
+    assert "Julgamentos colaborativos</span>" in central_html
     assert "Recebidas" in central_html
     assert "Em preenchimento" in central_html
     assert "Finalizadas" in central_html
@@ -578,7 +578,7 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
     assert 'data-modal-kind="matrix"' in tabela_js
     assert 'data-modal-kind="weights"' in tabela_js
     assert 'data-modal-kind="collaborators"' in tabela_js
-    assert 'class="admin-table matriz-view-table ami-collaborators"' in tabela_js
+    assert 'class="admin-table matriz-view-table ami-collaborators ami-table--database"' in tabela_js
     assert "j.convites || []" in tabela_js
     assert 'type="checkbox" class="ami-row-select"' in tabela_js
     assert 'type="radio"' not in tabela_js
@@ -601,7 +601,7 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
     assert 'id="ami-create-section"' in html
     assert ">1</span>" in html and "Configuração do julgamento" in html
     assert "<span>Simulação de comparação pareada" in html
-    assert 'scaleIndex.textContent = "3.1"' in julgamentos_js
+    assert '>1</span><span>Escala de intensidade de importância' in html
     assert ">2</span><span>Indicadores instantâneos" in html
     assert '>3</span><span>Matriz de comparação pareada' in html
     assert '>3</span><span>Formulário de comparação pareada' in html
@@ -611,7 +611,7 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
     assert 'id="ami-criteria-matrix-summary"' in html
     assert ">2</span><span>Monitoramento das atividades" in html
     assert ">1</span><span>Mensagem de email" in html
-    assert html.count("ami-config-field") == 5
+    assert html.count("ami-config-field") == 6
     assert 'id="ami-modo-comparacao"' in html
     for field_id, help_id in (
         ("ami-deadline", "ami-deadline-help"),

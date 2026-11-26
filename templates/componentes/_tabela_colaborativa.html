@@ -3,8 +3,14 @@
   <div class="ahp-section-label ami-table-heading">{% if (tabela_colaborativa_comparacao or tabela_colaborativa_respostas) and not indicacao_processos %}<span class="ahp-section-index-icon" aria-hidden="true">1</span>{% endif %}<span><i class="fas fa-table" aria-hidden="true"></i> {% if tabela_colaborativa_respostas %}Julgamentos colaborativos{% else %}Julgamentos Realizados{% endif %}</span></div>
   <div class="ahp-section-body">
     {% if tabela_colaborativa_comparacao %}
-    <p class="ami-judgments-intro">Nesta seção, você localiza os julgamentos cadastrados e consulta a situação da coleta, o prazo, a forma de participação e a matriz associada. A partir do registro selecionado, você acessa sua configuração, as simulações disponíveis e os resultados já calculados.</p>
+    <p class="ami-section-intro">Nesta seção, você localiza os julgamentos cadastrados e consulta a situação da coleta, o prazo, a forma de participação e a matriz associada. A partir do registro selecionado, você acessa sua configuração, as simulações disponíveis e os resultados já calculados.</p>
     <div class="ami-filtered-table">
+    {% elif tabela_colaborativa_respostas %}
+    <p class="ami-section-intro">Localize o julgamento que deseja analisar e consulte a situação da coleta. A tabela apresenta os totais de convidados ou inscritos e de respostas em preenchimento, finalizadas e finalizadas com consistência.</p>
+    {% elif tabela_colaborativa_id == 'ami-workspace-database' %}
+    <p class="ami-section-intro">Localize o registro que deseja acompanhar e acesse seu espaço de trabalho para consultar a configuração, a participação e os resultados.</p>
+    {% elif modo_pagina == 'formulario' %}
+    <p class="ami-section-intro">Consulte o nome, a situação e o prazo para identificar o julgamento. O endereço associado abre o fluxo de participação configurado para esse registro.</p>
     {% endif %}
     {% if tabela_colaborativa_id == "ami-judgments" %}{% set filtro_prefixo = "ami-filter" %}{% set filtro_rotulo = "Filtrar julgamentos" %}{% include "componentes/filtro_tabela.html" %}{% endif %}<div class="hier-table-shell ami-table-shell"><table class="admin-table hier-register-table ami-table--database{% if tabela_colaborativa_respostas %} ami-table--respostas{% endif %}" data-source-table="ahp.comparacao_colaborativa_ambiente">
     <thead><tr>

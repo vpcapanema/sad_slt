@@ -5,7 +5,7 @@ import logging
 import re
 import secrets
 from hashlib import sha256
-from html import escape
+from urllib.parse import urlsplit
 from uuid import uuid4
 
 from cryptography.exceptions import InvalidTag
@@ -17,9 +17,9 @@ from api.repositories import email_convites_repository as repo
 from api.repositories import convite_individual_repository
 from api.schemas.email import ConviteEmailEnvioSchema, EmailEnvioSchema
 from api.schemas.comparacao_colaborativa import EMAIL_ASSUNTO_PADRAO, EMAIL_REMETENTE_ALIAS_PADRAO
-from api.services import convite_envelope, email_service
+from api.services import convite_envelope, email_ahp_rascunho, email_service, mensagens_ahp
 from api.services.comparacao_colaborativa_service import (
-    _criterios_convidado,
+    _link_publico,
     _mensagem_email_padrao,
     _validar_ambiente_ativo,
     base_mensagem_padrao,
@@ -31,71 +31,45 @@ _CODIGO_LINK = re.compile(r"[0-9a-f]{32}")
 logger = logging.getLogger(__name__)
 
 
-def _personalizar_mensagem(texto: str, nome: str | None) -> str:
+def _personalizar_mensagem(texto: str, nome: str | None, *, normalizar_assinatura: bool = True) -> str:
     """Aplica somente os dados individuais que não pertencem ao texto-base persistido."""
-    mensagem = texto.replace("Equipe SICARD/SLT", "Equipe SICARD-PLI")
+    mensagem = texto.replace("Equipe SICARD/SLT", "Equipe SICARD-PLI") if normalizar_assinatura else texto
     partes_nome = str(nome or "").strip().split()
     if partes_nome:
         cumprimento = " ".join(partes_nome[:2])
         mensagem = re.sub(
-            r"Olá,\s*colaborador\(a\)!", f"Olá, {cumprimento}!", mensagem,
+            r"^Olá,[ \t]*colaborador\(a\)!", lambda _: f"Olá, {cumprimento}!", mensagem,
             count=1, flags=re.IGNORECASE,
         )
     return mensagem
 
 
-def _html_convite(texto: str, segredo: str, caminhos: tuple[str, ...]) -> str:
-    """Versão institucional do convite; o texto puro continua como alternativa."""
-    linhas = texto.splitlines()
-    indice_link = next(
-        (indice for indice, linha in enumerate(linhas) if any(caminho in linha for caminho in caminhos)),
-        None,
-    )
-    if indice_link is None:
-        raise DemandaValidationError("A mensagem não contém o link deste julgamento.", field="texto")
-    link = linhas[indice_link].strip()
-    linhas_sem_link = linhas[:indice_link] + linhas[indice_link + 1:]
-    blocos = "".join(
-        f'<p style="margin:0 0 10px;font-family:Arial,Helvetica,sans-serif;font-size:14px;'
-        f'line-height:1.55;color:#22333f;">{escape(linha)}</p>'
-        if linha.strip() else '<div style="height:4px;line-height:4px;">&nbsp;</div>'
-        for linha in linhas_sem_link
-    )
-    chave = escape(segredo)
-    return (
-        '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"></head>'
-        '<body style="margin:0;padding:0;background:#eef3f7;">'
-        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef3f7;">'
-        '<tr><td align="center" style="padding:18px 8px;">'
-        '<table role="presentation" width="640" cellpadding="0" cellspacing="0" '
-        'style="max-width:640px;width:100%;background:#ffffff;border:1px solid #d5dee6;">'
-        '<tr><td style="background:#00507a;padding:16px 22px;font-family:Arial,Helvetica,sans-serif;'
-        'color:#ffffff;font-size:18px;font-weight:bold;">SICARD &middot; Convite para colaboração</td></tr>'
-        '<tr><td style="padding:22px;">'
-        f'{blocos}'
-        '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:20px auto;">'
-        '<tr><td align="center" style="border-radius:5px;background:#00507a;">'
-        f'<a href="{escape(link, quote=True)}" target="_blank" style="display:inline-block;padding:13px 24px;'
-        'font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;color:#ffffff;'
-        'text-decoration:none;border:1px solid #003d5c;border-radius:5px;">Acessar formulário colaborativo</a>'
-        '</td></tr></table>'
-        '<div style="margin:18px 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:13px;'
-        'font-weight:bold;color:#00507a;">Chave individual do convite</div>'
-        '<div style="padding:13px 14px;border:1px solid #9fb4c3;border-left:5px solid #00507a;'
-        'background:#f3f7fa;font-family:Consolas,Monaco,monospace;font-size:16px;line-height:1.5;'
-        f'letter-spacing:.03em;color:#12303f;word-break:break-all;user-select:all;">{chave}</div>'
-        '<p style="margin:8px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;'
-        'color:#516878;">Selecione a chave acima e use Copiar no seu aplicativo de e-mail.</p>'
-        '<p style="margin:20px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;'
-        'color:#516878;">A chave é exclusiva deste destinatário, revogável e válida dentro do prazo do '
-        'convite. Não compartilhe.</p>'
-        '</td></tr></table></td></tr></table></body></html>'
-    )
+def _linha_link(texto: str, caminhos: tuple[str, ...], link_canonico: str | None) -> str | None:
+    for linha in texto.splitlines():
+        valor = linha.strip()
+        if link_canonico is not None:
+            if valor == link_canonico:
+                return linha
+            continue
+        if any(c.isspace() for c in valor) or not any(caminho in valor for caminho in caminhos):
+            continue
+        try:
+            url = urlsplit(valor)
+        except ValueError:
+            continue
+        if url.scheme in {"http", "https"} and url.hostname and any(url.path.endswith(caminho) for caminho in caminhos):
+            return linha
+    return None
 
 
 def codigo_link(token: str, destinatario: str) -> str:
     """Código público e estável do link de cada destinatário, sem expor o e-mail na URL."""
     return sha256(f"{token}|{destinatario.strip().lower()}".encode()).hexdigest()[:32]
+
+
+def _link_de_acesso(link: str, segredo: str) -> str:
+    # O fragmento só é lido pelo formulário no navegador e fica fora da requisição de navegação.
+    return urlsplit(link)._replace(fragment=f"acesso={segredo}").geturl()
 
 
 def _marcar_links(texto: str, token: str, destinatario: str, caminhos: tuple[str, ...]) -> str:
@@ -153,50 +127,60 @@ def _mensagem_original(ambiente_id: str, email: str, row: dict) -> dict:
         ) from None
 
 
-def _preparar_convite(ambiente: dict, convite: dict, destinatario: str, segredo: str) -> dict:
+def link_lembrete(ambiente_id: str, email: str, versao, link: str, token: str) -> str:
+    try:
+        convite = convite_individual_repository.obter(ambiente_id, email, versao)
+    except DemandaValidationError as exc:
+        raise ConviteOriginalIndisponivel(str(exc), field="convite") from exc
+    if convite is None:
+        raise ConviteOriginalIndisponivel("O convite não está mais disponível.", field="convite")
+    segredo = _mensagem_original(ambiente_id, email, convite)["segredo"]
+    return _link_de_acesso(f"{link}?c={codigo_link(token, email)}", segredo)
+
+
+def _preparar_convite(ambiente: dict, convite: dict, destinatario: str, segredo: str, *,
+                      conteudo: dict | None = None, base_url: str = "") -> dict:
     # O servidor acrescenta o codigo persistido, nunca um codigo fornecido pelo cliente.
     caminhos = (
         f"/public/analise-multicriterio/formulario-comparacao-pareada/{ambiente['token']}/",
         f"/public/analise-multicriterio/{ambiente['token']}/",
     )
-    corpo = ambiente.get("email_mensagem")
+    corpo = conteudo["texto"] if conteudo else ambiente.get("email_mensagem")
     if not corpo or not corpo.strip():
         raise DemandaValidationError("Salve a mensagem do convite antes de enviar.", field="email_mensagem")
-    base = base_mensagem_padrao(ambiente)
+    base = None if conteudo else base_mensagem_padrao(ambiente)
     if base is not None:
-        corpo = _mensagem_email_padrao(
-            ambiente, base_url=base, criterios=_criterios_convidado(ambiente, destinatario),
-        )
-    corpo = _personalizar_mensagem(corpo, convite.get("nome"))
+        corpo = _mensagem_email_padrao(ambiente, base_url=base)
+    corpo = _personalizar_mensagem(corpo, convite.get("nome"), normalizar_assinatura=conteudo is None)
     if not any(caminho in corpo for caminho in caminhos):
         raise DemandaValidationError("A mensagem não contém o link deste julgamento.", field="texto")
-    assunto = ambiente.get("email_assunto") or EMAIL_ASSUNTO_PADRAO
-    alias_remetente = ambiente.get("email_remetente_alias") or EMAIL_REMETENTE_ALIAS_PADRAO
-    instrucoes = (
-        "\n\nChave individual do convite: {segredo}\n"
-        "Informe seu e-mail convidado e esta chave no formulário. Não compartilhe a chave. "
-        "Ela é revogável, exclusiva deste destinatário e válida dentro do prazo do convite."
-    )
-    corpo = _marcar_links(corpo, ambiente["token"], destinatario, caminhos)
-    texto = corpo
-    if len(texto) + len(instrucoes.format(segredo="x" * 43)) > 50000:
+    assunto = conteudo["assunto"] if conteudo else ambiente.get("email_assunto") or EMAIL_ASSUNTO_PADRAO
+    alias_remetente = conteudo["alias_remetente"] if conteudo else ambiente.get("email_remetente_alias") or EMAIL_REMETENTE_ALIAS_PADRAO
+    corpo = _marcar_links("\n".join(corpo.splitlines()), ambiente["token"], destinatario, caminhos)
+    link_canonico = _marcar_links(_link_publico(ambiente, base_url=base_url), ambiente["token"], destinatario, caminhos) if conteudo else None
+    linha_link = _linha_link(corpo, caminhos, link_canonico)
+    if linha_link is None:
+        raise DemandaValidationError("Mantenha o link do julgamento em uma linha própria da mensagem.", field="texto")
+    link = _link_de_acesso(linha_link.strip(), segredo)
+    texto = re.sub(r"(?m)^" + re.escape(linha_link) + r"$", lambda _: link, corpo, count=1)
+    if len(texto) > 50000:
         raise DemandaValidationError(
-            "Reduza a mensagem para que o texto, incluindo a chave individual e suas instruções, tenha até 50.000 caracteres.",
+            "Reduza a mensagem para que o texto, incluindo o link de acesso, tenha até 50.000 caracteres.",
             field="texto",
         )
-    identidade = alias_remetente + "\n" + assunto + "\n" + texto
+    identidade = alias_remetente + "\n" + assunto + "\n" + corpo
     mensagem = EmailEnvioSchema(
         destinatario=destinatario,
         alias_remetente=alias_remetente,
         assunto=assunto,
-        texto=texto + instrucoes.format(segredo=segredo),
-        html=_html_convite(corpo, segredo, caminhos),
+        texto=texto,
+        html=mensagens_ahp.html(texto, link, mensagens_ahp.ACAO_CONVITE, julgamento=ambiente.get("nome") or ""),
     )
     return {"segredo": segredo, "identidade": identidade, "mensagem": mensagem.model_dump(mode="json")}
 
 
 def _reservar_convite(
-    ambiente_id: str, dados: ConviteEmailEnvioSchema, usuario_id: str,
+    ambiente_id: str, dados: ConviteEmailEnvioSchema, usuario_id: str, *, conn=None, base_url: str = "",
 ) -> tuple[dict, EmailEnvioSchema | None]:
     revisao = dados.revisao_convites
     ambiente = ambientes.get_ambiente_by_id(ambiente_id, bloquear=revisao is not None)
@@ -215,15 +199,19 @@ def _reservar_convite(
     if convite is None:
         raise DemandaValidationError("O destinatário não pertence aos colaboradores salvos.", field="destinatario")
     original = convite_individual_repository.obter(ambiente_id, destinatario, versao)
-    if original:
-        envelope = _mensagem_original(ambiente_id, destinatario, original)
-        cifrado = None
-    else:
+    envelope_original = _mensagem_original(ambiente_id, destinatario, original) if original else None
+    conteudo = email_ahp_rascunho.para_envio(
+        conn, ambiente, usuario_id, dados.rascunho_id, dados.reenvio_id, base_url,
+    ) if dados.usar_modelo_atual else None
+    envelope = envelope_original
+    if conteudo or not envelope:
+        segredo = envelope_original["segredo"] if envelope_original else secrets.token_urlsafe(32)
         try:
-            envelope = _preparar_convite(ambiente, convite, str(dados.destinatario), secrets.token_urlsafe(32))
+            envelope = _preparar_convite(ambiente, convite, str(dados.destinatario), segredo,
+                                        conteudo=conteudo, base_url=base_url)
         except ValueError:
             raise DemandaValidationError("O conteúdo do convite não atende aos limites de envio.", field="texto") from None
-        cifrado = convite_envelope.cifrar(ambiente_id, destinatario, envelope)
+    cifrado = None if original else convite_envelope.cifrar(ambiente_id, destinatario, envelope)
     config = email_service._config()
     identidade = envelope["identidade"]
     if dados.reenvio_id:
@@ -250,7 +238,9 @@ def _reservar_convite(
             original = convite_individual_repository.obter(ambiente_id, destinatario, versao)
         if not original:
             raise DemandaValidationError("O convite mudou. Reabra o julgamento.", field="convite")
-        envelope = _mensagem_original(ambiente_id, destinatario, original)
+        validado = _mensagem_original(ambiente_id, destinatario, original)
+        if conteudo is None or cifrado is not None:
+            envelope = validado
         return registro, EmailEnvioSchema.model_validate(envelope["mensagem"])
     except (DatabaseUnavailableError, DemandaValidationError):
         if revisao is None:
@@ -258,14 +248,14 @@ def _reservar_convite(
         raise
 
 
-def enviar(ambiente_id: str, dados: ConviteEmailEnvioSchema, usuario_id: str) -> dict:
-    if dados.revisao_convites is None:
+def enviar(ambiente_id: str, dados: ConviteEmailEnvioSchema, usuario_id: str, *, base_url: str = "") -> dict:
+    if dados.revisao_convites is None and not dados.usar_modelo_atual:
         registro, mensagem = _reservar_convite(ambiente_id, dados, usuario_id)
     else:
         # A revisão, a chave individual e a reserva são conferidas juntas antes do SMTP.
         with get_connection() as conn, atomic_connection(conn):
             repo.bloquear_envio(conn, ambiente_id, str(dados.destinatario).lower())
-            registro, mensagem = _reservar_convite(ambiente_id, dados, usuario_id)
+            registro, mensagem = _reservar_convite(ambiente_id, dados, usuario_id, conn=conn, base_url=base_url)
     if mensagem is None:
         return registro
     try:

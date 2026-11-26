@@ -1,13 +1,15 @@
 <section id="ami-divulgacao" class="ahp-subcard" aria-labelledby="ami-divulgacao-title">
   <h3 class="ahp-subsection-title" id="ami-divulgacao-title">Compartilhar link público</h3>
   <div class="ahp-section-body">
-    <p class="form-help">Adicione contatos para enviar o link de inscrição. Após a inscrição pelo formulário público, acompanhe o participante no Monitoramento das atividades.</p>
+    <p class="ami-section-intro">Organize a divulgação por e-mail do endereço de inscrição. Defina os destinatários, prepare a mensagem e acompanhe o envio. A participação passa a ser registrada quando a pessoa confirma a inscrição.</p>
+    <p class="form-help">Após a inscrição pelo formulário público, acompanhe o participante no Monitoramento das atividades.</p>
     <p class="form-help is-hidden" id="ami-divulgacao-consulta">Clique em <strong>Editar julgamento</strong> para alterar a lista e a mensagem ou enviar o link público.</p>
     <p class="form-help is-hidden" id="ami-divulgacao-prazo">Para enviar, reabra a coleta ou salve um prazo futuro na edição do julgamento.</p>
     <div class="ami-email-content-grid ami-divulgacao-editor">
       <section class="ahp-subcard" aria-labelledby="ami-divulgacao-destinatarios-title">
         <h4 class="ahp-subsection-title" id="ami-divulgacao-destinatarios-title">Destinatários</h4>
         <form class="ahp-section-body" id="ami-divulgacao-contato">
+          <p class="ami-section-intro">Cadastre os contatos da divulgação ou carregue uma lista existente. Esses registros definem para quem o SICARD poderá enviar a mensagem de inscrição.</p>
           <div class="ami-collaborator-fields" id="ami-divulgacao-campos">
             <label for="ami-divulgacao-nome">Nome do destinatário<input class="c-form-control" id="ami-divulgacao-nome" maxlength="200" autocomplete="name" required></label>
             <label for="ami-divulgacao-email">E-mail do destinatário<input class="c-form-control" id="ami-divulgacao-email" type="email" maxlength="254" autocomplete="email" aria-describedby="ami-divulgacao-contato-alerta" required></label>
@@ -24,12 +26,15 @@
       <section class="ahp-subcard" aria-labelledby="ami-divulgacao-mensagem-title">
         <h4 class="ahp-subsection-title" id="ami-divulgacao-mensagem-title">Mensagem de e-mail</h4>
         <div class="ahp-section-body">
+          <p class="ami-section-intro">Defina o assunto e o conteúdo da mensagem que será enviada aos destinatários selecionados para divulgar a inscrição.</p>
           <label class="c-form-group" for="ami-divulgacao-assunto">Assunto do e-mail<input class="c-form-control" id="ami-divulgacao-assunto" maxlength="200" required></label>
-          <label class="c-form-group" for="ami-divulgacao-mensagem">Mensagem<textarea class="c-form-control collab-email-template" id="ami-divulgacao-mensagem" rows="5" maxlength="49000" aria-describedby="ami-divulgacao-link-ajuda" required></textarea></label>
+          <label class="c-form-group" for="ami-divulgacao-mensagem">Mensagem antes do link<textarea class="c-form-control collab-email-template" id="ami-divulgacao-mensagem" rows="10" maxlength="49000" aria-describedby="ami-divulgacao-link-ajuda"></textarea></label>
           <div class="c-form-group ami-divulgacao-link">
-            <p class="form-help" id="ami-divulgacao-link-ajuda">O link para divulgar é incluído no final do e-mail.</p>
+            <p class="form-help" id="ami-divulgacao-link-ajuda">Este é o link público de inscrição incluído na mensagem.</p>
             <a id="ami-divulgacao-link-mensagem" class="ami-email-protected-link" target="_blank" rel="noopener"></a>
           </div>
+          <label class="c-form-group" for="ami-divulgacao-mensagem-depois">Mensagem depois do link<textarea class="c-form-control collab-email-template" id="ami-divulgacao-mensagem-depois" rows="3" maxlength="49000" aria-describedby="ami-divulgacao-link-ajuda"></textarea></label>
+          <p class="form-help">Salve suas alterações para usá-las no próximo envio. A mensagem volta ao modelo padrão depois desse envio.</p>
           <div class="ahp-form-actions"><button type="button" class="btn btn-secondary" id="ami-divulgacao-salvar-mensagem"><i class="fas fa-floppy-disk c-btn__icon" aria-hidden="true"></i>Salvar mensagem</button></div>
         </div>
       </section>
@@ -37,6 +42,7 @@
 
     <div class="ami-divulgacao-lista">
       <p class="ami-table-label" id="ami-divulgacao-lista-titulo">Tabela de colaboradores convidados</p>
+      <p class="ami-section-intro">Consulte os destinatários da divulgação e acompanhe a situação do envio e da entrega por contato.</p>
       <div class="hier-table-shell ami-table-shell"><table id="ami-divulgacao-tabela" class="admin-table hier-register-table ami-table--database" aria-labelledby="ami-divulgacao-lista-titulo" data-produto-exportacao="Lista de colaboradores convidados">
         <thead><tr><th scope="col">Nome do colaborador</th><th scope="col">E-mail do colaborador</th><th scope="col">Instituição</th><th scope="col">Status do envio</th><th scope="col">Data do envio</th><th scope="col">Status da entrega</th></tr></thead><tbody></tbody>
       </table></div>

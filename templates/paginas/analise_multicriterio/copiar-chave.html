@@ -5,13 +5,17 @@
 {% set scripts_defer = true %}
 {% block titulo %}Copiar chave do convite — SICARD{% endblock %}
 {% block classes_body %}ahp-module-page ami-public-page{% endblock %}
-{% block estilos_pagina %}<link rel="stylesheet" href="/assets/css/paginas/ami-copiar-chave.css?v=20261119-1">{% endblock %}
+{% block estilos_pagina %}
+  <link rel="stylesheet" href="/assets/css/paginas/ami-copiar-chave.css?v=20261126-contextos-ahp">
+  <link rel="stylesheet" href="/assets/css/paginas/ami-contextualizacao.css?v=20261126-contextos-ahp">
+{% endblock %}
 {% block conteudo %}
 <main class="conteudo-principal app-main ahp-main">
   <section class="secao-copiar-chave card ahp-step-section" aria-labelledby="copiar-chave-title">
     <div class="ahp-section-label"><i class="fas fa-key" aria-hidden="true"></i><span id="copiar-chave-title">Chave individual do convite</span></div>
     <div class="ahp-section-body ami-copy-key-body">
-      <p>A chave permanece somente no endereço desta página e não é enviada ao servidor.</p>
+      <p class="ami-section-intro">Copie a chave individual do convite para liberar o formulário associado ao e-mail convidado.</p>
+      <p class="form-help">A chave permanece somente no endereço desta página e não é enviada ao servidor.</p>
       <code id="ami-copy-key-value" aria-label="Chave individual"></code>
       <button type="button" class="btn btn-primary" id="ami-copy-key-button" disabled><i class="fas fa-copy c-btn__icon" aria-hidden="true"></i>Copiar chave</button>
       <p class="form-help" id="ami-copy-key-feedback" role="status" aria-live="polite"></p>

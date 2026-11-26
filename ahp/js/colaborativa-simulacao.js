@@ -43,7 +43,7 @@
   document.addEventListener('DOMContentLoaded', () => {
     const notice = document.createElement('p');
     notice.className = 'ahp-info-note'; notice.setAttribute('role', 'status');
-    notice.textContent = 'Simulação do formulário do colaborador. Informe um e-mail convidado e o código de acesso do julgamento. Nenhuma resposta será gravada; o progresso será descartado ao fechar ou recarregar.';
-    document.querySelector('main').prepend(notice);
+    notice.textContent = 'Simulação do formulário do colaborador. O preenchimento será descartado ao fechar ou recarregar a página.';
+    document.getElementById('collab-context').before(notice);
   });
 })(window);

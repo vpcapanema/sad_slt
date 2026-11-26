@@ -333,7 +333,8 @@ $migrations = @(
     "188_lembretes_automaticos_ahp.sql",
     "189_listas_reutilizaveis_divulgacao_ahp.sql",
     "190_notificacoes_lembretes_ahp.sql",
-    "191_instituicao_destinatarios_ahp.sql"
+    "191_instituicao_destinatarios_ahp.sql",
+    "192_rascunhos_email_ahp.sql"
 )
 
 if ($OnlyMigration) {
@@ -574,6 +575,11 @@ if (-not $OnlyMigration -and "190_notificacoes_lembretes_ahp.sql" -notin $migrat
 if (-not $OnlyMigration -and "191_instituicao_destinatarios_ahp.sql" -notin $migrations -and
     -not (Test-SchemaReady "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'ahp' AND table_name = 'comparacao_colaborativa_divulgacao' AND column_name = 'instituicao');")) {
     $migrations += "191_instituicao_destinatarios_ahp.sql"
+}
+
+if (-not $OnlyMigration -and "192_rascunhos_email_ahp.sql" -notin $migrations -and
+    -not (Test-SchemaReady "SELECT to_regclass('ahp.comparacao_colaborativa_email_rascunho') IS NOT NULL;")) {
+    $migrations += "192_rascunhos_email_ahp.sql"
 }
 
 if (-not $OnlyMigration -and "166_politica_usuarios_sicard.sql" -notin $migrations) {

@@ -214,8 +214,9 @@ def test_worker_confere_elegibilidade_depois_da_cadencia_e_so_reserva_uma_vez(mo
     inicio = brasilia(2026, 9, 1, 8)
     pessoa = participante(inicio)
     if modo == "convite":
-        pessoa.update(modo_participacao=modo, clique_em=pessoa["inscrito_em"], inscrito_em=None,
+        pessoa.update(modo_participacao=modo, clique_em=pessoa["inscrito_em"], inscrito_em=None, versao_convite=inicio,
                       resposta_id=None, resposta=None, iniciado_em=None)
+        monkeypatch.setattr(lembretes, "link_lembrete", lambda *args: args[-2] + "?c=teste#acesso=" + "A" * 43)
     repositorio = lembretes.repo
     previsto = lembretes._proximos(lembretes._com_periodo(pessoa), inicio, 1)[0]["previsto_em"]
     agora = previsto + timedelta(minutes=1)
@@ -265,12 +266,18 @@ def test_worker_confere_elegibilidade_depois_da_cadencia_e_so_reserva_uma_vez(mo
     if mudanca is None:
         lembretes.processar(Event(), "https://sicard.example.org/sicard", "example.org")
         conn.send_message.assert_called_once()
-        conteudo = conn.send_message.call_args.args[0].get_content()
+        mensagem = conn.send_message.call_args.args[0]
+        conteudo = mensagem.get_body(preferencelist=("plain",)).get_content()
+        html = mensagem.get_body(preferencelist=("html",)).get_content()
+        assert "Agradecemos" in conteudo
         if modo == "publico":
             assert "/sicard/public/analise-multicriterio/participar/link-publico/" in conteudo
+            assert "Retomar preenchimento" in html
         else:
             assert "/sicard/public/analise-multicriterio/formulario-comparacao-pareada/link-publico/?c=" in conteudo
-            assert "chave individual recebida no convite original" in conteudo
+            assert "#acesso=" in conteudo
+            assert "chave individual" not in conteudo
+            assert "Acessar formulário" in html
         assert finalizados[0][1] == "aceito_smtp"
     else:
         conn.send_message.assert_not_called()

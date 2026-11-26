@@ -10,7 +10,7 @@ import pytest
 
 from api.routers import api_router
 from api.routers.email import router
-from api.services import email_service
+from api.services import email_layout_ahp, email_service, mensagens_ahp
 from api.services.session_service import SessionUser, create_token
 
 SMTP_REAL = smtplib.SMTP
@@ -151,6 +151,33 @@ def test_envia_texto_html_com_remetente_fixo_e_tls(client, smtp, perfil, caplog)
     assert body["id_mensagem"] in caplog.text
     for privado in ("segredo-sintetico", "Texto da mensagem.", "destino@example.com"):
         assert privado not in caplog.text
+
+
+def test_envia_capturas_do_convite_como_imagens_inline(client, smtp):
+    link = "https://sicard.example.com/public/analise-multicriterio/participar/julgamento/"
+    modelo = mensagens_ahp.convite({"nome": "Julgamento PLI-SP 2050"}, link, "01/12/2026, às 23h59")
+    html = mensagens_ahp.html(modelo["texto"], link, mensagens_ahp.ACAO_CONVITE)
+    referencias = [f'src="cid:{item["cid"]}"' for item in email_layout_ahp.IMAGENS_CONVITE]
+    ordem = ["Orientações para preenchimento", *referencias[:2], "Ajuda com a consistência do julgamento",
+             *referencias[2:], "Prazo para resposta e acesso ao formulário"]
+    assert [html.index(trecho) for trecho in ordem] == sorted(html.index(trecho) for trecho in ordem)
+    assert f'bgcolor="{email_layout_ahp.VERDE_PLI}"' in html
+    assert f'bgcolor="{email_layout_ahp.AZUL_PLI}"' in html
+    assert "60%" in modelo["texto"] and "0,10" in modelo["texto"]
+    assert "<img" not in mensagens_ahp.html(modelo["texto"], link, mensagens_ahp.ACAO_CONVITE, ilustrar=False)
+    resposta = client.post("/api/email/enviar", headers=autenticacao(), json=dados(**modelo, html=html))
+    assert resposta.status_code == 200, resposta.text
+    mensagem = smtp[0].send_message.call_args.args[0]
+    parte_relacionada = mensagem.get_body(preferencelist=("related",))
+    assert parte_relacionada.get_content_type() == "multipart/related"
+    imagens = list(parte_relacionada.iter_parts())[1:]
+    assert [imagem["Content-ID"] for imagem in imagens] == [
+        f'<{item["cid"]}>' for item in email_layout_ahp.IMAGENS_CONVITE
+    ]
+    assert all(imagem.get_content_type() == "image/png" for imagem in imagens)
+    assert all(imagem.get_content_disposition() == "inline" for imagem in imagens)
+    assert all(imagem.get_content().startswith(b"\x89PNG\r\n\x1a\n") for imagem in imagens)
+    assert link in mensagem.get_body(preferencelist=("plain",)).get_content()
 
 
 def test_ssl_direto_e_email_sem_html_ou_reply_to(client, smtp, monkeypatch):

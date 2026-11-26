@@ -1,0 +1,74 @@
+.ahp-module-page.ami-page .ami-main > .standard-page-hero:has(+ .ami-page-intro),
+.ami-public-page .ahp-main > .standard-page-hero:has(+ .ami-page-intro) {
+  margin-bottom: var(--ami-space-sm, 0.75rem);
+}
+
+.ami-page .ami-main > .ami-page-intro,
+.ami-public-page .ahp-main > .ami-page-intro {
+  margin: 0;
+  padding-inline: calc(var(--ami-recuo, 1.5rem) + 1px);
+  color: var(--pli-text);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.ami-public-page .ahp-main > .ami-page-intro {
+  margin-block-end: var(--ami-space-sm, 0.75rem);
+  text-align: start;
+  hyphens: manual;
+}
+
+.ami-page .ami-main > .ami-page-intro + .standard-section-action-row {
+  margin-top: var(--ami-space-xs, 0.5rem);
+  align-items: stretch;
+  flex-wrap: wrap;
+  gap: var(--ami-space-xs, 0.5rem);
+}
+
+.ami-page .ami-main > .ami-page-intro + .standard-section-action-row > .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  min-height: 2.5rem;
+}
+
+.ahp-module-page .ami-section-intro {
+  margin: 0 0 var(--ami-espaco-texto, 0.5rem);
+  color: var(--pli-text);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.ami-page .ami-main p.ami-section-intro,
+.ami-public-page .ahp-main p.ami-section-intro {
+  font-size: 0.8125rem;
+}
+
+.ami-environment-content > .ami-section-intro {
+  margin-block: 0.5rem 1rem;
+}
+
+.ami-page .ami-main p.ami-monitor-note {
+  display: block;
+}
+
+.ami-page .ami-main .ami-collaborator-import > .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+}
+
+#ami-public-form-preview iframe {
+  display: block;
+  width: 100%;
+  height: 85vh;
+  border: 0;
+}
+
+@media (max-width: 600px) {
+  .ami-page.ami-central-responsiva .ami-main .ami-registration-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

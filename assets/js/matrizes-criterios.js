@@ -10,6 +10,10 @@
   }
   function showDetails(dialog, host, record) {
     host.replaceChildren();
+    const gestaoJulgamentos = Boolean(dialog.closest('.ami-main[data-modo="espaco"]'));
+    if (gestaoJulgamentos) {
+      host.append(element("p", "Confira a origem da matriz, os critérios que compõem a avaliação e a estrutura de comparação que será apresentada aos colaboradores.", "ami-section-intro"));
+    }
     const metadata = element("dl");
     const fields = { Nome: record.nome, ID: record.id || "Arquivo local — ainda não cadastrado",
       Arquivo: record.arquivo_nome || record.conteudo?.arquivo || "Não informado",
@@ -18,9 +22,11 @@
       if (value != null) metadata.append(element("dt", key), element("dd", value));
     });
     host.append(metadata, element("p", "Somente visualização. As intensidades de importância são recolhidas exclusivamente pelo formulário público; não são atribuídas neste quadro."));
-    function table(title, headers, values, labelText) {
+    function table(title, headers, values, labelText, context) {
       host.append(element("h3", title));
-      if (labelText && document.querySelector('.ami-main[data-modo="espaco"]')) host.append(element("p", labelText, "ami-table-label"));
+      if (gestaoJulgamentos) {
+        host.append(element("p", context, "ami-section-intro"), element("p", labelText, "ami-table-label"));
+      }
       const shell = element("div", null, "matriz-table-wrap");
       const grid = element("table", null, "admin-table matriz-view-table ami-matrix");
       grid.dataset.produtoExportacao = title;
@@ -43,14 +49,15 @@
     const criteria = rows(record.conteudo);
     const keys = [...new Set(criteria.flatMap(row => Object.keys(row)))];
     const premises = table("Critérios e premissas do arquivo", keys, criteria.map(row => keys.map(key => row[key] ?? "—")),
-      "Tabela dos critérios e premissas do arquivo");
+      "Tabela dos critérios e premissas do arquivo", "Consulte os critérios cadastrados, seus grupos e as premissas que definem o que cada critério avalia.");
     host.append(element("p", "As dimensões de todas as linhas da matriz formam os grupos de critérios do julgamento."));
     const names = criteria.map((row, index) => {
       const key = Object.keys(row).find(key => ["criterio", "nome", "name"].includes(key.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase()));
       return key ? row[key] : "Critério " + (index + 1);
     });
     const pairs = table("Estrutura de comparação pareada — sem julgamentos", ["Critério", ...names],
-      names.map(name => [name, ...names.map(() => "—")]), "Matriz da estrutura de comparação pareada sem julgamentos");
+      names.map(name => [name, ...names.map(() => "—")]), "Matriz da estrutura de comparação pareada sem julgamentos",
+      "Confira a disposição dos critérios nas linhas e colunas da matriz antes da coleta de respostas.");
     dialog.showModal();
     [premises, pairs].forEach(grid => global.SLTAnalysisTable(grid, record));
   }

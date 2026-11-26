@@ -59,6 +59,7 @@ def participantes(ambiente_id: str | None = None, *, email: str | None = None,
     with get_connection() as conn:
         return conn.execute(
             """SELECT a.id AS ambiente_id, a.nome AS julgamento, a.token, a.modo_participacao,
+                      m.nome AS matriz_nome, a.arquivo_matriz_nome, a.atualizado_em AS versao_convite,
                       a.status, a.valido_ate, a.lembrete_prazo_alterado_em AS prazo_alterado_em,
                       a.lembrete_notificacoes_ativas AS notificacoes_ativas,
                       a.lembrete_notificacoes_alteradas_em AS notificacoes_alteradas_em,
@@ -80,6 +81,7 @@ def participantes(ambiente_id: str | None = None, *, email: str | None = None,
                       FROM jsonb_array_elements(a.convites) c
                      WHERE a.modo_participacao = 'convite' AND nullif(btrim(c->>'email'), '') IS NOT NULL
                  ) p ON true
+                 LEFT JOIN ahp.matriz_criterios_premissas m ON m.id = a.matriz_id
                  LEFT JOIN ahp.comparacao_colaborativa_lembrete_config c ON c.ambiente_id = a.id
                  LEFT JOIN ahp.comparacao_colaborativa_resposta r ON r.ambiente_id = a.id
                        AND CASE WHEN a.modo_participacao = 'publico' THEN r.inscricao_id = p.inscricao_id

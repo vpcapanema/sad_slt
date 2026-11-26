@@ -8,6 +8,18 @@
   align-items: flex-start;
   gap: 1rem;
 }
+.ami-public-page .secao-copiar-chave .ahp-section-label,
+.ami-public-page #ami-copy-key-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.ami-public-page .ami-copy-key-body p {
+  margin: 0;
+}
+.ami-public-page .ami-copy-key-body .form-help {
+  font-size: 0.75rem;
+}
 .ami-public-page #ami-copy-key-value {
   box-sizing: border-box;
   width: 100%;

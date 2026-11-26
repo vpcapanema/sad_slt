@@ -11,9 +11,9 @@
   <link rel="stylesheet" href="/assets/css/ahp-module.css?v=20261103-regua-invertida">
   <link rel="stylesheet" href="/assets/css/ahp-collab-analytics.css">
   <link rel="stylesheet" href="/assets/css/ahp-collab-explorer.css">
-  <link rel="stylesheet" href="/assets/css/ahp-collab-rounds.css">
+  <link rel="stylesheet" href="/assets/css/ahp-collab-rounds.css?v=20261126-cursor">
   <link rel="stylesheet" href="/assets/css/analise-multicriterio.css?v=20261106-regua-miniatura-7">
-  <link rel="stylesheet" href="/assets/css/analise-multicriterio-tabela.css?v=20260831-larguras-colunas">
+  <link rel="stylesheet" href="/assets/css/analise-multicriterio-tabela.css?v=20261126-cursor">
   <link rel="stylesheet" href="/assets/css/central-respostas-layout.css?v=20261105-table-labels">
   <link rel="stylesheet" href="/assets/css/analise-multicriterio-modal.css?v=20260819-modal5">
   <link rel="stylesheet" href="/assets/css/mad-filter-standard.css?v=20260820-1">
@@ -22,11 +22,12 @@
   <link rel="stylesheet" href="/assets/css/paginas/ami-report-tables.css?v=20261020-paginacao">
   {% if modo_pagina in ['espaco', 'julgamentos'] %}
   <link rel="stylesheet" href="/assets/css/admin-table-controls.css?v=20261015-botoes-quadrados">
-  <link rel="stylesheet" href="/assets/css/paginas/ami-espaco-secoes.css?v=20261126-abertura-julgamentos">
+  <link rel="stylesheet" href="/assets/css/paginas/ami-espaco-secoes.css?v=20261126-email-consistencia">
   {% endif %}
   {% if modo_pagina == 'julgamentos' %}<link rel="stylesheet" href="/assets/css/paginas/sicard-standard-pages.css?v=20261126-padrao-status">{% endif %}
   {% if modo_pagina == 'julgamentos' %}<link rel="stylesheet" href="/assets/css/paginas/central-respostas-padrao.css?v=20261126-padrao-status">{% endif %}
   {% if modo_pagina in ['espaco', 'julgamentos'] %}<link rel="stylesheet" href="/assets/css/paginas/ami-responsivo.css?v=20261126-iniciais-grupos">{% endif %}
+  <link rel="stylesheet" href="/assets/css/paginas/ami-contextualizacao.css?v=20261126-contextos-ahp">
 {% endblock %}
 {% block conteudo %}
 {% set indicacao_processos = modo_pagina in ['espaco', 'julgamentos'] %}
@@ -36,23 +37,20 @@
   <section class="secao-cabecalho-julgamentos card ahp-step-intro ami-hero standard-page-hero card-cabecalho-julgamentos">
     <h1 class="standard-page-hero__title" id="ami-page-title"><i id="ami-page-title-icon" class="{% if modo_pagina == 'julgamentos' %}fa-solid fa-list-check{% elif modo_pagina == 'formulario' %}fa-solid fa-clipboard-question{% else %}fa-solid fa-people-group{% endif %}" aria-hidden="true"></i><span id="ami-page-title-text">{% if modo_pagina in ['espaco', 'julgamentos'] %}Central de {{ 'julgamentos' if modo_pagina == 'espaco' else 'respostas' }}{% elif modo_pagina == 'formulario' %}Formulário dos especialistas{% else %}Gestão de julgamentos AHP{% endif %}</span></h1>
     <p class="ami-eyebrow standard-page-hero__eyebrow">Análise Multicritério Interativa</p>
-    {% if modo_pagina != 'espaco' %}
-    <p class="standard-page-hero__description" id="ami-page-intro">{% if modo_pagina == 'julgamentos' %}Consulte as respostas enviadas pelos especialistas nos julgamentos colaborativos.{% elif modo_pagina == 'formulario' %}Selecione um julgamento e abra o formulário público destinado aos especialistas.{% else %}Configure participantes, prazo de coleta e acesso ao ambiente colaborativo.{% endif %}</p>
-    {% endif %}
   </section>
-  {% if modo_pagina == 'espaco' %}
-  <p class="ami-page-intro" id="ami-page-intro">Crie e gerencie os julgamentos colaborativos do Método de Análise Hierárquica (AHP). Nesta página, você define o que será comparado, organiza o acesso dos colaboradores e acompanha a coleta de respostas que servirá de base para o cálculo dos pesos.</p>
-  {% endif %}
+  <p class="ami-page-intro" id="ami-page-intro">{% if modo_pagina == 'julgamentos' %}Nesta página, você acompanha a participação dos especialistas, examina as comparações recebidas e avalia a consistência das matrizes. Os resultados da análise permitem consolidar e homologar os pesos para a finalidade do julgamento.{% elif modo_pagina == 'formulario' %}Nesta página, você localiza o julgamento e abre o endereço de participação associado ao registro selecionado.{% else %}Crie e gerencie os julgamentos colaborativos do Método de Análise Hierárquica (AHP). Nesta página, você define o que será comparado, organiza o acesso dos colaboradores e acompanha a coleta de respostas que servirá de base para o cálculo dos pesos.{% endif %}</p>
   {% set tabela_colaborativa_id = "ami-judgments" %}{% set tabela_colaborativa_respostas = modo_pagina == 'julgamentos' %}{% set tabela_colaborativa_comparacao = modo_pagina == 'espaco' %}{% include "componentes/_tabela_colaborativa.html" %}
   {% if tabela_colaborativa_respostas %}
   <section class="ami-environment-content is-hidden" id="ami-analysis-summary" aria-labelledby="ami-analysis-title">
     <h2 class="ami-environment-title" id="ami-analysis-title"><i class="fas fa-chart-line" aria-hidden="true"></i> <span>Análise e consolidação das respostas</span></h2>
+    <p class="ami-section-intro">Consulte o resumo da participação no julgamento selecionado. Os indicadores mostram quantos colaboradores ainda não começaram, quantos estão preenchendo o formulário e quantas respostas foram enviadas e classificadas quanto à consistência.</p>
     <div class="ami-status-cards" id="ami-analysis-participation" aria-label="Participação na rodada"></div>
   </section>
   {% endif %}
   {% include "componentes/analise_multicriterio/_espaco_analitico_respostas.html" %}
   <div class="ami-environment-content is-hidden" id="ami-create-section">
     <h2 class="ami-environment-title"><i class="fas fa-people-group" aria-hidden="true"></i> <span>Ambiente colaborativo</span></h2>
+    <p class="ami-section-intro">Neste ambiente, você organiza a coleta de um julgamento. A configuração reúne as regras de comparação e de participação. Após o cadastro, você gerencia os convites ou divulga o link de inscrição, conforme a forma de participação.</p>
     <div id="ami-create-status" class="ami-status-cards" aria-label="Status do ambiente colaborativo" hidden></div>
     <form id="ami-create-form">
       {% include "componentes/analise_multicriterio/_analise_multicriterio_interativa.html" %}
@@ -60,6 +58,7 @@
     <section id="ami-public-link-card" class="card ahp-step-section is-hidden">
       <div class="ahp-section-label"><i class="fas fa-link" aria-hidden="true"></i><span>Link público de colaboração</span></div>
       <div class="ahp-section-body">
+        <p class="ami-section-intro">Acesse o endereço público de inscrição do julgamento. Após se inscrever, cada colaborador pode realizar a avaliação em duas etapas e enviar sua resposta.</p>
         <label class="c-form-group">Link para divulgar<input class="c-form-control" type="url" id="ami-public-link" readonly></label>
         <div class="ahp-form-actions">
           <button type="button" class="btn btn-primary" id="ami-copy-public-link"><i class="fas fa-copy" aria-hidden="true"></i> Copiar link público</button>
@@ -74,39 +73,51 @@
       <section id="ami-email-draft-card" class="secao-collab-email-draft-card card card-ami-email-draft ahp-step-section is-hidden">
         <div class="ahp-section-label"><i class="fas fa-envelope" aria-hidden="true"></i><span>Convites e acompanhamento</span></div>
         <div class="ahp-section-body">
+          <p class="ami-section-intro">Prepare os convites individuais e acompanhe a participação dos colaboradores, do envio do e-mail ao recebimento das respostas.</p>
           <section class="secao-ami-subcard ahp-subcard">
             <div class="ahp-subsection-title"><span class="ahp-subsection-num">1</span><span>Mensagem de email e notificação</span></div>
             <div class="ahp-section-body">
-          <p class="step-intro ami-email-instrucao"><i class="fas fa-circle-info" aria-hidden="true"></i><span>Confira a mensagem abaixo e envie o convite pelo SICARD aos colaboradores salvos. Cada pessoa recebe um e-mail individual, com o link persistente e os critérios deste julgamento.</span></p>
+          <p class="ami-section-intro">Prepare o assunto e o conteúdo do convite e confira a mensagem destinada a cada colaborador. O SICARD inclui o link de acesso ao formulário no e-mail.</p>
           <label class="c-form-group">Prévia do convite por colaborador<select id="ami-email-preview-recipient" class="c-form-control"></select></label>
           <div class="ami-email-header-fields">
             <label class="c-form-group" for="ami-email-sender-address" data-read-control>Remetente<input id="ami-email-sender-address" class="c-form-control" type="text" readonly aria-readonly="true" value="Carregando conta do serviço…"><span class="form-help">Conta real utilizada pelo backend para autenticação no serviço de e-mail.</span></label>
             <label class="c-form-group" for="ami-email-sender-alias">Alias do Remetente<input id="ami-email-sender-alias" class="c-form-control" type="text" maxlength="200" autocomplete="off" value="SICARD-PLI"><span class="form-help">Nome exibido como remetente na caixa de e-mail do colaborador.</span></label>
-            <label class="c-form-group" for="ami-email-subject">Assunto<input id="ami-email-subject" class="c-form-control" type="text" maxlength="200" autocomplete="off"><span class="form-help">Assunto preenchido pelo SICARD e editável para este julgamento.</span></label>
+            <label class="c-form-group" for="ami-email-subject">Assunto<input id="ami-email-subject" class="c-form-control" type="text" maxlength="200" autocomplete="off"><span class="form-help">Assunto sugerido pelo SICARD e editável para o próximo envio.</span></label>
           </div>
           <div class="ami-email-content-grid">
             <div class="c-form-group ami-email-message-field"><label id="ami-email-template-label" class="c-form-label" for="ami-email-template"><i class="fas fa-envelope-open-text"></i> Mensagem aos colaboradores</label>
               <div class="ami-email-editor-container"><textarea id="ami-email-template" class="c-form-control collab-email-template ami-email-message-part" maxlength="50000" aria-label="Mensagem antes do link do formulário" aria-describedby="ami-email-message-help"></textarea>
                 <a id="ami-email-editor-link" class="ami-email-protected-link" href="#" target="_blank" rel="noopener" aria-label="Abrir formulário público do julgamento">Carregando link do formulário…</a>
                 <textarea id="ami-email-template-after" class="c-form-control collab-email-template ami-email-message-part" maxlength="50000" aria-label="Mensagem depois do link do formulário" aria-describedby="ami-email-message-help"></textarea>
-                <p class="form-help" id="ami-email-message-help">Todo o texto pode ser editado. O link do formulário é persistido, clicável e protegido contra alteração. A chave individual é acrescentada somente no momento do envio.</p>
+                <p class="form-help" id="ami-email-message-help">Edite o texto antes e depois do link e salve para usar a versão no próximo envio. Depois do envio, o editor volta ao modelo padrão. O SICARD inclui o link do julgamento automaticamente.</p>
               </div>
             </div>
             <div class="c-form-group ami-email-preview-field"><div class="c-form-label" id="ami-email-preview-field-label"><i class="fas fa-eye" aria-hidden="true"></i> Prévia institucional do convite</div>
               <div class="ami-email-institutional-preview" id="ami-email-institutional-preview" aria-labelledby="ami-email-preview-field-label ami-email-preview-title">
                 <div class="ami-email-preview-title" id="ami-email-preview-title">SICARD · Convite para colaboração</div>
-                <div class="ami-email-preview-body"><div id="ami-email-preview-message"></div><a class="ami-email-preview-button" id="ami-email-preview-button" href="#" target="_blank" rel="noopener">Acessar formulário colaborativo</a><strong>Chave individual do convite</strong><code id="ami-email-preview-token">gerada individualmente no envio</code><button type="button" class="btn btn-secondary" id="ami-copy-email-token-preview" disabled title="A chave real é gerada somente no envio"><i class="fas fa-copy c-btn__icon" aria-hidden="true"></i>Copiar chave</button><p class="form-help" id="ami-email-preview-help">Esta é a prévia institucional usada pelo serviço de envio. O botão e a chave individual são acrescentados no momento do envio.</p></div>
+                <div class="ami-email-preview-body">
+                  <div id="ami-email-preview-message"></div>
+                  <div id="ami-email-preview-exemplos" class="ami-email-preview-exemplos" hidden></div>
+                  <div id="ami-email-preview-consistencia" class="ami-email-preview-consistencia" hidden></div>
+                  <div id="ami-email-preview-exemplos-consistencia" class="ami-email-preview-exemplos" hidden></div>
+                  <section class="ami-email-preview-access" id="ami-email-preview-access">
+                    <h4 id="ami-email-preview-access-title">Prazo para resposta e acesso ao formulário</h4>
+                    <div class="ami-email-preview-access-body"><div id="ami-email-preview-deadline"></div><a class="ami-email-preview-button" id="ami-email-preview-button" href="#" target="_blank" rel="noopener">Acessar formulário</a></div>
+                  </section>
+                  <div id="ami-email-preview-message-after"></div>
+                </div>
               </div>
             </div>
           </div>
           <div class="ahp-form-actions" id="ami-email-actions" role="group" aria-label="Controles da mensagem de e-mail"><button type="button" class="btn btn-secondary" id="ami-save-email-config" disabled><i class="fas fa-floppy-disk c-btn__icon" aria-hidden="true"></i>Salvar mensagem</button><button type="button" class="btn btn-secondary" id="ami-copy-email-link"><i class="fas fa-copy c-btn__icon" aria-hidden="true"></i>Copiar link</button><button type="button" class="btn btn-secondary" id="ami-open-mail" disabled><i class="fas fa-envelope c-btn__icon" aria-hidden="true"></i>Enviar e-mail</button><button type="button" class="btn btn-secondary" id="ami-email-receipts" disabled><i class="fas fa-arrows-rotate c-btn__icon" aria-hidden="true"></i>Atualizar confirmações</button><button type="button" class="btn btn-secondary" id="ami-revoke-invitation" disabled><i class="fas fa-ban c-btn__icon" aria-hidden="true"></i>Revogar convite selecionado</button></div>
-          <p class="form-help">O servidor acrescenta uma chave individual de 43 caracteres exclusiva do destinatário. O reenvio mantém a mensagem e a chave originais, sem renovar a validade. Códigos compartilhados antigos não são aceitos. A revogação abaixo afeta apenas o destinatário selecionado na prévia, sem excluir sua resposta.</p>
+          <p class="form-help">O reenvio usa o modelo padrão ou a edição salva para esse envio. Revogar o convite cancela o acesso do destinatário selecionado na prévia e preserva a resposta registrada.</p>
             </div>
           </section>
           <section id="ami-monitoring-section" class="secao-ami-monitoring ahp-subcard ami-monitoring-section standard-table-section">
             <div class="ahp-subsection-title"><span class="ahp-subsection-num">2</span><span>Monitoramento das atividades</span></div>
             <div class="ahp-section-body">
-          <p class="form-help"><span id="ami-monitor-invited-help">A etapa da colaboração avança automaticamente quando o convite é enviado, o link é acessado, o preenchimento começa e a resposta é enviada.</span><span id="ami-monitor-public-help" hidden>A etapa acompanha a inscrição, o início do preenchimento e o envio da resposta.</span> Clique no status do envio para consultar os registros de entrega e leitura.</p>
+          <p class="ami-section-intro">Acompanhe a etapa alcançada por cada colaborador e identifique quem ainda precisa concluir a participação. O acompanhamento começa no envio do convite ou na inscrição, conforme a forma de acesso, e segue até o envio da resposta.</p>
+          <p class="form-help ami-monitor-note"><span id="ami-monitor-invited-help">A etapa da colaboração avança automaticamente quando o convite é enviado, o link é acessado, o preenchimento começa e a resposta é enviada.</span><span id="ami-monitor-public-help" hidden>A etapa acompanha a inscrição, o início do preenchimento e o envio da resposta.</span> Clique no status do envio para consultar os registros de entrega e leitura.</p>
           <p id="ami-email-status" class="form-help" role="status" aria-live="polite"></p>
           {% if modo_pagina == 'espaco' %}
           <div class="ami-monitor-table-heading">
@@ -144,6 +155,7 @@
     <div class="json-modal ami-data-modal__card">
       <header class="json-modal-head ami-data-modal__head"><h2 id="ami-email-history-title">Histórico de e-mail</h2><button type="button" class="json-modal-close" id="ami-email-history-close" aria-label="Fechar"><i class="fas fa-xmark" aria-hidden="true"></i></button></header>
       <div class="json-modal-body ami-data-modal__content standard-table-section">
+        <p class="ami-section-intro">Consulte os registros associados ao e-mail selecionado para verificar o andamento da entrega e as confirmações de leitura disponíveis.</p>
         <p id="ami-email-history-context" class="form-help"></p>
         <div class="ami-filtered-table">
           {% set filtro_prefixo = "ami-email-history-filter" %}{% set filtro_rotulo = "Filtrar histórico de e-mail" %}{% include "componentes/filtro_tabela.html" %}
@@ -162,6 +174,7 @@
     <div class="json-modal ami-data-modal__card">
       <header class="json-modal-head ami-data-modal__head"><h2 id="ami-email-detail-title">Detalhes do envio</h2><button type="button" class="json-modal-close" id="ami-email-detail-close" aria-label="Fechar"><i class="fas fa-xmark" aria-hidden="true"></i></button></header>
       <div class="json-modal-body ami-data-modal__content">
+        <p class="ami-section-intro">Consulte o registro de um envio específico para identificar o motivo da situação exibida no histórico.</p>
         <p id="ami-email-detail-texto" class="ami-detail-message"></p>
       </div>
     </div>
@@ -169,11 +182,21 @@
   <section class="card-ami-pairwise secao-ami-pairwise card ahp-step-section is-hidden" id="ami-pairwise-panel">
     <div class="ahp-section-label"><i class="fas fa-table-cells" aria-hidden="true"></i><span>Simulação de comparação pareada</span></div>
     <div class="ahp-section-body">
-      <p class="step-intro">Simulação local: as alterações não são salvas e não modificam respostas, análises ou pesos homologados.</p><div id="ami-saaty-scale-host"></div>
+      <p class="ami-section-intro">Teste comparações usando os critérios ou as dimensões do julgamento selecionado. A simulação mostra como diferentes escolhas afetam a matriz e sua consistência.</p>
+      <p class="form-help">Os valores simulados ficam disponíveis nesta sessão e são descartados ao recarregar a página.</p>
+      <section class="ahp-subcard info-card info-card--spaced" id="saaty-scale-subcard">
+        <div class="ahp-subsection-title"><span class="ahp-subsection-num">{{ '1' if indicacao_processos else '3.1' }}</span><span>Escala de intensidade de importância</span></div>
+        <div class="info-card-content">
+          <p class="ami-section-intro">Use a escala de Saaty para indicar qual item do par é mais importante e com que intensidade.</p>
+          <p class="form-help"><strong>1</strong> indica igual importância. Valores maiores que 1 favorecem o item da linha. As frações favorecem o item da coluna. O SICARD preenche o valor inverso automaticamente.</p>
+        </div>
+      </section>
       <label class="c-form-group is-hidden">Grupo de critérios<select class="c-form-control" id="ami-pairwise-group"></select></label>
       <div class="ahp-subcard info-card info-card--spaced" id="ami-metrics-card">
         <div class="ahp-subsection-title"><span class="ahp-subsection-num">{{ '2' if indicacao_processos else '3.2' }}</span><span>Indicadores instantâneos de consistência AHP</span></div>
-        <div class="info-card-content"><div class="ahp-live-metrics ami-live-metrics is-initial" id="ami-live-metrics" aria-live="polite">
+        <div class="info-card-content">
+        <p class="ami-section-intro">Acompanhe como os valores simulados afetam a coerência da matriz à medida que as comparações são alteradas.</p>
+        <div class="ahp-live-metrics ami-live-metrics is-initial" id="ami-live-metrics" aria-live="polite">
           <div class="ahp-metric-card"><div class="ahp-metric-card__label">Lambda máximo (λmax)</div><div class="ahp-metric-card__value" id="ami-metric-lambda">—</div><div class="ahp-metric-card__sub">instantâneo</div></div>
           <div class="ahp-metric-card"><div class="ahp-metric-card__label">Índice de consistência (IC)</div><div class="ahp-metric-card__value" id="ami-metric-ic">—</div><div class="ahp-metric-card__sub">instantâneo</div></div>
           <div class="ahp-metric-card"><div class="ahp-metric-card__label">Índice aleatório (IA)</div><div class="ahp-metric-card__value" id="ami-metric-ia">—</div><div class="ahp-metric-card__sub">Saaty</div></div>
@@ -184,6 +207,15 @@
       {% include "componentes/analise_multicriterio/_formulario_comparacao_pareada.html" %}
     </div>
   </section>
+  {% if tabela_colaborativa_comparacao %}
+  <section class="card ahp-step-section" id="ami-public-form-preview" hidden>
+    <div class="ahp-section-label"><i class="fas fa-clipboard-list" aria-hidden="true"></i><span>Simulação do formulário do colaborador</span></div>
+    <div class="ahp-section-body">
+      <p class="ami-section-intro">Percorra o formulário do julgamento por convite para conferir o escopo, os pares apresentados e a experiência de preenchimento.</p>
+      <iframe title="Formulário de comparação pareada — simulação"></iframe>
+    </div>
+  </section>
+  {% endif %}
 </main>
 {% endblock %}
 {% block scripts_pagina %}
@@ -193,12 +225,12 @@
   <script src="/assets/js/admin-auth.js"></script>
   <script src="/assets/vendor/xlsx/xlsx-0.18.5.min.js"></script>
   <script src="/assets/js/paginas/ami-status.js?v=20261126-padrao-status"></script>
-  <script src="/assets/js/paginas/analise-multicriterio-tabela.js?v=20261126-padrao-status"></script>
+  <script src="/assets/js/paginas/analise-multicriterio-tabela.js?v=20261126-contextos-ahp"></script>
   <script src="/assets/js/api-erro.js?v=20261027"></script>
-  <script src="/assets/js/paginas/ami-email.js?v=20261126-padrao-status"></script>
-  {% if modo_pagina == 'espaco' %}<script src="/assets/js/paginas/ami-divulgacao.js?v=20261126-padrao-status"></script>{% endif %}
+  <script src="/assets/js/paginas/ami-email.js?v=20261126-email-consistencia"></script>
+  {% if modo_pagina == 'espaco' %}<script src="/assets/js/paginas/ami-divulgacao.js?v=20261126-email-ahp"></script>{% endif %}
   <script src="/assets/js/matriz-criterios-arquivo.js?v=20261009"></script>
-  <script src="/assets/js/matrizes-criterios.js?v=20261124-matriz-integral"></script>
+  <script src="/assets/js/matrizes-criterios.js?v=20261126-contextos-ahp"></script>
   <script src="/assets/js/saaty-selector-color.js?v=20261103-1"></script>
-  <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20261126-contextualizacao"></script>
+  <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20261126-email-ahp"></script>
 {% endblock %}

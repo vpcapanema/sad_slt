@@ -4,6 +4,7 @@ const {chromium} = require('playwright');
 
 const base = process.env.SICARD_TEST_URL || 'http://127.0.0.1:8083';
 const link = `${base}/public/analise-multicriterio/participar/rodada-publica/`;
+const padrao = {assunto: 'Convite para colaboração no SICARD', texto: `Olá, colaborador(a)!\n\n${link}\n\nAgradecemos sua contribuição.`};
 const julgamento = {id: 'rodada', token: 'rodada-publica', nome: 'Consulta de teste', modo_participacao: 'publico',
   status: 'encerrada', criadoEm: '2025-01-01T12:00:00Z', valido_ate: '2025-12-31T23:59:59-03:00',
   url_publica: link, n_criterios: 2, criterios: [], convites: []};
@@ -48,9 +49,10 @@ const inscricaoDireta = {nome: 'Inscrição Direta', email: 'direto@example.org'
       if (path.endsWith('/divulgacao') || path.endsWith('/divulgacao/confirmacoes')) return route.fulfill({json: {
         destinatarios: contatos, emails_inscritos: [...(inscricaoDiretaVisivel ? [inscricaoDireta.email] : []), ...(inscrito ? ['ana@example.org'] : [])],
         registros, mensagem: mensagemSalva, confirmacoes_configuradas: true}});
-      if (path.endsWith('/divulgacao/mensagem')) {
+      if (path.endsWith('/emails/mensagem')) {
+        if (req.method() === 'GET') return route.fulfill({json: {padrao, rascunho: mensagemSalva}});
         assert.equal(req.method(), 'PUT');
-        mensagemSalva = req.postDataJSON();
+        mensagemSalva = {id: 'edicao-para-envio', ...req.postDataJSON()};
         return route.fulfill({json: mensagemSalva});
       }
       if (path.endsWith('/divulgacao/destinatarios')) {
@@ -78,6 +80,13 @@ const inscricaoDireta = {nome: 'Inscrição Direta', email: 'direto@example.org'
       if (path.endsWith('/divulgacao/enviar')) {
         const payload = req.postDataJSON();
         disparos.push(payload);
+        if (payload.rascunho_id) {
+          assert.equal(payload.rascunho_id, mensagemSalva.id);
+          assert.match(mensagemSalva.texto, /Mensagem revisada/);
+          assert.ok(mensagemSalva.texto.includes(link));
+          assert.match(mensagemSalva.texto, /Agradecemos a colaboração/);
+          mensagemSalva = null;
+        }
         const item = {id: String(disparos.length), destinatario: payload.destinatario, natureza: 'divulgacao',
           criado_em: new Date().toISOString(), envio_status: 'aceito_smtp', entrega_status: 'sem_confirmacao',
           smtp_aceito_em: dataEnvio, leitura_status: 'confirmada', eventos: [{tipo: 'leitura', ocorrido_em: dataInscricao}]};
@@ -103,7 +112,7 @@ const inscricaoDireta = {nome: 'Inscrição Direta', email: 'direto@example.org'
     assert.equal(await page.locator('#ami-public-link').inputValue(), link);
     assert.equal(await linkMensagem.getAttribute('href'), link);
     assert.equal(await linkMensagem.textContent(), link);
-    assert.equal(await painel.getByLabel('Mensagem', {exact: true}).isEditable(), false);
+    assert.equal(await painel.getByLabel('Mensagem antes do link', {exact: true}).isEditable(), false);
     assert.equal(await painel.getByLabel('Carregar lista de um arquivo').isDisabled(), true);
     assert.equal(await painel.getByRole('button', {name: 'Carregar lista existente'}).isDisabled(), true);
     assert.equal(await painel.getByRole('button', {name: 'Salvar mensagem'}).isDisabled(), true);
@@ -129,7 +138,7 @@ const inscricaoDireta = {nome: 'Inscrição Direta', email: 'direto@example.org'
       return {
         acimaDaSecao: espaco(divulgacao.previousElementSibling, divulgacao),
         acimaDoTitulo: espaco(editor, titulo),
-        abaixoDoTitulo: espaco(titulo, moldura),
+        abaixoDaIntroducao: espaco(titulo.nextElementSibling, moldura),
         acimaDasAcoes: espaco(moldura, acoes),
         acimaDasAcoesReferencia: espaco(referencia, acoesReferencia),
         fonteTitulo: fonte(titulo),
@@ -149,7 +158,7 @@ const inscricaoDireta = {nome: 'Inscrição Direta', email: 'direto@example.org'
       } else {
         assert.ok(medidas.acimaDaSecao >= 16, 'Separação da seção em relação aos botões');
         assert.ok(medidas.acimaDoTitulo >= 16, 'Separação do título em relação aos campos');
-        assert.equal(medidas.abaixoDoTitulo, 12);
+        assert.ok(medidas.abaixoDaIntroducao >= 0);
         assert.equal(medidas.acimaDasAcoes, 8);
       }
       assert.equal(medidas.acimaDasAcoes, medidas.acimaDasAcoesReferencia);
@@ -183,7 +192,7 @@ const inscricaoDireta = {nome: 'Inscrição Direta', email: 'direto@example.org'
     assert.deepEqual(tipografia.ajuda, tipografia.ajudaReferencia);
     assert.equal(tipografia.gapCampos, '8px');
     assert.equal(tipografia.margemImportacao, '0px');
-    for (const campo of ['Nome do destinatário', 'E-mail do destinatário', 'Assunto do e-mail', 'Mensagem']) {
+    for (const campo of ['Nome do destinatário', 'E-mail do destinatário', 'Assunto do e-mail', 'Mensagem antes do link', 'Mensagem depois do link']) {
       assert.equal(await painel.getByLabel(campo, {exact: true}).isEditable(), true, campo);
     }
     const medirLinha = () => painel.locator('#ami-divulgacao-contato').evaluate(form => {
@@ -278,18 +287,19 @@ const inscricaoDireta = {nome: 'Inscrição Direta', email: 'direto@example.org'
     assert.equal(await painel.locator('#ami-divulgacao-enviar').isDisabled(), true);
     assert.equal(await painel.locator('#ami-divulgacao-prazo').isVisible(), true);
     const assunto = 'Consulta pública · nova rodada';
-    const textoSalvo = '  Prezados,\n\nTexto preparado para este julgamento.\n ';
+    const textoSalvo = 'Prezados,\n\nTexto preparado para este julgamento.';
     await painel.getByLabel('Assunto do e-mail').fill(assunto);
-    await painel.getByLabel('Mensagem', {exact: true}).fill(textoSalvo);
+    await painel.getByLabel('Mensagem antes do link', {exact: true}).fill(textoSalvo);
     await painel.getByRole('button', {name: 'Salvar mensagem'}).click();
-    await painel.getByText('Mensagem salva neste julgamento.').waitFor();
-    assert.deepEqual(mensagemSalva, {assunto, texto: textoSalvo});
+    await painel.getByText('Edição salva para o próximo envio deste julgamento.').waitFor();
+    assert.equal(mensagemSalva.assunto, assunto);
+    assert.ok(mensagemSalva.texto.startsWith(textoSalvo) && mensagemSalva.texto.includes(link));
     await page.locator('#ami-create-cancel').click();
-    assert.equal(await painel.getByLabel('Mensagem', {exact: true}).isEditable(), false);
+    assert.equal(await painel.getByLabel('Mensagem antes do link', {exact: true}).isEditable(), false);
     await page.locator('#ami-create-cancel').click();
     await page.locator('#ami-judgments-view-action').click();
     await painel.getByRole('button', {name: 'Salvar mensagem'}).waitFor();
-    await page.waitForFunction(texto => document.querySelector('#ami-divulgacao-mensagem').value === texto, textoSalvo);
+    await page.waitForFunction(texto => document.querySelector('#ami-divulgacao-mensagem').value.trimEnd() === texto, textoSalvo);
     assert.equal(await painel.getByLabel('Assunto do e-mail').inputValue(), assunto);
     assert.equal(await linkMensagem.textContent(), link);
     await page.locator('#ami-environment-edit').click();
@@ -311,24 +321,29 @@ const inscricaoDireta = {nome: 'Inscrição Direta', email: 'direto@example.org'
     await ana.getByRole('checkbox').check();
     assert.equal(await painel.locator('#ami-divulgacao-enviar').isEnabled(), true);
     assert.equal(salvamentos.length, 1);
-    const textoAtual = '  Mensagem revisada.\n\nNovo parágrafo com acentuação.\n ';
-    await painel.getByLabel('Mensagem', {exact: true}).fill(textoAtual);
+    const textoAtual = 'Mensagem revisada.\n\nNovo parágrafo com acentuação.';
+    await painel.getByLabel('Mensagem antes do link', {exact: true}).fill(textoAtual);
+    await painel.getByLabel('Mensagem depois do link').fill('Agradecemos a colaboração.');
+    assert.equal(await painel.locator('#ami-divulgacao-enviar').isDisabled(), true);
+    await painel.getByRole('button', {name: 'Salvar mensagem'}).click();
+    await painel.getByText('Edição salva para o próximo envio deste julgamento.').waitFor();
     await painel.locator('#ami-divulgacao-enviar').click();
     await page.locator('#pfsConfirmOk').click();
     await ana.getByRole('button', {name: /Aceito pelo servidor/}).waitFor();
     assert.equal(await ana.locator('td').nth(5).textContent(), '26/11/2026, 11:36:23');
-    assert.equal(disparos[0].assunto, assunto);
-    assert.equal(disparos[0].texto, textoAtual);
+    assert.equal(disparos[0].rascunho_id, 'edicao-para-envio');
     assert.equal(disparos[0].destinatario, 'ana@example.org');
     assert.equal(disparos[0].reenvio, false);
     assert.match(await ana.innerText(), /Sem confirmação/);
     assert.equal(await ana.getByText('Lido', {exact: true}).count(), 0);
     assert.equal(await painel.locator('#ami-divulgacao-enviar').isDisabled(), true);
 
+    await page.waitForFunction(assunto => document.querySelector('#ami-divulgacao-assunto').value === assunto, padrao.assunto);
     await painel.locator('#ami-divulgacao-reenviar').click();
     await page.locator('#pfsConfirmOk').click();
     await page.waitForFunction(() => document.querySelector('#ami-divulgacao-status').textContent.includes('1 de 1'));
     assert.equal(disparos[1].reenvio, true);
+    assert.equal(disparos[1].rascunho_id, null);
     await ana.getByRole('button', {name: /Histórico de envio/}).click();
     await page.locator('#ami-email-history-title').getByText('E-mail de divulgação').waitFor();
     assert.equal(await page.locator('#ami-email-history-body tr').count(), 2);

@@ -201,7 +201,9 @@ const BASE = process.env.SICARD_BROWSER_BASE_URL || 'http://127.0.0.1:8083';
  assert.deepEqual(await seletores.evaluateAll(campos => campos.map(campo => campo.id)), ['ami-analysis-scope', 'ami-pairs-judge', 'ami-analysis-measure']);
  await page.setViewportSize({width:1440,height:900});
  const estiloDoResumo = await page.locator('#ami-analysis-title').evaluate(titulo => {
-   const grade = titulo.nextElementSibling, card = grade.firstElementChild;
+   const abertura = titulo.nextElementSibling;
+   const grade = abertura.nextElementSibling, card = grade.firstElementChild;
+   if (!abertura.matches('p.ami-section-intro')) throw new Error('A abertura deve ficar entre o título e os indicadores.');
    return [getComputedStyle(titulo).fontSize, getComputedStyle(grade).gap, getComputedStyle(card).padding, getComputedStyle(card).borderRadius];
  });
  assert.deepEqual(estiloDoResumo, ['23.2px', '16px', '16px', '8px']);

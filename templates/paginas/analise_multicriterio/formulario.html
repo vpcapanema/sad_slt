@@ -4,22 +4,31 @@
    O símbolo reduzido atende ao cabeçalho mobile em alta densidade; original preservado. #}
 {% set scripts_defer = true %}
 {% set simbolo_sicard = "/assets/img/brand/sicard-simbolo-384.png" %}
-{% set subtitulo = "Matriz de comparação pareada AHP" %}
+{% set titulo_pagina = "Formulário de comparação pareada" %}
+{% set subtitulo = "Análise Multicritério Interativa" %}
 {% set navegacao = "publica" %}
 {% set somente_marca = not modo_modelo %}
 {% set requer_autenticacao = false %}
-{% block titulo %}{% if modo_modelo %}Formulário de comparação pareada — modelo PLI{% else %}Julgamento interativo{% endif %} — SICARD{% endblock %}
+{% block titulo %}{{ titulo_pagina }}{% if modo_modelo %} — modelo PLI{% endif %} — SICARD{% endblock %}
 {% block classes_body %}ahp-module-page ahp-colaborativa-page ami-public-page escala-revisada{% endblock %}
 {% block base_url %}<base href="/public/analise-multicriterio/formulario-comparacao-pareada/">{% endblock %}
 {% block estilos_pagina %}
 	<link rel="stylesheet" href="/assets/css/ahp-module.css?v=20261103-regua-invertida">
 	<link rel="stylesheet" href="/assets/css/analise-multicriterio.css?v=20260819-ui6">
 	<link rel="stylesheet" href="/assets/css/escala-tipografica.css">
-	<link rel="stylesheet" href="/assets/css/paginas/ahp-formulario-publico.css?v=20261124-acesso-direto">
+	<link rel="stylesheet" href="/assets/css/page-title-standard.css?v=20260820-3">
+	<link rel="stylesheet" href="/assets/css/paginas/ahp-formulario-publico.css?v=20261126-identificacao">
+	<link rel="stylesheet" href="/assets/css/paginas/ami-responsivo.css?v=20261126-contexto-formulario">
+	<link rel="stylesheet" href="/assets/css/paginas/ami-contextualizacao.css?v=20261126-contexto-formulario">
 {% endblock %}
 
 {% block conteudo %}
 <main class="conteudo-principal app-main ahp-main">
+		<section class="card ahp-step-intro standard-page-hero" aria-labelledby="collab-page-title">
+			<h1 class="standard-page-hero__title" id="collab-page-title"><i class="fa-solid fa-clipboard-question" aria-hidden="true"></i><span>{{ titulo_pagina }}</span></h1>
+			<p class="standard-page-hero__eyebrow">{{ subtitulo }}</p>
+		</section>
+		<p class="ami-page-intro" id="collab-page-intro">{% if modo_modelo %}Neste formulário, você pode praticar a comparação de critérios com a matriz do PLI-SP 2050. Em cada par, indique qual critério é mais importante e com que intensidade.{% else %}Neste formulário, você compara dois itens por vez e indica qual tem mais importância para o objetivo do julgamento e com que intensidade. O SICARD usa essas comparações para calcular os pesos.{% endif %}</p>
 		{% if modo_inscricao %}<div id="collab-public-enrollment" data-token="{{ token }}" data-email="{{ inscricao.email }}" hidden></div>{% endif %}
 		<section class="card-collab-context secao-collab-context card ahp-step-section">
 			<div class="ahp-section-label"><i class="fas fa-compass"></i><span>Contextualização</span></div>
@@ -28,55 +37,62 @@
 				{% if modo_inscricao %}
 				<section class="collab-scope collab-enrollment-guide" aria-labelledby="collab-scope-title">
 					<h2 id="collab-scope-title">A avaliação é feita em duas etapas</h2>
-					<p>Em cada comparação, indique qual dos dois itens você considera mais importante para o objetivo da análise e com que intensidade.</p>
+					<p class="ami-section-intro">Primeiro, compare as dimensões entre si. Depois, compare os critérios dentro de cada dimensão. Você envia uma única resposta ao final.</p>
 					<ol>
-						<li><strong>Etapa 1 · Dimensões</strong><p>Compare as dimensões entre si. Suas escolhas indicam a importância de cada dimensão no resultado geral.</p></li>
-						<li><strong>Etapa 2 · Critérios</strong><p>Compare os critérios de uma dimensão por vez. Suas escolhas indicam a importância de cada critério dentro daquela dimensão.</p></li>
+						<li><strong>Etapa 1 · Dimensões</strong><p>Defina a importância de cada dimensão no resultado geral.</p></li>
+						<li><strong>Etapa 2 · Critérios</strong><p>Defina a importância de cada critério na sua dimensão.</p></li>
 					</ol>
-					<p>Complete os pares e obtenha <strong>Razão de Consistência (RC) inferior a 0,10</strong> para avançar da primeira etapa, passar à próxima dimensão ou enviar sua resposta.</p>
-					<p>Seu progresso é salvo automaticamente. Ao concluir as duas etapas, clique em <strong>Enviar resposta</strong> para registrar sua contribuição.</p>
+					<p>Complete os pares de cada etapa. A <strong>razão de consistência (RC) deve ficar abaixo de 0,10</strong> para avançar ou enviar.</p>
 				</section>
 				{% else %}
 				<section class="secao-collab-scope collab-scope" aria-labelledby="collab-scope-title">
 					<h2 id="collab-scope-title">Escopo do formulário</h2>
-					<p id="collab-scope-intro">Os recursos disponíveis limitam quantas demandas podem ser atendidas em cada período. O SICARD auxilia a definição de prioridades ao organizar as demandas e os critérios usados para avaliá-las.</p>
-					<p id="collab-scope-examples" hidden></p>
+					<p class="ami-section-intro">Use o objetivo do julgamento como referência ao comparar os critérios ou as dimensões que lhe foram atribuídos.</p>
+					<details id="collab-scope-details" hidden>
+						<summary>Contexto e exemplos do julgamento</summary>
+						<div class="collab-detail-grid">
+							<article class="collab-detail-card">
+								<h3>Contexto da avaliação</h3>
+								<p id="collab-scope-intro"></p>
+								</article>
+							<article class="collab-detail-card">
+								<h3>Exemplos de critérios</h3>
+								<ul id="collab-scope-examples"></ul>
+							</article>
+							<article class="collab-detail-card">
+								<h3>Como os pesos são obtidos</h3>
+								<p id="collab-scope-method-text"></p>
+							</article>
+							<article class="collab-detail-card">
+								<h3>Sua participação</h3>
+								<p id="collab-scope-assignment"></p>
+							</article>
+						</div>
+					</details>
 					{% if modo_modelo %}
 					<details id="collab-model-criteria" hidden>
 						<summary>Critérios e premissas da matriz do PLI-SP 2050</summary>
-						<div></div>
+						<p class="ami-section-intro">Consulte o significado de cada critério e as premissas da matriz utilizada no formulário demonstrativo.</p>
+						<div class="collab-detail-grid collab-detail-grid--criteria"></div>
 					</details>
 					{% endif %}
 					<section class="secao-collab-scope-method" aria-labelledby="collab-scope-method">
 						<h3 id="collab-scope-method">Método utilizado: comparação pareada pelo AHP</h3>
-						<p id="collab-scope-method-text">O SICARD apresenta os critérios dois a dois para avaliar sua importância relativa. As comparações servem para calcular os pesos pelo Método de Análise Hierárquica (AHP).</p>
-						<p id="collab-scope-assignment" aria-live="polite" hidden></p>
-						<p>A barra utiliza os níveis apresentados da escala de Saaty: <strong>1</strong> indica igual importância; <strong>3</strong>, importância moderada; <strong>5</strong>, forte; <strong>7</strong>, muito forte; e <strong>9</strong>, extrema. Os valores inversos representam a preferência pelo outro critério. Confira a descrição exibida ao movimentar a barra. Se o critério A receber importância 3 em relação a B, a comparação de B com A será preenchida automaticamente como 1/3; não é necessário julgar esse par novamente no sentido inverso.</p>
+						<p class="ami-section-intro">O Método de Análise Hierárquica (AHP) combina as escolhas de todos os pares para calcular a importância relativa dos itens.</p>
 					</section>
 					<section class="secao-collab-scope-steps" aria-labelledby="collab-scope-steps">
 						<h3 id="collab-scope-steps">Passo a passo da sua participação</h3>
+						<p class="ami-section-intro">{% if modo_modelo %}Pratique as três etapas, da identificação à simulação do envio.{% else %}Identifique-se, compare os pares e envie sua resposta dentro do prazo.{% endif %}</p>
 						<ol>
-							{% if modo_modelo %}
-							<li><strong>Conheça os critérios.</strong> Consulte as premissas da matriz para entender o que cada critério avalia.</li>
-							<li><strong>Inicie a simulação.</strong> Preencha os campos de identificação e clique em “Liberar formulário”.</li>
-							{% else %}
-							<li><strong>Confira a rodada.</strong> Leia o objetivo, verifique o prazo e o status apresentados acima e confirme que está participando da hierarquização para a qual recebeu o convite.</li>
-							<li><strong>Identifique-se.</strong> Informe nome completo, instituição, e-mail convidado e chave individual recebida por e-mail. Clique em “Liberar formulário”. O convite é exclusivo do destinatário; nome e instituição identificam sua resposta.</li>
-							{% endif %}
-							<li><strong>Compare todos os pares.</strong> {% if modo_modelo %}Compare os critérios de uma dimensão por vez. Responda a todos os pares e obtenha RC inferior a 0,10 para avançar. {% endif %}Leia os critérios e ajuste cada barra para expressar a importância relativa. Use 1 quando considerar os critérios igualmente importantes. Após 1,5 segundo sem novos ajustes, o par e seu valor inverso recebem confirmação visual verde. Você pode movimentar a barra novamente para revisar sua escolha antes do envio.</li>
-							<li><strong>Acompanhe a consistência.</strong> Observe a Razão de Consistência (RC) e revise as comparações quando necessário. Procure coerência entre suas escolhas: se A é mais importante que B e B é mais importante que C, uma preferência muito forte de C sobre A merece reavaliação.</li>
-							{% if modo_modelo %}
-							<li><strong>Revise o preenchimento.</strong> Confira todos os pares. O progresso fica disponível enquanto a página estiver aberta.</li>
-							<li><strong>Conclua a simulação.</strong> Com a RC inferior a 0,10, clique em “Enviar resposta” para simular o envio.</li>
-							{% else %}
-							<li><strong>Revise o preenchimento.</strong> Confira todos os pares, inclusive os que permaneceram em igual importância. O progresso é salvo automaticamente durante o preenchimento; acompanhe a mensagem de salvamento. Salvar o progresso não substitui o envio definitivo.</li>
-							<li><strong>Envie sua contribuição.</strong> Com a RC inferior a 0,10, clique em “Enviar resposta”, dentro do prazo da rodada, e aguarde a confirmação de sucesso. É essa confirmação que indica a conclusão da sua participação.</li>
-							{% endif %}
+							<li><strong>Libere o formulário.</strong> <span id="colab-access-guide">Preencha a identificação{% if not modo_modelo %} com o e-mail do convite{% endif %}.</span></li>
+							<li><strong>Compare os pares.</strong> Use a régua para indicar a importância relativa de cada item.</li>
+							<li><strong>Revise e envie.</strong> Confira a consistência e use <strong>Enviar resposta</strong>{% if modo_modelo %} para simular o envio{% else %}. Aguarde a confirmação{% endif %}.</li>
 						</ol>
 					</section>
 					<section class="secao-collab-scope-consistency" aria-labelledby="collab-scope-consistency">
 						<h3 id="collab-scope-consistency">Como interpretar os indicadores</h3>
-						<p>A <strong>RC</strong> avalia a coerência interna das comparações, não se a sua opinião está “certa” ou “errada”. O sistema aceita o envio quando <strong>RC &lt; 0,10</strong>. Em zero, o cartão permanece neutro; acima de zero e abaixo de 0,10, fica verde; a partir de 0,10, fica vermelho e o envio permanece bloqueado até a revisão. O Índice de Consistência (IC) e o valor λmax são indicadores auxiliares do cálculo AHP, atualizados automaticamente. Você não precisa calculá-los nem preenchê-los.</p>
+						<p class="ami-section-intro">A razão de consistência (RC) indica se suas comparações são coerentes entre si. Para enviar, a RC deve ficar <strong>abaixo de 0,10</strong>.</p>
+						<p>Se a RC chegar a 0,10 ou mais, revise os pares sinalizados pela ajuda de consistência. O SICARD calcula os indicadores automaticamente.</p>
 					</section>
 				</section>
 				{% endif %}
@@ -86,6 +102,7 @@
 			<div class="ahp-section-label"><i class="fas fa-id-card"></i><span>Identificação</span></div>
 			<div class="ahp-section-body">
 				{% if modo_inscricao %}
+				<p class="ami-section-intro">Confira os dados da inscrição vinculados à sua resposta.</p>
 				<dl class="collab-inscrito-dados">
 					<div><dt>Nome completo</dt><dd id="colab-nome">{{ inscricao.nome_completo }}</dd></div>
 					<div><dt>Instituição</dt><dd id="colab-inst">{{ inscricao.instituicao }}</dd></div>
@@ -94,7 +111,8 @@
 				{% include "componentes/analise_multicriterio/_codigo_retomada.html" %}
 				<button type="button" class="btn btn-primary" id="collab-retry-start" hidden>Tentar abrir o formulário novamente</button>
 				{% else %}
-				<p class="step-intro">{% if modo_modelo %}Informe nome, instituição e e-mail para liberar a simulação.{% else %}Informe seus dados e a chave individual recebida no convite. Códigos compartilhados antigos não são aceitos; solicite um novo convite ao responsável.{% endif %}</p>
+				<p class="ami-section-intro" id="colab-access-intro">{% if modo_modelo %}Preencha nome, instituição e e-mail para iniciar a simulação.{% else %}Informe seu nome, instituição e o e-mail do convite. Em seguida, clique em <strong>Liberar formulário</strong>.{% endif %}</p>
+				{% if not modo_modelo %}<p class="form-help" id="colab-access-legacy">Abra o link que recebeu por e-mail. Se você recebeu um convite anterior com uma chave separada, use o campo abaixo.</p>{% endif %}
 				<div class="collab-identificacao-grid">
 					<div class="c-form-group"><label for="colab-nome" class="c-form-label">Nome completo</label><input id="colab-nome" class="c-form-control" required></div>
 					<div class="c-form-group"><label for="colab-inst" class="c-form-label">Instituição vinculada</label><input id="colab-inst" class="c-form-control" required></div>
@@ -108,15 +126,16 @@
 		<section class="card-collab-form-section secao-collab-form-section card ahp-step-section is-hidden" id="collab-form-section">
 			<div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">3</span><span>Comparação pareada</span></div>
 			<div class="ahp-section-body">
+				<p class="ami-section-intro">Registre suas escolhas par a par. O SICARD atualiza a matriz e a consistência a cada ajuste.</p>
 				<section class="collab-dimension-guide is-hidden" id="collab-linked-stage" aria-labelledby="collab-linked-title">
 					<h3 id="collab-linked-title" tabindex="-1"></h3>
-					<p id="collab-linked-description"></p>
+					<p class="ami-section-intro" id="collab-linked-description"></p>
 				</section>
 				<section class="secao-collab-guia ahp-subcard info-card collab-comparison-subcard" aria-labelledby="collab-guia-titulo">
 					<h2 class="ahp-subsection-title" id="collab-guia-titulo"><span class="ahp-subsection-num" aria-hidden="true">3.1</span><span>Entenda a escala antes de comparar</span></h2>
 					<div class="info-card-content">
 						<section class="secao-collab-guia-saaty collab-guia-saaty" aria-labelledby="collab-guia-titulo">
-							<p class="collab-guia-resumo">Compare dois critérios por vez, considerando o objetivo da análise. O <strong>critério 1 é a referência</strong>, identificada no título de cada card. A <strong>escala de Saaty</strong> registra a intensidade da preferência do critério 1 em relação ao critério 2. O método AHP utiliza o conjunto dessas comparações para calcular os pesos; o número escolhido na barra não é, isoladamente, o peso do critério.</p>
+							<p class="ami-section-intro collab-guia-resumo">Na régua, <strong>1</strong> significa igual importância. À esquerda, você favorece o primeiro item. À direita, o segundo. Quanto mais longe do centro, mais forte a preferência.</p>
 							<div class="collab-guia-escala" role="group" aria-labelledby="collab-guia-escala-titulo">
 								<p class="collab-guia-subtitulo" id="collab-guia-escala-titulo">Escala de Saaty: o que cada nome da barra significa</p>
 								<ul class="collab-guia-intensidades">
@@ -126,14 +145,14 @@
 									<li class="collab-guia-intensidade collab-guia-intensidade--bastante"><span class="collab-guia-nome">Bastante</span><span class="collab-guia-valor">7</span><span class="collab-guia-significado">importância muito forte</span></li>
 									<li class="collab-guia-intensidade collab-guia-intensidade--extremamente"><span class="collab-guia-nome">Extremamente</span><span class="collab-guia-valor">9</span><span class="collab-guia-significado">importância extrema</span></li>
 								</ul>
-								<p class="collab-guia-inverso"><i class="fas fa-rotate" aria-hidden="true"></i><span>À <strong>esquerda do centro</strong>, 3, 5, 7 e 9 indicam preferência pelo <strong>critério 1</strong>. No centro, <strong>1 significa igual importância</strong>. À <strong>direita do centro</strong>, 1/3, 1/5, 1/7 e 1/9 indicam preferência pelo <strong>critério 2</strong>: por exemplo, 1/5 para o critério 1 corresponde a 5 para o critério 2. Este formulário oferece essas nove posições; os valores intermediários 2, 4, 6 e 8 não estão disponíveis na barra.</span></p>
+								<p class="collab-guia-inverso"><i class="fas fa-rotate" aria-hidden="true"></i><span>Se o primeiro item tiver importância forte em relação ao segundo, escolha <strong>5</strong>. O SICARD registra automaticamente <strong>1/5</strong> no sentido inverso.</span></p>
 							</div>
 							<div class="collab-guia-passos-bloco">
 								<p class="collab-guia-subtitulo">Como atribuir a importância em cada card</p>
 								<ol class="collab-guia-passos">
-									<li><div class="collab-guia-passo-cabecalho"><span class="collab-guia-passo-num" aria-hidden="true">1</span><strong>Identifique a referência</strong></div><p>Leia o título e os nomes marcados como <b>critério 1</b> e <b>critério 2</b>. Decida qual deles é mais importante para o objetivo, ou se têm igual importância.</p></li>
-									<li><div class="collab-guia-passo-cabecalho"><span class="collab-guia-passo-num" aria-hidden="true">2</span><strong>Escolha o lado e a intensidade</strong></div><p>Mova o seletor para a <b>esquerda</b> para favorecer o critério 1, ou para a <b>direita</b> para favorecer o critério 2. Quanto mais longe do centro, mais intensa é a preferência pelo critério favorecido. Para igualdade, mantenha <b>Igual (1)</b>.</p></li>
-									<li><div class="collab-guia-passo-cabecalho"><span class="collab-guia-passo-num" aria-hidden="true">3</span><strong>Confira a leitura e o valor oposto</strong></div><p>A frase abaixo da barra explica sua escolha. O <b>valor oposto</b> compara o critério 2 com o critério 1 e é aplicado automaticamente como recíproco: se a escolha é 3, o oposto é 1/3; se é 1/3, o oposto é 3. Não é necessário preencher essa comparação novamente.</p></li>
+									<li><div class="collab-guia-passo-cabecalho"><span class="collab-guia-passo-num" aria-hidden="true">1</span><strong>Leia os dois itens</strong></div><p>Considere o objetivo do julgamento ao comparar o par.</p></li>
+									<li><div class="collab-guia-passo-cabecalho"><span class="collab-guia-passo-num" aria-hidden="true">2</span><strong>Marque sua escolha</strong></div><p>Use o lado do item mais importante e a intensidade que representa sua avaliação.</p></li>
+									<li><div class="collab-guia-passo-cabecalho"><span class="collab-guia-passo-num" aria-hidden="true">3</span><strong>Confira a leitura</strong></div><p>A frase abaixo da régua mostra como o SICARD interpretou a escolha.</p></li>
 								</ol>
 							</div>
 						</section>
@@ -142,18 +161,20 @@
 				<section class="secao-collab-pairwise ahp-subcard info-card collab-comparison-subcard" aria-labelledby="collab-pairwise-title">
 					<h2 class="ahp-subsection-title" id="collab-pairwise-title"><span class="ahp-subsection-num" aria-hidden="true">3.2</span><span>Comparação pareada</span></h2>
 					<div class="info-card-content">
+						<p class="ami-section-intro">Preencha os pares exibidos. Use a matriz para conferir os valores registrados.</p>
 						<div id="collab-group-context" hidden>
 							<section class="collab-dimension-guide" aria-labelledby="collab-dimension-guide-title">
 								<h3 id="collab-dimension-guide-title">Como funciona a comparação por dimensão</h3>
+								<p class="ami-section-intro">Compare os critérios da dimensão exibida para definir o peso de cada um dentro do grupo.</p>
 								<p id="collab-group-method">Os critérios são organizados em dimensões. <strong id="collab-dimension-count"></strong></p>
-								<p>O formulário apresenta uma dimensão por vez. Você só compara critérios da dimensão exibida. Em cada par, indique qual dos dois critérios deve pesar mais na decisão e com que intensidade. Confira a consistência das suas respostas antes de avançar.</p>
 								<p id="collab-group-note" class="is-hidden"></p>
 							</section>
 							<h3 id="collab-group-title" tabindex="-1"></h3>
 						</div>
-						<p class="collab-pairwise-intro">Para cada par, indique qual critério é mais importante para o objetivo desta análise e com que intensidade. Se ambos tiverem a mesma importância, escolha 1 (igual importância). Cada ajuste preenche automaticamente o valor inverso e atualiza os indicadores de consistência. Enquanto houver pares sem resposta, o cálculo é provisório e usa 1 para esses pares. O envio exige RC &lt; 0,10. Após 1,5 segundo sem novos ajustes no par, ele e seu valor inverso ficam verdes. Para revisar, mova a barra novamente. Essa confirmação visual não substitui o envio final.</p>
 						<section class="secao-collab-metrics" aria-labelledby="collab-metrics-title">
 							<h3 id="collab-metrics-title">Indicadores instantâneos de consistência AHP</h3>
+							<p class="ami-section-intro">A razão de consistência (RC) indica se suas escolhas são coerentes entre si. Mantenha a RC <strong>abaixo de 0,10</strong> para avançar ou enviar.</p>
+							<p class="form-help">Enquanto houver pares em aberto, a RC é provisória e usa 1 para esses pares.</p>
 							<div id="liveMetrics" class="ahp-live-metrics">
 								<div class="ahp-metric-card"><div class="ahp-metric-card__label">Lambda máximo (λmax)</div><div class="ahp-metric-card__value" id="metricLambdaValue">—</div></div>
 								<div class="ahp-metric-card"><div class="ahp-metric-card__label">Índice de consistência (IC)</div><div class="ahp-metric-card__value" id="metricICValue">—</div></div>
@@ -171,12 +192,14 @@
 								<button type="button" class="collab-rc-resize" aria-label="Redimensionar indicador de consistência" aria-description="Use as setas para aumentar ou diminuir; Home restaura 100%. Limites de 50% a 200%, conforme o espaço disponível." title="Arraste o canto para redimensionar; setas ajustam e Home restaura 100%"></button>
 							</aside>
 							<div id="collab-panel-form" role="tabpanel" aria-labelledby="collab-tab-form">
-								<p id="collab-form-legend" class="collab-pairwise-intro">No formulário, cada card apresenta um par de critérios. Mova o seletor pela escala para indicar qual critério é mais importante e com qual intensidade. A frase exibida abaixo da régua confirma a escolha, e o valor da comparação no sentido oposto é calculado automaticamente. Revise todos os cards antes de enviar a resposta.</p>
+								<p class="ami-section-intro">Registre uma escolha em cada cartão. A régua pode ser ajustada até o envio.</p>
+								<p id="collab-form-legend" class="collab-pairwise-intro">O destaque verde confirma o registro do par. Você ainda pode revisar a escolha.</p>
 								<div id="comparisonContent" class="ahp-comparison-content"></div>
 							</div>
 							<div id="collab-panel-matrix" role="tabpanel" aria-labelledby="collab-tab-matrix" hidden>
 								<h3 id="collab-matrix-title" class="collab-matrix-title">Matriz da comparação pareada — valores da linha em relação à coluna</h3>
-								<p id="collab-matrix-legend" class="collab-pairwise-intro">Cada célula apresenta a importância do critério da linha em relação ao critério da coluna. A diagonal permanece igual a 1 e as duas metades são recíprocas. As cores correspondem aos valores da escala de Saaty e não representam validação. Esta matriz é somente para conferência; faça qualquer ajuste na aba formulário.</p>
+								<p class="ami-section-intro">Confira a importância do item da linha em relação ao item da coluna.</p>
+								<p id="collab-matrix-legend" class="collab-pairwise-intro">As cores indicam os valores da escala. Para alterar uma comparação, volte à aba <strong>Formulário de comparação pareada</strong>.</p>
 								<div id="collab-matrix-wrap" class="matrix-table-wrap collab-readonly-matrix" tabindex="0" role="region" aria-labelledby="collab-matrix-title" aria-describedby="collab-matrix-legend"></div>
 							</div>
 						</div>
@@ -196,6 +219,9 @@
 					<button type="button" class="btn btn-secondary" id="collab-restart" disabled><i class="fas fa-rotate-left c-btn__icon" aria-hidden="true"></i>Recomeçar do zero</button>
 					<button type="button" class="btn btn-success" id="btn-enviar-resposta" disabled><i class="fas fa-paper-plane c-btn__icon"></i>Enviar resposta</button>
 				</div>
+				{% if not modo_modelo and request.query_params.get('simulacao') != '1' %}
+				<p class="form-help">O SICARD salva seu progresso automaticamente. Para concluir a participação, clique em <strong>Enviar resposta</strong> e aguarde a confirmação.</p>
+				{% endif %}
 			</div>
 		</section>
 </main>
@@ -203,10 +229,11 @@
 		<section class="ahp-coerencia-modal card" role="dialog" aria-labelledby="collab-consistency-modal-title" aria-describedby="collab-consistency-modal-summary">
 			<header class="ahp-coerencia-modal__head" id="collab-consistency-modal-drag-handle"><i class="fas fa-circle-question" aria-hidden="true"></i><h2 id="collab-consistency-modal-title">Ajuda de consistência AHP</h2><div class="collab-consistency-window-controls" role="group" aria-label="Controles da janela de ajuda"><button type="button" id="collab-consistency-modal-minimize" class="collab-consistency-window-button" aria-label="Minimizar ajuda" title="Minimizar"><i class="fas fa-window-minimize" aria-hidden="true"></i></button><button type="button" id="collab-consistency-modal-maximize" class="collab-consistency-window-button" aria-label="Maximizar ajuda" title="Maximizar"><i class="fas fa-window-maximize" aria-hidden="true"></i></button><button type="button" id="collab-consistency-modal-close" class="collab-consistency-window-button collab-consistency-modal-close" aria-label="Fechar ajuda" title="Fechar"><i class="fas fa-xmark" aria-hidden="true"></i></button></div></header>
 			<div class="ahp-coerencia-modal__body">
+				<p class="ami-section-intro">Veja quais comparações revisar para melhorar a consistência.</p>
 				<p id="collab-consistency-modal-summary" class="ahp-coerencia-modal__intro"></p>
-				<section aria-labelledby="collab-consistency-pairs-title"><h3 id="collab-consistency-pairs-title">Pares que merecem revisão</h3><ol id="collab-consistency-pairs" class="ahp-coerencia-modal__list"></ol></section>
-				<section class="collab-consistency-explanation" aria-labelledby="collab-consistency-why-title"><h3 id="collab-consistency-why-title">Por que há inconsistência?</h3><div id="collab-consistency-why" class="collab-consistency-narrative"></div></section>
-				<section class="collab-consistency-explanation" aria-labelledby="collab-consistency-tip-title"><h3 id="collab-consistency-tip-title">Como resolver</h3><p id="collab-consistency-tip"></p></section>
+				<section aria-labelledby="collab-consistency-pairs-title"><h3 id="collab-consistency-pairs-title">Pares que merecem revisão</h3><p class="ami-section-intro">Comece pelos pares apontados pelo diagnóstico.</p><ol id="collab-consistency-pairs" class="ahp-coerencia-modal__list"></ol></section>
+				<section class="collab-consistency-explanation" aria-labelledby="collab-consistency-why-title"><h3 id="collab-consistency-why-title">Por que há inconsistência?</h3><p class="ami-section-intro">Veja onde uma escolha entra em conflito com as demais.</p><div id="collab-consistency-why" class="collab-consistency-narrative"></div></section>
+				<section class="collab-consistency-explanation" aria-labelledby="collab-consistency-tip-title"><h3 id="collab-consistency-tip-title">Como resolver</h3><p class="ami-section-intro">Revise os pares e confira a nova RC.</p><p id="collab-consistency-tip"></p></section>
 			</div>
 		</section>
 	</div>
@@ -217,9 +244,9 @@
 	<script defer src="/restrict/ahp/js/ahp-core.js?v=20261119-rc-compartilhada"></script>
 	<script defer src="/restrict/ahp/js/colaborativa-api.js?v=20261124-reinicio"></script>
 	{% if modo_inscricao %}<script defer src="/assets/js/paginas/ahp-codigo-retomada.js?v=20261124"></script>{% endif %}
-	{% if modo_modelo %}<script defer src="/restrict/ahp/js/colaborativa-modelo.js?v=20261124-reinicio"></script>{% elif not modo_inscricao %}<script defer src="/restrict/ahp/js/colaborativa-simulacao.js?v=20261124-reinicio"></script>{% endif %}
+	{% if modo_modelo %}<script defer src="/restrict/ahp/js/colaborativa-modelo.js?v=20261126-contexto-formulario"></script>{% elif not modo_inscricao %}<script defer src="/restrict/ahp/js/colaborativa-simulacao.js?v=20261126-contexto-formulario"></script>{% endif %}
 	<script defer src="/restrict/ahp/js/script.js?v=20261124-resposta-regua"></script>
-	<script defer src="/restrict/ahp/js/colaborativa.js?v=20261124-acesso-direto"></script>
+	<script defer src="/restrict/ahp/js/colaborativa.js?v=20261126-link-convite"></script>
 	<script defer src="/assets/js/paginas/ahp-comparacao-abas.js?v=20261124-matriz-pli"></script>
 	<script defer src="/assets/js/paginas/ahp-formulario-layout.js?v=20261104-card-default-90"></script>
 {% endblock %}

@@ -8,6 +8,7 @@
 {% block estilos_pagina %}
 <link rel="stylesheet" href="/assets/css/ahp-module.css?v=20261103-regua-invertida">
 <link rel="stylesheet" href="/assets/css/paginas/ahp-formulario-publico.css?v=20261124-guia-dimensoes">
+<link rel="stylesheet" href="/assets/css/paginas/ami-contextualizacao.css?v=20261126-contextos-ahp">
 {% endblock %}
 
 {% block conteudo %}
@@ -16,11 +17,12 @@
     <div class="ahp-section-label"><i class="fas fa-id-card" aria-hidden="true"></i><span>Inscrição para participar</span></div>
     <div class="ahp-section-body">
       <h1 id="inscricao-titulo">{{ julgamento }}</h1>
+      <p class="ami-section-intro">Registre seus dados para participar do julgamento. O SICARD vincula a inscrição à sua avaliação e direciona você ao formulário ou à fila de espera, conforme a disponibilidade.</p>
       <p>Prazo para enviar sua resposta <time id="inscricao-prazo" datetime="{{ prazo }}">{{ prazo }}</time> (horário de Brasília).</p>
       {% if erro %}
       <p role="status">{{ erro }}</p>
       {% else %}
-      <p>Informe seus dados para participar. O julgamento tem duas etapas. Você compara primeiro as dimensões e, depois, os critérios de cada dimensão.</p>
+      <p>Primeiro, compare as dimensões entre si. Depois, compare os critérios de cada dimensão.</p>
       <p>Se todas as vagas de preenchimento estiverem ocupadas, aguarde sua vez na fila. O formulário abrirá automaticamente quando a vaga for liberada.</p>
       <form id="ahp-inscricao" method="post" data-api="/api/ahp/comparacao-colaborativa/publico/{{ token }}/inscricao" data-formulario-url="{{ formulario_url }}">
         <div class="collab-identificacao-grid">
@@ -30,6 +32,7 @@
         </div>
         <details>
           <summary>Já se inscreveu? Use o código de retomada</summary>
+          <p class="ami-section-intro">Recupere a inscrição e o preenchimento já realizado com o e-mail da inscrição e seu código de retomada.</p>
           <div class="c-form-group"><label class="c-form-label" for="inscricao-retomada">Código de retomada</label><input class="c-form-control" id="inscricao-retomada" name="codigo_retomada" spellcheck="false" autocomplete="off" maxlength="43" pattern="[A-Za-z0-9_\-]{43}" disabled></div>
         </details>
         <p id="inscricao-feedback" role="status" aria-live="polite"></p>

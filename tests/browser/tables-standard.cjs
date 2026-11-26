@@ -10,6 +10,7 @@ const base = process.env.SICARD_TEST_URL || 'http://127.0.0.1:8083';
   const publicUrl = 'https://sicard.example.invalid/sicard/public/analise-multicriterio/participar/rodada-de-teste/';
   const judgments = items.map((x, i) => ({...x, status:'ativa', matriz_id:'matriz-' + x.id, convites:[], criterios:[], n_criterios:0,
     modo_participacao:i === 0 || i === 2 ? 'publico' : 'convite', url_publica:i === 2 ? 'about:blank' : publicUrl}));
+  judgments[1].convites = Array.from({length:188}, (_, i) => ({email:`colaborador${i + 1}@example.invalid`}));
   const cases = [
     ['hierarquizacao/processos/','#hier-tbody','hier-filter','codigo','#hier-pagination','hier-filter-count','.hier-row-select'],
     ['analise-multicriterio/central-julgamentos','#ami-judgments','ami-filter','nome','#ami-judgments-pagination','ami-count','[data-select-id]'],
@@ -60,13 +61,44 @@ const base = process.env.SICARD_TEST_URL || 'http://127.0.0.1:8083';
         assert.ok(publicColumn >= 0);
         const enrollmentLink = cells.nth(publicColumn).getByRole('link');
         assert.equal(await enrollmentLink.getAttribute('href'), publicUrl);
+        await cells.nth(1).hover();
+        assert.equal(await cells.first().evaluate(cell => getComputedStyle(cell).cursor), 'auto');
+        assert.equal(await cells.nth(1).evaluate(cell => getComputedStyle(cell).cursor), 'auto');
+        assert.equal(await cells.first().getByRole('checkbox').evaluate(input => getComputedStyle(input).cursor), 'pointer');
         for (const row of [1, 2]) {
           assert.equal(await p.locator('#ami-judgments tr').nth(row).locator('td').nth(publicColumn).textContent(), '—');
         }
         assert.deepEqual(await enrollmentLink.evaluate(link => {
           const style = getComputedStyle(link);
-          return [style.color, style.textDecorationLine];
-        }), ['rgb(18, 59, 86)', 'underline']);
+          return [style.color, style.textDecorationLine, style.cursor];
+        }), ['rgb(18, 59, 86)', 'underline', 'pointer']);
+        await p.evaluate(() => { document.documentElement.style.zoom = '80%'; });
+        try {
+          const link = p.getByText('188 colaboradores', {exact:true});
+          assert.equal(await link.evaluate(el => getComputedStyle(el).cursor), 'pointer');
+          assert.ok(parseFloat(await link.evaluate(el => getComputedStyle(el).paddingBlockEnd)) > 0);
+          const captura = await link.screenshot();
+          const possuiLinha = await p.evaluate(async base64 => {
+            const dados = Uint8Array.from(atob(base64), char => char.charCodeAt(0));
+            const imagem = await createImageBitmap(new Blob([dados], {type:'image/png'}));
+            const canvas = new OffscreenCanvas(imagem.width, imagem.height);
+            const contexto = canvas.getContext('2d');
+            contexto.drawImage(imagem, 0, 0);
+            const {data} = contexto.getImageData(0, 0, imagem.width, imagem.height);
+            for (let y = Math.floor(imagem.height * 0.75); y < imagem.height; y++) {
+              let escuros = 0;
+              for (let x = 0; x < imagem.width; x++) {
+                const i = (y * imagem.width + x) * 4;
+                if (data[i] < 120 && data[i + 1] < 160 && data[i + 2] < 190) escuros++;
+              }
+              if (escuros >= imagem.width * 0.85) return true;
+            }
+            return false;
+          }, captura.toString('base64'));
+          assert.ok(possuiLinha, 'O sublinhado do registro de 188 colaboradores deve aparecer com zoom de 80%.');
+        } finally {
+          await p.evaluate(() => { document.documentElement.style.removeProperty('zoom'); });
+        }
         const popup = p.waitForEvent('popup');
         await enrollmentLink.click();
         const enrollmentPage = await popup;

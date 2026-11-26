@@ -1190,6 +1190,8 @@
     var emDuasEtapas = data.ambiente.modo_comparacao === "duas_etapas";
     panel.hidden = !emDuasEtapas && data.ambiente.modo_comparacao !== "por_grupo";
     if (panel.hidden) return;
+    $("ami-global-group-intro").hidden = emDuasEtapas;
+    $("ami-global-linked-intro").hidden = !emDuasEtapas;
     form.hidden = emDuasEtapas || analysisMode !== "edit";
     $("ami-linked-analysis-form").hidden = !emDuasEtapas || analysisMode !== "edit";
     if (emDuasEtapas) {
@@ -1522,15 +1524,8 @@
   function renderEmailDraft(judgment) {
     renderEmailRecipients(judgment);
     var card = $("ami-email-draft-card"), url = persistentPublicUrl(judgment);
-    var message = judgment.email_mensagem || "";
-    $("ami-email-sender-alias").value = judgment.email_remetente_alias || "SICARD-PLI";
-    $("ami-email-subject").value = judgment.email_assunto || "Convite para preenchimento colaborativo AHP - PLI - SICARD";
     card.classList.remove("is-hidden");
-    SICARDEmailConvites.mostrar(judgment, message, url, function (invite) {
-      return (judgment.criterios || []).filter(function (criterio) {
-        return invite.dimensoes.includes(criterionDimension(criterio));
-      }).map(criterionName);
-    });
+    SICARDEmailConvites.mostrar(judgment, url);
   }
   function renderParticipationAccess(judgment) {
     var publico = participacaoPublica(judgment);
@@ -1855,10 +1850,10 @@
     importGroups = julgaTodasDimensoes() ? [] : Array.from(groups.keys());
     importSource = source;
     importReadOnly = readOnly;
-    var description = "Marque os grupos que cada colaborador vai responder. Todos atribui a matriz completa. A caixa no cabeçalho aplica a atribuição a todos os colaboradores filtrados.";
+    var description = "Marque os grupos por colaborador. Todos inclui a matriz completa. Use o cabeçalho para aplicar aos registros filtrados.";
     $("ami-import-description").textContent = readOnly ? "Consulte os colaboradores e seus grupos de critérios. Todos indica a matriz completa."
       : divulgacao ? "Confira os contatos e confirme os selecionados para incluí-los no rascunho de convidados."
-        : description + (source === "file" ? " Para escolher grupos específicos, selecione antes a matriz do julgamento." : " Confirme para aplicar os grupos aos colaboradores selecionados.");
+        : description + (source === "file" ? " Selecione uma matriz para atribuir grupos específicos." : " Confirme para aplicar os grupos aos colaboradores selecionados.");
     $("ami-import-confirm").classList.toggle("is-hidden", readOnly);
     var confirmLabel = divulgacao ? "Confirmar destinatários" : source === "file" ? "Confirmar importação" : "Confirmar lista de colaboradores";
     $("ami-import-confirm").setAttribute("aria-label", confirmLabel);
@@ -2217,17 +2212,6 @@
     if (isMatrix) host.querySelectorAll("[data-pair-row]").forEach(function (select) { select.addEventListener("change", function () { updatePairwise(judgment, Number(select.dataset.pairRow), Number(select.dataset.pairColumn), Number(select.value)); }); });
     applyConfiguredVisuals(judgment, host); applyMatrixZoom(); updateLiveMetrics(judgment); updatePairCounter(judgment);
   }
-  function loadSaatyScale() {
-    var host = $("ami-saaty-scale-host"); if (host.dataset.loaded === "true") return Promise.resolve();
-    return (window.SICARDBrowserLogs?.fetch || fetch)(appUrl("restrict", "/ahp/comparacao/"), { credentials: "same-origin" }).then(function (response) { if (!response.ok) throw new Error("Não foi possível carregar a escala de Saaty."); return response.text(); }).then(function (html) {
-      var source = new DOMParser().parseFromString(html, "text/html").querySelector("#saaty-scale-subcard"); if (!source) throw new Error("A subseção Escala de Intensidade de Importância não foi encontrada.");
-      host.replaceChildren(source.cloneNode(true)); host.dataset.loaded = "true";
-      var scaleIndex = host.querySelector(".ahp-subsection-num"); if (scaleIndex) { scaleIndex.textContent = "3.1"; if (modo === "espaco") scaleIndex.textContent = "1"; scaleIndex.classList.remove("ahp-subsection-num--roman"); }
-      var toggle = host.querySelector("#saaty-scale-toggle"), extras = host.querySelectorAll(".saaty-scale-extra"), icon = host.querySelector("#saaty-scale-chevron i");
-      function toggleScale() { var expanded = toggle.getAttribute("aria-expanded") !== "true"; toggle.setAttribute("aria-expanded", String(expanded)); extras.forEach(function (element) { element.classList.toggle("is-hidden", !expanded); }); if (icon) { icon.classList.toggle("fa-chevron-down", !expanded); icon.classList.toggle("fa-chevron-up", expanded); } }
-      toggle.addEventListener("click", toggleScale); toggle.addEventListener("keydown", function (event) { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); toggleScale(); } });
-    }).catch(function (error) { host.innerHTML = '<p class="ami-feedback">' + escapeHtml(error.message) + "</p>"; });
-  }
   function syncPairwiseButtons() { [$("ami-judgments-matrix-action"), $("ami-judgments-form-action")].forEach(function (button) { if (!button) return; var visible = modo === "espaco" && !(button.id === "ami-judgments-form-action" && selectedRecord()?.modo_participacao === "publico"); var enabled = visible && Boolean(selectedId) && !editingId; button.disabled = !enabled; button.classList.toggle("is-disabled", !enabled); button.classList.toggle("is-hidden", !visible); }); }
   function syncEnvironmentEditButton() {
     var button = $("ami-environment-edit"); if (!button) return;
@@ -2304,19 +2288,22 @@
     var preview = $("ami-public-form-preview");
     if (mode === "form") {
       $("ami-pairwise-panel").classList.add("is-hidden");
-      if (!preview) {
-        preview = document.createElement("section"); preview.id = "ami-public-form-preview";
-        preview.className = "card ahp-step-section";
-        preview.innerHTML = '<div class="ahp-section-label"><i class="fas fa-clipboard-list" aria-hidden="true"></i><span>Simulação do formulário do colaborador</span></div><iframe title="Formulário de comparação pareada — simulação" style="display:block;width:100%;height:85vh;border:0;border-radius:0 0 8px 8px"></iframe>';
-        $("ami-pairwise-panel").after(preview);
-      }
       preview.hidden = false;
       preview.querySelector('iframe').src = actionLinks(judgment).public + '?simulacao=1';
       preview.scrollIntoView({behavior: 'smooth', block: 'start'});
       return;
     }
     if (preview) { preview.hidden = true; preview.querySelector('iframe').src = 'about:blank'; }
- pairwiseMode = mode; [["ami-judgments-matrix-action", "matrix"], ["ami-judgments-form-action", "form"]].forEach(function (entry) { var active = mode === entry[1]; $(entry[0]).classList.toggle("is-active", active); $(entry[0]).setAttribute("aria-pressed", String(active)); }); $("ami-pairwise-panel").classList.remove("is-hidden"); loadSaatyScale().then(function () { renderPairwiseScope(judgment); $("ami-pairwise-panel").scrollIntoView({ behavior: "smooth", block: "start" }); }); }
+    pairwiseMode = mode;
+    [["ami-judgments-matrix-action", "matrix"], ["ami-judgments-form-action", "form"]].forEach(function (entry) {
+      var active = mode === entry[1];
+      $(entry[0]).classList.toggle("is-active", active);
+      $(entry[0]).setAttribute("aria-pressed", String(active));
+    });
+    $("ami-pairwise-panel").classList.remove("is-hidden");
+    renderPairwiseScope(judgment);
+    $("ami-pairwise-panel").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
   function renderPairwiseScope(judgment) {
     var select = $("ami-pairwise-group"), emDuasEtapas = judgment.modo_comparacao === "duas_etapas";
     var porGrupo = emDuasEtapas || judgment.modo_comparacao === "por_grupo";
@@ -2346,12 +2333,10 @@
     } else if (modo === "formulario") {
       $("ami-page-title-text").textContent = "Formulário dos especialistas";
       $("ami-page-title-icon").className = "fa-solid fa-clipboard-question";
-      $("ami-page-intro").textContent = "Selecione um julgamento e use o botão acima da tabela para abrir o formulário público.";
       document.title = "Formulário dos especialistas — SICARD";
     } else {
       $("ami-page-title-text").textContent = "Central de respostas";
       $("ami-page-title-icon").className = "fa-solid fa-list-check";
-      $("ami-page-intro").textContent = "Consulte as respostas enviadas pelos especialistas nos julgamentos colaborativos.";
       document.title = "Central de respostas — SICARD";
       ["edit","save","cancel","delete","public"].forEach(function (action) { var element=$("ami-judgments-"+action+"-action"); if(element) element.classList.add("is-hidden"); });
     }

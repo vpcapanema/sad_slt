@@ -13,9 +13,10 @@ from api.routers.comparacao_colaborativa import _base_url
 from api.routers.email import _erro, _nao_armazenar
 from api.schemas.email import (
     ConviteEmailEnvioSchema, DivulgacaoEmailEnvioSchema, ExclusaoDestinatariosDivulgacaoSchema,
-    ListaDivulgacaoSchema, MensagemDivulgacaoSchema, RespostaEmailEnvioSchema, SalvamentoListaDivulgacaoSchema,
+    ListaDivulgacaoSchema, MensagemDivulgacaoSchema, RascunhoEmailAhpSchema, RespostaEmailEnvioSchema,
+    SalvamentoListaDivulgacaoSchema,
 )
-from api.services import autorizacao, divulgacao_ahp, email_confirmacoes, email_convites, email_resposta_colaborador
+from api.services import autorizacao, divulgacao_ahp, email_ahp_rascunho, email_confirmacoes, email_convites, email_resposta_colaborador
 from api.services.atividade_colaboracao_ahp import etapa_colaboracao
 from api.services.email_service import FalhaEmail
 from api.services.session_service import SessionUser
@@ -49,16 +50,41 @@ def configuracao_remetente(ambiente_id: UUID) -> dict:
 
 
 @router.post("/{ambiente_id}/emails/enviar")
-def enviar(ambiente_id: UUID, dados: ConviteEmailEnvioSchema,
+def enviar(ambiente_id: UUID, dados: ConviteEmailEnvioSchema, request: Request,
            user: SessionUser = Depends(require_analyst)) -> dict:
     try:
-        return email_convites.enviar(str(ambiente_id), dados, user.id)
+        if dados.usar_modelo_atual:
+            autorizacao.exigir(user, "mad.operar", acao="enviar o convite do julgamento")
+        return email_convites.enviar(str(ambiente_id), dados, user.id, base_url=_base_url(request))
     except FalhaEmail as exc:
         raise _erro(exc) from exc
     except email_convites.ConviteOriginalIndisponivel as exc:
         raise HTTPException(422, detail=str(exc), headers={
             "Cache-Control": "no-store", "X-SICARD-Email-Error": "convite_original_indisponivel",
         }) from exc
+    except DemandaValidationError as exc:
+        raise HTTPException(422, detail=str(exc)) from exc
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(503, detail=str(exc)) from exc
+
+
+@router.get("/{ambiente_id}/emails/mensagem")
+def ler_edicao(ambiente_id: UUID, request: Request, user: SessionUser = Depends(require_analyst)) -> dict:
+    try:
+        autorizacao.exigir(user, "mad.operar", acao="consultar a mensagem do julgamento")
+        return email_ahp_rascunho.edicao(str(ambiente_id), user.id, _base_url(request))
+    except DemandaValidationError as exc:
+        raise HTTPException(422, detail=str(exc)) from exc
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(503, detail=str(exc)) from exc
+
+
+@router.put("/{ambiente_id}/emails/mensagem")
+def salvar_edicao(ambiente_id: UUID, dados: RascunhoEmailAhpSchema, request: Request,
+                  user: SessionUser = Depends(require_analyst)) -> dict:
+    try:
+        autorizacao.exigir(user, "mad.operar", acao="editar a mensagem do julgamento")
+        return email_ahp_rascunho.salvar(str(ambiente_id), user.id, dados, _base_url(request))
     except DemandaValidationError as exc:
         raise HTTPException(422, detail=str(exc)) from exc
     except DatabaseUnavailableError as exc:

@@ -23,7 +23,7 @@ from api.exceptions import DatabaseUnavailableError, DemandaValidationError
 from api.repositories import comparacao_colaborativa_repository as repo
 from api.repositories import email_convites_repository as historico
 from api.schemas.email import EmailEnvioSchema
-from api.services import ahp_engine, email_service
+from api.services import ahp_engine, email_layout_ahp, email_service
 from api.services.comparacao_colaborativa_service import _criterio_nomes, _criterios_resposta, _dimensao
 
 logger = logging.getLogger(__name__)
@@ -36,7 +36,7 @@ PESQUISA_AHP_INTRO = (
 PESQUISA_AHP_CONVITE = (
     f"{PESQUISA_AHP_INTRO} A pesquisa é anônima e leva cerca de três minutos."
 )
-FONTE_EMAIL = "font-family:Arial,Helvetica,sans-serif;"
+FONTE_EMAIL = email_layout_ahp.FONTE
 RODAPE_EMAIL = "Esta é uma mensagem automática do SICARD."
 
 AZUL = (17, 101, 147)
@@ -121,37 +121,19 @@ def _texto_rodape(url: str, convite: str) -> list[str]:
 
 def _html_confirmacao(conteudo: str, pesquisa_url: str, pesquisa_convite: str) -> str:
     fonte = FONTE_EMAIL
-    return (
-        '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">'
-        '<meta name="viewport" content="width=device-width, initial-scale=1"></head>'
-        '<body style="margin:0;padding:0;background:#eef3f7;">'
-        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef3f7;">'
-        '<tr><td align="center" style="padding:18px 8px;">'
-        '<table role="presentation" width="640" cellpadding="0" cellspacing="0" '
-        'style="max-width:640px;width:100%;background:#ffffff;border:1px solid #d5dee6;">'
-        '<tr><td bgcolor="#00507a" style="background:#00507a;padding:16px 22px;">'
-        f'<h1 style="margin:0;{fonte}color:#ffffff;font-size:19px;line-height:1.35;font-weight:bold;">'
-        'SICARD · Confirmação de recebimento</h1></td></tr>'
-        f'<tr><td style="padding:22px;">{conteudo}'
+    pesquisa = email_layout_ahp.painel(
+        PESQUISA_AHP_TITULO,
+        f'<p style="margin:0 0 16px;{fonte}font-size:14px;line-height:1.55;color:#22333f;">'
+        f'{escape(pesquisa_convite)}</p>' + email_layout_ahp.botao(pesquisa_url, "Responder à pesquisa"),
+    )
+    return email_layout_ahp.documento(
+        "Confirmação de recebimento",
+        conteudo +
         '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" aria-hidden="true">'
         '<tr><td height="36" style="height:36px;font-size:1px;line-height:36px;mso-line-height-rule:exactly;">'
         '&nbsp;</td></tr></table>'
-        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
-        'style="border:1px solid #bed4e2;border-collapse:separate;">'
-        '<tr><td bgcolor="#00507a" style="padding:14px 18px;background:#00507a;">'
-        f'<h2 style="margin:0;{fonte}font-size:18px;line-height:1.35;font-weight:bold;color:#ffffff;">'
-        f'{escape(PESQUISA_AHP_TITULO)}</h2></td></tr>'
-        '<tr><td bgcolor="#edf5fa" style="padding:18px;background:#edf5fa;">'
-        f'<p style="margin:0 0 16px;{fonte}font-size:14px;line-height:1.55;color:#22333f;">'
-        f'{escape(pesquisa_convite)}</p>'
-        '<table role="presentation" cellpadding="0" cellspacing="0">'
-        '<tr><td align="center" bgcolor="#00507a" style="border-radius:5px;background:#00507a;">'
-        f'<a href="{escape(pesquisa_url)}" target="_blank" style="display:inline-block;padding:13px 20px;'
-        f'{fonte}font-size:15px;font-weight:bold;color:#ffffff;text-decoration:none;'
-        'border:1px solid #003d5c;border-radius:5px;">Responder à pesquisa</a>'
-        '</td></tr></table></td></tr></table>'
-        f'<p style="margin:20px 0 0;{fonte}color:#516878;font-size:12px;line-height:1.5;">{RODAPE_EMAIL}</p>'
-        '</td></tr></table></td></tr></table></body></html>'
+        + pesquisa +
+        f'<p style="margin:20px 0 0;{fonte}color:#516878;font-size:12px;line-height:1.5;">{RODAPE_EMAIL}</p>',
     )
 
 

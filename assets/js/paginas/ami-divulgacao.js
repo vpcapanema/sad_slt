@@ -3,18 +3,47 @@
   const $ = id => document.getElementById("ami-divulgacao-" + id);
   const painel = document.getElementById("ami-divulgacao");
   const tabela = $("tabela"), contatoForm = $("contato"), assunto = $("assunto"), mensagem = $("mensagem");
+  const mensagemDepois = $("mensagem-depois");
   const modal = $("modal"), modalForm = $("modal-form");
   const envio = {enviando: "Resultado pendente", aceito_smtp: "Aceito pelo servidor de e-mail", falha: "Falha no envio", indeterminado: "Resultado indeterminado"};
   const entrega = {sem_confirmacao: "Sem confirmação", confirmada: "Entregue", falha: "Devolvido", adiada: "Entrega adiada"};
   let atual = null, modo = "create";
 
-  function mensagemEditada() {
-    if (!assunto.reportValidity() || !mensagem.reportValidity()) return null;
-    if (!assunto.value.trim() || !mensagem.value.trim()) {
+  function textoDoEditor(contexto) {
+    return [mensagem.value.trimEnd(), contexto.link, mensagemDepois.value.trimStart()].filter(Boolean).join("\n\n");
+  }
+
+  function mensagemEditada(contexto) {
+    if (!assunto.reportValidity()) return null;
+    if (!assunto.value.trim() || (!mensagem.value.trim() && !mensagemDepois.value.trim())) {
       $("status").textContent = "Informe o assunto e a mensagem.";
       return null;
     }
-    return {assunto: assunto.value, texto: mensagem.value};
+    return {assunto: assunto.value, texto: textoDoEditor(contexto)};
+  }
+
+  function aplicarEdicao(contexto, edicao) {
+    if (contexto !== atual) return;
+    const conteudo = edicao.rascunho || edicao.padrao;
+    const indice = conteudo.texto.indexOf(contexto.link);
+    assunto.value = conteudo.assunto;
+    mensagem.value = indice < 0 ? conteudo.texto : conteudo.texto.slice(0, indice).trimEnd();
+    mensagemDepois.value = indice < 0 ? "" : conteudo.texto.slice(indice + contexto.link.length).trimStart();
+    contexto.edicao = edicao;
+    contexto.editorAlterado = false;
+    controles();
+  }
+
+  async function carregarEdicao(contexto) {
+    try {
+      aplicarEdicao(contexto, await contexto.api(contexto.urlMensagem));
+    } catch (erro) {
+      if (contexto === atual) {
+        contexto.edicao = null;
+        $("status").textContent = erro.message;
+        controles();
+      }
+    }
   }
 
   function elegivel(contato, reenvio) {
@@ -48,13 +77,13 @@
     const pronto = editavel && atual.dados;
     const coletaAberta = atual?.julgamento.status === "ativa" && Date.parse(atual.julgamento.valido_ate) >= Date.now();
     const pendente = alterada(atual);
-    const podeEnviar = pronto && coletaAberta && !pendente;
+    const podeEnviar = pronto && atual.edicao && coletaAberta && !pendente && !atual.editorAlterado;
     $("consulta").classList.toggle("is-hidden", modo !== "view");
     $("prazo").classList.toggle("is-hidden", modo !== "edit" || !atual || coletaAberta);
     $("pendencias").classList.toggle("is-hidden", modo !== "edit" || !pendente);
     [$("nome"), $("email"), $("instituicao"), $("adicionar"), $("arquivo"), $("listas")].forEach(campo => { campo.disabled = !pronto; });
-    [assunto, mensagem].forEach(campo => { campo.readOnly = !editavel; });
-    $("salvar-mensagem").disabled = !pronto;
+    [assunto, mensagem, mensagemDepois].forEach(campo => { campo.readOnly = !editavel || !atual.edicao; });
+    $("salvar-mensagem").disabled = !pronto || !atual.edicao || !atual.editorAlterado;
     if (!$("enviar")) return;
     const marcados = atual ? selecionados() : [];
     const temContatos = Boolean(tabela.analysisControls?.rows.length);
@@ -138,10 +167,6 @@
     try {
       const dados = await contexto.api(contexto.url + caminho, opcoes);
       if (contexto !== atual || consulta !== contexto.consulta) return;
-      if (!contexto.dados && !contexto.editorAlterado && dados.mensagem) {
-        assunto.value = dados.mensagem.assunto;
-        mensagem.value = dados.mensagem.texto;
-      }
       if (JSON.stringify(dados) !== JSON.stringify(contexto.dados)) {
         contexto.dados = dados;
         renderizar(contexto);
@@ -167,12 +192,11 @@
 
   async function disparar(reenvio) {
     const contexto = atual;
-    if (!podeEditar() || alterada(contexto)) return;
+    if (!podeEditar() || !contexto.edicao || contexto.editorAlterado || alterada(contexto)) return;
     const titulo = reenvio ? "Reenviar link público" : "Enviar link público";
     const contatos = selecionados().filter(contato => elegivel(contato, reenvio));
     if (!contatos.length) return;
-    const conteudo = mensagemEditada();
-    if (!conteudo) return;
+    const rascunho_id = contexto.edicao.rascunho?.id;
     contexto.ocupado = true;
     controles();
     try {
@@ -187,7 +211,7 @@
         $("status").textContent = "Registrando envio para " + contato.nome + "…";
         try {
           const retorno = await contexto.api(contexto.url + "/enviar", {method: "POST",
-            body: JSON.stringify({...conteudo, destinatario: contato.email, reenvio, operacao_id})});
+            body: JSON.stringify({rascunho_id, destinatario: contato.email, reenvio, operacao_id})});
           if (retorno.envio_status === "aceito_smtp") aceitos++;
           else {
             problemas.push(contato.nome + " · " + (retorno.detalhe || envio[retorno.envio_status]));
@@ -201,6 +225,7 @@
       if (atual !== contexto) return;
       const resultado = aceitos + " de " + contatos.length + " e-mail(s) aceito(s) pelo servidor.";
       $("status").textContent = [resultado, ...problemas].join("\n");
+      await carregarEdicao(contexto);
       await carregar(contexto);
     } catch (erro) { if (atual === contexto) $("status").textContent += " " + erro.message; }
     finally {
@@ -211,17 +236,16 @@
 
   async function salvarMensagem() {
     const contexto = atual;
-    if (!podeEditar() || !contexto.dados) return;
-    const conteudo = mensagemEditada();
+    if (!podeEditar() || !contexto.dados || !contexto.edicao) return;
+    const conteudo = mensagemEditada(contexto);
     if (!conteudo) return;
     contexto.ocupado = true;
     controles();
     try {
-      const salva = await contexto.api(contexto.url + "/mensagem", {method: "PUT", body: JSON.stringify(conteudo)});
+      const rascunho = await contexto.api(contexto.urlMensagem, {method: "PUT", body: JSON.stringify(conteudo)});
       if (contexto !== atual) return;
-      contexto.dados.mensagem = salva;
-      contexto.editorAlterado = false;
-      $("status").textContent = "Mensagem salva neste julgamento.";
+      aplicarEdicao(contexto, {...contexto.edicao, rascunho});
+      $("status").textContent = "Edição salva para o próximo envio deste julgamento.";
     } catch (erro) {
       if (contexto === atual) $("status").textContent = erro.message;
     } finally {
@@ -392,19 +416,29 @@
       linkMensagem.href = link;
       linkMensagem.textContent = link;
       if (atual?.julgamento.id === julgamento.id) {
+        const atualizarModelo = !atual.editorAlterado && !atual.ocupado &&
+          (atual.link !== link || atual.julgamento.valido_ate !== julgamento.valido_ate ||
+            atual.julgamento.nome !== julgamento.nome);
+        atual.link = link;
         atual.julgamento = julgamento;
+        if (atualizarModelo) carregarEdicao(atual);
         controles();
         return;
       }
       this.fechar();
       const contexto = {julgamento, api, contatos: new Map(), inscritos: new Set(), alteracoes: new Map(), remocoes: new Set(),
-        url: "/api/ahp/comparacao-colaborativa/ambientes/" + encodeURIComponent(julgamento.id) + "/emails/divulgacao"};
+        link, url: "/api/ahp/comparacao-colaborativa/ambientes/" + encodeURIComponent(julgamento.id) + "/emails/divulgacao",
+        urlMensagem: "/api/ahp/comparacao-colaborativa/ambientes/" + encodeURIComponent(julgamento.id) + "/emails/mensagem"};
       atual = contexto;
       renderizar(contexto);
-      assunto.value = "Convite para colaboração no SICARD";
-      mensagem.value = "Olá!\n\nConvidamos você a participar do julgamento “" + (julgamento.nome || "AHP") + "”. Use o link abaixo para fazer sua inscrição.\n\nEquipe SICARD-PLI";
+      assunto.value = mensagem.value = mensagemDepois.value = "";
       $("status").textContent = "Carregando lista de divulgação…";
-      carregar(contexto).then(() => { if (atual === contexto) $("status").textContent = ""; })
+      carregar(contexto).then(() => {
+        if (atual === contexto) {
+          $("status").textContent = "";
+          if (contexto.link) return carregarEdicao(contexto);
+        }
+      })
         .catch(erro => { if (atual === contexto) $("status").textContent = erro.message; });
     },
     fechar() {
@@ -459,8 +493,11 @@
     }
   };
   $("modal-fechar").addEventListener("click", () => modal.close());
-  [assunto, mensagem].forEach(campo => campo.addEventListener("input", () => {
-    if (atual) atual.editorAlterado = true;
+  [assunto, mensagem, mensagemDepois].forEach(campo => campo.addEventListener("input", () => {
+    if (!atual?.edicao) return;
+    const anterior = atual.edicao.rascunho || atual.edicao.padrao;
+    atual.editorAlterado = assunto.value !== anterior.assunto || textoDoEditor(atual) !== anterior.texto;
+    controles();
   }));
   $("salvar-mensagem").addEventListener("click", salvarMensagem);
   setInterval(() => {

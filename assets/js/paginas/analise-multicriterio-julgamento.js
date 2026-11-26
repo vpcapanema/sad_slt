@@ -5,7 +5,12 @@
   var $ = function (name) { return document.getElementById(name); };
   var esc = function (value) { var n = document.createElement("span"); n.textContent = value == null ? "" : String(value); return n.innerHTML; };
   function api(url, options) { return fetch(url, Object.assign({ credentials: "same-origin", headers: { "Content-Type": "application/json" } }, options || {})).then(async function (r) { var b = await r.json().catch(function () { return {}; }); if (!r.ok) throw new Error(b.detail && (b.detail.message || b.detail) || "Operação não concluída."); return b; }); }
-  function names() { return (julgamento.criterios || []).map(function (c) { return typeof c === "string" ? c : c.criterio || c.nome || c.name || c.codigo; }); }
+  function names() {
+    return (julgamento.criterios || []).map(function (criterio, index) {
+      return typeof criterio === "string" ? criterio :
+        criterio?.criterio || criterio?.nome || criterio?.Critério || criterio?.name || criterio?.codigo || "Critério " + (index + 1);
+    });
+  }
   function localInput(iso) { var d = new Date(iso); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); }
   function deadlineLabel(iso) { return new Date(iso).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }); }
   function deadlineEndOfDay(value) { var parts = value.split("-").map(Number); return new Date(parts[0], parts[1] - 1, parts[2], 23, 59, 59, 0).toISOString(); }

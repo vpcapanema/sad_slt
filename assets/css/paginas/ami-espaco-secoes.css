@@ -106,16 +106,6 @@
   align-items: center;
   gap: var(--ami-space-sm, 0.75rem);
 }
-.ami-espaco-page .ami-email-instrucao {
-  display: flex;
-  align-items: baseline;
-  gap: 0.625rem;
-  line-height: 1.55;
-}
-.ami-espaco-page .ami-email-instrucao > i {
-  flex-shrink: 0;
-  color: var(--pli-blue);
-}
 .ami-espaco-page .ami-email-header-fields {
   display: grid;
   grid-template-columns: minmax(13rem, .9fr) minmax(11rem, .7fr) minmax(18rem, 1.4fr);
@@ -202,7 +192,7 @@
   margin: 0;
   border: 1px solid #d5dee6;
   border-radius: 6px;
-  background: #fff;
+  background: var(--pli-bg);
   overflow: hidden;
 }
 .ami-espaco-page .ami-email-preview-title {
@@ -210,11 +200,11 @@
   display: flex;
   align-items: center;
   min-height: var(--ami-altura-subcabecalho, 2rem);
-  padding: 3px 1rem;
-  background: #00507a;
+  padding: .75rem 1rem;
+  background: var(--pli-deep);
+  border-bottom: 5px solid var(--pli-green);
   color: #fff;
-  font: 700 .75rem/1.4 Montserrat, Verdana, sans-serif;
-  letter-spacing: .04em;
+  font: 700 1rem/1.35 Arial, Helvetica, sans-serif;
 }
 .ami-espaco-page .ami-email-preview-body {
   display: flex;
@@ -223,40 +213,78 @@
   align-items: stretch;
   gap: .75rem;
   padding: 1rem;
-  font: 400 var(--ami-font-child, .7rem)/1.55 Roboto, Arial, sans-serif;
+  background: #fff;
+  font: 400 .875rem/1.55 Arial, Helvetica, sans-serif;
 }
-.ami-espaco-page .ami-email-preview-body > .form-help {
-  margin: 0;
-}
-.ami-espaco-page #ami-email-preview-message {
+.ami-espaco-page :is(#ami-email-preview-message, #ami-email-preview-message-after, #ami-email-preview-deadline, .ami-email-preview-consistencia) {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   font: inherit;
 }
+.ami-espaco-page :is(#ami-email-preview-message, .ami-email-preview-consistencia) p { margin: 0 0 .625rem; }
+.ami-espaco-page :is(#ami-email-preview-message h4, .ami-email-preview-consistencia h5) {
+  margin: 1rem 0 .5rem;
+  padding-left: 9px;
+  border-left: 4px solid var(--pli-green);
+  color: var(--pli-deep);
+  font: 700 .875rem/1.4 Arial, Helvetica, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+.ami-espaco-page .ami-email-preview-consistencia h5 {
+  font-size: .9375rem;
+  text-transform: none;
+  letter-spacing: normal;
+}
+.ami-espaco-page .ami-email-preview-exemplos:not([hidden]) {
+  display: grid;
+  gap: .875rem;
+}
+.ami-espaco-page .ami-email-preview-exemplos figure {
+  min-width: 0;
+  margin: 0;
+  border: 1px solid #b8dbc4;
+}
+.ami-espaco-page .ami-email-preview-exemplos figcaption {
+  padding: .75rem .875rem;
+  background: #eaf8ef;
+  color: var(--pli-deep);
+  font-size: .8125rem;
+}
+.ami-espaco-page .ami-email-preview-exemplos figcaption strong {
+  display: block;
+  margin-bottom: .375rem;
+  font-size: .875rem;
+}
+.ami-espaco-page .ami-email-preview-exemplos img {
+  box-sizing: border-box;
+  display: block;
+  width: min(calc(100% - 20px), var(--ami-largura-exemplo, 380px));
+  height: auto;
+  margin: 10px auto;
+}
+.ami-espaco-page .ami-email-preview-access.is-framed { border: 1px solid #b8dbc4; }
+.ami-espaco-page .ami-email-preview-access > h4 {
+  margin: 0;
+  padding: .625rem .875rem;
+  background: var(--pli-green);
+  color: var(--pli-deep);
+  font: 700 1rem/1.35 Arial, Helvetica, sans-serif;
+}
+.ami-espaco-page .ami-email-preview-access.is-framed .ami-email-preview-access-body {
+  padding: .875rem;
+  background: #eaf8ef;
+}
 .ami-espaco-page .ami-email-preview-button {
-  align-self: center;
+  display: inline-block;
+  margin-top: .625rem;
   padding: .55rem 1rem;
   border: 1px solid #003d5c;
   border-radius: 5px;
-  background: #00507a;
+  background: var(--pli-deep);
   color: #fff;
-  font: 700 var(--ami-font-child, .7rem)/1.4 Roboto, Arial, sans-serif;
+  font: 700 .875rem/1.4 Arial, Helvetica, sans-serif;
   text-decoration: none;
-}
-.ami-espaco-page .ami-email-preview-body > strong {
-  font: 700 var(--ami-font-child, .7rem)/1.55 Roboto, Arial, sans-serif;
-}
-.ami-espaco-page #ami-email-preview-token {
-  padding: .55rem .75rem;
-  border: 1px solid #9fb4c3;
-  border-left: 5px solid #00507a;
-  background: #f3f7fa;
-  color: #12303f;
-  font: 400 var(--ami-font-child, .7rem)/1.55 monospace;
-  overflow-wrap: anywhere;
-}
-.ami-espaco-page #ami-copy-email-token-preview {
-  align-self: flex-start;
 }
 @media (max-width: 700px) {
   .ami-espaco-page .ami-email-header-fields,
@@ -353,37 +381,6 @@
    As linhas se ajustam ao conteúdo, sem reservar espaço para textos vazios. */
 .ami-page.ami-espaco-page {
   --ami-espaco-texto: 0.5rem;
-}
-
-.ami-page.ami-espaco-page .ami-main > .standard-page-hero:has(+ .ami-page-intro) {
-  margin-bottom: var(--ami-space-sm);
-}
-
-.ami-page.ami-espaco-page .ami-main > .ami-page-intro {
-  margin: 0;
-  padding-inline: calc(var(--ami-recuo, 1.5rem) + 1px);
-  color: var(--pli-text);
-  font-size: 0.875rem;
-  line-height: 1.5;
-}
-
-.ami-page.ami-espaco-page .ami-main > .ami-page-intro + .standard-section-action-row {
-  margin-top: var(--ami-space-xs);
-  align-items: stretch;
-  flex-wrap: wrap;
-  gap: var(--ami-space-xs);
-}
-
-.ami-page.ami-espaco-page .ami-main > .ami-page-intro + .standard-section-action-row > .btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.375rem;
-  min-height: 2.5rem;
-}
-
-.ami-page.ami-espaco-page .ami-main .ami-judgments-intro {
-  font-size: 0.8125rem;
 }
 
 .ami-page.ami-espaco-page .ami-main .ahp-section-body {
@@ -652,6 +649,11 @@
   text-underline-offset: .16em;
 }
 
+/* A reserva inferior evita que o recorte dos rótulos corte também o sublinhado em certos níveis de zoom. */
+.ami-page.ami-central-responsiva .ami-main table td button.ami-cell-link {
+  padding-block-end: 2px;
+}
+
 .ami-page.ami-central-responsiva table [data-ami-status] {
   --ami-status-cor: #475569;
   color: var(--ami-status-cor);
@@ -830,6 +832,9 @@
 }
 .ami-page.ami-espaco-page .ami-divulgacao-editor .form-help {
   margin: 0;
+}
+.ami-page.ami-espaco-page #ami-divulgacao-mensagem-depois {
+  min-height: 6rem;
 }
 .ami-page.ami-espaco-page #ami-divulgacao .form-help {
   font: 400 var(--ami-font-help)/1.4 Roboto, Arial, sans-serif;

@@ -7,18 +7,20 @@
 <section class="card ahp-step-section is-hidden" id="ami-analysis-workspace">
   <div class="ahp-section-label">{% if indicacao_processos %}<i class="fas fa-chart-line" aria-hidden="true"></i>{% else %}<span class="ahp-section-index-icon">2</span>{% endif %}<span>Espaço analítico do julgamento</span></div>
   <div class="ahp-section-body">
+    <p class="ami-section-intro">Neste espaço, você examina as respostas e os pesos que elas produzem. Consulte os julgadores e os valores atribuídos a cada par, confira a matriz e a consistência e, por fim, avalie os pesos. O modo de comparação determina como as respostas são consolidadas e como o resultado pode ser homologado.</p>
     <div id="ami-analysis-context" class="step-intro"></div>
     <p id="ami-analysis-mode" class="step-intro" role="status"></p>
-    <p class="step-intro"><i class="fas fa-circle-info" aria-hidden="true"></i> As respostas expressam a intensidade de importância entre os critérios. A consolidação dessas comparações calcula os pesos dos critérios da matriz associada ao julgamento. Após a homologação, os pesos poderão ser selecionados em hierarquizações compatíveis com essa matriz. Julgamentos de superfícies preservam seu contexto específico.</p>
+    <p class="form-help">A homologação torna os pesos disponíveis para o uso correspondente ao julgamento. Em uma hierarquização, a matriz deve ser compatível. Para superfícies, os pesos se aplicam à matriz da própria superfície.</p>
     {% if not tabela_colaborativa_respostas %}<div class="ahp-live-metrics ami-live-metrics" id="ami-analysis-participation"></div>{% endif %}
 
     <section class="ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">{{ '1' if indicacao_processos else '2.1' }}</span><span>Julgadores</span></div>
-      <p class="ami-subsection-hint">Consulte os colaboradores deste julgamento e acompanhe a situação de cada resposta.</p>
+      <p class="ami-section-intro">Consulte os colaboradores e a situação de cada resposta. A tabela reúne os registros de início e envio e, quando calculada, a razão de consistência individual.</p>
       <div class="ahp-section-body"><div class="matriz-table-wrap"><table class="admin-table ami-stats-table ami-table--julgadores"><thead><tr><th>Nome do colaborador</th><th>E-mail do colaborador</th><th>Instituição</th><th>Situação</th><th>RC individual</th><th>Início</th><th>Envio</th></tr></thead><tbody id="ami-analysis-judges"></tbody></table></div></div>
     </section>
     <p class="ami-fio-elo"><span>Cada julgador que respondeu atribuiu, par a par, os índices de importância abaixo.</span></p>
 
     <section class="ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">{{ '2' if indicacao_processos else '2.2' }}</span><span>Índices de importância de Saaty por par de critérios</span></div>
+      <p class="ami-section-intro">Examine os valores atribuídos a cada par no recorte selecionado. Você pode consultar um julgador ou comparar as respostas e aplicar uma medida de tendência central para compor a matriz agregada.</p>
       <p class="ami-subsection-hint">Índice que cada julgador atribuiu a cada par, na escala fundamental de Saaty (1/9, 1/7, 1/5, 1/3, 1, 3, 5, 7, 9) — a mesma do formulário dos especialistas. As linhas da tabela e as barras do gr&aacute;fico s&atilde;o sempre os pares de crit&eacute;rios do julgador escolhido na lista suspensa: com &ldquo;Todos os julgadores&rdquo; aparecem todos os pares e um julgador por coluna; ao escolher um julgador, aparecem somente os pares que lhe foram atribu&iacute;dos. Passar o cursor por uma linha destaca o par no gr&aacute;fico, e vice-versa; clicar numa linha ou numa barra seleciona o par nos dois lados, e clicar de novo desfaz. Cada par tem um c&oacute;digo (Par 1, Par 2&hellip;), que identifica a linha da tabela e a barra do gr&aacute;fico; com todos &agrave; vista, clicar num julgador da legenda abre aquele julgador. A marca na base da c&eacute;lula indica o afastamento em rela&ccedil;&atilde;o &agrave; m&eacute;dia geom&eacute;trica do par.</p>
       <div class="ami-analysis-selectors" data-read-control>
         <div class="ami-judge-filter"><label class="c-form-label" for="ami-analysis-scope">Recorte de dimensões</label><select id="ami-analysis-scope" class="c-form-control" aria-describedby="ami-analysis-scope-hint"></select></div>
@@ -32,25 +34,29 @@
     <p class="ami-fio-elo"><span>Esses índices formam a matriz de comparação pareada: a do julgador selecionado, ou a agregação de todos pela medida de tendência central escolhida.</span></p>
 
     <section class="ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">{{ '3' if indicacao_processos else '2.3' }}</span><span>Matriz de comparação pareada</span></div>
+      <p class="ami-section-intro">Consulte como os valores de importância relativa foram organizados na matriz em exibição. A matriz individual, agregada ou registrada serve de base para examinar a consistência e os pesos do recorte.</p>
       <p class="ami-subsection-hint" id="ami-analysis-matrix-hint"></p>
       <div class="ahp-section-body" id="ami-analysis-matrix"></div>
     </section>
     <p class="ami-fio-elo"><span>Da matriz saem as métricas que atestam a sua coerência.</span></p>
 
     <section class="ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">{{ '4' if indicacao_processos else '2.4' }}</span><span>Métricas de consistência</span></div>
+      <p class="ami-section-intro">Avalie a coerência interna das comparações. A razão de consistência (RC), comparada ao limite adotado, indica se a matriz atende ao critério de consistência da análise.</p>
       <p class="ami-subsection-hint" id="ami-analysis-metrics-hint"></p>
       <div class="ahp-section-body" id="ami-analysis-metrics"></div>
     </section>
-    <p class="ami-fio-elo"><span>Aprovada a consistência, o autovetor da matriz vira o peso de cada critério.</span></p>
+    <p class="ami-fio-elo"><span>Os pesos são calculados a partir da matriz. A consistência é avaliada para a homologação do resultado.</span></p>
 
     <section class="ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">{{ '5' if indicacao_processos else '2.5' }}</span><span>Pesos de cada critério</span></div>
+      <p class="ami-section-intro">Consulte a importância relativa dos critérios ou das dimensões na matriz em exibição. Quando o cálculo é feito por grupo, cada peso expressa a importância do critério dentro do seu grupo.</p>
       <p class="ami-subsection-hint" id="ami-analysis-weights-hint"></p>
       <div class="ahp-section-body">{{ painel_pesos(true) }}<div id="ami-analysis-group-weights" hidden></div></div>
       <template id="ami-analysis-weights-template">{{ painel_pesos(false) }}</template>
     </section>
 
     <section class="ahp-subcard" id="ami-analysis-local-consolidation"><div class="ahp-subsection-title"><span class="ahp-subsection-num">{{ '6' if indicacao_processos else '2.6' }}</span><span>Consolidação das respostas</span></div>
-      <p class="ami-subsection-hint">Gravar o resultado: escolha quais respostas entram e salve a análise consolidada do julgamento. Quem ainda não enviou aparece na lista, mas não pode ser incluído.</p>
+      <p class="ami-section-intro">Defina quais respostas enviadas entram na análise e se o limite de consistência individual será aplicado à seleção. O SICARD agrega os valores dos pares pela medida escolhida e salva a matriz consolidada, as métricas de consistência e os pesos do recorte.</p>
+      <p class="form-help">Somente respostas já enviadas podem ser incluídas. Quem ainda não enviou aparece na lista para acompanhamento.</p>
       <div class="ahp-section-body">
         <fieldset class="ami-analysis-config">
           <legend>Configuração da análise</legend>
@@ -66,12 +72,14 @@
       </div>
     </section>
     <section class="ahp-subcard" id="ami-analysis-local-results"><div class="ahp-subsection-title"><span class="ahp-subsection-num">{{ '7' if indicacao_processos else '2.7' }}</span><span>An&aacute;lises consolidadas e pesos finais</span></div>
+      <p class="ami-section-intro">Consulte as análises salvas, as respostas incluídas, a consistência e os pesos obtidos. Quando o resultado atender às condições, homologue-o como referência de pesos para a finalidade do julgamento.</p>
       <div class="ahp-section-body" id="ami-analysis-consolidations"><p class="ami-empty">Nenhuma an&aacute;lise consolidada.</p></div>
     </section>
     <section class="ahp-subcard" id="ami-global-weights" aria-labelledby="ami-global-title" hidden>
       <h3 class="ahp-subsection-title" id="ami-global-title">Pesos globais dos critérios</h3>
       <div class="ahp-section-body">
-        <p class="step-intro">Se precisar de pesos globais, multiplique o peso local de cada critério pelo peso da sua dimensão.</p>
+        <p class="ami-section-intro" id="ami-global-group-intro" hidden>Combine os pesos locais de cada grupo com os pesos das dimensões para obter pesos comparáveis para toda a matriz. Os pesos das dimensões podem ser definidos manualmente ou obtidos de um julgamento AHP homologado da mesma matriz.</p>
+        <p class="ami-section-intro" id="ami-global-linked-intro" hidden>Calcule o ranking coletivo com todas as respostas que têm as duas etapas validadas. O SICARD combina as dimensões e os critérios em cada resposta e calcula a média dos pesos globais individuais, com a mesma participação para cada resposta.</p>
         <form id="ami-global-form">
           <fieldset class="ami-analysis-config" id="ami-global-fields">
             <legend>Composição dos pesos globais</legend>

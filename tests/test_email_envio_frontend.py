@@ -12,10 +12,11 @@ const controls = {};
 const detail = 'O servidor de email recusou a autenticação do SICARD (código 535 5.7.139). Verifique a credencial de aplicativo e a autorização SMTP da conta.';
 const context = {
   Set, crypto: require('node:crypto').webcrypto,
-  contexto: {julgamento: {id: 'teste'}, destinatarios: ['a@example.com', 'b@example.com', 'c@example.com']},
+  contexto: {edicao: {rascunho: null}, julgamento: {id: 'teste'}, destinatarios: ['a@example.com', 'b@example.com', 'c@example.com']},
   pronto: true, loteEmExecucao: false, registros: [], REENVIAVEIS: new Set(['pendente']), estado: () => 'pendente',
   $: id => controls[id] ||= {disabled: false, textContent: ''},
-  bloquear: value => {busy = value;}, render() {}, url: () => '/mock',
+  bloquear: value => {busy = value;}, render() {}, url: () => '/mock', async carregarEdicao() {}, async carregar() {},
+  definirRegistros(rows) { context.registros = rows; },
   rotulosEnvio: {falha: 'Não enviado'},
   request: async () => {sends++; return {id: 'falha', envio_status: 'falha', detalhe: detail};},
   ProcessFeedback: {confirmar: async () => true, iniciarCadastro: () => ({
@@ -50,10 +51,11 @@ let resultado, ocupado;
 const compacto = [];
 const context = {
   Set, crypto: require('node:crypto').webcrypto,
-  contexto: {julgamento: {id: 'teste', atualizadoEm: 'versao', revisao_convites: 'revisao-original'}, destinatarios: emails},
+  contexto: {edicao: {rascunho: {id: 'edicao-teste'}}, julgamento: {id: 'teste', atualizadoEm: 'versao', revisao_convites: 'revisao-original'}, destinatarios: emails},
   pronto: true, loteEmExecucao: false, registros: [], REENVIAVEIS: new Set(['Não enviado', 'Devolvido']),
   estado: () => 'Não enviado', $: id => controles[id] ||= {disabled: false},
-  bloquear(valor) { ocupado = valor; }, controles() {}, render() {}, url: () => '/mock',
+  bloquear(valor) { ocupado = valor; }, controles() {}, render() {}, url: () => '/mock', async carregarEdicao() {},
+  definirRegistros(rows) { context.registros = rows; },
   setTimeout: callback => callback(),
   rotulosEnvio: {aceito_smtp: 'Enviado', falha: 'Não enviado'},
   fetch: async (_url, options) => {
@@ -66,6 +68,8 @@ const context = {
       context.registros = [];
     }
     assert.equal(dados.somente_nao_enviado, true);
+    assert.equal(dados.rascunho_id, 'edicao-teste');
+    assert.equal(dados.usar_modelo_atual, true);
     assert.equal(dados.revisao_convites, 'revisao-original');
     const anteriores = tentativas.get(destinatario) || [];
     anteriores.push(options.body);

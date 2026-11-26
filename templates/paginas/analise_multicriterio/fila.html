@@ -8,6 +8,7 @@
 {% block estilos_pagina %}
 <link rel="stylesheet" href="/assets/css/ahp-module.css?v=20261103-regua-invertida">
 <link rel="stylesheet" href="/assets/css/paginas/ahp-formulario-publico.css?v=20261124-acesso-direto">
+<link rel="stylesheet" href="/assets/css/paginas/ami-contextualizacao.css?v=20261126-contextos-ahp">
 {% endblock %}
 
 {% block conteudo %}
@@ -17,9 +18,10 @@
     <div class="ahp-section-body">
       <h1 id="fila-titulo">{{ julgamento }}</h1>
       {% if fila.situacao == "enviada" %}
-      <p>Sua resposta já foi enviada. Obrigado pela participação.</p>
+      <p class="ami-section-intro">Sua avaliação foi registrada e sua participação neste julgamento está concluída.</p>
       {% else %}
-      <p>Todas as vagas de preenchimento estão ocupadas. Mantenha esta página aberta. O formulário abrirá automaticamente quando chegar a sua vez.</p>
+      <p class="ami-section-intro">Acompanhe sua posição enquanto aguarda uma vaga de preenchimento. O SICARD abrirá o formulário automaticamente quando chegar a sua vez.</p>
+      <p class="form-help">Mantenha esta página aberta para acompanhar a fila.</p>
       <p id="ahp-fila-status" role="status" data-api="/api/ahp/comparacao-colaborativa/publico/{{ token }}/fila">Sua posição na fila é {{ fila.posicao }}.</p>
       {% include "componentes/analise_multicriterio/_codigo_retomada.html" %}
       {% endif %}

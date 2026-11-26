@@ -18,8 +18,9 @@ from api.schemas.email import EmailEnvioSchema
 from api.schemas.lembretes_ahp import FrequenciaLembretesSchema
 from api.services import email_service
 from api.services.atividade_colaboracao_ahp import etapa_colaboracao
-from api.services.comparacao_colaborativa_service import _link_publico
-from api.services.email_convites import codigo_link
+from api.services import mensagens_ahp
+from api.services.comparacao_colaborativa_service import _link_publico, _prazo_email
+from api.services.email_convites import ConviteOriginalIndisponivel, link_lembrete
 
 PADRAO = (
     {"ate": 50, "quantidade": 0}, {"ate": 80, "quantidade": 1},
@@ -349,19 +350,22 @@ def _enviar(pessoa: dict, previsto_em: datetime, percentual: float, base: str, d
     try:
         _conferir_envio(ambiente_id, email, previsto_em)
         link = _link_publico(pessoa, base_url=base)
-        instrucoes = "Use o link da coleta para continuar o preenchimento."
-        if pessoa["modo_participacao"] == "convite":
-            link += "?c=" + codigo_link(pessoa["token"], email)
-            instrucoes = "Use o link abaixo e a chave individual recebida no convite original."
-        julgamento = pessoa["julgamento"]
-        assunto = f"Lembrete de resposta — {' '.join(julgamento.split())}"[:200]
+        convite = pessoa["modo_participacao"] == "convite"
+        if convite:
+            link = link_lembrete(ambiente_id, email, pessoa["versao_convite"], link, pessoa["token"])
+        conteudo = mensagens_ahp.lembrete(pessoa, link, _prazo_email(pessoa, "%d/%m/%Y, às %Hh%M"), previsto_em)
         msg = EmailEnvioSchema(
-            destinatario=email, alias_remetente="SICARD-PLI", assunto=assunto,
-            texto=f"Olá, {pessoa['nome']}.\n\nSua resposta ao julgamento “{julgamento}” está pendente. "
-                  f"{instrucoes}\n\n{link}\n\nEquipe SICARD-PLI",
+            destinatario=email, **conteudo,
+            html=mensagens_ahp.html(
+                conteudo["texto"], link,
+                mensagens_ahp.ACAO_CONVITE if convite else mensagens_ahp.ACAO_LEMBRETE_PUBLICO,
+                titulo="Lembrete de participação", julgamento=pessoa["julgamento"], ilustrar=False,
+            ),
         )
         resultado = email_service.enviar(msg, usuario_id="sicard:lembretes-ahp", id_mensagem=mensagem_id,
                                           conferir_elegibilidade=lambda: _conferir_envio(ambiente_id, email, previsto_em))
+    except ConviteOriginalIndisponivel as exc:
+        repo.finalizar(mensagem_id, "cancelado", str(exc))
     except ValidationError:
         repo.finalizar(mensagem_id, "falha", "O endereço ou o assunto do lembrete contém dados inválidos.")
     except email_service.FalhaEmail as exc:

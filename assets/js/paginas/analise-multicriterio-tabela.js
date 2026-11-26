@@ -127,8 +127,30 @@
     body.querySelectorAll("[data-select-id]").forEach(function (checkbox) { checkbox.addEventListener("change", function () { if (options.onSelectionChange) options.onSelectionChange(checkbox.dataset.selectId, checkbox.checked); }); });
     var modal = document.getElementById(tbodyId + "-modal"), modalTitle = document.getElementById(tbodyId + "-modal-title"), modalContent = document.getElementById(tbodyId + "-modal-content");
     function closeModal() { modal.classList.add("is-hidden"); }
-    body.querySelectorAll('[data-modal-kind="collaborators"]').forEach(function (button) { button.addEventListener("click", function (event) { event.stopImmediatePropagation(); var j = (julgamentos || []).find(function (item) { return item.id === button.dataset.recordId; }); if (!j) return; modalTitle.textContent = "Colaboradores do julgamento"; modalContent.innerHTML = collaboratorsModal(j); modal.classList.remove("is-hidden"); var tabela = modalContent.querySelector("table"); if (tabela) global.SLTAnalysisTable?.(tabela, j); modal.querySelector("[data-modal-close]").focus(); }); });
-    body.querySelectorAll("[data-modal-kind]").forEach(function (button) { button.addEventListener("click", function () { var j = (julgamentos || []).find(function (item) { return item.id === button.dataset.recordId; }); if (!j) return; var kind = button.dataset.modalKind, titles = { criteria: "Critérios do julgamento", matrix: "Matriz de comparação pareada consolidada", weights: "Pesos consolidados" }; modalTitle.textContent = titles[kind] || "Detalhes do julgamento"; modalContent.innerHTML = kind === "criteria" ? criteriaModal(j) : kind === "matrix" ? matrix(j) : weightsModal(j); modal.classList.remove("is-hidden"); modal.querySelector("[data-modal-close]").focus(); }); });
+    var detalhes = {
+      collaborators: ["Colaboradores do julgamento", "Consulte os especialistas convidados e acompanhe quantas respostas foram recebidas.", collaboratorsModal],
+      criteria: ["Critérios do julgamento", "Confira os critérios vinculados ao julgamento e seu enquadramento por dimensão e fase, quando informado.", criteriaModal],
+      matrix: ["Matriz de comparação pareada consolidada", "Consulte os valores de importância relativa usados no cálculo dos pesos da análise consolidada.", matrix],
+      weights: ["Pesos consolidados", "Consulte a importância relativa dos critérios no resultado da análise consolidada.", weightsModal]
+    };
+    body.querySelectorAll("[data-modal-kind]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        var julgamento = (julgamentos || []).find(function (item) { return item.id === button.dataset.recordId; });
+        var tipo = button.dataset.modalKind;
+        if (!julgamento || !detalhes[tipo]) return;
+        var [titulo, contexto, renderizar] = detalhes[tipo];
+        var abertura = document.createElement("p");
+        abertura.className = "ami-section-intro";
+        abertura.textContent = contexto;
+        modalTitle.textContent = titulo;
+        modalContent.innerHTML = renderizar(julgamento);
+        modalContent.prepend(abertura);
+        modal.classList.remove("is-hidden");
+        var tabela = modalContent.querySelector("table");
+        if (tipo === "collaborators" && tabela) global.SLTAnalysisTable?.(tabela, julgamento);
+        modal.querySelector("[data-modal-close]").focus();
+      });
+    });
     modal.querySelector("[data-modal-close]").onclick = closeModal; modal.onclick = function (event) { if (event.target === modal) closeModal(); };
   };
   global.renderCentralRespostas = function (tbodyId, respostas, options) {

@@ -65,6 +65,14 @@ class ConviteEmailEnvioSchema(EmailTesteSchema):
     revisao_convites: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     reenvio_id: UUID | None = None
     somente_nao_enviado: bool = False
+    usar_modelo_atual: bool = False
+    rascunho_id: UUID | None = None
+
+    @model_validator(mode="after")
+    def validar_operacao(self):
+        if self.rascunho_id and (not self.usar_modelo_atual or self.reenvio_id is None):
+            raise ValueError("Informe a operação a que pertence a edição da mensagem.")
+        return self
 
 
 class RespostaEmailEnvioSchema(EmailTesteSchema):
@@ -122,9 +130,29 @@ class MensagemDivulgacaoSchema(BaseModel):
         return EmailEnvioSchema.validar_assunto(valor)
 
 
-class DivulgacaoEmailEnvioSchema(EmailTesteSchema, MensagemDivulgacaoSchema):
+class RascunhoEmailAhpSchema(MensagemDivulgacaoSchema):
+    alias_remetente: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)] = "SICARD-PLI"
+
+    @field_validator("alias_remetente", mode="before")
+    @classmethod
+    def validar_alias(cls, valor: str) -> str:
+        return EmailEnvioSchema.validar_assunto(valor)
+
+
+class DivulgacaoEmailEnvioSchema(EmailTesteSchema):
     operacao_id: UUID
     reenvio: bool = False
+    rascunho_id: UUID | None = None
+    assunto: Annotated[str, StringConstraints(strip_whitespace=False)] | None = None
+    texto: Annotated[str, StringConstraints(strip_whitespace=False)] | None = None
+
+    @model_validator(mode="after")
+    def validar_texto_legado(self):
+        if self.assunto is not None or self.texto is not None:
+            MensagemDivulgacaoSchema(assunto=self.assunto, texto=self.texto)
+            if self.rascunho_id:
+                raise ValueError("Use apenas a edição salva para esta operação.")
+        return self
 
 
 class DivulgacaoTransporteSchema(EmailEnvioSchema):

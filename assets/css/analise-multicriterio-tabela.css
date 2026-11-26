@@ -79,6 +79,10 @@
 }
 
 .ami-table--database th,
+.admin-table.ami-table--database tbody tr:hover {
+  cursor: auto;
+}
+
 .ami-table--database td {
   text-align: center;
   vertical-align: middle;

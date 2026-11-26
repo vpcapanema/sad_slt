@@ -128,9 +128,9 @@ async function checkColor(page) {
     assert.equal(textAlignment, 'justify', 'Parágrafos de texto corrido devem permanecer justificados no mobile');
     const participationSteps = await page.locator('.secao-collab-scope-steps li').evaluateAll(elements =>
       elements.map(element => getComputedStyle(element).textAlign));
-    assert.equal(participationSteps.length, 6, 'O passo a passo da participação deve manter seis opções');
+    assert.equal(participationSteps.length, 3, 'O passo a passo deve ter identificação, comparação e envio');
     assert.ok(participationSteps.every(alignment => alignment === 'justify'),
-      'Os textos das seis opções do passo a passo devem ficar justificados');
+      'Os textos do passo a passo devem ficar justificados');
     const guideCards = await page.locator('.collab-guia-passos li').evaluateAll(cards => cards.map(card => {
       const header = card.querySelector('.collab-guia-passo-cabecalho');
       const number = card.querySelector('.collab-guia-passo-num').getBoundingClientRect();
@@ -153,8 +153,8 @@ async function checkColor(page) {
     });
     assert.ok(tabIntroSpacing.top >= tabIntroSpacing.bottom,
       'O texto abaixo das abas deve ter folga superior igual ou maior que a inferior');
-    assert.match(await page.locator('#collab-form-legend').textContent(), /cada card apresenta um par de critérios/i,
-      'A orientação da aba formulário deve explicar a realidade dos cards');
+    assert.match(await page.locator('#collab-panel-form > .ami-section-intro').textContent(), /uma escolha em cada cartão/i,
+      'A abertura da aba formulário deve indicar uma escolha por cartão');
     await page.locator('#collab-tab-matrix').click();
     assert.equal(await page.locator('#collab-form-legend').isVisible(), false,
       'A orientação do formulário não deve aparecer na aba matriz');
@@ -162,9 +162,12 @@ async function checkColor(page) {
     assert.equal(await page.locator('#collab-matrix-title').evaluate(element => getComputedStyle(element).textAlign), 'left');
     assert.equal(await page.locator('#collab-matrix-wrap caption').count(), 0,
       'O título da matriz não deve permanecer dentro do contêiner da tabela');
-    assert.equal(await page.locator('#collab-matrix-title').evaluate(element =>
-      element.nextElementSibling.nextElementSibling.id), 'collab-matrix-wrap',
-      'Título e explicação devem ficar acima e fora do contêiner da matriz');
+    assert.deepEqual(await page.locator('#collab-matrix-title').evaluate(element => {
+      const intro = element.nextElementSibling;
+      const nota = intro.nextElementSibling;
+      return [intro.matches('p.ami-section-intro'), nota.id, nota.nextElementSibling.id];
+    }), [true, 'collab-matrix-legend', 'collab-matrix-wrap'],
+      'Título, abertura e nota devem ficar acima e fora do contêiner da matriz');
     await page.locator('#collab-tab-form').click();
     assert.ok(mobile.labelFont < 8.96 && mobile.handleWidth < 22,
       'Textos e seletor devem acompanhar proporcionalmente a largura mobile');

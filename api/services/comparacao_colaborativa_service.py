@@ -45,7 +45,7 @@ from api.schemas.comparacao_colaborativa import (
     EMAIL_ASSUNTO_PADRAO,
     EMAIL_REMETENTE_ALIAS_PADRAO,
 )
-from api.services import ahp_engine, contexto_julgamento_ahp, superficie_ahp, matrizes_criterios
+from api.services import ahp_engine, contexto_julgamento_ahp, superficie_ahp, matrizes_criterios, mensagens_ahp
 
 logger = logging.getLogger(__name__)
 METODO_PESOS_GLOBAIS = "pesos_por_dimensao"
@@ -280,6 +280,7 @@ def _proteger_link_publico(row: dict[str, Any], mensagem: str, *, base_url: str 
     """Normaliza o único trecho imutável da mensagem para o link canônico do julgamento."""
     token = quote(str(row["token"]), safe="")
     caminhos = (
+        _link_publico(row),
         f"/public/analise-multicriterio/formulario-comparacao-pareada/{token}/",
         f"/public/analise-multicriterio/{token}/",
     )
@@ -306,12 +307,17 @@ def _prazo_email(row: dict[str, Any], formato: str) -> str:
 
 
 def _mensagem_email_padrao(
-    row: dict[str, Any], *, base_url: str = "", criterios: list[dict] | None = None,
+    row: dict[str, Any], *, base_url: str = "",
 ) -> str:
-    nomes = _criterio_nomes(row.get("criterios") or []) if criterios is None else _criterio_nomes(criterios)
-    exemplos = _criterio_nomes(row.get("criterios") or [])
+    return mensagens_ahp.convite(
+        row, _link_publico(row, base_url=base_url), _prazo_email(row, "%d/%m/%Y, às %Hh%M"),
+    )["texto"]
+
+
+def _mensagem_email_padrao_anterior(row: dict[str, Any], *, base_url: str = "") -> str:
+    nomes = _criterio_nomes(row.get("criterios") or [])
     prazo = _prazo_email(row, "%d/%m/%Y, às %Hh%M, horário de Brasília")
-    linhas = ["Olá, colaborador(a)!", "", contexto_julgamento_ahp.abertura_convite(row, exemplos), "",
+    linhas = ["Olá, colaborador(a)!", "", contexto_julgamento_ahp.abertura_convite(row, nomes), "",
               contexto_julgamento_ahp.orientacao_convite(row, len(nomes))]
     if nomes:
         linhas.extend(["", f"Critérios a comparar ({len(nomes)}):"])
@@ -354,7 +360,7 @@ def base_mensagem_padrao(row: dict[str, Any]) -> str | None:
     if link is None:
         return None
     base = link[:-len(caminho)]
-    if mensagem == _mensagem_email_padrao(row, base_url=base):
+    if mensagem in (_mensagem_email_padrao(row, base_url=base), _mensagem_email_padrao_anterior(row, base_url=base)):
         return base
     prazo_legado = re.search(r"(?m)^Acesse o formulário colaborativo pelo botão abaixo até (\d{2}/\d{2}/\d{4}):$", mensagem)
     origem_legada = re.search(r'(?m)^Você foi convidado\(a\) a preencher a matriz de comparação pareada da análise "([^\n]+)" no SICARD\.$', mensagem)

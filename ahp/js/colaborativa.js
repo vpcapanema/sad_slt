@@ -7,6 +7,7 @@
   var PAIR_VALIDATION_MS = 1500;
   var LIMITE_RC = 0.10;
   var token = "";
+  var acessoDoLink = "";
   var meta = null;
   var stats = { inicio_ms: null, duracao_anterior_ms: 0, pares: {} };
   var draftActive = false;
@@ -95,16 +96,23 @@
       if (item[0] === "Prazo") line.title = "Horário de Brasília";
       box.appendChild(line);
     });
-    if (inscricao || !meta.contextualizacao) return;
-    var texto = meta.contextualizacao;
-    el("collab-scope-intro").textContent = texto.introducao;
-    el("collab-scope-method-text").textContent = texto.metodo;
+    if (inscricao) return;
+    var detalhes = el("collab-scope-details");
+    var texto = meta.contextualizacao || {};
+    [["collab-scope-intro", texto.introducao], ["collab-scope-method-text", texto.metodo],
+      ["collab-scope-assignment", texto.orientacao]].forEach(function ([id, conteudo]) {
+      var campo = el(id);
+      campo.textContent = conteudo || "";
+      campo.parentElement.hidden = !campo.textContent.trim();
+    });
     var exemplos = el("collab-scope-examples");
-    exemplos.textContent = (texto.exemplos || []).join(" ");
-    exemplos.hidden = !exemplos.textContent;
-    var orientacao = el("collab-scope-assignment");
-    orientacao.textContent = texto.orientacao || "";
-    orientacao.hidden = !orientacao.textContent;
+    exemplos.replaceChildren(...(texto.exemplos || []).filter(Boolean).map(function (exemplo) {
+      var item = document.createElement("li");
+      item.textContent = exemplo;
+      return item;
+    }));
+    exemplos.parentElement.hidden = !exemplos.childElementCount;
+    detalhes.hidden = !detalhes.querySelector(".collab-detail-card:not([hidden])");
   }
 
   function trackPair(pid) {
@@ -953,7 +961,7 @@
     var nome = (inscricao ? el("colab-nome").textContent : el("colab-nome").value).trim();
     var inst = (inscricao ? el("colab-inst").textContent : el("colab-inst").value).trim();
     var email = (inscricao ? inscricao.dataset.email : el("colab-email").value).trim().toLowerCase();
-    var codigo = inscricao ? undefined : (global.SLTColaborativaModelo ? "000000" : (el("colab-token").value || "").trim());
+    var codigo = inscricao ? undefined : (global.SLTColaborativaModelo ? "000000" : acessoDoLink || el("colab-token").value.trim());
     if (!nome || !inst || !email) {
       feedback("Informe nome, instituição e e-mail para iniciar o preenchimento.", "error");
       return;
@@ -1081,6 +1089,15 @@
       return;
     }
     if (!inscricao) {
+      var acessoRecebido = new URLSearchParams(global.location.hash.slice(1)).get("acesso");
+      if (!global.SLTColaborativaModelo && /^[A-Za-z0-9_-]{43}$/.test(acessoRecebido || "")) {
+        acessoDoLink = acessoRecebido;
+        global.history.replaceState(global.history.state, "", global.location.pathname + global.location.search);
+        el("colab-token").closest(".c-form-group").classList.add("is-hidden");
+        el("colab-access-intro").textContent = "Informe seu nome, instituição e o endereço de e-mail que recebeu o convite. Em seguida, clique em Liberar formulário.";
+        el("colab-access-legacy").hidden = true;
+        el("colab-access-guide").textContent = "Preencha a identificação com o e-mail que recebeu o convite.";
+      }
       var preEmail = qp("email");
       if (preEmail) el("colab-email").value = preEmail;
       global.SLTColaborativaApi.obterPublico(token)

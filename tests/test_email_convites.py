@@ -113,15 +113,16 @@ def test_preserva_texto_acrescenta_token_e_nao_repete_apos_recarga(ambiente, smt
     assert result["envio_status"] == "aceito_smtp"
     texto = smtp.call_args.args[0].texto
     html = smtp.call_args.args[0].html
-    assert texto.startswith(ambiente["email_mensagem"].replace("/token-teste/\n", "/token-teste/?c=" + service.codigo_link("token-teste", DEST) + "\n") + "\n\n")
-    assert "Chave individual do convite: " + "A" * 43 in texto
-    assert "Acessar formulário colaborativo" in html
-    assert "Copiar no seu aplicativo" in html
-    assert "A" * 43 in html
+    fragmento = "#acesso=" + "A" * 43
+    rastreio = "/token-teste/?c=" + service.codigo_link("token-teste", DEST)
+    assert texto == ambiente["email_mensagem"].replace("/token-teste/\n", rastreio + fragmento + "\n")
+    assert "Chave individual do convite" not in texto and "Chave individual do convite" not in html
+    assert "Acessar formulário" in html
+    assert rastreio + fragmento in html
     assert "copiar-chave" not in html
     assert "/token-teste/?c=" + service.codigo_link("token-teste", DEST) in html
     assert ">https://example.com/" not in html
-    assert registros[0]["conteudo_hash"] == sha256(("SICARD-PLI\n" + service.ASSUNTO + "\n" + texto.split("\n\nChave individual")[0]).encode()).hexdigest()
+    assert registros[0]["conteudo_hash"] == sha256(("SICARD-PLI\n" + service.ASSUNTO + "\n" + texto.replace(fragmento, "")).encode()).hexdigest()
     assert smtp.call_args.kwargs["solicitar_confirmacoes"] is True
     assert smtp.call_args.kwargs["id_mensagem"] == registros[0]["mensagem_id"]
     assert "sicard." in registros[0]["mensagem_id"]
@@ -146,7 +147,7 @@ def test_convite_usa_alias_assunto_e_mensagem_editados(ambiente, smtp, registros
 
 
 @pytest.mark.parametrize("legado", [False, True])
-def test_convite_padrao_introduz_o_pli_e_usa_o_recorte_do_destinatario(ambiente, smtp, registros, legado):
+def test_convite_padrao_apresenta_o_pli_e_separa_as_orientacoes_do_acesso(ambiente, smtp, registros, legado):
     from api.services import comparacao_colaborativa_service as julgamentos
 
     base = "https://example.com/sicard"
@@ -165,13 +166,16 @@ def test_convite_padrao_introduz_o_pli_e_usa_o_recorte_do_destinatario(ambiente,
     )
     service.enviar(ambiente["id"], payload(ambiente), "analista")
     enviado = smtp.call_args.args[0]
-    intro, orientacao, lista, *_ = enviado.texto.split("\n\n")[1:]
-    assert intro.startswith("O PLI-SP 2050 orienta o planejamento")
-    ordem = [intro.index(trecho) for trecho in ("muitas demandas", "recursos disponíveis", "estabelecer prioridades", "O SICARD apoia", "Método de Análise Hierárquica (AHP)")]
+    assert enviado.texto.split("\n\n")[1].startswith("O PLI-SP 2050 orienta o planejamento")
+    ordem = [enviado.texto.index(trecho) for trecho in (
+        "desenvolvemos uma ferramenta de apoio à tomada de decisão",
+        "Método de Análise Hierárquica (AHP)", "Gostaríamos de contar com sua contribuição",
+        "Orientações para preenchimento", "O formulário está organizado em cartões",
+        "mova a régua para qualquer lado", "Prazo para resposta e acesso ao formulário",
+        julgamentos._link_publico(ambiente, base_url=base), "Agradecemos seu tempo",
+    )]
     assert ordem == sorted(ordem)
-    assert "1 comparação entre os 2 critérios" in orientacao
-    assert "D6 · Viabilidade" in lista and "D7 · Riscos" in lista
-    assert "D1" not in lista
+    assert "D6 · Viabilidade" not in enviado.texto
     assert enviado.texto.startswith("Olá, Ana Silva!")
     assert "22/11/2026" not in enviado.texto
     assert "horário de Brasília" in enviado.html
@@ -806,11 +810,11 @@ def test_monitoramento_inclui_nomes_e_disponibilidade_da_resposta(ambiente, regi
     result = monitoramento(ambiente["id"])
     assert result["registros"] == registros
     assert result["colaboradores"] == [
-        {"nome": "Ana", "email": DEST, "resposta_recebida": True, "acesso_formulario_em": None,
+        {"nome": "Ana", "email": DEST, "instituicao": None, "resposta_recebida": True, "acesso_formulario_em": None,
          "resposta_enviada_em": "2026-11-06T20:01:12+00:00", "clique_link_em": None,
          "etapa_codigo": "resposta_enviada", "etapa_rotulo": "Resposta enviada",
          "etapa_atualizada_em": "2026-11-06T20:01:12+00:00"},
-        {"nome": "Bia", "email": "bia@example.com", "resposta_recebida": False,
+        {"nome": "Bia", "email": "bia@example.com", "instituicao": None, "resposta_recebida": False,
          "acesso_formulario_em": "2026-11-06T19:51:11+00:00", "resposta_enviada_em": None,
          "clique_link_em": None, "etapa_codigo": "em_preenchimento", "etapa_rotulo": "Em preenchimento",
          "etapa_atualizada_em": "2026-11-06T19:51:11+00:00"},
@@ -906,7 +910,7 @@ def test_link_do_convite_recebe_codigo_sem_expor_o_email(ambiente, smtp, registr
     service.enviar(ambiente["id"], payload(ambiente), "analista")
     codigo = service.codigo_link("token-teste", DEST)
     texto = smtp.call_args.args[0].texto
-    assert f"/formulario-comparacao-pareada/token-teste/?c={codigo}\n" in texto
+    assert f"/formulario-comparacao-pareada/token-teste/?c={codigo}#acesso=" in texto
     assert DEST not in texto
     assert codigo != service.codigo_link("token-teste", "bia@example.com")
 

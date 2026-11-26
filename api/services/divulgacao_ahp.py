@@ -12,8 +12,9 @@ from api.schemas.email import (
     DivulgacaoEmailEnvioSchema, DivulgacaoTransporteSchema, ExclusaoDestinatariosDivulgacaoSchema,
     ListaDivulgacaoSchema, MensagemDivulgacaoSchema, SalvamentoListaDivulgacaoSchema,
 )
-from api.services import email_service
+from api.services import email_ahp_rascunho, email_service, mensagens_ahp
 from api.services.comparacao_colaborativa_service import _link_publico, _validar_ambiente_ativo, instituicao_convidado
+from api.services.email_convites import _personalizar_mensagem
 
 NATUREZA = "divulgacao"
 
@@ -151,13 +152,22 @@ def enviar(ambiente_id: str, dados: DivulgacaoEmailEnvioSchema, usuario_id: str,
             acao = "Reenviar" if historico else "Enviar"
             raise DemandaValidationError(f"Atualize a lista e use a ação {acao} para este contato.", field="destinatario")
         link = _link_publico(ambiente, base_url=base_url)
-        html_texto = escape(dados.texto).replace("\r\n", "\n").replace("\r", "\n").replace("\n", "<br>")
-        mensagem = DivulgacaoTransporteSchema(
-            destinatario=email, assunto=dados.assunto, alias_remetente="SICARD-PLI",
-            texto=f"{dados.texto}\n\nInscrição pública no SICARD\n{link}",
-            html=(f'<div style="white-space:pre-wrap">{html_texto}</div>'
-                  f'<p><a href="{escape(link, quote=True)}">Abrir inscrição pública</a></p>'),
-        )
+        if dados.texto is not None:
+            html_texto = escape(dados.texto).replace("\r\n", "\n").replace("\r", "\n").replace("\n", "<br>")
+            mensagem = DivulgacaoTransporteSchema(
+                destinatario=email, assunto=dados.assunto, alias_remetente="SICARD-PLI",
+                texto=f"{dados.texto}\n\nInscrição pública no SICARD\n{link}",
+                html=(f'<div style="white-space:pre-wrap">{html_texto}</div>'
+                      f'<p><a href="{escape(link, quote=True)}">Abrir inscrição pública</a></p>'),
+            )
+        else:
+            conteudo = email_ahp_rascunho.para_envio(conn, ambiente, usuario_id, dados.rascunho_id, dados.operacao_id, base_url)
+            texto = _personalizar_mensagem(conteudo["texto"], contato[0].get("nome"), normalizar_assinatura=False)
+            mensagem = DivulgacaoTransporteSchema(
+                destinatario=email, assunto=conteudo["assunto"], alias_remetente=conteudo["alias_remetente"],
+                texto=texto, html=mensagens_ahp.html(texto, link, mensagens_ahp.ACAO_CONVITE,
+                                                    julgamento=ambiente.get("nome") or ""),
+            )
         remetente = email_service._config().remetente
         registro, novo = emails.reservar(
             ambiente_id, email, identidade, f"<sicard.{uuid4().hex}@{str(remetente).rsplit('@', 1)[1]}>",

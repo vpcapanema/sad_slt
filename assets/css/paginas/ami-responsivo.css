@@ -1,26 +1,36 @@
-/* Escala comum às centrais AHP. As tabelas mantêm a rolagem na área de dados. */
+/* Escala dos cabeçalhos AHP e dos controles das centrais. */
 @media (max-width: 900px) {
-  .ami-page.ami-central-responsiva .ami-main {
+  .ami-page.ami-central-responsiva .ami-main,
+  .ami-public-page .ahp-main > :is(.standard-page-hero, .ami-page-intro) {
     --ami-recuo: clamp(.5rem, 1.9vw, 1rem);
+    --ami-titulo-pagina: clamp(1.125rem, 3.8vw, 1.45rem);
+  }
+
+  .ami-page.ami-central-responsiva .ami-main {
     --ami-espaco-texto: clamp(.25rem, 1vw, .5rem);
     --ami-altura-campo: clamp(1.75rem, 5.4vw, 2.125rem);
     --ami-tamanho-botao-icone: clamp(1.75rem, 5.4vw, 2.115rem);
     --ami-controle-filtro: clamp(1.375rem, 4.5vw, 1.5625rem);
     --ami-altura-subcabecalho: clamp(1.75rem, 5.2vw, 2rem);
     --ami-titulo-tabela: clamp(.8125rem, 2.65vw, 1rem);
-    --ami-titulo-pagina: clamp(1.125rem, 3.8vw, 1.45rem);
     width: calc(100% - 2 * var(--ami-recuo));
     padding-block: var(--ami-recuo);
   }
 
-  .ami-page.ami-central-responsiva .ami-main :is(.standard-page-hero, .ahp-step-section, .ahp-subcard) {
+  .ami-page.ami-central-responsiva .ami-main :is(.standard-page-hero, .ahp-step-section, .ahp-subcard),
+  .ami-public-page .ahp-main > .standard-page-hero {
     padding: var(--ami-recuo) !important;
     min-width: 0;
   }
 
-  .ami-page.ami-central-responsiva .ami-main :is(.standard-page-hero__title, .ami-environment-title) {
+  .ami-page.ami-central-responsiva .ami-main :is(.standard-page-hero__title, .ami-environment-title),
+  .ami-public-page .ahp-main > .standard-page-hero .standard-page-hero__title {
     font-size: var(--ami-titulo-pagina);
     line-height: 1.25;
+  }
+
+  .ami-public-page .ahp-main > .standard-page-hero .standard-page-hero__title {
+    flex-wrap: nowrap;
   }
 
   .ami-page.ami-central-responsiva .ami-main .ami-environment-title {

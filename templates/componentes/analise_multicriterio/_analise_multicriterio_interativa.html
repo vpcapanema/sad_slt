@@ -2,21 +2,25 @@
   <div class="ahp-section-label"><i class="fas fa-sliders" aria-hidden="true"></i><span>Configuração do julgamento</span></div>
   <div class="ahp-section-body">
     <div class="ami-registration-intro">
-        <p class="step-intro"><i class="fas fa-circle-info" aria-hidden="true"></i> Selecione ou cadastre uma matriz de critérios, defina a data limite da coleta e escolha a forma de participação. O julgamento pode ser criado sem hierarquização. A mesma matriz poderá ser associada posteriormente a uma hierarquização. Julgamentos de superfícies preservam sua matriz fixa.</p>
+        <p class="ami-section-intro">Identifique o tema do julgamento AHP e defina o prazo de coleta. Selecione uma matriz de critérios e premissas ou importe uma nova. O SICARD usa a matriz e o escopo de comparação para montar os pares do formulário. Escolha a participação por convite, com uma lista de colaboradores, ou por link público, com inscrição para o julgamento em duas etapas.</p>
+        <p class="form-help">A hierarquização é opcional na criação. A mesma matriz pode ser associada posteriormente a uma hierarquização. Julgamentos de superfícies usam a matriz fixa da superfície.</p>
     <p class="ami-feedback" id="ami-create-feedback" role="status" aria-live="polite"></p>
     <p id="ami-criteria-matrix-summary" class="form-help hidden" role="status" aria-live="polite"></p>
     </div>
         <div class="ami-registration-grid">
         <section class="ahp-subcard ami-collaborator-section" aria-labelledby="ami-name-section-title">
           <div class="ahp-subsection-title"><span class="ahp-subsection-num">1</span><span id="ami-name-section-title">Nome do julgamento</span></div>
-          <div class="c-form-group ami-config-field"><small class="form-help" id="ami-name-help"><i class="fas fa-info-circle" aria-hidden="true"></i> Informe um nome para identificar este julgamento.</small><div class="ami-config-control"><input id="ami-judgment-name" class="c-form-control" aria-labelledby="ami-name-section-title" aria-describedby="ami-name-help" type="text" maxlength="200" required></div></div>
+          <p class="ami-section-intro" id="ami-name-help">Identifique o julgamento pelo tema ou pela decisão que ele apoiará. Esse nome permite localizar o registro e suas respostas nas centrais do SICARD.</p>
+          <div class="c-form-group ami-config-field"><div class="ami-config-control"><input id="ami-judgment-name" class="c-form-control" aria-labelledby="ami-name-section-title" aria-describedby="ami-name-help" type="text" maxlength="200" required></div></div>
         </section>
         <section class="ahp-subcard ami-collaborator-section" aria-labelledby="ami-deadline-section-title">
           <div class="ahp-subsection-title"><span class="ahp-subsection-num">2</span><span id="ami-deadline-section-title">Data limite da coleta</span></div>
-          <div class="c-form-group ami-config-field"><small class="form-help" id="ami-deadline-help"><i class="fas fa-info-circle" aria-hidden="true"></i> Defina até quando os colaboradores poderão enviar suas respostas.</small><div class="ami-config-control"><input id="ami-deadline" class="c-form-control" type="date" aria-labelledby="ami-deadline-section-title" aria-describedby="ami-deadline-help" required></div></div>
+          <p class="ami-section-intro" id="ami-deadline-help">Defina a data de encerramento da coleta. Ela estabelece até quando os colaboradores podem enviar suas respostas.</p>
+          <div class="c-form-group ami-config-field"><div class="ami-config-control"><input id="ami-deadline" class="c-form-control" type="date" aria-labelledby="ami-deadline-section-title" aria-describedby="ami-deadline-help" required></div></div>
         </section>
         <section class="ahp-subcard ami-collaborator-section" aria-labelledby="ami-matrix-section-title" id="ami-matrix-section">
           <div class="ahp-subsection-title"><span class="ahp-subsection-num">3</span><span id="ami-matrix-section-title">Matriz de critérios</span></div>
+          <p class="ami-section-intro">Defina a matriz de critérios e premissas que servirá de base para o julgamento. O escopo de comparação escolhido na criação determina quais critérios ou dimensões serão apresentados em pares.</p>
           {% include "componentes/_seletor_matriz_criterios.html" %}
           <label class="c-form-group ami-config-field">Escopo da comparação pareada
             <select id="ami-modo-comparacao" class="c-form-control" aria-describedby="ami-modo-comparacao-help">
@@ -30,10 +34,12 @@
         </section>
         <section class="ahp-subcard ami-collaborator-section" aria-labelledby="ami-hierarchy-section-title" id="ami-surface-hierarchy-section" hidden>
           <div class="ahp-subsection-title"><span class="ahp-subsection-num">3</span><span id="ami-hierarchy-section-title">Contexto da superfície</span></div>
-          <div class="c-form-group ami-config-field"><small class="form-help" id="ami-hierarchy-source"><i class="fas fa-info-circle"></i> Contexto da superfície de critérios. A matriz fixa será preservada.</small><div class="ami-config-control"><select id="ami-hierarchy" class="c-form-control" aria-labelledby="ami-hierarchy-section-title" data-source-tables="hierarquizacao_demandas.hierarquizacao_portfolio" aria-describedby="ami-hierarchy-source ami-hierarchy-summary"><option value="">Selecione…</option></select></div><div id="ami-hierarchy-summary" class="ami-summary ami-config-meta"></div></div>
+          <p class="ami-section-intro" id="ami-hierarchy-source">Consulte a hierarquização associada à superfície. O julgamento usa a matriz fixa da superfície para obter os pesos dos critérios aplicados à sua avaliação.</p>
+          <div class="c-form-group ami-config-field"><div class="ami-config-control"><select id="ami-hierarchy" class="c-form-control" aria-labelledby="ami-hierarchy-section-title" data-source-tables="hierarquizacao_demandas.hierarquizacao_portfolio" aria-describedby="ami-hierarchy-source ami-hierarchy-summary"><option value="">Selecione…</option></select></div><div id="ami-hierarchy-summary" class="ami-summary ami-config-meta"></div></div>
         </section>
         <section class="ahp-subcard ami-collaborator-section" aria-labelledby="ami-email-section-title">
           <div class="ahp-subsection-title"><span class="ahp-subsection-num">4</span><span id="ami-email-section-title">Informações do colaborador</span></div>
+          <p class="ami-section-intro">Defina como os colaboradores acessarão o julgamento. Na participação por convite, identifique os destinatários e atribua os grupos quando o escopo permitir. Por link público, cada participante informa seus dados na inscrição.</p>
           <label class="c-form-group ami-config-field">Forma de participação
             <select id="ami-modo-participacao" class="c-form-control">
               <option value="convite">Por convite</option>
@@ -57,6 +63,7 @@
             </div>
             <fieldset id="ami-collaborator-dimensions" class="matrix-source-option">
               <legend>Dimensões atribuídas ao colaborador</legend>
+              <p class="ami-section-intro">Vincule os grupos de critérios que o colaborador será responsável por avaliar.</p>
               <small class="form-help"><i class="fas fa-info-circle" aria-hidden="true"></i> Selecione uma ou mais dimensões entre os critérios do julgamento.</small>
               <div id="ami-dimension-options"></div>
             </fieldset>
@@ -65,6 +72,7 @@
         </div>
         <section id="ami-collaborator-list-section" class="ahp-subcard ami-collaborator-section standard-table-section" aria-labelledby="ami-list-section-title" hidden>
           <div class="ahp-subsection-title"><span class="ahp-subsection-num">5</span><span id="ami-list-section-title">Lista de colaboradores</span></div>
+          <p class="ami-section-intro">Revise e confirme a lista que servirá de base para os convites individuais. Ela reúne os dados dos colaboradores, os grupos atribuídos e o prazo da coleta.</p>
           <div class="c-form-group ami-config-list" id="ami-collaborator-table"><small class="form-help"><i class="fas fa-info-circle"></i> Confira os colaboradores adicionados e selecione registros quando precisar removê-los. <span id="ami-emails-feedback" role="status" aria-live="polite"></span></small><div class="ami-filtered-table">{% set filtro_prefixo = "ami-emails-filter" %}{% set filtro_rotulo = "Filtrar colaboradores" %}{% include "componentes/filtro_tabela.html" %}<div class="hier-table-shell ami-table-shell"><table class="admin-table hier-register-table ami-table--database ami-collaborators-table"><thead><tr><th class="col-select" scope="col"><input type="checkbox" id="ami-select-all" title="Selecionar todos" aria-label="Selecionar todos"></th><th scope="col">Nome do colaborador</th><th scope="col">E-mail do colaborador</th><th scope="col">Instituição</th><th scope="col">Grupos de critérios</th><th scope="col">Data limite</th></tr></thead><tbody id="ami-email-list"><tr><td colspan="6" class="ami-empty">Nenhum colaborador adicionado.</td></tr></tbody></table></div></div><div class="admin-actions ami-collaborator-controls ami-table-actions standard-table-actions" role="group" aria-label="Controles da lista de colaboradores">
 <button type="button" class="admin-icon-btn save" id="ami-confirm-emails" title="Confirmar lista de colaboradores" aria-label="Confirmar lista de colaboradores"><i class="fas fa-check" aria-hidden="true"></i></button>
 <button type="button" class="admin-icon-btn edit" id="ami-edit-emails" title="Editar colaboradores" aria-label="Editar colaboradores"><i class="fas fa-pen" aria-hidden="true"></i></button>
