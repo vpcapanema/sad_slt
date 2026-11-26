@@ -15,7 +15,7 @@
   <link rel="stylesheet" href="/assets/css/table-standard.css?v=20261015-fontes-ordem">
   <link rel="stylesheet" href="/assets/css/admin-table-controls.css?v=20261015-botoes-quadrados">
   <link rel="stylesheet" href="/assets/css/paginas/ami-espaco-secoes.css?v=20261126-sublinhado">
-  <link rel="stylesheet" href="/assets/css/paginas/ami-lembretes.css?v=20261126-cards-periodo">
+  <link rel="stylesheet" href="/assets/css/paginas/ami-lembretes.css?v=20261126-vigencia-nos-intervalos">
   <link rel="stylesheet" href="/assets/css/paginas/ami-responsivo.css?v=20261126-iniciais-grupos">
   <link rel="stylesheet" href="/assets/css/paginas/ami-contextualizacao.css?v=20261126-contextos-ahp">
 {% endblock %}
@@ -27,25 +27,6 @@
     <p class="ami-eyebrow standard-page-hero__eyebrow">Análise Multicritério Interativa</p>
   </section>
   <p class="ami-page-intro">Nesta página, você configura os lembretes automáticos para colaboradores com resposta pendente e acompanha os horários previstos e os envios registrados por participante. Selecione um julgamento para consultar o período de vigência.</p>
-  <dl class="ahp-live-metrics ami-lembretes-periodo" aria-label="Vigência do julgamento selecionado" aria-live="polite">
-    <div class="ahp-metric-card">
-      <dt class="ahp-metric-card__label">Data inicial</dt>
-      <dd class="ahp-metric-card__value" id="ami-lembretes-periodo-inicio">—</dd>
-    </div>
-    <div class="ahp-metric-card">
-      <dt class="ahp-metric-card__label">Data final</dt>
-      <dd class="ahp-metric-card__value" id="ami-lembretes-periodo-fim">—</dd>
-    </div>
-    <div class="ahp-metric-card">
-      <dt class="ahp-metric-card__label">Dias totais</dt>
-      <dd class="ahp-metric-card__value" id="ami-lembretes-periodo-total">—</dd>
-    </div>
-    <div class="ahp-metric-card">
-      <dt class="ahp-metric-card__label">Dias restantes</dt>
-      <dd class="ahp-metric-card__value" id="ami-lembretes-periodo-restante">—</dd>
-    </div>
-  </dl>
-
   <section class="card ahp-step-section standard-table-section" aria-labelledby="ami-lembretes-config-titulo">
     <div class="ahp-section-label" id="ami-lembretes-config-titulo" role="heading" aria-level="2" tabindex="-1"><span><i class="fas fa-table" aria-hidden="true"></i> Configurações de lembretes</span></div>
     <div class="ahp-section-body">
@@ -77,6 +58,24 @@
       <div class="ahp-section-label" role="heading" aria-level="2"><span><i class="fas fa-sliders" aria-hidden="true"></i> Intervalos do período</span></div>
       <form class="ahp-section-body ami-lembretes-form" id="ami-lembretes-form" novalidate>
         <p class="ami-section-intro">Defina em quantos intervalos a vigência do julgamento será dividida, a duração de cada intervalo e a quantidade de lembretes em cada um. A vigência começa na criação do julgamento e termina no prazo final da coleta.</p>
+        <dl class="ahp-live-metrics ami-lembretes-periodo" aria-label="Vigência do julgamento selecionado" aria-live="polite">
+          <div class="ahp-metric-card">
+            <dt class="ahp-metric-card__label">Data inicial</dt>
+            <dd class="ahp-metric-card__value" id="ami-lembretes-periodo-inicio">—</dd>
+          </div>
+          <div class="ahp-metric-card">
+            <dt class="ahp-metric-card__label">Data final</dt>
+            <dd class="ahp-metric-card__value" id="ami-lembretes-periodo-fim">—</dd>
+          </div>
+          <div class="ahp-metric-card">
+            <dt class="ahp-metric-card__label">Dias totais</dt>
+            <dd class="ahp-metric-card__value" id="ami-lembretes-periodo-total">—</dd>
+          </div>
+          <div class="ahp-metric-card">
+            <dt class="ahp-metric-card__label">Dias restantes</dt>
+            <dd class="ahp-metric-card__value" id="ami-lembretes-periodo-restante">—</dd>
+          </div>
+        </dl>
         <p class="form-help">Use as barras para ajustar a duração em porcentagens inteiras. Cada intervalo é igual ou mais curto que o anterior e os intervalos somam 100%.</p>
         <p class="form-help" id="ami-lembretes-regra"></p>
         <div class="ami-lembretes-numero" role="group" aria-labelledby="ami-lembretes-numero-label">
@@ -148,5 +147,5 @@
   <script src="/assets/js/table-standard.js?v=20261127-filtros-centrais"></script>
   <script src="/assets/js/api-erro.js?v=20261027"></script>
   <script src="/assets/js/paginas/ami-status.js?v=20261126-padrao-status"></script>
-  <script src="/assets/js/paginas/ami-lembretes.js?v=20261126-cards-periodo"></script>
+  <script src="/assets/js/paginas/ami-lembretes.js?v=20261126-vigencia-nos-intervalos"></script>
 {% endblock %}

@@ -381,9 +381,8 @@
       el('ami-lembretes-config-ver').disabled = carregando || total !== 1;
       el('ami-lembretes-config-editar').disabled = carregando || somenteLeitura || total !== 1;
       el('ami-lembretes-config-limpar').disabled = total === 0;
-      mostrarPeriodo(lista.selecionado());
     });
-  setInterval(() => mostrarPeriodo(lista.selecionado()), 60_000);
+  setInterval(() => { if (!rodada.hidden) mostrarPeriodo(dados); }, 60_000);
   const rotulosConfiguracao = registro => ({...registro, frequencia:registro.padrao ? 'Padrão' : 'Personalizada',
     forma_participacao:registro.modo_participacao === 'publico' ? 'Link público' : 'Por convite'});
   const rotuloNotificacoes = ativas => ativas ? 'Ativadas' : 'Desativadas';
@@ -457,6 +456,7 @@
 
   function mostrar(dadosNovos, preservarEdicao = false) {
     dados = dadosNovos;
+    mostrarPeriodo(dados);
     limparPrevia();
     const intervalos = larguras(dados.faixas);
     const arredondada = faixasRascunho(intervalos).some((faixa, i) => faixa.ate !== dados.faixas[i].ate);

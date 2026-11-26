@@ -1,7 +1,7 @@
 .ami-lembretes .ami-lembretes-periodo {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: clamp(4px, 1.3vw, 12px);
-  margin-block: 12px 16px;
+  margin: 0;
 }
 .ami-lembretes-periodo .ahp-metric-card {
   display: flex;
