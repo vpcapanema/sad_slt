@@ -8,7 +8,11 @@ from api.services import contexto_julgamento_ahp, email_layout_ahp
 
 _ORIENTACOES = "Orientações para preenchimento"
 _AJUDA_CONSISTENCIA = "Ajuda com a consistência do julgamento"
-_PRAZO_ACESSO = "Prazo para resposta e acesso ao formulário"
+_PRAZO = "Prazo para contribuir"
+_PRAZO_ANTERIOR = "Prazo para resposta e acesso ao formulário"
+_FUSO = "Horário de Brasília."
+_DATA = r"\d{2}/\d{2}/\d{4}"
+_HORA = r"\d{2}h\d{2}"
 _ASSINATURA = "Atenciosamente,\nEquipe SICARD-PLI"
 ACAO_LEMBRETE_PUBLICO = "Retomar preenchimento pelo link público"
 ACAO_CONVITE = "Acessar formulário"
@@ -24,9 +28,30 @@ _METODO = (
 )
 
 
-def _prazo(prazo: str, acesso: str) -> str:
-    texto = f"Você pode enviar sua resposta até {prazo} (horário de Brasília)." if prazo else ""
-    return f"{_PRAZO_ACESSO}\n\n{' '.join(filter(None, (texto, acesso)))}".rstrip()
+def _prazo(prazo: str) -> str:
+    if prazo:
+        data, _, hora = prazo.partition(", às ")
+        return f"{_PRAZO}\n\n{data}\n{hora}\n\n{_FUSO}"
+    return ""
+
+
+def _separar_prazo(texto: str) -> tuple[str, tuple[str, str] | None, str]:
+    inicio, titulo, depois = texto.rpartition(f"\n\n{_PRAZO}\n\n")
+    if titulo:
+        data_hora, _, observacoes = depois.strip().partition("\n\n")
+        valores = re.fullmatch(rf"({_DATA})\n({_HORA})", data_hora)
+        if valores:
+            return inicio, (valores[1], valores[2]), observacoes
+    inicio, titulo, depois = texto.rpartition(f"\n\n{_PRAZO_ANTERIOR}\n\n")
+    if titulo:
+        valores = re.match(
+            rf"Você pode enviar sua resposta até ({_DATA}), às ({_HORA}) \(horário de Brasília\)\.",
+            depois,
+        )
+        if valores:
+            observacoes = depois[valores.end():].strip()
+            return inicio, (valores[1], valores[2]), "\n\n".join(filter(None, (_FUSO, observacoes)))
+    return texto, None, ""
 
 
 def _eh_pli(ambiente: dict, julgamento: str) -> bool:
@@ -64,7 +89,7 @@ def convite(ambiente: dict, link: str, prazo: str) -> dict:
         "A janela mostra quais pares revisar, por que as escolhas entram em conflito e qual seria a RC com todos "
         "os ajustes sugeridos. Clique no nome de um par para localizá-lo ou em Aplicar o valor sugerido se o "
         "ajuste representar sua avaliação. Ao abrir a ajuda, suas respostas são preservadas.",
-        _prazo(prazo, "Para acessar o formulário, use o link abaixo."),
+        _prazo(prazo),
         link,
         "Agradecemos seu tempo e sua disponibilidade para contribuir" + (" com o PLI-SP 2050." if pli else "."),
         _ASSINATURA,
@@ -98,7 +123,7 @@ def lembrete(ambiente: dict, link: str, prazo: str, previsto_em: datetime) -> di
         orientacao += " Ao concluir as comparações, clique em Enviar resposta para registrar sua avaliação."
         agradecimento = ("Agradecemos o tempo que você já dedicou ao julgamento e sua disponibilidade para contribuir"
                          if publico else "Agradecemos seu tempo e sua disponibilidade para contribuir")
-    corpo = [f"Olá, {ambiente['nome']}!", contexto, _ORIENTACOES, orientacao, _prazo(prazo, ""), link,
+    corpo = [f"Olá, {ambiente['nome']}!", contexto, _ORIENTACOES, orientacao, _prazo(prazo), link,
              agradecimento + (" com o PLI-SP 2050." if pli else "."), _ASSINATURA]
     return {"assunto": f"{assunto} — {' '.join(nome.split())}"[:200],
             "alias_remetente": EMAIL_REMETENTE_ALIAS_PADRAO, "texto": "\n\n".join(corpo)}
@@ -147,21 +172,29 @@ def _paragrafos(texto: str, julgamento: str) -> str:
 def html(texto: str, link: str, acao: str, *, julgamento: str = "",
          titulo: str = "Convite para colaboração", ilustrar: bool = True) -> str:
     antes, _, depois = re.split(r"(?m)^([ \t]*" + re.escape(link) + r"[ \t]*)$", texto.replace("\r\n", "\n"), maxsplit=1)
-    inicio, separador, acesso = antes.rpartition(f"\n\n{_PRAZO_ACESSO}\n\n")
-    botao = email_layout_ahp.botao(link, acao, cores_pli=True)
-    introducao = inicio if separador else antes
+    introducao, data_hora, observacoes = _separar_prazo(antes)
+    botao = email_layout_ahp.botao(link, acao, cores_pli=True, centralizado=data_hora is not None)
     comparacoes, ajuda, detalhes = introducao.partition(f"\n\n{_AJUDA_CONSISTENCIA}\n\n")
     blocos = _paragrafos(comparacoes, julgamento)
     if ilustrar and _ORIENTACOES in comparacoes.strip().split("\n\n"):
         blocos += email_layout_ahp.exemplos_html(email_layout_ahp.EXEMPLOS_COMPARACAO)
     if ajuda:
-        blocos += _paragrafos(f"{_AJUDA_CONSISTENCIA}\n\n{detalhes}", julgamento)
+        secao_ajuda = _paragrafos(f"{_AJUDA_CONSISTENCIA}\n\n{detalhes}", julgamento)
         if ilustrar:
-            blocos += email_layout_ahp.exemplos_html(email_layout_ahp.EXEMPLOS_CONSISTENCIA)
-    if separador:
-        blocos += email_layout_ahp.painel(
-            _PRAZO_ACESSO, _paragrafos(acesso, julgamento) + botao, cores_pli=True,
+            secao_ajuda += email_layout_ahp.exemplos_html(email_layout_ahp.EXEMPLOS_CONSISTENCIA)
+        blocos += f'<div class="sicard-email-ajuda-consistencia">{secao_ajuda}</div>'
+    if data_hora:
+        estilo = (
+            f"{email_layout_ahp.FONTE}font-size:28px;line-height:1.25;"
+            "font-weight:bold;color:#8a1c1c;text-align:center;"
         )
+        prazo = (
+            f'<div style="{estilo}margin:0 0 6px;">{escape(data_hora[0])}</div>'
+            f'<div style="{estilo}margin:0 0 16px;">{escape(data_hora[1])}</div>'
+        )
+        card = email_layout_ahp.painel(_PRAZO, prazo + botao, cores_pli=True)
+        blocos += f'<div style="margin:0 0 12px;">{card}</div>'
+        blocos += _paragrafos(observacoes, julgamento)
     else:
         blocos += botao
     assinatura = _paragrafos(depois, julgamento)

@@ -171,14 +171,14 @@ def test_convite_padrao_apresenta_o_pli_e_separa_as_orientacoes_do_acesso(ambien
         "desenvolvemos uma ferramenta de apoio à tomada de decisão",
         "Método de Análise Hierárquica (AHP)", "Gostaríamos de contar com sua contribuição",
         "Orientações para preenchimento", "O formulário está organizado em cartões",
-        "mova a régua para qualquer lado", "Prazo para resposta e acesso ao formulário",
+        "mova a régua para qualquer lado", "Prazo para contribuir",
         julgamentos._link_publico(ambiente, base_url=base), "Agradecemos seu tempo",
     )]
     assert ordem == sorted(ordem)
     assert "D6 · Viabilidade" not in enviado.texto
     assert enviado.texto.startswith("Olá, Ana Silva!")
     assert "22/11/2026" not in enviado.texto
-    assert "horário de Brasília" in enviado.html
+    assert "Horário de Brasília." in enviado.html
 
 
 @pytest.mark.parametrize(("nome", "cumprimento"), [

@@ -6,6 +6,7 @@
   let configuracaoOriginal = null, configuracaoAlterada = false;
   const tituloOrientacoes = "Orientações para preenchimento";
   const tituloConsistencia = "Ajuda com a consistência do julgamento";
+  const tituloPrazo = "Prazo para contribuir";
   const aliasInput = $("ami-email-sender-alias"), assuntoInput = $("ami-email-subject"),
     mensagemInput = $("ami-email-template"), mensagemAfterInput = $("ami-email-template-after"),
     mensagemLink = $("ami-email-editor-link");
@@ -314,11 +315,17 @@
   function atualizarPreviaInstitucional() {
     const config = configuracaoAtual(), urlAtual = contexto?.url || "";
     const antes = mensagemPersonalizada(mensagemInput.value.trimEnd()).split(/\n\n+/);
-    const prazo = antes.lastIndexOf("Prazo para resposta e acesso ao formulário");
-    $("ami-email-preview-access").classList.toggle("is-framed", prazo >= 0);
-    $("ami-email-preview-access-title").hidden = prazo < 0;
-    $("ami-email-preview-deadline").textContent = prazo < 0 ? "" : antes.slice(prazo + 1).join("\n\n");
-    const blocos = antes.slice(0, prazo < 0 ? antes.length : prazo);
+    const {blocos, dataHora, observacoes} = separarPrazoPrevia(antes);
+    $("ami-email-preview-access").classList.toggle("is-framed", Boolean(dataHora.length));
+    $("ami-email-preview-access-title").hidden = !dataHora.length;
+    $("ami-email-preview-deadline").replaceChildren(...dataHora.map(valor => {
+      const linha = document.createElement("div");
+      linha.textContent = valor;
+      return linha;
+    }));
+    const observacoesPrevia = $("ami-email-preview-observacoes");
+    renderizarParagrafos(observacoesPrevia, observacoes);
+    observacoesPrevia.hidden = !observacoes.length;
     const indiceAjuda = blocos.indexOf(tituloConsistencia);
     const comparacoes = blocos.slice(0, indiceAjuda < 0 ? blocos.length : indiceAjuda);
     const ajuda = indiceAjuda < 0 ? [] : blocos.slice(indiceAjuda);
@@ -330,9 +337,24 @@
     exemplos.hidden = !exemplos.childElementCount || !comparacoes.includes(tituloOrientacoes);
     const exemplosAjuda = $("ami-email-preview-exemplos-consistencia");
     exemplosAjuda.hidden = !exemplosAjuda.childElementCount || !ajuda.length;
-    $("ami-email-preview-message-after").textContent = mensagemAfterInput.value.trimStart();
+    renderizarParagrafos($("ami-email-preview-message-after"), mensagemAfterInput.value.trimStart().split(/\n\n+/));
     $("ami-email-preview-button").href = urlAtual || "#";
     mensagemInput.dataset.message = config.email_mensagem;
+  }
+  function separarPrazoPrevia(paragrafos) {
+    const indice = paragrafos.lastIndexOf(tituloPrazo);
+    const dataHora = indice < 0 ? null : paragrafos[indice + 1]?.match(/^(\d{2}\/\d{2}\/\d{4})\n(\d{2}h\d{2})$/);
+    if (dataHora) {
+      return {blocos: paragrafos.slice(0, indice), dataHora: dataHora.slice(1), observacoes: paragrafos.slice(indice + 2)};
+    }
+    const indiceAnterior = paragrafos.lastIndexOf("Prazo para resposta e acesso ao formulário");
+    const paragrafoAnterior = indiceAnterior < 0 ? "" : paragrafos[indiceAnterior + 1] || "";
+    const valores = paragrafoAnterior.match(/^Você pode enviar sua resposta até (\d{2}\/\d{2}\/\d{4}), às (\d{2}h\d{2}) \(horário de Brasília\)\./);
+    if (valores) {
+      return {blocos: paragrafos.slice(0, indiceAnterior), dataHora: valores.slice(1),
+        observacoes: ["Horário de Brasília.", paragrafoAnterior.slice(valores[0].length).trim(), ...paragrafos.slice(indiceAnterior + 2)]};
+    }
+    return {blocos: paragrafos, dataHora: [], observacoes: []};
   }
   function renderizarParagrafos(destino, blocos) {
     destino.replaceChildren(...blocos.filter(texto => texto.trim()).map(texto => {
@@ -347,9 +369,11 @@
       const figura = document.createElement("figure");
       const legenda = document.createElement("figcaption");
       const titulo = document.createElement("strong");
+      const descricao = document.createElement("p");
       const imagem = document.createElement("img");
       titulo.textContent = exemplo.titulo;
-      legenda.append(titulo, document.createTextNode(exemplo.legenda));
+      descricao.textContent = exemplo.legenda;
+      legenda.append(titulo, descricao);
       imagem.src = exemplo.url;
       imagem.alt = exemplo.alt;
       if (exemplo.largura) imagem.style.setProperty("--ami-largura-exemplo", exemplo.largura + "px");

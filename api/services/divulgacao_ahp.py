@@ -157,7 +157,7 @@ def enviar(ambiente_id: str, dados: DivulgacaoEmailEnvioSchema, usuario_id: str,
             mensagem = DivulgacaoTransporteSchema(
                 destinatario=email, assunto=dados.assunto, alias_remetente="SICARD-PLI",
                 texto=f"{dados.texto}\n\nInscrição pública no SICARD\n{link}",
-                html=(f'<div style="white-space:pre-wrap">{html_texto}</div>'
+                html=(f'<p style="white-space:pre-wrap">{html_texto}</p>'
                       f'<p><a href="{escape(link, quote=True)}">Abrir inscrição pública</a></p>'),
             )
         else:

@@ -22,7 +22,7 @@ from api.exceptions import DatabaseUnavailableError
 from api.schemas.email import (
     EmailConexaoResultado, EmailDiagnostico, EmailEnvioResultado, EmailEnvioSchema,
 )
-from api.services import email_layout_ahp
+from api.services import email_html, email_layout_ahp
 
 logger = logging.getLogger(__name__)
 _envios_concorrentes = BoundedSemaphore(3)
@@ -218,16 +218,16 @@ def enviar(dados: EmailEnvioSchema, *, usuario_id: str, id_mensagem: str | None 
     if solicitar_confirmacoes:
         mensagem["Disposition-Notification-To"] = remetente
     mensagem.set_content(dados.texto)
-    if dados.html is not None:
-        mensagem.add_alternative(dados.html, subtype="html")
-        corpo_html = mensagem.get_body(("html",))
-        for imagem in email_layout_ahp.IMAGENS_CONVITE:
-            cid = imagem["cid"]
-            if f'src="cid:{cid}"' in dados.html:
-                corpo_html.add_related(
-                    email_layout_ahp.carregar_imagem(imagem["arquivo"]), maintype="image", subtype="png",
-                    cid=f"<{cid}>", disposition="inline",
-                )
+    html = email_html.corpo_html(dados.texto, dados.html)
+    mensagem.add_alternative(html, subtype="html")
+    parte_html = mensagem.get_body(("html",))
+    for imagem in email_layout_ahp.IMAGENS_CONVITE:
+        cid = imagem["cid"]
+        if f'src="cid:{cid}"' in html:
+            parte_html.add_related(
+                email_layout_ahp.carregar_imagem(imagem["arquivo"]), maintype="image", subtype="png",
+                cid=f"<{cid}>", disposition="inline",
+            )
     if anexo_pdf is not None:
         nome, conteudo = anexo_pdf
         if (not conteudo.startswith(b"%PDF-") or len(conteudo) > 10 * 1024 * 1024

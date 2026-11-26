@@ -145,7 +145,9 @@ def test_envia_texto_html_com_remetente_fixo_e_tls(client, smtp, perfil, caplog)
     assert mensagem["Subject"] == "Atualização da demanda"
     assert mensagem["Date"]
     assert mensagem.get_body(preferencelist=("plain",)).get_content().strip() == "Texto da mensagem."
-    assert mensagem.get_body(preferencelist=("html",)).get_content().strip() == "<p>Texto da mensagem.</p>"
+    assert mensagem.get_body(preferencelist=("html",)).get_content().strip() == (
+        '<p style="text-align:justify!important;" align="justify">Texto da mensagem.</p>'
+    )
     assert call.kwargs == {"from_addr": "sicard@example.com", "to_addrs": ["destino@example.com"]}
     assert "usuario-teste" in caplog.text
     assert body["id_mensagem"] in caplog.text
@@ -159,11 +161,16 @@ def test_envia_capturas_do_convite_como_imagens_inline(client, smtp):
     html = mensagens_ahp.html(modelo["texto"], link, mensagens_ahp.ACAO_CONVITE)
     referencias = [f'src="cid:{item["cid"]}"' for item in email_layout_ahp.IMAGENS_CONVITE]
     ordem = ["Orientações para preenchimento", *referencias[:2], "Ajuda com a consistência do julgamento",
-             *referencias[2:], "Prazo para resposta e acesso ao formulário"]
+             *referencias[2:], "Prazo para contribuir"]
     assert [html.index(trecho) for trecho in ordem] == sorted(html.index(trecho) for trecho in ordem)
     assert f'bgcolor="{email_layout_ahp.VERDE_PLI}"' in html
     assert f'bgcolor="{email_layout_ahp.AZUL_PLI}"' in html
     assert "60%" in modelo["texto"] and "0,10" in modelo["texto"]
+    assert "Prazo para contribuir\n\n01/12/2026\n23h59\n\nHorário de Brasília." in modelo["texto"]
+    cartao = html.split(">Prazo para contribuir</h2>", 1)[1].split("Horário de Brasília.", 1)[0]
+    assert cartao.count("color:#8a1c1c;") == 2
+    assert cartao.count("font-size:28px;") == 2
+    assert cartao.index(">01/12/2026</div>") < cartao.index(">23h59</div>") < cartao.index("Acessar formulário")
     assert "<img" not in mensagens_ahp.html(modelo["texto"], link, mensagens_ahp.ACAO_CONVITE, ilustrar=False)
     resposta = client.post("/api/email/enviar", headers=autenticacao(), json=dados(**modelo, html=html))
     assert resposta.status_code == 200, resposta.text
@@ -178,13 +185,33 @@ def test_envia_capturas_do_convite_como_imagens_inline(client, smtp):
     assert all(imagem.get_content_disposition() == "inline" for imagem in imagens)
     assert all(imagem.get_content().startswith(b"\x89PNG\r\n\x1a\n") for imagem in imagens)
     assert link in mensagem.get_body(preferencelist=("plain",)).get_content()
+    corpo = mensagem.get_body(preferencelist=("html",)).get_content()
+    assert corpo.count('<p ') == corpo.count('align="justify"')
 
 
-def test_ssl_direto_e_email_sem_html_ou_reply_to(client, smtp, monkeypatch):
+def test_justifica_paragrafos_de_html_personalizado(client, smtp):
+    html = (
+        '<h1 align="center">Título</h1>\n'
+        '<!-- <p>Comentário</p> -->\n'
+        '<p id="introducao" align="right" style="color:#003b5a;text-align:right!important">Introdução</p>\n'
+        '<p\n class="texto">Mais informações em <a href="https://example.com">este link</a>.</p>'
+    )
+    resposta = client.post("/api/email/enviar", headers=autenticacao(), json=dados(html=html))
+    assert resposta.status_code == 200
+    enviado = smtp[0].send_message.call_args.args[0].get_body(("html",)).get_content()
+    assert '<h1 align="center">Título</h1>' in enviado
+    assert '<!-- <p>Comentário</p> -->' in enviado
+    assert '<p id="introducao" align="justify" style="color:#003b5a;text-align:right!important;text-align:justify!important;">' in enviado
+    assert '<p class="texto" style="text-align:justify!important;" align="justify">' in enviado
+    assert '<a href="https://example.com">este link</a>' in enviado
+
+
+def test_ssl_direto_e_email_com_html_gerado_sem_reply_to(client, smtp, monkeypatch):
     monkeypatch.setenv("SICARD_SMTP_SECURITY", "ssl")
     monkeypatch.setenv("SICARD_SMTP_PORT", "465")
     monkeypatch.delenv("SICARD_EMAIL_REPLY_TO")
-    response = client.post("/api/email/enviar", headers=autenticacao(), json=dados())
+    texto = "Primeiro <parágrafo>\nLinha seguinte\n\nSegundo & último."
+    response = client.post("/api/email/enviar", headers=autenticacao(), json=dados(texto=texto))
     assert response.status_code == 200
     servidor, fabrica, fabrica_ssl = smtp
     fabrica.assert_not_called()
@@ -194,7 +221,12 @@ def test_ssl_direto_e_email_sem_html_ou_reply_to(client, smtp, monkeypatch):
     assert kwargs["context"].verify_mode == ssl.CERT_REQUIRED
     servidor.starttls.assert_not_called()
     mensagem = servidor.send_message.call_args.args[0]
-    assert mensagem.get_content_type() == "text/plain"
+    assert mensagem.get_content_type() == "multipart/alternative"
+    assert mensagem.get_body(("plain",)).get_content().strip() == texto
+    html = mensagem.get_body(("html",)).get_content()
+    assert html.count('align="justify"') == 2
+    assert "Primeiro &lt;parágrafo&gt;<br>Linha seguinte" in html
+    assert "Segundo &amp; último." in html
     assert mensagem["Reply-To"] is None
 
 
@@ -307,8 +339,10 @@ def test_teste_email_exige_destinatario_e_envia_uma_mensagem(client, smtp):
     smtp[0].send_message.assert_called_once()
     mensagem = smtp[0].send_message.call_args.args[0]
     assert str(mensagem["Subject"]) == "Teste de email - SICARD"
-    assert "SICARD" in mensagem.get_content()
-    assert "segredo-sintetico" not in mensagem.get_content()
+    texto = mensagem.get_body(("plain",)).get_content()
+    assert "SICARD" in texto
+    assert "segredo-sintetico" not in texto
+    assert 'align="justify"' in mensagem.get_body(("html",)).get_content()
 
 
 @pytest.mark.parametrize("path", ["/enviar", "/teste", "/teste-conexao"])

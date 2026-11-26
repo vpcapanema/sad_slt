@@ -90,10 +90,11 @@ def painel(titulo: str, conteudo: str, *, cores_pli: bool = False) -> str:
     )
 
 
-def botao(url: str, rotulo: str, *, cores_pli: bool = False) -> str:
+def botao(url: str, rotulo: str, *, cores_pli: bool = False, centralizado: bool = False) -> str:
     fundo = AZUL_PLI if cores_pli else "#00507a"
+    alinhamento = ' align="center"' if centralizado else ""
     return (
-        '<table role="presentation" cellpadding="0" cellspacing="0">'
+        f'<table role="presentation" cellpadding="0" cellspacing="0"{alinhamento}>'
         f'<tr><td align="center" bgcolor="{fundo}" style="border-radius:5px;background:{fundo};">'
         f'<a href="{escape(url, quote=True)}" target="_blank" style="display:inline-block;padding:13px 20px;'
         f'{FONTE}font-size:15px;font-weight:bold;color:#ffffff;text-decoration:none;'

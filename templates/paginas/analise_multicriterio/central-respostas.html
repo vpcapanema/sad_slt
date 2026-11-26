@@ -22,7 +22,7 @@
   <link rel="stylesheet" href="/assets/css/paginas/ami-report-tables.css?v=20261020-paginacao">
   {% if modo_pagina in ['espaco', 'julgamentos'] %}
   <link rel="stylesheet" href="/assets/css/admin-table-controls.css?v=20261015-botoes-quadrados">
-  <link rel="stylesheet" href="/assets/css/paginas/ami-espaco-secoes.css?v=20261126-email-consistencia">
+  <link rel="stylesheet" href="/assets/css/paginas/ami-espaco-secoes.css?v=20261126-email-prazo">
   {% endif %}
   {% if modo_pagina == 'julgamentos' %}<link rel="stylesheet" href="/assets/css/paginas/sicard-standard-pages.css?v=20261126-padrao-status">{% endif %}
   {% if modo_pagina == 'julgamentos' %}<link rel="stylesheet" href="/assets/css/paginas/central-respostas-padrao.css?v=20261126-padrao-status">{% endif %}
@@ -101,9 +101,10 @@
                   <div id="ami-email-preview-consistencia" class="ami-email-preview-consistencia" hidden></div>
                   <div id="ami-email-preview-exemplos-consistencia" class="ami-email-preview-exemplos" hidden></div>
                   <section class="ami-email-preview-access" id="ami-email-preview-access">
-                    <h4 id="ami-email-preview-access-title">Prazo para resposta e acesso ao formulário</h4>
+                    <h4 id="ami-email-preview-access-title">Prazo para contribuir</h4>
                     <div class="ami-email-preview-access-body"><div id="ami-email-preview-deadline"></div><a class="ami-email-preview-button" id="ami-email-preview-button" href="#" target="_blank" rel="noopener">Acessar formulário</a></div>
                   </section>
+                  <div id="ami-email-preview-observacoes" hidden></div>
                   <div id="ami-email-preview-message-after"></div>
                 </div>
               </div>
@@ -227,7 +228,7 @@
   <script src="/assets/js/paginas/ami-status.js?v=20261126-padrao-status"></script>
   <script src="/assets/js/paginas/analise-multicriterio-tabela.js?v=20261126-contextos-ahp"></script>
   <script src="/assets/js/api-erro.js?v=20261027"></script>
-  <script src="/assets/js/paginas/ami-email.js?v=20261126-email-consistencia"></script>
+  <script src="/assets/js/paginas/ami-email.js?v=20261126-email-prazo"></script>
   {% if modo_pagina == 'espaco' %}<script src="/assets/js/paginas/ami-divulgacao.js?v=20261126-email-ahp"></script>{% endif %}
   <script src="/assets/js/matriz-criterios-arquivo.js?v=20261009"></script>
   <script src="/assets/js/matrizes-criterios.js?v=20261126-contextos-ahp"></script>
