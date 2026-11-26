@@ -3,6 +3,7 @@
 import json
 import math
 import os
+import re
 import unicodedata
 from collections import Counter
 from hashlib import sha256
@@ -23,7 +24,7 @@ _MODOS_ORIGEM = {"todos", "dimensoes", "por_grupo"}
 def disponivel(ambiente: dict) -> bool:
     return bool(
         os.getenv("SICARD_AHP_ASSOCIACAO_ARQUIVO")
-        and str(ambiente["id"]) == os.getenv("SICARD_AHP_ASSOCIACAO_JULGAMENTO")
+        and str(ambiente.get("id")) == os.getenv("SICARD_AHP_ASSOCIACAO_JULGAMENTO")
         and ambiente.get("modo_participacao") == "publico"
         and ambiente.get("modo_comparacao") == "duas_etapas"
     )
@@ -67,7 +68,8 @@ def _erro(mensagem: str) -> DemandaValidationError:
 
 
 def _chave(nome: str) -> str:
-    return " ".join(unicodedata.normalize("NFC", nome).casefold().split())
+    normalizado = " ".join(unicodedata.normalize("NFC", nome).casefold().split())
+    return re.sub(r"^d[0-9]+ ?· ?", "", normalizado)
 
 
 def _assinatura(dados) -> str:

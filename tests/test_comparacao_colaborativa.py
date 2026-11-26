@@ -1385,7 +1385,7 @@ def test_associacao_extraordinaria_grava_dimensoes_somente_no_envio_valido(monke
                               {"Critério": "Custo", "Dimensão": "Financeira"},
                           ])
     origem = _ambiente_row(id=CONFIG_ID, nome="Origem", token="origem", modo_comparacao="todos",
-                           status="encerrada", criterios=[{"Critério": "Financeira"}, {"Critério": "Social"}])
+                           status="encerrada", criterios=[{"Critério": "D2 · Financeira"}, {"Critério": "D1 · Social"}])
     fake.ambientes.update({AMBIENTE_ID: atual, CONFIG_ID: origem})
     email, sem_resposta = "ana@x.gov.br", "bia@x.gov.br"
     antiga = [[1, 3], [1 / 3, 1]]
@@ -1421,7 +1421,7 @@ def test_associacao_extraordinaria_grava_dimensoes_somente_no_envio_valido(monke
     assert "confirmacao" not in pendente and pendente["destinatarios"][1]["problema"]
     previa = gestor.post(gestao, json=dados).json()
     assert [(par["origem"], par["destino"]) for par in previa["correspondencias"]] == [
-        ("Social", "Social"), ("Financeira", "Financeira"),
+        ("D1 · Social", "Social"), ("D2 · Financeira", "Financeira"),
     ]
     assert not arquivo.exists()
     assert gestor.post(gestao, json={**dados, "confirmacao": "0" * 64}).status_code == 422
