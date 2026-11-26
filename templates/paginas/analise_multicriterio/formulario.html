@@ -13,7 +13,7 @@
 {% block classes_body %}ahp-module-page ahp-colaborativa-page ami-public-page escala-revisada{% endblock %}
 {% block base_url %}<base href="/public/analise-multicriterio/formulario-comparacao-pareada/">{% endblock %}
 {% block estilos_pagina %}
-	<link rel="stylesheet" href="/assets/css/ahp-module.css?v=20261103-regua-invertida">
+	<link rel="stylesheet" href="/assets/css/ahp-module.css?v=20261126-validacao-rc">
 	<link rel="stylesheet" href="/assets/css/analise-multicriterio.css?v=20260819-ui6">
 	<link rel="stylesheet" href="/assets/css/escala-tipografica.css">
 	<link rel="stylesheet" href="/assets/css/page-title-standard.css?v=20260820-3">
@@ -193,7 +193,7 @@
 							</aside>
 							<div id="collab-panel-form" role="tabpanel" aria-labelledby="collab-tab-form">
 								<p class="ami-section-intro">Registre uma escolha em cada cartão. A régua pode ser ajustada até o envio.</p>
-								<p id="collab-form-legend" class="collab-pairwise-intro">O destaque verde confirma o registro do par. Você ainda pode revisar a escolha.</p>
+								<p id="collab-form-legend" class="collab-pairwise-intro">O azul-claro indica um par confirmado. Quando a Razão de Consistência (RC) fica abaixo de 0,10, todos os cartões confirmados ficam verdes. Você ainda pode revisar suas escolhas.</p>
 								<div id="comparisonContent" class="ahp-comparison-content"></div>
 							</div>
 							<div id="collab-panel-matrix" role="tabpanel" aria-labelledby="collab-tab-matrix" hidden>
@@ -246,7 +246,7 @@
 	{% if modo_inscricao %}<script defer src="/assets/js/paginas/ahp-codigo-retomada.js?v=20261124"></script>{% endif %}
 	{% if modo_modelo %}<script defer src="/restrict/ahp/js/colaborativa-modelo.js?v=20261126-contexto-formulario"></script>{% elif not modo_inscricao %}<script defer src="/restrict/ahp/js/colaborativa-simulacao.js?v=20261126-contexto-formulario"></script>{% endif %}
 	<script defer src="/restrict/ahp/js/script.js?v=20261124-resposta-regua"></script>
-	<script defer src="/restrict/ahp/js/colaborativa.js?v=20261126-link-convite"></script>
+	<script defer src="/restrict/ahp/js/colaborativa.js?v=20261126-validacao-rc"></script>
 	<script defer src="/assets/js/paginas/ahp-comparacao-abas.js?v=20261124-matriz-pli"></script>
 	<script defer src="/assets/js/paginas/ahp-formulario-layout.js?v=20261104-card-default-90"></script>
 {% endblock %}

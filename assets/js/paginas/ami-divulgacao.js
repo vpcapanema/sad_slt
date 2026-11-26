@@ -2,7 +2,8 @@
   "use strict";
   const $ = id => document.getElementById("ami-divulgacao-" + id);
   const painel = document.getElementById("ami-divulgacao");
-  const tabela = $("tabela"), contatoForm = $("contato"), assunto = $("assunto"), mensagem = $("mensagem");
+  const tabela = $("tabela"), contatoForm = $("contato"), remetente = $("alias-remetente"),
+    assunto = $("assunto"), mensagem = $("mensagem");
   const mensagemDepois = $("mensagem-depois");
   const modal = $("modal"), modalForm = $("modal-form");
   const envio = {enviando: "Resultado pendente", aceito_smtp: "Aceito pelo servidor de e-mail", falha: "Falha no envio", indeterminado: "Resultado indeterminado"};
@@ -14,18 +15,20 @@
   }
 
   function mensagemEditada(contexto) {
-    if (!assunto.reportValidity()) return null;
-    if (!assunto.value.trim() || (!mensagem.value.trim() && !mensagemDepois.value.trim())) {
-      $("status").textContent = "Informe o assunto e a mensagem.";
+    if (!remetente.reportValidity() || !assunto.reportValidity()) return null;
+    const alias_remetente = remetente.value.trim();
+    if (!alias_remetente || !assunto.value.trim() || (!mensagem.value.trim() && !mensagemDepois.value.trim())) {
+      $("status").textContent = "Informe o nome do remetente, o assunto e a mensagem.";
       return null;
     }
-    return {assunto: assunto.value, texto: textoDoEditor(contexto)};
+    return {alias_remetente, assunto: assunto.value, texto: textoDoEditor(contexto)};
   }
 
   function aplicarEdicao(contexto, edicao) {
     if (contexto !== atual) return;
     const conteudo = edicao.rascunho || edicao.padrao;
     const indice = conteudo.texto.indexOf(contexto.link);
+    remetente.value = conteudo.alias_remetente;
     assunto.value = conteudo.assunto;
     mensagem.value = indice < 0 ? conteudo.texto : conteudo.texto.slice(0, indice).trimEnd();
     mensagemDepois.value = indice < 0 ? "" : conteudo.texto.slice(indice + contexto.link.length).trimStart();
@@ -82,7 +85,7 @@
     $("prazo").classList.toggle("is-hidden", modo !== "edit" || !atual || coletaAberta);
     $("pendencias").classList.toggle("is-hidden", modo !== "edit" || !pendente);
     [$("nome"), $("email"), $("instituicao"), $("adicionar"), $("arquivo"), $("listas")].forEach(campo => { campo.disabled = !pronto; });
-    [assunto, mensagem, mensagemDepois].forEach(campo => { campo.readOnly = !editavel || !atual.edicao; });
+    [remetente, assunto, mensagem, mensagemDepois].forEach(campo => { campo.readOnly = !editavel || !atual.edicao; });
     $("salvar-mensagem").disabled = !pronto || !atual.edicao || !atual.editorAlterado;
     if (!$("enviar")) return;
     const marcados = atual ? selecionados() : [];
@@ -431,7 +434,7 @@
         urlMensagem: "/api/ahp/comparacao-colaborativa/ambientes/" + encodeURIComponent(julgamento.id) + "/emails/mensagem"};
       atual = contexto;
       renderizar(contexto);
-      assunto.value = mensagem.value = mensagemDepois.value = "";
+      remetente.value = assunto.value = mensagem.value = mensagemDepois.value = "";
       $("status").textContent = "Carregando lista de divulgação…";
       carregar(contexto).then(() => {
         if (atual === contexto) {
@@ -493,10 +496,11 @@
     }
   };
   $("modal-fechar").addEventListener("click", () => modal.close());
-  [assunto, mensagem, mensagemDepois].forEach(campo => campo.addEventListener("input", () => {
+  [remetente, assunto, mensagem, mensagemDepois].forEach(campo => campo.addEventListener("input", () => {
     if (!atual?.edicao) return;
     const anterior = atual.edicao.rascunho || atual.edicao.padrao;
-    atual.editorAlterado = assunto.value !== anterior.assunto || textoDoEditor(atual) !== anterior.texto;
+    atual.editorAlterado = remetente.value.trim() !== anterior.alias_remetente ||
+      assunto.value !== anterior.assunto || textoDoEditor(atual) !== anterior.texto;
     controles();
   }));
   $("salvar-mensagem").addEventListener("click", salvarMensagem);

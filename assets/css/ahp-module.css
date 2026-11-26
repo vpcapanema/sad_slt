@@ -2985,9 +2985,11 @@ a.ahp-progress-step:hover {
   background: var(--pfs-green-light);
 }
 
-/* A validação do par colore apenas o fundo do card; os elementos internos
-   mantêm a aparência normal. */
 .ahp-colaborativa-page .saaty-pair.is-auto-validated {
+  background: #cbe6f7;
+}
+
+.ahp-colaborativa-page #comparisonContent.is-rc-acceptable .saaty-pair.is-auto-validated {
   background: var(--pfs-green-light);
 }
 
@@ -2996,7 +2998,7 @@ a.ahp-progress-step:hover {
 }
 
 /* Fundos opacos: equivalem aos tons translúcidos sobre o card branco e evitam que
-   o verde do card validado se misture aos elementos internos. */
+   o fundo do card validado se misture aos elementos internos. */
 .ahp-colaborativa-page .saaty-readout--pos {
   background: #ecf3fa;
 }

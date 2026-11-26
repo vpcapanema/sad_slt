@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from api.exceptions import DemandaValidationError
 from api.schemas.email import (
     DivulgacaoEmailEnvioSchema, EmailEnvioResultado, ExclusaoDestinatariosDivulgacaoSchema,
-    ListaDivulgacaoSchema, MensagemDivulgacaoSchema, SalvamentoListaDivulgacaoSchema,
+    ListaDivulgacaoSchema, MensagemDivulgacaoSchema, RascunhoEmailAhpSchema, SalvamentoListaDivulgacaoSchema,
 )
 from api.server import app
 from api.services import divulgacao_ahp
@@ -125,6 +125,36 @@ def test_divulgacao_envia_link_comum_e_mantem_historico_separado(rodada):
     contatos["ana@example.org"]["inscrito_em"] = datetime.now(timezone.utc)
     with pytest.raises(DemandaValidationError, match="já está inscrito"):
         divulgacao_ahp.enviar("rodada", reenvio.model_copy(update={"operacao_id": uuid4()}), "gestor", base_url=base)
+
+
+def test_divulgacao_usa_nome_de_exibicao_do_rascunho_so_na_operacao(monkeypatch, rodada):
+    ambiente, _, mensagens = rodada
+    ambiente["id"] = "rodada"
+    base = "https://sicard.example.org/sicard"
+    link = base + "/public/analise-multicriterio/participar/link-da-rodada/"
+    rascunhos = divulgacao_ahp.email_ahp_rascunho
+    rascunho_id, operacao_id = uuid4(), uuid4()
+    rascunho = {}
+
+    def salvar(ambiente_id, editor_id, dados):
+        assert (ambiente_id, editor_id) == ("rodada", "gestor")
+        rascunho.update(dados.model_dump(), id=rascunho_id)
+        return rascunho
+
+    def vincular(_conn, ambiente_id, editor_id, rascunho_usado, operacao):
+        assert (ambiente_id, editor_id, rascunho_usado, operacao) == ("rodada", "gestor", rascunho_id, operacao_id)
+        return rascunho
+
+    monkeypatch.setattr(rascunhos.repo, "salvar", salvar)
+    monkeypatch.setattr(rascunhos.repo, "vincular", vincular)
+    rascunhos.salvar("rodada", "gestor",
+                    RascunhoEmailAhpSchema(alias_remetente="Equipe do Workshop PLI", assunto="Convite", texto=f"Olá!\n\n{link}"), base)
+    divulgacao_ahp.adicionar("rodada", ListaDivulgacaoSchema(destinatarios=[{"nome": "Ana", "destinatario": "ana@example.org"}]))
+    primeiro = DivulgacaoEmailEnvioSchema(destinatario="ana@example.org", operacao_id=operacao_id, rascunho_id=rascunho_id)
+    seguinte = DivulgacaoEmailEnvioSchema(destinatario="ana@example.org", operacao_id=uuid4(), reenvio=True)
+    divulgacao_ahp.enviar("rodada", primeiro, "gestor", base_url=base)
+    divulgacao_ahp.enviar("rodada", seguinte, "gestor", base_url=base)
+    assert [mensagem.alias_remetente for mensagem in mensagens] == ["Equipe do Workshop PLI", "SICARD-PLI"]
 
 
 def test_divulgacao_recusa_modo_convite_e_requer_sessao(rodada):

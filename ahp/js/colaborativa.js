@@ -327,6 +327,7 @@
     var matrizGravada = matrizParaGravar(matrix);
     var complete = paresRespondidos(matrix);
     var consistent = res.CR < LIMITE_RC;
+    el("comparisonContent").classList.toggle("is-rc-acceptable", consistent);
     [["metricLambdaValue", res.lambdaMax], ["metricICValue", res.CI], ["metricRCValue", res.CR]].forEach(function ([id, value]) {
       var metric = el(id), formatted = SLTAhp.formatMetric(value);
       if (metric.textContent !== formatted) metric.textContent = formatted;

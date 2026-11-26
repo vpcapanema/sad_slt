@@ -4,7 +4,9 @@ const {chromium} = require('playwright');
 
 const base = process.env.SICARD_TEST_URL || 'http://127.0.0.1:8083';
 const link = `${base}/public/analise-multicriterio/participar/rodada-publica/`;
-const padrao = {assunto: 'Convite para colaboração no SICARD', texto: `Olá, colaborador(a)!\n\n${link}\n\nAgradecemos sua contribuição.`};
+const padrao = {alias_remetente: 'SICARD-PLI', assunto: 'Convite para colaboração no SICARD',
+  texto: `Olá, colaborador(a)!\n\n${link}\n\nAgradecemos sua contribuição.`};
+const nomeRemetente = 'Equipe do Workshop PLI';
 const julgamento = {id: 'rodada', token: 'rodada-publica', nome: 'Consulta de teste', modo_participacao: 'publico',
   status: 'encerrada', criadoEm: '2025-01-01T12:00:00Z', valido_ate: '2025-12-31T23:59:59-03:00',
   url_publica: link, n_criterios: 2, criterios: [], convites: []};
@@ -82,6 +84,7 @@ const inscricaoDireta = {nome: 'Inscrição Direta', email: 'direto@example.org'
         disparos.push(payload);
         if (payload.rascunho_id) {
           assert.equal(payload.rascunho_id, mensagemSalva.id);
+          assert.equal(mensagemSalva.alias_remetente, nomeRemetente);
           assert.match(mensagemSalva.texto, /Mensagem revisada/);
           assert.ok(mensagemSalva.texto.includes(link));
           assert.match(mensagemSalva.texto, /Agradecemos a colaboração/);
@@ -192,7 +195,7 @@ const inscricaoDireta = {nome: 'Inscrição Direta', email: 'direto@example.org'
     assert.deepEqual(tipografia.ajuda, tipografia.ajudaReferencia);
     assert.equal(tipografia.gapCampos, '8px');
     assert.equal(tipografia.margemImportacao, '0px');
-    for (const campo of ['Nome do destinatário', 'E-mail do destinatário', 'Assunto do e-mail', 'Mensagem antes do link', 'Mensagem depois do link']) {
+    for (const campo of ['Nome do destinatário', 'E-mail do destinatário', 'Nome do remetente', 'Assunto do e-mail', 'Mensagem antes do link', 'Mensagem depois do link']) {
       assert.equal(await painel.getByLabel(campo, {exact: true}).isEditable(), true, campo);
     }
     const medirLinha = () => painel.locator('#ami-divulgacao-contato').evaluate(form => {
@@ -288,11 +291,16 @@ const inscricaoDireta = {nome: 'Inscrição Direta', email: 'direto@example.org'
     assert.equal(await painel.locator('#ami-divulgacao-prazo').isVisible(), true);
     const assunto = 'Consulta pública · nova rodada';
     const textoSalvo = 'Prezados,\n\nTexto preparado para este julgamento.';
+    const remetente = painel.getByLabel('Nome do remetente', {exact: true});
+    assert.equal(await remetente.inputValue(), padrao.alias_remetente);
+    await remetente.fill(nomeRemetente);
+    assert.equal(await painel.getByRole('button', {name: 'Salvar mensagem'}).isEnabled(), true);
     await painel.getByLabel('Assunto do e-mail').fill(assunto);
     await painel.getByLabel('Mensagem antes do link', {exact: true}).fill(textoSalvo);
     await painel.getByRole('button', {name: 'Salvar mensagem'}).click();
     await painel.getByText('Edição salva para o próximo envio deste julgamento.').waitFor();
     assert.equal(mensagemSalva.assunto, assunto);
+    assert.equal(mensagemSalva.alias_remetente, nomeRemetente);
     assert.ok(mensagemSalva.texto.startsWith(textoSalvo) && mensagemSalva.texto.includes(link));
     await page.locator('#ami-create-cancel').click();
     assert.equal(await painel.getByLabel('Mensagem antes do link', {exact: true}).isEditable(), false);
@@ -301,6 +309,7 @@ const inscricaoDireta = {nome: 'Inscrição Direta', email: 'direto@example.org'
     await painel.getByRole('button', {name: 'Salvar mensagem'}).waitFor();
     await page.waitForFunction(texto => document.querySelector('#ami-divulgacao-mensagem').value.trimEnd() === texto, textoSalvo);
     assert.equal(await painel.getByLabel('Assunto do e-mail').inputValue(), assunto);
+    assert.equal(await remetente.inputValue(), nomeRemetente);
     assert.equal(await linkMensagem.textContent(), link);
     await page.locator('#ami-environment-edit').click();
     await page.locator('#ami-deadline').fill('2035-12-31');
@@ -339,11 +348,12 @@ const inscricaoDireta = {nome: 'Inscrição Direta', email: 'direto@example.org'
     assert.equal(await painel.locator('#ami-divulgacao-enviar').isDisabled(), true);
 
     await page.waitForFunction(assunto => document.querySelector('#ami-divulgacao-assunto').value === assunto, padrao.assunto);
+    assert.equal(await remetente.inputValue(), padrao.alias_remetente);
     await painel.locator('#ami-divulgacao-reenviar').click();
     await page.locator('#pfsConfirmOk').click();
     await page.waitForFunction(() => document.querySelector('#ami-divulgacao-status').textContent.includes('1 de 1'));
     assert.equal(disparos[1].reenvio, true);
-    assert.equal(disparos[1].rascunho_id, null);
+    assert.equal(disparos[1].rascunho_id ?? null, null);
     await ana.getByRole('button', {name: /Histórico de envio/}).click();
     await page.locator('#ami-email-history-title').getByText('E-mail de divulgação').waitFor();
     assert.equal(await page.locator('#ami-email-history-body tr').count(), 2);
