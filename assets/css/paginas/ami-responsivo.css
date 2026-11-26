@@ -1,0 +1,246 @@
+/* Escala comum às centrais AHP. As tabelas mantêm a rolagem na área de dados. */
+@media (max-width: 900px) {
+  .ami-page.ami-central-responsiva .ami-main {
+    --ami-recuo: clamp(.5rem, 1.9vw, 1rem);
+    --ami-espaco-texto: clamp(.25rem, 1vw, .5rem);
+    --ami-altura-campo: clamp(1.75rem, 5.4vw, 2.125rem);
+    --ami-tamanho-botao-icone: clamp(1.75rem, 5.4vw, 2.115rem);
+    --ami-controle-filtro: clamp(1.375rem, 4.5vw, 1.5625rem);
+    --ami-altura-subcabecalho: clamp(1.75rem, 5.2vw, 2rem);
+    --ami-titulo-tabela: clamp(.8125rem, 2.65vw, 1rem);
+    --ami-titulo-pagina: clamp(1.125rem, 3.8vw, 1.45rem);
+    width: calc(100% - 2 * var(--ami-recuo));
+    padding-block: var(--ami-recuo);
+  }
+
+  .ami-page.ami-central-responsiva .ami-main :is(.standard-page-hero, .ahp-step-section, .ahp-subcard) {
+    padding: var(--ami-recuo) !important;
+    min-width: 0;
+  }
+
+  .ami-page.ami-central-responsiva .ami-main :is(.standard-page-hero__title, .ami-environment-title) {
+    font-size: var(--ami-titulo-pagina);
+    line-height: 1.25;
+  }
+
+  .ami-page.ami-central-responsiva .ami-main .ami-environment-title {
+    margin-block: calc(2 * var(--ami-recuo)) var(--ami-recuo);
+  }
+
+  .ami-page.ami-central-responsiva .ami-main .ahp-step-section > .ahp-section-label,
+  .ami-page.ami-central-responsiva .ami-main .ahp-subcard > .ahp-subsection-title {
+    margin: calc(-1 * var(--ami-recuo)) calc(-1 * var(--ami-recuo)) var(--ami-espaco-texto) !important;
+    min-height: var(--ami-altura-subcabecalho) !important;
+    padding: var(--ami-espaco-texto) var(--ami-recuo);
+    gap: var(--ami-espaco-texto);
+  }
+
+  .ami-page.ami-central-responsiva .ami-main .ahp-subsection-title .ahp-subsection-num {
+    --ami-medalhao: clamp(1.25rem, 4.4vw, 1.5rem);
+    flex: 0 0 var(--ami-medalhao);
+    width: var(--ami-medalhao);
+    min-width: var(--ami-medalhao);
+    height: var(--ami-medalhao);
+  }
+
+  .ami-page.ami-central-responsiva .ami-main :is(.ami-table-label, .sicard-table-label) {
+    font-size: var(--ami-titulo-tabela) !important;
+    line-height: 1.3;
+    overflow-wrap: normal;
+  }
+
+  .ami-page.ami-central-responsiva .ami-main .ami-monitor-table-heading {
+    gap: var(--ami-espaco-texto);
+  }
+
+  .ami-page.ami-central-responsiva .ami-main .ami-monitor-table-heading .btn {
+    max-inline-size: 38%;
+    text-align: center;
+    white-space: normal;
+    overflow-wrap: normal;
+  }
+
+  .ami-page.ami-central-responsiva .ami-main :is(a.btn, button.btn) {
+    min-height: var(--ami-altura-campo);
+    padding: var(--ami-espaco-texto) var(--ami-recuo);
+    line-height: 1.25;
+  }
+
+  .ami-page.ami-central-responsiva .ami-main :is(input:not([type=checkbox], [type=radio], [type=range], [type=hidden]), select, output.c-form-control):not(.admin-filter-bar *) {
+    min-height: var(--ami-altura-campo) !important;
+    height: var(--ami-altura-campo) !important;
+    padding-block: 2px;
+  }
+
+  .ami-page.ami-central-responsiva .ami-main :is(.ahp-section-body, .ahp-form-actions, .ami-table-actions, .ami-report-table .admin-actions) {
+    gap: var(--ami-espaco-texto);
+  }
+
+  .ami-page.ami-central-responsiva .ami-main :is(#ami-create-status, #ami-analysis-participation).ami-status-cards {
+    grid-template-columns: repeat(auto-fit, minmax(min(5.5rem, 100%), 1fr));
+    gap: var(--ami-espaco-texto);
+    margin-block-end: var(--ami-recuo);
+  }
+
+  .ami-page.ami-central-responsiva .ami-main .ami-status-card {
+    min-width: 0;
+    padding: var(--ami-recuo);
+    gap: var(--ami-espaco-texto);
+  }
+
+  .ami-page.ami-central-responsiva .ami-main :is(.ami-registration-grid, .ami-deadline-hierarchy-row, .ami-email-content-grid) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--ami-recuo);
+  }
+
+  .ami-page.ami-central-responsiva .ami-main .ami-email-header-fields {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--ami-recuo);
+  }
+
+  .ami-page.ami-central-responsiva .ami-main :is(.ami-filtered-table, .standard-table-section) .admin-filter-bar {
+    flex-wrap: nowrap;
+    min-height: var(--ami-altura-subcabecalho);
+    height: var(--ami-altura-subcabecalho);
+    gap: var(--ami-espaco-texto);
+    padding: 1px var(--ami-espaco-texto);
+  }
+
+  .ami-page.ami-central-responsiva .ami-main .admin-filter-label {
+    flex: none;
+    white-space: nowrap;
+  }
+
+  .ami-page.ami-central-responsiva .ami-main :is(.ami-filtered-table, .standard-table-section) .admin-filter-bar select {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: var(--ami-controle-filtro) !important;
+    height: var(--ami-controle-filtro) !important;
+    padding: 1px 3px !important;
+    font-size: clamp(.6875rem, 2vw, .74rem) !important;
+    color: #33475b;
+  }
+
+  .ami-page.ami-central-responsiva .ami-main .admin-filter-bar select:disabled {
+    color: #526174;
+  }
+
+  .ami-page.ami-central-responsiva .ami-main :is(.ami-filtered-table, .standard-table-section) .admin-filter-bar .admin-icon-btn {
+    flex: 0 0 var(--ami-controle-filtro);
+    width: var(--ami-controle-filtro);
+    min-width: var(--ami-controle-filtro);
+    height: var(--ami-controle-filtro);
+    min-height: var(--ami-controle-filtro);
+  }
+
+  .ami-page.ami-central-responsiva .ami-main .admin-filter-bar .cg-botoes {
+    flex: none;
+    flex-wrap: nowrap;
+    gap: var(--ami-espaco-texto);
+    align-items: center;
+    margin: 0 0 0 auto;
+  }
+
+  .ami-page.ami-central-responsiva .ami-main .admin-filter-bar .cg-botao {
+    box-sizing: border-box;
+    display: grid;
+    place-items: center;
+    flex: 0 0 var(--ami-controle-filtro);
+    width: var(--ami-controle-filtro);
+    min-width: var(--ami-controle-filtro);
+    height: var(--ami-controle-filtro);
+    min-height: var(--ami-controle-filtro);
+    padding: 0;
+    border-radius: 50%;
+    font-size: clamp(.6875rem, 2vw, .74rem);
+  }
+
+  .ami-page.ami-central-responsiva .ami-main .admin-filter-bar .cg-botao .cg-rotulo {
+    display: none;
+  }
+
+  .ami-page.ami-central-responsiva .ami-main .admin-filter-bar .cg-botao::before {
+    content: attr(data-inicial);
+  }
+
+  .ami-page.ami-central-responsiva .ami-main .admin-filter-bar .cg-botao:not(.is-ativo) {
+    --cg-fundo: #fff;
+    --cg-texto: var(--cg-cor);
+    --ami-botao-borda: var(--cg-cor);
+    opacity: 1;
+  }
+
+  .ami-page.ami-central-responsiva .ami-main :is(.admin-table-footer, .admin-pagination) {
+    column-gap: var(--ami-espaco-texto);
+  }
+
+  .ami-page.ami-central-responsiva .ami-main .admin-pagination button {
+    width: var(--ami-tamanho-botao-icone);
+    min-width: var(--ami-tamanho-botao-icone);
+    height: var(--ami-tamanho-botao-icone);
+  }
+
+  .ami-page.ami-central-responsiva #ami-analysis-workspace .ami-analysis-selectors {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--ami-recuo);
+  }
+
+  .ami-page.ami-central-responsiva #ami-analysis-workspace .ami-analysis-selectors > .ami-judge-filter {
+    gap: var(--ami-espaco-texto);
+    min-width: 0;
+    margin: 0;
+  }
+
+  .ami-page.ami-central-responsiva #ami-analysis-workspace .ami-pair-bars__grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(13rem, 100%), 1fr));
+    gap: var(--ami-recuo);
+  }
+
+  .ami-page.ami-central-responsiva #ami-analysis-workspace :is(.ami-analysis-config, .ami-chart-card) {
+    padding: var(--ami-recuo);
+  }
+
+  .ami-page.ami-central-responsiva .ami-lembretes :is(#ami-lembretes-rodada, .ami-lembretes-form, .ami-lembretes-faixa) {
+    gap: var(--ami-recuo);
+  }
+
+  .ami-page.ami-central-responsiva .ami-lembretes .ami-lembretes-faixa {
+    grid-template-columns: minmax(2.5rem, .55fr) repeat(2, minmax(0, 1fr));
+    padding: var(--ami-recuo);
+  }
+
+  .ami-page.ami-central-responsiva .ami-lembretes .ami-lembretes-faixa .c-form-group {
+    overflow-wrap: normal;
+  }
+}
+
+@media (max-width: 540px) {
+  .ami-page.ami-central-responsiva .ami-main .ami-email-content-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 350px) {
+  .ami-page.ami-central-responsiva .ami-main .admin-filter-bar:has(> .cg-botoes:not([hidden])) {
+    display: grid !important;
+    grid-template-columns: max-content repeat(2, minmax(0, 1fr)) repeat(2, max-content);
+    height: auto;
+  }
+
+  .ami-page.ami-central-responsiva .ami-main .admin-filter-bar > .cg-botoes {
+    grid-column: 1 / -1;
+    margin: 0;
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 460px) {
+  .ami-page.ami-central-responsiva .ami-main .ami-email-header-fields,
+  .ami-page.ami-central-responsiva #ami-analysis-workspace .ami-analysis-selectors {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ami-page.ami-central-responsiva #ami-analysis-workspace .ami-analysis-selectors > :has(> #ami-analysis-measure) {
+    grid-column: 1 / -1;
+  }
+}

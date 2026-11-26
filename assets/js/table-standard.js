@@ -31,7 +31,7 @@
   }
   function values(select, rows, value) {
     const previous = select.value;
-    select.replaceChildren(new Option('Todos os valores', ''));
+    select.replaceChildren(new Option(select.dataset.filtroTodos || 'Todos os valores', ''));
     [...new Set(rows.map(row => String(value(row) ?? '')))].sort((a,b) => a.localeCompare(b, 'pt-BR')).forEach(v => select.add(new Option(v || 'Sem valor', v || '__empty__')));
     if ([...select.options].some(o => o.value === previous)) select.value = previous;
   }

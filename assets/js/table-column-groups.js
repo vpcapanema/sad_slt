@@ -144,7 +144,13 @@
       botao.type = "button";
       botao.className = "cg-botao";
       botao.dataset.grupo = grupo.id;
-      botao.textContent = grupo.titulo;
+      botao.dataset.inicial = grupo.titulo.trim().charAt(0).toLocaleUpperCase("pt-BR");
+      botao.title = grupo.titulo;
+      botao.setAttribute("aria-label", grupo.titulo);
+      var rotulo = document.createElement("span");
+      rotulo.className = "cg-rotulo";
+      rotulo.textContent = grupo.titulo;
+      botao.appendChild(rotulo);
       botao.style.setProperty("--cg-cor", grupo.cor);
       botao.addEventListener("click", function () {
         if (estado.ocultos.has(grupo.id)) estado.ocultos.delete(grupo.id);
@@ -207,8 +213,8 @@
         botao.setAttribute("aria-pressed", String(!estado.ocultos.has(botao.dataset.grupo)));
         var ativo = !estado.ocultos.has(botao.dataset.grupo);
         botao.classList.toggle("is-ativo", ativo);
-        botao.style.setProperty("background", botao.style.getPropertyValue("--cg-cor"), "important");
-        botao.style.setProperty("color", "#ffffff", "important");
+        botao.style.setProperty("background", "var(--cg-fundo, var(--cg-cor))", "important");
+        botao.style.setProperty("color", "var(--cg-texto, #ffffff)", "important");
       });
     }
 

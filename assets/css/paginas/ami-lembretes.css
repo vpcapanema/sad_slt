@@ -1,0 +1,180 @@
+.ami-lembretes :is(#ami-lembretes-rodada, .ami-lembretes-form) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  min-width: 0;
+}
+.ami-lembretes #ami-lembretes-rodada > section,
+.ami-lembretes .standard-table-section > .ahp-section-body { min-width: 0; }
+.ami-lembretes [hidden], .ami-lembretes-modal [hidden] { display: none !important; }
+.ami-lembretes-form p { margin: 0; }
+.ami-lembretes-numero, .ami-lembretes-numero-controles { display: flex; align-items: center; gap: 8px; }
+.ami-lembretes-numero { flex-wrap: wrap; }
+.ami-lembretes-numero-controles output {
+  display: grid;
+  place-items: center;
+  min-width: 3rem;
+  height: var(--ami-altura-campo, 34px);
+  padding-block: 0;
+}
+.ami-lembretes-faixas { display: grid; gap: 8px; }
+.ami-lembretes-faixa {
+  display: grid;
+  grid-template-columns: minmax(4rem, .55fr) minmax(0, 1.5fr) minmax(0, 1fr);
+  column-gap: 8px;
+  border: 1px solid var(--pli-border, #cbd5e1);
+  border-radius: 6px;
+  background: #edf4f8;
+  padding: 8px 12px;
+}
+.ami-lembretes-faixa .c-form-group {
+  display: grid;
+  grid-row: 1 / span 2;
+  grid-template-rows: subgrid;
+  margin: 0;
+  min-width: 0;
+}
+.ami-lembretes-intervalo-numero {
+  grid-column: 1;
+  grid-row: 2;
+  align-self: center;
+  margin: 0;
+  font-size: var(--ami-titulo-tabela, .875rem);
+  color: var(--pli-deep, #003b5a);
+}
+.ami-lembretes-duracao {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: var(--ami-altura-campo, 34px);
+}
+.ami-lembretes-duracao input[type="range"] {
+  --ami-duracao-cor: var(--pli-deep, #003b5a);
+  --ami-duracao-trilho: linear-gradient(to right, var(--ami-duracao-cor) var(--ami-duracao-percentual), #cbd5e1 var(--ami-duracao-percentual));
+  appearance: none;
+  flex: 1;
+  height: 100%;
+  width: 0;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+}
+.ami-lembretes-duracao input[type="range"]:disabled { opacity: 1; cursor: default; }
+.ami-lembretes-duracao input[type="range"]:focus-visible { outline: 2px solid var(--ami-duracao-cor); }
+.ami-lembretes-duracao input::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 4px;
+  background: var(--ami-duracao-trilho);
+}
+.ami-lembretes-duracao input::-moz-range-track {
+  height: 6px;
+  border-radius: 4px;
+  background: var(--ami-duracao-trilho);
+}
+.ami-lembretes-duracao input::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -4px;
+  border: 1px solid var(--ami-duracao-cor);
+  border-radius: 50%;
+  background: #fff;
+}
+.ami-lembretes-duracao input::-moz-range-thumb {
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--ami-duracao-cor);
+  border-radius: 50%;
+  background: #fff;
+}
+.ami-lembretes-duracao output {
+  min-width: 6ch;
+  color: var(--pli-deep, #003b5a);
+  font: 600 .75rem/1.2 Roboto, Arial, sans-serif;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+.ami-lembretes-form .ahp-form-actions { justify-content: flex-end; margin: 0; }
+.ami-lembretes :is(#ami-lembretes-form-status, #ami-lembretes-contexto-status, #ami-lembretes-previa-status):empty { display: none; }
+.ami-lembretes .ami-lembretes-erro, .ami-lembretes-modal .ami-lembretes-erro { color: #991b1b; }
+.ami-lembretes .ami-lembretes-origem, .ami-lembretes #ami-lembretes-rotina { margin: 0 0 12px; }
+.ami-lembretes :is(#ami-lembretes-tabela-titulo, #ami-lembretes-config-label) { margin: 0 0 4px; }
+.ami-lembretes #ami-lembretes-config-ver { --ami-botao-cor: #1d4ed8; --ami-botao-borda: #153998; }
+.ami-lembretes #ami-lembretes-config-editar { --ami-botao-cor: #6b21a8; --ami-botao-borda: #481670; }
+.ami-lembretes #ami-lembretes-config-limpar { --ami-botao-cor: #475569; --ami-botao-borda: #2f3946; }
+.ami-lembretes #ami-lembretes-config-paginas button { border: 0; }
+.ami-lembretes #ami-lembretes-detalhe-titulo { scroll-margin-top: 16px; overflow-wrap: anywhere; }
+.ami-lembretes #ami-lembretes-atualizar { --ami-botao-cor: #0f766e; --ami-botao-borda: #0a4f49; }
+.ami-lembretes #ami-lembretes-historico { --ami-botao-cor: #1d4ed8; --ami-botao-borda: #153998; }
+.ami-lembretes #ami-lembretes-limpar { --ami-botao-cor: #475569; --ami-botao-borda: #2f3946; }
+.ami-lembretes :is(#ami-lembretes-tabela, #ami-lembretes-config-tabela) td:nth-child(2) { text-align: left; }
+.ami-lembretes #ami-lembretes-tabela td:is(:nth-child(3), :nth-child(4)) { text-align: left; }
+.ami-page #ami-lembretes-config-tabela .ami-lembretes-notificacoes {
+  --ami-botao-borda: #475569;
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  width: 2rem;
+  height: 1.125rem;
+  padding: 2px;
+  border: 1px solid;
+  border-radius: 1rem;
+  background: #475569;
+  cursor: pointer;
+}
+.ami-page #ami-lembretes-config-tabela .ami-lembretes-notificacoes[aria-checked="true"] {
+  --ami-botao-borda: #166534;
+  justify-content: flex-end;
+  background: #166534;
+}
+.ami-page #ami-lembretes-config-tabela .ami-lembretes-notificacoes::before {
+  content: "";
+  width: .75rem;
+  height: .75rem;
+  border-radius: 50%;
+  background: #fff;
+}
+.ami-page #ami-lembretes-config-tabela .ami-lembretes-notificacoes:focus-visible {
+  outline: 2px solid #00527d;
+  outline-offset: 2px;
+}
+.ami-lembretes .ami-lembretes-notificacoes:disabled { opacity: .65; cursor: default; }
+.ami-page.ami-espaco-page #ami-lembretes-tabela .ami-cell-link { color: var(--ami-status-cor, #123b56); text-decoration: underline; }
+.ami-lembretes-modal { position: fixed; inset: 0; margin: auto; width: min(92vw, 48rem); padding: 0; }
+.ami-page dialog.ami-lembretes-modal:not([open]) { display: none; }
+.ami-lembretes-modal::backdrop { background: rgb(0 28 46 / 66%); }
+.ami-page .ami-lembretes-modal .ami-data-modal__content { display: grid; gap: 8px; }
+.ami-page .ami-lembretes-modal :is(h3, p, ol) { margin: 0; }
+.ami-lembretes-modal h3 { font-size: .88rem; color: var(--pli-deep, #003b5a); }
+.ami-lembretes-modal #ami-lembretes-modal-status:empty { display: none; }
+.ami-lembretes-modal :is(#ami-lembretes-modal-contexto, #ami-lembretes-modal-motivo) { overflow-wrap: anywhere; }
+.ami-lembretes-modal #ami-lembretes-modal-programacao { display: grid; gap: 8px; }
+.ami-lembretes-modal :is(.ami-lembretes-horarios, .ami-lembretes-datas) { list-style: none; padding: 0; margin: 0; }
+.ami-lembretes-modal .ami-lembretes-horarios { display: grid; gap: 8px; }
+.ami-lembretes-modal .ami-lembretes-intervalo-agenda { display: grid; gap: 4px; }
+.ami-lembretes-modal .ami-lembretes-intervalo-agenda h4 { margin: 0; font: inherit; font-weight: 600; }
+.ami-lembretes-modal .ami-lembretes-sem-horario { color: #475569; }
+.ami-lembretes-modal ol { padding-inline-start: 20px; }
+.ami-lembretes-modal #ami-lembretes-mais { justify-self: start; }
+@media (max-width: 700px) {
+  .ami-lembretes .ahp-step-section > .ahp-section-label { margin-top: -16px; margin-inline: -16px; padding-inline: 16px; }
+}
+@media (max-width: 900px) {
+  .ami-page.ami-central-responsiva #ami-lembretes .ami-lembretes-form .ami-lembretes-faixa {
+    grid-template-columns: max-content minmax(0, 1.55fr) minmax(0, 1fr);
+    row-gap: 0;
+  }
+  .ami-lembretes-intervalo-numero { font-size: clamp(.75rem, 1.8vw, .875rem); }
+  .ami-lembretes-faixa .c-form-label {
+    font-size: clamp(.6875rem, 1.8vw, .8125rem);
+    margin-bottom: 4px;
+  }
+  .ami-lembretes-duracao output { font-size: clamp(.6875rem, 1.8vw, .75rem); }
+}

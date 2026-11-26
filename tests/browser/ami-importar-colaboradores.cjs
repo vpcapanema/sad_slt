@@ -89,17 +89,17 @@ function workbookWithTables() {
     const chooser = await chooserPromise;
     await chooser.setFiles({
       name: 'colaboradores.csv', mimeType: 'text/csv',
-      buffer: Buffer.from('Nome do colaborador;E-mail válido\nANA   DA SILVA;ana@example.com\nbia souza;bia@example.com\nAna Silva;ANA@example.com')
+      buffer: Buffer.from('Nome do colaborador;E-mail válido;Instituição\nANA   DA SILVA;ana@example.com;Instituto Alfa\nbia souza;bia@example.com\nAna Silva;ANA@example.com')
     });
     const modal = page.locator('#ami-import-modal');
     await modal.waitFor({state: 'visible'});
-    assert.deepEqual(await modal.locator('th').allTextContents(), ['', 'Nome do colaborador', 'E-mail', 'Todos']);
+    assert.deepEqual(await modal.locator('th').allTextContents(), ['', 'Nome do colaborador', 'E-mail do colaborador', 'Instituição', 'Todos']);
     assert.equal(await page.locator('#ami-import-list tr').count(), 3);
     const removeDuplicates = modal.getByRole('button', {name: 'Excluir duplicatas'});
     const confirm = page.locator('#ami-import-confirm');
     const duplicateNotes = modal.locator('.ami-import-duplicate');
     await removeDuplicates.waitFor();
-    assert.match(await duplicateNotes.textContent(), /E-mail repetido no arquivo/);
+    assert.match(await duplicateNotes.textContent(), /E-mail repetido/);
     assert.equal(await confirm.isDisabled(), true);
     assert.equal(await modal.locator('[data-import-scope-column]:enabled').count(), 0);
     const duplicateButtonStyle = await page.evaluate(() => {
@@ -119,6 +119,7 @@ function workbookWithTables() {
     await confirm.click();
     await modal.waitFor({state: 'hidden'});
     assert.equal(await page.locator('#ami-email-list tr').count(), 2);
+    assert.equal(await page.locator('#ami-email-list').getByText('Instituto Alfa').count(), 1);
     assert.match(await page.locator('#ami-emails-feedback').textContent(), /Lista confirmada/);
 
     await page.locator('#ami-collaborator-file').setInputFiles({
@@ -203,7 +204,7 @@ function workbookWithTables() {
     assert.equal(await page.locator('#ami-import-list tr').count(), 3);
     const groups = ['Ambiental', 'Social', 'Viabilidade institucional e financeira', 'Espacial'];
     const headers = (await modal.locator('th').allTextContents()).map(text => text.trim().replace(/\s+/g, ' '));
-    assert.deepEqual(headers, ['', 'Nome do colaborador', 'E-mail', ...groups, 'Todos']);
+    assert.deepEqual(headers, ['', 'Nome do colaborador', 'E-mail do colaborador', 'Instituição', ...groups, 'Todos']);
     const nameHeader = modal.locator('thead th').nth(1);
     for (const direction of ['ascending', 'descending', 'none']) {
       await nameHeader.click();
@@ -310,7 +311,7 @@ function workbookWithTables() {
     assert.match(await page.locator('#ami-email-list').textContent(), /Débora Nunes.*debora@example.com.*Todos/);
     assert.doesNotMatch(await page.locator('#ami-email-list').textContent(), /Outra grafia de Ana/);
     assert.deepEqual(await page.locator('#ami-email-list').locator('xpath=ancestor::table').locator('th').allTextContents(),
-      ['', 'Colaboradores', 'E-mail colaborador', 'Grupos de critérios', 'Data limite']);
+      ['', 'Nome do colaborador', 'E-mail do colaborador', 'Instituição', 'Grupos de critérios', 'Data limite']);
     await page.locator('#ami-judgment-name').fill('Teste de atribuição');
     await page.locator('#ami-deadline').fill('2036-01-01');
     await page.locator('#ami-modo-comparacao').selectOption('por_grupo');

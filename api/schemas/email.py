@@ -1,11 +1,11 @@
 """Contratos de envio administrativo de email pelo SICARD."""
 from __future__ import annotations
 
-from typing import Literal
+from typing import Annotated, Literal
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, StringConstraints, field_validator, model_validator
 
 
 class EmailTesteSchema(BaseModel):
@@ -69,3 +69,65 @@ class ConviteEmailEnvioSchema(EmailTesteSchema):
 
 class RespostaEmailEnvioSchema(EmailTesteSchema):
     reenvio_id: UUID | None = None
+
+
+class DestinatarioDivulgacaoSchema(EmailTesteSchema):
+    nome: str = Field(min_length=1, max_length=200)
+    instituicao: str | None = Field(None, max_length=300)
+
+
+class ListaDivulgacaoSchema(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    destinatarios: list[DestinatarioDivulgacaoSchema] = Field(min_length=1, max_length=1000)
+
+
+class ExclusaoDestinatariosDivulgacaoSchema(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    destinatarios: list[Annotated[EmailStr, Field(max_length=254)]] = Field(min_length=1)
+
+
+class SalvamentoListaDivulgacaoSchema(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    alterados: list[DestinatarioDivulgacaoSchema] = Field(max_length=1000)
+    removidos: list[Annotated[EmailStr, Field(max_length=254)]] = Field(max_length=1000)
+    nova_lista: str | None = Field(default=None, min_length=1, max_length=120)
+    lista_id: UUID | None = None
+
+    @model_validator(mode="after")
+    def validar_lista(self):
+        if self.nova_lista and self.lista_id:
+            raise ValueError("Escolha entre criar uma lista ou atualizar uma lista existente.")
+        return self
+
+
+class MensagemDivulgacaoSchema(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    assunto: Annotated[str, StringConstraints(strip_whitespace=False, min_length=1, max_length=200)]
+    texto: Annotated[str, StringConstraints(strip_whitespace=False, min_length=1, max_length=49000)]
+
+    @field_validator("assunto", "texto")
+    @classmethod
+    def exigir_conteudo(cls, valor: str) -> str:
+        if not valor.strip():
+            raise ValueError("Informe um conteúdo com texto.")
+        return valor
+
+    @field_validator("assunto")
+    @classmethod
+    def validar_assunto(cls, valor: str) -> str:
+        return EmailEnvioSchema.validar_assunto(valor)
+
+
+class DivulgacaoEmailEnvioSchema(EmailTesteSchema, MensagemDivulgacaoSchema):
+    operacao_id: UUID
+    reenvio: bool = False
+
+
+class DivulgacaoTransporteSchema(EmailEnvioSchema):
+    model_config = ConfigDict(str_strip_whitespace=False)
+
+    html: str = Field(min_length=1, max_length=350000)

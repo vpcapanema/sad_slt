@@ -36,12 +36,13 @@ from api.routers.comparacao_colaborativa import definir_cookie_inscricao
 from api.services import email_convites as convites_service, storage_remoto
 from api.services import comparacao_colaborativa_service as julgamento_service
 from api.services.email_confirmacoes_automaticas import lifespan as email_lifespan
+from api.services.lembretes_ahp_automaticos import lifespan as lembretes_lifespan
 from api.services.usuarios_sigma_automaticos import lifespan as usuarios_lifespan
 from api.services.session_service import SessionUser, cookie_name
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    async with email_lifespan(app), usuarios_lifespan(app):
+    async with email_lifespan(app), usuarios_lifespan(app), lembretes_lifespan(app):
         yield
 
 
@@ -508,6 +509,11 @@ def pagina_julgamentos_multicriterio(request: Request) -> Response:
 @app.get("/restrict/analise-multicriterio/central-julgamentos", include_in_schema=False)
 def pagina_central_julgamentos(request: Request) -> Response:
     return render_page(request, "paginas/analise_multicriterio/central-respostas.html", modo_pagina="espaco")
+
+
+@app.get("/restrict/analise-multicriterio/central-lembretes", include_in_schema=False)
+def pagina_central_lembretes(request: Request) -> Response:
+    return render_page(request, "paginas/analise_multicriterio/central-lembretes.html")
 
 
 @app.get("/restrict/analise-multicriterio/central-respostas", include_in_schema=False)

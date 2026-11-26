@@ -355,6 +355,37 @@
   --ami-espaco-texto: 0.5rem;
 }
 
+.ami-page.ami-espaco-page .ami-main > .standard-page-hero:has(+ .ami-page-intro) {
+  margin-bottom: var(--ami-space-sm);
+}
+
+.ami-page.ami-espaco-page .ami-main > .ami-page-intro {
+  margin: 0;
+  padding-inline: calc(var(--ami-recuo, 1.5rem) + 1px);
+  color: var(--pli-text);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.ami-page.ami-espaco-page .ami-main > .ami-page-intro + .standard-section-action-row {
+  margin-top: var(--ami-space-xs);
+  align-items: stretch;
+  flex-wrap: wrap;
+  gap: var(--ami-space-xs);
+}
+
+.ami-page.ami-espaco-page .ami-main > .ami-page-intro + .standard-section-action-row > .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  min-height: 2.5rem;
+}
+
+.ami-page.ami-espaco-page .ami-main .ami-judgments-intro {
+  font-size: 0.8125rem;
+}
+
 .ami-page.ami-espaco-page .ami-main .ahp-section-body {
   padding-top: var(--ami-espaco-texto);
   gap: var(--ami-espaco-texto);
@@ -410,6 +441,15 @@
 .ami-page.ami-espaco-page .ami-main .ahp-section-body > p.ami-table-label {
   margin: 0 0 4px;
 }
+
+.ami-page.ami-espaco-page .ami-monitor-table-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ami-page.ami-espaco-page .ami-monitor-table-heading .ami-table-label { margin: 0; font-size: 1rem; }
+.ami-page.ami-espaco-page .ami-monitor-table-heading .btn { flex: none; white-space: nowrap; }
 
 /* Alternância por profundidade, apenas no fundo dos contêineres.
    Níveis 1/3: branco; níveis 2/4: azul-claro. Cabeçalhos preservados. */
@@ -590,14 +630,37 @@
   border: 0;
   box-shadow: none;
   background: transparent;
-  color: #123b56;
+  color: var(--ami-status-cor, #123b56);
 }
 .ami-page.ami-espaco-page #ami-judgments .ami-cell-link[data-availability="available"] {
-  color: #166534;
+  color: var(--ami-status-cor, #166534);
 }
 .ami-page.ami-espaco-page #ami-judgments .ami-cell-link[data-availability="pending"] {
-  color: #991b1b;
+  color: var(--ami-status-cor, #991b1b);
 }
+
+.ami-page.ami-central-responsiva .ami-main :is(a[href]:not(.admin-icon-btn), .ami-cell-link, summary,
+  .ami-open-text, [aria-haspopup="dialog"]:not(.admin-icon-btn)):not(:disabled, [aria-disabled="true"]),
+.ami-page.ami-central-responsiva .ami-lembretes-modal .ami-open-text {
+  text-decoration-line: underline !important;
+  text-underline-offset: .16em;
+}
+.ami-page.ami-central-responsiva .ami-main :is(a[href]:not(.admin-icon-btn), .ami-open-text,
+  [aria-haspopup="dialog"]:not(.admin-icon-btn)):not(:disabled, [aria-disabled="true"]) > span,
+.ami-page.ami-central-responsiva .ami-lembretes-modal .ami-open-text > span {
+  text-decoration-line: underline;
+  text-underline-offset: .16em;
+}
+
+.ami-page.ami-central-responsiva table [data-ami-status] {
+  --ami-status-cor: #475569;
+  color: var(--ami-status-cor);
+  font-weight: 700 !important;
+}
+.ami-page.ami-central-responsiva table [data-ami-status="sucesso"] { --ami-status-cor: #166534; }
+.ami-page.ami-central-responsiva table [data-ami-status="pendencia"] { --ami-status-cor: #854d0e; }
+.ami-page.ami-central-responsiva table [data-ami-status="falha"] { --ami-status-cor: #991b1b; }
+.ami-page.ami-central-responsiva table [data-ami-status="espera"] { --ami-status-cor: #1d4ed8; }
 
 /* Botões com texto: padrão solicitado, independente dos botões de ícone. */
 .ami-page.ami-espaco-page .ami-main .btn:not(#ami-new):not(.admin-icon-btn) {
@@ -681,7 +744,7 @@
 }
 .ami-page.ami-espaco-page .ami-collaborator-fields {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
   align-items: end;
   gap: 0.5rem;
 }
@@ -709,10 +772,83 @@
   gap: 0.5rem;
 }
 .ami-page.ami-espaco-page .ami-collaborator-import .form-help { margin: 0; }
+.ami-page.ami-espaco-page #ami-public-link-card > .ahp-section-body > #ami-divulgacao,
+.ami-page.ami-espaco-page .ami-divulgacao-lista {
+  margin-block-start: var(--ami-espaco-texto);
+}
+.ami-page.ami-espaco-page .ami-divulgacao-lista .ami-report-table {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+.ami-page.ami-espaco-page #ami-divulgacao-campos {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+}
+.ami-page.ami-espaco-page #ami-divulgacao-campos > label:first-child { grid-column: auto; }
+.ami-page.ami-espaco-page #ami-divulgacao-adicionar {
+  width: var(--ami-altura-campo);
+  min-width: var(--ami-altura-campo);
+  height: var(--ami-altura-campo);
+}
+.ami-page.ami-espaco-page #ami-divulgacao-contato .ami-collaborator-import {
+  align-items: end;
+}
+.ami-page.ami-espaco-page #ami-divulgacao-contato .ami-collaborator-import > label {
+  flex: 1 1 auto;
+  max-width: 100%;
+}
+.ami-page.ami-espaco-page .ami-divulgacao-editor > .ahp-subcard {
+  min-width: 0;
+  margin: 0;
+}
+.ami-page.ami-espaco-page .ami-divulgacao-editor :is(label, .ami-divulgacao-link) {
+  display: grid;
+  gap: var(--ami-espaco-texto);
+  min-width: 0;
+  margin: 0;
+}
+.ami-page.ami-espaco-page .ami-divulgacao-editor label {
+  font: 600 var(--ami-font-child)/1.4 Roboto, Arial, sans-serif;
+}
+.ami-page.ami-espaco-page .ami-divulgacao-editor :is(.c-form-control, .ami-email-protected-link),
+.ami-page.ami-espaco-page .ami-divulgacao-editor input[type="file"]::file-selector-button {
+  font: 400 var(--ami-font-child)/1.4 Roboto, Arial, sans-serif;
+}
+.ami-page.ami-espaco-page #ami-divulgacao-arquivo {
+  --ami-recuo-vertical-arquivo: 4px;
+  --ami-altura-interna-arquivo: calc(var(--ami-altura-campo) - 2 * var(--ami-recuo-vertical-arquivo) - 2px);
+  padding-block: var(--ami-recuo-vertical-arquivo);
+  line-height: var(--ami-altura-interna-arquivo);
+}
+.ami-page.ami-espaco-page #ami-divulgacao-arquivo::file-selector-button {
+  height: var(--ami-altura-interna-arquivo);
+  padding-block: 0;
+  vertical-align: top;
+}
+.ami-page.ami-espaco-page .ami-divulgacao-editor .ami-email-protected-link,
+.ami-page.ami-espaco-page .ami-divulgacao-editor .ahp-form-actions {
+  margin: 0;
+}
+.ami-page.ami-espaco-page .ami-divulgacao-editor .form-help {
+  margin: 0;
+}
+.ami-page.ami-espaco-page #ami-divulgacao .form-help {
+  font: 400 var(--ami-font-help)/1.4 Roboto, Arial, sans-serif;
+}
+.ami-page.ami-espaco-page #ami-divulgacao-status:empty { display: none; }
+.ami-page.ami-espaco-page #ami-divulgacao-contato-alerta { margin: 0; color: #991b1b; }
+.ami-page.ami-espaco-page #ami-divulgacao-contato-alerta:empty { display: none; }
 .ami-page.ami-espaco-page .ami-table--database.ami-collaborators-table { min-width: 0; width: 100%; }
 .ami-page.ami-espaco-page .ami-collaborators-table td:not(.col-select) { white-space: normal; overflow-wrap: anywhere; }
 .ami-page #ami-import-modal { grid-template-columns: minmax(0, 1fr); }
 .ami-page #ami-import-modal .ami-data-modal__card { width: min(1050px, 100%); box-sizing: border-box; }
+.ami-page dialog#ami-divulgacao-modal { position: fixed; inset: 0; margin: auto; width: min(92vw, 32rem); padding: 0; }
+.ami-page dialog#ami-divulgacao-modal:not([open]) { display: none; }
+#ami-divulgacao-modal::backdrop { background: rgb(0 28 46 / 66%); }
+.ami-page #ami-divulgacao-modal .ami-data-modal__content,
+.ami-page #ami-divulgacao-modal fieldset { display: grid; gap: 8px; }
+.ami-page #ami-divulgacao-modal fieldset { min-width: 0; border: 0; margin: 0; padding: 0; }
+.ami-page #ami-divulgacao-modal .ami-data-modal__content :is(p, label, .ahp-form-actions) { margin: 0; }
+.ami-page #ami-divulgacao-modal :is([hidden], #ami-divulgacao-modal-status:empty) { display: none; }
 .ami-page.ami-espaco-page #ami-import-modal .ami-data-modal__content {
   display: grid;
   gap: 8px;
@@ -759,7 +895,7 @@
     grid-template-columns: minmax(0, 1fr);
   }
   .ami-page.ami-espaco-page .ami-collaborator-fields {
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
   }
   .ami-page.ami-espaco-page .ami-collaborator-fields > label:first-child {
     grid-column: 1 / -1;
@@ -847,7 +983,7 @@
   min-width: 56rem;
   width: 100%;
 }
-.ami-page.ami-espaco-page #ami-monitor-table tbody td:is(:nth-child(2), :nth-child(3)):not([colspan]),
+.ami-page.ami-espaco-page #ami-monitor-table tbody td:is(:nth-child(2), :nth-child(3), :nth-child(4)):not([colspan]),
 .ami-page.ami-espaco-page #ami-email-history-table tbody td:last-child:not([colspan]) {
   text-align: left;
 }

@@ -87,12 +87,13 @@ const fs = require('node:fs');
       await page.locator('#pfsStatusOverlay .pfs-box.pfs-active .pfs-close').click();
     };
     assert.deepEqual(await page.locator('#ami-monitor-table th').allTextContents(),
-      ['','Colaboradores','E-mail colaborador','Registrado em','Etapa da colaboração','E-mail convite','E-mail resposta']);
+      ['', 'Nome do colaborador', 'E-mail do colaborador', 'Data do primeiro registro de e-mail', 'Status da etapa de colaboração',
+        'Status do envio do e-mail de convite', 'Status do envio do e-mail de resposta']);
     assert.match(await page.locator('#ami-collaborator-table thead').innerText(),/E-MAIL COLABORADOR/i);
     assert.equal(await convite.isDisabled(),true); assert.equal(await resposta.isDisabled(),true);
     assert.match(await linha('bia@example.com').innerText(),/Bia/);
     assert.equal(await linha('bia@example.com').count(),1);
-    assert.equal(await linha('bia@example.com').locator('.ami-cell-link').first().innerText(),'Entregue');
+    assert.equal(await linha('bia@example.com').locator('.ami-cell-link').first().innerText(),'Enviado');
 
     await marcar('ana@example.com');
     await page.waitForFunction(() => !document.getElementById('ami-monitor-send').disabled &&

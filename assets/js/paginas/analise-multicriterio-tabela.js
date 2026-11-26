@@ -1,6 +1,7 @@
 (function (global) {
   "use strict";
   function esc(value) { var node = document.createElement("span"); node.textContent = value == null ? "" : String(value); return node.innerHTML.replace(/"/g, "&quot;"); }
+  function statusAttr(rotulo) { return global.SicardAhpStatus?.atributo(rotulo) || ""; }
   function date(value) { var parsed = new Date(value); return !value || isNaN(parsed.getTime()) ? "—" : parsed.toLocaleString("pt-BR"); }
   function num(value) { return value == null ? "—" : Number(value).toLocaleString("pt-BR", { maximumFractionDigits: 4 }); }
   function json(value, label) { return value == null ? "—" : '<details><summary>' + esc(label) + '</summary><pre>' + esc(JSON.stringify(value, null, 2)) + '</pre></details>'; }
@@ -61,7 +62,18 @@
       }).join("") + '</tbody></table></div>';
   }
   function criteriaModal(j) { return '<p><strong>' + esc(j.n_criterios) + ' critérios vinculados ao julgamento.</strong></p><div class="ami-modal-criteria">' + (j.criterios || []).map(function (c, index) { var name = typeof c === "string" ? c : c.criterio || c.nome || c.Critério || c.name || "Critério " + (index + 1); var dimension = typeof c === "object" && (c.dimensao || c.Dimensão); var phase = typeof c === "object" && (c.fase || c.Fase); return '<article><span>' + (index + 1) + '</span><div><strong>' + esc(name) + '</strong><small>' + esc([dimension, phase].filter(Boolean).join(" · ")) + '</small></div></article>'; }).join("") + '</div>'; }
-  function collaboratorsModal(j) { var invitations = j.convites || [], received = Number(j.total_respostas || 0); if (!invitations.length) return '<p class="ami-empty">Nenhum colaborador convidado.</p>'; return '<p class="ami-modal-description"><strong>' + received + '</strong> de <strong>' + invitations.length + '</strong> respostas recebidas.</p>' + tableLabel("Tabela dos colaboradores do julgamento") + '<div class="matriz-table-wrap"><table class="admin-table matriz-view-table ami-collaborators"><thead><tr><th>Colaborador</th><th>E-mail</th></tr></thead><tbody>' + invitations.map(function (invitation, index) { var email = typeof invitation === "string" ? invitation : invitation.email; return '<tr><td>' + (index + 1) + '</td><td>' + esc(email || "—") + '</td></tr>'; }).join("") + '</tbody></table></div>'; }
+  function collaboratorsModal(j) {
+    var invitations = j.convites || [], received = Number(j.total_respostas || 0);
+    if (!invitations.length) return '<p class="ami-empty">Nenhum colaborador convidado.</p>';
+    return '<p class="ami-modal-description"><strong>' + received + '</strong> de <strong>' + invitations.length +
+      '</strong> respostas recebidas.</p>' + tableLabel("Tabela dos colaboradores do julgamento") +
+      '<div class="matriz-table-wrap"><table class="admin-table matriz-view-table ami-collaborators ami-table--database"><thead><tr><th>Nome do colaborador</th><th>E-mail do colaborador</th><th>Instituição</th></tr></thead><tbody>' +
+      invitations.map(function (convite) {
+        var email = typeof convite === "string" ? convite : convite.email;
+        return '<tr><td>' + esc(convite.nome || "—") + '</td><td>' + esc(email || "—") +
+          '</td><td>' + esc(convite.instituicao || "—") + '</td></tr>';
+      }).join("") + '</tbody></table></div>';
+  }
   function participationLink(j, received, invited) {
     var label = received + ' de ' + invited + ' (' + (invited ? num(received / invited * 100) : "0") + '%)';
     return j.modo_participacao === "publico" ? esc(label)
@@ -78,6 +90,8 @@
       var publico = j.modo_participacao === "publico";
       var c = j.analise_exibida || j.consolidacao, invited = publico ? j.total_inscritos || 0 : (j.total_convites ?? (j.convites || []).length), received = Number(j.total_respostas || 0), selected = options.selectedIds ? options.selectedIds.has(j.id) : options.selectedId === j.id, editing = options.editingId === j.id;
       var temMatriz = Boolean(c?.matriz_consolidada?.length), temPesos = Boolean(c?.pesos_consolidados?.length);
+      var situacao = { ativa: "Aberto", consolidada: "Consolidado", encerrada: "Encerrado" }[j.status] || j.status;
+      var matrizStatus = temMatriz ? "Disponível" : "Pendente", pesosStatus = temPesos ? "Disponíveis" : "Pendentes";
       var matrixName = j.matriz_nome || [j.hierarquizacao_nome, j.hierarquizacao_codigo].filter(Boolean).join(" · ") || "—";
       var total = publico ? invited : (j.lista_colaboradores ?? j.convites ?? []).length;
       var lista = options.onOpenCollaborators ? '<td><button type="button" class="ami-cell-link" data-lista-colaboradores="' + esc(j.id) + '"' + (publico ? '' : ' aria-haspopup="dialog"') + ' aria-label="Abrir lista de colaboradores de ' + esc(j.nome || j.id) + '">' + total + (publico ? (total === 1 ? ' inscrito' : ' inscritos') : (total === 1 ? ' colaborador' : ' colaboradores')) + '</button></td>' : "";
@@ -91,12 +105,12 @@
       }
       var criteria = '<td><button class="ami-cell-link" data-modal-kind="criteria" data-record-id="' + esc(j.id) + '">' + esc(j.n_criterios) + ' critérios</button></td>';
       return '<tr class="collab-round-row ' + (selected ? "is-selected" : "") + '" aria-selected="' + selected + '"><td class="col-select"><input type="checkbox" class="ami-row-select" data-select-id="' + esc(j.id) + '" ' + (selected ? "checked" : "") + (options.editingId ? " disabled" : "") + ' aria-label="Selecionar julgamento ' + esc(j.hierarquizacao_codigo) + '"></td>' +
-        '<td>' + (editing ? '<input class="ami-inline-input" data-edit-field="nome" type="text" maxlength="200" required aria-label="Nome do julgamento">' : esc(j.nome || 'Julgamento ' + j.id)) + '</td><td>' + esc({ ativa: "Aberto", consolidada: "Consolidado", encerrada: "Encerrado" }[j.status] || j.status) + '</td>' + ids +
+        '<td>' + (editing ? '<input class="ami-inline-input" data-edit-field="nome" type="text" maxlength="200" required aria-label="Nome do julgamento">' : esc(j.nome || 'Julgamento ' + j.id)) + '</td><td' + statusAttr(situacao) + '>' + esc(situacao) + '</td>' + ids +
         '<td title="' + esc(matrixName) + '">' + esc(matrixName) + '</td>' + (centralJulgamentos ? criteria + link : "") +
         '<td>' + participationLink(j, received, invited) + '</td>' + lista + '<td>' + deadlineDate(j.valido_ate) + '</td><td>' + date(j.criadoEm) + '</td><td>' + date(j.atualizadoEm) + '</td>' +
         (centralJulgamentos ? "" : criteria) +
         '<td class="ami-cell-token">' + (publico ? "Link público" : "Individual por e-mail") + '</td><td>' + num(c && c.lambda_max) + '</td><td>' + num(c && c.indice_consistencia) + '</td><td>' + num(c && c.indice_aleatorio) + '</td><td>' + num(c && c.razao_consistencia) + '</td>' +
-        '<td><button class="ami-cell-link" data-availability="' + (temMatriz ? 'available' : 'pending') + '" data-modal-kind="matrix" data-record-id="' + esc(j.id) + '">' + (temMatriz ? "Disponível" : "Pendente") + '</button></td><td><button class="ami-cell-link" data-availability="' + (temPesos ? 'available' : 'pending') + '" data-modal-kind="weights" data-record-id="' + esc(j.id) + '">' + (temPesos ? "Disponíveis" : "Pendentes") + '</button></td></tr>';
+        '<td><button class="ami-cell-link"' + statusAttr(matrizStatus) + ' data-availability="' + (temMatriz ? 'available' : 'pending') + '" data-modal-kind="matrix" data-record-id="' + esc(j.id) + '">' + matrizStatus + '</button></td><td><button class="ami-cell-link"' + statusAttr(pesosStatus) + ' data-availability="' + (temPesos ? 'available' : 'pending') + '" data-modal-kind="weights" data-record-id="' + esc(j.id) + '">' + pesosStatus + '</button></td></tr>';
     }).join("") || '<tr><td colspan="18" class="ami-empty">Nenhum registro colaborativo encontrado no banco.</td></tr>';
     var nameInput = body.querySelector('[data-edit-field="nome"]');
     if (nameInput) {
@@ -113,7 +127,7 @@
     body.querySelectorAll("[data-select-id]").forEach(function (checkbox) { checkbox.addEventListener("change", function () { if (options.onSelectionChange) options.onSelectionChange(checkbox.dataset.selectId, checkbox.checked); }); });
     var modal = document.getElementById(tbodyId + "-modal"), modalTitle = document.getElementById(tbodyId + "-modal-title"), modalContent = document.getElementById(tbodyId + "-modal-content");
     function closeModal() { modal.classList.add("is-hidden"); }
-    body.querySelectorAll('[data-modal-kind="collaborators"]').forEach(function (button) { button.addEventListener("click", function (event) { event.stopImmediatePropagation(); var j = (julgamentos || []).find(function (item) { return item.id === button.dataset.recordId; }); if (!j) return; modalTitle.textContent = "Colaboradores do julgamento"; modalContent.innerHTML = collaboratorsModal(j); modal.classList.remove("is-hidden"); modal.querySelector("[data-modal-close]").focus(); }); });
+    body.querySelectorAll('[data-modal-kind="collaborators"]').forEach(function (button) { button.addEventListener("click", function (event) { event.stopImmediatePropagation(); var j = (julgamentos || []).find(function (item) { return item.id === button.dataset.recordId; }); if (!j) return; modalTitle.textContent = "Colaboradores do julgamento"; modalContent.innerHTML = collaboratorsModal(j); modal.classList.remove("is-hidden"); var tabela = modalContent.querySelector("table"); if (tabela) global.SLTAnalysisTable?.(tabela, j); modal.querySelector("[data-modal-close]").focus(); }); });
     body.querySelectorAll("[data-modal-kind]").forEach(function (button) { button.addEventListener("click", function () { var j = (julgamentos || []).find(function (item) { return item.id === button.dataset.recordId; }); if (!j) return; var kind = button.dataset.modalKind, titles = { criteria: "Critérios do julgamento", matrix: "Matriz de comparação pareada consolidada", weights: "Pesos consolidados" }; modalTitle.textContent = titles[kind] || "Detalhes do julgamento"; modalContent.innerHTML = kind === "criteria" ? criteriaModal(j) : kind === "matrix" ? matrix(j) : weightsModal(j); modal.classList.remove("is-hidden"); modal.querySelector("[data-modal-close]").focus(); }); });
     modal.querySelector("[data-modal-close]").onclick = closeModal; modal.onclick = function (event) { if (event.target === modal) closeModal(); };
   };

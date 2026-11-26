@@ -3,7 +3,7 @@
     <header class="json-modal-head ami-data-modal__head"><h2 id="ami-import-title">Prévia da lista de colaboradores</h2><button type="button" class="json-modal-close" id="ami-import-close" aria-label="Fechar prévia" title="Fechar prévia"><i class="fas fa-xmark" aria-hidden="true"></i></button></header>
     <form class="json-modal-body ami-data-modal__content is-hidden" id="ami-import-source-form">
       <p class="ami-modal-description" id="ami-import-source-description">Escolha a aba ou tabela que contém a lista de colaboradores.</p>
-      <label class="c-form-group" for="ami-import-source">Aba ou tabela<select class="c-form-control" id="ami-import-source" required></select></label>
+      <label class="c-form-group" for="ami-import-source"><span id="ami-import-source-label">Aba ou tabela</span><select class="c-form-control" id="ami-import-source" required></select></label>
       <p class="ami-feedback" id="ami-import-source-feedback" role="alert"></p>
       <div><button class="btn btn-primary" type="submit" id="ami-import-source-continue" disabled>Carregar lista</button></div>
     </form>
@@ -12,7 +12,7 @@
       <p class="ami-feedback" id="ami-import-feedback" role="status" aria-live="polite"></p>
       <div class="ami-filtered-table">
         {% set filtro_prefixo = "ami-import-filter" %}{% set filtro_rotulo = "Filtrar colaboradores" %}{% include "componentes/filtro_tabela.html" %}
-        <div class="hier-table-shell ami-table-shell" tabindex="0" role="region" aria-label="Registros da prévia"><table class="admin-table hier-register-table ami-table--database ami-collaborators-table"><thead><tr id="ami-import-headers"><th class="col-select" scope="col"><input type="checkbox" id="ami-import-select-all" checked title="Selecionar todos" aria-label="Selecionar todos os colaboradores filtrados"></th><th scope="col">Nome do colaborador</th><th scope="col">E-mail</th></tr></thead><tbody id="ami-import-list"></tbody></table></div>
+        <div class="hier-table-shell ami-table-shell" tabindex="0" role="region" aria-label="Registros da prévia"><table class="admin-table hier-register-table ami-table--database ami-collaborators-table"><thead><tr id="ami-import-headers"><th class="col-select" scope="col"><input type="checkbox" id="ami-import-select-all" checked title="Selecionar todos" aria-label="Selecionar todos os colaboradores filtrados"></th><th scope="col">Nome do colaborador</th><th scope="col">E-mail do colaborador</th><th scope="col">Instituição</th></tr></thead><tbody id="ami-import-list"></tbody></table></div>
       </div>
       <div class="admin-bulk-actions ami-table-actions standard-table-actions" role="group" aria-label="Controles da prévia de importação">
         <button type="button" class="admin-icon-btn delete is-hidden" id="ami-import-remove-duplicates" title="Excluir duplicatas" aria-label="Excluir duplicatas"><i class="fas fa-trash" aria-hidden="true"></i></button>

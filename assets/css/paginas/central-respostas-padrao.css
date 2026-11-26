@@ -25,7 +25,7 @@
 .sicard-standard-page.ami-page #ami-analysis-workspace .admin-table tbody :is(td, th) {
   height: 1.7rem; padding: .18rem .55rem;
   font: 400 .74rem/1.1 Roboto, Arial, sans-serif;
-  color: var(--pli-deep); text-transform: none; letter-spacing: normal;
+  color: var(--ami-status-cor, var(--pli-deep)); text-transform: none; letter-spacing: normal;
 }
 .sicard-standard-page.ami-page #ami-analysis-workspace .admin-table tbody tr:nth-child(odd) > :is(td, th) { background: #fff; }
 .sicard-standard-page.ami-page #ami-analysis-workspace .admin-table tbody tr:nth-child(even) > :is(td, th) { background: #edf4f8; }

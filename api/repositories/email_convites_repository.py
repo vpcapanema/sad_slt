@@ -30,11 +30,13 @@ def _explicar_eventos(eventos: list[dict[str, Any]] | None) -> list[dict[str, An
     return eventos
 
 
-def listar(ambiente_id: str) -> list[dict[str, Any]]:
+def listar(ambiente_id: str, *, natureza: str | None = None, destinatario: str | None = None) -> list[dict[str, Any]]:
     with get_connection() as conn:
         rows = conn.execute(
-            "SELECT * FROM ahp.comparacao_colaborativa_email WHERE ambiente_id=%s ORDER BY criado_em",
-            (ambiente_id,),
+            """SELECT * FROM ahp.comparacao_colaborativa_email WHERE ambiente_id=%s
+               AND (%s::text IS NULL OR natureza=%s) AND (%s::text IS NULL OR destinatario=%s)
+               ORDER BY criado_em, id""",
+            (ambiente_id, natureza, natureza, destinatario, destinatario),
         ).fetchall()
     resultado = [dict(row) for row in rows]
     for registro in resultado:
@@ -60,7 +62,8 @@ _CHAVE_COLETA = "ahp-email:coleta-confirmacoes"
 class _BloqueioColeta:
     """Trava consultiva da coleta de confirmações; a conexão fica aberta enquanto o bloqueio existir."""
 
-    def __init__(self) -> None:
+    def __init__(self, chave: str) -> None:
+        self._chave = chave
         self._cm: Any = None
         self._conn: Any = None
         self._adquirido = False
@@ -70,7 +73,7 @@ class _BloqueioColeta:
         conn = self._cm.__enter__()
         try:
             row = conn.execute(
-                "SELECT pg_try_advisory_lock(hashtextextended(%s,0)) AS adquirido", (_CHAVE_COLETA,),
+                "SELECT pg_try_advisory_lock(hashtextextended(%s,0)) AS adquirido", (self._chave,),
             ).fetchone()
             if row is None:
                 raise RuntimeError("O banco não confirmou o bloqueio da coleta de emails.")
@@ -89,7 +92,7 @@ class _BloqueioColeta:
                 try:
                     if conn.info.transaction_status == TransactionStatus.INERROR:
                         conn.rollback()
-                    conn.execute("SELECT pg_advisory_unlock(hashtextextended(%s,0))", (_CHAVE_COLETA,))
+                    conn.execute("SELECT pg_advisory_unlock(hashtextextended(%s,0))", (self._chave,))
                 except BaseException:
                     conn.close()
                     raise
@@ -98,8 +101,8 @@ class _BloqueioColeta:
         return False
 
 
-def bloquear_coleta() -> _BloqueioColeta:
-    return _BloqueioColeta()
+def bloquear_coleta(chave: str = _CHAVE_COLETA) -> _BloqueioColeta:
+    return _BloqueioColeta(chave)
 
 
 def bloquear_envio(conn: ConnectionDict, ambiente_id: str, destinatario: str, natureza: str = "convite") -> None:
@@ -199,8 +202,10 @@ def finalizar(ident: str, status: str, detalhe: str, *, dsn: bool = False,
         row = conn.execute(
             """UPDATE ahp.comparacao_colaborativa_email
                SET envio_status=%s, detalhe=%s, dsn_solicitada=%s, leitura_solicitada=%s,
+                   smtp_aceito_em=CASE WHEN %s='aceito_smtp' THEN COALESCE(smtp_aceito_em, clock_timestamp())
+                       ELSE smtp_aceito_em END,
                    atualizado_em=now() WHERE id=%s RETURNING *""",
-            (status, detalhe, dsn, leitura, ident),
+            (status, detalhe, dsn, leitura, status, ident),
         ).fetchone()
     if not row:
         raise DemandaValidationError("O histórico do envio foi removido durante a operação.", field="ambiente_id")

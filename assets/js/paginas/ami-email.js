@@ -14,6 +14,7 @@
   const ambienteUrl = id => "/api/ahp/comparacao-colaborativa/ambientes/" + encodeURIComponent(id);
   const url = id => ambienteUrl(id) + "/emails";
   const filterColumn = $("ami-monitor-filter-coluna"), filterValue = $("ami-monitor-filter-valor");
+  const monitorTable = $("ami-monitor-table"), dataHeader = $("ami-monitor-data-header");
   const monitor = $("ami-monitoring-section"), monitorConvites = monitor.parentElement;
   const monitorPublico = $("ami-public-monitor-host");
   const historyModal = $("ami-email-history-modal"), historyColumn = $("ami-email-history-filter-coluna"),
@@ -40,8 +41,8 @@
       registrosPorEmail.get(chave).push(item);
     });
   }
-  function historico(row, tipo) {
-    return registrosDe(row).filter(item => natureza(item) === tipo)
+  function historico(row, tipo, lista = registrosDe(row)) {
+    return lista.filter(item => natureza(item) === tipo)
       .flatMap(item => [item, ...(item.eventos || []).filter(event => event.tipo === "tentativa" && event.registro)
         .map(event => ({...event.registro, id: item.id + ":" + event.fonte}))])
       .sort((a, b) => Date.parse(b.criado_em) - Date.parse(a.criado_em));
@@ -59,6 +60,16 @@
     if (atual) return rotulosEnvio[atual.envio_status];
     if (tipo === "resposta" && !row.resposta_recebida) return "Aguardando resposta";
     return "Não enviado";
+  }
+  function registroStatusEnvio(row, tipo) {
+    const tentativas = historico(row, tipo);
+    return tentativas.find(item => item.envio_status === "aceito_smtp") ||
+      tentativas.find(item => item.envio_status !== "falha") || tentativas[0];
+  }
+  function statusEnvio(row, tipo) {
+    const atual = registroStatusEnvio(row, tipo);
+    if (atual) return rotulosEnvio[atual.envio_status] || "Não enviado";
+    return tipo === "resposta" && !row.resposta_recebida ? "Aguardando resposta" : "Não enviado";
   }
   function dataEvento(row, tipo) {
     const datas = (row.eventos || []).filter(evento => evento.tipo === tipo && evento.ocorrido_em)
@@ -79,19 +90,22 @@
         (rotulosEnvio[row.envio_status] || "Não enviado") + ". " + (row.detalhe || "") + aviso +
         (retornos ? " " + retornos : "")];
   }
-  function registradoEm(row) {
+  function dataMonitoramento(row) {
     if (contexto?.publico) return row.registrado_em;
     return registrosDe(row).map(item => item.criado_em).filter(Boolean).sort()[0];
   }
   function cells(row) {
-    const data = registradoEm(row);
-    return [row.nome, row.destinatario, data ? new Date(data).toLocaleString("pt-BR") : "—",
+    const data = dataMonitoramento(row);
+    return [row.nome, row.destinatario, row.instituicao || "—", data ? new Date(data).toLocaleString("pt-BR") : "—",
       row.etapa_rotulo || (contexto?.publico ? "Inscrito" : "Convite não enviado"),
-      contexto?.publico ? "Não se aplica" : estado(row, "convite"), estado(row, "resposta")];
+      contexto?.publico ? "Não se aplica" : statusEnvio(row, "convite"), statusEnvio(row, "resposta")];
   }
-  const sortRows = SLTTable.sorting($("ami-monitor-table"), () => [null, ...Array.from({length: 6}, (_, index) =>
-    index === 2 ? row => Date.parse(registradoEm(row)) || "" : row => cells(row)[index])], () => { pagina = 1; render(); });
-  Array.from($("ami-monitor-table").tHead.rows[0].cells).slice(1).forEach((th, index) => filterColumn.add(new Option(th.textContent, String(index))));
+  const monitorHeaders = () => [...monitorTable.tHead.rows[0].cells].slice(1).map(th => th.textContent.trim());
+  const colunaData = dataHeader.cellIndex - 1;
+  const colunasMonitor = monitorHeaders();
+  const sortRows = SLTTable.sorting(monitorTable, () => [null, ...colunasMonitor.map((_, index) =>
+    index === colunaData ? row => Date.parse(dataMonitoramento(row)) || "" : row => cells(row)[index])], () => { pagina = 1; render(); });
+  monitorHeaders().forEach((label, index) => filterColumn.add(new Option(label, String(index))));
   function filterOptions() {
     SLTTable.values(filterValue, monitorRows, row => cells(row)[Number(filterColumn.value)]);
     filterValue.disabled = filterColumn.value === "";
@@ -113,7 +127,7 @@
   }
   function renderHistorico() {
     if (!historyContext) return;
-    const rows = historico(historyContext.row, historyContext.tipo);
+    const rows = historico(historyContext.row, historyContext.tipo, historyContext.registros);
     const keys = new Set(rows.map(row => row.id));
     historySelected.forEach(key => { if (!keys.has(key)) historySelected.delete(key); });
     SLTTable.values(historyValue, rows, row => detalhes(row)[Number(historyColumn.value)]);
@@ -136,7 +150,11 @@
       };
       cell.append(checkbox);
       const valores = detalhes(row);
-      valores.slice(0, 2).forEach(value => { tr.insertCell().textContent = value; });
+      const entrega = tr.insertCell(), leitura = tr.insertCell();
+      entrega.textContent = valores[0];
+      leitura.textContent = valores[1];
+      SicardAhpStatus.aplicar(entrega, row.entrega_status === "confirmada" ? "Entregue" : valores[0]);
+      SicardAhpStatus.aplicar(leitura, row.leitura_status === "confirmada" ? "Lido" : valores[1]);
       const detalheCell = tr.insertCell();
       detalheCell.className = "ami-detail-cell"; detalheCell.textContent = valores[2];
       detalheCell.tabIndex = 0; detalheCell.setAttribute("role", "button"); detalheCell.setAttribute("aria-haspopup", "dialog");
@@ -157,11 +175,11 @@
     $("ami-email-history-clear").disabled = !historySelected.size;
     SLTTable.summary("ami-email-history-count", historySelected.size, result.rows.length, rows.length);
   }
-  function abrirHistorico(row, tipo, trigger) {
-    historyContext = {row, tipo}; historyTrigger = trigger; historyPage = 1; historySelected.clear();
+  function abrirHistorico(row, tipo, trigger, registros, julgamento) {
+    historyContext = {row, tipo, registros, julgamento}; historyTrigger = trigger; historyPage = 1; historySelected.clear();
     historyColumn.value = ""; historyValue.value = "";
     SLTTable.inversion($("ami-email-history-filter-inverter"), false);
-    $("ami-email-history-title").textContent = tipo === "convite" ? "E-mail convite" : "E-mail resposta";
+    $("ami-email-history-title").textContent = tipo === "divulgacao" ? "E-mail de divulgação" : tipo === "convite" ? "E-mail convite" : "E-mail resposta";
     $("ami-email-history-context").textContent = row.nome + " · " + row.destinatario;
     historyModal.classList.remove("is-hidden"); renderHistorico(); $("ami-email-history-close").focus();
   }
@@ -171,7 +189,7 @@
     historyTrigger = null;
   }
   function abrirDetalhe(row, trigger) {
-    $("ami-email-detail-title").textContent = historyContext.tipo === "convite" ? "Detalhes do e-mail convite" : "Detalhes do e-mail resposta";
+    $("ami-email-detail-title").textContent = "Detalhes do " + $("ami-email-history-title").textContent.toLowerCase();
     $("ami-email-detail-texto").textContent = detalhes(row)[2];
     detalheTrigger = trigger; detalheAberto = true;
     detailModal.classList.remove("is-hidden"); $("ami-email-detail-close").focus();
@@ -218,8 +236,8 @@
   $("ami-email-history-clear").onclick = () => { historySelected.clear(); renderHistorico(); };
   $("ami-email-history-export").onclick = () => {
     if (!historyContext) return;
-    exportar(historico(historyContext.row, historyContext.tipo).filter(row => historySelected.has(row.id)).map(detalhes),
-      ["Entrega", "Leitura", "Detalhes"], SicardNomeArquivo.gerar(contexto?.julgamento?.nome, `historico email ${historyContext.tipo}`, 'csv', 'Julgamento Colaborativo'));
+    exportar(historico(historyContext.row, historyContext.tipo, historyContext.registros).filter(row => historySelected.has(row.id)).map(detalhes),
+      ["Entrega", "Leitura", "Detalhes"], SicardNomeArquivo.gerar((historyContext.julgamento || contexto?.julgamento)?.nome, `historico email ${historyContext.tipo}`, 'csv', 'Julgamento Colaborativo'));
   };
   async function request(path, options) {
     const response = await fetch(path, Object.assign({
@@ -389,7 +407,7 @@
     tbody.replaceChildren();
     if (!pronto) { controles(); return; }
     const rows = (contexto.colaboradores || []).map(c => ({
-      inscricao_id: c.inscricao_id, nome: c.nome, destinatario: c.email,
+      inscricao_id: c.inscricao_id, nome: c.nome, destinatario: c.email, instituicao: c.instituicao,
       resposta_recebida: c.resposta_recebida, registrado_em: c.registrado_em,
       clique_link_em: c.clique_link_em, acesso_formulario_em: c.acesso_formulario_em,
       resposta_enviada_em: c.resposta_enviada_em, etapa_codigo: c.etapa_codigo,
@@ -417,22 +435,29 @@
       cell.appendChild(checkbox);
       cells(row).forEach((value, index) => {
         const td = tr.insertCell();
-        if (index === 5 || (index === 4 && !contexto.publico)) {
+        const tipo = index === colunasMonitor.length - 1 ? "resposta" :
+          index === colunasMonitor.length - 2 && !contexto.publico ? "convite" : null;
+        if (tipo) {
           const button = document.createElement("button");
           button.type = "button"; button.className = "ami-cell-link"; button.textContent = value;
-          button.dataset.emailHistory = index === 4 ? "convite" : "resposta";
+          button.dataset.emailHistory = tipo;
           button.dataset.emailRecipient = rowKey(row);
-          button.setAttribute("aria-label", (index === 4 ? "E-mail convite" : "E-mail resposta") + " de " + row.nome + ": " + value);
+          SicardAhpStatus.aplicar(button, value, registroStatusEnvio(row, tipo)?.envio_status === "falha" ? "falha" : undefined);
+          const emailLabel = "e-mail de " + tipo;
+          button.setAttribute("aria-label", "Histórico do " + emailLabel + " de " + row.nome + ": " + value);
           td.append(button);
-        } else td.textContent = value;
+        } else {
+          td.textContent = value;
+          if (index === colunaData + 1 || index === colunasMonitor.length - 2) SicardAhpStatus.aplicar(td, value);
+        }
       });
       tbody.appendChild(tr);
     });
     if (!result.rows.length) {
-      const td = tbody.insertRow().insertCell(); td.colSpan = 7; td.className = "ami-empty"; td.textContent = "Nenhum registro encontrado.";
+      const td = tbody.insertRow().insertCell(); td.colSpan = colunasMonitor.length + 1; td.className = "ami-empty"; td.textContent = "Nenhum registro encontrado.";
     }
     controles();
-    if (historyContext) {
+    if (historyContext && historyContext.tipo !== "divulgacao") {
       const atual = monitorRows.find(row => rowKey(row) === rowKey(historyContext.row));
       if (atual) { historyContext.row = atual; renderHistorico(); } else fecharHistorico();
     }
@@ -750,6 +775,11 @@
   }
   function prepararMonitoramento() {
     const publico = Boolean(contexto.publico);
+    const dataLabel = publico ? "Data da inscrição" : dataHeader.dataset.conviteLabel;
+    const dataTitle = dataHeader.querySelector(".smart-column-title") || dataHeader;
+    dataTitle.textContent = dataLabel;
+    if (dataHeader.classList.contains("slt-sortable-column")) dataHeader.title = "Ordenar por " + dataLabel;
+    filterColumn.querySelector(`option[value="${colunaData}"]`).textContent = dataLabel;
     (publico ? monitorPublico : monitorConvites).appendChild(monitor);
     monitorPublico.classList.toggle("is-hidden", !publico);
     $("ami-monitor-invited-help").hidden = publico;
@@ -770,6 +800,9 @@
     render(); carregar(contexto);
   }
   window.SICARDEmailConvites = {
+    historicoDivulgacao(contato, registros, julgamento, trigger) {
+      abrirHistorico({nome: contato.nome, destinatario: contato.email}, "divulgacao", trigger, registros, julgamento);
+    },
     modo(value) {
       modo = value;
       if (modo !== "edit" && contexto?.publico) {
@@ -843,8 +876,7 @@
   $("ami-monitor-export").addEventListener("click", () => {
     const rows = monitorRows.filter(marcado);
     if (!rows.length) return;
-    const headings = Array.from($("ami-monitor-table").tHead.rows[0].cells).slice(1).map(th => th.textContent.trim());
-    exportar(rows.map(cells), headings, SicardNomeArquivo.gerar(contexto?.julgamento?.nome, 'monitoramento colaboradores', 'csv', 'Julgamento Colaborativo'));
+    exportar(rows.map(cells), monitorHeaders(), SicardNomeArquivo.gerar(contexto?.julgamento?.nome, 'monitoramento colaboradores', 'csv', 'Julgamento Colaborativo'));
   });
   function atualizarAutomaticamente() {
     if (contexto && !ocupado && carregando?.atual !== contexto && modoMonitor() &&

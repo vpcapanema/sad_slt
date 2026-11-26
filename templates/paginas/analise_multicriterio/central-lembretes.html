@@ -1,0 +1,125 @@
+{% extends "bases/base_conteudo.html" %}
+{% set subtitulo = "Análise Multicritério Interativa" %}
+{% set navegacao = "restrita" %}
+{% set bloco_modulo = "mad" %}
+{% set requer_autenticacao = true %}
+{% block titulo %}Central de lembretes — SICARD{% endblock %}
+{% block classes_body %}ahp-module-page ami-page ami-espaco-page ami-central-responsiva feedback-proprio{% endblock %}
+{% block estilos_pagina %}
+  <link rel="stylesheet" href="/assets/css/ahp-module.css?v=20261103-regua-invertida">
+  <link rel="stylesheet" href="/assets/css/analise-multicriterio.css?v=20261106-regua-miniatura-7">
+  <link rel="stylesheet" href="/assets/css/analise-multicriterio-tabela.css?v=20260831-larguras-colunas">
+  <link rel="stylesheet" href="/assets/css/analise-multicriterio-modal.css?v=20260819-modal5">
+  <link rel="stylesheet" href="/assets/css/mad-filter-standard.css?v=20260820-1">
+  <link rel="stylesheet" href="/assets/css/page-title-standard.css?v=20260820-3">
+  <link rel="stylesheet" href="/assets/css/table-standard.css?v=20261015-fontes-ordem">
+  <link rel="stylesheet" href="/assets/css/admin-table-controls.css?v=20261015-botoes-quadrados">
+  <link rel="stylesheet" href="/assets/css/paginas/ami-espaco-secoes.css?v=20261126-padrao-status">
+  <link rel="stylesheet" href="/assets/css/paginas/ami-lembretes.css?v=20261126-padrao-status">
+  <link rel="stylesheet" href="/assets/css/paginas/ami-responsivo.css?v=20261126-iniciais-grupos">
+{% endblock %}
+{% block conteudo %}
+{% set filtro_rotulos_curtos = true %}
+<main class="conteudo-principal app-main ahp-main ami-main ami-lembretes" id="ami-lembretes" data-somente-leitura="{{ 'true' if access_read_only else 'false' }}">
+  <section class="secao-cabecalho-julgamentos card ahp-step-intro ami-hero standard-page-hero card-cabecalho-julgamentos">
+    <h1 class="standard-page-hero__title"><i class="fas fa-bell" aria-hidden="true"></i> Central de lembretes</h1>
+    <p class="ami-eyebrow standard-page-hero__eyebrow">Análise Multicritério Interativa</p>
+    <p class="standard-page-hero__description">Configure a frequência por julgamento e acompanhe a agenda de lembretes de cada colaborador.</p>
+  </section>
+
+  <section class="card ahp-step-section standard-table-section" aria-labelledby="ami-lembretes-config-titulo">
+    <div class="ahp-section-label" id="ami-lembretes-config-titulo" role="heading" aria-level="2" tabindex="-1"><span><i class="fas fa-table" aria-hidden="true"></i> Configurações de lembretes</span></div>
+    <div class="ahp-section-body">
+      <div><p class="ami-table-label" id="ami-lembretes-config-label">Tabela de configurações por julgamento</p></div>
+      <div class="ami-filtered-table">
+        {% set filtro_prefixo = "ami-lembretes-config-filtro" %}{% set filtro_rotulo = "Filtrar configurações de lembretes" %}{% include "componentes/filtro_tabela.html" %}
+        <div class="hier-table-shell ami-table-shell">
+          <table class="admin-table hier-register-table ami-table--database" id="ami-lembretes-config-tabela" data-table-heading="ami-lembretes-config-label">
+            <thead><tr><th class="col-select" scope="col"><input type="checkbox" id="ami-lembretes-config-todos" aria-label="Selecionar todas as configurações filtradas" disabled></th><th scope="col">Julgamento</th><th scope="col">Forma de participação</th><th scope="col">Notificações</th><th scope="col">Frequência</th><th scope="col">Número de intervalos</th><th scope="col">Lembretes por colaborador</th><th scope="col">Última alteração</th></tr></thead>
+            <tbody id="ami-lembretes-config-linhas"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="admin-bulk-actions ami-table-actions standard-table-actions" role="group" aria-label="Controles das configurações">
+        <button type="button" class="admin-icon-btn" id="ami-lembretes-config-ver" title="Visualizar configuração" aria-label="Visualizar configuração" data-read-control disabled><i class="fas fa-eye" aria-hidden="true"></i></button>
+        <button type="button" class="admin-icon-btn" id="ami-lembretes-config-editar" title="Editar configuração" aria-label="Editar configuração" data-write-control disabled><i class="fas fa-pen-to-square" aria-hidden="true"></i></button>
+        <button type="button" class="admin-icon-btn" id="ami-lembretes-config-limpar" title="Limpar seleção das configurações" aria-label="Limpar seleção das configurações" data-read-control disabled><i class="fas fa-broom" aria-hidden="true"></i></button>
+      </div>
+      <div class="admin-table-footer"><nav class="admin-pagination" id="ami-lembretes-config-paginas" aria-label="Paginação das configurações"></nav><p class="admin-table-summary" id="ami-lembretes-config-contagem" aria-live="polite"></p></div>
+      <p id="ami-lembretes-contexto-status" class="form-help" role="status">Carregando julgamentos…</p>
+    </div>
+  </section>
+
+  <div id="ami-lembretes-rodada" hidden>
+    <h2 class="ami-environment-title" tabindex="-1" id="ami-lembretes-detalhe-titulo"></h2>
+    <section class="card ahp-step-section">
+      <div class="ahp-section-label" role="heading" aria-level="2"><span><i class="fas fa-sliders" aria-hidden="true"></i> Intervalos do período</span></div>
+      <form class="ahp-section-body ami-lembretes-form" id="ami-lembretes-form" novalidate>
+        <p class="form-help">Use as barras para ajustar a duração. Cada intervalo é igual ou mais curto que o anterior e os intervalos somam 100%.</p>
+        <p class="form-help" id="ami-lembretes-regra"></p>
+        <div class="ami-lembretes-numero" role="group" aria-labelledby="ami-lembretes-numero-label">
+          <strong id="ami-lembretes-numero-label">Número de intervalos</strong>
+          <div class="ami-lembretes-numero-controles">
+            <button type="button" class="admin-icon-btn" id="ami-lembretes-subtrair" aria-label="Remover último intervalo" title="Remover último intervalo" data-edicao-lembretes hidden><i class="fas fa-minus" aria-hidden="true"></i></button>
+            <output id="ami-lembretes-numero-valor" class="c-form-control" aria-labelledby="ami-lembretes-numero-label"></output>
+            <button type="button" class="admin-icon-btn" id="ami-lembretes-adicionar" aria-label="Adicionar intervalo" title="Adicionar intervalo" data-edicao-lembretes hidden><i class="fas fa-plus" aria-hidden="true"></i></button>
+          </div>
+        </div>
+        <div class="ami-lembretes-faixas" id="ami-lembretes-faixas"></div>
+        <div class="ahp-form-actions" id="ami-lembretes-acoes">
+          <button type="button" class="btn btn-secondary" id="ami-lembretes-restaurar" data-edicao-lembretes hidden><i class="fas fa-rotate-left c-btn__icon" aria-hidden="true"></i>Restaurar frequência padrão</button>
+          <button type="button" class="btn btn-secondary" id="ami-lembretes-fechar-config" data-read-control>Fechar visualização</button>
+          <button type="submit" class="btn btn-primary" id="ami-lembretes-salvar" data-edicao-lembretes hidden><i class="fas fa-floppy-disk c-btn__icon" aria-hidden="true"></i>Salvar frequência</button>
+        </div>
+        <p class="form-help" id="ami-lembretes-form-status" role="status"></p>
+      </form>
+    </section>
+
+    <section class="card ahp-step-section standard-table-section" aria-labelledby="ami-lembretes-agenda-titulo">
+      <div class="ahp-section-label" id="ami-lembretes-agenda-titulo" role="heading" aria-level="2"><span><i class="fas fa-calendar-days" aria-hidden="true"></i> Agenda e histórico</span></div>
+      <div class="ahp-section-body">
+        <p class="form-help" id="ami-lembretes-rotina" hidden></p>
+        <p class="form-help ami-lembretes-origem" id="ami-lembretes-origem"></p>
+        <p class="form-help ami-lembretes-origem" id="ami-lembretes-horarios-oficiais"></p>
+        <p class="form-help" id="ami-lembretes-previa-status" role="status"></p>
+        <div><p class="ami-table-label" id="ami-lembretes-tabela-titulo">Tabela de lembretes por colaborador</p></div>
+        <div class="ami-filtered-table">
+          {% set filtro_prefixo = "ami-lembretes-filtro" %}{% set filtro_rotulo = "Filtrar colaboradores" %}{% include "componentes/filtro_tabela.html" %}
+          <div class="hier-table-shell ami-table-shell">
+            <table class="admin-table hier-register-table ami-table--database" id="ami-lembretes-tabela" data-table-heading="ami-lembretes-tabela-titulo">
+              <thead><tr><th class="col-select" scope="col"><input type="checkbox" id="ami-lembretes-todos" aria-label="Selecionar todos os registros filtrados"></th><th scope="col">Nome do colaborador</th><th scope="col">E-mail do colaborador</th><th scope="col">Instituição</th><th scope="col">Início do período de vigência</th><th scope="col">Status da etapa de colaboração</th><th scope="col">Status de notificação</th><th scope="col">Último envio</th></tr></thead>
+              <tbody id="ami-lembretes-linhas"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="admin-bulk-actions ami-table-actions standard-table-actions" role="group" aria-label="Controles da agenda">
+          <button type="button" class="admin-icon-btn" id="ami-lembretes-atualizar" title="Atualizar agenda" aria-label="Atualizar agenda" data-read-control><i class="fas fa-arrows-rotate" aria-hidden="true"></i></button>
+          <button type="button" class="admin-icon-btn" id="ami-lembretes-historico" title="Abrir agenda e histórico do selecionado" aria-label="Abrir agenda e histórico do selecionado" data-read-control disabled><i class="fas fa-calendar-check" aria-hidden="true"></i></button>
+          <button type="button" class="admin-icon-btn" id="ami-lembretes-limpar" title="Limpar seleção" aria-label="Limpar seleção" data-read-control disabled><i class="fas fa-broom" aria-hidden="true"></i></button>
+        </div>
+        <div class="admin-table-footer"><nav id="ami-lembretes-paginas" class="admin-pagination" aria-label="Paginação dos colaboradores"></nav><p class="admin-table-summary" id="ami-lembretes-contagem" aria-live="polite"></p></div>
+      </div>
+    </section>
+  </div>
+</main>
+<dialog class="json-modal ami-data-modal__card ami-lembretes-modal" id="ami-lembretes-modal" aria-labelledby="ami-lembretes-modal-titulo" aria-describedby="ami-lembretes-modal-contexto ami-lembretes-modal-motivo">
+  <header class="json-modal-head ami-data-modal__head"><h2 id="ami-lembretes-modal-titulo">Agenda e histórico</h2><button type="button" class="json-modal-close" id="ami-lembretes-fechar" aria-label="Fechar" data-read-control><i class="fas fa-xmark" aria-hidden="true"></i></button></header>
+  <div class="json-modal-body ami-data-modal__content">
+    <p id="ami-lembretes-modal-contexto" class="form-help"></p>
+    <p id="ami-lembretes-modal-motivo" hidden></p>
+    <p id="ami-lembretes-modal-status" class="form-help" role="status"></p>
+    <section id="ami-lembretes-modal-programacao" aria-labelledby="ami-lembretes-modal-horarios">
+      <h3 id="ami-lembretes-modal-horarios">Horários por intervalo</h3>
+      <ul class="ami-lembretes-horarios" id="ami-lembretes-modal-agenda"></ul>
+      <button type="button" class="btn btn-secondary ami-open-text" id="ami-lembretes-mais" data-read-control hidden><span>Ver próximos horários</span></button>
+    </section>
+    <h3>Histórico de disparos</h3><ol id="ami-lembretes-modal-historico"></ol>
+  </div>
+</dialog>
+{% endblock %}
+{% block scripts_pagina %}
+  <script src="/assets/js/table-standard.js?v=20261127-filtros-centrais"></script>
+  <script src="/assets/js/api-erro.js?v=20261027"></script>
+  <script src="/assets/js/paginas/ami-status.js?v=20261126-padrao-status"></script>
+  <script src="/assets/js/paginas/ami-lembretes.js?v=20261126-padrao-status"></script>
+{% endblock %}

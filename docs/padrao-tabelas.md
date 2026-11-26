@@ -46,6 +46,10 @@ do filtro ativo. A seleção permanece ao navegar ou ordenar a tabela.
   ordenação e exportação usam cada coluna individualmente.
 - Campos dos filtros: **25 px** de altura. Botões dos filtros: **25 × 25 px**,
   redondos, ícones **#4b5563**, bordas **#374151**, fundo neutro.
+- No layout responsivo das centrais AHP, os botões de grupos de colunas são
+  redondos, com o mesmo diâmetro dos botões de filtro. Exibem somente a
+  primeira letra da primeira palavra do grupo, centralizada. O nome completo
+  fica disponível no título e no rótulo acessível do botão.
 - Cabeçalho da tabela: fundo azul-escuro `var(--pli-deep)`, texto branco.
 - Dados: zebrado branco **#ffffff** e azul muito claro **#edf4f8**. A seleção
   deve continuar identificável, inclusive sobre o zebrado.
@@ -55,9 +59,15 @@ do filtro ativo. A seleção permanece ao navegar ou ordenar a tabela.
 - Botões do paginador sem bordas.
 - Coluna de seletores com largura fixa de **2.75 rem (44 px)**, incluindo
   cabeçalho e células; checkbox centralizado.
-- Textos interativos nas células: fonte herdada da tabela, sublinhado,
-  azul-escuro **#123b56**, sem borda, fundo ou sombra. Disponibilidade de
-  matriz e pesos: disponível em **#166534**, pendente em **#991b1b**.
+- Textos interativos nas células: fonte herdada da tabela, sublinhado
+  permanente, azul-escuro **#123b56**, sem borda, fundo ou sombra.
+- Nas centrais de Julgamentos, Respostas e Lembretes, os status ficam em
+  negrito sobre o zebrado. Use verde **#166534** para conclusão com sucesso,
+  amarelo escuro **#854d0e** para pendência, vermelho **#991b1b** para falha
+  ou impedimento, azul **#1d4ed8** para espera normal e cinza **#475569** para
+  estados neutros, como “Não se aplica”. Status clicáveis conservam o
+  sublinhado. Matrizes e pesos disponíveis usam verde. Pendências usam amarelo
+  escuro.
 - Ritmo do rodapé: gap de **8 px** entre os elementos, margens verticais dos
   controles zeradas e padding superior do rodapé de **6 px**, conforme os
   estilos da referência. Não somar margens adicionais ao gap.

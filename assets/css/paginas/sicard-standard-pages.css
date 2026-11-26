@@ -105,12 +105,12 @@
 .sicard-standard-page.ami-page .ami-main :is(.cancel, #hier-bulk-cancel) { --ami-botao-cor:#475569; --ami-botao-borda:#2f3946; }
 .sicard-standard-page.ami-page .ami-main .reload { --ami-botao-cor:#0f766e; --ami-botao-borda:#0a4f49; }
 .sicard-standard-page.ami-page .ami-main table :is(a:not(.admin-icon-btn), .ami-cell-link, .hier-cell-link, .link-like, .json-cell, .matriz-link) {
-  border: 0 !important; background: transparent !important; color:#123b56 !important;
+  border: 0 !important; background: transparent !important; color:var(--ami-status-cor, #123b56) !important;
   box-shadow: none !important; padding: 0; min-height: 0; height: auto;
   font: inherit; text-decoration: underline; cursor: pointer;
 }
-.sicard-standard-page.ami-page .ami-main table [data-availability="available"] { color:#166534 !important; }
-.sicard-standard-page.ami-page .ami-main table [data-availability="pending"] { color:#991b1b !important; }
+.sicard-standard-page.ami-page .ami-main table [data-availability="available"] { color:var(--ami-status-cor, #166534) !important; }
+.sicard-standard-page.ami-page .ami-main table [data-availability="pending"] { color:var(--ami-status-cor, #991b1b) !important; }
 .sicard-standard-page.ami-page .ami-main table :is(th, td):is(.col-select, :first-child:has(input[type="checkbox"])) {
   box-sizing: border-box; width: 2.75rem !important; min-width: 2.75rem !important;
   max-width: 2.75rem !important; padding-inline: 0 !important; text-align: center;

@@ -10,7 +10,7 @@ import re
 import smtplib
 import ssl
 from hashlib import sha256
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from threading import BoundedSemaphore
 from time import sleep
 
@@ -201,7 +201,8 @@ def testar_conexao(*, usuario_id: str) -> EmailConexaoResultado:
 
 def enviar(dados: EmailEnvioSchema, *, usuario_id: str, id_mensagem: str | None = None,
            solicitar_confirmacoes: bool = False,
-           anexo_pdf: tuple[str, bytes] | None = None) -> EmailEnvioResultado:
+           anexo_pdf: tuple[str, bytes] | None = None,
+           conferir_elegibilidade: Callable[[], None] | None = None) -> EmailEnvioResultado:
     config = _config()
     remetente = str(config.remetente)
     id_mensagem = id_mensagem or make_msgid(domain=remetente.rsplit("@", 1)[1])
@@ -232,6 +233,8 @@ def enviar(dados: EmailEnvioSchema, *, usuario_id: str, id_mensagem: str | None 
         with _envios_concorrentes, _conexao(config) as servidor:
             dsn_solicitada = solicitar_confirmacoes and servidor.has_extn("dsn")
             _aguardar_cadencia(config)
+            if conferir_elegibilidade is not None:
+                conferir_elegibilidade()
             iniciou_envio = True
             if dsn_solicitada:
                 recusados = servidor.send_message(

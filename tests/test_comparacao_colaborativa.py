@@ -566,11 +566,11 @@ def test_confirmacao_salva_lista_com_grupos_e_exige_versao_atual(monkeypatch):
     monkeypatch.setattr(repo, "update_ambiente", atualizar)
     payload = AmbienteColaborativoUpdateSchema(
         versao_lista_colaboradores=atual["atualizado_em"],
-        convites=[{"nome": "Ana", "email": "a@x.gov.br", "dimensoes": None},
+        convites=[{"nome": "Ana", "email": "a@x.gov.br", "dimensoes": None, "instituicao": " Instituto Alfa "},
                   {"nome": "Bia", "email": "b@x.gov.br", "dimensoes": ["Financeira"]}],
     )
     resultado = service.atualizar_ambiente(AMBIENTE_ID, payload)
-    lista = [{"email": "a@x.gov.br", "nome": "Ana"},
+    lista = [{"email": "a@x.gov.br", "nome": "Ana", "instituicao": "Instituto Alfa"},
              {"email": "b@x.gov.br", "nome": "Bia", "dimensoes": ["Financeira"]}]
     atualizar.assert_called_once_with(AMBIENTE_ID, {"convites": lista}, atualizado_em_esperado=atual["atualizado_em"])
     assert resultado.lista_colaboradores == lista

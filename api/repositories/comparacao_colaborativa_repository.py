@@ -91,6 +91,13 @@ _CAMPOS_MATRIZ = """
     END AS matriz_contexto
 """
 
+_INSTITUICOES_CONVIDADOS = """
+    CASE WHEN a.modo_participacao = 'convite' THEN (
+        SELECT jsonb_object_agg(lower(btrim(r.email)), btrim(r.instituicao))
+          FROM ahp.comparacao_colaborativa_resposta r
+         WHERE r.ambiente_id = a.id AND nullif(btrim(r.instituicao), '') IS NOT NULL
+    ) END AS instituicoes_convidados
+"""
 
 _JOIN_ANALISE_EXIBIDA = """
     LEFT JOIN LATERAL (
@@ -189,7 +196,7 @@ def get_ambiente_by_id(ambiente_id: str, *, bloquear: bool = False) -> dict[str,
     bloqueio = "FOR SHARE OF a" if bloquear else ""
     return _get_ambiente(
         f"""
-        SELECT a.*, {_CAMPOS_MATRIZ}, to_jsonb(analise_exibida) AS analise_exibida,
+        SELECT a.*, {_CAMPOS_MATRIZ}, {_INSTITUICOES_CONVIDADOS}, to_jsonb(analise_exibida) AS analise_exibida,
                CASE WHEN a.modo_participacao = 'publico' THEN
                  (SELECT COUNT(*) FROM ahp.comparacao_colaborativa_inscricao i WHERE i.ambiente_id = a.id)
                END AS total_inscritos,
@@ -225,7 +232,7 @@ def get_active_ambiente_by_config(config_tipo: str, config_id: Any) -> dict[str,
 
 def list_ambientes() -> list[dict[str, Any]]:
     query = f"""
-        SELECT a.*, {_CAMPOS_MATRIZ}, to_jsonb(analise_exibida) AS analise_exibida,
+        SELECT a.*, {_CAMPOS_MATRIZ}, {_INSTITUICOES_CONVIDADOS}, to_jsonb(analise_exibida) AS analise_exibida,
                COALESCE(a.config_nome, h.nome) AS hierarquizacao_nome,
                CASE WHEN a.modo_participacao = 'publico' THEN
                  (SELECT COUNT(*) FROM ahp.comparacao_colaborativa_inscricao i WHERE i.ambiente_id = a.id)

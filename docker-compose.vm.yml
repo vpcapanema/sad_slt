@@ -23,6 +23,7 @@ services:
       # tres horas a frente para quem usa o sistema em Sao Paulo.
       TZ: "America/Sao_Paulo"
       PORT: "8080"
+      SICARD_PUBLIC_BASE_URL: "${SICARD_PUBLIC_BASE_URL:-https://56.125.163.194/sicard}"
       SICARD_STORAGE_WRITE_DIR: /app/storage-escrita
       SICARD_STORAGE_TEMP_DIR: /app/storage-escrita/temporarios-sicard
       TMPDIR: /app/storage-escrita/temporarios-sicard

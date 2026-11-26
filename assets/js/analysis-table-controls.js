@@ -46,6 +46,10 @@
       footer.append(nav, summary);
       host.append(footer);
       const column = filter.querySelector('select'), value = filter.querySelectorAll('select')[1];
+      if (document.body.classList.contains('ami-central-responsiva')) {
+        column.options[0].text = 'Coluna';
+        value.dataset.filtroTodos = 'Todos';
+      }
       headers.forEach((h, i) => { if (!h.querySelector('input')) column.add(new Option(h.textContent.trim(), String(i))); });
       state = table.analysisControls = {prefix, column, value, page:1, rows:[], headers, existingSelection};
       state.text = (row, i) => row.cells[i + (existingSelection ? 0 : 1)]?.textContent.trim() || '';

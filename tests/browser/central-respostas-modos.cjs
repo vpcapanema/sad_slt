@@ -216,8 +216,9 @@ const BASE = process.env.SICARD_BROWSER_BASE_URL || 'http://127.0.0.1:8083';
  assert.equal(await page.locator('#ami-analysis-group-weights .ami-donut-chart').count(), 2);
  assert.equal(await page.locator('#ami-analysis-calculate').isDisabled(), true);
  await page.setViewportSize({width:390,height:900});
- const colunasNoCelular = await page.locator('.ami-analysis-selectors').evaluate(grade => getComputedStyle(grade).gridTemplateColumns.split(' ').length);
- assert.equal(colunasNoCelular, 1);
+ const colunasNoCelular = await page.locator('.ami-analysis-selectors').evaluate(grade =>
+   getComputedStyle(grade).gridTemplateColumns.split(' ').filter(largura => parseFloat(largura) > 0).length);
+ assert.equal(colunasNoCelular, 2);
  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
  await page.setViewportSize({width:1440,height:900});
  await page.locator('#ami-pairs-judge').selectOption('r0');

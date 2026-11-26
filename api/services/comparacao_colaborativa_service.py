@@ -180,6 +180,18 @@ def _emails_convites(convites: list[dict[str, Any]]) -> list[str]:
     return [str(c.get("email", "")).strip().lower() for c in convites if c.get("email")]
 
 
+def instituicao_convidado(convite: dict[str, Any], ambiente: dict[str, Any]) -> str | None:
+    email = str(convite.get("email", "")).strip().lower()
+    return convite.get("instituicao") or (ambiente.get("instituicoes_convidados") or {}).get(email)
+
+
+def _convite_para_gestao(convite: dict[str, Any], ambiente: dict[str, Any]) -> dict[str, Any]:
+    dados = {k: convite[k] for k in ("email", "nome", "dimensoes") if k in convite}
+    instituicao = instituicao_convidado(convite, ambiente)
+    if instituicao:
+        dados["instituicao"] = instituicao
+    return dados
+
 def _carregar_hierarquizacao(hierarq_id: UUID) -> dict[str, Any]:
     """Carrega a hierarquização e sua matriz de premissas e critérios."""
     row = hierarq_repo.get_by_id(hierarq_id)
@@ -511,9 +523,8 @@ def _ambiente_to_response(row: dict[str, Any], *, base_url: str = "", gestao: bo
         token_acesso=None,
         total_convites=len(convites),
         total_inscritos=int(row.get("total_inscritos") or 0),
-        convites=[{k: c[k] for k in ("email", "nome", "dimensoes") if k in c} for c in convites] if gestao else [],
-        lista_colaboradores=[{k: c[k] for k in ("email", "nome", "dimensoes") if k in c}
-                             for c in lista_colaboradores],
+        convites=[_convite_para_gestao(c, row) for c in convites] if gestao else [],
+        lista_colaboradores=[_convite_para_gestao(c, row) for c in lista_colaboradores],
         valido_ate=_iso(row.get("valido_ate")) or "",
         status=row["status"],
         url_publica=url if gestao else "",
@@ -618,6 +629,7 @@ def criar_ambiente(
         )
 
     convites = [{"email": str(c.email).strip().lower(), "nome": (c.nome or "").strip() or None,
+                **({"instituicao": c.instituicao.strip()} if c.instituicao and c.instituicao.strip() else {}),
                 **({"dimensoes": [d.strip() for d in c.dimensoes]} if c.dimensoes is not None else {})} for c in payload.convites]
     _validar_dimensoes(convites, criterios, payload.modo_comparacao)
     emails = {c["email"] for c in convites}
@@ -910,6 +922,9 @@ def atualizar_ambiente(
         anteriores = {c["email"].strip().lower(): c for c in atual.get("convites", [])}
         for convite, item in zip(convites, payload.convites):
             anterior = anteriores.get(convite["email"], {})
+            instituicao = item.instituicao if "instituicao" in item.model_fields_set else anterior.get("instituicao")
+            if instituicao and instituicao.strip():
+                convite["instituicao"] = instituicao.strip()
             dimensoes = item.dimensoes if "dimensoes" in item.model_fields_set else anterior.get("dimensoes")
             if dimensoes is not None:
                 convite["dimensoes"] = [d.strip() for d in dimensoes]

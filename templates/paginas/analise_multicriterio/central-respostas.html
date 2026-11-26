@@ -5,7 +5,7 @@
 {% set bloco_modulo = "mad" %}
 {% set requer_autenticacao = true %}
 {% block titulo %}{% if modo_pagina == 'espaco' %}Central de julgamentos{% elif modo_pagina == 'julgamentos' %}Central de respostas{% elif modo_pagina == 'formulario' %}Formulário dos especialistas{% else %}Gestão de julgamentos AHP{% endif %} — SICARD{% endblock %}
-{% block classes_body %}ahp-module-page ami-page feedback-proprio{% if modo_pagina in ['espaco', 'julgamentos'] %} ami-espaco-page{% endif %}{% if modo_pagina == 'julgamentos' %} sicard-standard-page{% endif %}{% endblock %}
+{% block classes_body %}ahp-module-page ami-page feedback-proprio{% if modo_pagina in ['espaco', 'julgamentos'] %} ami-espaco-page ami-central-responsiva{% endif %}{% if modo_pagina == 'julgamentos' %} sicard-standard-page{% endif %}{% endblock %}
 {% block estilos_pagina %}
   <link rel="stylesheet" href="/assets/css/matrizes-criterios.css?v=20261104-alinhamento">
   <link rel="stylesheet" href="/assets/css/ahp-module.css?v=20261103-regua-invertida">
@@ -22,20 +22,27 @@
   <link rel="stylesheet" href="/assets/css/paginas/ami-report-tables.css?v=20261020-paginacao">
   {% if modo_pagina in ['espaco', 'julgamentos'] %}
   <link rel="stylesheet" href="/assets/css/admin-table-controls.css?v=20261015-botoes-quadrados">
-  <link rel="stylesheet" href="/assets/css/paginas/ami-espaco-secoes.css?v=20261125-resumo-respostas">
+  <link rel="stylesheet" href="/assets/css/paginas/ami-espaco-secoes.css?v=20261126-abertura-julgamentos">
   {% endif %}
-  {% if modo_pagina == 'julgamentos' %}<link rel="stylesheet" href="/assets/css/paginas/sicard-standard-pages.css?v=20261027-1">{% endif %}
-  {% if modo_pagina == 'julgamentos' %}<link rel="stylesheet" href="/assets/css/paginas/central-respostas-padrao.css?v=20261125-recortes-ahp">{% endif %}
+  {% if modo_pagina == 'julgamentos' %}<link rel="stylesheet" href="/assets/css/paginas/sicard-standard-pages.css?v=20261126-padrao-status">{% endif %}
+  {% if modo_pagina == 'julgamentos' %}<link rel="stylesheet" href="/assets/css/paginas/central-respostas-padrao.css?v=20261126-padrao-status">{% endif %}
+  {% if modo_pagina in ['espaco', 'julgamentos'] %}<link rel="stylesheet" href="/assets/css/paginas/ami-responsivo.css?v=20261126-iniciais-grupos">{% endif %}
 {% endblock %}
 {% block conteudo %}
 {% set indicacao_processos = modo_pagina in ['espaco', 'julgamentos'] %}
+{% set filtro_rotulos_curtos = indicacao_processos %}
 <div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
 <main class="conteudo-principal app-main ahp-main ami-main" data-modo="{{ modo_pagina }}">
   <section class="secao-cabecalho-julgamentos card ahp-step-intro ami-hero standard-page-hero card-cabecalho-julgamentos">
     <h1 class="standard-page-hero__title" id="ami-page-title"><i id="ami-page-title-icon" class="{% if modo_pagina == 'julgamentos' %}fa-solid fa-list-check{% elif modo_pagina == 'formulario' %}fa-solid fa-clipboard-question{% else %}fa-solid fa-people-group{% endif %}" aria-hidden="true"></i><span id="ami-page-title-text">{% if modo_pagina in ['espaco', 'julgamentos'] %}Central de {{ 'julgamentos' if modo_pagina == 'espaco' else 'respostas' }}{% elif modo_pagina == 'formulario' %}Formulário dos especialistas{% else %}Gestão de julgamentos AHP{% endif %}</span></h1>
     <p class="ami-eyebrow standard-page-hero__eyebrow">Análise Multicritério Interativa</p>
+    {% if modo_pagina != 'espaco' %}
     <p class="standard-page-hero__description" id="ami-page-intro">{% if modo_pagina == 'julgamentos' %}Consulte as respostas enviadas pelos especialistas nos julgamentos colaborativos.{% elif modo_pagina == 'formulario' %}Selecione um julgamento e abra o formulário público destinado aos especialistas.{% else %}Configure participantes, prazo de coleta e acesso ao ambiente colaborativo.{% endif %}</p>
+    {% endif %}
   </section>
+  {% if modo_pagina == 'espaco' %}
+  <p class="ami-page-intro" id="ami-page-intro">Crie e gerencie os julgamentos colaborativos do Método de Análise Hierárquica (AHP). Nesta página, você define o que será comparado, organiza o acesso dos colaboradores e acompanha a coleta de respostas que servirá de base para o cálculo dos pesos.</p>
+  {% endif %}
   {% set tabela_colaborativa_id = "ami-judgments" %}{% set tabela_colaborativa_respostas = modo_pagina == 'julgamentos' %}{% set tabela_colaborativa_comparacao = modo_pagina == 'espaco' %}{% include "componentes/_tabela_colaborativa.html" %}
   {% if tabela_colaborativa_respostas %}
   <section class="ami-environment-content is-hidden" id="ami-analysis-summary" aria-labelledby="ami-analysis-title">
@@ -56,9 +63,11 @@
         <label class="c-form-group">Link para divulgar<input class="c-form-control" type="url" id="ami-public-link" readonly></label>
         <div class="ahp-form-actions">
           <button type="button" class="btn btn-primary" id="ami-copy-public-link"><i class="fas fa-copy" aria-hidden="true"></i> Copiar link público</button>
-          <a class="btn btn-secondary" id="ami-open-public-link" target="_blank" rel="noopener">Abrir inscrição pública</a>
-          <a class="btn btn-secondary" id="ami-open-public-responses">Ver inscritos e respostas</a>
+          <a class="btn btn-secondary" id="ami-open-public-link" target="_blank" rel="noopener"><span>Abrir inscrição pública</span></a>
+          <a class="btn btn-secondary" id="ami-open-public-responses"><span>Ver inscritos e respostas</span></a>
+          {% if modo_pagina == 'espaco' %}<a class="btn btn-secondary" id="ami-open-reminders" data-read-control><i class="fas fa-bell c-btn__icon" aria-hidden="true"></i><span>Gerenciar lembretes</span></a>{% endif %}
         </div>
+        {% if modo_pagina == 'espaco' %}{% include "componentes/analise_multicriterio/_divulgacao_link_publico.html" %}{% endif %}
       </div>
     </section>
     <div id="ami-public-monitor-host" class="card ahp-step-section is-hidden"></div>
@@ -97,12 +106,26 @@
           <section id="ami-monitoring-section" class="secao-ami-monitoring ahp-subcard ami-monitoring-section standard-table-section">
             <div class="ahp-subsection-title"><span class="ahp-subsection-num">2</span><span>Monitoramento das atividades</span></div>
             <div class="ahp-section-body">
-          <p class="form-help"><span id="ami-monitor-invited-help">A etapa da colaboração avança automaticamente quando o convite é enviado, o link é acessado, o preenchimento começa e a resposta é enviada.</span><span id="ami-monitor-public-help" hidden>A etapa acompanha a inscrição, o início do preenchimento e o envio da resposta.</span> A entrega e a leitura dependem dos retornos do provedor de e-mail.</p>
+          <p class="form-help"><span id="ami-monitor-invited-help">A etapa da colaboração avança automaticamente quando o convite é enviado, o link é acessado, o preenchimento começa e a resposta é enviada.</span><span id="ami-monitor-public-help" hidden>A etapa acompanha a inscrição, o início do preenchimento e o envio da resposta.</span> Clique no status do envio para consultar os registros de entrega e leitura.</p>
           <p id="ami-email-status" class="form-help" role="status" aria-live="polite"></p>
-          {% if modo_pagina == 'espaco' %}<p class="ami-table-label">Tabela do monitoramento das atividades</p>{% endif %}
+          {% if modo_pagina == 'espaco' %}
+          <div class="ami-monitor-table-heading">
+            <p class="ami-table-label" id="ami-monitor-table-label">Tabela de monitoramento das atividades dos colaboradores</p>
+            <a class="btn btn-secondary" id="ami-monitor-open-responses" target="_blank" rel="noopener" data-read-control><span>Central de Respostas</span></a>
+          </div>
+          {% endif %}
           <div class="ami-filtered-table">
             {% set filtro_prefixo = "ami-monitor-filter" %}{% set filtro_rotulo = "Filtrar atividades dos colaboradores" %}{% include "componentes/filtro_tabela.html" %}
-          <div class="hier-table-shell ami-table-shell"><table id="ami-monitor-table" class="admin-table hier-register-table ami-table--database" aria-label="Monitoramento por colaborador"><thead><tr><th class="col-select" scope="col"><input type="checkbox" id="ami-monitor-select-all" aria-label="Selecionar todos os registros filtrados"></th><th>Colaboradores</th><th>E-mail colaborador</th><th>Registrado em</th><th>Etapa da colaboração</th><th>E-mail convite</th><th>E-mail resposta</th></tr></thead><tbody id="ami-email-deliveries"></tbody></table></div></div>
+          <div class="hier-table-shell ami-table-shell"><table id="ami-monitor-table" class="admin-table hier-register-table ami-table--database" {% if modo_pagina == 'espaco' %}aria-labelledby="ami-monitor-table-label" data-table-heading="ami-monitor-table-label"{% else %}aria-label="Monitoramento por colaborador"{% endif %}>
+            <thead><tr>
+              <th class="col-select" scope="col"><input type="checkbox" id="ami-monitor-select-all" aria-label="Selecionar todos os registros filtrados"></th>
+              <th scope="col">Nome do colaborador</th><th scope="col">E-mail do colaborador</th><th scope="col">Instituição</th>
+              <th scope="col" id="ami-monitor-data-header" data-convite-label="Data do primeiro registro de e-mail">Data do primeiro registro de e-mail</th>
+              <th scope="col">Status da etapa de colaboração</th>
+              <th scope="col">Status do envio do e-mail de convite</th>
+              <th scope="col">Status do envio do e-mail de resposta</th>
+            </tr></thead><tbody id="ami-email-deliveries"></tbody>
+          </table></div></div>
           <div class="admin-bulk-actions ami-table-actions standard-table-actions" role="group" aria-label="Controles do monitoramento">
             <button type="button" class="admin-icon-btn" id="ami-monitor-refresh" title="Atualizar confirmações" aria-label="Atualizar confirmações" disabled><i class="fas fa-arrows-rotate" aria-hidden="true"></i></button>
             <button type="button" class="admin-icon-btn" id="ami-monitor-send" title="Enviar e-mail de convite aos selecionados" aria-label="Enviar e-mail de convite aos selecionados" disabled><i class="fas fa-envelope" aria-hidden="true"></i></button>
@@ -165,15 +188,17 @@
 {% endblock %}
 {% block scripts_pagina %}
   {% if modo_pagina == 'julgamentos' %}<script src="/assets/js/sicard-standard-layout.js?v=20261027-1"></script>{% endif %}
-  <script src="/assets/js/table-standard.js?v=20261027-cabecalho-agrupado"></script>
-  <script src="/assets/js/analysis-table-controls.js?v=20261106-rotulo-unico"></script>
+  <script src="/assets/js/table-standard.js?v=20261127-filtros-centrais"></script>
+  <script src="/assets/js/analysis-table-controls.js?v=20261127-filtros-centrais"></script>
   <script src="/assets/js/admin-auth.js"></script>
   <script src="/assets/vendor/xlsx/xlsx-0.18.5.min.js"></script>
-  <script src="/assets/js/paginas/analise-multicriterio-tabela.js?v=20261124-link-julgamentos"></script>
+  <script src="/assets/js/paginas/ami-status.js?v=20261126-padrao-status"></script>
+  <script src="/assets/js/paginas/analise-multicriterio-tabela.js?v=20261126-padrao-status"></script>
   <script src="/assets/js/api-erro.js?v=20261027"></script>
-  <script src="/assets/js/paginas/ami-email.js?v=20261124-resultados-em-linhas"></script>
+  <script src="/assets/js/paginas/ami-email.js?v=20261126-padrao-status"></script>
+  {% if modo_pagina == 'espaco' %}<script src="/assets/js/paginas/ami-divulgacao.js?v=20261126-padrao-status"></script>{% endif %}
   <script src="/assets/js/matriz-criterios-arquivo.js?v=20261009"></script>
   <script src="/assets/js/matrizes-criterios.js?v=20261124-matriz-integral"></script>
   <script src="/assets/js/saaty-selector-color.js?v=20261103-1"></script>
-  <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20261125-recortes-ahp"></script>
+  <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20261126-contextualizacao"></script>
 {% endblock %}

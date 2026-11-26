@@ -1,0 +1,75 @@
+<section id="ami-divulgacao" class="ahp-subcard" aria-labelledby="ami-divulgacao-title">
+  <h3 class="ahp-subsection-title" id="ami-divulgacao-title">Compartilhar link público</h3>
+  <div class="ahp-section-body">
+    <p class="form-help">Adicione contatos para enviar o link de inscrição. Após a inscrição pelo formulário público, acompanhe o participante no Monitoramento das atividades.</p>
+    <p class="form-help is-hidden" id="ami-divulgacao-consulta">Clique em <strong>Editar julgamento</strong> para alterar a lista e a mensagem ou enviar o link público.</p>
+    <p class="form-help is-hidden" id="ami-divulgacao-prazo">Para enviar, reabra a coleta ou salve um prazo futuro na edição do julgamento.</p>
+    <div class="ami-email-content-grid ami-divulgacao-editor">
+      <section class="ahp-subcard" aria-labelledby="ami-divulgacao-destinatarios-title">
+        <h4 class="ahp-subsection-title" id="ami-divulgacao-destinatarios-title">Destinatários</h4>
+        <form class="ahp-section-body" id="ami-divulgacao-contato">
+          <div class="ami-collaborator-fields" id="ami-divulgacao-campos">
+            <label for="ami-divulgacao-nome">Nome do destinatário<input class="c-form-control" id="ami-divulgacao-nome" maxlength="200" autocomplete="name" required></label>
+            <label for="ami-divulgacao-email">E-mail do destinatário<input class="c-form-control" id="ami-divulgacao-email" type="email" maxlength="254" autocomplete="email" aria-describedby="ami-divulgacao-contato-alerta" required></label>
+            <label for="ami-divulgacao-instituicao">Instituição<input class="c-form-control" id="ami-divulgacao-instituicao" maxlength="300" autocomplete="organization"></label>
+            <button type="submit" class="ahp-collab-add-btn" id="ami-divulgacao-adicionar" title="Adicionar à lista de convidados" aria-label="Adicionar à lista de convidados"><i class="fas fa-plus" aria-hidden="true"></i></button>
+          </div>
+          <p class="form-help" id="ami-divulgacao-contato-alerta" role="alert"></p>
+          <div class="ami-collaborator-import">
+            <label class="c-form-group" for="ami-divulgacao-arquivo">Carregar lista de um arquivo<input id="ami-divulgacao-arquivo" class="c-form-control" type="file" accept=".xlsx,.xls,.csv,.tsv,.txt,.json"></label>
+            <button type="button" class="btn btn-secondary" id="ami-divulgacao-listas" aria-haspopup="dialog" aria-controls="ami-import-modal"><i class="fas fa-list c-btn__icon" aria-hidden="true"></i><span>Carregar lista existente</span></button>
+          </div>
+        </form>
+      </section>
+      <section class="ahp-subcard" aria-labelledby="ami-divulgacao-mensagem-title">
+        <h4 class="ahp-subsection-title" id="ami-divulgacao-mensagem-title">Mensagem de e-mail</h4>
+        <div class="ahp-section-body">
+          <label class="c-form-group" for="ami-divulgacao-assunto">Assunto do e-mail<input class="c-form-control" id="ami-divulgacao-assunto" maxlength="200" required></label>
+          <label class="c-form-group" for="ami-divulgacao-mensagem">Mensagem<textarea class="c-form-control collab-email-template" id="ami-divulgacao-mensagem" rows="5" maxlength="49000" aria-describedby="ami-divulgacao-link-ajuda" required></textarea></label>
+          <div class="c-form-group ami-divulgacao-link">
+            <p class="form-help" id="ami-divulgacao-link-ajuda">O link para divulgar é incluído no final do e-mail.</p>
+            <a id="ami-divulgacao-link-mensagem" class="ami-email-protected-link" target="_blank" rel="noopener"></a>
+          </div>
+          <div class="ahp-form-actions"><button type="button" class="btn btn-secondary" id="ami-divulgacao-salvar-mensagem"><i class="fas fa-floppy-disk c-btn__icon" aria-hidden="true"></i>Salvar mensagem</button></div>
+        </div>
+      </section>
+    </div>
+
+    <div class="ami-divulgacao-lista">
+      <p class="ami-table-label" id="ami-divulgacao-lista-titulo">Tabela de colaboradores convidados</p>
+      <div class="hier-table-shell ami-table-shell"><table id="ami-divulgacao-tabela" class="admin-table hier-register-table ami-table--database" aria-labelledby="ami-divulgacao-lista-titulo" data-produto-exportacao="Lista de colaboradores convidados">
+        <thead><tr><th scope="col">Nome do colaborador</th><th scope="col">E-mail do colaborador</th><th scope="col">Instituição</th><th scope="col">Status do envio</th><th scope="col">Data do envio</th><th scope="col">Status da entrega</th></tr></thead><tbody></tbody>
+      </table></div>
+      <p class="form-help is-hidden" id="ami-divulgacao-pendencias" role="status">Há alterações na lista. Clique em <strong>Salvar</strong> para confirmar os convidados antes do envio.</p>
+    </div>
+    <template id="ami-divulgacao-acoes">
+      <button type="button" class="admin-icon-btn edit" id="ami-divulgacao-editar" title="Editar convidado selecionado" aria-label="Editar convidado selecionado"><i class="fas fa-pen" aria-hidden="true"></i></button>
+      <button type="button" class="admin-icon-btn save" id="ami-divulgacao-salvar" title="Salvar" aria-label="Salvar" aria-describedby="ami-divulgacao-lista-titulo"><i class="fas fa-floppy-disk" aria-hidden="true"></i></button>
+      <button type="button" class="admin-icon-btn save" id="ami-divulgacao-salvar-nova" title="Salvar como nova lista" aria-label="Salvar como nova lista"><i class="fas fa-folder-plus" aria-hidden="true"></i></button>
+      <button type="button" class="admin-icon-btn edit" id="ami-divulgacao-salvar-existente" title="Atualizar lista existente" aria-label="Atualizar lista existente"><i class="fas fa-list-check" aria-hidden="true"></i></button>
+      <button type="button" class="admin-icon-btn delete" id="ami-divulgacao-excluir" title="Excluir selecionados" aria-label="Excluir selecionados"><i class="fas fa-xmark" aria-hidden="true"></i></button>
+      <button type="button" class="admin-icon-btn public" id="ami-divulgacao-enviar" title="Enviar e-mail aos selecionados" aria-label="Enviar e-mail aos selecionados"><i class="fas fa-paper-plane" aria-hidden="true"></i></button>
+      <button type="button" class="admin-icon-btn edit" id="ami-divulgacao-reenviar" title="Reenviar e-mail aos selecionados" aria-label="Reenviar e-mail aos selecionados"><i class="fas fa-rotate-right" aria-hidden="true"></i></button>
+      <button type="button" class="admin-icon-btn cancel" id="ami-divulgacao-confirmacoes" title="Atualizar confirmações e inscrições" aria-label="Atualizar confirmações e inscrições"><i class="fas fa-arrows-rotate" aria-hidden="true"></i></button>
+    </template>
+    <p id="ami-divulgacao-status" class="form-help" role="status" aria-live="polite"></p>
+  </div>
+</section>
+  <dialog class="json-modal ami-data-modal__card" id="ami-divulgacao-modal" aria-labelledby="ami-divulgacao-modal-titulo" aria-describedby="ami-divulgacao-modal-descricao">
+    <header class="json-modal-head ami-data-modal__head">
+      <h2 id="ami-divulgacao-modal-titulo"></h2>
+      <button type="button" class="json-modal-close" id="ami-divulgacao-modal-fechar" aria-label="Fechar" data-read-control><i class="fas fa-xmark" aria-hidden="true"></i></button>
+    </header>
+    <form class="json-modal-body ami-data-modal__content" id="ami-divulgacao-modal-form">
+      <p class="form-help" id="ami-divulgacao-modal-descricao"></p>
+      <fieldset id="ami-divulgacao-modal-convidado">
+        <label class="c-form-group" for="ami-divulgacao-modal-nome">Nome<input class="c-form-control" id="ami-divulgacao-modal-nome" maxlength="200" required></label>
+        <label class="c-form-group" for="ami-divulgacao-modal-email">E-mail<input class="c-form-control" id="ami-divulgacao-modal-email" type="email" maxlength="254" required></label>
+        <label class="c-form-group" for="ami-divulgacao-modal-instituicao">Instituição<input class="c-form-control" id="ami-divulgacao-modal-instituicao" maxlength="300" autocomplete="organization"></label>
+      </fieldset>
+      <label class="c-form-group" for="ami-divulgacao-modal-nova">Nome da lista<input class="c-form-control" id="ami-divulgacao-modal-nova" maxlength="120" required></label>
+      <label class="c-form-group" for="ami-divulgacao-modal-listas">Lista a atualizar<select class="c-form-control" id="ami-divulgacao-modal-listas" required></select></label>
+      <div class="ahp-form-actions"><button type="submit" class="btn btn-primary" id="ami-divulgacao-modal-confirmar">Salvar</button></div>
+      <p class="form-help" id="ami-divulgacao-modal-status" role="status"></p>
+    </form>
+  </dialog>

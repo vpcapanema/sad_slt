@@ -327,7 +327,13 @@ $migrations = @(
     "182_julgamento_dimensoes.sql",
     "183_inscricoes_publicas_ahp.sql",
     "184_fila_publica_ahp.sql",
-    "185_exclusao_inscricoes_publicas_ahp.sql"
+    "185_exclusao_inscricoes_publicas_ahp.sql",
+    "186_divulgacao_link_publico_ahp.sql",
+    "187_exclusao_destinatarios_divulgacao_ahp.sql",
+    "188_lembretes_automaticos_ahp.sql",
+    "189_listas_reutilizaveis_divulgacao_ahp.sql",
+    "190_notificacoes_lembretes_ahp.sql",
+    "191_instituicao_destinatarios_ahp.sql"
 )
 
 if ($OnlyMigration) {
@@ -538,6 +544,36 @@ if (-not $OnlyMigration -and "184_fila_publica_ahp.sql" -notin $migrations -and
 if (-not $OnlyMigration -and "185_exclusao_inscricoes_publicas_ahp.sql" -notin $migrations -and
     -not (Test-SchemaReady "SELECT NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname IN ('slt_user', 'sigma_user') AND NOT coalesce(has_table_privilege(oid, to_regclass('ahp.comparacao_colaborativa_inscricao'), 'DELETE'), false));")) {
     $migrations += "185_exclusao_inscricoes_publicas_ahp.sql"
+}
+
+if (-not $OnlyMigration -and "186_divulgacao_link_publico_ahp.sql" -notin $migrations -and
+    -not (Test-SchemaReady "SELECT to_regclass('ahp.comparacao_colaborativa_divulgacao') IS NOT NULL AND to_regclass('ahp.comparacao_colaborativa_divulgacao_mensagem') IS NOT NULL;")) {
+    $migrations += "186_divulgacao_link_publico_ahp.sql"
+}
+
+if (-not $OnlyMigration -and "187_exclusao_destinatarios_divulgacao_ahp.sql" -notin $migrations -and
+    -not (Test-SchemaReady "SELECT to_regclass('ahp.comparacao_colaborativa_divulgacao') IS NOT NULL AND NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname IN ('slt_user', 'sigma_user') AND NOT coalesce(has_table_privilege(oid, to_regclass('ahp.comparacao_colaborativa_divulgacao'), 'DELETE'), false));")) {
+    $migrations += "187_exclusao_destinatarios_divulgacao_ahp.sql"
+}
+
+if (-not $OnlyMigration -and "188_lembretes_automaticos_ahp.sql" -notin $migrations -and
+    -not (Test-SchemaReady "SELECT to_regclass('ahp.comparacao_colaborativa_lembrete_config') IS NOT NULL AND to_regclass('ahp.comparacao_colaborativa_lembrete_envio') IS NOT NULL;")) {
+    $migrations += "188_lembretes_automaticos_ahp.sql"
+}
+
+if (-not $OnlyMigration -and "189_listas_reutilizaveis_divulgacao_ahp.sql" -notin $migrations -and
+    -not (Test-SchemaReady "SELECT to_regclass('ahp.comparacao_colaborativa_divulgacao_lista') IS NOT NULL;")) {
+    $migrations += "189_listas_reutilizaveis_divulgacao_ahp.sql"
+}
+
+if (-not $OnlyMigration -and "190_notificacoes_lembretes_ahp.sql" -notin $migrations -and
+    -not (Test-SchemaReady "SELECT count(*) = 2 FROM information_schema.columns WHERE table_schema = 'ahp' AND table_name = 'comparacao_colaborativa_ambiente' AND column_name IN ('lembrete_notificacoes_ativas', 'lembrete_notificacoes_alteradas_em');")) {
+    $migrations += "190_notificacoes_lembretes_ahp.sql"
+}
+
+if (-not $OnlyMigration -and "191_instituicao_destinatarios_ahp.sql" -notin $migrations -and
+    -not (Test-SchemaReady "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'ahp' AND table_name = 'comparacao_colaborativa_divulgacao' AND column_name = 'instituicao');")) {
+    $migrations += "191_instituicao_destinatarios_ahp.sql"
 }
 
 if (-not $OnlyMigration -and "166_politica_usuarios_sicard.sql" -notin $migrations) {

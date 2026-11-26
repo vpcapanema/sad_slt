@@ -13,8 +13,8 @@
     {% if not tabela_colaborativa_respostas %}<div class="ahp-live-metrics ami-live-metrics" id="ami-analysis-participation"></div>{% endif %}
 
     <section class="ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">{{ '1' if indicacao_processos else '2.1' }}</span><span>Julgadores</span></div>
-      <p class="ami-subsection-hint">Todos os julgadores convidados para este julgamento. Quem ainda não respondeu aparece com nome e e-mail, e os demais campos em branco.</p>
-      <div class="ahp-section-body"><div class="matriz-table-wrap"><table class="admin-table ami-stats-table ami-table--julgadores"><thead><tr><th>Julgador</th><th>E-mail</th><th>Instituição</th><th>Situação</th><th>RC individual</th><th>Início</th><th>Envio</th></tr></thead><tbody id="ami-analysis-judges"></tbody></table></div></div>
+      <p class="ami-subsection-hint">Consulte os colaboradores deste julgamento e acompanhe a situação de cada resposta.</p>
+      <div class="ahp-section-body"><div class="matriz-table-wrap"><table class="admin-table ami-stats-table ami-table--julgadores"><thead><tr><th>Nome do colaborador</th><th>E-mail do colaborador</th><th>Instituição</th><th>Situação</th><th>RC individual</th><th>Início</th><th>Envio</th></tr></thead><tbody id="ami-analysis-judges"></tbody></table></div></div>
     </section>
     <p class="ami-fio-elo"><span>Cada julgador que respondeu atribuiu, par a par, os índices de importância abaixo.</span></p>
 
@@ -61,7 +61,7 @@
           <label class="ami-analysis-checkbox"><input id="ami-analysis-exclude-inconsistent" type="checkbox" checked> Excluir respostas inconsistentes</label>
           <p class="form-help">Medida de tendência central em uso <strong id="ami-analysis-consolidation-measure"></strong></p>
         </fieldset>
-        <div class="matriz-table-wrap"><table class="admin-table ami-stats-table ami-table--respostas"><thead><tr><th>Incluir</th><th>Julgador</th><th>E-mail</th><th>Situação</th><th>RC</th><th>Início</th><th>Envio</th></tr></thead><tbody id="ami-analysis-responses"></tbody></table></div>
+        <div class="matriz-table-wrap"><table class="admin-table ami-stats-table ami-table--respostas"><thead><tr><th>Incluir</th><th>Nome do colaborador</th><th>E-mail do colaborador</th><th>Instituição</th><th>Situação</th><th>RC</th><th>Início</th><th>Envio</th></tr></thead><tbody id="ami-analysis-responses"></tbody></table></div>
         <div class="ahp-form-actions"><button type="button" class="btn btn-primary" id="ami-analysis-calculate"><i class="fas fa-calculator"></i> Calcular e salvar análise</button></div><p id="ami-analysis-feedback" class="ami-feedback" role="status"></p>
       </div>
     </section>
@@ -91,7 +91,7 @@
             <p class="form-help" id="ami-global-total" role="status"></p>
             <div class="ahp-form-actions">
               <button class="btn btn-primary" type="submit">Calcular e salvar pesos globais</button>
-              <a id="ami-global-new-ahp" class="btn btn-secondary">Novo AHP das dimensões</a>
+              <a id="ami-global-new-ahp" class="btn btn-secondary"><span>Novo AHP das dimensões</span></a>
             </div>
           </fieldset>
         </form>
