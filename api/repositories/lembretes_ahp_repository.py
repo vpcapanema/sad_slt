@@ -9,7 +9,8 @@ from api.db.connection import get_connection
 def configuracoes() -> list[dict]:
     with get_connection() as conn:
         return conn.execute(
-            """SELECT a.id, a.nome, a.modo_participacao, a.lembrete_notificacoes_ativas AS notificacoes_ativas,
+            """SELECT a.id, a.nome, a.modo_participacao, a.criado_em, a.valido_ate,
+                      a.lembrete_notificacoes_ativas AS notificacoes_ativas,
                       c.faixas, c.atualizado_em AS configurado_em
                  FROM ahp.comparacao_colaborativa_ambiente a
                  LEFT JOIN ahp.comparacao_colaborativa_lembrete_config c ON c.ambiente_id = a.id
@@ -20,7 +21,7 @@ def configuracoes() -> list[dict]:
 def ambiente(ambiente_id: str) -> dict | None:
     with get_connection() as conn:
         return conn.execute(
-            """SELECT a.id, a.nome, a.status, a.modo_participacao, a.valido_ate,
+            """SELECT a.id, a.nome, a.status, a.modo_participacao, a.criado_em, a.valido_ate,
                       a.lembrete_notificacoes_ativas AS notificacoes_ativas,
                       c.faixas, c.atualizado_em AS configurado_em
                  FROM ahp.comparacao_colaborativa_ambiente a
@@ -60,7 +61,7 @@ def participantes(ambiente_id: str | None = None, *, email: str | None = None,
         return conn.execute(
             """SELECT a.id AS ambiente_id, a.nome AS julgamento, a.token, a.modo_participacao,
                       m.nome AS matriz_nome, a.arquivo_matriz_nome, a.atualizado_em AS versao_convite,
-                      a.status, a.valido_ate, a.lembrete_prazo_alterado_em AS prazo_alterado_em,
+                      a.status, a.criado_em, a.valido_ate, a.lembrete_prazo_alterado_em AS prazo_alterado_em,
                       a.lembrete_notificacoes_ativas AS notificacoes_ativas,
                       a.lembrete_notificacoes_alteradas_em AS notificacoes_alteradas_em,
                       c.faixas, c.atualizado_em AS configurado_em, p.nome, p.email,

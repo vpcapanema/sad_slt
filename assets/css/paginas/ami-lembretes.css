@@ -1,3 +1,20 @@
+.ami-lembretes .ami-lembretes-periodo {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(4px, 1.3vw, 12px);
+  margin-block: 12px 16px;
+}
+.ami-lembretes-periodo .ahp-metric-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding-inline: clamp(4px, 1.6vw, 16px);
+}
+.ami-lembretes-periodo .ahp-metric-card__value {
+  color: var(--pli-deep);
+  font-size: clamp(.6875rem, 3.2vw, 1.5rem);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 .ami-lembretes :is(#ami-lembretes-rodada, .ami-lembretes-form) {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -164,6 +181,7 @@
 .ami-lembretes-modal ol { padding-inline-start: 20px; }
 .ami-lembretes-modal #ami-lembretes-mais { justify-self: start; }
 @media (max-width: 700px) {
+  .ami-lembretes-periodo .ahp-metric-card { padding-block: 8px; }
   .ami-lembretes .ahp-step-section > .ahp-section-label { margin-top: -16px; margin-inline: -16px; padding-inline: 16px; }
 }
 @media (max-width: 900px) {

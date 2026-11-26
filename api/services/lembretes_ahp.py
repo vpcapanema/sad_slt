@@ -23,8 +23,8 @@ from api.services.comparacao_colaborativa_service import _link_publico, _prazo_e
 from api.services.email_convites import ConviteOriginalIndisponivel, link_lembrete
 
 PADRAO = (
-    {"ate": 50, "quantidade": 0}, {"ate": 80, "quantidade": 1},
-    {"ate": 95, "quantidade": 2}, {"ate": 100, "quantidade": 3},
+    {"ate": 40, "quantidade": 1}, {"ate": 70, "quantidade": 2},
+    {"ate": 90, "quantidade": 3}, {"ate": 100, "quantidade": 4},
 )
 _FUSO = ZoneInfo("America/Sao_Paulo")
 _HORARIOS_OFICIAIS = (time(9, 30), time(15), time(20))
@@ -53,12 +53,14 @@ def _com_periodo(pessoa: dict) -> dict:
         convite_enviado=bool(pessoa["primeiro_convite"]), convite_em=pessoa["primeiro_convite"],
     )
     return {**pessoa, "etapa_codigo": codigo, "etapa_rotulo": rotulo, "etapa_em": etapa_em,
-            "inicio_periodo": pessoa["inscrito_em"] if publico else pessoa["clique_em"]}
+            "inicio_periodo": pessoa["criado_em"],
+            "entrada_participacao": pessoa["inscrito_em"] if publico else pessoa["clique_em"]}
 
 
 def _inicio_agendavel(pessoa: dict) -> datetime:
     inicio = pessoa["inicio_periodo"]
-    return max(inicio, pessoa["etapa_em"] or inicio, pessoa["prazo_alterado_em"],
+    entrada = pessoa["entrada_participacao"] or inicio
+    return max(inicio, entrada, pessoa["etapa_em"] or entrada, pessoa["prazo_alterado_em"],
                pessoa["configurado_em"] or inicio, pessoa["notificacoes_alteradas_em"] or inicio)
 
 
@@ -69,7 +71,7 @@ def _bloqueio(pessoa: dict, agora: datetime) -> tuple[str, str] | None:
     if pessoa["status"] != "ativa" or pessoa["valido_ate"] <= agora:
         return "encerrada", "Coleta encerrada"
     elegivel = "em_preenchimento" if pessoa["modo_participacao"] == "publico" else "link_acessado"
-    if etapa != elegivel or not pessoa["inicio_periodo"]:
+    if etapa != elegivel or not pessoa["entrada_participacao"]:
         return "etapa_inelegivel", "Fora da agenda"
     if not pessoa["notificacoes_ativas"]:
         return "notificacoes_desativadas", "Notificações desativadas"
@@ -150,7 +152,7 @@ def _intervalos(pessoa: dict) -> Iterator[_IntervaloAgenda]:
     if inicio is None or inicio >= prazo:
         return
     inicio, prazo = inicio.astimezone(timezone.utc), prazo.astimezone(timezone.utc)
-    # O primeiro lembrete precisa ocorrer depois do início da participação.
+    # Os intervalos são comuns ao julgamento. A entrada do participante limita os horários elegíveis.
     de = inicio + timedelta(microseconds=1)
     intervalos = []
     for numero, faixa in enumerate(pessoa["faixas"] or PADRAO, start=1):
@@ -215,6 +217,7 @@ def _ambiente(ambiente_id: str) -> dict:
 def _resumo_configuracao(ambiente: dict) -> dict:
     faixas = ambiente["faixas"] or PADRAO
     return {"id": ambiente["id"], "nome": ambiente["nome"], "modo_participacao": ambiente["modo_participacao"],
+            "inicio_periodo": ambiente["criado_em"], "prazo": ambiente["valido_ate"],
             "notificacoes_ativas": ambiente["notificacoes_ativas"],
             "padrao": tuple(faixas) == PADRAO,
             "total_faixas": len(faixas), "total_lembretes": sum(faixa["quantidade"] for faixa in faixas),
@@ -276,7 +279,7 @@ def listar(ambiente_id: str, simulacao: FrequenciaLembretesSchema | None = None)
             situacao = "Não se aplica"
         participantes.append({
             **{campo: pessoa[campo] for campo in ("nome", "email", "primeiro_convite", "inscrito_em", "clique_em",
-                                                  "inicio_periodo", "etapa_codigo", "etapa_rotulo", "ultimo_envio",
+                                                  "inicio_periodo", "entrada_participacao", "etapa_codigo", "etapa_rotulo", "ultimo_envio",
                                                   "ultima_tentativa", "estado_ultima_tentativa")},
             "codigo": codigo, "situacao": situacao, "proximo_envio": proximo,
             "instituicao": pessoa.get("instituicao"),
@@ -289,7 +292,8 @@ def listar(ambiente_id: str, simulacao: FrequenciaLembretesSchema | None = None)
     except email_service.FalhaEmail:
         email = None
     resumo = _resumo_configuracao(ambiente)
-    return {"julgamento": ambiente["nome"], "prazo": ambiente["valido_ate"], "configuracao": resumo,
+    return {"julgamento": ambiente["nome"], "inicio_periodo": ambiente["criado_em"],
+            "prazo": ambiente["valido_ate"], "configuracao": resumo,
             "padrao": resumo["padrao"], "faixas": faixas, "faixas_padrao": PADRAO, "participantes": participantes,
             "horarios_oficiais": [horario.strftime("%H:%M") for horario in _HORARIOS_OFICIAIS],
             "rotina_disponivel": bool(email and email.habilitado and email.configurado)}

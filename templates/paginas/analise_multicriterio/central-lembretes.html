@@ -15,7 +15,7 @@
   <link rel="stylesheet" href="/assets/css/table-standard.css?v=20261015-fontes-ordem">
   <link rel="stylesheet" href="/assets/css/admin-table-controls.css?v=20261015-botoes-quadrados">
   <link rel="stylesheet" href="/assets/css/paginas/ami-espaco-secoes.css?v=20261126-sublinhado">
-  <link rel="stylesheet" href="/assets/css/paginas/ami-lembretes.css?v=20261126-padrao-status">
+  <link rel="stylesheet" href="/assets/css/paginas/ami-lembretes.css?v=20261126-cards-periodo">
   <link rel="stylesheet" href="/assets/css/paginas/ami-responsivo.css?v=20261126-iniciais-grupos">
   <link rel="stylesheet" href="/assets/css/paginas/ami-contextualizacao.css?v=20261126-contextos-ahp">
 {% endblock %}
@@ -26,12 +26,30 @@
     <h1 class="standard-page-hero__title"><i class="fas fa-bell" aria-hidden="true"></i> Central de lembretes</h1>
     <p class="ami-eyebrow standard-page-hero__eyebrow">Análise Multicritério Interativa</p>
   </section>
-  <p class="ami-page-intro">Nesta página, você configura os lembretes automáticos para colaboradores com resposta pendente e acompanha os horários previstos e os envios registrados por participante.</p>
+  <p class="ami-page-intro">Nesta página, você configura os lembretes automáticos para colaboradores com resposta pendente e acompanha os horários previstos e os envios registrados por participante. Selecione um julgamento para consultar o período de vigência.</p>
+  <dl class="ahp-live-metrics ami-lembretes-periodo" aria-label="Vigência do julgamento selecionado" aria-live="polite">
+    <div class="ahp-metric-card">
+      <dt class="ahp-metric-card__label">Data inicial</dt>
+      <dd class="ahp-metric-card__value" id="ami-lembretes-periodo-inicio">—</dd>
+    </div>
+    <div class="ahp-metric-card">
+      <dt class="ahp-metric-card__label">Data final</dt>
+      <dd class="ahp-metric-card__value" id="ami-lembretes-periodo-fim">—</dd>
+    </div>
+    <div class="ahp-metric-card">
+      <dt class="ahp-metric-card__label">Dias totais</dt>
+      <dd class="ahp-metric-card__value" id="ami-lembretes-periodo-total">—</dd>
+    </div>
+    <div class="ahp-metric-card">
+      <dt class="ahp-metric-card__label">Dias restantes</dt>
+      <dd class="ahp-metric-card__value" id="ami-lembretes-periodo-restante">—</dd>
+    </div>
+  </dl>
 
   <section class="card ahp-step-section standard-table-section" aria-labelledby="ami-lembretes-config-titulo">
     <div class="ahp-section-label" id="ami-lembretes-config-titulo" role="heading" aria-level="2" tabindex="-1"><span><i class="fas fa-table" aria-hidden="true"></i> Configurações de lembretes</span></div>
     <div class="ahp-section-body">
-      <p class="ami-section-intro">Consulte a frequência por julgamento e gerencie a ativação das notificações. A configuração determina como os lembretes se distribuem pelo prazo disponível para cada colaborador.</p>
+      <p class="ami-section-intro">Consulte a frequência por julgamento e gerencie a ativação das notificações. A configuração distribui os lembretes ao longo da vigência do julgamento.</p>
       <div><p class="ami-table-label" id="ami-lembretes-config-label">Tabela de configurações por julgamento</p></div>
       <div class="ami-filtered-table">
         {% set filtro_prefixo = "ami-lembretes-config-filtro" %}{% set filtro_rotulo = "Filtrar configurações de lembretes" %}{% include "componentes/filtro_tabela.html" %}
@@ -58,8 +76,8 @@
     <section class="card ahp-step-section">
       <div class="ahp-section-label" role="heading" aria-level="2"><span><i class="fas fa-sliders" aria-hidden="true"></i> Intervalos do período</span></div>
       <form class="ahp-section-body ami-lembretes-form" id="ami-lembretes-form" novalidate>
-        <p class="ami-section-intro">Defina em quantos intervalos o período será dividido, a duração de cada intervalo e a quantidade de lembretes em cada um. O SICARD aplica essa distribuição ao prazo disponível para cada participante.</p>
-        <p class="form-help">Use as barras para ajustar a duração. Cada intervalo é igual ou mais curto que o anterior e os intervalos somam 100%.</p>
+        <p class="ami-section-intro">Defina em quantos intervalos a vigência do julgamento será dividida, a duração de cada intervalo e a quantidade de lembretes em cada um. A vigência começa na criação do julgamento e termina no prazo final da coleta.</p>
+        <p class="form-help">Use as barras para ajustar a duração em porcentagens inteiras. Cada intervalo é igual ou mais curto que o anterior e os intervalos somam 100%.</p>
         <p class="form-help" id="ami-lembretes-regra"></p>
         <div class="ami-lembretes-numero" role="group" aria-labelledby="ami-lembretes-numero-label">
           <strong id="ami-lembretes-numero-label">Número de intervalos</strong>
@@ -82,7 +100,7 @@
     <section class="card ahp-step-section standard-table-section" aria-labelledby="ami-lembretes-agenda-titulo">
       <div class="ahp-section-label" id="ami-lembretes-agenda-titulo" role="heading" aria-level="2"><span><i class="fas fa-calendar-days" aria-hidden="true"></i> Agenda e histórico</span></div>
       <div class="ahp-section-body">
-        <p class="ami-section-intro">Acompanhe a programação e os envios por colaborador. A agenda considera o estágio da participação e o prazo disponível para responder.</p>
+        <p class="ami-section-intro">Acompanhe os horários previstos e os envios por colaborador. A etapa de participação define a elegibilidade a partir dos próximos horários da agenda do julgamento.</p>
         <p class="form-help" id="ami-lembretes-rotina" hidden></p>
         <p class="form-help ami-lembretes-origem" id="ami-lembretes-origem"></p>
         <p class="form-help ami-lembretes-origem" id="ami-lembretes-horarios-oficiais"></p>
@@ -92,7 +110,7 @@
           {% set filtro_prefixo = "ami-lembretes-filtro" %}{% set filtro_rotulo = "Filtrar colaboradores" %}{% include "componentes/filtro_tabela.html" %}
           <div class="hier-table-shell ami-table-shell">
             <table class="admin-table hier-register-table ami-table--database" id="ami-lembretes-tabela" data-table-heading="ami-lembretes-tabela-titulo">
-              <thead><tr><th class="col-select" scope="col"><input type="checkbox" id="ami-lembretes-todos" aria-label="Selecionar todos os registros filtrados"></th><th scope="col">Nome do colaborador</th><th scope="col">E-mail do colaborador</th><th scope="col">Instituição</th><th scope="col">Início do período de vigência</th><th scope="col">Status da etapa de colaboração</th><th scope="col">Status de notificação</th><th scope="col">Último envio</th></tr></thead>
+              <thead><tr><th class="col-select" scope="col"><input type="checkbox" id="ami-lembretes-todos" aria-label="Selecionar todos os registros filtrados"></th><th scope="col">Nome do colaborador</th><th scope="col">E-mail do colaborador</th><th scope="col">Instituição</th><th scope="col">Início da participação</th><th scope="col">Status da etapa de colaboração</th><th scope="col">Status de notificação</th><th scope="col">Último envio</th></tr></thead>
               <tbody id="ami-lembretes-linhas"></tbody>
             </table>
           </div>
@@ -116,7 +134,7 @@
     <p id="ami-lembretes-modal-status" class="form-help" role="status"></p>
     <section id="ami-lembretes-modal-programacao" aria-labelledby="ami-lembretes-modal-horarios">
       <h3 id="ami-lembretes-modal-horarios">Horários por intervalo</h3>
-      <p class="ami-section-intro">Consulte os horários previstos e como os lembretes foram distribuídos ao longo do prazo de participação.</p>
+      <p class="ami-section-intro">Consulte os próximos horários de envio nas faixas da vigência do julgamento.</p>
       <ul class="ami-lembretes-horarios" id="ami-lembretes-modal-agenda"></ul>
       <button type="button" class="btn btn-secondary ami-open-text" id="ami-lembretes-mais" data-read-control hidden><span>Ver próximos horários</span></button>
     </section>
@@ -130,5 +148,5 @@
   <script src="/assets/js/table-standard.js?v=20261127-filtros-centrais"></script>
   <script src="/assets/js/api-erro.js?v=20261027"></script>
   <script src="/assets/js/paginas/ami-status.js?v=20261126-padrao-status"></script>
-  <script src="/assets/js/paginas/ami-lembretes.js?v=20261126-padrao-status"></script>
+  <script src="/assets/js/paginas/ami-lembretes.js?v=20261126-cards-periodo"></script>
 {% endblock %}

@@ -20,7 +20,7 @@ def participante(inicio):
     return {
         "ambiente_id": uuid4(), "email": "ana@example.org", "nome": "Ana",
         "modo_participacao": "publico", "token": "link-publico", "julgamento": "Rodada",
-        "status": "ativa", "valido_ate": inicio + timedelta(days=100),
+        "status": "ativa", "criado_em": inicio, "valido_ate": inicio + timedelta(days=100),
         "resposta_id": uuid4(), "resposta": "em_preenchimento", "iniciado_em": inicio, "enviado_em": None,
         "primeiro_convite": None, "inscrito_em": inicio, "clique_em": None,
         "prazo_alterado_em": inicio, "configurado_em": None, "faixas": None,
@@ -33,25 +33,17 @@ def brasilia(ano, mes, dia, hora, minuto=0):
     return datetime(ano, mes, dia, hora, minuto, tzinfo=ZoneInfo("America/Sao_Paulo"))
 
 
-def test_padrao_distribui_dentro_dos_intervalos_e_preenchimento_tardio_pula_marcos():
+def test_padrao_distribui_dez_lembretes_dentro_dos_intervalos():
     inicio = datetime(2026, 9, 1, tzinfo=timezone.utc)
     pessoa = lembretes._com_periodo(participante(inicio))
-    assert lembretes._marco(pessoa, inicio + timedelta(days=50), futuro=False) is None
-    agenda = lembretes._proximos(pessoa, inicio, 10)
-    assert [item["fatia"] for item in agenda] == [2, 3, 3, 4, 4, 4]
-    assert agenda[0]["previsto_em"] == brasilia(2026, 11, 4, 9, 30)
-    for item, (de, ate) in zip(agenda, [(50, 80), (80, 95), (80, 95), (95, 100), (95, 100), (95, 100)]):
+    agenda = lembretes._proximos(pessoa, inicio, 11)
+    assert [item["fatia"] for item in agenda] == [1, 2, 2, 3, 3, 3, 4, 4, 4, 4]
+    assert agenda[0]["previsto_em"] == brasilia(2026, 9, 20, 9, 30)
+    limites = [(0, 40), (40, 70), (70, 90), (90, 100)]
+    for item in agenda:
+        de, ate = limites[item["fatia"] - 1]
         assert de <= item["percentual"] < ate
         assert item["previsto_em"].astimezone(ZoneInfo("America/Sao_Paulo")).strftime("%H:%M") in {"09:30", "15:00", "20:00"}
-
-    pessoa = lembretes._com_periodo({**pessoa, "iniciado_em": inicio + timedelta(days=85)})
-    assert lembretes._marco(pessoa, inicio + timedelta(days=85.5), futuro=False) is None
-    referencia = inicio + timedelta(days=91)
-    primeiro, percentual = lembretes._marco(pessoa, referencia, futuro=False)
-    assert primeiro > pessoa["iniciado_em"]
-    assert (primeiro, percentual) == (agenda[2]["previsto_em"], agenda[2]["percentual"])
-    pessoa["ultima_tentativa"] = primeiro
-    assert lembretes._marco(pessoa, referencia, futuro=False) is None
 
 
 @pytest.mark.parametrize("hora_limite,horarios", [(17, [(9, 30), (15, 0)]), (21, [(9, 30), (15, 0), (20, 0)])])
@@ -60,12 +52,13 @@ def test_periodo_de_48h_preserva_as_fracoes_e_respeita_o_prazo_na_data_compartil
     prazo = inicio + timedelta(hours=48)
     pessoa = lembretes._com_periodo({**participante(inicio), "valido_ate": prazo})
     intervalos = list(lembretes._intervalos(pessoa))
-    assert [f.fim - f.inicio for f in intervalos] == [
-        timedelta(hours=14, minutes=24), timedelta(hours=7, minutes=12), timedelta(hours=2, minutes=24),
+    assert [f.fim - inicio for f in intervalos] == [
+        timedelta(hours=19, minutes=12), timedelta(hours=33, minutes=36),
+        timedelta(hours=43, minutes=12), timedelta(hours=48),
     ]
     _, agenda = lembretes._resumir_agenda(pessoa, inicio)
     assert agenda[-1] == {"fatia": 4, "horarios": [brasilia(2026, 12, 1, *horario) for horario in horarios],
-                          "mais": False, "agendados": len(horarios), "sem_horario": 3 - len(horarios)}
+                          "mais": False, "agendados": len(horarios), "sem_horario": 4 - len(horarios)}
 
 
 def test_data_compartilhada_prioriza_o_ultimo_intervalo_sem_acumular_lembretes_no_dia_anterior():
@@ -73,7 +66,10 @@ def test_data_compartilhada_prioriza_o_ultimo_intervalo_sem_acumular_lembretes_n
     prazo = brasilia(2026, 12, 1, 23, 59)
     pessoa = lembretes._com_periodo({**participante(inicio), "valido_ate": prazo})
     esperados = [
-        (2, brasilia(2026, 11, 29, 9, 30)),
+        (1, brasilia(2026, 11, 26, 9, 30)),
+        (2, brasilia(2026, 11, 28, 9, 30)),
+        (3, brasilia(2026, 11, 29, 20)),
+        (3, brasilia(2026, 11, 30, 9, 30)),
         (3, brasilia(2026, 11, 30, 15)),
         (4, brasilia(2026, 12, 1, 9, 30)),
         (4, brasilia(2026, 12, 1, 15)),
@@ -83,7 +79,7 @@ def test_data_compartilhada_prioriza_o_ultimo_intervalo_sem_acumular_lembretes_n
     assert [(item["fatia"], item["previsto_em"]) for item in agenda] == esperados
     _, resumo = lembretes._resumir_agenda(pessoa, inicio)
     assert [(grupo["fatia"], grupo["agendados"], grupo["sem_horario"]) for grupo in resumo] == [
-        (2, 1, 0), (3, 1, 1), (4, 3, 0),
+        (1, 1, 0), (2, 1, 1), (3, 3, 0), (4, 3, 1),
     ]
     for item in agenda:
         horario = item["previsto_em"]
@@ -149,16 +145,30 @@ def test_elegibilidade_usa_etapa_do_monitoramento(modo, etapa, codigo, esperado)
     assert (lembretes._bloqueio(pessoa, inicio) is None) is esperado
 
 
-def test_agenda_calcula_prazos_individuais_pelas_datas_de_inscricao_ou_clique():
+@pytest.mark.parametrize("modo", ["publico", "convite"])
+def test_entrada_tardia_usa_faixa_e_horarios_da_vigencia_do_julgamento(modo):
     inicio = datetime(2026, 9, 1, tzinfo=timezone.utc)
-    outro_inicio = inicio + timedelta(days=20)
-    inscrito = participante(inicio)
-    convidado = {**inscrito, "modo_participacao": "convite", "inscrito_em": None, "clique_em": outro_inicio,
-                "primeiro_convite": inicio, "resposta_id": None, "resposta": None, "iniciado_em": None}
-    previsto_inscrito, _ = lembretes._marco(lembretes._com_periodo(inscrito), outro_inicio, futuro=True)
-    previsto_convidado, _ = lembretes._marco(lembretes._com_periodo(convidado), outro_inicio, futuro=True)
-    assert previsto_inscrito == brasilia(2026, 11, 4, 9, 30)
-    assert previsto_convidado == brasilia(2026, 11, 11, 9, 30)
+    registro = participante(inicio)
+    agenda = lembretes._proximos(lembretes._com_periodo(registro), inicio, 10)
+    entrada = agenda[1]["previsto_em"] + timedelta(minutes=10)
+    assert agenda[1]["fatia"] == agenda[2]["fatia"] == 2
+    if modo == "publico":
+        registro.update(inscrito_em=entrada, iniciado_em=entrada + timedelta(minutes=5))
+    else:
+        registro.update(modo_participacao=modo, inscrito_em=None, clique_em=entrada, primeiro_convite=inicio,
+                        resposta_id=None, resposta=None, iniciado_em=None)
+
+    pessoa = lembretes._com_periodo(registro)
+    assert pessoa["entrada_participacao"] == entrada
+    assert pessoa["inicio_periodo"] == inicio
+    assert lembretes._marco(pessoa, entrada, futuro=False) is None
+    assert lembretes._proximos(pessoa, entrada, 10) == agenda[2:]
+    proximo, resumo = lembretes._resumir_agenda(pessoa, entrada)
+    assert proximo == agenda[2]["previsto_em"]
+    assert [item["fatia"] for item in resumo] == [2, 3, 4]
+    assert lembretes._marco(pessoa, proximo, futuro=False) == (proximo, agenda[2]["percentual"])
+    pessoa["ultima_tentativa"] = proximo
+    assert lembretes._marco(pessoa, proximo, futuro=False) is None
 
 
 def test_notificacoes_retomam_apenas_horarios_futuros():
@@ -169,7 +179,7 @@ def test_notificacoes_retomam_apenas_horarios_futuros():
     assert lembretes._bloqueio(pessoa, retomada)[0] == "notificacoes_desativadas"
     pessoa.update(notificacoes_ativas=True, notificacoes_alteradas_em=retomada)
     assert lembretes._marco(pessoa, retomada, futuro=False) is None
-    assert lembretes._marco(pessoa, retomada, futuro=True)[0] == brasilia(2026, 12, 6, 9, 30)
+    assert lembretes._marco(pessoa, retomada, futuro=True)[0] == brasilia(2026, 12, 1, 9, 30)
 
 
 def test_rotina_nao_reserva_lembrete_com_notificacoes_desativadas(monkeypatch):
@@ -192,13 +202,14 @@ def test_rotina_nao_reserva_lembrete_com_notificacoes_desativadas(monkeypatch):
     [{"ate": 100, "quantidade": 1.5}],
     [{"ate": 40, "quantidade": 0}, {"ate": 100, "quantidade": 1}],
     [{"ate": 60, "quantidade": 0}, {"ate": 75, "quantidade": 1}, {"ate": 100, "quantidade": 2}],
+    [{"ate": 64.5, "quantidade": 0}, {"ate": 100, "quantidade": 1}],
 ])
 def test_frequencia_rejeita_repeticao_reducao_e_intervalos_invalidos(faixas):
     with pytest.raises(ValidationError):
         FrequenciaLembretesSchema(faixas=faixas)
 
 
-@pytest.mark.parametrize("primeiro_limite", [50, 64.5])
+@pytest.mark.parametrize("primeiro_limite", [50, 64])
 def test_frequencia_aceita_intervalos_iguais_ou_decrescentes(primeiro_limite):
     configuracao = FrequenciaLembretesSchema(faixas=[
         {"ate": primeiro_limite, "quantidade": 1}, {"ate": 100, "quantidade": 4},
@@ -306,10 +317,13 @@ def test_central_requer_sessao_e_restringe_salvamento_ao_operador_mad(monkeypatc
 
 def test_lista_inclui_julgamento_com_frequencia_padrao_sem_registro(monkeypatch):
     quando = datetime(2026, 11, 25, tzinfo=timezone.utc)
+    inicio, fim = quando - timedelta(days=5), quando + timedelta(days=10)
     monkeypatch.setattr(lembretes.repo, "configuracoes", lambda: [
         {"id": uuid4(), "nome": "Padrão", "modo_participacao": "publico", "faixas": None,
+         "criado_em": inicio, "valido_ate": fim,
          "configurado_em": None, "notificacoes_ativas": True},
         {"id": uuid4(), "nome": "Personalizado", "modo_participacao": "convite",
+         "criado_em": inicio, "valido_ate": fim,
          "faixas": [{"ate": 100, "quantidade": 3}], "configurado_em": quando, "notificacoes_ativas": False},
     ])
     cliente = TestClient(app)
@@ -319,9 +333,11 @@ def test_lista_inclui_julgamento_com_frequencia_padrao_sem_registro(monkeypatch)
     resposta = cliente.get(url, headers={"Authorization": f"Bearer {token}"})
     assert resposta.status_code == 200
     padrao, personalizado = resposta.json()
+    assert datetime.fromisoformat(padrao["inicio_periodo"]) == inicio
+    assert datetime.fromisoformat(padrao["prazo"]) == fim
     assert [padrao["notificacoes_ativas"], personalizado["notificacoes_ativas"]] == [True, False]
     assert [padrao["modo_participacao"], personalizado["modo_participacao"]] == ["publico", "convite"]
-    assert (padrao["padrao"], padrao["total_faixas"], padrao["total_lembretes"], padrao["configurado_em"]) == (True, 4, 6, None)
+    assert (padrao["padrao"], padrao["total_faixas"], padrao["total_lembretes"], padrao["configurado_em"]) == (True, 4, 10, None)
     assert (personalizado["padrao"], personalizado["total_faixas"], personalizado["total_lembretes"]) == (False, 1, 3)
 
 
@@ -344,8 +360,10 @@ def test_notificacoes_exigem_gestor_e_booleano_estrito(monkeypatch):
 def test_agenda_agrupa_horarios_por_intervalo_e_simula_sem_gravar(monkeypatch):
     agora = datetime.now(timezone.utc)
     pessoa = participante(agora - timedelta(days=60))
-    pessoa.update(ultimo_envio=None, estado_ultima_tentativa=None)
-    ambiente = {"id": pessoa["ambiente_id"], "nome": "Rodada", "modo_participacao": "publico", "valido_ate": pessoa["valido_ate"],
+    pessoa.update(inscrito_em=agora - timedelta(days=2), iniciado_em=agora - timedelta(days=1),
+                 ultimo_envio=None, estado_ultima_tentativa=None)
+    ambiente = {"id": pessoa["ambiente_id"], "nome": "Rodada", "modo_participacao": "publico",
+                "criado_em": pessoa["criado_em"], "valido_ate": pessoa["valido_ate"],
                 "faixas": None, "configurado_em": None, "notificacoes_ativas": True}
     monkeypatch.setattr(lembretes.repo, "ambiente", lambda _: ambiente)
     monkeypatch.setattr(lembretes.repo, "participantes", lambda *_args, **_kw: [pessoa])
@@ -354,17 +372,19 @@ def test_agenda_agrupa_horarios_por_intervalo_e_simula_sem_gravar(monkeypatch):
     monkeypatch.setattr(lembretes.repo, "configurar", gravar)
     id_rodada = str(ambiente["id"])
     dados = lembretes.listar(id_rodada)
+    assert dados["inicio_periodo"] == pessoa["criado_em"]
+    assert dados["participantes"][0]["entrada_participacao"] == pessoa["inscrito_em"]
     assert dados["horarios_oficiais"] == ["09:30", "15:00", "20:00"]
-    assert [intervalo["ate"] for intervalo in dados["faixas_padrao"]] == [50, 80, 95, 100]
+    assert [(faixa["ate"], faixa["quantidade"]) for faixa in dados["faixas_padrao"]] == [(40, 1), (70, 2), (90, 3), (100, 4)]
     agenda = dados["participantes"][0]["agenda_fatias"]
-    assert [(grupo["fatia"], len(grupo["horarios"])) for grupo in agenda] == [(2, 1), (3, 2), (4, 3)]
-    data_esperada = (pessoa["inscrito_em"] + timedelta(days=65)).astimezone(ZoneInfo("America/Sao_Paulo"))
-    assert agenda[0]["horarios"] == [data_esperada.replace(hour=9, minute=30, second=0, microsecond=0)]
+    assert [(grupo["fatia"], len(grupo["horarios"])) for grupo in agenda] == [(3, 3), (4, 4)]
+    data_esperada = (pessoa["criado_em"] + timedelta(days=75)).astimezone(ZoneInfo("America/Sao_Paulo"))
+    assert agenda[0]["horarios"][0] == data_esperada.replace(hour=9, minute=30, second=0, microsecond=0)
 
     rascunho = FrequenciaLembretesSchema(faixas=[{"ate": 60, "quantidade": 0}, {"ate": 100, "quantidade": 1}])
     previa = lembretes.listar(id_rodada, rascunho)["participantes"][0]["agenda_fatias"]
     assert previa[0]["fatia"] == 2
-    assert previa[0]["horarios"] == [data_esperada.replace(hour=9, minute=30, second=0, microsecond=0) + timedelta(days=15)]
+    assert previa[0]["horarios"] == [data_esperada.replace(hour=9, minute=30, second=0, microsecond=0) + timedelta(days=5)]
     detalhe = lembretes.historico(id_rodada, pessoa["email"], simulacao=rascunho)
     assert detalhe["agenda"][0]["fatia"] == 2
     assert detalhe["agenda"][0]["previsto_em"] == previa[0]["horarios"][0]
@@ -387,7 +407,8 @@ def test_status_de_notificacao_distingue_resposta_entregue_da_etapa(monkeypatch)
     pessoa.update(resposta="enviada", enviado_em=agora - timedelta(days=2), instituicao="Instituto Alfa",
                  ultimo_envio=None, estado_ultima_tentativa=None)
     ambiente = {"id": pessoa["ambiente_id"], "nome": pessoa["julgamento"], "modo_participacao": "publico",
-                "valido_ate": pessoa["valido_ate"], "faixas": None, "configurado_em": agora, "notificacoes_ativas": True}
+                "criado_em": pessoa["criado_em"], "valido_ate": pessoa["valido_ate"], "faixas": None,
+                "configurado_em": agora, "notificacoes_ativas": True}
     monkeypatch.setattr(lembretes.repo, "ambiente", lambda _: ambiente)
     monkeypatch.setattr(lembretes.repo, "participantes", lambda *_args, **_kwargs: [pessoa])
     registro = lembretes.listar(str(ambiente["id"]))["participantes"][0]

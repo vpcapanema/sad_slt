@@ -10,18 +10,17 @@
   const base = '/api/ahp/comparacao-colaborativa/ambientes';
   const urlConfiguracoes = '/api/ahp/comparacao-colaborativa/lembretes';
   const formatador = new Intl.DateTimeFormat('pt-BR', {dateStyle:'short', timeStyle:'short', timeZone:'America/Sao_Paulo'});
+  const dataPeriodo = new Intl.DateTimeFormat('pt-BR', {day:'2-digit', month:'2-digit', year:'numeric', timeZone:'America/Sao_Paulo'});
   const listaHorarios = new Intl.ListFormat('pt-BR');
   const horaOficial = valor => valor.replace(/^0/, '').replace(':00', 'h').replace(':', 'h');
   const numeros = new Intl.NumberFormat('pt-BR', {maximumFractionDigits:4});
-  const percentuaisBarras = new Intl.NumberFormat('pt-BR', {maximumFractionDigits:2});
   const data = valor => valor ? formatador.format(new Date(valor)) : '—';
   const percentual = valor => `${numeros.format(valor)}%`;
   const estados = {aceito_smtp:'Aceito pelo servidor SMTP', falha:'Falha no envio', indeterminado:'Resultado indeterminado',
     cancelado:'Cancelado', enviando:'Em envio'};
-  const colunas = ['nome','email','instituicao','inicio_periodo','etapa_rotulo','situacao','ultimo_envio'];
-  const colunasData = new Set(['inicio_periodo','ultimo_envio','configurado_em']);
-  const unidadesPorPercentual = 1000000;
-  const periodoInteiro = 100 * unidadesPorPercentual;
+  const colunas = ['nome','email','instituicao','entrada_participacao','etapa_rotulo','situacao','ultimo_envio'];
+  const colunasData = new Set(['entrada_participacao','ultimo_envio','configurado_em']);
+  const periodoInteiro = 100;
   let julgamento = '', modo = '', dados, pendente = false, carregando = false, detalhe;
   let largurasAtuais = [], ajusteLargura, temporizadorPrevia, versaoPrevia = 0, faixasEmPrevia = null;
   let quantidadesAtuais = [], ajusteQuantidade;
@@ -40,6 +39,23 @@
     status.classList.toggle('ami-lembretes-erro', erro);
   }
 
+  function mostrarPeriodo(registro) {
+    const inicio = Date.parse(registro?.inicio_periodo);
+    const fim = Date.parse(registro?.prazo);
+    const dias = diferenca => Number.isFinite(diferenca)
+      ? numeros.format(Math.max(0, Math.ceil(diferenca / 86_400_000))) : '—';
+    const valores = {
+      inicio: Number.isFinite(inicio) ? dataPeriodo.format(inicio) : '—',
+      fim: Number.isFinite(fim) ? dataPeriodo.format(fim) : '—',
+      total: dias(fim - inicio),
+      restante: dias(fim - Date.now()),
+    };
+    for (const [campo, valor] of Object.entries(valores)) {
+      const card = el(`ami-lembretes-periodo-${campo}`);
+      if (card.textContent !== valor) card.textContent = valor;
+    }
+  }
+
   async function api(url, opcoes = {}) {
     let resposta;
     const method = opcoes.method || 'GET';
@@ -54,8 +70,6 @@
     grupo.append(elemento('span', rotulo, 'c-form-label'), controle);
     return grupo;
   }
-
-  const ajustarDecimal = valor => Number(valor.toPrecision(15));
 
   function lerFatias() {
     return largurasAtuais.map((largura, i) => ({largura, quantidade:quantidadesAtuais[i]}));
@@ -91,7 +105,9 @@
   }
 
   function larguras(intervalos) {
-    return intervalos.map((faixa, i) => ({largura:ajustarDecimal(faixa.ate - (intervalos[i - 1]?.ate || 0)), quantidade:faixa.quantidade}));
+    const pesos = intervalos.map((faixa, i) => faixa.ate - (intervalos[i - 1]?.ate || 0));
+    const duracoes = dividir(periodoInteiro, pesos).sort((a, b) => b - a);
+    return intervalos.map((faixa, i) => ({largura:duracoes[i], quantidade:faixa.quantidade}));
   }
 
   function dividir(total, pesos) {
@@ -99,11 +115,12 @@
       const parte = Math.floor(total / pesos.length), resto = total % pesos.length;
       return pesos.map((_, i) => parte + Number(i < resto));
     }
+    const minimo = pesos.length <= total ? 1 : 0;
     const soma = pesos.reduce((a, b) => a + b, 0);
     let acumulado = 0, repartido = 0;
     return pesos.map((peso, i) => {
       acumulado += peso;
-      const marco = Math.max(repartido + 1, Math.min(Math.round(total * acumulado / soma), total - (pesos.length - i - 1)));
+      const marco = Math.max(repartido + minimo, Math.min(Math.round(total * acumulado / soma), total - minimo * (pesos.length - i - 1)));
       const largura = marco - repartido;
       repartido = marco;
       return largura;
@@ -124,7 +141,7 @@
       anterior = marco;
       return peso;
     });
-    return dividir(periodoInteiro, pesos).sort((a, b) => b - a).map(unidades => unidades / unidadesPorPercentual);
+    return dividir(periodoInteiro, pesos).sort((a, b) => b - a);
   }
 
   function redistribuirDuracoes(pesos, indice, fixo) {
@@ -166,15 +183,15 @@
     if (!Number.isFinite(valor) || valor <= 0 || largurasAtuais.length <= 1) return false;
     const entradas = [...fatias.querySelectorAll('[data-largura]')], indice = entradas.indexOf(controle);
     if (ajusteLargura?.controle !== controle) {
-      const pesos = largurasAtuais.filter((_, i) => i !== indice).map(largura => Math.max(1, Math.round(largura * unidadesPorPercentual)));
+      const pesos = largurasAtuais.filter((_, i) => i !== indice);
       ajusteLargura = {controle, pesos};
     }
     const minimo = indice === 0 ? Math.ceil(periodoInteiro / entradas.length) : 1;
     const maximo = Math.floor((periodoInteiro - (entradas.length - indice - 1)) / (indice + 1));
-    const fixo = Math.max(minimo, Math.min(Math.round(valor * unidadesPorPercentual), maximo));
+    const fixo = Math.max(minimo, Math.min(Math.round(valor), maximo));
     const demais = redistribuirDuracoes(ajusteLargura.pesos, indice, fixo);
     demais.splice(indice, 0, fixo);
-    largurasAtuais = demais.map(unidades => unidades / unidadesPorPercentual);
+    largurasAtuais = demais;
     entradas.forEach((entrada, i) => mostrarLargura(entrada, largurasAtuais[i]));
     return true;
   }
@@ -182,16 +199,14 @@
   function mostrarLargura(barra, largura) {
     if (barra.valueAsNumber !== largura) barra.value = largura;
     barra.style.setProperty('--ami-duracao-percentual', `${largura}%`);
-    const rotulo = largura < 0.01 ? '<0,01%' : `${percentuaisBarras.format(largura)}%`;
+    const rotulo = `${largura}%`;
     barra.setAttribute('aria-valuetext', rotulo);
     barra.nextElementSibling.value = rotulo;
   }
 
-  function faixasRascunho() {
+  function faixasRascunho(intervalos = lerFatias()) {
     let limite = 0;
-    return lerFatias().map(({largura, quantidade}, i) => ({
-      ate: i === fatias.children.length - 1 ? 100 : limite = ajustarDecimal(limite + largura), quantidade,
-    }));
+    return intervalos.map(({largura, quantidade}) => ({ate:limite += largura, quantidade}));
   }
 
   function renderizarFatias(intervalos) {
@@ -199,6 +214,7 @@
     ajusteQuantidade = null;
     largurasAtuais = intervalos.map(fatia => fatia.largura);
     quantidadesAtuais = intervalos.map(fatia => fatia.quantidade);
+    const cabem = intervalos.length <= periodoInteiro;
     fatias.replaceChildren(...intervalos.map((fatia, i) => {
       const linha = elemento('div', null, 'ami-lembretes-faixa');
       const largura = elemento('input'), total = elemento('input');
@@ -206,10 +222,10 @@
       const percentualAtual = elemento('output');
       largura.type = 'range';
       largura.id = `ami-lembretes-duracao-${i + 1}`;
-      largura.min = String(1 / unidadesPorPercentual);
-      largura.max = String((periodoInteiro - intervalos.length + 1) / unidadesPorPercentual);
-      largura.step = 'any';
-      largura.disabled = !editando() || intervalos.length === 1;
+      largura.min = cabem ? '1' : '0';
+      largura.max = String(cabem ? periodoInteiro - intervalos.length + 1 : periodoInteiro);
+      largura.step = '1';
+      largura.disabled = !editando() || !cabem || intervalos.length === 1;
       percentualAtual.htmlFor.add(largura.id);
       percentualAtual.setAttribute('aria-hidden', 'true');
       duracao.append(largura, percentualAtual);
@@ -230,8 +246,9 @@
       return linha;
     }));
     el('ami-lembretes-numero-valor').value = intervalos.length;
+    el('ami-lembretes-adicionar').disabled = intervalos.length >= periodoInteiro;
     el('ami-lembretes-subtrair').disabled = intervalos.length <= 1;
-    el('ami-lembretes-salvar').disabled = !pendente;
+    el('ami-lembretes-salvar').disabled = !pendente || !cabem;
   }
 
   function tabelaPadrao(prefixo, campos, chave, vazio, aoSelecionar, abrirNome) {
@@ -334,7 +351,9 @@
         colunaFiltro.querySelector(`option[value="${campo}"]`).textContent = rotulo;
       },
       limparSelecao() { selecionados.clear(); renderizar(); },
-      selecionado() { return registros.find(registro => selecionados.has(registro[chave])); },
+      selecionado() {
+        return selecionados.size === 1 ? registros.find(registro => selecionados.has(registro[chave])) : null;
+      },
       reiniciar() {
         selecionados.clear(); pagina = 1; limparFiltro(); SLTTable.inversion(el(`${filtro}-inverter`), false);
       },
@@ -362,7 +381,9 @@
       el('ami-lembretes-config-ver').disabled = carregando || total !== 1;
       el('ami-lembretes-config-editar').disabled = carregando || somenteLeitura || total !== 1;
       el('ami-lembretes-config-limpar').disabled = total === 0;
+      mostrarPeriodo(lista.selecionado());
     });
+  setInterval(() => mostrarPeriodo(lista.selecionado()), 60_000);
   const rotulosConfiguracao = registro => ({...registro, frequencia:registro.padrao ? 'Padrão' : 'Personalizada',
     forma_participacao:registro.modo_participacao === 'publico' ? 'Link público' : 'Por convite'});
   const rotuloNotificacoes = ativas => ativas ? 'Ativadas' : 'Desativadas';
@@ -414,7 +435,7 @@
 
   function atualizarPrevia() {
     limparPrevia();
-    if (!editando() || !pendente || !dados.configuracao.notificacoes_ativas) {
+    if (!editando() || !pendente || largurasAtuais.length > periodoInteiro || !dados.configuracao.notificacoes_ativas) {
       agenda.atualizar(dados.participantes);
       return;
     }
@@ -437,19 +458,19 @@
   function mostrar(dadosNovos, preservarEdicao = false) {
     dados = dadosNovos;
     limparPrevia();
+    const intervalos = larguras(dados.faixas);
+    const arredondada = faixasRascunho(intervalos).some((faixa, i) => faixa.ate !== dados.faixas[i].ate);
     if (!preservarEdicao) {
-      const intervalos = larguras(dados.faixas);
-      pendente = editando() && intervalos.some(({largura}, i) => i > 0 && largura > intervalos[i - 1].largura + 1e-9);
-      if (pendente) {
-        const duracoes = intervalos.map(({largura}) => largura).sort((a, b) => b - a);
-        intervalos.forEach((intervalo, i) => { intervalo.largura = duracoes[i]; });
-      }
+      pendente = editando() && arredondada;
       renderizarFatias(intervalos);
     }
     el('ami-lembretes-detalhe-titulo').textContent = dados.julgamento;
     el('ami-lembretes-fechar-config').textContent = editando() ? 'Cancelar edição' : 'Fechar visualização';
     for (const controle of formulario.querySelectorAll('[data-edicao-lembretes]')) controle.hidden = !editando();
-    el('ami-lembretes-regra').textContent = pendente ? 'Alterações pendentes.' :
+    el('ami-lembretes-regra').textContent = largurasAtuais.length > periodoInteiro
+      ? 'Reduza a frequência a até 100 intervalos para salvar as porcentagens inteiras.'
+      : pendente ? 'Alterações pendentes.' :
+      arredondada ? 'As barras mostram porcentagens inteiras. A agenda usa a frequência salva.' :
       dados.padrao ? 'Configuração padrão em uso.' : 'Configuração personalizada em uso.';
     const notificando = dados.configuracao.notificacoes_ativas;
     el('ami-lembretes-rotina').hidden = notificando && dados.rotina_disponivel;
@@ -457,11 +478,10 @@
       ? 'O envio automático está indisponível neste ambiente. Confira a configuração do serviço de e-mail.'
       : 'Notificações desativadas para este julgamento.';
     const publico = dados.configuracao.modo_participacao === 'publico';
-    agenda.definirRotulo('inicio_periodo', publico ? 'Data da inscrição' : 'Data de acesso ao link');
-    const inicio = publico ? 'da inscrição' : 'do primeiro acesso ao link';
+    agenda.definirRotulo('entrada_participacao', publico ? 'Data da inscrição' : 'Primeiro acesso ao link');
     const etapa = publico ? 'Em preenchimento' : 'Link acessado';
-    el('ami-lembretes-origem').textContent = `O período de vigência dos lembretes vai ${inicio} à data limite da coleta (${data(dados.prazo)}). ` +
-      `A agenda inclui quem está na etapa «${etapa}» do Monitoramento das atividades.`;
+    el('ami-lembretes-origem').textContent = `A vigência vai da criação do julgamento (${data(dados.inicio_periodo)}) à data limite da coleta (${data(dados.prazo)}). ` +
+      `Na etapa «${etapa}», cada participante segue os horários ainda disponíveis na faixa em curso e nas seguintes.`;
     el('ami-lembretes-horarios-oficiais').textContent = `Os horários oficiais de envio são ${listaHorarios.format(dados.horarios_oficiais.map(horaOficial))}, no horário de Brasília.`;
     rodada.hidden = false;
     lista.substituir(rotulosConfiguracao(dados.configuracao));
@@ -612,9 +632,12 @@
   };
   function registrarEdicao() {
     pendente = true;
-    el('ami-lembretes-regra').textContent = 'Alterações pendentes.';
+    const cabem = largurasAtuais.length <= periodoInteiro;
+    el('ami-lembretes-regra').textContent = cabem
+      ? 'Alterações pendentes.'
+      : 'Reduza a frequência a até 100 intervalos para salvar as porcentagens inteiras.';
     informar('ami-lembretes-form-status', '');
-    el('ami-lembretes-salvar').disabled = false;
+    el('ami-lembretes-salvar').disabled = !cabem;
     atualizarPrevia();
   }
 
@@ -632,7 +655,7 @@
 
   function mudarNumero(delta) {
     const tamanho = quantidadesAtuais.length + delta;
-    if (tamanho < 1) return;
+    if (tamanho < 1 || (delta > 0 && tamanho > periodoInteiro)) return;
     const quantidades = quantidadesAtuais.slice(0, tamanho).map((valor, i) => Math.min(valor, tetoQuantidade(i, tamanho)));
     if (delta > 0) quantidades.push(quantidades.at(-1) + 1);
     pendente = true;
@@ -650,7 +673,7 @@
   formulario.onsubmit = async evento => {
     evento.preventDefault();
     if (ajusteQuantidade) ajustarQuantidade(ajusteQuantidade.controle, true);
-    if (!editando() || carregando || !pendente) return;
+    if (!editando() || carregando || !pendente || largurasAtuais.length > periodoInteiro) return;
     const faixas = faixasRascunho();
     limparPrevia();
     carregando = true;
